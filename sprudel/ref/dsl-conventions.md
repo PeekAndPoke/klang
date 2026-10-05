@@ -111,6 +111,12 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   The editor types it as the canonical object, so `vel(` shows the `velocity(...)` signature. One
   alias row per alias. Compound slots get no aliases at all (`rsize`, `delayfb` went 2026-09-07).
 - Design record and rejected alternatives: `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`.
+- A continuous signal (`sine`, `perlin`, `rand`, ...) is the other callable object: `@KlangScript.Object("perlin")
+  object perlin : SprudelSignal("perlin", createPerlin())`, where `SprudelSignal` IS a `SprudelPattern` by delegation, so
+  the bare name stays a pattern in every door and method. Its `@KlangScript.Invoke` is the range shorthand
+  (`perlin(from, to)` is `perlin.range(from, to)`), both values required through `ranged`. A signal that is another one
+  shifted or flipped is built from it, not written again (`cosine` is `sine.early(0.25)`). A new signal joins the
+  table rows of `LangSignalShorthandSpec` and `SignalShorthandIntelSpec`.
 
 ## Setter semantics in force
 

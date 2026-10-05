@@ -16,8 +16,9 @@ package io.peekandpoke.klang
  * so the sound stays identical. A materially changed instrument gets a NEW dated snapshot; the old
  * one stays so its rows remain comparable.
  *
- * 2026-10-05, one `range` (`docs/tasks/sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone, so a
- * twin is spelled as its signal with `.range(-1, 1)`. Syntax only; the renders are identical in raw doubles.
+ * 2026-10-05, one `range` (`docs/tasks/sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone. The one
+ * twin here sat in a commented-out fragment (`//.mix(saw2, 1.0)`, where `saw` is the local supersaw, not the signal),
+ * and the fragment is deleted. A comment only; the renders are identical in raw doubles.
  *
  * 2026-10-03, the Ignitor/Katalyst naming (`docs/plans/ignitor-katalyst-naming.md`): the script object, its slot
  * accessor and its slot setter are spelled with their new names (`Ign.`, `Ign.slot.`, `ignp`). Syntax only; the
@@ -200,7 +201,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
     .analog(pAnalog).analogSpread(0.5)
   )
  
-  let signal = saw //.mix(saw.range(-1, 1), 1.0)
+  let signal = saw
     // Simulate plucked string
     .pitchEnvelope(0.5, x => x.adsr(0.001, 0.02, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)

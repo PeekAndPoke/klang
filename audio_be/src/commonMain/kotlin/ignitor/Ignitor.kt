@@ -1153,24 +1153,24 @@ private class LerpIgnitor(
     }
 }
 
-/** Maps `[-1, 1]` → `[lo, hi]` per sample: `lo + (x + 1)·0.5·(hi − lo)`. */
-fun Ignitor.range(lo: Ignitor, hi: Ignitor): Ignitor = RangeIgnitor(this, lo, hi)
+/** Maps `[-1, 1]` → `[from, to]` per sample: `from + (x + 1)·0.5·(to − from)`. */
+fun Ignitor.range(from: Ignitor, to: Ignitor): Ignitor = RangeIgnitor(this, from, to)
 
 private class RangeIgnitor(
     private val upstream: Ignitor,
-    private val lo: Ignitor,
-    private val hi: Ignitor,
+    private val from: Ignitor,
+    private val to: Ignitor,
 ) : Ignitor {
-    private val boundsConst = lo.isBlockConstant && hi.isBlockConstant
+    private val boundsConst = from.isBlockConstant && to.isBlockConstant
 
     override val isBlockConstant: Boolean = upstream.isBlockConstant && boundsConst
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
-        val l = lo.controlRateValueOrNull(freqHz) ?: return null
-        val h = hi.controlRateValueOrNull(freqHz) ?: return null
+        val f = from.controlRateValueOrNull(freqHz) ?: return null
+        val t = to.controlRateValueOrNull(freqHz) ?: return null
 
-        return l + (v + 1.0) * 0.5 * (h - l)
+        return f + (v + 1.0) * 0.5 * (t - f)
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -1178,21 +1178,21 @@ private class RangeIgnitor(
         // scratch renders. Single-const-bound combinatorics deliberately not done — rare shape.
         // Same breach policy as PlusIgnitor (null despite flag -> scratch path below).
         if (boundsConst) {
-            val kl = lo.controlRateValueOrNull(freqHz)
-            val kh = hi.controlRateValueOrNull(freqHz)
+            val kFrom = from.controlRateValueOrNull(freqHz)
+            val kTo = to.controlRateValueOrNull(freqHz)
 
-            if (kl != null && kh != null) {
+            if (kFrom != null && kTo != null) {
                 // Half the span, hoisted for the same reason as `LerpIgnitor`'s `kwInv`. The
                 // re-association is safe: scaling by 0.5 is exact, so `((x+1)·0.5)·span` and
                 // `(x+1)·(span·0.5)` are both ONE rounding of the same real product, and
                 // `ConstantFoldParitySpec` pins this loop against the audio-rate one below.
                 val end = ctx.windowEnd
-                val halfSpan = 0.5 * (kh - kl)
+                val halfSpan = 0.5 * (kTo - kFrom)
 
                 upstream.generate(buffer, freqHz, ctx)
 
                 for (i in ctx.offset until end) {
-                    buffer[i] = kl + (buffer[i] + 1.0) * halfSpan
+                    buffer[i] = kFrom + (buffer[i] + 1.0) * halfSpan
                 }
 
                 return
@@ -1201,70 +1201,24 @@ private class RangeIgnitor(
 
         upstream.generate(buffer, freqHz, ctx)
 
-        ctx.scratchBuffers.use { loBuf ->
-            lo.generate(loBuf, freqHz, ctx)
+        ctx.scratchBuffers.use { fromBuf ->
+            from.generate(fromBuf, freqHz, ctx)
 
-            ctx.scratchBuffers.use { hiBuf ->
+            ctx.scratchBuffers.use { toBuf ->
                 val end = ctx.windowEnd
 
-                hi.generate(hiBuf, freqHz, ctx)
+                to.generate(toBuf, freqHz, ctx)
 
-                // `h − l` is per-sample here, not invariant: both bounds are audio-rate signals.
+                // `t − f` is per-sample here, not invariant: both bounds are audio-rate signals.
                 // The form stays unfactored to match `controlRateValueOrNull` bit-for-bit
                 // (ControlRateScalarParitySpec renders this path as the scalar's oracle).
                 for (i in ctx.offset until end) {
-                    val l = loBuf[i]
-                    val h = hiBuf[i]
+                    val f = fromBuf[i]
+                    val t = toBuf[i]
 
-                    buffer[i] = l + (buffer[i] + 1.0) * 0.5 * (h - l)
+                    buffer[i] = f + (buffer[i] + 1.0) * 0.5 * (t - f)
                 }
             }
-        }
-    }
-}
-
-/** Maps `[0, 1]` → `[-1, 1]` per sample: `x·2 − 1`. */
-fun Ignitor.bipolar(): Ignitor = BipolarIgnitor(this)
-
-private class BipolarIgnitor(private val upstream: Ignitor) : Ignitor {
-    override val isBlockConstant: Boolean = upstream.isBlockConstant
-
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
-
-        return v * 2.0 - 1.0
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.windowEnd
-
-        upstream.generate(buffer, freqHz, ctx)
-
-        for (i in ctx.offset until end) {
-            buffer[i] = buffer[i] * 2.0 - 1.0
-        }
-    }
-}
-
-/** Maps `[-1, 1]` → `[0, 1]` per sample: `(x + 1)·0.5`. */
-fun Ignitor.unipolar(): Ignitor = UnipolarIgnitor(this)
-
-private class UnipolarIgnitor(private val upstream: Ignitor) : Ignitor {
-    override val isBlockConstant: Boolean = upstream.isBlockConstant
-
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
-
-        return (v + 1.0) * 0.5
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.windowEnd
-
-        upstream.generate(buffer, freqHz, ctx)
-
-        for (i in ctx.offset until end) {
-            buffer[i] = (buffer[i] + 1.0) * 0.5
         }
     }
 }

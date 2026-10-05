@@ -20,8 +20,9 @@ class ContinuousPattern private constructor(
     val getValue: (from: Double, to: Double, ctx: QueryContext) -> Double,
 ) : SprudelPattern.FixedWeight {
     companion object {
-        val minKey = QueryContext.Key<Double>("rangeMin")
-        val maxKey = QueryContext.Key<Double>("rangeMax")
+        /** Where a `range` puts the signal's 0 and its 1, set by `range` / `rangex`; the innermost one wins. */
+        val rangeFromKey = QueryContext.Key<Double>("rangeFrom")
+        val rangeToKey = QueryContext.Key<Double>("rangeTo")
 
         operator fun invoke(getValue: (from: Double) -> Double) =
             ContinuousPattern { from, _, _ -> getValue(from) }
@@ -37,8 +38,8 @@ class ContinuousPattern private constructor(
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
 
         val value = getValue(
-            min = ctx.getOrDefault(minKey, 0.0),
-            max = ctx.getOrDefault(maxKey, 1.0),
+            rangeFrom = ctx.getOrDefault(rangeFromKey, 0.0),
+            rangeTo = ctx.getOrDefault(rangeToKey, 1.0),
             from = from.toCycles(),
             to = to.toCycles(),
             ctx = ctx
@@ -70,10 +71,10 @@ class ContinuousPattern private constructor(
     }
 
     /** Creates a new version of this pattern with a transformed value range */
-    internal fun getValue(min: Double, max: Double, from: Double, to: Double, ctx: QueryContext): Double {
+    internal fun getValue(rangeFrom: Double, rangeTo: Double, from: Double, to: Double, ctx: QueryContext): Double {
         val value = getValue(from, to, ctx)
-        // The internal oscillators now produce 0.0 to 1.0.
-        // We map this unipolar value to the target min..max range.
-        return min + (value * (max - min))
+        // The internal oscillators produce 0.0 to 1.0.
+        // We map this value onto the target rangeFrom..rangeTo swing.
+        return rangeFrom + (value * (rangeTo - rangeFrom))
     }
 }

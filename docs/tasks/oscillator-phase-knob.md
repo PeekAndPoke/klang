@@ -49,7 +49,7 @@ through sine partials and a phase offset would be even better."
 The guitar case (maintainer): "you cannot really vibrato the frequency down when playing a string on the guitar";
 a guitar's vibrato goes UP from the fretted note. The concept (first discussed as a `bias` knob, then condensed,
 2026-10-05: "we condense the entire bias knob to one range() function on all three dsl") is ONE word, `range`:
-- **A signal you build yourself** (Ignitor, Katalyst, sprudel): `x.range(lo, hi)` lays the signal's swing onto lo..hi.
+- **A signal you build yourself** (Ignitor, Katalyst, sprudel): `x.range(from, to)` lays the signal's swing onto from..to.
   The other words go (`unipolar` / `bipolar` on the Ignitor side, the sprudel twins and helpers): that cleanup is its
   own task, `docs/tasks/sprudel-signals-range-cleanup.md`.
 - **The vibrato and tremolo doors** hide their LFO, so `range` is a builder knob that shapes that inner LFO in the same

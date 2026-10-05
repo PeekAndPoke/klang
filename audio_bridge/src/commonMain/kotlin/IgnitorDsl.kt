@@ -1176,34 +1176,18 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Maps the inner signal from `[-1, 1]` to `[lo, hi]` per sample.
+     * Maps the inner signal from `[-1, 1]` to `[from, to]` per sample.
      *
-     * Standard LFO scaler. Output = `lo + (inner + 1)·0.5·(hi − lo)`.
+     * Standard LFO scaler. Output = `from + (inner + 1)·0.5·(to − from)`.
      */
     @WireName("range")
     data class Range(
         val inner: IgnitorDsl,
-        val lo: IgnitorDsl,
-        val hi: IgnitorDsl,
+        val from: IgnitorDsl,
+        val to: IgnitorDsl,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); lo.collectParams(out); hi.collectParams(out)
-        }
-    }
-
-    /** Maps the inner signal from `[0, 1]` to `[-1, 1]` per sample. */
-    @WireName("bipolar")
-    data class Bipolar(val inner: IgnitorDsl) : IgnitorDsl {
-        override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out)
-        }
-    }
-
-    /** Maps the inner signal from `[-1, 1]` to `[0, 1]` per sample. */
-    @WireName("unipolar")
-    data class Unipolar(val inner: IgnitorDsl) : IgnitorDsl {
-        override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out)
+            inner.collectParams(out); from.collectParams(out); to.collectParams(out)
         }
     }
 
@@ -2247,14 +2231,8 @@ fun IgnitorDsl.tanh() = IgnitorDsl.Tanh(inner = this)
 /** Linear interpolation: `this·(1−t) + other·t`. */
 fun IgnitorDsl.lerp(other: IgnitorDsl, t: IgnitorDsl) = IgnitorDsl.Lerp(left = this, right = other, t = t)
 
-/** Maps this signal from `[-1, 1]` to `[lo, hi]` per sample. */
-fun IgnitorDsl.range(lo: IgnitorDsl, hi: IgnitorDsl) = IgnitorDsl.Range(inner = this, lo = lo, hi = hi)
-
-/** Maps this signal from `[0, 1]` to `[-1, 1]` per sample. */
-fun IgnitorDsl.bipolar() = IgnitorDsl.Bipolar(inner = this)
-
-/** Maps this signal from `[-1, 1]` to `[0, 1]` per sample. */
-fun IgnitorDsl.unipolar() = IgnitorDsl.Unipolar(inner = this)
+/** Maps this signal from `[-1, 1]` to `[from, to]` per sample; where the swing sits: the script door `range`. */
+fun IgnitorDsl.range(from: IgnitorDsl, to: IgnitorDsl) = IgnitorDsl.Range(inner = this, from = from, to = to)
 
 /** Per-sample floor. */
 fun IgnitorDsl.floor() = IgnitorDsl.Floor(inner = this)

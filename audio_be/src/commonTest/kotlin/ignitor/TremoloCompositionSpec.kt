@@ -126,7 +126,7 @@ class TremoloCompositionSpec : StringSpec({
     fun law(dry: DoubleArray, osc: DoubleArray, depth: Double): DoubleArray =
         DoubleArray(dry.size) { i -> dry[i] * (1.0 - depth * (1.0 - (osc[i] + 1.0) / 2.0)) }
 
-    // Floating-point level: `range` computes `lo + (x + 1) * halfSpan`, the law `1 - d * (1 - (x + 1) / 2)`.
+    // Floating-point level: `range` computes `from + (x + 1) * halfSpan`, the law `1 - d * (1 - (x + 1) / 2)`.
     val tolerance = 1e-12
 
     // ── THE LAW, as a relation ───────────────────────────────────────────────────────────────────

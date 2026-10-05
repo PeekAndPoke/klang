@@ -10,38 +10,38 @@ import io.peekandpoke.klang.script.parser.KlangScriptParser
 
 class DirectParserTest : StringSpec({
 
-    "Parse: just sine2" {
-        val code = "sine2"
+    "Parse: just lfo" {
+        val code = "lfo"
         val ast = KlangScriptParser.parse(code, "test")
         println("✓ Parsed: $code")
     }
 
-    "Parse: sine2.prop" {
-        val code = "sine2.prop"
+    "Parse: lfo.prop" {
+        val code = "lfo.prop"
         val ast = KlangScriptParser.parse(code, "test")
         println("✓ Parsed: $code")
     }
 
-    "Parse: sine2.fromBipolar" {
-        val code = "sine2.fromBipolar"
+    "Parse: lfo.shifted" {
+        val code = "lfo.shifted"
         val ast = KlangScriptParser.parse(code, "test")
         println("✓ Parsed: $code")
     }
 
-    "Parse: sine2.fromBipolar()" {
-        val code = "sine2.fromBipolar()"
+    "Parse: lfo.shifted()" {
+        val code = "lfo.shifted()"
         val ast = KlangScriptParser.parse(code, "test")
         println("✓ Parsed: $code")
     }
 
-    "Parse: sine2.fromBipolar().range" {
-        val code = "sine2.fromBipolar().range"
+    "Parse: lfo.shifted().range" {
+        val code = "lfo.shifted().range"
         val ast = KlangScriptParser.parse(code, "test")
         println("✓ Parsed: $code")
     }
 
-    "Parse: sine2.fromBipolar().range(0.1, 0.9)" {
-        val code = "sine2.fromBipolar().range(0.1, 0.9)"
+    "Parse: lfo.shifted().range(0.1, 0.9)" {
+        val code = "lfo.shifted().range(0.1, 0.9)"
         val ast = KlangScriptParser.parse(code, "test")
         println("✓ Parsed: $code")
     }

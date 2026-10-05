@@ -13,7 +13,9 @@ record), and put the narrative in the task record, which gets archived. The full
   production builds; do not re-introduce a parser combinator library.
 - **Language**: literals, operators including `===`, arrow functions, `let` / `const`, objects, arrays,
   `if` / `else` as an expression, `while` / `do-while` / `for`, `break` / `continue`, template literals,
-  named arguments (`name = value`), imports and exports including `export name = expr`. The status per
+  named arguments (`name = value`), imports and exports including `export name = expr`. `from` and `as` are
+  contextual keywords, as in JavaScript: keywords only inside an import or export, ordinary names everywhere else
+  (`range(from = 1, to = 2)`, guard `ContextualImportKeywordsTest`). The status per
   feature is `ref/feature-catalog.md` and `language-features/NN-*.md`.
 - **Module split**: this module is the language and runtime (`klangScriptEngine()` builds a bare engine);
   the stdlib (`Ignitor` / `Ign`, `Katalyst` / `Kat`, `Math`, `Object`, `console`, the value-type extensions) and `klangScript()`
@@ -115,3 +117,8 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-04: the stdlib's `export { ... }` block deleted (it governed nothing: a native cannot be exported);
   `import * from "stdlib"` loads every stdlib name, a selective import of it binds nothing (`StdLibScopeSpec`,
   `docs/tasks-archive/2026-10/20261004-stdlib-export-block.md`).
+- 2026-10-05: the Ignitor doors `unipolar()` / `bipolar()` removed, `range` is the one word for a swing; a sprudel object
+  that IS a pattern (the signals) takes `@KlangScript.Invoke` and keeps its pattern methods through the `isInstance` walk
+  (`docs/tasks/sprudel-signals-range-cleanup.md`).
+- 2026-10-05: `from` and `as` are contextual keywords (lexed as identifiers, read as keywords only in an import or
+  export), so the range values can be named `from` / `to` (`docs/tasks/sprudel-signals-range-cleanup.md`).

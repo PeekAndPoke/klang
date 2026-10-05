@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.script.intel
 
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.docs.receiverChain
+import io.peekandpoke.klang.script.docs.typeMatches
 import io.peekandpoke.klang.script.runtime.NativeOperatorNames
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangDecl
@@ -151,10 +153,16 @@ private fun KlangSymbol.toAliasSuggestion(alias: String): CompletionSuggestion {
 }
 
 private fun KlangSymbol.toMemberSuggestion(receiverType: KlangType): CompletionSuggestion {
-    val matchingVariant = variants.firstOrNull { variant ->
-        when (variant) {
-            is KlangCallable -> variant.receiver?.simpleName == receiverType.simpleName
-            is KlangProperty -> variant.owner?.simpleName == receiverType.simpleName
+    // Most specific first, through the supertypes, like `callableForReceiver`: a method declared on a base type
+    // (`SprudelPattern.slow`) shows as a function with its docs on an object that IS one (`perlin.`).
+    val matchingVariant = receiverChain(receiverType).firstNotNullOfOrNull { candidate ->
+        variants.firstOrNull { variant ->
+            val owner = when (variant) {
+                is KlangCallable -> variant.receiver
+                is KlangProperty -> variant.owner
+            }
+
+            typeMatches(owner, candidate)
         }
     }
 

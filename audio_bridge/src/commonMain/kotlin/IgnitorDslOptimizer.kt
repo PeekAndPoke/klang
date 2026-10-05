@@ -427,14 +427,15 @@ private fun IgnitorDsl.isControlRate(): Boolean = when (this) {
     is IgnitorDsl.Recip -> inner.isControlRate()
     is IgnitorDsl.Sign -> inner.isControlRate()
     is IgnitorDsl.Tanh -> inner.isControlRate()
-    is IgnitorDsl.Bipolar -> inner.isControlRate()
-    is IgnitorDsl.Unipolar -> inner.isControlRate()
     is IgnitorDsl.Floor -> inner.isControlRate()
     is IgnitorDsl.Ceil -> inner.isControlRate()
     is IgnitorDsl.Round -> inner.isControlRate()
     is IgnitorDsl.Frac -> inner.isControlRate()
     is IgnitorDsl.Clamp -> inner.isControlRate() && lo.isControlRate() && hi.isControlRate()
     is IgnitorDsl.Lerp -> left.isControlRate() && right.isControlRate() && t.isControlRate()
+    // the LFO scaler: `range(0, 1)` and `mul(2).minus(1)` spell the retired `unipolar()` / `bipolar()`, which were
+    // control-rate over a control-rate inner, so the spelling that replaced them folds the same (2026-10-05)
+    is IgnitorDsl.Range -> inner.isControlRate() && from.isControlRate() && to.isControlRate()
     is IgnitorDsl.Affine -> inner.isControlRate() && pre.isControlRate() && mul.isControlRate() && add.isControlRate()
     else -> false
 }

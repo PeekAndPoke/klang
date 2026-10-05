@@ -152,7 +152,7 @@ class SprudelDocsSpec : StringSpec({
         doc.tags shouldContain "oscillator"
 
         val variant = doc.variants.filterIsInstance<KlangProperty>().first()
-        variant.signature shouldBe "val sine: SprudelPattern"
+        variant.signature shouldBe "val sine: sine"
     }
 
     "sine KlangProperty variant should have samples parsed from fenced KlangScript blocks" {
@@ -236,9 +236,11 @@ class SprudelDocsSpec : StringSpec({
 
         variant.name shouldBe "sine"
         variant.owner shouldBe null
-        variant.type.simpleName shouldBe "SprudelPattern"
+        // The signal is an object (its call form is the range shorthand) that IS a pattern
+        variant.type.simpleName shouldBe "sine"
+        variant.type.supertypes.map { it.simpleName } shouldContain "SprudelPattern"
 
         // Rendered signature has no parens
-        variant.signature shouldBe "val sine: SprudelPattern"
+        variant.signature shouldBe "val sine: sine"
     }
 })

@@ -20,57 +20,19 @@ import io.peekandpoke.klang.sprudel.sampleAt
 
 class LangContinuousPatternsSpec : StringSpec({
 
-    "toBipolar dsl interface" {
-        dslInterfaceTests(
-            "pattern.toBipolar()" to
-                    sine.toBipolar(),
-            "script pattern.toBipolar()" to
-                    SprudelPattern.compile("sine.toBipolar()"),
-            "string.toBipolar()" to
-                    "0.5".toBipolar(),
-            "script string.toBipolar()" to
-                    SprudelPattern.compile(""""0.5".toBipolar()"""),
-            "toBipolar()" to
-                    sine.apply(toBipolar()),
-            "script toBipolar()" to
-                    SprudelPattern.compile("sine.apply(toBipolar())"),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-        }
-    }
-
-    "fromBipolar dsl interface" {
-        dslInterfaceTests(
-            "pattern.fromBipolar()" to
-                    sine2.fromBipolar(),
-            "script pattern.fromBipolar()" to
-                    SprudelPattern.compile("sine2.fromBipolar()"),
-            "string.fromBipolar()" to
-                    "-0.5".fromBipolar(),
-            "script string.fromBipolar()" to
-                    SprudelPattern.compile(""""-0.5".fromBipolar()"""),
-            "fromBipolar()" to
-                    sine2.apply(fromBipolar()),
-            "script fromBipolar()" to
-                    SprudelPattern.compile("sine2.apply(fromBipolar())"),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-        }
-    }
-
     "range dsl interface" {
         dslInterfaceTests(
-            "pattern.range(min, max)" to
+            "pattern.range(from, to)" to
                     sine.range(0.0, 100.0),
-            "script pattern.range(min, max)" to
+            "script pattern.range(from, to)" to
                     SprudelPattern.compile("sine.range(0, 100)"),
-            "string.range(min, max)" to
+            "string.range(from, to)" to
                     "0.5".range(0.0, 100.0),
-            "script string.range(min, max)" to
+            "script string.range(from, to)" to
                     SprudelPattern.compile(""""0.5".range(0, 100)"""),
-            "range(min, max)" to
+            "range(from, to)" to
                     sine.apply(range(0.0, 100.0)),
-            "script range(min, max)" to
+            "script range(from, to)" to
                     SprudelPattern.compile("sine.apply(range(0, 100))"),
         ) { _, events ->
             events.shouldNotBeEmpty()
@@ -79,37 +41,18 @@ class LangContinuousPatternsSpec : StringSpec({
 
     "rangex dsl interface" {
         dslInterfaceTests(
-            "pattern.rangex(min, max)" to
+            "pattern.rangex(from, to)" to
                     sine.rangex(100.0, 1000.0),
-            "script pattern.rangex(min, max)" to
+            "script pattern.rangex(from, to)" to
                     SprudelPattern.compile("sine.rangex(100, 1000)"),
-            "string.rangex(min, max)" to
+            "string.rangex(from, to)" to
                     "0.5".rangex(100.0, 1000.0),
-            "script string.rangex(min, max)" to
+            "script string.rangex(from, to)" to
                     SprudelPattern.compile(""""0.5".rangex(100, 1000)"""),
-            "rangex(min, max)" to
+            "rangex(from, to)" to
                     sine.apply(rangex(100.0, 1000.0)),
-            "script rangex(min, max)" to
+            "script rangex(from, to)" to
                     SprudelPattern.compile("sine.apply(rangex(100, 1000))"),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-        }
-    }
-
-    "range2 dsl interface" {
-        dslInterfaceTests(
-            "pattern.range2(min, max)" to
-                    sine2.range2(0.0, 100.0),
-            "script pattern.range2(min, max)" to
-                    SprudelPattern.compile("sine2.range2(0, 100)"),
-            "string.range2(min, max)" to
-                    "0.5".range2(0.0, 100.0),
-            "script string.range2(min, max)" to
-                    SprudelPattern.compile(""""0.5".range2(0, 100)"""),
-            "range2(min, max)" to
-                    sine2.apply(range2(0.0, 100.0)),
-            "script range2(min, max)" to
-                    SprudelPattern.compile("sine2.apply(range2(0, 100))"),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -235,39 +178,6 @@ class LangContinuousPatternsSpec : StringSpec({
         }
     }
 
-    "sine2 oscillator" {
-        withClue("sine2 in kotlin") {
-            val pattern = sine2
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("sine2 with range in kotlin") {
-            val pattern = sine2.range(0.0, 100.0)
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-
-        withClue("sine2 compiled") {
-            val pattern = SprudelPattern.compile("sine2")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("sine2 compiled with range") {
-            val pattern = SprudelPattern.compile("sine2.range(0, 100)")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-    }
-
     "cosine oscillator" {
         withClue("cosine in kotlin") {
             val pattern = cosine
@@ -296,32 +206,41 @@ class LangContinuousPatternsSpec : StringSpec({
         }
     }
 
-    "cosine2 oscillator" {
-        withClue("cosine2 in kotlin") {
-            val pattern = cosine2
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
+    "cosine is sine.early(0.25), exactly: bare, ranged, through the shorthand and on the script door" {
+        val shifted = sine.early(0.25)
+        val points = listOf(0.0, 0.1, 0.125, 0.2, 0.25, 1.0 / 3.0, 0.5, 0.7, 0.75, 0.9, 1.0, 1.6, 2.25, 3.875)
+
+        fun SprudelPattern.valuesAt(t: Double): List<Double> =
+            queryArc(t, t + EPSILON).map { it.data.value?.asDouble.shouldNotBeNull() }
+
+        val cases = listOf(
+            Triple("bare", cosine, shifted),
+            Triple("range(200, 400)", cosine.range(200, 400), shifted.range(200, 400)),
+            Triple("range(1, -1)", cosine.range(1, -1), shifted.range(1, -1)),
+            Triple("shorthand cosine(200, 400)", cosine(200, 400), shifted.range(200, 400)),
+            Triple("script bare", SprudelPattern.compile("cosine")!!, SprudelPattern.compile("sine.early(0.25)")!!),
+            Triple(
+                "script shorthand",
+                SprudelPattern.compile("cosine(200, 400)")!!,
+                SprudelPattern.compile("sine.early(0.25).range(200, 400)")!!,
+            ),
+        )
+
+        for ((label, actual, expected) in cases) {
+            withClue(label) {
+                for (t in points) {
+                    withClue("t = $t") {
+                        val values = expected.valuesAt(t)
+                        values.shouldNotBeEmpty()
+                        actual.valuesAt(t) shouldBe values
+                    }
+                }
+            }
         }
 
-        withClue("cosine2 with range in kotlin") {
-            val pattern = cosine2.range(0.0, 100.0)
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-
-        withClue("cosine2 compiled") {
-            val pattern = SprudelPattern.compile("cosine2")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("cosine2 compiled with range") {
-            val pattern = SprudelPattern.compile("cosine2.range(0, 100)")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
+        // Not a vacuous match: cosine is not sine, it is a quarter cycle ahead of it
+        cosine.valuesAt(0.0) shouldNotBe sine.valuesAt(0.0)
+        cosine.valuesAt(0.0) shouldBe sine.valuesAt(0.25)
     }
 
     "saw oscillator" {
@@ -350,85 +269,30 @@ class LangContinuousPatternsSpec : StringSpec({
         }
     }
 
-    "saw2 oscillator" {
-        withClue("saw2 in kotlin") {
-            val pattern = saw2
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("saw2 with range in kotlin") {
-            val pattern = saw2.range(0.0, 100.0)
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
-        }
-
-        withClue("saw2 compiled") {
-            val pattern = SprudelPattern.compile("saw2")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-
-        withClue("saw2 compiled with range") {
-            val pattern = SprudelPattern.compile("saw2.range(0, 100)")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
-        }
-    }
-
-    "isaw oscillator" {
-        withClue("isaw in kotlin") {
-            val pattern = isaw
+    "a falling saw is saw.range(1, 0)" {
+        withClue("saw.range(1, 0) in kotlin") {
+            val pattern = saw.range(1.0, 0.0)
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
         }
 
-        withClue("isaw with range in kotlin") {
-            val pattern = isaw.range(0.0, 10.0)
+        withClue("saw.range(10, 0) in kotlin") {
+            val pattern = saw.range(10.0, 0.0)
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (5.0 plusOrMinus EPSILON)
         }
 
-        withClue("isaw compiled") {
-            val pattern = SprudelPattern.compile("isaw")!!
+        withClue("saw.range(1, 0) compiled") {
+            val pattern = SprudelPattern.compile("saw.range(1, 0)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
         }
 
-        withClue("isaw compiled with range") {
-            val pattern = SprudelPattern.compile("isaw.range(0, 10)")!!
+        withClue("saw(10, 0) compiled") {
+            val pattern = SprudelPattern.compile("saw(10, 0)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (5.0 plusOrMinus EPSILON)
-            pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-        }
-    }
-
-    "isaw2 oscillator" {
-        withClue("isaw2 in kotlin") {
-            val pattern = isaw2
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("isaw2 with range in kotlin") {
-            val pattern = isaw2.range(-10.0, 10.0)
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-
-        withClue("isaw2 compiled") {
-            val pattern = SprudelPattern.compile("isaw2")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-
-        withClue("isaw2 compiled with range") {
-            val pattern = SprudelPattern.compile("isaw2.range(-10, 10)")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
         }
     }
@@ -460,87 +324,31 @@ class LangContinuousPatternsSpec : StringSpec({
         }
     }
 
-    "tri2 oscillator" {
-        withClue("tri2 in kotlin") {
-            val pattern = tri2
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-
-        withClue("tri2 with range in kotlin") {
-            val pattern = tri2.range(-10.0, 10.0)
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-        }
-
-        withClue("tri2 compiled") {
-            val pattern = SprudelPattern.compile("tri2")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("tri2 compiled with range") {
-            val pattern = SprudelPattern.compile("tri2.range(-10, 10)")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-        }
-    }
-
-    "itri oscillator" {
-        withClue("itri in kotlin") {
-            val pattern = itri
+    "an inverted triangle is tri.range(1, 0)" {
+        withClue("tri.range(1, 0) in kotlin") {
+            val pattern = tri.range(1.0, 0.0)
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
         }
 
-        withClue("itri with range in kotlin") {
-            val pattern = itri.range(0.0, 100.0)
+        withClue("tri.range(100, 0) in kotlin") {
+            val pattern = tri.range(100.0, 0.0)
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         }
 
-        withClue("itri compiled") {
-            val pattern = SprudelPattern.compile("itri")!!
+        withClue("tri.range(1, 0) compiled") {
+            val pattern = SprudelPattern.compile("tri.range(1, 0)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         }
 
-        withClue("itri compiled with range") {
-            val pattern = SprudelPattern.compile("itri.range(0, 100)")!!
+        withClue("tri(100, 0) compiled") {
+            val pattern = SprudelPattern.compile("tri(100, 0)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-    }
-
-    "itri2 oscillator" {
-        withClue("itri2 in kotlin") {
-            val pattern = itri2
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-
-        withClue("itri2 with range in kotlin") {
-            val pattern = itri2.range(-10.0, 10.0)
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
-        }
-
-        withClue("itri2 compiled") {
-            val pattern = SprudelPattern.compile("itri2")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("itri2 compiled with range") {
-            val pattern = SprudelPattern.compile("itri2.range(-10, 10)")!!
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
         }
     }
 
@@ -566,32 +374,6 @@ class LangContinuousPatternsSpec : StringSpec({
         withClue("square compiled with range") {
             val pattern = SprudelPattern.compile("square.range(0, 10)")!!
             pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-        }
-    }
-
-    "square2 oscillator" {
-        withClue("square2 in kotlin") {
-            val pattern = square2
-            pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("square2 with range in kotlin") {
-            val pattern = square2.range(-10.0, 10.0)
-            pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
-        }
-
-        withClue("square2 compiled") {
-            val pattern = SprudelPattern.compile("square2")!!
-            pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-        }
-
-        withClue("square2 compiled with range") {
-            val pattern = SprudelPattern.compile("square2.range(-10, 10)")!!
-            pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
         }
     }
@@ -669,49 +451,6 @@ class LangContinuousPatternsSpec : StringSpec({
         max.shouldBeBetween(0.65, 1.0, 0.0)
     }
 
-    "perlin2 oscillator: same seed produces same values" {
-        val p1 = perlin2.seed(42)
-        val p2 = perlin2.seed(42)
-
-        val val1 = p1.queryArc(0.5, 0.6)[0].data.value?.asDouble
-        val val2 = p2.queryArc(0.5, 0.6)[0].data.value?.asDouble
-
-        val1 shouldBe val2
-    }
-
-    "perlin2 oscillator: different seeds produce different values" {
-        val p1 = perlin2.seed(1)
-        val p2 = perlin2.seed(2)
-
-        val val1 = p1.queryArc(0.1, 0.2)[0].data.value?.asDouble
-        val val2 = p2.queryArc(0.1, 0.2)[0].data.value?.asDouble
-
-        val1 shouldNotBe val2
-    }
-
-    "perlin2 oscillator: output range in DSL is -1.0 to 1.0" {
-        val p = perlin2.seed(55)
-        var min = 1.0
-        var max = -1.0
-
-        for (i in 0..1000) {
-            val t = i * 0.1
-            val events = p.queryArc(t, t + EPSILON)
-            if (events.isNotEmpty()) {
-                val v = events[0].data.value?.asDouble ?: 0.0
-                // Should be strictly within -1..1 (bipolar)
-                v.shouldBeBetween(-1.0, 1.0, 0.0001)
-
-                if (v < min) min = v
-                if (v > max) max = v
-            }
-        }
-
-        // Ensure it covers a good part of the range
-        min.shouldBeBetween(-1.0, -0.3, 0.0)
-        max.shouldBeBetween(0.3, 1.0, 0.0)
-    }
-
     "berlin oscillator: same seed produces same values" {
         val p1 = berlin.seed(99)
         val p2 = berlin.seed(99)
@@ -765,49 +504,6 @@ class LangContinuousPatternsSpec : StringSpec({
         max.shouldBeBetween(0.65, 1.0, 0.0)
     }
 
-    "berlin2 oscillator: same seed produces same values" {
-        val p1 = berlin2.seed(99)
-        val p2 = berlin2.seed(99)
-
-        val val1 = p1.queryArc(0.7, 0.8)[0].data.value?.asDouble
-        val val2 = p2.queryArc(0.7, 0.8)[0].data.value?.asDouble
-
-        val1 shouldBe val2
-    }
-
-    "berlin2 oscillator: different seeds produce different values" {
-        val p1 = berlin2.seed(1)
-        val p2 = berlin2.seed(2)
-
-        val val1 = p1.queryArc(0.1, 0.2)[0].data.value?.asDouble
-        val val2 = p2.queryArc(0.1, 0.2)[0].data.value?.asDouble
-
-        val1 shouldNotBe val2
-    }
-
-    "berlin2 oscillator: output range in DSL is -1.0 to 1.0" {
-        val p = berlin2.seed(66)
-        var min = 1.0
-        var max = -1.0
-
-        for (i in 0..1000) {
-            val t = i * 0.1
-            val events = p.queryArc(t, t + EPSILON)
-            if (events.isNotEmpty()) {
-                val v = events[0].data.value?.asDouble ?: 0.0
-                // Should be strictly within -1..1 (bipolar)
-                v.shouldBeBetween(-1.0, 1.0, 0.0001)
-
-                if (v < min) min = v
-                if (v > max) max = v
-            }
-        }
-
-        // Ensure it covers a good part of the range
-        min.shouldBeBetween(-1.0, -0.3, 0.0)
-        max.shouldBeBetween(0.3, 1.0, 0.0)
-    }
-
     "rangex() with exponential scaling" {
         withClue("rangex in kotlin") {
             // rangex uses exponential scaling: log(min) to log(max)
@@ -825,27 +521,6 @@ class LangContinuousPatternsSpec : StringSpec({
 
             val expected = kotlin.math.sqrt(100.0 * 1000.0)
             events[0].data.value?.asDouble shouldBe (expected plusOrMinus 1.0)
-        }
-    }
-
-    "range2() with bipolar input" {
-        withClue("range2 in kotlin") {
-            // sine2 goes from -1 to 1, range2 should scale it to 0-100
-            val pattern = sine2.range2(0.0, 100.0)
-
-            // At phase 0, sine2 is 0 (middle), should map to 50
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
-            // At phase 0.25, sine2 is 1, should map to 100
-            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
-            // At phase 0.75, sine2 is -1, should map to 0
-            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        }
-
-        withClue("range2 compiled") {
-            val pattern = SprudelPattern.compile("sine2.range2(500, 4000)")!!
-
-            // At phase 0, sine2 is 0, should map to middle value 2250
-            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (2250.0 plusOrMinus EPSILON)
         }
     }
 
@@ -1110,38 +785,6 @@ class LangContinuousPatternsSpec : StringSpec({
         }
     }
 
-    "apply(toBipolar().range2(-10, 10)) chains toBipolar and range2" {
-        // sine at t=0: 0.5 -> toBipolar -> 0.0 -> range2(-10, 10) -> 0.0 (midpoint)
-        // sine at t=0.25: 1.0 -> toBipolar -> 1.0 -> range2(-10, 10) -> 10.0
-        val p = sine.apply(toBipolar().range2(-10.0, 10.0))
-
-        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus 0.1)
-        p.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus 0.1)
-    }
-
-    "script apply(toBipolar()) works in compiled code" {
-        // sine at t=0: 0.5 -> toBipolar -> 0.0
-        val p = SprudelPattern.compile("sine.apply(toBipolar())")!!
-
-        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus 0.01)
-    }
-
-    "apply(fromBipolar().range(0, 100)) chains fromBipolar and range" {
-        // sine2 at t=0: 0.0 -> fromBipolar -> 0.5 -> range(0, 100) -> 50.0
-        // sine2 at t=0.25: 1.0 -> fromBipolar -> 1.0 -> range(0, 100) -> 100.0
-        val p = sine2.apply(fromBipolar().range(0.0, 100.0))
-
-        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus 0.1)
-        p.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus 0.1)
-    }
-
-    "script apply(fromBipolar()) works in compiled code" {
-        // sine2 at t=0: 0.0 -> fromBipolar -> 0.5
-        val p = SprudelPattern.compile("sine2.apply(fromBipolar())")!!
-
-        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus 0.01)
-    }
-
     "PatternMapperFn.range() chains as mapper" {
         // ContextModifierPattern chains inner-first: range(0,10) is inner, range(0,20) is outer.
         // At query time inner context (min=0, max=10) overrides outer (min=0, max=20).
@@ -1158,13 +801,6 @@ class LangContinuousPatternsSpec : StringSpec({
         val expected = kotlin.math.sqrt(100.0 * 1000.0)
 
         p.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (expected plusOrMinus 1.0)
-    }
-
-    "PatternMapperFn.range2() chains as mapper" {
-        // sine2 at t=0: 0.0 -> range2(0, 100) -> fromBipolar: (0+1)/2=0.5 -> range(0,100): 50.0
-        val p = sine2.apply(range2(0.0, 100.0))
-
-        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus 0.1)
     }
 
     "note(\"a\").lpf(sine.range(200, 2000)) - apply continuous pattern to filter cutoff" {

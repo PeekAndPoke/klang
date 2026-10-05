@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "ClassName", "Detekt:TooManyFunctions")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -12,6 +12,7 @@ import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
@@ -74,17 +75,46 @@ fun steady(value: Number, @Suppress("unused") callInfo: CallInfo? = null): Sprud
     return applySignal { _ -> v }
 }
 
-// -- sine / sine2 -----------------------------------------------------------------------------------------------------
-
-private val sineBase: SprudelPattern by lazy { applySignal { t -> (sin(t * 2.0 * PI) + 1.0) / 2.0 } }
-private val sine2Base: SprudelPattern by lazy { sineBase.toBipolar() }
+// -- the signals ------------------------------------------------------------------------------------------------------
 
 /**
- * Sine oscillator — unscaled continuous values in `0..1`.
+ * A sprudel signal: a continuous pattern that swings between `0` and `1`, and the object behind its script name.
+ *
+ * Bare, the object IS the pattern (`perlin.slow(8)`, `.pan(perlin)`), every pattern method and door takes it as it
+ * is. Called with two values it is [range]: `perlin(200, 400)` is exactly `perlin.range(200, 400)`. Both values are
+ * required, because `Ignitor.sine(200)` means 200 Hz on the Ignitor side and a one-value `sine(200)` here would be a
+ * trap; a call with fewer is a [KlangScriptArgumentError] naming the fix, on both doors.
+ *
+ * Each signal object declares its own `@KlangScript.Invoke` member (KSP reads the annotation on the object) and
+ * hands it to [ranged]. Decided 2026-10-05, `docs/tasks/sprudel-signals-range-cleanup.md`.
+ */
+sealed class SprudelSignal(private val name: String, source: SprudelPattern) : SprudelPattern by source {
+
+    /** [range] with both values, or the script error that names the fix. */
+    protected fun ranged(from: Number?, to: Number?, callInfo: CallInfo?): SprudelPattern {
+        if (from == null || to == null) {
+            throw KlangScriptArgumentError(
+                functionName = name,
+                message = "a signal's range takes two values: $name(from, to)",
+                location = callInfo?.callLocation,
+            )
+        }
+
+        return range(from, to, callInfo)
+    }
+}
+
+// -- sine -------------------------------------------------------------------------------------------------------------
+
+private val sineBase: SprudelPattern by lazy { applySignal { t -> (sin(t * 2.0 * PI) + 1.0) / 2.0 } }
+
+/**
+ * Sine oscillator: unscaled continuous values in `0..1`.
  *
  * Starts at `0.5` at phase 0, rises to `1.0` at the quarter cycle, falls back through `0.5`
  * at the half cycle, reaches `0.0` at three-quarters, and returns to `0.5` at cycle end.
- * For a centred (`-1..1`) LFO use [sine2]. Use [range] to map to a target parameter range.
+ * Use [range] to map it to a target range, or call it: `sine(200, 2000)` is `sine.range(200, 2000)`.
+ * For a swing centred on 0 use `sine(-1, 1)`.
  *
  * ```KlangScript(Playable)
  * sine.range(200, 2000).freq().segment(128)  // sinusoidal frequency sweep
@@ -97,40 +127,37 @@ private val sine2Base: SprudelPattern by lazy { sineBase.toBipolar() }
  * @category continuous
  * @tags sine, oscillator, lfo, continuous, wave
  */
-@KlangScript.Constant
-val sine: SprudelPattern = sineBase
+@KlangScript.Library("sprudel")
+@KlangScript.Object("sine")
+object sine : SprudelSignal("sine", sineBase) {
+
+    /**
+     * The shorthand for [range]: `sine(from, to)` is exactly `sine.range(from, to)`.
+     *
+     * Both values are required; `sine` alone is the signal itself, swinging between `0` and `1`.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*8").s("saw").lpf(sine(400, 2000).slow(4))  // the filter opens and closes over four cycles
+     * ```
+     *
+     * @param from Required. The value where the signal is at its low end.
+     * @param to Required. The value where the signal is at its high end.
+     * @return The signal swinging between [from] and [to].
+     */
+    @KlangScript.Invoke
+    operator fun invoke(from: Number? = null, to: Number? = null, callInfo: CallInfo? = null): SprudelPattern =
+        ranged(from, to, callInfo)
+}
+
+// -- cosine -----------------------------------------------------------------------------------------------------------
 
 /**
- * Bipolar sine oscillator — unscaled continuous values in `-1..1`.
+ * Cosine oscillator: unscaled continuous values in `0..1`. It is `sine.early(0.25)`, exactly.
  *
- * Identical to `sine.toBipolar()`. Use [range2] to scale to any target range.
- *
- * ```KlangScript(Playable)
- * sine2.range2(200, 2000).freq().segment(128)  // bipolar sine frequency sweep
- * ```
- *
- * ```KlangScript(Playable)
- * sine2.range2(40, 60).note().segment(128)  // pitch vibrato in semitones
- * ```
- *
- * @category continuous
- * @tags sine2, sine, oscillator, lfo, bipolar, continuous, wave
- */
-@KlangScript.Constant
-val sine2: SprudelPattern = sine2Base
-
-// -- cosine / cosine2 -------------------------------------------------------------------------------------------------
-
-private val cosineBase: SprudelPattern by lazy { applySignal { t -> (sin(t * 2.0 * PI + PI / 2.0) + 1.0) / 2.0 } }
-private val cosine2Base: SprudelPattern by lazy { cosineBase.toBipolar() }
-
-/**
- * Cosine oscillator — unscaled continuous values in `0..1`.
- *
- * Like [sine] but shifted by a quarter cycle: starts at `1.0` at phase 0, falls to `0.5` at the
+ * [sine] a quarter cycle earlier: starts at `1.0` at phase 0, falls to `0.5` at the
  * quarter cycle, reaches `0.0` at the half cycle, and rises back to `1.0` at cycle end.
- * Use [range] to map to a target parameter range.
- *
+ * It is built that way, so `sine` is the one source of the wave and the two never drift apart.
+ * Use [range] to map it to a target range, or call it: `cosine(200, 2000)` is `cosine.range(200, 2000)`.
  *
  * ```KlangScript(Playable)
  * cosine.range(200, 2000).freq().segment(128)  // cosine frequency sweep
@@ -142,39 +169,37 @@ private val cosine2Base: SprudelPattern by lazy { cosineBase.toBipolar() }
  * @category continuous
  * @tags cosine, oscillator, lfo, continuous, wave
  */
-@KlangScript.Constant
-val cosine: SprudelPattern = cosineBase
+@KlangScript.Library("sprudel")
+@KlangScript.Object("cosine")
+object cosine : SprudelSignal("cosine", sine.early(0.25)) {
 
-/**
- * Bipolar cosine oscillator — unscaled continuous values in `-1..1`.
- *
- * Identical to `cosine.toBipolar()`. Use [range2] to scale to any target range.
- *
- *
- * ```KlangScript(Playable)
- * cosine2.range2(200, 2000).freq().segment(128)  // bipolar cosine frequency sweep
- * ```
- *
- * ```KlangScript(Playable)
- * cosine2.range2(-1, 1).pan().segment(128)  // stereo panning with bipolar cosine
- * ```
- * @category continuous
- * @tags cosine2, cosine, oscillator, lfo, bipolar, continuous, wave
- */
-@KlangScript.Constant
-val cosine2: SprudelPattern = cosine2Base
+    /**
+     * The shorthand for [range]: `cosine(from, to)` is exactly `cosine.range(from, to)`.
+     *
+     * Both values are required; `cosine` alone is the signal itself, swinging between `0` and `1`.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*8").s("saw").pan(cosine(0.2, 0.8).slow(2))  // pans between left and right
+     * ```
+     *
+     * @param from Required. The value where the signal is at its low end.
+     * @param to Required. The value where the signal is at its high end.
+     * @return The signal swinging between [from] and [to].
+     */
+    @KlangScript.Invoke
+    operator fun invoke(from: Number? = null, to: Number? = null, callInfo: CallInfo? = null): SprudelPattern =
+        ranged(from, to, callInfo)
+}
 
-// -- saw / saw2 -------------------------------------------------------------------------------------------------------
+// -- saw --------------------------------------------------------------------------------------------------------------
 
 private val sawBase: SprudelPattern by lazy { applySignal { t -> t % 1.0 } }
-private val saw2Base: SprudelPattern by lazy { sawBase.toBipolar() }
 
 /**
- * Sawtooth oscillator — unscaled continuous values in `0..1`.
+ * Sawtooth oscillator: unscaled continuous values in `0..1`.
  *
  * Resets to `0.0` at the start of each cycle and rises linearly to `1.0` by the end.
- * Use [range] to map to a target parameter range.
- *
+ * Use [range] to map it to a target range, or call it: `saw(200, 2000)` is `saw.range(200, 2000)`.
  *
  * ```KlangScript(Playable)
  * saw.range(200, 2000).freq()  // linearly rising frequency sweep per cycle
@@ -186,73 +211,29 @@ private val saw2Base: SprudelPattern by lazy { sawBase.toBipolar() }
  * @category continuous
  * @tags saw, sawtooth, oscillator, lfo, continuous, wave
  */
-@KlangScript.Constant
-val saw: SprudelPattern = sawBase
+@KlangScript.Library("sprudel")
+@KlangScript.Object("saw")
+object saw : SprudelSignal("saw", sawBase) {
 
-/**
- * Bipolar sawtooth oscillator — unscaled continuous values in `-1..1`.
- *
- * Identical to `saw.toBipolar()`. Rising from `-1` to `1` each cycle. Use [range2] to scale.
- *
- *
- * ```KlangScript(Playable)
- * saw2.range2(200, 2000).freq().segment(128)  // bipolar saw frequency sweep
- * ```
- *
- * ```KlangScript(Playable)
- * saw2.range2(40, 60).note().segment(128)  // rising pitch slide per cycle
- * ```
- * @category continuous
- * @tags saw2, saw, sawtooth, oscillator, lfo, bipolar, continuous, wave
- */
-@KlangScript.Constant
-val saw2: SprudelPattern = saw2Base
+    /**
+     * The shorthand for [range]: `saw(from, to)` is exactly `saw.range(from, to)`.
+     *
+     * Both values are required; `saw` alone is the signal itself, swinging between `0` and `1`.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*8").s("saw").lpf(saw(300, 3000))  // the filter opens across every cycle
+     * ```
+     *
+     * @param from Required. The value where the signal is at its low end.
+     * @param to Required. The value where the signal is at its high end.
+     * @return The signal swinging between [from] and [to].
+     */
+    @KlangScript.Invoke
+    operator fun invoke(from: Number? = null, to: Number? = null, callInfo: CallInfo? = null): SprudelPattern =
+        ranged(from, to, callInfo)
+}
 
-// -- isaw / isaw2 -----------------------------------------------------------------------------------------------------
-
-private val isawBase: SprudelPattern by lazy { applySignal { t -> 1.0 - (t % 1.0) } }
-private val isaw2Base: SprudelPattern by lazy { isawBase.toBipolar() }
-
-/**
- * Inverse sawtooth oscillator — unscaled continuous values in `0..1`.
- *
- * Mirror image of [saw]: starts at `1.0` and falls linearly to `0.0` by the end of the cycle.
- * Use [range] to map to a target parameter range.
- *
- *
- * ```KlangScript(Playable)
- * isaw.range(200, 2000).freq().slow(8).segment(64)  // linearly falling frequency sweep per cycle
- * ```
- *
- * ```KlangScript(Playable)
- * isaw.range(0.0, 0.8).gain()  // linearly decreasing gain per cycle
- * ```
- * @category continuous
- * @tags isaw, sawtooth, oscillator, lfo, continuous, wave
- */
-@KlangScript.Constant
-val isaw: SprudelPattern = isawBase
-
-/**
- * Bipolar inverse sawtooth oscillator — unscaled continuous values in `-1..1`.
- *
- * Identical to `isaw.toBipolar()`. Falling from `1` to `-1` each cycle. Use [range2] to scale.
- *
- *
- * ```KlangScript(Playable)
- * isaw2.range2(200, 2000).freq().segment(128)  // descending frequency sweep per cycle
- * ```
- *
- * ```KlangScript(Playable)
- * isaw2.range2(40, 60).note().segment(128)  // descending pitch slide per cycle
- * ```
- * @category continuous
- * @tags isaw2, isaw, sawtooth, oscillator, lfo, bipolar, continuous, wave
- */
-@KlangScript.Constant
-val isaw2: SprudelPattern = isaw2Base
-
-// -- tri / tri2 -------------------------------------------------------------------------------------------------------
+// -- tri --------------------------------------------------------------------------------------------------------------
 
 private val triBase: SprudelPattern by lazy {
     applySignal { t ->
@@ -260,14 +241,12 @@ private val triBase: SprudelPattern by lazy {
         if (phase < 0.5) phase * 2.0 else 2.0 - (phase * 2.0)
     }
 }
-private val tri2Base: SprudelPattern by lazy { triBase.toBipolar() }
 
 /**
- * Triangle oscillator — unscaled continuous values in `0..1`.
+ * Triangle oscillator: unscaled continuous values in `0..1`.
  *
  * Rises linearly `0→1` in the first half of the cycle then falls `1→0` in the second half.
- * Use [range] to map to a target parameter range.
- *
+ * Use [range] to map it to a target range, or call it: `tri(200, 2000)` is `tri.range(200, 2000)`.
  *
  * ```KlangScript(Playable)
  * tri.range(200, 2000).freq().segment(128)  // triangular frequency oscillation
@@ -279,88 +258,38 @@ private val tri2Base: SprudelPattern by lazy { triBase.toBipolar() }
  * @category continuous
  * @tags tri, triangle, oscillator, lfo, continuous, wave
  */
-@KlangScript.Constant
-val tri: SprudelPattern = triBase
+@KlangScript.Library("sprudel")
+@KlangScript.Object("tri")
+object tri : SprudelSignal("tri", triBase) {
 
-/**
- * Bipolar triangle oscillator — unscaled continuous values in `-1..1`.
- *
- * Identical to `tri.toBipolar()`. Rises `-1→1` then falls `1→-1`. Use [range2] to scale.
- *
- *
- * ```KlangScript(Playable)
- * tri2.range2(200, 2000).freq()  // symmetric frequency oscillation
- * ```
- *
- * ```KlangScript(Playable)
- * tri2.range2(40, 60).note()  // symmetric pitch vibrato in semitones
- * ```
- * @category continuous
- * @tags tri2, tri, triangle, oscillator, lfo, bipolar, continuous, wave
- */
-@KlangScript.Constant
-val tri2: SprudelPattern = tri2Base
-
-// -- itri / itri2 -----------------------------------------------------------------------------------------------------
-
-private val itriBase: SprudelPattern by lazy {
-    applySignal { t ->
-        val phase = t % 1.0
-        if (phase < 0.5) 1.0 - phase * 2.0 else phase * 2.0 - 1.0
-    }
+    /**
+     * The shorthand for [range]: `tri(from, to)` is exactly `tri.range(from, to)`.
+     *
+     * Both values are required; `tri` alone is the signal itself, swinging between `0` and `1`.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*8").s("saw").lpf(tri(400, 2400).slow(2))  // the filter rises and falls evenly
+     * ```
+     *
+     * @param from Required. The value where the signal is at its low end.
+     * @param to Required. The value where the signal is at its high end.
+     * @return The signal swinging between [from] and [to].
+     */
+    @KlangScript.Invoke
+    operator fun invoke(from: Number? = null, to: Number? = null, callInfo: CallInfo? = null): SprudelPattern =
+        ranged(from, to, callInfo)
 }
-private val itri2Base: SprudelPattern by lazy { itriBase.toBipolar() }
 
-/**
- * Inverse triangle oscillator — unscaled continuous values in `0..1`.
- *
- * Mirror image of [tri]: falls `1→0` in the first half of the cycle, then rises `0→1`.
- * Use [range] to map to a target parameter range.
- *
- *
- * ```KlangScript(Playable)
- * itri.range(200, 2000).freq().segment(128)  // inverted triangular frequency oscillation
- * ```
- *
- * ```KlangScript(Playable)
- * itri.range(0.2, 0.9).gain().segment(128)  // inverted triangle gain tremolo
- * ```
- * @category continuous
- * @tags itri, triangle, oscillator, lfo, continuous, wave
- */
-@KlangScript.Constant
-val itri: SprudelPattern = itriBase
-
-/**
- * Bipolar inverse triangle oscillator — unscaled continuous values in `-1..1`.
- *
- * Identical to `itri.toBipolar()`. Falls `1→-1` then rises `-1→1`. Use [range2] to scale.
- *
- *
- * ```KlangScript(Playable)
- * itri2.range2(200, 2000).freq().segment(128)  // inverted symmetric frequency oscillation
- * ```
- *
- * ```KlangScript(Playable)
- * itri2.range2(40, 60).note().segment(128)  // inverted pitch vibrato in semitones
- * ```
- * @category continuous
- * @tags itri2, itri, triangle, oscillator, lfo, bipolar, continuous, wave
- */
-@KlangScript.Constant
-val itri2: SprudelPattern = itri2Base
-
-// -- square / square2 -------------------------------------------------------------------------------------------------
+// -- square -----------------------------------------------------------------------------------------------------------
 
 private val squareBase: SprudelPattern by lazy { applySignal { t -> if (t % 1.0 < 0.5) 0.0 else 1.0 } }
-private val square2Base: SprudelPattern by lazy { squareBase.toBipolar() }
 
 /**
- * Square oscillator — unscaled continuous values alternating `0` / `1`.
+ * Square oscillator: unscaled continuous values alternating `0` / `1`.
  *
  * Produces `0.0` for the first half of each cycle and `1.0` for the second half (50 % duty cycle).
- * Use [range] to map those two discrete levels to any pair of target values.
- *
+ * Use [range] to map those two levels to any pair of values, or call it: `square(200, 800)` is
+ * `square.range(200, 800)`.
  *
  * ```KlangScript(Playable)
  * square.range(200, 800).freq().segment(128)  // frequency alternates between two values
@@ -372,29 +301,29 @@ private val square2Base: SprudelPattern by lazy { squareBase.toBipolar() }
  * @category continuous
  * @tags square, oscillator, lfo, continuous, wave, gate
  */
-@KlangScript.Constant
-val square: SprudelPattern = squareBase
+@KlangScript.Library("sprudel")
+@KlangScript.Object("square")
+object square : SprudelSignal("square", squareBase) {
 
-/**
- * Bipolar square oscillator — unscaled continuous values alternating `-1` / `1`.
- *
- * Identical to `square.toBipolar()`. Alternates `-1.0` / `1.0`. Use [range2] to scale.
- *
- *
- * ```KlangScript(Playable)
- * square2.range2(200, 800).freq().segment(128)  // frequency jumps via bipolar square
- * ```
- *
- * ```KlangScript(Playable)
- * square2.range2(40, 60).note().segment(128)  // pitch alternates between two values
- * ```
- * @category continuous
- * @tags square2, square, oscillator, lfo, bipolar, continuous, wave, gate
- */
-@KlangScript.Constant
-val square2: SprudelPattern = square2Base
+    /**
+     * The shorthand for [range]: `square(from, to)` is exactly `square.range(from, to)`.
+     *
+     * Both values are required; `square` alone is the signal itself, swinging between `0` and `1`.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*8").s("saw").lpf(square(500, 3000))  // dark for half a cycle, bright for the other half
+     * ```
+     *
+     * @param from Required. The value where the signal is at its low end.
+     * @param to Required. The value where the signal is at its high end.
+     * @return The signal swinging between [from] and [to].
+     */
+    @KlangScript.Invoke
+    operator fun invoke(from: Number? = null, to: Number? = null, callInfo: CallInfo? = null): SprudelPattern =
+        ranged(from, to, callInfo)
+}
 
-// -- perlin / perlin2 -------------------------------------------------------------------------------------------------
+// -- perlin -----------------------------------------------------------------------------------------------------------
 
 private fun createPerlin(): SprudelPattern {
     val cache = mutableMapOf<Int?, PerlinNoise>()
@@ -407,11 +336,11 @@ private fun createPerlin(): SprudelPattern {
 }
 
 /**
- * Continuous Perlin noise — smoothly varying unscaled values in `0..1`.
+ * Continuous Perlin noise: smoothly varying unscaled values in `0..1`.
  *
  * Each instantiation is seeded independently, producing different-but-deterministic smooth curves.
  * Perlin noise transitions gradually between values, making it ideal for organic modulation.
- * Use [range] to map to a target parameter range.
+ * Use [range] to map it to a target range, or call it: `perlin(200, 2000)` is `perlin.range(200, 2000)`.
  *
  *
  * ```KlangScript(Playable)
@@ -424,29 +353,29 @@ private fun createPerlin(): SprudelPattern {
  * @category continuous
  * @tags perlin, noise, random, smooth, continuous, lfo
  */
-@KlangScript.Constant
-val perlin: SprudelPattern = createPerlin()
+@KlangScript.Library("sprudel")
+@KlangScript.Object("perlin")
+object perlin : SprudelSignal("perlin", createPerlin()) {
 
-/**
- * Bipolar Perlin noise — smoothly varying unscaled values in `-1..1`.
- *
- * Identical to `perlin.toBipolar()`. Smoothly varying centred noise. Use [range2] to scale.
- *
- *
- * ```KlangScript(Playable)
- * perlin2.range2(200, 2000).freq().segment(128)  // bipolar smooth random frequency drift
- * ```
- *
- * ```KlangScript(Playable)
- * perlin2.range2(40, 50).slow(4).note().segment(64).s("sine").hpf(90)  // random pitch drift in semitones
- * ```
- * @category continuous
- * @tags perlin2, perlin, noise, random, bipolar, smooth, continuous, lfo
- */
-@KlangScript.Constant
-val perlin2: SprudelPattern = createPerlin().toBipolar()
+    /**
+     * The shorthand for [range]: `perlin(from, to)` is exactly `perlin.range(from, to)`.
+     *
+     * Both values are required; `perlin` alone is the signal itself, swinging between `0` and `1`.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*8").s("saw").lpf(perlin(400, 2000).slow(8))  // the filter wanders, smoothly
+     * ```
+     *
+     * @param from Required. The value where the signal is at its low end.
+     * @param to Required. The value where the signal is at its high end.
+     * @return The signal swinging between [from] and [to].
+     */
+    @KlangScript.Invoke
+    operator fun invoke(from: Number? = null, to: Number? = null, callInfo: CallInfo? = null): SprudelPattern =
+        ranged(from, to, callInfo)
+}
 
-// -- berlin / berlin2 -------------------------------------------------------------------------------------------------
+// -- berlin -----------------------------------------------------------------------------------------------------------
 
 private fun createBerlin(): SprudelPattern {
     val cache = mutableMapOf<Int?, BerlinNoise>()
@@ -458,16 +387,12 @@ private fun createBerlin(): SprudelPattern {
     }
 }
 
-private fun createBerlin2(): SprudelPattern {
-    return createBerlin().toBipolar()
-}
-
 /**
- * Continuous Berlin noise — sawtooth-textured unscaled values in `0..1`.
+ * Continuous Berlin noise: sawtooth-textured unscaled values in `0..1`.
  *
  * Like [perlin] but built from sawtooth waves, giving a harsher, more angular quality.
  * The sawtooth construction makes it a characterful, surprisingly musical modulation source.
- * Use [range] to map to a target parameter range.
+ * Use [range] to map it to a target range, or call it: `berlin(200, 2000)` is `berlin.range(200, 2000)`.
  *
  *
  * ```KlangScript(Playable)
@@ -480,24 +405,24 @@ private fun createBerlin2(): SprudelPattern {
  * @category continuous
  * @tags berlin, noise, random, sawtooth, continuous, lfo
  */
-@KlangScript.Constant
-val berlin: SprudelPattern = createBerlin()
+@KlangScript.Library("sprudel")
+@KlangScript.Object("berlin")
+object berlin : SprudelSignal("berlin", createBerlin()) {
 
-/**
- * Bipolar Berlin noise — sawtooth-textured unscaled values in `-1..1`.
- *
- * Identical to `berlin.toBipolar()`. Sawtooth-flavoured centred noise. Use [range2] to scale.
- *
- *
- * ```KlangScript(Playable)
- * berlin2.range2(200, 2000).slow(4).freq().segment(128)  // bipolar berlin noise frequency drift
- * ```
- *
- * ```KlangScript(Playable)
- * berlin2.range2(40, 80).slow(4).note().segment(64).s("sine").hpf(90)  // random pitch drift in semitones
- * ```
- * @category continuous
- * @tags berlin2, berlin, noise, random, bipolar, sawtooth, continuous, lfo
- */
-@KlangScript.Constant
-val berlin2: SprudelPattern = createBerlin2()
+    /**
+     * The shorthand for [range]: `berlin(from, to)` is exactly `berlin.range(from, to)`.
+     *
+     * Both values are required; `berlin` alone is the signal itself, swinging between `0` and `1`.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*8").s("saw").lpf(berlin(400, 2000).slow(4))  // the filter wanders in rough steps
+     * ```
+     *
+     * @param from Required. The value where the signal is at its low end.
+     * @param to Required. The value where the signal is at its high end.
+     * @return The signal swinging between [from] and [to].
+     */
+    @KlangScript.Invoke
+    operator fun invoke(from: Number? = null, to: Number? = null, callInfo: CallInfo? = null): SprudelPattern =
+        ranged(from, to, callInfo)
+}

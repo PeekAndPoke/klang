@@ -518,7 +518,7 @@ song and frozen piece at HEAD in a throwaway worktree and on the final tree can.
 migration fixture: written for the step, deleted with it, its result recorded in the task doc.
 Two things it needs: enough cycles to reach every section (the longest `arrange` and the longest
 `mute` alternation set the bar; 256 covered the corpus of 2026-09-19), and the WALL CLOCK PINNED,
-because four songs seed their randomness from `timeOfDay` or `sinOfDay` and otherwise differ for
+because four songs seed their randomness from `timeOfDay` or `sineOfDay` and otherwise differ for
 a reason that has nothing to do with the engine. What it cannot see: differences under one 16-bit count, JS-only behaviour. (Corrected 2026-09-26: it DOES
 see sample voices; the CLI render loads the samples from the repo-root `./cache` before scheduling any voice,
 so run it from the repo root and check each log's sample-load count. Only the `:jvmTest` `renderSong` helper has

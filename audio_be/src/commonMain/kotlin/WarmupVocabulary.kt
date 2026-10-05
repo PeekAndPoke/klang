@@ -13,7 +13,6 @@ import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.bandpass
-import io.peekandpoke.klang.audio_bridge.bipolar
 import io.peekandpoke.klang.audio_bridge.ceil
 import io.peekandpoke.klang.audio_bridge.clamp
 import io.peekandpoke.klang.audio_bridge.coarse
@@ -56,7 +55,6 @@ import io.peekandpoke.klang.audio_bridge.sqrt
 import io.peekandpoke.klang.audio_bridge.tanh
 import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.audio_bridge.tremolo
-import io.peekandpoke.klang.audio_bridge.unipolar
 import io.peekandpoke.klang.audio_bridge.vibrato
 
 /**
@@ -126,14 +124,17 @@ object WarmupVocabulary {
     val math: IgnitorDsl = run {
         val s = sine()
         val t = sine(1.5)
-        val lfo = IgnitorDsl.Sine(freq = Constant(2.0)).unipolar()
+        // a 0..1 LFO: range maps the sine's -1..1 onto it
+        val lfo = IgnitorDsl.Sine(freq = Constant(2.0)).range(Constant(0.0), Constant(1.0))
         val a = s.mul(Constant(0.5)).div(Constant(2.0)).minus(t.mul(Constant(0.1))).neg().abs()
         // `max(t).min(-t)` bounds to [-t, t]: cap first, then floor. Builds Max(Min(x, t), -t),
         // the same node pair as before the min/max doors became clamps.
         val b = a.clamp(Constant(-1.0), Constant(1.0)).pow(Constant(2.0)).max(t).min(t.neg())
         // `Constant(0.5).neg()`: a negation the optimizer leaves standing (a signal's folds into an Affine)
         val c = b.exp().log().sqrt().sign().mul(b.tanh()).lerp(t, lfo).range(Constant(0.5).neg(), Constant(0.5))
-        val d = c.bipolar().unipolar().mul(Constant(4.0)).floor().mul(Constant(0.1))
+        // 0..1 onto -1..1 and back: `mul(2).minus(1)`, then `range(0, 1)`
+        val d = c.mul(Constant(2.0)).minus(Constant(1.0)).range(Constant(0.0), Constant(1.0))
+            .mul(Constant(4.0)).floor().mul(Constant(0.1))
             .mul(t.ceil().round().mul(Constant(0.1)).mul(t.frac()))
             .mod(Constant(0.5)).mul(t.sq().plus(Constant(2.0)).recip().mul(Constant(0.5))) // recip of `+2`: never near zero
         val chosen = lfo.select(whenTrue = d, whenFalse = c)

@@ -518,20 +518,28 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 
 ## Continuous Signals (LFOs)
 
-Top-level signals that produce continuous values. Use `.range(min, max)` to scale.
+Top-level signals that produce continuous values between 0 and 1. Use `.range(from, to)` to scale, or call the
+signal: `perlin(200, 400)` is exactly `perlin.range(200, 400)`. Both values are required (`sine(200)` is a script
+error, `Ignitor.sine(200)` would be 200 Hz). The bare name stays a pattern: `perlin.slow(8)`, `.pan(perlin)`.
 
-### Oscillators (0..1 unipolar, add `2` suffix for -1..1 bipolar)
+### Oscillators (0..1)
 
-`sine`, `sine2`, `cosine`, `cosine2`, `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`,
-`square2`
+`sine`, `cosine` (exactly `sine.early(0.25)`), `saw`, `tri`, `square`
+
+A falling saw is `saw.range(1, 0)`, an inverted triangle `tri.range(1, 0)`. To range one, swap the values: a falling
+saw from a to b is `saw.range(b, a)` (the old `isaw.range(a, b)`), the same for `tri` (the old `itri`), because the
+innermost range wins.
 
 ### Noise
 
-`perlin`, `perlin2`, `berlin`, `berlin2`, `rand`, `rand2`, `randCycle`
+`perlin`, `berlin`, `rand`, `randCycle` (`randCycle` has no call shorthand)
 
 ### Utility
 
 `time` (cycle counter), `cps` (cycles/sec), `rpm` (CPS*60), `bpm` (CPS*240)
+
+Wall clock: `timeOfDay` (0 at midnight, 1 at the next), `sineOfDay` (0 at midnight, 1 at noon), `timeOfNight`,
+`sineOfNight` (their inverses).
 
 Tempo-following lengths and rates (both follow every rpm change; `base` = beats per cycle, default 4):
 
@@ -545,18 +553,32 @@ Tempo-following lengths and rates (both follow every rpm change; `base` = beats 
 
 | Function                  | Input | Description                      |
 |---------------------------|-------|----------------------------------|
-| `.range(min, max)`        | 0..1  | Linear scale                     | 
-| `.rangex(min, max)`       | 0..1  | Exponential (for frequencies)    |
-| `.range2(min, max)`       | -1..1 | Bipolar linear scale             |
-| `.toBipolar()`            | 0..1  | Convert to -1..1                 |
-| `.fromBipolar()`          | -1..1 | Convert to 0..1                  |
+| `.range(from, to)`        | 0..1  | Linear scale                     |
+| `signal(from, to)`        | 0..1  | The same, as the call shorthand  |
+| `.rangex(from, to)`       | 0..1  | Exponential (for frequencies)    |
 | `.segment(n)` / `.seg(n)` | any   | Sample-and-hold at n steps/cycle |
+
+Where the swing sits is up to the two values (the same word and result on the Ignitor side):
+
+| Call             | The signal moves                        |
+|------------------|-----------------------------------------|
+| `range(0, 1)`    | only upward, between 0 and 1 (as it is) |
+| `range(-1, 0)`   | only downward, between -1 and 0         |
+| `range(-1, 1)`   | both ways, centred on 0                 |
+| `range(-0.5, 1)` | mostly upward, dipping a little below 0 |
+| `range(1, 0)`    | the same swing turned upside down       |
+
+The innermost range wins: `perlin(200, 400).range(0, 1)` still swings between 200 and 400, so range a signal once.
+An outer `rangex` does not reshape a ranged signal either (`perlin(200, 400).rangex(...)` gives wrong values): use
+`rangex` on the bare signal, `perlin.rangex(200, 400)`. The two values are named `from` and `to` on every surface
+(`perlin.range(from = 200, to = 400)`); `from` may be larger than `to`.
 
 ### Usage
 
 ```javascript
 // Sweeping filter
 note("c3").s("saw").lpf(sine.range(200, 2000).slow(4))
+note("c3").s("saw").lpf(sine(200, 2000).slow(4))   // the same, the call shorthand
 
 // Random panning
 s("hh*8").pan(rand)

@@ -25,7 +25,6 @@ import io.peekandpoke.klang.sprudel.lang.silence
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.sprudel.lang.toPattern
 import io.peekandpoke.klang.sprudel.pattern.BindPattern
-import io.peekandpoke.klang.sprudel.pattern.ContextRangeMapPattern
 import io.peekandpoke.klang.sprudel.pattern.createEventList
 import io.peekandpoke.klang.sprudel.pattern.FastGapPattern
 import io.peekandpoke.klang.sprudel.pattern.MapPattern
@@ -464,20 +463,6 @@ fun SprudelPattern.withSteps(steps: Double?): SprudelPattern {
  */
 fun SprudelPattern.stack(vararg others: SprudelPattern): SprudelPattern {
     return StackPattern(patterns = listOf(this) + others.toList())
-}
-
-/**
- * Maps the rango context, useful for mapping between bipolar and unipolar ranges
- */
-fun SprudelPattern._mapRangeContext(
-    transformMin: (Double) -> Double,
-    transformMax: (Double) -> Double,
-): SprudelPattern {
-    return ContextRangeMapPattern(
-        source = this,
-        transformMin = transformMin,
-        transformMax = transformMax,
-    )
 }
 
 /**

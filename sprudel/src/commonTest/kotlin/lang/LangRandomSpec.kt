@@ -9,7 +9,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
-import io.kotest.matchers.ranges.shouldBeIn
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.sprudel.EPSILON
@@ -59,52 +58,6 @@ class LangRandomSpec : StringSpec({
 
             val value = events[0].data.value?.asDouble!!
             (value >= 0.0 && value <= 100.0) shouldBe true
-        }
-    }
-
-    "rand2 oscillator" {
-        withClue("rand2 in kotlin produces values between -1 and 1") {
-            val pattern = rand2.seed(42)
-            val events = pattern.queryArc(0.0, 1.0)
-            events.size shouldBe 1
-
-            val value = events[0].data.value?.asDouble!!
-            (value >= -1.0 && value <= 1.0) shouldBe true
-        }
-
-        withClue("rand2 with range in kotlin") {
-            val pattern = rand2.seed(42).range(-100.0, 100.0)
-            val events = pattern.queryArc(0.0, 1.0)
-
-            val value = events[0].data.value?.asDouble!!
-            (value >= -100.0 && value <= 100.0) shouldBe true
-        }
-
-        withClue("rand2 with seed produces consistent results") {
-            val p1 = rand2.seed(77)
-            val v1 = p1.queryArc(0.3, 0.3 + EPSILON)[0].data.value?.asDouble
-
-            val p2 = rand2.seed(77)
-            val v2 = p2.queryArc(0.3, 0.3 + EPSILON)[0].data.value?.asDouble
-
-            v1 shouldBe v2
-        }
-
-        withClue("rand2 compiled") {
-            val pattern = SprudelPattern.compile("rand2.seed(456)")!!
-            val events = pattern.queryArc(0.0, 1.0)
-            events.size shouldBe 1
-
-            val value = events[0].data.value?.asDouble!!
-            (value >= -1.0 && value <= 1.0) shouldBe true
-        }
-
-        withClue("rand2 compiled with range") {
-            val pattern = SprudelPattern.compile("rand2.seed(456).range2(0, 50)")!!
-            val events = pattern.queryArc(0.0, 1.0)
-
-            val value = events[0].data.value?.asDouble!!
-            value shouldBeIn (0.0..50.0)
         }
     }
 

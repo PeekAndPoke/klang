@@ -60,7 +60,6 @@ class IgnitorDslWalkSpec : StringSpec({
             12,
         ),
         Triple("BerlinNoise", IgnitorDsl.BerlinNoise(rate = m(0), octaves = m(1), persistence = m(2)), 3),
-        Triple("Bipolar", IgnitorDsl.Bipolar(inner = m(0)), 1),
         Triple("BrownNoise", IgnitorDsl.BrownNoise(depth = m(0)), 1),
         Triple("Ceil", IgnitorDsl.Ceil(inner = m(0)), 1),
         Triple("Clamp", IgnitorDsl.Clamp(inner = m(0), lo = m(1), hi = m(2)), 3),
@@ -158,7 +157,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("Pow", IgnitorDsl.Pow(base = m(0), exp = m(1)), 2),
         Triple("Pulze", IgnitorDsl.Pulze(freq = m(0), duty = m(1), analog = m(2), flankSamples = 7.5, riseFlank = 7.5, fallFlank = 7.5), 3),
         Triple("Ramp", IgnitorDsl.Ramp(freq = m(0), analog = m(1), resetSamples = 7.5, shapeMax = 7.5), 2),
-        Triple("Range", IgnitorDsl.Range(inner = m(0), lo = m(1), hi = m(2)), 3),
+        Triple("Range", IgnitorDsl.Range(inner = m(0), from = m(1), to = m(2)), 3),
         Triple("RawPulze", IgnitorDsl.RawPulze(freq = m(0), duty = m(1), analog = m(2)), 3),
         Triple("Recip", IgnitorDsl.Recip(inner = m(0)), 1),
         Triple("Round", IgnitorDsl.Round(inner = m(0)), 1),
@@ -200,7 +199,6 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("Times", IgnitorDsl.Times(left = m(0), right = m(1)), 2),
         Triple("Tremolo", IgnitorDsl.Tremolo(inner = m(0), rate = m(1), depth = m(2), shape = m(3)), 4),
         Triple("Triangle", IgnitorDsl.Triangle(freq = m(0), analog = m(1)), 2),
-        Triple("Unipolar", IgnitorDsl.Unipolar(inner = m(0)), 1),
         Triple("Variants", IgnitorDsl.Variants(listOf(m(0), m(1), m(2))), 3),
         Triple("Vibrato", IgnitorDsl.Vibrato(inner = m(0), rate = m(1), semitones = m(2)), 3),
         Triple("WhiteNoise", IgnitorDsl.WhiteNoise(color = m(0)), 1),
@@ -210,8 +208,8 @@ class IgnitorDslWalkSpec : StringSpec({
 
     "the corpus covers every IgnitorDsl node type" {
         // Bump this together with a new node's walker arms and its corpus entry.
-        corpus.size shouldBe 80
-        corpus.map { it.first }.toSet().size shouldBe 80
+        corpus.size shouldBe 78
+        corpus.map { it.first }.toSet().size shouldBe 78
     }
 
     "every node reports exactly the declared number of children" {

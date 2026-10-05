@@ -55,6 +55,15 @@ setter semantics) and `/dsl-design`. What they produce today:
   `VowelBands.indexOf`, 0 is `none`); they have no readers (`docs/tasks/future/string-slot-readers.md`).
 - The five wet doors take `wet` first; a bare call reinterprets the pattern's values as the wet.
 - `.katalyst(dsl)`, `.master(dsl)` and `sound()` REPLACE; each stamps one value onto every event.
+- The eight signals (`sine`, `cosine`, `saw`, `tri`, `square`, `perlin`, `berlin`, `rand`) are objects on
+  `SprudelSignal` that ARE patterns (delegation); their `invoke` is the range shorthand, `perlin(200, 400)` is exactly
+  `perlin.range(200, 400)`, both values required, fewer is a `KlangScriptArgumentError` naming the fix. `range` is the
+  one word for a signal's swing, its two values are `from` and `to` on every surface (`range`, `rangex`, the
+  shorthand, the Ignitor `range`). `cosine` is built as `sine.early(0.25)`. A falling saw is `saw.range(1, 0)`, an
+  inverted triangle `tri.range(1, 0)`; `isaw.range(a, b)` was `saw.range(b, a)` (the same for `itri` / `tri`), because
+  the innermost range wins. The wall-clock signals are `timeOfDay`, `sineOfDay`, `timeOfNight`,
+  `sineOfNight`. Guards: `LangSignalShorthandSpec`, `SignalShorthandIntelSpec`, the cosine row of
+  `LangContinuousPatternsSpec`.
 
 ## Levels: `gain`, `velocity`, `pregain`
 
@@ -164,3 +173,8 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-04: the Ignitor/Katalyst naming is complete: `ignitorParam` / `ignp` and `katalystParam` / `katp`, the
   bag `ignitorParams`, the songs spell `Ign.` and `ignp` (one `ignitorParam`), the old names guarded by `RetiredIgnitorNamesSpec`
   (`docs/plans/ignitor-katalyst-naming.md`).
+- 2026-10-05: one `range`: the bipolar twins and `toBipolar` / `fromBipolar` / `range2` removed, every signal callable as
+  its range shorthand (`docs/tasks/sprudel-signals-range-cleanup.md`).
+- 2026-10-05: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, `sinOfDay` / `sinOfNight` renamed to
+  `sineOfDay` / `sineOfNight`, `cosine` is `sine.early(0.25)`, the range values are `from` / `to`
+  (`docs/tasks/sprudel-signals-range-cleanup.md`, maintainer decisions).

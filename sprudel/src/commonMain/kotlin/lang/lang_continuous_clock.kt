@@ -245,40 +245,20 @@ val timeOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * Returns the current time of day as a sine wave: `0.0` (midnight) → `1.0` (noon) → `0.0` (midnight).
  *
  * ```KlangScript(Playable)
- * s("hh*8").gain(sinOfDay)          // gain peaks at noon
+ * s("hh*8").gain(sineOfDay)         // gain peaks at noon
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").vibrato(sinOfDay.range(0, 8))  // vibrato rises and falls with the sun
+ * note("c4").vibrato(sineOfDay.range(0, 8))  // vibrato rises and falls with the sun
  * ```
  *
  * @category continuous
- * @tags sinOfDay, time, sine, clock, continuous
+ * @tags sineOfDay, time, sine, clock, continuous
  */
 @KlangScript.Constant
-val sinOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
+val sineOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
     val t = getTimeOfDayFraction(ctx.getKronos())
     sin(t * PI)
-}
-
-/**
- * Returns the current time of day as a bipolar sine wave: `-1.0` (midnight) → `1.0` (noon) → `-1.0` (midnight).
- *
- * ```KlangScript(Playable)
- * note("c4").transpose(sinOfDay2.range(-12, 12))  // transpose oscillates through the day
- * ```
- *
- * ```KlangScript(Playable)
- * s("hh*8").gain(sinOfDay2.range(0, 1))  // bipolar to unipolar conversion
- * ```
- *
- * @category continuous
- * @tags sinOfDay2, time, sine, bipolar, clock, continuous
- */
-@KlangScript.Constant
-val sinOfDay2: SprudelPattern = ContinuousPattern { _, _, ctx ->
-    val t = getTimeOfDayFraction(ctx.getKronos())
-    sin(t * PI) * 2.0 - 1.0
 }
 
 /**
@@ -304,39 +284,18 @@ val timeOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * Returns the current time of night as a sine wave: `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
  *
  * ```KlangScript(Playable)
- * s("hh*8").gain(sinOfNight)        // gain peaks at midnight
+ * s("hh*8").gain(sineOfNight)       // gain peaks at midnight
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").vibrato(sinOfNight.range(0, 8))  // vibrato is strongest at night
+ * note("c4").vibrato(sineOfNight.range(0, 8))  // vibrato is strongest at night
  * ```
  *
  * @category continuous
- * @tags sinOfNight, time, sine, night, clock, continuous
+ * @tags sineOfNight, time, sine, night, clock, continuous
  */
 @KlangScript.Constant
-val sinOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
+val sineOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
     val t = getTimeOfDayFraction(ctx.getKronos())
     1.0 - sin(t * PI)
-}
-
-/**
- * Returns the current time of night as a bipolar sine wave:
- * `1.0` (midnight) → `-1.0` (noon) → `1.0` (midnight).
- *
- * ```KlangScript(Playable)
- * note("c4").transpose(sinOfNight2.range(-12, 12))  // transpose inverts through the day
- * ```
- *
- * ```KlangScript(Playable)
- * s("hh*8").gain(sinOfNight2.range(0, 1))  // bipolar night signal to unipolar gain
- * ```
- *
- * @category continuous
- * @tags sinOfNight2, time, sine, bipolar, night, clock, continuous
- */
-@KlangScript.Constant
-val sinOfNight2: SprudelPattern = ContinuousPattern { _, _, ctx ->
-    val t = getTimeOfDayFraction(ctx.getKronos())
-    1.0 - sin(t * PI) * 2.0
 }

@@ -457,6 +457,19 @@ one): `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("linear", "linear", "linear"
 | `.times(other)` | Multiply signals (ring modulation) |
 | `.mul(factor)`  | Scale amplitude                    |
 | `.div(divisor)` | Divide amplitude                   |
+| `.range(from, to)` | Let a `-1..1` signal swing between `from` and `to` (the LFO scaler) |
+
+Where the swing sits is up to the two values of `range`, the same word, parameter names and result as sprudel's `range(from, to)`
+(sprudel's signals start from `0..1`, the oscillators from `-1..1`; `x.range(200, 400)` lands on 200..400 on both):
+
+| Call             | The signal moves                         |
+|------------------|------------------------------------------|
+| `range(0, 1)`    | only upward, between 0 and 1             |
+| `range(-1, 0)`   | only downward, between -1 and 0          |
+| `range(-1, 1)`   | both ways, centred on 0 (the oscillator) |
+| `range(-0.5, 1)` | mostly upward, dipping a little below 0  |
+
+From `0..1` to `-1..1` without a range: `x.mul(2).minus(1)`.
 
 ### Composition: `.through(...)`
 
@@ -605,10 +618,10 @@ Any parameter can accept an Ignitor node instead of a number:
 
 ```javascript
 // Filter cutoff modulated by LFO
-Ignitor.saw().lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(500))
+Ignitor.saw().lowpass(Ignitor.sine(0.3).range(500, 2500))
 
 // Tremolo via multiplication
-Ignitor.saw().times(Ignitor.sine(4).plus(1).mul(0.5))  // 4 Hz tremolo
+Ignitor.saw().times(Ignitor.sine(4).range(0, 1))  // 4 Hz tremolo
 
 // Vibrato via frequency modulation
 Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
@@ -917,10 +930,9 @@ Ignitor.sine().mul(0.5)                                                // fundam
 
 ```javascript
 // Filter LFO: sine at 0.3 Hz modulating cutoff 500-2500 Hz
-.lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(500))
+.lowpass(Ignitor.sine(0.3).range(500, 2500))
 
-// The pattern: Ignitor.lfo(freq).plus(1) maps -1..1 to 0..2
-// Then .times(range/2).plus(center) maps to your desired range
+// range(from, to) maps the oscillator's -1..1 onto from..to
 ```
 
 **Layering oscillators** (additive synthesis):

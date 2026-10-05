@@ -228,36 +228,6 @@ fun SprudelPattern.chooseIn(vararg args: PatternLike, callInfo: CallInfo? = null
 fun String.chooseIn(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).chooseIn(*args, callInfo = callInfo)
 
-// -- choose2() --------------------------------------------------------------------------------------------------------
-
-private fun applyChoose2(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val xs = args.extractChoiceArgs()
-    return ChoicePattern.createFromRaw(p.fromBipolar(), xs, mode = StructurePattern.Mode.Out)
-}
-
-/**
- * Like `choose`, but the selector pattern should be in the range -1 to 1 (bipolar).
- *
- * The receiver bipolar pattern is converted to 0–1 before indexing into the list, so
- * `rand2` and LFOs centred at zero can be used directly as selectors.
- *
- * ```KlangScript(Playable)
- * rand2.choose2("c", "e", "g", "b")    // bipolar rand selects among chord tones
- * ```
- *
- * @param args Values or patterns to choose from using the bipolar receiver (-1 to 1) as selector.
- * @category random
- * @tags choose2, bipolar, selector, random
- */
-@KlangScript.Function
-fun SprudelPattern.choose2(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyChoose2(this, args.toList().asSprudelDslArgs(callInfo))
-
-/** Like `choose`, but the selector pattern should be in the range -1 to 1 (bipolar). */
-@KlangScript.Function
-fun String.choose2(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).choose2(*args, callInfo = callInfo)
-
 // -- chooseCycles() ---------------------------------------------------------------------------------------------------
 
 private fun applyChooseCyclesPattern(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {

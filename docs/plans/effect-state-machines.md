@@ -225,7 +225,7 @@ first as the template. Each conversion is accepted on:
   deliberate mutation on the tree side that makes the digests differ, so the harness is shown to
   be able to fail (for the delay: halving the countdown changed 1106 of 4460 lines);
 - (b) minimal synth-only render rows with a peak floor and an engagement control, plus the
-  built-in songs that call the stage, wall clock pinned (`timeOfDay`, `sinOfDay`), both sides
+  built-in songs that call the stage, wall clock pinned (`timeOfDay`, `sineOfDay`), both sides
   rendered from the same song text, for enough cycles to REACH every call site of the stage (a
   call inside a late `arrange` section is not reached by 64 cycles; signal-flow plan §12; the
   frozen-song hashes this list used to name were retired with Katalyst 5a-3);

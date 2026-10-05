@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "ClassName", "Detekt:TooManyFunctions")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -123,14 +123,14 @@ fun withSeed(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p 
 fun PatternMapperFn.withSeed(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.withSeed(n, callInfo) }
 
-// -- rand / rand2 / randCycle -----------------------------------------------------------------------------------------
+// -- rand / randCycle -------------------------------------------------------------------------------------------------
 
 /**
  * Continuous random pattern producing values in the range 0–1.
  *
- * `rand` generates a unique pseudo-random value for each point in time. Use `range()` to
- * re-map the output, `segment(n)` to discretise it into `n` steps per cycle, or pass it
- * directly to parameters that accept patterns.
+ * `rand` generates a unique pseudo-random value for each point in time. Use `range()` to re-map the
+ * output, or call it: `rand(0.5, 1)` is `rand.range(0.5, 1)`. Use `segment(n)` to discretise it into
+ * `n` steps per cycle. Any parameter that accepts a pattern takes it directly.
  *
  * ```KlangScript(Playable)
  * s("hh*8").pan(rand)  // random panning for each hit
@@ -143,30 +143,30 @@ fun PatternMapperFn.withSeed(n: PatternLike, callInfo: CallInfo? = null): Patter
  * @category random
  * @tags rand, random, continuous, noise
  */
-@KlangScript.Constant
-val rand: SprudelPattern = ContinuousPattern { from, _, ctx ->
-    ctx.getSeededRandom(from, "rand").nextDouble()
-}
+@KlangScript.Library("sprudel")
+@KlangScript.Object("rand")
+object rand : SprudelSignal(
+    "rand",
+    ContinuousPattern { from, _, ctx -> ctx.getSeededRandom(from, "rand").nextDouble() },
+) {
 
-/**
- * Continuous random pattern producing values in the range -1–1 (bipolar).
- *
- * Equivalent to `rand.toBipolar()`. Useful for LFO-style modulation that oscillates
- * around zero (e.g., pitch detune, stereo panning centred at 0).
- *
- * ```KlangScript(Playable)
- * s("hh*8").pan(rand2)   // bipolar random panning around centre
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4*8").transpose(rand2.range(-2, 2))   // pitch wobble centred on the note
- * ```
- *
- * @category random
- * @tags rand2, random, bipolar, continuous, noise
- */
-@KlangScript.Constant
-val rand2: SprudelPattern = rand.toBipolar()
+    /**
+     * The shorthand for [range]: `rand(from, to)` is exactly `rand.range(from, to)`.
+     *
+     * Both values are required; `rand` alone is the signal itself, between `0` and `1`.
+     *
+     * ```KlangScript(Playable)
+     * s("hh*8").gain(rand(0.4, 1))  // every hit at its own level
+     * ```
+     *
+     * @param from Required. The value where the signal is at its low end.
+     * @param to Required. The value where the signal is at its high end.
+     * @return The signal between [from] and [to].
+     */
+    @KlangScript.Invoke
+    operator fun invoke(from: Number? = null, to: Number? = null, callInfo: CallInfo? = null): SprudelPattern =
+        ranged(from, to, callInfo)
+}
 
 /**
  * Continuous random pattern that holds a constant value for each full cycle.

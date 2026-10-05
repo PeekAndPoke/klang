@@ -153,9 +153,15 @@ internal fun isInsideStringLiteral(prefix: String): Boolean {
 
 /**
  * Check if the cursor is in an import statement context (after `from "`).
+ *
+ * The line must start with `import`: `from` is an ordinary name outside an import (`range(from = 200, to = 400)`),
+ * so a line that merely contains it is no import.
  */
 private fun isImportContext(context: CompletionContext): Boolean {
     val line = context.state.doc.lineAt(context.pos)
     val lineText = context.state.doc.sliceString(line.from, context.pos)
-    return lineText.contains("from") && lineText.contains("\"")
+    return importLineStart.containsMatchIn(lineText) && lineText.contains("from") && lineText.contains("\"")
 }
+
+/** The word `import` at the start of a line: `importer = 1` and `important(...)` are no import. */
+private val importLineStart = Regex("""^\s*import\b""")

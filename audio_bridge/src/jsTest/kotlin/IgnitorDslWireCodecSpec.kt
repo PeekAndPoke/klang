@@ -154,8 +154,6 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Tanh" { check(IgnitorDsl.Sine().tanh()) }
     "Lerp" { check(IgnitorDsl.Sine().lerp(IgnitorDsl.Sawtooth(), IgnitorDsl.Constant(0.3))) }
     "Range" { check(IgnitorDsl.Sine().range(IgnitorDsl.Constant(0.5), IgnitorDsl.Constant(5.0))) }
-    "Bipolar" { check(IgnitorDsl.Sine().bipolar()) }
-    "Unipolar" { check(IgnitorDsl.Sine().unipolar()) }
     "Floor" { check(IgnitorDsl.Sine().floor()) }
     "Ceil" { check(IgnitorDsl.Sine().ceil()) }
     "Round" { check(IgnitorDsl.Sine().round()) }

@@ -199,7 +199,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                 is IgnitorDsl.Min, is IgnitorDsl.Max, is IgnitorDsl.Pow, is IgnitorDsl.Neg, is IgnitorDsl.Abs,
                 is IgnitorDsl.Sq, is IgnitorDsl.Sqrt, is IgnitorDsl.Exp, is IgnitorDsl.Log, is IgnitorDsl.Tanh,
                 is IgnitorDsl.Sign, is IgnitorDsl.Floor, is IgnitorDsl.Ceil, is IgnitorDsl.Round, is IgnitorDsl.Frac,
-                is IgnitorDsl.Recip, is IgnitorDsl.Bipolar, is IgnitorDsl.Unipolar, is IgnitorDsl.Clamp,
+                is IgnitorDsl.Recip, is IgnitorDsl.Clamp,
                 is IgnitorDsl.Range, is IgnitorDsl.Lerp, is IgnitorDsl.Select, is IgnitorDsl.Affine,
                 is IgnitorDsl.OptimizerHint -> dsl.childNodes().all { isScalar(it) }
 
@@ -341,8 +341,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // pointwise unary, in place
             is IgnitorDsl.Abs, is IgnitorDsl.Neg, is IgnitorDsl.Sq, is IgnitorDsl.Sqrt, is IgnitorDsl.Tanh,
             is IgnitorDsl.Exp, is IgnitorDsl.Log, is IgnitorDsl.Sign, is IgnitorDsl.Floor, is IgnitorDsl.Ceil,
-            is IgnitorDsl.Round, is IgnitorDsl.Frac, is IgnitorDsl.Recip, is IgnitorDsl.Bipolar,
-            is IgnitorDsl.Unipolar -> inPlace()
+            is IgnitorDsl.Round, is IgnitorDsl.Frac, is IgnitorDsl.Recip -> inPlace()
 
             // binary: in place over a scalar side, a scratch render and a third stream otherwise
             is IgnitorDsl.Plus -> GraphCensus(1, 1 + signals(node.left, node.right), 0)
@@ -357,7 +356,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // one pass; a signal coefficient makes the node render every coefficient through scratch
             is IgnitorDsl.Affine -> GraphCensus(1, 2 + coefficientReads(node.pre, node.mul, node.add), 0)
             is IgnitorDsl.Clamp -> GraphCensus(1, 2 + coefficientReads(node.lo, node.hi), 0)
-            is IgnitorDsl.Range -> GraphCensus(1, 2 + coefficientReads(node.lo, node.hi), 0)
+            is IgnitorDsl.Range -> GraphCensus(1, 2 + coefficientReads(node.from, node.to), 0)
 
             // a lerp folds its weight only and always renders its second signal; a select has no fold and renders both branches
             is IgnitorDsl.Lerp -> GraphCensus(1, 3 + signals(node.t), 0)

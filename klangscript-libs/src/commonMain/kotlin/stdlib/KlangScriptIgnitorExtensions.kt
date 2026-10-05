@@ -856,18 +856,32 @@ object KlangScriptIgnitorExtensions {
     fun mix(self: IgnitorDsl, other: IgnitorDslLike, t: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Lerp(left = self, right = other.toIgnitorDsl(), t = t.toIgnitorDsl())
 
-    /** Maps this signal from `[-1, 1]` to `[lo, hi]` per sample. Standard LFO scaler. */
+    /**
+     * Lets this signal swing between [from] and [to], per sample. The standard LFO scaler.
+     *
+     * The oscillators swing between `-1` and `1`; `range` maps `-1` to [from] and `1` to [to], linearly. Where the
+     * swing sits is up to the two values:
+     *
+     * | Call              | The signal moves                                      |
+     * |-------------------|-------------------------------------------------------|
+     * | `range(0, 1)`     | only upward, between 0 and 1                          |
+     * | `range(-1, 0)`    | only downward, between -1 and 0                       |
+     * | `range(-1, 1)`    | both ways, centred on 0 (the oscillator as it is)     |
+     * | `range(-0.5, 1)`  | mostly upward, dipping a little below 0               |
+     * | `range(1, 0)`     | the same swing turned upside down                     |
+     *
+     * Sprudel's signals swing between `0` and `1` instead, and their `range(from, to)` gives the same result:
+     * `x.range(200, 400)` swings between 200 and 400 in both DSLs. To get from `0..1` to `-1..1` without a range,
+     * `x.mul(2).minus(1)`.
+     *
+     * ```KlangScript
+     * Ignitor.saw().lowpass(Ignitor.sine(0.5).range(400, 2000))   // the cutoff sweeps 400 to 2000 Hz
+     * Ignitor.sine().mul(Ignitor.sine(5).range(0.6, 1))            // a tremolo that only ever dips
+     * ```
+     */
     @KlangScript.Method
-    fun range(self: IgnitorDsl, lo: IgnitorDslLike, hi: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Range(inner = self, lo = lo.toIgnitorDsl(), hi = hi.toIgnitorDsl())
-
-    /** Maps this signal from `[0, 1]` to `[-1, 1]` per sample. */
-    @KlangScript.Method
-    fun bipolar(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Bipolar(inner = self)
-
-    /** Maps this signal from `[-1, 1]` to `[0, 1]` per sample. */
-    @KlangScript.Method
-    fun unipolar(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Unipolar(inner = self)
+    fun range(self: IgnitorDsl, from: IgnitorDslLike, to: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Range(inner = self, from = from.toIgnitorDsl(), to = to.toIgnitorDsl())
 
     /** Per-sample floor. */
     @KlangScript.Method
