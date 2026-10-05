@@ -59,7 +59,8 @@ setter semantics) and `/dsl-design`. What they produce today:
   `SprudelSignal` that ARE patterns (delegation); their `invoke` is the range shorthand, `perlin(200, 400)` is exactly
   `perlin.range(200, 400)`, both values required, fewer is a `KlangScriptArgumentError` naming the fix. `range` is the
   one word for a signal's swing, its two values are `from` and `to` on every surface (`range`, `rangex`, the
-  shorthand, the Ignitor `range`). `cosine` is built as `sine.early(0.25)`. A falling saw is `saw.range(1, 0)`, an
+  shorthand, the Ignitor `range`). `range` and `rangex` shape continuous signals only and have no string receiver;
+  discrete values scale with `.mul(k).add(c)`. `cosine` is built as `sine.early(0.25)`. A falling saw is `saw.range(1, 0)`, an
   inverted triangle `tri.range(1, 0)`; `isaw.range(a, b)` was `saw.range(b, a)` (the same for `itri` / `tri`), because
   the innermost range wins. The wall-clock signals are `timeOfDay`, `sineOfDay`, `timeOfNight`,
   `sineOfNight`. Guards: `LangSignalShorthandSpec`, `SignalShorthandIntelSpec`, the cosine row of
@@ -178,3 +179,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-05: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, `sinOfDay` / `sinOfNight` renamed to
   `sineOfDay` / `sineOfNight`, `cosine` is `sine.early(0.25)`, the range values are `from` / `to`
   (`docs/tasks/sprudel-signals-range-cleanup.md`, maintainer decisions).
+- 2026-10-05: `String.range` / `String.rangex` removed (a silent no-op or a wrong `exp` on discrete values); a
+  mini-notation string scales with `.mul(k).add(c)` (`docs/tasks/sprudel-signals-range-cleanup.md`).

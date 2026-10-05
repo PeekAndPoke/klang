@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
@@ -13,6 +14,8 @@ import io.kotest.matchers.doubles.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
@@ -26,10 +29,6 @@ class LangContinuousPatternsSpec : StringSpec({
                     sine.range(0.0, 100.0),
             "script pattern.range(from, to)" to
                     SprudelPattern.compile("sine.range(0, 100)"),
-            "string.range(from, to)" to
-                    "0.5".range(0.0, 100.0),
-            "script string.range(from, to)" to
-                    SprudelPattern.compile(""""0.5".range(0, 100)"""),
             "range(from, to)" to
                     sine.apply(range(0.0, 100.0)),
             "script range(from, to)" to
@@ -45,10 +44,6 @@ class LangContinuousPatternsSpec : StringSpec({
                     sine.rangex(100.0, 1000.0),
             "script pattern.rangex(from, to)" to
                     SprudelPattern.compile("sine.rangex(100, 1000)"),
-            "string.rangex(from, to)" to
-                    "0.5".rangex(100.0, 1000.0),
-            "script string.rangex(from, to)" to
-                    SprudelPattern.compile(""""0.5".rangex(100, 1000)"""),
             "rangex(from, to)" to
                     sine.apply(rangex(100.0, 1000.0)),
             "script rangex(from, to)" to
@@ -204,6 +199,23 @@ class LangContinuousPatternsSpec : StringSpec({
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
         }
+    }
+
+    "range and rangex have no string receiver: a mini-notation string scales with mul and add" {
+        for (method in listOf("range", "rangex")) {
+            withClue(method) {
+                val error = shouldThrow<KlangScriptTypeError> {
+                    SprudelPattern.compile(""""0 0.5 1".$method(100, 1000)""")
+                }
+                error.message.shouldNotBeNull() shouldContain "has no method '$method'"
+            }
+        }
+
+        // The migration the docs give: "0 0.5 1".mul(900).add(100) is 100, 550 and 1000, on both doors
+        val expected = listOf(100.0, 550.0, 1000.0)
+        "0 0.5 1".mul(900).add(100).queryArc(0.0, 1.0).map { it.data.value?.asDouble } shouldBe expected
+        SprudelPattern.compile(""""0 0.5 1".mul(900).add(100)""")!!
+            .queryArc(0.0, 1.0).map { it.data.value?.asDouble } shouldBe expected
     }
 
     "cosine is sine.early(0.25), exactly: bare, ranged, through the shorthand and on the script door" {

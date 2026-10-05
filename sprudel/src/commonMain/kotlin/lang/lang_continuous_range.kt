@@ -37,6 +37,9 @@ private fun applyRange(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * swing linearly onto `[from, to]`: where the signal is `0` you get [from], where it is `1` you get [to]. Every
  * signal has a shorthand for it: `perlin(200, 400)` is exactly `perlin.range(200, 400)`.
  *
+ * `range` shapes continuous signals only. Discrete values (a mini-notation string, `seq(...)`) scale with `mul` and
+ * `add`: `"0 0.5 1".mul(900).add(100)` gives 100, 550 and 1000.
+ *
  * Where the swing sits is up to the two values:
  *
  * | Call              | The signal moves                                      |
@@ -77,17 +80,6 @@ private fun applyRange(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 @KlangScript.Function
 fun SprudelPattern.range(from: Number = 0.0, to: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     applyRange(this, listOf(from.toDouble(), to.toDouble()).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern, then linearly scales its values to `[from, to]`.
- *
- * @param from The value where the signal is at its low end (default `0.0`).
- * @param to The value where the signal is at its high end (default `1.0`).
- * @return A new pattern with values linearly scaled to `[from, to]`.
- */
-@KlangScript.Function
-fun String.range(from: Number = 0.0, to: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).range(from, to, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that linearly scales pattern values to `[from, to]`.
@@ -150,6 +142,8 @@ private fun applyRangex(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
 /**
  * Scales the values of a continuous pattern to `[from, to]` using an **exponential** curve.
  *
+ * `rangex` shapes continuous signals only, like [range]. Discrete values scale with `mul` and `add`.
+ *
  * Unlike [range] (linear), `rangex` applies a logarithmic input mapping so that equal
  * perceived steps correspond to equal value steps. This is particularly useful for audio
  * frequencies and filter cutoffs, where musical intervals (octaves, fifths) are ratios
@@ -175,21 +169,6 @@ private fun applyRangex(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
 @KlangScript.Function
 fun SprudelPattern.rangex(from: Number = 0.0, to: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     applyRangex(this, listOf(from.toDouble(), to.toDouble()).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern, then exponentially scales its values to `[from, to]`.
- *
- * @param from The value where the signal is at its low end (default `0.0`; use a small positive number for frequencies).
- * @param to The value where the signal is at its high end (default `1.0`).
- * @return A new pattern with values exponentially scaled to `[from, to]`.
- *
- * ```KlangScript(Playable)
- * "0 0.5 1".rangex(100, 1000).freq()  // manual values scaled exponentially to frequency range
- * ```
- */
-@KlangScript.Function
-fun String.rangex(from: Number = 0.0, to: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).rangex(from, to, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that exponentially scales pattern values to `[from, to]`.

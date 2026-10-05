@@ -558,6 +558,9 @@ Tempo-following lengths and rates (both follow every rpm change; `base` = beats 
 | `.rangex(from, to)`       | 0..1  | Exponential (for frequencies)    |
 | `.segment(n)` / `.seg(n)` | any   | Sample-and-hold at n steps/cycle |
 
+`range` and `rangex` shape continuous signals only. Discrete values (a mini-notation string, `seq(...)`) scale with
+`mul` and `add`: `"0 0.5 1".mul(900).add(100)` gives 100, 550 and 1000.
+
 Where the swing sits is up to the two values (the same word and result on the Ignitor side):
 
 | Call             | The signal moves                        |

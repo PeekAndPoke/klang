@@ -172,7 +172,8 @@ same for `itri`, because the innermost range wins), `sinOfDay2`, `sinOfNight2` a
 `sinOfDay` / `sinOfNight` are now `sineOfDay` / `sineOfNight`; the old parameter names of `range` (`min` / `max` in
 sprudel's `range` and `rangex`, `lo` / `hi` on the Ignitor doors, the wire node `IgnitorDsl.Range` and the engine's
 `Ignitor.range`) are `from` / `to` end to end; the clamp keeps `lo` / `hi`. Sprudel's `_mapRangeContext` and
-`ContextRangeMapPattern` went with the helpers.
+`ContextRangeMapPattern` went with the helpers, and so did sprudel's `String.range` / `String.rangex` (a
+mini-notation string scales with `.mul(k).add(c)`).
 
 ## Available Agent
 

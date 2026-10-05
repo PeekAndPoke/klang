@@ -45,11 +45,16 @@ functionality, a total win."
     persisted, so it is a plain rename. The clamp keeps `lo` / `hi`: a different concept.
 14. **The dead range-context helpers go** (2026-10-05): `_mapRangeContext` and `ContextRangeMapPattern` with its spec,
     whose only callers were the bipolar helpers and `choose2`.
+15. **`String.range` and `String.rangex` go** (maintainer, 2026-10-05), both doors. On a mini-notation string they
+    did nothing useful: only `ContinuousPattern` reads the range, so `range` was a silent no-op and `rangex` applied a
+    bare `exp` to the values. Discrete values already scale with `.mul(k).add(c)`: `"0 0.5 1".range(100, 1000)` meant
+    `"0 0.5 1".mul(900).add(100)`. `SprudelPattern.range` / `rangex` stay; their KDoc says they shape continuous
+    signals only.
 
 ## Order (each step green, songs bit-identical)
 
-Status, 2026-10-05: steps 1 to 5 and decisions 6 to 14 are done in the working tree (reports
-`tmp/reviews/signals-range-report.md` and `tmp/reviews/signals-range-decisions-report.md`), not yet committed.
+Status, 2026-10-05: steps 1 to 5 and decisions 6 to 14 are committed (`82cc6024`); decision 15 is done in the working
+tree (reports `tmp/reviews/signals-range-report.md` and `tmp/reviews/signals-range-decisions-report.md`).
 
 1. **Done.** The two song lines that use a twin (`TetrisRemix.kt:41` and `StrangerThings.kt:59`, both `berlin2`) become
    `berlin.range(-1, 1)` (`x * 2 - 1` and `-1 + 2 * x` are the same IEEE number); the corpus render proves it.
@@ -57,9 +62,9 @@ Status, 2026-10-05: steps 1 to 5 and decisions 6 to 14 are done in the working t
 3. **Done.** The Ignitor `unipolar` / `bipolar` go (`WarmupVocabulary.kt` rewritten with `range` / `mul`).
 4. **Done.** The callable shorthand, both doors, with its specs (mutation-checked).
 5. **Done.** The docs of `range` gain the table "where the swing sits" (`range(0, 1)` only upward, `range(-1, 0)` only down).
-6. **Done.** Decisions 6 to 14: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, the clock pair
+6. **Done.** Decisions 6 to 15: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, the clock pair
    renamed, `cosine` built from `sine`, `from` / `to` on every range door and in the wire node and engine, `from` and
-   `as` contextual in the parser, the dead range-context helpers removed. The corpus render is identical except
+   `as` contextual in the parser, the dead range-context helpers and the string-receiver `range` / `rangex` removed. The corpus render is identical except
    Der Schmetterling (the maintainer's open edit), which is proven separately from the committed text.
 
 The phase knob and the vibrato/tremolo `range` knob are the next task (`oscillator-phase-knob.md`).
