@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
 import io.peekandpoke.klang.audio_bridge.constants.RAMP_RESET_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.RAMP_SHAPE_MAX
+import io.peekandpoke.klang.audio_bridge.constants.RANGEX_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.SAW_RESET_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.SAW_SHAPE_MAX
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
@@ -2233,6 +2234,26 @@ fun IgnitorDsl.lerp(other: IgnitorDsl, t: IgnitorDsl) = IgnitorDsl.Lerp(left = t
 
 /** Maps this signal from `[-1, 1]` to `[from, to]` per sample; where the swing sits: the script door `range`. */
 fun IgnitorDsl.range(from: IgnitorDsl, to: IgnitorDsl) = IgnitorDsl.Range(inner = this, from = from, to = to)
+
+/**
+ * The exponential twin of [range]: maps this signal from `[-1, 1]` to `[from, to]` so that equal steps of the signal
+ * are equal RATIOS, `from · (to / from)^((x + 1) / 2)`. Perceptually even for frequencies; the script door `rangex`
+ * has the table and the example.
+ *
+ * Built by composition, no node of its own: `exp(range(ln(max(from, floor)), ln(max(to, floor))))`, with
+ * [RANGEX_FLOOR] as the floor. A value at or below 0 is coerced, as in sprudel, instead of meeting the engine's
+ * signed-magnitude `Log` (`0 -> 0`, `-v -> -ln v`), which would give a wrong sweep: `rangex(0, 1000)` would start
+ * at 1, not at almost nothing. The mathematical [IgnitorDsl.Max] node on purpose: the door named `max` is a clamp
+ * and builds [IgnitorDsl.Min]. The operand order matters too: the value on the left and the floor on the right, so
+ * a NaN value reads as the floor (`Max` keeps its right operand when `left > right` is false).
+ */
+fun IgnitorDsl.rangex(from: IgnitorDsl, to: IgnitorDsl): IgnitorDsl {
+    val floor = IgnitorDsl.Constant(RANGEX_FLOOR)
+    val logFrom = IgnitorDsl.Log(inner = IgnitorDsl.Max(left = from, right = floor))
+    val logTo = IgnitorDsl.Log(inner = IgnitorDsl.Max(left = to, right = floor))
+
+    return IgnitorDsl.Exp(inner = IgnitorDsl.Range(inner = this, from = logFrom, to = logTo))
+}
 
 /** Per-sample floor. */
 fun IgnitorDsl.floor() = IgnitorDsl.Floor(inner = this)

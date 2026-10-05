@@ -458,6 +458,7 @@ one): `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("linear", "linear", "linear"
 | `.mul(factor)`  | Scale amplitude                    |
 | `.div(divisor)` | Divide amplitude                   |
 | `.range(from, to)` | Let a `-1..1` signal swing between `from` and `to` (the LFO scaler) |
+| `.rangex(from, to)` | The same, exponentially: equal steps are equal ratios (for frequencies) |
 
 Where the swing sits is up to the two values of `range`, the same word, parameter names and result as sprudel's `range(from, to)`
 (sprudel's signals start from `0..1`, the oscillators from `-1..1`; `x.range(200, 400)` lands on 200..400 on both):
@@ -470,6 +471,15 @@ Where the swing sits is up to the two values of `range`, the same word, paramete
 | `range(-0.5, 1)` | mostly upward, dipping a little below 0  |
 
 From `0..1` to `-1..1` without a range: `x.mul(2).minus(1)`.
+
+`rangex(from, to)` is the exponential twin, the same as sprudel's `rangex`: `-1` gives `from`, `0` the geometric
+mean `sqrt(from * to)`, `1` gives `to`, so each octave of a frequency sweep takes the same share of the swing (with
+a saw or a triangle, the same time; a sine lingers at its ends). Values at or below 0 are coerced to 0.0001.
+
+```javascript
+// The cutoff sweeps four octaves (200 to 3200 Hz) evenly, through 800 Hz in the middle
+Ignitor.saw().lowpass(Ignitor.sine(0.2).rangex(200, 3200))
+```
 
 ### Composition: `.through(...)`
 

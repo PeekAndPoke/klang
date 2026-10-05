@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
+import io.peekandpoke.klang.audio_bridge.rangex
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
@@ -882,6 +883,34 @@ object KlangScriptIgnitorExtensions {
     @KlangScript.Method
     fun range(self: IgnitorDsl, from: IgnitorDslLike, to: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Range(inner = self, from = from.toIgnitorDsl(), to = to.toIgnitorDsl())
+
+    /**
+     * Lets this signal swing between [from] and [to] exponentially, per sample: the exponential twin of [range],
+     * perceptually even for frequencies.
+     *
+     * `range` takes equal steps of the signal to equal DIFFERENCES, `rangex` to equal RATIOS:
+     * `from · (to / from)^((x + 1) / 2)`. So in a sweep from 200 to 3200 Hz each octave takes the same share of the
+     * swing (with a saw or a triangle, the same time), which is what the ear hears as even; with `range` the low
+     * octaves would rush by. A sine dwells at its ends, so it lingers in the lowest and the highest octave.
+     *
+     * | The oscillator is | `rangex(200, 3200)` gives                  |
+     * |-------------------|--------------------------------------------|
+     * | `-1`              | 200, [from]                                |
+     * | `0`               | 800, the geometric mean `√(from · to)`     |
+     * | `1`               | 3200, [to]                                 |
+     *
+     * `rangex(3200, 200)` turns the swing upside down. Both values are frequencies or other positive amounts: a
+     * value at or below 0 (or not a number) is coerced to 0.0001, so nothing breaks, but that end of the sweep sits
+     * at almost nothing.
+     * Sprudel's `rangex(from, to)` is the same mapping on its `0..1` signals.
+     *
+     * ```KlangScript
+     * Ignitor.saw().lowpass(Ignitor.sine(0.2).rangex(200, 3200))   // the cutoff sweeps four octaves, evenly
+     * ```
+     */
+    @KlangScript.Method
+    fun rangex(self: IgnitorDsl, from: IgnitorDslLike, to: IgnitorDslLike): IgnitorDsl =
+        self.rangex(from = from.toIgnitorDsl(), to = to.toIgnitorDsl())
 
     /** Per-sample floor. */
     @KlangScript.Method

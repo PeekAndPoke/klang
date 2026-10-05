@@ -50,11 +50,20 @@ functionality, a total win."
     bare `exp` to the values. Discrete values already scale with `.mul(k).add(c)`: `"0 0.5 1".range(100, 1000)` meant
     `"0 0.5 1".mul(900).add(100)`. `SprudelPattern.range` / `rangex` stay; their KDoc says they shape continuous
     signals only.
+16. **The Ignitor gets `rangex(from, to)`** (maintainer, 2026-10-05), both doors, with the same meaning as sprudel's
+    (parameter parity): the `-1..1` swing laid onto `from..to` exponentially, `from · (to / from)^((x + 1) / 2)`, so
+    `from` at -1, the geometric mean at 0, `to` at 1. A value at or below 0 is coerced to `RANGEX_FLOOR` (0.0001,
+    `audio_bridge/constants/RangeDefaults.kt`, which sprudel's `rangex` now reads too). Built by COMPOSITION, no wire
+    node and no engine ignitor: `exp(range(ln(max(from, floor)), ln(max(to, floor))))` with the mathematical `Max`
+    node (the door named `max` is a clamp). The optimizer already classifies `Exp`, `Log`, `Max` and `Range` as
+    control-rate over control-rate operands, so the chain folds like `range`; at run time the two logarithms are
+    block-constant (once per block), and the cost per sample is the range's multiply-add and one `fastExp` (with
+    signal bounds: also two `ln` per sample and two scratch renders).
 
 ## Order (each step green, songs bit-identical)
 
-Status, 2026-10-05: steps 1 to 5 and decisions 6 to 14 are committed (`82cc6024`); decision 15 is done in the working
-tree (reports `tmp/reviews/signals-range-report.md` and `tmp/reviews/signals-range-decisions-report.md`).
+Status, 2026-10-05: steps 1 to 5 and decisions 6 to 15 are committed (`82cc6024`, `f22448e9`); decision 16 is done
+in the working tree (reports `tmp/reviews/signals-range-report.md` and `tmp/reviews/signals-range-decisions-report.md`).
 
 1. **Done.** The two song lines that use a twin (`TetrisRemix.kt:41` and `StrangerThings.kt:59`, both `berlin2`) become
    `berlin.range(-1, 1)` (`x * 2 - 1` and `-1 + 2 * x` are the same IEEE number); the corpus render proves it.
@@ -62,9 +71,9 @@ tree (reports `tmp/reviews/signals-range-report.md` and `tmp/reviews/signals-ran
 3. **Done.** The Ignitor `unipolar` / `bipolar` go (`WarmupVocabulary.kt` rewritten with `range` / `mul`).
 4. **Done.** The callable shorthand, both doors, with its specs (mutation-checked).
 5. **Done.** The docs of `range` gain the table "where the swing sits" (`range(0, 1)` only upward, `range(-1, 0)` only down).
-6. **Done.** Decisions 6 to 15: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, the clock pair
+6. **Done.** Decisions 6 to 16: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, the clock pair
    renamed, `cosine` built from `sine`, `from` / `to` on every range door and in the wire node and engine, `from` and
-   `as` contextual in the parser, the dead range-context helpers and the string-receiver `range` / `rangex` removed. The corpus render is identical except
+   `as` contextual in the parser, the dead range-context helpers and the string-receiver `range` / `rangex` removed, the Ignitor `rangex` composed. The corpus render is identical except
    Der Schmetterling (the maintainer's open edit), which is proven separately from the committed text.
 
 The phase knob and the vibrato/tremolo `range` knob are the next task (`oscillator-phase-knob.md`).

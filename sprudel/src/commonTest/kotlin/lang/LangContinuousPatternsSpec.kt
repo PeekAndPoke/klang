@@ -201,6 +201,17 @@ class LangContinuousPatternsSpec : StringSpec({
         }
     }
 
+    "rangex coerces a bound at or below 0, and a NaN bound, to the floor 0.0001, as the Ignitor's rangex does" {
+        // sine is 0 at t = 0.75, so the value there is the `from` end of the sweep, and 1 at t = 0.25, the `to` end
+        fun at(p: SprudelPattern, t: Double) = p.queryArc(t, t + EPSILON).single().data.value?.asDouble.shouldNotBeNull()
+
+        at(sine.rangex(Double.NaN, 1000.0), 0.75) shouldBe (0.0001 plusOrMinus 1e-15)
+        at(sine.rangex(0.0, 1000.0), 0.75) shouldBe (0.0001 plusOrMinus 1e-15)
+        at(sine.rangex(-5.0, 1000.0), 0.75) shouldBe (0.0001 plusOrMinus 1e-15)
+        at(sine.rangex(1000.0, Double.NaN), 0.25) shouldBe (0.0001 plusOrMinus 1e-15)
+        at(sine.rangex(100.0, 1000.0), 0.25) shouldBe (1000.0 plusOrMinus 1e-9)
+    }
+
     "range and rangex have no string receiver: a mini-notation string scales with mul and add" {
         for (method in listOf("range", "rangex")) {
             withClue(method) {

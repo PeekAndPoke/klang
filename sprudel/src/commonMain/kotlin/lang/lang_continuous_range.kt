@@ -8,6 +8,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.RANGEX_FLOOR
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -125,8 +126,9 @@ private fun applyRangex(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
     val to = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 1.0
 
     // Apply logarithmic transformation to from/to for exponential scaling
-    val logFrom = kotlin.math.ln(kotlin.math.max(from, 0.0001)) // Avoid log(0)
-    val logTo = kotlin.math.ln(kotlin.math.max(to, 0.0001))
+    // Coerced to the shared floor with the Ignitor's comparison, so a value at or below it and a NaN read as the floor
+    val logFrom = kotlin.math.ln(if (from > RANGEX_FLOOR) from else RANGEX_FLOOR)
+    val logTo = kotlin.math.ln(if (to > RANGEX_FLOOR) to else RANGEX_FLOOR)
 
     val ranged = pattern.withContext {
         set(ContinuousPattern.rangeFromKey, logFrom)
@@ -149,8 +151,8 @@ private fun applyRangex(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * frequencies and filter cutoffs, where musical intervals (octaves, fifths) are ratios
  * rather than fixed differences.
  *
- * Both values must be greater than `0` for meaningful results; values ≤ `0` are clamped to
- * `0.0001` internally to avoid `ln(0)`.
+ * Both values must be greater than `0` for meaningful results; values ≤ `0` are coerced to
+ * `0.0001` internally to avoid `ln(0)`. The Ignitor's `rangex(from, to)` is the same mapping on its `-1..1` swing.
  *
  * @param from The value where the signal is at its low end (default `0.0`; use a small positive number for frequencies).
  * @param to The value where the signal is at its high end (default `1.0`).

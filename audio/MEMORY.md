@@ -164,6 +164,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-05 The Ignitor's `rangex(from, to)`, the exponential twin of `range`, composed of `Exp`, `Range`, `Log` and
+  `Max` (no node of its own), floor `RANGEX_FLOOR` (`docs/tasks/sprudel-signals-range-cleanup.md` decision 16)
 - 2026-10-05 One `range`: the Ignitor's `unipolar()` / `bipolar()` go with their wire nodes; `range(0, 1)` and
   `mul(2).minus(1)` spell them (`docs/tasks/sprudel-signals-range-cleanup.md`)
 - 2026-10-04 The Ignitor/Katalyst naming: the wire field is `ignitorParams`, `SoundValue.Dsl` holds an inline tree,
