@@ -656,7 +656,7 @@ object SongBenchmarkCases {
         // the marimba, one component at a time
         liveCase("marimba: full", "marimba", LEAD),
         liveCase("marimba: no analog", "marimba", LEAD, swap("let pAnalog = Ign.slot.analog\n  let ring = Ign.constant(400)", "let pAnalog = 0\n  let ring = Ign.constant(400)")),
-        liveCase("marimba: no body", "marimba", LEAD, swap(Regex("""\.body\(material = "wood", wet = [0-9.]+\)"""), "")),
+        liveCase("marimba: no body", "marimba", LEAD, swap(Regex("""\.body\(material = "steel", wet = [0-9.]+\)"""), "")),
         // the drum, one component at a time
         liveCase("trommel: full", "trommel", TROMMEL),
         liveCase("trommel: no harmonic bank", "trommel", TROMMEL, swap(".plus(harms)", "")),
