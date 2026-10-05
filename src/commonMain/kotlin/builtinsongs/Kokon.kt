@@ -281,8 +281,8 @@ export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
   .ignp("decay", 3.0).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4400)                                       // less fizz, the wall keeps its own
-  .gain(0.41).pan(0.5)
+  .lpf(4200)                                       // less fizz, the wall keeps its own
+  .gain(0.42).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -386,21 +386,21 @@ let spinning = stack(
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).pan(0.3).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyOne).pan(0.7).gain(0.27).hpf(300),
+  spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyOne).pan(0.75).gain(0.27).hpf(300),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).pan(0.3).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyTwo).pan(0.7).gain(0.27).hpf(312),
+  spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyTwo).pan(0.75).gain(0.27).hpf(312),
   beat(cocoonRoots).pan(0.5).gain(saw.range(0.0, 0.22).slow(4)).lpf(1500),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp.ply(2)).pan(0.3).gain("<0.28 0.29 0.30 0.31>").lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyOne.ply(2)).pan(0.7).gain("<0.28 0.29 0.30 0.31>").hpf(325),
+  spin(cocoonArp.ply(2)).pan(0.25).gain("<0.28 0.29 0.30 0.31>").lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyOne.ply(2)).pan(0.75).gain("<0.28 0.29 0.30 0.31>").hpf(325),
   beat(cocoonRoots).pan(0.5).gain(0.18).lpf(1500),
   swell(cocoonSwell),
 )
@@ -409,8 +409,8 @@ let stretching = stack(
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp.ply(2)).pan(0.3).gain("<0.30 0.31 0.32 0.33>").lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyTwo.struct("x!32")).pan(0.7).gain("<0.30 0.31 0.32 0.33>").hpf(325),
+  spin(cocoonArp.ply(2)).pan(0.25).gain("<0.30 0.31 0.32 0.33>").lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyTwo.struct("x!32")).pan(0.75).gain("<0.30 0.31 0.32 0.33>").hpf(325),
   beat(cocoonRoots).pan(0.5).gain(0.20).lpf(1500),
   swell(cocoonSwell),
 )
@@ -426,7 +426,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.58).pan(0.5),
+  spin(cocoonArp.add(7)).ply(2).gain(0.60).pan(0.5),
   wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1500),
@@ -451,13 +451,13 @@ let landing = stack(
 
 // The cocoon again, empty now, and the butterfly flies off.
 let flyingOff = stack(
-  spin(cocoonArp),
-  chime(schmetterlingLead),
+  spin(cocoonArp).pan(0.25),
+  chime(schmetterlingLead).pan(0.75),
 )
 
 // The last chord is D major: this part brings its own scale, and the first scale on a note wins.
 let lastChord = stack(
-  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").ignp("release", 6.0),
+  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").ignp("release", 5.0),
 )
 
 // The heavy block: the cocoon breaks open, the arpeggio unravels, the lift, the landing. Played twice, the second time
