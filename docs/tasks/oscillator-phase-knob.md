@@ -1,4 +1,4 @@
-# A `phase` knob on every periodic oscillator, `bias` on vibrato and tremolo
+# A `phase` knob on every periodic oscillator, `range` on the vibrato and tremolo LFOs
 
 Status: **queued 2026-09-30 by the maintainer.** Not started.
 
@@ -44,26 +44,21 @@ through sine partials and a phase offset would be even better."
 - **Default 0 is bit-identical**: a spec renders every built-in song before and after with the default and compares
   bit for bit.
 
-## Decided 2026-10-05 (maintainer): `bias` on vibrato and tremolo; `unipolar` / `bipolar` go
+## Decided 2026-10-05 (maintainer): the swing's position is `range`, on every surface
 
-**`bias`, the swing's position around the note**, a dedicated knob of the LFO doors only (NOT on the oscillators,
-NOT on sprudel's normal sounds): from -1 to 1, 0 swings around the center (-1..1), 1 only upward (0..1), -1 only
-downward (-1..0), continuous in between (0.5 swings -0.5..1). The maintainer's case: a guitar's vibrato goes UP from
-the fretted note ("you cannot really vibrato the frequency down when playing a string on the guitar").
-- **Vibrato**: `bias` default 0 (today's sound); a secondary knob, so on the builder behind the configure lambda on
-  both doors (sprudel `vibrato(rate, depth, x => x.bias(1))`, the Ignitor vibrato node the same).
-- **Tremolo**: `bias` default **-1**, which is today's tremolo (the gain dips from 1 to 1 - depth); built so that
-  -1 is literally today's `range(1 - depth, 1)`, bit-identical. 0 also swings above unity, 1 only upward.
-- Per sample: one multiply and one add on the LFO value; a constant bias folds per block.
-- Same concept in an instrument's own LFO: `Ign.sine(rate).range(lo, hi)` (bias 1 is `.range(0, 1)`, bias 0.5 is
-  `.range(-0.5, 1)`). Document `range` with that table.
+The guitar case (maintainer): "you cannot really vibrato the frequency down when playing a string on the guitar";
+a guitar's vibrato goes UP from the fretted note. The concept (first discussed as a `bias` knob, then condensed,
+2026-10-05: "we condense the entire bias knob to one range() function on all three dsl") is ONE word, `range`:
+- **A signal you build yourself** (Ignitor, Katalyst, sprudel): `x.range(lo, hi)` lays the signal's swing onto lo..hi.
+  The other words go (`unipolar` / `bipolar` on the Ignitor side, the sprudel twins and helpers): that cleanup is its
+  own task, `docs/tasks/sprudel-signals-range-cleanup.md`.
+- **The vibrato and tremolo doors** hide their LFO, so `range` is a builder knob that shapes that inner LFO in the same
+  -1..1 language, depth staying the musical knob on the door: `vibrato(5, 0.3, x => x.range(0, 1))` swings only upward
+  (guitar); the vibrato default is `range(-1, 1)` (today's sound); the tremolo default is `range(-1, 0)` (today's
+  tremolo, the gain dipping from 1 to 1 - depth), built so that the default is literally today's computation,
+  bit-identical. Raw Motor: no clamp; `range(0, 2)` swings twice the depth upward.
+- Per sample: one multiply and one add on the LFO value; a constant range folds per block.
 - Not "skew": skew/symmetry in synth language is the horizontal asymmetry (triangle toward saw); not wanted now.
-
-**`unipolar()` and `bipolar()` are removed** (maintainer: "can be expressed with .range()"): `unipolar()` is exactly
-`.range(0, 1)`. `bipolar()` maps a 0..1 source (an envelope, a constant) to -1..1, which `range` cannot say
-readably (`range(-3, 1)`); its replacement is `.mul(2).minus(1)` (pending the maintainer's confirmation of that
-reading). No song uses either; the uses are `WarmupVocabulary.kt`, the wire nodes `IgnitorDsl.Unipolar` / `Bipolar`,
-the runtime `UnipolarIgnitor` / `BipolarIgnitor`, the script doors and their tests. Removed, not deprecated.
 
 ## Open when it starts
 
