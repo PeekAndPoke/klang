@@ -303,7 +303,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
 export chug = roots => n(roots.add(-7)).struct("x x@2  x x@2  x x")
-  .sound(heavy).adsrOff().unison(voices = 15, spread = 0.10)
+  .sound(heavy).adsrOff().unison(voices = 15, spread = 0.09)
   .ignp("decay", 0.8).clip(1)
   .velocity("1.0 0.75 0.9 0.80 0.95 0.80")
   .gain(1.00).pan(0.5).late(perlin.range(0.0000, 0.0008))
@@ -311,7 +311,7 @@ export chug = roots => n(roots.add(-7)).struct("x x@2  x x@2  x x")
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
-  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
+  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.09)
   .ignp("decay", 0.5).clip(1)
   .velocity("1.0 0.92!2 0.96 0.90 0.92 0.94 0.96")
   .gain(0.48).apply(
@@ -322,7 +322,7 @@ export wings = chords => n(chords).ply(16)
 
 // Strike: one heavy chord, let ring. It shares the wings' orbit and room.
 export strike = chords => n(chords)
-  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
+  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.09)
   .ignp("decay", 3.5).clip(1)
   .gain(0.7)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.000))
@@ -354,7 +354,7 @@ export kick = pat => sound("bd").struct(pat)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
-  .gain(0.47).pan(0.55)
+  .gain(0.48).pan(0.55)
   .lpf(freq = 11000, q = 0.5)
   .delay(0.33, pure(1/16).div(cps), 0.82, 16) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin.range(0.001, 0.0015))
@@ -380,26 +380,26 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
 // The cocoon is spun one thread at a time, over two rounds, in the middle; the answer and the heartbeat will stand to
 // either side of it.
 let spinning = stack(
-  spin(cocoonArp).gain(0.28).lpf(3300).unison(voices = 5, spread = 0.02).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
+  spin(cocoonArp).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
 )
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).gain(0.28).lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyOne).gain(0.28).hpf(250),
+  spin(cocoonArp).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyOne).gain(0.28).hpf(300),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).gain(0.28).lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyTwo).gain(0.28).hpf(275),
+  spin(cocoonArp).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyTwo).gain(0.28).hpf(312),
   beat(cocoonRoots).gain(saw.range(0.0, 0.22).slow(4)).lpf(1500),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
   spin(cocoonArp.ply(2)).gain("<0.28 0.29 0.30 0.31>").lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyOne.ply(2)).gain("<0.28 0.29 0.30 0.31>").hpf(300),
+  sing(melodyOne.ply(2)).gain("<0.28 0.29 0.30 0.31>").hpf(325),
   swell(cocoonSwell),
   beat(cocoonRoots).gain(0.18).lpf(1500),
 )
@@ -409,7 +409,7 @@ let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
   spin(cocoonArp.ply(2)).gain("<0.30 0.31 0.32 0.33>").lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyTwo.struct("x!32")).gain("<0.30 0.31 0.32 0.33>").hpf(300),
+  sing(melodyTwo.struct("x!32")).gain("<0.30 0.31 0.32 0.33>").hpf(325),
   swell(cocoonSwell),
   beat(cocoonRoots).gain(0.20).lpf(1500),
 )
