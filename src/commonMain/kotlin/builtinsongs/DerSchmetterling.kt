@@ -123,9 +123,9 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  3.1)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  3.2)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  7.9)         // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  3.8)         // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 1.8, db =  3.8)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))          // the low end
@@ -262,15 +262,15 @@ let marimba = (() => {
 
 export lead_shape = x => x.sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "steel", wet = 0.2)
-  .hpf(600, 0.7).lpf(4500, 1.2)
+  .hpf(600, 0.7).lpf(4200, 1.2).notch(2700, 1.7)
   .pan(0.33).superimpose(pan(0.66)) // . solo()
   .clip(0.80)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.18!16>").gain(mul(0.38))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.18!16>").gain(mul(0.35))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
-  .mute("<1!64 0!32 1!32 0!16>")
+  .mute("<1!64 0!32 1!48 0!16 1!16>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -286,7 +286,7 @@ export guitar1_shape = x => x.pregain(guitarDyna.fast(2).mul(0.8)).sound(guitarM
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.20)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.220)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.210)  // .mute()
   .late(berlin.range(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
@@ -328,8 +328,8 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.41) // . mute()
-    .ignp("sub", 0.90).ignp("harmonics", 1.00)  // . solo()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.42) // . mute()
+    .ignp("sub", 0.95).ignp("harmonics", 1.00)  // . solo()
     .adsr(0.003, 0.3, 0.33, 0.015).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
@@ -339,7 +339,7 @@ export bass_arrange = x => x.orbit(4) // . mute()
 
 export bass = n(bass_pat).struct(
   `< x x x [x x]  x x [x x] x    x x x [x x]  x x [x x] x
-    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x x] x] [x [x x]]    [x x] [x [x x]] [x x] [x x]  [[x x] [x x?]] [x x] [[x x] x] [x x]
+    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x? x] x] [x [x x]]    [x x] [x [x x]] [x x] [x x]  [[x x] [x x?]] [x x] [[x x] x] [x x]
     [x x@2 x]!16
     [x!4]!12 [x!8]!2 [[x x] x!3]!2>`
 ).fast(2).apply(bass_shape).tag("bass")
@@ -364,7 +364,7 @@ let gummiEimer = (() => {
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.40, "softsat", 2)
-    .mul(0.3)
+    .mul(0.1)
     .classic()
 })()
 
@@ -377,7 +377,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .pan(0.25).superimpose(pan(0.75))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.07)
+  .scale("e4:minor").gain(0.19)
   .mute("<1!32 0!32 1!32>")                          
   .late(berlin.range(0.0035, 0.0045).mul(drunk))
 
