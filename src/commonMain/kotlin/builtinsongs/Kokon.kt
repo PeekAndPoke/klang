@@ -282,7 +282,7 @@ export soar = notes => n(notes.add(14))
   .ignp("decay", 3.0).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
   .lpf(4450)                                       // less fizz, the wall keeps its own
-  .gain(0.39).pan(0.5)
+  .gain(0.40).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -356,13 +356,13 @@ export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.50).pan(0.55)
   .lpf(freq = 11000, q = 0.5)
-  .delay(0.33, pure(1/16).div(cps), 0.82, 16) // Snare needs it own orbit for the dalay!
+  .delay(0.35, pure(1/16).div(cps), 0.85, 16) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin.range(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)
   .velocity("1.0 0.7 0.85 0.7")
   .hpf(800).lpf(freq = 14500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
-  .gain(0.75).pan(0.4)                            
+  .gain(0.75).pan(0.45)                            
   .orbit(11).apply(drumRoom).late(perlin.range(0.002, 0.0035))
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
@@ -371,7 +371,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 1.00).ignp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.2).pan(0.5)
+  .gain(1.3).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -434,7 +434,7 @@ let unravelling = stack(
 
 // The lift: Bb, C, Dm.
 let lifting = stack(
-  spin(liftArp.ply(4)).gain(0.20).ignp("sustain", 0.0).clip(0.5).pan(0.25).superimpose(pan(0.75)),
+  spin(liftArp.ply(4)).gain(0.10).ignp("sustain", 0.0).clip(0.33).pan(0.25).superimpose(pan(0.75)),
   soar(melodyTwo).vibrato(beatRate(0.5), saw.pow(4).mul(0.2).add(0.02).slow(4)),
   wings(liftPower),
   chug(liftRoots),    
