@@ -160,7 +160,8 @@ The release-defining set, regardless of when they're sequenced:
   blind reviewer in round 1, as a trial; (2) `docs/blog/2026-01-20-the-position-that-survived/position-pipeline.png`,
   unreferenced since its interactive figure replaced it: keep as history or delete; (3) `console/deploy-finzo.sh`
   copies with `scp -r` and never deletes on the server, so a removed page or post stays online: add a delete step or
-  accept it.
+  accept it; (4) the triangle's name across the DSLs (`tri` in sprudel, `Ign.triangle` but `supertri`, both as sound
+  and LFO names), [`oscillator-names-across-dsls.md`](oscillator-names-across-dsls.md).
 - **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
   `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [
   `-07`](copyright-audit-07-control-vocabulary-legal-review.md)

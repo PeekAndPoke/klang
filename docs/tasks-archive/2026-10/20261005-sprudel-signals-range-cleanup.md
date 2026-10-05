@@ -1,7 +1,9 @@
 # One `range`: the sprudel signals' shorthand, the bipolar twins and the polarity helpers out
 
-Status: **decided 2026-10-05 (maintainer), started the same day.** "It reduces the surface while not costing any
-functionality, a total win."
+Status: **DONE 2026-10-05, archived.** Decided by the maintainer and built the same day on branch `signals-range`: "It
+reduces the surface while not costing any functionality, a total win." Commits `5f3c0278`, `82cc6024`, `f22448e9`,
+`4b94bdd5`. Follow-ups: the phase knob with the vibrato/tremolo `range` knob (`docs/tasks/oscillator-phase-knob.md`)
+and one name per oscillator shape (`docs/tasks/oscillator-names-across-dsls.md`).
 
 ## The decisions (maintainer, 2026-10-05)
 
@@ -62,8 +64,9 @@ functionality, a total win."
 
 ## Order (each step green, songs bit-identical)
 
-Status, 2026-10-05: steps 1 to 5 and decisions 6 to 15 are committed (`82cc6024`, `f22448e9`); decision 16 is done
-in the working tree (reports `tmp/reviews/signals-range-report.md` and `tmp/reviews/signals-range-decisions-report.md`).
+Status, 2026-10-05: all steps and decisions 1 to 16 are committed (`5f3c0278`, `82cc6024`, `f22448e9`, `4b94bdd5`).
+Reviews: round 1 (blind pair) and round 2 (reviewer-high, clean) for the cleanup, a clean blind round 1 for the
+Ignitor `rangex`.
 
 1. **Done.** The two song lines that use a twin (`TetrisRemix.kt:41` and `StrangerThings.kt:59`, both `berlin2`) become
    `berlin.range(-1, 1)` (`x * 2 - 1` and `-1 + 2 * x` are the same IEEE number); the corpus render proves it.
@@ -76,4 +79,4 @@ in the working tree (reports `tmp/reviews/signals-range-report.md` and `tmp/revi
    `as` contextual in the parser, the dead range-context helpers and the string-receiver `range` / `rangex` removed, the Ignitor `rangex` composed. The corpus render is identical except
    Der Schmetterling (the maintainer's open edit), which is proven separately from the committed text.
 
-The phase knob and the vibrato/tremolo `range` knob are the next task (`oscillator-phase-knob.md`).
+The phase knob and the vibrato/tremolo `range` knob are the next task (`docs/tasks/oscillator-phase-knob.md`).

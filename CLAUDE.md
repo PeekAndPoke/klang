@@ -162,7 +162,7 @@ script object `Osc` (now `Ignitor`, short `Ign`), the global `OscSlot` (now `Ign
 `oscp` (now `ignitorParam` / `ignp`), the wire field `oscParams` (now `ignitorParams`), `SoundValue.Osc` (now
 `SoundValue.Dsl`) and the Kotlin types `KlangScriptOsc`, `KlangScriptOscSlot`, `KlangScriptOscExtensions`. The
 `Osc*Builder` types keep their names: they configure real oscillators. Guard: `RetiredIgnitorNamesSpec`. The polarity helpers (gone 2026-10-05,
-`docs/tasks/sprudel-signals-range-cleanup.md`: `range(from, to)` is the one word on every surface): sprudel's bipolar
+`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`: `range(from, to)` is the one word on every surface): sprudel's bipolar
 twins `sine2`, `cosine2`, `saw2`, `isaw2`, `tri2`, `itri2`, `square2`, `perlin2`, `berlin2`, `rand2` and the helpers
 `toBipolar`, `fromBipolar`, `range2` (a bare twin is its signal with `.range(-1, 1)`; `twin.range(a, b)` and
 `twin.range2(a, b)` are `signal.range(a, b)`, because the innermost range wins), and the Ignitor's `unipolar()` /

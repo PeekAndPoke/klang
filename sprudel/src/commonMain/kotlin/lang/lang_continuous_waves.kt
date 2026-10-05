@@ -86,7 +86,7 @@ fun steady(value: Number, @Suppress("unused") callInfo: CallInfo? = null): Sprud
  * trap; a call with fewer is a [KlangScriptArgumentError] naming the fix, on both doors.
  *
  * Each signal object declares its own `@KlangScript.Invoke` member (KSP reads the annotation on the object) and
- * hands it to [ranged]. Decided 2026-10-05, `docs/tasks/sprudel-signals-range-cleanup.md`.
+ * hands it to [ranged]. Decided 2026-10-05, `docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`.
  */
 sealed class SprudelSignal(private val name: String, source: SprudelPattern) : SprudelPattern by source {
 

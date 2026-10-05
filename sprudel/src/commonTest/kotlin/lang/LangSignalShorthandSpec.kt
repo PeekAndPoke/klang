@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
- * The callable shorthand of the sprudel signals (`docs/tasks/sprudel-signals-range-cleanup.md`, step 4):
+ * The callable shorthand of the sprudel signals (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`, step 4):
  * `perlin(200, 400)` is exactly `perlin.range(200, 400)` on both doors, the bare name stays a pattern, and a call
  * with fewer than two values is a script error that names the fix.
  */

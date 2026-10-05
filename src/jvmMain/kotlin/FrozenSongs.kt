@@ -22,7 +22,7 @@ package io.peekandpoke.klang
  * notes below describe Seltsamere Dinge and that retired text; the new snapshot's own migrations are the 2026-09-26
  * and 2026-10-03 notes below and the 2026-09-28 Master entry of the list.
  *
- * 2026-10-05, one `range` (`docs/tasks/sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone, so a
+ * 2026-10-05, one `range` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone, so a
  * twin is spelled as its signal with `.range(-1, 1)`. Syntax only; the renders are identical in raw doubles.
  *
  * 2026-10-03, the Ignitor/Katalyst naming (`docs/plans/ignitor-katalyst-naming.md`): the script object, its slot

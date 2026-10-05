@@ -119,6 +119,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   `docs/tasks-archive/2026-10/20261004-stdlib-export-block.md`).
 - 2026-10-05: the Ignitor doors `unipolar()` / `bipolar()` removed, `range` is the one word for a swing; a sprudel object
   that IS a pattern (the signals) takes `@KlangScript.Invoke` and keeps its pattern methods through the `isInstance` walk
-  (`docs/tasks/sprudel-signals-range-cleanup.md`).
+  (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
 - 2026-10-05: `from` and `as` are contextual keywords (lexed as identifiers, read as keywords only in an import or
-  export), so the range values can be named `from` / `to` (`docs/tasks/sprudel-signals-range-cleanup.md`).
+  export), so the range values can be named `from` / `to` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).

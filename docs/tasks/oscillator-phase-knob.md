@@ -51,7 +51,7 @@ a guitar's vibrato goes UP from the fretted note. The concept (first discussed a
 2026-10-05: "we condense the entire bias knob to one range() function on all three dsl") is ONE word, `range`:
 - **A signal you build yourself** (Ignitor, Katalyst, sprudel): `x.range(from, to)` lays the signal's swing onto from..to.
   The other words go (`unipolar` / `bipolar` on the Ignitor side, the sprudel twins and helpers): that cleanup is its
-  own task, `docs/tasks/sprudel-signals-range-cleanup.md`.
+  own task, `docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`.
 - **The vibrato and tremolo doors** hide their LFO, so `range` is a builder knob that shapes that inner LFO in the same
   -1..1 language, depth staying the musical knob on the door: `vibrato(5, 0.3, x => x.range(0, 1))` swings only upward
   (guitar); the vibrato default is `range(-1, 1)` (today's sound); the tremolo default is `range(-1, 0)` (today's

@@ -175,9 +175,9 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   bag `ignitorParams`, the songs spell `Ign.` and `ignp` (one `ignitorParam`), the old names guarded by `RetiredIgnitorNamesSpec`
   (`docs/plans/ignitor-katalyst-naming.md`).
 - 2026-10-05: one `range`: the bipolar twins and `toBipolar` / `fromBipolar` / `range2` removed, every signal callable as
-  its range shorthand (`docs/tasks/sprudel-signals-range-cleanup.md`).
+  its range shorthand (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
 - 2026-10-05: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, `sinOfDay` / `sinOfNight` renamed to
   `sineOfDay` / `sineOfNight`, `cosine` is `sine.early(0.25)`, the range values are `from` / `to`
-  (`docs/tasks/sprudel-signals-range-cleanup.md`, maintainer decisions).
+  (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`, maintainer decisions).
 - 2026-10-05: `String.range` / `String.rangex` removed (a silent no-op or a wrong `exp` on discrete values); a
-  mini-notation string scales with `.mul(k).add(c)` (`docs/tasks/sprudel-signals-range-cleanup.md`).
+  mini-notation string scales with `.mul(k).add(c)` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).

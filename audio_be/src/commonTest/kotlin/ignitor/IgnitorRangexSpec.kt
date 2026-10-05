@@ -22,7 +22,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * The Ignitor `rangex(from, to)` rendered by the engine (`docs/tasks/sprudel-signals-range-cleanup.md` decision 16).
+ * The Ignitor `rangex(from, to)` rendered by the engine (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md` decision 16).
  * It has no node of its own: the door composes `exp(range(ln(max(from, floor)), ln(max(to, floor))))`, so these rows
  * check what the composition renders, `from · (to / from)^((x + 1) / 2)`:
  *

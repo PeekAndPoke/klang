@@ -22,7 +22,7 @@ import io.peekandpoke.klang.script.runtime.NumberValue
  * `from` and `as` are contextual keywords, as in JavaScript: the import and export grammar reads them as keywords, and
  * everywhere else they are ordinary names. The range values of every DSL are named `from` and `to`
  * (`range(from = 200, to = 400)`), so a hard keyword would make the named call a syntax error
- * (`docs/tasks/sprudel-signals-range-cleanup.md`, maintainer decisions of 2026-10-05).
+ * (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`, maintainer decisions of 2026-10-05).
  */
 class ContextualImportKeywordsTest : StringSpec({
 

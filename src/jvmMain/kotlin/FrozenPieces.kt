@@ -16,7 +16,7 @@ package io.peekandpoke.klang
  * so the sound stays identical. A materially changed instrument gets a NEW dated snapshot; the old
  * one stays so its rows remain comparable.
  *
- * 2026-10-05, one `range` (`docs/tasks/sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone. The one
+ * 2026-10-05, one `range` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone. The one
  * twin here sat in a commented-out fragment (`//.mix(saw2, 1.0)`, where `saw` is the local supersaw, not the signal),
  * and the fragment is deleted. A comment only; the renders are identical in raw doubles.
  *

@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
  * The Ignitor `range` on both doors, with its values named `from` and `to` as on every range door
- * (`docs/tasks/sprudel-signals-range-cleanup.md`, maintainer 2026-10-05): positional, named in either order and the
+ * (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`, maintainer 2026-10-05): positional, named in either order and the
  * Kotlin door build the same node, and `from` is the value at the low end of the swing. The same for `rangex`, the
  * exponential twin, which is composed of existing nodes (decision 16).
  */
