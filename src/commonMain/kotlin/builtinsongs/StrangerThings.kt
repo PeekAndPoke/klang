@@ -56,7 +56,7 @@ stack(
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2 * 0.45)).vibrato(rate = "0.51".add(perlin.div(20)), depth = 0.06)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
-        .crush(amount = "2.0".add(berlin2.mul(0.75).slow(4)), oversample = 1).lpf(7.75 * 440).hpf(300)
+        .crush(amount = "2.0".add(berlin.range(-1, 1).mul(0.75).slow(4)), oversample = 1).lpf(7.75 * 440).hpf(300)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))

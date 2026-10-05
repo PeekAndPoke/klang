@@ -22,6 +22,9 @@ package io.peekandpoke.klang
  * notes below describe Seltsamere Dinge and that retired text; the new snapshot's own migrations are the 2026-09-26
  * and 2026-10-03 notes below and the 2026-09-28 Master entry of the list.
  *
+ * 2026-10-05, one `range` (`docs/tasks/sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone, so a
+ * twin is spelled as its signal with `.range(-1, 1)`. Syntax only; the renders are identical in raw doubles.
+ *
  * 2026-10-03, the Ignitor/Katalyst naming (`docs/plans/ignitor-katalyst-naming.md`): the script object, its slot
  * accessor and its slot setter are spelled with their new names (`Ign.`, `Ign.slot.`, `ignp`). Syntax only; the
  * renders are identical in raw doubles.
@@ -562,7 +565,7 @@ stack(
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0 * 0.45)).vibrato(rate = "0.51".add(perlin.div(10)), depth = 0.05)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
-        .crush(amount = "1.85".add(berlin2.mul(0.5).slow(4)), oversample = 1).lpf(5.5 * 440).hpf(300)
+        .crush(amount = "1.85".add(berlin.range(-1, 1).mul(0.5).slow(4)), oversample = 1).lpf(5.5 * 440).hpf(300)
         .pan(0.2).superimpose(pan(0.8))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))
