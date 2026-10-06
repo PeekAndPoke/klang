@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  3.1)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  5.0)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  7.9)         // roar:  low mids
     .band(freq = 2700, q = 2.0, db =  3.6)         // bark:  the upper-mid speaker peak
   )
@@ -231,7 +231,7 @@ let bass = (() => {
     .classic()
 })()
 
-export guitarDyna = "0.98 0.88!7 0.95 0.88!7".sub(perlin.range(0.00, 0.03).slow(2))
+export guitarDyna = "0.98!2 0.80!6 0.92!2 0.80!6".sub(perlin.range(0.00, 0.05).slow(2))
 export guitarClip = "<0.97!31 0.85 0.97!31 0.88 0.97!30 0.85 0.80>".sub(perlin.range(0.0, 0.02))
   .mul("<0.985!32 [1.1 0.99!7]!32 0.975!32 [1.1 0.99!7]!32>")
 export guitarDecay = "<0.425!16 0.440!16 0.425!16 0.440!16>"
@@ -286,7 +286,7 @@ export guitar1_shape = x => x.pregain(guitarDyna.fast(2).mul(0.8)).sound(guitarM
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.20)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.200)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.180)  // .mute()
   .late(berlin.range(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
@@ -300,10 +300,10 @@ export guitar2_pat =
 
 export guitar2_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", guitarDecay)
-  .clip(guitarClip.fast(2)).pan(0.25).body(material = "oak", wet = 0.195) // .superimpose(pan(0.95))
+  .clip(guitarClip.fast(2)).pan(0.25).body(material = "oak", wet = 0.15) // .superimpose(pan(0.95))
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
-  .scale("<e2:minor>").gain(0.140).mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").gain(0.135).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin.range(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar2_shape).tag("guitar2")
@@ -318,7 +318,7 @@ export guitar3_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff(
   .clip(guitarClip.fast(2)).pan(0.75).body(material = "maple", wet = 0.2) // .superimpose(pan(0.05))
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
-  .scale("<e2:minor>").gain(0.140).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(0.135).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin.range(0.0000, 0.0004).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
@@ -328,8 +328,8 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.45) // . mute()
-    .ignp("sub", 0.97).ignp("harmonics", 1.00)  // . solo()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.48) // . mute()
+    .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.9".sub(perlin.range(0.0, 0.1).slow(8)))  // . solo()
     .adsr(0.003, 0.3, 0.33, 0.015).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
@@ -377,7 +377,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .pan(0.16).superimpose(pan(0.84))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.22)
+  .scale("e4:minor").gain(0.24)
   .mute("<1!32 0!32 1!32>")                          
   .late(berlin.range(0.0035, 0.0045).mul(drunk))
 
@@ -464,20 +464,20 @@ export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin.range(0.0
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
-export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.12).pan(0.575)
+export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.13).pan(0.575)
   .lpf(11200)
 export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
-export hats_shape = x => x.gain(0.14).pan(0.425)
-  .hpf(1200).lpf(freq = "14500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin.range(0.001, 0.003), 0.1, 0.70, 2.0)
+export hats_shape = x => x.gain(0.15).pan(0.425)
+  .hpf(800).lpf(freq = "14500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin.range(0.001, 0.003), 0.1, 0.70, 2.0)
 export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
 
 export shaker_pat = `<pink ~ pink ~ pink ~ pink ~ pink>*8`
-export shaker_shape = x => x.gain(0.04).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
-  .hpf(freq = 6000, q = 0.7) //  . solo()
+export shaker_shape = x => x.gain(0.07).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
+  .hpf(freq = 8000, q = 0.7) //  . solo()
   .pan(0.35).adsr(0.015, 0.10, 0.0, 0.01)
 export shaker_arrange = x => x.orbit(10).late(berlin.range(0.0010, 0.0020).mul(drunk))
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
@@ -526,7 +526,7 @@ export song = stack(
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
     .reverb(0.2, 5, 7000)
-    .gain(4.0)
+    .gain(3.8)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )

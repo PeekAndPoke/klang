@@ -270,7 +270,8 @@ export spin = notes => n(notes)
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .ignp("decay", 3.0).clip(0.99)
-  .tremolo(rate = 4, depth = perlin.range(0.325, 0.375)).accelerate(perlin.range(0.01, 0.02).slow(8).seg(8))
+  .tremolo(rate = beatRate(0.33), depth = perlin.range(0.300, 0.350))  // The guitar finger
+  .vibrato(rate = beatRate(0.33), depth = perlin.range(0.010, 0.020))
   .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
@@ -420,7 +421,7 @@ let holdingBreath = stack(
 
 // The high gain rig splits it open: the melody against the wall. The arpeggio waits for its own part.
 let breakingOpen = stack(
-  soar(melodyOne).vibrato(beatRate(0.5), saw.pow(8).mul(0.5).add(0.01).slow(2)),
+  soar(melodyOne).tremolo(beatRate(0.33), saw.slow(4).pow(2).mul(0.10).add(0.01)),
   wings(cocoonPower),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -438,7 +439,7 @@ let unravelling = stack(
 // The lift: Bb, C, Dm.
 let lifting = stack(
   //spin(liftArp.add(14).ply(4)).gain(0.05).ignp("sustain", 0.0).clip(0.25).pan(0.25).superimpose(pan(0.75)),
-  soar(melodyTwo).vibrato(beatRate(0.5), saw.pow(8).mul(0.20).add(0.01).slow(2)),
+  soar(melodyTwo).tremolo(beatRate(0.33), saw.slow(4).pow(2).mul(0.10).add(0.01)),
   wings(liftPower),
   chug(liftRoots),    
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
