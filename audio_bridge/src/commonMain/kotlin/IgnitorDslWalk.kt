@@ -64,7 +64,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Highpass -> listOf(
             inner, freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
         )
-        is IgnitorDsl.Impulse -> listOf(freq, analog)
+        is IgnitorDsl.Impulse -> listOf(freq, analog, phase)
         is IgnitorDsl.Lerp -> listOf(left, right, t)
         is IgnitorDsl.Log -> listOf(inner)
         is IgnitorDsl.Lowpass -> listOf(
@@ -91,14 +91,14 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Pluck -> listOf(freq, decay, brightness, pickPosition, stiffness, analog)
         is IgnitorDsl.Plus -> listOf(left, right)
         is IgnitorDsl.Pow -> listOf(base, exp)
-        is IgnitorDsl.Pulze -> listOf(freq, duty, analog)
-        is IgnitorDsl.Ramp -> listOf(freq, analog)
+        is IgnitorDsl.Pulze -> listOf(freq, duty, analog, phase)
+        is IgnitorDsl.Ramp -> listOf(freq, analog, phase)
         is IgnitorDsl.Range -> listOf(inner, from, to)
-        is IgnitorDsl.RawPulze -> listOf(freq, duty, analog)
+        is IgnitorDsl.RawPulze -> listOf(freq, duty, analog, phase)
         is IgnitorDsl.Recip -> listOf(inner)
         is IgnitorDsl.Round -> listOf(inner)
         is IgnitorDsl.Sample -> emptyList()
-        is IgnitorDsl.Sawtooth -> listOf(freq, analog)
+        is IgnitorDsl.Sawtooth -> listOf(freq, analog, phase)
         is IgnitorDsl.Select -> listOf(cond, whenTrue, whenFalse)
         is IgnitorDsl.Shape -> listOf(inner, shape, oversample)
         is IgnitorDsl.Shimmer -> listOf(inner, wet, feedback, tone, floor)
@@ -106,28 +106,28 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Silence -> emptyList()
         is IgnitorDsl.Sine -> listOf(
             freq, analog, fundamental, harmonics, harmonicsRolloff, octaves, octavesRolloff,
-            suboctaves, suboctavesRolloff, analogSpread,
+            suboctaves, suboctavesRolloff, analogSpread, phase,
         )
         is IgnitorDsl.Sq -> listOf(inner)
         is IgnitorDsl.Sqrt -> listOf(inner)
-        is IgnitorDsl.Square -> listOf(freq, analog)
+        is IgnitorDsl.Square -> listOf(freq, analog, phase)
         is IgnitorDsl.SuperPluck -> listOf(
             freq, voices, spread, decay, brightness, pickPosition, stiffness, analog, analogSpread,
         )
-        is IgnitorDsl.SuperRamp -> listOf(freq, voices, spread, analog, analogSpread)
-        is IgnitorDsl.SuperSaw -> listOf(freq, voices, spread, analog, analogSpread)
-        is IgnitorDsl.SuperSine -> listOf(freq, voices, spread, analog, analogSpread)
-        is IgnitorDsl.SuperSquare -> listOf(freq, voices, spread, analog, analogSpread)
-        is IgnitorDsl.SuperTri -> listOf(freq, voices, spread, analog, analogSpread)
+        is IgnitorDsl.SuperRamp -> listOf(freq, voices, spread, analog, analogSpread, phase)
+        is IgnitorDsl.SuperSaw -> listOf(freq, voices, spread, analog, analogSpread, phase)
+        is IgnitorDsl.SuperSine -> listOf(freq, voices, spread, analog, analogSpread, phase)
+        is IgnitorDsl.SuperSquare -> listOf(freq, voices, spread, analog, analogSpread, phase)
+        is IgnitorDsl.SuperTri -> listOf(freq, voices, spread, analog, analogSpread, phase)
         is IgnitorDsl.Tanh -> listOf(inner)
         is IgnitorDsl.Times -> listOf(left, right)
-        is IgnitorDsl.Tremolo -> listOf(inner, rate, depth, shape)
-        is IgnitorDsl.Triangle -> listOf(freq, analog)
+        is IgnitorDsl.Tremolo -> listOf(inner, rate, depth, shape, rangeFrom, rangeTo)
+        is IgnitorDsl.Triangle -> listOf(freq, analog, phase)
         is IgnitorDsl.Variants -> children
         is IgnitorDsl.Vibrato -> listOf(inner, rate, semitones)
         is IgnitorDsl.WhiteNoise -> listOf(color)
-        is IgnitorDsl.Zamp -> listOf(freq, analog)
-        is IgnitorDsl.Zawtooth -> listOf(freq, analog)
+        is IgnitorDsl.Zamp -> listOf(freq, analog, phase)
+        is IgnitorDsl.Zawtooth -> listOf(freq, analog, phase)
     }
 }
 
@@ -217,7 +217,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             env = new[5], attackSec = new[6], decaySec = new[7], sustainLevel = new[8], releaseSec = new[9],
             attackCurve = new[10], decayCurve = new[11], releaseCurve = new[12],
         )
-        is IgnitorDsl.Impulse -> copy(freq = new[0], analog = new[1])
+        is IgnitorDsl.Impulse -> copy(freq = new[0], analog = new[1], phase = new[2])
         is IgnitorDsl.Lerp -> copy(left = new[0], right = new[1], t = new[2])
         is IgnitorDsl.Log -> copy(inner = new[0])
         is IgnitorDsl.Lowpass -> copy(
@@ -263,14 +263,14 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         )
         is IgnitorDsl.Plus -> copy(left = new[0], right = new[1])
         is IgnitorDsl.Pow -> copy(base = new[0], exp = new[1])
-        is IgnitorDsl.Pulze -> copy(freq = new[0], duty = new[1], analog = new[2])
-        is IgnitorDsl.Ramp -> copy(freq = new[0], analog = new[1])
+        is IgnitorDsl.Pulze -> copy(freq = new[0], duty = new[1], analog = new[2], phase = new[3])
+        is IgnitorDsl.Ramp -> copy(freq = new[0], analog = new[1], phase = new[2])
         is IgnitorDsl.Range -> copy(inner = new[0], from = new[1], to = new[2])
-        is IgnitorDsl.RawPulze -> copy(freq = new[0], duty = new[1], analog = new[2])
+        is IgnitorDsl.RawPulze -> copy(freq = new[0], duty = new[1], analog = new[2], phase = new[3])
         is IgnitorDsl.Recip -> copy(inner = new[0])
         is IgnitorDsl.Round -> copy(inner = new[0])
         is IgnitorDsl.Sample -> this
-        is IgnitorDsl.Sawtooth -> copy(freq = new[0], analog = new[1])
+        is IgnitorDsl.Sawtooth -> copy(freq = new[0], analog = new[1], phase = new[2])
         is IgnitorDsl.Select -> copy(cond = new[0], whenTrue = new[1], whenFalse = new[2])
         is IgnitorDsl.Shape -> copy(inner = new[0], shape = new[1], oversample = new[2])
         is IgnitorDsl.Shimmer -> copy(inner = new[0], wet = new[1], feedback = new[2], tone = new[3], floor = new[4])
@@ -279,11 +279,11 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Sine -> copy(
             freq = new[0], analog = new[1], fundamental = new[2], harmonics = new[3], harmonicsRolloff = new[4],
             octaves = new[5], octavesRolloff = new[6], suboctaves = new[7], suboctavesRolloff = new[8],
-            analogSpread = new[9],
+            analogSpread = new[9], phase = new[10],
         )
         is IgnitorDsl.Sq -> copy(inner = new[0])
         is IgnitorDsl.Sqrt -> copy(inner = new[0])
-        is IgnitorDsl.Square -> copy(freq = new[0], analog = new[1])
+        is IgnitorDsl.Square -> copy(freq = new[0], analog = new[1], phase = new[2])
         is IgnitorDsl.SuperPluck -> copy(
             freq = new[0],
             voices = new[1],
@@ -295,20 +295,32 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             analog = new[7],
             analogSpread = new[8],
         )
-        is IgnitorDsl.SuperRamp -> copy(freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4])
-        is IgnitorDsl.SuperSaw -> copy(freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4])
-        is IgnitorDsl.SuperSine -> copy(freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4])
-        is IgnitorDsl.SuperSquare -> copy(freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4])
-        is IgnitorDsl.SuperTri -> copy(freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4])
+        is IgnitorDsl.SuperRamp -> copy(
+            freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4], phase = new[5],
+        )
+        is IgnitorDsl.SuperSaw -> copy(
+            freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4], phase = new[5],
+        )
+        is IgnitorDsl.SuperSine -> copy(
+            freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4], phase = new[5],
+        )
+        is IgnitorDsl.SuperSquare -> copy(
+            freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4], phase = new[5],
+        )
+        is IgnitorDsl.SuperTri -> copy(
+            freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4], phase = new[5],
+        )
         is IgnitorDsl.Tanh -> copy(inner = new[0])
         is IgnitorDsl.Times -> copy(left = new[0], right = new[1])
-        is IgnitorDsl.Tremolo -> copy(inner = new[0], rate = new[1], depth = new[2], shape = new[3])
-        is IgnitorDsl.Triangle -> copy(freq = new[0], analog = new[1])
+        is IgnitorDsl.Tremolo -> copy(
+            inner = new[0], rate = new[1], depth = new[2], shape = new[3], rangeFrom = new[4], rangeTo = new[5],
+        )
+        is IgnitorDsl.Triangle -> copy(freq = new[0], analog = new[1], phase = new[2])
         is IgnitorDsl.Variants -> copy(children = new)
         is IgnitorDsl.Vibrato -> copy(inner = new[0], rate = new[1], semitones = new[2])
         is IgnitorDsl.WhiteNoise -> copy(color = new[0])
-        is IgnitorDsl.Zamp -> copy(freq = new[0], analog = new[1])
-        is IgnitorDsl.Zawtooth -> copy(freq = new[0], analog = new[1])
+        is IgnitorDsl.Zamp -> copy(freq = new[0], analog = new[1], phase = new[2])
+        is IgnitorDsl.Zawtooth -> copy(freq = new[0], analog = new[1], phase = new[2])
     }
 }
 

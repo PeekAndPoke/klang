@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.childNodes
+import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import io.peekandpoke.klang.audio_bridge.coercePasses
 
 /**
@@ -269,6 +270,16 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
         private fun source(bytes: Int = SOURCE_BYTES) = GraphCensus(1, 1, bytes)
 
+        /** A moving `phase` signal is read once per sample by each of [voices] voice loops; a scalar one costs nothing. */
+        private fun phaseReads(phase: IgnitorDsl, voices: Int = 1) = if (isScalar(phase)) NONE else GraphCensus(0, voices, 0)
+
+        /**
+         * One bound of a tremolo off its classic range, `1 + floored * bound`: nothing when it folds (a scalar depth and
+         * bound), else the multiply (in place over a scalar side, a third stream over two signals) and the add of 1.
+         */
+        private fun tremoloBound(depth: IgnitorDsl, bound: IgnitorDsl): GraphCensus =
+            if (isScalar(depth) && isScalar(bound)) NONE else GraphCensus(1, 1 + signals(depth, bound), 0) + inPlace()
+
         private fun inPlace(bytes: Int = 0) = GraphCensus(1, 2, bytes)
 
         /** A unison stack: its loop is voice-major, a pass per voice, the first writing and the rest adding in. */
@@ -309,11 +320,21 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
             // sources: one pass that writes the block (silence fills it)
             is IgnitorDsl.Silence -> GraphCensus(1, 1, 0)
-            is IgnitorDsl.Sawtooth, is IgnitorDsl.Square, is IgnitorDsl.Triangle, is IgnitorDsl.Ramp,
-            is IgnitorDsl.Pulze, is IgnitorDsl.RawPulze, is IgnitorDsl.Zawtooth, is IgnitorDsl.Zamp,
-            is IgnitorDsl.Impulse, is IgnitorDsl.WhiteNoise, is IgnitorDsl.PinkNoise, is IgnitorDsl.BrownNoise,
+            is IgnitorDsl.WhiteNoise, is IgnitorDsl.PinkNoise, is IgnitorDsl.BrownNoise,
             is IgnitorDsl.Crackle, is IgnitorDsl.Dust, is IgnitorDsl.PerlinNoise, is IgnitorDsl.BerlinNoise,
             is IgnitorDsl.Sample -> source()
+
+            // the periodic oscillators; a moving `phase` signal adds the read of its block (a scalar one moves the
+            // accumulator once per block and costs nothing per sample)
+            is IgnitorDsl.Sawtooth -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Square -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Triangle -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Ramp -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Pulze -> source() + phaseReads(node.phase)
+            is IgnitorDsl.RawPulze -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Zawtooth -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Zamp -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Impulse -> source() + phaseReads(node.phase)
 
             // a sine with partials is one pass over a bank; every partial keeps a phase, an increment and a gain
             is IgnitorDsl.Sine -> {
@@ -321,14 +342,16 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                         ((node.octaves as? IgnitorDsl.Constant)?.value ?: 0.0) +
                         ((node.suboctaves as? IgnitorDsl.Constant)?.value ?: 0.0)
 
-                source(SOURCE_BYTES + partials.toInt() * 24)
+                // coarse on purpose, as the bank's own one pass: every partial's loop reads a moving phase's block, but
+                // the bank is charged one read (a partial count would rank phase-modulated banks against stacks)
+                source(SOURCE_BYTES + partials.toInt() * 24) + phaseReads(node.phase)
             }
 
-            is IgnitorDsl.SuperSaw -> stack(node.voices)
-            is IgnitorDsl.SuperSine -> stack(node.voices)
-            is IgnitorDsl.SuperSquare -> stack(node.voices)
-            is IgnitorDsl.SuperTri -> stack(node.voices)
-            is IgnitorDsl.SuperRamp -> stack(node.voices)
+            is IgnitorDsl.SuperSaw -> stack(node.voices) + phaseReads(node.phase, countOf(node.voices))
+            is IgnitorDsl.SuperSine -> stack(node.voices) + phaseReads(node.phase, countOf(node.voices))
+            is IgnitorDsl.SuperSquare -> stack(node.voices) + phaseReads(node.phase, countOf(node.voices))
+            is IgnitorDsl.SuperTri -> stack(node.voices) + phaseReads(node.phase, countOf(node.voices))
+            is IgnitorDsl.SuperRamp -> stack(node.voices) + phaseReads(node.phase, countOf(node.voices))
 
             // strings: the source writes, the ring is read and written per sample, a string per voice
             is IgnitorDsl.Pluck -> GraphCensus(1, 3, STRING_BYTES)
@@ -392,7 +415,17 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // in place, and the multiply reads the signal and the gain and writes one. Every depth is floored
             // (`1 - max(depth, 0)`); a control-rate depth folds that to one value per block, a signal depth adds
             // the floor and the `1 - depth` pass (each in place over a scalar side) and makes the range read both bounds
-            is IgnitorDsl.Tremolo -> if (isScalar(node.depth)) {
+            // Off the classic range `(-1, 0)` the bounds are `1 + floored * from` and `1 + floored * to`; only what runs
+            // is counted: a signal depth's floor (in place, memoized for its two readers: a copy out each), each bound
+            // that does not fold, the range (reading both bounds when either is a signal) and the multiply.
+            is IgnitorDsl.Tremolo -> if (!node.hasClassicRange()) {
+                val floor = if (isScalar(node.depth)) NONE else inPlace() + GraphCensus(0, 2 * 2, blockFrames * 8)
+                val from = tremoloBound(node.depth, node.rangeFrom)
+                val to = tremoloBound(node.depth, node.rangeTo)
+                val boundsScalar = from == NONE && to == NONE
+
+                source() + floor + from + to + GraphCensus(1, if (boundsScalar) 2 else 2 + 2, 0) + GraphCensus(1, 3, 0)
+            } else if (isScalar(node.depth)) {
                 source() + GraphCensus(1, 2, 0) + GraphCensus(1, 3, 0)
             } else {
                 source() + inPlace() + inPlace() + GraphCensus(1, 2 + 2, 0) + GraphCensus(1, 3, 0)

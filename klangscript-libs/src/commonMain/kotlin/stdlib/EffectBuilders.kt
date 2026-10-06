@@ -388,8 +388,23 @@ fun PhaserBuilder.floor(floor: IgnitorDslLike): PhaserBuilder = copy(node = node
 
 // ── Tremolo ──────────────────────────────────────────────────────────────────
 
-/** Builder for [IgnitorDsl.Tremolo], handed to the `configure` lambda of `.tremolo(...)`. Knob: `shape`. */
+/** Builder for [IgnitorDsl.Tremolo], handed to the `configure` lambda of `.tremolo(...)`. Knobs: `shape`, `range`. */
 data class TremoloBuilder(val node: IgnitorDsl.Tremolo)
+
+/**
+ * Where the tremolo's swing sits, in the -1..1 language of the Ignitor `range`: the LFO's low point maps to [from],
+ * its high point to [to], and the gain is `1 + depth * that`, so the depth on the door stays the musical knob.
+ * The default `range(-1, 0)` is the tremolo as it always was, the level dipping from 1 to `1 - depth`. `range(0, 1)`
+ * swells upward from 1 to `1 + depth` (louder, so mind the headroom), `range(-1, 1)` swings both ways, `range(0, 2)`
+ * twice the depth upward. Raw, no clamp. Both values are signals, read like the depth.
+ *
+ * ```KlangScript
+ * Ignitor.saw().tremolo(4, 0.3, x => x.range(-1, 1))   // the level swings from 0.7 to 1.3
+ * ```
+ */
+@KlangScript.Function
+fun TremoloBuilder.range(from: IgnitorDslLike, to: IgnitorDslLike): TremoloBuilder =
+    copy(node = node.copy(rangeFrom = from.toIgnitorDsl(), rangeTo = to.toIgnitorDsl()))
 
 /**
  * The LFO's waveform: `"sine"` (default), `"triangle"`, `"square"`, `"sawtooth"` or `"ramp"`, with the

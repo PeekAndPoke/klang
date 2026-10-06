@@ -82,6 +82,9 @@ object WarmupVocabulary {
 
     private fun sine(mul: Double = 1.0): IgnitorDsl = IgnitorDsl.Sine(freq = Freq.mul(Constant(mul)))
 
+    /** A moving `phase` input: a slow sine, a tenth of a cycle deep. */
+    private fun slowPhase(): IgnitorDsl = IgnitorDsl.Sine(freq = Constant(0.5)).mul(Constant(0.1))
+
     /** Every plain oscillator, mixed at a tenth each. */
     val waves: IgnitorDsl = listOf<IgnitorDsl>(
         IgnitorDsl.Sine(),
@@ -95,6 +98,16 @@ object WarmupVocabulary {
         IgnitorDsl.RawPulze(),
         IgnitorDsl.Ramp(),
         IgnitorDsl.Silence,
+        // the `phase` input: a constant (the block-start shift) and a signal (each engine's phased loop, the pulse
+        // with and without PWM)
+        IgnitorDsl.Sine(phase = Constant(0.25)),
+        IgnitorDsl.Triangle(phase = Constant(0.25)),
+        IgnitorDsl.Impulse(phase = Constant(0.25)),
+        IgnitorDsl.Sine(phase = slowPhase()),
+        IgnitorDsl.Sawtooth(phase = slowPhase()),
+        IgnitorDsl.RawPulze(phase = slowPhase()),
+        IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = Constant(3.0)).range(Constant(0.3), Constant(0.7)), phase = slowPhase()),
+        IgnitorDsl.Impulse(phase = slowPhase()),
     ).reduce { acc, osc -> IgnitorDsl.Plus(acc, osc) }.mul(Constant(0.1))
 
     /** The unison families and the plucks — the phase pools and the Karplus paths. */
@@ -107,6 +120,12 @@ object WarmupVocabulary {
         IgnitorDsl.Sine(harmonics = Constant(7.0), octaves = Constant(2.0), suboctaves = Constant(1.0)),
         IgnitorDsl.Pluck(),
         IgnitorDsl.SuperPluck(voices = Constant(3.0)),
+        // the stacks' and the bank's `phase` paths: a constant shift and the phased voice loops
+        IgnitorDsl.SuperSaw(voices = Constant(5.0), phase = Constant(0.25)),
+        IgnitorDsl.SuperSaw(voices = Constant(5.0), phase = slowPhase()),
+        IgnitorDsl.SuperSine(voices = Constant(5.0), phase = slowPhase()),
+        IgnitorDsl.Sine(harmonics = Constant(3.0), phase = Constant(0.25)),
+        IgnitorDsl.Sine(harmonics = Constant(3.0), phase = slowPhase()),
     ).reduce { acc, osc -> IgnitorDsl.Plus(acc, osc) }.mul(Constant(0.15))
 
     /** Every noise and chaos generator. */
@@ -195,6 +214,7 @@ object WarmupVocabulary {
         .phaser(wet = 0.5, rate = 0.7, center = 800.0)
         .tremolo(rate = 4.0, depth = 0.4)
         .tremolo(rate = 3.0, depth = 0.3, shape = "square") // a non-sine LFO, the pulse oscillator with its edge
+        .tremolo(rate = 4.0, depth = 0.3, rangeFrom = 0.0, rangeTo = 1.0) // off the classic range: the general gain
         .shimmer()
         .vibrato(rate = 5.0, semitones = 0.2)
         .accelerate(1.0)

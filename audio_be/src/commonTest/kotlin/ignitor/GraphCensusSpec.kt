@@ -226,4 +226,51 @@ class GraphCensusSpec : StringSpec({
             }
         }
     }
+
+    "an oscillator's phase: a scalar one costs nothing, a signal one adds its read to each voice loop" {
+        val lfo = IgnitorDsl.Sine(freq = c(0.5))
+
+        // the saw (1, 1) and nothing else: the constant moves the accumulator once per block
+        GraphCensus.of(IgnitorDsl.Sawtooth(phase = c(0.25))) shouldBe GraphCensus.of(saw)
+        GraphCensus.of(IgnitorDsl.Sawtooth(phase = IgnitorDsl.Param("ph", 0.1))) shouldBe GraphCensus.of(saw)
+
+        // + the phase LFO (1, 1) + the saw's loop reading it (0, 1)
+        GraphCensus.of(IgnitorDsl.Sawtooth(phase = lfo)).let {
+            it.passes shouldBe 2
+            it.traffic shouldBe 3
+            it.bytes shouldBe 2 * 64
+        }
+
+        // a stack of 5 (5 passes, 2 * 5 - 1) + the LFO (1, 1) + every voice loop reading it (0, 5)
+        GraphCensus.of(IgnitorDsl.SuperSaw(voices = c(5.0), phase = lfo)).let {
+            it.passes shouldBe 6
+            it.traffic shouldBe 9 + 1 + 5
+            it.bytes shouldBe 64 + 5 * 40 + 64
+        }
+    }
+
+    "a tremolo off its classic range counts only what runs" {
+        val lfo = IgnitorDsl.Sine(freq = c(0.5))
+
+        // scalar depth and bounds fold to one value per block: the classic tremolo's count
+        GraphCensus.of(IgnitorDsl.Tremolo(saw, rate = c(4.0), depth = c(0.5), rangeFrom = c(0.0), rangeTo = c(1.0))) shouldBe
+            GraphCensus.of(saw.tremolo(4.0, 0.5))
+
+        // a signal upper bound, a scalar depth: the saw (1, 1), the LFO (1, 1), the bound's own sine (1, 1),
+        // `floored * to` in place over the scalar side (1, 2), `+ 1` in place (1, 2), the range reading both bounds
+        // (1, 4), the multiply (1, 3); no floor pass, no lower-bound pass
+        GraphCensus.of(IgnitorDsl.Tremolo(saw, rate = c(4.0), depth = c(0.5), rangeFrom = c(0.0), rangeTo = lfo)).let {
+            it.passes shouldBe 7
+            it.traffic shouldBe 14
+            it.bytes shouldBe 3 * 64
+        }
+
+        // a signal depth, scalar bounds: + the depth's sine (1, 1), its floor in place (1, 2) memoized for the two
+        // bounds (a copy out each, 0, 4, a block of state), and each bound a multiply and an add (2 x (1, 2) each)
+        GraphCensus.of(IgnitorDsl.Tremolo(saw, rate = c(4.0), depth = lfo, rangeFrom = c(0.0), rangeTo = c(1.0))).let {
+            it.passes shouldBe 10
+            it.traffic shouldBe 1 + 1 + 1 + 2 + 4 + 4 + 4 + 4 + 3
+            it.bytes shouldBe 3 * 64 + 128 * 8
+        }
+    }
 })

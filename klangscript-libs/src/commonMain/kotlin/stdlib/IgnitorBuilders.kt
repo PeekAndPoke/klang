@@ -34,11 +34,28 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
  * Builder for [IgnitorDsl.Sine], handed to the `configure` lambda of `Ignitor.sine(...)`.
- * Knobs: `analog`, and the partial banks `harmonics`, `octaves`, `suboctaves` with `fundamental` and
+ * Knobs: `analog`, `phase`, and the partial banks `harmonics`, `octaves`, `suboctaves` with `fundamental` and
  * `analogSpread` (`docs/plans/sine-partial-banks.md`). Immutable: every knob returns a new builder.
  * `node` is the configured oscillator.
  */
 data class OscSineBuilder(val node: IgnitorDsl.Sine)
+
+/**
+ * Where in its cycle the sine runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
+ * `sin(0)`, the upward zero crossing. 0.5 is half a cycle on, and it wraps, no clamp: 1.25 is 0.25, -0.25 is 0.75. A
+ * number is the start phase; a signal moves the phase while the note plays, which is phase modulation (a jump clicks).
+ * With partial banks every partial moves by the same fraction of its OWN cycle (the fundamental by `phase`): 0.5
+ * inverts the whole wave, other values change how the partials line up (0.25 starts every partial on its peak, the
+ * peakiest alignment, which matters ahead of a `distort` or `shape`). A partial that joins the bank mid-note (a moving
+ * count) starts at the phase applied so far, so at a phase other than 0 or 0.5 it enters with a step of up to its own
+ * gain (0.25 and 0.75 the largest), a click (raw); at 0 or 0.5 it enters on a zero crossing.
+ *
+ * ```KlangScript
+ * Ignitor.sine(4, x => x.phase(0.25))   // an LFO that starts at its peak
+ * ```
+ */
+@KlangScript.Function
+fun OscSineBuilder.phase(phase: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. With partial banks, the depth of every partial. */
 @KlangScript.Function
@@ -63,7 +80,7 @@ fun OscSineBuilder.fundamental(gain: IgnitorDslLike): OscSineBuilder = copy(node
  * the note: `Ignitor.sine(Ignitor.freq().mul(2), x => x.harmonics(3))` is `2f, 4f, 6f, 8f`, the even series. Partials
  * at or above Nyquist stay silent. Both arguments are signals read once per block, so
  * `harmonics(12, Ignitor.param("rolloff", 1))` puts brightness on the pattern; a moving `count` steps on every
- * removal, a moving `rolloff` does not. Banks sum: `harmonics(7)` plus
+ * removal (and, with a `phase` other than 0 or 0.5, on every addition too), a moving `rolloff` does not. Banks sum: `harmonics(7)` plus
  * `octaves(3)` doubles the shared partials, as two written sines would.
  *
  * ```KlangScript
@@ -121,10 +138,23 @@ fun OscSineBuilder.analogSpread(amount: IgnitorDslLike): OscSineBuilder = copy(n
 
 /**
  * Builder for [IgnitorDsl.Triangle], handed to the `configure` lambda of `Ignitor.triangle(...)`.
- * Knobs: `analog`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscTriangleBuilder(val node: IgnitorDsl.Triangle)
+
+/**
+ * Where in its cycle the triangle runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
+ * is -1, its lowest point, rising to +1 at 0.5. 0.5 is half a cycle on, and it wraps, no clamp: 1.25 is 0.25, -0.25 is
+ * 0.75. A number is the start phase; a signal moves the phase while the note plays, which is phase modulation (a jump
+ * clicks).
+ *
+ * ```KlangScript
+ * Ignitor.triangle(2, x => x.phase(0.5))   // starts at its top
+ * ```
+ */
+@KlangScript.Function
+fun OscTriangleBuilder.phase(phase: IgnitorDslLike): OscTriangleBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
@@ -134,10 +164,23 @@ fun OscTriangleBuilder.analog(analog: IgnitorDslLike): OscTriangleBuilder = copy
 
 /**
  * Builder for [IgnitorDsl.Zawtooth], handed to the `configure` lambda of `Ignitor.zawtooth(...)`.
- * Knobs: `analog`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscZawtoothBuilder(val node: IgnitorDsl.Zawtooth)
+
+/**
+ * Where in its cycle the zawtooth runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
+ * is -1, the bottom of its rise (the reset ends the cycle). 0.5 is half a cycle on, and it wraps, no clamp: 1.25 is
+ * 0.25, -0.25 is 0.75. A number is the start phase; a signal moves the phase while the note plays, which is phase
+ * modulation (a jump clicks).
+ *
+ * ```KlangScript
+ * Ignitor.zawtooth(x => x.phase(0.5))   // starts mid-rise, at 0
+ * ```
+ */
+@KlangScript.Function
+fun OscZawtoothBuilder.phase(phase: IgnitorDslLike): OscZawtoothBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
@@ -147,10 +190,23 @@ fun OscZawtoothBuilder.analog(analog: IgnitorDslLike): OscZawtoothBuilder = copy
 
 /**
  * Builder for [IgnitorDsl.Zamp], handed to the `configure` lambda of `Ignitor.zamp(...)`.
- * Knobs: `analog`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscZampBuilder(val node: IgnitorDsl.Zamp)
+
+/**
+ * Where in its cycle the zamp runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
+ * +1, the top of its fall (the reset ends the cycle). 0.5 is half a cycle on, and it wraps, no clamp: 1.25 is 0.25,
+ * -0.25 is 0.75. A number is the start phase; a signal moves the phase while the note plays, which is phase modulation
+ * (a jump clicks).
+ *
+ * ```KlangScript
+ * Ignitor.zamp(x => x.phase(0.5))   // starts mid-fall, at 0
+ * ```
+ */
+@KlangScript.Function
+fun OscZampBuilder.phase(phase: IgnitorDslLike): OscZampBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
@@ -160,10 +216,24 @@ fun OscZampBuilder.analog(analog: IgnitorDslLike): OscZampBuilder = copy(node = 
 
 /**
  * Builder for [IgnitorDsl.Impulse], handed to the `configure` lambda of `Ignitor.impulse(...)`.
- * Knobs: `analog`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscImpulseBuilder(val node: IgnitorDsl.Impulse)
+
+/**
+ * Where in its cycle the impulse runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
+ * the spike: the note starts on it. 0.5 is half a cycle on, and it wraps, no clamp: 1.25 is 0.25, -0.25 is 0.75. A
+ * number is the start phase; a signal moves the phase while the note plays, which is phase modulation (a jump clicks).
+ * The spike sits where the shifted phase passes 0 going forward, so a start phase of 0.25 spikes first after three
+ * quarters of a cycle, and a step back (within half a cycle) spikes nothing.
+ *
+ * ```KlangScript
+ * Ignitor.impulse(2, x => x.phase(0.5))   // the first spike half a cycle in
+ * ```
+ */
+@KlangScript.Function
+fun OscImpulseBuilder.phase(phase: IgnitorDslLike): OscImpulseBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
@@ -173,10 +243,24 @@ fun OscImpulseBuilder.analog(analog: IgnitorDslLike): OscImpulseBuilder = copy(n
 
 /**
  * Builder for [IgnitorDsl.RawPulze], handed to the `configure` lambda of `Ignitor.pulze(...)`.
- * Knobs: `duty`, `analog`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `duty`, `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscPulzeBuilder(val node: IgnitorDsl.RawPulze)
+
+/**
+ * Where in its cycle the raw pulse runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
+ * is +1, the start of its high plateau: the instant rising edge sits at the wrap (high until `duty`, then low). So
+ * `pulze` starts high where the rounded `square` starts low, on the other side of its rising edge. 0.5 is half a cycle
+ * on, and it wraps, no clamp: 1.25 is 0.25, -0.25 is 0.75. A number is the start phase; a signal moves the phase while
+ * the note plays, which is phase modulation (a jump clicks).
+ *
+ * ```KlangScript
+ * Ignitor.pulze(2, x => x.phase(0.5))   // a gate LFO that starts closed (low), then opens
+ * ```
+ */
+@KlangScript.Function
+fun OscPulzeBuilder.phase(phase: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Pulse width / duty cycle (0..1, default 0.5 = square). Accepts an `Ignitor.*` graph for PWM. */
 @KlangScript.Function
@@ -190,10 +274,24 @@ fun OscPulzeBuilder.analog(analog: IgnitorDslLike): OscPulzeBuilder = copy(node 
 
 /**
  * Builder for [IgnitorDsl.Pulze], handed to the `configure` lambda of `Ignitor.square(...)`.
- * Knobs: `duty`, `analog`, `flankSamples`, `riseFlank`, `fallFlank`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `duty`, `analog`, `flankSamples`, `riseFlank`, `fallFlank`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSquareBuilder(val node: IgnitorDsl.Pulze)
+
+/**
+ * Where in its cycle the square runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
+ * -1, the foot of its rising edge (rise, high until `duty`, fall, low), where the raw `pulze` starts high. 0.5 is half
+ * a cycle on, and it wraps, no clamp: 1.25 is 0.25, -0.25 is 0.75. A number is the start phase; a signal moves the
+ * phase while the note plays, which is phase modulation (a jump clicks). A fast-moving phase also squeezes the soft
+ * edges (sized from the note's own pitch), which then alias as the raw twin's do.
+ *
+ * ```KlangScript
+ * Ignitor.square(2, x => x.phase(0.5))   // an LFO that starts on its falling edge
+ * ```
+ */
+@KlangScript.Function
+fun OscSquareBuilder.phase(phase: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Pulse width / duty cycle (0..1, default 0.5 = square). Accepts an `Ignitor.*` graph for PWM. */
 @KlangScript.Function
@@ -219,10 +317,24 @@ fun OscSquareBuilder.fallFlank(fallFlank: Double): OscSquareBuilder = copy(node 
 
 /**
  * Builder for [IgnitorDsl.Sawtooth], handed to the `configure` lambda of `Ignitor.saw(...)`.
- * Knobs: `analog`, `resetSamples`, `shapeMax`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `analog`, `resetSamples`, `shapeMax`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSawBuilder(val node: IgnitorDsl.Sawtooth)
+
+/**
+ * Where in its cycle the sawtooth runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
+ * is -1, the bottom of its rise (the flyback ends the cycle). 0.5 is half a cycle on, and it wraps, no clamp: 1.25 is
+ * 0.25, -0.25 is 0.75. A number is the start phase; a signal moves the phase while the note plays, which is phase
+ * modulation (a jump clicks). A fast-moving phase also squeezes the soft edges (sized from the note's own pitch),
+ * which then alias as the raw twin's do.
+ *
+ * ```KlangScript
+ * Ignitor.saw(x => x.phase(0.5))   // starts mid-rise, at 0
+ * ```
+ */
+@KlangScript.Function
+fun OscSawBuilder.phase(phase: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
@@ -240,10 +352,24 @@ fun OscSawBuilder.shapeMax(shapeMax: Double): OscSawBuilder = copy(node = node.c
 
 /**
  * Builder for [IgnitorDsl.Ramp], handed to the `configure` lambda of `Ignitor.ramp(...)`.
- * Knobs: `analog`, `resetSamples`, `shapeMax`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `analog`, `resetSamples`, `shapeMax`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscRampBuilder(val node: IgnitorDsl.Ramp)
+
+/**
+ * Where in its cycle the ramp runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
+ * +1, the top of its fall (the flyback ends the cycle). 0.5 is half a cycle on, and it wraps, no clamp: 1.25 is 0.25,
+ * -0.25 is 0.75. A number is the start phase; a signal moves the phase while the note plays, which is phase modulation
+ * (a jump clicks). A fast-moving phase also squeezes the soft edges (sized from the note's own pitch), which then
+ * alias as the raw twin's do.
+ *
+ * ```KlangScript
+ * Ignitor.ramp(x => x.phase(0.5))   // starts mid-fall, at 0
+ * ```
+ */
+@KlangScript.Function
+fun OscRampBuilder.phase(phase: IgnitorDslLike): OscRampBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
@@ -261,10 +387,26 @@ fun OscRampBuilder.shapeMax(shapeMax: Double): OscRampBuilder = copy(node = node
 
 /**
  * Builder for [IgnitorDsl.SuperSaw], handed to the `configure` lambda of `Ignitor.supersaw(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperSawBuilder(val node: IgnitorDsl.SuperSaw)
+
+/**
+ * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
+ * every voice by the same fraction of its own cycle, so the spread of start phases stays as drawn. Each voice starts
+ * at its own random phase (or the phase pool's), measured from the saw's phase 0, which is -1, the bottom of its rise.
+ * Because those start phases are drawn anew for every note, a constant shift on its own is not audible: the stack's
+ * use is a MOVING phase, phase modulation of the whole stack. It wraps, no clamp (1.25 is 0.25); a jump clicks. A
+ * fast-moving phase also squeezes the soft edges (sized from the note's own pitch), which then alias as the raw twin's
+ * do.
+ *
+ * ```KlangScript
+ * Ignitor.supersaw(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
+ * ```
+ */
+@KlangScript.Function
+fun OscSuperSawBuilder.phase(phase: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
 @KlangScript.Function
@@ -350,10 +492,25 @@ fun OscSuperSawBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.SuperSine], handed to the `configure` lambda of `Ignitor.supersine(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperSineBuilder(val node: IgnitorDsl.SuperSine)
+
+/**
+ * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
+ * every voice by the same fraction of its own cycle, so the spread of start phases stays as drawn. Each voice starts
+ * at its own random phase (or the phase pool's), measured from the sine's phase 0, which is `sin(0)`, the upward zero
+ * crossing. Because those start phases are drawn anew for every note, a constant shift on its own is not audible: the
+ * stack's use is a MOVING phase, phase modulation of the whole stack. It wraps, no clamp (1.25 is 0.25); a jump
+ * clicks.
+ *
+ * ```KlangScript
+ * Ignitor.supersine(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
+ * ```
+ */
+@KlangScript.Function
+fun OscSuperSineBuilder.phase(phase: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
 @KlangScript.Function
@@ -439,10 +596,26 @@ fun OscSuperSineBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.SuperSquare], handed to the `configure` lambda of `Ignitor.supersquare(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperSquareBuilder(val node: IgnitorDsl.SuperSquare)
+
+/**
+ * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
+ * every voice by the same fraction of its own cycle, so the spread of start phases stays as drawn. Each voice starts
+ * at its own random phase (or the phase pool's), measured from the square's phase 0, which is -1, the foot of its
+ * rising edge. Because those start phases are drawn anew for every note, a constant shift on its own is not audible:
+ * the stack's use is a MOVING phase, phase modulation of the whole stack. It wraps, no clamp (1.25 is 0.25); a jump
+ * clicks. A fast-moving phase also squeezes the soft edges (sized from the note's own pitch), which then alias as the
+ * raw twin's do.
+ *
+ * ```KlangScript
+ * Ignitor.supersquare(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
+ * ```
+ */
+@KlangScript.Function
+fun OscSuperSquareBuilder.phase(phase: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
 @KlangScript.Function
@@ -528,10 +701,24 @@ fun OscSuperSquareBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.SuperTri], handed to the `configure` lambda of `Ignitor.supertri(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperTriBuilder(val node: IgnitorDsl.SuperTri)
+
+/**
+ * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
+ * every voice by the same fraction of its own cycle, so the spread of start phases stays as drawn. Each voice starts
+ * at its own random phase (or the phase pool's), measured from the triangle's phase 0, which is -1, its lowest point.
+ * Because those start phases are drawn anew for every note, a constant shift on its own is not audible: the stack's
+ * use is a MOVING phase, phase modulation of the whole stack. It wraps, no clamp (1.25 is 0.25); a jump clicks.
+ *
+ * ```KlangScript
+ * Ignitor.supertri(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
+ * ```
+ */
+@KlangScript.Function
+fun OscSuperTriBuilder.phase(phase: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
 @KlangScript.Function
@@ -617,10 +804,26 @@ fun OscSuperTriBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.SuperRamp], handed to the `configure` lambda of `Ignitor.superramp(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperRampBuilder(val node: IgnitorDsl.SuperRamp)
+
+/**
+ * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
+ * every voice by the same fraction of its own cycle, so the spread of start phases stays as drawn. Each voice starts
+ * at its own random phase (or the phase pool's), measured from the ramp's phase 0, which is +1, the top of its fall.
+ * Because those start phases are drawn anew for every note, a constant shift on its own is not audible: the stack's
+ * use is a MOVING phase, phase modulation of the whole stack. It wraps, no clamp (1.25 is 0.25); a jump clicks. A
+ * fast-moving phase also squeezes the soft edges (sized from the note's own pitch), which then alias as the raw twin's
+ * do.
+ *
+ * ```KlangScript
+ * Ignitor.superramp(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
+ * ```
+ */
+@KlangScript.Function
+fun OscSuperRampBuilder.phase(phase: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
 @KlangScript.Function

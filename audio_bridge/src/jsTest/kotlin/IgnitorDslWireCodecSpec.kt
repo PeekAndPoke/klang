@@ -54,6 +54,11 @@ class IgnitorDslWireCodecSpec : StringSpec({
             )
         )
     }
+    // the oscillators' phase input, a constant and a signal, non-default so a dropped field shows up
+    "Sine with a phase" { check(IgnitorDsl.Sine(phase = IgnitorDsl.Constant(0.25))) }
+    "Pulze with a moving phase" { check(IgnitorDsl.Pulze(phase = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)))) }
+    "SuperSaw with a phase" { check(IgnitorDsl.SuperSaw(phase = IgnitorDsl.Constant(-0.5))) }
+    "Impulse with a phase" { check(IgnitorDsl.Impulse(phase = IgnitorDsl.Param("ph", 0.1))) }
     "Sawtooth" { check(IgnitorDsl.Sawtooth()) }
     "Square" { check(IgnitorDsl.Square(freq = IgnitorDsl.Param("freq", 220.0))) }
     "Triangle" { check(IgnitorDsl.Triangle()) }
@@ -279,6 +284,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
     "Phaser" { check(IgnitorDsl.Sine().phaser(wet = 0.4, rate = 0.5).copy(floor = IgnitorDsl.Constant(0.25))) }
+    "Tremolo with a range" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5, rangeFrom = 0.0, rangeTo = 2.0)) }
     "Tremolo" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5)) }
     "Tremolo (shape non-default, the depth a slot)" {
         check(

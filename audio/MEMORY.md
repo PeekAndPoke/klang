@@ -70,6 +70,13 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   Every lane steps once per block and ramps across it.
 - **`DriftLanes`** gives every multi-voice oscillator its drift; `analogSpread` 0 is one shared walk, 1 (default)
   a lane per voice, and both endpoints are exact.
+- **Oscillator phase** (`PhaseOffset`, `docs/tasks/oscillator-phase-knob.md`): every periodic oscillator has a `phase`
+  input in cycles, wrapped to `[0, 1)`, no clamp. The literal 0 builds no input (the default renders as before, bit for
+  bit); a block-constant one moves the accumulator by its change once per block (the per-sample loops untouched); a
+  signal takes the oscillator's phased loop, which reads the shape at `accumulator + offset` per sample. A stack
+  shifts every voice alike; the impulse spikes where the shifted phase passes 0 going forward.
+- **Tremolo range**: `Tremolo.rangeFrom` / `rangeTo` (`TREMOLO_RANGE_FROM` / `_TO`, -1 and 0) place the LFO swing,
+  gain `1 + depth * (from..to)`; the literal default builds the classic `range(1 - depth, 1)` itself.
 - **The voice rng**: one stream per voice, and the draw ORDER is part of the sound (`audio/ref/voice-synthesis.md`,
   "The voice rng").
 - **Silence culling**: a voice in its release whose output stays under `VOICE_CULL_FLOOR` (=
@@ -142,7 +149,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
   `duck-orbit-switch-click.md`, and the owed rounds listed there.
 - **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md`,
-  `docs/tasks/bugfix-ignitor-non-finite-pitch-amount.md`, `docs/tasks/svf-coefficient-cache-never-engages.md`.
+  `docs/tasks/bugfix-ignitor-non-finite-pitch-amount.md`, `docs/tasks/svf-coefficient-cache-never-engages.md`,
+  `docs/tasks/shared-modulator-memo-rate.md` (a `duty` or `phase` LFO shared across pitches runs twice per block).
 - **Scheduled or designed**: `docs/tasks/oversampling-regions.md`, `docs/tasks/master-dsl-followups.md`,
   `docs/tasks/katalyst-master-configure-doors.md`, `docs/tasks/pluck-release-tail.md`,
   `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
@@ -164,6 +172,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-06 A `phase` input on every periodic oscillator and a `range` on the tremolo's swing, both defaults bit-identical
+  (`docs/tasks/oscillator-phase-knob.md`)
 - 2026-10-05 The Ignitor's `rangex(from, to)`, the exponential twin of `range`, composed of `Exp`, `Range`, `Log` and
   `Max` (no node of its own), floor `RANGEX_FLOOR` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md` decision 16)
 - 2026-10-05 One `range`: the Ignitor's `unipolar()` / `bipolar()` go with their wire nodes; `range(0, 1)` and

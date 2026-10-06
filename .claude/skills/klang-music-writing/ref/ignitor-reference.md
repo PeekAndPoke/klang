@@ -92,7 +92,7 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 | `Ignitor.ramp(freq?)`     | Reverse sawtooth                         |
 | `Ignitor.zawtooth(freq?)` | Naive sawtooth (brighter, no anti-alias) |
 | `Ignitor.impulse(freq?)`  | Single-sample impulse per cycle          |
-| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse                |
+| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse; one `duty` LFO shared by pulses at different pitches runs too fast today, build one per pulse (`docs/tasks/shared-modulator-memo-rate.md`) |
 
 ### Super Oscillators (Unison/Detuned)
 
@@ -113,6 +113,29 @@ and returns it. The builder carries exactly that oscillator's knobs; processing 
 
 ```javascript
 Ignitor.supersaw(x => x.voices(9).spread(0.1).analog(0.2)).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
+```
+
+**`phase(x)`: where in its cycle an oscillator runs** (every periodic oscillator's builder: `sine`, `saw`, `ramp`,
+`square`, `pulze`, `triangle`, `zawtooth`, `zamp`, `impulse` and the five super oscillators; not the plucks, not the
+noises). A fraction of one cycle added to the phase every sample, default 0: 0.5 is half a cycle on, and it wraps
+with no clamp (1.25 is 0.25, -0.25 is 0.75). A number is the start phase; a signal moves the phase while the note
+plays, which is phase modulation (a jump clicks). Phase 0 is where each shape always started: the sine at `sin(0)`,
+rising; the saw and zawtooth at -1, the bottom of the rise; the ramp and zamp at +1, the top of the fall; the square
+at -1, the foot of its rising edge; the raw pulze at +1, the start of its high plateau (its instant edge sits at the
+wrap); the triangle at -1, its lowest point; the impulse on its spike. On a super oscillator it shifts the whole
+stack (every voice by the same fraction of its own cycle, the spread of start phases kept); since the voices draw
+new random start phases on every note, a constant there is not audible, a moving phase is. On a sine with partial
+banks every partial moves by the same fraction of its own cycle (0.5 inverts the wave, 0.25 starts every partial on
+its peak), and a partial that joins mid-note at a phase other than 0 or 0.5 enters with a step. A fast-moving phase
+also squeezes the soft edges of the saw and square family, which then alias like their raw twins. One phase LFO
+shared by layers at different pitches runs too fast today (`docs/tasks/shared-modulator-memo-rate.md`): build a
+separate LFO per layer until that task lands.
+
+```javascript
+Ignitor.sine(4, x => x.phase(0.25))                      // an LFO that starts at its peak
+// two layers on opposite tremolos: the saw is loud while the square is quiet, and back
+Ignitor.saw().mul(Ignitor.sine(4).range(0.5, 1)).plus(Ignitor.square().mul(Ignitor.sine(4, x => x.phase(0.5)).range(0.5, 1)))
+Ignitor.sine(x => x.phase(Ignitor.sine(5).mul(0.2)))     // phase modulation by a 5 Hz LFO: a vibrato of about 6 Hz either way
 ```
 
 **Sine partial banks** (`Ignitor.sine` builder knobs; `docs/plans/sine-partial-banks.md`). The sine can carry banks
@@ -394,7 +417,7 @@ their short names) and `declick(seconds)` rounds the gain's corners (0 = off, th
 | `.coarse(amount)`                       | Sample-rate reduction                      |
 | `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
 | `.shimmer(wet?, feedback?, tone?, pitches?, x => x.floor(f))` | Granular pitch-shift cloud: wet 0.5, feedback 0.5, tone 4000, pitches `[0, 7, 12]`; dry floor on the builder |
-| `.tremolo(rate, depth, x => x.shape(name))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), which is the oscillator of that name; the square, sawtooth and ramp get a 16 ms soft edge |
+| `.tremolo(rate, depth, x => x.shape(name).range(from, to))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), which is the oscillator of that name; the square, sawtooth and ramp get a 16 ms soft edge. `range(from, to)` places the swing in the -1..1 language of `range`, the gain being `1 + depth * that`: default `range(-1, 0)`, the dip from 1 to `1 - depth`; `range(0, 1)` swells upward to `1 + depth`, `range(-1, 1)` both ways; raw, no clamp |
 
 `.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,
 `shape` is the curve with no gain, and `distort(amount, shape)` is exactly `drive(amount).shape(shape)`.

@@ -112,6 +112,11 @@ class DistortSlots internal constructor() {
  * `tremolo(depth, rate, shape)`: `tremolo.depth` (default 0.0, off), `tremolo.rate` (the
  * RATE in Hz; default 0.0, the strip's untouched rate, NOT the node's 5.0) and `tremolo.shape` (an
  * INDEX into [LfoShapes], default `sine`; no sprudel reader, the name is a string there).
+ *
+ * No range slots, by decision (maintainer, 2026-10-06, "not in sprudel yet"): the node's `rangeFrom` / `rangeTo` stay
+ * at their default `(-1, 0)` here, so a pattern's tremolo is always the classic dip. Sprudel's tremolo is a flat door
+ * with no builder layer for a two-value knob; the engine is ready (two slots at -1 and 0 render the same bits), and a
+ * song that wants a swell reopens it (`docs/tasks/oscillator-phase-knob.md`, decision 4).
  */
 class TremoloSlots internal constructor() {
     val depth: IgnitorDsl = slot("tremolo", "depth", 0.0)

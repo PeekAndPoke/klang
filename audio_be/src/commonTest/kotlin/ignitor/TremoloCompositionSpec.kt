@@ -409,4 +409,130 @@ class TremoloCompositionSpec : StringSpec({
             }
         }
     }
+
+    // ── THE RANGE: where the swing sits (decision 2, 2026-10-06) ─────────────────────────────────
+
+    /** The ranged law, computed here: the dry signal times `1 + depth * (from + (osc + 1) / 2 * (to - from))`. */
+    fun rangedLaw(dry: DoubleArray, osc: DoubleArray, depth: Double, from: DoubleArray, to: DoubleArray): DoubleArray =
+        DoubleArray(dry.size) { i -> dry[i] * (1.0 + depth * (from[i] + (osc[i] + 1.0) / 2.0 * (to[i] - from[i]))) }
+
+    fun rangedNode(shape: String, depth: Double, from: IgnitorDsl, to: IgnitorDsl): IgnitorDsl = IgnitorDsl.Tremolo(
+        inner = inner,
+        rate = IgnitorDsl.Constant(5.3),
+        depth = IgnitorDsl.Constant(depth),
+        shape = IgnitorDsl.Constant(LfoShapes.indexOf(shape)),
+        rangeFrom = from,
+        rangeTo = to,
+    )
+
+    "the default range (-1, 0) is the classic dip: the general law at (-1, 0), through slots, renders the classic bits" {
+        // The slots force the general branch (`1 + depth * from`, `1 + depth * to`); at -1 and 0 it must reduce to the
+        // classic `range(1 - depth, 1)` exactly, so a pattern that writes the defaults sounds as one that writes none.
+        val sampleRate = 48000
+        val slots = mapOf("r.from" to -1.0, "r.to" to 0.0)
+
+        for (shape in LfoShapes.names) {
+            for (depth in listOf(0.33, 1.0)) {
+                withClue("$shape depth=$depth") {
+                    val classic = renderNode(inner.tremolo(5.3, depth, shape = shape), sampleRate)
+                    val general = renderNode(
+                        rangedNode(shape, depth, IgnitorDsl.Param("r.from", 0.5), IgnitorDsl.Param("r.to", 0.5)),
+                        sampleRate,
+                        slots,
+                    )
+
+                    general.map { it.toRawBits() } shouldBe classic.map { it.toRawBits() }
+                    // the default node itself carries (-1, 0)
+                    (inner.tremolo(5.3, depth, shape = shape) as IgnitorDsl.Tremolo).rangeFrom shouldBe IgnitorDsl.Constant(-1.0)
+                    (inner.tremolo(5.3, depth, shape = shape) as IgnitorDsl.Tremolo).rangeTo shouldBe IgnitorDsl.Constant(0.0)
+                }
+            }
+        }
+    }
+
+    "the general law at (-1, 0) with a SIGNAL depth renders the classic bits too (the floor shared by both bounds)" {
+        val sampleRate = 48000
+        val depth = IgnitorDsl.Plus(
+            IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0), analog = IgnitorDsl.Constant(0.0)), IgnitorDsl.Constant(0.5)),
+            IgnitorDsl.Constant(0.1),
+        )
+        val slots = mapOf("r.from" to -1.0, "r.to" to 0.0)
+
+        for (shape in LfoShapes.names) {
+            withClue(shape) {
+                fun node(from: IgnitorDsl, to: IgnitorDsl) = IgnitorDsl.Tremolo(
+                    inner = inner, rate = IgnitorDsl.Constant(5.3), depth = depth,
+                    shape = IgnitorDsl.Constant(LfoShapes.indexOf(shape)), rangeFrom = from, rangeTo = to,
+                )
+
+                // two seconds: the depth swings below 0 (from about 0.13 s on), where only the floor keeps the gain at 1
+                val twoSeconds = List(750) { 0 to blockFrames }
+                val classic = renderNode(node(IgnitorDsl.Constant(-1.0), IgnitorDsl.Constant(0.0)), sampleRate, blocks = twoSeconds)
+                val general = renderNode(
+                    node(IgnitorDsl.Param("r.from", 0.5), IgnitorDsl.Param("r.to", 0.5)), sampleRate, slots, twoSeconds,
+                )
+
+                general.map { it.toRawBits() } shouldBe classic.map { it.toRawBits() }
+            }
+        }
+    }
+
+    "a range lays the LFO onto 1 + depth * (from..to): upward, both ways, twice the depth, upside down" {
+        val sampleRate = 48000
+        val dry = renderNode(inner, sampleRate)
+        val n = dry.size
+
+        for (shape in LfoShapes.names) {
+            val osc = renderWindows(oscillator(shape, ConstantIgnitor(5.3), sampleRate), sampleRate)
+
+            for ((from, to) in listOf(0.0 to 1.0, -1.0 to 1.0, 0.0 to 2.0, 0.5 to -0.5)) {
+                withClue("$shape range($from, $to)") {
+                    val node = renderNode(rangedNode(shape, 0.4, IgnitorDsl.Constant(from), IgnitorDsl.Constant(to)), sampleRate)
+                    val expected = rangedLaw(dry, osc, 0.4, DoubleArray(n) { from }, DoubleArray(n) { to })
+
+                    (maxDiff(node, expected) < tolerance) shouldBe true
+                    // Not vacuous: off the classic dip.
+                    (maxDiff(node, renderNode(inner.tremolo(5.3, 0.4, shape = shape), sampleRate)) > 0.05) shouldBe true
+                }
+            }
+        }
+    }
+
+    "a range takes signals: a moving upper bound is read per sample" {
+        val sampleRate = 48000
+        val dry = renderNode(inner, sampleRate)
+        val to = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.9), analog = IgnitorDsl.Constant(0.0))
+        val toValues = renderNode(to, sampleRate)
+
+        for (shape in LfoShapes.names) {
+            withClue(shape) {
+                val osc = renderWindows(oscillator(shape, ConstantIgnitor(5.3), sampleRate), sampleRate)
+                val node = renderNode(rangedNode(shape, 0.7, IgnitorDsl.Constant(0.0), to), sampleRate)
+
+                (maxDiff(node, rangedLaw(dry, osc, 0.7, DoubleArray(dry.size) { 0.0 }, toValues)) < tolerance) shouldBe true
+            }
+        }
+    }
+
+    "the depth floor holds off the default range: a depth at or below 0 is no tremolo, whatever the range" {
+        val sampleRate = 48000
+        val dry = renderNode(inner, sampleRate).map { it.toRawBits() }
+        // block-constant arithmetic the gate cannot read, at -0.3: only the floor stops a range(0, 2) from boosting
+        val negative = IgnitorDsl.Plus(IgnitorDsl.Div(IgnitorDsl.Freq, IgnitorDsl.Constant(-200.0)), IgnitorDsl.Constant(0.8))
+
+        for (shape in LfoShapes.names) {
+            withClue(shape) {
+                val node = IgnitorDsl.Tremolo(
+                    inner = inner,
+                    rate = IgnitorDsl.Constant(5.3),
+                    depth = negative,
+                    shape = IgnitorDsl.Constant(LfoShapes.indexOf(shape)),
+                    rangeFrom = IgnitorDsl.Constant(0.0),
+                    rangeTo = IgnitorDsl.Constant(2.0),
+                )
+
+                renderNode(node, sampleRate).map { it.toRawBits() } shouldBe dry
+            }
+        }
+    }
 })
