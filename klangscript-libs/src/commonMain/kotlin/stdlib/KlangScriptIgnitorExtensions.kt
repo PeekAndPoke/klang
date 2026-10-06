@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
+import io.peekandpoke.klang.audio_bridge.rangex
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
@@ -498,10 +499,11 @@ object KlangScriptIgnitorExtensions {
 
     /**
      * Applies amplitude tremolo: an oscillator at [rate] Hz pulls the level down by up to [depth]
-     * (0 to 1). The LFO's shape is a knob on the [TremoloBuilder]: `.tremolo(4, 0.8, x => x.shape("square"))`.
-     * Rate first, like every Ignitor LFO door; the pattern door is `tremolo(depth, rate, shape)`.
+     * (0 to 1) by default; the builder's `range` moves the swing (a swell upward, or both ways). The LFO's shape and where its swing sits are knobs on the [TremoloBuilder]:
+     * `.tremolo(4, 0.8, x => x.shape("square"))`, `.tremolo(4, 0.3, x => x.range(0, 1))` (a swell upward instead of
+     * the classic dip). Rate first, like every Ignitor LFO door; the pattern door is `tremolo(depth, rate, shape)`.
      *
-     * @param configure receives the [TremoloBuilder] (knob: `shape`) and returns it.
+     * @param configure receives the [TremoloBuilder] (knobs: `shape`, `range`) and returns it.
      */
     @KlangScript.Method
     fun tremolo(
@@ -856,18 +858,60 @@ object KlangScriptIgnitorExtensions {
     fun mix(self: IgnitorDsl, other: IgnitorDslLike, t: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Lerp(left = self, right = other.toIgnitorDsl(), t = t.toIgnitorDsl())
 
-    /** Maps this signal from `[-1, 1]` to `[lo, hi]` per sample. Standard LFO scaler. */
+    /**
+     * Lets this signal swing between [from] and [to], per sample. The standard LFO scaler.
+     *
+     * The oscillators swing between `-1` and `1`; `range` maps `-1` to [from] and `1` to [to], linearly. Where the
+     * swing sits is up to the two values:
+     *
+     * | Call              | The signal moves                                      |
+     * |-------------------|-------------------------------------------------------|
+     * | `range(0, 1)`     | only upward, between 0 and 1                          |
+     * | `range(-1, 0)`    | only downward, between -1 and 0                       |
+     * | `range(-1, 1)`    | both ways, centred on 0 (the oscillator as it is)     |
+     * | `range(-0.5, 1)`  | mostly upward, dipping a little below 0               |
+     * | `range(1, 0)`     | the same swing turned upside down                     |
+     *
+     * Sprudel's signals swing between `0` and `1` instead, and their `range(from, to)` gives the same result:
+     * `x.range(200, 400)` swings between 200 and 400 in both DSLs. To get from `0..1` to `-1..1` without a range,
+     * `x.mul(2).minus(1)`.
+     *
+     * ```KlangScript
+     * Ignitor.saw().lowpass(Ignitor.sine(0.5).range(400, 2000))   // the cutoff sweeps 400 to 2000 Hz
+     * Ignitor.sine().mul(Ignitor.sine(5).range(0.6, 1))            // a tremolo that only ever dips
+     * ```
+     */
     @KlangScript.Method
-    fun range(self: IgnitorDsl, lo: IgnitorDslLike, hi: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Range(inner = self, lo = lo.toIgnitorDsl(), hi = hi.toIgnitorDsl())
+    fun range(self: IgnitorDsl, from: IgnitorDslLike, to: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Range(inner = self, from = from.toIgnitorDsl(), to = to.toIgnitorDsl())
 
-    /** Maps this signal from `[0, 1]` to `[-1, 1]` per sample. */
+    /**
+     * Lets this signal swing between [from] and [to] exponentially, per sample: the exponential twin of [range],
+     * perceptually even for frequencies.
+     *
+     * `range` takes equal steps of the signal to equal DIFFERENCES, `rangex` to equal RATIOS:
+     * `from · (to / from)^((x + 1) / 2)`. So in a sweep from 200 to 3200 Hz each octave takes the same share of the
+     * swing (with a saw or a triangle, the same time), which is what the ear hears as even; with `range` the low
+     * octaves would rush by. A sine dwells at its ends, so it lingers in the lowest and the highest octave.
+     *
+     * | The oscillator is | `rangex(200, 3200)` gives                  |
+     * |-------------------|--------------------------------------------|
+     * | `-1`              | 200, [from]                                |
+     * | `0`               | 800, the geometric mean `√(from · to)`     |
+     * | `1`               | 3200, [to]                                 |
+     *
+     * `rangex(3200, 200)` turns the swing upside down. Both values are frequencies or other positive amounts: a
+     * value at or below 0 (or not a number) is coerced to 0.0001, so nothing breaks, but that end of the sweep sits
+     * at almost nothing.
+     * Sprudel's `rangex(from, to)` is the same mapping on its `0..1` signals.
+     *
+     * ```KlangScript
+     * Ignitor.saw().lowpass(Ignitor.sine(0.2).rangex(200, 3200))   // the cutoff sweeps four octaves, evenly
+     * ```
+     */
     @KlangScript.Method
-    fun bipolar(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Bipolar(inner = self)
-
-    /** Maps this signal from `[-1, 1]` to `[0, 1]` per sample. */
-    @KlangScript.Method
-    fun unipolar(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Unipolar(inner = self)
+    fun rangex(self: IgnitorDsl, from: IgnitorDslLike, to: IgnitorDslLike): IgnitorDsl =
+        self.rangex(from = from.toIgnitorDsl(), to = to.toIgnitorDsl())
 
     /** Per-sample floor. */
     @KlangScript.Method

@@ -56,7 +56,7 @@ fun sine(...): Ignitor {
 }
 ```
 
-**Stateless SAMs are fine** — `mul(constant)`, `bipolar()`, `abs()`,
+**Stateless SAMs are fine**: `mul(constant)`, `range(from, to)`, `abs()`,
 `whiteNoise()`, the arithmetic combinators in `Ignitor.kt`, etc. The footgun
 is specifically **mutable** captures (`var phase`, `var lastSample`).
 

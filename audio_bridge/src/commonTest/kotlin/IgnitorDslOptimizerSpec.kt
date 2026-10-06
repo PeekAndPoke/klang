@@ -671,6 +671,38 @@ class IgnitorDslOptimizerSpec : StringSpec({
         scalar.optimize() shouldBe scalar
     }
 
+    "R2: a range over block-constant operands is a scalar: alone it is left alone, as a coefficient it folds" {
+        // `range(0, 1)` spells the retired `unipolar()`, which was a scalar over a scalar inner; the spelling
+        // that replaced it must fold the same
+        val unipolarFreq = IgnitorDsl.Freq.range(c(0.0), c(1.0))
+        val depth = IgnitorDsl.Param("depth", 0.5).range(c(0.0), c(1.0))
+
+        unipolarFreq.div(c(-1.17)).optimize() shouldBe unipolarFreq.div(c(-1.17))
+        IgnitorDsl.Sawtooth().mul(depth).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = depth, add = none)
+    }
+
+    "R2: a range over a signal is a signal: mul(lfo.range(0, 1)) stays Times" {
+        val ring = IgnitorDsl.Sawtooth().mul(IgnitorDsl.Sine(freq = c(3.0)).range(c(0.0), c(1.0)))
+
+        ring.optimize() shouldBe ring
+    }
+
+    "R2: rangex over block-constant operands is a scalar too: its composed chain folds as a coefficient" {
+        // rangex is composed (exp of a range between two logs of maxes), no node of its own; every node of the
+        // chain must be classified control-rate, or a slot-driven rangex would cost a per-sample multiply
+        val depth = IgnitorDsl.Param("depth", 0.5).rangex(c(100.0), c(1600.0))
+
+        IgnitorDsl.Sawtooth().mul(depth).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = depth, add = none)
+    }
+
+    "R2: rangex over a signal is a signal: mul(lfo.rangex(...)) stays Times" {
+        val ring = IgnitorDsl.Sawtooth().mul(IgnitorDsl.Sine(freq = c(3.0)).rangex(c(0.5), c(2.0)))
+
+        ring.optimize() shouldBe ring
+    }
+
     "R2: optimizer(0) leaves every arithmetic node untouched" {
         val dsl = IgnitorDsl.Sawtooth().mul(c(2.0)).plus(c(10.0)).optimizer(on = 0)
 

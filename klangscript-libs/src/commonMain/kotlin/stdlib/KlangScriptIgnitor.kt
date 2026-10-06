@@ -69,7 +69,7 @@ object KlangScriptIgnitor {
      * `Ignitor.sine(Ignitor.freq().mul(2), x => x.harmonics(3))` is the even series `2f, 4f, 6f, 8f`.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency (e.g. 5 for a 5 Hz LFO).
-     * @param configure receives the [OscSineBuilder] (knobs: `analog`, `fundamental`, `harmonics`, `octaves`, `suboctaves`, `analogSpread`) and returns it.
+     * @param configure receives the [OscSineBuilder] (knobs: `analog`, `fundamental`, `harmonics`, `octaves`, `suboctaves`, `analogSpread`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.sine(x => x.analog(3)).lowpass(2000)
@@ -85,7 +85,7 @@ object KlangScriptIgnitor {
      * Creates a sawtooth wave oscillator (analog flyback shape, no PolyBLEP, softens with pitch).
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSawBuilder] (knobs: `analog`, `resetSamples`, `shapeMax`) and returns it.
+     * @param configure receives the [OscSawBuilder] (knobs: `analog`, `resetSamples`, `shapeMax`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.saw(x => x.resetSamples(4.0).analog(5.0))
@@ -101,7 +101,7 @@ object KlangScriptIgnitor {
      * [pulze] the raw, aliased one.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSquareBuilder] (knobs: `duty`, `analog`, `flankSamples`, `riseFlank`, `fallFlank`) and returns it.
+     * @param configure receives the [OscSquareBuilder] (knobs: `duty`, `analog`, `flankSamples`, `riseFlank`, `fallFlank`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.square(x => x.duty(0.3).flankSamples(4.0))
@@ -112,24 +112,24 @@ object KlangScriptIgnitor {
         OscSquareBuilder(IgnitorDsl.Pulze(freq = freq.orNoteFreq())).configuredBy("Ignitor.square", configure).node
 
     /**
-     * Creates a triangle wave oscillator. Its flanks are fixed fully open; `analog` is the only knob.
+     * Creates a triangle wave oscillator. Its flanks are fixed fully open; `analog` and `phase` are its knobs.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscTriangleBuilder] (knobs: `analog`) and returns it.
+     * @param configure receives the [OscTriBuilder] (knobs: `analog`, `phase`) and returns it.
      *
      * ```KlangScript
-     * Ignitor.triangle(x => x.analog(3))
+     * Ignitor.tri(x => x.analog(3))
      * ```
      */
     @KlangScript.Method
-    fun triangle(freq: IgnitorDslLike? = null, configure: ((OscTriangleBuilder) -> OscTriangleBuilder)? = null): IgnitorDsl =
-        OscTriangleBuilder(IgnitorDsl.Triangle(freq = freq.orNoteFreq())).configuredBy("Ignitor.triangle", configure).node
+    fun tri(freq: IgnitorDslLike? = null, configure: ((OscTriBuilder) -> OscTriBuilder)? = null): IgnitorDsl =
+        OscTriBuilder(IgnitorDsl.Tri(freq = freq.orNoteFreq())).configuredBy("Ignitor.tri", configure).node
 
     /**
      * Creates a ramp (reverse sawtooth) wave oscillator.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscRampBuilder] (knobs: `analog`, `resetSamples`, `shapeMax`) and returns it.
+     * @param configure receives the [OscRampBuilder] (knobs: `analog`, `resetSamples`, `shapeMax`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.ramp(x => x.resetSamples(4.0).analog(5.0))
@@ -143,7 +143,7 @@ object KlangScriptIgnitor {
      * Creates a naive sawtooth without anti-aliasing (brighter, harsher).
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscZawtoothBuilder] (knobs: `analog`) and returns it.
+     * @param configure receives the [OscZawtoothBuilder] (knobs: `analog`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.zawtooth(x => x.analog(3))
@@ -157,7 +157,7 @@ object KlangScriptIgnitor {
      * Creates a raw ramp ("zamp"): a naive reverse sawtooth without anti-aliasing (the raw [ramp]).
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscZampBuilder] (knobs: `analog`) and returns it.
+     * @param configure receives the [OscZampBuilder] (knobs: `analog`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.zamp(x => x.analog(3))
@@ -171,7 +171,7 @@ object KlangScriptIgnitor {
      * Creates an impulse (click) oscillator.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscImpulseBuilder] (knobs: `analog`) and returns it.
+     * @param configure receives the [OscImpulseBuilder] (knobs: `analog`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.impulse(x => x.analog(3))
@@ -185,7 +185,7 @@ object KlangScriptIgnitor {
      * Creates a raw pulse ("pulze"): a naive, aliased pulse with variable duty cycle (the raw counterpart of [square]).
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscPulzeBuilder] (knobs: `duty`, `analog`) and returns it.
+     * @param configure receives the [OscPulzeBuilder] (knobs: `duty`, `analog`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.pulze(x => x.duty(0.3))
@@ -291,7 +291,7 @@ object KlangScriptIgnitor {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperSawBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperSawBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.supersaw(x => x.voices(9).spread(0.1).spreadPower(1.5).analog(5.0)).lowpass(800)
@@ -307,7 +307,7 @@ object KlangScriptIgnitor {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperSineBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperSineBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.supersine(x => x.voices(9).spread(0.1).analog(5.0))
@@ -323,7 +323,7 @@ object KlangScriptIgnitor {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperSquareBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperSquareBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.supersquare(x => x.voices(9).spread(0.1).analog(5.0))
@@ -339,7 +339,7 @@ object KlangScriptIgnitor {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperTriBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperTriBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.supertri(x => x.voices(9).spread(0.1).analog(5.0))
@@ -355,7 +355,7 @@ object KlangScriptIgnitor {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperRampBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperRampBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.superramp(x => x.voices(9).spread(0.1).analog(5.0))

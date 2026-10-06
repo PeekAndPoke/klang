@@ -413,72 +413,27 @@ object JsCompatTestData {
             Example(SKIP, "Continuous | Sine range pure", """sine.range(-10, 10)"""),
             Example("Continuous | Sine", """note("a b c d").pan(sine)"""),
             Example("Continuous | Sine range", """note("a b c d").pan(sine.range(0.1, 0.9))"""),
-            // Continuous patterns Sine2
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | Sine2 pure", """sine2"""),
-            Example("Continuous | Sine2", """note("a b c d").pan(sine2)"""),
-            Example("Continuous | Sine2 range", """note("a b c d").pan(sine2.fromBipolar().range(0.1, 0.9))"""),
             // Continuous patterns Cosine
             // Is OK: we set "whole" and js does not
             Example(SKIP, "Continuous | Cosine pure", """cosine"""),
             Example(SKIP, "Continuous | Cosine range pure", """cosine.range(-10, 10)"""),
             Example("Continuous | Cosine", """note("a b c d").pan(cosine)"""),
             Example("Continuous | Cosine range", """note("a b c d").pan(cosine.range(0.1, 0.9))"""),
-            // Continuous patterns Cosine2
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | Cosine2 pure", """cosine2"""),
-            Example("Continuous | Cosine2", """note("a b c d").pan(cosine2)"""),
-            Example("Continuous | Cosine2 range", """note("a b c d").pan(cosine2.fromBipolar().range(0.1, 0.9))"""),
             // Continuous patterns Saw
             // Is OK: we set "whole" and js does not
             Example(SKIP, "Continuous | Saw pure", """saw"""),
             Example("Continuous | Saw", """note("a b c d").pan(saw)"""),
             Example("Continuous | Saw range", """note("a b c d").pan(saw.range(0.1, 0.9))"""),
-            // Continuous patterns Saw2
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | Saw2 pure", """saw2"""),
-            Example("Continuous | Saw2", """note("a b c d").pan(saw2)"""),
-            Example("Continuous | Saw2 range", """note("a b c d").pan(saw2.fromBipolar().range(0.1, 0.9))"""),
-            // Continuous patterns ISaw
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | ISaw pure", """isaw"""),
-            Example("Continuous | ISaw", """note("a b c d").pan(isaw)"""),
-            Example("Continuous | ISaw range", """note("a b c d").pan(isaw.range(0.1, 0.9))"""),
-            // Continuous patterns ISaw2
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | ISaw2 pure", """isaw2"""),
-            Example("Continuous | ISaw2", """note("a b c d").pan(isaw2)"""),
-            Example("Continuous | ISaw2 range", """note("a b c d").pan(isaw2.fromBipolar().range(0.1, 0.9))"""),
             // Continuous patterns Tri
             // Is OK: we set "whole" and js does not
             Example(SKIP, "Continuous | Tri pure", """tri"""),
             Example("Continuous | Tri", """note("a b c d").pan(tri)"""),
             Example("Continuous | Tri range", """note("a b c d").pan(tri.range(0.1, 0.9))"""),
-            // Continuous patterns Tri2
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | Tri2 pure", """tri2"""),
-            Example("Continuous | Tri2", """note("a b c d").pan(tri2)"""),
-            Example("Continuous | Tri2 range", """note("a b c d").pan(tri2.fromBipolar().range(0.1, 0.9))"""),
-            // Continuous patterns ITri
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | ITri pure", """itri"""),
-            Example("Continuous | ITri", """note("a b c d").pan(itri)"""),
-            Example("Continuous | ITri range", """note("a b c d").pan(itri.range(0.1, 0.9))"""),
-            // Continuous patterns ITri2
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | ITri2 pure", """itri2"""),
-            Example("Continuous | ITri2", """note("a b c d").pan(itri2)"""),
-            Example("Continuous | ITri2 range", """note("a b c d").pan(itri2.fromBipolar().range(0.1, 0.9))"""),
             // Continuous patterns Square
             // Is OK: we set "whole" and js does not
             Example(SKIP, "Continuous | Square pure", """square"""),
             Example("Continuous | Square", """note("a b c d").pan(square)"""),
             Example("Continuous | Square range", """note("a b c d").pan(square.range(0.1, 0.9))"""),
-            // Continuous patterns Square2
-            // Is OK: we set "whole" and js does not
-            Example(SKIP, "Continuous | Square2 pure", """square2"""),
-            Example("Continuous | Square2", """note("a b c d").pan(square2)"""),
-            Example("Continuous | Square2 range", """note("a b c d").pan(square2.fromBipolar().range(0.1, 0.9))"""),
         ).map {
             it.ignore("data.gain")
                 .recovers("data.soundIndex") { graal, native ->
@@ -635,9 +590,6 @@ object JsCompatTestData {
         // Is OK: we set "whole" and js does not
         Example(SKIP, "Rangex basic", """sine.rangex(100, 1000)"""),
         Example("Rangex with pattern", """note("a b c d").pan(sine.rangex(0.1, 10))"""),
-        // Is OK: we set "whole" and js does not
-        Example(SKIP, "Range2 basic", """sine2.range2(0, 100)"""),
-        Example("Range2 with pattern", """note("a b c d").lpf(sine2.range2(500, 4000))"""),
 
         // Value Modifiers
         Example("Round basic", """seq("0.3 1.7 2.51").round()"""),

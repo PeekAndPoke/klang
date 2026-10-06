@@ -152,7 +152,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             17 -> IgnitorDsl.Adsr(inner, attackSec = IgnitorDsl.Constant(0.001 + r.nextDouble() * 0.05), decaySec = IgnitorDsl.Constant(r.nextDouble() * 0.2))
             18 -> IgnitorDsl.Clamp(inner, lo = IgnitorDsl.Constant(-1.0), hi = IgnitorDsl.Constant(1.0))
             19 -> IgnitorDsl.Lerp(inner, tree(r, depth - 1, pool, stats), t = k)
-            20 -> IgnitorDsl.Unipolar(inner)
+            20 -> IgnitorDsl.Range(inner, from = IgnitorDsl.Constant(0.0), to = IgnitorDsl.Constant(1.0)) // the LFO scaler, -1..1 onto 0..1
             21 -> {
                 val on = if (r.nextInt(4) == 0) 0 else 1
 

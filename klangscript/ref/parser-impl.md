@@ -7,7 +7,11 @@ Zero external dependencies. Replaces better-parse (broken in Kotlin/JS productio
 
 ## Token Types (40+)
 
-Keywords: `let`, `const`, `return`, `import`, `export`, `from`, `as`, `true`, `false`, `null`
+Keywords: `let`, `const`, `return`, `import`, `export`, `in`, `if`, `else`, `while`, `do`, `for`, `break`,
+`continue`, `true`, `false`, `null`
+Contextual keywords: `from` and `as` are lexed as `IDENTIFIER` and read as keywords only where the import and export
+grammar expects them (`consumeFrom`, `matchAs`), as in JavaScript, so `range(from = 1, to = 2)`, `(from, to) => ...`,
+`let as` and `x.from` work. Guard: `ContextualImportKeywordsTest`.
 Literals: `NUMBER`, `STRING`, `IDENTIFIER`
 Operators: `PLUS`, `MINUS`, `STAR`, `SLASH`, `PERCENT`, `BANG`, `EQ`, `NEQ`, `LT`, `LTE`, `GT`, `GTE`, `AND`, `OR`,
 `ARROW`

@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
 import io.peekandpoke.klang.audio_bridge.constants.RAMP_RESET_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.RAMP_SHAPE_MAX
+import io.peekandpoke.klang.audio_bridge.constants.RANGEX_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.SAW_RESET_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.SAW_SHAPE_MAX
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
@@ -83,6 +84,8 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SELECTION
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_TO
 
 
 
@@ -332,13 +335,19 @@ sealed interface IgnitorDsl {
         val suboctavesRolloff: IgnitorDsl = Constant(1.0),
         /** Drift lane blend, 0 = one shared analog walk for every partial, 1 = independent walks. */
         val analogSpread: IgnitorDsl = Constant(1.0),
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out); fundamental.collectParams(out)
             harmonics.collectParams(out); harmonicsRolloff.collectParams(out)
             octaves.collectParams(out); octavesRolloff.collectParams(out)
             suboctaves.collectParams(out); suboctavesRolloff.collectParams(out)
-            analogSpread.collectParams(out)
+            analogSpread.collectParams(out); phase.collectParams(out)
         }
 
         /** True when every bank knob is its literal default: the engine builds the plain sine. */
@@ -356,9 +365,15 @@ sealed interface IgnitorDsl {
         val resetSamples: Double = SAW_RESET_SAMPLES,
         /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps very high notes sane. */
         val shapeMax: Double = SAW_SHAPE_MAX,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -371,23 +386,35 @@ sealed interface IgnitorDsl {
     data class Square(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
-    /** Triangle wave oscillator. */
-    @WireName("triangle")
-    data class Triangle(
+    /** Triangle wave oscillator (`Ignitor.tri`). */
+    @WireName("tri")
+    data class Tri(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
         // No shape knobs: the triangle is the pulse engine with both flanks fully open (rise = fall = 1.0),
         // which makes the min-flank floor (PULSE_MIN_FLANK_SAMPLES) always overridden — there is nothing
-        // tunable here (see Ignitors.triangle / WaveVoiceState.setPulseShape). Stays a plain oscillator.
+        // tunable here (see Ignitors.tri / WaveVoiceState.setPulseShape). Stays a plain oscillator.
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -418,9 +445,15 @@ sealed interface IgnitorDsl {
     data class Zawtooth(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -429,9 +462,15 @@ sealed interface IgnitorDsl {
     data class Zamp(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -440,9 +479,15 @@ sealed interface IgnitorDsl {
     data class Impulse(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -458,9 +503,15 @@ sealed interface IgnitorDsl {
         val riseFlank: Double = PULSE_RISE_FLANK,
         /** Falling-edge flank fraction of the plateau (0 = sharpest/min floor, 1 = full ramp). Default 0.0. */
         val fallFlank: Double = PULSE_FALL_FLANK,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); duty.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); duty.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -473,9 +524,15 @@ sealed interface IgnitorDsl {
         val freq: IgnitorDsl = Freq,
         val duty: IgnitorDsl = Slots.duty,
         val analog: IgnitorDsl = Slots.analog,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); duty.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); duty.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -572,9 +629,15 @@ sealed interface IgnitorDsl {
         val resetSamples: Double = RAMP_RESET_SAMPLES,
         /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps high notes sane. */
         val shapeMax: Double = RAMP_SHAPE_MAX,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -630,10 +693,16 @@ sealed interface IgnitorDsl {
         val selection: String = SUPERSAW_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = SUPERSAW_WARMUP,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
-            analogSpread.collectParams(out)
+            analogSpread.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -685,10 +754,16 @@ sealed interface IgnitorDsl {
         val selection: String = SUPERSINE_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = SUPERSINE_WARMUP,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
-            analogSpread.collectParams(out)
+            analogSpread.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -738,10 +813,16 @@ sealed interface IgnitorDsl {
         val selection: String = SUPERSQUARE_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = SUPERSQUARE_WARMUP,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
-            analogSpread.collectParams(out)
+            analogSpread.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -792,10 +873,16 @@ sealed interface IgnitorDsl {
         val selection: String = SUPERTRI_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = SUPERTRI_WARMUP,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
-            analogSpread.collectParams(out)
+            analogSpread.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -845,10 +932,16 @@ sealed interface IgnitorDsl {
         val selection: String = SUPERRAMP_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = SUPERRAMP_WARMUP,
+        /**
+         * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
+         * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is
+         * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
+         */
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
-            analogSpread.collectParams(out)
+            analogSpread.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -1176,34 +1269,18 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Maps the inner signal from `[-1, 1]` to `[lo, hi]` per sample.
+     * Maps the inner signal from `[-1, 1]` to `[from, to]` per sample.
      *
-     * Standard LFO scaler. Output = `lo + (inner + 1)·0.5·(hi − lo)`.
+     * Standard LFO scaler. Output = `from + (inner + 1)·0.5·(to − from)`.
      */
     @WireName("range")
     data class Range(
         val inner: IgnitorDsl,
-        val lo: IgnitorDsl,
-        val hi: IgnitorDsl,
+        val from: IgnitorDsl,
+        val to: IgnitorDsl,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); lo.collectParams(out); hi.collectParams(out)
-        }
-    }
-
-    /** Maps the inner signal from `[0, 1]` to `[-1, 1]` per sample. */
-    @WireName("bipolar")
-    data class Bipolar(val inner: IgnitorDsl) : IgnitorDsl {
-        override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out)
-        }
-    }
-
-    /** Maps the inner signal from `[-1, 1]` to `[0, 1]` per sample. */
-    @WireName("unipolar")
-    data class Unipolar(val inner: IgnitorDsl) : IgnitorDsl {
-        override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out)
+            inner.collectParams(out); from.collectParams(out); to.collectParams(out)
         }
     }
 
@@ -1997,7 +2074,7 @@ sealed interface IgnitorDsl {
     /**
      * Tremolo effect: a pulsing volume change. At voice build it becomes an oscillator of [shape] at [rate]
      * (no analog drift; the square, sawtooth and ramp get a 16 ms soft edge, `TREMOLO_EDGE_SECONDS`), mapped
-     * to a gain from `1 - depth` to 1 and multiplied into the signal.
+     * to a gain (by default from `1 - depth` to 1, see [rangeFrom]) and multiplied into the signal.
      *
      * @param rate LFO rate in Hz, read once per block. A negative rate runs the oscillator backwards, and its
      *   soft edges then go instant (the edge length goes negative), so the square, sawtooth and ramp click, and
@@ -2011,6 +2088,14 @@ sealed interface IgnitorDsl {
      *   the nearest position, and a non-finite, negative or past-the-end one is `sine`, as an unknown
      *   name is. Default: `sine` (index 0). Above about 31.25 Hz the 16 ms edges fill the whole cycle, so
      *   `square`, `sawtooth` and `ramp` all become the same symmetric triangle (only the start differs).
+     * @param rangeFrom with [rangeTo], where the LFO's swing sits, in the -1..1 language of the Ignitor `range`: the
+     *   LFO's -1 maps to [rangeFrom], its +1 to [rangeTo], and the gain is `1 + depth * that`. The default
+     *   `(-1, 0)` is the tremolo as it always was, the gain dipping from 1 to `1 - depth` (and the engine then builds
+     *   exactly the classic computation, bit for bit). `(0, 1)` swells upward from 1 to `1 + depth`, `(-1, 1)`
+     *   swings both ways, `(0, 2)` twice the depth upward. Raw: no clamp, and the depth floor still applies (a
+     *   depth at or below 0 is no tremolo). Signals, read like [depth]. The script door's builder knob is
+     *   `range(from, to)`.
+     * @param rangeTo see [rangeFrom].
      */
     @WireName("tremolo")
     data class Tremolo(
@@ -2018,10 +2103,12 @@ sealed interface IgnitorDsl {
         val rate: IgnitorDsl = Constant(5.0),
         val depth: IgnitorDsl = Constant(0.5),
         val shape: IgnitorDsl = Constant(LfoShapes.SINE_INDEX.toDouble()),
+        val rangeFrom: IgnitorDsl = Constant(TREMOLO_RANGE_FROM),
+        val rangeTo: IgnitorDsl = Constant(TREMOLO_RANGE_TO),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
-            shape.collectParams(out)
+            shape.collectParams(out); rangeFrom.collectParams(out); rangeTo.collectParams(out)
         }
     }
 
@@ -2247,14 +2334,28 @@ fun IgnitorDsl.tanh() = IgnitorDsl.Tanh(inner = this)
 /** Linear interpolation: `this·(1−t) + other·t`. */
 fun IgnitorDsl.lerp(other: IgnitorDsl, t: IgnitorDsl) = IgnitorDsl.Lerp(left = this, right = other, t = t)
 
-/** Maps this signal from `[-1, 1]` to `[lo, hi]` per sample. */
-fun IgnitorDsl.range(lo: IgnitorDsl, hi: IgnitorDsl) = IgnitorDsl.Range(inner = this, lo = lo, hi = hi)
+/** Maps this signal from `[-1, 1]` to `[from, to]` per sample; where the swing sits: the script door `range`. */
+fun IgnitorDsl.range(from: IgnitorDsl, to: IgnitorDsl) = IgnitorDsl.Range(inner = this, from = from, to = to)
 
-/** Maps this signal from `[0, 1]` to `[-1, 1]` per sample. */
-fun IgnitorDsl.bipolar() = IgnitorDsl.Bipolar(inner = this)
+/**
+ * The exponential twin of [range]: maps this signal from `[-1, 1]` to `[from, to]` so that equal steps of the signal
+ * are equal RATIOS, `from · (to / from)^((x + 1) / 2)`. Perceptually even for frequencies; the script door `rangex`
+ * has the table and the example.
+ *
+ * Built by composition, no node of its own: `exp(range(ln(max(from, floor)), ln(max(to, floor))))`, with
+ * [RANGEX_FLOOR] as the floor. A value at or below 0 is coerced, as in sprudel, instead of meeting the engine's
+ * signed-magnitude `Log` (`0 -> 0`, `-v -> -ln v`), which would give a wrong sweep: `rangex(0, 1000)` would start
+ * at 1, not at almost nothing. The mathematical [IgnitorDsl.Max] node on purpose: the door named `max` is a clamp
+ * and builds [IgnitorDsl.Min]. The operand order matters too: the value on the left and the floor on the right, so
+ * a NaN value reads as the floor (`Max` keeps its right operand when `left > right` is false).
+ */
+fun IgnitorDsl.rangex(from: IgnitorDsl, to: IgnitorDsl): IgnitorDsl {
+    val floor = IgnitorDsl.Constant(RANGEX_FLOOR)
+    val logFrom = IgnitorDsl.Log(inner = IgnitorDsl.Max(left = from, right = floor))
+    val logTo = IgnitorDsl.Log(inner = IgnitorDsl.Max(left = to, right = floor))
 
-/** Maps this signal from `[-1, 1]` to `[0, 1]` per sample. */
-fun IgnitorDsl.unipolar() = IgnitorDsl.Unipolar(inner = this)
+    return IgnitorDsl.Exp(inner = IgnitorDsl.Range(inner = this, from = logFrom, to = logTo))
+}
 
 /** Per-sample floor. */
 fun IgnitorDsl.floor() = IgnitorDsl.Floor(inner = this)
@@ -2884,22 +2985,34 @@ fun IgnitorDsl.phaser(wet: Double, rate: Double, center: Double = 1000.0, sweep:
 )
 
 /**
+ * True when the tremolo's swing is the literal default `(-1, 0)`, the classic dip: the one test of it, read by the
+ * runtime (which then builds the classic gain) and by the graph census.
+ */
+fun IgnitorDsl.Tremolo.hasClassicRange(): Boolean =
+    rangeFrom == IgnitorDsl.Constant(TREMOLO_RANGE_FROM) && rangeTo == IgnitorDsl.Constant(TREMOLO_RANGE_TO)
+
+/**
  * Applies a tremolo (amplitude modulation) at the given LFO [rate] in Hz and [depth], with the LFO's
  * [shape] (a name from [LfoShapes], converted to its index). See [IgnitorDsl.Tremolo].
  *
- * FLAT, where the script door is `tremolo(rate, depth, configure)` with `shape` on a builder: a recorded
- * two-door asymmetry, the filter doors' precedent (`audio_bridge` cannot see the script builders; the
- * flat door is a superset of the builder). A slot in any knob is written through the node.
+ * FLAT, where the script door is `tremolo(rate, depth, configure)` with `shape` and `range(from, to)` on a
+ * builder (here [rangeFrom] and [rangeTo], default `(-1, 0)`, the classic dip): a recorded two-door asymmetry,
+ * the filter doors' precedent (`audio_bridge` cannot see the script builders; the flat door is a superset of the
+ * builder). A slot in any knob is written through the node.
  */
 fun IgnitorDsl.tremolo(
     rate: Double,
     depth: Double,
     shape: String = "sine",
+    rangeFrom: Double = TREMOLO_RANGE_FROM,
+    rangeTo: Double = TREMOLO_RANGE_TO,
 ) = IgnitorDsl.Tremolo(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
     depth = IgnitorDsl.Constant(depth),
     shape = IgnitorDsl.Constant(LfoShapes.indexOf(shape)),
+    rangeFrom = IgnitorDsl.Constant(rangeFrom),
+    rangeTo = IgnitorDsl.Constant(rangeTo),
 )
 
 /**

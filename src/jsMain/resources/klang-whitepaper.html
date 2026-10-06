@@ -2164,7 +2164,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
       .classic()
 
 <span class="kw">let</span> shaku = Ignitor.sine().mul(0.6)
-      .plus(Ignitor.triangle().mul(0.25))
+      .plus(Ignitor.tri().mul(0.25))
       .plus(Ignitor.perlin(13).mul(0.05))
       .plus(Ignitor.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
       .lowpass(3500, 1.0, x =&gt; x.analog(Ignitor.slot.analog))

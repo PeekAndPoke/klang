@@ -302,34 +302,20 @@ class IgnitorArithmeticTest : StringSpec({
         out[0] shouldBe (0.5 plusOrMinus 1e-6)
     }
 
-    "range maps -1..1 to lo..hi at midpoint" {
-        // input = 0 (midpoint of [-1,1]) → output = midpoint of [lo, hi]
+    "range maps -1..1 to from..to, the midpoint" {
+        // input = 0 (midpoint of [-1,1]) → output = midpoint of [from, to]
         val out = render(const(0.0).range(const(2.0), const(10.0)))
         out[0] shouldBe (6.0 plusOrMinus 1e-5)
     }
 
-    "range maps -1 to lo" {
+    "range maps -1 to from" {
         val out = render(const(-1.0).range(const(2.0), const(10.0)))
         out[0] shouldBe (2.0 plusOrMinus 1e-5)
     }
 
-    "range maps +1 to hi" {
+    "range maps +1 to to" {
         val out = render(const(1.0).range(const(2.0), const(10.0)))
         out[0] shouldBe (10.0 plusOrMinus 1e-5)
-    }
-
-    "bipolar maps 0..1 to -1..1" {
-        // 0 → -1, 1 → +1, 0.5 → 0
-        render(const(0.0).bipolar())[0] shouldBe (-1.0 plusOrMinus 1e-6)
-        render(const(1.0).bipolar())[0] shouldBe (1.0 plusOrMinus 1e-6)
-        render(const(0.5).bipolar())[0] shouldBe (0.0 plusOrMinus 1e-6)
-    }
-
-    "unipolar maps -1..1 to 0..1" {
-        // -1 → 0, +1 → 1, 0 → 0.5
-        render(const(-1.0).unipolar())[0] shouldBe (0.0 plusOrMinus 1e-6)
-        render(const(1.0).unipolar())[0] shouldBe (1.0 plusOrMinus 1e-6)
-        render(const(0.0).unipolar())[0] shouldBe (0.5 plusOrMinus 1e-6)
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

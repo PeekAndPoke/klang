@@ -86,7 +86,7 @@ The constants live in `audio_be/src/commonMain/kotlin/DspUtil.kt`.
   clamped to `≤ SAFE_MAX`, sign preserved. Prevents runaway products from
   overflowing Float.
 - **Naturally bounded ops** — `Plus`, `Minus`, `Lerp`, `Range`, `Min`, `Max`,
-  `Clamp`, `Bipolar`, `Unipolar`, `Tanh`, `Abs`, `Sign`, `Floor`,
+  `Clamp`, `Tanh`, `Abs`, `Sign`, `Floor`,
   `Ceil`, `Round`, `Frac`, `Sqrt`, `Log` — output bounded by their inputs
   or by their algebraic properties; no extra guard needed. `Neg` is a multiply by
   `-1` since 2026-09-15 (no dedicated ignitor), so it clamps like `Times`.

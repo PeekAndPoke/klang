@@ -26,6 +26,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_EDGE_SECONDS
+import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import kotlin.random.Random
 
 /**
@@ -731,9 +732,10 @@ private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Igni
     val analog = ConstantIgnitor(0.0)
     val edgeSamples = TREMOLO_EDGE_SECONDS * sampleRate
 
-    // The catalogue's names ARE the oscillator names; `sine` is also every index `indexAt` falls back to.
+    // Each catalogue name picks its oscillator (the LFO shape `triangle` is the oscillator `tri`); `sine` is also
+    // every index `indexAt` falls back to.
     val lfo = when (LfoShapes.names[lfoShapeIndex]) {
-        "triangle" -> Ignitors.triangle(rate, analog)
+        "triangle" -> Ignitors.tri(rate, analog)
         "square" -> Ignitors.pulze(rate, ConstantIgnitor(0.5), analog, flankSamples = edgeSamples)
         "sawtooth" -> Ignitors.sawtooth(rate, analog, resetSamples = edgeSamples)
         "ramp" -> Ignitors.ramp(rate, analog, resetSamples = edgeSamples)
@@ -757,6 +759,24 @@ internal fun tremoloGain(rate: Ignitor, depth: Ignitor, lfoShapeIndex: Int, samp
     val floored = depth.max(ConstantIgnitor(0.0))
 
     return tremoloLfo(lfoShapeIndex, rate, sampleRate).range(ConstantIgnitor(1.0).minus(floored), ConstantIgnitor(1.0))
+}
+
+/**
+ * The tremolo's gain with its swing placed by `range(from, to)` (the node's `rangeFrom` / `rangeTo`, in the -1..1
+ * language of the Ignitor `range`): the LFO's -1 maps to `1 + depth * from`, its +1 to `1 + depth * to`, so the gain
+ * is `1 + depth * m` with `m` the LFO laid onto from..to. The depth is floored at 0 as in [tremoloGain]; the range is
+ * raw (no clamp, `(0, 2)` swings twice the depth upward). The `Tremolo` arm calls this only off the default
+ * `(-1, 0)`, which builds [tremoloGain] itself, the classic computation bit for bit.
+ */
+internal fun tremoloGainInRange(
+    rate: Ignitor, depth: Ignitor, from: Ignitor, to: Ignitor, lfoShapeIndex: Int, sampleRate: Int,
+): Ignitor {
+    val max = depth.max(ConstantIgnitor(0.0))
+    // Both bounds read the floored depth: a signal depth is floored once per block and shared (a memo of two readers).
+    val floored = if (max.isBlockConstant) max else MemoizingIgnitor(max).also { it.incConsumers() }
+    val one = ConstantIgnitor(1.0)
+
+    return tremoloLfo(lfoShapeIndex, rate, sampleRate).range(one + floored * from, one + floored * to)
 }
 
 /**
@@ -884,6 +904,12 @@ private fun IgnitorDsl.buildRaw(
     fun IgnitorDsl.noMod(): Ignitor = buildIgnitor(ignitorParams, cache).ignitor
 
     /**
+     * An oscillator's `phase` input: null for the literal 0 (the default), so the oscillator builds no [PhaseOffset]
+     * and renders exactly as before the knob existed; anything else is built like every other parameter, last.
+     */
+    fun IgnitorDsl.phaseInput(): Ignitor? = if (this == IgnitorDsl.Constant(0.0)) null else noMod()
+
+    /**
      * Builds a PITCHED source: applies [accumulatedMod] as before when the source's own `freq`
      * slot is musically derived, and otherwise shields it from pitch modulation entirely
      * ([ModBlockingIgnitor]).
@@ -923,38 +949,42 @@ private fun IgnitorDsl.buildRaw(
         // Literal defaults build the plain sine, bit-identical to before the partial banks existed;
         // any bank knob set builds the bank (a Param included: its value is only known at voice build).
         is IgnitorDsl.Sine -> if (isPlainSine()) {
-            pitchedSource(freq, Ignitors.sine(freq.noMod(), analog.noMod()))
+            pitchedSource(freq, Ignitors.sine(freq.noMod(), analog.noMod(), phase.phaseInput()))
         } else {
             pitchedSource(
                 freq,
                 Ignitors.sinePartials(
                     freq.noMod(), analog.noMod(), fundamental.noMod(),
                     harmonics.noMod(), harmonicsRolloff.noMod(), octaves.noMod(), octavesRolloff.noMod(),
-                    suboctaves.noMod(), suboctavesRolloff.noMod(), analogSpread.noMod(),
+                    suboctaves.noMod(), suboctavesRolloff.noMod(), analogSpread.noMod(), phase.phaseInput(),
                 ),
             )
         }
         is IgnitorDsl.Sawtooth -> pitchedSource(
             freq,
-            Ignitors.sawtooth(freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax),
+            Ignitors.sawtooth(
+                freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax, phase = phase.phaseInput(),
+            ),
         )
-        is IgnitorDsl.Square -> pitchedSource(freq, Ignitors.square(freq.noMod(), analog.noMod()))
-        is IgnitorDsl.Triangle -> pitchedSource(freq, Ignitors.triangle(freq.noMod(), analog.noMod()))
+        is IgnitorDsl.Square -> pitchedSource(freq, Ignitors.square(freq.noMod(), analog.noMod(), phase.phaseInput()))
+        is IgnitorDsl.Tri -> pitchedSource(freq, Ignitors.tri(freq.noMod(), analog.noMod(), phase.phaseInput()))
         is IgnitorDsl.Ramp -> pitchedSource(
             freq,
-            Ignitors.ramp(freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax),
+            Ignitors.ramp(
+                freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax, phase = phase.phaseInput(),
+            ),
         )
-        is IgnitorDsl.Zawtooth -> pitchedSource(freq, Ignitors.zawtooth(freq.noMod(), analog.noMod()))
-        is IgnitorDsl.Zamp -> pitchedSource(freq, Ignitors.zamp(freq.noMod(), analog.noMod()))
+        is IgnitorDsl.Zawtooth -> pitchedSource(freq, Ignitors.zawtooth(freq.noMod(), analog.noMod(), phase.phaseInput()))
+        is IgnitorDsl.Zamp -> pitchedSource(freq, Ignitors.zamp(freq.noMod(), analog.noMod(), phase.phaseInput()))
         is IgnitorDsl.Pulze -> pitchedSource(
             freq,
             Ignitors.pulze(
                 freq.noMod(), duty.noMod(), analog.noMod(),
-                flankSamples = flankSamples, riseFlank = riseFlank, fallFlank = fallFlank,
+                flankSamples = flankSamples, riseFlank = riseFlank, fallFlank = fallFlank, phase = phase.phaseInput(),
             ),
         )
-        is IgnitorDsl.RawPulze -> pitchedSource(freq, Ignitors.rawPulze(freq.noMod(), duty.noMod(), analog.noMod()))
-        is IgnitorDsl.Impulse -> pitchedSource(freq, Ignitors.impulse(freq.noMod(), analog.noMod()))
+        is IgnitorDsl.RawPulze -> pitchedSource(freq, Ignitors.rawPulze(freq.noMod(), duty.noMod(), analog.noMod(), phase.phaseInput()))
+        is IgnitorDsl.Impulse -> pitchedSource(freq, Ignitors.impulse(freq.noMod(), analog.noMod(), phase.phaseInput()))
         is IgnitorDsl.Silence -> applyMod(Ignitors.silence(), accumulatedMod)
         // The voice's sample (step 7): a playhead, pitched by `phaseMod` like every source. Silence without one.
         is IgnitorDsl.Sample -> applyMod(cache.sampleSource ?: Ignitors.silence(), accumulatedMod)
@@ -977,7 +1007,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit,
+                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
             ),
         )
 
@@ -990,7 +1020,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit,
+                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
             ),
         )
 
@@ -1003,7 +1033,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit,
+                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
             ),
         )
 
@@ -1016,7 +1046,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit,
+                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
             ),
         )
 
@@ -1029,7 +1059,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit,
+                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
             ),
         )
 
@@ -1138,9 +1168,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Sign -> inner.withMod().sign()
         is IgnitorDsl.Tanh -> inner.withMod().tanh()
         is IgnitorDsl.Lerp -> left.withMod().lerp(right.withMod(), t.withMod())
-        is IgnitorDsl.Range -> inner.withMod().range(lo.withMod(), hi.withMod())
-        is IgnitorDsl.Bipolar -> inner.withMod().bipolar()
-        is IgnitorDsl.Unipolar -> inner.withMod().unipolar()
+        is IgnitorDsl.Range -> inner.withMod().range(from.withMod(), to.withMod())
         is IgnitorDsl.Floor -> inner.withMod().floor()
         is IgnitorDsl.Ceil -> inner.withMod().ceil()
         is IgnitorDsl.Round -> inner.withMod().round()
@@ -1476,12 +1504,25 @@ private fun IgnitorDsl.buildRaw(
             val signal = inner.withMod()
             val lfoShapeIndex = shape.lfoShapeIndexKnob(ignitorParams, cache)
 
-            signal * tremoloGain(
-                rate = rate.noMod(),
-                depth = depth.noMod(),
-                lfoShapeIndex = lfoShapeIndex,
-                sampleRate = cache.sampleRate,
-            )
+            // The default swing (-1, 0) is the classic dip and builds exactly the classic gain; any other range,
+            // a slot or a signal included, lays the LFO onto `1 + depth * (from..to)`.
+            if (hasClassicRange()) {
+                signal * tremoloGain(
+                    rate = rate.noMod(),
+                    depth = depth.noMod(),
+                    lfoShapeIndex = lfoShapeIndex,
+                    sampleRate = cache.sampleRate,
+                )
+            } else {
+                signal * tremoloGainInRange(
+                    rate = rate.noMod(),
+                    depth = depth.noMod(),
+                    from = rangeFrom.noMod(),
+                    to = rangeTo.noMod(),
+                    lfoShapeIndex = lfoShapeIndex,
+                    sampleRate = cache.sampleRate,
+                )
+            }
         }
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, floor.noMod())
     }

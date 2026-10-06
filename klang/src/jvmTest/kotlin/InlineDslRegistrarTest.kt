@@ -112,7 +112,7 @@ class InlineDslRegistrarTest : StringSpec({
 
     "synthetic name matches IgnitorDsl.uniqueId()" {
         val (reg, _) = newRegistrar()
-        val dsl = IgnitorDsl.Triangle()
+        val dsl = IgnitorDsl.Tri()
         reg.ignitors.registerOrLookup(dsl) shouldBe dsl.uniqueId()
     }
 

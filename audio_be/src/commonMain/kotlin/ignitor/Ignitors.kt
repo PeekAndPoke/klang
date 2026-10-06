@@ -90,8 +90,10 @@ import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.waveTrapezoid
 import io.peekandpoke.klang.audio_be.wrapPhase
+import io.peekandpoke.klang.audio_be.wrapToUnitCycle
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.pow
@@ -131,15 +133,20 @@ object Ignitors {
     private val pickPositionDefault = ConstantIgnitor(0.5)
     private val stiffnessDefault = ConstantIgnitor(0.0)
 
-    /** Sine wave oscillator. Inherently band-limited, no anti-aliasing needed. */
+    /**
+     * Sine wave oscillator. Inherently band-limited, no anti-aliasing needed. Phase 0 is `sin(0)`, the upward zero
+     * crossing; [phase] (null: none) is the offset in cycles, see [PhaseOffset].
+     */
     fun sine(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = SineIgnitor(freq, analog)
+        phase: Ignitor? = null,
+    ): Ignitor = SineIgnitor(freq, analog, phase?.let { PhaseOffset(it) })
 
     private class SineIgnitor(
         private val freq: Ignitor,
         private val analog: Ignitor,
+        private val phaseIn: PhaseOffset?,
     ) : Ignitor {
         private var phase: Double = 0.0
         private var drift: AnalogDrift? = null
@@ -151,6 +158,22 @@ object Ignitors {
             val phaseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val phaseMod = ctx.phaseMod
             val end = ctx.windowEnd
+
+            if (phaseIn != null) {
+                if (!phaseIn.isSignal) {
+                    val shift = phaseIn.blockDelta(actualFreq)
+
+                    if (shift != 0.0) {
+                        phase = (phase + shift * TWO_PI).wrapPhase(TWO_PI)
+                    }
+                }
+
+                if (phaseIn.perSample) {
+                    renderPhased(buffer, actualFreq, ctx, d, phaseInc, phaseIn)
+
+                    return
+                }
+            }
 
             if (d.active) {
                 d.beginBlock()
@@ -189,6 +212,52 @@ object Ignitors {
                 }
             }
         }
+
+        /**
+         * The phased loop (a moving `phase` signal): reads the sine at `phase + offset` and advances `phase` as the
+         * four loops above do (the same products in the same order, so an offset of 0 everywhere renders what they
+         * render).
+         */
+        private fun renderPhased(
+            buffer: AudioBuffer, actualFreq: Double, ctx: IgniteContext, d: AnalogDrift, phaseInc: Double, phaseIn: PhaseOffset,
+        ) {
+            val phaseMod = ctx.phaseMod
+            val off = ctx.offset
+            val end = ctx.windowEnd
+
+            ctx.scratchBuffers.use { offsets ->
+                phaseIn.render(offsets, actualFreq, ctx)
+
+                var m = 1.0
+                var dm = 0.0
+
+                if (d.active) {
+                    d.beginBlock()
+                    m = d.blockStart
+                    dm = (d.blockEnd - m) / (end - off).coerceAtLeast(1)
+                }
+
+                for (i in off until end) {
+                    var p = phase + offsets[i].wrapToUnitCycle() * TWO_PI
+
+                    if (p >= TWO_PI) {
+                        p -= TWO_PI
+                    }
+
+                    buffer[i] = fastSin(p)
+
+                    var inc = phaseInc
+
+                    if (phaseMod != null) {
+                        inc *= phaseMod[i]
+                    }
+
+                    phase += inc * m
+                    m += dm
+                    phase = phase.wrapPhase(TWO_PI)
+                }
+            }
+        }
     }
 
 
@@ -209,7 +278,8 @@ object Ignitors {
      * directions). Banks sum without deduplication. Every knob is read once per block (control rate,
      * the `voices` pattern). Each bank owns its partial state, so a count change in one bank never
      * re-indexes another; surviving partials keep their phase, a partial that (re)activates starts
-     * at phase 0, which is a zero crossing, so adds are step-free. Removals are not: a count
+     * at the phase applied so far: at `phase` 0 (or 0.5) a zero crossing, so adds are step-free,
+     * at any other `phase` a step of up to the partial's gain. Removals are not step-free: a count
      * decrement drops its partial at whatever phase it has (a step of up to that partial's gain),
      * so automate `rolloff`, not `count`, when it must move smoothly. A partial at or above Nyquist,
      * judged at block start on the base pitch, is silenced (gain 0); there is no lower limit.
@@ -243,10 +313,11 @@ object Ignitors {
         suboctaves: Ignitor = ConstantIgnitor(0.0),
         suboctavesRolloff: Ignitor = ConstantIgnitor(1.0),
         analogSpread: Ignitor = ConstantIgnitor(1.0),
+        phase: Ignitor? = null,
     ): Ignitor = PartialBankIgnitor(
         freq, analog, fundamental,
         harmonics, harmonicsRolloff, octaves, octavesRolloff, suboctaves, suboctavesRolloff,
-        analogSpread,
+        analogSpread, phase?.let { PhaseOffset(it) },
     )
 
     private class PartialBankIgnitor(
@@ -260,8 +331,9 @@ object Ignitors {
         private val suboctaves: Ignitor,
         private val suboctavesRolloff: Ignitor,
         private val analogSpread: Ignitor,
+        private val phaseIn: PhaseOffset?,
     ) : Ignitor {
-        /** One bank's partial state: growth-only arrays, a live [count], (re)activated partials restart at phase 0. */
+        /** One bank's partial state: growth-only arrays, a live [count], (re)activated partials restart at the applied phase. */
         private class Bank {
             var count: Int = 0
             var phase: DoubleArray = DoubleArray(0)
@@ -272,7 +344,8 @@ object Ignitors {
             var laneIdx: IntArray = IntArray(0)
             private var lanesAssigned: Int = 0
 
-            fun resize(newCount: Int, drift: DriftLanes?) {
+            /** [startPhase]: where a (re)activated partial starts, in radians (the offset a block-constant `phase` applied so far). */
+            fun resize(newCount: Int, drift: DriftLanes?, startPhase: Double) {
                 if (newCount > phase.size) {
                     phase = phase.copyOf(newCount)
                     gain = gain.copyOf(newCount)
@@ -295,7 +368,7 @@ object Ignitors {
                 }
 
                 for (i in count until newCount) {
-                    phase[i] = 0.0 // a (re)activated partial starts at a zero crossing: step-free
+                    phase[i] = startPhase // at phase 0 or 0.5 a zero crossing (step-free), elsewhere a step
                 }
 
                 count = newCount
@@ -370,6 +443,48 @@ object Ignitors {
             return ph
         }
 
+        /**
+         * [renderPartial] for a moving `phase` signal: every partial reads at its own `phase + offset` (each shifted
+         * by the same fraction of its OWN cycle) and advances exactly as [renderPartial] advances it.
+         */
+        private fun renderPartialPhased(
+            buffer: AudioBuffer, off: Int, end: Int, first: Boolean,
+            phaseIn: Double, d: Double, g: Double,
+            pm: DoubleArray?, drift: DriftLanes?, lane: Int, offsets: AudioBuffer,
+        ): Double {
+            var ph = phaseIn
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(lane)
+                m = drift.startOf(lane)
+                dm = (drift.endOf(lane) - m) / (end - off).coerceAtLeast(1)
+            }
+
+            for (i in off until end) {
+                var p = ph + offsets[i].wrapToUnitCycle() * TWO_PI
+
+                if (p >= TWO_PI) {
+                    p -= TWO_PI
+                }
+
+                val s = g * fastSin(p)
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var step = d * m
+
+                if (pm != null) {
+                    step *= pm[i]
+                }
+
+                m += dm
+                ph = (ph + step).wrapPhase(TWO_PI)
+            }
+
+            return ph
+        }
+
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
@@ -387,10 +502,13 @@ object Ignitors {
             val o = count(octaves, actualFreq, ctx)
             val sub = count(suboctaves, actualFreq, ctx)
             val lanes = drift
+            // A block-constant phase is folded into every accumulator, so a partial that (re)activates starts at the
+            // offset applied so far (0 without a phase: the step-free zero crossing); this block's change follows below.
+            val startPhase = if (phaseIn != null && !phaseIn.isSignal) phaseIn.applied * TWO_PI else 0.0
 
-            harmonicsBank.resize(h, lanes)
-            octavesBank.resize(o, lanes)
-            suboctavesBank.resize(sub, lanes)
+            harmonicsBank.resize(h, lanes, startPhase)
+            octavesBank.resize(o, lanes, startPhase)
+            suboctavesBank.resize(sub, lanes, startPhase)
 
             val baseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val fund = readParam(fundamental, actualFreq, ctx)
@@ -439,13 +557,53 @@ object Ignitors {
                 lanes.prepareBlock(analogSpreadAmt)
             }
 
+            if (phaseIn != null) {
+                if (!phaseIn.isSignal) {
+                    shiftPartials(phaseIn.blockDelta(actualFreq))
+                }
+
+                if (phaseIn.perSample) {
+                    ctx.scratchBuffers.use { offsets ->
+                        phaseIn.render(offsets, actualFreq, ctx)
+                        renderPartials(buffer, off, end, pm, lanes, offsets)
+                    }
+
+                    return
+                }
+            }
+
+            renderPartials(buffer, off, end, pm, lanes, null)
+        }
+
+        /** Moves every live accumulator by a block-constant phase change of [shift] cycles (0: nothing moves). */
+        private fun shiftPartials(shift: Double) {
+            if (shift == 0.0) {
+                return
+            }
+
+            val rad = shift * TWO_PI
+
+            fundPhase = (fundPhase + rad).wrapPhase(TWO_PI)
+
+            for (bank in banks) {
+                for (i in 0 until bank.count) {
+                    bank.phase[i] = (bank.phase[i] + rad).wrapPhase(TWO_PI)
+                }
+            }
+        }
+
+        /** Renders the fundamental and every bank; [offsets] is a moving `phase` signal's block, or null. */
+        private fun renderPartials(
+            buffer: AudioBuffer, off: Int, end: Int, pm: DoubleArray?, lanes: DriftLanes?, offsets: AudioBuffer?,
+        ) {
             var first = true
 
             if (fundGain != 0.0) {
-                fundPhase = renderPartial(
-                    buffer, off, end, first, fundPhase, fundInc, fundGain,
-                    pm, lanes, 0,
-                )
+                fundPhase = if (offsets == null) {
+                    renderPartial(buffer, off, end, first, fundPhase, fundInc, fundGain, pm, lanes, 0)
+                } else {
+                    renderPartialPhased(buffer, off, end, first, fundPhase, fundInc, fundGain, pm, lanes, 0, offsets)
+                }
                 first = false
             }
 
@@ -457,10 +615,13 @@ object Ignitors {
                         continue // silent (Nyquist): nothing to add, nothing to advance
                     }
 
-                    bank.phase[i] = renderPartial(
-                        buffer, off, end, first, bank.phase[i], bank.inc[i], g,
-                        pm, lanes, bank.laneIdx[i],
-                    )
+                    bank.phase[i] = if (offsets == null) {
+                        renderPartial(buffer, off, end, first, bank.phase[i], bank.inc[i], g, pm, lanes, bank.laneIdx[i])
+                    } else {
+                        renderPartialPhased(
+                            buffer, off, end, first, bank.phase[i], bank.inc[i], g, pm, lanes, bank.laneIdx[i], offsets,
+                        )
+                    }
                     first = false
                 }
             }
@@ -495,8 +656,9 @@ object Ignitors {
         private val fallFlank: Double = 0.0,
         // SAW-only: caps the saw flyback fraction; read solely in the WaveKind.SAW branch. The PULSE kind
         // (square/triangle) ignores it — no per-shape WaveIgnitor split needed since the DSL types already
-        // separate SAW (Sawtooth/Ramp expose shapeMax) from PULSE (Pulze/Triangle don't).
+        // separate SAW (Sawtooth/Ramp expose shapeMax) from PULSE (Pulze/Tri don't).
         private val shapeMax: Double = SAW_SHAPE_MAX,
+        private val phaseIn: PhaseOffset? = null,
     ) : Ignitor {
         private val voice = WaveVoiceState()
         private var driftInit = false
@@ -522,6 +684,16 @@ object Ignitors {
             val safeWrap = pm != null || voice.drift != null || !(abs(dt) < 1.0)
             val off = ctx.offset
             val end = off + ctx.length
+            // A block-constant phase moves the accumulator once here; a moving one renders through the phased loop.
+            if (phaseIn != null && !phaseIn.isSignal) {
+                val shift = phaseIn.blockDelta(actualFreq)
+
+                if (shift != 0.0) {
+                    voice.phase = (voice.phase + shift).wrapPhase(1.0)
+                }
+            }
+
+            val phased = phaseIn?.takeIf { it.perSample }
 
             if (kind == WaveKind.SAW) {
                 if (dt != lastDt) {
@@ -535,7 +707,12 @@ object Ignitors {
                     voice.setSawShape(if (rf != rf) shapeMax else rf)
                 }
 
-                renderHoisted(buffer, off, end, dt, pm, safeWrap)
+                if (phased != null) {
+                    renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, null, 0.0)
+                } else {
+                    renderHoisted(buffer, off, end, dt, pm, safeWrap)
+                }
+
                 return
             }
 
@@ -553,7 +730,11 @@ object Ignitors {
                     voice.setPulseShape(d, riseFlank, fallFlank, flankSamples * dt)
                 }
 
-                renderHoisted(buffer, off, end, dt, pm, safeWrap)
+                if (phased != null) {
+                    renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, null, 0.0)
+                } else {
+                    renderHoisted(buffer, off, end, dt, pm, safeWrap)
+                }
             } else {
                 if (dt != lastDt) {
                     lastDt = dt; lastDuty = Double.NaN
@@ -563,6 +744,12 @@ object Ignitors {
 
                 ctx.scratchBuffers.use { dutyBuf ->
                     duty.generate(dutyBuf, actualFreq, ctx)
+
+                    if (phased != null) {
+                        renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, dutyBuf, floor)
+
+                        return
+                    }
 
                     var phase = voice.phase
                     val drift = voice.drift
@@ -641,44 +828,109 @@ object Ignitors {
 
             voice.phase = phase
         }
+
+        /**
+         * The phased loop (a moving `phase` signal): reads the trapezoid at `phase + offset`, advances `phase` as
+         * [renderHoisted] and the PWM loop do. [dutyBuf] is the PWM block (the shape rebaked per sample, [floor] the
+         * flank floor), or null for the shape already baked for this block.
+         */
+        private fun renderPhased(
+            buffer: AudioBuffer, off: Int, end: Int, dt: Double, pm: DoubleArray?, safeWrap: Boolean,
+            phaseIn: PhaseOffset, actualFreq: Double, ctx: IgniteContext, dutyBuf: AudioBuffer?, floor: Double,
+        ) {
+            ctx.scratchBuffers.use { offsets ->
+                phaseIn.render(offsets, actualFreq, ctx)
+
+                var phase = voice.phase
+                val drift = voice.drift
+                val pol = polarity
+                var m = 1.0
+                var dm = 0.0
+
+                if (drift != null) {
+                    drift.beginBlock()
+                    m = drift.blockStart
+                    dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+                }
+
+                for (i in off until end) {
+                    if (dutyBuf != null) {
+                        val d = dutyBuf[i]
+
+                        if (d != lastDuty) {
+                            lastDuty = d; voice.setPulseShape(d, riseFlank, fallFlank, floor)
+                        }
+                    }
+
+                    var p = phase + offsets[i].wrapToUnitCycle()
+
+                    if (p >= 1.0) {
+                        p -= 1.0
+                    }
+
+                    buffer[i] = pol * waveTrapezoid(
+                        p, voice.riseEnd, voice.highEnd, voice.fallEnd, voice.riseSlope, voice.fallSlope,
+                    )
+
+                    var inc = dt * m
+
+                    if (pm != null) {
+                        inc *= pm[i]
+                    }
+
+                    m += dm
+                    phase += inc
+                    phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                }
+
+                voice.phase = phase
+            }
+        }
     }
 
     /**
-     * Sawtooth — rise then a finite flyback ([SAW_RESET_SAMPLES] samples; no PolyBLEP, softens with
+     * Sawtooth: rise then a finite flyback ([SAW_RESET_SAMPLES] samples; no PolyBLEP, softens with
      * pitch). Single-voice form of the shape shared with [superSaw]. Per-voice analog drift via [analog].
+     * Phase 0 is -1, the bottom of the rise (the flyback ends the cycle); [phase] (null: none) see [PhaseOffset].
      */
     fun sawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         resetSamples: Double = SAW_RESET_SAMPLES,
         shapeMax: Double = SAW_SHAPE_MAX,
+        phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
         freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = resetSamples, shapeMax = shapeMax,
+        phaseIn = phase?.let { PhaseOffset(it) },
     )
 
-    /** Reverse sawtooth — the negated [sawtooth] (own `RAMP_RESET_SAMPLES` flyback knob). */
+    /** Reverse sawtooth: the negated [sawtooth] (own `RAMP_RESET_SAMPLES` flyback knob). Phase 0 is +1, the top of the fall. */
     fun ramp(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         resetSamples: Double = RAMP_RESET_SAMPLES,
         shapeMax: Double = RAMP_SHAPE_MAX,
+        phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
         freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = resetSamples, shapeMax = shapeMax,
+        phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /** Square wave — a 50%-duty [pulze] (Kotlin convenience; the DSL drives `duty` via an Ignitor slot). */
     fun square(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = pulze(freq, ConstantIgnitor(0.5), analog)
+        phase: Ignitor? = null,
+    ): Ignitor = pulze(freq, ConstantIgnitor(0.5), analog, phase = phase)
 
-    /** Triangle wave — the pulse engine with both flanks fully open (duty 0.5, rise = fall = 1). */
-    fun triangle(
+    /** Triangle wave: the pulse engine with both flanks fully open (duty 0.5, rise = fall = 1). Phase 0 is -1, its lowest point. */
+    fun tri(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
+        phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
         freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
-        duty = ConstantIgnitor(0.5), riseFlank = 1.0, fallFlank = 1.0,
+        duty = ConstantIgnitor(0.5), riseFlank = 1.0, fallFlank = 1.0, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /** White noise generator. Flat spectrum with equal energy at all frequencies. */
@@ -722,41 +974,60 @@ object Ignitors {
         }
     }
 
-    /** Naive sawtooth ("zaw") — the raw [sawtooth] (`flankSamples = 0` → instant reset, aliased/harsh). */
+    /** Naive sawtooth ("zaw"): the raw [sawtooth] (`flankSamples = 0` → instant reset, aliased/harsh). Phase 0 is -1. */
     fun zawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = WaveIgnitor(freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = 0.0)
+        phase: Ignitor? = null,
+    ): Ignitor = WaveIgnitor(
+        freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
+    )
 
-    /** Raw ramp ("zamp") — the negated [zawtooth] (naive reverse saw, no anti-aliasing). */
+    /** Raw ramp ("zamp"): the negated [zawtooth] (naive reverse saw, no anti-aliasing). Phase 0 is +1. */
     fun zamp(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = WaveIgnitor(freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = 0.0)
+        phase: Ignitor? = null,
+    ): Ignitor = WaveIgnitor(
+        freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
+    )
 
-    /** Raw pulse ("pulze") — naive aliased pulse with variable [duty] (the raw [square]). */
+    /**
+     * Raw pulse ("pulze"): naive aliased pulse with variable [duty] (the raw [square]). Phase 0 is +1, the start of
+     * the high plateau: the instant rising edge sits at the wrap (high until `duty`, then low). The rounded [pulze]
+     * starts on the other side of its rising edge, at -1.
+     */
     fun rawPulze(
         freq: Ignitor = FreqIgnitor,
         duty: Ignitor = dutyDefault,
         analog: Ignitor = analogDefault,
+        phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
         freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = 0.0,
-        duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK,
+        duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
-    /** Impulse: outputs 1.0 once per cycle (at phase wrap), 0.0 otherwise. */
+    /**
+     * Impulse: outputs 1.0 once per cycle (at phase wrap), 0.0 otherwise. Phase 0 is the spike: the first sample is
+     * 1. With [phase] (null: none, see [PhaseOffset]) the spike sits where the shifted phase passes 0 going forward,
+     * so a start phase of 0.25 spikes first after three quarters of a cycle, and a moving phase moves the spikes
+     * (one per forward crossing, a step back of less than half a cycle spikes nothing).
+     */
     fun impulse(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = ImpulseIgnitor(freq, analog)
+        phase: Ignitor? = null,
+    ): Ignitor = ImpulseIgnitor(freq, analog, phase?.let { PhaseOffset(it) })
 
     private class ImpulseIgnitor(
         private val freq: Ignitor,
         private val analog: Ignitor,
+        private val phaseIn: PhaseOffset?,
     ) : Ignitor {
         private var phase: Double = 0.0
         private var lastPhase: Double = Double.POSITIVE_INFINITY
         private var drift: AnalogDrift? = null
+        private var started: Boolean = false
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
@@ -765,6 +1036,22 @@ object Ignitors {
             val phaseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val phaseMod = ctx.phaseMod
             val end = ctx.windowEnd
+
+            if (phaseIn != null) {
+                if (!phaseIn.isSignal) {
+                    val shift = phaseIn.blockDelta(actualFreq)
+
+                    shiftBy(shift, bookkeeping = phaseIn.perSample)
+                }
+
+                if (phaseIn.perSample) {
+                    renderPhased(buffer, actualFreq, ctx, d, phaseInc, phaseIn)
+
+                    return
+                }
+            }
+
+            started = true
 
             if (d.active) {
                 d.beginBlock()
@@ -807,9 +1094,98 @@ object Ignitors {
                 }
             }
         }
+
+        /**
+         * A block-constant phase change of [shift] cycles, folded into the accumulator. The block's first sample is
+         * then judged by the phased loop's own rule, so both paths agree: it spikes when the heard phase dropped by
+         * more than half a cycle since the last sample (a forward pass through 0, the natural wrap and the step
+         * together); a step back of less than half a cycle spikes nothing. At the very first block nothing has been
+         * crossed yet: a start phase other than 0 does not spike. A [bookkeeping] change (a breach unfolding the
+         * offset, so the phased loop can read it per sample) moves no heard phase: the accumulator moves, and
+         * `lastPhase`, the last sample's heard phase, stays as it is. The first answered block after a breach folds
+         * the offset back in with an ordinary change: `lastPhase` then holds the phased loop's heard phase, the same
+         * frame as the folded accumulator, so the drop rule judges it like any other step.
+         */
+        private fun shiftBy(shift: Double, bookkeeping: Boolean) {
+            if (shift == 0.0) {
+                return
+            }
+
+            phase = (phase + shift * TWO_PI).wrapPhase(TWO_PI)
+
+            if (bookkeeping) {
+                return
+            }
+
+            if (!started) {
+                lastPhase = phase
+
+                return
+            }
+
+            // +inf is the plain loop's "spike on the next sample"; the phase itself, "no spike"
+            lastPhase = if (lastPhase - phase > PI) Double.POSITIVE_INFINITY else phase
+        }
+
+        /**
+         * The phased loop (a moving `phase` signal): the shifted phase `phase + offset` spikes where it passes 0
+         * going forward, read as a drop of more than half a cycle between two samples (a step back of less than
+         * half a cycle spikes nothing). The very first sample spikes only at exactly 0, the unshifted start. Where
+         * the plain loop's rule (any drop spikes) differs: an increment above half a cycle per sample (above
+         * Nyquist) or a backward pitch modulation spike there and not here, so an offset of 0 renders the plain
+         * loop's bits only for a forward increment below Nyquist.
+         */
+        private fun renderPhased(
+            buffer: AudioBuffer, actualFreq: Double, ctx: IgniteContext, d: AnalogDrift, phaseInc: Double, phaseIn: PhaseOffset,
+        ) {
+            val phaseMod = ctx.phaseMod
+            val off = ctx.offset
+            val end = ctx.windowEnd
+
+            ctx.scratchBuffers.use { offsets ->
+                phaseIn.render(offsets, actualFreq, ctx)
+
+                var m = 1.0
+                var dm = 0.0
+
+                if (d.active) {
+                    d.beginBlock()
+                    m = d.blockStart
+                    dm = (d.blockEnd - m) / (end - off).coerceAtLeast(1)
+                }
+
+                for (i in off until end) {
+                    var p = phase + offsets[i].wrapToUnitCycle() * TWO_PI
+
+                    if (p >= TWO_PI) {
+                        p -= TWO_PI
+                    }
+
+                    val spike = if (started) lastPhase - p > PI else p == 0.0
+
+                    buffer[i] = if (spike) 1.0 else 0.0
+                    started = true
+                    lastPhase = p
+
+                    var inc = phaseInc
+
+                    if (phaseMod != null) {
+                        inc *= phaseMod[i]
+                    }
+
+                    phase += inc * m
+                    m += dm
+                    phase = phase.wrapPhase(TWO_PI)
+                }
+            }
+        }
     }
 
-    /** Rounded pulse with variable [duty] cycle (square / pulse) — band-limited [WaveIgnitor], PWM-capable. */
+    /**
+     * Rounded pulse with variable [duty] cycle (square / pulse), band-limited [WaveIgnitor], PWM-capable. Phase 0
+     * is -1, the foot of the rising edge (rise, the high plateau up to `duty`, fall, the low plateau); [phase]
+     * (null: none) see [PhaseOffset].
+     */
     fun pulze(
         freq: Ignitor = FreqIgnitor,
         duty: Ignitor = dutyDefault,
@@ -817,9 +1193,10 @@ object Ignitors {
         flankSamples: Double = PULSE_MIN_FLANK_SAMPLES,
         riseFlank: Double = PULSE_RISE_FLANK,
         fallFlank: Double = PULSE_FALL_FLANK,
+        phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
         freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = flankSamples,
-        duty = duty, riseFlank = riseFlank, fallFlank = fallFlank,
+        duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
@@ -1063,13 +1440,14 @@ object Ignitors {
         warmup: Double = SUPERSAW_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
+        phase: Ignitor? = null,
     ): Ignitor = SawStackIgnitor(
         freq, voices, detune, analog, analogSpread, rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
         resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX,
     )
 
@@ -1095,12 +1473,13 @@ object Ignitors {
         warmup: Double = SUPERSAW_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
+        phase: Ignitor? = null,
     ): Ignitor = superSawRaw(
         freq, voices, detune, analog, analogSpread, rng,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phase = phase,
     )
 
     /**
@@ -1137,6 +1516,7 @@ object Ignitors {
         private val warmup: Double,
         private val phasePools: PhasePools?,
         private val orbit: Int,
+        private val phaseIn: PhaseOffset?,
     ) : Ignitor {
         /** `selection` parsed lazily at the first POOLED note-on (`"name[:width[:outliers]]"` —
          *  see [parsePhasePoolSelection]); voices with the pool OFF (the default) never pay
@@ -1161,6 +1541,15 @@ object Ignitors {
         protected abstract fun renderVoice(
             buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
             pm: DoubleArray?, drift: DriftLanes?,
+        )
+
+        /**
+         * [renderVoice] for a moving `phase` signal: reads the voice's shape at `phase + offsets[i]` and advances the
+         * phase exactly as [renderVoice] does. Every voice reads the same [offsets], so the stack moves as one.
+         */
+        protected abstract fun renderVoicePhased(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
         )
 
         final override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -1285,6 +1674,33 @@ object Ignitors {
             // voice's ramp blends the same shared move.
             if (lanes != null) {
                 lanes.prepareBlock(analogSpreadAmt)
+            }
+
+            // The phase shifts the whole stack: every voice by the same fraction of its own cycle, so the spread of
+            // start phases (random or the pool's) stays as drawn, and so does the pool's coherence K (a common
+            // shift leaves |sum g e^(i 2 pi phi)| unchanged).
+            if (phaseIn != null) {
+                if (!phaseIn.isSignal) {
+                    val shift = phaseIn.blockDelta(actualFreq)
+
+                    if (shift != 0.0) {
+                        for (n in 0 until v) {
+                            voiceStates[n].phase = (voiceStates[n].phase + shift).wrapPhase(1.0)
+                        }
+                    }
+                }
+
+                if (phaseIn.perSample) {
+                    ctx.scratchBuffers.use { offsets ->
+                        phaseIn.render(offsets, actualFreq, ctx)
+
+                        for (n in 0 until v) {
+                            renderVoicePhased(buffer, off, end, voiceStates[n], n, n == 0, pm, lanes, offsets)
+                        }
+                    }
+
+                    return
+                }
             }
 
             for (n in 0 until v) {
@@ -1432,14 +1848,14 @@ object Ignitors {
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int,
+        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
     ) : DetunedStackIgnitor(
         freq, voices, detune, analog, analogSpread, rng,
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
     ) {
         final override fun renderVoice(
             buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
@@ -1491,6 +1907,53 @@ object Ignitors {
 
             vs.phase = phase
         }
+
+        final override fun renderVoicePhased(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            val riseEnd = vs.riseEnd
+            val highEnd = vs.highEnd
+            val fallEnd = vs.fallEnd
+            val riseSlope = vs.riseSlope
+            val fallSlope = vs.fallSlope
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                m = drift.startOf(n)
+                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
+            }
+
+            for (i in off until end) {
+                var p = phase + offsets[i].wrapToUnitCycle()
+
+                if (p >= 1.0) {
+                    p -= 1.0
+                }
+
+                val s = waveTrapezoid(p, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+            }
+
+            vs.phase = phase
+        }
     }
 
     /** Unison saw / ramp ([polarity] ±1): the analog-flyback saw shape per voice. */
@@ -1499,7 +1962,7 @@ object Ignitors {
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int,
+        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
         private val resetSamples: Double, private val shapeMax: Double,
     ) : TrapezoidStackIgnitor(
         freq, voices, detune, analog, analogSpread, rng,
@@ -1507,7 +1970,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
     ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) {
             val rf = (resetSamples * dt).coerceAtMost(shapeMax)
@@ -1525,7 +1988,7 @@ object Ignitors {
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int,
+        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
         private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
         private val flankSamples: Double,
     ) : TrapezoidStackIgnitor(
@@ -1534,7 +1997,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
     ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) {
             vs.setPulseShape(duty, riseFlank, fallFlank, flankSamples * dt)
@@ -1547,14 +2010,14 @@ object Ignitors {
         sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int,
+        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
     ) : DetunedStackIgnitor(
         freq, voices, detune, analog, analogSpread, rng,
         polarity = 1.0, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
     ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) { /* sine carries no shape */
         }
@@ -1602,6 +2065,48 @@ object Ignitors {
 
             vs.phase = phase
         }
+
+        override fun renderVoicePhased(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                m = drift.startOf(n)
+                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
+            }
+
+            for (i in off until end) {
+                var p = phase + offsets[i].wrapToUnitCycle()
+
+                if (p >= 1.0) {
+                    p -= 1.0
+                }
+
+                val s = fastSin(p * TWO_PI) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+            }
+
+            vs.phase = phase
+        }
     }
 
     /**
@@ -1631,13 +2136,14 @@ object Ignitors {
         warmup: Double = SUPERSINE_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
+        phase: Ignitor? = null,
     ): Ignitor = SineStackIgnitor(
         freq, voices, detune, analog, analogSpread, rng,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /**
@@ -1668,6 +2174,7 @@ object Ignitors {
         warmup: Double = SUPERSQUARE_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
+        phase: Ignitor? = null,
     ): Ignitor = PulseStackIgnitor(
         freq, voices, detune, analog, analogSpread, rng,
         polarity = 1.0,
@@ -1675,7 +2182,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
         duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
@@ -1706,6 +2213,7 @@ object Ignitors {
         warmup: Double = SUPERTRI_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
+        phase: Ignitor? = null,
     ): Ignitor = PulseStackIgnitor(
         freq, voices, detune, analog, analogSpread, rng,
         polarity = 1.0,
@@ -1713,7 +2221,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
         duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
@@ -1744,6 +2252,7 @@ object Ignitors {
         warmup: Double = SUPERRAMP_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
+        phase: Ignitor? = null,
     ): Ignitor = SawStackIgnitor(
         freq, voices, detune, analog, analogSpread, rng,
         polarity = -1.0,
@@ -1751,7 +2260,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit,
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
         resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
     )
 

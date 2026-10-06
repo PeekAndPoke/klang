@@ -161,7 +161,23 @@ channel fader applied once with pan, so a song that used both folds them by mult
 script object `Osc` (now `Ignitor`, short `Ign`), the global `OscSlot` (now `Ignitor.slot`), the setters `oscparam` /
 `oscp` (now `ignitorParam` / `ignp`), the wire field `oscParams` (now `ignitorParams`), `SoundValue.Osc` (now
 `SoundValue.Dsl`) and the Kotlin types `KlangScriptOsc`, `KlangScriptOscSlot`, `KlangScriptOscExtensions`. The
-`Osc*Builder` types keep their names: they configure real oscillators. Guard: `RetiredIgnitorNamesSpec`.
+`Osc*Builder` types keep their names: they configure real oscillators. Guard: `RetiredIgnitorNamesSpec`. The polarity helpers (gone 2026-10-05,
+`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`: `range(from, to)` is the one word on every surface): sprudel's bipolar
+twins `sine2`, `cosine2`, `saw2`, `isaw2`, `tri2`, `itri2`, `square2`, `perlin2`, `berlin2`, `rand2` and the helpers
+`toBipolar`, `fromBipolar`, `range2` (a bare twin is its signal with `.range(-1, 1)`; `twin.range(a, b)` and
+`twin.range2(a, b)` are `signal.range(a, b)`, because the innermost range wins), and the Ignitor's `unipolar()` /
+`bipolar()` with the wire nodes `IgnitorDsl.Unipolar` / `Bipolar` (`.range(0, 1)`, `.mul(2).minus(1)`). With them
+went sprudel's `isaw` and `itri` (`saw.range(1, 0)`, `tri.range(1, 0)`; `isaw.range(a, b)` is `saw.range(b, a)`, the
+same for `itri`, because the innermost range wins), `sinOfDay2`, `sinOfNight2` and `choose2`;
+`sinOfDay` / `sinOfNight` are now `sineOfDay` / `sineOfNight`; the old parameter names of `range` (`min` / `max` in
+sprudel's `range` and `rangex`, `lo` / `hi` on the Ignitor doors, the wire node `IgnitorDsl.Range` and the engine's
+`Ignitor.range`) are `from` / `to` end to end; the clamp keeps `lo` / `hi`. Sprudel's `_mapRangeContext` and
+`ContextRangeMapPattern` went with the helpers, and so did sprudel's `String.range` / `String.rangex` (a
+mini-notation string scales with `.mul(k).add(c)`). The Ignitor's triangle door `Ign.triangle` / `Ignitor.triangle`,
+its builder `OscTriangleBuilder`, the wire node `IgnitorDsl.Triangle` (wire name `triangle`) and the factory
+`Ignitors.triangle` (gone 2026-10-06, `docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`: now `tri`,
+`OscTriBuilder`, `IgnitorDsl.Tri`, `Ignitors.tri`, like `supertri` and sprudel's `tri`; the sound name and the LFO
+shape `triangle` stay). Guard: `RetiredIgnitorNamesSpec`.
 
 ## Available Agent
 

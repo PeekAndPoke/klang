@@ -181,7 +181,7 @@ class ControlRateScalarParitySpec : StringSpec({
     }
 
     "unary scalar overrides are bit-equal to the scratch render (batch)" {
-        // The 11 new unary overrides at NEGATIVE, ZERO and POSITIVE inputs (every branch arm of
+        // The unary overrides at NEGATIVE, ZERO and POSITIVE inputs (every branch arm of
         // Sign/Sqrt/Frac evaluated on the scalar path) + mod/lerp/range/select, each vs a
         // fully-opacified oracle.
         val unaryValues = listOf(-2.6, 0.0, 0.37)
@@ -189,8 +189,6 @@ class ControlRateScalarParitySpec : StringSpec({
             "sqrt" to { x -> x.sqrt() },
             "sign" to { x -> x.sign() },
             "tanh" to { x -> x.tanh() },
-            "bipolar" to { x -> x.bipolar() },
-            "unipolar" to { x -> x.unipolar() },
             "floor" to { x -> x.floor() },
             "ceil" to { x -> x.ceil() },
             "round" to { x -> x.round() },
@@ -366,8 +364,6 @@ class ControlRateScalarParitySpec : StringSpec({
             "sqrt" to { x -> x.sqrt() },
             "sign" to { x -> x.sign() },
             "tanh" to { x -> x.tanh() },
-            "bipolar" to { x -> x.bipolar() },
-            "unipolar" to { x -> x.unipolar() },
             "floor" to { x -> x.floor() },
             "ceil" to { x -> x.ceil() },
             "round" to { x -> x.round() },
@@ -380,8 +376,8 @@ class ControlRateScalarParitySpec : StringSpec({
             "lerp b" to { x -> ConstantIgnitor(0.5).lerp(x, ConstantIgnitor(0.3)) },
             "lerp t" to { x -> ConstantIgnitor(0.5).lerp(ConstantIgnitor(1.0), x) },
             "range upstream" to { x -> x.range(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)) },
-            "range lo" to { x -> ConstantIgnitor(0.5).range(x, ConstantIgnitor(1.0)) },
-            "range hi" to { x -> ConstantIgnitor(0.5).range(ConstantIgnitor(-1.0), x) },
+            "range from" to { x -> ConstantIgnitor(0.5).range(x, ConstantIgnitor(1.0)) },
+            "range to" to { x -> ConstantIgnitor(0.5).range(ConstantIgnitor(-1.0), x) },
             // select: no short-circuit on the condition — a stateful UNTAKEN branch must force
             // null (its state advances in generate; a scalar that ignores it would desync).
             "select cond" to { x -> x.select(ConstantIgnitor(1.0), ConstantIgnitor(2.0)) },

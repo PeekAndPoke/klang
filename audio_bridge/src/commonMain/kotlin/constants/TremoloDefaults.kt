@@ -16,3 +16,15 @@ package io.peekandpoke.klang.audio_bridge.constants
  * the ramp all become the same symmetric triangle; only where each starts in the cycle differs.
  */
 const val TREMOLO_EDGE_SECONDS: Double = 0.016
+
+/**
+ * Where the tremolo's LFO swing sits by default, in the -1..1 language of the Ignitor `range` (`IgnitorDsl.Tremolo`'s
+ * `rangeFrom` / `rangeTo`, the script builder's `range(from, to)`): the LFO's -1 maps to `from`, its +1 to `to`, and the
+ * gain is `1 + depth * that`. `(-1, 0)` is the tremolo as it always was, the gain dipping from 1 to `1 - depth`; the
+ * engine recognises exactly these two values and then builds the classic `range(1 - depth, 1)`, bit for bit.
+ * Decided by the maintainer on 2026-10-05 (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`).
+ */
+const val TREMOLO_RANGE_FROM: Double = -1.0
+
+/** See [TREMOLO_RANGE_FROM]. */
+const val TREMOLO_RANGE_TO: Double = 0.0

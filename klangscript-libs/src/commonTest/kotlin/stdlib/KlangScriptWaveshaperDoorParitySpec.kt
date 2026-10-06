@@ -22,7 +22,9 @@ private fun c(v: Double) = IgnitorDsl.Constant(v)
 
 /** Every field of a tremolo, shape or distort node except its input, by name. */
 private fun IgnitorDsl.knobs(): Map<String, Any?> = when (this) {
-    is IgnitorDsl.Tremolo -> linkedMapOf("rate" to rate, "depth" to depth, "shape" to shape)
+    is IgnitorDsl.Tremolo -> linkedMapOf(
+        "rate" to rate, "depth" to depth, "shape" to shape, "rangeFrom" to rangeFrom, "rangeTo" to rangeTo,
+    )
     is IgnitorDsl.Shape -> linkedMapOf("shape" to shape, "oversample" to oversample)
     else -> error("not a tremolo or shape node: ${this::class.simpleName}")
 }

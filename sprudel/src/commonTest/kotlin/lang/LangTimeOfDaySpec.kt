@@ -73,50 +73,26 @@ class LangTimeOfDaySpec : StringSpec({
         events[0].data.value?.asDouble shouldBe 0.75
     }
 
-    "sinOfDay at midnight should return 0.0" {
+    "sineOfDay at midnight should return 0.0" {
         val ctx = QueryContext {
             set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
         }
 
-        val events = sinOfDay.queryArcContextual(0.0, 1.0, ctx)
+        val events = sineOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus 0.01)
     }
 
-    "sinOfDay at noon should return 1.0" {
+    "sineOfDay at noon should return 1.0" {
         val ctx = QueryContext {
             set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
         }
 
-        val events = sinOfDay.queryArcContextual(0.0, 1.0, ctx)
+        val events = sineOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // sin(0.5 * PI) = 1.0
-        events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus 0.01)
-    }
-
-    "sinOfDay2 at midnight should return -1.0" {
-        val ctx = QueryContext {
-            set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
-        }
-
-        val events = sinOfDay2.queryArcContextual(0.0, 1.0, ctx)
-
-        events.size shouldBe 1
-        // sin(0 * PI) * 2 - 1 = 0 * 2 - 1 = -1
-        events[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus 0.01)
-    }
-
-    "sinOfDay2 at noon should return 1.0" {
-        val ctx = QueryContext {
-            set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
-        }
-
-        val events = sinOfDay2.queryArcContextual(0.0, 1.0, ctx)
-
-        events.size shouldBe 1
-        // sin(0.5 * PI) * 2 - 1 = 1 * 2 - 1 = 1
         events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus 0.01)
     }
 
@@ -142,52 +118,28 @@ class LangTimeOfDaySpec : StringSpec({
         events[0].data.value?.asDouble shouldBe 0.5
     }
 
-    "sinOfNight at midnight should return 1.0" {
+    "sineOfNight at midnight should return 1.0" {
         val ctx = QueryContext {
             set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
         }
 
-        val events = sinOfNight.queryArcContextual(0.0, 1.0, ctx)
+        val events = sineOfNight.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // 1.0 - sin(0 * PI) = 1.0 - 0 = 1.0
         events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus 0.01)
     }
 
-    "sinOfNight at noon should return 0.0" {
+    "sineOfNight at noon should return 0.0" {
         val ctx = QueryContext {
             set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
         }
 
-        val events = sinOfNight.queryArcContextual(0.0, 1.0, ctx)
+        val events = sineOfNight.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // 1.0 - sin(0.5 * PI) = 1.0 - 1.0 = 0.0
         events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus 0.01)
-    }
-
-    "sinOfNight2 at midnight should return 1.0" {
-        val ctx = QueryContext {
-            set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
-        }
-
-        val events = sinOfNight2.queryArcContextual(0.0, 1.0, ctx)
-
-        events.size shouldBe 1
-        // 1.0 - sin(0 * PI) * 2 = 1.0 - 0 * 2 = 1.0
-        events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus 0.01)
-    }
-
-    "sinOfNight2 at noon should return -1.0" {
-        val ctx = QueryContext {
-            set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
-        }
-
-        val events = sinOfNight2.queryArcContextual(0.0, 1.0, ctx)
-
-        events.size shouldBe 1
-        // 1.0 - sin(0.5 * PI) * 2 = 1.0 - 1.0 * 2 = -1.0
-        events[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus 0.01)
     }
 
     "timeOfDay should use system time when no Kronos is set in context" {

@@ -204,8 +204,6 @@ class KlangScriptParser private constructor(
             "const" to TokenType.CONST,
             "import" to TokenType.IMPORT,
             "export" to TokenType.EXPORT,
-            "from" to TokenType.FROM,
-            "as" to TokenType.AS,
             "return" to TokenType.RETURN,
             "in" to TokenType.IN,
             "if" to TokenType.IF,
@@ -241,7 +239,7 @@ class KlangScriptParser private constructor(
         NUMBER, STRING, BACKTICK_STRING, IDENTIFIER,
 
         // Keywords (must match before IDENTIFIER)
-        TRUE, FALSE, NULL, LET, CONST, IMPORT, EXPORT, FROM, AS, RETURN, IN,
+        TRUE, FALSE, NULL, LET, CONST, IMPORT, EXPORT, RETURN, IN,
         IF, ELSE, WHILE, DO, FOR, BREAK, CONTINUE,
 
         // Punctuation
@@ -945,6 +943,32 @@ class KlangScriptParser private constructor(
         error(message)
     }
 
+    /**
+     * Consumes the `from` of an import. `from` and `as` are contextual keywords, as in JavaScript: the lexer emits
+     * them as IDENTIFIERs, so they stay ordinary names everywhere else (`range(from = 1, to = 2)`,
+     * `(from, to) => ...`, `x.as`), and only the import and export grammar reads them as keywords.
+     */
+    private fun consumeFrom(message: String): Token {
+        if (checkContextualKeyword("from")) {
+            return advance()
+        }
+
+        error(message)
+    }
+
+    /** Consumes the `as` of an import or export alias if it is next, see [consumeFrom]. */
+    private fun matchAs(): Boolean {
+        if (!checkContextualKeyword("as")) {
+            return false
+        }
+
+        advance()
+
+        return true
+    }
+
+    private fun checkContextualKeyword(text: String): Boolean = check(TokenType.IDENTIFIER) && peek().text == text
+
     private fun error(message: String): Nothing {
         val token = if (isAtEnd()) previous() else peek()
         throw KlangScriptSyntaxError(
@@ -1539,7 +1563,7 @@ class KlangScriptParser private constructor(
      * Call and member access (method chaining)
      * CRITICAL: Allows alternating .prop, (), [ index ] in any order
      * Also handles postfix ++ and --
-     * Fixes: sine2.fromBipolar().range(0.1, 0.9)
+     * Fixes: lfo.shifted().range(0.1, 0.9), a no-argument call in the middle of a chain
      */
     private fun parseCallExpression(): Expression = parsePostfix(parsePrimary())
 
@@ -1901,13 +1925,13 @@ class KlangScriptParser private constructor(
         when {
             match(TokenType.STAR) -> {
                 // Wildcard or namespace import
-                val namespaceAlias = if (match(TokenType.AS)) {
+                val namespaceAlias = if (matchAs()) {
                     consume(TokenType.IDENTIFIER, "Expected namespace name").text
                 } else {
                     null
                 }
 
-                consume(TokenType.FROM, "Expected 'from' after import")
+                consumeFrom("Expected 'from' after import")
                 val libraryName = consume(TokenType.STRING, "Expected library name").text
 
                 return ImportStatement(
@@ -1924,7 +1948,7 @@ class KlangScriptParser private constructor(
 
                 do {
                     val name = consume(TokenType.IDENTIFIER, "Expected import name").text
-                    val alias = if (match(TokenType.AS)) {
+                    val alias = if (matchAs()) {
                         consume(TokenType.IDENTIFIER, "Expected alias").text
                     } else {
                         name
@@ -1933,7 +1957,7 @@ class KlangScriptParser private constructor(
                 } while (match(TokenType.COMMA))
 
                 consume(TokenType.RIGHT_BRACE, "Expected '}'")
-                consume(TokenType.FROM, "Expected 'from'")
+                consumeFrom("Expected 'from'")
                 val libraryName = consume(TokenType.STRING, "Expected library name").text
 
                 return ImportStatement(
@@ -1958,7 +1982,7 @@ class KlangScriptParser private constructor(
 
         do {
             val localName = consume(TokenType.IDENTIFIER, "Expected export name").text
-            val exportedName = if (match(TokenType.AS)) {
+            val exportedName = if (matchAs()) {
                 consume(TokenType.IDENTIFIER, "Expected exported name").text
             } else {
                 localName

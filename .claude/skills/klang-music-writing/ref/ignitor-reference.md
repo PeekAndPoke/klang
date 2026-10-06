@@ -88,11 +88,11 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 | `Ignitor.sine(freq?)`     | Pure sine wave; its builder adds partial banks (below) |
 | `Ignitor.saw(freq?)`      | Sawtooth, anti-aliased (PolyBLEP)        |
 | `Ignitor.square(freq?)`   | Square wave, anti-aliased                |
-| `Ignitor.triangle(freq?)` | Triangle wave                            |
+| `Ignitor.tri(freq?)`      | Triangle wave                            |
 | `Ignitor.ramp(freq?)`     | Reverse sawtooth                         |
 | `Ignitor.zawtooth(freq?)` | Naive sawtooth (brighter, no anti-alias) |
 | `Ignitor.impulse(freq?)`  | Single-sample impulse per cycle          |
-| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse                |
+| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse; one `duty` LFO shared by pulses at different pitches runs too fast today, build one per pulse (`docs/tasks/shared-modulator-memo-rate.md`) |
 
 ### Super Oscillators (Unison/Detuned)
 
@@ -113,6 +113,29 @@ and returns it. The builder carries exactly that oscillator's knobs; processing 
 
 ```javascript
 Ignitor.supersaw(x => x.voices(9).spread(0.1).analog(0.2)).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
+```
+
+**`phase(x)`: where in its cycle an oscillator runs** (every periodic oscillator's builder: `sine`, `saw`, `ramp`,
+`square`, `pulze`, `tri`, `zawtooth`, `zamp`, `impulse` and the five super oscillators; not the plucks, not the
+noises). A fraction of one cycle added to the phase every sample, default 0: 0.5 is half a cycle on, and it wraps
+with no clamp (1.25 is 0.25, -0.25 is 0.75). A number is the start phase; a signal moves the phase while the note
+plays, which is phase modulation (a jump clicks). Phase 0 is where each shape always started: the sine at `sin(0)`,
+rising; the saw and zawtooth at -1, the bottom of the rise; the ramp and zamp at +1, the top of the fall; the square
+at -1, the foot of its rising edge; the raw pulze at +1, the start of its high plateau (its instant edge sits at the
+wrap); the triangle at -1, its lowest point; the impulse on its spike. On a super oscillator it shifts the whole
+stack (every voice by the same fraction of its own cycle, the spread of start phases kept); since the voices draw
+new random start phases on every note, a constant there is not audible, a moving phase is. On a sine with partial
+banks every partial moves by the same fraction of its own cycle (0.5 inverts the wave, 0.25 starts every partial on
+its peak), and a partial that joins mid-note at a phase other than 0 or 0.5 enters with a step. A fast-moving phase
+also squeezes the soft edges of the saw and square family, which then alias like their raw twins. One phase LFO
+shared by layers at different pitches runs too fast today (`docs/tasks/shared-modulator-memo-rate.md`): build a
+separate LFO per layer until that task lands.
+
+```javascript
+Ignitor.sine(4, x => x.phase(0.25))                      // an LFO that starts at its peak
+// two layers on opposite tremolos: the saw is loud while the square is quiet, and back
+Ignitor.saw().mul(Ignitor.sine(4).range(0.5, 1)).plus(Ignitor.square().mul(Ignitor.sine(4, x => x.phase(0.5)).range(0.5, 1)))
+Ignitor.sine(x => x.phase(Ignitor.sine(5).mul(0.2)))     // phase modulation by a 5 Hz LFO: a vibrato of about 6 Hz either way
 ```
 
 **Sine partial banks** (`Ignitor.sine` builder knobs; `docs/plans/sine-partial-banks.md`). The sine can carry banks
@@ -394,7 +417,7 @@ their short names) and `declick(seconds)` rounds the gain's corners (0 = off, th
 | `.coarse(amount)`                       | Sample-rate reduction                      |
 | `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
 | `.shimmer(wet?, feedback?, tone?, pitches?, x => x.floor(f))` | Granular pitch-shift cloud: wet 0.5, feedback 0.5, tone 4000, pitches `[0, 7, 12]`; dry floor on the builder |
-| `.tremolo(rate, depth, x => x.shape(name))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), which is the oscillator of that name; the square, sawtooth and ramp get a 16 ms soft edge |
+| `.tremolo(rate, depth, x => x.shape(name).range(from, to))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), which is the oscillator of that name; the square, sawtooth and ramp get a 16 ms soft edge. `range(from, to)` places the swing in the -1..1 language of `range`, the gain being `1 + depth * that`: default `range(-1, 0)`, the dip from 1 to `1 - depth`; `range(0, 1)` swells upward to `1 + depth`, `range(-1, 1)` both ways; raw, no clamp |
 
 `.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,
 `shape` is the curve with no gain, and `distort(amount, shape)` is exactly `drive(amount).shape(shape)`.
@@ -457,6 +480,29 @@ one): `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("linear", "linear", "linear"
 | `.times(other)` | Multiply signals (ring modulation) |
 | `.mul(factor)`  | Scale amplitude                    |
 | `.div(divisor)` | Divide amplitude                   |
+| `.range(from, to)` | Let a `-1..1` signal swing between `from` and `to` (the LFO scaler) |
+| `.rangex(from, to)` | The same, exponentially: equal steps are equal ratios (for frequencies) |
+
+Where the swing sits is up to the two values of `range`, the same word, parameter names and result as sprudel's `range(from, to)`
+(sprudel's signals start from `0..1`, the oscillators from `-1..1`; `x.range(200, 400)` lands on 200..400 on both):
+
+| Call             | The signal moves                         |
+|------------------|------------------------------------------|
+| `range(0, 1)`    | only upward, between 0 and 1             |
+| `range(-1, 0)`   | only downward, between -1 and 0          |
+| `range(-1, 1)`   | both ways, centred on 0 (the oscillator) |
+| `range(-0.5, 1)` | mostly upward, dipping a little below 0  |
+
+From `0..1` to `-1..1` without a range: `x.mul(2).minus(1)`.
+
+`rangex(from, to)` is the exponential twin, the same as sprudel's `rangex`: `-1` gives `from`, `0` the geometric
+mean `sqrt(from * to)`, `1` gives `to`, so each octave of a frequency sweep takes the same share of the swing (with
+a saw or a triangle, the same time; a sine lingers at its ends). Values at or below 0 are coerced to 0.0001.
+
+```javascript
+// The cutoff sweeps four octaves (200 to 3200 Hz) evenly, through 800 Hz in the middle
+Ignitor.saw().lowpass(Ignitor.sine(0.2).rangex(200, 3200))
+```
 
 ### Composition: `.through(...)`
 
@@ -605,10 +651,10 @@ Any parameter can accept an Ignitor node instead of a number:
 
 ```javascript
 // Filter cutoff modulated by LFO
-Ignitor.saw().lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(500))
+Ignitor.saw().lowpass(Ignitor.sine(0.3).range(500, 2500))
 
 // Tremolo via multiplication
-Ignitor.saw().times(Ignitor.sine(4).plus(1).mul(0.5))  // 4 Hz tremolo
+Ignitor.saw().times(Ignitor.sine(4).range(0, 1))  // 4 Hz tremolo
 
 // Vibrato via frequency modulation
 Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
@@ -623,7 +669,7 @@ Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 
 | `sine`        | `sin`                    | Sine(Freq)                                                      |
 | `sawtooth`    | `saw`                    | Sawtooth(Freq)                                                  |
 | `square`      | `sqr`, `pulse`           | Square(Freq)                                                    |
-| `triangle`    | `tri`                    | Triangle(Freq)                                                  |
+| `triangle`    | `tri`                    | Tri(Freq)                                                       |
 | `ramp`        |                          | Ramp(Freq)                                                      |
 | `zawtooth`    | `zaw`                    | Zawtooth(Freq)                                                  |
 | `pulze`       |                          | Pulze(Freq, duty=0.5)                                           |
@@ -660,7 +706,7 @@ pattern, so the two envelopes do not multiply; the others keep `classic()`'s env
 
 ```javascript
 let flute = Ignitor.sine()
-        .plus(Ignitor.triangle().mul(0.3))
+        .plus(Ignitor.tri().mul(0.3))
         .plus(Ignitor.perlin(12).mul(0.2).lowpass(4000).highpass(800).adsr(0.01, 0.12, 0.02, 0.01))
         .plus(Ignitor.perlin(8).mul(0.05))
         .lowpass(3000).highpass(400)
@@ -672,7 +718,7 @@ let flute = Ignitor.sine()
 **Clarinet** — Triangle (odd harmonics) + light square + breath
 
 ```javascript
-let clarinet = Ignitor.triangle().mul(0.7)
+let clarinet = Ignitor.tri().mul(0.7)
         .plus(Ignitor.square().mul(0.15))
         .plus(Ignitor.sine().mul(0.15))
         .plus(Ignitor.perlin(6).mul(0.02))
@@ -917,10 +963,9 @@ Ignitor.sine().mul(0.5)                                                // fundam
 
 ```javascript
 // Filter LFO: sine at 0.3 Hz modulating cutoff 500-2500 Hz
-.lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(500))
+.lowpass(Ignitor.sine(0.3).range(500, 2500))
 
-// The pattern: Ignitor.lfo(freq).plus(1) maps -1..1 to 0..2
-// Then .times(range/2).plus(center) maps to your desired range
+// range(from, to) maps the oscillator's -1..1 onto from..to
 ```
 
 **Layering oscillators** (additive synthesis):

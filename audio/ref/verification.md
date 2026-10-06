@@ -9,7 +9,7 @@ is `/review-loop`; this file is the audio-specific half. The stories behind the 
 
 - **Render the corpus, both sides, in raw doubles.** The built-in songs plus the frozen songs and pieces
   (`src/jvmMain/kotlin/FrozenSongs.kt`, `FrozenPieces.kt`), 256 cycles, 48 kHz, the wall-clock seeds pinned
-  (`timeOfDay`, `sinOfDay`, `sinOfDay2`, `timeOfNight`, `sinOfNight` to `pure(0.5)`), HEAD in a throwaway
+  (`timeOfDay`, `sineOfDay`, `timeOfNight`, `sineOfNight` to `pure(0.5)`), HEAD in a throwaway
   `git worktree` against the tree. Compare doubles, not a 16-bit WAV: a 16-bit render cannot see a sub-LSB change,
   so a bit-level claim needs a spec, not the corpus.
 - **Render from the repo root.** The JVM sample bank loads and writes `./cache` relative to where it runs

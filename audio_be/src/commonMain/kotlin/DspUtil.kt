@@ -256,6 +256,23 @@ inline fun Double.wrapPhase(period: Double): Double {
 }
 
 /**
+ * This value as a fraction of one cycle, wrapped into `[0, 1)`: an oscillator's `phase` input (1.25 is 0.25,
+ * -0.25 is 0.75). A value in `[0, 1)` comes back unchanged, bit for bit, so does any `x + n` for an integer `n`
+ * small enough to keep `x` exact. Non-finite reads as 0 (a non-finite value reads as unset), and the one rounding
+ * case, a tiny negative whose wrap rounds up to exactly 1, is 0 as well.
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun Double.wrapToUnitCycle(): Double {
+    if (!this.isFinite()) {
+        return 0.0
+    }
+
+    val r = this - floor(this)
+
+    return if (r >= 1.0) 0.0 else r
+}
+
+/**
  * First-order PolyBLEP residual for anti-aliased discontinuities.
  *
  * Used in band-limited oscillators (saw, square, pulse) to smooth the signal discontinuity.

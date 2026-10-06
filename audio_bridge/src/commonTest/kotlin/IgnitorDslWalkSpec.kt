@@ -60,7 +60,6 @@ class IgnitorDslWalkSpec : StringSpec({
             12,
         ),
         Triple("BerlinNoise", IgnitorDsl.BerlinNoise(rate = m(0), octaves = m(1), persistence = m(2)), 3),
-        Triple("Bipolar", IgnitorDsl.Bipolar(inner = m(0)), 1),
         Triple("BrownNoise", IgnitorDsl.BrownNoise(depth = m(0)), 1),
         Triple("Ceil", IgnitorDsl.Ceil(inner = m(0)), 1),
         Triple("Clamp", IgnitorDsl.Clamp(inner = m(0), lo = m(1), hi = m(2)), 3),
@@ -106,7 +105,7 @@ class IgnitorDslWalkSpec : StringSpec({
             ),
             13,
         ),
-        Triple("Impulse", IgnitorDsl.Impulse(freq = m(0), analog = m(1)), 2),
+        Triple("Impulse", IgnitorDsl.Impulse(freq = m(0), analog = m(1), phase = m(2)), 3),
         Triple("Lerp", IgnitorDsl.Lerp(left = m(0), right = m(1), t = m(2)), 3),
         Triple("Log", IgnitorDsl.Log(inner = m(0)), 1),
         Triple(
@@ -156,13 +155,13 @@ class IgnitorDslWalkSpec : StringSpec({
             ), 6),
         Triple("Plus", IgnitorDsl.Plus(left = m(0), right = m(1)), 2),
         Triple("Pow", IgnitorDsl.Pow(base = m(0), exp = m(1)), 2),
-        Triple("Pulze", IgnitorDsl.Pulze(freq = m(0), duty = m(1), analog = m(2), flankSamples = 7.5, riseFlank = 7.5, fallFlank = 7.5), 3),
-        Triple("Ramp", IgnitorDsl.Ramp(freq = m(0), analog = m(1), resetSamples = 7.5, shapeMax = 7.5), 2),
-        Triple("Range", IgnitorDsl.Range(inner = m(0), lo = m(1), hi = m(2)), 3),
-        Triple("RawPulze", IgnitorDsl.RawPulze(freq = m(0), duty = m(1), analog = m(2)), 3),
+        Triple("Pulze", IgnitorDsl.Pulze(freq = m(0), duty = m(1), analog = m(2), flankSamples = 7.5, riseFlank = 7.5, fallFlank = 7.5, phase = m(3)), 4),
+        Triple("Ramp", IgnitorDsl.Ramp(freq = m(0), analog = m(1), resetSamples = 7.5, shapeMax = 7.5, phase = m(2)), 3),
+        Triple("Range", IgnitorDsl.Range(inner = m(0), from = m(1), to = m(2)), 3),
+        Triple("RawPulze", IgnitorDsl.RawPulze(freq = m(0), duty = m(1), analog = m(2), phase = m(3)), 4),
         Triple("Recip", IgnitorDsl.Recip(inner = m(0)), 1),
         Triple("Round", IgnitorDsl.Round(inner = m(0)), 1),
-        Triple("Sawtooth", IgnitorDsl.Sawtooth(freq = m(0), analog = m(1), resetSamples = 7.5, shapeMax = 7.5), 2),
+        Triple("Sawtooth", IgnitorDsl.Sawtooth(freq = m(0), analog = m(1), resetSamples = 7.5, shapeMax = 7.5, phase = m(2)), 3),
         Triple("Select", IgnitorDsl.Select(cond = m(0), whenTrue = m(1), whenFalse = m(2)), 3),
         Triple("Shape", IgnitorDsl.Shape(inner = m(0), shape = m(1), oversample = m(2)), 3),
         Triple("Shimmer", IgnitorDsl.Shimmer(inner = m(0), wet = m(1), feedback = m(2), tone = m(3), floor = m(4), pitches = listOf(3.0, 7.0)), 5),
@@ -174,12 +173,13 @@ class IgnitorDslWalkSpec : StringSpec({
             IgnitorDsl.Sine(
                 freq = m(0), analog = m(1), fundamental = m(2), harmonics = m(3), harmonicsRolloff = m(4),
                 octaves = m(5), octavesRolloff = m(6), suboctaves = m(7), suboctavesRolloff = m(8), analogSpread = m(9),
+                phase = m(10),
             ),
-            10,
+            11,
         ),
         Triple("Sq", IgnitorDsl.Sq(inner = m(0)), 1),
         Triple("Sqrt", IgnitorDsl.Sqrt(inner = m(0)), 1),
-        Triple("Square", IgnitorDsl.Square(freq = m(0), analog = m(1)), 2),
+        Triple("Square", IgnitorDsl.Square(freq = m(0), analog = m(1), phase = m(2)), 3),
         Triple("SuperPluck", IgnitorDsl.SuperPluck(
                 freq = m(0),
                 voices = m(1),
@@ -191,27 +191,26 @@ class IgnitorDslWalkSpec : StringSpec({
                 analog = m(7),
                 analogSpread = m(8),
             ), 9),
-        Triple("SuperRamp", IgnitorDsl.SuperRamp(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5), 5),
-        Triple("SuperSaw", IgnitorDsl.SuperSaw(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5), 5),
-        Triple("SuperSine", IgnitorDsl.SuperSine(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5), 5),
-        Triple("SuperSquare", IgnitorDsl.SuperSquare(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5), 5),
-        Triple("SuperTri", IgnitorDsl.SuperTri(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5), 5),
+        Triple("SuperRamp", IgnitorDsl.SuperRamp(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5, phase = m(5)), 6),
+        Triple("SuperSaw", IgnitorDsl.SuperSaw(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5, phase = m(5)), 6),
+        Triple("SuperSine", IgnitorDsl.SuperSine(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5, phase = m(5)), 6),
+        Triple("SuperSquare", IgnitorDsl.SuperSquare(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5, phase = m(5)), 6),
+        Triple("SuperTri", IgnitorDsl.SuperTri(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5, phase = m(5)), 6),
         Triple("Tanh", IgnitorDsl.Tanh(inner = m(0)), 1),
         Triple("Times", IgnitorDsl.Times(left = m(0), right = m(1)), 2),
-        Triple("Tremolo", IgnitorDsl.Tremolo(inner = m(0), rate = m(1), depth = m(2), shape = m(3)), 4),
-        Triple("Triangle", IgnitorDsl.Triangle(freq = m(0), analog = m(1)), 2),
-        Triple("Unipolar", IgnitorDsl.Unipolar(inner = m(0)), 1),
+        Triple("Tremolo", IgnitorDsl.Tremolo(inner = m(0), rate = m(1), depth = m(2), shape = m(3), rangeFrom = m(4), rangeTo = m(5)), 6),
+        Triple("Tri", IgnitorDsl.Tri(freq = m(0), analog = m(1), phase = m(2)), 3),
         Triple("Variants", IgnitorDsl.Variants(listOf(m(0), m(1), m(2))), 3),
         Triple("Vibrato", IgnitorDsl.Vibrato(inner = m(0), rate = m(1), semitones = m(2)), 3),
         Triple("WhiteNoise", IgnitorDsl.WhiteNoise(color = m(0)), 1),
-        Triple("Zamp", IgnitorDsl.Zamp(freq = m(0), analog = m(1)), 2),
-        Triple("Zawtooth", IgnitorDsl.Zawtooth(freq = m(0), analog = m(1)), 2),
+        Triple("Zamp", IgnitorDsl.Zamp(freq = m(0), analog = m(1), phase = m(2)), 3),
+        Triple("Zawtooth", IgnitorDsl.Zawtooth(freq = m(0), analog = m(1), phase = m(2)), 3),
     )
 
     "the corpus covers every IgnitorDsl node type" {
         // Bump this together with a new node's walker arms and its corpus entry.
-        corpus.size shouldBe 80
-        corpus.map { it.first }.toSet().size shouldBe 80
+        corpus.size shouldBe 78
+        corpus.map { it.first }.toSet().size shouldBe 78
     }
 
     "every node reports exactly the declared number of children" {

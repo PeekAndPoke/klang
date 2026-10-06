@@ -54,9 +54,14 @@ class IgnitorDslWireCodecSpec : StringSpec({
             )
         )
     }
+    // the oscillators' phase input, a constant and a signal, non-default so a dropped field shows up
+    "Sine with a phase" { check(IgnitorDsl.Sine(phase = IgnitorDsl.Constant(0.25))) }
+    "Pulze with a moving phase" { check(IgnitorDsl.Pulze(phase = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)))) }
+    "SuperSaw with a phase" { check(IgnitorDsl.SuperSaw(phase = IgnitorDsl.Constant(-0.5))) }
+    "Impulse with a phase" { check(IgnitorDsl.Impulse(phase = IgnitorDsl.Param("ph", 0.1))) }
     "Sawtooth" { check(IgnitorDsl.Sawtooth()) }
     "Square" { check(IgnitorDsl.Square(freq = IgnitorDsl.Param("freq", 220.0))) }
-    "Triangle" { check(IgnitorDsl.Triangle()) }
+    "Tri" { check(IgnitorDsl.Tri()) }
     "Ramp" { check(IgnitorDsl.Ramp()) }
     "Zawtooth" { check(IgnitorDsl.Zawtooth()) }
     "Zamp" { check(IgnitorDsl.Zamp()) }
@@ -134,7 +139,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- arithmetic / math ----------------------------------------------------------------------------------
     "Plus" { check(IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()) }
-    "Times" { check(IgnitorDsl.Sine() * IgnitorDsl.Triangle()) }
+    "Times" { check(IgnitorDsl.Sine() * IgnitorDsl.Tri()) }
     "Affine" { check(IgnitorDsl.Affine(IgnitorDsl.Sine(), pre = IgnitorDsl.Constant(0.1), mul = IgnitorDsl.Param("level", 0.5), add = IgnitorDsl.Constant(-2.0))) }
     // the absent pre-add and add are -0.0, and the sign must survive the wire (Constant is a data
     // class, and Double equality on JVM and JS tells -0.0 from 0.0, so a normalising codec fails here)
@@ -154,8 +159,6 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Tanh" { check(IgnitorDsl.Sine().tanh()) }
     "Lerp" { check(IgnitorDsl.Sine().lerp(IgnitorDsl.Sawtooth(), IgnitorDsl.Constant(0.3))) }
     "Range" { check(IgnitorDsl.Sine().range(IgnitorDsl.Constant(0.5), IgnitorDsl.Constant(5.0))) }
-    "Bipolar" { check(IgnitorDsl.Sine().bipolar()) }
-    "Unipolar" { check(IgnitorDsl.Sine().unipolar()) }
     "Floor" { check(IgnitorDsl.Sine().floor()) }
     "Ceil" { check(IgnitorDsl.Sine().ceil()) }
     "Round" { check(IgnitorDsl.Sine().round()) }
@@ -281,6 +284,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
     "Phaser" { check(IgnitorDsl.Sine().phaser(wet = 0.4, rate = 0.5).copy(floor = IgnitorDsl.Constant(0.25))) }
+    "Tremolo with a range" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5, rangeFrom = 0.0, rangeTo = 2.0)) }
     "Tremolo" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5)) }
     "Tremolo (shape non-default, the depth a slot)" {
         check(

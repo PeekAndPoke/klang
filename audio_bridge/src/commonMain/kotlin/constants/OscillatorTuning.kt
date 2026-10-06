@@ -222,7 +222,7 @@ const val SUPERSINE_WARMUP: Double = SUPERSAW_WARMUP
 // ── Pulse family (square / pulse / pulze / triangle share one shape) ──────────────────────────────
 // square / pulse / pulze are one pulse oscillator (duty Ignitor slot; 0.5 = square). Each edge is a
 // finite-slope flank (no PolyBLEP — like the saw), as a fraction of its plateau: 0 = sharpest (just
-// the minimum floor below), 1 = full ramp. Both flanks = 1 (at duty 0.5) → a triangle (the `triangle`
+// the minimum floor below), 1 = full ramp. Both flanks = 1 (at duty 0.5) → a triangle (the `tri`
 // factory hardcodes 1.0/1.0).
 
 /** Minimum flank length in **samples** (a floor on every edge, like the saw → edges are never truly

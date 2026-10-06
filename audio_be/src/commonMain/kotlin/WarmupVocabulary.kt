@@ -13,7 +13,6 @@ import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.bandpass
-import io.peekandpoke.klang.audio_bridge.bipolar
 import io.peekandpoke.klang.audio_bridge.ceil
 import io.peekandpoke.klang.audio_bridge.clamp
 import io.peekandpoke.klang.audio_bridge.coarse
@@ -56,7 +55,6 @@ import io.peekandpoke.klang.audio_bridge.sqrt
 import io.peekandpoke.klang.audio_bridge.tanh
 import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.audio_bridge.tremolo
-import io.peekandpoke.klang.audio_bridge.unipolar
 import io.peekandpoke.klang.audio_bridge.vibrato
 
 /**
@@ -84,12 +82,15 @@ object WarmupVocabulary {
 
     private fun sine(mul: Double = 1.0): IgnitorDsl = IgnitorDsl.Sine(freq = Freq.mul(Constant(mul)))
 
+    /** A moving `phase` input: a slow sine, a tenth of a cycle deep. */
+    private fun slowPhase(): IgnitorDsl = IgnitorDsl.Sine(freq = Constant(0.5)).mul(Constant(0.1))
+
     /** Every plain oscillator, mixed at a tenth each. */
     val waves: IgnitorDsl = listOf<IgnitorDsl>(
         IgnitorDsl.Sine(),
         IgnitorDsl.Sawtooth(),
         IgnitorDsl.Square(),
-        IgnitorDsl.Triangle(),
+        IgnitorDsl.Tri(),
         IgnitorDsl.Zawtooth(),
         IgnitorDsl.Zamp(),
         IgnitorDsl.Impulse(),
@@ -97,6 +98,16 @@ object WarmupVocabulary {
         IgnitorDsl.RawPulze(),
         IgnitorDsl.Ramp(),
         IgnitorDsl.Silence,
+        // the `phase` input: a constant (the block-start shift) and a signal (each engine's phased loop, the pulse
+        // with and without PWM)
+        IgnitorDsl.Sine(phase = Constant(0.25)),
+        IgnitorDsl.Tri(phase = Constant(0.25)),
+        IgnitorDsl.Impulse(phase = Constant(0.25)),
+        IgnitorDsl.Sine(phase = slowPhase()),
+        IgnitorDsl.Sawtooth(phase = slowPhase()),
+        IgnitorDsl.RawPulze(phase = slowPhase()),
+        IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = Constant(3.0)).range(Constant(0.3), Constant(0.7)), phase = slowPhase()),
+        IgnitorDsl.Impulse(phase = slowPhase()),
     ).reduce { acc, osc -> IgnitorDsl.Plus(acc, osc) }.mul(Constant(0.1))
 
     /** The unison families and the plucks — the phase pools and the Karplus paths. */
@@ -109,6 +120,12 @@ object WarmupVocabulary {
         IgnitorDsl.Sine(harmonics = Constant(7.0), octaves = Constant(2.0), suboctaves = Constant(1.0)),
         IgnitorDsl.Pluck(),
         IgnitorDsl.SuperPluck(voices = Constant(3.0)),
+        // the stacks' and the bank's `phase` paths: a constant shift and the phased voice loops
+        IgnitorDsl.SuperSaw(voices = Constant(5.0), phase = Constant(0.25)),
+        IgnitorDsl.SuperSaw(voices = Constant(5.0), phase = slowPhase()),
+        IgnitorDsl.SuperSine(voices = Constant(5.0), phase = slowPhase()),
+        IgnitorDsl.Sine(harmonics = Constant(3.0), phase = Constant(0.25)),
+        IgnitorDsl.Sine(harmonics = Constant(3.0), phase = slowPhase()),
     ).reduce { acc, osc -> IgnitorDsl.Plus(acc, osc) }.mul(Constant(0.15))
 
     /** Every noise and chaos generator. */
@@ -126,14 +143,17 @@ object WarmupVocabulary {
     val math: IgnitorDsl = run {
         val s = sine()
         val t = sine(1.5)
-        val lfo = IgnitorDsl.Sine(freq = Constant(2.0)).unipolar()
+        // a 0..1 LFO: range maps the sine's -1..1 onto it
+        val lfo = IgnitorDsl.Sine(freq = Constant(2.0)).range(Constant(0.0), Constant(1.0))
         val a = s.mul(Constant(0.5)).div(Constant(2.0)).minus(t.mul(Constant(0.1))).neg().abs()
         // `max(t).min(-t)` bounds to [-t, t]: cap first, then floor. Builds Max(Min(x, t), -t),
         // the same node pair as before the min/max doors became clamps.
         val b = a.clamp(Constant(-1.0), Constant(1.0)).pow(Constant(2.0)).max(t).min(t.neg())
         // `Constant(0.5).neg()`: a negation the optimizer leaves standing (a signal's folds into an Affine)
         val c = b.exp().log().sqrt().sign().mul(b.tanh()).lerp(t, lfo).range(Constant(0.5).neg(), Constant(0.5))
-        val d = c.bipolar().unipolar().mul(Constant(4.0)).floor().mul(Constant(0.1))
+        // 0..1 onto -1..1 and back: `mul(2).minus(1)`, then `range(0, 1)`
+        val d = c.mul(Constant(2.0)).minus(Constant(1.0)).range(Constant(0.0), Constant(1.0))
+            .mul(Constant(4.0)).floor().mul(Constant(0.1))
             .mul(t.ceil().round().mul(Constant(0.1)).mul(t.frac()))
             .mod(Constant(0.5)).mul(t.sq().plus(Constant(2.0)).recip().mul(Constant(0.5))) // recip of `+2`: never near zero
         val chosen = lfo.select(whenTrue = d, whenFalse = c)
@@ -194,6 +214,7 @@ object WarmupVocabulary {
         .phaser(wet = 0.5, rate = 0.7, center = 800.0)
         .tremolo(rate = 4.0, depth = 0.4)
         .tremolo(rate = 3.0, depth = 0.3, shape = "square") // a non-sine LFO, the pulse oscillator with its edge
+        .tremolo(rate = 4.0, depth = 0.3, rangeFrom = 0.0, rangeTo = 1.0) // off the classic range: the general gain
         .shimmer()
         .vibrato(rate = 5.0, semitones = 0.2)
         .accelerate(1.0)
