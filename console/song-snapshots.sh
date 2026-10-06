@@ -14,7 +14,7 @@
 # since the Ignitor/Katalyst naming (2026-10-03, docs/plans/ignitor-katalyst-naming.md) the script
 # object, its slot accessor and its slot setter have new names; the old tags are spelled with them
 # on extraction, values untouched. The patterns use a character class so this file does not spell
-# the retired names itself (RetiredIgnitorNamesSpec).
+# the retired names itself (a habit from a repo-scanning guard, removed 2026-10-07).
 #
 set -euo pipefail
 cd "$(dirname "$0")/.."

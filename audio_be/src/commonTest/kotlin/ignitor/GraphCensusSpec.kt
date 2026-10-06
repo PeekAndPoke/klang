@@ -25,7 +25,7 @@ import io.peekandpoke.klang.audio_bridge.tremolo
 class GraphCensusSpec : StringSpec({
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
 
     "a source is one pass that writes the block" {
         val census = GraphCensus.of(saw)
@@ -147,7 +147,7 @@ class GraphCensusSpec : StringSpec({
     }
 
     "sharing is by identity, as the runtime's build cache keys it: two equal saws are two saws" {
-        val census = GraphCensus.of(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Sawtooth()))
+        val census = GraphCensus.of(IgnitorDsl.Saw().plus(IgnitorDsl.Saw()))
 
         census.passes shouldBe 3
         census.traffic shouldBe 1 + 1 + 3
@@ -231,11 +231,11 @@ class GraphCensusSpec : StringSpec({
         val lfo = IgnitorDsl.Sine(freq = c(0.5))
 
         // the saw (1, 1) and nothing else: the constant moves the accumulator once per block
-        GraphCensus.of(IgnitorDsl.Sawtooth(phase = c(0.25))) shouldBe GraphCensus.of(saw)
-        GraphCensus.of(IgnitorDsl.Sawtooth(phase = IgnitorDsl.Param("ph", 0.1))) shouldBe GraphCensus.of(saw)
+        GraphCensus.of(IgnitorDsl.Saw(phase = c(0.25))) shouldBe GraphCensus.of(saw)
+        GraphCensus.of(IgnitorDsl.Saw(phase = IgnitorDsl.Param("ph", 0.1))) shouldBe GraphCensus.of(saw)
 
         // + the phase LFO (1, 1) + the saw's loop reading it (0, 1)
-        GraphCensus.of(IgnitorDsl.Sawtooth(phase = lfo)).let {
+        GraphCensus.of(IgnitorDsl.Saw(phase = lfo)).let {
             it.passes shouldBe 2
             it.traffic shouldBe 3
             it.bytes shouldBe 2 * 64

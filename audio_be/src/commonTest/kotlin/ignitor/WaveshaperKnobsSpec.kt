@@ -44,7 +44,7 @@ class WaveshaperKnobsSpec : StringSpec({
     fun seed() = Random(11)
 
     // A loud saw, so every shaper is well into its curve and two shapes cannot look alike.
-    val saw: IgnitorDsl = IgnitorDsl.Times(IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq), IgnitorDsl.Constant(3.0))
+    val saw: IgnitorDsl = IgnitorDsl.Times(IgnitorDsl.Saw(freq = IgnitorDsl.Freq), IgnitorDsl.Constant(3.0))
 
     fun ctx(rng: Random): IgniteContext = IgniteContext(
         sampleRate = sampleRate,
@@ -245,7 +245,7 @@ class WaveshaperKnobsSpec : StringSpec({
     // ── The tremolo's rate is read per block ─────────────────────────────────────────────────────
 
     "the tremolo's rate is read per block, so an expression reaches it (the build-time shape knob ignores one)" {
-        val source = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
+        val source = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
         val base = source.tremolo(37.3, 1.0, shape = "square") as IgnitorDsl.Tremolo
         val sum = IgnitorDsl.Plus(IgnitorDsl.Constant(18.65), IgnitorDsl.Constant(18.65))
 
@@ -254,7 +254,7 @@ class WaveshaperKnobsSpec : StringSpec({
     }
 
     "the tremolo's shape from the bag reaches the stage, and its default is the sine" {
-        val source = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
+        val source = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
         val slotted = IgnitorDsl.Tremolo(
             inner = source,
             rate = IgnitorDsl.Constant(37.3),
@@ -274,7 +274,7 @@ class WaveshaperKnobsSpec : StringSpec({
         fun IgnitorDsl.gates(params: Map<String, Double>? = null): Boolean =
             buildExciter(ignitorParams = params, random = seed(), freqHz = freqHz, sampleRate = sampleRate).gatesOutput
 
-        val source = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
+        val source = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
 
         withClue("a plain source") { source.gates() shouldBe false }
         withClue("a built tremolo") { source.tremolo(4.0, 1.0, shape = "square").gates() shouldBe true }

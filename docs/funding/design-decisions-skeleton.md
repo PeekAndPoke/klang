@@ -98,7 +98,7 @@ Template per decision:
 
 ### 1.6 Callable objects: `@KlangScript.Invoke`
 - Decision: dedicated annotation so KSP can reject two invokes (no overloads) [K5].
-- Evidence: [K5]; CLAUDE.md "Retired" (old spelling refused by KSP); DEV-DIARY 2026-09-07.
+- Evidence: [K5]; `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) (old spelling refused by KSP); DEV-DIARY 2026-09-07.
 - Status: settled.
 
 ### 1.7 Two doors: every DSL usable from Kotlin
@@ -120,7 +120,7 @@ Template per decision:
   2. 2026-03-21 rename strudel → sprudel (`b0c64728`, PR #43 `b1bcc0e3`) "taking our own direction now".
   3. 2026-08-23 heritage abandoned: compat tests cut to structural functions [S3]; heritage filter aliases
      deleted (`50f97bdb`).
-  4. 2026-09-07 `lang/addons` dissolved [S14] (`deb1bf80`); CLAUDE.md "Retired": "sprudel is not a Strudel port".
+  4. 2026-09-07 `lang/addons` dissolved [S14] (`deb1bf80`); `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07): "sprudel is not a Strudel port".
 - Decision + why: [S1] [S2] [S4] [S5].
 - Evidence: CREDITS.MD lineage; WP §4.
 - Status: settled.
@@ -149,7 +149,7 @@ Template per decision:
 - Decision: compounds become objects with named slots, `adsr(attack = ...)` sets, `adsr.attack` reads; no namespace
   pollution [S12] [S13].
 - Iterations: pilot on `freq` (`1053f694`, 2026-09-06) → batches E, F, G (`d9b6c8e3`, `0c535555`, `95705370`,
-  2026-09-07) → per-knob doors retired (CLAUDE.md "Retired" 2026-09-07).
+  2026-09-07) → per-knob doors retired (`docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) 2026-09-07).
 - Agent proposal overruled: ctx copy per control event rejected for cost [S11].
 - Status: settled; string-slot readers parked (`docs/tasks/future/string-slot-readers.md`).
 
@@ -223,7 +223,7 @@ Template per decision:
 ### 3.8 Transitions: crossfade, parking slot, morph rejected
 - Iterations: 1. crossfade + bank cap 10 (`ANS 2026-09-19T15:11`) → 2. formant MORPH built and heard as
   "laser-shot" [SD7] [M24] → 3. two banks + one parking slot, 20 ms, cap removed [M25] [M26].
-- Evidence: CLAUDE.md "Retired" 2026-09-20 (MORPH, `MAX_BANKS`); `docs/plans/knob-glide.md`;
+- Evidence: `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) 2026-09-20 (MORPH, `MAX_BANKS`); `docs/plans/knob-glide.md`;
   `docs/tasks/future/transition-times.md`; "security net" [M23].
 - Status: settled.
 
@@ -285,7 +285,7 @@ Template per decision:
   5. 20:43 pregain + velocity slots; 20:47 rejects agent's "magic" [D18]; 21:25 rejects bare-osc equivalence [D20].
   6. 21:44 velocity folds into gain at the frontend [D21]; 21:49 pregain / gain / busgain order.
 - Result: `f359f23e` plan; `df93f9f1` "gain is the one level word, velocity folds at the wire, postgain retires";
-  `52b89756` (2026-09-19). CLAUDE.md "Retired" `postgain`, wire `velocity` (2026-09-19).
+  `52b89756` (2026-09-19). `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) `postgain`, wire `velocity` (2026-09-19).
 - Evidence: `docs/plans/signal-flow-redesign.md`; maintainer: "the last discussion was very fruitful!" (2026-09-18T22:28).
 - Status: in progress.
 

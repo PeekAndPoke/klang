@@ -6,7 +6,7 @@
 >
 > **The living state is `audio/MEMORY.md`.** Many entries below describe code as it was at their date and were
 > superseded later (the voice strip, the Pipeline DSL, the Master DSL, the resonator morph, the 10-bank pool are
-> all gone; the retired list in `CLAUDE.md` is authoritative). Nothing here overrides the current file, the
+> all gone; the retired list, `docs/retired-names.md`, is authoritative). Nothing here overrides the current file, the
 > `audio/ref/*.md` topic files or the code. New entries go to `audio/MEMORY.md`'s History list as one line and to
 > the task record, not here.
 

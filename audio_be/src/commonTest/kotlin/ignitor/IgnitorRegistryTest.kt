@@ -37,7 +37,7 @@ class IgnitorRegistryTest : StringSpec({
         // keeps the two trees comparable for debugging. (The by-ear A/B does NOT go through here —
         // .optimizer(0) travels inside the tree and comes back out of optimized() untouched.)
         val registry = IgnitorRegistry()
-        val authored = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0)
+        val authored = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0)
         registry.register("gtr", authored)
 
         registry.get("gtr") shouldBe authored
@@ -51,7 +51,7 @@ class IgnitorRegistryTest : StringSpec({
         // FORK. A local-only optimized() lookup returns null for every built-in and
         // VoiceFactory then drops the voice: the whole song goes silent.
         val root = IgnitorRegistry()
-        root.register("gtr", IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0))
+        root.register("gtr", IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0))
         val fork = root.fork()
 
         fork.optimized("gtr") shouldNotBe null
@@ -62,7 +62,7 @@ class IgnitorRegistryTest : StringSpec({
         // Live coding re-registers names with edited trees; a getOrPut would keep playing the
         // old sound forever.
         val registry = IgnitorRegistry()
-        registry.register("s", IgnitorDsl.Sawtooth().lowpass(1000.0))
+        registry.register("s", IgnitorDsl.Saw().lowpass(1000.0))
         registry.register("s", IgnitorDsl.Sine().lowpass(2000.0).notch(300.0, 1.0))
 
         (registry.optimized("s") as IgnitorDsl.Eq).let {
@@ -82,7 +82,7 @@ class IgnitorRegistryTest : StringSpec({
         // every other spec in the repo stays green while every voice silently ships unfused.
         // White-box by necessity.
         val registry = IgnitorRegistry()
-        registry.register("gtr", IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0))
+        registry.register("gtr", IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0))
 
         val exciter = registry.createExciter("gtr", VoiceData.empty.copy(sound = "gtr"), 440.0)!!.ignitor
 
@@ -121,7 +121,7 @@ class IgnitorRegistryTest : StringSpec({
     "names returns all registered names" {
         val registry = IgnitorRegistry()
         registry.register("sine", IgnitorDsl.Sine())
-        registry.register("saw", IgnitorDsl.Sawtooth())
+        registry.register("saw", IgnitorDsl.Saw())
         registry.names() shouldBe setOf("sine", "saw")
     }
 
@@ -233,7 +233,7 @@ class IgnitorRegistryTest : StringSpec({
         val variants = IgnitorDsl.Variants(
             listOf(
                 IgnitorDsl.Sine(),
-                IgnitorDsl.Sawtooth(),
+                IgnitorDsl.Saw(),
             )
         )
         registry.register("v", variants)
@@ -264,12 +264,12 @@ class IgnitorRegistryTest : StringSpec({
 
         val nullIndex = render(null)        // ?: 0 → Sine
         val zero = render(0)                // Sine
-        val one = render(1)                 // Sawtooth
+        val one = render(1)                 // Saw
         val wrapped = render(2)             // 2 % 2 = 0 → Sine
-        val negative = render(-1)           // (-1).mod(2) = 1 → Sawtooth
+        val negative = render(-1)           // (-1).mod(2) = 1 → Saw
 
         val sineRef = reference(IgnitorDsl.Sine())
-        val sawRef = reference(IgnitorDsl.Sawtooth())
+        val sawRef = reference(IgnitorDsl.Saw())
 
         for (i in sineRef.indices) {
             nullIndex[i] shouldBe sineRef[i]
@@ -283,21 +283,21 @@ class IgnitorRegistryTest : StringSpec({
     //    since step 9); the tag stays for the editor and the future auto-attach. ──────────────────────────────────
 
     "the tag: a tree that ends in classic(), whoever built it; not a plain tree, not a stage after classic()" {
-        IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth()).endsInClassic() shouldBe true
-        IgnitorDsl.Sawtooth().classic().endsInClassic() shouldBe true
-        IgnitorDsl.Sawtooth().endsInClassic() shouldBe false
-        IgnitorDsl.Sawtooth().classic().mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
+        IgnitorRegistry.builtInVoice(IgnitorDsl.Saw()).endsInClassic() shouldBe true
+        IgnitorDsl.Saw().classic().endsInClassic() shouldBe true
+        IgnitorDsl.Saw().endsInClassic() shouldBe false
+        IgnitorDsl.Saw().classic().mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
     }
 
     "the tag: an optimizer hint on a classic() tree (the by-ear A/B) still ends in classic()" {
-        IgnitorDsl.Sawtooth().classic().optimizer(0).endsInClassic() shouldBe true
-        IgnitorDsl.Sawtooth().classic().optimizer(1).endsInClassic() shouldBe true
+        IgnitorDsl.Saw().classic().optimizer(0).endsInClassic() shouldBe true
+        IgnitorDsl.Saw().classic().optimizer(1).endsInClassic() shouldBe true
     }
 
     "the tag reads the same on the authored and the optimized tree: no optimizer rewrite makes or hides it" {
         // The optimizer rewrites no `Adsr` root, and an `on != 0` hint at the root dissolves, which the tag looks
         // through. A future pass that rewrote the classic root would turn this row red.
-        val saw = IgnitorDsl.Sawtooth()
+        val saw = IgnitorDsl.Saw()
         val trees = listOf(
             saw.classic(),
             saw.classic().optimizer(1),
@@ -324,7 +324,7 @@ class IgnitorRegistryTest : StringSpec({
     "the built-in shape is still step 6's tree: under classic()'s crush sits the onepole on the pregained source" {
         // Step 6 wrote it `OnePoleLowpass(source.pregain(), slot).classic()`; since step 10 the onepole is classic()'s
         // first stage, so the same tree comes out of `source.pregain().classic()`.
-        val saw = IgnitorDsl.Sawtooth()
+        val saw = IgnitorDsl.Saw()
         val shape = IgnitorRegistry.builtInVoice(saw)
 
         shape.let { root ->

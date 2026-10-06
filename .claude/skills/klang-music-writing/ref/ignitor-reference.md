@@ -667,7 +667,7 @@ Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 
 | Name          | Aliases                  | Signal Graph                                                    |
 |---------------|--------------------------|-----------------------------------------------------------------|
 | `sine`        | `sin`                    | Sine(Freq)                                                      |
-| `sawtooth`    | `saw`                    | Sawtooth(Freq)                                                  |
+| `sawtooth`    | `saw`                    | Saw(Freq)                                                       |
 | `square`      | `sqr`, `pulse`           | Square(Freq)                                                    |
 | `triangle`    | `tri`                    | Tri(Freq)                                                       |
 | `ramp`        |                          | Ramp(Freq)                                                      |

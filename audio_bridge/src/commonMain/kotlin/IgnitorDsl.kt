@@ -356,9 +356,9 @@ sealed interface IgnitorDsl {
                 octaves == Constant(0.0) && suboctaves == Constant(0.0)
     }
 
-    /** Sawtooth wave oscillator (rising ramp). */
-    @WireName("sawtooth")
-    data class Sawtooth(
+    /** Sawtooth wave oscillator, a rising ramp (`Ignitor.saw`). */
+    @WireName("saw")
+    data class Saw(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
         /** Analog flyback time in samples: lower = brighter/sharper reset, higher = softer (default [SAW_RESET_SAMPLES]). */
@@ -619,7 +619,7 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Ramp oscillator. Reverse sawtooth — FALLING, the negated [Sawtooth] (`Ignitors.ramp`
+    /** Ramp oscillator. Reverse sawtooth, FALLING: the negated [Saw] (`Ignitors.ramp`
      *  builds it at `polarity = -1.0`). */
     @WireName("ramp")
     data class Ramp(

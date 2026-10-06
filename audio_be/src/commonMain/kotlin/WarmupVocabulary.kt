@@ -88,7 +88,7 @@ object WarmupVocabulary {
     /** Every plain oscillator, mixed at a tenth each. */
     val waves: IgnitorDsl = listOf<IgnitorDsl>(
         IgnitorDsl.Sine(),
-        IgnitorDsl.Sawtooth(),
+        IgnitorDsl.Saw(),
         IgnitorDsl.Square(),
         IgnitorDsl.Tri(),
         IgnitorDsl.Zawtooth(),
@@ -104,7 +104,7 @@ object WarmupVocabulary {
         IgnitorDsl.Tri(phase = Constant(0.25)),
         IgnitorDsl.Impulse(phase = Constant(0.25)),
         IgnitorDsl.Sine(phase = slowPhase()),
-        IgnitorDsl.Sawtooth(phase = slowPhase()),
+        IgnitorDsl.Saw(phase = slowPhase()),
         IgnitorDsl.RawPulze(phase = slowPhase()),
         IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = Constant(3.0)).range(Constant(0.3), Constant(0.7)), phase = slowPhase()),
         IgnitorDsl.Impulse(phase = slowPhase()),
@@ -177,7 +177,7 @@ object WarmupVocabulary {
      * state-dependent damping branch) runs the standalone SVF nodes — the branch Der Schmetterling's
      * guitar takes with its `analog` param (review round 3).
      */
-    val filters: IgnitorDsl = IgnitorDsl.Sawtooth()
+    val filters: IgnitorDsl = IgnitorDsl.Saw()
         .lowpass(freq = 3000.0, q = 1.2, passes = 2)
         .highpass(freq = 80.0, q = 0.9)
         .onepole(freq = 6000.0)

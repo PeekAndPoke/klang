@@ -110,7 +110,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
 
     val expKnob = AdsrCurves.knob(AdsrCurve.Exponential)
     val linKnob = AdsrCurves.knob(AdsrCurve.Linear)
-    val saw = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
+    val saw = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
 
     "the Ignitor pitch envelope: an unwritten curve sweeps on the exponential curve" {
         // 12 semitones: the ratio is 2^level, so log2 of it is the level. 1e-9: the engine bends through

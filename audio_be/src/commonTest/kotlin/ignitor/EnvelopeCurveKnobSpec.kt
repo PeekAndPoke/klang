@@ -146,7 +146,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
 
     // ── The modulation envelopes: the four filters and the pitch envelope ────────────────────
 
-    val saw = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
+    val saw = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
 
     // Each envelope with ONE curve knob set on ONE stage (the other two at the node's default), so a
     // curve read on the wrong envelope or the wrong stage cannot hide behind the others.

@@ -49,7 +49,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     put("sine", sine)
     put("sin", sine)
 
-    val saw = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq, analog = slots.analog)
+    val saw = IgnitorDsl.Saw(freq = IgnitorDsl.Freq, analog = slots.analog)
     put("sawtooth", saw)
     put("saw", saw)
 
@@ -185,7 +185,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     // Rich detuned pad: two saws slightly detuned, mixed and lowpass filtered
     put(
         "sgpad",
-        (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(semitones = 0.1))
+        (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(semitones = 0.1))
             .div(other = IgnitorDsl.Param(name = "divisor", default = 2.0))
             .onepole(freq = 3000.0)
     )
@@ -224,7 +224,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     put(
         "eqdemo",
         IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq, analog = slots.analog),
+            inner = IgnitorDsl.Saw(freq = IgnitorDsl.Freq, analog = slots.analog),
             sections = listOf(
                 IgnitorDsl.EqSection.Bell(
                     freq = IgnitorDsl.Param(name = "eqhz", default = 1200.0, description = "Bell centre frequency"),

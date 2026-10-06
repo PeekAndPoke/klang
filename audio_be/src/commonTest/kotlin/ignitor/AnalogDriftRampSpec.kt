@@ -148,7 +148,7 @@ class AnalogDriftRampSpec : StringSpec({
     }
 
     "the single-voice saw's phase follows the block ramp, on both of its loops" {
-        val saw = { Ignitors.sawtooth(analog = ConstantIgnitor(analog), resetSamples = 0.0) }
+        val saw = { Ignitors.saw(analog = ConstantIgnitor(analog), resetSamples = 0.0) }
 
         assertClose(render(saw(), seed = 3), sawExpected(0), "saw")
         assertClose(render(saw(), seed = 3, withPhaseMod = true), sawExpected(0), "saw under a unity phaseMod")
@@ -159,7 +159,7 @@ class AnalogDriftRampSpec : StringSpec({
         // ramp must reach the block's end value at the window's end, so the next block starts
         // where this one ended. A ramp sized by the block would leave a step at the note attack.
         val sine = Ignitors.sine(analog = ConstantIgnitor(analog))
-        val saw = Ignitors.sawtooth(analog = ConstantIgnitor(analog), resetSamples = 0.0)
+        val saw = Ignitors.saw(analog = ConstantIgnitor(analog), resetSamples = 0.0)
 
         assertClose(render(sine, seed = 3, firstOffset = 37), sineExpected(37), "sine, first window 37..128")
         assertClose(render(saw, seed = 3, firstOffset = 37), sawExpected(37), "saw, first window 37..128")

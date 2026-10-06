@@ -132,9 +132,9 @@ fun sndSquare(params: PatternLike? = null, callInfo: CallInfo? = null): PatternM
 fun PatternMapperFn.sndSquare(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSquare(params, callInfo) }
 
-// -- sndTriangle() ----------------------------------------------------------------------------------------------------
+// -- sndTri() ---------------------------------------------------------------------------------------------------------
 
-private fun applySndTriangle(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applySndTri(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("triangle")) }
 }
 
@@ -144,32 +144,32 @@ private fun applySndTriangle(source: SprudelPattern, args: List<SprudelDslArg<An
  * @param params Optional pattern-like parameter.
  * @return A new pattern with sound set to "triangle".
  * @category tonal
- * @tags triangle, oscillator, snd
+ * @tags tri, triangle, oscillator, snd
  */
 @KlangScript.Function
-fun SprudelPattern.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applySndTriangle(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+fun SprudelPattern.sndTri(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applySndTri(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /** Parses this string as a pattern and sets sound to triangle wave.
  * @category tonal
- * @tags triangle, oscillator, snd
+ * @tags tri, triangle, oscillator, snd
  */
 @KlangScript.Function
-fun String.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).sndTriangle(params, callInfo)
+fun String.sndTri(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndTri(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to triangle wave.
  * @category tonal
- * @tags triangle, oscillator, snd
+ * @tags tri, triangle, oscillator, snd
  */
 @KlangScript.Function
-fun sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.sndTriangle(params, callInfo) }
+fun sndTri(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.sndTri(params, callInfo) }
 
 /** Chains a triangle wave sound onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.sndTriangle(params, callInfo) }
+fun PatternMapperFn.sndTri(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.sndTri(params, callInfo) }
 
 // -- sndRamp() --------------------------------------------------------------------------------------------------------
 

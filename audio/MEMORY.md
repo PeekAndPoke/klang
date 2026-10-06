@@ -172,6 +172,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 The saw's node is `Saw` end to end: the node `IgnitorDsl.Saw` (wire name `saw`), the factory
+  `Ignitors.saw`; the sound names `sawtooth` / `saw` and the LFO shape `sawtooth` stay
+  (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 3)
 - 2026-10-06 The triangle oscillator is `tri` end to end: the node `IgnitorDsl.Tri` (wire name `tri`), the factory
   `Ignitors.tri`; the sound name and the LFO shape `triangle` stay
   (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`)

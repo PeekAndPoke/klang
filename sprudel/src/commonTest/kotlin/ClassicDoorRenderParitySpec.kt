@@ -29,7 +29,7 @@ import kotlin.random.Random
 
 /**
  * `classic()`'s DOOR PARITY, rendered (phase 3 step 5, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 9):
- * one voice per row, the script `Ignitor.saw().classic()` against the Kotlin `IgnitorDsl.Sawtooth().classic()`,
+ * one voice per row, the script `Ignitor.saw().classic()` against the Kotlin `IgnitorDsl.Saw().classic()`,
  * with the slots written through the bag, every slot in turn and a few in combination, compared in RAW
  * BITS. Here because sprudel is the module that has both the script engine and the renderer, so the
  * spec runs on the JVM and on JS.
@@ -84,7 +84,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
         engine.execute("Ignitor.saw().classic()").toObjectOrNull<IgnitorDsl>()!!
     }
 
-    val kotlin: IgnitorDsl = IgnitorDsl.Sawtooth().classic()
+    val kotlin: IgnitorDsl = IgnitorDsl.Saw().classic()
 
     /** A row: the slot it engages ([knob], or null for a combination), and the bag that writes it. */
     class Row(val knob: String?, val bag: Map<String, Double>, val label: String? = knob) {
@@ -199,7 +199,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
         "DOOR PARITY: sprudel's tremolo(0.5, 5, \"$shape\") renders what the Ignitor door's tremolo(5, 0.5, \"$shape\") renders" {
             val bag = note("a3").tremolo(0.5, 5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams ?: emptyMap()
             val viaSprudel = render(kotlin, bag)
-            val viaIgnitor = render(IgnitorDsl.Sawtooth().ignitorTremolo(5.0, 0.5, shape).classic(), emptyMap())
+            val viaIgnitor = render(IgnitorDsl.Saw().ignitorTremolo(5.0, 0.5, shape).classic(), emptyMap())
             val bare = render(kotlin, emptyMap())
 
             withClue("engagement: the tremolo moved the render") { viaSprudel.toList() shouldNotBe bare.toList() }

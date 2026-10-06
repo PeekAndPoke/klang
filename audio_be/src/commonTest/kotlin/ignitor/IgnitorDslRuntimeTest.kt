@@ -70,8 +70,8 @@ class IgnitorDslRuntimeTest : StringSpec({
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
-    "Sawtooth DSL produces non-zero output" {
-        val sig = IgnitorDsl.Sawtooth().toExciter()
+    "Saw DSL produces non-zero output" {
+        val sig = IgnitorDsl.Saw().toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
@@ -97,7 +97,7 @@ class IgnitorDslRuntimeTest : StringSpec({
 
     "Eq DSL builds and produces non-zero output" {
         val dsl = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(
                 IgnitorDsl.EqSection.Lowpass(IgnitorDsl.Constant(2000.0), IgnitorDsl.Constant(1.0)),
             ),
@@ -106,13 +106,13 @@ class IgnitorDslRuntimeTest : StringSpec({
     }
 
     "Plus composition produces non-zero output" {
-        val dsl = IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()
+        val dsl = IgnitorDsl.Sine() + IgnitorDsl.Saw()
         val sig = dsl.toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
     "sgpad composition produces non-zero output" {
-        val dsl = (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(0.1))
+        val dsl = (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1))
             .div(IgnitorDsl.Param("divisor", 2.0))
             .onepole(3000.0)
         val sig = dsl.toExciter()
@@ -216,30 +216,30 @@ class IgnitorDslRuntimeTest : StringSpec({
     fun referenceBlock(dsl: IgnitorDsl): AudioBuffer = generateBlock(dsl.toExciter())
 
     "Variants with soundIndex=0 picks the first child" {
-        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()))
+        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw()))
         val picked = generateBlock(dsl.toExciter(soundIndex = 0))
         val expected = referenceBlock(IgnitorDsl.Sine())
         for (i in picked.indices) picked[i] shouldBe expected[i]
     }
 
     "Variants with soundIndex=1 picks the second child" {
-        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()))
+        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw()))
         val picked = generateBlock(dsl.toExciter(soundIndex = 1))
-        val expected = referenceBlock(IgnitorDsl.Sawtooth())
+        val expected = referenceBlock(IgnitorDsl.Saw())
         for (i in picked.indices) picked[i] shouldBe expected[i]
     }
 
     "Variants wraps via floor-mod for overflow indices" {
-        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()))
+        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw()))
         val picked = generateBlock(dsl.toExciter(soundIndex = 2)) // 2.mod(2) = 0 → Sine
         val expected = referenceBlock(IgnitorDsl.Sine())
         for (i in picked.indices) picked[i] shouldBe expected[i]
     }
 
     "Variants wraps via floor-mod for negative indices" {
-        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()))
-        val picked = generateBlock(dsl.toExciter(soundIndex = -1)) // -1.mod(2) = 1 → Sawtooth
-        val expected = referenceBlock(IgnitorDsl.Sawtooth())
+        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw()))
+        val picked = generateBlock(dsl.toExciter(soundIndex = -1)) // -1.mod(2) = 1 → Saw
+        val expected = referenceBlock(IgnitorDsl.Saw())
         for (i in picked.indices) picked[i] shouldBe expected[i]
     }
 

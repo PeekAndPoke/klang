@@ -43,7 +43,7 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
 
     val doors = listOf(
         PhaseDoor("sine", { p -> KlangScriptIgnitor.sine(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Sine(freq = c(4.0), phase = p) }),
-        PhaseDoor("saw", { p -> KlangScriptIgnitor.saw(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Sawtooth(freq = c(4.0), phase = p) }),
+        PhaseDoor("saw", { p -> KlangScriptIgnitor.saw(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Saw(freq = c(4.0), phase = p) }),
         PhaseDoor("ramp", { p -> KlangScriptIgnitor.ramp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Ramp(freq = c(4.0), phase = p) }),
         PhaseDoor("square", { p -> KlangScriptIgnitor.square(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Pulze(freq = c(4.0), phase = p) }),
         PhaseDoor("pulze", { p -> KlangScriptIgnitor.pulze(4.0) { it.phase(p) } }, { p -> IgnitorDsl.RawPulze(freq = c(4.0), phase = p) }),
@@ -99,7 +99,7 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
     // ── the tremolo's range ──────────────────────────────────────────────────────────────────────────────
 
     "tremolo range(from, to): positional, named in either order, and both Kotlin doors build the same node" {
-        val saw = IgnitorDsl.Sawtooth()
+        val saw = IgnitorDsl.Saw()
         val expected = IgnitorDsl.Tremolo(inner = saw, rate = c(4.0), depth = c(0.3), rangeFrom = c(0.0), rangeTo = c(1.0))
 
         ks("Ignitor.saw().tremolo(4, 0.3, x => x.range(0, 1))") shouldBe expected
@@ -114,7 +114,7 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
     }
 
     "the tremolo's default range is (-1, 0), the classic dip, on every door" {
-        val saw = IgnitorDsl.Sawtooth()
+        val saw = IgnitorDsl.Saw()
         val classic = ks("Ignitor.saw().tremolo(4, 0.3)") as IgnitorDsl.Tremolo
 
         classic.rangeFrom shouldBe c(-1.0)
@@ -125,7 +125,7 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
     }
 
     "the tremolo's range takes signals" {
-        val saw = IgnitorDsl.Sawtooth()
+        val saw = IgnitorDsl.Saw()
         val lfo = ks("Ign.sine(0.5).range(1, 2)")
 
         ks("Ignitor.saw().tremolo(4, 0.3, x => x.range(0, Ign.sine(0.5).range(1, 2)))") shouldBe

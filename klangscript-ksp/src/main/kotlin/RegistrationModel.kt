@@ -421,11 +421,12 @@ internal class RegistrationChunk(
 )
 
 /**
- * Distributes rendered registration [blocks] (area identifier to text, in collection order) over chunk
- * functions named `<functionPrefix><area>Chunk<n>`, numbered per area. A chunk holds blocks of ONE area
- * and stays within [budget] characters (a block larger than the budget gets a chunk of its own). The
- * result is in collection order, which is the order the entry point calls the chunks in ([entryPointCalls]),
- * so the registration order is the order the blocks were collected in.
+ * Distributes rendered registration [blocks] (area identifier to text, in the order given: the processor
+ * passes them in source order, [SourcePosition]) over chunk functions named `<functionPrefix><area>Chunk<n>`,
+ * numbered per area. A chunk holds blocks of ONE area and stays within [budget] characters (a block larger
+ * than the budget gets a chunk of its own), so every change of area in [blocks] starts a new chunk. The
+ * result keeps the order given, which is the order the entry point calls the chunks in ([entryPointCalls]),
+ * so the registration order is the order of [blocks].
  */
 internal fun distributeIntoChunks(
     blocks: List<Pair<String, String>>,

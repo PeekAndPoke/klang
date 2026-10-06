@@ -149,7 +149,7 @@ class ClassicSlotParamsSpec : StringSpec({
         )
 
         val placed = mutableListOf<IgnitorDsl.Param>()
-        IgnitorDsl.Sawtooth().classic().collectParams(placed)
+        IgnitorDsl.Saw().classic().collectParams(placed)
         val s = IgnitorDsl.Slots.sample
         val names = placed.map { it.name }.toSet() +
             listOf(s.begin, s.end, s.speed, s.loop).map { (it as IgnitorDsl.Param).name } +

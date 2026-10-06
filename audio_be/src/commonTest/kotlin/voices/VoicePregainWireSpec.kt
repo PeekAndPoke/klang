@@ -60,10 +60,10 @@ class VoicePregainWireSpec : StringSpec({
      * "driven" instrument is deaf to the knob under test is worse than none, and it is also the
      * instrument somebody copies out of here.
      */
-    val driven: IgnitorDsl = IgnitorDsl.Sawtooth().pregain().distort(0.5)
+    val driven: IgnitorDsl = IgnitorDsl.Saw().pregain().distort(0.5)
 
     /** The same instrument with no slot anywhere, like an authored instrument that never places it. */
-    val plain: IgnitorDsl = IgnitorDsl.Sawtooth().distort(0.5)
+    val plain: IgnitorDsl = IgnitorDsl.Saw().distort(0.5)
 
     /**
      * One voice, built the production way from [data] on an instrument registered as `"test-inst"`,

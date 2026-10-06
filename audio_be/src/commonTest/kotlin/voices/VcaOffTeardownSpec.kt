@@ -68,10 +68,10 @@ class VcaOffTeardownSpec : StringSpec({
     )
 
     /** The guitar's topology: the envelope is INSIDE the instrument, before its amp. */
-    val envelopeBeforeAmp: IgnitorDsl = amp(env(IgnitorDsl.Sawtooth()))
+    val envelopeBeforeAmp: IgnitorDsl = amp(env(IgnitorDsl.Saw()))
 
     /** The control: envelope last, the way the strip VCA used to apply it (and `classic()` applies it now). */
-    val envelopeAfterAmp: IgnitorDsl = env(amp(IgnitorDsl.Sawtooth()))
+    val envelopeAfterAmp: IgnitorDsl = env(amp(IgnitorDsl.Saw()))
 
     /**
      * Renders a whole voice through the teardown fade, over an arbitrary frame span and an arbitrary (possibly fractional) endFrame: the branches the fade's clamps

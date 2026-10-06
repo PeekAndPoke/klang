@@ -132,7 +132,7 @@ class KlangOfflineRendererTest : StringSpec({
             cycles = 1,
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
-            customIgnitors = listOf("sine" to IgnitorDsl.Sawtooth()),
+            customIgnitors = listOf("sine" to IgnitorDsl.Saw()),
             onBlock = { samples, _ -> blocksOverride.add(samples.copyOf()) },
         )
 
@@ -151,7 +151,7 @@ class KlangOfflineRendererTest : StringSpec({
 
         val customs = listOf(
             "oscA" to IgnitorDsl.Sine(),
-            "oscB" to IgnitorDsl.Sawtooth(),
+            "oscB" to IgnitorDsl.Saw(),
         )
 
         // Render oscA

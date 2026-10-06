@@ -26,8 +26,8 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
  */
 class WaveOscDefaultsSyncSpec : StringSpec({
 
-    "IgnitorDsl.Sawtooth shape defaults match the SAW_* engine constants" {
-        val d = IgnitorDsl.Sawtooth()
+    "IgnitorDsl.Saw shape defaults match the SAW_* engine constants" {
+        val d = IgnitorDsl.Saw()
         d.resetSamples shouldBe SAW_RESET_SAMPLES
         d.shapeMax shouldBe SAW_SHAPE_MAX
     }

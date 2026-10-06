@@ -1,6 +1,8 @@
 # One name per oscillator shape across the DSLs
 
 Status: **DONE 2026-10-06, archived.** Decided by the maintainer on 2026-10-06, built on branch `oscillator-phase`.
+Decisions 3 and 4 (the saw's node, sprudel's `sndTri()`) followed on 2026-10-07, built on branch
+`housekeeping-2026-10-07`.
 
 ## The ask (maintainer, 2026-10-05)
 
@@ -34,7 +36,7 @@ signals are now `sine`, `cosine`, `saw`, `tri`, `square`, `perlin`, `berlin`, `r
    the door on both doors (`KlangScriptIgnitor.tri`), the builder `OscTriBuilder` (as `OscSuperTriBuilder`), the wire
    node `IgnitorDsl.Tri` with `@WireName("tri")` (the wire ships with the frontend and the worklet, nothing is
    persisted) and the engine factory `Ignitors.tri`. Prose still says "a triangle wave"; only names changed.
-   Guard: `RetiredIgnitorNamesSpec` (the triangle rows).
+   (A guard, `RetiredIgnitorNamesSpec`, carried triangle rows until the maintainer removed it on 2026-10-07.)
    **Stays as it is, on purpose:** the built-in SOUND names (`s("triangle")` and `s("tri")` both, in
    `audio_be/.../ignitor/IgnitorDefaults.kt`), the LFO shape names in `audio_bridge/.../LfoShapes.kt` (`triangle`
    canonical, `tri` an alias; the index order is append-only), the warmup sound list, and the sound aliases
@@ -43,8 +45,8 @@ signals are now `sine`, `cosine`, `saw`, `tri`, `square`, `perlin`, `berlin`, `r
    **Not aligned, recorded (review, 2026-10-06):** two neighbours keep a door/node split that the triangle no longer
    has: `Ign.saw` builds `IgnitorDsl.Sawtooth` (wire name `sawtooth`, factory `Ignitors.sawtooth`), and `Ign.square`
    builds `IgnitorDsl.Pulze` while `Ign.pulze` builds `RawPulze`. The second goes with the chip-style folds
-   (`docs/tasks/future/chip-style-instruments.md`); the first is an open maintainer question in
-   `docs/tasks/_priorities.md`.
+   (`docs/tasks/future/chip-style-instruments.md`); the first was an open maintainer question in
+   `docs/tasks/_priorities.md`, answered by decision 3 below.
 2. **Sprudel sounds get no `phase` slot.** `s("sine")` cannot reach an oscillator's `phase`, and that is the decision,
    not a gap: an instrument author opens it per note with `x.phase(Ignitor.param("phase", 0))` and `ignp("phase", ...)`.
    Recorded in `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md` ("Recorded asymmetries") and
@@ -54,7 +56,22 @@ Verified: the 18 corpus songs render identically to the phase-knob baseline (the
 
 Left as it is, not part of decision 1: sprudel's sound door `sndTriangle()` (it sets the sound name `triangle`, as
 `sndSaw()` sets `sawtooth`); it is a sound door, and sound names stay. Renaming the `snd*` family would be its own
-question for the maintainer.
+question for the maintainer. Answered by decision 4 below.
+
+## Decisions (maintainer, 2026-10-07)
+
+3. **The saw's node is `Saw` end to end**, like the triangle: the wire node `IgnitorDsl.Sawtooth` with
+   `@WireName("sawtooth")` became `IgnitorDsl.Saw` with `@WireName("saw")`, and the engine factory
+   `Ignitors.sawtooth` became `Ignitors.saw`, with every walk, census, optimizer, runtime, warmup, codec and spec
+   reference. The door `Ign.saw` and its builder `OscSawBuilder` already said saw. **Stays as it is:** the built-in
+   SOUND names (`s("sawtooth")` and `s("saw")`), the LFO shape name `sawtooth` in `LfoShapes` (index order
+   append-only), and prose ("a sawtooth wave").
+4. **Sprudel's `sndTriangle()` is `sndTri()`** on both doors (Kotlin and KlangScript), removed, not deprecated. It
+   still sets the sound `triangle`, so nothing sounds different; `sndSaw()` keeps its name (it already is the short
+   one, and sets the sound `sawtooth`).
+
+Retired entries for both are in `docs/retired-names.md`. Verified: the 18 corpus songs render bit-identically
+before and after (`tmp/reviews/hk-2026-10-07-report.md`).
 
 ## The question as it stood (2026-10-05)
 

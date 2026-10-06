@@ -23,14 +23,14 @@ class IgnitorDslOptimizerSpec : StringSpec({
     // ── R1: what fuses ────────────────────────────────────────────────────────
 
     "a run of adjacent filters collapses into ONE Eq, in written order" {
-        val dsl = IgnitorDsl.Sawtooth()
+        val dsl = IgnitorDsl.Saw()
             .notch(210.0, 2.5)
             .highpass(440.0, 0.707)
             .lowpass(5300.0, 0.707)
             .optimize()
 
         val eq = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
-        eq.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        eq.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
         eq.sections.size shouldBe 3
         eq.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Notch>()
         eq.sections[1].shouldBeInstanceOf<IgnitorDsl.EqSection.Highpass>()
@@ -71,7 +71,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "a filter on top of an existing authored Eq appends into it" {
-        val eq = IgnitorDsl.Sawtooth().eq().band(1200.0, 0.9, 6.0)
+        val eq = IgnitorDsl.Saw().eq().band(1200.0, 0.9, 6.0)
             .lowpass(5000.0)
             .optimize()
             .shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -93,7 +93,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // four chained filters. Without this rule that is 5 nodes; the point of D4 is that it
         // becomes 1. (The song file itself is the maintainer's to commit, so the repo copy may
         // still carry the older hand-built parallel form.)
-        val authored = IgnitorDsl.Sawtooth()
+        val authored = IgnitorDsl.Saw()
             .eq()
             .tap(850.0, 0.707, 1.7)
             .tap(2500.0, 0.7, 5.0)
@@ -109,7 +109,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
             .lowpass(5250.0, 0.707)
 
         val eq = authored.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
-        eq.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        eq.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
         eq.sections.map { it::class.simpleName } shouldBe listOf(
             "RawTap", "RawTap", "Notch", "Highpass", "Lowpass", "Lowpass",
         )
@@ -239,7 +239,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "an unfusable FILTER between two fusible ones splits them, and both sides still fuse" {
         // A rendered parity row cannot see this: a regression that makes the optimizer MORE
         // conservative below a wall is bit-identical. Only a shape assertion catches it.
-        val dsl = IgnitorDsl.Sawtooth()
+        val dsl = IgnitorDsl.Saw()
             .lowpass(2000.0, 0.707)
             .onepole(800.0)
             .lowpass(4000.0, 0.707)
@@ -253,7 +253,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "an analog filter between two fusible ones splits them the same way" {
         val dsl = IgnitorDsl.Lowpass(
-            inner = IgnitorDsl.Sawtooth().lowpass(2000.0, 0.707),
+            inner = IgnitorDsl.Saw().lowpass(2000.0, 0.707),
             freq = IgnitorDsl.Constant(3000.0),
             q = IgnitorDsl.Constant(0.707),
             analog = IgnitorDsl.Constant(2.0),
@@ -276,7 +276,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // let t = sig.notch(...); t.lowpass(a).add(t.lowpass(b))
         // Absorbing the shared notch into either branch would compute it twice — a silent CPU
         // regression, which is the opposite of the point.
-        val shared = IgnitorDsl.Sawtooth().notch(210.0, 2.5)
+        val shared = IgnitorDsl.Saw().notch(210.0, 2.5)
         val dsl = IgnitorDsl.Plus(shared.lowpass(3000.0), shared.lowpass(6000.0)).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
@@ -295,7 +295,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // the real inner and append into a shared Eq — forking it and computing the lowpass
         // twice per block. Audio would be unaffected, which is what makes it dangerous: it
         // is a silent CPU regression landing exactly in the .optimizer(0) -> (1) A/B flow.
-        val shared = IgnitorDsl.Sawtooth().lowpass(1000.0)
+        val shared = IgnitorDsl.Saw().lowpass(1000.0)
         val dsl = IgnitorDsl.Plus(
             shared.optimizer(on = 1).notch(210.0, 2.5),
             shared.highpass(300.0),
@@ -313,7 +313,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "a shared subtree is rewritten once and stays shared" {
-        val shared = IgnitorDsl.Sawtooth().lowpass(1000.0)
+        val shared = IgnitorDsl.Saw().lowpass(1000.0)
         val dsl = IgnitorDsl.Plus(shared, shared).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
@@ -323,7 +323,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     // ── Purity / stability ────────────────────────────────────────────────────
 
     "optimize is idempotent" {
-        val once = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0).optimize()
+        val once = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0).optimize()
         once.optimize() shouldBe once
     }
 
@@ -336,7 +336,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "param names and their first-occurrence order survive" {
         val chained = IgnitorDsl.Notch(
             inner = IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("f", 220.0)),
+                inner = IgnitorDsl.Saw(freq = IgnitorDsl.Param("f", 220.0)),
                 freq = IgnitorDsl.Param("lf", 5300.0),
                 q = c(0.707),
             ),
@@ -361,13 +361,13 @@ class IgnitorDslOptimizerSpec : StringSpec({
     // ── Kill switch ───────────────────────────────────────────────────────────
 
     "optimizer(0) disables fusion for the WHOLE definition" {
-        val dsl = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0).optimizer(on = 0)
+        val dsl = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0).optimizer(on = 0)
         (dsl.optimize() === dsl) shouldBe true
     }
 
     "optimizer(0) anywhere in the tree disables it, not just below the marker" {
         // The marker is a definition-level switch, so burying it in a param subtree still counts.
-        val dsl = IgnitorDsl.Sawtooth()
+        val dsl = IgnitorDsl.Saw()
             .let {
                 IgnitorDsl.Lowpass(
                     inner = it,
@@ -381,7 +381,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "optimizer(1) leaves fusion ON and dissolves the marker" {
-        val marked = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0).optimizer(on = 1)
+        val marked = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0).optimizer(on = 1)
         val eq = marked.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.sections.size shouldBe 2
     }
@@ -390,13 +390,13 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // The A/B hatch must compare the authored tree against the tree production really
         // renders. If an on=1 marker survived the rewrite it would split the chain in two,
         // so flipping 0 -> 1 would show a THIRD sound that ships nowhere.
-        val marked = IgnitorDsl.Sawtooth()
+        val marked = IgnitorDsl.Saw()
             .lowpass(5000.0)
             .optimizer(on = 1)
             .notch(210.0, 2.5)
 
         val eq = marked.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
-        eq.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        eq.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
         eq.sections.size shouldBe 2
     }
 
@@ -413,59 +413,59 @@ class IgnitorDslOptimizerSpec : StringSpec({
     val none = IgnitorDsl.Constant(-0.0)
 
     "R2: a multiply then an add is one Affine, the absent pre-add the -0.0 default" {
-        IgnitorDsl.Sawtooth().mul(c(2.0)).plus(c(10.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(10.0))
+        IgnitorDsl.Saw().mul(c(2.0)).plus(c(10.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = c(10.0))
     }
 
     "R2: an add then a multiply is one Affine with the pre-add (exact at the zero crossings)" {
-        IgnitorDsl.Sawtooth().plus(c(10.0)).mul(c(2.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = c(10.0), mul = c(2.0), add = none)
+        IgnitorDsl.Saw().plus(c(10.0)).mul(c(2.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = c(10.0), mul = c(2.0), add = none)
     }
 
     "R2: a lone multiply folds, with both identities; a constant on the left folds the same" {
-        IgnitorDsl.Sawtooth().mul(c(2.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = none)
-        c(2.0).mul(IgnitorDsl.Sawtooth()).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = none)
+        IgnitorDsl.Saw().mul(c(2.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = none)
+        c(2.0).mul(IgnitorDsl.Saw()).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = none)
     }
 
     "R2: a subtract before the multiply is the negated pre-add; a leading constant plus is the pre-add" {
-        IgnitorDsl.Sawtooth().minus(c(3.0)).mul(c(2.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = c(-3.0), mul = c(2.0), add = none)
-        c(10.0).plus(IgnitorDsl.Sawtooth()).mul(c(2.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = c(10.0), mul = c(2.0), add = none)
+        IgnitorDsl.Saw().minus(c(3.0)).mul(c(2.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = c(-3.0), mul = c(2.0), add = none)
+        c(10.0).plus(IgnitorDsl.Saw()).mul(c(2.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = c(10.0), mul = c(2.0), add = none)
     }
 
     "R2: the full shape, add then multiply then add, is one node" {
-        IgnitorDsl.Sawtooth().plus(c(1.0)).mul(c(2.0)).plus(c(3.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = c(1.0), mul = c(2.0), add = c(3.0))
+        IgnitorDsl.Saw().plus(c(1.0)).mul(c(2.0)).plus(c(3.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = c(1.0), mul = c(2.0), add = c(3.0))
     }
 
     "R2: a growing run of literal multiplies composes into one coefficient" {
         // |m| >= 1 throughout: the chain's per-op clamp and the fold's single clamp saturate alike
-        IgnitorDsl.Sawtooth().mul(c(2.0)).mul(c(2.0)).plus(c(10.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(4.0), add = c(10.0))
+        IgnitorDsl.Saw().mul(c(2.0)).mul(c(2.0)).plus(c(10.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(4.0), add = c(10.0))
     }
 
     "R2: a mixed run (up then down) does not compose: the chain's intermediate clamp could differ" {
-        IgnitorDsl.Sawtooth().mul(c(100.0)).mul(c(0.01)).optimize() shouldBe
+        IgnitorDsl.Saw().mul(c(100.0)).mul(c(0.01)).optimize() shouldBe
             IgnitorDsl.Affine(
-                IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(100.0), add = none),
+                IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(100.0), add = none),
                 pre = none, mul = c(0.01), add = none,
             )
     }
 
     "R2: an attenuating run composes only over a clamped input (an Affine output is one; a bare source is not)" {
         // the source is not provably below SAFE_MAX (a Constant(1e300) source is legal): two nodes
-        IgnitorDsl.Sawtooth().mul(c(0.5)).mul(c(0.25)).optimize() shouldBe
+        IgnitorDsl.Saw().mul(c(0.5)).mul(c(0.25)).optimize() shouldBe
             IgnitorDsl.Affine(
-                IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(0.5), add = none),
+                IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(0.5), add = none),
                 pre = none, mul = c(0.25), add = none,
             )
         // through a clamping node first (mul(2) is one), the attenuating pair composes
-        IgnitorDsl.Sawtooth().mul(c(2.0)).mul(c(0.5)).mul(c(0.25)).optimize() shouldBe
+        IgnitorDsl.Saw().mul(c(2.0)).mul(c(0.5)).mul(c(0.25)).optimize() shouldBe
             IgnitorDsl.Affine(
-                IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = none),
+                IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = none),
                 pre = none, mul = c(0.125), add = none,
             )
     }
@@ -473,10 +473,10 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "R2: an Affine that carries an add is NOT a clamped input: its add sits outside the clamp" {
         // 2x + 8e15 is unbounded; composing 0.5 · 0.5 over it would clamp once where the chain
         // clamps twice (1e15 versus 5e14, half the value)
-        IgnitorDsl.Sawtooth().mul(c(2.0)).plus(c(8e15)).mul(c(0.5)).mul(c(0.5)).optimize() shouldBe
+        IgnitorDsl.Saw().mul(c(2.0)).plus(c(8e15)).mul(c(0.5)).mul(c(0.5)).optimize() shouldBe
             IgnitorDsl.Affine(
                 IgnitorDsl.Affine(
-                    IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(8e15)),
+                    IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = c(8e15)),
                     pre = none, mul = c(0.5), add = none,
                 ),
                 pre = none, mul = c(0.5), add = none,
@@ -484,16 +484,16 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "R2: a run whose product overflows, or underflows to a subnormal, is not composed" {
-        IgnitorDsl.Sawtooth().mul(c(1e300)).mul(c(1e300)).optimize() shouldBe
+        IgnitorDsl.Saw().mul(c(1e300)).mul(c(1e300)).optimize() shouldBe
             IgnitorDsl.Affine(
-                IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(1e300), add = none),
+                IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(1e300), add = none),
                 pre = none, mul = c(1e300), add = none,
             )
         // 1e-12 · 1e-300 is subnormal: the constant alone would carry a rounding error over the margin
-        IgnitorDsl.Sawtooth().mul(c(2.0)).mul(c(1e-12)).mul(c(1e-300)).optimize() shouldBe
+        IgnitorDsl.Saw().mul(c(2.0)).mul(c(1e-12)).mul(c(1e-300)).optimize() shouldBe
             IgnitorDsl.Affine(
                 IgnitorDsl.Affine(
-                    IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = none),
+                    IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = none),
                     pre = none, mul = c(1e-12), add = none,
                 ),
                 pre = none, mul = c(1e-300), add = none,
@@ -501,7 +501,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "R2: a shared Affine is not filled by an add either: the Plus stays, the sharing survives" {
-        val shared = IgnitorDsl.Sawtooth().mul(c(2.0))
+        val shared = IgnitorDsl.Saw().mul(c(2.0))
         val dsl = shared.plus(c(1.0)).plus(shared).optimize()
 
         val outer = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
@@ -509,41 +509,41 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
         inner.right shouldBe c(1.0)
         (inner.left === outer.right) shouldBe true
-        inner.left shouldBe IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = none)
+        inner.left shouldBe IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = none)
     }
 
     "R2: a Param multiply folds alone, never composed with a literal" {
         val level = IgnitorDsl.Param("level", 0.5)
 
-        IgnitorDsl.Sawtooth().mul(level).mul(c(2.0)).optimize() shouldBe
+        IgnitorDsl.Saw().mul(level).mul(c(2.0)).optimize() shouldBe
             IgnitorDsl.Affine(
-                IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = level, add = none),
+                IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = level, add = none),
                 pre = none, mul = c(2.0), add = none,
             )
     }
 
     "R2: never across an addition: mul, add, mul is two nodes; mul, add, add keeps a Plus" {
-        IgnitorDsl.Sawtooth().mul(c(2.0)).plus(c(1.0)).mul(c(3.0)).optimize() shouldBe
+        IgnitorDsl.Saw().mul(c(2.0)).plus(c(1.0)).mul(c(3.0)).optimize() shouldBe
             IgnitorDsl.Affine(
-                IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(1.0)),
+                IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = c(1.0)),
                 pre = none, mul = c(3.0), add = none,
             )
-        IgnitorDsl.Sawtooth().mul(c(2.0)).plus(c(1.0)).plus(c(2.0)).optimize() shouldBe
-            IgnitorDsl.Plus(IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(1.0)), c(2.0))
+        IgnitorDsl.Saw().mul(c(2.0)).plus(c(1.0)).plus(c(2.0)).optimize() shouldBe
+            IgnitorDsl.Plus(IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = c(1.0)), c(2.0))
     }
 
     "R2: a subtract after the multiply fills the add with the negation, bare (no Neg: that clamps now)" {
-        IgnitorDsl.Sawtooth().mul(c(2.0)).minus(c(3.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(-3.0))
-        IgnitorDsl.Sawtooth().mul(c(2.0)).minus(IgnitorDsl.Param("off", 0.5)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(-0.0).minus(IgnitorDsl.Param("off", 0.5)))
+        IgnitorDsl.Saw().mul(c(2.0)).minus(c(3.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = c(-3.0))
+        IgnitorDsl.Saw().mul(c(2.0)).minus(IgnitorDsl.Param("off", 0.5)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = c(-0.0).minus(IgnitorDsl.Param("off", 0.5)))
     }
 
     "R2: a constant minus the signal stays a Minus: the fold would clamp a bare subtract" {
         // k - x as -1 · (x + (-k)) turns a NaN into 0 and an infinity into SAFE_MAX, and it is more
         // work than the subtract; a Param on the left stays for the same reason and for param order
-        val literalLeft = c(2.0).minus(IgnitorDsl.Sawtooth())
-        val paramLeft = IgnitorDsl.Param("off", 0.5).minus(IgnitorDsl.Sawtooth())
+        val literalLeft = c(2.0).minus(IgnitorDsl.Saw())
+        val paramLeft = IgnitorDsl.Param("off", 0.5).minus(IgnitorDsl.Saw())
 
         literalLeft.optimize() shouldBe literalLeft
         paramLeft.optimize() shouldBe paramLeft
@@ -551,52 +551,52 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "R2: a divide by a block-constant divisor is a multiply by its reciprocal, evaluated once per block" {
         // the reciprocal is an expression node so the runtime's own divisor guard applies to it
-        IgnitorDsl.Sawtooth().div(c(4.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(1.0).div(c(4.0)), add = none)
-        IgnitorDsl.Sawtooth().plus(c(1.0)).div(c(4.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = c(1.0), mul = c(1.0).div(c(4.0)), add = none)
-        IgnitorDsl.Sawtooth().div(IgnitorDsl.Param("d", 4.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(1.0).div(IgnitorDsl.Param("d", 4.0)), add = none)
+        IgnitorDsl.Saw().div(c(4.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(1.0).div(c(4.0)), add = none)
+        IgnitorDsl.Saw().plus(c(1.0)).div(c(4.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = c(1.0), mul = c(1.0).div(c(4.0)), add = none)
+        IgnitorDsl.Saw().div(IgnitorDsl.Param("d", 4.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(1.0).div(IgnitorDsl.Param("d", 4.0)), add = none)
     }
 
     "R2: a divide by a literal zero is a multiply by a literal zero: a dead branch that is still built" {
         // the engine renders neither (nothing upstream renders); keeping the subtree keeps the
         // build-time draws of the nodes after it (a phase pool) in step with the authored tree
-        val filtered = IgnitorDsl.Sawtooth().lowpass(1000.0)
+        val filtered = IgnitorDsl.Saw().lowpass(1000.0)
 
         filtered.div(c(0.0)).optimize() shouldBe
             IgnitorDsl.Affine(filtered.optimize(), pre = none, mul = c(0.0), add = none)
-        IgnitorDsl.Sawtooth().div(c(-0.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(0.0), add = none)
+        IgnitorDsl.Saw().div(c(-0.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(0.0), add = none)
     }
 
     "R2: a literal run whose product underflows to zero does not compose: it would be a dead branch the chain never was" {
-        val run = IgnitorDsl.Sawtooth().mul(c(0.5)).mul(c(1e-200)).mul(c(1e-200))
+        val run = IgnitorDsl.Saw().mul(c(0.5)).mul(c(1e-200)).mul(c(1e-200))
         val optimized = run.optimize()
 
         optimized shouldBe IgnitorDsl.Affine(
-            IgnitorDsl.Affine(IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(0.5), add = none), pre = none, mul = c(1e-200), add = none),
+            IgnitorDsl.Affine(IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(0.5), add = none), pre = none, mul = c(1e-200), add = none),
             pre = none, mul = c(1e-200), add = none,
         )
         // a zero that IS one of the factors composes where the run's rules allow (an attenuating
         // run over a clamped input): both sides are dead already
-        IgnitorDsl.Sawtooth().mul(c(0.5)).mul(c(0.5)).mul(c(0.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(0.5), add = none), pre = none, mul = c(0.0), add = none)
+        IgnitorDsl.Saw().mul(c(0.5)).mul(c(0.5)).mul(c(0.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(0.5), add = none), pre = none, mul = c(0.0), add = none)
     }
 
     "R2: a negation is a multiply by minus one and composes like one" {
-        IgnitorDsl.Sawtooth().neg().optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(-1.0), add = none)
+        IgnitorDsl.Saw().neg().optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(-1.0), add = none)
         // a sign flip composes with any literal: the magnitudes the chain clamps are the fold's
-        IgnitorDsl.Sawtooth().mul(c(2.0)).neg().optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(-2.0), add = none)
-        IgnitorDsl.Sawtooth().mul(c(0.3)).neg().optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(-0.3), add = none)
-        IgnitorDsl.Sawtooth().neg().plus(c(1.0)).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(-1.0), add = c(1.0))
+        IgnitorDsl.Saw().mul(c(2.0)).neg().optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(-2.0), add = none)
+        IgnitorDsl.Saw().mul(c(0.3)).neg().optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(-0.3), add = none)
+        IgnitorDsl.Saw().neg().plus(c(1.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(-1.0), add = c(1.0))
         // the INNER sign flip does not compose with an attenuation over an unclamped input:
         // 0.5 · safeOut(-x) clamps x first where -0.5 · x does not (x can exceed SAFE_MAX here)
-        val hot = IgnitorDsl.Sawtooth().plus(c(1e300)).abs()
+        val hot = IgnitorDsl.Saw().plus(c(1e300)).abs()
 
         hot.neg().mul(c(0.5)).optimize() shouldBe
             IgnitorDsl.Affine(IgnitorDsl.Affine(hot, pre = none, mul = c(-1.0), add = none), pre = none, mul = c(0.5), add = none)
@@ -604,8 +604,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "R2: a divide by a signal, a scalar over a signal, and a scalar-only negation stay what they are" {
         val lfo = IgnitorDsl.Sine(freq = c(3.0))
-        val bySignal = IgnitorDsl.Sawtooth().div(lfo)
-        val overSignal = c(2.0).div(IgnitorDsl.Sawtooth())
+        val bySignal = IgnitorDsl.Saw().div(lfo)
+        val overSignal = c(2.0).div(IgnitorDsl.Saw())
         val scalarNeg = c(2.0).neg()
 
         bySignal.optimize() shouldBe bySignal
@@ -614,8 +614,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "R2: no multiply, no Affine: adds and subtracts stay what they are" {
-        val adds = IgnitorDsl.Sawtooth().plus(c(1.0)).plus(c(2.0))
-        val sub = IgnitorDsl.Sawtooth().minus(c(1.0))
+        val adds = IgnitorDsl.Saw().plus(c(1.0)).plus(c(2.0))
+        val sub = IgnitorDsl.Saw().minus(c(1.0))
 
         adds.optimize() shouldBe adds
         sub.optimize() shouldBe sub
@@ -623,22 +623,22 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "R2: a modulated operand is not a coefficient: mul(lfo) stays Times, add(signal) stays Plus" {
         val lfo = IgnitorDsl.Sine(freq = c(3.0))
-        val ring = IgnitorDsl.Sawtooth().mul(lfo)
-        val mix = IgnitorDsl.Sawtooth().plus(IgnitorDsl.Sine()).mul(c(0.5))
+        val ring = IgnitorDsl.Saw().mul(lfo)
+        val mix = IgnitorDsl.Saw().plus(IgnitorDsl.Sine()).mul(c(0.5))
 
         ring.optimize() shouldBe ring
-        mix.optimize() shouldBe IgnitorDsl.Affine(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Sine()), pre = none, mul = c(0.5), add = none)
+        mix.optimize() shouldBe IgnitorDsl.Affine(IgnitorDsl.Saw().plus(IgnitorDsl.Sine()), pre = none, mul = c(0.5), add = none)
     }
 
     "R2: a block-constant coefficient EXPRESSION folds as the coefficient, unevaluated" {
         val tracking = IgnitorDsl.Freq.mul(c(2.0)).plus(c(10.0))
 
-        IgnitorDsl.Sawtooth().mul(tracking).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = tracking, add = none)
+        IgnitorDsl.Saw().mul(tracking).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = tracking, add = none)
     }
 
     "R2: a shared node is never absorbed: the fold wraps it, the sharing survives" {
-        val shared = IgnitorDsl.Sawtooth().mul(c(2.0))
+        val shared = IgnitorDsl.Saw().mul(c(2.0))
         val dsl = shared.mul(c(3.0)).plus(shared).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
@@ -647,7 +647,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         outer.mul shouldBe c(3.0)
         // the shared multiply was folded ONCE and both consumers hold the same instance
         (outer.inner === plus.right) shouldBe true
-        outer.inner shouldBe IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = none)
+        outer.inner shouldBe IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = none)
     }
 
     "R2: a Param on the LEFT of a multiply or an add stays where it was written (param order is a contract)" {
@@ -678,12 +678,12 @@ class IgnitorDslOptimizerSpec : StringSpec({
         val depth = IgnitorDsl.Param("depth", 0.5).range(c(0.0), c(1.0))
 
         unipolarFreq.div(c(-1.17)).optimize() shouldBe unipolarFreq.div(c(-1.17))
-        IgnitorDsl.Sawtooth().mul(depth).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = depth, add = none)
+        IgnitorDsl.Saw().mul(depth).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = depth, add = none)
     }
 
     "R2: a range over a signal is a signal: mul(lfo.range(0, 1)) stays Times" {
-        val ring = IgnitorDsl.Sawtooth().mul(IgnitorDsl.Sine(freq = c(3.0)).range(c(0.0), c(1.0)))
+        val ring = IgnitorDsl.Saw().mul(IgnitorDsl.Sine(freq = c(3.0)).range(c(0.0), c(1.0)))
 
         ring.optimize() shouldBe ring
     }
@@ -693,18 +693,18 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // chain must be classified control-rate, or a slot-driven rangex would cost a per-sample multiply
         val depth = IgnitorDsl.Param("depth", 0.5).rangex(c(100.0), c(1600.0))
 
-        IgnitorDsl.Sawtooth().mul(depth).optimize() shouldBe
-            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = depth, add = none)
+        IgnitorDsl.Saw().mul(depth).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = depth, add = none)
     }
 
     "R2: rangex over a signal is a signal: mul(lfo.rangex(...)) stays Times" {
-        val ring = IgnitorDsl.Sawtooth().mul(IgnitorDsl.Sine(freq = c(3.0)).rangex(c(0.5), c(2.0)))
+        val ring = IgnitorDsl.Saw().mul(IgnitorDsl.Sine(freq = c(3.0)).rangex(c(0.5), c(2.0)))
 
         ring.optimize() shouldBe ring
     }
 
     "R2: optimizer(0) leaves every arithmetic node untouched" {
-        val dsl = IgnitorDsl.Sawtooth().mul(c(2.0)).plus(c(10.0)).optimizer(on = 0)
+        val dsl = IgnitorDsl.Saw().mul(c(2.0)).plus(c(10.0)).optimizer(on = 0)
 
         dsl.optimize() shouldBe dsl
     }

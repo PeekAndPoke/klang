@@ -326,7 +326,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
             // the periodic oscillators; a moving `phase` signal adds the read of its block (a scalar one moves the
             // accumulator once per block and costs nothing per sample)
-            is IgnitorDsl.Sawtooth -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Saw -> source() + phaseReads(node.phase)
             is IgnitorDsl.Square -> source() + phaseReads(node.phase)
             is IgnitorDsl.Tri -> source() + phaseReads(node.phase)
             is IgnitorDsl.Ramp -> source() + phaseReads(node.phase)

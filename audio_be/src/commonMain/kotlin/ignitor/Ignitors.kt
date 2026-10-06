@@ -656,7 +656,7 @@ object Ignitors {
         private val fallFlank: Double = 0.0,
         // SAW-only: caps the saw flyback fraction; read solely in the WaveKind.SAW branch. The PULSE kind
         // (square/triangle) ignores it — no per-shape WaveIgnitor split needed since the DSL types already
-        // separate SAW (Sawtooth/Ramp expose shapeMax) from PULSE (Pulze/Tri don't).
+        // separate SAW (Saw/Ramp expose shapeMax) from PULSE (Pulze/Tri don't).
         private val shapeMax: Double = SAW_SHAPE_MAX,
         private val phaseIn: PhaseOffset? = null,
     ) : Ignitor {
@@ -893,7 +893,7 @@ object Ignitors {
      * pitch). Single-voice form of the shape shared with [superSaw]. Per-voice analog drift via [analog].
      * Phase 0 is -1, the bottom of the rise (the flyback ends the cycle); [phase] (null: none) see [PhaseOffset].
      */
-    fun sawtooth(
+    fun saw(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         resetSamples: Double = SAW_RESET_SAMPLES,
@@ -904,7 +904,7 @@ object Ignitors {
         phaseIn = phase?.let { PhaseOffset(it) },
     )
 
-    /** Reverse sawtooth: the negated [sawtooth] (own `RAMP_RESET_SAMPLES` flyback knob). Phase 0 is +1, the top of the fall. */
+    /** Reverse sawtooth: the negated [saw] (own `RAMP_RESET_SAMPLES` flyback knob). Phase 0 is +1, the top of the fall. */
     fun ramp(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
@@ -974,7 +974,7 @@ object Ignitors {
         }
     }
 
-    /** Naive sawtooth ("zaw"): the raw [sawtooth] (`flankSamples = 0` → instant reset, aliased/harsh). Phase 0 is -1. */
+    /** Naive sawtooth ("zaw"): the raw [saw] (`flankSamples = 0` → instant reset, aliased/harsh). Phase 0 is -1. */
     fun zawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,

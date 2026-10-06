@@ -34,7 +34,7 @@ import io.peekandpoke.klang.audio_bridge.lowpass
  */
 class FilterSlotLayerFillSpec : StringSpec({
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
 
     /** A lowpass whose five envelope knobs are all slots, as `classic()` places them. */
     fun slotted(

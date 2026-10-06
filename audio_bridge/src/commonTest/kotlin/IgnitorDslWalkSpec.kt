@@ -161,7 +161,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("RawPulze", IgnitorDsl.RawPulze(freq = m(0), duty = m(1), analog = m(2), phase = m(3)), 4),
         Triple("Recip", IgnitorDsl.Recip(inner = m(0)), 1),
         Triple("Round", IgnitorDsl.Round(inner = m(0)), 1),
-        Triple("Sawtooth", IgnitorDsl.Sawtooth(freq = m(0), analog = m(1), resetSamples = 7.5, shapeMax = 7.5, phase = m(2)), 3),
+        Triple("Saw", IgnitorDsl.Saw(freq = m(0), analog = m(1), resetSamples = 7.5, shapeMax = 7.5, phase = m(2)), 3),
         Triple("Select", IgnitorDsl.Select(cond = m(0), whenTrue = m(1), whenFalse = m(2)), 3),
         Triple("Shape", IgnitorDsl.Shape(inner = m(0), shape = m(1), oversample = m(2)), 3),
         Triple("Shimmer", IgnitorDsl.Shimmer(inner = m(0), wet = m(1), feedback = m(2), tone = m(3), floor = m(4), pitches = listOf(3.0, 7.0)), 5),

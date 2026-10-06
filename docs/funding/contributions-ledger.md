@@ -283,7 +283,7 @@ the item is a contribution in its category, not whether it exists.
   - **Rules register with hardness levels** (stone, rule, guideline, guardrail; 2026-09-06). Its key line is
     "session instructions are not rules": a request is scoped to its session until it lands in the register with
     a date. It was born from a scored clean-up of 89 stale agent memories.
-  - **A Retired register,** guarded by specs (`RetiredIgnitorNamesSpec`), so agents do not bring back dead names.
+  - **A Retired register** (`docs/retired-names.md` since 2026-10-07), so agents do not bring back dead names.
   - **Review protocol:**
     - Reviews loop until a clean round, because a fix is itself an unreviewed change.
     - Round 1 reviewers see no history.

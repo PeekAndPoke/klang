@@ -62,7 +62,7 @@ object ClassicVoiceRig {
         val a = AdsrCurves.knob(namedCurves.first)
         val d = AdsrCurves.knob(namedCurves.second)
         val r = AdsrCurves.knob(namedCurves.third)
-        val saw = IgnitorDsl.Sawtooth()
+        val saw = IgnitorDsl.Saw()
         val an = IgnitorDsl.Slots.analog
         val filter: IgnitorDsl = when (door) {
             "lpf" -> IgnitorDsl.Lowpass(

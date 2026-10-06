@@ -147,7 +147,7 @@ class IgnitorTailSpec : StringSpec({
         // pick A (0.1 s) and truncate B (0.5 s) — attack happens INSIDE the gate and never
         // contributes to the tail.
         val a = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), attackSec = c(2.0), releaseSec = c(0.1))
-        val b = IgnitorDsl.Adsr(inner = IgnitorDsl.Sawtooth(), attackSec = c(0.001), releaseSec = c(0.5))
+        val b = IgnitorDsl.Adsr(inner = IgnitorDsl.Saw(), attackSec = c(0.001), releaseSec = c(0.5))
 
         tailOf(IgnitorDsl.Plus(a, b)) shouldBe 0.5
     }
@@ -169,7 +169,7 @@ class IgnitorTailSpec : StringSpec({
         val dsl = IgnitorDsl.Variants(
             listOf(
                 IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2),
-                IgnitorDsl.Sawtooth().adsr(0.01, 0.1, 0.5, 1.5),
+                IgnitorDsl.Saw().adsr(0.01, 0.1, 0.5, 1.5),
                 IgnitorDsl.Square().adsr(0.01, 0.1, 0.5, 0.8),
             )
         )

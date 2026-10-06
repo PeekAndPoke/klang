@@ -471,7 +471,9 @@ word-aware rename rule of 2.12, and its exact file list.
 
 ### 7.1 The guards
 
-- **Old names are gone**: `src/jvmTest/kotlin/RetiredIgnitorNamesSpec.kt`, walking the tree like `LexikonSpec`
+- **Old names are gone** (this guard was removed 2026-10-07 by the maintainer: code with an old name does not compile,
+  a song script with one fails `BuiltInSongsSmokeTest`, and the names are listed in `docs/retired-names.md`):
+  `src/jvmTest/kotlin/RetiredIgnitorNamesSpec.kt`, walking the tree like `LexikonSpec`
   (repo root, `kt`, `kts`, `md`, `MD`, `html`, `xml`, `py`, `sh`; skipping `build`, `.git`, `cache`,
   `kotlin-js-store`, `node_modules`, `tmp`) for `\bOsc\b`, `\bOscSlot\b`, `KlangScriptOsc`, `\boscp\b`,
   `\boscparam\b`, `\boscParams\b`, `putOscParam`, `oscParamsOrNew`, `SoundValue\.Osc`. Allowlist: the history paths

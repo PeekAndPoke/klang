@@ -737,7 +737,7 @@ private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Igni
     val lfo = when (LfoShapes.names[lfoShapeIndex]) {
         "triangle" -> Ignitors.tri(rate, analog)
         "square" -> Ignitors.pulze(rate, ConstantIgnitor(0.5), analog, flankSamples = edgeSamples)
-        "sawtooth" -> Ignitors.sawtooth(rate, analog, resetSamples = edgeSamples)
+        "sawtooth" -> Ignitors.saw(rate, analog, resetSamples = edgeSamples)
         "ramp" -> Ignitors.ramp(rate, analog, resetSamples = edgeSamples)
         else -> Ignitors.sine(rate, analog)
     }
@@ -960,9 +960,9 @@ private fun IgnitorDsl.buildRaw(
                 ),
             )
         }
-        is IgnitorDsl.Sawtooth -> pitchedSource(
+        is IgnitorDsl.Saw -> pitchedSource(
             freq,
-            Ignitors.sawtooth(
+            Ignitors.saw(
                 freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax, phase = phase.phaseInput(),
             ),
         )

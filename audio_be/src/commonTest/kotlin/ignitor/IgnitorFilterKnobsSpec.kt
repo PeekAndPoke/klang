@@ -101,7 +101,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
     /** The node right under the root memo: what the build did or did not add. */
     fun shapeOf(ignitor: Ignitor): Any = (ignitor as MemoizingIgnitor).inner::class
 
-    val saw: IgnitorDsl = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
+    val saw: IgnitorDsl = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
 
     /**
      * [blocks] blocks of a RAW runtime Ignitor built by [wrap] around the bare saw, for the rows

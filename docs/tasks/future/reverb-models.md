@@ -56,7 +56,7 @@ Convolution is both a model and the measuring stick for the others, so it likely
   one ships (the licensing rule in `CLAUDE.md`).
 - **History**: the old `iresponse` / `ir` door and the wire field `iResponse` were retired 2026-09-16
   because no convolution reverb ever read them; a future one designs its own door
-  (`CLAUDE.md`, retired list). Related idea: [`ir-to-modal-table-extraction.md`](ir-to-modal-table-extraction.md)
+  (`docs/retired-names.md`). Related idea: [`ir-to-modal-table-extraction.md`](ir-to-modal-table-extraction.md)
   (an IR reduced to a `body()` material).
 
 ## To decide when it starts

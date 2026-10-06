@@ -73,7 +73,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         return engine.execute(code).toObjectOrNull<IgnitorDsl>()!!
     }
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
     val modulated = IgnitorDsl.Param("cut", 800.0)
 
     /** The Kotlin door, by name, with everything named; `passes` is ignored by the band filters. */
@@ -255,21 +255,21 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
 
     "onepole: a modulated freq works from Kotlin (it was Double-only)" {
         val script = ks("""Ignitor.saw().onepole(Ignitor.param("cut", 800))""") as IgnitorDsl.OnePoleLowpass
-        val kotlin = IgnitorDsl.Sawtooth().onepole(modulated)
+        val kotlin = IgnitorDsl.Saw().onepole(modulated)
         script.freq shouldBe kotlin.freq
     }
 
     "the Kotlin scalar overloads wrap in Constant and default the same as the node overloads" {
         val f = c(800.0)
 
-        withClue("lowpass") { IgnitorDsl.Sawtooth().lowpass(800.0).filterFields() shouldBe IgnitorDsl.Sawtooth().lowpass(f).filterFields() }
-        withClue("highpass") { IgnitorDsl.Sawtooth().highpass(800.0).filterFields() shouldBe IgnitorDsl.Sawtooth().highpass(f).filterFields() }
-        withClue("bandpass") { IgnitorDsl.Sawtooth().bandpass(800.0).filterFields() shouldBe IgnitorDsl.Sawtooth().bandpass(f).filterFields() }
-        withClue("notch") { IgnitorDsl.Sawtooth().notch(800.0).filterFields() shouldBe IgnitorDsl.Sawtooth().notch(f).filterFields() }
+        withClue("lowpass") { IgnitorDsl.Saw().lowpass(800.0).filterFields() shouldBe IgnitorDsl.Saw().lowpass(f).filterFields() }
+        withClue("highpass") { IgnitorDsl.Saw().highpass(800.0).filterFields() shouldBe IgnitorDsl.Saw().highpass(f).filterFields() }
+        withClue("bandpass") { IgnitorDsl.Saw().bandpass(800.0).filterFields() shouldBe IgnitorDsl.Saw().bandpass(f).filterFields() }
+        withClue("notch") { IgnitorDsl.Saw().notch(800.0).filterFields() shouldBe IgnitorDsl.Saw().notch(f).filterFields() }
 
         withClue("the scalar overload carries the curves and the fill too") {
-            IgnitorDsl.Sawtooth().lowpass(800.0, decaySec = 0.3, releaseCurve = AdsrCurve.Cube).filterFields() shouldBe
-                IgnitorDsl.Sawtooth().lowpass(f, decaySec = c(0.3), releaseCurve = AdsrCurves.knob(AdsrCurve.Cube)).filterFields()
+            IgnitorDsl.Saw().lowpass(800.0, decaySec = 0.3, releaseCurve = AdsrCurve.Cube).filterFields() shouldBe
+                IgnitorDsl.Saw().lowpass(f, decaySec = c(0.3), releaseCurve = AdsrCurves.knob(AdsrCurve.Cube)).filterFields()
         }
     }
 })

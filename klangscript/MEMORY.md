@@ -85,7 +85,11 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
   no initialized top-level property lands in `NativeInterop.kt`) are the shared runtime helpers. The
   generated registration files hold only plain functions; `Generated<Lib>Docs.kt` is the only generated
   file with top-level state (its type table first). A top-level property in a registration file brings the
-  Kotlin/JS init guard back into every door of that file, with every test still green.
+  Kotlin/JS init guard back into every door of that file, with every test still green. The processor sorts
+  what KSP hands it into source order (file path, line; `SourceOrder.kt`): the output is the same on every
+  machine, and the registration order is the source order. Order changes no lookup as long as no name repeats
+  in a library and the receiver types that one value can be at once (`IgnitorDsl`, `SprudelPattern`,
+  `PatternMapperProvider`, `Function1`) keep their relative registration order.
 - **Keep the feature docs in sync**: after every implementation update `ref/feature-catalog.md` and the
   matching `language-features/NN-*.md` status.
 
@@ -139,3 +143,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-06: the generated registration is split per source area (`Generated<Lib><Area>Registration.kt`, plain functions,
   no top-level state), an entry point calls the chunks in the old order, the docs live in `Generated<Lib>Docs.kt` with
   each `KlangType` emitted once (`docs/tasks/reduce-js-bundle-size.md`, "Step 2 done").
+- 2026-10-07: the KSP processor sorts the symbols and the registration blocks into source order, so the generated
+  output no longer depends on the file system's directory order (sprudel 150 chunk functions to 56)
+  (`docs/tasks/reduce-js-bundle-size.md`, "Step 3: source order").
