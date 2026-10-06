@@ -93,7 +93,7 @@ class AffineIgnitorSpec : StringSpec({
         }
     }
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
     val none = Constant(-0.0)
 
     "the DSL node lowers to the one-pass runtime, and its fast path touches no scratch" {

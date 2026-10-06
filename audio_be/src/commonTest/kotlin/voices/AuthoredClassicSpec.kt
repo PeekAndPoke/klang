@@ -58,14 +58,14 @@ class AuthoredClassicSpec : StringSpec({
     val longTail: IgnitorDsl = IgnitorDsl.Sine().adsr(0.005, 0.1, 0.8, 0.5)
 
     /** An instrument whose own tail (0.02 s) is inside the voice envelope's release: nothing is stretched. */
-    val shortTail: IgnitorDsl = IgnitorDsl.Sawtooth().adsr(0.005, 0.1, 0.8, 0.02)
+    val shortTail: IgnitorDsl = IgnitorDsl.Saw().adsr(0.005, 0.1, 0.8, 0.02)
 
     /**
      * No envelope of its own and a level at its root: under `adsrOff` it sounds until the voice ends, so the
      * teardown fade over the voice's last frames is what takes it to zero (an instrument with its own short
      * release would be silent there already, and no row could see the fade).
      */
-    val sustainedLevel: IgnitorDsl = IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.5))
+    val sustainedLevel: IgnitorDsl = IgnitorDsl.Saw().mul(IgnitorDsl.Constant(0.5))
 
     /**
      * Its own ROOT envelope with a MODULATED release (a perlin-driven 0.3 s, give or take 10 ms), which no build can
@@ -73,7 +73,7 @@ class AuthoredClassicSpec : StringSpec({
      * (0.05 s past the gate) while this envelope is still releasing, so only the teardown fade takes it to zero.
      */
     val modulatedRelease: IgnitorDsl = IgnitorDsl.Adsr(
-        inner = IgnitorDsl.Sawtooth(),
+        inner = IgnitorDsl.Saw(),
         attackSec = IgnitorDsl.Constant(0.005),
         decaySec = IgnitorDsl.Constant(0.1),
         sustainLevel = IgnitorDsl.Constant(0.8),

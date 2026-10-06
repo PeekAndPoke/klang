@@ -54,17 +54,17 @@ class OscShapeEffectSpec : StringSpec({
 
     val clean = IgnitorDsl.Constant(0.0) // analog off → deterministic render
 
-    "Sawtooth.resetSamples reaches the audio" {
+    "Saw.resetSamples reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Sawtooth(analog = clean, resetSamples = 2.0),
-            IgnitorDsl.Sawtooth(analog = clean, resetSamples = 20.0),
+            IgnitorDsl.Saw(analog = clean, resetSamples = 2.0),
+            IgnitorDsl.Saw(analog = clean, resetSamples = 20.0),
         )
     }
 
-    "Sawtooth.shapeMax reaches the audio (clamps the flyback at high pitch)" {
+    "Saw.shapeMax reaches the audio (clamps the flyback at high pitch)" {
         assertTakesEffect(
-            IgnitorDsl.Sawtooth(analog = clean, resetSamples = 10.0, shapeMax = 0.1),
-            IgnitorDsl.Sawtooth(analog = clean, resetSamples = 10.0, shapeMax = 0.5),
+            IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.1),
+            IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.5),
             freqHz = 4000.0,
         )
     }

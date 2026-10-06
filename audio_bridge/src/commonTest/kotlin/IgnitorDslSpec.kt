@@ -98,7 +98,7 @@ class IgnitorDslSpec : StringSpec({
     }
 
     "tap extension adds a RawTap with stdlib-matching defaults" {
-        val dsl = IgnitorDsl.Sawtooth().eq().tap(850.0)
+        val dsl = IgnitorDsl.Saw().eq().tap(850.0)
         val tap = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
         (tap.freq as IgnitorDsl.Constant).value shouldBe 850.0
         // C1 (filter unification): ONE default q = 0.707 on every surface, tap included.
@@ -107,14 +107,14 @@ class IgnitorDslSpec : StringSpec({
     }
 
     "tap and band append into ONE ordered section list" {
-        val dsl = IgnitorDsl.Sawtooth().eq().tap(850.0, 0.707, 1.7).band(4000.0, 0.7, -3.0)
+        val dsl = IgnitorDsl.Saw().eq().tap(850.0, 0.707, 1.7).band(4000.0, 0.7, -3.0)
         dsl.sections.size shouldBe 2
         dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
         dsl.sections[1].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
     }
 
     "band extension accepts IgnitorDsl params (note tracking)" {
-        val dsl = IgnitorDsl.Sawtooth().eq().band(freq = IgnitorDsl.Freq)
+        val dsl = IgnitorDsl.Saw().eq().band(freq = IgnitorDsl.Freq)
         (dsl.sections.single() as IgnitorDsl.EqSection.Bell).freq.shouldBeInstanceOf<IgnitorDsl.Freq>()
     }
 
@@ -124,7 +124,7 @@ class IgnitorDslSpec : StringSpec({
         val dsl = IgnitorDsl.Variants(
             listOf(
                 IgnitorDsl.Sine(freq = IgnitorDsl.Param("a", 440.0), analog = IgnitorDsl.Constant(0.0)),
-                IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("b", 220.0), analog = IgnitorDsl.Constant(0.0)),
+                IgnitorDsl.Saw(freq = IgnitorDsl.Param("b", 220.0), analog = IgnitorDsl.Constant(0.0)),
             )
         )
         val params = mutableListOf<IgnitorDsl.Param>()
@@ -136,7 +136,7 @@ class IgnitorDslSpec : StringSpec({
         val dsl = IgnitorDsl.Variants(
             listOf(
                 IgnitorDsl.Sine(freq = IgnitorDsl.Param("a", 440.0), analog = IgnitorDsl.Constant(0.0)),
-                IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("b", 220.0), analog = IgnitorDsl.Constant(0.0)),
+                IgnitorDsl.Saw(freq = IgnitorDsl.Param("b", 220.0), analog = IgnitorDsl.Constant(0.0)),
             )
         )
         val viaCollect = mutableListOf<IgnitorDsl.Param>().also { dsl.collectParams(it) }

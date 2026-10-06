@@ -120,7 +120,7 @@ private data class SawRampKnobs(
 ) {
     /** [node] with these fields written through its own data class `.copy()`, never through a builder. */
     fun onto(node: IgnitorDsl): IgnitorDsl = when (node) {
-        is IgnitorDsl.Sawtooth -> node.copy(
+        is IgnitorDsl.Saw -> node.copy(
             freq = freq ?: node.freq,
             analog = analog ?: node.analog,
             resetSamples = resetSamples ?: node.resetSamples,

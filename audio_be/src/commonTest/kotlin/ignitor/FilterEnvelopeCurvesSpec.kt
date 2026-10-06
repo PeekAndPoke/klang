@@ -47,7 +47,7 @@ class FilterEnvelopeCurvesSpec : StringSpec({
     val blockFrames = 128
     val blocks = 24
     val freqHz = 220.0
-    val saw: IgnitorDsl = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
+    val saw: IgnitorDsl = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
 
     fun ctx(rng: Random) = IgniteContext(
         sampleRate = sr, voiceDurationFrames = blockFrames * blocks / 2, gateEndFrame = blockFrames * blocks / 2,

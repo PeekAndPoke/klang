@@ -142,13 +142,13 @@ class SuperSineOutOfRangePhaseSpec : StringSpec({
     }
 
     "the single-voice saw under the same abuse aliases, in either sign" {
-        assertAliasing(render(Ignitors.sawtooth(), freqHz = 2.37 * sampleRate), "saw at 2.37 x sampleRate")
-        assertAliasing(render(Ignitors.sawtooth(), freqHz = -2.37 * sampleRate), "saw at -2.37 x sampleRate")
+        assertAliasing(render(Ignitors.saw(), freqHz = 2.37 * sampleRate), "saw at 2.37 x sampleRate")
+        assertAliasing(render(Ignitors.saw(), freqHz = -2.37 * sampleRate), "saw at -2.37 x sampleRate")
     }
 
     "a drifting single-voice saw just under one cycle per sample cannot be carried over the edge" {
         for (seed in 1..2) {
-            val sig = Ignitors.sawtooth(analog = ConstantIgnitor(20.0))
+            val sig = Ignitors.saw(analog = ConstantIgnitor(20.0))
 
             assertAliasing(render(sig, freqHz = 0.9999 * sampleRate, blocks = driftBlocks, seed = seed), "drifting saw, seed $seed")
         }

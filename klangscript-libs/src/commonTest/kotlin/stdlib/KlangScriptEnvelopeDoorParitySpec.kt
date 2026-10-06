@@ -44,7 +44,7 @@ class KlangScriptEnvelopeDoorParitySpec : StringSpec({
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
 
     /**
      * One envelope of the family: how the script writes it with a given `adsr(...)` call, how the

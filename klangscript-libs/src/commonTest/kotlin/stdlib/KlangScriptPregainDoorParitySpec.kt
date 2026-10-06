@@ -44,21 +44,21 @@ class KlangScriptPregainDoorParitySpec : StringSpec({
 
     "the script helper builds the Kotlin helper's tree, node for node" {
         val script = ks("Ignitor.saw().pregain()")
-        val kotlin = IgnitorDsl.Sawtooth().pregain()
+        val kotlin = IgnitorDsl.Saw().pregain()
 
         script shouldBe kotlin
 
         // ...and it really is the multiply, with the signal on the left on both doors.
         val times = script.shouldBeInstanceOf<IgnitorDsl.Times>()
 
-        times.left shouldBe IgnitorDsl.Sawtooth()
+        times.left shouldBe IgnitorDsl.Saw()
         times.right shouldBe IgnitorDsl.Slots.pregain
     }
 
     "on each door the helper equals the spelled-out mul, and the doors agree with each other" {
         ks("Ignitor.saw().pregain()") shouldBe ks("Ignitor.saw().mul(Ignitor.slot.pregain)")
-        IgnitorDsl.Sawtooth().pregain() shouldBe IgnitorDsl.Sawtooth().mul(IgnitorDsl.Slots.pregain)
-        ks("Ignitor.saw().mul(Ignitor.slot.pregain)") shouldBe IgnitorDsl.Sawtooth().mul(IgnitorDsl.Slots.pregain)
+        IgnitorDsl.Saw().pregain() shouldBe IgnitorDsl.Saw().mul(IgnitorDsl.Slots.pregain)
+        ks("Ignitor.saw().mul(Ignitor.slot.pregain)") shouldBe IgnitorDsl.Saw().mul(IgnitorDsl.Slots.pregain)
     }
 
     "a whole driven instrument is the same tree on both doors" {
@@ -67,12 +67,12 @@ class KlangScriptPregainDoorParitySpec : StringSpec({
         // `2.0`, where the shaper saturates and the slot is inaudible: a tree comparison passes at
         // either, but a spec is where a reader copies an instrument from.
         val script = ks("Ignitor.saw().pregain().distort(0.5)")
-        val kotlin = IgnitorDsl.Sawtooth().pregain().distort(0.5)
+        val kotlin = IgnitorDsl.Saw().pregain().distort(0.5)
 
         script shouldBe kotlin
 
         withClue("the slot sits INSIDE the distortion, which is the whole point of the shape") {
-            script shouldNotBe IgnitorDsl.Sawtooth().distort(0.5).pregain()
+            script shouldNotBe IgnitorDsl.Saw().distort(0.5).pregain()
         }
     }
 })

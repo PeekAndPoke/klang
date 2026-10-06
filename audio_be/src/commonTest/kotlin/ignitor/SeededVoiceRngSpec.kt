@@ -50,7 +50,7 @@ class SeededVoiceRngSpec : StringSpec({
     fun wildDsl(): IgnitorDsl = IgnitorDsl.Plus(
         IgnitorDsl.Plus(
             IgnitorDsl.Plus(
-                IgnitorDsl.Sawtooth(analog = IgnitorDsl.Constant(0.7)),
+                IgnitorDsl.Saw(analog = IgnitorDsl.Constant(0.7)),
                 IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.5)),
             ),
             IgnitorDsl.Pluck(),

@@ -120,9 +120,9 @@ class EqIgnitorSpec : StringSpec({
         // The one variant no other row renders — a swapped Bandpass mapping arm in the
         // runtime (e.g. -> NOTCH) would ship a spectrally INVERTED filter with every other
         // row green.
-        val chained = IgnitorDsl.Bandpass(IgnitorDsl.Sawtooth(), c(1200.0), c(3.0))
+        val chained = IgnitorDsl.Bandpass(IgnitorDsl.Saw(), c(1200.0), c(3.0))
         val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Bandpass(c(1200.0), c(3.0))),
         )
         assertDslParity(chained, fused)
@@ -141,12 +141,12 @@ class EqIgnitorSpec : StringSpec({
             IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(2.0)), c(500.0)),
         )
         val chained = IgnitorDsl.Lowpass(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             freq = lfoCutoff(),
             q = c(0.9),
         )
         val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Lowpass(lfoCutoff(), c(0.9))),
         )
         assertDslParity(chained, fused)
@@ -163,12 +163,12 @@ class EqIgnitorSpec : StringSpec({
             IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(2.0), analog = c(0.3)), c(500.0)),
         )
         val chained = IgnitorDsl.Lowpass(
-            inner = IgnitorDsl.Sawtooth(analog = c(0.7)),
+            inner = IgnitorDsl.Saw(analog = c(0.7)),
             freq = lfoCutoff(),
             q = c(0.9),
         )
         val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(analog = c(0.7)),
+            inner = IgnitorDsl.Saw(analog = c(0.7)),
             sections = listOf(EqSection.Lowpass(lfoCutoff(), c(0.9))),
         )
 
@@ -247,7 +247,7 @@ class EqIgnitorSpec : StringSpec({
         )
         val chained = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 freq = lfoCutoff(),
                 q = c(0.9),
             ),
@@ -256,7 +256,7 @@ class EqIgnitorSpec : StringSpec({
         )
         val fused = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Eq(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 sections = listOf(EqSection.Lowpass(lfoCutoff(), c(0.9))),
             ),
             rate = c(5.0),
@@ -300,9 +300,9 @@ class EqIgnitorSpec : StringSpec({
         // the adapter (instead of ctx.sampleRate) would mistune every fused section on the
         // 48k worklet with the whole suite green. One chained-vs-fused row at 48k pins the
         // plumbing against the SvfIgnitor oracle.
-        val chained = IgnitorDsl.Lowpass(IgnitorDsl.Sawtooth(), c(2000.0), c(0.9))
+        val chained = IgnitorDsl.Lowpass(IgnitorDsl.Saw(), c(2000.0), c(0.9))
         val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Lowpass(c(2000.0), c(0.9))),
         )
         val a = chained.toExciter()
@@ -341,12 +341,12 @@ class EqIgnitorSpec : StringSpec({
         // the first frequency and reddens the 110/440 runs.
         fun trackingCutoff() = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Param("track", 4.0))
         val chained = IgnitorDsl.Highpass(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             freq = trackingCutoff(),
             q = c(0.9),
         )
         val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Highpass(trackingCutoff(), c(0.9))),
         )
         assertDslParity(chained, fused, freqs = listOf(110.0, 220.0, 440.0))
@@ -363,7 +363,7 @@ class EqIgnitorSpec : StringSpec({
         fun trackingCutoff() = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Param("track", 4.0))
         val a = IgnitorDsl.Highpass(
             inner = IgnitorDsl.Highpass(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 freq = IgnitorDsl.Freq,
                 q = c(0.9),
             ),
@@ -371,7 +371,7 @@ class EqIgnitorSpec : StringSpec({
             q = c(1.3),
         ).toExciter()
         val b = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(
                 EqSection.Highpass(IgnitorDsl.Freq, c(0.9)),
                 EqSection.Highpass(trackingCutoff(), c(1.3)),
@@ -406,10 +406,10 @@ class EqIgnitorSpec : StringSpec({
             c(0.01),
         )
         val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Bell(c(850.0), c(0.9), dbExpr())),
         ).toExciter()
-        val srcOnly = IgnitorDsl.Sawtooth().toExciter()
+        val srcOnly = IgnitorDsl.Saw().toExciter()
         val core = EqCore(1)
 
         val glide = listOf(220.0, 330.0, 330.0)
@@ -438,7 +438,7 @@ class EqIgnitorSpec : StringSpec({
         // The D4d replacement target, wired end to end: the legacy tree shares ONE source
         // node (identity-shared -> MemoizingIgnitor replay), the fused tree hands the same
         // node to Eq as inner — taps read the Eq input by definition.
-        val sharedLegacy = IgnitorDsl.Sawtooth()
+        val sharedLegacy = IgnitorDsl.Saw()
         val legacy = IgnitorDsl.Plus(
             IgnitorDsl.Plus(
                 sharedLegacy,
@@ -458,7 +458,7 @@ class EqIgnitorSpec : StringSpec({
             .lowpass(5300.0, 0.707)
 
         val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(
                 EqSection.RawTap(c(1000.0), c(0.8), c(2.0)),
                 EqSection.RawTap(c(4000.0), c(0.85), c(5.5)),
@@ -478,7 +478,7 @@ class EqIgnitorSpec : StringSpec({
         // every parity row above green. NOTE this is not the song's literal shape — the serial
         // tail is appended as SECTIONS here, whereas a song chains .notch()/.lowpass() as
         // separate nodes after the Eq (that shape is pinned by StdLibIgnitorTest instead).
-        val sharedLegacy = IgnitorDsl.Sawtooth()
+        val sharedLegacy = IgnitorDsl.Saw()
         val legacy = IgnitorDsl.Plus(
             IgnitorDsl.Plus(
                 sharedLegacy,
@@ -489,7 +489,7 @@ class EqIgnitorSpec : StringSpec({
             .notch(210.0, 2.5)
             .lowpass(5300.0, 0.707)
 
-        val authored = IgnitorDsl.Sawtooth()
+        val authored = IgnitorDsl.Saw()
             .eq()
             .tap(1000.0, 0.8, 2.0)
             .tap(4000.0, 0.85, 5.5)
@@ -518,8 +518,8 @@ class EqIgnitorSpec : StringSpec({
         val qBell = q / sqrt(aSq)
         val db = 20.0 * log10(aSq)
 
-        val oneTap = IgnitorDsl.Sawtooth().eq().tap(850.0, q, gain)
-        val oneBell = IgnitorDsl.Sawtooth().eq().band(850.0, qBell, db)
+        val oneTap = IgnitorDsl.Saw().eq().tap(850.0, q, gain)
+        val oneBell = IgnitorDsl.Saw().eq().band(850.0, qBell, db)
 
         maxAbsDiff(oneTap, oneBell) shouldBeLessThan 1e-9
     }
@@ -540,8 +540,8 @@ class EqIgnitorSpec : StringSpec({
         // figure does; a max-abs-diff bound cannot express that.
         val bands = listOf(850.0 to (0.707 to 1.7), 2500.0 to (0.7 to 5.0))
 
-        var taps = IgnitorDsl.Sawtooth().eq()
-        var bells = IgnitorDsl.Sawtooth().eq()
+        var taps = IgnitorDsl.Saw().eq()
+        var bells = IgnitorDsl.Saw().eq()
         for ((freq, spec) in bands) {
             val (q, gain) = spec
             val aSq = 1.0 + gain // C2 unity-peak taps: q is out of the level
@@ -556,9 +556,9 @@ class EqIgnitorSpec : StringSpec({
     "static 0 dB bell is skipped: bit-equal to the chain WITHOUT the bell" {
         // The adapter-owned skip (EqCore KDoc): Param-backed db is per-voice constant, so a
         // 0 dB bell can never move off zero and its slot is retired to passthrough.
-        val without = IgnitorDsl.Sawtooth().lowpass(2000.0, 1.0)
+        val without = IgnitorDsl.Saw().lowpass(2000.0, 1.0)
         val with = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(
                 EqSection.Bell(c(850.0), c(0.9), IgnitorDsl.Param("belldb", 0.0)),
                 EqSection.Lowpass(c(2000.0), c(1.0)),
@@ -570,9 +570,9 @@ class EqIgnitorSpec : StringSpec({
     "EXPRESSION-backed 0 dB bell stays transparent through the running-state path" {
         // Not static (Times is neither Param nor Constant) -> the core's explicit 0 dB
         // branch runs state every block and emits v0 — still bit-transparent.
-        val without = IgnitorDsl.Sawtooth().lowpass(2000.0, 1.0)
+        val without = IgnitorDsl.Saw().lowpass(2000.0, 1.0)
         val with = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(
                 EqSection.Bell(c(850.0), c(0.9), IgnitorDsl.Times(c(0.0), IgnitorDsl.Freq)),
                 EqSection.Lowpass(c(2000.0), c(1.0)),
@@ -586,11 +586,11 @@ class EqIgnitorSpec : StringSpec({
         // of the same value — the ignitorParams plumbing goes through the same buildIgnitor leaf
         // path as every other param.
         val overridden = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Bell(c(850.0), c(0.9), IgnitorDsl.Param("belldb", 0.0))),
         )
         val explicit = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Bell(c(850.0), c(0.9), c(6.0))),
         )
         assertDslParity(explicit, overridden, ignitorParams = mapOf("belldb" to 6.0))
@@ -603,15 +603,15 @@ class EqIgnitorSpec : StringSpec({
         // and the process() entry guards neither throw nor mutate the buffer at sectionCount
         // 0 (a later `require(sectionCount > 0)` is the realistic regression). It does NOT
         // pin loop-index arithmetic — the 1-section rows carry that.
-        val bare = IgnitorDsl.Sawtooth()
-        val emptyEq = IgnitorDsl.Eq(inner = IgnitorDsl.Sawtooth(), sections = emptyList())
+        val bare = IgnitorDsl.Saw()
+        val emptyEq = IgnitorDsl.Eq(inner = IgnitorDsl.Saw(), sections = emptyList())
         assertDslParity(bare, emptyEq)
     }
 
     "production sub-block onset renders bit-equal (offset != 0, partial length, first call)" {
-        val chained = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0, 0.707)
+        val chained = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0, 0.707)
         val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
+            inner = IgnitorDsl.Saw(),
             sections = listOf(
                 EqSection.Notch(c(210.0), c(2.5)),
                 EqSection.Lowpass(c(5300.0), c(0.707)),
@@ -700,7 +700,7 @@ class EqIgnitorSpec : StringSpec({
 
         val eq = eqOf(
             IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 freq = IgnitorDsl.Constant(1200.0),
                 q = IgnitorDsl.Param("res", 1.2),
                 passes = IgnitorDsl.Constant(3.0),

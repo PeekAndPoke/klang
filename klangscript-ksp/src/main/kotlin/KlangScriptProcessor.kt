@@ -16,6 +16,7 @@ import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
+import com.google.devtools.ksp.symbol.FileLocation
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
@@ -104,17 +105,18 @@ class KlangScriptProcessor(
     override fun process(resolver: Resolver): List<KSAnnotated> {
         logger.info("KlangScriptProcessor: Starting processing")
 
-        // Collect all annotated symbols
+        // Collect all annotated symbols, each list in source order ([sortedBySource]): KSP returns them in
+        // the order the file system lists the source directory, which differs between machines.
         val objectClasses = resolver.getSymbolsWithAnnotation(ANN_OBJECT)
-            .filterIsInstance<KSClassDeclaration>().toList()
+            .filterIsInstance<KSClassDeclaration>().toList().sortedBySource { it.sourcePosition() }
         val typeExtClasses = resolver.getSymbolsWithAnnotation(ANN_TYPE_EXTENSIONS)
-            .filterIsInstance<KSClassDeclaration>().toList()
+            .filterIsInstance<KSClassDeclaration>().toList().sortedBySource { it.sourcePosition() }
         val topLevelFunctions = resolver.getSymbolsWithAnnotation(ANN_FUNCTION)
-            .filterIsInstance<KSFunctionDeclaration>().toList()
+            .filterIsInstance<KSFunctionDeclaration>().toList().sortedBySource { it.sourcePosition() }
         val topLevelProperties = resolver.getSymbolsWithAnnotation(ANN_PROPERTY)
-            .filterIsInstance<KSPropertyDeclaration>().toList()
+            .filterIsInstance<KSPropertyDeclaration>().toList().sortedBySource { it.sourcePosition() }
         val topLevelConstants = resolver.getSymbolsWithAnnotation(ANN_CONSTANT)
-            .filterIsInstance<KSPropertyDeclaration>().toList()
+            .filterIsInstance<KSPropertyDeclaration>().toList().sortedBySource { it.sourcePosition() }
 
         logger.info(
             "KlangScriptProcessor: Found ${objectClasses.size} @Object, " +
@@ -144,7 +146,7 @@ class KlangScriptProcessor(
 
         // @Method must live inside an @Object or @TypeExtensions class.
         val allMethods = resolver.getSymbolsWithAnnotation(ANN_METHOD)
-            .filterIsInstance<KSFunctionDeclaration>().toList()
+            .filterIsInstance<KSFunctionDeclaration>().toList().sortedBySource { it.sourcePosition() }
         for (method in allMethods) {
             val scriptName = getAnnotationStringArg(method, ANN_METHOD, "name")
                 .let { if (it.isNullOrEmpty()) method.simpleName.asString() else it }
@@ -164,7 +166,7 @@ class KlangScriptProcessor(
         // @Invoke is the one call form of a callable object: `operator fun invoke` inside an
         // @Object or @TypeExtensions class, at most one per class (KlangScript has no overloads).
         val allInvokes = resolver.getSymbolsWithAnnotation(ANN_INVOKE)
-            .filterIsInstance<KSFunctionDeclaration>().toList()
+            .filterIsInstance<KSFunctionDeclaration>().toList().sortedBySource { it.sourcePosition() }
         val invokesPerClass = allInvokes.groupingBy { it.parentDeclaration }.eachCount()
         for (fn in allInvokes) {
             val parent = fn.parentDeclaration
@@ -388,6 +390,17 @@ class KlangScriptProcessor(
 
     // ===== Annotation helpers =====
 
+    /** This declaration's [SourcePosition]: its file, its line, and its qualified name as the tie-breaker. */
+    private fun KSDeclaration.sourcePosition(): SourcePosition {
+        val fileLocation = location as? FileLocation
+
+        return SourcePosition(
+            filePath = fileLocation?.filePath ?: containingFile?.filePath ?: "",
+            line = fileLocation?.lineNumber ?: 0,
+            name = qualifiedName?.asString() ?: simpleName.asString(),
+        )
+    }
+
     private fun getLibraryName(cls: KSClassDeclaration): String? {
         return getAnnotationStringArg(cls, ANN_LIBRARY, "name")
     }
@@ -531,8 +544,11 @@ class KlangScriptProcessor(
     /** One generated source file: its name without `.kt`, and its text. */
     private data class GeneratedFile(val fileName: String, val text: String)
 
-    /** One rendered registration block and the area identifier ([areaOf]) of the source file that declares it. */
-    private data class RegistrationBlock(val area: String, val text: String)
+    /**
+     * One rendered registration block, the area identifier ([areaOf]) of the source file that declares it, and the
+     * [SourcePosition] of its declaration, which orders the blocks.
+     */
+    private data class RegistrationBlock(val area: String, val position: SourcePosition, val text: String)
 
     /**
      * The generated files of one library:
@@ -541,8 +557,8 @@ class KlangScriptProcessor(
      *    part, so sprudel's `lang_structural_chunk.kt` belongs to `lang_structural`, and a file without
      *    `_` such as `KlangScriptIgnitor.kt` is its own area), holding plain chunk functions;
      *  - `Generated<Lib>Registration.kt`, the entry point `register<Lib>Generated()`, which calls every
-     *    chunk in the order the blocks were collected (the registration order of the single file before
-     *    the split) and then registers the docs;
+     *    chunk in source order (the blocks sorted by [SourcePosition], so one area's blocks come out
+     *    together and the order is the same on every machine) and then registers the docs;
      *  - `Generated<Lib>Docs.kt`, the docs map and the [KlangTypeTable] its types are taken from.
      *
      * Only the docs file has top-level state. Kotlin/JS starts every function of a file that holds an
@@ -731,7 +747,7 @@ class KlangScriptProcessor(
                     appendLine(item.renderRegistration().prependIndent("    "))
                 }
             }
-            registrationBlocks.add(RegistrationBlock(areaOf(obj.cls.containingFile), block))
+            registrationBlocks.add(RegistrationBlock(areaOf(obj.cls.containingFile), obj.cls.sourcePosition(), block))
         }
 
         // Type extensions
@@ -749,7 +765,7 @@ class KlangScriptProcessor(
                         val item = buildFileLevelExtItem(method, ext.typeDecl)
                         appendLine(item.renderRegistration().prependIndent("    "))
                     }
-                    registrationBlocks.add(RegistrationBlock(areaOf(method.fn.containingFile), block))
+                    registrationBlocks.add(RegistrationBlock(areaOf(method.fn.containingFile), method.fn.sourcePosition(), block))
                 }
             } else {
                 val block = buildString {
@@ -766,7 +782,7 @@ class KlangScriptProcessor(
                     }
                     appendLine("    }")
                 }
-                registrationBlocks.add(RegistrationBlock(areaOf(ext.cls.containingFile), block))
+                registrationBlocks.add(RegistrationBlock(areaOf(ext.cls.containingFile), ext.cls.sourcePosition(), block))
             }
         }
 
@@ -778,7 +794,7 @@ class KlangScriptProcessor(
                 val item = buildTopLevelFunctionItem(fn)
                 appendLine(item.renderRegistration().prependIndent("    "))
             }
-            registrationBlocks.add(RegistrationBlock(areaOf(fn.fn.containingFile), block))
+            registrationBlocks.add(RegistrationBlock(areaOf(fn.fn.containingFile), fn.fn.sourcePosition(), block))
         }
 
         // Top-level properties: register as named native objects.
@@ -788,16 +804,16 @@ class KlangScriptProcessor(
                 appendLine("    // @Property on ${prop.prop.simpleName.asString()}")
                 appendLine("    registerObject(\"${prop.name}\", ${escapeIdentifier(prop.prop.simpleName.asString())})")
             }
-            registrationBlocks.add(RegistrationBlock(areaOf(prop.prop.containingFile), block))
+            registrationBlocks.add(RegistrationBlock(areaOf(prop.prop.containingFile), prop.prop.sourcePosition(), block))
         }
 
-        // Distribute the blocks over chunk functions, in their collected order. A chunk holds blocks of
-        // ONE area and stays under a conservative character budget, well under the JVM's 64 KB limit per
-        // method (source size is a loose proxy for bytecode size; 20_000 chars keeps headroom). The
-        // entry point calls the chunks in this same order, so the registration order is the order the
-        // single generated file had before the split.
+        // Distribute the blocks over chunk functions, in source order (file path, then line): the order of
+        // the declarations, the same on every machine, with one area's blocks together. A chunk holds blocks
+        // of ONE area and stays under a conservative character budget, well under the JVM's 64 KB limit per
+        // method (source size is a loose proxy for bytecode size; 20_000 chars keeps headroom). The entry
+        // point calls the chunks in this same order, so the registration order is the source order.
         val chunks = distributeIntoChunks(
-            blocks = registrationBlocks.map { it.area to it.text },
+            blocks = registrationBlocks.sortedBySource { it.position }.map { it.area to it.text },
             budget = 20_000,
             functionPrefix = "register$capitalizedName",
         )
@@ -818,7 +834,7 @@ class KlangScriptProcessor(
             files.add(GeneratedFile("Generated$capitalizedName${area}Registration", text))
         }
 
-        // The entry point: every chunk in the collected order, then the docs.
+        // The entry point: every chunk in source order, then the docs.
         val entryPoint = buildString {
             appendLine("// Generated by KlangScriptProcessor, DO NOT EDIT")
             appendLine()

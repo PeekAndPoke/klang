@@ -217,26 +217,26 @@ class ExcitersTest : StringSpec({
 
     "sawtooth - amplitude close to gain (PolyBLEP softens peaks)" {
         val g = 0.6
-        val buf = generate(Ignitors.sawtooth().withGain(gain(g)), freqHz = 440.0)
+        val buf = generate(Ignitors.saw().withGain(gain(g)), freqHz = 440.0)
         // PolyBLEP rounds the discontinuity, so peak may be slightly below gain
         buf.peakAmplitude() shouldBe (g plusOrMinus 0.05)
     }
 
     "sawtooth - correct frequency (zero crossings)" {
         // Sawtooth crosses zero once per cycle going up, plus the reset jump may cause another
-        val buf = generate(Ignitors.sawtooth(), freqHz = 440.0)
+        val buf = generate(Ignitors.saw(), freqHz = 440.0)
         val crossings = buf.zeroCrossings()
         crossings shouldBeGreaterThanOrEqual 40
         crossings shouldBeLessThanOrEqual 90
     }
 
     "sawtooth - symmetric around zero" {
-        val buf = generate(Ignitors.sawtooth(), freqHz = 440.0)
+        val buf = generate(Ignitors.saw(), freqHz = 440.0)
         buf.dcOffset() shouldBe (0.0 plusOrMinus 0.02)
     }
 
     "sawtooth - phase continuity across blocks" {
-        val sig = Ignitors.sawtooth()
+        val sig = Ignitors.saw()
         val blockSize = 128
         val ctx = createCtx(blockSize)
         val buf1 = AudioBuffer(blockSize)
@@ -796,7 +796,7 @@ class ExcitersTest : StringSpec({
     }
 
     "sawtooth - negative phaseMod does not cause phase drift" {
-        val sig = Ignitors.sawtooth()
+        val sig = Ignitors.saw()
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }

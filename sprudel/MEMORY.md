@@ -181,3 +181,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`, maintainer decisions).
 - 2026-10-05: `String.range` / `String.rangex` removed (a silent no-op or a wrong `exp` on discrete values); a
   mini-notation string scales with `.mul(k).add(c)` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
+- 2026-10-07: the sound door `sndTriangle()` is `sndTri()`, like `sndSaw()`; it still sets the sound `triangle`
+  (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 4).

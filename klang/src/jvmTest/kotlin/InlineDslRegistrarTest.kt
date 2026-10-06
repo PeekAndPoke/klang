@@ -87,7 +87,7 @@ class InlineDslRegistrarTest : StringSpec({
         val (reg, sent) = newRegistrar()
 
         val name1 = reg.ignitors.registerOrLookup(IgnitorDsl.Sine())
-        val name2 = reg.ignitors.registerOrLookup(IgnitorDsl.Sawtooth())
+        val name2 = reg.ignitors.registerOrLookup(IgnitorDsl.Saw())
         val name3 = reg.ignitors.registerOrLookup(IgnitorDsl.Square())
 
         name1 shouldNotBe name2
@@ -171,7 +171,7 @@ class InlineDslRegistrarTest : StringSpec({
 
     "announceAll registers every inline DSL kind found in the events" {
         val (reg, sent) = newRegistrar()
-        val osc = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Constant(123.45))
+        val osc = IgnitorDsl.Saw(freq = IgnitorDsl.Constant(123.45))
         val master = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(2.6)))
         val katalyst = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)))
 
@@ -231,7 +231,7 @@ class InlineDslRegistrarTest : StringSpec({
                     val dsl = if (i % 3 == 0) {
                         IgnitorDsl.Sine()
                     } else {
-                        IgnitorDsl.Sawtooth(freq = IgnitorDsl.Constant(440.0 + t * 1000 + i))
+                        IgnitorDsl.Saw(freq = IgnitorDsl.Constant(440.0 + t * 1000 + i))
                     }
                     results[t][i] = reg.ignitors.registerOrLookup(dsl)
                 }

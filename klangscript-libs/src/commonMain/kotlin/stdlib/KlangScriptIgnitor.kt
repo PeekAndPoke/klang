@@ -93,7 +93,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun saw(freq: IgnitorDslLike? = null, configure: ((OscSawBuilder) -> OscSawBuilder)? = null): IgnitorDsl =
-        OscSawBuilder(IgnitorDsl.Sawtooth(freq = freq.orNoteFreq())).configuredBy("Ignitor.saw", configure).node
+        OscSawBuilder(IgnitorDsl.Saw(freq = freq.orNoteFreq())).configuredBy("Ignitor.saw", configure).node
 
     /**
      * Creates a square wave oscillator: a variable-duty pulse whose `duty` defaults to 50%.

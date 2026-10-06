@@ -162,7 +162,7 @@ class OscillatorPhaseSpec : StringSpec({
     fun nodes(phase: IgnitorDsl, analog: IgnitorDsl = c(0.0)): Map<String, IgnitorDsl> = linkedMapOf(
         "sine" to IgnitorDsl.Sine(analog = analog, phase = phase),
         "sine with banks" to IgnitorDsl.Sine(analog = analog, harmonics = c(3.0), suboctaves = c(1.0), phase = phase),
-        "sawtooth" to IgnitorDsl.Sawtooth(analog = analog, phase = phase),
+        "sawtooth" to IgnitorDsl.Saw(analog = analog, phase = phase),
         "ramp" to IgnitorDsl.Ramp(analog = analog, phase = phase),
         "square (Pulze)" to IgnitorDsl.Pulze(analog = analog, phase = phase),
         "square (PWM)" to IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = c(3.0)).range(c(0.3), c(0.7)), analog = analog, phase = phase),
@@ -185,7 +185,7 @@ class OscillatorPhaseSpec : StringSpec({
         // every periodic node as its constructor's defaults, `phase` NOT passed, and the field read by name
         val defaults: Map<String, Pair<IgnitorDsl, IgnitorDsl>> = linkedMapOf(
             "sine" to IgnitorDsl.Sine().let { it to it.phase },
-            "sawtooth" to IgnitorDsl.Sawtooth().let { it to it.phase },
+            "sawtooth" to IgnitorDsl.Saw().let { it to it.phase },
             "ramp" to IgnitorDsl.Ramp().let { it to it.phase },
             "square (Pulze)" to IgnitorDsl.Pulze().let { it to it.phase },
             "pulze" to IgnitorDsl.RawPulze().let { it to it.phase },
@@ -226,7 +226,7 @@ class OscillatorPhaseSpec : StringSpec({
         }
 
         for ((name, node) in listOf(
-            "sawtooth" to IgnitorDsl.Sawtooth(analog = c(0.0)),
+            "sawtooth" to IgnitorDsl.Saw(analog = c(0.0)),
             "zawtooth" to IgnitorDsl.Zawtooth(analog = c(0.0)),
         )) {
             withClue("$name: -1, the bottom of the rise") {
@@ -313,7 +313,7 @@ class OscillatorPhaseSpec : StringSpec({
         val pm = DoubleArray(blockFrames) { 1.0 + 0.01 * sin(it * 0.05) }
         val factories: Map<String, (Ignitor?) -> Ignitor> = linkedMapOf(
             "sine" to { p -> Ignitors.sine(phase = p) },
-            "sawtooth" to { p -> Ignitors.sawtooth(phase = p) },
+            "sawtooth" to { p -> Ignitors.saw(phase = p) },
             "tri" to { p -> Ignitors.tri(phase = p) },
             "impulse" to { p -> Ignitors.impulse(phase = p) },
             "supersaw" to { p -> Ignitors.superSaw(voices = ConstantIgnitor(3.0), rng = Random(3), phase = p) },
@@ -357,7 +357,7 @@ class OscillatorPhaseSpec : StringSpec({
     "a moving phase wraps the same way: a signal at 1.25 is a signal at 0.25, -0.25 is 0.75, bit for bit" {
         val factories: Map<String, (Ignitor?) -> Ignitor> = linkedMapOf(
             "sine" to { p -> Ignitors.sine(phase = p) },
-            "sawtooth" to { p -> Ignitors.sawtooth(phase = p) },
+            "sawtooth" to { p -> Ignitors.saw(phase = p) },
             "tri" to { p -> Ignitors.tri(phase = p) },
             "impulse" to { p -> Ignitors.impulse(phase = p) },
             "sine with banks" to { p -> Ignitors.sinePartials(harmonics = ConstantIgnitor(3.0), phase = p) },
@@ -378,7 +378,7 @@ class OscillatorPhaseSpec : StringSpec({
     "a non-finite phase reads as unset, no shift" {
         for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
             withClue("phase $bad") {
-                bits(render(Ignitors.sawtooth(phase = ConstantIgnitor(bad)), 220.0)) shouldBe bits(render(Ignitors.sawtooth(), 220.0))
+                bits(render(Ignitors.saw(phase = ConstantIgnitor(bad)), 220.0)) shouldBe bits(render(Ignitors.saw(), 220.0))
                 bits(render(Ignitors.sine(phase = ConstantIgnitor(bad)), 220.0)) shouldBe bits(render(Ignitors.sine(), 220.0))
             }
         }
@@ -389,7 +389,7 @@ class OscillatorPhaseSpec : StringSpec({
     "a constant quarter cycle is the default oscillator with its first quarter cycle cut" {
         val n = 10 * blockFrames
         val single: Map<String, (Ignitor?) -> Ignitor> = linkedMapOf(
-            "sawtooth" to { p -> Ignitors.sawtooth(phase = p) },
+            "sawtooth" to { p -> Ignitors.saw(phase = p) },
             "ramp" to { p -> Ignitors.ramp(phase = p) },
             "square" to { p -> Ignitors.square(phase = p) },
             "pulze" to { p -> Ignitors.rawPulze(phase = p) },
@@ -540,7 +540,7 @@ class OscillatorPhaseSpec : StringSpec({
     "a block-constant input that answers no value (a contract breach) is read per sample, not dropped" {
         val factories: Map<String, (Ignitor?) -> Ignitor> = linkedMapOf(
             "sine" to { p -> Ignitors.sine(phase = p) },
-            "sawtooth" to { p -> Ignitors.sawtooth(phase = p) },
+            "sawtooth" to { p -> Ignitors.saw(phase = p) },
             "impulse" to { p -> Ignitors.impulse(phase = p) },
             "sine with banks" to { p -> Ignitors.sinePartials(harmonics = ConstantIgnitor(3.0), phase = p) },
             "supersaw" to { p -> Ignitors.superSaw(voices = ConstantIgnitor(3.0), rng = Random(3), phase = p) },

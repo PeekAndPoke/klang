@@ -323,7 +323,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     "mod across sum: (a + b).vibrato() applies vibrato to both sources" {
         val a = IgnitorDsl.Sine()
-        val b = IgnitorDsl.Sawtooth()
+        val b = IgnitorDsl.Saw()
         val vibRate = IgnitorDsl.Constant(5.0)
         val vibDepth = IgnitorDsl.Constant(1.0)
 
@@ -337,7 +337,7 @@ class CompositionPropertiesSpec : StringSpec({
         val buf = render(ig, 440.0, createCtx())
 
         // Output should be non-zero (both sources producing) and differ from plain sum.
-        val plainSum = IgnitorDsl.Plus(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()).toExciter()
+        val plainSum = IgnitorDsl.Plus(IgnitorDsl.Sine(), IgnitorDsl.Saw()).toExciter()
         val plainBuf = render(plainSum, 440.0, createCtx())
 
         var diffs = 0

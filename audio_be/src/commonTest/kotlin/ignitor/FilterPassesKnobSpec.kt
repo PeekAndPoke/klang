@@ -24,7 +24,7 @@ import io.peekandpoke.klang.audio_bridge.optimize
  */
 class FilterPassesKnobSpec : StringSpec({
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
 
     fun lp(passes: IgnitorDsl): IgnitorDsl = IgnitorDsl.Lowpass(inner = saw, freq = IgnitorDsl.Constant(900.0), q = IgnitorDsl.Constant(2.0), passes = passes)
 

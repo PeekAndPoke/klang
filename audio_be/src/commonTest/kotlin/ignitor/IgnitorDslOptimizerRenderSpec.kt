@@ -257,7 +257,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // INDEPENDENTLY written ladder implementations (bridge `passesLadderRel` and engine
         // `butterworthQLadder`). PassesLadderParitySpec pins the numbers; this pins the render.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth().lowpass(2400.0, 0.707, passes = 2)
+            IgnitorDsl.Saw().lowpass(2400.0, 0.707, passes = 2)
         )
     }
 
@@ -267,7 +267,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // written to mirror each other. This row pins that they still do.
         assertOptimizeIsInaudible(
             IgnitorDsl.Highpass(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 freq = IgnitorDsl.Constant(600.0),
                 q = IgnitorDsl.Param("res", 1.2),
                 passes = IgnitorDsl.Constant(3.0),
@@ -310,7 +310,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             for (poisoned in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
                 assertOptimizeIsInaudible(
                     IgnitorDsl.Lowpass(
-                        inner = IgnitorDsl.Sawtooth(),
+                        inner = IgnitorDsl.Saw(),
                         freq = IgnitorDsl.Constant(1500.0),
                         q = IgnitorDsl.Param("res", poisoned),
                         passes = IgnitorDsl.Constant(n.toDouble()),
@@ -353,7 +353,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         fun block(q: Double, n: Int): DoubleArray {
             val rng = Random(seed)
             val ignitor = IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 freq = IgnitorDsl.Constant(1500.0),
                 q = IgnitorDsl.Param("res", q),
                 passes = IgnitorDsl.Constant(n.toDouble()),
@@ -432,7 +432,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // per stage, through the same `times` semantics.
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 freq = IgnitorDsl.Constant(1800.0),
                 q = IgnitorDsl.Plus(
                     IgnitorDsl.Constant(1.4),
@@ -446,7 +446,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     "the guitar tail: four chained filters fuse inaudibly" {
         // The shape D4 exists for. Every one of these is a node today and one Eq afterwards.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth()
+            IgnitorDsl.Saw()
                 .notch(210.0, 2.5)
                 .highpass(440.0, 0.707)
                 .lowpass(5300.0, 0.707)
@@ -461,7 +461,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // guitar. (The song file is the maintainer's to commit; the repo copy may still carry
         // the older hand-built parallel form.)
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth()
+            IgnitorDsl.Saw()
                 .eq()
                 .tap(850.0, 0.707, 1.7)
                 .tap(2500.0, 0.7, 5.0)
@@ -504,7 +504,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
 
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Sawtooth(analog = IgnitorDsl.Constant(0.7)),
+                inner = IgnitorDsl.Saw(analog = IgnitorDsl.Constant(0.7)),
                 freq = lfoCutoff(),
                 q = IgnitorDsl.Constant(0.9),
             ).notch(210.0, 2.5)
@@ -516,7 +516,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // above would pass for the trivial reason that nothing random happens, and a real
         // draw-order regression would sail through. Different seeds must produce different
         // audio, or those rows prove nothing.
-        val dsl = IgnitorDsl.Sawtooth(analog = IgnitorDsl.Constant(0.7))
+        val dsl = IgnitorDsl.Saw(analog = IgnitorDsl.Constant(0.7))
             .notch(210.0, 2.5)
             .lowpass(5300.0, 0.707)
 
@@ -578,7 +578,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
 
     "every fusible filter type survives the rewrite" {
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth()
+            IgnitorDsl.Saw()
                 .lowpass(4000.0, 0.8)
                 .highpass(200.0, 0.9)
                 .bandpass(1200.0, 1.1)
@@ -598,7 +598,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // Eq's output. This is the live counterpart of followups section 2's merge trap, and
         // the tripwire for the day that merge is implemented.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth().lowpass(1000.0, 0.707).eq().tap(850.0, 0.707, 1.7)
+            IgnitorDsl.Saw().lowpass(1000.0, 0.707).eq().tap(850.0, 0.707, 1.7)
         )
     }
 
@@ -606,11 +606,11 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // The nearest miss: `asFusibleSection` must decline these while its neighbours fuse.
         // `.onepole()` especially — it is a one-liner people reach for constantly.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth().lowpass(2000.0, 0.707).onepole(800.0).lowpass(4000.0, 0.707)
+            IgnitorDsl.Saw().lowpass(2000.0, 0.707).onepole(800.0).lowpass(4000.0, 0.707)
         )
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Sawtooth().lowpass(2000.0, 0.707),
+                inner = IgnitorDsl.Saw().lowpass(2000.0, 0.707),
                 freq = IgnitorDsl.Constant(3000.0),
                 q = IgnitorDsl.Constant(0.707),
                 analog = IgnitorDsl.Constant(2.0),
@@ -630,14 +630,14 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     "a filter appended onto an AUTHORED Eq is inaudible" {
         // Mixed provenance: sections the user wrote plus a section the optimizer folded in.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth().eq().band(1200.0, 0.9, 6.0).tap(850.0, 0.707, 1.7)
+            IgnitorDsl.Saw().eq().band(1200.0, 0.9, 6.0).tap(850.0, 0.707, 1.7)
                 .lowpass(5300.0, 0.707)
                 .notch(210.0, 2.5)
         )
     }
 
     "a shared intermediate renders identically and is not forked" {
-        val shared = IgnitorDsl.Sawtooth().notch(210.0, 2.5)
+        val shared = IgnitorDsl.Saw().notch(210.0, 2.5)
         assertOptimizeIsInaudible(
             IgnitorDsl.Plus(shared.lowpass(3000.0, 0.707), shared.lowpass(6000.0, 0.707))
         )
@@ -648,7 +648,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // the voice frequency exactly as the chained node did.
         assertOptimizeIsInaudible(
             IgnitorDsl.Highpass(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 freq = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.5)),
                 q = IgnitorDsl.Constant(0.707),
             ).lowpass(5300.0, 0.707),
@@ -657,34 +657,34 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     }
 
     "R2: a multiply then an add folds into one Affine within the margin" {
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.4)).plus(IgnitorDsl.Constant(0.1)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().mul(IgnitorDsl.Constant(0.4)).plus(IgnitorDsl.Constant(0.1)), minPeak = 0.1)
     }
 
     "R2: an add then a multiply folds with the pre-add, exact at the zero crossings" {
         // the offset-then-scale shape whose zero crossings a distributed fold would miss
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Constant(0.5)).mul(IgnitorDsl.Constant(-2.0)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().plus(IgnitorDsl.Constant(0.5)).mul(IgnitorDsl.Constant(-2.0)), minPeak = 0.1)
     }
 
     "R2: a growing literal run composes; a mixed run stays two nodes; both within the margin" {
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(2.0)).mul(IgnitorDsl.Constant(2.0)).plus(IgnitorDsl.Constant(1.0)), minPeak = 0.1)
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(100.0)).mul(IgnitorDsl.Constant(0.01)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().mul(IgnitorDsl.Constant(2.0)).mul(IgnitorDsl.Constant(2.0)).plus(IgnitorDsl.Constant(1.0)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().mul(IgnitorDsl.Constant(100.0)).mul(IgnitorDsl.Constant(0.01)), minPeak = 0.1)
     }
 
     "R2: a Param level and a Freq-tracking coefficient fold and render within the margin" {
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Param("level", 0.6)), ignitorParams = mapOf("level" to 0.6), minPeak = 0.1)
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Freq.mul(IgnitorDsl.Constant(0.001))), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().mul(IgnitorDsl.Param("level", 0.6)), ignitorParams = mapOf("level" to 0.6), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().mul(IgnitorDsl.Freq.mul(IgnitorDsl.Constant(0.001))), minPeak = 0.1)
     }
 
     "R2: a level knob between two filters folds and the filters stay put, within the margin" {
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth().lowpass(2000.0).mul(IgnitorDsl.Constant(0.5)).highpass(120.0).mul(IgnitorDsl.Constant(1.2)),
+            IgnitorDsl.Saw().lowpass(2000.0).mul(IgnitorDsl.Constant(0.5)).highpass(120.0).mul(IgnitorDsl.Constant(1.2)),
             minPeak = 0.05,
         )
     }
 
     "R2: a subtract after the multiply folds within the margin; a constant minus the signal is left alone" {
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.4)).minus(IgnitorDsl.Constant(0.1)), minPeak = 0.1)
-        assertOptimizeIsInaudible(IgnitorDsl.Constant(0.5).minus(IgnitorDsl.Sawtooth()), minPeak = 0.1, expectFused = false)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().mul(IgnitorDsl.Constant(0.4)).minus(IgnitorDsl.Constant(0.1)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Constant(0.5).minus(IgnitorDsl.Saw()), minPeak = 0.1, expectFused = false)
         // a Param subtrahend at NaN, at an infinity and beyond SAFE_MAX: the subtract is bare on
         // both sides (a Neg coefficient would scrub the NaN and clamp the rest).
         //
@@ -696,8 +696,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // wrote. The tree SHAPE is unchanged either way (a `Param` is control-rate and is not a
         // literal on both paths), so the fold under test is the same one.
         for (off in listOf(Double.NaN, Double.NEGATIVE_INFINITY, 1e300)) {
-            assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.5)).minus(IgnitorDsl.Param("off", off)))
-            assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().minus(IgnitorDsl.Param("off", off)).mul(IgnitorDsl.Constant(1e-10)))
+            assertOptimizeIsInaudible(IgnitorDsl.Saw().mul(IgnitorDsl.Constant(0.5)).minus(IgnitorDsl.Param("off", off)))
+            assertOptimizeIsInaudible(IgnitorDsl.Saw().minus(IgnitorDsl.Param("off", off)).mul(IgnitorDsl.Constant(1e-10)))
         }
     }
 
@@ -710,7 +710,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // asserts the value is still in the render.
         fun firstSample(off: Double): Double {
             val rng = Random(seed)
-            val ignitor = IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.5))
+            val ignitor = IgnitorDsl.Saw().mul(IgnitorDsl.Constant(0.5))
                 .minus(IgnitorDsl.Param("off", off))
                 .toExciter(random = rng)
             val buf = AudioBuffer(blockFrames)
@@ -733,13 +733,13 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     }
 
     "R2: a divide by a literal, by a Param, after an add, and by zero, fold within the margin" {
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Constant(4.0)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().div(IgnitorDsl.Constant(4.0)), minPeak = 0.1)
         // 1/3 is not representable: the reciprocal multiply is an ulp off, and the filter carries
         // that to the zero crossings, which is why the margin is relative to the block's scale
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Constant(3.0)).lowpass(1000.0), minPeak = 0.1)
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Constant(0.5)).div(IgnitorDsl.Constant(4.0)), minPeak = 0.1)
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Param("d", 4.0)), ignitorParams = mapOf("d" to 4.0), minPeak = 0.1)
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().lowpass(1000.0).div(IgnitorDsl.Constant(0.0)))
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().div(IgnitorDsl.Constant(3.0)).lowpass(1000.0), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().plus(IgnitorDsl.Constant(0.5)).div(IgnitorDsl.Constant(4.0)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().div(IgnitorDsl.Param("d", 4.0)), ignitorParams = mapOf("d" to 4.0), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().lowpass(1000.0).div(IgnitorDsl.Constant(0.0)))
         // a literal zero divisor over a node that draws at BUILD time (the supersaw's phase pool),
         // with a second such node after it: the subtree is built on both sides, so the second
         // pool draws the same phases authored and optimized
@@ -812,10 +812,10 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     }
 
     "R2: a negation, alone and composed with a level, folds within the margin; the inner flip over a hot input does not compose" {
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().neg(), minPeak = 0.1)
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.3)).neg().plus(IgnitorDsl.Constant(0.2)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().neg(), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().mul(IgnitorDsl.Constant(0.3)).neg().plus(IgnitorDsl.Constant(0.2)), minPeak = 0.1)
         // x beyond SAFE_MAX: 0.5 · safeOut(-x) is -5e14 where a composed -0.5 · x would be -1e15
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Constant(1e300)).abs().neg().mul(IgnitorDsl.Constant(0.5)))
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().plus(IgnitorDsl.Constant(1e300)).abs().neg().mul(IgnitorDsl.Constant(0.5)))
     }
 
     "the warmup vocabulary: every sound the engine can build renders within the margin under the pass" {
@@ -829,7 +829,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     "the production sub-block onset shape is inaudible (offset != 0, partial length)" {
         // Voices start mid-block; the partial window must be the FIRST call on fresh state.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0, 0.707),
+            IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0, 0.707),
             freqs = listOf(220.0),
             offset = 37,
             length = 64,
@@ -848,12 +848,12 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // un-modulate any sound carrying the kill switch — the one place a difference must
         // never appear, since it would look like the fusion A/B rather than the hatch.
         val bare = IgnitorDsl.Vibrato(
-            inner = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0, 0.707),
+            inner = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0, 0.707),
             rate = IgnitorDsl.Constant(5.0),
             semitones = IgnitorDsl.Constant(0.3),
         )
         val marked = IgnitorDsl.Vibrato(
-            inner = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0, 0.707).optimizer(on = 0),
+            inner = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0, 0.707).optimizer(on = 0),
             rate = IgnitorDsl.Constant(5.0),
             semitones = IgnitorDsl.Constant(0.3),
         )
@@ -883,7 +883,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     "an unfusable analog filter renders identically (it is left alone)" {
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 freq = IgnitorDsl.Constant(3000.0),
                 q = IgnitorDsl.Constant(0.707),
                 analog = IgnitorDsl.Constant(2.0),

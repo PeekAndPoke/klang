@@ -108,13 +108,13 @@ class ZzProbePhaseShareR2Spec : StringSpec({
 
         probe(
             "phase, same freq",
-            IgnitorDsl.Sawtooth(analog = c(0.0), phase = lfo),
+            IgnitorDsl.Saw(analog = c(0.0), phase = lfo),
             IgnitorDsl.Ramp(analog = c(0.0), phase = lfo),
         )
         probe(
             "phase, different freq",
-            IgnitorDsl.Sawtooth(analog = c(0.0), phase = lfo),
-            IgnitorDsl.Sawtooth(freq = upper, analog = c(0.0), phase = lfo),
+            IgnitorDsl.Saw(analog = c(0.0), phase = lfo),
+            IgnitorDsl.Saw(freq = upper, analog = c(0.0), phase = lfo),
         )
         val duty = IgnitorDsl.Plus(IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(30.0), analog = c(0.0)), c(0.2)), c(0.5))
         probe(

@@ -23,7 +23,7 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
  */
 class ClassicTailSpec : StringSpec({
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
     val tail = saw.classic()
 
     /** The chain from the outermost stage to the source, one node per stage. */
@@ -51,7 +51,7 @@ class ClassicTailSpec : StringSpec({
 
     "the order is the strip's behind the onepole: onepole, crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
         spine(tail).map { it::class.simpleName } shouldBe listOf(
-            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Sawtooth",
+            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Saw",
         )
         spine(tail).last() shouldBe saw
     }

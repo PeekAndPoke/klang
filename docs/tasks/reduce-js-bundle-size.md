@@ -2,7 +2,8 @@
 
 _Status: in progress. Step 1 ((b), (c), the cast fix, non-literal defaults refused) committed 2026-10-06 (599540e6);
 step 2 ((d), (e), the split per area) done 2026-10-06, awaiting review (see "Step 1 done" and "Step 2 done" at the
-end). Created 2026-06-11._
+end); step 3 (the KSP output in source order, the file-system item below) done 2026-10-07, see "Step 3: source
+order". Created 2026-06-11._
 
 ## Problem
 
@@ -770,7 +771,7 @@ brings the init guard back, with every test green) is in `klangscript/MEMORY.md`
 The split is not free: the collection order interleaves the areas, so sprudel has 150 chunk functions instead of 50
 and the stdlib 23 instead of 12, about 5 to 10 KB unminified (already in the measured bundle above).
 
-### Open: the registration order depends on the file system (waits for the maintainer)
+### Closed 2026-10-07: the registration order depended on the file system
 
 Found in step 2 review round 1 (code role, MINOR 3), pre-existing, not changed. The processor takes the annotated
 symbols in the order `Resolver.getSymbolsWithAnnotation` returns them, which follows the raw directory listing of
@@ -787,8 +788,83 @@ makes the output reproducible and groups the areas (sprudel back to about 50 chu
 registration order once, which the step 2 brief froze. Today no name repeats within a library, so no lookup depends
 on the order. Needs the maintainer's yes.
 
+The maintainer said yes on 2026-10-07; built as step 3 below.
+
 ### Left for later
 
-- The file-system order (above).
 - Per-area isolating KSP outputs (see above).
 - The type references as getter calls; the repeated import block per area file.
+
+## Step 3: source order (2026-10-07)
+
+Maintainer decision, 2026-10-07: sort the KSP output so it no longer depends on the order the file system lists the
+source directory. Branch `housekeeping-2026-10-07`.
+
+### What changed
+
+- `SourceOrder.kt` in `klangscript-ksp`: `SourcePosition(filePath, line, name)` with one comparator (the path with
+  `/` as separator, then the line as a number, then the qualified name as the tie-breaker) and
+  `List.sortedBySource`. The processor sorts every symbol list it takes from `Resolver.getSymbolsWithAnnotation`
+  (objects, type extension classes, functions, properties, constants, and the methods and invokes it only
+  validates), so the docs, a symbol's variant order and the `ktN` type table follow source order.
+- The rendered registration blocks are sorted once more by the position of their declaration before they are cut
+  into chunks. Sorting the symbol lists alone left sprudel at 77 chunk functions: the blocks are collected kind by
+  kind (objects, then type extensions, then functions, then constants), so every area came back once per kind. With
+  the blocks in source order the registration order IS the source order, and every area is one run.
+- Both modules the processor runs on get it (sprudel, klangscript-libs; one processor).
+
+### Measured
+
+| | before (file-system order) | after (source order) |
+|---|---|---|
+| sprudel chunk functions | 150 | 56 (one run per area: 16 areas, split only by the 20,000-character budget) |
+| klangscript-libs chunk functions | 23 | 22 |
+| sprudel generated | 2,404,592 B, 48,778 lines | 2,393,138 B, 48,402 lines (before the `sndTri` rename) |
+| klangscript-libs generated | 682,848 B, 13,946 lines | 682,713 B, 13,942 lines |
+| production `klang-engine.*.js` | 8,123,323 B | 8,116,726 B (-6,597 B) |
+
+The bundle pair is one A/B in one build-lock call on the same tree, the sort taken out and put back
+(`cmp`-verified), songs unchanged in between. Expected was about 50 sprudel chunks; 56 is what one run per area gives
+with today's budget.
+
+### Proof
+
+- **Deterministic.** Two runs of both KSP tasks from clean (output and `kspCaches` deleted): byte-identical
+  (md5 of every generated file). Other listing orders simulated through the real processor (each symbol list
+  reversed, then shuffled with a fixed seed, before the sort): byte-identical to the normal run. Control: the same
+  reversed listing with both sorts taken out produces different output (150 chunks again), so the simulation does
+  perturb what the sort repairs.
+- **Order only.** A throwaway spec (not committed) dumped the generated docs of both libraries and the registry each
+  `register<Lib>Generated()` builds (functions with parameter specs and defaults, types, objects, extension methods
+  and properties per receiver), before and after the sort, before the renames. Compared as sets (JVM identity hashes
+  and lambda class names normalized): the registries of both libraries are identical, the sprudel docs are identical
+  as SETS (every symbol field, every variant, the tags in order). The ORDER of a symbol's variants changed for 12
+  sprudel symbols (`freq`, `attack`, `decay`, `depth`, `env`, `floor`, `q`, `rate`, `release`, `sustain`, `wet`,
+  `invoke`) and 10 stdlib ones (`analog`, `attack`, `decay`, `depth`, `floor`, `rate`, `release`, `add`, `indexOf`,
+  `toString`): harmless, a member lookup picks the variant by its receiver, never by position. One stdlib docs value
+  moved: `indexOf`, documented on both
+  `String` and `Array`, takes its category from its first variant, so it reads `array` now (it read `string` on this
+  machine before, and already read `array` on a machine whose file system lists names sorted). It is shown on the
+  library docs page; nothing else reads it.
+- **No lookup depends on the order.** No function or object name repeats within a library, and no function shares a
+  name with an object (re-checked on the generated registries). The order of `nativeTypes` decides a method lookup
+  only when one value is an instance of two registered receivers that both have the method: those pairs are
+  `IgnitorDsl`, `SprudelPattern`, `PatternMapperProvider` and `Function1` (shared names such as `add`, `mul`,
+  `lowpass`), and their relative registration order is unchanged. The pairs that did swap (a sprudel object such
+  as `sine` against `SprudelPattern` or `PatternMapperProvider`) share no method or property name, and a named
+  object's own class answers a display name first.
+- New `SourceOrderTest` covers the sort FUNCTION (path, line as a number, name; every arrival order; a Windows path;
+  sorted blocks give one chunk per area), mutation-checked in `SourceOrder.kt`: the line dropped, the line compared
+  as text, the separator not normalized, and `sortedBySource` returning its input each go red. It does not see where
+  the processor calls the sort (review round 1, MINOR 4: all call sites removed, `:klangscript-ksp:test` stayed
+  green).
+- New `GeneratedRegistrationOrderSpec` (root `jvmTest`) covers the CALL SITES on the real output: it reads the
+  generated entry point of sprudel and of klangscript-libs and checks that each area's chunks are called in one
+  contiguous run, numbered from 0, with the runs in the order of the source files. Mutation-checked in the processor:
+  all seven symbol sorts and the block sort removed, red; the block sort alone removed, red. A third row (review
+  round 2) guards the symbol sorts, which decide what the docs show: it reads the generated stdlib docs and checks
+  that `indexOf`'s variants come in the order of their declaring files' paths (Array, then String) and that its
+  category is the first variant's, `array`. The symbol sorts alone removed (block sort kept), red on this machine;
+  as a regression detector that row is machine-dependent (review round 3): where the file system happens to list the
+  two files in sorted order, a removed sort stays green there. The `ktN` numbering stays pinned only by the two clean
+  KSP runs and the simulated listings above.

@@ -133,7 +133,7 @@ class IgnitorGateSpec : StringSpec({
     /** The node right under the root memo: what the gate adds or does not add. */
     fun shapeOf(ignitor: Ignitor): Any = (ignitor as MemoizingIgnitor).inner::class
 
-    val saw: IgnitorDsl = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
+    val saw: IgnitorDsl = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
 
     /** The build's release-tail finding for [this], which is what voice lifetime is ranked on. */
     fun IgnitorDsl.tail(): Double? = buildExciter(random = seed(), freqHz = freqHz).releaseTailSec

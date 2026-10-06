@@ -38,7 +38,7 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
     // pulse), and `Ignitor.pulze()` builds the RawPulze.
     val supported = listOf(
         """Ignitor.sine(x => x.analog(3))""" to IgnitorDsl.Sine::class,
-        """Ignitor.saw(x => x.analog(3))""" to IgnitorDsl.Sawtooth::class,
+        """Ignitor.saw(x => x.analog(3))""" to IgnitorDsl.Saw::class,
         """Ignitor.tri(x => x.analog(3))""" to IgnitorDsl.Tri::class,
         """Ignitor.ramp(x => x.analog(3))""" to IgnitorDsl.Ramp::class,
         """Ignitor.zawtooth(x => x.analog(3))""" to IgnitorDsl.Zawtooth::class,
@@ -101,7 +101,7 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
 /** The `analog` field of every drift-bearing node, read without knowing the type up front. */
 private fun IgnitorDsl.analogOf(): IgnitorDsl? = when (this) {
     is IgnitorDsl.Sine -> analog
-    is IgnitorDsl.Sawtooth -> analog
+    is IgnitorDsl.Saw -> analog
     is IgnitorDsl.Tri -> analog
     is IgnitorDsl.Ramp -> analog
     is IgnitorDsl.Zawtooth -> analog

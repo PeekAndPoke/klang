@@ -61,6 +61,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Every commit an AI agent wrote or co-wrote carries a `Co-Authored-By:` trailer naming the model (e.g. `Claude Opus 5.5 (1M context) <noreply@anthropic.com>`); a commit the maintainer wrote alone carries none. The trailer is the provenance record funding applications rely on, so it is never dropped, not even for a one-line fix. Commits before 2026-08 are inconsistent: `docs/funding/gaps.md` G4. | 2026-09-24 | this file |
 | Compound doors fill per param at the door: a call that names a stage writes every companion it left out and the event has not set, from the constant in `audio_bridge/constants/`; an explicit value is never overwritten. A stage with a name knob is named only by that knob, and a tail-only call never invents it; a stage without one is named by any of its knobs. Which door is which: the two closed lists in `/dsl-design` §4, the one home of this rule's text, never copied. | 2026-09-18 | `/dsl-design` §4, checklist 11 and 12 |
 | Nothing in the backend or the frontend allocates without a way to clean it up: per-playback state lives in a storage the playback owns or in a per-playbackId registry that is freed when the playback dies; process-wide maps that grow per edit are debt (tracked in `docs/plans/signal-flow-redesign.md` §11). | 2026-09-17 | this file |
+| Script-door defaults are plain literals (number, string, boolean, null); the KSP build refuses any other default (e.g. a `Slots.*` leaf) with an error naming the door and parameter. Bake the literal on the door, resolve the real default in the body. | 2026-09-05, enforced 2026-10-06 | `/dsl-design` §3 |
 
 ### Guideline
 
@@ -82,127 +83,20 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 
 | Guardrail                                                                                                                  | Since      | Detail                                     |
 |----------------------------------------------------------------------------------------------------------------------------|------------|--------------------------------------------|
-| Kotest: one unquoted `--tests` FQCN per Gradle run; treat `No tests found` as a script error in any expect-red runner.      | 2026-07-03 | `/review-loop` Gotchas                     |
-| A frontend watcher blocks Gradle only in continuous mode (`-t` / `--continuous`); a plain `jsBrowserDevelopmentRun` does not. | 2026-09-09 | `/review-loop` Gotchas                     |
 | Block size is pinned to 128 frames everywhere (it is a tone parameter); never raise it to speed up a render.                | 2026-08    | `audio/MEMORY.md`, `DelayLine` KDoc        |
-| Deliberate engine exceptions a reviewer must not "fix": reverb uses `+ ANTI_DENORMAL` (not `flushState`); OnePole HPF cutoff bias is documented, not corrected; BPF stays linear; the house limiter's 5 ms lookahead (`MasterStage`) is always on and not authorable, and an authored lookahead (the Katalyst `compressor`/`limiter` `lookahead`, fixed per chain, at most 50 ms) makes its orbit or playback late by it, uncompensated, by the author's choice. | 2026-05, narrowed 2026-09-27 | `/review-loop` templates, `.claude/skills/review-loop/audio-constraints.md` |
-| Script-door defaults must be safe literals (number, string, boolean, null). Enforced at build time by the KSP processor since 2026-10-06: any other default (e.g. a `Slots.*` leaf) stops the build with an error naming the door and parameter, so this is no longer a review-time check. Bake the literal on the door, resolve the real default in the body. | 2026-09-05, enforced 2026-10-06 | `/dsl-design` §3 |
+| Deliberate engine exceptions a reviewer must not "fix" (reverb `+ ANTI_DENORMAL`, the OnePole HPF bias, linear bandpass, the house limiter's fixed lookahead, authored lookahead uncompensated): the list and the reasons are in `audio-constraints.md`. | 2026-05, narrowed 2026-09-27 | `.claude/skills/review-loop/audio-constraints.md` |
 | Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | 2026-07 | `sprudel/MEMORY.md` Lessons |
 | Builtin songs are KlangScript inside Kotlin strings: `/` divides, `$` interpolates.                                          | 2026-09    | this line                                  |
 | `min`/`max` are clamps on every door: `a.max(b)` is "a, at most b". The Ignitor doors therefore build the opposite-named node (`max` builds `IgnitorDsl.Min`); the nodes and the runtime `Ignitor.min`/`max` primitives keep the mathematical meaning, and `Math.min(a, b)`/`Math.max(a, b)` still select. Do not "correct" the crossing. Guard: `StdLibIgnitorTest`, `StdLibNumberMethodsTest`. | 2026-09-10 | `/dsl-design` §5 |
 
-### Retired, do not restore or cite
+### Retired names
 
-`klangblocks` (removed 2026-08-23, never user-visible); the `Motör` spelling; the sub-type method
-chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors; the Master DSL (gone 2026-09-28, phase 3 step 12 C5: the master is the Katalyst at the
-output position, `master(Katalyst(k => ...))`): `MasterDsl`, `MasterStageDsl`, `MasterValue`, `MasterDslIdentity`,
-`MasterRegistry`, `Cmd.RegisterMaster` (`register-master`), the script `Master` object and `Master.default()`,
-`MasterBuilders`, `MasterChain` (gone in C3) and the C3 shim `MasterDslShim`; the single
-envelope doors `attack()`, `decay()`, `sustain()`, `release()` (gone 2026-09-07, `adsr(attack = ...)`
-sets a slot and `adsr.attack` reads it); the per-knob effect doors and their aliases (`roomWet`,
-`roomsize`/`rsize`/`sz`/`size`, `roomfade`, `roomlp`, `roomdim`, `delayWet`, `delaytime`, `delayfeedback`/`delayfb`,
-`delaycap`/`dcap`, `ph`, `phaserWet`, `phasercenter`/`phc`, `phasersweep`/`phs`, `phaserFloor`, the `tremolo*`/`trem*`
-knobs, `dist`, `distos`, `distortshape`/`dshape`, `crushos`, `coarseos`, the `*Oversampling` spellings; gone
-2026-09-07: `delay`, `phaser`, `tremolo`, `distort`, `crush`, `coarse` are objects with named slots,
-`delay(time = 0.3)` sets, `delay.time` reads); the reverb's `room` object with its `fade` and `dim` slots and the
-master reverb knobs `roomSize`, `roomFade`, `roomLp`, `damp` (gone 2026-09-16: `reverb(wet, size, lowpass)` on both
-doors, `fade = x` is `size = 10x`, `lowpass` is the one damping knob, see
-`docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`); `iresponse` and its alias `ir` with the wire field
-`iResponse` (gone 2026-09-16: no convolution reverb ever read the name; a future one designs its own door); the filter per-knob doors `lpq`, `lpx`, `lpe`, `lpadsr`, `hpq`, `hpx`, `hpe`,
-`hpadsr`, `bpq`, `bpe`, `bpadsr`, `notchf`, `nresonance`/`nres`/`notchq`/`ntq`, `ntf`, `nfadsr`, `nfattack`/`nfa`, `nfdecay`/`nfd`,
-`nfsustain`/`nfs`, `nfrelease`/`nfr`, `nfenv`/`nfe` (gone 2026-09-07: `lpf` and `hpf` carry `q`, `passes`, `env` and the envelope
-stages as slots, `bpf` and `notch` the same without `passes`); the singular `adsrCurve` on every surface (`adsrCurves(a, d, r)` only); the batch G per-knob doors `vibratoMod`,
-`pattack`/`patt`, `pdecay`/`pdec`, `prelease`/`prel`, `pcurve`/`pcrv`, `panchor`/`panc`, `fmenv`/`fmmod`, `fmh`, `fmattack`/`fmatt`,
-`fmdecay`/`fmdec`, `fmsustain`/`fmsus`, `duckorbit`, `duckattack`/`duckatt`, `duckdepth`, the pattern-level `voices`, `spread`, `panSpread`
-(the ignitor builders keep their own `voices()`/`spread()`),
-`vowelWet`, `vowelFloor`, `bodyWet`, `bodyFloor` (gone 2026-09-07: `compressor`, `unison`, `duck`, `vibrato`, `penv`, `fm`,
-`vowel`, `body` carry them as slots; `comp`, `uni`, `vib`, `pamt` stay). The `penv` slots `curve` and
-`anchor` with the wire fields `pCurve` and `pAnchor` (gone 2026-09-25, phase 3 step 5b c1: `penv(amount, attack,
-decay, sustain, release)` has a real release, `penvCurves(attack, decay, release)` shapes it, `pSustain` is the wire word). The Pipeline DSL and the voice strip (gone 2026-09-27, phase 3 step 9: every voice
-is an Ignitor tree; `classic()` is the sprudel voice): `PipelineDsl`, `StageDsl`, `PipelineDsl.modern`, the script
-`Pipeline(...)` / `Pipeline.modern(...)` / `Pipeline.build(...)` with `PipelineBuilder`, `PipelineVcaBuilder`,
-`PipelineFilterBuilder`, `tuneVca`, `tuneFilter`, sprudel `.pipeline()` and the `pipeline(...)` mapper, `PipelineValue`,
-`PipelineRegistry`, `PipelinePreset` (the `pedal` preset went first, 2026-09-25, with `Pipeline.pedal(...)`), `Cmd.RegisterPipeline` (`register-pipeline`), `VoiceData.pipeline`,
-`KlangPatternEvent.pipeline`, the strip's `FilterPipelineBuilder`, `EnvelopeRenderer` (the strip VCA),
-`FilterModRenderer`, `AudioFilterRenderer`, `CrushRenderer`, `CoarseRenderer`, `DistortionRenderer`, `TremoloRenderer`,
-`StripPhaserRenderer`, `Voice.Phaser` / `Tremolo` / `Distort` / `Crush` / `Coarse` / `FilterModulator`, `Voice.Envelope.of`
-and `Envelope.declick` (`Voice.Envelope` itself stays: FM and the pitch envelope use it), and
-the registry's engine `onepole` wrap with `IgnitorRegistry.endsInClassic(name)` (the `IgnitorDsl.endsInClassic()` tag
-stays); and the strip-only filter classes `SvfLPF`, `SvfHPF`, `SvfNotch`, `PassCascadeFilter`, `createLPF` / `createHPF`
-/ `createBPF` / `createNotch`, `ChainAudioFilter`, `NoOpAudioFilter`, `AudioFilter.combine()` and `AudioFilter.Tunable`
-(the tree's filter is `Ignitor.svf`; `BaseSvf`, `SvfBPF` for the resonators, the OnePoles and `butterworthQLadder` stay). The typed `VoiceData` fields
-that no reader was left for (gone 2026-09-27, phase 3 step 9 (b): a voice door is a `classic()` slot in `ignitorParams`, an
-orbit stage a `katalystParams` slot): `scale`, `filters`, `adsr`, `distort`, `distortShape`, `distortOversample`,
-`coarse`, `coarseOversample`, `crush`, `crushOversample`, `phaser`, `phaserDepth`, `phaserCenter`, `phaserSweep`,
-`phaserFloor`, `tremoloSync`, `tremoloDepth`, `tremoloSkew`, `tremoloPhase`, `tremoloShape`, `cutoff`, `hcutoff`, `bandf`,
-`resonance`, `begin`, `end`, `speed`, `loop`, `loopBegin`, `loopEnd`; with them `FilterDefs`, `FilterDef.LowPass` /
-`HighPass` / `BandPass` / `Notch`, the bridge `FilterEnvDef`, `AdsrDef.on` and the `AdsrDef` merge and resolve API (`mergeWith`, `resolve`,
-`Resolved`, `empty`, `defaultSynth`; the voice envelope defaults are `VOICE_ADSR_*`) (`FilterDef.Formant` / `Body` stay as the
-orbit's band carriers, `AdsrDef` for sample metadata), and the sprudel doors `loopBegin` / `loopb` / `loopEnd` / `loope`
-(they never reached the engine; a loop region is `loop().begin(x).end(y)`). The spelling
-`@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
-refuses the old one). The sprudel `lang/addons/` directory, the package
-`io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag (gone 2026-09-07: sprudel is not a Strudel port,
-so "what Strudel does not have" named nothing a reader could use; every DSL file is now
-`lang_<group>_<subgroup>.kt` in `sprudel/.../lang/`, see `docs/tasks-archive/2026-09/20260907-sprudel-lang-file-reorganisation.md`).
-`TutorialScope` and the tutorial field `scope` (renamed 2026-09-08 to `TutorialDepth` / `depth`, with
-`scopeLabel`/`scopeColor` and the `?scope=` URL parameter: Quick/Standard/DeepDive is a depth ladder, and
-"scope" now means one thing only, WHERE audio runs, see `KlangScope` and the `@scope` KDoc tag).
-The resonator MORPH (`ResonatorBank.morphTo`, the `MORPH` flags on the body and vowel hosts,
-`BaseSvf.retune` and `resetState`, the split bank and wrap factories, `MORPH_CAPACITY`) and
-`KatalystFilterSwap.MAX_BANKS` with its outgoing pool and drop rule, both gone 2026-09-20: the
-maintainer listened and rejected the morph (travelling a bank's resonances is an audible filter
-sweep, "an 8-bit laser shot"), and the pool was replaced by two banks and one parking slot holding a
-config, latest wins, at `BANK_CROSSFADE_SECONDS`. The tremolo's own LFO and its two shape knobs (gone 2026-09-29, `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`: the tremolo is composed from the oscillators at voice build, the maintainer chose it by ear): `TremoloIgnitor`, `Ignitor.tremolo(...)`, `TremoloCore`, `LfoShape` (the `LfoShapes` name vocabulary stays), and `skew` / `phase` on every tremolo door with the slot keys `tremolo.skew` / `tremolo.phase`. `postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
-channel fader applied once with pan, so a song that used both folds them by multiplication, and sprudel's
-`velocity` door stays but is multiplied into `gain` where the voice crosses the wire; see
-`docs/plans/signal-flow-redesign.md` section 6). The old names of the Ignitor's script surface (gone 2026-10-04,
-`docs/plans/ignitor-katalyst-naming.md`: one word per concept, a full and a short name for each engine word): the
-script object `Osc` (now `Ignitor`, short `Ign`), the global `OscSlot` (now `Ignitor.slot`), the setters `oscparam` /
-`oscp` (now `ignitorParam` / `ignp`), the wire field `oscParams` (now `ignitorParams`), `SoundValue.Osc` (now
-`SoundValue.Dsl`) and the Kotlin types `KlangScriptOsc`, `KlangScriptOscSlot`, `KlangScriptOscExtensions`. The
-`Osc*Builder` types keep their names: they configure real oscillators. Guard: `RetiredIgnitorNamesSpec`. The polarity helpers (gone 2026-10-05,
-`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`: `range(from, to)` is the one word on every surface): sprudel's bipolar
-twins `sine2`, `cosine2`, `saw2`, `isaw2`, `tri2`, `itri2`, `square2`, `perlin2`, `berlin2`, `rand2` and the helpers
-`toBipolar`, `fromBipolar`, `range2` (a bare twin is its signal with `.range(-1, 1)`; `twin.range(a, b)` and
-`twin.range2(a, b)` are `signal.range(a, b)`, because the innermost range wins), and the Ignitor's `unipolar()` /
-`bipolar()` with the wire nodes `IgnitorDsl.Unipolar` / `Bipolar` (`.range(0, 1)`, `.mul(2).minus(1)`). With them
-went sprudel's `isaw` and `itri` (`saw.range(1, 0)`, `tri.range(1, 0)`; `isaw.range(a, b)` is `saw.range(b, a)`, the
-same for `itri`, because the innermost range wins), `sinOfDay2`, `sinOfNight2` and `choose2`;
-`sinOfDay` / `sinOfNight` are now `sineOfDay` / `sineOfNight`; the old parameter names of `range` (`min` / `max` in
-sprudel's `range` and `rangex`, `lo` / `hi` on the Ignitor doors, the wire node `IgnitorDsl.Range` and the engine's
-`Ignitor.range`) are `from` / `to` end to end; the clamp keeps `lo` / `hi`. Sprudel's `_mapRangeContext` and
-`ContextRangeMapPattern` went with the helpers, and so did sprudel's `String.range` / `String.rangex` (a
-mini-notation string scales with `.mul(k).add(c)`). The Ignitor's triangle door `Ign.triangle` / `Ignitor.triangle`,
-its builder `OscTriangleBuilder`, the wire node `IgnitorDsl.Triangle` (wire name `triangle`) and the factory
-`Ignitors.triangle` (gone 2026-10-06, `docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`: now `tri`,
-`OscTriBuilder`, `IgnitorDsl.Tri`, `Ignitors.tri`, like `supertri` and sprudel's `tri`; the sound name and the LFO
-shape `triangle` stay). Guard: `RetiredIgnitorNamesSpec`.
+A retired name is never restored and never cited as current. The full list, newest first, with what replaced each
+name and where it was decided, is `docs/retired-names.md`; read it when an old name turns up (for example when
+porting an old song). History keeps its words.
 
-## Available Agent
+## Agents and skills
 
-| Agent                       | Trigger                                                                                                       | Description                                                                                                                                                         |
-|-----------------------------|---------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `music-platform-strategist` | **Explicit only**: say "music-platform-strategist" or "talk to the strategist" or "platform strategy session" | Strategic product advisor. NOT a coder. Reasons about user value, platform surface, and launch readiness. Has persistent memory. Saves output to `.claude/vision/`. |
-
-## Available Skills
-
-Use `/skill-name` or describe what you need in natural language to invoke a skill.
-
-| Skill                    | Trigger                                                                                        | Description                                                                                               |
-|--------------------------|------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| `/skill-builder`         | "create a skill", "build a skill", "audit a skill"                                             | Guide skill creation, optimization, and auditing following Claude Code best practices                     |
-| `/sprudel-dev-knowhow`   | "work on sprudel", "implement sprudel feature", "sprudel tests"                                | Load sprudel module architecture, critical rules, current status, and feature checklist                   |
-| `/klangscript-knowhow`   | "work on klangscript", "add language feature", "klangscript parser", "klangscript interpreter" | Load klangscript context incrementally (dispatcher + targeted ref files)                                  |
-| `/klangaudio-knowhow`    | "work on audio", "audio engine", "voice synthesis", "effects", "sample loading", "orbits"      | Load audio subsystem context (audio_bridge / audio_be / audio_fe / audio_jsworklet)                       |
-| `/code-style`            | "apply code style", "check code style", "clean up code style", "follow code conventions"       | Project code style rules (curly braces, formatting, etc.)                                                 |
-| `/public-voice`          | "write a blog post", "whitepaper", "README", "release notes", "public text", "review the tone" | The public voice of every published text: what it is, what it is not, before/after pairs, a reviewer's grep list |
-| `/writing-loop`          | "rewrite the whitepaper", "write a long post", "writing loop", "reader and writer"           | Trial: a reader agent briefs, a writer agent drafts and refines, a cold reader re-reads, a fact check closes it |
-| `/dsl-design`            | "design a DSL", "add a DSL door/knob", "review a DSL change", "builder", "configure lambda", "DSL immutability", "parameter parity" | Design principles for every Klang DSL: construction-time immutability, builder/configure-lambda door shape, two doors, parity, one word per concept, coerce vs raw, wire types, review checklist |
-| `/review-loop`           | "review this change", "code review", "review loop", "mutation check", "apply review findings"  | Review standard: reviews loop until a clean round (fixes get re-reviewed); new tests are mutation-checked |
-| `/ultra-libs-knowhow`    | "ultra libs", "ultra.html", "ultra events", "io.peekandpoke.ultra"                             | Source reference for all `io.peekandpoke.ultra.*` modules (html, streams, common, etc.)                   |
-| `/kraft-knowhow`         | "kraft", "kraft component", "kraft forms", "kraft routing", "io.peekandpoke.kraft"             | Source reference for the Kraft UI framework (components, VDom, forms, routing, etc.)                      |
-| `/klang-music-writing`   | "write music", "compose", "make a beat", "create an instrument", "sound design"                | LLM-ready reference for writing sprudel patterns and designing ignitor instruments                        |
-| `/klang-music-recording` | "record audio", "render to wav", "export wav", "offline render", "record.sh"                   | Offline WAV rendering pipeline: CLI commands, KlangOfflineRenderer, WavFileWriter                         |
-| `/six-hats`              | "six hats", "thinking hats", "multi-perspective analysis"                                      | Run Six Thinking Hats method: 5 parallel agents (Red/Black/Yellow/Green/Blue) + synthesis                 |
-| `/agent-fleet`           | "fan out agents", "launch agents in parallel", "spawn sub-agents", before any multi-agent run  | Model/effort tiers per sub-agent + fan-out safety (coordinator owns Gradle; workers never fan out)        |
+The project skills live in `.claude/skills/` (each `SKILL.md` says when to use it) and the agents in
+`.claude/agents/`; the harness lists both, with their triggers, to every session. Use `/skill-name` or describe
+the task. The `music-platform-strategist` agent runs only when asked for by name ("talk to the strategist").

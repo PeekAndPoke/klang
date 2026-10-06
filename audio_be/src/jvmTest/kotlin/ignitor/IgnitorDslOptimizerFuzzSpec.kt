@@ -111,7 +111,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             val leaf: IgnitorDsl = when (r.nextInt(7)) {
                 0 -> IgnitorDsl.Sine(freq = IgnitorDsl.Freq)
                 1 -> IgnitorDsl.Sine(freq = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.0 + r.nextDouble())))
-                2 -> IgnitorDsl.Sawtooth()
+                2 -> IgnitorDsl.Saw()
                 3 -> IgnitorDsl.WhiteNoise()
                 4 -> IgnitorDsl.Constant(constant(r, stats))
                 5 -> IgnitorDsl.Param("p${r.nextInt(3)}", constant(r, stats))

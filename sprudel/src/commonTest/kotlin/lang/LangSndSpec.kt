@@ -59,14 +59,14 @@ class LangSndSpec : StringSpec({
         }
     }
 
-    "sndTriangle() dsl interface" {
+    "sndTri() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndTriangle()" to note("c3").sndTriangle(),
-            "string.sndTriangle()" to "c3".sndTriangle(),
-            "script pattern.sndTriangle()" to SprudelPattern.compile("""note("c3").sndTriangle()"""),
-            "script string.sndTriangle()" to SprudelPattern.compile(""""c3".sndTriangle()"""),
-            "apply(sndTriangle())" to note("c3").apply(sndTriangle()),
-            "script apply(sndTriangle())" to SprudelPattern.compile("""note("c3").apply(sndTriangle())"""),
+            "pattern.sndTri()" to note("c3").sndTri(),
+            "string.sndTri()" to "c3".sndTri(),
+            "script pattern.sndTri()" to SprudelPattern.compile("""note("c3").sndTri()"""),
+            "script string.sndTri()" to SprudelPattern.compile(""""c3".sndTri()"""),
+            "apply(sndTri())" to note("c3").apply(sndTri()),
+            "script apply(sndTri())" to SprudelPattern.compile("""note("c3").apply(sndTri())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.soundName shouldBe "triangle"
@@ -381,7 +381,7 @@ class LangSndSpec : StringSpec({
             Triple(note("c3").apply(gain(1.0).sndSine()), """note("c3").apply(gain(1.0).sndSine())""", "sine"),
             Triple(note("c3").apply(gain(1.0).sndSaw()), """note("c3").apply(gain(1.0).sndSaw())""", "sawtooth"),
             Triple(note("c3").apply(gain(1.0).sndSquare()), """note("c3").apply(gain(1.0).sndSquare())""", "square"),
-            Triple(note("c3").apply(gain(1.0).sndTriangle()), """note("c3").apply(gain(1.0).sndTriangle())""", "triangle"),
+            Triple(note("c3").apply(gain(1.0).sndTri()), """note("c3").apply(gain(1.0).sndTri())""", "triangle"),
             Triple(note("c3").apply(gain(1.0).sndRamp()), """note("c3").apply(gain(1.0).sndRamp())""", "ramp"),
             Triple(note("c3").apply(gain(1.0).sndZamp()), """note("c3").apply(gain(1.0).sndZamp())""", "zamp"),
             Triple(note("c3").apply(gain(1.0).sndNoise()), """note("c3").apply(gain(1.0).sndNoise())""", "whitenoise"),

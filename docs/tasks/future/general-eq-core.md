@@ -135,7 +135,7 @@ that covers the section list), measured before it is trusted on the audio thread
 
 Every built-in song (12 of 14 use `lpf`, about 175 filter calls in total), the tutorials (their own session), the Lexikon,
 `.claude/skills/klang-music-writing/ref/sprudel-reference.md` and `ignitor-reference.md`, the `/klang-music-writing` skill, the editor's filter tools
-(`sprudel-ui-tools.md`), and the rules register's retired list. Render identity of the corpus through the migration is
+(`sprudel-ui-tools.md`), and the retired list (`docs/retired-names.md`). Render identity of the corpus through the migration is
 the acceptance (`classic()`'s order written out explicitly keeps every song identical where the math is unchanged, within the
 stated bounds of Part A's parity rows elsewhere).
 

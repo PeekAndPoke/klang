@@ -315,8 +315,8 @@ class CallInfoTest : StringSpec({
         assertReceiverLocationsSurvive("""note("c3").sndSuperSquare()""")
     }
 
-    "sndTriangle keeps the receiver's locations" {
-        assertReceiverLocationsSurvive("""note("c3").sndTriangle()""")
+    "sndTri keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndTri()""")
     }
 
     "sndSuperTri keeps the receiver's locations" {

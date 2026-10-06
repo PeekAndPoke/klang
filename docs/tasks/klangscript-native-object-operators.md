@@ -1,5 +1,48 @@
 # Feature Implementation Plan: Operator Functions for Registered Native Objects
 
+## Decided 2026-10-07 (maintainer), supersedes the naming and dispatch below
+
+The ask: `lpf(saw(100, 200) * 4)`, `lpf(saw ** 2.0 * 10)`. Precedence stays KlangScript's own (Kotlin's table):
+`saw(100, 200) + 50 * 4` is `saw + 200`, power binds tighter than `*`. `^` stays as it is for now ("let us not fiddle
+with ^ for the moment").
+
+1. **Explicit on both sides, no silent swap.** `a + b` with a native object on the left needs `__plus__` on it; with a
+   native object only on the right (`4 + saw`) it needs `__rplus__` on the right operand. If the method is not
+   defined, the expression is not possible: an error at the operator in the editor, and the same error at runtime.
+   ("If the `__add__` is not defined then `saw + ?` is not possible. If the `__radd__` is not defined then `? + saw` is
+   not possible.")
+2. **Number gets no operators.** Numbers keep their built-in arithmetic; `4 / saw` works only if the pattern side
+   defines `__rdiv__`.
+3. **Internal names are `__xxx__`** (maintainer: "let us go for the php style `__xxx__`"), and `invoke` becomes
+   `__invoke__` as the internal symbol:
+
+   | Syntax              | On the left operand                          | On the right operand |
+   |---------------------|----------------------------------------------|----------------------|
+   | `a + b`             | `__plus__`                                   | `__rplus__`          |
+   | `a - b`             | `__minus__`                                  | `__rminus__`         |
+   | `a * b`             | `__times__`                                  | `__rtimes__`         |
+   | `a / b`             | `__div__`                                    | `__rdiv__`           |
+   | `a % b`             | `__rem__`                                    | `__rrem__`           |
+   | `a ** b`            | `__pow__`                                    | `__rpow__`           |
+   | `-a`, `+a`, `!a`    | `__unaryMinus__`, `__unaryPlus__`, `__not__` |                      |
+   | `a(...)`            | `__invoke__`                                 |                      |
+
+   Kotlin's operator words inside the underscores (maintainer, 2026-10-07: "go for the kotlin words"), the reversed
+   side with an `r` prefix.
+
+   `pow` is Kotlin's function name for the power (`kotlin.math.pow`); `**` is in scope because the ask uses it
+   (`saw ** 2.0 * 10`). Comparisons (`<`, `==`) and indexing on objects are out of scope for now.
+4. **No new script words.** The `__xxx__` names are internal symbols, not aliases: an annotation on the existing method
+   (e.g. `@KlangScript.Operator("__plus__")` on sprudel's `add`, `@KlangScript.Operator("__rplus__")` on a method that
+   computes `left + this`) tells KSP which operator it serves; the script surface keeps `add`, `mul`, ... (one word per
+   concept). The Kotlin side keeps `operator fun invoke` (Kotlin's own word); only the KlangScript symbol is
+   `__invoke__`.
+5. **The editor** knows the result type of an operator expression (completion after `(saw(1, 2) * 4).` keeps working)
+   and reports a missing operator method as an error at the operator.
+
+The `invoke` -> `__invoke__` rename goes with `docs/tasks/callable-object-docs.md`, which removes the stray `invoke`
+docs symbol anyway; the arithmetic operators follow as their own step.
+
 ## Goal
 
 Allow registering Kotlin-style operator functions on native objects in KlangScript. This enables

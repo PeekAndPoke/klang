@@ -59,7 +59,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Pulze with a moving phase" { check(IgnitorDsl.Pulze(phase = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)))) }
     "SuperSaw with a phase" { check(IgnitorDsl.SuperSaw(phase = IgnitorDsl.Constant(-0.5))) }
     "Impulse with a phase" { check(IgnitorDsl.Impulse(phase = IgnitorDsl.Param("ph", 0.1))) }
-    "Sawtooth" { check(IgnitorDsl.Sawtooth()) }
+    "Saw" { check(IgnitorDsl.Saw()) }
     "Square" { check(IgnitorDsl.Square(freq = IgnitorDsl.Param("freq", 220.0))) }
     "Tri" { check(IgnitorDsl.Tri()) }
     "Ramp" { check(IgnitorDsl.Ramp()) }
@@ -138,14 +138,14 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "SuperPluck" { check(IgnitorDsl.SuperPluck(analogSpread = IgnitorDsl.Constant(0.25))) }
 
     // --- arithmetic / math ----------------------------------------------------------------------------------
-    "Plus" { check(IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()) }
+    "Plus" { check(IgnitorDsl.Sine() + IgnitorDsl.Saw()) }
     "Times" { check(IgnitorDsl.Sine() * IgnitorDsl.Tri()) }
     "Affine" { check(IgnitorDsl.Affine(IgnitorDsl.Sine(), pre = IgnitorDsl.Constant(0.1), mul = IgnitorDsl.Param("level", 0.5), add = IgnitorDsl.Constant(-2.0))) }
     // the absent pre-add and add are -0.0, and the sign must survive the wire (Constant is a data
     // class, and Double equality on JVM and JS tells -0.0 from 0.0, so a normalising codec fails here)
     "Affine, the -0.0 identities" { check(IgnitorDsl.Affine(IgnitorDsl.Sine(), mul = IgnitorDsl.Constant(2.0))) }
     "Div" { check(IgnitorDsl.Sine().div(IgnitorDsl.Param("divisor", 2.0))) }
-    "Minus" { check(IgnitorDsl.Sine().minus(IgnitorDsl.Sawtooth())) }
+    "Minus" { check(IgnitorDsl.Sine().minus(IgnitorDsl.Saw())) }
     "Neg" { check(IgnitorDsl.Sine().neg()) }
     "Abs" { check(IgnitorDsl.Sine().abs()) }
     "Pow" { check(IgnitorDsl.Sine().pow(IgnitorDsl.Constant(2.0))) }
@@ -157,7 +157,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Sqrt" { check(IgnitorDsl.Sine().sqrt()) }
     "Sign" { check(IgnitorDsl.Sine().sign()) }
     "Tanh" { check(IgnitorDsl.Sine().tanh()) }
-    "Lerp" { check(IgnitorDsl.Sine().lerp(IgnitorDsl.Sawtooth(), IgnitorDsl.Constant(0.3))) }
+    "Lerp" { check(IgnitorDsl.Sine().lerp(IgnitorDsl.Saw(), IgnitorDsl.Constant(0.3))) }
     "Range" { check(IgnitorDsl.Sine().range(IgnitorDsl.Constant(0.5), IgnitorDsl.Constant(5.0))) }
     "Floor" { check(IgnitorDsl.Sine().floor()) }
     "Ceil" { check(IgnitorDsl.Sine().ceil()) }
@@ -179,7 +179,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // An inline `sound(Ignitor.saw().classic())` crosses the wire; its filter slots default to SLOT_UNSET,
     // so this is the same NaN-through-the-codec question the Katalyst's classic chain answers.
     "classic(): the whole slotted tail round-trips, its unset defaults included, and keeps its name" {
-        val tail = IgnitorDsl.Sawtooth().classic()
+        val tail = IgnitorDsl.Saw().classic()
         val decoded = roundTrip(tail)
 
         decoded shouldBe tail
@@ -188,8 +188,8 @@ class IgnitorDslWireCodecSpec : StringSpec({
         // the tag survives the wire (phase 3 step 10): a registered instrument reaches the engine through here
         decoded.endsInClassic() shouldBe true
     }
-    "Highpass (custom q)" { check(IgnitorDsl.Sawtooth().highpass(500.0, 1.5)) }
-    "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onepole(3000.0)) }
+    "Highpass (custom q)" { check(IgnitorDsl.Saw().highpass(500.0, 1.5)) }
+    "OnePoleLowpass" { check(IgnitorDsl.Saw().onepole(3000.0)) }
     "Bandpass" { check(IgnitorDsl.Sine().bandpass(1000.0, 2.0)) }
     "Notch" { check(IgnitorDsl.Sine().notch(1000.0, 2.0)) }
     "Lowpass, Highpass, Bandpass, Notch with envelope curves (non-default)" {
@@ -214,7 +214,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Eq (every section variant, all fields non-default)" {
         check(
             IgnitorDsl.Eq(
-                inner = IgnitorDsl.Sawtooth(),
+                inner = IgnitorDsl.Saw(),
                 sections = listOf(
                     IgnitorDsl.EqSection.RawTap(
                         IgnitorDsl.Constant(4000.0), IgnitorDsl.Constant(0.8), IgnitorDsl.Param("tapGain", 2.0),
@@ -323,14 +323,14 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- dispatch / deep composites -------------------------------------------------------------------------
     "Variants (primitive children)" {
-        check(IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth(), IgnitorDsl.Square())))
+        check(IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw(), IgnitorDsl.Square())))
     }
     "Variants (nested inside Variants)" {
         check(
             IgnitorDsl.Variants(
                 listOf(
                     IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Square())),
-                    IgnitorDsl.Sawtooth(),
+                    IgnitorDsl.Saw(),
                 )
             )
         )
@@ -340,7 +340,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     }
     "sgpad-style composite" {
         check(
-            (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(0.1))
+            (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1))
                 .div(IgnitorDsl.Param("divisor", 2.0))
                 .onepole(3000.0)
         )

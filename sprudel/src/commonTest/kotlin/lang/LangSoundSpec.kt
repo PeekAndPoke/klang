@@ -143,7 +143,7 @@ class LangSoundSpec : StringSpec({
     }
 
     "sound(IgnitorDsl) replaces a previous SoundValue.Named on the same chain" {
-        val p = note("c").sound("bd").sound(IgnitorDsl.Sawtooth())
+        val p = note("c").sound("bd").sound(IgnitorDsl.Saw())
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

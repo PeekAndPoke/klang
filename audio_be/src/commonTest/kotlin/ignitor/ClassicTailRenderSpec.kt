@@ -30,7 +30,7 @@ import kotlin.random.Random
  */
 class ClassicTailRenderSpec : StringSpec({
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
     val tail = saw.classic()
 
     val envelopeAlone = saw.adsr(

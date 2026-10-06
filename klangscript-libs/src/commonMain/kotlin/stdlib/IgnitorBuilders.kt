@@ -313,14 +313,14 @@ fun OscSquareBuilder.riseFlank(riseFlank: Double): OscSquareBuilder = copy(node 
 @KlangScript.Function
 fun OscSquareBuilder.fallFlank(fallFlank: Double): OscSquareBuilder = copy(node = node.copy(fallFlank = fallFlank))
 
-// ── Sawtooth ─────────────────────────────────────────────────────────────────
+// ── Saw ─────────────────────────────────────────────────────────────────
 
 /**
- * Builder for [IgnitorDsl.Sawtooth], handed to the `configure` lambda of `Ignitor.saw(...)`.
+ * Builder for [IgnitorDsl.Saw], handed to the `configure` lambda of `Ignitor.saw(...)`.
  * Knobs: `analog`, `resetSamples`, `shapeMax`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
-data class OscSawBuilder(val node: IgnitorDsl.Sawtooth)
+data class OscSawBuilder(val node: IgnitorDsl.Saw)
 
 /**
  * Where in its cycle the sawtooth runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0

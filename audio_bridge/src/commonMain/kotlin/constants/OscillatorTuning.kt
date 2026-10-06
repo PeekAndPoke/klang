@@ -9,7 +9,7 @@ package io.peekandpoke.klang.audio_bridge.constants
  * Fine-tuning constants for oscillator character — the engine's "voice", collected in one place so
  * the sound can be dialed in by ear without hunting through the oscillator code.
  *
- * `SAW_*` apply to **every** saw (the single `Ignitors.sawtooth` and the `Ignitors.superSaw` voices —
+ * `SAW_*` apply to **every** saw (the single `Ignitors.saw` and the `Ignitors.superSaw` voices:
  * there is only one saw shape). `SUPERSAW_*` are unison-specific (they only matter when stacking
  * detuned voices). More oscillator families (ramp, …) will add their groups here over time.
  *

@@ -61,7 +61,7 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
         return engine.execute(code).toObjectOrNull<IgnitorDsl>()!!
     }
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
 
     // ── tremolo ──────────────────────────────────────────────────────────────────────────────────
 

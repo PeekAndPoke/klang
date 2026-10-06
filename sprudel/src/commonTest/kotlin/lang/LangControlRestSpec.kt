@@ -124,7 +124,7 @@ class LangControlRestSpec : StringSpec({
             Row("ignitorParam(slot = \"analog\", ", "value", "1", "2"),
             Row("ignp(slot = \"analog\", ", "value", "1", "2"),
         ),
-        listOf("sndPink", "sndRamp", "sndSaw", "sndSine", "sndSquare", "sndTriangle", "sndZamp").map {
+        listOf("sndPink", "sndRamp", "sndSaw", "sndSine", "sndSquare", "sndTri", "sndZamp").map {
             Row(it, "params", "1", "1", fresh = true)
         },
         compound("sndNoise", t("color", "0.3", "0.6")),

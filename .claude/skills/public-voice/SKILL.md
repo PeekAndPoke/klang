@@ -42,7 +42,7 @@ brochure ("no Hochglanz-rubbish"). Factual, but not cold.
   "Klang is not here to replace any of it" holds everywhere.
 - **No record of retired surfaces** (maintainer, 2026-09-28: "remove these mentions fully, no need to keep record in
   non published posts or the white-paper"). The whitepaper and every unpublished draft describe today's engine: no
-  retired door, class or spelling (the list is the "Retired" section of `CLAUDE.md`), no "since then" or "no X any
+  retired door, class or spelling (the list is `docs/retired-names.md`), no "since then" or "no X any
   more" notes, and code only in current, verified syntax. A post keeps its story and tells it in words that are true
   today. A published post is the one exception: it keeps what it said at its date.
 - **Not stale.** A status claim ("shipped", "still open", "measured") is checked in its primary record under

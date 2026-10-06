@@ -100,14 +100,14 @@ class TremoloCompositionSpec : StringSpec({
             "sine" -> Ignitors.sine(rate, analog)
             "triangle" -> Ignitors.tri(rate, analog)
             "square" -> Ignitors.pulze(rate, ConstantIgnitor(0.5), analog, flankSamples = edge)
-            "sawtooth" -> Ignitors.sawtooth(rate, analog, resetSamples = edge)
+            "sawtooth" -> Ignitors.saw(rate, analog, resetSamples = edge)
             "ramp" -> Ignitors.ramp(rate, analog, resetSamples = edge)
             else -> error("a new LFO shape needs its oscillator in this spec: $shape")
         }
     }
 
     // The input: a saw at the voice's pitch, without drift, so the node and the dry render are the same samples.
-    val inner: IgnitorDsl = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq, analog = IgnitorDsl.Constant(0.0))
+    val inner: IgnitorDsl = IgnitorDsl.Saw(freq = IgnitorDsl.Freq, analog = IgnitorDsl.Constant(0.0))
 
     /** The largest absolute difference between [a] and [b], sample for sample. */
     fun maxDiff(a: DoubleArray, b: DoubleArray): Double {

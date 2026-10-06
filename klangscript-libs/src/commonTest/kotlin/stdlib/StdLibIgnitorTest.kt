@@ -48,7 +48,7 @@ class StdLibIgnitorTest : StringSpec({
         val dsl = evalIgnitorDsl("Ignitor.saw().adsr(0.01, 0.1, 0.5, 0.2, e => e.declick(0.001))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
         dsl.declickSeconds shouldBe IgnitorDsl.Constant(0.001)
-        dsl.inner shouldBe IgnitorDsl.Sawtooth()
+        dsl.inner shouldBe IgnitorDsl.Saw()
     }
 
     "the reach-back chain methods adsrCurves, declickSeconds and expK are gone, and fail loudly" {
@@ -96,8 +96,8 @@ class StdLibIgnitorTest : StringSpec({
         dsl.freq shouldBe IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
     }
 
-    "Ignitor.saw() returns Sawtooth" {
-        evalIgnitorDsl("Ignitor.saw()").shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+    "Ignitor.saw() returns Saw" {
+        evalIgnitorDsl("Ignitor.saw()").shouldBeInstanceOf<IgnitorDsl.Saw>()
     }
 
     "Ignitor.square() returns Pulze (square/pulse/pulze are one pulse oscillator)" {
@@ -293,7 +293,7 @@ class StdLibIgnitorTest : StringSpec({
         dsl.oversample shouldBe IgnitorDsl.Constant(0.0)
         val drive = dsl.inner
         drive.shouldBeInstanceOf<IgnitorDsl.Drive>()
-        drive.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        drive.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
     }
 
     "distort with oversample factor" {
@@ -327,7 +327,7 @@ class StdLibIgnitorTest : StringSpec({
         val dsl = evalIgnitorDsl("Ignitor.sine().plus(Ignitor.saw())")
         dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
         dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
-        dsl.right.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        dsl.right.shouldBeInstanceOf<IgnitorDsl.Saw>()
     }
 
     "plus with number creates Constant" {
@@ -355,7 +355,7 @@ class StdLibIgnitorTest : StringSpec({
         val dsl = evalIgnitorDsl("Ignitor.sine().minus(Ignitor.saw())")
         dsl.shouldBeInstanceOf<IgnitorDsl.Minus>()
         dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
-        dsl.right.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        dsl.right.shouldBeInstanceOf<IgnitorDsl.Saw>()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -385,12 +385,12 @@ class StdLibIgnitorTest : StringSpec({
     "min and max keep the receiver on the left" {
         val capped = evalIgnitorDsl("Ignitor.saw().max(Ignitor.sine())")
         capped.shouldBeInstanceOf<IgnitorDsl.Min>()
-        capped.left.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        capped.left.shouldBeInstanceOf<IgnitorDsl.Saw>()
         capped.right.shouldBeInstanceOf<IgnitorDsl.Sine>()
 
         val floored = evalIgnitorDsl("Ignitor.saw().min(Ignitor.sine())")
         floored.shouldBeInstanceOf<IgnitorDsl.Max>()
-        floored.left.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        floored.left.shouldBeInstanceOf<IgnitorDsl.Saw>()
         floored.right.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
@@ -418,7 +418,7 @@ class StdLibIgnitorTest : StringSpec({
         """.trimIndent()
         )
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
-        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
         // The LFO is a Plus(Times(Plus(Sine, Constant), Constant), Constant)
         dsl.freq.shouldBeInstanceOf<IgnitorDsl.Plus>()
     }

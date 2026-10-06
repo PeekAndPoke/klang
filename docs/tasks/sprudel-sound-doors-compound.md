@@ -13,7 +13,7 @@ live on an object as well: `object Snd { object supersaw { fields } }`. Not full
 |------------------|-------------------------------------------------------|
 | `sndPluck`       | `decay, brightness, pickPosition, stiffness`          |
 | `sndSuperPluck`  | `voices, spread, decay, brightness, pickPosition, stiffness` |
-| `sndSine`, `sndSaw`, `sndSquare`, `sndTriangle`, `sndRamp`, `sndZamp`, `sndPink` | `params` (one slot) |
+| `sndSine`, `sndSaw`, `sndSquare`, `sndTri`, `sndRamp`, `sndZamp`, `sndPink` | `params` (one slot) |
 | `sndNoise`       | `color`                                               |
 | `sndBrown`       | `depth`                                               |
 | `sndPulze`       | `duty`                                                |

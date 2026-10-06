@@ -43,7 +43,7 @@ class KlangScriptEffectBuilderSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    val saw = IgnitorDsl.Sawtooth()
+    val saw = IgnitorDsl.Saw()
 
     "eq: script lambda == Kotlin eq().band().tap()" {
         ks("Ignitor.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))") shouldBe

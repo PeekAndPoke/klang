@@ -163,7 +163,7 @@ tasks {
                 "version" to project.version.toString(),
                 "gitBranch" to (git("rev-parse", "--abbrev-ref", "HEAD") ?: na),
                 "gitRev" to (git("rev-parse", "--short=8", "HEAD") ?: na),
-                "gitDesc" to (git("describe", "--tags", "--always") ?: na),
+                "gitDesc" to (git("describe", "--tags", "--always", "--dirty") ?: na),
                 "date" to now,
             )
 

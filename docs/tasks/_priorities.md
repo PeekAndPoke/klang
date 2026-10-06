@@ -156,7 +156,7 @@ The release-defining set, regardless of when they're sequenced:
 
 ## Blocked / off-plan / parked
 
-- **OPEN · maintainer decisions** (from the topic walk of 2026-10-02/04, not reached): (1) Sonnet 5.5 as a third,
+- **Maintainer decisions, all answered** (raised in the topic walk of 2026-10-02/04, answered 2026-10-06/07): (1) Sonnet 5.5 as a third,
   blind reviewer in round 1, as a trial; (2) `docs/blog/2026-01-20-the-position-that-survived/position-pipeline.png`,
   unreferenced since its interactive figure replaced it: keep as history or delete; (3) `console/deploy-finzo.sh`
   copies with `scp -r` and never deletes on the server, so a removed page or post stays online: add a delete step or
@@ -167,11 +167,16 @@ The release-defining set, regardless of when they're sequenced:
   [`20261006-oscillator-phase-knob.md`](../tasks-archive/2026-10/20261006-oscillator-phase-knob.md), "Recorded
   asymmetries". Queued from review: [`shared-modulator-memo-rate.md`](shared-modulator-memo-rate.md), a stateful
   modulator shared by oscillators at different pitches runs at double rate (pre-existing, `duty` and `phase`).
-  Open since 2026-10-06: (4) the saw keeps a door/node split the triangle lost (`Ign.saw` builds
-  `IgnitorDsl.Sawtooth`, wire name `sawtooth`, factory `Ignitors.sawtooth`), and sprudel's sound doors say
-  `sndTriangle()` / `sndSaw()` after the long sound names: align or keep; (5) the root `jvmTest` reports UP-TO-DATE
-  when only a doc changes, so the repo-scanning guards (`RetiredIgnitorNamesSpec`) do not run without `--rerun`:
-  declare the scanned files as test inputs, or accept and document it.
+  Answered 2026-10-07: (4) the saw's node is `IgnitorDsl.Saw` (wire name `saw`, factory `Ignitors.saw`), like its
+  door `Ign.saw`; sprudel's `sndTriangle()` is `sndTri()` (it still sets the sound `triangle`); the sound names and
+  the LFO shape `sawtooth` stay,
+  [`20261006-oscillator-names-across-dsls.md`](../tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md),
+  decisions 3 and 4. Also answered 2026-10-07: (1) no Sonnet reviewer trial; (2) `position-pipeline.png` deleted
+  (source and built copy); (3) the deploy is versioned, `klang.finzo.de/versions/v<version>-<git hash>` with a `current`
+  symlink, the newest 10 releases kept with their source maps (`console/deploy-finzo.sh`); (5) the repo-scanning guard
+  `RetiredIgnitorNamesSpec` goes (it guarded what the compiler and the song smoke test already catch); the retired
+  names moved from `CLAUDE.md` to `docs/retired-names.md`. Queued: [`callable-object-docs.md`](callable-object-docs.md),
+  a callable object's docs show its object form and its callable form.
 - **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
   `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [
   `-07`](copyright-audit-07-control-vocabulary-legal-review.md)
