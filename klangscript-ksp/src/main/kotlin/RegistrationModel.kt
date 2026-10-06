@@ -388,6 +388,74 @@ data class DefaultDecision(val literal: String?, val error: String?)
  */
 internal fun classLiteralTypeName(resolvedKotlinType: String): String = resolvedKotlinType.removeSuffix("?")
 
+/**
+ * The area of a generated registration block: its source file's name without `.kt`, cut after the second
+ * `_`-separated part. Sprudel's `lang_structural_chunk.kt` and `lang_structural_seq.kt` share the area
+ * `lang_structural`; a file without `_` (`KlangScriptIgnitor.kt`) is an area of its own. A block whose
+ * file is unknown goes to `misc`.
+ */
+internal fun sourceArea(fileName: String?): String {
+    val base = fileName?.removeSuffix(".kt")?.takeIf { it.isNotBlank() } ?: return "misc"
+
+    return base.split('_').take(2).joinToString("_")
+}
+
+/**
+ * An [sourceArea] as an identifier part: `lang_structural` becomes `LangStructural`, and an area with no
+ * letter or digit becomes `Misc`. The identifier, not the raw area, groups the blocks into files and
+ * names them, so two areas that normalize alike share one file instead of colliding on its name, and
+ * no area can produce the entry point's file name.
+ */
+internal fun areaIdentifier(area: String): String =
+    area.split('_', '-', '.', ' ')
+        .filter { it.isNotEmpty() }
+        .joinToString("") { part -> part.filter { it.isLetterOrDigit() }.replaceFirstChar { it.uppercase() } }
+        .ifEmpty { "Misc" }
+
+/** A chunk function of the generated registration: its area identifier, its name and its rendered blocks. */
+internal class RegistrationChunk(
+    val area: String,
+    val functionName: String,
+    val blocks: MutableList<String>,
+    var size: Int,
+)
+
+/**
+ * Distributes rendered registration [blocks] (area identifier to text, in collection order) over chunk
+ * functions named `<functionPrefix><area>Chunk<n>`, numbered per area. A chunk holds blocks of ONE area
+ * and stays within [budget] characters (a block larger than the budget gets a chunk of its own). The
+ * result is in collection order, which is the order the entry point calls the chunks in ([entryPointCalls]),
+ * so the registration order is the order the blocks were collected in.
+ */
+internal fun distributeIntoChunks(
+    blocks: List<Pair<String, String>>,
+    budget: Int,
+    functionPrefix: String,
+): List<RegistrationChunk> {
+    val chunks = mutableListOf<RegistrationChunk>()
+    val chunkCountPerArea = mutableMapOf<String, Int>()
+
+    for ((area, text) in blocks) {
+        val current = chunks.lastOrNull()
+        val fits = current != null && current.area == area && current.size + text.length <= budget
+
+        if (fits) {
+            current.blocks.add(text)
+            current.size += text.length
+            continue
+        }
+
+        val index = chunkCountPerArea.getOrElse(area) { 0 }
+        chunkCountPerArea[area] = index + 1
+        chunks.add(RegistrationChunk(area, "$functionPrefix${area}Chunk$index", mutableListOf(text), text.length))
+    }
+
+    return chunks
+}
+
+/** The entry point's calls, one per chunk, in the order of [chunks] (never re-sorted: that order is the registration order). */
+internal fun entryPointCalls(chunks: List<RegistrationChunk>): List<String> = chunks.map { "${it.functionName}()" }
+
 internal fun joinCallArgs(selfArg: String, args: String): String = when {
     selfArg.isEmpty() -> args
     args.isEmpty() -> selfArg.trimEnd(' ', ',')

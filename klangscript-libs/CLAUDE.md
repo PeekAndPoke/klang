@@ -26,7 +26,7 @@ script registration). Split out of `:klangscript` on 2026-09-06
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |
 | `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `AdsrBuilder` (curves, declick) and `ModAdsrBuilder` (curves) for the envelopes, `FilterBuilder`/`BandFilterBuilder` (the four filters), `EqBuilder` (band, tap), `PitchEnvelopeBuilder`, `FmBuilder`, `PhaserBuilder`/`ShimmerBuilder` (floor), `TremoloBuilder` (shape) |
 | `src/{jvmMain,jsMain}/kotlin/stdlib/PlatformConsole.kt` | Platform console output                                              |
-| `build/generated/ksp/metadata/commonMain/kotlin/`  | `GeneratedStdlibRegistration.kt` (KSP output, never edit)                 |
+| `build/generated/ksp/metadata/commonMain/kotlin/`  | KSP output, never edit: one `GeneratedStdlib<Area>Registration.kt` per source file area, the entry point `GeneratedStdlibRegistration.kt`, the docs `GeneratedStdlibDocs.kt` |
 
 ## Rules
 

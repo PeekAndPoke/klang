@@ -82,7 +82,10 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
   positional); the call pastes the same literal only for a native caller with fewer arguments (a
   native function in a Kotlin function slot), `optArg` for the nullable `= null` case. `callInfoOf`
   and `optArg` (`runtime/NativeInterop.kt`) and `nullDefault` (alone in `runtime/NullDefault.kt`, so
-  no initialized top-level property lands in `NativeInterop.kt`) are the shared runtime helpers.
+  no initialized top-level property lands in `NativeInterop.kt`) are the shared runtime helpers. The
+  generated registration files hold only plain functions; `Generated<Lib>Docs.kt` is the only generated
+  file with top-level state (its type table first). A top-level property in a registration file brings the
+  Kotlin/JS init guard back into every door of that file, with every test still green.
 - **Keep the feature docs in sync**: after every implementation update `ref/feature-catalog.md` and the
   matching `language-features/NN-*.md` status.
 
@@ -133,3 +136,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   `optArg`, `nullDefault`, and the processor refuses a non-literal door default; `convertToKotlin` refuses a number,
   boolean, array or object on a target it cannot be as a `KlangScriptTypeError` at the call, on every platform
   (`docs/tasks/reduce-js-bundle-size.md`, "Step 1 done").
+- 2026-10-06: the generated registration is split per source area (`Generated<Lib><Area>Registration.kt`, plain functions,
+  no top-level state), an entry point calls the chunks in the old order, the docs live in `Generated<Lib>Docs.kt` with
+  each `KlangType` emitted once (`docs/tasks/reduce-js-bundle-size.md`, "Step 2 done").
