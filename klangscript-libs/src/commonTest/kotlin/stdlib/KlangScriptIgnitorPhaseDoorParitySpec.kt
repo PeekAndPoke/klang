@@ -15,7 +15,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * The oscillators' `phase` knob and the tremolo's `range(from, to)` on both doors (`docs/tasks/oscillator-phase-knob.md`,
+ * The oscillators' `phase` knob and the tremolo's `range(from, to)` on both doors (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`,
  * decisions 1 and 2 of 2026-10-06): the script door (`Ignitor.sine(4, x => x.phase(0.25))`, positional and named) and
  * the Kotlin door (`KlangScriptIgnitor.sine(4) { it.phase(0.25) }`) build the same node, and that node is the
  * default node with exactly its `phase` field written (the expectation never goes through a builder). Every periodic

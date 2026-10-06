@@ -70,7 +70,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   Every lane steps once per block and ramps across it.
 - **`DriftLanes`** gives every multi-voice oscillator its drift; `analogSpread` 0 is one shared walk, 1 (default)
   a lane per voice, and both endpoints are exact.
-- **Oscillator phase** (`PhaseOffset`, `docs/tasks/oscillator-phase-knob.md`): every periodic oscillator has a `phase`
+- **Oscillator phase** (`PhaseOffset`, `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): every periodic oscillator has a `phase`
   input in cycles, wrapped to `[0, 1)`, no clamp. The literal 0 builds no input (the default renders as before, bit for
   bit); a block-constant one moves the accumulator by its change once per block (the per-sample loops untouched); a
   signal takes the oscillator's phased loop, which reads the shape at `accumulator + offset` per sample. A stack
@@ -173,7 +173,7 @@ One line per step, newest first. A link to the archived task record where one ex
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
 - 2026-10-06 A `phase` input on every periodic oscillator and a `range` on the tremolo's swing, both defaults bit-identical
-  (`docs/tasks/oscillator-phase-knob.md`)
+  (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`)
 - 2026-10-05 The Ignitor's `rangex(from, to)`, the exponential twin of `range`, composed of `Exp`, `Range`, `Log` and
   `Max` (no node of its own), floor `RANGEX_FLOOR` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md` decision 16)
 - 2026-10-05 One `range`: the Ignitor's `unipolar()` / `bipolar()` go with their wire nodes; `range(0, 1)` and

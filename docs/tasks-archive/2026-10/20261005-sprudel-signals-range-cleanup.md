@@ -2,7 +2,7 @@
 
 Status: **DONE 2026-10-05, archived.** Decided by the maintainer and built the same day on branch `signals-range`: "It
 reduces the surface while not costing any functionality, a total win." Commits `5f3c0278`, `82cc6024`, `f22448e9`,
-`4b94bdd5`. Follow-ups: the phase knob with the vibrato/tremolo `range` knob (`docs/tasks/oscillator-phase-knob.md`)
+`4b94bdd5`. Follow-ups: the phase knob with the vibrato/tremolo `range` knob (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`)
 and one name per oscillator shape (`docs/tasks/oscillator-names-across-dsls.md`).
 
 ## The decisions (maintainer, 2026-10-05)
@@ -79,4 +79,4 @@ Ignitor `rangex`.
    `as` contextual in the parser, the dead range-context helpers and the string-receiver `range` / `rangex` removed, the Ignitor `rangex` composed. The corpus render is identical except
    Der Schmetterling (the maintainer's open edit), which is proven separately from the committed text.
 
-The phase knob and the vibrato/tremolo `range` knob are the next task (`docs/tasks/oscillator-phase-knob.md`).
+The phase knob and the vibrato/tremolo `range` knob are the next task (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`).

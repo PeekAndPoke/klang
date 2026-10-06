@@ -1,6 +1,6 @@
 # One stateful modulator shared by two oscillators at different pitches runs twice per block
 
-Status: **queued 2026-10-06**, found in review (round 2 of `docs/tasks/oscillator-phase-knob.md`, code role). Not
+Status: **queued 2026-10-06**, found in review (round 2 of `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`, code role). Not
 started. Pre-existing for `duty`; the oscillator `phase` input follows the same path and inherits it.
 
 ## What

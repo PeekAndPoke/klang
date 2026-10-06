@@ -9,7 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.wrapToUnitCycle
 
 /**
- * A periodic oscillator's `phase` input (`docs/tasks/oscillator-phase-knob.md`): an offset in cycles, wrapped into
+ * A periodic oscillator's `phase` input (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): an offset in cycles, wrapped into
  * `[0, 1)`, that the oscillator adds to its running phase every sample. The oscillator reads its shape at
  * `accumulator + offset`. Two paths, chosen once from the input's structure ([Ignitor.isBlockConstant]):
  *

@@ -161,7 +161,11 @@ The release-defining set, regardless of when they're sequenced:
   unreferenced since its interactive figure replaced it: keep as history or delete; (3) `console/deploy-finzo.sh`
   copies with `scp -r` and never deletes on the server, so a removed page or post stays online: add a delete step or
   accept it; (4) the triangle's name across the DSLs (`tri` in sprudel, `Ign.triangle` but `supertri`, both as sound
-  and LFO names), [`oscillator-names-across-dsls.md`](oscillator-names-across-dsls.md).
+  and LFO names), [`oscillator-names-across-dsls.md`](oscillator-names-across-dsls.md); (5) whether sprudel sounds get
+  a `phase` slot (`s("sine")` cannot reach the oscillators' `phase` knob today, its default is a literal 0),
+  [`20261006-oscillator-phase-knob.md`](../tasks-archive/2026-10/20261006-oscillator-phase-knob.md), "Recorded
+  asymmetries". Queued from review: [`shared-modulator-memo-rate.md`](shared-modulator-memo-rate.md), a stateful
+  modulator shared by oscillators at different pitches runs at double rate (pre-existing, `duty` and `phase`).
 - **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
   `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [
   `-07`](copyright-audit-07-control-vocabulary-legal-review.md)

@@ -23,7 +23,7 @@ signals are now `sine`, `cosine`, `saw`, `tri`, `square`, `perlin`, `berlin`, `r
 ## What is already covered elsewhere
 
 - **cosine on the Ignitor**: arrives with the phase knob, as a sine with `phase = 0.25`
-  (`docs/tasks/oscillator-phase-knob.md`).
+  (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`).
 - **`ramp`, `zamp`, `zawtooth`, `pulze`**: folding the raw twins into their rounded oscillators with an edge knob is
   `docs/tasks/future/chip-style-instruments.md`, which needs a bit-identity proof per fold.
 

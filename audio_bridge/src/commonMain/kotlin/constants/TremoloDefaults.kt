@@ -22,7 +22,7 @@ const val TREMOLO_EDGE_SECONDS: Double = 0.016
  * `rangeFrom` / `rangeTo`, the script builder's `range(from, to)`): the LFO's -1 maps to `from`, its +1 to `to`, and the
  * gain is `1 + depth * that`. `(-1, 0)` is the tremolo as it always was, the gain dipping from 1 to `1 - depth`; the
  * engine recognises exactly these two values and then builds the classic `range(1 - depth, 1)`, bit for bit.
- * Decided by the maintainer on 2026-10-05 (`docs/tasks/oscillator-phase-knob.md`).
+ * Decided by the maintainer on 2026-10-05 (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`).
  */
 const val TREMOLO_RANGE_FROM: Double = -1.0
 

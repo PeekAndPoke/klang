@@ -1,8 +1,9 @@
 # A `phase` knob on every periodic oscillator, `range` on the vibrato and tremolo LFOs
 
-Status: **built 2026-10-06** on branch `oscillator-phase` (on top of `signals-range`), review round 1 applied. The
-sprudel tremolo `range` is decided (decision 4: not in sprudel yet). Worker report: `tmp/reviews/phase-knob-report.md`
-(not in git).
+Status: **DONE 2026-10-06, archived.** Built on branch `oscillator-phase` (on top of `signals-range`), commit
+`1207ed50`; review round 1 (blind pair) and round 2 (reviewer-high, clean) applied. The sprudel tremolo `range` is
+decided (decision 4: not in sprudel yet); the vibrato's `range` moved to `docs/tasks/future/pitch-pipeline-into-the-tree.md`;
+the shared-modulator defect found in review is `docs/tasks/shared-modulator-memo-rate.md`.
 
 ## Decided at the start (maintainer, 2026-10-06)
 

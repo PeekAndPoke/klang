@@ -38,6 +38,10 @@ the strip is gone, the tree's own `Vibrato` and `PitchEnvelope` nodes could be c
 way the tremolo was (`docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`): one pitch primitive in
 semitones (ratio `2^(x/12)`), fed by `Ignitor.sine(rate)` times the depth (analog 0) for the vibrato and by an
 envelope times the amount for the pitch envelope; then `VibratoModIgnitor` and `pitchEnvelopeModIgnitor` go, the
-doors stay. Open before building: the start phase (needs `docs/tasks/oscillator-phase-knob.md`), whether accelerate
+doors stay. The vibrato's `range` knob lands here (maintainer, 2026-10-06, deferred from the phase knob so it is
+built once): a builder knob that places the inner LFO's swing in the -1..1 language of the Ignitor `range`, default
+`range(-1, 1)` (today's sound, bit-identical), `range(0, 1)` for a guitar's upward-only vibrato, no clamp; the
+tremolo's `range` (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`) is the model. Open before building:
+the start phase (the `phase` knob exists since 2026-10-06, same archive file), whether accelerate
 (progress over the note's length) needs a new building block or stays, FM last (modulator at a multiple of the note,
 depth in Hz, its own envelope), sample voices, and a listening pair wherever the composed form is not bit-identical.
