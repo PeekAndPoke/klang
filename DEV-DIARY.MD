@@ -4,6 +4,16 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-06) A lighter bundle ... v0.5.3
+
+- the KSP registration slimmed for every library it runs on ... one call per door, no arity ladders any more
+- docs metadata in its own file, each KlangType emitted once, the registrations split per area ... the 2.9 MB generated file is 18 small ones
+- the production bundle went from 9.5 MB to 8.1 MB (-14.5 %) ... docs, registries and editor results byte-identical
+- the 26 "no cast needed" warnings are gone
+- a non-literal door default is a build error now ... the guardrail enforces itself
+- a wrong argument type is a clear type error on JVM and in the browser alike ... no more internal ClassCastException
+- found on the way: true.toString() fails ... parked as its own task
+
 ### (2026-10-06) A phase on every oscillator ... v0.5.2
 
 - every periodic oscillator gets phase(...) ... a fraction of a cycle, 1.25 is 0.25, a moving one is phase modulation
