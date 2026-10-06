@@ -9,7 +9,7 @@ These are starting points — tweak parameters to taste.
 
 ```javascript
 let flute = Ignitor.sine(x => x.analog(0.15))
-        .plus(Ignitor.triangle(x => x.analog(0.15)).mul(0.3))
+        .plus(Ignitor.tri(x => x.analog(0.15)).mul(0.3))
         .plus(
             Ignitor.perlin(12).mul(0.2)
                 .lowpass(4000)
@@ -27,7 +27,7 @@ let flute = Ignitor.sine(x => x.analog(0.15))
 ### Clarinet
 
 ```javascript
-let clarinet = Ignitor.triangle().mul(0.7)
+let clarinet = Ignitor.tri().mul(0.7)
         .plus(Ignitor.square().mul(0.15))
         .plus(Ignitor.sine().mul(0.15))
         .plus(Ignitor.perlin(6).mul(0.02))
@@ -45,7 +45,7 @@ let clarinet = Ignitor.triangle().mul(0.7)
 ### Jazz Clarinet
 
 ```javascript
-let jazzClar = Ignitor.triangle().mul(0.6)
+let jazzClar = Ignitor.tri().mul(0.6)
         .plus(Ignitor.square().mul(0.25))
         .plus(Ignitor.sine().mul(0.15))
         .plus(Ignitor.perlin(8).mul(0.03))

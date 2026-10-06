@@ -732,9 +732,10 @@ private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Igni
     val analog = ConstantIgnitor(0.0)
     val edgeSamples = TREMOLO_EDGE_SECONDS * sampleRate
 
-    // The catalogue's names ARE the oscillator names; `sine` is also every index `indexAt` falls back to.
+    // Each catalogue name picks its oscillator (the LFO shape `triangle` is the oscillator `tri`); `sine` is also
+    // every index `indexAt` falls back to.
     val lfo = when (LfoShapes.names[lfoShapeIndex]) {
-        "triangle" -> Ignitors.triangle(rate, analog)
+        "triangle" -> Ignitors.tri(rate, analog)
         "square" -> Ignitors.pulze(rate, ConstantIgnitor(0.5), analog, flankSamples = edgeSamples)
         "sawtooth" -> Ignitors.sawtooth(rate, analog, resetSamples = edgeSamples)
         "ramp" -> Ignitors.ramp(rate, analog, resetSamples = edgeSamples)
@@ -966,7 +967,7 @@ private fun IgnitorDsl.buildRaw(
             ),
         )
         is IgnitorDsl.Square -> pitchedSource(freq, Ignitors.square(freq.noMod(), analog.noMod(), phase.phaseInput()))
-        is IgnitorDsl.Triangle -> pitchedSource(freq, Ignitors.triangle(freq.noMod(), analog.noMod(), phase.phaseInput()))
+        is IgnitorDsl.Tri -> pitchedSource(freq, Ignitors.tri(freq.noMod(), analog.noMod(), phase.phaseInput()))
         is IgnitorDsl.Ramp -> pitchedSource(
             freq,
             Ignitors.ramp(

@@ -122,3 +122,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
 - 2026-10-05: `from` and `as` are contextual keywords (lexed as identifiers, read as keywords only in an import or
   export), so the range values can be named `from` / `to` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
+- 2026-10-06: the Ignitor's triangle door is `Ign.tri` / `Ignitor.tri` with `OscTriBuilder`, matching `supertri` and
+  sprudel's `tri`; `triangle` as a door is removed (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`).

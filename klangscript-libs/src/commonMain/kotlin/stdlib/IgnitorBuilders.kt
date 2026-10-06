@@ -134,14 +134,14 @@ fun OscSineBuilder.suboctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1
 @KlangScript.Function
 fun OscSineBuilder.analogSpread(amount: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
 
-// ── Triangle ─────────────────────────────────────────────────────────────────
+// ── Tri ─────────────────────────────────────────────────────────────────
 
 /**
- * Builder for [IgnitorDsl.Triangle], handed to the `configure` lambda of `Ignitor.triangle(...)`.
+ * Builder for [IgnitorDsl.Tri], handed to the `configure` lambda of `Ignitor.tri(...)`.
  * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
-data class OscTriangleBuilder(val node: IgnitorDsl.Triangle)
+data class OscTriBuilder(val node: IgnitorDsl.Tri)
 
 /**
  * Where in its cycle the triangle runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
@@ -150,15 +150,15 @@ data class OscTriangleBuilder(val node: IgnitorDsl.Triangle)
  * clicks).
  *
  * ```KlangScript
- * Ignitor.triangle(2, x => x.phase(0.5))   // starts at its top
+ * Ignitor.tri(2, x => x.phase(0.5))   // starts at its top
  * ```
  */
 @KlangScript.Function
-fun OscTriangleBuilder.phase(phase: IgnitorDslLike): OscTriangleBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+fun OscTriBuilder.phase(phase: IgnitorDslLike): OscTriBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
-fun OscTriangleBuilder.analog(analog: IgnitorDslLike): OscTriangleBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscTriBuilder.analog(analog: IgnitorDslLike): OscTriBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
 // ── Zawtooth ─────────────────────────────────────────────────────────────────
 

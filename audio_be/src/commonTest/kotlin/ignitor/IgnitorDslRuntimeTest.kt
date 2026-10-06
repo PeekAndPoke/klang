@@ -80,8 +80,8 @@ class IgnitorDslRuntimeTest : StringSpec({
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
-    "Triangle DSL produces non-zero output" {
-        val sig = IgnitorDsl.Triangle().toExciter()
+    "Tri DSL produces non-zero output" {
+        val sig = IgnitorDsl.Tri().toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 

@@ -104,8 +104,8 @@ oscillators (already `(freq, configure)`).
   (two slots at -1 and 0 render the classic bits), so a song that wants a swell reopens it. (2) Sprudel cannot reach
   an oscillator's `phase`: the field defaults to the literal 0, not a slot (as `analog` and `duty` do), so the
   built-in sounds read no `phase` slot and the default costs nothing; an instrument author opens it per note with
-  `x.phase(Ignitor.param("phase", 0))` and the pattern's `ignp("phase", ...)`. A `Slots.phase` default is a
-  maintainer question.
+  `x.phase(Ignitor.param("phase", 0))` and the pattern's `ignp("phase", ...)`. Sprudel sounds get no `phase` slot
+  (maintainer, 2026-10-06).
 - **Recorded two-door asymmetries (step 3d(i)).** The Kotlin filter doors stay flat and name the four envelope
   stages separately (audio_bridge cannot see the script builders; a superset of the builder). The Kotlin
   `phaser`/`shimmer` set `floor` only by `.copy(floor = ...)`: `floor` exists only as an effect-builder knob

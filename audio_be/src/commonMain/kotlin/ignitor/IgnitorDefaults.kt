@@ -62,9 +62,9 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     val rawPulse = IgnitorDsl.RawPulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
     put("pulze", rawPulse)
 
-    val triangle = IgnitorDsl.Triangle(freq = IgnitorDsl.Freq, analog = slots.analog)
-    put("triangle", triangle)
-    put("tri", triangle)
+    val tri = IgnitorDsl.Tri(freq = IgnitorDsl.Freq, analog = slots.analog)
+    put("triangle", tri)
+    put("tri", tri)
 
     // ramp = rounded reverse-saw; zamp = its raw/aliased counterpart.
     val ramp = IgnitorDsl.Ramp(freq = IgnitorDsl.Freq, analog = slots.analog)
@@ -272,7 +272,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
 // ── FM Synthesis ─────────────────────────────────────────────────────────────
 //   Sine.fm(Sine, ratio=2.0, depth=200)             — bell / metallic
 //   Sine.fm(Sine, ratio=1.0, depth=500)             — harsh brass
-//   Triangle.fm(Sine, ratio=3.0, depth=100)         — softer FM
+//   Tri.fm(Sine, ratio=3.0, depth=100)              — softer FM
 //   Sine.fm(Sine, ratio=1.4, depth=300,             — decaying FM bell
 //           envDecaySec=0.5, envSustainLevel=0.0)
 //

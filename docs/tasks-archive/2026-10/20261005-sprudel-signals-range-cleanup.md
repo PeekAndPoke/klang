@@ -3,7 +3,7 @@
 Status: **DONE 2026-10-05, archived.** Decided by the maintainer and built the same day on branch `signals-range`: "It
 reduces the surface while not costing any functionality, a total win." Commits `5f3c0278`, `82cc6024`, `f22448e9`,
 `4b94bdd5`. Follow-ups: the phase knob with the vibrato/tremolo `range` knob (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`)
-and one name per oscillator shape (`docs/tasks/oscillator-names-across-dsls.md`).
+and one name per oscillator shape (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`).
 
 ## The decisions (maintainer, 2026-10-05)
 

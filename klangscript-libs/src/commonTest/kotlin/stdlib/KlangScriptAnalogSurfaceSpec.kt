@@ -39,7 +39,7 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
     val supported = listOf(
         """Ignitor.sine(x => x.analog(3))""" to IgnitorDsl.Sine::class,
         """Ignitor.saw(x => x.analog(3))""" to IgnitorDsl.Sawtooth::class,
-        """Ignitor.triangle(x => x.analog(3))""" to IgnitorDsl.Triangle::class,
+        """Ignitor.tri(x => x.analog(3))""" to IgnitorDsl.Tri::class,
         """Ignitor.ramp(x => x.analog(3))""" to IgnitorDsl.Ramp::class,
         """Ignitor.zawtooth(x => x.analog(3))""" to IgnitorDsl.Zawtooth::class,
         """Ignitor.zamp(x => x.analog(3))""" to IgnitorDsl.Zamp::class,
@@ -102,7 +102,7 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
 private fun IgnitorDsl.analogOf(): IgnitorDsl? = when (this) {
     is IgnitorDsl.Sine -> analog
     is IgnitorDsl.Sawtooth -> analog
-    is IgnitorDsl.Triangle -> analog
+    is IgnitorDsl.Tri -> analog
     is IgnitorDsl.Ramp -> analog
     is IgnitorDsl.Zawtooth -> analog
     is IgnitorDsl.Zamp -> analog

@@ -89,8 +89,8 @@ class TremoloCompositionSpec : StringSpec({
 
     /**
      * The oscillator of [shape] at [rate], built here the way the listening pairs built the composed tremolo:
-     * `Ignitor.<shape>(rate, o => ...edges... .analog(0))`. Not the engine's own mapping: a shape that maps to the
-     * wrong oscillator there, or a new shape with no oscillator, shows here.
+     * `Ignitor.<shape>(rate, o => ...edges... .analog(0))` (the shape `triangle` is `Ignitor.tri`). Not the engine's own
+     * mapping: a shape that maps to the wrong oscillator there, or a new shape with no oscillator, shows here.
      */
     fun oscillator(shape: String, rate: Ignitor, sampleRate: Int): Ignitor {
         val analog = ConstantIgnitor(0.0)
@@ -98,7 +98,7 @@ class TremoloCompositionSpec : StringSpec({
 
         return when (shape) {
             "sine" -> Ignitors.sine(rate, analog)
-            "triangle" -> Ignitors.triangle(rate, analog)
+            "triangle" -> Ignitors.tri(rate, analog)
             "square" -> Ignitors.pulze(rate, ConstantIgnitor(0.5), analog, flankSamples = edge)
             "sawtooth" -> Ignitors.sawtooth(rate, analog, resetSamples = edge)
             "ramp" -> Ignitors.ramp(rate, analog, resetSamples = edge)

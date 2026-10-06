@@ -133,8 +133,8 @@ inharmonic, and its sign pattern is already within 0.15 dB of the best free phas
 - **Sprudel cannot reach an oscillator's `phase`.** The field defaults to the literal 0, not a slot (as `analog` and
   `duty` do), so the built-in sounds read no `phase` slot: the default costs nothing and is bit-identical. The
   per-note route is an instrument author's `x.phase(Ignitor.param("phase", 0))` with the pattern's
-  `ignp("phase", ...)`. Whether a `Slots.phase` default is wanted is a maintainer question (raised by the
-  coordinator, round 1).
+  `ignp("phase", ...)`. Whether a `Slots.phase` default is wanted was raised by the coordinator in round 1;
+  answered 2026-10-06 by the maintainer: no, sprudel sounds get no `phase` slot.
 
 ## Open
 

@@ -172,6 +172,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-06 The triangle oscillator is `tri` end to end: the node `IgnitorDsl.Tri` (wire name `tri`), the factory
+  `Ignitors.tri`; the sound name and the LFO shape `triangle` stay
+  (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`)
 - 2026-10-06 A `phase` input on every periodic oscillator and a `range` on the tremolo's swing, both defaults bit-identical
   (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`)
 - 2026-10-05 The Ignitor's `rangex(from, to)`, the exponential twin of `range`, composed of `Exp`, `Range`, `Log` and

@@ -328,7 +328,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // accumulator once per block and costs nothing per sample)
             is IgnitorDsl.Sawtooth -> source() + phaseReads(node.phase)
             is IgnitorDsl.Square -> source() + phaseReads(node.phase)
-            is IgnitorDsl.Triangle -> source() + phaseReads(node.phase)
+            is IgnitorDsl.Tri -> source() + phaseReads(node.phase)
             is IgnitorDsl.Ramp -> source() + phaseReads(node.phase)
             is IgnitorDsl.Pulze -> source() + phaseReads(node.phase)
             is IgnitorDsl.RawPulze -> source() + phaseReads(node.phase)

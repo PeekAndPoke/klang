@@ -47,7 +47,7 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
         PhaseDoor("ramp", { p -> KlangScriptIgnitor.ramp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Ramp(freq = c(4.0), phase = p) }),
         PhaseDoor("square", { p -> KlangScriptIgnitor.square(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Pulze(freq = c(4.0), phase = p) }),
         PhaseDoor("pulze", { p -> KlangScriptIgnitor.pulze(4.0) { it.phase(p) } }, { p -> IgnitorDsl.RawPulze(freq = c(4.0), phase = p) }),
-        PhaseDoor("triangle", { p -> KlangScriptIgnitor.triangle(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Triangle(freq = c(4.0), phase = p) }),
+        PhaseDoor("tri", { p -> KlangScriptIgnitor.tri(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Tri(freq = c(4.0), phase = p) }),
         PhaseDoor("zawtooth", { p -> KlangScriptIgnitor.zawtooth(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Zawtooth(freq = c(4.0), phase = p) }),
         PhaseDoor("zamp", { p -> KlangScriptIgnitor.zamp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Zamp(freq = c(4.0), phase = p) }),
         PhaseDoor("impulse", { p -> KlangScriptIgnitor.impulse(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Impulse(freq = c(4.0), phase = p) }),

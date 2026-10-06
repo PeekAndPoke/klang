@@ -28,7 +28,7 @@ let koto = Ign.pluck()
       .classic()
 
 let shaku = Ign.sine().mul(0.6)
-      .plus(Ign.triangle().mul(0.25))
+      .plus(Ign.tri().mul(0.25))
       .plus(Ign.perlin(13).mul(0.05))
       .plus(Ign.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
       .lowpass(3500, 1.0, x => x.analog(Ign.slot.analog))

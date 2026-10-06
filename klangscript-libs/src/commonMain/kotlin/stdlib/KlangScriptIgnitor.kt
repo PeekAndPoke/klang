@@ -115,15 +115,15 @@ object KlangScriptIgnitor {
      * Creates a triangle wave oscillator. Its flanks are fixed fully open; `analog` and `phase` are its knobs.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscTriangleBuilder] (knobs: `analog`, `phase`) and returns it.
+     * @param configure receives the [OscTriBuilder] (knobs: `analog`, `phase`) and returns it.
      *
      * ```KlangScript
-     * Ignitor.triangle(x => x.analog(3))
+     * Ignitor.tri(x => x.analog(3))
      * ```
      */
     @KlangScript.Method
-    fun triangle(freq: IgnitorDslLike? = null, configure: ((OscTriangleBuilder) -> OscTriangleBuilder)? = null): IgnitorDsl =
-        OscTriangleBuilder(IgnitorDsl.Triangle(freq = freq.orNoteFreq())).configuredBy("Ignitor.triangle", configure).node
+    fun tri(freq: IgnitorDslLike? = null, configure: ((OscTriBuilder) -> OscTriBuilder)? = null): IgnitorDsl =
+        OscTriBuilder(IgnitorDsl.Tri(freq = freq.orNoteFreq())).configuredBy("Ignitor.tri", configure).node
 
     /**
      * Creates a ramp (reverse sawtooth) wave oscillator.

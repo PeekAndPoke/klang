@@ -173,7 +173,11 @@ same for `itri`, because the innermost range wins), `sinOfDay2`, `sinOfNight2` a
 sprudel's `range` and `rangex`, `lo` / `hi` on the Ignitor doors, the wire node `IgnitorDsl.Range` and the engine's
 `Ignitor.range`) are `from` / `to` end to end; the clamp keeps `lo` / `hi`. Sprudel's `_mapRangeContext` and
 `ContextRangeMapPattern` went with the helpers, and so did sprudel's `String.range` / `String.rangex` (a
-mini-notation string scales with `.mul(k).add(c)`).
+mini-notation string scales with `.mul(k).add(c)`). The Ignitor's triangle door `Ign.triangle` / `Ignitor.triangle`,
+its builder `OscTriangleBuilder`, the wire node `IgnitorDsl.Triangle` (wire name `triangle`) and the factory
+`Ignitors.triangle` (gone 2026-10-06, `docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`: now `tri`,
+`OscTriBuilder`, `IgnitorDsl.Tri`, `Ignitors.tri`, like `supertri` and sprudel's `tri`; the sound name and the LFO
+shape `triangle` stay). Guard: `RetiredIgnitorNamesSpec`.
 
 ## Available Agent
 

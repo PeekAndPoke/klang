@@ -187,7 +187,9 @@ class CompletionProviderTest : StringSpec({
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.memberCompletions(KlangType("Ignitor"), "").map { it.name }
         names shouldHaveAtLeastSize 5
-        names.toSet().containsAll(listOf("sine", "saw", "square", "triangle")) shouldBe true
+        names.toSet().containsAll(listOf("sine", "saw", "square", "tri")) shouldBe true
+        // the triangle door is `tri` since 2026-10-06; `triangle` is a sound name and an LFO shape, not a door
+        names.contains("triangle") shouldBe false
     }
 
     "member: excludes other types' methods" {

@@ -83,31 +83,31 @@ class ExcitersTest : StringSpec({
 
     "triangle - amplitude matches gain" {
         val g = 0.7
-        val buf = generate(Ignitors.triangle().withGain(gain(g)), freqHz = 440.0)
+        val buf = generate(Ignitors.tri().withGain(gain(g)), freqHz = 440.0)
         buf.peakAmplitude() shouldBe (g plusOrMinus 0.02)
     }
 
     "triangle - custom gain scales amplitude" {
         val g = 0.3
-        val buf = generate(Ignitors.triangle().withGain(gain(g)), freqHz = 440.0)
+        val buf = generate(Ignitors.tri().withGain(gain(g)), freqHz = 440.0)
         buf.peakAmplitude() shouldBe (g plusOrMinus 0.02)
     }
 
     "triangle - correct frequency (zero crossings)" {
         // 440Hz over 100ms = 44 cycles = 88 zero crossings (2 per cycle)
-        val buf = generate(Ignitors.triangle(), freqHz = 440.0)
+        val buf = generate(Ignitors.tri(), freqHz = 440.0)
         buf.zeroCrossings() shouldBeInRange 86..90
     }
 
     "triangle - symmetric around zero (no DC offset)" {
-        val buf = generate(Ignitors.triangle(), freqHz = 440.0)
+        val buf = generate(Ignitors.tri(), freqHz = 440.0)
         buf.dcOffset() shouldBe (0.0 plusOrMinus 0.01)
     }
 
     "triangle - linear ramps (not curved like sine)" {
         // Generate at a low frequency so we have many samples per ramp
         val freqHz = 100.0
-        val buf = generate(Ignitors.triangle().withGain(gain(1.0)), freqHz = freqHz, blockFrames = sampleRate)
+        val buf = generate(Ignitors.tri().withGain(gain(1.0)), freqHz = freqHz, blockFrames = sampleRate)
         // samplesPerCycle = 44100 / 100 = 441
         // Each quarter-cycle (110.25 samples) should be a linear ramp
         // Find the first rising zero crossing and check linearity of the ramp after it
@@ -134,7 +134,7 @@ class ExcitersTest : StringSpec({
     }
 
     "triangle - phase continuity across blocks" {
-        val sig = Ignitors.triangle()
+        val sig = Ignitors.tri()
         val blockSize = 128
         val ctx = createCtx(blockSize)
         val buf1 = AudioBuffer(blockSize)
@@ -151,12 +151,12 @@ class ExcitersTest : StringSpec({
     }
 
     "triangle - correct frequency at 100Hz" {
-        val buf = generate(Ignitors.triangle(), freqHz = 100.0)
+        val buf = generate(Ignitors.tri(), freqHz = 100.0)
         buf.zeroCrossings() shouldBeInRange 18..22
     }
 
     "triangle - correct frequency at 1000Hz" {
-        val buf = generate(Ignitors.triangle(), freqHz = 1000.0)
+        val buf = generate(Ignitors.tri(), freqHz = 1000.0)
         buf.zeroCrossings() shouldBeInRange 198..202
     }
 
@@ -822,7 +822,7 @@ class ExcitersTest : StringSpec({
     }
 
     "triangle - negative phaseMod does not cause phase drift" {
-        val sig = Ignitors.triangle()
+        val sig = Ignitors.tri()
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }

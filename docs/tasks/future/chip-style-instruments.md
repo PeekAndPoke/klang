@@ -16,7 +16,7 @@ needed: a chip is a small library of instrument functions, composed from the bui
 
 ```javascript
 let nesPulse = (duty) => Ignitor.square(x => x.duty(duty).flankSamples(0).analog(0))  // hard edges, no drift
-let nesTri   = Ignitor.triangle().crush(4)                                            // a stepped, low-bit triangle
+let nesTri   = Ignitor.tri().crush(4)                                            // a stepped, low-bit triangle
 let mySaw    = (freq) => Ignitor.saw(freq, x => x.resetSamples(0).analog(0))          // an instant flyback
 ```
 

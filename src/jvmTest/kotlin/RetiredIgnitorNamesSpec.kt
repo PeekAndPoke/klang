@@ -18,6 +18,11 @@ import java.io.File
  * old wire field or the old Kotlin types. A replaced surface is removed, not deprecated (`/dsl-design` section 5),
  * so a re-added old name is a regression this row names with its file and line.
  *
+ * The same holds for the Ignitor's triangle door, `tri` since 2026-10-06
+ * (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`): [retiredTri] guards the old door
+ * `Ign.triangle` / `Ignitor.triangle`, its builder, its wire node and its engine factory. The sound name and the LFO
+ * shape `triangle` stay, so the pattern names only the code spellings, never the bare word.
+ *
  * History keeps its words (the rules register): the [historyPaths] are records, and inside [lineScopedFiles] only
  * the named section may spell an old name. A new allowlist entry is a maintainer decision.
  */
@@ -26,6 +31,12 @@ class RetiredIgnitorNamesSpec : StringSpec({
     val retired = Regex(
         """\bOsc\b(?!\*Builder)|OscSlot|Oscp\b|KlangScriptOsc|(?<![A-Za-z0-9])oscp\b|(?<![A-Za-z0-9])oscparams?\b|""" +
             """(?<![A-Za-z0-9])oscParam|OscParam|Oscparam|StdLibOscTest|\boscSlot\(|\bosc-params?\b|SoundValue\.Osc"""
+    )
+
+    /** The triangle door's old code names (2026-10-06); the sound and LFO shape `"triangle"` are not among them. */
+    val retiredTri = Regex(
+        """\bIgn(?:itor)?\.triangle\b|KlangScriptIgnitor\.triangle\b|Ignitors\.triangle\b|OscTriangleBuilder|""" +
+            """IgnitorDsl\.Triangle\b"""
     )
 
     val extensions = setOf("kt", "kts", "md", "MD", "html", "xml", "py", "sh", "ipynb", "txt")
@@ -84,10 +95,11 @@ class RetiredIgnitorNamesSpec : StringSpec({
         return (start until end).toSet()
     }
 
-    fun scan(): Pair<Set<String>, List<String>> {
+    /** Walks the live files once; the hits come back per pattern, in the order of [patterns]. */
+    fun scan(patterns: List<Regex>): Pair<Set<String>, List<List<String>>> {
         val root = File(".").canonicalFile
         val seen = mutableSetOf<String>()
-        val hits = mutableListOf<String>()
+        val hits = patterns.map { mutableListOf<String>() }
 
         root.walkTopDown()
             .onEnter { dir ->
@@ -103,8 +115,14 @@ class RetiredIgnitorNamesSpec : StringSpec({
                 val lines = file.readLines()
                 val allowed = allowedLines(path, lines)
                 lines.forEachIndexed { i, line ->
-                    if (i !in allowed && retired.containsMatchIn(line)) {
-                        hits += "$path:${i + 1}: ${line.trim().take(160)}"
+                    if (i in allowed) {
+                        return@forEachIndexed
+                    }
+
+                    patterns.forEachIndexed { p, pattern ->
+                        if (pattern.containsMatchIn(line)) {
+                            hits[p] += "$path:${i + 1}: ${line.trim().take(160)}"
+                        }
                     }
                 }
             }
@@ -112,8 +130,11 @@ class RetiredIgnitorNamesSpec : StringSpec({
         return seen to hits
     }
 
+    val scanned by lazy { scan(listOf(retired, retiredTri)) }
+
     "no live file spells a name the Ignitor/Katalyst naming retired" {
-        val (seen, hits) = scan()
+        val (seen, perPattern) = scanned
+        val hits = perPattern[0]
 
         withClue("the walk must actually see the repository (saw ${seen.size} live files; 1,921 on 2026-10-04)") {
             seen.size shouldBeGreaterThan 1800
@@ -128,6 +149,39 @@ class RetiredIgnitorNamesSpec : StringSpec({
         withClue("old names in live files; rename them (docs/plans/ignitor-katalyst-naming.md, section 2):\n" + hits.joinToString("\n")) {
             hits.shouldBeEmpty()
         }
+    }
+
+    "no live file spells the retired triangle door, builder, wire node or engine factory" {
+        val (seen, perPattern) = scanned
+        val hits = perPattern[1]
+
+        withClue("the walk must actually see the repository (saw ${seen.size} live files)") {
+            seen.size shouldBeGreaterThan 1800
+        }
+        withClue("the triangle door is `tri` since 2026-10-06; rename these:\n" + hits.joinToString("\n")) {
+            hits.shouldBeEmpty()
+        }
+    }
+
+    "the triangle pattern recognises the old door and leaves the sound name and the LFO shape alone" {
+        val known = listOf(
+            "Ign.triangle()", "Ignitor.triangle(x => x.analog(3))", "the `Ignitor.triangle` door", "OscTriangleBuilder",
+            "IgnitorDsl.Triangle(phase = p)", "is IgnitorDsl.Triangle -> analog",
+            "Ignitors.triangle(rate, analog)", "KlangScriptIgnitor.triangle(4.0)",
+        )
+        known.forEach { sample -> withClue(sample) { retiredTri.containsMatchIn(sample) shouldBe true } }
+
+        val clean = listOf(
+            "Ign.tri()", "Ignitor.tri(x => x.analog(3))", "OscTriBuilder", "IgnitorDsl.Tri(phase = p)", "Ignitors.tri(rate)",
+            "@WireName(\"tri\")", "note(\"c3\").s(\"triangle\")", ".sound(\"triangle\")", "put(\"triangle\", tri)",
+            "x.shape(\"triangle\")", "\"triangle\" -> Ignitors.tri(rate, analog)", "a triangle wave", "Ignitor.supertri()",
+            "IgnitorDsl.SuperTri()", "sndTriangle()", "Triangle wave oscillator",
+        )
+        clean.forEach { sample -> withClue(sample) { retiredTri.containsMatchIn(sample) shouldBe false } }
+
+        // the history allowlist is not dead for this pattern either: the archived task record spells the old door
+        File("docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md").readText()
+            .let { retiredTri.containsMatchIn(it) } shouldBe true
     }
 
     "the pattern still recognises the retired names it guards (a guard for the guard)" {

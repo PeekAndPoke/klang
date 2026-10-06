@@ -120,7 +120,7 @@ class StdlibDocsInferenceTest : StringSpec({
     "real stdlib: getVariantsForReceiver(Ignitor) returns Ignitor methods" {
         val reg = stdlibRegistry()
         val ignitorMembers = reg.getVariantsForReceiver(KlangType("Ignitor"))
-        ignitorMembers shouldHaveAtLeastSize 5 // sine, saw, square, triangle, slot, etc.
+        ignitorMembers shouldHaveAtLeastSize 5 // sine, saw, square, tri, slot, etc.
         // Each returned symbol has at least one variant whose owner/receiver is Ignitor.
         ignitorMembers.all { symbol ->
             symbol.variants.any { v ->

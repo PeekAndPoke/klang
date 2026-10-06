@@ -90,7 +90,7 @@ object WarmupVocabulary {
         IgnitorDsl.Sine(),
         IgnitorDsl.Sawtooth(),
         IgnitorDsl.Square(),
-        IgnitorDsl.Triangle(),
+        IgnitorDsl.Tri(),
         IgnitorDsl.Zawtooth(),
         IgnitorDsl.Zamp(),
         IgnitorDsl.Impulse(),
@@ -101,7 +101,7 @@ object WarmupVocabulary {
         // the `phase` input: a constant (the block-start shift) and a signal (each engine's phased loop, the pulse
         // with and without PWM)
         IgnitorDsl.Sine(phase = Constant(0.25)),
-        IgnitorDsl.Triangle(phase = Constant(0.25)),
+        IgnitorDsl.Tri(phase = Constant(0.25)),
         IgnitorDsl.Impulse(phase = Constant(0.25)),
         IgnitorDsl.Sine(phase = slowPhase()),
         IgnitorDsl.Sawtooth(phase = slowPhase()),

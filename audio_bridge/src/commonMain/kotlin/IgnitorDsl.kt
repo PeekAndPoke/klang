@@ -398,14 +398,14 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Triangle wave oscillator. */
-    @WireName("triangle")
-    data class Triangle(
+    /** Triangle wave oscillator (`Ignitor.tri`). */
+    @WireName("tri")
+    data class Tri(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
         // No shape knobs: the triangle is the pulse engine with both flanks fully open (rise = fall = 1.0),
         // which makes the min-flank floor (PULSE_MIN_FLANK_SAMPLES) always overridden — there is nothing
-        // tunable here (see Ignitors.triangle / WaveVoiceState.setPulseShape). Stays a plain oscillator.
+        // tunable here (see Ignitors.tri / WaveVoiceState.setPulseShape). Stays a plain oscillator.
         /**
          * Phase offset as a fraction of one cycle, added to the running phase every sample. 0 (default) starts
          * where the oscillator always started (its builder's KDoc names the point); it wraps, no clamp (1.25 is

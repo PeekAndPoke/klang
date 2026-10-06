@@ -88,7 +88,7 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 | `Ignitor.sine(freq?)`     | Pure sine wave; its builder adds partial banks (below) |
 | `Ignitor.saw(freq?)`      | Sawtooth, anti-aliased (PolyBLEP)        |
 | `Ignitor.square(freq?)`   | Square wave, anti-aliased                |
-| `Ignitor.triangle(freq?)` | Triangle wave                            |
+| `Ignitor.tri(freq?)`      | Triangle wave                            |
 | `Ignitor.ramp(freq?)`     | Reverse sawtooth                         |
 | `Ignitor.zawtooth(freq?)` | Naive sawtooth (brighter, no anti-alias) |
 | `Ignitor.impulse(freq?)`  | Single-sample impulse per cycle          |
@@ -116,7 +116,7 @@ Ignitor.supersaw(x => x.voices(9).spread(0.1).analog(0.2)).lowpass(800).adsr(0.0
 ```
 
 **`phase(x)`: where in its cycle an oscillator runs** (every periodic oscillator's builder: `sine`, `saw`, `ramp`,
-`square`, `pulze`, `triangle`, `zawtooth`, `zamp`, `impulse` and the five super oscillators; not the plucks, not the
+`square`, `pulze`, `tri`, `zawtooth`, `zamp`, `impulse` and the five super oscillators; not the plucks, not the
 noises). A fraction of one cycle added to the phase every sample, default 0: 0.5 is half a cycle on, and it wraps
 with no clamp (1.25 is 0.25, -0.25 is 0.75). A number is the start phase; a signal moves the phase while the note
 plays, which is phase modulation (a jump clicks). Phase 0 is where each shape always started: the sine at `sin(0)`,
@@ -669,7 +669,7 @@ Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 
 | `sine`        | `sin`                    | Sine(Freq)                                                      |
 | `sawtooth`    | `saw`                    | Sawtooth(Freq)                                                  |
 | `square`      | `sqr`, `pulse`           | Square(Freq)                                                    |
-| `triangle`    | `tri`                    | Triangle(Freq)                                                  |
+| `triangle`    | `tri`                    | Tri(Freq)                                                       |
 | `ramp`        |                          | Ramp(Freq)                                                      |
 | `zawtooth`    | `zaw`                    | Zawtooth(Freq)                                                  |
 | `pulze`       |                          | Pulze(Freq, duty=0.5)                                           |
@@ -706,7 +706,7 @@ pattern, so the two envelopes do not multiply; the others keep `classic()`'s env
 
 ```javascript
 let flute = Ignitor.sine()
-        .plus(Ignitor.triangle().mul(0.3))
+        .plus(Ignitor.tri().mul(0.3))
         .plus(Ignitor.perlin(12).mul(0.2).lowpass(4000).highpass(800).adsr(0.01, 0.12, 0.02, 0.01))
         .plus(Ignitor.perlin(8).mul(0.05))
         .lowpass(3000).highpass(400)
@@ -718,7 +718,7 @@ let flute = Ignitor.sine()
 **Clarinet** — Triangle (odd harmonics) + light square + breath
 
 ```javascript
-let clarinet = Ignitor.triangle().mul(0.7)
+let clarinet = Ignitor.tri().mul(0.7)
         .plus(Ignitor.square().mul(0.15))
         .plus(Ignitor.sine().mul(0.15))
         .plus(Ignitor.perlin(6).mul(0.02))

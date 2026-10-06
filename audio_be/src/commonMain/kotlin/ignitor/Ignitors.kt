@@ -656,7 +656,7 @@ object Ignitors {
         private val fallFlank: Double = 0.0,
         // SAW-only: caps the saw flyback fraction; read solely in the WaveKind.SAW branch. The PULSE kind
         // (square/triangle) ignores it — no per-shape WaveIgnitor split needed since the DSL types already
-        // separate SAW (Sawtooth/Ramp expose shapeMax) from PULSE (Pulze/Triangle don't).
+        // separate SAW (Sawtooth/Ramp expose shapeMax) from PULSE (Pulze/Tri don't).
         private val shapeMax: Double = SAW_SHAPE_MAX,
         private val phaseIn: PhaseOffset? = null,
     ) : Ignitor {
@@ -924,7 +924,7 @@ object Ignitors {
     ): Ignitor = pulze(freq, ConstantIgnitor(0.5), analog, phase = phase)
 
     /** Triangle wave: the pulse engine with both flanks fully open (duty 0.5, rise = fall = 1). Phase 0 is -1, its lowest point. */
-    fun triangle(
+    fun tri(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,

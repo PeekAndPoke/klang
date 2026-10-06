@@ -168,7 +168,7 @@ class OscillatorPhaseSpec : StringSpec({
         "square (PWM)" to IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = c(3.0)).range(c(0.3), c(0.7)), analog = analog, phase = phase),
         "pulze" to IgnitorDsl.RawPulze(analog = analog, phase = phase),
         "square (internal)" to IgnitorDsl.Square(analog = analog, phase = phase),
-        "triangle" to IgnitorDsl.Triangle(analog = analog, phase = phase),
+        "tri" to IgnitorDsl.Tri(analog = analog, phase = phase),
         "zawtooth" to IgnitorDsl.Zawtooth(analog = analog, phase = phase),
         "zamp" to IgnitorDsl.Zamp(analog = analog, phase = phase),
         "impulse" to IgnitorDsl.Impulse(analog = analog, phase = phase),
@@ -190,7 +190,7 @@ class OscillatorPhaseSpec : StringSpec({
             "square (Pulze)" to IgnitorDsl.Pulze().let { it to it.phase },
             "pulze" to IgnitorDsl.RawPulze().let { it to it.phase },
             "square (internal)" to IgnitorDsl.Square().let { it to it.phase },
-            "triangle" to IgnitorDsl.Triangle().let { it to it.phase },
+            "tri" to IgnitorDsl.Tri().let { it to it.phase },
             "zawtooth" to IgnitorDsl.Zawtooth().let { it to it.phase },
             "zamp" to IgnitorDsl.Zamp().let { it to it.phase },
             "impulse" to IgnitorDsl.Impulse().let { it to it.phase },
@@ -273,7 +273,7 @@ class OscillatorPhaseSpec : StringSpec({
         }
 
         withClue("triangle: -1, its lowest point, +1 at half a cycle") {
-            val x = first(IgnitorDsl.Triangle(analog = c(0.0)))
+            val x = first(IgnitorDsl.Tri(analog = c(0.0)))
 
             x[0] shouldBe -1.0
             x[32] shouldBe 1.0
@@ -314,7 +314,7 @@ class OscillatorPhaseSpec : StringSpec({
         val factories: Map<String, (Ignitor?) -> Ignitor> = linkedMapOf(
             "sine" to { p -> Ignitors.sine(phase = p) },
             "sawtooth" to { p -> Ignitors.sawtooth(phase = p) },
-            "triangle" to { p -> Ignitors.triangle(phase = p) },
+            "tri" to { p -> Ignitors.tri(phase = p) },
             "impulse" to { p -> Ignitors.impulse(phase = p) },
             "supersaw" to { p -> Ignitors.superSaw(voices = ConstantIgnitor(3.0), rng = Random(3), phase = p) },
             "supersine" to { p -> Ignitors.superSine(voices = ConstantIgnitor(3.0), rng = Random(3), phase = p) },
@@ -358,7 +358,7 @@ class OscillatorPhaseSpec : StringSpec({
         val factories: Map<String, (Ignitor?) -> Ignitor> = linkedMapOf(
             "sine" to { p -> Ignitors.sine(phase = p) },
             "sawtooth" to { p -> Ignitors.sawtooth(phase = p) },
-            "triangle" to { p -> Ignitors.triangle(phase = p) },
+            "tri" to { p -> Ignitors.tri(phase = p) },
             "impulse" to { p -> Ignitors.impulse(phase = p) },
             "sine with banks" to { p -> Ignitors.sinePartials(harmonics = ConstantIgnitor(3.0), phase = p) },
             "supersaw" to { p -> Ignitors.superSaw(voices = ConstantIgnitor(3.0), rng = Random(3), phase = p) },
@@ -393,7 +393,7 @@ class OscillatorPhaseSpec : StringSpec({
             "ramp" to { p -> Ignitors.ramp(phase = p) },
             "square" to { p -> Ignitors.square(phase = p) },
             "pulze" to { p -> Ignitors.rawPulze(phase = p) },
-            "triangle" to { p -> Ignitors.triangle(phase = p) },
+            "tri" to { p -> Ignitors.tri(phase = p) },
             "zawtooth" to { p -> Ignitors.zawtooth(phase = p) },
             "zamp" to { p -> Ignitors.zamp(phase = p) },
         )
@@ -451,7 +451,7 @@ class OscillatorPhaseSpec : StringSpec({
             "zawtooth" to { p -> Ignitors.zawtooth(phase = p) },
             "zamp" to { p -> Ignitors.zamp(phase = p) },
             "pulze" to { p -> Ignitors.rawPulze(phase = p) },
-            "triangle" to { p -> Ignitors.triangle(phase = p) },
+            "tri" to { p -> Ignitors.tri(phase = p) },
         )
 
         for ((name, make) in single) {

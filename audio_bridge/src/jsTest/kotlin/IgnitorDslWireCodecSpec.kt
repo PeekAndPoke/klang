@@ -61,7 +61,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Impulse with a phase" { check(IgnitorDsl.Impulse(phase = IgnitorDsl.Param("ph", 0.1))) }
     "Sawtooth" { check(IgnitorDsl.Sawtooth()) }
     "Square" { check(IgnitorDsl.Square(freq = IgnitorDsl.Param("freq", 220.0))) }
-    "Triangle" { check(IgnitorDsl.Triangle()) }
+    "Tri" { check(IgnitorDsl.Tri()) }
     "Ramp" { check(IgnitorDsl.Ramp()) }
     "Zawtooth" { check(IgnitorDsl.Zawtooth()) }
     "Zamp" { check(IgnitorDsl.Zamp()) }
@@ -139,7 +139,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- arithmetic / math ----------------------------------------------------------------------------------
     "Plus" { check(IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()) }
-    "Times" { check(IgnitorDsl.Sine() * IgnitorDsl.Triangle()) }
+    "Times" { check(IgnitorDsl.Sine() * IgnitorDsl.Tri()) }
     "Affine" { check(IgnitorDsl.Affine(IgnitorDsl.Sine(), pre = IgnitorDsl.Constant(0.1), mul = IgnitorDsl.Param("level", 0.5), add = IgnitorDsl.Constant(-2.0))) }
     // the absent pre-add and add are -0.0, and the sign must survive the wire (Constant is a data
     // class, and Double equality on JVM and JS tells -0.0 from 0.0, so a normalising codec fails here)

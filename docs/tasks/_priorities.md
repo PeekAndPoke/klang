@@ -160,12 +160,18 @@ The release-defining set, regardless of when they're sequenced:
   blind reviewer in round 1, as a trial; (2) `docs/blog/2026-01-20-the-position-that-survived/position-pipeline.png`,
   unreferenced since its interactive figure replaced it: keep as history or delete; (3) `console/deploy-finzo.sh`
   copies with `scp -r` and never deletes on the server, so a removed page or post stays online: add a delete step or
-  accept it; (4) the triangle's name across the DSLs (`tri` in sprudel, `Ign.triangle` but `supertri`, both as sound
-  and LFO names), [`oscillator-names-across-dsls.md`](oscillator-names-across-dsls.md); (5) whether sprudel sounds get
-  a `phase` slot (`s("sine")` cannot reach the oscillators' `phase` knob today, its default is a literal 0),
+  accept it. Answered 2026-10-06: the triangle's name across the DSLs is `tri` (`Ign.tri`, like `supertri` and
+  sprudel's `tri`; the sound and LFO names stay),
+  [`20261006-oscillator-names-across-dsls.md`](../tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md);
+  sprudel sounds get no `phase` slot,
   [`20261006-oscillator-phase-knob.md`](../tasks-archive/2026-10/20261006-oscillator-phase-knob.md), "Recorded
   asymmetries". Queued from review: [`shared-modulator-memo-rate.md`](shared-modulator-memo-rate.md), a stateful
   modulator shared by oscillators at different pitches runs at double rate (pre-existing, `duty` and `phase`).
+  Open since 2026-10-06: (4) the saw keeps a door/node split the triangle lost (`Ign.saw` builds
+  `IgnitorDsl.Sawtooth`, wire name `sawtooth`, factory `Ignitors.sawtooth`), and sprudel's sound doors say
+  `sndTriangle()` / `sndSaw()` after the long sound names: align or keep; (5) the root `jvmTest` reports UP-TO-DATE
+  when only a doc changes, so the repo-scanning guards (`RetiredIgnitorNamesSpec`) do not run without `--rerun`:
+  declare the scanned files as test inputs, or accept and document it.
 - **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
   `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [
   `-07`](copyright-audit-07-control-vocabulary-legal-review.md)
