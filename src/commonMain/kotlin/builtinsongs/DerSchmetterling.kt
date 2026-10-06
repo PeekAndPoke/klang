@@ -231,8 +231,8 @@ let bass = (() => {
     .classic()
 })()
 
-export guitarDyna = "0.98!2 0.80!6 0.92!2 0.80!6".sub(perlin.range(0.00, 0.05).slow(2))
-export guitarClip = "<0.97!31 0.85 0.97!31 0.88 0.97!30 0.85 0.80>".sub(perlin.range(0.0, 0.02))
+export guitarDyna = "0.98!2 0.80!6  0.90!2 0.80!2 0.90!2 0.80!2".sub(perlin(0.00, 0.05))
+export guitarClip = "<0.97!31 0.85 0.97!31 0.88 0.97!30 0.85 0.80>".sub(perlin(0.0, 0.03))
   .mul("<0.985!32 [1.1 0.99!7]!32 0.975!32 [1.1 0.99!7]!32>")
 export guitarDecay = "<0.425!16 0.440!16 0.425!16 0.440!16>"
 
@@ -271,7 +271,7 @@ export lead_arrange = x => x.orbit(0) //  .mute()
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!16 1!16>")
-  .late(berlin.range(0.0005, 0.0015).mul(drunk))
+  .late(berlin(0.0005, 0.0015).mul(drunk))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
 
@@ -281,13 +281,13 @@ export guitar1_pat =
     [[4 [4 4 2 0] [4 3 2 0] 0] [-1 [1 [<3 2> 1] -1 -4]] [-3!4 -3!8 4 2 4 0] [2 [2 6@3]]]!2
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-3 -1 0 3] 2]]>/4`
 
-export guitar1_shape = x => x.pregain(guitarDyna.fast(2).mul(0.8)).sound(guitarMelody).adsrOff().unison(voices = 13, spread = 0.06) // . solo()
+export guitar1_shape = x => x.pregain(guitarDyna.fast(2).mul(0.8)).sound(guitarMelody).adsrOff().unison(voices = 15, spread = 0.07) // . solo()
   .ignp("decay", guitarDecay) //. mute()
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.20)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.180)  // .mute()
-  .late(berlin.range(0.0002, 0.0006).mul(drunk).seg(4))
+  .late(berlin(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
 
@@ -304,7 +304,7 @@ export guitar2_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff(
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
   .scale("<e2:minor>").gain(0.135).mute("<0!128 1!16 0!16>") // .mute()
-  .late(berlin.range(0.0002, 0.0006).mul(drunk).seg(4))
+  .late(berlin(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar2_shape).tag("guitar2")
 
@@ -319,7 +319,7 @@ export guitar3_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff(
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
   .scale("<e2:minor>").gain(0.135).mute("<0!128 1!16 0!16>") //.mute()
-  .late(berlin.range(0.0000, 0.0004).mul(drunk).seg(4))
+  .late(berlin(0.0000, 0.0004).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
 
@@ -329,13 +329,13 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.48) // . mute()
-    .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.9".sub(perlin.range(0.0, 0.1).slow(8)))  // . solo()
+    .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.9".sub(perlin(0.0, 0.1).slow(8)))  // . solo()
     .adsr(0.003, 0.3, 0.33, 0.015).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
-  .pan(0.5).clip("<[0.80 0.70 0.65 0.70]>*4".sub(perlin.range(0.0, 0.1).slow(8)))
-  .late(berlin.range(0.0002, 0.0005).mul(drunk).seg(4))
+  .pan(0.5).clip("<[0.80 0.70 0.65 0.70]>*4".sub(perlin(0.0, 0.1).slow(8)))
+  .late(berlin(0.0002, 0.0005).mul(drunk).seg(4))
 
 export bass = n(bass_pat).struct(
   `< x x x [x x]  x x [x x] [x!4]    x x x [x x]  [x x] x x [x!4]
@@ -372,14 +372,14 @@ let gummiEimer = (() => {
 export trommel_pat = `<[0 ~ 1 0 ~ ~ 2 ~] [0 ~ 0 -4 -2 ~ -1 ~] [0 ~ -1 0 ~ ~ ~ ~] [0 0 ~ 2 2 ~ 1 ~]>`
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
-  .velocity("1.0 0.8 0.9 0.8".sub(perlin.range(0.0, 0.02))).body(material = "membrane", wet = 0.4).notch(100, 1.2)
-  .hpf(300).lpf("2400".add(perlin.range(-100, 100).slow(16).early(8)))
+  .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4).notch(100, 1.2)
+  .hpf(300).lpf("2400".add(perlin(-200, 200).slow(16)))
   .pan(0.16).superimpose(pan(0.84))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.24)
+  .scale("e4:minor").gain(0.23)
   .mute("<1!32 0!32 1!32>")                          
-  .late(berlin.range(0.0035, 0.0045).mul(drunk))
+  .late(berlin(0.0035, 0.0045).mul(drunk))
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
 
@@ -460,26 +460,26 @@ let metalSnare = (() => {
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
 export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.30).velocity("0.98 0.94 0.96 0.94").pan(0.5)
-export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
+export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
 export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.13).pan(0.575)
   .lpf(11200)
-export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0015).mul(drunk).seg(4))
+export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
 export hats_shape = x => x.gain(0.15).pan(0.425)
-  .hpf(800).lpf(freq = "14500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin.range(0.001, 0.003), 0.1, 0.70, 2.0)
-export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
-export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
+  .hpf(800).lpf(freq = "13500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.70, 2.0)
+export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin(0.0015, 0.0025).mul(drunk).seg(4))
+export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
 export shaker_pat = `<pink ~ pink ~ pink ~ pink ~ pink>*8`
-export shaker_shape = x => x.gain(0.07).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
-  .hpf(freq = 8000, q = 0.7) //  . solo()
+export shaker_shape = x => x.gain(0.04).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
+  .hpf(freq = 8000, q = 0.7).lpf(15000) //  . solo()
   .pan(0.35).adsr(0.015, 0.10, 0.0, 0.01)
-export shaker_arrange = x => x.orbit(10).late(berlin.range(0.0010, 0.0020).mul(drunk))
+export shaker_arrange = x => x.orbit(10).late(berlin(0.0010, 0.0020).mul(drunk))
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
 // Count-in  --------------------------------------------------------------------------------------------------------------------------------------------------
