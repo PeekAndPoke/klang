@@ -223,7 +223,13 @@ object vowel {
     @KlangScript.Property
     val floor: FieldAccessor = FieldAccessor { it.vowelFloor }
 
-    /** The setter, see [SprudelPattern.vowel]. */
+    /**
+     * The setter, see [SprudelPattern.vowel].
+     *
+     * @param wet How much of the orbit runs through the filter, 0 to 1.
+     * @param vowel Vowel name, see the list at [SprudelPattern.vowel]. A prefix picks a voice type, `tenor:a`.
+     * @param floor Minimum dry share kept in the mix, 0 to 1.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         wet: PatternLike? = null,

@@ -63,19 +63,35 @@ registerObject("Math", MathObject) {
 **Auto-conversion:** Kotlin primitives ↔ `RuntimeValue` via reified generics. Native returns are auto-wrapped in
 `NativeObjectValue`. Registry-based lookup by `KClass<*>`.
 
-## Callable objects (`invoke`)
+## Callable objects (`__invoke__`)
 
-- A `NativeObjectValue` callee (`Katalyst(...)`, sprudel's `reverb(0.3)`) dispatches to the `invoke`
-  extension method of its type through the spec-aware member-call path (`Interpreter.evaluateCall`).
-  The editor follows: `ExpressionTypeInferrer.resolveCallable` falls back to `getCallable("invoke", type)`,
-  `KlangCallable.signature` renders the call as `Katalyst(...)`, member completion hides `invoke`.
+- A `NativeObjectValue` callee (`Katalyst(...)`, sprudel's `reverb(0.3)`) dispatches to the extension
+  method its type registers under the internal symbol `__invoke__` (Kotlin's operator word inside double
+  underscores, the scheme of `docs/tasks/klangscript-native-object-operators.md`; no script spells it),
+  through the spec-aware member-call path (`Interpreter.evaluateCall`). Errors and the call stack name the
+  call as written (`Katalyst`, `adsr`), never the internal symbol; the generated registration names a call
+  form's argument errors after the object too (`SpecAwareItem.errorName`). A script never reaches an operator
+  symbol (`NativeOperatorNames.isOperatorName`, any `__x__`) by member access, and the "Available ..." lists and
+  completion leave them out.
+- The docs carry the call form as the object's second variant: the object's symbol holds `val perlin: perlin`
+  (a `KlangProperty`) and `perlin(from, to): SprudelPattern` (a receiver-less `KlangCallable` named after the
+  object, `KlangSymbol.callForm`); no docs symbol is named after the operator. The editor resolves a call on
+  the object's name like any top-level call (`getCallable(name, null)`), and a call on another value of the
+  object's type (`Kat(...)`, a local) through `KlangDocsRegistry.getCallForm(type)` (by simple name, else by
+  FQCN); a local is never a same-named global, in the inferrer and in `NamedArgumentChecker` alike. The docs page
+  shows the object's call form on an alias card too (`KlangDocsRegistry.callFormFor`). The param tools bind a call
+  form's arguments to its own parameters, except where a method has the very same parameter list and declares
+  tools for the argument (the field accessors and compounds mirror their pattern method: `pan(0.7)`,
+  `lpf(800)`), and then the whole-call rewrite is open, since the twin has the same parameter names; the signals'
+  `perlin(from, to)` and `Katalyst(configure)` mirror none. A call form is never a
+  candidate for an untyped member call (`ArgumentBinding.bindArgument`).
 - The call form is declared with `@KlangScript.Invoke` on `operator fun invoke` (2026-09-07; the old
-  `@KlangScript.Method(name = "invoke")` spelling is retired). The name has one definition,
-  `KlangScript.Invoke.NAME`, read by `NativeOperatorNames.INVOKE`. KSP (`InvokeShape`) refuses an `@Invoke`
-  outside an `@Object` / `@TypeExtensions` class, one not named `invoke`, one without `operator`, a second
-  one in the same class (KlangScript has no overloads, so one call form), and a `@Method` whose script
-  name resolves to `invoke` (`methodSpelledInvoke`).
-- Only `invoke` is wired; the arithmetic and comparison operators of
+  `@KlangScript.Method(name = "invoke")` spelling is retired). The Kotlin side keeps Kotlin's word `invoke`;
+  the script symbol has one definition, `KlangScript.Invoke.NAME` (`__invoke__`, 2026-10-07), read by
+  `NativeOperatorNames.INVOKE`. KSP (`InvokeShape`) refuses an `@Invoke` outside an `@Object` class, one not
+  on `invoke`, one without `operator`, a second one in the same class (KlangScript has no overloads, so one
+  call form), and a `@Method` whose script name is `invoke`, `__invoke__` or any other `__x__` (`methodNameProblem`).
+- Only `__invoke__` is wired; the arithmetic operators of
   `docs/tasks/klangscript-native-object-operators.md` are not built.
 
 ## Library registration and argument checks

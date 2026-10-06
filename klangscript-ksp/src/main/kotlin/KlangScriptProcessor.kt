@@ -150,7 +150,7 @@ class KlangScriptProcessor(
         for (method in allMethods) {
             val scriptName = getAnnotationStringArg(method, ANN_METHOD, "name")
                 .let { if (it.isNullOrEmpty()) method.simpleName.asString() else it }
-            InvokeShape.methodSpelledInvoke(method.simpleName.asString(), scriptName)?.let { logger.error(it, method) }
+            InvokeShape.methodNameProblem(method.simpleName.asString(), scriptName)?.let { logger.error(it, method) }
 
             val parent = method.parentDeclaration
             if (parent !is KSClassDeclaration || parent !in validParents) {
@@ -164,7 +164,7 @@ class KlangScriptProcessor(
         }
 
         // @Invoke is the one call form of a callable object: `operator fun invoke` inside an
-        // @Object or @TypeExtensions class, at most one per class (KlangScript has no overloads).
+        // @Object class, at most one per class (KlangScript has no overloads).
         val allInvokes = resolver.getSymbolsWithAnnotation(ANN_INVOKE)
             .filterIsInstance<KSFunctionDeclaration>().toList().sortedBySource { it.sourcePosition() }
         val invokesPerClass = allInvokes.groupingBy { it.parentDeclaration }.eachCount()
@@ -173,7 +173,7 @@ class KlangScriptProcessor(
             val problems = InvokeShape.problems(
                 functionName = fn.simpleName.asString(),
                 isOperator = Modifier.OPERATOR in fn.modifiers,
-                insideRegisteredClass = parent is KSClassDeclaration && parent in validParents,
+                insideObjectClass = parent is KSClassDeclaration && parent in objectClasses,
                 invokeCountInClass = invokesPerClass[parent] ?: 1,
             )
             for (problem in problems) {
@@ -733,7 +733,7 @@ class KlangScriptProcessor(
                 appendLine("    // @Object(\"${obj.name}\") on ${obj.cls.simpleName.asString()}")
                 appendLine("    registerObject(\"${obj.name}\", ${obj.cls.simpleName.asString()}) {")
                 for (method in normalMethods) {
-                    val item = buildMethodItem(method, obj.cls, isTypeExtension = false, importedFqcns = imports)
+                    val item = buildMethodItem(method, obj.cls, isTypeExtension = false, importedFqcns = imports, objectName = obj.name)
                     appendLine(item.renderRegistration().prependIndent("        "))
                 }
                 for (prop in obj.memberProperties) {
@@ -895,6 +895,7 @@ class KlangScriptProcessor(
         ownerCls: KSClassDeclaration,
         isTypeExtension: Boolean,
         importedFqcns: Set<String>,
+        objectName: String? = null,
     ): RegistrationItem {
         val fn = method.fn
         val allParams = getScriptParams(fn)
@@ -946,7 +947,9 @@ class KlangScriptProcessor(
         //  - we have Kotlin defaults (an omitted optional gets its default literal pasted),
         //  - we need CallInfo (only spec-aware path threads `loc`),
         //  - or arity exceeds the inline overload set (only spec-aware path is unbounded).
-        val needsSpecAware = hasDefaults || hasCallInfo || scriptParams.size > MAX_FIXED_PARAMS_METHOD
+        //  - or it is a call form, whose argument errors must name the object, not the internal `__invoke__`.
+        val isCallForm = method.name == KlangScript.Invoke.NAME && objectName != null
+        val needsSpecAware = hasDefaults || hasCallInfo || scriptParams.size > MAX_FIXED_PARAMS_METHOD || isCallForm
         if (needsSpecAware) {
             val receiverCast = if (isTypeExtension) {
                 val receiverTypeName = fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
@@ -964,6 +967,7 @@ class KlangScriptProcessor(
                 receiverCast = receiverCast,
                 isTopLevel = false,
                 hasCallInfo = hasCallInfo,
+                errorName = objectName?.takeIf { isCallForm } ?: method.name,
             )
         }
 
@@ -1217,7 +1221,8 @@ class KlangScriptProcessor(
 
         for (obj in entries.objects) {
             val fqcn = obj.cls.qualifiedName?.asString()
-            for (method in obj.methods) {
+            // The call form (`@Invoke`) is no symbol of its own: it is the object's second variant, below.
+            for (method in obj.methods.filter { it.name != KlangScript.Invoke.NAME }) {
                 docItems.add(DocItem(method.name, obj.name, fqcn, method.fn, isRawArgs = isRawArgsMethod(method.fn)))
             }
         }
@@ -1264,7 +1269,11 @@ class KlangScriptProcessor(
                 val kdoc = KDocParser.parse(obj.cls.docString)
                 val description = kdoc.description.escapeForRawString()
                 val category = kdoc.category ?: "object"
-                val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
+                // A callable object's call form (`perlin(from, to)`): a receiver-less callable named after the
+                // object, its second variant, the shape the editor already resolves a top-level call with.
+                val callForm = obj.methods.firstOrNull { it.name == KlangScript.Invoke.NAME }
+                val callFormKdoc = callForm?.let { KDocParser.parse(it.fn.docString) }
+                val tagsString = (kdoc.tags + callFormKdoc?.tags.orEmpty()).distinct().joinToString(", ") { "\"$it\"" }
                 appendLine()
                 val objFqcn = obj.cls.qualifiedName?.asString()
                 val objFqcnArg = if (objFqcn != null) ", fqcn = \"$objFqcn\"" else ""
@@ -1277,7 +1286,7 @@ class KlangScriptProcessor(
                 appendLine("        category = \"$category\",")
                 appendLine("        tags = listOf($tagsString),")
                 appendLine("        aliases = listOf(),")
-                append(scopeArgLine(obj.name, listOf(kdoc)))
+                append(scopeArgLine(obj.name, listOfNotNull(kdoc, callFormKdoc)))
                 appendLine("        origin = KlangSymbol.Origin.Library(\"$libraryName\"),")
                 appendLine("        variants = listOf(")
                 appendLine("            KlangProperty(")
@@ -1297,7 +1306,15 @@ class KlangScriptProcessor(
                     appendLine("                samples = emptyList(),")
                 }
                 appendLine("                library = \"$libraryName\",")
-                appendLine("            )")
+
+                if (callForm != null) {
+                    appendLine("            ),")
+                    val item = DocItem(obj.name, null, null, callForm.fn, isRawArgs = isRawArgsMethod(callForm.fn))
+                    appendLine(generateCallableDoc(item, KDocParser.parse(callForm.fn.docString), libraryName))
+                } else {
+                    appendLine("            )")
+                }
+
                 appendLine("        )")
                 if (index < entries.objects.size - 1) {
                     appendLine("    ),")

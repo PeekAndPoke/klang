@@ -183,7 +183,14 @@ object delay {
     @KlangScript.Property
     val cap: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.cap") }
 
-    /** The setter, see [SprudelPattern.delay]. */
+    /**
+     * The setter, see [SprudelPattern.delay].
+     *
+     * @param wet How much of the orbit goes into the delay, 0 to 1, default 0.25. Orbit-wide.
+     * @param time Delay time in seconds, default 0.25. Orbit-wide.
+     * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Orbit-wide.
+     * @param cap Ceiling the repeats may not exceed, default 1. Orbit-wide.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         wet: PatternLike? = null,

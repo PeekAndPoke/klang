@@ -244,7 +244,18 @@ object hpf {
     @KlangScript.Property
     val release: FieldAccessor = FieldAccessor { it.hprelease }
 
-    /** The setter, see [SprudelPattern.hpf]. */
+    /**
+     * The setter, see [SprudelPattern.hpf].
+     *
+     * @param freq Cutoff in Hz.
+     * @param q Resonance, higher emphasises the cutoff.
+     * @param passes Cascade count, 1 to 16.
+     * @param env Envelope depth in semitones.
+     * @param attack Envelope attack in seconds.
+     * @param decay Envelope decay in seconds.
+     * @param sustain Envelope sustain, 0 to 1.
+     * @param release Envelope release in seconds.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         freq: PatternLike? = null,
@@ -436,7 +447,13 @@ fun String.hpfCurves(
 @KlangScript.Object("hpfCurves")
 object hpfCurves {
 
-    /** The setter, see [SprudelPattern.hpfCurves]. */
+    /**
+     * The setter, see [SprudelPattern.hpfCurves].
+     *
+     * @param attack Curve name for the attack stage.
+     * @param decay Curve name for the decay stage.
+     * @param release Curve name for the release stage.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         attack: PatternLike? = null,

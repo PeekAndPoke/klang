@@ -240,7 +240,15 @@ object compressor {
     @KlangScript.Property
     val release: FieldAccessor = FieldAccessor { it.katalystParams?.get("compressor.release") }
 
-    /** The setter, see [SprudelPattern.compressor]. */
+    /**
+     * The setter, see [SprudelPattern.compressor].
+     *
+     * @param threshold Level in dB where compression starts, such as -20.
+     * @param ratio Compression ratio. 4 means 4:1 above the threshold.
+     * @param knee Knee width in dB. 0 is hard, 6 and above soft.
+     * @param attack Attack in seconds.
+     * @param release Release in seconds.
+     */
     @KlangScript.Invoke
     operator fun invoke(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }

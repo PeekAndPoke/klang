@@ -17,7 +17,6 @@ import io.peekandpoke.klang.script.ast.ObjectLiteral
 import io.peekandpoke.klang.script.ast.StringLiteral
 import io.peekandpoke.klang.script.ast.TemplateLiteral
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.runtime.NativeOperatorNames.INVOKE
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangType
@@ -62,9 +61,10 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
         if (scope != null && scope.contains(id.name)) {
             return scope.resolve(id.name)?.type
         }
-        // 2. Registry global (e.g. `Ignitor`, `Math` — registered as KlangProperty).
+        // 2. Registry global (e.g. `Ignitor`, `Math`, registered as KlangProperty). Only a top-level property is
+        //    the value of the bare name: an owned one (the stdlib's `Katalyst.slot.duck`) is a member elsewhere.
         val symbol = registry.get(id.name) ?: return null
-        val prop = symbol.variants.filterIsInstance<KlangProperty>().firstOrNull()
+        val prop = symbol.variants.filterIsInstance<KlangProperty>().firstOrNull { it.owner == null }
         return prop?.type
     }
 
@@ -96,14 +96,16 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
                 // Calling a local binding (e.g. `let f = ...; f(...)`) short-circuits
                 // the registry lookup — we don't know the return type without
                 // call-site / function-body inference, but we must NOT resolve via
-                // a same-named global like `signal()` from sprudel.
+                // a same-named global like `signal()` from sprudel. A local holding a
+                // callable object (`let d = duck; d(1)`) calls the call form of its type.
                 if (scope != null && scope.contains(callee.name)) {
-                    return null
+                    return scope.resolve(callee.name)?.type?.let { registry.getCallForm(it) }
                 }
-                // A plain function, or a callable OBJECT (`Katalyst(...)`): the object's type
-                // registers an `invoke` method, the same way the interpreter dispatches it.
+                // A plain function or a callable object's call form (`Katalyst(...)`, both receiver-less on
+                // the symbol of that name), or a value holding a callable object (`Kat(...)`): the call form
+                // of its type, the same way the interpreter dispatches it.
                 registry.getCallable(callee.name, receiverType = null)
-                    ?: inferIdentifier(callee, scope)?.let { registry.getCallable(INVOKE, it) }
+                    ?: inferIdentifier(callee, scope)?.let { registry.getCallForm(it) }
             }
 
             is MemberAccess -> {
@@ -111,7 +113,7 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
                 // object reached through a member (`Foo.Bar(...)`).
                 val objType = inferType(callee.obj, scope) ?: return null
                 registry.getCallable(callee.property, objType)
-                    ?: inferMemberAccess(callee, scope)?.let { registry.getCallable(INVOKE, it) }
+                    ?: inferMemberAccess(callee, scope)?.let { registry.getCallForm(it) }
             }
 
             else -> null

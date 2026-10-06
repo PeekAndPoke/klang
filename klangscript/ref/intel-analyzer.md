@@ -77,14 +77,19 @@ The scope parameter is optional — callers without one (e.g. standalone tests t
 walking statements) still get registry-only inference. `AnalyzedAst.TypeMapBuilder` passes
 its current scope on every call so the typeMap reflects shadowing as the walk progresses.
 
-`resolveCallable` (used by `inferCallExpression` and by the typed-lambda binding) falls back to
-the `invoke` callable registered on the callee's type when no plain callable matches, so a
-callable object (`Katalyst(...)`) gets its return type and typed lambda params like a method call.
+`resolveCallable` (used by `inferCallExpression` and by the typed-lambda binding) finds a callable
+object's call form like any top-level callable (`Katalyst(...)`: the receiver-less `KlangCallable`
+named after the object on the object's own symbol), and falls back to `registry.getCallForm(type)` on
+the callee's type when no plain callable matches (`Kat(...)`, a local holding the object), so the call
+gets its return type and typed lambda params like a method call. `NamedArgumentChecker` follows the
+same rule.
 
-For `inferCallExpression` on `Identifier(name)`: if `name` is locally bound, returns null
-(we don't infer return types of locally-bound arrow functions yet). Crucially, it does NOT
-fall through to `registry.getCallable(name, null)` in that case — otherwise `f()` on a
-local arrow `let f = ...` would resolve to a same-named global like sprudel's `signal()`.
+For `inferCallExpression` on `Identifier(name)`: if `name` is locally bound, a local holding a
+callable object (`let d = duck; d(1)`) resolves through `registry.getCallForm` on the local's type,
+and any other local returns null (we don't infer return types of locally-bound arrow functions yet).
+Crucially, it does NOT fall through to `registry.getCallable(name, null)` in that case: otherwise `f()`
+on a local arrow `let f = ...` would resolve to a same-named global like sprudel's `signal()`.
+`NamedArgumentChecker` applies the same rule through the analyzer's locally bound identifiers.
 
 ## `KlangSymbol.Origin`
 

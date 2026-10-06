@@ -221,7 +221,17 @@ object bpf {
     @KlangScript.Property
     val release: FieldAccessor = FieldAccessor { it.bprelease }
 
-    /** The setter, see [SprudelPattern.bpf]. */
+    /**
+     * The setter, see [SprudelPattern.bpf].
+     *
+     * @param freq Centre frequency in Hz.
+     * @param q Resonance, higher narrows the band.
+     * @param env Envelope depth in semitones.
+     * @param attack Envelope attack in seconds.
+     * @param decay Envelope decay in seconds.
+     * @param sustain Envelope sustain, 0 to 1.
+     * @param release Envelope release in seconds.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         freq: PatternLike? = null,
@@ -409,7 +419,13 @@ fun String.bpfCurves(
 @KlangScript.Object("bpfCurves")
 object bpfCurves {
 
-    /** The setter, see [SprudelPattern.bpfCurves]. */
+    /**
+     * The setter, see [SprudelPattern.bpfCurves].
+     *
+     * @param attack Curve name for the attack stage.
+     * @param decay Curve name for the decay stage.
+     * @param release Curve name for the release stage.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         attack: PatternLike? = null,

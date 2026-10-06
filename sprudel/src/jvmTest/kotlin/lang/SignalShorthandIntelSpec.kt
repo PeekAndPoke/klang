@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldNotContain
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
@@ -25,9 +26,9 @@ import io.peekandpoke.klang.script.types.KlangProperty
 
 /**
  * The editor's and the docs page's view of the eight signals, against the real generated sprudel registry: each is an
- * object whose type carries `SprudelPattern`, so `perlin.` completes the pattern methods, `perlin(` shows the range
- * shorthand, and the docs page joins that call form to the signal's own card (`KlangScriptLibraryDocsPage` matches
- * the `invoke` receiver to the property type by FQCN).
+ * object whose type carries `SprudelPattern`, so `perlin.` completes the pattern methods, and `perlin(` shows the
+ * range shorthand: the call form is the second variant of the signal's own symbol (KSP), so hover and the docs page
+ * show both forms on one card.
  */
 class SignalShorthandIntelSpec : StringSpec({
 
@@ -48,14 +49,16 @@ class SignalShorthandIntelSpec : StringSpec({
                 prop.type.supertypes.map { it.simpleName } shouldContain "SprudelPattern"
                 prop.samples.isNotEmpty() shouldBe true
 
-                val invoke = registry.getCallable("invoke", prop.type).shouldNotBeNull()
-                invoke.signature shouldStartWith "$name(from"
-                invoke.receiver.shouldNotBeNull().fqcn shouldBe prop.type.fqcn
+                val callForm = registry.getCallForm(prop.type).shouldNotBeNull()
+                callForm.signature shouldStartWith "$name(from"
+                callForm.receiver.shouldBeNull()
+                symbol.callForm shouldBe callForm
+                symbol.variants.map { it.signature } shouldBe listOf("val $name: $name", callForm.signature)
             }
         }
     }
 
-    "completions after a signal offer the pattern methods as functions with their docs, and hide invoke" {
+    "completions after a signal offer the pattern methods as functions with their docs, and no call form" {
         for (name in names) {
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull()
@@ -64,7 +67,7 @@ class SignalShorthandIntelSpec : StringSpec({
                 val members = suggestions.map { it.name }
 
                 members shouldContainAll listOf("slow", "range", "rangex", "segment", "add")
-                members shouldNotContain "invoke"
+                members shouldNotContain "__invoke__"
 
                 // Found through the SprudelPattern supertype, they show as functions with their docs, the same
                 // suggestion a plain pattern gets

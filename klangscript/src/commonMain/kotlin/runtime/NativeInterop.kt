@@ -646,15 +646,24 @@ sealed class CallArgs {
 }
 
 /**
- * Canonical names of the operator methods a native object may register. Registering an extension
+ * Canonical names of the operator methods a native object may register: internal symbols, Kotlin's
+ * operator words inside double underscores, never spelled by a script. Registering an extension
  * method under one of these names makes the object take part in the corresponding KlangScript
  * syntax; the interpreter looks them up like any other extension method (supertype walk included).
- * Only [INVOKE] is wired today; the arithmetic and comparison operators of
+ * Only [INVOKE] is wired today; the arithmetic operators of
  * `docs/tasks/klangscript-native-object-operators.md` are designed but not built.
  */
 object NativeOperatorNames {
-    /** `obj(a, b)`: a callable object, e.g. `Katalyst(k => k.gain(2))`. */
+    /** `obj(a, b)`: a callable object, e.g. `Katalyst(k => k.gain(2))`; the symbol is `__invoke__`. */
     const val INVOKE = KlangScript.Invoke.NAME
+
+    /**
+     * True for an operator symbol (`__invoke__`, later `__plus__`, ...): a name of the form `__x__`. A script
+     * never reaches one by member access (`perlin.__invoke__(1, 2)` is "no method"), and no suggestion or
+     * completion lists one; only the operator syntax uses them.
+     */
+    fun isOperatorName(name: String): Boolean =
+        name.length > 4 && name.startsWith("__") && name.endsWith("__")
 }
 
 /**

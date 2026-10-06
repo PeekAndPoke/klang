@@ -15,6 +15,7 @@ import io.peekandpoke.klang.script.types.KlangMutability
 import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangType
+import io.peekandpoke.klang.script.types.parametersByName
 
 /**
  * Unit tests for the structured DSL documentation model:
@@ -288,5 +289,25 @@ class DslDocsModelTest : StringSpec({
         callable.samples shouldHaveSize 2
         callable.samples[0].code shouldBe """seq("a b c").note()"""
         callable.samples[1].code shouldBe """seq("bd", "sd").s()"""
+    }
+
+    // ─── parametersByName (the hover's parameter table) ─────────────────────
+
+    "parametersByName: one row per name, the first non-blank description wins whatever the variant order" {
+        val number = KlangType("Number")
+        val callForm = KlangCallable(name = "pan", params = listOf(KlangParam("amount", number)))
+        val method = KlangCallable(
+            name = "pan",
+            receiver = KlangType("SprudelPattern"),
+            params = listOf(KlangParam("amount", number, description = "Pan position."), KlangParam("extra", number)),
+        )
+        val property = KlangProperty(name = "pan", type = KlangType("pan"))
+
+        val rows = listOf(property, callForm, method).parametersByName()
+
+        rows.map { it.name } shouldBe listOf("amount", "extra")
+        rows[0].description shouldBe "Pan position."
+        // with no description anywhere, the first one stands
+        listOf(callForm).parametersByName().single() shouldBe callForm.params.single()
     }
 })

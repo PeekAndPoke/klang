@@ -14,6 +14,7 @@ import io.peekandpoke.klang.script.runtime.ExecutionContext
 import io.peekandpoke.klang.script.runtime.Interpreter
 import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 import io.peekandpoke.klang.script.runtime.LibraryLoader
+import io.peekandpoke.klang.script.runtime.NativeOperatorNames
 import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
 import io.peekandpoke.klang.script.runtime.NativeExtensionProperty
 import io.peekandpoke.klang.script.runtime.RuntimeValue
@@ -211,15 +212,16 @@ class KlangScriptEngine private constructor(
     }
 
     /**
-     * Get all registered extension method names for a native type
+     * Get all registered extension method names for a native type that a script can spell
      *
-     * Used for error messages to suggest available methods.
+     * Used for error messages to suggest available methods. Operator symbols (`__invoke__`) are left out:
+     * a script never reaches them by name.
      *
      * @param value The runtime value to get the extension method names for
      * @return List of method names
      */
     fun getExtensionMethodNames(value: RuntimeValue): Set<String> {
-        return environment.getExtensionMethodNames(value)
+        return environment.getExtensionMethodNames(value).filterNotTo(LinkedHashSet()) { NativeOperatorNames.isOperatorName(it) }
     }
 
     /**

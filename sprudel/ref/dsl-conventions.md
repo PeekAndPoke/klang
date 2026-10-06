@@ -79,7 +79,8 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   2026-09-07, the Kotlin naming convention is suppressed at file level with `"ClassName"`):
   `@KlangScript.Library("sprudel") @KlangScript.Object("gain") object gain : FieldAccessor({ it.gain })`
   with a `@KlangScript.Invoke operator fun invoke(...) = { p -> p.gain(...) }` member (the
-  annotation pins the name; KSP rejects a second one per object, a non-operator, or a function
+  annotation registers it under the internal script symbol `__invoke__` and the docs show it as the object's
+  second variant, `gain(...)` next to `gain`; KSP rejects a second one per object, a non-operator, or a function
   not named `invoke`). The object IS the Kotlin door: `gain(0.5)` resolves through the invoke convention and
   `pan(gain)` reads the value. No top-level `fun gain(...)` factory and no `val gain` twin (both
   removed 2026-09-07). The old factory's KDoc lives on `invoke`; the object's KDoc describes the
@@ -108,7 +109,8 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   a KDoc that carries `@category` and `@tags` (the property entry merges into the symbol first, so
   without them the docs page shows the alias as "uncategorized"; guarded by
   `FreqAccessorIntelSpec`). No alias factory either: `vel(0.5)` in Kotlin is the constant's invoke.
-  The editor types it as the canonical object, so `vel(` shows the `velocity(...)` signature. One
+  The editor types it as the canonical object, so `vel(...)` resolves to the `velocity(...)` call form
+  (diagnostics, return type), and the docs page shows that call form on the `vel` card. One
   alias row per alias. Compound slots get no aliases at all (`rsize`, `delayfb` went 2026-09-07).
 - Design record and rejected alternatives: `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`.
 - A continuous signal (`sine`, `perlin`, `rand`, ...) is the other callable object: `@KlangScript.Object("perlin")

@@ -112,7 +112,12 @@ object vibrato {
     @KlangScript.Property
     val depth: FieldAccessor = FieldAccessor { it.vibratoMod }
 
-    /** The setter, see [SprudelPattern.vibrato]. */
+    /**
+     * The setter, see [SprudelPattern.vibrato].
+     *
+     * @param rate LFO rate in Hz.
+     * @param depth Depth in semitones.
+     */
     @KlangScript.Invoke
     operator fun invoke(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.vibrato(rate, depth, callInfo) }
@@ -326,7 +331,15 @@ object penv {
     @KlangScript.Property
     val release: FieldAccessor = FieldAccessor { it.pRelease }
 
-    /** The setter, see [SprudelPattern.penv]. */
+    /**
+     * The setter, see [SprudelPattern.penv].
+     *
+     * @param amount Depth in semitones, the pitch at the envelope's peak.
+     * @param attack Attack in seconds.
+     * @param decay Decay in seconds.
+     * @param sustain Held share of `amount` while the note is on; 0 is the note itself.
+     * @param release Release in seconds, back to the note after the note ends.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         amount: PatternLike? = null,
@@ -501,7 +514,13 @@ fun String.penvCurves(
 @KlangScript.Object("penvCurves")
 object penvCurves {
 
-    /** The setter, see [SprudelPattern.penvCurves]. */
+    /**
+     * The setter, see [SprudelPattern.penvCurves].
+     *
+     * @param attack Curve name for the attack stage.
+     * @param decay Curve name for the decay stage.
+     * @param release Curve name for the release stage.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         attack: PatternLike? = null,
@@ -603,6 +622,8 @@ object accelerate : FieldAccessor({ it.accelerate }) {
      * ```KlangScript(Playable)
      * s("hh").apply(accelerate(24))  // mapper form
      * ```
+     *
+     * @param semitones Pitch bend in semitones. Typically -24 to 24.
      */
     @KlangScript.Invoke
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

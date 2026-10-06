@@ -19,7 +19,7 @@ import io.peekandpoke.klang.script.types.KlangType
 /**
  * The editor's view of the short names `Ign` and `Kat` and of `Katalyst.slot`, against the real generated stdlib
  * registry (the Ignitor/Katalyst naming, plan section 7.1, the intel row; the `FreqAccessorIntelSpec` pattern):
- * completion after `Ign.` offers what `Ignitor.` offers, `Kat(` resolves through `invoke` with its signature, both
+ * completion after `Ign.` offers what `Ignitor.` offers, `Kat(` resolves through the object's call form with its signature, both
  * docs symbols carry a category, and `Kat.slot.reverb.wet` types through to a `KatalystParam`.
  */
 class IgnitorKatalystAliasIntelSpec : StringSpec({
@@ -49,9 +49,9 @@ class IgnitorKatalystAliasIntelSpec : StringSpec({
         kat shouldBe katalyst
     }
 
-    "Kat( resolves through invoke and shows the call signature" {
-        val invoke = registry.getCallable("invoke", typeOfSymbol("Kat")).shouldNotBeNull()
-        invoke.signature shouldStartWith "Katalyst(configure"
+    "Kat( resolves through the call form and shows the call signature" {
+        val callForm = registry.getCallForm(typeOfSymbol("Kat")).shouldNotBeNull()
+        callForm.signature shouldStartWith "Katalyst(configure"
 
         val a = analyze("Kat(k => k.reverb(0.2))")
         a.typeOf(a.top())?.simpleName shouldBe "KatalystDsl"

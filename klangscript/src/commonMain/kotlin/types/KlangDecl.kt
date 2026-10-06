@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.script.types
 
 import io.peekandpoke.klang.script.runtime.ArgAlignment
-import io.peekandpoke.klang.script.runtime.NativeOperatorNames
 
 /** Base interface for a KlangScript declaration (callable or property). */
 sealed interface KlangDecl {
@@ -27,7 +26,9 @@ sealed interface KlangDecl {
 }
 
 /**
- * A callable declaration (function or method).
+ * A callable declaration (function or method). A callable object's call form is one too: a
+ * receiver-less callable named after the object, next to the object's [KlangProperty] on the same
+ * symbol (`perlin(from, to)` beside `perlin`), see [KlangSymbol.callForm].
  *
  * @param name Function/method name
  * @param receiver Optional receiver type for extension methods
@@ -50,13 +51,8 @@ data class KlangCallable(
 ) : KlangDecl {
     override val signature: String
         get() = buildString {
-            // A callable object's `invoke` renders as the call the user writes: `Katalyst(...)`.
-            if (name == NativeOperatorNames.INVOKE && receiver != null) {
-                append(receiver.render())
-            } else {
-                receiver?.let { append("${it.render()}.") }
-                append(name)
-            }
+            receiver?.let { append("${it.render()}.") }
+            append(name)
             append("(")
             append(params.joinToString(", ") { it.render() })
             append(")")
@@ -137,3 +133,16 @@ data class KlangProperty(
             append(": ${type.render()}")
         }
 }
+
+/**
+ * One parameter per name across these declarations' callables, in first-seen order, as a parameter table shows
+ * them: per name the first parameter that carries a description, else the first. A variant that documents a
+ * parameter wins over an earlier one that does not (a call form `pan(amount)` sorted before
+ * `SprudelPattern.pan(amount)`).
+ */
+fun List<KlangDecl>.parametersByName(): List<KlangParam> =
+    filterIsInstance<KlangCallable>()
+        .flatMap { it.params }
+        .groupBy { it.name }
+        .values
+        .map { params -> params.firstOrNull { it.description.isNotBlank() } ?: params.first() }

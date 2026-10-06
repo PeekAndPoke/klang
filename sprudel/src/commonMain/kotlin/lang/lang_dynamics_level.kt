@@ -334,6 +334,8 @@ object pan : FieldAccessor({ it.pan }) {
      * ```KlangScript(Playable)
      * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
      * ```
+     *
+     * @param amount Pan position, 0 left to 1 right.
      */
     @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

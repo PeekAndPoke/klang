@@ -60,9 +60,12 @@ data class FixedMethodItem(
 
 /**
  * A method or function on the spec-aware path: one with Kotlin defaults, a `CallInfo` parameter, or
- * more parameters than the fixed-arity overloads cover. Always a raw `registerExtensionMethodWithSpecs`
- * or `registerFunctionWithSpecs` closure whose body is [appendConversionsAndCall]: one call per door,
- * with no arity dispatch.
+ * more parameters than the fixed-arity overloads cover, and every callable object's call form. Always
+ * a raw `registerExtensionMethodWithSpecs` or `registerFunctionWithSpecs` closure whose body is
+ * [appendConversionsAndCall]: one call per door, with no arity dispatch.
+ *
+ * @property errorName the name the argument errors give the door: [scriptName], except for a call form,
+ *   which registers under the internal `__invoke__` and is named as the user calls it (`adsr`).
  */
 data class SpecAwareItem(
     override val scriptName: String,
@@ -73,6 +76,7 @@ data class SpecAwareItem(
     val receiverCast: ReceiverCast?,
     val isTopLevel: Boolean,
     val hasCallInfo: Boolean = false,
+    val errorName: String = scriptName,
 ) : RegistrationItem() {
 
     /**
@@ -120,7 +124,7 @@ data class SpecAwareItem(
             appendLine("${indent}val callInfo = callInfoOf($receiverExpr, args, loc)")
         }
 
-        appendConversionsAndCall(indent, scriptName, scriptParams, fnCall, selfArg, hasCallInfo)
+        appendConversionsAndCall(indent, errorName, scriptParams, fnCall, selfArg, hasCallInfo)
 
         append("}")
     }

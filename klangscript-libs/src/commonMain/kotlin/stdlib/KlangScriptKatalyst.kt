@@ -144,6 +144,8 @@ object KlangScriptKatalyst {
      * ```
      * katalyst(Katalyst(k => k.reverb(0.2, 4).compressor(threshold = -18)))
      * ```
+     *
+     * @param configure receives the [KatalystBuilder] and returns it.
      */
     @KlangScript.Invoke
     operator fun invoke(configure: ((KatalystBuilder) -> KatalystBuilder)? = null): KatalystDsl = build(configure)

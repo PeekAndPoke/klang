@@ -341,7 +341,13 @@ object duck {
     @KlangScript.Property
     val attack: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.attack") }
 
-    /** The setter, see [SprudelPattern.duck]. */
+    /**
+     * The setter, see [SprudelPattern.duck].
+     *
+     * @param orbit Orbit index whose voices trigger the duck.
+     * @param depth Depth, 0 for none, 1 for full silence.
+     * @param attack Recovery time in seconds after the trigger stops.
+     */
     @KlangScript.Invoke
     operator fun invoke(orbit: PatternLike? = null, depth: PatternLike? = null, attack: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.duck(orbit, depth, attack, callInfo) }

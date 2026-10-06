@@ -91,6 +91,8 @@ object cull : FieldAccessor({ it.cull }) {
      * ```KlangScript(Playable)
      * note("c3 e3").apply(cull(0.2))                    // set the window via mapper
      * ```
+     *
+     * @param seconds The window in seconds; the release must stay silent this long before the voice ends.
      */
     @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

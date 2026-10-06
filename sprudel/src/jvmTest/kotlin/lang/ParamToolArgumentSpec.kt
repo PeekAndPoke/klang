@@ -7,6 +7,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -156,4 +157,44 @@ class ParamToolArgumentSpec : StringSpec({
 
         amount.uitools shouldBe listOf("SprudelGainEditor", "SprudelGainSequenceEditor")
     }
+
+    "a signal's call form binds to its own parameters, not to the Ignitor method of the same name" {
+        val binding = bindingAt("""note("c3").lpf(perlin(400, 2000))""", "400").shouldNotBeNull()
+
+        binding.callable shouldBe registry.get("perlin").shouldNotBeNull().callForm
+        binding.param.name shouldBe "from"
+        binding.wholeCall shouldBe true
+        bindingAt("""note("c3").lpf(perlin(400, 2000))""", "2000").shouldNotBeNull().param.name shouldBe "to"
+    }
+
+    "a compound's call form mirrors its pattern method: lpf(800) at top level keeps the filter tool" {
+        val freq = paramAt("""note("c3").superimpose(lpf(800))""", "800").shouldNotBeNull()
+
+        freq.name shouldBe "freq"
+        freq.uitools shouldBe listOf("SprudelLpFilterEditor", "SprudelLpFilterSequenceEditor")
+    }
+
+    "an untyped member call never binds to a call form (it is no member)" {
+        val binding = bindingAt("""let f = x => x.adsrCurves("lin")""", "\"lin\"", typed = false).shouldNotBeNull()
+
+        binding.callable.receiver.shouldNotBeNull()
+    }
+
+    "a tooled setter call form at top level opens the whole-call rewrite (its twin has the same parameter names)" {
+        val tremolo = bindingAt("""note("c3").superimpose(tremolo(5, 0.3))""", "5,").shouldNotBeNull()
+        tremolo.param.uitools.shouldNotBeEmpty()
+        tremolo.wholeCall shouldBe true
+
+        val gain = bindingAt("""note("c3").superimpose(gain(0.5))""", "0.5").shouldNotBeNull()
+        gain.param.uitools shouldBe listOf("SprudelGainEditor", "SprudelGainSequenceEditor")
+        gain.wholeCall shouldBe true
+    }
+
+    "an untyped member call is not made ambiguous by a call form of the same name (x.perlin is the Ignitor's)" {
+        val binding = bindingAt("""let f = x => x.perlin(4)""", "4)", typed = false).shouldNotBeNull()
+
+        binding.param.name shouldBe "rate"
+        binding.wholeCall shouldBe true
+    }
 })
+

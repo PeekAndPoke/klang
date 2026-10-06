@@ -25,7 +25,10 @@ record), and put the narrative in the task record, which gets archived. The full
   analyzer; `ParamSpec.isFunctionType` and `KlangType.functionParams` / `functionReturn` (KSP emits the
   `FunctionN` components) let the analyzer bind a lambda's parameters with the callee's declared types, so
   `.superimpose(x => x.` completes. Language docs: `language-features/04-functions.md` 4.10.
-- **Callable objects**: `@KlangScript.Invoke` and the `invoke` dispatch, `ref/interpreter-impl.md`.
+- **Callable objects**: `@KlangScript.Invoke` on `operator fun invoke` (an `@Object` only) registers the call form
+  under the internal symbol `__invoke__` (`NativeOperatorNames.INVOKE`, no script spells it); the docs carry it as
+  the object's second variant (`perlin: perlin` and `perlin(from, to)` on one symbol, `KlangSymbol.callForm`), the
+  editor resolves `Kat(...)` through `KlangDocsRegistry.getCallForm(type)`. `ref/interpreter-impl.md`.
 - **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
   on immutable oscillator builder wrappers (`IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
   `octaves`, `suboctaves`, `fundamental` (a gain), `analog` and `analogSpread`, and the six super builders
@@ -146,3 +149,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-07: the KSP processor sorts the symbols and the registration blocks into source order, so the generated
   output no longer depends on the file system's directory order (sprudel 150 chunk functions to 56)
   (`docs/tasks/reduce-js-bundle-size.md`, "Step 3: source order").
+- 2026-10-07: callable objects show both forms in the docs, the call form as the object's second variant (the stray
+  `invoke` docs symbol is gone), and the call's internal symbol is `__invoke__` (`docs/tasks/callable-object-docs.md`).

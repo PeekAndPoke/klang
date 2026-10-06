@@ -142,6 +142,52 @@ class KlangDocsRegistry {
         _symbols[name]?.callableForReceiver(receiverType)
 
     /**
+     * The call form of a callable object of type [type] ([KlangSymbol.callFormOf]), or null when
+     * values of that type are not callable. The object's symbol is named like the object, and so is its
+     * type (KSP names an in-module `@Object`'s type after its script name), so the lookup is by the type's
+     * simple name, the type itself first, then its supertypes, like [getCallable]; a type that carries
+     * another simple name (a cross-module reference names the Kotlin class) is matched by its FQCN. This is
+     * how a call on any value of the type resolves: `Kat(...)` (a constant holding the `Katalyst` object),
+     * `let d = duck; d(1)`.
+     */
+    fun getCallForm(type: KlangType): KlangCallable? {
+        var foundTheObject = false
+
+        for (candidate in receiverChain(type)) {
+            val symbol = candidate?.let { _symbols[it.simpleName] } ?: continue
+
+            if (symbol.holdsObjectOf(candidate)) {
+                foundTheObject = true
+                symbol.callForm?.let { return it }
+            }
+        }
+
+        // Only a type no symbol of its name holds is looked for by FQCN: an object found and not callable is the answer
+        return if (foundTheObject) null else callFormByFqcn(type)
+    }
+
+    /**
+     * The call form a symbol's docs card shows: its own ([KlangSymbol.callForm]), or, for a second name of a
+     * callable object (`Kat`, `lowpass`, `vel`: a top-level property holding the object), the object's.
+     */
+    fun callFormFor(symbol: KlangSymbol): KlangCallable? =
+        symbol.callForm ?: symbol.variants.filterIsInstance<KlangProperty>()
+            .firstOrNull { it.owner == null }
+            ?.type
+            ?.let { getCallForm(it) }
+
+    /** The call form of the object whose own type has [type]'s FQCN, whatever the simple names say. */
+    private fun callFormByFqcn(type: KlangType): KlangCallable? {
+        val fqcn = type.fqcn ?: return null
+
+        return _symbols.values.firstNotNullOfOrNull { symbol ->
+            val holdsIt = symbol.variants.any { it is KlangProperty && it.owner == null && it.type.fqcn == fqcn }
+
+            if (holdsIt) symbol.callForm else null
+        }
+    }
+
+    /**
      * Get all symbols that have at least one variant with the given receiver type.
      * Used for code completion after `.` — returns all methods available on a type.
      *

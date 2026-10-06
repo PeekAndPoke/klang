@@ -648,22 +648,21 @@ class Interpreter(
                 }
             }
 
-            // A native object is callable when its type registers an `invoke` method
-            // (`Katalyst(k => ...)`). It runs through the SAME spec-aware path as a member call, so
-            // named arguments, default thunks and the trailing-lambda rule all apply.
+            // A native object is callable when its type registers a call form under the internal
+            // symbol `__invoke__` (`Katalyst(k => ...)`, declared with `@KlangScript.Invoke`). It runs
+            // through the SAME spec-aware path as a member call, so named arguments, default thunks and
+            // the trailing-lambda rule all apply. The error for one without speaks to the script user.
             is NativeObjectValue<*> -> {
                 val invoke = engine.getExtensionMethod(callee, NativeOperatorNames.INVOKE)
                     ?: throw KlangScriptTypeError(
-                        message = "Cannot call non-function value: ${callee.toDisplayString()}. " +
-                                "A native object is callable only when its type registers a method named " +
-                                "'${NativeOperatorNames.INVOKE}'.",
+                        message = notCallableMessage(callee, call.callee),
                         operation = "function call",
                         location = call.location,
                         astNode = call,
                         callStackTrace = getStackTrace(),
                     )
-                // calleeName already reads `Katalyst.invoke` (see resolveCalleeName), so every error
-                // raised for this call site, mixed-style or unknown-parameter, names the same thing.
+                // calleeName already reads `Katalyst`, the call the user wrote (see resolveCalleeName), so
+                // every error raised for this call site, mixed-style or unknown-parameter, names the same thing.
                 val fnName = calleeName
                 callStack.push(fnName, call.location)
 
@@ -683,7 +682,7 @@ class Interpreter(
 
             else -> {
                 throw KlangScriptTypeError(
-                    message = "Cannot call non-function value: ${callee.toDisplayString()}",
+                    message = notCallableMessage(callee, call.callee),
                     operation = "function call",
                     location = call.location,
                     astNode = call,
@@ -693,28 +692,33 @@ class Interpreter(
         }
     }
 
-    /** User-visible name for a callee — used in argument error messages. */
+    /** User-visible name for a callee: used in argument error messages. */
     private fun resolveCalleeName(callee: RuntimeValue, calleeExpr: Expression): String = when (callee) {
         is NativeFunctionValue -> callee.name
         is BoundNativeMethod -> "${callee.receiver.qualifiedName}.${callee.methodName}"
-        is FunctionValue -> when (calleeExpr) {
-            is Identifier -> calleeExpr.name
-            is MemberAccess -> calleeExpr.property
-            else -> "<anonymous function>"
-        }
+        is FunctionValue -> writtenName(calleeExpr) ?: "<anonymous function>"
+        // A callable object: named as the user calls it (`Katalyst(...)`), never by its internal
+        // `__invoke__` symbol.
+        is NativeObjectValue<*> -> writtenName(calleeExpr) ?: "<object>"
+        else -> writtenName(calleeExpr) ?: "<anonymous>"
+    }
 
-        // A callable object: `Katalyst(...)` dispatches to `Katalyst.invoke`.
-        is NativeObjectValue<*> -> when (calleeExpr) {
-            is Identifier -> "${calleeExpr.name}.${NativeOperatorNames.INVOKE}"
-            is MemberAccess -> "${calleeExpr.property}.${NativeOperatorNames.INVOKE}"
-            else -> "<object>.${NativeOperatorNames.INVOKE}"
-        }
+    /** The name a call was written with (`x(...)`, `a.x(...)`), or null when the callee is an expression. */
+    private fun writtenName(calleeExpr: Expression): String? = when (calleeExpr) {
+        is Identifier -> calleeExpr.name
+        is MemberAccess -> calleeExpr.property
+        else -> null
+    }
 
-        else -> when (calleeExpr) {
-            is Identifier -> calleeExpr.name
-            is MemberAccess -> calleeExpr.property
-            else -> "<anonymous>"
-        }
+    /**
+     * The one wording for calling what is not a function, a native object without a call form included:
+     * named as written (`'x' cannot be called`), else by its value (`5 cannot be called`).
+     */
+    private fun notCallableMessage(callee: RuntimeValue, calleeExpr: Expression): String {
+        val what = writtenName(calleeExpr)?.let { "'$it'" }
+            ?: if (callee is NativeObjectValue<*>) "This value" else callee.toDisplayString()
+
+        return "$what cannot be called: it is not a function."
     }
 
     /**
@@ -1360,6 +1364,9 @@ class Interpreter(
             return NullValue
         }
 
+        // An operator symbol (`__invoke__`) is reached through its syntax only, never by name: no member.
+        val isOperatorName = NativeOperatorNames.isOperatorName(memberAccess.property)
+
         // Handle native objects - lookup extension properties first, then methods
         if (objValue is NativeObjectValue<*>) {
             val extensionProperty = engine.getExtensionProperty(objValue, memberAccess.property)
@@ -1367,7 +1374,7 @@ class Interpreter(
                 return extensionProperty.getter(objValue.value)
             }
 
-            val extensionMethod = engine.getExtensionMethod(objValue, memberAccess.property)
+            val extensionMethod = if (isOperatorName) null else engine.getExtensionMethod(objValue, memberAccess.property)
             if (extensionMethod != null) {
                 // Return bound method
                 return BoundNativeMethod(
@@ -1401,7 +1408,7 @@ class Interpreter(
                 return extensionProperty.getter(objValue)
             }
 
-            val extensionMethod = engine.getExtensionMethod(objValue, memberAccess.property)
+            val extensionMethod = if (isOperatorName) null else engine.getExtensionMethod(objValue, memberAccess.property)
             if (extensionMethod != null) {
                 // Return bound method
                 return BoundNativeMethod(

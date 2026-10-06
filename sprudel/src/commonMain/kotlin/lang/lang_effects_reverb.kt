@@ -204,7 +204,13 @@ object reverb {
     @KlangScript.Property
     val lowpass: FieldAccessor = FieldAccessor { it.katalystParams?.get("reverb.lowpass") }
 
-    /** The setter, see [SprudelPattern.reverb]. */
+    /**
+     * The setter, see [SprudelPattern.reverb].
+     *
+     * @param wet How much of the orbit goes into the room, 0 to 1, default 0.25. Orbit-wide.
+     * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Orbit-wide.
+     * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Orbit-wide.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         wet: PatternLike? = null,

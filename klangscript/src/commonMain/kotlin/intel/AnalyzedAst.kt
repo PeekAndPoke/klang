@@ -285,7 +285,7 @@ class AnalyzedAst(
             val typeMap = builder.map
             val bindingMap = builder.bindingMap
             val diagnostics = if (computeDiagnostics) {
-                NamedArgumentChecker(registry, typeMap).check(program)
+                NamedArgumentChecker(registry, typeMap, localIdentifiers = bindingMap.keys).check(program)
             } else {
                 emptyList()
             }

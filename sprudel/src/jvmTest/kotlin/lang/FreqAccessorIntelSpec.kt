@@ -22,7 +22,7 @@ import io.peekandpoke.klang.script.types.KlangProperty
 
 /**
  * The editor's view of the `freq` accessor, against the real generated sprudel registry:
- * bare `freq` is a typed constant, `freq(...)` resolves through `invoke`, and `freq.` offers the
+ * bare `freq` is a typed constant, `freq(...)` resolves through its call form, and `freq.` offers the
  * first-step operators registered on `PatternMapperProvider`.
  */
 class FreqAccessorIntelSpec : StringSpec({
@@ -44,8 +44,8 @@ class FreqAccessorIntelSpec : StringSpec({
         prop.samples.first().code shouldContain "bpf(freq)"
     }
 
-    "freq(440) resolves through invoke and the signature renders as the call the user writes" {
-        val invoke = registry.getCallable("invoke", freqType).shouldNotBeNull()
+    "freq(440) resolves through the call form and the signature renders as the call the user writes" {
+        val invoke = registry.getCallForm(freqType).shouldNotBeNull()
         invoke.signature shouldStartWith "freq(hz"
 
         val a = analyze("freq(440)")
@@ -60,17 +60,17 @@ class FreqAccessorIntelSpec : StringSpec({
         a.typeOf(a.top()).shouldNotBeNull()
     }
 
-    "completions after freq. offer the first-step operators and hide invoke" {
+    "completions after freq. offer the first-step operators and no call form" {
         val names = CompletionProvider(registry).memberCompletions(freqType, "").map { it.name }
         names shouldContainAll listOf("add", "sub", "mul", "div")
-        names shouldNotContain "invoke"
+        names shouldNotContain "__invoke__"
     }
 
     "every batch-one accessor is an object with a call form and the first-step operators" {
         listOf("gain", "velocity", "pan").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
-            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "$name("
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
             analyze("$name(0.5)").diagnostics.size shouldBe 0
             analyze("$name.mul(2)").typeOf(analyze("$name.mul(2)").top()).shouldNotBeNull()
@@ -99,10 +99,10 @@ class FreqAccessorIntelSpec : StringSpec({
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe name
-                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name(${slots.first()}"
+                registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "$name(${slots.first()}"
                 val children = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
                 children shouldContainAll slots
-                children shouldNotContain "invoke"
+                children shouldNotContain "__invoke__"
                 analyze("$name(0.5)").diagnostics.size shouldBe 0
                 slots.forEach { slot ->
                     withClue("$name.$slot") {
@@ -118,7 +118,7 @@ class FreqAccessorIntelSpec : StringSpec({
         listOf("begin", "end", "speed", "cut", "legato", "accelerate").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
-            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "$name("
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
             analyze("$name(0.5)").diagnostics.size shouldBe 0
         }
@@ -128,7 +128,7 @@ class FreqAccessorIntelSpec : StringSpec({
         listOf("density", "orbit", "analog", "duty", "onepole", "pregain").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
-            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "$name("
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
             analyze("$name(0.5)").diagnostics.size shouldBe 0
         }
@@ -142,7 +142,7 @@ class FreqAccessorIntelSpec : StringSpec({
             (symbol.category != "uncategorized") shouldBe true
             val type = symbol.variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe canonical
-            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical("
+            registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "$canonical("
             analyze("$alias(0.5)").diagnostics.size shouldBe 0
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("mul")
         }
@@ -155,8 +155,8 @@ class FreqAccessorIntelSpec : StringSpec({
                 (symbol.category != "uncategorized") shouldBe true
                 val type = symbol.variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe canonical
-                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical("
-                CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldNotContain "invoke"
+                registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "$canonical("
+                CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldNotContain "__invoke__"
                 analyze("$alias(5)").diagnostics.size shouldBe 0
             }
         }
@@ -168,7 +168,7 @@ class FreqAccessorIntelSpec : StringSpec({
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe name
                 // Wet first, as on every door that has one (step 3d(iii), 2026-09-24).
-                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name(wet"
+                registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "$name(wet"
                 val children = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
                 children shouldContainAll slots
                 children shouldNotContain name
@@ -182,20 +182,20 @@ class FreqAccessorIntelSpec : StringSpec({
     "adsrCurves is an object with the setter only: no children, the slots are names" {
         val type = registry.get("adsrCurves").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
         type.simpleName shouldBe "adsrCurves"
-        registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "adsrCurves(attack"
+        registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "adsrCurves(attack"
         val members = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
         members shouldNotContain "attack"
-        members shouldNotContain "invoke"
+        members shouldNotContain "__invoke__"
         analyze("""adsrCurves(attack = "scurve", release = "linear")""").diagnostics.size shouldBe 0
     }
 
     "adsr is an object whose children are the slot accessors and whose call form is the setter" {
         val type = registry.get("adsr").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
         type.simpleName shouldBe "adsr"
-        registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "adsr(attack"
+        registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "adsr(attack"
         val members = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
         members shouldContainAll listOf("attack", "decay", "sustain", "release")
-        members shouldNotContain "invoke"
+        members shouldNotContain "__invoke__"
         val code = "adsr.attack.mul(2)"
         val a = analyze(code)
         a.typeOf(a.top()).shouldNotBeNull()
@@ -206,7 +206,7 @@ class FreqAccessorIntelSpec : StringSpec({
         analyze("adsr(attack = 0.1, release = 0.5)").diagnostics.size shouldBe 0
     }
 
-    "named-argument diagnostics reach the setter through invoke" {
+    "named-argument diagnostics reach the setter through the call form" {
         val bad = analyze("freq(hzz = 440)")
         bad.diagnostics.size shouldBe 1
         bad.diagnostics.single().message shouldContain "Unknown parameter 'hzz'"
