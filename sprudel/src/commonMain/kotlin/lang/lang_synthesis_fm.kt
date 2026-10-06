@@ -246,7 +246,15 @@ object fm {
     @KlangScript.Property
     val sustain: FieldAccessor = FieldAccessor { it.fmSustain }
 
-    /** The setter, see [SprudelPattern.fm]. */
+    /**
+     * The setter, see [SprudelPattern.fm].
+     *
+     * @param env Modulation depth in Hz.
+     * @param h Harmonicity, the modulator to carrier ratio.
+     * @param attack Modulation envelope attack in seconds.
+     * @param decay Modulation envelope decay in seconds.
+     * @param sustain Modulation envelope sustain, 0 to 1.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         env: PatternLike? = null,

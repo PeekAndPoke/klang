@@ -105,17 +105,22 @@ object KlangScript {
 
     /**
      * Marks the call form of a callable object: `reverb(0.3)` in KlangScript dispatches to the
-     * annotated member. The member must be `operator fun invoke` inside an `@Object` or
-     * `@TypeExtensions` class, and a class carries at most one, because KlangScript has no
-     * overloads. The script-side name is fixed to [NAME]; the runtime looks it up as an
-     * ordinary method under that name.
+     * annotated member. The member must be `operator fun invoke` inside an `@Object` class, and a
+     * class carries at most one, because KlangScript has no overloads. The Kotlin side keeps
+     * Kotlin's word `invoke`; the KlangScript side registers it under the internal symbol [NAME],
+     * which no script spells: the runtime looks it up there when an object is called, and the
+     * docs show the call form as a second variant of the object's own symbol (`perlin(from, to)`
+     * next to `perlin`).
      */
     @Target(AnnotationTarget.FUNCTION)
     @Retention(AnnotationRetention.SOURCE)
     annotation class Invoke {
         companion object {
-            /** The method name a callable object registers under. */
-            const val NAME = "invoke"
+            /**
+             * The internal KlangScript symbol a callable object's call form registers under: Kotlin's
+             * operator word inside double underscores (`docs/tasks/klangscript-native-object-operators.md`).
+             */
+            const val NAME = "__invoke__"
         }
     }
 

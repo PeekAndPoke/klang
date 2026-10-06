@@ -48,8 +48,12 @@ sealed interface CallReceiver {
  *
  * The variant: on a [CallReceiver.Typed] receiver the receiver-matched one (null when none
  * matches, never a guess); on an [CallReceiver.Untyped] one [KlangSymbol.callableForArgument],
- * which prefers the variant whose parameter declares tools; on a [CallReceiver.TopLevel] call the
- * top-level variant, else the same untyped rule. The parameter: [KlangCallable.paramForArgument].
+ * which prefers the variant whose parameter declares tools (a call form is never a member, so never
+ * a candidate there); on a [CallReceiver.TopLevel] call the top-level variant, else the same untyped
+ * rule. A callable object's call form binds to its own parameters, except where a method has the very
+ * same parameter list and declares tools for the argument: a field accessor's or compound's call form
+ * (`pan(0.7)`, `lpf(800)`) mirrors its pattern method, which carries the tools; the signals' and
+ * `Katalyst`'s call forms have lists of their own. The parameter: [KlangCallable.paramForArgument].
  *
  * @param argIndex     The argument's position in the call.
  * @param argName      The argument's name when written `name = value`, else null.
@@ -64,20 +68,42 @@ fun KlangSymbol.bindArgument(
     val matched = when (receiver) {
         is CallReceiver.Typed -> callableForReceiver(receiver.type) ?: return null
         CallReceiver.Untyped -> null
-        CallReceiver.TopLevel -> callableForReceiver(null)
+        CallReceiver.TopLevel -> callableForReceiver(null)?.let { top ->
+            if (top == callForm) toolTwinOf(top, argIndex, argName, functionArgs) ?: top else top
+        }
     }
 
     val callable = matched ?: callableForArgument(argIndex, argName, functionArgs) ?: return null
     val param = callable.paramForArgument(argIndex, argName, functionArgs) ?: return null
 
-    // Chosen by the untyped rule: is the choice ambiguous for this argument?
-    val ambiguous = matched == null && variants.filterIsInstance<KlangCallable>().any { other ->
+    // Chosen by the untyped rule: is the choice ambiguous for this argument? (The call form is no member.)
+    val ownCallForm = callForm
+    val ambiguous = matched == null && variants.filterIsInstance<KlangCallable>().filter { it != ownCallForm }.any { other ->
         val otherName = other.paramForArgument(argIndex, argName, functionArgs)?.name
 
         otherName != null && otherName != param.name
     }
 
     return ArgumentBinding(callable = callable, param = param, wholeCall = !ambiguous)
+}
+
+/**
+ * For a callable object's [callForm], the method with the very same parameter list (by name) that declares
+ * tools for this argument: `SprudelPattern.pan(amount)` for `pan(amount)`. Null when no method mirrors it.
+ */
+private fun KlangSymbol.toolTwinOf(
+    callForm: KlangCallable,
+    argIndex: Int,
+    argName: String?,
+    functionArgs: List<Boolean>,
+): KlangCallable? {
+    val names = callForm.params.map { it.name }
+
+    return variants.filterIsInstance<KlangCallable>().firstOrNull { other ->
+        other != callForm &&
+                other.params.map { it.name } == names &&
+                other.paramForArgument(argIndex, argName, functionArgs)?.uitools?.isNotEmpty() == true
+    }
 }
 
 /** A call argument found at a source position, with the symbol and the binding it resolved to. */

@@ -13,7 +13,9 @@
 #
 # The host's document root must be klang.finzo.de/current (a one-time switch in the host settings, maintainer,
 # 2026-10-07). The last step fetches the live version.json and fails loudly if the site does not serve the release
-# just deployed, so a host still pointing at the old root cannot go unnoticed.
+# just deployed, so a host still pointing at the old root cannot go unnoticed. Setting the document root in the
+# hosting panel creates `current` as an empty directory; the script refuses to replace a real directory, so remove it
+# once (`rmdir`) before the first deploy (happened on 2026-10-07; the host follows the symlink).
 #
 # A removed page or post is really gone in the next release, and a rollback is one symlink. A browser tab left open
 # across a deploy loses the old release's on-demand chunks (webpack's ChunkLoadError) until it is reloaded. The newest

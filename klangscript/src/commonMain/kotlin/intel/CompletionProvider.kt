@@ -65,6 +65,11 @@ class CompletionProvider(private val registry: KlangDocsRegistry) {
                 if (prefix.isNotEmpty() && !alias.startsWith(prefix, ignoreCase = true)) {
                     continue
                 }
+                // A name that is a top-level symbol of its own is offered once, as itself (`density` is
+                // listed as an alias of `d`, and is the object `density`)
+                if (registry.get(alias)?.hasTopLevelVariant() == true) {
+                    continue
+                }
                 suggestions.add(symbol.toAliasSuggestion(alias))
             }
         }
@@ -84,8 +89,8 @@ class CompletionProvider(private val registry: KlangDocsRegistry) {
             if (prefix.isNotEmpty() && !symbol.name.startsWith(prefix, ignoreCase = true)) {
                 continue
             }
-            // `invoke` is what makes `Katalyst(...)` callable; nobody types `Katalyst.invoke(...)`.
-            if (symbol.name == NativeOperatorNames.INVOKE) {
+            // An operator symbol (`__invoke__`) is never typed
+            if (NativeOperatorNames.isOperatorName(symbol.name)) {
                 continue
             }
             suggestions.add(symbol.toMemberSuggestion(receiverType))

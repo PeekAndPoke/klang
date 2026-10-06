@@ -226,7 +226,17 @@ object notch {
     @KlangScript.Property
     val release: FieldAccessor = FieldAccessor { it.nfrelease }
 
-    /** The setter, see [SprudelPattern.notch]. */
+    /**
+     * The setter, see [SprudelPattern.notch].
+     *
+     * @param freq Centre frequency in Hz.
+     * @param q Resonance, higher narrows the notch.
+     * @param env Envelope depth in semitones.
+     * @param attack Envelope attack in seconds.
+     * @param decay Envelope decay in seconds.
+     * @param sustain Envelope sustain, 0 to 1.
+     * @param release Envelope release in seconds.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         freq: PatternLike? = null,
@@ -349,7 +359,13 @@ fun String.notchCurves(
 @KlangScript.Object("notchCurves")
 object notchCurves {
 
-    /** The setter, see [SprudelPattern.notchCurves]. */
+    /**
+     * The setter, see [SprudelPattern.notchCurves].
+     *
+     * @param attack Curve name for the attack stage.
+     * @param decay Curve name for the decay stage.
+     * @param release Curve name for the release stage.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         attack: PatternLike? = null,

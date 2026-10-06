@@ -8,6 +8,7 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.script.types.parametersByName
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
@@ -248,10 +249,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                 }
 
                 // ── Parameters ───────────────────────────────────────────────────
-                val params = sortedVariants
-                    .filterIsInstance<KlangCallable>()
-                    .flatMap { it.params }
-                    .distinctBy { it.name }
+                val params = sortedVariants.parametersByName()
 
                 if (params.isNotEmpty()) {
                     noui.item {

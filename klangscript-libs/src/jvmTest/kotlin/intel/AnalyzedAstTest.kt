@@ -1146,13 +1146,13 @@ let a = placeholder("aa", Ignitor.sine())"""
         stdlibRegistry().getCallable("voices", builder).shouldNotBeNull()
     }
 
-    "real stdlib: Katalyst(k => k.gain(2)) resolves through invoke; k is the KatalystBuilder" {
+    "real stdlib: Katalyst(k => k.gain(2)) resolves through its call form; k is the KatalystBuilder" {
         val code = "Katalyst(k => k.delay(0.05, d => d.cap(2)).gain(2))"
         val a = analyze(code)
         a.typeOf(a.topExpr())?.simpleName shouldBe "KatalystDsl"
         a.receiverTypeBeforeDot(code.indexOf("k.delay") + 1)?.simpleName shouldBe "KatalystBuilder"
         a.receiverTypeBeforeDot(code.indexOf("d.cap") + 1)?.simpleName shouldBe "KatalystDelayBuilder"
-        stdlibRegistry().getCallable("invoke", KlangType("Katalyst"))!!.signature shouldBe
+        stdlibRegistry().getCallForm(KlangType("Katalyst"))!!.signature shouldBe
                 "Katalyst(configure: ((KatalystBuilder) -> KatalystBuilder)? = null): KatalystDsl"
     }
 

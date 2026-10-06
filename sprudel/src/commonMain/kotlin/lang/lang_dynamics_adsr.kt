@@ -308,7 +308,13 @@ fun String.adsrCurves(
 @KlangScript.Object("adsrCurves")
 object adsrCurves {
 
-    /** The setter, see [SprudelPattern.adsrCurves]. */
+    /**
+     * The setter, see [SprudelPattern.adsrCurves].
+     *
+     * @param attack Curve name for the attack stage.
+     * @param decay Curve name for the decay stage.
+     * @param release Curve name for the release stage.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         attack: PatternLike? = null,

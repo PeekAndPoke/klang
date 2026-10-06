@@ -126,7 +126,13 @@ object unison {
     @KlangScript.Property
     val pan: FieldAccessor = FieldAccessor { it.ignitorParams?.get("panSpread") }
 
-    /** The setter, see [SprudelPattern.unison]. */
+    /**
+     * The setter, see [SprudelPattern.unison].
+     *
+     * @param voices Voices. Typically 1 to 16.
+     * @param spread Detune spread in semitones.
+     * @param pan Stereo spread, 0 to 1. Reserved, not read yet.
+     */
     @KlangScript.Invoke
     operator fun invoke(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.unison(voices, spread, pan, callInfo) }

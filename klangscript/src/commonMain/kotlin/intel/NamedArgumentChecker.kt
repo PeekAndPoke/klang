@@ -39,7 +39,6 @@ import io.peekandpoke.klang.script.ast.TernaryExpression
 import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.runtime.NativeOperatorNames.INVOKE
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangType
 
@@ -64,6 +63,8 @@ import io.peekandpoke.klang.script.types.KlangType
 class NamedArgumentChecker(
     private val docs: KlangDocsRegistry,
     private val typeMap: Map<Expression, KlangType?>,
+    /** The identifiers bound to a local (`let`, `const`, a lambda parameter): never a same-named global. */
+    private val localIdentifiers: Set<Identifier>,
 ) {
     /** Walk the program and collect all named-arg diagnostics. */
     fun check(program: Program): List<AnalyzerDiagnostic> {
@@ -224,16 +225,22 @@ class NamedArgumentChecker(
     // resolve receiver types, avoiding a redundant second inference pass.
 
     private fun resolveCallable(call: CallExpression): KlangCallable? = when (val callee = call.callee) {
-        // A plain function, or a callable object (`Katalyst(...)`) through its type's `invoke`,
-        // the same fallback `ExpressionTypeInferrer.resolveCallable` applies.
-        is Identifier -> docs.getCallable(callee.name, receiverType = null)
-            ?: typeMap[callee]?.let { docs.getCallable(INVOKE, it) }
+        // A local is never a same-named global (`const gain = (amount) => amount; gain(level = 1)`): only a
+        // local holding a callable object calls the call form of its type. Otherwise a plain function or a
+        // callable object's call form (`Katalyst(...)`), or a value holding a callable object through its
+        // type's call form. The same rule `ExpressionTypeInferrer.resolveCallable` applies.
+        is Identifier -> if (callee in localIdentifiers) {
+            typeMap[callee]?.let { docs.getCallForm(it) }
+        } else {
+            docs.getCallable(callee.name, receiverType = null)
+                ?: typeMap[callee]?.let { docs.getCallForm(it) }
+        }
 
         is MemberAccess -> {
             val objType = typeMap[callee.obj]
             if (objType != null) {
                 docs.getCallable(callee.property, objType)
-                    ?: typeMap[callee]?.let { docs.getCallable(INVOKE, it) }
+                    ?: typeMap[callee]?.let { docs.getCallForm(it) }
             } else {
                 null
             }

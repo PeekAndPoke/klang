@@ -179,25 +179,32 @@ exception: they render no spec (no named arguments), and Kotlin supplies their d
 Tests: `ArgAlignmentTest.kt`, `ConfigureLambdaBindingTest.kt` (runtime), `AnalyzedAstTest.kt`
 ("configure lambda" cases, analyzer). Plan: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
 
-### 4.11 Callable native objects (`invoke`) ✅
+### 4.11 Callable native objects (`__invoke__`) ✅
 
-A native object registered from Kotlin becomes callable when its type registers a method named
-`invoke` (`@KlangScript.Invoke` on the `operator fun invoke` member of an `@KlangScript.Object`,
-or a hand registration under `NativeOperatorNames.INVOKE`; the name is defined once, as
-`KlangScript.Invoke.NAME`). KSP rejects an `@Invoke` that is not `operator fun invoke`, that sits
-outside an `@Object`/`@TypeExtensions` class, or that has a sibling `@Invoke`: KlangScript has no
-overloads, a callable object has exactly one call form (2026-09-07). `Katalyst(k => k.gain(2.5))` then dispatches to
-that method through the SAME spec-aware path as `Katalyst.build(k => ...)`: named arguments,
-default thunks and the trailing-lambda rule all apply. An object without `invoke` stays a plain
-value; calling it is a type error that names the missing method. The analyzer resolves the call
-to the `invoke` callable (return type, typed lambda parameter, hover signature rendered as
-`Katalyst(...)`), and `invoke` never appears as a member completion.
+A native object registered from Kotlin becomes callable when its type registers a method under the
+internal symbol `__invoke__` (`@KlangScript.Invoke` on the `operator fun invoke` member of an
+`@KlangScript.Object`, or a hand registration under `NativeOperatorNames.INVOKE`; the name is defined
+once, as `KlangScript.Invoke.NAME`, 2026-10-07). No script spells it: `perlin.__invoke__(1, 2)` is "no
+method", and no error list or completion shows an operator symbol (`__x__`). KSP rejects an `@Invoke`
+that is not `operator fun invoke`, that sits outside an `@Object` class, or that has a sibling
+`@Invoke`: KlangScript has no overloads, a callable object has exactly one call form (2026-09-07).
+`Katalyst(k => k.gain(2.5))` then dispatches to that method through the SAME spec-aware path as
+`Katalyst.build(k => ...)`: named arguments, default thunks and the trailing-lambda rule all apply.
+Errors name the call as written (`in Katalyst: unknown parameter ...`). An object without a call form
+stays a plain value; calling it is a type error (`'x' cannot be called: it is not a function.`).
+
+The docs carry the call form as the object's second variant (`val Katalyst: Katalyst`, then
+`Katalyst(configure): KatalystDsl`), so the analyzer resolves `Katalyst(...)` like any top-level call
+(return type, typed lambda parameter, named-argument checks); a value holding the object (`Kat(...)`,
+`let d = duck; d(1)`) resolves through `KlangDocsRegistry.getCallForm(type)`. The call form never
+appears as a member completion.
 
 ```javascript
 master(Katalyst(k => k.reverb(0.05).gain(2.5)))             // == Katalyst.build(k => ...)
 master(Katalyst())                                          // == Katalyst.build(), the empty chain
 ```
 
-Tests: `NativeObjectInvokeTest.kt` (runtime), `InvokeAnalysisTest.kt` (analyzer). Design:
+Tests: `NativeObjectInvokeTest.kt` (runtime), `InvokeAnalysisTest.kt` (analyzer), `CallableObjectDocsSpec`
+(sprudel) and `KatalystCallFormSpec` (klangscript-libs) on the real registries. Design:
 `docs/tasks/klangscript-native-object-operators.md` (revision 2026-09-05). The arithmetic and
 comparison operators of that plan are designed, not built.

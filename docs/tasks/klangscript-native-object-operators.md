@@ -41,7 +41,8 @@ with ^ for the moment").
    and reports a missing operator method as an error at the operator.
 
 The `invoke` -> `__invoke__` rename goes with `docs/tasks/callable-object-docs.md`, which removes the stray `invoke`
-docs symbol anyway; the arithmetic operators follow as their own step.
+docs symbol anyway (done 2026-10-07: `KlangScript.Invoke.NAME` is `__invoke__`, `NativeOperatorNames.INVOKE` reads
+it); the arithmetic operators follow as their own step.
 
 ## Goal
 

@@ -21,7 +21,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   20    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -3    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    3    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
@@ -93,12 +93,12 @@ let preampCrunch = x => x
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = x => x
-  .highpass(120)                                   // tight: no bass into the gain stages
+  .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.40, "tube", 4).highpass(110)
   .distort(0.55, "softsat", 4).highpass(100)
-  .distort(0.65, "hard", 4)
-  .lowpass(6000)                                   // the fizz
-  .mul(0.25)    
+  .distort(0.65, "soft", 4)
+  .lowpass(5800)                                   // the fizz
+  .mul(0.25)                                       // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
 let powerStock = x => x.drive(0.3)
@@ -123,12 +123,12 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  3.5)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  3.1)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  7.9)         // roar:  low mids
     .band(freq = 2700, q = 2.0, db =  3.6)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105, 0.707, x => x.passes(2))          // the low end
+  .highpass(100, 0.707, x => x.passes(2))          // the low end
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = x => x
@@ -165,16 +165,16 @@ let makeGuitar = (rig) => {
   let pAttack     = Ign.param("attack",       0.005, "Attack")
   let pDecay      = Ign.param("decay",        1.000, "Decay")
   let pSustain    = Ign.param("sustain",      0.400, "sustain")
-  let pRelease    = Ign.param("release",      0.012, "Release")
+  let pRelease    = Ign.param("release",      0.050, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
-    .phasePool(on = 1, kMin = 0.70, kMax = 0.99, warmup = 0, selection = "normal")
+    .phasePool(on = 1, kMin = 0.70, kMax = 0.95, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
-    .spreadPower(4.0).sideAtten(0.2).gainJitter(0.10).centerJitter(0.10)
+    .spreadPower(1.0).sideAtten(0.0).gainJitter(0.50).centerJitter(0.20)
     // analog settings
-    .analog(pAnalog.adsr(pAttack, pDecay, 0.025, pRelease)).analogSpread(0.33)
+    .analog(pAnalog).analogSpread(0.05)
   )
  
   let signal = saw.mul(Ign.slot.pregain)
@@ -182,9 +182,9 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.5, x => x.adsr(0.001, 0.07, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.crackle(1.1).highpass(1200).adsr(0.003, 0.05, 0.0, 0.05).mul(1.0))
+    .plus(Ign.crackle(1.2).highpass(1200).adsr(0.003, 0.05, 0.0, 0.05).mul(1.2))
     // the string - lowpass adsr for the string sound and adsr for the string
-    .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
+    .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "exp"))
            
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
@@ -270,7 +270,7 @@ export lead_arrange = x => x.orbit(0) //  .mute()
   .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.20!16>").gain(mul(0.35))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
-  .mute("<1!64 0!32 1!48 0!16 1!48>")
+  .mute("<1!64 0!32 1!48 0!16 1!16>")
   .late(berlin(0.0005, 0.0015).mul(drunk))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -282,7 +282,7 @@ export guitar1_pat =
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-3 -1 0 3] 2]]>/4`
 
 export guitar1_shape = x => x.pregain(guitarDyna.fast(2).mul(0.8)).sound(guitarMelody).adsrOff().unison(voices = 15, spread = 0.07) // . solo()
-  .ignp("decay", guitarDecay) //. mute()
+  .ignp("decay", guitarDecay).hpf(180) //. mute()
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.20)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
@@ -328,7 +328,7 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.44) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.42) // . mute()
     .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
     .adsr(0.003, 0.3, 0.33, 0.025).hpf(30)
 
@@ -351,16 +351,16 @@ let gummiEimer = (() => {
  
   let ring = Ign.constant(140).div(Ign.freq()).mul(0.85)  
  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(18, x => x.adsr(0.010, 0.025, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(14, x => x.adsr(0.010, 0.025, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Ign.sine(x => x.harmonics(10, 1.1).fundamental(0).analog(pAnalog).analogSpread(1.0))
-    .pitchEnvelope(15, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, 0.35, 0.0, 0.40).mul(1.2)
+  let harms = Ign.sine(x => x.harmonics(6, 1.1).fundamental(0).analog(pAnalog).analogSpread(1.0))
+    .pitchEnvelope(21, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, 0.35, 0.0, 0.40).mul(2.0)
  
-  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.60)
-  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.25)
+  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.30)
+  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.20)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
-  let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(3.00)    
+  let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.40, "softsat", 2)
@@ -377,7 +377,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .pan(0.16).superimpose(pan(0.84))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.23)
+  .scale("e4:minor").gain(0.18)
   .mute("<1!32 0!32 1!32>")                          
   .late(berlin(0.0035, 0.0045).mul(drunk))
 
@@ -525,8 +525,8 @@ export song = stack(
     // pulled the groove towards the break (6.3 LU apart without it, 4.4 at 1.4 dB of glue). The ceiling sits at -3 dB
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
-    .reverb(0.2, 5, 7000)
-    .gain(3.8)
+    .reverb(0.05, 7, 6000)
+    .gain(4.3)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )

@@ -98,8 +98,10 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
   `tuneVca(configure)` on a pipeline preset, retired with the Pipeline DSL (phase 3 step 9, 2026-09-27).
 - The lambda is called ONCE at construction; the tree it produces is bit-identical to hand-built
   nodes. No new node kinds, no wire change.
-- Callable objects (`Katalyst(...)`) go through the `invoke` operator
-  (`docs/tasks/klangscript-native-object-operators.md`), aliased to a method form
+- Callable objects (`Katalyst(...)`) go through the call operator (`@KlangScript.Invoke` on
+  `operator fun invoke`, the internal script symbol `__invoke__`,
+  `docs/tasks/klangscript-native-object-operators.md`); the docs show the object and its call form as
+  two variants of one symbol. A callable object may be aliased to a method form
   (`Katalyst.build(...)`; `Katalyst()` == `Katalyst.build()`, the empty chain) so both can be tested
   against each other.
 - No sub-type methods on the node types. The pre-2026-09 "config first, base wrappers last" chain

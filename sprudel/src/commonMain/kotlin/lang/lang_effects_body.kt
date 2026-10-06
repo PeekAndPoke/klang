@@ -232,7 +232,13 @@ object body {
     @KlangScript.Property
     val floor: FieldAccessor = FieldAccessor { it.bodyFloor }
 
-    /** The setter, see [SprudelPattern.body]. */
+    /**
+     * The setter, see [SprudelPattern.body].
+     *
+     * @param wet How much of the orbit runs through the body, 0 to 1.
+     * @param material Material name, see the list at [SprudelPattern.body].
+     * @param floor Minimum dry share kept in the mix, 0 to 1.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         wet: PatternLike? = null,

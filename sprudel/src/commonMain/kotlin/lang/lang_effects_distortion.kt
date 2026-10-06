@@ -123,7 +123,13 @@ object distort {
     @KlangScript.Property
     val oversample: FieldAccessor = FieldAccessor { it.distortOversample?.toDouble() }
 
-    /** The setter, see [SprudelPattern.distort]. */
+    /**
+     * The setter, see [SprudelPattern.distort].
+     *
+     * @param amount Drive, 0 is clean, 1 is heavy. Higher is allowed.
+     * @param shape Transfer curve by name, for example `tube`.
+     * @param oversample Oversampling factor: 1, 2, 4 or 8.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         amount: PatternLike? = null,
@@ -237,7 +243,12 @@ object crush {
     @KlangScript.Property
     val oversample: FieldAccessor = FieldAccessor { it.crushOversample?.toDouble() }
 
-    /** The setter, see [SprudelPattern.crush]. */
+    /**
+     * The setter, see [SprudelPattern.crush].
+     *
+     * @param amount Bit depth. Fewer bits are harsher, typically 1 to 16.
+     * @param oversample Oversampling factor: 1, 2, 4 or 8.
+     */
     @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.crush(amount, oversample, callInfo) }
@@ -335,7 +346,12 @@ object coarse {
     @KlangScript.Property
     val oversample: FieldAccessor = FieldAccessor { it.coarseOversample?.toDouble() }
 
-    /** The setter, see [SprudelPattern.coarse]. */
+    /**
+     * The setter, see [SprudelPattern.coarse].
+     *
+     * @param amount Sample rate divisor, 1 is off, higher is coarser.
+     * @param oversample Oversampling factor: 1, 2, 4 or 8.
+     */
     @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.coarse(amount, oversample, callInfo) }

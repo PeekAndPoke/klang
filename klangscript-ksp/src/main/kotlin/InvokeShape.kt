@@ -12,9 +12,13 @@ import io.peekandpoke.klang.script.annotations.KlangScript
  *
  * A callable object has exactly one call form: KlangScript has no overloads, and the Kotlin door
  * only exists through `operator fun invoke`, so the annotated member must be that operator and
- * must sit inside an `@Object` or `@TypeExtensions` class.
+ * must sit inside an `@Object` class, whose docs symbol carries the call form as its second variant.
+ * The script registers it under the internal symbol `KlangScript.Invoke.NAME` (`__invoke__`).
  */
 object InvokeShape {
+
+    /** Kotlin's operator word: the only Kotlin function an `@Invoke` may sit on. */
+    const val KOTLIN_OPERATOR = "invoke"
 
     /**
      * The problems with one annotated function, in the order they should be reported; empty when
@@ -22,27 +26,27 @@ object InvokeShape {
      *
      * @param functionName The Kotlin name of the annotated function.
      * @param isOperator Whether the function carries the `operator` modifier.
-     * @param insideRegisteredClass Whether its parent is an `@Object` or `@TypeExtensions` class.
+     * @param insideObjectClass Whether its parent is an `@Object` class.
      * @param invokeCountInClass How many `@Invoke` members that class declares, this one included.
      */
     fun problems(
         functionName: String,
         isOperator: Boolean,
-        insideRegisteredClass: Boolean,
+        insideObjectClass: Boolean,
         invokeCountInClass: Int,
     ): List<String> {
         val problems = mutableListOf<String>()
 
-        if (!insideRegisteredClass) {
+        if (!insideObjectClass) {
             problems.add(
                 "@KlangScript.Invoke '$functionName' must be declared inside an @KlangScript.Object " +
-                        "or @KlangScript.TypeExtensions class."
+                        "class: the call form is documented on the object's own symbol."
             )
         }
 
-        if (functionName != KlangScript.Invoke.NAME) {
+        if (functionName != KOTLIN_OPERATOR) {
             problems.add(
-                "@KlangScript.Invoke must sit on 'operator fun ${KlangScript.Invoke.NAME}', " +
+                "@KlangScript.Invoke must sit on 'operator fun $KOTLIN_OPERATOR', " +
                         "not on '$functionName': the Kotlin call form only exists through the operator."
             )
         }
@@ -65,15 +69,27 @@ object InvokeShape {
     }
 
     /**
-     * The problem with a `@KlangScript.Method` that would register under the invoke name, or null
-     * when [scriptName] is another name: the call form has exactly one spelling.
+     * The problem with a `@KlangScript.Method` whose script name no method may have, or null when [scriptName]
+     * is fine. Refused are the call form's spellings, the internal symbol `__invoke__` and Kotlin's word
+     * `invoke` (a `@Method` on `operator fun invoke` would register a plain method `invoke` and leave the
+     * object not callable), and any other operator symbol, a name of the form `__x__`: a script never reaches
+     * one by name, so such a method would be dead on arrival.
      */
-    fun methodSpelledInvoke(functionName: String, scriptName: String): String? {
-        if (scriptName != KlangScript.Invoke.NAME) {
-            return null
+    fun methodNameProblem(functionName: String, scriptName: String): String? {
+        if (scriptName == KlangScript.Invoke.NAME || scriptName == KOTLIN_OPERATOR) {
+            return "@KlangScript.Method '$functionName' registers as '$scriptName'; the call form " +
+                    "of a callable object is @KlangScript.Invoke on 'operator fun $KOTLIN_OPERATOR', nothing else."
         }
 
-        return "@KlangScript.Method '$functionName' registers as '${KlangScript.Invoke.NAME}'; the call form " +
-                "of a callable object is @KlangScript.Invoke on 'operator fun invoke', nothing else."
+        if (isOperatorShaped(scriptName)) {
+            return "@KlangScript.Method '$functionName' registers as '$scriptName'; a name of the form __x__ is an " +
+                    "operator symbol, which a script never reaches by name."
+        }
+
+        return null
     }
+
+    /** The `__x__` shape of an operator symbol, the rule of the runtime's `NativeOperatorNames.isOperatorName`. */
+    fun isOperatorShaped(name: String): Boolean =
+        name.length > 4 && name.startsWith("__") && name.endsWith("__")
 }

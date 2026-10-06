@@ -232,7 +232,15 @@ object phaser {
     @KlangScript.Property
     val floor: FieldAccessor = FieldAccessor { it.phaserFloor }
 
-    /** The setter, see [SprudelPattern.phaser]. */
+    /**
+     * The setter, see [SprudelPattern.phaser].
+     *
+     * @param wet Depth, 0 to 1. Engages above 0.01.
+     * @param rate LFO rate in Hz.
+     * @param center Centre frequency of the sweep, Hz.
+     * @param sweep Sweep range around the centre, Hz.
+     * @param floor Minimum dry share kept in the mix, 0 to 1.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         wet: PatternLike? = null,
@@ -413,7 +421,13 @@ object tremolo {
     @KlangScript.Property
     val rate: FieldAccessor = FieldAccessor { it.tremoloRate }
 
-    /** The setter, see [SprudelPattern.tremolo]. */
+    /**
+     * The setter, see [SprudelPattern.tremolo].
+     *
+     * @param depth Depth, 0 to 1. The stage is built only above 0.
+     * @param rate LFO rate in Hz. [beatRate] follows the tempo.
+     * @param shape LFO waveform: `sine`, `triangle`, `square`, `sawtooth`, `ramp`.
+     */
     @KlangScript.Invoke
     operator fun invoke(
         depth: PatternLike? = null,

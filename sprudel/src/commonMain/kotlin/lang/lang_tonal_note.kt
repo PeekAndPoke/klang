@@ -274,7 +274,7 @@ private fun applyLegato(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * @param amount Duration scaling factor. 1.0 = fill event slot exactly, 0.5 = staccato (half length),
- *   1.5 = overlapping (legato), 2.0 = double length. Default: 1.0. Typical range: 0.1–2.0.
+ *   1.5 = overlapping (legato), 2.0 = double length. Default: 1.0. Typical range: 0.1 to 2.0.
  * @alias clip
  * @category tonal
  * @tags legato, clip, duration, sustain, staccato
@@ -319,6 +319,9 @@ object legato : FieldAccessor({ it.legato }) {
      * ```KlangScript(Playable)
      * note("c3 e3").apply(legato(1.5))   // mapper form
      * ```
+     *
+     * @param amount Duration scaling factor. 1.0 = fill event slot exactly, 0.5 = staccato (half length), 1.5 =
+     *     overlapping (legato), 2.0 = double length. Default: 1.0. Typical range: 0.1 to 2.0.
      */
     @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

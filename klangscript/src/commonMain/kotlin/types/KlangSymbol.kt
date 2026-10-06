@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.script.types
 
 import io.peekandpoke.klang.script.annotations.KlangScope
+import io.peekandpoke.klang.script.docs.typeMatches
 
 /**
  * A documented KlangScript symbol (function, method, property, etc.).
@@ -56,6 +57,33 @@ data class KlangSymbol(
     fun getLibrary(): Origin.Library? = origin as? Origin.Library
 
     /**
+     * The call form of a callable object (`perlin(from, to)`, `Katalyst(k => ...)`), or null when this
+     * symbol is no callable object. KSP puts it next to the object itself on the object's own symbol:
+     * the object is a top-level [KlangProperty], the call form a receiver-less [KlangCallable] of the
+     * same name and library.
+     */
+    val callForm: KlangCallable?
+        get() {
+            val objects = variants.filterIsInstance<KlangProperty>().filter { it.owner == null && it.name == name }
+
+            return variants.filterIsInstance<KlangCallable>().firstOrNull { callable ->
+                callable.receiver == null && callable.name == name && objects.any { it.library == callable.library }
+            }
+        }
+
+    /**
+     * The call form ([callForm]) when this symbol is the object whose type [type] is: its top-level
+     * property's type matches [type] (FQCN when both carry one, as the registry matches receivers).
+     * A same-named symbol that is not that object (a function `Number` for a value of type `Number`)
+     * gives null.
+     */
+    fun callFormOf(type: KlangType): KlangCallable? = if (holdsObjectOf(type)) callForm else null
+
+    /** True when a top-level property of this symbol has the type [type] (FQCN when both carry one). */
+    fun holdsObjectOf(type: KlangType): Boolean =
+        variants.any { it is KlangProperty && it.owner == null && typeMatches(it.type, type) }
+
+    /**
      * The callable variant an argument belongs to when the call's receiver type is unknown, as the
      * editor's param tools see it (`x => x.body(material = "oak")`: nothing types `x`).
      *
@@ -67,10 +95,12 @@ data class KlangSymbol(
      *
      * Known asymmetry: an untyped receiver is assumed to be a pattern, since the tools live there.
      * On an untyped Ignitor or Katalyst call this may pick a variant the call does not belong to;
-     * `bindArgument` then reports the binding as not safe for a whole-call rewrite.
+     * `bindArgument` then reports the binding as not safe for a whole-call rewrite. A callable object's
+     * [callForm] is never a member, so never a candidate here.
      */
     fun callableForArgument(argIndex: Int, argName: String?, functionArgs: List<Boolean>): KlangCallable? {
-        val callables = variants.filterIsInstance<KlangCallable>()
+        val ownCallForm = callForm
+        val callables = variants.filterIsInstance<KlangCallable>().filter { it != ownCallForm }
 
         return callables.firstOrNull { it.paramForArgument(argIndex, argName, functionArgs)?.uitools?.isNotEmpty() == true }
             ?: callables.firstOrNull()
@@ -79,9 +109,10 @@ data class KlangSymbol(
     /**
      * Merge another [KlangSymbol] of the same name into this one.
      *
-     * Variants are concatenated and deduplicated by `(name, receiver/owner.simpleName, library)`,
+     * Variants are concatenated and deduplicated by `(kind, name, receiver/owner.simpleName, library)`,
      * so two libraries' variants for the same script name co-exist (e.g. stdlib's
-     * `Math.abs` + sprudel's top-level `abs`), while a re-registration from the same
+     * `Math.abs` + sprudel's top-level `abs`), and a callable object's two variants (the object and
+     * its call form, both top-level and named alike) co-exist, while a re-registration from the same
      * source doesn't double up.
      *
      * Used by both [io.peekandpoke.klang.script.docs.KlangDocsRegistry.register] and by
@@ -91,8 +122,8 @@ data class KlangSymbol(
     fun mergeWith(other: KlangSymbol): KlangSymbol {
         val merged = (variants + other.variants).distinctBy { variant ->
             when (variant) {
-                is KlangCallable -> Triple(variant.name, variant.receiver?.simpleName, variant.library)
-                is KlangProperty -> Triple(variant.name, variant.owner?.simpleName, variant.library)
+                is KlangCallable -> listOf("callable", variant.name, variant.receiver?.simpleName, variant.library)
+                is KlangProperty -> listOf("property", variant.name, variant.owner?.simpleName, variant.library)
             }
         }
         return copy(

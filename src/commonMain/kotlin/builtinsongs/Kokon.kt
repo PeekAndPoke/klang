@@ -33,7 +33,7 @@ import * from "sprudel"
 //   parts  lines played together; a part starts on its own first cycle
 //   song   arrange(): which part, for how many cycles (3 s each), in which order
 
-let feel  = 15   // analog drift of the guitars, as in Der Schmetterling
+let feel  = 10   // analog drift of the guitars, as in Der Schmetterling
 let drunk =  1   // two guitarists, sober this time, mostly
 
 // Rig stages (from Der Schmetterling)  ------------------------------------------------------------
@@ -72,12 +72,12 @@ let preampCrunch = x => x
   .mul(1.9)
 
 let preampHighGain = x => x
-  .highpass(120)                                   // tight: no bass into the gain stages
+  .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.40, "tube", 4).highpass(110)
   .distort(0.55, "softsat", 4).highpass(100)
-  .distort(0.65, "hard", 4)
-  .lowpass(6000)                                   // the fizz
-  .mul(0.25)                                       // volume
+  .distort(0.65, "soft", 4)
+  .lowpass(5800)                                   // the fizz
+  .mul(0.30)                                       // volume
 
 let powerPushPull = x => x
   .distort(0.25, "soft", 2)
@@ -95,7 +95,7 @@ let cab4x12 = x => x
     .band(freq = 2700, q = 2.0, db =  3.5)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105, 0.707, x => x.passes(2))          // the low end
+  .highpass(100, 0.707, x => x.passes(2))          // the low end
 
 let cab1x12 = x => x
   .highpass(120, 0.707, x => x.passes(2))
@@ -124,12 +124,12 @@ let makeGuitar = (rig) => {
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
     .phasePool(on = 1, kMin = 0.75, kMax = 0.90, warmup = 0, selection = "normal")
-    .spreadPower(4.0).sideAtten(0.3).gainJitter(0.10).centerJitter(0.10)
-    .analog(pAnalog.adsr(pAttack, pDecay, 0.05, pRelease)).analogSpread(0.33)
+    .spreadPower(1.0).sideAtten(0.2).gainJitter(0.20).centerJitter(0.50)
+    .analog(pAnalog).analogSpread(0.05)
   )
 
   let signal = saw.mul(Ign.slot.pregain)
-    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))
+    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.03, 0, 0))
     .plus(Ign.crackle(1.2).highpass(1200).adsr(0.003, 0.05, 0.0, 0.05).mul(1.2))
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
 
@@ -222,7 +222,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(9, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.33)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -283,7 +283,7 @@ export soar = notes => n(notes.add(14))
   .ignp("decay", 2.8).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
   .lpf(4400)                                       // less fizz, the wall keeps its own
-  .gain(0.45).pan(0.5)
+  .gain(0.44).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -315,9 +315,9 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", 0.5).clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92")
-  .gain(0.45).apply(
-    x => x.pan(0.00).late(perlin(0.0005, 0.0011)),
-    x => x.pan(1.00).late(perlin(0.0010, 0.0016)),
+  .gain(0.45).late(perlin(0.0007, 0.0015)).apply(
+    x => x.pan(0.10), //.late(perlin(0.0007, 0.0015)),
+    x => x.pan(0.90), //.late(perlin(0.0007, 0.0015)),
   )
   .orbit(4)
 
@@ -325,10 +325,7 @@ export wings = chords => n(chords).ply(16)
 export strike = chords => n(chords)
   .sound(heavy).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", 3.5).clip(1)
-  .gain(0.50).apply(
-    x => x.pan(0.00).late(perlin(0.0005, 0.0013)),
-    x => x.pan(1.00).late(perlin(0.0010, 0.0018)),
-  )
+  .gain(0.45).apply(x => x.pan(0.10),x => x.pan(0.90))
   .orbit(5)
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
@@ -422,8 +419,8 @@ let holdingBreath = stack(
 // The high gain rig splits it open: the melody against the wall. The arpeggio waits for its own part.
 let breakingOpen = stack(
   soar(melodyOne)
-    .tremolo(rate = beatRate(0.50), depth = saw.slow(4).pow(2).mul(0.10).add(0.01))
-    .vibrato(rate = beatRate(0.50), depth = saw.slow(4).pow(2).mul(0.05).add(0.01)),
+    .tremolo(rate = beatRate(0.25), depth = saw.slow(4).pow(2).mul(0.10).add(0.01))
+    .vibrato(rate = beatRate(0.25), depth = saw.slow(4).pow(2).mul(0.05).add(0.01)),
   wings(cocoonPower),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),

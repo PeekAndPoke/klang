@@ -50,7 +50,6 @@ class KlangScriptIgnitorKatalystAliasSpec : StringSpec({
             }
         }
         .map { it.name }
-        .filter { it != "invoke" } // the call form has its own row: `Kat(...)` is not a member access
         .sorted()
 
     /** `alias.member` and `full.member` resolve to the same registration: the same method of the same object, or the same value. */

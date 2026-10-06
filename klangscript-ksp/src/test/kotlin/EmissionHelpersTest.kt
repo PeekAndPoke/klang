@@ -7,6 +7,8 @@ package io.peekandpoke.klang.script.ksp
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 
 /**
  * The emission helpers of the generated registration. The class literal and cast rows are what a
@@ -96,6 +98,25 @@ class EmissionHelpersTest : StringSpec({
             |    )
             |)
             |""".trimMargin()
+    }
+
+    "a call form registers under __invoke__ and names the object in its argument errors" {
+        val item = SpecAwareItem(
+            scriptName = "__invoke__",
+            specsExpr = "specs",
+            fnCall = "adsr.invoke",
+            selfArg = "",
+            scriptParams = listOf(param("attack", "Double", "Double", isNullable = false, index = 0, default = null)),
+            receiverCast = null,
+            isTopLevel = false,
+            errorName = "adsr",
+        )
+        val rendered = item.renderRegistration()
+
+        rendered shouldContain "name = \"__invoke__\","
+        rendered shouldContain "checkArgsSize(fn = \"adsr\""
+        rendered shouldContain "convertArgToKotlin(fn = \"adsr\""
+        rendered shouldNotContain "fn = \"__invoke__\""
     }
 
     // ===== the one decision on a door default: paste the literal, or refuse the door =====

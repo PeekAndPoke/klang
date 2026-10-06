@@ -76,7 +76,7 @@ class ErrorHandlingTest : StringSpec({
         }
 
         error.errorType shouldBe KlangScriptErrorType.TypeError
-        error.message shouldContain "Cannot call non-function"
+        error.message shouldContain "cannot be called: it is not a function."
     }
 
     "TypeError - binary operation on incompatible types" {
@@ -411,7 +411,7 @@ class ErrorHandlingTest : StringSpec({
             engine.execute("5()")
         }
 
-        error.message shouldContain "Cannot call non-function"
+        error.message shouldContain "cannot be called: it is not a function."
         error.message shouldContain "5"
     }
 
@@ -609,7 +609,7 @@ class ErrorHandlingTest : StringSpec({
         }
 
         error.errorType shouldBe KlangScriptErrorType.TypeError
-        error.message shouldContain "Cannot call non-function"
+        error.message shouldContain "cannot be called: it is not a function."
     }
 
     "TypeError - calling boolean" {
@@ -620,7 +620,7 @@ class ErrorHandlingTest : StringSpec({
         }
 
         error.errorType shouldBe KlangScriptErrorType.TypeError
-        error.message shouldContain "Cannot call non-function"
+        error.message shouldContain "cannot be called: it is not a function."
     }
 
     "TypeError - calling object" {
@@ -631,7 +631,7 @@ class ErrorHandlingTest : StringSpec({
         }
 
         error.errorType shouldBe KlangScriptErrorType.TypeError
-        error.message shouldContain "Cannot call non-function"
+        error.message shouldContain "cannot be called: it is not a function."
     }
 
     // ============================================================
