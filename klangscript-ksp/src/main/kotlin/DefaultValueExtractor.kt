@@ -11,23 +11,25 @@ import java.io.File
 
 /**
  * Extracts the source text of a Kotlin parameter's default value, for
- * KlangScript documentation and — when the text is literal-shaped — for
- * runtime default thunks.
+ * KlangScript documentation and for the generated registration, which pastes
+ * it (when it is a safe literal) into the default thunk and the call.
  *
  * KSP1 does not expose the default expression of a function parameter as an
  * AST node — only `hasDefault: Boolean`. We scan the raw source file
  * around the parameter's reported line, find the parameter name, the `=`,
  * and the matching top-level `,` or `)`.
  *
- * The extractor is intentionally **fail-soft**: any unexpected token, missing
- * source location, unbalanced bracket, or runaway scan returns `null` and the
- * caller emits `defaultDoc = null`.
+ * Any unexpected token, missing source location, unbalanced bracket, or
+ * runaway scan returns `null`. Since 2026-10-06 that is no longer a docs
+ * miss: the processor refuses a script door whose default it cannot read
+ * (`decideDefault`), so the build stops and names the parameter. Comments
+ * inside the extracted span are stripped (`0.5 // seconds` reads as `0.5`).
  *
- * ⚠️ NOT docs-only: extractions that look like plain literals (numbers,
- * strings, booleans — see `SafeDefaultLiteral.isSafe`) are pasted into the
- * generated registration as RUNTIME default thunks by `safeDefaultThunk`.
- * A plausible-but-wrong literal is therefore a behavioral bug, not a cosmetic
- * one — when in doubt, return null.
+ * NOT docs-only: extractions that look like plain literals (numbers, strings,
+ * booleans, see `SafeDefaultLiteral.isSafe`) are pasted into the generated
+ * registration as the RUNTIME default (`decideDefault`). A plausible-but-wrong
+ * literal is therefore a behavioral bug, not a cosmetic one: when in doubt,
+ * return null, which refuses the door instead of shipping a wrong default.
  */
 object DefaultValueExtractor {
 
@@ -111,7 +113,7 @@ object DefaultValueExtractor {
                 val valueStart = eq + 1
                 val valueEnd = findValueEnd(window, valueStart)
                 if (valueEnd != null) {
-                    val text = window.substring(valueStart, valueEnd).trim()
+                    val text = stripComments(window.substring(valueStart, valueEnd))
                     if (text.isNotEmpty()) {
                         return text
                     }
@@ -121,8 +123,39 @@ object DefaultValueExtractor {
         }
     }
 
+    /**
+     * [text] without its comments, trimmed: `0.5 // seconds` and `"" /* none */` read as `0.5` and
+     * `""`. String and char literals are kept whole, so a `//` inside a string stays. An unterminated
+     * comment or string leaves [text] as it is (trimmed); the processor then refuses it.
+     */
+    internal fun stripComments(text: String): String {
+        val out = StringBuilder()
+        var i = 0
+
+        while (i < text.length) {
+            val isComment = text.startsWith("//", i) || text.startsWith("/*", i)
+            val end = skipNoise(text, i) ?: return text.trim()
+
+            if (end == i) {
+                out.append(text[i])
+                i++
+                continue
+            }
+
+            if (isComment) {
+                out.append(' ')
+            } else {
+                out.append(text, i, end)
+            }
+
+            i = end
+        }
+
+        return out.toString().trim()
+    }
+
     // ------------------------------------------------------------------------
-    //  Internal — bracket/string/comment-aware scanners
+    //  Internal: bracket/string/comment-aware scanners
     // ------------------------------------------------------------------------
 
     /**
@@ -259,11 +292,11 @@ object DefaultValueExtractor {
                         val prev = if (i == 0) ' ' else s[i - 1]
                         val next = if (i + 1 >= s.length) ' ' else s[i + 1]
                         // `>` before `=` stays compound even though a glued generic
-                        // (`List<Int>= x`) is thereby missed (fail-soft null):
-                        // distinguishing that from a real `>=` comparison on
-                        // false-candidate scans through lambda bodies proved
-                        // unsafe — a misread ships a WRONG RUNTIME DEFAULT via
-                        // safeDefaultThunk. A docs miss beats wrong behavior.
+                        // (`List<Int>= x`) is thereby missed (null, so the processor
+                        // refuses the door): distinguishing that from a real `>=`
+                        // comparison on false-candidate scans through lambda bodies
+                        // proved unsafe, and a misread ships a WRONG RUNTIME DEFAULT
+                        // (`decideDefault`). A build error beats wrong behavior.
                         val isCompound = prev == '=' || prev == '<' || prev == '>' || prev == '!' ||
                                 next == '=' || next == '>'
                         if (!isCompound) return i

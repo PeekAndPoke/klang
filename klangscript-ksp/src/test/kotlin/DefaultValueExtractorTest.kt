@@ -118,9 +118,9 @@ class DefaultValueExtractorTest : StringSpec({
 
     "glued generic before the `=` (`List<Int>= x`) — deliberately null, never misread" {
         // Distinguishing a glued generic close from a real `>=` comparison on
-        // false-candidate scans proved unsafe (wrong runtime defaults via
-        // safeDefaultThunk), so glued `>=` fail-softs to null. Formatted
-        // source never glues these.
+        // false-candidate scans proved unsafe (wrong runtime defaults pasted
+        // by the processor), so glued `>=` reads as null, which the processor
+        // refuses with a build error. Formatted source never glues these.
         val src = "fun a(gain: List<Int>= listOf(1))"
         DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe null
     }
@@ -133,7 +133,7 @@ class DefaultValueExtractorTest : StringSpec({
     "real `>=` comparison in an earlier lambda default — stays compound, retry finds the real param" {
         // The `=` of `gain >= 0.5` must NOT be taken as a default marker: this
         // extraction would "succeed" with "0.5", which is literal-shaped and
-        // would ship as a WRONG RUNTIME DEFAULT via safeDefaultThunk.
+        // would ship as a WRONG RUNTIME DEFAULT (pasted by the processor).
         val src = "fun f(pred: (Double) -> Boolean = { gain: Double -> gain >= 0.5 }, gain: Double = 1.0)"
         DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
     }
@@ -145,7 +145,7 @@ class DefaultValueExtractorTest : StringSpec({
 
     "assignment with literal RHS in an earlier lambda default — brace dead-end, retry wins" {
         // Without the `}`-dead-end rule in findValueEnd this extracted "0.5" —
-        // literal-shaped, i.e. a WRONG RUNTIME DEFAULT via safeDefaultThunk.
+        // literal-shaped, i.e. a WRONG RUNTIME DEFAULT (pasted by the processor).
         val src = "fun f(cb: (Double) -> Unit = { gain: Double -> threshold = 0.5 }, gain: Double = 1.0)"
         DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
     }
@@ -223,10 +223,23 @@ class DefaultValueExtractorTest : StringSpec({
         DefaultValueExtractor.extractFromWindow(src, "cutoff") shouldBe "1000.0"
     }
 
-    // The extractor itself just returns whatever's after `=` — it doesn't decide
-    // whether the text is safe to paste. That decision lives in the KSP processor's
-    // `safeDefaultThunk` / `isSafeLiteralForThunk`. We round-trip both here so a
-    // future refactor doesn't accidentally let unsafe text into the generated code.
+    // The extractor itself just returns whatever's after `=` (comments stripped); it
+    // doesn't decide whether the text is safe to paste. That decision is the
+    // processor's `decideDefault`, which refuses anything but a safe literal.
+
+    "a line comment after a literal default is not part of it" {
+        val src = "fun f(\n    x: Double = 0.5 // seconds\n)"
+        DefaultValueExtractor.extractFromWindow(src, "x") shouldBe "0.5"
+    }
+
+    "a block comment after a literal default is not part of it" {
+        val src = "fun f(description: String = \"\" /* none */, y: Int = 1)"
+        DefaultValueExtractor.extractFromWindow(src, "description") shouldBe "\"\""
+    }
+
+    "comment stripping keeps a `//` inside a string literal" {
+        DefaultValueExtractor.stripComments("\"http://x\" // the url") shouldBe "\"http://x\""
+    }
 
     "extractor returns dotted reference verbatim (caller decides safety)" {
         val src = "fun sine(freq: IgnitorDslLike = IgnitorDsl.Freq)"

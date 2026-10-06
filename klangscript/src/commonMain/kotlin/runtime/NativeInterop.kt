@@ -9,6 +9,7 @@ import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.runtime.CallArgs.Companion.resolve
 import kotlin.reflect.KClass
 
@@ -107,15 +108,52 @@ fun checkNoArgs(fn: String, args: List<RuntimeValue>, location: SourceLocation? 
  *
  * Only literals keep a location: a [StringValue] and a [NumberValue] know where they were
  * written, every other [RuntimeValue] is computed and has nowhere to point. This is the one
- * definition of that probe. The KSP-generated registration code calls it for the receiver and
- * for every argument when it builds a `CallInfo`; keeping it here rather than pasting a `when`
- * into the generated text also keeps the generated code free of the casts that the receiver's
- * own hard cast made redundant.
+ * definition of that probe. [callInfoOf] calls it for the receiver and for every argument when
+ * the KSP-generated registration code builds a `CallInfo`; keeping it here rather than pasting a
+ * `when` into the generated text also keeps the generated code free of the casts that the
+ * receiver's own hard cast made redundant.
  */
 fun sourceLocationOf(value: Any?): SourceLocation? = when (value) {
     is StringValue -> value.location
     is NumberValue -> value.location
     else -> null
+}
+
+/**
+ * The [CallInfo] of one native call: the call's own location, the receiver's (null for a
+ * top-level function, which passes a null [receiver]) and one entry per argument.
+ *
+ * The KSP-generated registration code calls this once per door call instead of spelling the
+ * construction out in every closure; it allocates exactly what that inline construction did.
+ */
+fun callInfoOf(receiver: Any?, args: List<RuntimeValue>, loc: SourceLocation?): CallInfo = CallInfo(
+    callLocation = loc,
+    receiverLocation = sourceLocationOf(receiver),
+    paramLocations = args.map { arg -> sourceLocationOf(arg) },
+)
+
+/**
+ * An optional, nullable argument whose Kotlin default is `null`: the converted argument when the
+ * caller passed one, null when not.
+ *
+ * Converts exactly as [convertArgToKotlin] does once its bounds check has passed ([NullValue]
+ * becomes null, anything else goes through [convertToKotlin] with [loc]), so a type error has the
+ * same message and location. The bounds error of [convertArgToKotlin] cannot happen here, which
+ * is why no function name is needed. Deliberately without default parameters: Kotlin/JS would
+ * pass a sentinel for every omitted one at every generated call site.
+ */
+fun <T : Any> optArg(args: List<RuntimeValue>, index: Int, cls: KClass<T>, loc: SourceLocation?): T? {
+    if (index >= args.size) {
+        return null
+    }
+
+    val arg = args[index]
+
+    if (arg is NullValue) {
+        return null
+    }
+
+    return arg.convertToKotlin(cls = cls, loc = loc)
 }
 
 /**
@@ -131,6 +169,10 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? 
 
     requireCallableForFunctionSlot(cls, loc)
 
+    // A number, a boolean, an array or an object reaches a target it cannot be as a script-level type
+    // error, on every platform (`kotlinValueAs`). Before 2026-10-06 the raw value passed through and only
+    // the generated code's cast refused it, as an internal ClassCastException; where no cast was emitted
+    // nothing did (on JS, `Ignitor.variants(1, Ign.sine())` built a tree with a number child).
     val result = when (this) {
         // Special conversion logic for numeric values
         is NumberValue -> when (cls) {
@@ -139,13 +181,11 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? 
             Int::class -> value.toInt()
             Short::class -> value.toInt().toShort()
             Byte::class -> value.toInt().toByte()
-            else -> value
+            // `Any`, `Number`, `Comparable` take the Double; any other target is a script type error.
+            else -> kotlinValueAs(value, cls, loc)
         }
 
-        is BooleanValue -> when (cls) {
-            Boolean::class -> value
-            else -> value
-        }
+        is BooleanValue -> kotlinValueAs(value, cls, loc)
 
         is FunctionValue -> {
             requireFunctionTarget(cls, loc)
@@ -181,32 +221,37 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? 
                 if (it is NullValue) null else it.convertToKotlin(Any::class)
             }.toTypedArray()
 
-            else -> value
+            else -> kotlinValueAs(value, cls, loc)
         }
 
         // A native function may take the ObjectValue itself, to read properties the generic
         // `value` map has already flattened — script lambdas, for one, survive only on this path.
         is ObjectValue -> when (cls) {
             ObjectValue::class -> this
-            else -> value
+            else -> kotlinValueAs(value, cls, loc)
         }
 
-        else -> {
-            val isValid = cls.isInstance(value)
-
-            when (isValid) {
-                true -> value
-                else -> throw KlangScriptTypeError(
-                    message = "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
-                    operation = "parameter conversion",
-                    location = loc,
-                )
-            }
-        }
+        else -> kotlinValueAs(value, cls, loc)
     }
 
     @Suppress("UNCHECKED_CAST")
     return result as T
+}
+
+/**
+ * [kotlinValue], this runtime value's Kotlin form, when it is an instance of [cls]; otherwise the
+ * script-level type error "Cannot convert <RuntimeValue type> to <target>" at [loc].
+ */
+private fun RuntimeValue.kotlinValueAs(kotlinValue: Any?, cls: KClass<*>, loc: SourceLocation?): Any? {
+    if (cls.isInstance(kotlinValue)) {
+        return kotlinValue
+    }
+
+    throw KlangScriptTypeError(
+        message = "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
+        operation = "parameter conversion",
+        location = loc,
+    )
 }
 
 /**
@@ -617,17 +662,15 @@ object NativeOperatorNames {
  *
  * @property name Parameter name used for named-arg binding.
  * @property kotlinType Kotlin class the converted value must match.
- * @property isOptional True if the script-side caller may omit this argument.
- *   When true *and* [default] is set, the resolver invokes the thunk to fill
- *   the slot. When true and [default] is null, the slot is left unfilled —
- *   the bridge must handle the omission itself (e.g. Kotlin's own arity
- *   dispatch for legacy KSP-generated bridges that can't safely paste a
- *   default expression into a thunk).
+ * @property isOptional True if the script-side caller may omit this argument. An omitted
+ *   optional is filled from [default] on every script call, positional or named, so a fixed
+ *   optional parameter must carry a [default] (checked at construction; nothing a script author
+ *   writes reaches it). The KSP processor refuses a door default it cannot turn into one.
  * @property isNullable True if the underlying Kotlin parameter type is
  *   nullable. Drives whether `NullValue` from script collapses to a Kotlin
  *   `null` (when nullable) or rejects with a type error (when not).
- * @property default Null ⇒ no thunk; non-null thunk runs only when the arg is
- *   missing during named-call resolution.
+ * @property default The thunk that fills an omitted optional argument; null only for a required
+ *   parameter or a vararg slot.
  * @property isVararg True if this slot captures trailing positional args.
  *   Vararg slots are inherently optional and need no thunk.
  */
@@ -639,6 +682,14 @@ data class ParamSpec(
     val default: (() -> RuntimeValue)? = null,
     val isVararg: Boolean = false,
 ) {
+    init {
+        // An invariant of the registration code, never of script input: since 2026-10-06 no
+        // producer emits an optional spec without a thunk, and the interpreter relies on it.
+        require(!isOptional || isVararg || default != null) {
+            "ParamSpec '$name' is optional but has no default thunk"
+        }
+    }
+
     /**
      * True when the Kotlin parameter is a function type (`(A) -> B`, emitted by KSP as
      * `Function1::class`). Drives the trailing-lambda rule in [ArgAlignment]: a script

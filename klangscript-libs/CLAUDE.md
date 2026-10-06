@@ -33,8 +33,9 @@ script registration). Split out of `:klangscript` on 2026-09-06
 - Every DSL surface follows `/dsl-design` (immutability, configure lambdas on builder types, two
   doors, parity, one word per concept). The builders of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`
   land HERE, next to their doors; this module is the Kotlin door for them as well.
-- Script-door parameter defaults are safe literals (number, string, boolean, null); KSP refuses a
-  door that invites a trailing lambda but carries a non-literal optional default.
+- Script-door parameter defaults are safe literals (number, string, boolean, null); since 2026-10-06
+  the KSP processor refuses any other default with a build error naming the door and the parameter
+  (the default thunk fills every script call, the pasted literal serves native callers; `/dsl-design` §3).
 - Tests come in two shapes: script-vs-Kotlin equivalence specs (`KlangScriptSineSpec` is the
   template for one door, `KlangScriptSuperOscSpec` for a family of builders with the same knobs)
   and door-parity specs (`KlangScriptFilterDoorParitySpec`). Analyzer tests that need the real

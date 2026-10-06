@@ -835,9 +835,9 @@ class KlangScriptProcessor(
         }
 
         val isVararg = scriptParams.any { it.isVararg }
-        val specsExpr = paramSpecsListExpression(scriptParams)
 
-        // Vararg → legacy helper
+        // Vararg → legacy helper. It renders no parameter spec and Kotlin supplies its defaults, so its
+        // defaults are neither pasted nor judged (the spec expression is built after this branch).
         if (isVararg) {
             val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
             val returnType = resolveCastType(fn.returnType?.resolve())
@@ -845,7 +845,7 @@ class KlangScriptProcessor(
                 "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}($selfArg*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
             return VarargItem(
                 scriptName = method.name,
-                specsExpr = specsExpr,
+                specsExpr = "emptyList()",
                 paramType = paramType,
                 returnType = returnType,
                 fnCallWithArgs = fnCall,
@@ -854,36 +854,28 @@ class KlangScriptProcessor(
             )
         }
 
+        val specsExpr = paramSpecsListExpression(method.name, scriptParams)
         val hasDefaults = scriptParams.any { it.hasDefault }
 
         // Use the spec-aware path when:
-        //  - we have Kotlin defaults (need arity dispatch),
+        //  - we have Kotlin defaults (an omitted optional gets its default literal pasted),
         //  - we need CallInfo (only spec-aware path threads `loc`),
         //  - or arity exceeds the inline overload set (only spec-aware path is unbounded).
         val needsSpecAware = hasDefaults || hasCallInfo || scriptParams.size > MAX_FIXED_PARAMS_METHOD
         if (needsSpecAware) {
             val receiverCast = if (isTypeExtension) {
                 val receiverTypeName = fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
-                receiverTypeName?.let { ArityDispatchItem.ReceiverCast(it, useConvertToKotlin = false) }
+                receiverTypeName?.let { SpecAwareItem.ReceiverCast(it, useConvertToKotlin = false) }
             } else {
                 null
             }
 
-            return ArityDispatchItem(
+            return SpecAwareItem(
                 scriptName = method.name,
                 specsExpr = specsExpr,
                 fnCall = "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}",
                 selfArg = if (isTypeExtension) "typedReceiver, " else "",
-                scriptParams = scriptParams.mapIndexed { i, p ->
-                    ArityDispatchItem.ResolvedParam(
-                        name = p.name?.asString() ?: "p$i",
-                        kotlinType = classLiteralTypeName(resolveKotlinType(p.type.resolve())),
-                        castType = resolveCastType(p.type.resolve()),
-                        hasDefault = p.hasDefault,
-                        isNullable = p.type.resolve().isMarkedNullable,
-                        index = i,
-                    )
-                },
+                scriptParams = scriptParams.mapIndexed { i, p -> resolvedParam(p, i) },
                 receiverCast = receiverCast,
                 isTopLevel = false,
                 hasCallInfo = hasCallInfo,
@@ -961,13 +953,12 @@ class KlangScriptProcessor(
             if (allParams.isNotEmpty()) allParams.drop(1) else allParams
         }
 
-        val specsExpr = paramSpecsListExpression(scriptParams)
-        val hasDefaults = scriptParams.any { it.hasDefault }
         val hasCallInfo = hasCallInfoParam(fn)
         val isVararg = scriptParams.any { it.isVararg }
 
-        // Vararg file-level extension → legacy helper (same as non-file-level ext).
-        // The arity-dispatch path below can't handle vararg params cleanly because
+        // Vararg file-level extension → legacy helper (same as non-file-level ext). Like there, its
+        // defaults are neither pasted nor judged: the spec expression is built after this branch.
+        // The spec-aware path below can't handle vararg params cleanly because
         // named-arg calls to varargs are prohibited unless using spread syntax.
         if (isVararg) {
             val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
@@ -994,11 +985,7 @@ class KlangScriptProcessor(
                 } ?: "Any"
                 appendLine("    val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin($recvType::class, loc)")
                 if (hasCallInfo) {
-                    appendLine("    val callInfo = CallInfo(")
-                    appendLine("        callLocation = loc,")
-                    appendLine("        receiverLocation = sourceLocationOf(receiver),")
-                    appendLine("        paramLocations = args.map { arg -> sourceLocationOf(arg) },")
-                    appendLine("    )")
+                    appendLine("    val callInfo = callInfoOf(receiver, args, loc)")
                 }
                 appendLine("    val kotlinArgs = List(args.size) { index ->")
                 appendLine("        convertArgToKotlin(fn = \"${method.name}\", args = args, index = index, cls = $clsForConvert, nullable = true, loc = loc)")
@@ -1014,6 +1001,8 @@ class KlangScriptProcessor(
             return RawBlockItem(scriptName = method.name, specsExpr = "emptyList()", rendered = rendered)
         }
 
+        val specsExpr = paramSpecsListExpression(method.name, scriptParams)
+
         val receiverTypeName = if (hasExtensionReceiver) {
             fn.extensionReceiver?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
         } else {
@@ -1021,7 +1010,7 @@ class KlangScriptProcessor(
         }
 
         val receiverCast = receiverTypeName?.let {
-            ArityDispatchItem.ReceiverCast(it, useConvertToKotlin = hasExtensionReceiver)
+            SpecAwareItem.ReceiverCast(it, useConvertToKotlin = hasExtensionReceiver)
         }
 
         val selfArg = if (receiverTypeName != null) {
@@ -1037,18 +1026,7 @@ class KlangScriptProcessor(
             receiverClassName = typeName,
             receiverCast = receiverCast,
             fnName = fnName,
-            scriptParams = scriptParams.mapIndexed { i, p ->
-                ArityDispatchItem.ResolvedParam(
-                    name = p.name?.asString() ?: "p$i",
-                    kotlinType = classLiteralTypeName(resolveKotlinType(p.type.resolve())),
-                    castType = resolveCastType(p.type.resolve()),
-                    hasDefault = p.hasDefault,
-                    isNullable = p.type.resolve().isMarkedNullable,
-                    index = i,
-                )
-            },
-            hasExtensionReceiver = hasExtensionReceiver,
-            hasDefaults = hasDefaults,
+            scriptParams = scriptParams.mapIndexed { i, p -> resolvedParam(p, i) },
             hasCallInfo = hasCallInfoParam(fn),
             selfArg = selfArg,
             fnCallPrefix = fnCallPrefix,
@@ -1062,16 +1040,15 @@ class KlangScriptProcessor(
         val isVararg = params.any { it.isVararg }
         val hasDefaults = params.any { it.hasDefault }
         val fnName = escapeIdentifier(fn.simpleName.asString())
-        val specsExpr = paramSpecsListExpression(params)
 
-        // Vararg → legacy
+        // Vararg → legacy (no spec rendered, defaults neither pasted nor judged; see buildMethodItem)
         if (isVararg) {
             val paramType = getVarargComponentType(params.first { it.isVararg })
             val returnType = resolveCastType(fn.returnType?.resolve())
             val fnCall = "$fnName(*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
             return VarargItem(
                 scriptName = entry.name,
-                specsExpr = specsExpr,
+                specsExpr = "emptyList()",
                 paramType = paramType,
                 returnType = returnType,
                 fnCallWithArgs = fnCall,
@@ -1080,27 +1057,20 @@ class KlangScriptProcessor(
             )
         }
 
+        val specsExpr = paramSpecsListExpression(entry.name, params)
+
         // Use the spec-aware path when:
-        //  - we have Kotlin defaults (need arity dispatch),
+        //  - we have Kotlin defaults (an omitted optional gets its default literal pasted),
         //  - we need CallInfo (only spec-aware path threads `loc`),
         //  - or arity exceeds the inline overload set (only spec-aware path is unbounded).
         val needsSpecAware = hasDefaults || hasCallInfo || params.size > MAX_FIXED_PARAMS_FUNCTION
         if (needsSpecAware) {
-            return ArityDispatchItem(
+            return SpecAwareItem(
                 scriptName = entry.name,
                 specsExpr = specsExpr,
                 fnCall = fnName,
                 selfArg = "",
-                scriptParams = params.mapIndexed { i, p ->
-                    ArityDispatchItem.ResolvedParam(
-                        name = p.name?.asString() ?: "p$i",
-                        kotlinType = classLiteralTypeName(resolveKotlinType(p.type.resolve())),
-                        castType = resolveCastType(p.type.resolve()),
-                        hasDefault = p.hasDefault,
-                        isNullable = p.type.resolve().isMarkedNullable,
-                        index = i,
-                    )
-                },
+                scriptParams = params.mapIndexed { i, p -> resolvedParam(p, i) },
                 receiverCast = null,
                 isTopLevel = true,
                 hasCallInfo = hasCallInfo,
@@ -1499,7 +1469,7 @@ class KlangScriptProcessor(
                     append("type = ${generateKlangType(paramType)}")
                     if (param.isVararg) append(", isVararg = true")
                     if (param.hasDefault) append(", isOptional = true")
-                    val defaultDoc = DefaultValueExtractor.extract(param)
+                    val defaultDoc = defaultTextOf(param)
                     if (defaultDoc != null) {
                         append(", defaultDoc = \"\"\"${defaultDoc.escapeForRawString()}\"\"\"")
                     }
@@ -1799,65 +1769,27 @@ class KlangScriptProcessor(
     // ===== ParamSpec emission =====
 
     /**
-     * The runtime's trailing-lambda rule (`runtime/ArgAlignment`) only runs on the spec-aware
-     * call path, which requires EVERY optional parameter to carry a default thunk (KSP emits
-     * one only for a safe literal). A door whose shape lets a trailing lambda float, but whose
-     * optionals include a non-literal default (e.g. `freq: IgnitorDslLike = IgnitorDsl.Freq`),
-     * would look floatable to the editor yet bind the lambda to the first slot at runtime.
-     * Refuse that shape at generation time instead of letting the two disagree silently.
-     * The fix on the declaring side is a literal default (`freq: IgnitorDslLike? = null`).
+     * Build the Kotlin source for a `List<ParamSpec>` covering [scriptParams] of the script door [door].
      *
-     * Floatable, per `ArgAlignment`: the LAST function-typed parameter `j` has a non-function
-     * parameter directly before it (`j >= 1`, `j - 1` not function-typed). Then a call whose
-     * last positional argument lands on `j - 1` sees exactly one function-typed candidate after
-     * it. If `j - 1` is itself function-typed, every earlier position sees two or more
-     * candidates and the rule refuses (ambiguous), so the shape is not floatable. A vararg
-     * parameter also rules floating out: `resolveByParamSpec`'s vararg branch maps positionally.
-     */
-    private fun checkTrailingLambdaShape(scriptParams: List<KSValueParameter>) {
-        val isFunction = scriptParams.map { isFunctionKsType(it.type.resolve()) }
-        val lastFunctionIdx = isFunction.lastIndexOf(true)
-        val floatable = lastFunctionIdx >= 1 && !isFunction[lastFunctionIdx - 1] && scriptParams.none { it.isVararg }
-        if (!floatable) {
-            return
-        }
-        val functionParam = scriptParams[lastFunctionIdx]
-        for (p in scriptParams) {
-            if (p.hasDefault && safeDefaultThunk(p) == null) {
-                val fnName = (p.parent as? KSFunctionDeclaration)?.simpleName?.asString() ?: "<function>"
-                logger.error(
-                    "'$fnName': parameter '${functionParam.name?.asString()}' is function-typed and invites a " +
-                            "trailing lambda, but optional parameter '${p.name?.asString()}' has a non-literal " +
-                            "default (no default thunk), which disables the spec-aware call path, so " +
-                            "`$fnName(x => ...)` would bind the lambda to the first slot at runtime. Give " +
-                            "'${p.name?.asString()}' a literal default (number, string, boolean or null) and " +
-                            "resolve the real default in the body.",
-                    p,
-                )
-            }
-        }
-    }
-
-    /**
-     * Build the Kotlin source for a `List<ParamSpec>` covering [scriptParams].
-     *
-     * For optional params, attempts to extract the Kotlin default expression via
-     * [DefaultValueExtractor] and pastes it into a thunk if [SafeDefaultLiteral]
-     * accepts it (pure literals only — numbers, plain strings without template
-     * splices, booleans, null, chars). Unsafe defaults leave `default = null`;
-     * the runtime then rejects named-call omissions for those slots.
+     * Every optional parameter must have a safe literal default ([SafeDefaultLiteral]: a number, a plain
+     * string, a boolean, null, a char), read by [DefaultValueExtractor] and judged by [decideDefault].
+     * Its spec gets a default thunk returning that literal (`nullDefault`, the runtime's shared one, for
+     * `null`), which fills the omitted argument on every script call, positional or named; the generated
+     * call pastes the same literal for a native caller that passes fewer arguments (see
+     * `appendConversionsAndCall`). Any other default stops the build here with the refusal of
+     * [decideDefault], reported on the parameter; before 2026-10-06 such a door got no thunk and an
+     * arity dispatch on `args.size` instead.
      *
      * Note on type aliases: [resolveKotlinType] follows aliases through to the
      * underlying type, so a parameter declared as e.g. `IgnitorDslLike` (a typealias
      * for `Any`) ends up with `kotlinType = Any::class` in the emitted spec. This is
      * enough to drive named-arg binding (we only need the name), but it loses the
-     * original alias for runtime type-checking and intellisense — those rely on the
+     * original alias for runtime type-checking and intellisense; those rely on the
      * separate KlangParam doc model which preserves the alias text. Functions that
      * want strict type checking should declare concrete (non-alias) parameter types.
      */
-    private fun paramSpecsListExpression(scriptParams: List<KSValueParameter>, indent: String = "    "): String {
+    private fun paramSpecsListExpression(door: String, scriptParams: List<KSValueParameter>, indent: String = "    "): String {
         if (scriptParams.isEmpty()) return "emptyList()"
-        checkTrailingLambdaShape(scriptParams)
         val specs = scriptParams.map { p ->
             val name = p.name?.asString() ?: "p"
             val resolvedType = p.type.resolve()
@@ -1871,8 +1803,13 @@ class KlangScriptProcessor(
             if (isNullable) parts.add("isNullable = true")
             if (p.hasDefault) {
                 parts.add("isOptional = true")
-                val thunk = safeDefaultThunk(p)
-                if (thunk != null) parts.add("default = $thunk")
+                val decision = decideDefault(door, name, defaultTextOf(p))
+                decision.error?.let { logger.error(it, p) }
+                val literal = decision.literal
+
+                if (literal != null) {
+                    parts.add(if (literal == "null") "default = nullDefault" else "default = { wrapAsRuntimeValue($literal) }")
+                }
             }
             "$indent    ParamSpec(${parts.joinToString(", ")})"
         }
@@ -1884,30 +1821,40 @@ class KlangScriptProcessor(
     }
 
     /**
-     * Returns a Kotlin source expression for a thunk that produces the
-     * extracted default value, or null if extraction failed or the text isn't
-     * provably safe to paste verbatim into the generated file.
-     *
-     * "Provably safe" = a Kotlin literal that requires no enclosing-scope
-     * symbols to compile:
-     *   - number literals (Int/Long/Float/Double, with optional sign and suffix)
-     *   - string literals ("…" or """…""")
-     *   - char literals ('…')
-     *   - boolean literals (true/false)
-     *   - null literal
-     *
-     * Anything else (qualified references, function calls, expressions) goes
-     * to `defaultDoc` for display only; the runtime falls back to Kotlin's
-     * own arity-dispatch when the user calls the function positionally, and
-     * to a "use positional" error when the caller omits the slot in a named
-     * call. This is the conservative choice: a paste failure here would
-     * break the build of [ GeneratedStdlibRegistration ]; a missing thunk
-     * just degrades to slightly-less-flexible named-arg ergonomics.
+     * The default of [param] as [DefaultValueExtractor] reads it, null when it has none or the read
+     * failed. Cached per parameter: the extractor reads the whole source file, and the spec, the
+     * generated call and the docs all ask for the same parameter.
      */
-    private fun safeDefaultThunk(param: KSValueParameter): String? {
-        val text = DefaultValueExtractor.extract(param) ?: return null
-        if (!SafeDefaultLiteral.isSafe(text)) return null
-        return "{ wrapAsRuntimeValue($text) }"
+    private fun defaultTextOf(param: KSValueParameter): String? {
+        if (!param.hasDefault) {
+            return null
+        }
+
+        if (param !in defaultTexts) {
+            defaultTexts[param] = DefaultValueExtractor.extract(param)
+        }
+
+        return defaultTexts[param]
+    }
+
+    /** See [defaultTextOf]. */
+    private val defaultTexts = HashMap<KSValueParameter, String?>()
+
+    /** One script parameter as the spec-aware emitters need it, its pasteable default included. */
+    private fun resolvedParam(p: KSValueParameter, i: Int): SpecAwareItem.ResolvedParam {
+        val name = p.name?.asString() ?: "p$i"
+        // The door name only shapes the refusal text, which paramSpecsListExpression has already reported.
+        val literal = if (p.hasDefault) decideDefault("", name, defaultTextOf(p)).literal else null
+
+        return SpecAwareItem.ResolvedParam(
+            name = name,
+            kotlinType = classLiteralTypeName(resolveKotlinType(p.type.resolve())),
+            castType = resolveCastType(p.type.resolve()),
+            hasDefault = p.hasDefault,
+            isNullable = p.type.resolve().isMarkedNullable,
+            index = i,
+            defaultLiteral = literal,
+        )
     }
 
     /** Escapes content for safe embedding in Kotlin raw strings ("""..."""). */

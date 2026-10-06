@@ -70,8 +70,8 @@ object KlangScriptMaster {
 ```
 
 The spec asserts `Master(...) == Master.build(...)` and `Master() == Master.default()` node for
-node. (The `configure` parameter's only earlier parameters must have literal defaults, per the
-KSP trailing-lambda guard; here there are none.)
+node. (Every optional parameter must have a literal default, per the KSP literal-default refusal,
+`/dsl-design` §3; here there are none.)
 
 **Interpreter (replaces Step 3a).** In `Interpreter.evaluateCall`, the `when (callee)` gains a
 `NativeObjectValue<*>` branch BEFORE the "Cannot call non-function value" fallback. It looks up

@@ -10,11 +10,13 @@ package io.peekandpoke.klang.script.ksp
  * Kotlin literal that can be pasted verbatim into the generated registration
  * file without risk of compile failure.
  *
- * Used by [KlangScriptProcessor.safeDefaultThunk] to gate which Kotlin defaults
- * become runtime thunks (enabling named-arg calls to omit the slot) vs which
- * stay as docs-only metadata. The conservative-by-default rule: if we can't
- * prove the text needs no enclosing-scope symbols to compile, return false and
- * let the runtime fall back to Kotlin's own arity dispatch.
+ * The processor pastes an accepted default twice: into the parameter spec's
+ * default thunk, which fills the omitted argument on every script call
+ * (positional or named), and into the generated call, for a native caller that
+ * passes fewer arguments (a native function in a Kotlin function slot). A
+ * default this check rejects is refused with a build error (`decideDefault`,
+ * since 2026-10-06). The conservative rule stays: if we can't prove the text
+ * needs no enclosing-scope symbols to compile, return false.
  *
  * Recognised literal shapes:
  *  - `null`, `true`, `false`

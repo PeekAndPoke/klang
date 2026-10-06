@@ -15,25 +15,12 @@ import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.ParamSpec
 import io.peekandpoke.klang.script.runtime.StringValue
-import io.peekandpoke.klang.script.runtime.wrapAsRuntimeValue
 
 /** Top-level fixtures — Kotlin disallows nested named objects inside StringSpec init. */
 private object FunctionBuilderTestFixtures {
     object IgnitorLike {
         override fun toString() = "[IgnitorLike]"
     }
-}
-
-/**
- * JVM-style Double.toString(): always include a decimal point.
- *
- * Kotlin/JS strips trailing `.0` from whole-number doubles (`(800.0).toString() == "800"`),
- * which breaks tests that assert against JVM-style output. This helper makes the format
- * deterministic across both targets so the assertions stay platform-agnostic.
- */
-private fun Double.fmt(): String {
-    val s = toString()
-    return if ('.' in s || 'e' in s || 'E' in s) s else "$s.0"
 }
 
 /**
@@ -280,48 +267,14 @@ class FunctionBuilderTest : StringSpec({
         err.message!! shouldContain "not nullable"
     }
 
-    "regression: complex-default optional, named call omitting it falls back to Kotlin default via arity dispatch" {
-        // Simulates a KSP-emitted bridge where one optional param had its
-        // default extracted but the second one didn't (no safe-literal thunk).
-        // Build the spec list manually so we can register it via the low-level path.
-        val engine = klangScriptEngine {
-            registerFunctionWithSpecs(
-                name = "filter",
-                paramSpecs = listOf(
-                    ParamSpec(name = "cutoff", kotlinType = Double::class),
-                    ParamSpec(name = "q", kotlinType = Double::class, isOptional = true /* no thunk */),
-                ),
-            ) { args, _ ->
-                // Arity-dispatch body — fewer args means we'd use the Kotlin default.
-                when (args.size) {
-                    1 -> wrapAsRuntimeValue("filter(${(args[0] as NumberValue).value.fmt()})")
-                    2 -> wrapAsRuntimeValue("filter(${(args[0] as NumberValue).value.fmt()}, ${(args[1] as NumberValue).value.fmt()})")
-                    else -> error("unexpected args.size = ${args.size}")
-                }
-            }
+    "an optional parameter spec without a default thunk is refused at construction" {
+        // Every omitted optional is filled from its thunk on every script call. Before 2026-10-06 a
+        // KSP door with a non-literal default produced such a spec and relied on an arity dispatch in
+        // its body; the processor now refuses that default, so a thunkless optional spec is a bug.
+        val err = shouldThrow<IllegalArgumentException> {
+            ParamSpec(name = "q", kotlinType = Double::class, isOptional = true)
         }
-        // Named call supplying only the required param → trailing optional truncated → 1-arg branch fires.
-        (engine.execute("filter(cutoff = 800)") as StringValue).value shouldBe "filter(800.0)"
-        // Named call supplying both → 2-arg branch fires.
-        (engine.execute("filter(cutoff = 800, q = 0.5)") as StringValue).value shouldBe "filter(800.0, 0.5)"
-    }
-
-    "regression: complex-default in middle of named call errors clearly" {
-        val engine = klangScriptEngine {
-            registerFunctionWithSpecs(
-                name = "fn",
-                paramSpecs = listOf(
-                    ParamSpec(name = "a", kotlinType = Double::class, isOptional = true /* no thunk */),
-                    ParamSpec(name = "b", kotlinType = Double::class),
-                ),
-            ) { _, _ -> wrapAsRuntimeValue(0.0) }
-        }
-        // Supplying only 'b' (last) requires filling 'a' (middle) which has no thunk.
-        val err = shouldThrow<KlangScriptArgumentError> {
-            engine.execute("fn(b = 5)")
-        }
-        err.message!! shouldContain "complex Kotlin default"
-        err.message!! shouldContain "in the middle"
+        err.message shouldBe "ParamSpec 'q' is optional but has no default thunk"
     }
 
     // ── Reviewer-flagged coverage gaps ───────────────────────────────────────
