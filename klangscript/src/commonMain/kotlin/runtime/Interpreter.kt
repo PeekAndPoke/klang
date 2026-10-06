@@ -718,23 +718,16 @@ class Interpreter(
     }
 
     /**
-     * Convert [CallArgs] into the positional `List<RuntimeValue>` that the
-     * legacy native-function signature expects.
+     * Convert [CallArgs] into the positional `List<RuntimeValue>` a native function receives.
      *
-     * Routing rules:
-     *  - **Positional call** → pass through unchanged. Legacy bridges that use
-     *    arity dispatch on `args.size` keep working; their Kotlin defaults
-     *    fill the missing tail.
-     *  - **Named call** → requires [paramSpecs] *and* every optional spec must
-     *    carry a default thunk. When met, [resolveByParamSpec] produces a
-     *    fully-populated positional list (defaults invoked for omitted slots).
-     *    When not met, throw a transitional error.
-     *  - **Empty call** → empty list, regardless of specs.
-     *
-     * The "every optional has a thunk" check is what separates new-builder
-     * registrations (always thunked) and KSP-generated bridges with safe
-     * literal defaults (also thunked) from legacy KSP bridges with complex
-     * Kotlin defaults (no thunks; named calls error until migrated).
+     *  - **With parameter specs** (every KSP-generated door and every builder registration):
+     *    [resolveByParamSpec] binds positional and named arguments alike, and an omitted optional
+     *    is filled from its default thunk, so the native receives one value per spec, whatever
+     *    the call style. Every optional spec has a thunk: [ParamSpec] refuses one without, and the
+     *    KSP processor refuses a door default it cannot turn into one (since 2026-10-06).
+     *  - **Without specs** (raw registrations, zero-parameter builders, the vararg emitters): a
+     *    positional call passes through unchanged, an empty call is an empty list, and a named call
+     *    is an error.
      */
     private fun positionalArgsForNative(
         functionName: String,
@@ -742,16 +735,10 @@ class Interpreter(
         args: CallArgs,
         call: CallExpression,
     ): List<RuntimeValue> {
-        // An empty specs list means "no metadata" — same as null for resolution.
+        // An empty specs list means "no metadata", the same as null.
         val specs: List<ParamSpec>? = paramSpecs?.takeIf { it.isNotEmpty() }
 
-        // Strict spec-aware: every optional has a thunk (or it's a vararg). We
-        // can fully resolve any call style and produce a list aligned with the
-        // spec list. Used by the Phase 4 builder and by KSP bridges where every
-        // default extracted to a safe literal.
-        val canResolveAll = specs != null && specs.all { !it.isOptional || it.default != null }
-
-        if (canResolveAll) {
+        if (specs != null) {
             val resolved = resolveByParamSpec(
                 functionName = functionName,
                 specs = specs,
@@ -759,75 +746,25 @@ class Interpreter(
                 callLocation = call.location,
                 callStackTrace = getStackTrace(),
             )
+
             return resolved.mapIndexed { i, v ->
                 v ?: if (specs[i].isVararg) ArrayValue(mutableListOf()) else specs[i].default!!.invoke()
             }
         }
 
-        // Legacy / partially-thunked path. Positional bypasses spec resolution
-        // so the bridge body's arity dispatch on `args.size` keeps working and
-        // Kotlin's own defaults fill the tail.
         return when (args) {
             CallArgs.Empty -> emptyList()
 
             is CallArgs.Positional -> args.values
 
-            is CallArgs.Named -> {
-                if (specs == null) {
-                    throw KlangScriptArgumentError(
-                        functionName = functionName,
-                        message = "Native function '$functionName' does not yet support named arguments. " +
-                                "Pass them positionally for now (named-arg support lands with the builder rewrite).",
-                        location = call.location,
-                        astNode = call,
-                        callStackTrace = getStackTrace(),
-                    )
-                }
-
-                // Has specs but at least one optional lacks a thunk. Resolve as
-                // far as we can and let the bridge body's arity dispatch fill
-                // any trailing unfillable optionals via Kotlin's own defaults.
-                val resolved = resolveByParamSpec(
-                    functionName = functionName,
-                    specs = specs,
-                    args = args,
-                    callLocation = call.location,
-                    callStackTrace = getStackTrace(),
-                )
-
-                var lastSuppliedIdx = -1
-                resolved.forEachIndexed { i, v -> if (v != null) lastSuppliedIdx = i }
-
-                val out = mutableListOf<RuntimeValue>()
-                for (i in resolved.indices) {
-                    val v = resolved[i]
-                    val spec = specs[i]
-                    val thunk = spec.default
-                    when {
-                        v != null -> out += v
-                        spec.isVararg -> out += ArrayValue(mutableListOf())
-                        thunk != null -> out += thunk()
-                        spec.isOptional && i > lastSuppliedIdx -> break  // trailing — let Kotlin default
-                        spec.isOptional -> throw KlangScriptArgumentError(
-                            functionName = functionName,
-                            message = "parameter '${spec.name}' has a complex Kotlin default and was omitted " +
-                                    "in the middle of the call. Either supply it explicitly or call positionally.",
-                            location = call.location,
-                            astNode = call,
-                            callStackTrace = getStackTrace(),
-                        )
-
-                        else -> throw KlangScriptArgumentError(
-                            functionName = functionName,
-                            message = "missing required parameter '${spec.name}'",
-                            location = call.location,
-                            astNode = call,
-                            callStackTrace = getStackTrace(),
-                        )
-                    }
-                }
-                out
-            }
+            is CallArgs.Named -> throw KlangScriptArgumentError(
+                functionName = functionName,
+                message = "Native function '$functionName' does not yet support named arguments. " +
+                        "Pass them positionally for now (named-arg support lands with the builder rewrite).",
+                location = call.location,
+                astNode = call,
+                callStackTrace = getStackTrace(),
+            )
         }
     }
 

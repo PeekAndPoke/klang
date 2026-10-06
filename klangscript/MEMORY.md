@@ -76,8 +76,16 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
 - **KSP-generated code in another module** needs the members it touches to be public
   (`NativeObjectExtensionsBuilder.builder` / `cls`), and Kotlin cannot smart-cast a property declared in
   another module.
-- **A script-door default must be a safe literal**, or KSP emits no thunk and the trailing lambda cannot
-  float (rules register guardrail, `/dsl-design` §3).
+- **A script-door default must be a safe literal**; the KSP processor refuses any other default with a
+  build error (rules register guardrail, `/dsl-design` §3). A generated door is ONE call, no arity
+  dispatch: the spec's default thunk fills every omitted optional on a script call (named or
+  positional); the call pastes the same literal only for a native caller with fewer arguments (a
+  native function in a Kotlin function slot), `optArg` for the nullable `= null` case. `callInfoOf`
+  and `optArg` (`runtime/NativeInterop.kt`) and `nullDefault` (alone in `runtime/NullDefault.kt`, so
+  no initialized top-level property lands in `NativeInterop.kt`) are the shared runtime helpers. The
+  generated registration files hold only plain functions; `Generated<Lib>Docs.kt` is the only generated
+  file with top-level state (its type table first). A top-level property in a registration file brings the
+  Kotlin/JS init guard back into every door of that file, with every test still green.
 - **Keep the feature docs in sync**: after every implementation update `ref/feature-catalog.md` and the
   matching `language-features/NN-*.md` status.
 
@@ -124,3 +132,10 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   export), so the range values can be named `from` / `to` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
 - 2026-10-06: the Ignitor's triangle door is `Ign.tri` / `Ignitor.tri` with `OscTriBuilder`, matching `supertri` and
   sprudel's `tri`; `triangle` as a door is removed (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`).
+- 2026-10-06: the generated registration is one call per door (no arity dispatch), the shared helpers `callInfoOf`,
+  `optArg`, `nullDefault`, and the processor refuses a non-literal door default; `convertToKotlin` refuses a number,
+  boolean, array or object on a target it cannot be as a `KlangScriptTypeError` at the call, on every platform
+  (`docs/tasks/reduce-js-bundle-size.md`, "Step 1 done").
+- 2026-10-06: the generated registration is split per source area (`Generated<Lib><Area>Registration.kt`, plain functions,
+  no top-level state), an entry point calls the chunks in the old order, the docs live in `Generated<Lib>Docs.kt` with
+  each `KlangType` emitted once (`docs/tasks/reduce-js-bundle-size.md`, "Step 2 done").

@@ -1,7 +1,8 @@
 # Reduce the frontend JS bundle size
 
-_Status: re-measured 2026-10-06 (see "Re-measured 2026-10-06" at the end), proposal ready, not yet implemented;
-one maintainer decision open (non-literal defaults on script doors). Created 2026-06-11._
+_Status: in progress. Step 1 ((b), (c), the cast fix, non-literal defaults refused) committed 2026-10-06 (599540e6);
+step 2 ((d), (e), the split per area) done 2026-10-06, awaiting review (see "Step 1 done" and "Step 2 done" at the
+end). Created 2026-06-11._
 
 ## Problem
 
@@ -466,3 +467,328 @@ Next, separately: (d) and (e). They are cheap, generator-only, and (e) is worth 
   defaults still matter), mutation-checked per `/review-loop`.
 - The metadata compile shows no "No cast needed".
 - Re-measure with the scripts in `tmp/reviews/ksp-registration-size/` against these numbers.
+
+---
+
+## Step 1 done (2026-10-06)
+
+The maintainer approved the recommendation on 2026-10-06, all of it, in order, with one decision: a non-literal
+door default is a KSP error. Step 1 is (b), (c), the cast fix and that error, in the general `klangscript-ksp`
+generator and the `klangscript` runtime, for every module the processor runs on (sprudel, klangscript-libs).
+Branch `ksp-registration-size`. Steps (d) and (e) come after review.
+
+### What changed
+
+Names as of the end of review (round 1 renamed `ArityDispatchItem` to `SpecAwareItem` and
+`nonLiteralDefaultError` to `decideDefault`, and moved `nullDefault` to its own file):
+
+- `klangscript-ksp/.../RegistrationModel.kt`: both ladder emitters (`SpecAwareItem`, `FileLevelExtItem`) are
+  gone; both now call one shared body, `appendConversionsAndCall`: the arity check, one `val` per required
+  parameter, then ONE call. An optional parameter is `optArg(args, i, T::class, loc)` when it is nullable with
+  default `null`, otherwise `if (args.size > i) convertArgToKotlin(...) else <its default literal>`.
+  `castSuffix` drops the cast when the parameter is nullable and the cast type is exactly the class literal.
+  `decideDefault` is the one decision on a default: paste the literal, or refuse the door.
+- `klangscript-ksp/.../KlangScriptProcessor.kt`: every optional parameter of every non-vararg door goes
+  through `decideDefault`; a refused one is a `logger.error` on the parameter, so the build stops with the door,
+  the parameter and the offending default named. The old floatable-shape check is subsumed and removed. Default
+  thunks for `null` are the shared `nullDefault` (`runtime/NullDefault.kt`). The file-level vararg block uses `callInfoOf` too.
+- `klangscript/.../runtime/NativeInterop.kt`: `callInfoOf(receiver, args, loc)`, `optArg(args, index, cls, loc)`
+  (converts exactly as `convertArgToKotlin` does after its bounds check, no default parameters).
+  `KlangScriptExtensionBuilder`'s two inline vararg helpers use `callInfoOf` as well.
+- Rule text: the guardrail row in `CLAUDE.md` (now "enforced 2026-10-06"), `/dsl-design` §3,
+  `klangscript-libs/CLAUDE.md`, `klangscript/MEMORY.md`, `klangscript/language-features/04-functions.md`,
+  `sprudel/ref/dsl-conventions.md`, the `SafeDefaultLiteral` KDoc.
+
+`duck`, before (4 branches, 6 conversions, 4 calls, 25 lines in the closure) and after (12 lines):
+
+```kotlin
+) { receiver, args, loc ->
+    val callInfo = callInfoOf(receiver, args, loc)
+    checkArgsSize(fn = "invoke", args = args, expected = 0, location = loc)
+    wrapAsRuntimeValue(
+        duck.invoke(
+            orbit = optArg(args, 0, Any::class, loc),
+            depth = optArg(args, 1, Any::class, loc),
+            attack = optArg(args, 2, Any::class, loc),
+            callInfo = callInfo,
+        )
+    )
+}
+```
+
+### Measured
+
+Generated files (`wc -l`, bytes):
+
+| Module             | Before                    | After                     | Change                  |
+|--------------------|---------------------------|---------------------------|-------------------------|
+| `sprudel`          | 50,137 lines / 3,436,614 B | 42,876 lines / 2,927,103 B | -7,261 lines, -14.8 % bytes |
+| `klangscript-libs` | 12,320 lines / 751,597 B   | 11,693 lines / 685,693 B   | -627 lines, -8.8 % bytes   |
+
+In them: arity ladders 439 to 0; `convertArgToKotlin` calls 3,524 to 1,181; inline `CallInfo(...)` blocks 1,072
+to 0 (`callInfoOf`); `{ wrapAsRuntimeValue(null) }` thunks 882 to 0 (`nullDefault`). "No cast needed" warnings in
+the generated files: 26 before, 0 after (`:sprudel:compileCommonMainKotlinMetadata
+:klangscript-libs:compileCommonMainKotlinMetadata --rerun`).
+
+Production bundle, a fresh `:jsBrowserProductionWebpack` on the branch, against the 00:56 build re-measured above:
+
+| What                                   | Before    | After     | Change               |
+|----------------------------------------|-----------|-----------|----------------------|
+| `klang-engine.*.js`                    | 9,503,122 | 8,986,508 | -516,614 B (-5.4 %)  |
+| attributed to `GeneratedSprudelRegistration.kt` | 2,458,365 | 2,194,511 | -263,854 |
+| attributed to `GeneratedStdlibRegistration.kt`  | 520,258   | 498,643   | -21,615  |
+| Kotlin stdlib `_Collections.kt` (the `args.map` that was inlined into every `CallInfo` block) | | | -109,456 |
+| unmapped (ladder code without map entries) |       |           | -139,271             |
+| every other source, net                |           |           | +18,673              |
+
+The "every other source" line is the work merged between the two builds (069cb200 to 84c85100), not this step;
+without it the step takes about 535 KB off the bundle (modeled beforehand: 675 KB). Counted in the new JS:
+`convertArgToKotlin` 3,649 to 1,322, `new CallInfo(` 1,131 to 2, literal thunk functions 1,024 to 142, the `$default`
+sentinel `kotlin_kotlin_stdlib.CmH` 23,322 to 21,094. The `_init_properties_` prefixes (1,985 left) are step (d).
+
+### Behaviour
+
+- All suites green: `:klangscript-ksp:test` 131, `:klangscript:jvmTest` 1,141, `:klangscript:jsTest` (browser)
+  1,112, `:klangscript-libs:jvmTest` 792, `:klangscript-libs:jsTest` 571, `:sprudel:jvmTest` 3,427 (486 skipped,
+  483 of them `JsCompatTests` on the JVM as before), `:sprudel:jsTest` 2,919, root `:jvmTest` 56 (with
+  `DslDocExamplesSpec` and `SongBenchmarkCasesCompileSpec`). The 28 spec files that assert argument and type
+  errors are among them and stayed green. The step as reviewed changes one class of error text on purpose: a
+  number, boolean, array or object on a parameter it cannot be (see "Round-1 fixes" and "Round-2 fixes" below).
+- The 18-song corpus (`ZzScratchCorpusRenderSpec`): `ksp-before` rendered first on the unchanged branch,
+  `ksp-step1` after; all 18 rows identical (raw and PCM hashes, peaks).
+- New rows, all mutation-checked (mutate, run, restore with `cp`, verify with `cmp`, one lock call each):
+
+| Mutation                                                           | Guard                                         | Killed |
+|--------------------------------------------------------------------|-----------------------------------------------|--------|
+| an omitted optional is converted without the size guard            | `NativeFunctionSlotDefaultsSpec` (function slot row) | yes |
+| the pasted default literal is wrong (`16` becomes `8`)             | `NativeFunctionSlotDefaultsSpec` (function slot row) | yes |
+| `decideDefault` (then `nonLiteralDefaultError`) never refuses                             | `EmissionHelpersTest` (2 refusal rows)        | yes    |
+| the class-literal cast rule is off                                 | `EmissionHelpersTest` (2 rows)                | yes    |
+| a nullable `= null` optional does not use `optArg`                 | `EmissionHelpersTest` (2 rows)                | yes    |
+
+- The KSP error end to end, once, not as a committed test (the KSP module has no compile-testing harness): the
+  Katalyst `compressor`'s `lookahead: Double? = null` was set to `= Double.NaN` for one
+  `:klangscript-libs:kspCommonMainKotlinMetadata` run and restored. The build failed with
+  `KatalystBuilders.kt:366: KlangScript door 'compressor': optional parameter 'lookahead' has the non-literal
+  default `Double.NaN`. ...`. What the unit rows do not cover is that the processor calls the check; that wiring is
+  one line in `paramSpecsListExpression`.
+
+### Round-1 fixes (2026-10-06)
+
+Review round 1 (`tmp/reviews/ksp-r1-code.md`, `tmp/reviews/ksp-r1-dsl.md`) found two MAJORs and several smaller
+points; all applied:
+
+- **A lost type check on JS (DSL MAJOR).** The `as Double?` / `as Number?` casts that step 1 dropped had been the
+  only thing refusing a boolean on those parameters in the browser, because `convertToKotlin` passed a `BooleanValue`, an
+  `ArrayValue` or an `ObjectValue` through for any target. Fixed at the root: `convertToKotlin` now raises the
+  script-level `KlangScriptTypeError` "Cannot convert BooleanValue to Double" (same style as the existing
+  `StringValue` error) when the value is not an instance of the target, on every platform. The casts stay removed.
+  `sine(true, 2)` and `compressor(lookahead = true)` are type errors on the JVM and in the browser
+  (`StrictArgumentConversionSpec` in sprudel and klangscript-libs, `OptArgAndStrictConversionTest` in klangscript).
+  Changed JVM error text for a script author: a boolean, array or object on a parameter of another type used to
+  surface as `Internal error in native function '...': class java.lang.Boolean cannot be cast to class
+  java.lang.Double ...` (a `KlangScriptInternalError`) and now reads `Cannot convert BooleanValue to Double` (a
+  `KlangScriptTypeError` at the call). On `main` the browser refused these calls too, through the generated cast
+  (a `ClassCastException`, surfaced as the same internal error); they passed silently only in step 1 before this
+  fix. So the user-visible change against `main` is: an internal ClassCastException error becomes a clear
+  `KlangScriptTypeError` at the call, on both platforms.
+- **The init guard (code MAJOR).** `nullDefault` had made `NativeInterop.kt` the owner of a top-level property with
+  an initializer, so Kotlin/JS started 19 of its functions (`convertToKotlin`, `convertArgToKotlin`,
+  `wrapAsRuntimeValue`, ...) with `_init_properties_NativeInterop_kt()`. It now lives alone in
+  `runtime/NullDefault.kt` (an `object` implementing the function type is not allowed on JS). The production
+  bundle has 0 `_init_properties_NativeInterop_kt` calls (19 before the fix).
+- **Dead scaffolding removed.** `ParamSpec` refuses an optional spec without a thunk at construction (an invariant of
+  the registration code, never of script input), and `positionalArgsForNative` keeps only its two live paths: with
+  specs, resolve and fill from the thunks; without specs, positional pass-through and the named-call error. The two
+  `FunctionBuilderTest` rows that simulated a thunkless KSP door are replaced by one row for the invariant.
+- **One decision per default.** `decideDefault(door, parameter, text)` is the single pure function both the refusal
+  and the pasting use; each default is read once per parameter (cached). Comments around a default are stripped by
+  `DefaultValueExtractor` (`= 0.5 // seconds` reads as `0.5`). The refusal now says "make the parameter's type
+  nullable with `= null`". `ArityDispatchItem` is `SpecAwareItem`; `FileLevelExtItem.hasExtensionReceiver` is gone.
+- **Texts.** The thunk fills every script call, positional or named; the pasted literal serves only native callers
+  with fewer arguments (a native function in a Kotlin function slot): aligned in the processor and
+  `SafeDefaultLiteral` KDocs, `/dsl-design` §3, `sprudel/ref/dsl-conventions.md`, `klangscript-libs/CLAUDE.md` and
+  `klangscript/MEMORY.md`. The `CLAUDE.md` row stays in the Guardrail table and says it is enforced at build time.
+  Stale texts fixed in `Interpreter.kt`, the `ParamSpec` KDoc, the `DefaultValueExtractor` KDoc and test comments,
+  and `docs/tasks/klangscript-native-object-operators.md`.
+- **Tests added, all mutation-checked:** `optArg` absent, explicit null, given, wrong type (the reviewer's surviving
+  off-by-one mutant now goes red, both in the unit test and in a new function-slot row for `sndSuperSaw`, a
+  top-level door with `= null` defaults); strict conversion for boolean, array and object (JVM and JS); the
+  `ParamSpec` invariant; comment stripping; the decision function.
+
+After the fixes: all step 1 suites green (`:klangscript-ksp:test` 134, `:klangscript:jvmTest` 1,148,
+`:klangscript:jsTest` 1,119, `:klangscript-libs:jvmTest` 793, `:klangscript-libs:jsTest` 572, `:sprudel:jvmTest`
+3,429, `:sprudel:jsTest` 2,921, root `:jvmTest` 56), the corpus `ksp-r1fix` is identical to `ksp-before` (18 of 18),
+0 warnings in the generated files, generated sizes unchanged (2,927,103 and 685,693 bytes). Production bundle:
+8,984,914 bytes, 1,594 less than before the fixes, 518,208 (5.45 %) less than the 9,503,122 baseline.
+
+Known gap: no committed test proves that the processor calls `logger.error` with the refusal (the KSP module has no
+compile-testing harness, and adding one is a dependency the maintainer would decide on). Verified by hand twice: a
+temporary `lookahead: Double? = Double.NaN` on the Katalyst `compressor` stops `:klangscript-libs:kspCommonMainKotlinMetadata`
+with the refusal, and `= null /* none */` passes.
+
+### Round-2 fixes (2026-10-06)
+
+Review round 2 was clean on both roles (`tmp/reviews/ksp-r2-code.md`, `tmp/reviews/ksp-r2-dsl.md`); applied:
+
+- **Numbers too (MINOR, both).** The `NumberValue` branch of `convertToKotlin` still passed a number into a
+  non-numeric target. It now ends in the same `kotlinValueAs` check: `Any`, `Number`, `Comparable` and the numeric
+  targets take the number, anything else is "Cannot convert NumberValue to <target>" at the call, on every
+  platform. Changed texts against `main`: `Ignitor.variants(1, Ign.sine())` built a tree with a number child in the
+  browser (silently) and was an internal error on the JVM ("arraycopy: element type mismatch"); `"abc".startsWith(1)`,
+  `chunk(4, x => x, 1)`, `tweaks(1)` were internal ClassCastException errors on both platforms. All are now
+  `KlangScriptTypeError`s ("Cannot convert NumberValue to IgnitorDsl", "... to String", "... to Boolean",
+  "... to ObjectValue"). Rows on JVM and JS, mutation-checked; the doc-example, song, tutorial and corpus specs
+  are unchanged and green (no legitimate number-into-foreign-target use existed).
+- **Vararg doors (NIT).** The spec expression is built after the vararg branch, so a vararg door (which renders no
+  spec and lets Kotlin supply its defaults) is no longer refused for a default it never pastes. Generated output
+  unchanged.
+- **Records (NIT).** This section's "Behaviour" bullet and names corrected; the claim that `main` let `sine(true, 2)`
+  pass in the browser corrected (it did not; only step 1 before round 1 did).
+- **Queued (out of scope):** `docs/tasks/boolean-member-access.md` (`true.toString()` fails although
+  `KlangScriptBooleanExtensions` registers it).
+
+After round 2: all step 1 suites green (`:klangscript-ksp:test` 134, `:klangscript:jvmTest` 1,150,
+`:klangscript:jsTest` 1,121, `:klangscript-libs:jvmTest` 795, `:klangscript-libs:jsTest` 574, `:sprudel:jvmTest`
+3,429, `:sprudel:jsTest` 2,921, root `:jvmTest` 56), corpus `ksp-r2fix` identical to `ksp-before` (18 of 18), 0
+warnings in the generated files, generated sizes unchanged.
+
+### Left for later
+
+- Steps (d) (the docs map in its own file) and (e) (a `KlangType` table).
+
+
+## Step 2 scope (maintainer, 2026-10-06)
+
+Step 2 is (d), (e) and a split of the generated output, decided together:
+
+- **(d)** the docs metadata leaves the registration file for a file (or files) of its own, so its top-level state
+  stops putting an init guard into every registration function.
+- **(e)** each distinct `KlangType` is emitted once and referenced, not rebuilt per use.
+- **The split** (maintainer: "Can we also split the generated chunks into different files?"): the registrations are
+  written per DSL group (one file per `lang_<group>` area in sprudel, per stdlib area in klangscript-libs), as plain
+  functions with NO top-level state, plus one small entry point that calls them all. Why: a 2.9 MB generated file is
+  slow in the IDE, and per-group files can make incremental KSP builds cheaper. The split alone does not shrink the
+  bundle; without top-level state it costs about 5 to 10 KB unminified (measured in step 2: the collection order
+  interleaves the areas, so sprudel has 150 chunk functions instead of 50 and the stdlib 23 instead of 12).
+- **Verify:** the bundle stays the same or shrinks (measured against step 1); behaviour identical (the step 1 suites,
+  the error specs, the corpus); if KSP's per-file dependencies are declared (isolating outputs), a test that editing one
+  door regenerates the right file and nothing is missed. If the incremental part turns out fiddly, the split ships
+  aggregating (as today) and the incremental question is recorded, not forced.
+
+---
+
+## Step 2 done (2026-10-06)
+
+Step 1 is committed (599540e6). Step 2 is (d), (e) and the split, in the general `klangscript-ksp` generator, for
+both modules that run it. Branch `ksp-registration-size`, uncommitted, awaiting review.
+
+### What changed
+
+- **The split.** A library's registration is written as one file per source AREA: the source file's name cut after
+  its second `_`-separated part (`lang_structural_chunk.kt` belongs to `lang_structural`; `KlangScriptIgnitor.kt`
+  is its own area), so sprudel gets one file per `lang_<group>` and klangscript-libs one per stdlib file
+  (`sourceArea`, `areaIdentifier` in `RegistrationModel.kt`). The files hold plain `internal` chunk functions and
+  no top-level state. A file-level extension method is its own block, so it lands in its own file's area.
+- **Order kept.** The blocks are collected exactly as before and cut into chunks of one area; the entry point
+  `register<Lib>Generated()` (still in `Generated<Lib>Registration.kt`, same public name) calls every chunk in that
+  collected order, then registers the docs. Order does not change meaning today anyway: no name repeats within a
+  library (the processor's collision check refuses it; checked: no function and object share a name either).
+- **(d)** The docs (the chunk functions and `generated<Lib>Docs`) live in `Generated<Lib>Docs.kt`, the only
+  generated file with top-level state.
+- **(e)** `KlangTypeTable`: every distinct `KlangType(...)` of the docs is emitted once as `private val ktN` at the top
+  of the docs file (before the docs map, so it is initialized first) and referenced everywhere else; nested types are
+  interned first.
+- **Incremental KSP.** All outputs stay aggregating: the entry point and the docs map are built from every annotated
+  symbol, so any change regenerates the set, and isolating outputs per area would buy nothing at the KSP level. What
+  the split buys is Kotlin's incremental compile: a scripted check (temporary `lookahead: Double? = 0.25` on the
+  Katalyst `compressor`) regenerated 18 files and changed exactly two of them, `GeneratedStdlibDocs.kt` and
+  `GeneratedStdlibKatalystBuildersRegistration.kt`; the rest were byte-identical, and the restored source
+  regenerated byte-identical output. Open question, not forced: per-area isolating outputs would need the entry
+  point and the docs map to stop aggregating (for example one docs file per area plus a generated index), which is
+  a design change for the maintainer.
+
+### Measured
+
+| | Step 1 | Step 2 |
+|---|---|---|
+| sprudel generated | 1 file, 42,876 lines, 2,927,103 B | 18 files (16 areas, entry point, docs), 48,778 lines, 2,404,592 B |
+| sprudel largest file (IDE) | 2,927,103 B | `GeneratedSprudelDocs.kt` 1,148,472 B / 22,833 lines; largest registration file `GeneratedSprudelLangStructuralRegistration.kt` 225,350 B |
+| klangscript-libs generated | 1 file, 11,693 lines, 685,693 B | 18 files (16 areas, entry point, docs), 13,946 lines, 682,848 B |
+| klangscript-libs largest file | 685,693 B | `GeneratedStdlibDocs.kt` 355,992 B / 8,077 lines |
+| production `klang-engine.*.js` | 8,984,914 B | 8,123,790 B (-861,124 B, -9.6 %) |
+
+Line counts rise because every area file repeats the module's import block (unused imports cost nothing at run
+time, and the owner-reference rule decides simple names against that one set). Against the June-era baseline of
+this record (9,503,122 B) steps 1 and 2 together take 1,379,332 B (-14.5 %) off the main bundle.
+
+Source-map attribution of the step (fresh `:jsBrowserProductionWebpack`, against the step 1 bundle):
+
+| Source | Step 1 | Step 2 | Change |
+|---|---|---|---|
+| sprudel generated (registration / docs) | 2,194,511 | 577,694 / 902,731 | -714,086 |
+| klangscript-libs generated (registration / docs) | 498,643 | 165,916 / 244,681 | -88,046 |
+| unmapped | 2,168,823 | 2,105,647 | -63,176 |
+| `KlangScriptExtensionBuilder.kt` (its inline helpers, inlined into generated code) | | | +4,163 |
+| everything else | | | +21 |
+
+Counted in the JS: `new KlangType(` 8,731 to 217; `_init_properties_Generated*Registration_kt` 1,985 to 0 (the 283
+left are `_init_properties_Generated*Docs_kt`, inside the docs functions only). The type references compile to getter
+calls (`klang_engine_sprudel_get_kt0()`, about 5,600 of them); a cheaper reference shape is a possible follow-up.
+
+Clean KSP plus compile of sprudel (`kspCommonMainKotlinMetadata`, `compileCommonMainKotlinMetadata`,
+`compileKotlinJvm`, `compileKotlinJs`, each `--rerun`, warm daemon, two runs): 10.3 s / 10.1 s before, 9.8 s / 9.2 s
+after.
+
+### Behaviour
+
+- Docs and registration compared structurally, before against after: a throwaway spec (kept as
+  `tmp/ksp-step2/ZzKspStep2SnapshotSpec.kt.txt`, not in the source tree) dumps `generatedStdlibDocs` and
+  `generatedSprudelDocs` (every symbol's full data-class text, in map order) and the registry each
+  `register<Lib>Generated()` builds (functions with their parameter specs and default values, types, objects,
+  extension methods per class with specs, extension properties, all in iteration order). Snapshot taken on the
+  unchanged branch first (and taken twice: deterministic apart from JVM lambda class addresses, normalized). After:
+  all four dumps identical.
+- All step 1 suites green: `:klangscript-ksp:test` 140, `:klangscript:jvmTest` 1,150, `:klangscript:jsTest` 1,121,
+  `:klangscript-libs:jvmTest` 795, `:klangscript-libs:jsTest` 574, `:sprudel:jvmTest` 3,429, `:sprudel:jsTest`
+  2,921, root `:jvmTest` (`DslDocExamplesSpec`, `SongBenchmarkCasesCompileSpec`, `BuiltInSongsSmokeTest`,
+  `TutorialCurriculumSpec` among them). Corpus `ksp-step2` identical to `ksp-before` (18 of 18). No warnings in the
+  generated files.
+- New `GeneratedLayoutTest` (areas, identifiers, the type table), mutation-checked: an area cut after the first part,
+  and a table that never deduplicates, both go red.
+
+### Round-1 fixes (2026-10-06)
+
+Review round 1 of step 2 was clean on both roles (`tmp/reviews/ksp2-r1-code.md`, `tmp/reviews/ksp2-r1-docs.md`).
+Applied: the area IDENTIFIER (with `Misc` for an area without letters or digits) groups and names the files, so two
+areas never collide on one file name and none can take the entry point's name; the chunk distribution and the entry
+point's call order are a pure, tested function (`distributeIntoChunks`, `entryPointCalls`; the reviewer's two
+surviving mutations, mixed-area chunks and sorted calls, now go red); `KlangTypeTable` is `internal`; the
+`docsTypes` KDoc says it is only valid while the docs are built; the trap (a top-level property in a registration file
+brings the init guard back, with every test green) is in `klangscript/MEMORY.md`. The generated output of both modules is byte-identical before and after these fixes.
+
+The split is not free: the collection order interleaves the areas, so sprudel has 150 chunk functions instead of 50
+and the stdlib 23 instead of 12, about 5 to 10 KB unminified (already in the measured bundle above).
+
+### Open: the registration order depends on the file system (waits for the maintainer)
+
+Found in step 2 review round 1 (code role, MINOR 3), pre-existing, not changed. The processor takes the annotated
+symbols in the order `Resolver.getSymbolsWithAnnotation` returns them, which follows the raw directory listing of
+the source folder: sprudel's objects register as `distort crush coarse | cull | gain pregain pan velocity | orbit duck
+| notch notchCurves | sine ...`, exactly the `ls -U` order of `sprudel/src/commonMain/kotlin/lang/`, not alphabetical.
+ext4 orders a directory by a hash with a per-file-system seed, APFS returns sorted names. So another machine (or a
+fresh clone) can produce a different registration order, different chunk boundaries and `...ChunkN` numbers in every
+area file, and a different `ktN` numbering in the docs file. "Registration order identical to before" holds on the
+machine that produced both outputs; it is not reproducibility across machines. It is also why the areas interleave
+(about 150 alternations in sprudel, hence the 150 chunks).
+
+Proposed fix: sort each collected list once by (source file path, declaration position) before generation. That
+makes the output reproducible and groups the areas (sprudel back to about 50 chunks), but it changes the
+registration order once, which the step 2 brief froze. Today no name repeats within a library, so no lookup depends
+on the order. Needs the maintainer's yes.
+
+### Left for later
+
+- The file-system order (above).
+- Per-area isolating KSP outputs (see above).
+- The type references as getter calls; the repeated import block per area file.

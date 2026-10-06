@@ -171,10 +171,10 @@ error ("expected Double, got a function"), and since 2026-10-02 so is a non-call
 ("expected a function, got a number"); before, a number, a boolean, an array or an object passed through unconverted
 and failed inside the native.
 
-A door that wants the trailing-lambda rule must give every EARLIER optional parameter a literal
-default (number, string, boolean, null): the rule runs on the spec-aware call path, which needs
-a default thunk for each skipped slot, and KSP only emits thunks for literals. The KSP processor
-refuses a function-typed parameter preceded by a non-literal optional default.
+The trailing-lambda rule runs on the spec-aware call path, which needs a default thunk for each
+skipped slot. Every generated door has one: since 2026-10-06 the KSP processor refuses any optional
+parameter whose default is not a literal (number, string, boolean, null). Vararg doors are the one
+exception: they render no spec (no named arguments), and Kotlin supplies their defaults.
 
 Tests: `ArgAlignmentTest.kt`, `ConfigureLambdaBindingTest.kt` (runtime), `AnalyzedAstTest.kt`
 ("configure lambda" cases, analyzer). Plan: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.

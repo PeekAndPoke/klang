@@ -59,10 +59,12 @@ data class FixedMethodItem(
 }
 
 /**
- * A method/function with Kotlin defaults → arity-dispatch body.
- * Always uses a raw `registerExtensionMethodWithSpecs` or `registerFunctionWithSpecs` closure.
+ * A method or function on the spec-aware path: one with Kotlin defaults, a `CallInfo` parameter, or
+ * more parameters than the fixed-arity overloads cover. Always a raw `registerExtensionMethodWithSpecs`
+ * or `registerFunctionWithSpecs` closure whose body is [appendConversionsAndCall]: one call per door,
+ * with no arity dispatch.
  */
-data class ArityDispatchItem(
+data class SpecAwareItem(
     override val scriptName: String,
     override val specsExpr: String,
     val fnCall: String,
@@ -73,6 +75,14 @@ data class ArityDispatchItem(
     val hasCallInfo: Boolean = false,
 ) : RegistrationItem() {
 
+    /**
+     * One script parameter as the emitter needs it.
+     *
+     * @property defaultLiteral the parameter's Kotlin default as a safe literal (`null`, `0.5`,
+     *   `"normal"`), pasted into the call when the caller left the parameter out. Null when the
+     *   parameter has no default. A non-literal default never gets here: the processor refuses the
+     *   door (see [decideDefault]).
+     */
     data class ResolvedParam(
         val name: String,
         val kotlinType: String,
@@ -80,16 +90,12 @@ data class ArityDispatchItem(
         val hasDefault: Boolean,
         val isNullable: Boolean,
         val index: Int,
+        val defaultLiteral: String? = null,
     )
+
     data class ReceiverCast(val typeName: String, val useConvertToKotlin: Boolean)
 
-    private fun callWithCallInfo(args: String): String = withCallInfo(args, hasCallInfo)
-
     override fun renderRegistration(): String = buildString {
-        val requiredCount = scriptParams.count { !it.hasDefault }
-        val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
-        val hasDefaults = firstOptionalIdx != -1
-
         // Emit at column 0; the caller wraps with `prependIndent` to position the whole
         // block within its surrounding context (top-level vs nested register block).
         if (isTopLevel) {
@@ -107,91 +113,14 @@ data class ArityDispatchItem(
 
         val indent = "    "
 
-        if (receiverCast != null) {
-            appendLine("$indent@Suppress(\"UNCHECKED_CAST\")")
-            if (receiverCast.useConvertToKotlin) {
-                appendLine("${indent}val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin(${receiverCast.typeName}::class, loc)")
-            } else {
-                appendLine("${indent}val typedReceiver = receiver as ${receiverCast.typeName}")
-            }
-        }
+        appendReceiverCast(indent, receiverCast)
 
         if (hasCallInfo) {
-            val receiverLocExpr = if (isTopLevel) {
-                "null"
-            } else {
-                "sourceLocationOf(receiver)"
-            }
-            appendLine("${indent}val callInfo = CallInfo(")
-            appendLine("$indent    callLocation = loc,")
-            appendLine("$indent    receiverLocation = $receiverLocExpr,")
-            appendLine("$indent    paramLocations = args.map { arg -> sourceLocationOf(arg) },")
-            appendLine("$indent)")
+            val receiverExpr = if (isTopLevel) "null" else "receiver"
+            appendLine("${indent}val callInfo = callInfoOf($receiverExpr, args, loc)")
         }
 
-        appendLine("${indent}${arityCheck(scriptName, scriptParams, requiredCount)}")
-
-        // Required params — always convert
-        scriptParams.forEach { param ->
-            if (!param.hasDefault) {
-                appendLine(
-                    "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                        castSuffix(param.castType, param.isNullable)
-                    }"
-                )
-            }
-        }
-
-        if (!hasDefaults) {
-            // No defaults — single call with all required params.
-            // Use named-arg syntax so that the Kotlin parameter order can differ
-            // from the script parameter order (e.g. `callInfo` in the middle,
-            // trailing lambda last) without the generated code needing to match
-            // positional order.
-            val callArgs = scriptParams.joinToString(", ") { "${it.name} = ${it.name}" }
-            appendLine("${indent}wrapAsRuntimeValue($fnCall(${callWithCallInfo(joinCallArgs(selfArg, callArgs))}))")
-            append("}")
-            return@buildString
-        }
-
-        appendLine("${indent}wrapAsRuntimeValue(")
-
-        // Arity-dispatch chain
-        //
-        // For each level (starting from the highest arity that makes sense, down to
-        // the required-arity count), decide which optional params are filled from
-        // `args` and which take their default. Required params (no default) are
-        // always passed using named-arg syntax — they come from values extracted
-        // at the top level of the block.
-        for (level in scriptParams.size downTo firstOptionalIdx + 1) {
-            val argsForLevel = scriptParams.take(level)
-            val prefix = if (level == scriptParams.size) "if" else "} else if"
-            appendLine("$indent    $prefix (args.size >= $level) {")
-
-            argsForLevel.forEach { param ->
-                if (param.hasDefault) {
-                    appendLine(
-                        "$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                            castSuffix(param.castType, param.isNullable)
-                        }"
-                    )
-                }
-            }
-
-            // Pass every param bound at this level plus all required (no-default)
-            // params that may live after them in the Kotlin signature. Named-arg
-            // syntax makes order irrelevant.
-            val boundNames = argsForLevel.map { it.name }.toSet()
-            val callParams = argsForLevel + scriptParams.filter { !it.hasDefault && it.name !in boundNames }
-            val callArgs = callParams.joinToString(", ") { "${it.name} = ${it.name}" }
-            appendLine("$indent        $fnCall(${callWithCallInfo(joinCallArgs(selfArg, callArgs))})")
-        }
-
-        val requiredArgs = scriptParams.filter { !it.hasDefault }.joinToString(", ") { "${it.name} = ${it.name}" }
-        appendLine("$indent    } else {")
-        appendLine("$indent        $fnCall(${callWithCallInfo(joinCallArgs(selfArg, requiredArgs))})")
-        appendLine("$indent    }")
-        appendLine("$indent)")
+        appendConversionsAndCall(indent, scriptName, scriptParams, fnCall, selfArg, hasCallInfo)
 
         append("}")
     }
@@ -199,7 +128,7 @@ data class ArityDispatchItem(
 
 /**
  * A raw rendered registration block. Use when none of the specialised items
- * (VarargItem / ArityDispatchItem / FixedMethodItem / FileLevelExtItem) fit
+ * (VarargItem / SpecAwareItem / FixedMethodItem / FileLevelExtItem) fit
  * the shape — e.g. file-level vararg extensions which need a custom
  * `registerExtensionMethodWithSpecs` body plus manual vararg spread.
  */
@@ -261,11 +190,9 @@ data class FileLevelExtItem(
     override val scriptName: String,
     override val specsExpr: String,
     val receiverClassName: String,
-    val receiverCast: ArityDispatchItem.ReceiverCast?,
+    val receiverCast: SpecAwareItem.ReceiverCast?,
     val fnName: String,
-    val scriptParams: List<ArityDispatchItem.ResolvedParam>,
-    val hasExtensionReceiver: Boolean,
-    val hasDefaults: Boolean,
+    val scriptParams: List<SpecAwareItem.ResolvedParam>,
     val hasCallInfo: Boolean,
     val selfArg: String,
     val fnCallPrefix: String,
@@ -281,79 +208,15 @@ data class FileLevelExtItem(
 
         val indent = "    "
 
-        if (receiverCast != null) {
-            appendLine("$indent@Suppress(\"UNCHECKED_CAST\")")
-            if (receiverCast.useConvertToKotlin) {
-                appendLine("${indent}val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin(${receiverCast.typeName}::class, loc)")
-            } else {
-                appendLine("${indent}val typedReceiver = receiver as ${receiverCast.typeName}")
-            }
-        }
+        appendReceiverCast(indent, receiverCast)
 
         if (hasCallInfo) {
-            appendLine("${indent}val callInfo = CallInfo(")
-            appendLine("$indent    callLocation = loc,")
-            appendLine("$indent    receiverLocation = sourceLocationOf(receiver),")
-            appendLine("$indent    paramLocations = args.map { arg -> sourceLocationOf(arg) },")
-            appendLine("$indent)")
+            appendLine("${indent}val callInfo = callInfoOf(receiver, args, loc)")
         }
 
-        fun withCallInfo(args: String): String = withCallInfo(args, hasCallInfo)
-
-        if (hasDefaults) {
-            val requiredCount = scriptParams.count { !it.hasDefault }
-            val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
-
-            appendLine("${indent}${arityCheck(scriptName, scriptParams, requiredCount)}")
-            scriptParams.forEach { param ->
-                if (!param.hasDefault) {
-                    appendLine(
-                        "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                            castSuffix(param.castType, param.isNullable)
-                        }"
-                    )
-                }
-            }
-            appendLine("${indent}wrapAsRuntimeValue(")
-            for (level in scriptParams.size downTo firstOptionalIdx + 1) {
-                val argsForLevel = scriptParams.take(level)
-                val prefix = if (level == scriptParams.size) "if" else "} else if"
-                appendLine("$indent    $prefix (args.size >= $level) {")
-                argsForLevel.forEach { param ->
-                    if (param.hasDefault) {
-                        appendLine(
-                            "$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                                castSuffix(param.castType, param.isNullable)
-                            }"
-                        )
-                    }
-                }
-                // Pass required (no-default) params that live after the bound
-                // level in the Kotlin signature — named args make order flexible.
-                val boundNames = argsForLevel.map { it.name }.toSet()
-                val callParams = argsForLevel + scriptParams.filter { !it.hasDefault && it.name !in boundNames }
-                val callArgs = callParams.joinToString(", ") { "${it.name} = ${it.name}" }
-                appendLine("$indent        $fnCallPrefix$fnName(${withCallInfo(joinCallArgs(selfArg, callArgs))})")
-            }
-            val requiredArgs = scriptParams.filter { !it.hasDefault }.joinToString(", ") { "${it.name} = ${it.name}" }
-            appendLine("$indent    } else {")
-            appendLine("$indent        $fnCallPrefix$fnName(${withCallInfo(joinCallArgs(selfArg, requiredArgs))})")
-            appendLine("$indent    }")
-            appendLine("$indent)")
-        } else {
-            appendLine("${indent}${arityCheck(scriptName, scriptParams, scriptParams.size)}")
-            scriptParams.forEach { param ->
-                appendLine(
-                    "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                        castSuffix(param.castType, param.isNullable)
-                    }"
-                )
-            }
-            val callArgs = scriptParams.joinToString(", ") { "${it.name} = ${it.name}" }
-            // Note: for hasExtensionReceiver, selfArg is "" (set in buildFileLevelExtItem),
-            // so joinCallArgs collapses to just callArgs — both branches produce identical output.
-            appendLine("${indent}wrapAsRuntimeValue(${fnCallPrefix}$fnName(${withCallInfo(joinCallArgs(selfArg, callArgs))}))")
-        }
+        // For an extension receiver, selfArg is "" (set in buildFileLevelExtItem) and the receiver
+        // travels in fnCallPrefix (`typedReceiver.`) instead.
+        appendConversionsAndCall(indent, scriptName, scriptParams, "$fnCallPrefix$fnName", selfArg, hasCallInfo)
 
         append("}")
     }
@@ -364,15 +227,159 @@ data class FileLevelExtItem(
 // ============================================================================
 
 /**
- * Produces the `as Type` suffix for a convertArgToKotlin call. Returns empty string when the cast
- * is redundant (e.g. `as Any?`). A [kotlinType] that already ends in `?` is not suffixed again:
- * `resolveCastType` renders a nullable function type as `((A) -> B)?` and a nullable plain type
- * arrives as `Double?`, and `((A) -> B)??` is not a type Kotlin accepts.
+ * Produces the `as Type` suffix for a converted argument. A [castType] that already ends in `?` is
+ * not suffixed again: `resolveCastType` renders a nullable function type as `((A) -> B)?` and a
+ * nullable plain type arrives as `Double?`, and `((A) -> B)??` is not a type Kotlin accepts.
+ *
+ * Empty when the cast is redundant: the converters return `T?` for `cls = T::class`, so a nullable
+ * parameter whose cast type is exactly its [classLiteral] (`Number?` with `Number::class`, and
+ * `Any?`) already has the right type, and Kotlin would warn "No cast needed". Exact string equality
+ * only: a generic type (`List<Double>?` with `List::class`), a type alias or a function type keeps
+ * its cast. A non-null cast on the `T?` result is a real cast and always stays.
  */
-internal fun castSuffix(kotlinType: String, isNullable: Boolean): String {
-    val fullType = if (isNullable && !kotlinType.endsWith("?")) "$kotlinType?" else kotlinType
-    return if (fullType == "Any?") "" else " as $fullType"
+internal fun castSuffix(castType: String, isNullable: Boolean, classLiteral: String): String {
+    val fullType = if (isNullable && !castType.endsWith("?")) "$castType?" else castType
+
+    if (fullType == "Any?") {
+        return ""
+    }
+
+    if (isNullable && fullType == "$classLiteral?") {
+        return ""
+    }
+
+    return " as $fullType"
 }
+
+/** The receiver line of a spec-aware closure, when the door has a typed receiver. */
+internal fun StringBuilder.appendReceiverCast(indent: String, receiverCast: SpecAwareItem.ReceiverCast?) {
+    if (receiverCast == null) {
+        return
+    }
+
+    appendLine("$indent@Suppress(\"UNCHECKED_CAST\")")
+
+    if (receiverCast.useConvertToKotlin) {
+        appendLine("${indent}val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin(${receiverCast.typeName}::class, loc)")
+    } else {
+        appendLine("${indent}val typedReceiver = receiver as ${receiverCast.typeName}")
+    }
+}
+
+/**
+ * The body every spec-aware closure shares after its receiver and `CallInfo` lines: the arity check,
+ * one `val` per required parameter, then ONE call of the native.
+ *
+ * An optional parameter is converted inside the call when the caller passed it and otherwise gets
+ * its Kotlin default, pasted as the literal the processor extracted
+ * ([SpecAwareItem.ResolvedParam.defaultLiteral]). No arity dispatch: every script call, positional or
+ * named, arrives with every optional filled by the spec's default thunk, so the pasted literal serves
+ * only native callers that pass fewer arguments (a native function handed to a Kotlin function slot,
+ * which calls it with the slot's arity).
+ *
+ * Conversion order is the old one: required parameters first, then the optional ones by index.
+ * Named arguments make the Kotlin parameter order irrelevant (`callInfo` in the middle, a trailing
+ * lambda last).
+ */
+internal fun StringBuilder.appendConversionsAndCall(
+    indent: String,
+    scriptName: String,
+    scriptParams: List<SpecAwareItem.ResolvedParam>,
+    fnCall: String,
+    selfArg: String,
+    hasCallInfo: Boolean,
+) {
+    val requiredCount = scriptParams.count { !it.hasDefault }
+
+    appendLine("${indent}${arityCheck(scriptName, scriptParams, requiredCount)}")
+
+    scriptParams.forEach { param ->
+        if (!param.hasDefault) {
+            appendLine("${indent}val ${param.name} = ${requiredArgExpression(scriptName, param)}")
+        }
+    }
+
+    if (scriptParams.none { it.hasDefault }) {
+        val callArgs = scriptParams.joinToString(", ") { "${it.name} = ${it.name}" }
+        appendLine("${indent}wrapAsRuntimeValue($fnCall(${withCallInfo(joinCallArgs(selfArg, callArgs), hasCallInfo)}))")
+
+        return
+    }
+
+    appendLine("${indent}wrapAsRuntimeValue(")
+    appendLine("$indent    $fnCall(")
+
+    val self = selfArg.trimEnd(' ', ',')
+
+    if (self.isNotEmpty()) {
+        appendLine("$indent        $self,")
+    }
+
+    scriptParams.forEach { param ->
+        val value = if (param.hasDefault) optionalArgExpression(scriptName, param) else param.name
+        appendLine("$indent        ${param.name} = $value,")
+    }
+
+    if (hasCallInfo) {
+        appendLine("$indent        callInfo = callInfo,")
+    }
+
+    appendLine("$indent    )")
+    appendLine("${indent})")
+}
+
+/** The conversion of a required parameter (and of a passed optional one): `convertArgToKotlin(...)` plus its cast. */
+internal fun requiredArgExpression(scriptName: String, param: SpecAwareItem.ResolvedParam): String =
+    "convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, " +
+            "nullable = ${param.isNullable}, loc = loc)${castSuffix(param.castType, param.isNullable, param.kotlinType)}"
+
+/**
+ * The value of an optional parameter: the converted argument when the caller passed it, else the
+ * Kotlin default literal. The common shape, a nullable parameter defaulting to `null`, is the
+ * runtime's `optArg`, which converts exactly as `convertArgToKotlin` does.
+ */
+internal fun optionalArgExpression(scriptName: String, param: SpecAwareItem.ResolvedParam): String {
+    // The processor refuses a door whose optional parameter has no safe literal default, so the
+    // fallback only keeps the emitted text well-formed until that error stops the build.
+    val literal = param.defaultLiteral ?: "null"
+
+    if (param.isNullable && literal == "null") {
+        return "optArg(args, ${param.index}, ${param.kotlinType}::class, loc)${castSuffix(param.castType, true, param.kotlinType)}"
+    }
+
+    return "if (args.size > ${param.index}) ${requiredArgExpression(scriptName, param)} else $literal"
+}
+
+/**
+ * What the processor does with the default of one optional parameter of the script door [door]:
+ * paste it as [DefaultDecision.literal], or refuse the door with [DefaultDecision.error].
+ *
+ * [defaultText] is the default as `DefaultValueExtractor` read it (comments already stripped), null
+ * when it could not be read; both the refusal and the pasting use this one decision. A safe literal
+ * ([SafeDefaultLiteral]) is pasted into the spec's default thunk (every script call) and into the
+ * generated call (a native caller with fewer arguments). Anything else (`IgnitorDsl.Slots.rate`,
+ * `emptyList()`, `kotlin.math.PI`) has no literal to paste and is refused.
+ */
+internal fun decideDefault(door: String, parameter: String, defaultText: String?): DefaultDecision {
+    val text = defaultText?.trim()
+
+    if (text != null && SafeDefaultLiteral.isSafe(text)) {
+        return DefaultDecision(literal = text, error = null)
+    }
+
+    val shown = text?.let { "`$it`" } ?: "(a default the processor could not read)"
+
+    return DefaultDecision(
+        literal = null,
+        error = "KlangScript door '$door': optional parameter '$parameter' has the non-literal default $shown. " +
+                "A script-door default must be a literal (number, string, boolean or null): the generated " +
+                "registration pastes it for an omitted argument. Bake the value as a literal, or make the " +
+                "parameter's type nullable with `= null`, and resolve the real default in the body.",
+    )
+}
+
+/** The outcome of [decideDefault]: exactly one of [literal] and [error] is set. */
+data class DefaultDecision(val literal: String?, val error: String?)
 
 /**
  * The type name usable in a class literal (`X::class`) for a resolved Kotlin type name. A class
@@ -380,6 +387,74 @@ internal fun castSuffix(kotlinType: String, isNullable: Boolean): String {
  * parameter) must become `Function1`; nullability travels separately in `isNullable`.
  */
 internal fun classLiteralTypeName(resolvedKotlinType: String): String = resolvedKotlinType.removeSuffix("?")
+
+/**
+ * The area of a generated registration block: its source file's name without `.kt`, cut after the second
+ * `_`-separated part. Sprudel's `lang_structural_chunk.kt` and `lang_structural_seq.kt` share the area
+ * `lang_structural`; a file without `_` (`KlangScriptIgnitor.kt`) is an area of its own. A block whose
+ * file is unknown goes to `misc`.
+ */
+internal fun sourceArea(fileName: String?): String {
+    val base = fileName?.removeSuffix(".kt")?.takeIf { it.isNotBlank() } ?: return "misc"
+
+    return base.split('_').take(2).joinToString("_")
+}
+
+/**
+ * An [sourceArea] as an identifier part: `lang_structural` becomes `LangStructural`, and an area with no
+ * letter or digit becomes `Misc`. The identifier, not the raw area, groups the blocks into files and
+ * names them, so two areas that normalize alike share one file instead of colliding on its name, and
+ * no area can produce the entry point's file name.
+ */
+internal fun areaIdentifier(area: String): String =
+    area.split('_', '-', '.', ' ')
+        .filter { it.isNotEmpty() }
+        .joinToString("") { part -> part.filter { it.isLetterOrDigit() }.replaceFirstChar { it.uppercase() } }
+        .ifEmpty { "Misc" }
+
+/** A chunk function of the generated registration: its area identifier, its name and its rendered blocks. */
+internal class RegistrationChunk(
+    val area: String,
+    val functionName: String,
+    val blocks: MutableList<String>,
+    var size: Int,
+)
+
+/**
+ * Distributes rendered registration [blocks] (area identifier to text, in collection order) over chunk
+ * functions named `<functionPrefix><area>Chunk<n>`, numbered per area. A chunk holds blocks of ONE area
+ * and stays within [budget] characters (a block larger than the budget gets a chunk of its own). The
+ * result is in collection order, which is the order the entry point calls the chunks in ([entryPointCalls]),
+ * so the registration order is the order the blocks were collected in.
+ */
+internal fun distributeIntoChunks(
+    blocks: List<Pair<String, String>>,
+    budget: Int,
+    functionPrefix: String,
+): List<RegistrationChunk> {
+    val chunks = mutableListOf<RegistrationChunk>()
+    val chunkCountPerArea = mutableMapOf<String, Int>()
+
+    for ((area, text) in blocks) {
+        val current = chunks.lastOrNull()
+        val fits = current != null && current.area == area && current.size + text.length <= budget
+
+        if (fits) {
+            current.blocks.add(text)
+            current.size += text.length
+            continue
+        }
+
+        val index = chunkCountPerArea.getOrElse(area) { 0 }
+        chunkCountPerArea[area] = index + 1
+        chunks.add(RegistrationChunk(area, "$functionPrefix${area}Chunk$index", mutableListOf(text), text.length))
+    }
+
+    return chunks
+}
+
+/** The entry point's calls, one per chunk, in the order of [chunks] (never re-sorted: that order is the registration order). */
+internal fun entryPointCalls(chunks: List<RegistrationChunk>): List<String> = chunks.map { "${it.functionName}()" }
 
 internal fun joinCallArgs(selfArg: String, args: String): String = when {
     selfArg.isEmpty() -> args

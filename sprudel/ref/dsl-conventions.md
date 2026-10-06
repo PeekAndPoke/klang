@@ -167,12 +167,16 @@ Every alias must cross-reference all others:
 
 ## KSP
 
-- `klangscript-ksp` scans `@KlangScript.Function` items and generates
-  `GeneratedSprudelRegistration.kt` — callable bindings AND docs (`generatedSprudelDocs`);
+- `klangscript-ksp` scans `@KlangScript.Function` items and generates, since 2026-10-06, one
+  registration file per `lang_<group>` area (`GeneratedSprudelLang<Group>Registration.kt`, plain
+  functions), the entry point `GeneratedSprudelRegistration.kt` (`registerSprudelGenerated()`) and
+  the docs `GeneratedSprudelDocs.kt` (`generatedSprudelDocs`, each docs type emitted once);
   `KlangScriptStrudelLib.kt` registers the generated bundle once, nothing per-function
-- After changing KDoc: `./gradlew :sprudel:jvmTest` — KSP regenerates docs automatically
+- After changing KDoc: `./gradlew :sprudel:jvmTest`; KSP regenerates docs automatically
 - `SprudelDocsSpec` tests verify docs are correctly registered
-- **Vararg params kill named arguments** (KSP emits empty ParamSpecs for varargs) — prefer fixed
+- **Vararg params kill named arguments** (KSP emits empty ParamSpecs for varargs); prefer fixed
   arity when named-arg support and intellisense matter
-- Default values: only pure literals (numbers, plain strings, booleans, `null`) survive into the
-  generated default thunks; anything else makes the param required in named-arg calls
+- Default values: only pure literals (numbers, plain strings, booleans, `null`); since 2026-10-06 the
+  KSP processor refuses anything else with a build error. The default thunk fills an omitted argument
+  on every script call, named or positional; the generated call pastes the same literal only for a
+  native caller with fewer arguments (a native function in a Kotlin function slot)

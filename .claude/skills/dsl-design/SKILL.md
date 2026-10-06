@@ -125,9 +125,12 @@ script-only surface forces raw constructor calls and splits the vocabulary.
   `klangscript-libs` IS the Kotlin door for the builders; `audio_bridge` stays pure wire types.
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
   (`KlangScriptFilterDoorParitySpec` is the pattern).
-- Script-door param defaults are SAFE LITERALS (number, string, bool, null). A default like
-  `IgnitorDsl.Slots.rate` makes KSP emit no thunk, and a named call that skips that param fails at
-  runtime. Bake literals on the door, keep the `Slots.*` leaf on the data class.
+- Script-door param defaults are SAFE LITERALS (number, string, bool, null). Since 2026-10-06 the
+  KSP processor refuses any other default (`IgnitorDsl.Slots.rate`, `emptyList()`) with a build error
+  naming the door and the parameter. The spec's default thunk returns the literal and fills an
+  omitted argument on every script call, named or positional; the generated call pastes the same
+  literal for a native caller that passes fewer arguments (a native function in a Kotlin function
+  slot). Bake literals on the door, keep the `Slots.*` leaf on the data class.
 
 ---
 

@@ -90,7 +90,7 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  4.0)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  3.5)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  7.9)         // roar:  low mids
     .band(freq = 2700, q = 2.0, db =  3.5)         // bark:  the upper-mid speaker peak
   )
@@ -280,10 +280,10 @@ export sing = notes => n(notes.add(7))
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
-  .ignp("decay", 3.0).clip(1.5)
+  .ignp("decay", 2.5).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4300)                                       // less fizz, the wall keeps its own
-  .gain(0.41).pan(0.5)
+  .lpf(4600)                                       // less fizz, the wall keeps its own
+  .gain(0.45).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -304,7 +304,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
 export chug = roots => n(roots.add(-7)).struct("x x@2  x x@2  x x")
-  .sound(heavy).adsrOff().unison(voices = 15, spread = 0.08)
+  .sound(heavy).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", 0.8).clip(1)
   .velocity("1.0 0.75 0.9 0.80 0.95 0.80")
   .gain(0.94).pan(0.5).late(perlin.range(0.0000, 0.0006))
@@ -312,10 +312,10 @@ export chug = roots => n(roots.add(-7)).struct("x x@2  x x@2  x x")
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
-  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
+  .sound(heavy).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", 0.5).clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92")
-  .gain(0.47).apply(
+  .gain(0.45).apply(
     x => x.pan(0.00).late(perlin.range(0.0005, 0.0011)),
     x => x.pan(1.00).late(perlin.range(0.0010, 0.0016)),
   )
@@ -323,7 +323,7 @@ export wings = chords => n(chords).ply(16)
 
 // Strike: one heavy chord, let ring. It shares the wings' orbit and room.
 export strike = chords => n(chords)
-  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
+  .sound(heavy).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", 3.5).clip(1)
   .gain(0.50).apply(
     x => x.pan(0.00).late(perlin.range(0.0005, 0.0013)),
@@ -375,7 +375,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 0.97).ignp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.40).pan(0.5)
+  .gain(1.45).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -421,7 +421,7 @@ let holdingBreath = stack(
 
 // The high gain rig splits it open: the melody against the wall. The arpeggio waits for its own part.
 let breakingOpen = stack(
-  soar(melodyOne).tremolo(beatRate(0.33), saw.slow(4).pow(2).mul(0.10).add(0.01)),
+  soar(melodyOne).tremolo(beatRate(0.33), saw.slow(4).pow(2).mul(0.05).add(0.01)),
   wings(cocoonPower),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -439,7 +439,7 @@ let unravelling = stack(
 // The lift: Bb, C, Dm.
 let lifting = stack(
   //spin(liftArp.add(14).ply(4)).gain(0.05).ignp("sustain", 0.0).clip(0.25).pan(0.25).superimpose(pan(0.75)),
-  soar(melodyTwo).tremolo(beatRate(0.33), saw.slow(4).pow(2).mul(0.10).add(0.01)),
+  soar(melodyTwo).tremolo(beatRate(0.33), saw.slow(4).pow(2).mul(0.05).add(0.01)),
   wings(liftPower),
   chug(liftRoots),    
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
