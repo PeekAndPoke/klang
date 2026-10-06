@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  5.0)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  3.5)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  7.9)         // roar:  low mids
     .band(freq = 2700, q = 2.0, db =  3.6)         // bark:  the upper-mid speaker peak
   )
@@ -174,7 +174,7 @@ let makeGuitar = (rig) => {
     // character knobs, plain scalars on the supersaw builder
     .spreadPower(4.0).sideAtten(0.2).gainJitter(0.10).centerJitter(0.10)
     // analog settings
-    .analog(pAnalog.adsr(pAttack, pDecay, 0.05, pRelease)).analogSpread(0.33)
+    .analog(pAnalog.adsr(pAttack, pDecay, 0.025, pRelease)).analogSpread(0.33)
   )
  
   let signal = saw.mul(Ign.slot.pregain)
@@ -223,7 +223,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.33)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.2)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -270,7 +270,7 @@ export lead_arrange = x => x.orbit(0) //  .mute()
   .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.20!16>").gain(mul(0.35))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
-  .mute("<1!64 0!32 1!48 0!16 1!16>")
+  .mute("<1!64 0!32 1!48 0!16 1!48>")
   .late(berlin(0.0005, 0.0015).mul(drunk))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -328,9 +328,9 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.48) // . mute()
-    .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.9".sub(perlin(0.0, 0.1).slow(8)))  // . solo()
-    .adsr(0.003, 0.3, 0.33, 0.015).hpf(30)
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.44) // . mute()
+    .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
+    .adsr(0.003, 0.3, 0.33, 0.025).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
@@ -340,8 +340,8 @@ export bass_arrange = x => x.orbit(4) // . mute()
 export bass = n(bass_pat).struct(
   `< x x x [x x]  x x [x x] [x!4]    x x x [x x]  [x x] x x [x!4]
     [x x] [x [x x]] [x x] [x [x x]]  [[x x?] [~ x]] [x x] [[x? x] x] [x [x x]]    [x x] [x [x x]] x [x x?]  [[x x] [x x?]] [x x] [[x x] x] [x x]
-    [x x ~ x]!7 [x x] [x x ~ x]!7 [x x]
-    [x!4]!4 [x [x!2]] [x!4]!3 [x!2 x@2] [x!2] [x!2 x@2] x [x!8]!2 [[x x] x!3]!2>`
+    [x x ~ x]!7 [x x]   [x x ~ x]!6 [x x] [x!4]
+    [x!4]!4 [x [x x]] [[x x] x] [x!4] [x [x!2]]   [x!2 x@2] [x!2] [x!2 x@2] x [x!2 ~ x!2 ~ x!2]!2 [[x x] x!3]!2>`
 ).fast(2).apply(bass_shape).tag("bass")
 
 // Gummieimer  ------------------------------------------------------------------------------------------------------------------------------------------
