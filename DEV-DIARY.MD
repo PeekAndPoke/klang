@@ -4,6 +4,126 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-06) A phase on every oscillator ... v0.5.2
+
+- every periodic oscillator gets phase(...) ... a fraction of a cycle, 1.25 is 0.25, a moving one is phase modulation
+- each builder says where its wave starts at 0 ... and pulze turned out to start high, not low
+- the tremolo can swell up instead of dip: range(0, 1) ... the vibrato's range waits for the pitch pipeline
+- the snare thud measured against Schroeder phases ... the sign pattern we have is already within 0.15 dB of the best
+- Ign.triangle is Ign.tri now, like supertri and sprudel's tri
+- found on the way: a shared LFO runs twice as fast across two pitches ... parked as its own task
+
+### (2026-10-05) One range ... v0.5.1
+
+- range(from, to) everywhere ... sprudel, Ignitor, Katalyst, down to the wire and the engine
+- the bipolar twins (sine2, saw2, ...), unipolar/bipolar, isaw, itri, choose2, sinOfDay2 are gone ... a smaller surface, nothing lost
+- perlin(200, 400) is perlin.range(200, 400) ... every signal is callable now
+- sinOfDay is sineOfDay, cosine is literally sine.early(0.25)
+- from and as are plain names in KlangScript now ... range(from = 200, to = 400) parses
+- rangex on the Ignitor too, the exponential twin
+- the 18-song corpus renders bit for bit the same through all of it
+
+### (2026-10-04) Ignitor and Katalyst, one name each ... v0.5.0
+
+- Osc is Ignitor now (short Ign), OscSlot is Ignitor.slot, oscp is ignp ... and katp for the Katalyst
+- the old names are gone and guarded, the wire says ignitorParams
+- an error inside a native call finally knows where it was called
+- the stdlib export block that governed nothing is gone, klangblocks out of every live page
+
+### (2026-10-03) through() and the tremolo rate ... v0.4.5.1 to v0.4.6
+
+- through(): a signal chain written as the list it is ... makeGuitar takes one rig
+- the tremolo's sync is rate on every surface
+- two glockenspiels by ear, the harmonic one and a metal bar
+- the Irish Lament stab opens again like it did before depth became semitones
+- sprudel says it out loud: it does not mirror Strudel anymore
+
+### (2026-10-01) Beats
+
+- beats(n) and beatRate(n) ... durations and rates that follow the tempo
+- mask lights up the atom that let an event through
+
+### (2026-09-30) The whitepaper, the blog and Kokon ... v0.4.3 to v0.4.5
+
+- the whitepaper rewritten with a reader and a writer agent ... twelve interactive figures
+- the blog renders to static HTML, the dev status page gets a blog card
+- figures for the three oldest posts ... design lab for the main UI, a bit different every time
+- Kokon arranged from parts, one concert hall for the whole band
+- one room for both ears: the reverb is stereo
+- Der Schmetterling gets a snare that hits the same every time
+- both songs at one house level, -14 LUFS
+
+### (2026-09-29) The tremolo is a composition ... v0.4.1 / v0.4.2
+
+- the tremolo is built from the oscillators ... its own LFO is gone
+- filter drift is twice the pitch drift ... decided by ear
+- the limiter surge: measured, not audible, closed
+- memory files say what is true now and stay short ... the history lives next to them
+- Kokon: the cocoon before the butterfly
+
+### (2026-09-28) Phase 3 closes ... v0.4.0
+
+- the master is a Katalyst at the output ... the Master DSL retires
+- test consolidation: tables for tables' sake and weak rows out, law specs where the gaps were
+- echo layers multiply the source gain
+- the review ladder: round 3 and later on the strongest model at xhigh, never max
+
+### (2026-09-27) The strip retires ... v0.3.18
+
+- every voice is an Ignitor tree, classic() is the sprudel voice ... the voice strip and the Pipeline DSL are gone
+- VoiceData cut down to what someone still reads
+- the output runs a Katalyst chain, chain swaps are one state machine
+- dev status pages, the whitepaper moves next to the app
+
+### (2026-09-26) classic() everywhere ... v0.3.16 / v0.3.17
+
+- door shapes settled: wet first, knobs on the builder, the limiter says threshold and knee
+- one envelope law with six hosts, one adsr shape, one tremolo law, one crush and one distort law
+- built-in sounds, samples and the songs' instruments run as classic() trees
+- the modulation envelopes default to exponential
+
+### (2026-09-20) Katalyst
+
+- every orbit gets a Katalyst chain: reverb, delay, eq, body, vowel, compressor, duck, phaser
+- each stage switches and changes without clicks ... state machines, glides, fades on every edge
+- body and vowel on one resonator bank ... the morph between materials was rejected by ear ("an 8-bit laser shot")
+- gain is the one level word, velocity folds at the wire, postgain retires
+- an orbit stays alive while a voice plays on it
+
+### (2026-09-16) The optimization series ... v0.3.14 / v0.3.15
+
+- a blog series on making the motor fast ... the Fairphone as the target that does not get faster
+- the ledger: a per-instrument harness with a graph census
+- reverb is one word on every surface, room retired ... delay names end to end
+- a delay(...) or reverb(...) call sets every slot, defaults filled at write time
+
+### (2026-09-15) Polynomial sines and a marimba ... v0.3.13
+
+- sine, 2^x and e^x as polynomials in the hot paths ... eleven digits are plenty
+- the optimizer's promise is a margin, the Affine node folds block-constant math
+- analog drift steps once per block and ramps across it
+- zombies: a silent release frees its voice
+- Der Schmetterling: the lead is a marimba, the Orchestertrommel far away, guitars as five swappable stages
+- a Resources page: videos and links on one shelf
+
+### (2026-09-10) DriftLanes ... v0.3.11 / v0.3.12
+
+- one drift-lane container for every super oscillator ... analogSpread on the whole family
+- min and max are clamps on every door: a.max(b) reads "a, at most b"
+
+### (2026-09-09) Intellisense, step 0 ... v0.3.10
+
+- the linter has something to say now
+- a minus before a literal binds like Kotlin ... -6.db() is refused
+- the generated registration code stops shouting
+
+### (2026-09-08) Number methods ... v0.3.8.2 to v0.3.9
+
+- methods on number literals: 0.5.clamp(0, 1), 3.db() ... mod and rem both
+- @scope: every audio setting says where it takes effect, and a lexikon page per term
+- two statements on one line need a semicolon
+- a Videos page with tutorials found online
+
 ### (2026-09-07) Field accessors ... v0.3.8
 
 - every compound is an object with named slots now ... adsr(attack = 0.1) sets, adsr.attack reads
