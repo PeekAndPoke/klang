@@ -90,7 +90,7 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  3.1)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  4.0)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  7.9)         // roar:  low mids
     .band(freq = 2700, q = 2.0, db =  3.5)         // bark:  the upper-mid speaker peak
   )
@@ -283,7 +283,7 @@ export soar = notes => n(notes.add(14))
   .ignp("decay", 3.0).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
   .lpf(4300)                                       // less fizz, the wall keeps its own
-  .gain(0.40).pan(0.5)
+  .gain(0.41).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -430,7 +430,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.61).pan(0.5),
+  spin(cocoonArp.add(7)).ply(2).gain(0.62).pan(0.5),
   wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
