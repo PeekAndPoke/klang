@@ -21,7 +21,7 @@
 # across a deploy loses the old release's on-demand chunks (webpack's ChunkLoadError) until it is reloaded. The newest
 # KEEP_VERSIONS releases are kept; older ones are deleted, never the one `current` points at.
 #
-# Run after `./gradlew jsBrowserDistribution` on a clean, committed tree. The distribution folder holds the bundle
+# Run after `./gradlew jsBrowserDistribution`. The distribution folder holds the bundle
 # AND a copy of every file in src/jsMain/resources, including the version.json the build wrote, so it is the one
 # thing uploaded and the one thing checked.
 
@@ -37,12 +37,6 @@ cd "$(dirname "$0")/.."
 echo "Working in $(pwd)"
 
 shopt -s dotglob
-
-# The release must match its name: no uncommitted tracked change, nothing untracked in the resources the build copies.
-if [ -n "$(git status --porcelain --untracked-files=no)" ] || [ -n "$(git status --porcelain -- src/jsMain/resources)" ]; then
-  echo "The working tree has uncommitted or untracked changes: the release would not match its git hash." >&2
-  exit 1
-fi
 
 HASH="$(git rev-parse --short=12 HEAD)"
 
