@@ -11,6 +11,11 @@
 
 ## 1. The shape
 
+> **The rule since 2026-10-07 (maintainer, "as it fits"):** a state that carries data only it may see is a class
+> (an instance per state, created with its owner, as below); a state without data is a `data object`. Classes are
+> the usual case, because they extend without a rewrite. Effects kept flag-based on purpose (section 3, "done
+> without state classes") stay as they are: state machines only where they pay off.
+
 Every effect that has a lifecycle (off, active, draining, fading out, crossfading) owns ONE
 instance of each of its states, created with the effect, and a `state` field that points at the
 current one. A transition is a pointer swap after an `enter(...)` call on the target; the state

@@ -43,3 +43,17 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
 - **D5** bus knobs typed as full Ignitor expressions (a native backend would need the Ignitor builder to read a
   reverb's `wet`).
 - **D7** own the RNG (reproduce `XorWowRandom` in a project class), the precondition for a bit-identical port.
+
+## Decided (maintainer, 2026-10-07)
+
+- **D1, the word:** "cylinder" is the engine's and the user's word. `orbit()` stays only as an alias in sprudel, to
+  honour its Strudel origin. Today sprudel has it the other way round (`orbit` is the object, `cylinder` the
+  alias), so the rename is: sprudel's canonical door becomes `cylinder` (aliases `orbit`, `o`), and the docs, KDoc,
+  tutorials, UI text and the Katalyst vocabulary say cylinder. L; plan it as its own step.
+- **D3, the state-machine shape:** "as it fits". A state that carries data only it may see is a class; a state
+  without data is a `data object`. Classes are the usual case, because they extend without a rewrite. Recorded in
+  `../plans/effect-state-machines.md`. Consequence: the voice's `State` enum becomes a sealed type in a second,
+  bit-identical round (`voice-lifecycle-state-machine.md`, step 5b).
+- **D7, owning the RNG:** a prerequisite for the Zig port, not needed now. Deferred to the port's preparation.
+- **D5, bus knobs typed as Ignitor expressions:** explained to the maintainer 2026-10-07, decision pending.
+
