@@ -103,6 +103,12 @@ class KlangScriptEffectBuilderSpec : StringSpec({
         shouldThrowAny { ks("Ignitor.saw().shimmer(0.3, x => x.wet(0.4))") }
     }
 
+    "shimmer: a pitch that is not a number is the door's typed error, as on wet, feedback and tone" {
+        shouldThrow<KlangScriptTypeError> { ks("""Ignitor.saw().shimmer(0.3, 0.4, 3000, [0, "7", 12])""") }
+        shouldThrow<KlangScriptTypeError> { ks("""Ignitor.saw().shimmer(0.3, 0.4, 3000, [0, true, 12])""") }
+        (ks("Ignitor.saw().shimmer(0.3, 0.4, 3000, [0, 7, 12])") as IgnitorDsl.Shimmer).pitches shouldBe listOf(0.0, 7.0, 12.0)
+    }
+
     "drive: amount only, the type is gone on both doors" {
         ks("Ignitor.saw().drive(0.5)") shouldBe saw.drive(0.5)
         ks("Ignitor.saw().drive(0.5)") shouldBe IgnitorDsl.Drive(inner = saw, amount = IgnitorDsl.Constant(0.5))

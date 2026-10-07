@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 import io.peekandpoke.klang.audio_bridge.constants.BROWN_LEAK_DEFAULT
 import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_C
 import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_CHAOS_DEFAULT
@@ -1555,7 +1556,7 @@ object Ignitors {
         final override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
-            val newV = maxOf(0, readParam(voices, actualFreq, ctx).toInt())
+            val newV = coerceUnisonVoices(readParam(voices, actualFreq, ctx))
             // Read every block, like the bank and the pluck read theirs: a modulated subtree
             // advances once per block whether or not anything uses its value (ledger O2). Only the
             // DEPTH is latched, below.
@@ -2450,7 +2451,7 @@ object Ignitors {
             // readParam, NEVER a raw scratch render + index (ledger O1): on a zero-length terminal
             // window generate() writes nothing and the index read returns stale cross-voice pool
             // residue — which used to size the string array below.
-            val newV = maxOf(0, readParam(voices, actualFreq, ctx).toInt())
+            val newV = coerceUnisonVoices(readParam(voices, actualFreq, ctx))
 
             if (newV != v) {
                 // DECIDED (maintainer, 2026-08-28): voice-count changes are OBSERVED AT BLOCK

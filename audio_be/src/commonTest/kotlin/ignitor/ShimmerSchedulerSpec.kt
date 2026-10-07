@@ -8,7 +8,9 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
 
 /**
@@ -194,5 +196,83 @@ class ShimmerSchedulerSpec : StringSpec({
         }
 
         m shouldBe 0.0
+    }
+
+    "an empty pitches list spawns no grains: the dry passes at its coefficient and nothing throws" {
+        // User input on the script door (`shimmer(0.5, 0.5, 4000, [])`) and on the wire. Until 2026-10-07 the first
+        // grain read `intervalRates[0]` of an empty array on the audio thread. Long enough to pass several grain
+        // periods and the audible-wet region (blocks ~60 on, see the rows above), where a grain would show.
+        val wet = 0.5
+        val ig = TestTone().shimmer(
+            wet = ParamIgnitor("wet", wet),
+            feedback = ParamIgnitor("feedback", 0.5),
+            tone = ParamIgnitor("tone", 4000.0),
+            pitches = emptyList(),
+        )
+        val igCtx = ctx()
+        val dry = TestTone()
+        val dryCtx = ctx()
+        val dryC = cos(wet * PI / 2.0)
+
+        var m = 0.0
+
+        for (block in 0 until 90) {
+            val out = render(ig, igCtx, block * blockFrames, blockFrames)
+            val input = render(dry, dryCtx, block * blockFrames, blockFrames)
+
+            for (i in out.indices) {
+                m = maxOf(m, abs(out[i] - input[i] * dryC))
+            }
+        }
+
+        m shouldBe 0.0
+    }
+
+    fun shimmerOf(pitches: List<Double>) = TestTone().shimmer(
+        wet = ParamIgnitor("wet", 0.5),
+        feedback = ParamIgnitor("feedback", 0.5),
+        tone = ParamIgnitor("tone", 4000.0),
+        pitches = pitches,
+    )
+
+    /** The largest difference between two shimmers over 90 blocks: three grain periods, every pitch of the list spawned. */
+    fun maxDiffOver90Blocks(a: Ignitor, b: Ignitor): Double {
+        val aCtx = ctx()
+        val bCtx = ctx()
+        var m = 0.0
+
+        for (block in 0 until 90) {
+            m = maxOf(m, maxDiff(render(a, aCtx, block * blockFrames, blockFrames), render(b, bCtx, block * blockFrames, blockFrames)))
+        }
+
+        return m
+    }
+
+    // Under the wrap loops this row replaced it never finishes: the run hangs (mutation-checked 2026-10-07). No
+    // kotest timeout here, because a timeout cannot interrupt a busy loop on the JVM.
+    "a huge finite rate completes the block with finite output: 1200 semitones (2^100) and 12280 (near the double limit)" {
+        // User input (cents typed for semitones). 12280 makes `rate * grainLength` overflow to infinity unless the
+        // rate is reduced modulo the ring first. The pitches spawn in order at grain periods 0, 1 and 2.
+        val ig = shimmerOf(listOf(0.0, 1200.0, 12280.0))
+        val c = ctx()
+        var nonFinite = 0
+
+        for (block in 0 until 90) {
+            for (x in render(ig, c, block * blockFrames, blockFrames)) {
+                if (!x.isFinite()) {
+                    nonFinite++
+                }
+            }
+        }
+
+        nonFinite shouldBe 0
+    }
+
+    "an infinite pitch reads as rate 1.0, the unshifted grain" {
+        maxDiffOver90Blocks(shimmerOf(listOf(Double.POSITIVE_INFINITY)), shimmerOf(listOf(0.0))) shouldBe 0.0
+    }
+
+    "a NaN pitch reads as rate 1.0, the unshifted grain, and never poisons the voice" {
+        maxDiffOver90Blocks(shimmerOf(listOf(Double.NaN)), shimmerOf(listOf(0.0))) shouldBe 0.0
     }
 })

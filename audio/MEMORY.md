@@ -62,7 +62,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   (`writePcm16` in `_pcm16_edge.kt`, the one home). The lookahead delays the whole output uniformly.
 - **The wire** (`VoiceData`, `KlangCommLink`): pitch, gain, pan, routing, lifetime, and two slot maps; only seconds
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
-  `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`). Fields: `audio/ref/data-model.md`.
+  `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`; an empty one is silence everywhere, so as a
+  Katalyst bus knob it reads 0.0, not the knob's default). Fields: `audio/ref/data-model.md`.
 
 ## Laws and constants in force
 
@@ -114,6 +115,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Build-time knobs** (shapes, the oversample factor, `passes`, curves, the tremolo shape) are read once,
   leaf-only; a non-leaf takes the default and is not built. `Oversampler.factorOf`: non-finite is 0, a fraction
   truncates, no upper clamp (the D7 stopgap until `docs/tasks/oversampling-regions.md`).
+- **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
+  `UNISON_MAX_VOICES` = 64, non-finite is 0), both in `audio_bridge/FilterDef.kt`, read by the runtime and the census.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -209,6 +212,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 An empty `Ignitor.variants()` is silence, no longer a `require` at note-on; the shimmer survives an empty,
+  a huge or a non-finite pitch (no index error, no hang); a unison count is capped at `UNISON_MAX_VOICES` (64):
+  `docs/tasks/engine-tidy-up.md` ("First, a bug")
 - 2026-10-07 The voice's states are a sealed type; the fade window lives in `Fading`, the silence count in
   `Releasing` (lifecycle step 5b, no sound change by design; the 18-song corpus bit-identical to step 5,
   coordinator, 2026-10-07): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`

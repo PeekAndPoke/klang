@@ -275,10 +275,18 @@ internal class IgnitorBuildCache(
  */
 internal class DetuneContext
 
+/** What an empty [IgnitorDsl.Variants] plays: silence. A leaf, so the build and the fold predicate need nothing else. */
+private val EMPTY_VARIANTS_SILENCE: IgnitorDsl = IgnitorDsl.Constant(0.0)
+
 /** The one Variants pick rule, shared by the build dispatch and the D13 fold predicate so the
- *  two can never judge different subtrees (review round 1). */
+ *  two can never judge different subtrees (review round 1). An empty `Ignitor.variants()` is user input that both
+ *  doors accept and the wire carries, and this runs at note-on on the audio thread, so it is coerced to silence,
+ *  never asserted (`/code-style` §21). */
 private fun IgnitorDsl.Variants.pick(soundIndex: Int): IgnitorDsl {
-    require(children.isNotEmpty()) { "Ignitor.variants(...) must have at least one child" }
+    if (children.isEmpty()) {
+        return EMPTY_VARIANTS_SILENCE
+    }
+
     return children[soundIndex.mod(children.size)]
 }
 

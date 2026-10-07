@@ -524,6 +524,8 @@ object KlangScriptIgnitorExtensions {
      * @param feedback Cascade feedback (0..0.95). Default 0.5.
      * @param tone Feedback-path LPF cutoff in Hz. Default 4000.
      * @param pitches Array of semitone transpositions. Default [0, 7, 12]. Example: [0, 4, 7, 11] for maj7.
+     *   An empty list spawns no grains: only the dry plays, at its wet/dry level (silent at wet 1). An entry
+     *   that is not a number is a type error.
      * @param configure receives the [ShimmerBuilder] (knob: `floor`) and returns it.
      */
     @KlangScript.Method
@@ -536,7 +538,14 @@ object KlangScriptIgnitorExtensions {
         configure: ((ShimmerBuilder) -> ShimmerBuilder)? = null,
     ): IgnitorDsl {
         val pitchList = when (pitches) {
-            is List<*> -> pitches.map { (it as Number).toDouble() }
+            // A wrong TYPE is the door's usual typed error, as on `wet`, `feedback` and `tone`, at script time and
+            // never on the audio thread; skipping the entry would silently change the chord.
+            is List<*> -> pitches.map {
+                (it as? Number)?.toDouble() ?: throw KlangScriptTypeError(
+                    message = "shimmer pitches expect numbers, got ${describeArgument(it)}",
+                    operation = "shimmer",
+                )
+            }
             else -> listOf(0.0, 7.0, 12.0)
         }
         return ShimmerBuilder(

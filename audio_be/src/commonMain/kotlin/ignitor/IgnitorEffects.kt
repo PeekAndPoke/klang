@@ -551,7 +551,8 @@ fun Ignitor.phaser(
  *   Hard-clamped to 0.95 for stability.
  * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
  * @param pitches Semitone transpositions for grains. Each grain is assigned a pitch from this
- *   list in round-robin order. Default: `[0, 7, 12]` (root + fifth + octave).
+ *   list in round-robin order. Default: `[0, 7, 12]` (root + fifth + octave). An empty list spawns no grains:
+ *   only the dry plays, at its wet/dry level (silent at wet 1). A non-finite rate reads as 1.0.
  */
 fun Ignitor.shimmer(
     wet: Ignitor,
@@ -586,7 +587,12 @@ private class ShimmerIgnitor(
     private val grainElapsed = IntArray(maxGrains)
     private val grainTotal = IntArray(maxGrains)
 
-    private val intervalRates = DoubleArray(pitches.size) { 2.0.pow(pitches[it] / 12.0) }
+    private val intervalRates = DoubleArray(pitches.size) {
+        val rate = 2.0.pow(pitches[it] / 12.0)
+        // NaN-guard on a value the author can write: a non-finite rate (a NaN pitch, or one past about 12288
+        // semitones) reads as 1.0, the unshifted grain. A finite rate is never clamped, however large (raw Motor).
+        if (rate.isFinite()) rate else 1.0
+    }
     private var nextIntervalIdx: Int = 0
 
     private val grainsPerSecond = 12.0
@@ -664,7 +670,10 @@ private class ShimmerIgnitor(
                 writePos++
                 if (writePos >= ringSize) writePos = 0
 
-                if (samplesUntilNextGrain <= 0) {
+                // An empty `pitches` list is user input (`shimmer(0.5, 0.5, 4000, [])` on the script door, or the wire):
+                // no grain ever spawns, the cloud is silent and the dry passes at its coefficient. Coerced, never an
+                // index error on the audio thread (`/code-style` §21). The countdown then just keeps running down.
+                if (samplesUntilNextGrain <= 0 && intervalRates.isNotEmpty()) {
                     samplesUntilNextGrain = grainPeriodSamples
                     val rate = intervalRates[nextIntervalIdx]
                     nextIntervalIdx = (nextIntervalIdx + 1) % intervalRates.size
@@ -676,11 +685,22 @@ private class ShimmerIgnitor(
                         }
                     }
                     if (slot >= 0) {
-                        val lookback = rate * grainTotalSamples
-                        var start = writePos - lookback
-                        while (start < 0.0) start += ringSize
+                        // A floor-mod, not a loop: a huge rate (`2^100` from a pitch of 1200) made `start += ringSize`
+                        // a no-op and the loop never exited. The rate is reduced modulo the ring first, so the product
+                        // stays finite for any finite rate; the read position is the same, since the ring is circular
+                        // and the grain length is whole. Bit-identical to the old loop for every rate below `ringSize`
+                        // (a pitch below about 198 semitones): its additions were exact, and `% ringSize` is the
+                        // identity there. Above it the rate reduction changes the rounding of the lookback, where the
+                        // old loop could spin forever.
+                        val reducedRate = rate % ringSize
+                        val lookback = reducedRate * grainTotalSamples
+                        var start = (writePos - lookback).mod(ringSize.toDouble())
+                        // A tiny negative remainder plus the ring size can round up to the ring size, one past the end.
+                        if (start >= ringSize) start = 0.0
                         grainReadPos[slot] = start
-                        grainRate[slot] = rate
+                        // The reduced rate too, so the read moves exactly at any finite rate and the wrap below is
+                        // one subtraction (`pos + reducedRate < 2 * ringSize`).
+                        grainRate[slot] = reducedRate
                         grainElapsed[slot] = 0
                         grainTotal[slot] = grainTotalSamples
                         grainActive[slot] = true
@@ -704,7 +724,7 @@ private class ShimmerIgnitor(
                     wetSample += sample * win
 
                     var nextPos = pos + grainRate[g]
-                    while (nextPos >= ringSize) nextPos -= ringSize
+                    if (nextPos >= ringSize) nextPos -= ringSize
                     grainReadPos[g] = nextPos
                     grainElapsed[g]++
                     if (grainElapsed[g] >= grainTotal[g]) grainActive[g] = false

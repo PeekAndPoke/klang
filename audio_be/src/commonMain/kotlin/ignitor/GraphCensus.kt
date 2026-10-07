@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 
 /**
  * What one note of a graph asks of the engine, counted from the tree the runtime lowers (the
@@ -251,8 +252,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
         /** A count slot: a literal, a `Param` through the voice's params or its default, else one. */
         private fun countOf(slot: IgnitorDsl): Int = when (slot) {
-            is IgnitorDsl.Constant -> slot.value.toInt().coerceAtLeast(1)
-            is IgnitorDsl.Param -> (params[slot.name]?.takeIf { it.isFinite() } ?: slot.default).toInt().coerceAtLeast(1)
+            is IgnitorDsl.Constant -> coerceUnisonVoices(slot.value).coerceAtLeast(1)
+            is IgnitorDsl.Param -> coerceUnisonVoices(params[slot.name]?.takeIf { it.isFinite() } ?: slot.default).coerceAtLeast(1)
             else -> 1
         }
 

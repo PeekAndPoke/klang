@@ -22,6 +22,20 @@ each one reviewable commit. Section E: 11 decisions for the maintainer.
 
 ## First, a bug
 
+**Done 2026-10-07.** The engine's `Variants.pick` plays an empty `Variants` as silence (`Constant(0)`), so the wire is
+safe whatever frontend sends it; the doors keep accepting zero children. Reproduced first: the throw escaped
+`VoiceScheduler.scheduleVoice` / `promoteScheduled` through `VoiceFactory.makeVoice`, nothing caught it. Rows:
+`EmptyVariantsDoorRenderSpec` (sprudel, both doors through `KlangOfflineRenderer`), the engine row in
+`IgnitorDslRuntimeTest`. The sweep found one more user input of the same class: `shimmer(..., [])` read index 0 of an
+empty array per block; it now spawns no grains (`ShimmerSchedulerSpec`). Review round 1 added, in the same change:
+the shimmer's two wrap loops hung the audio thread on a huge or infinite rate (`[0, 7, 1200]` is `2^100`) and a NaN
+pitch poisoned the voice, so the loops are a floor-mod and a non-finite rate reads as 1.0 (finite rates unclamped);
+a unison count is capped (`coerceUnisonVoices`, `UNISON_MAX_VOICES = 64` beside `coercePasses`, non-finite is 0;
+the largest authored count is 32, so every builtin sound is unchanged; guard `UnisonVoiceCapSpec`); the script
+shimmer door raises its typed error (`KlangScriptTypeError`) for a pitch that is not a number, as on `wet`, `feedback`
+and `tone`, instead of a cast error. Decided by the coordinator by default, for
+the maintainer to confirm: the cap value 64. Report: `tmp/reviews/variants-empty-report.md`.
+
 `Ignitor.variants()` with no children reaches `require(children.isNotEmpty())` in `IgnitorDslRuntime.kt` (the
 `Variants.pick` helper) on the audio thread at note-on; nothing catches there. The KlangScript door accepts zero
 arguments. Per `/code-style` §21 (coerce user input, never `require()` it): an empty `variants()` is silence.
@@ -84,3 +98,10 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   Schmetterling 0.54 peak with identical settings). Accepted as a one-time change; not a correctness bug. The
   tidy-up: a note's phase take should not depend on list order (for example drawn at promotion, in onset order,
   or keyed by the voice), so a scheduling change never re-deals phases. Not fixed yet.
+
+## Found during the empty-variants fix
+
+- **`DelayLineMigrationSpec`'s "the timeout is the assertion" row may not be able to fail.** A kotest `timeout`
+  cannot interrupt a busy loop on the JVM (found 2026-10-07: a shimmer row under the old wrap loops hung the run
+  until a shell timeout killed it, its 30 s kotest timeout never fired). If that row's mutant spins, the suite
+  hangs instead of going red. Not checked yet.

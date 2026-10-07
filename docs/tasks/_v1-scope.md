@@ -51,7 +51,7 @@ port to Zig.
 2. The pitch pipeline into the tree: [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md).
 3. The Katalyst DSL leftovers and the engine tidy-up: [`engine-tidy-up.md`](engine-tidy-up.md) (audit 2026-10-07; the
    effect state machines verified done, kept flags respected). Its one bug, an empty `variants()` crashing the audio
-   thread, goes right after lifecycle step 5.
+   thread, goes right after lifecycle step 5 (**done 2026-10-07**: it is silence now).
 4. Takeover / voice stealing and the cut-group semantics: [`future/cut-group-semantics.md`](future/cut-group-semantics.md)
    decided first, then [`voice-takeover.md`](voice-takeover.md) Phase 1.
 5. Pitch takeover (`glide`): [`voice-takeover.md`](voice-takeover.md) Phase 2.

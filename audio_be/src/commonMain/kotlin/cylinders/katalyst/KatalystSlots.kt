@@ -90,9 +90,13 @@ internal object KatalystSlots {
      * structural read by contract, so the second query cannot advance any state the first one saw.
      *
      * The try/catch is the audio-thread guard, not a diagnostic: [resolve] runs at chain-install
-     * time inside the render callback, where an escaping exception takes the worklet with it. A
-     * hand-built tree can still throw at build time (an empty `Ignitor.variants()` does), and the
-     * house answer to "the engine cannot read this knob" is the knob's default, not a dead voice.
+     * time inside the render callback, where an escaping exception takes the worklet with it. Should
+     * a build ever throw, the house answer to "the engine cannot read this knob" is the knob's default,
+     * not a dead voice.
+     *
+     * An empty `Ignitor.variants()` no longer throws (since 2026-10-07 it is silence everywhere): it builds
+     * `Constant(0)`, both probes agree, and the knob reads 0.0. Until then the build threw and the knob
+     * fell back to its default.
      *
      * The build itself allocates, which is why this is a chain-build path only.
      */

@@ -141,3 +141,24 @@ fun coercePasses(passes: Double): Int {
 
     return coercePasses(passes.roundToInt())
 }
+
+/**
+ * Upper bound for a unison stack's voice count (the super oscillators and the super pluck). Like [FILTER_MAX_PASSES]
+ * it bounds a RESOURCE count, not a tone: the count sizes arrays at note-on on the render thread, so a live-typed
+ * `voices(1e9)` would allocate a billion voice states there. 64 keeps every authored sound as it was (the largest
+ * authored count is 32). It also keeps `PhasePool`'s `tries * voices` (tries at most 64) far from an `Int` overflow.
+ */
+const val UNISON_MAX_VOICES = 64
+
+/**
+ * The ONE place a unison voice count is coerced: the engine's two runtime reads (super oscillators, super pluck) and
+ * the graph census, so the census counts what renders. Not on the doors: a door clamp would not cover the wire or a
+ * signal. A non-finite value reads as 0 voices, silence; a finite one truncates and lands in `[0, UNISON_MAX_VOICES]`.
+ */
+fun coerceUnisonVoices(value: Double): Int {
+    if (!value.isFinite()) { // NaN-guard: a non-finite count reads as no voices
+        return 0
+    }
+
+    return value.toInt().coerceIn(0, UNISON_MAX_VOICES)
+}

@@ -1042,7 +1042,8 @@ sealed interface IgnitorDsl {
      *
      * Index wraps with floor-mod semantics: with N children, index `k` selects
      * `children[k.mod(N)]`, so negative indices wrap from the end and overflow
-     * wraps to zero. Missing `:n` defaults to index 0 at the registry boundary.
+     * wraps to zero. Missing `:n` defaults to index 0 at the registry boundary. An empty
+     * [children] list plays silence (the engine coerces it, it never throws).
      *
      * Nested variants all dispatch on the same `soundIndex` — this is intentional,
      * so a single switching axis can drive correlated changes deep in the tree.
@@ -2135,7 +2136,8 @@ sealed interface IgnitorDsl {
      * @param feedback Wet → grain-buffer feedback. 0.0 = no cascade, 0.9 = long tails.
      *   Hard-clamped to 0.95 internally for stability.
      * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]` (root + fifth + octave).
-     *   Example: `[0, 4, 7, 11]` for a major 7th chord shimmer.
+     *   Example: `[0, 4, 7, 11]` for a major 7th chord shimmer. An empty list spawns no grains: only the dry
+     *   plays, at its wet/dry level (silent at wet 1).
      * @param tone One-pole lowpass cutoff in Hz applied in the feedback path.
      *   Lower = darker, more ghostly tails. Typical: 2000–6000. Default: 4000.
      */
@@ -3021,8 +3023,9 @@ fun IgnitorDsl.tremolo(
 /**
  * Applies a granular shimmer (pitch-shift cloud with feedback). [wet] first, as on every door
  * that has one, default 0.5. [tone]: feedback-path LPF cutoff in Hz. [pitches]: semitone
- * transpositions. Same order as the script door. The dry floor is the node's `floor` field
- * (default 0.0), a knob on the script builder only; see [phaser].
+ * transpositions. An empty list spawns no grains: only the dry plays, at its wet/dry level (silent at wet 1).
+ * Same order as the script door. The dry floor is the node's `floor` field (default 0.0), a knob on the script
+ * builder only; see [phaser].
  */
 fun IgnitorDsl.shimmer(
     wet: Double = 0.5,

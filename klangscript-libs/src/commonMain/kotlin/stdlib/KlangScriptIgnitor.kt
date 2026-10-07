@@ -464,7 +464,8 @@ object KlangScriptIgnitor {
      *
      * Index wraps with floor-mod semantics: with N children, index `k` selects
      * `children[k.mod(N)]`, so negative indices wrap from the end and overflow
-     * wraps to zero. Notes with no `:n` default to the first variant.
+     * wraps to zero. Notes with no `:n` default to the first variant. With no children,
+     * `Ignitor.variants()` plays silence.
      *
      * Same selection mechanism used by sample banks (`bd:0`, `bd:1`, …). Nested
      * `variants(...)` all dispatch on the same `soundIndex`, so a single switching

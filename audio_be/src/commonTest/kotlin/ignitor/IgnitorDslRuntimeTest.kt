@@ -260,14 +260,10 @@ class IgnitorDslRuntimeTest : StringSpec({
         for (i in pickedIndex1.indices) pickedIndex1[i] shouldBe expectedIndex1[i]
     }
 
-    "Variants with empty children throws at build time" {
-        val dsl = IgnitorDsl.Variants(emptyList())
-        var thrown: Throwable? = null
-        try {
-            dsl.toExciter()
-        } catch (t: Throwable) {
-            thrown = t
-        }
-        (thrown != null) shouldBe true
+    // User input both doors accept and the wire carries; the build runs at note-on on the audio thread, so an empty
+    // Variants is silence, never a throw (`/code-style` §21). Until 2026-10-07 this row pinned the opposite.
+    "Variants with empty children builds and renders silence" {
+        val picked = generateBlock(IgnitorDsl.Variants(emptyList()).toExciter(soundIndex = 3))
+        for (i in picked.indices) picked[i] shouldBe 0.0
     }
 })
