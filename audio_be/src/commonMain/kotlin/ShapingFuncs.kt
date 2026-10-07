@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.utils.fastExp
 import kotlin.math.abs
 import kotlin.math.sin
 

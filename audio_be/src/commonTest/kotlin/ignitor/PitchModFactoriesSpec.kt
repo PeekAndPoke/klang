@@ -12,7 +12,7 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.safeOut
+import io.peekandpoke.klang.audio_be.utils.safeOut
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.sqrt

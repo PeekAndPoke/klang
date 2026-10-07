@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Compressor
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.min
@@ -276,8 +277,8 @@ class KatalystCompressorEffect(
             val mixR = ctx.mixBuffer.right
 
             instance.processLookahead(left = mixL, right = mixR, blockSize = n, delayedLeft = dryL, delayedRight = dryR)
-            dryL.copyInto(destination = mixL, destinationOffset = 0, startIndex = 0, endIndex = n)
-            dryR.copyInto(destination = mixR, destinationOffset = 0, startIndex = 0, endIndex = n)
+            dryL.copyRangeInto(destination = mixL, destinationOffset = 0, startIndex = 0, endIndex = n)
+            dryR.copyRangeInto(destination = mixR, destinationOffset = 0, startIndex = 0, endIndex = n)
         }
     }
 
@@ -361,8 +362,8 @@ class KatalystCompressorEffect(
             if (latent) {
                 c.processLookahead(left = mixL, right = mixR, blockSize = n, delayedLeft = dL, delayedRight = dR)
             } else {
-                mixL.copyInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
-                mixR.copyInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
+                mixL.copyRangeInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
+                mixR.copyRangeInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
                 compress(c = c, left = mixL, right = mixR, n = n)
             }
 
@@ -384,8 +385,8 @@ class KatalystCompressorEffect(
             // Landed: the samples from `end` on carry `to` exactly.
             if (t == 0.0) {
                 // Gain reduction 0 dB: the rest of the block IS the dry mix, and the life ends.
-                dL.copyInto(destination = mixL, destinationOffset = end, startIndex = end, endIndex = n)
-                dR.copyInto(destination = mixR, destinationOffset = end, startIndex = end, endIndex = n)
+                dL.copyRangeInto(destination = mixL, destinationOffset = end, startIndex = end, endIndex = n)
+                dR.copyRangeInto(destination = mixR, destinationOffset = end, startIndex = end, endIndex = n)
                 off.enter()
             } else {
                 // Full weight: the rest of the block is the compressed mix as it stands.

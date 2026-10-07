@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.effects
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb.Companion.FEEDBACK_OFFSET
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
@@ -349,12 +350,11 @@ class Reverb(
             // guarded at configure), so a FINITE input can never drive the state non-finite.
             // Guarding the input is therefore equivalent and 12x cheaper. Without it, one Inf
             // sample latched every comb and allpass for the life of the orbit.
-            // `abs(x) <= MAX_VALUE` rejects Inf AND NaN in one compare (NaN fails every
-            // comparison) and leaves no branch on the data — see `flushState`.
+            // `finiteOrZero` rejects Inf AND NaN in one compare and leaves no branch on the data.
             val rawL = inL[i]
             val rawR = inR[i]
-            val inpL = if (abs(rawL) <= Double.MAX_VALUE) rawL else 0.0
-            val inpR = if (abs(rawR) <= Double.MAX_VALUE) rawR else 0.0
+            val inpL = rawL.finiteOrZero()
+            val inpR = rawR.finiteOrZero()
 
             // Each side's room hears the other side too ([CROSS_FEED]). Written as a step towards the other
             // side, so an input with equal sides (inpL == inpR) feeds exactly what it did before, bit for bit.

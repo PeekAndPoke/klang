@@ -5,9 +5,9 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.utils.fastExp
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
-import kotlin.math.exp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The curve math of the envelope law (`EnvelopeCore`, which every ADSR envelope hosts, the voice's pitch
@@ -121,9 +121,7 @@ internal inline fun releaseProgressOffset(releaseFrames: Double): Double =
 //
 // The time constant itself is ENV_DECLICK_SECONDS, in audio_bridge/constants — see its
 // KDoc for the corner/floor measurement rather than repeating it here.
+//
+// Its per-sample coefficient is the one-pole time constant `timeConstantCoeff` (`utils/time_constant.kt`),
+// derived once per block by the envelope node.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** Per-sample one-pole coefficient for a [declickSeconds] time constant at [sampleRate] Hz. */
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun envDeclickCoeff(declickSeconds: Double, sampleRate: Double): Double =
-    1.0 - exp(-1.0 / (declickSeconds * sampleRate))

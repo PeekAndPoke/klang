@@ -76,7 +76,7 @@ class DoorDistortionLawSpec : StringSpec({
         DistortionShape.FOLD -> sin(x) to 0.0
         DistortionShape.CHEBYSHEV -> clamp1(x).let { 4.0 * it * it * it - 3.0 * it } to 0.0
         DistortionShape.RECTIFY -> minOf(abs(x), 1.0) to 0.0
-        // e^x through the engine's fastExp (relative error bound 1e-10, DspUtil) against the library exp here: measured
+        // e^x through the engine's fastExp (relative error bound 1e-10, utils/fast_math.kt) against the library exp here: measured
         // 3.3e-11 (EXP) and 1.8e-11 (STOMP_BOX), so the bound itself is the tolerance.
         DistortionShape.EXP -> (if (x >= 0.0) 1.0 - exp(-x) else -(1.0 - exp(x))) to 1e-10
         DistortionShape.SOFT_SAT -> x / sqrt(1.0 + x * x) to 0.0

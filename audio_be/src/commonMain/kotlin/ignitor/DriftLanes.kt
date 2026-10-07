@@ -59,7 +59,7 @@ import kotlin.random.Random
  * path entirely, which is what the mono oscillators do with a null [AnalogDrift].
  *
  * **How a hot loop uses it.** [prepareBlock] once per block, then per voice [advanceLane], and
- * the ramp `m = startOf(lane)`, `dm = (endOf(lane) - m) / length` hoisted before its sample
+ * the ramp `m = startOf(lane)`, `dm = rampStep(from = m, to = endOf(lane), frames = length)` hoisted before its sample
  * loop, which pays one add per sample. Nothing is read off the container per sample: on
  * Kotlin/JS that cost a drifting 8-voice supersaw about 16 percent (Node, 2026-09-10), and the
  * per-sample lane steps it replaced cost the Schmetterling guitars 19 percent (2026-09-15).

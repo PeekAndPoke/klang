@@ -6,8 +6,8 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
 import kotlin.math.abs
-import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
 
@@ -167,7 +167,7 @@ class Ducking(
     private fun calculateCoefficient(timeSeconds: Double): Double {
         val safeTime = if (timeSeconds.isFinite()) timeSeconds else 0.001
         val clampedTime = max(0.001, safeTime)
-        return 1.0 - exp(-1.0 / (clampedTime * sampleRate))
+        return timeConstantCoeff(timeSeconds = clampedTime, sampleRate = sampleRate.toDouble())
     }
 
     /** Reset internal state */

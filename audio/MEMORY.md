@@ -140,6 +140,8 @@ The list a reviewer pastes is `.claude/skills/review-loop/audio-constraints.md`;
 (block size, reverb `+ ANTI_DENORMAL`, OnePole HPF bias, the house limiter, script-door literal defaults, `min`/`max`
 crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
+- **A per-block copy is `copyRangeInto`** (`audio_be/.../utils/buffer_copy.kt`), never `copyInto`, whose JS form makes a
+  `subarray` view per call. The domain-free helpers (fast math, numeric guards, phase wraps, fades) live in `utils/`.
 - **The SVF**: bandpass, notch and the resonators are linear. Lowpass and highpass at `analog > 0` take a
   state-dependent DAMPING path (a diode-pair term grows `k` with the state; `IgnitorFilters.kt`, `Ignitor.svf`).
   Never saturate by capping the feedback signal with tanh: two such attempts went unstable and were reverted
@@ -218,6 +220,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-08 The audio helpers live in `utils/` (`DspUtil.kt` split by content; `finiteOrZero`, `fadeToZero`,
+  `timeConstantCoeff`, `wrapPhaseFastOrSafe`, `rampStep`, and `copyRangeInto` for every per-block copy, no `copyInto` view
+  on JS); the stereo add is the member `StereoBuffer.addFrom`: `docs/tasks/engine-tidy-up.md` step 6
 - 2026-10-08 One silence floor, `SILENCE_FLOOR` (1e-5; the master's 1e-4 stays, D9); `BusEffectDefaults` holds
   delay and reverb; `TEARDOWN_FADE_SECONDS`, `stageAskedFor`, `KatalystChain.writers`: `docs/tasks/engine-tidy-up.md` step 5
 - 2026-10-07 The `KatalystSlots` composites live in their writers, one NaN rule per knob (body, vowel, reverb

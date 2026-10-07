@@ -8,7 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.EnvelopeDeclick
-import io.peekandpoke.klang.audio_be.envDeclickCoeff
+import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_SUSTAIN_LEVEL
@@ -106,7 +106,7 @@ private class AdsrIgnitor(
             // declick is a control-rate slot: read per block, derive its coefficient once here.
             val declickSecondsVal = Ignitors.readParam(declickSeconds, freqHz, ctx)
             val declickOn = declickSecondsVal > 0.0
-            val declickCoeff = if (declickOn) envDeclickCoeff(declickSeconds = declickSecondsVal, sampleRate = ctx.sampleRateD) else 0.0
+            val declickCoeff = if (declickOn) timeConstantCoeff(timeSeconds = declickSecondsVal, sampleRate = ctx.sampleRateD) else 0.0
 
             val gateEndPos = ctx.gateEndFrame
 

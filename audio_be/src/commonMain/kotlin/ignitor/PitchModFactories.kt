@@ -5,16 +5,15 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.safeDiv
-import io.peekandpoke.klang.audio_be.safeOut
+import io.peekandpoke.klang.audio_be.utils.safeDiv
+import io.peekandpoke.klang.audio_be.utils.safeOut
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.EnvelopeCore
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.fastExp2
-import io.peekandpoke.klang.audio_be.fastSin
-import io.peekandpoke.klang.audio_be.smallNumFastMod
-import io.peekandpoke.klang.audio_be.wrapPhase
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.fastExp2
+import io.peekandpoke.klang.audio_be.utils.fastSin
+import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
@@ -96,14 +95,14 @@ private class VibratoModIgnitor(
             for (i in ctx.offset until end) {
                 buffer[i] = 1.0
                 lfoPhase += lfoInc
-                lfoPhase = if (safeWrap) lfoPhase.wrapPhase(TWO_PI) else lfoPhase.smallNumFastMod(TWO_PI)
+                lfoPhase = lfoPhase.wrapPhaseFastOrSafe(period = TWO_PI, safe = safeWrap)
             }
             return
         }
         for (i in ctx.offset until end) {
             buffer[i] = safeOut(fastExp2(fastSin(lfoPhase) * depthOctaves))
             lfoPhase += lfoInc
-            lfoPhase = if (safeWrap) lfoPhase.wrapPhase(TWO_PI) else lfoPhase.smallNumFastMod(TWO_PI)
+            lfoPhase = lfoPhase.wrapPhaseFastOrSafe(period = TWO_PI, safe = safeWrap)
         }
     }
 }

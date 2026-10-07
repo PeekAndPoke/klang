@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
 import io.peekandpoke.klang.audio_be.filters.filterEnvCutoff
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
-import io.peekandpoke.klang.audio_be.flushState
+import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE

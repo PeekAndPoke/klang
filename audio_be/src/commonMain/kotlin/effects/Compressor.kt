@@ -10,9 +10,11 @@ import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.DB20_OVER_LN10
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.ENV_COEFF_BLEND_DB
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.FAST_RELEASE_DIVISOR
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.LN10_OVER_20
-import io.peekandpoke.klang.audio_be.fastExp
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.audio_be.utils.fastExp
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
+import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
 import kotlin.math.abs
-import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.max
 
@@ -402,8 +404,8 @@ class Compressor(
         delayedRight: AudioBuffer,
     ) {
         if (delayFrames <= 0) {
-            left.copyInto(destination = delayedLeft, destinationOffset = 0, startIndex = 0, endIndex = blockSize)
-            right.copyInto(destination = delayedRight, destinationOffset = 0, startIndex = 0, endIndex = blockSize)
+            left.copyRangeInto(destination = delayedLeft, destinationOffset = 0, startIndex = 0, endIndex = blockSize)
+            right.copyRangeInto(destination = delayedRight, destinationOffset = 0, startIndex = 0, endIndex = blockSize)
             process(left = left, right = right, blockSize = blockSize)
 
             return
@@ -422,8 +424,8 @@ class Compressor(
             // delayFrames samples later, far from whatever produced it. Non-finite generally: an
             // Infinity survives `l != l`, is stored, and later emerges as `Inf * 0.0` = NaN, which
             // MasterStage maps to -1.0, the exact full-scale click this guard prevents.
-            delayL[delayPos] = if (l.isFinite()) l else 0.0
-            delayR[delayPos] = if (r.isFinite()) r else 0.0
+            delayL[delayPos] = l.finiteOrZero()
+            delayR[delayPos] = r.finiteOrZero()
             delayPos = if (delayPos + 1 == delayFrames) 0 else delayPos + 1
             delayedLeft[i] = outL
             delayedRight[i] = outR
@@ -476,7 +478,7 @@ class Compressor(
         // this returns exactly 1.0 forever — a brickwall that has become a bit-exact
         // pass-through with nothing to indicate it. Note the direction: a NaN SAMPLE never
         // latched it (`NaN > SILENCE_LIN` is false); only +/-Inf did.
-        val inputLevel = if (abs(level) <= Double.MAX_VALUE) level else 0.0
+        val inputLevel = level.finiteOrZero()
 
         // Convert to dB (with silence floor to avoid log(0)).
         val inputDb = if (inputLevel > SILENCE_LIN) {
@@ -531,7 +533,7 @@ class Compressor(
         // the whole window, and the master then fades the entire mix back in over ~450 ms. Reachable
         // in a raw engine via runaway feedback, and the DC blocker ahead of the limiter passes the
         // first Inf through unchanged. Same guard as the ring write, deliberately.
-        val level = if (inputLevel.isFinite()) inputLevel else 0.0
+        val level = inputLevel.finiteOrZero()
 
         val inputDb = if (level > SILENCE_LIN) DB20_OVER_LN10 * ln(level) else SILENCE_DB
         val reductionDb = calculateGainReduction(inputDb)
@@ -659,11 +661,11 @@ class Compressor(
         val attackTime = max(0.0001, attackSeconds)
         val releaseTime = max(0.0001, releaseSeconds)
 
-        attackCoeff = 1.0 - exp(-1.0 / (attackTime * sampleRate))
-        releaseCoeff = 1.0 - exp(-1.0 / (releaseTime * sampleRate))
+        attackCoeff = timeConstantCoeff(timeSeconds = attackTime, sampleRate = sampleRate.toDouble())
+        releaseCoeff = timeConstantCoeff(timeSeconds = releaseTime, sampleRate = sampleRate.toDouble())
         // Fast branch of the dual release (lookahead path only). A tenth of the configured release,
         // so `releaseSeconds` keeps meaning "the release" and no new knob is needed.
-        fastReleaseCoeff = 1.0 - exp(-1.0 / ((releaseTime / FAST_RELEASE_DIVISOR) * sampleRate))
+        fastReleaseCoeff = timeConstantCoeff(timeSeconds = releaseTime / FAST_RELEASE_DIVISOR, sampleRate = sampleRate.toDouble())
     }
 
     /**

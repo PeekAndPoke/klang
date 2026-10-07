@@ -15,7 +15,7 @@ import kotlin.math.pow
  * Equal temperament splits the octave into twelve equal steps, so a perfect fifth of seven
  * semitones is `7.0.semitones()` = 1.4983, and an octave down, `(-12.0).semitones()`, is 0.5.
  * Multiply a frequency by the result to transpose it: `440.0 * 12.0.semitones()` is 880.0 Hz,
- * the same formula the engine uses in `Double.applySemitoneDetuneToFrequency`.
+ * the formula the engine's unison detune, `detune` and the shimmer's grain rates call.
  *
  * The inverse is [toSemitones]. For hundredths of a semitone use [cents].
  */

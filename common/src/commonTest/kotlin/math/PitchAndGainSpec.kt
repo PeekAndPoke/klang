@@ -133,7 +133,7 @@ class PitchAndGainSpec : StringSpec({
     }
 
     "transposing a frequency by semitones multiplies it by the ratio" {
-        // The same formula the engine spells as Double.applySemitoneDetuneToFrequency.
+        // The engine transposes with this same call (the unison detune, `detune`, the shimmer).
         (440.0 * 12.0.semitones()) shouldBe (880.0 plusOrMinus 1e-9)
         (440.0 * (-12.0).semitones()) shouldBe (220.0 plusOrMinus 1e-9)
         // Middle C, nine semitones below concert A.

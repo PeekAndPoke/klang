@@ -84,16 +84,17 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
-import io.peekandpoke.klang.audio_be.fastSin
-import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.smallNumFastMod
-import io.peekandpoke.klang.audio_be.waveTrapezoid
-import io.peekandpoke.klang.audio_be.wrapPhase
-import io.peekandpoke.klang.audio_be.wrapToUnitCycle
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.fastSin
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
+import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.rampStep
+import io.peekandpoke.klang.audio_be.utils.wrapPhase
+import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
+import io.peekandpoke.klang.audio_be.utils.wrapToUnitCycle
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
+import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -180,7 +181,7 @@ object Ignitors {
                 d.beginBlock()
 
                 var m = d.blockStart
-                val dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+                val dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
 
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
@@ -235,7 +236,7 @@ object Ignitors {
                 if (d.active) {
                     d.beginBlock()
                     m = d.blockStart
-                    dm = (d.blockEnd - m) / (end - off).coerceAtLeast(1)
+                    dm = rampStep(from = m, to = d.blockEnd, frames = end - off)
                 }
 
                 for (i in off until end) {
@@ -399,7 +400,7 @@ object Ignitors {
         /** `m ^ -rolloff`, 0 when the law overflows (a huge negative rolloff); NaN-guard: never NaN. */
         private fun law(m: Double, rolloff: Double): Double {
             val g = m.pow(-rolloff)
-            return if (g.isFinite()) g else 0.0
+            return g.finiteOrZero()
         }
 
         /** Gain of a partial at [partialFreq]: [g], or 0 at or above Nyquist. */
@@ -424,7 +425,7 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(lane)
                 m = drift.startOf(lane)
-                dm = (drift.endOf(lane) - m) / (end - off).coerceAtLeast(1)
+                dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
             }
 
             for (i in off until end) {
@@ -460,7 +461,7 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(lane)
                 m = drift.startOf(lane)
-                dm = (drift.endOf(lane) - m) / (end - off).coerceAtLeast(1)
+                dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
             }
 
             for (i in off until end) {
@@ -514,7 +515,7 @@ object Ignitors {
             val baseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val fund = readParam(fundamental, actualFreq, ctx)
             // NaN-guard: a non-finite fundamental gain reads as 0 (the hand-rolled `.mul(gain)` scrubbed NaN too).
-            fundGain = gate(partialFreq = actualFreq, g = if (fund.isFinite()) fund else 0.0, ctx = ctx)
+            fundGain = gate(partialFreq = actualFreq, g = fund.finiteOrZero(), ctx = ctx)
             fundInc = baseInc
 
             val rh = readParam(harmonicsRolloff, actualFreq, ctx)
@@ -761,7 +762,7 @@ object Ignitors {
                     if (drift != null) {
                         drift.beginBlock()
                         m = drift.blockStart
-                        dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+                        dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
                     }
 
                     for (i in off until end) {
@@ -783,7 +784,7 @@ object Ignitors {
 
                         m += dm
                         phase += inc
-                        phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                        phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
                     }
 
                     voice.phase = phase
@@ -804,7 +805,7 @@ object Ignitors {
             if (drift != null) {
                 drift.beginBlock()
                 m = drift.blockStart
-                dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             val riseEnd = voice.riseEnd
@@ -824,7 +825,7 @@ object Ignitors {
 
                 m += dm
                 phase += inc
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
             }
 
             voice.phase = phase
@@ -851,7 +852,7 @@ object Ignitors {
                 if (drift != null) {
                     drift.beginBlock()
                     m = drift.blockStart
-                    dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+                    dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
                 }
 
                 for (i in off until end) {
@@ -881,7 +882,7 @@ object Ignitors {
 
                     m += dm
                     phase += inc
-                    phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                    phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
                 }
 
                 voice.phase = phase
@@ -1058,7 +1059,7 @@ object Ignitors {
                 d.beginBlock()
 
                 var m = d.blockStart
-                val dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+                val dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
 
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
@@ -1152,7 +1153,7 @@ object Ignitors {
                 if (d.active) {
                     d.beginBlock()
                     m = d.blockStart
-                    dm = (d.blockEnd - m) / (end - off).coerceAtLeast(1)
+                    dm = rampStep(from = m, to = d.blockEnd, frames = end - off)
                 }
 
                 for (i in off until end) {
@@ -1837,7 +1838,7 @@ object Ignitors {
             for (n in 0 until v) {
                 val vs = voiceStates[n]
 
-                vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(unison = v, detune = spread, voiceIndex = n, spreadPower = spreadPower) - mean) / sr
+                vs.dt = actualFreq * (getUnisonDetune(unison = v, detune = spread, voiceIndex = n, spreadPower = spreadPower) - mean).semitones() / sr
                 configureShape(vs, vs.dt)
             }
         }
@@ -1885,7 +1886,7 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(n)
                 m = drift.startOf(n)
-                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
             }
 
             for (i in off until end) {
@@ -1903,7 +1904,7 @@ object Ignitors {
                 phase += inc
                 // No phaseMod, no drift and |dt| < 1 ⇒ |inc| < 1 ⇒ one conditional subtract or add;
                 // otherwise the safe wrap (see safeWrap above).
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
             }
 
             vs.phase = phase
@@ -1928,7 +1929,7 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(n)
                 m = drift.startOf(n)
-                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
             }
 
             for (i in off until end) {
@@ -1950,7 +1951,7 @@ object Ignitors {
 
                 m += dm
                 phase += inc
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
             }
 
             vs.phase = phase
@@ -2045,7 +2046,7 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(n)
                 m = drift.startOf(n)
-                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
             }
 
             for (i in off until end) {
@@ -2061,7 +2062,7 @@ object Ignitors {
 
                 m += dm
                 phase += inc
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
             }
 
             vs.phase = phase
@@ -2081,7 +2082,7 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(n)
                 m = drift.startOf(n)
-                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
             }
 
             for (i in off until end) {
@@ -2103,7 +2104,7 @@ object Ignitors {
 
                 m += dm
                 phase += inc
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
             }
 
             vs.phase = phase
@@ -2349,7 +2350,7 @@ object Ignitors {
             if (hasDrift) {
                 d.beginBlock()
                 m = d.blockStart
-                dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+                dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
             }
 
             for (i in ctx.offset until end) {
@@ -2535,7 +2536,7 @@ object Ignitors {
                 lanes?.ensureLanes(n + 1)
 
                 val detuneSemitones = getUnisonDetune(unison = v, detune = spread, voiceIndex = n)
-                val detunedFreq = actualFreq.applySemitoneDetuneToFrequency(detuneSemitones)
+                val detunedFreq = actualFreq * detuneSemitones.semitones()
                 val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1.0))
 
                 // Excite each string independently
@@ -2566,7 +2567,7 @@ object Ignitors {
                 if (lanes != null) {
                     lanes.advanceLane(n)
                     m = lanes.startOf(n)
-                    dm = (lanes.endOf(n) - m) / (end - ctx.offset).coerceAtLeast(1)
+                    dm = rampStep(from = m, to = lanes.endOf(n), frames = end - ctx.offset)
                 }
 
                 for (i in ctx.offset until end) {
@@ -2665,8 +2666,8 @@ object Ignitors {
     private const val PERLIN_FBM_MAX_OCTAVES = 8
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // wrapPhase(), smallNumFastMod(), applySemitoneDetuneToFrequency()
-    // are in DspUtil.kt — imported via `import io.peekandpoke.klang.audio_be.*`
+    // wrapPhase(), smallNumFastMod() live in `utils/phase_wrap.kt`; a semitone detune is
+    // `common.math.semitones()`
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Unison / supersaw helpers

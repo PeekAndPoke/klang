@@ -6,24 +6,24 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.filters.WetDryMix
-import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.CrushCore
 import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.HALF_PI
-import io.peekandpoke.klang.audio_be.fastSin
+import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.nanGuard
+import io.peekandpoke.klang.audio_be.filters.WetDryMix
 import io.peekandpoke.klang.audio_be.parseDistortionShape
+import io.peekandpoke.klang.audio_be.utils.HALF_PI
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.fastSin
+import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.nanGuard
+import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.exp
-import kotlin.math.pow
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Distortion
@@ -594,7 +594,7 @@ private class ShimmerIgnitor(
     private val grainTotal = IntArray(maxGrains)
 
     private val intervalRates = DoubleArray(pitches.size) {
-        val rate = 2.0.pow(pitches[it] / 12.0)
+        val rate = pitches[it].semitones()
         // NaN-guard on a value the author can write: a non-finite rate (a NaN pitch, or one past about 12288
         // semitones) reads as 1.0, the unshifted grain. A finite rate is never clamped, however large (raw Motor).
         if (rate.isFinite()) rate else 1.0

@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 5 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 6 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -204,6 +204,77 @@ the eight unison and string factories in `Ignitors.kt`. A forgotten stream is no
   `memory-history.md`, the audit, the blog) keep their words.
 - **Left:** the spec `VcaOffTeardownSpec` keeps its file name.
 
+## Step 6, small shared helpers, the per-block copies and the audio `utils/` home: done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+
+Behaviour-neutral. Report, with the file list of each reviewable commit (the moves, the helpers, the copy sites):
+`tmp/reviews/tidy-step6-report.md`. Every NEW helper below is `inline`, allocates nothing, and has a spec in
+`audio_be/src/commonTest/kotlin/` (`utils/`, and `StereoBufferAddFromSpec` for the one member). `utils/` imports
+nothing from the rest of `audio_be`, in the main sources and in its specs (review rounds 1 and 2): it is a leaf a
+port can take on its own.
+
+- **The audio `utils/` home** (`/code-style` §3). `audio_be`'s `DspUtil.kt` is split by content into
+  `utils/math_constants.kt` (`TWO_PI`, `HALF_PI`), `utils/fast_math.kt` (`fastSin`, `fastExp2`, `fastExp`),
+  `utils/numerical_safety.kt` (`DENORMAL_THRESHOLD`, `nanGuard`, `flushState`, `SAFE_MIN`, `SAFE_MAX`, `safeDiv`,
+  `safeOut`) and `utils/phase_wrap.kt` (`wrapPhase`, `wrapToUnitCycle`, `smallNumFastMod`), package
+  `io.peekandpoke.klang.audio_be.utils`; `AudioSample` is written `Double` there. `wrapPhase` lands in
+  `[0, period)` only up to rounding at both ends: `period` itself (a tiny negative plus `period`, or the modulo
+  branch) and, from the modulo branch, a tiny negative (at most one ulp of the input in a sweep, not a proof);
+  `smallNumFastMod`, within its
+  one-overshoot precondition, lands in `[0, period]`. Unchanged; the KDoc says by how much, and the spec pins
+  each edge. Their moved KDoc lost its dashes
+  and `wrapPhase` got its braces. `applySemitoneDetuneToFrequency` is deleted: it was `common.math.semitones()`
+  times the frequency, so its two callers and the three inline `2.0.pow(x / 12.0)` copies (`Ignitor.kt` 2,
+  `IgnitorEffects.kt` 1) call `semitones()`, the same expression. `SvfCoeffSweep`'s `2.0.pow(d / 12.0 * x)`
+  rounds in another order and stays.
+  `waveTrapezoid` is the oscillators' waveform, a feature helper by the same rule, so it sits next to its one
+  state class in `ignitor/WaveVoiceState.kt`. `jsMain`'s `js_helpers.kt` is `utils/js_objects.kt`. `audio_fe`'s
+  `utils/utils.kt` is `utils/url_checks.kt`; its two enum helpers (`safeEnumOf`, `safeEnumOrNull`) had no caller
+  in any module and are deleted. `_pcm16_edge.kt` stays at the root: `writePcm16` takes a `StereoBuffer`, and the
+  file is the output edge (the clip's partner), a feature. Specs: `DspUtilSpec` is `utils/NumericalSafetySpec`,
+  `FastSinSpec`, `FastExpSpec` and `FastExp2Spec` moved along, their integration rows next to the features they
+  drive (`ignitor/SineOscillatorFastSinSpec`, `AdsrExpShapeFastExpSpec`, `ignitor/PitchEnvelopeModFastExp2Spec`,
+  `voices/strip/pitch/PitchEnvelopeRendererFastExp2Spec`); new `PhaseWrapSpec`, `JsObjectsSpec` (`jsTest`),
+  and `audio_fe`'s `UrlChecksSpec`; `NumericalSafetySpec` gained `safeDiv` and `safeOut` rows.
+- **New helpers:**
+  - `finiteOrZero` (B2.5, `numerical_safety.kt`): the 15 `if (abs(x) <= Double.MAX_VALUE) x else 0.0` taps
+    (`Crossfade` 10, `TailRelease` 2, `Reverb` 2, `Compressor` 1) and the 9 `if (x.isFinite()) x else 0.0`
+    sites with the same truth table (`Compressor` ring write and detector, `PhaserCore`, the three dB guards in
+    `LowPassHighPassFilters`, two partial gains in `Ignitors.kt`).
+  - `StereoBuffer.addFrom` (B2.4, a member next to `clear()` and `fill()`, not in `utils/`): the orbits into the fusion mix (`Cylinders`), the engine's
+    own bus into the output (`PlaybackEngine`), the draining chain's ring-out (`ChainSwap`; its one-line
+    `addLeavingMix` wrapper is gone).
+  - `fadeToZero` (B2.3, `fade_to_zero.kt`): the loop of the teardown fade and of the cut. Its window is
+    `startIndex` / `endIndex`, the words of `copyRangeInto`.
+  - `timeConstantCoeff` (B2.7, `time_constant.kt`): the compressor's attack, release and fast release, the
+    ducker's release, the envelope de-click (`envDeclickCoeff` is gone).
+  - `wrapPhaseFastOrSafe` (B2.16, `phase_wrap.kt`): the 12 `if (safeWrap) wrapPhase else smallNumFastMod` pairs
+    (9 in `ignitor/`, 3 in the pitch strip).
+  - `rampStep` (B2.16, `ramp_step.kt`): the drift ramp's per-frame step at 16 sites (9 single `AnalogDrift`
+    walks, 7 `DriftLanes` lanes). The `beginBlock` / `advanceLane` call and the start read stay at each site: they
+    set two locals, which a helper could only return by allocating.
+- **Kept apart, with the edge rule that differs:** `nanGuard` (NaN only, an infinity passes) and `flushState`
+  (also zeroes denormals) beside `finiteOrZero`; the "finite or a non-zero fallback" substitutions (`finiteOr` in
+  `IgnitorEnvelopes`, the Katalyst writers and effects, `Compressor` and `Ducking`'s settings guards) are another
+  law, not folded; `Ducking`'s 1 ms floor and non-finite fallback stay at its caller, only the law moved; the
+  bilinear `onePoleLpfCoeff` and the shimmer's `exp(-2 pi f / sr)` take a frequency, not a time; the teardown fade
+  and the cut each compute their own zero index and scale (`floor(endFrame) - 1` with a start held to the second
+  half of the voice, against `ceil(fadeEnd) - 1`), only the loop is shared; the decimator's prefix and history
+  loops in `Oversampler` were plain loops already (one an in-place shift) and stay loops; the "ramp written from
+  the block end" idiom stays (the audit's call).
+- **The per-block copies:** `copyRangeInto` (`utils/buffer_copy.kt`), a plain forward loop with `copyInto`'s
+  parameter names, replaces the 19 sites listed below, `Compressor.kt`'s unreachable no-lookahead fallback (2,
+  converted with the rest rather than dropped) and the oversampler's copy back. What it does not do that
+  `copyInto` did: no range check (JVM throws on a bad index, JS reads NaN and drops the write) and no overlap
+  handling (the spec pins the forward copy); no site copies within one array. `EqCore`'s window-guard KDoc says so.
+  Not converted, as the list says: `KatalystEqEffect` (control rate), `PhasePool` (once per note), the `copyOf`
+  growth and build sites, `SampleStore` (an upload message).
+- **Proof:** every new spec row mutation-checked (the report lists the mutants; two rows that a first mutant could not see
+  were strengthened and re-checked; review round 1 added raw-bits rows that pin `rampStep`'s and `fadeToZero`'s
+  operation order against a reassociated mutant); the compiled
+  `klang-engine-audio_be.js` (test build) shows the helpers inlined into their callers with no `subarray`,
+  `arrayCopy` or new object in the converted loops; the suites in the report. Bit-identity: the corpus render is
+  the coordinator's.
+
 ## Decisions for the maintainer
 
 Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that change the most:
@@ -259,6 +330,8 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   `jsMain` and `jvmMain` have none), re-grepped after review round 1 of step 2. Step 2 turned the `Oversampler`'s
   into a plain loop. Converting the per-block sites together earns a `utils/` copy helper with a spec,
   bit-identical; it belongs with step 6 (small shared helpers). Coordinator decision 2026-10-07: do it there.
+  **Done in step 6 (2026-10-08):** every per-block site below, and `Compressor.kt:405-406`, calls
+  `copyRangeInto`; the line numbers are those of the inventory, before step 6.
 
   **Per block, steady state (19 sites in all with the fades below):**
   - `ignitor/MemoizingIgnitor.kt:123`: per voice, per shared node, every block. Probably the hottest.

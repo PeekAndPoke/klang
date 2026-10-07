@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.utils.fadeToZero
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_bridge.constants.TEARDOWN_FADE_SECONDS
@@ -83,16 +84,15 @@ object TeardownFadeRenderer : BlockRenderer {
         // target ramps 1.0 -> 0, so a one-pole would lag and leave a non-zero final sample, losing
         // the exact-zero endpoint that is the whole point.
         //
-        // Skip the note body entirely: `from` collapses the per-sample branch and, for every block
+        // Skip the note body entirely: `startIndex` collapses the per-sample branch and, for every block
         // before the ramp, the loop does not run at all. maxOf also absorbs the very negative
         // fadeStartIdx that ceil().toInt() produces on later blocks.
-        val end = ctx.windowEnd
-        val from = maxOf(ctx.offset, fadeStartIdx)
-
-        for (idx in from until end) {
-            val remaining = (lastIdx - idx) * fadeScale
-            val gain = if (remaining < 0.0) 0.0 else if (remaining > 1.0) 1.0 else remaining
-            ctx.audioBuffer[idx] = ctx.audioBuffer[idx] * gain
-        }
+        fadeToZero(
+            buffer = ctx.audioBuffer,
+            startIndex = maxOf(ctx.offset, fadeStartIdx),
+            endIndex = ctx.windowEnd,
+            zeroIndex = lastIdx,
+            scale = fadeScale,
+        )
     }
 }

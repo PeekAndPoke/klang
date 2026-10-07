@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 
 /**
@@ -324,8 +325,8 @@ class KatalystFilterSwap(
             val w0 = outFrom
 
             // Keep the dry input: the outgoing pair and the dry partner both read it.
-            mixL.copyInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
-            mixR.copyInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
+            mixL.copyRangeInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
+            mixR.copyRangeInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
 
             // The target in place: the mix becomes its output (untouched when the target is dry).
             val tL = curL
@@ -343,8 +344,8 @@ class KatalystFilterSwap(
 
             if (bL != null && bR != null) {
                 // The entry runs the whole block, so its own state stays continuous.
-                dL.copyInto(destination = sL, destinationOffset = 0, startIndex = 0, endIndex = n)
-                dR.copyInto(destination = sR, destinationOffset = 0, startIndex = 0, endIndex = n)
+                dL.copyRangeInto(destination = sL, destinationOffset = 0, startIndex = 0, endIndex = n)
+                dR.copyRangeInto(destination = sR, destinationOffset = 0, startIndex = 0, endIndex = n)
                 bL.process(buffer = sL, offset = 0, length = n)
                 bR.process(buffer = sR, offset = 0, length = n)
                 srcL = sL

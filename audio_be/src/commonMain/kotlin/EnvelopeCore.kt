@@ -154,7 +154,7 @@ internal class EnvelopeCore {
  * The one-pole de-click smoother on an AMPLITUDE envelope's gain, primed to the first level it sees so a
  * voice that starts mid-note or at full level is not faded in. `classic()`'s envelope runs it always (its
  * `declick` is the constant `ENV_DECLICK_SECONDS`), any other Ignitor `adsr` when its `declick` knob is above 0. The modulation envelopes
- * have none. See [envDeclickCoeff].
+ * have none. Its coefficient is `timeConstantCoeff` (`utils/time_constant.kt`) of the `declick` time.
  */
 internal class EnvelopeDeclick {
     private var smoothed: Double = 0.0

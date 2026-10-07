@@ -100,7 +100,9 @@ Cmd → PlaybackEngineDispatcher.handle
 ## Engines / primitives / math
 
 - `StereoBuffer.kt`, `AudioSample.kt`, `Oversampler.kt`, `ShapingFuncs.kt`, `DistortionShape.kt`,
-  `DspUtil.kt`, `AdsrCurveMath.kt`, `AudioAnalyzer.kt`, `IndexCommon.kt`.
+  `AdsrCurveMath.kt`, `AudioAnalyzer.kt`, `IndexCommon.kt`.
+- `utils/`: the domain-free helpers (the fast math, the numeric guards, the phase wraps, the buffer copy,
+  the fade to zero, the time constant, the ramp step, `retainInOrder`); `jsMain/.../utils/js_objects.kt`.
 
 ## Platform entrypoints (thin pumps — not shared)
 

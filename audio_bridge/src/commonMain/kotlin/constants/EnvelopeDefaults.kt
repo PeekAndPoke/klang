@@ -11,8 +11,8 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 // Envelope character defaults: wire defaults for the ignitor `adsr(...)`
 // surface and `classic()`'s envelope.
 //
-// The shape math that consumes them (`adsrExpShape`, `envDeclickCoeff`) stays
-// in `audio_be/AdsrCurveMath.kt`; only the tunable values live here, so the
+// The shape math that consumes them (`adsrExpShape` in `audio_be/AdsrCurveMath.kt`, the de-click
+// coefficient `timeConstantCoeff` in `audio_be/utils/time_constant.kt`) stays in the engine; only the tunable values live here, so the
 // authoring side and the engine cannot disagree about them.
 // ─────────────────────────────────────────────────────────────────────────────
 

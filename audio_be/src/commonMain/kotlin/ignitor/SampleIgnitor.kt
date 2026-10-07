@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.rampStep
 import kotlin.random.Random
 
 /**
@@ -52,7 +53,7 @@ class SampleIgnitor(
             drift.beginBlock()
 
             var m = drift.blockStart
-            val dm = (drift.blockEnd - m) / ctx.length.coerceAtLeast(1)
+            val dm = rampStep(from = m, to = drift.blockEnd, frames = ctx.length)
 
             for (i in 0 until ctx.length) {
                 val idxOut = ctx.offset + i

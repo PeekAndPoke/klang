@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 
 /**
  * N-times oversampler for anti-aliased nonlinear processing.
@@ -135,11 +136,8 @@ class Oversampler(stages: Int) {
             currentLen = decimate2x(decimators[stage], work, currentLen)
         }
 
-        // Back into the caller's buffer. A plain loop: `copyInto` allocates a typed-array view per
-        // call on JS (`audio/ref/performance.md`).
-        for (i in 0 until length) {
-            target[offset + i] = work[i]
-        }
+        // Back into the caller's buffer, without `copyInto`'s typed-array view on JS (see `copyRangeInto`).
+        work.copyRangeInto(destination = target, destinationOffset = offset, startIndex = 0, endIndex = length)
     }
 
     /**

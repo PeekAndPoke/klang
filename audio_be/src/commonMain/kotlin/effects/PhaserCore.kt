@@ -5,9 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.effects
 
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.wrapPhase
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
+import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.wrapPhase
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.tan
@@ -164,7 +165,7 @@ internal class PhaserCore(
     @Suppress("NOTHING_TO_INLINE")
     internal inline fun step(x: Double): Double {
         // Snap NaN/Inf input to 0 — never poison the cascade or feedback state.
-        val safeX = if (x.isFinite()) x else 0.0
+        val safeX = x.finiteOrZero()
 
         val a = alpha
         var signal = safeX + lastOutput * feedback

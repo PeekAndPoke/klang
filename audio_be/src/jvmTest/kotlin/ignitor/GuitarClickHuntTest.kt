@@ -10,9 +10,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
-import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_be.roundTrip
+import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.bandpass

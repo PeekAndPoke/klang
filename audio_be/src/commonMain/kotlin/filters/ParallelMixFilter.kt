@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 
 /**
  * Parallel wet path with a dry floor: copies the input, runs [inner] on the copy, and blends
@@ -51,7 +52,7 @@ class ParallelMixFilter(
         }
 
         // 1. Copy the dry input, then run the inner filter on the copy → it becomes the wet signal.
-        buffer.copyInto(destination = wetBuffer, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
+        buffer.copyRangeInto(destination = wetBuffer, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
         inner.process(buffer = wetBuffer, offset = 0, length = length)
 
         // 2. Blend: dry attenuated to dryGain (≥ floor) + the resonant peaks on top.

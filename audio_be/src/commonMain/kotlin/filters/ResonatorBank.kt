@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 
 /**
  * Resonator bank: a parallel bank of [SvfBPF][LowPassHighPassFilters.SvfBPF] bandpasses, each
@@ -61,14 +62,14 @@ class ResonatorBank(
         }
 
         // 1. Copy the input to scratch (we overwrite `buffer` with the band sum below).
-        buffer.copyInto(destination = inputCopy, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
+        buffer.copyRangeInto(destination = inputCopy, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
 
         // 2. Clear the output region: the first band sums into zero. No bands: silence.
         buffer.fill(0.0, offset, offset + length)
 
         // 3. Run each band on its own copy of the input; sum into the output with its gain.
         for (b in 0 until count) {
-            inputCopy.copyInto(destination = bandBuffer, destinationOffset = 0, startIndex = 0, endIndex = length)
+            inputCopy.copyRangeInto(destination = bandBuffer, destinationOffset = 0, startIndex = 0, endIndex = length)
             filters[b].process(buffer = bandBuffer, offset = 0, length = length)
 
             val gain = gains[b]

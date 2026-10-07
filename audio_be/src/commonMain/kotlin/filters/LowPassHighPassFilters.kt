@@ -6,8 +6,9 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.safeOut
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
+import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.safeOut
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
@@ -304,7 +305,7 @@ internal inline fun computeSvfBellCoeffs(
     sampleRate: Double,
     out: SvfCoeffs,
 ) {
-    val safeDb = if (db.isFinite()) db else 0.0 // NaN-guard
+    val safeDb = db.finiteOrZero() // NaN-guard
     val a = 10.0.pow(safeDb / 40.0)
     computeSvfCoeffs(cutoffHz = cutoffHz, q = q * a, sampleRate = sampleRate, out = out)
     out.m1 = safeOut(out.k * (a * a - 1.0))
@@ -388,7 +389,7 @@ object LowPassHighPassFilters {
      */
     internal fun bodyGain(mode: FilterDef.Body.Mode): Double {
         // NaN-guard: a non-finite dB is 0 dB, unity gain.
-        val safeDb = if (mode.db.isFinite()) mode.db else 0.0
+        val safeDb = mode.db.finiteOrZero()
 
         return 10.0.pow(safeDb / 20.0)
     }
@@ -412,7 +413,7 @@ object LowPassHighPassFilters {
     internal fun vowelGain(band: FilterDef.Formant.Band): Double {
         // NaN-guards: a non-finite dB is 0 dB; a non-finite q folds the SVF's own fallback, and
         // it must be THAT clamp, or the k * q cancellation the fold rests on is not exact.
-        val safeDb = if (band.db.isFinite()) band.db else 0.0
+        val safeDb = band.db.finiteOrZero()
         val safeQ = clampSvfQ(band.q)
 
         return 10.0.pow(safeDb / 20.0) * safeQ * VOWEL_TAME

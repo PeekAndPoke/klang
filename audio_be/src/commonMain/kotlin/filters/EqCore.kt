@@ -7,8 +7,9 @@ package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.safeOut
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.safeOut
 
 /**
  * Freq-agnostic serial EQ core — N second-order TPT-SVF sections in one `process()` call.
@@ -270,7 +271,7 @@ class EqCore(
             inputCopy = AudioBuffer(((length + grain - 1) / grain) * grain)
         }
 
-        buffer.copyInto(destination = inputCopy, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
+        buffer.copyRangeInto(destination = inputCopy, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
     }
 
     /**
@@ -290,14 +291,14 @@ class EqCore(
      * An INSANE window (negative offset, non-positive length, or reaching past the buffer)
      * is IGNORED —
      * the same house fall-through as the index guards: on a broken surface, the serial loops
-     * would throw on JVM and NaN silently on JS, and [captureInput]'s `copyInto` would throw
-     * on BOTH platforms — on the JS worklet an escaped exception kills the whole processor,
-     * not one voice. One branch per block buys the never-throw property back.
+     * and [captureInput]'s copy would throw on JVM and NaN silently on JS (an exception escaping
+     * on the JS worklet would kill the whole processor, not one voice). One branch per block
+     * buys the never-throw property back.
      */
     fun process(buffer: AudioBuffer, offset: Int, length: Int) {
         // Overflow-proof form: with offset >= 0 established, `length > size - offset` cannot
         // wrap, while `offset + length` would for astronomical offsets (e.g. an absolute
-        // frame cursor passed by mistake) — and would then throw inside captureInput.
+        // frame cursor passed by mistake), and would then index past the buffer inside captureInput.
         if (offset < 0 || length <= 0 || length > buffer.size - offset) {
             return // insane window: ignore (KDoc)
         }

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.voices
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.utils.fadeToZero
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
@@ -452,24 +453,21 @@ class Voice(
      * The cut's ramp on this block's window: gain 1 up to the fade start, then linear to exact zero on the LAST
      * frame the voice renders, `ceil(fadeEnd) - 1` ([State.Fading.fadeEndFrame]; the voice is `Done` from the first
      * block that starts at or after the fade end, so that frame always renders), zero after it. The law of
-     * `TeardownFadeRenderer`, whose zero is `floor(endFrame) - 1`: the ramp spans the fade length minus one frame
+     * `TeardownFadeRenderer` (both run `fadeToZero`), whose zero is `floor(endFrame) - 1`: the ramp spans the fade length minus one frame
      * (191 steps at 48 kHz). The clamps absorb a 1-ulp overshoot at the entry frame.
      */
     private fun applyCutFade() {
-        val buffer = blockCtx.audioBuffer
         val fadeStart = fading.fadeStartFrame
         val zeroFrame = ceil(fading.fadeEndFrame) - 1.0
-        val scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0)
-        // The buffer index at which the gain reaches zero (frame = blockStart + index).
-        val zeroIdx = zeroFrame - blockCtx.blockStart
-        val end = blockCtx.windowEnd
 
-        for (idx in blockCtx.offset until end) {
-            val remaining = (zeroIdx - idx) * scale
-            val gain = if (remaining < 0.0) 0.0 else if (remaining > 1.0) 1.0 else remaining
-
-            buffer[idx] = buffer[idx] * gain
-        }
+        fadeToZero(
+            buffer = blockCtx.audioBuffer,
+            startIndex = blockCtx.offset,
+            endIndex = blockCtx.windowEnd,
+            // The buffer index at which the gain reaches zero (frame = blockStart + index).
+            zeroIndex = zeroFrame - blockCtx.blockStart,
+            scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0),
+        )
     }
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════

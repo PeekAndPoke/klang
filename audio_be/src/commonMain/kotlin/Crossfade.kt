@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
-import kotlin.math.abs
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 
 /**
  * The dual-chain crossfade: the ramp two effect chains are blended over while both hear the same
@@ -167,10 +167,8 @@ internal class Crossfade(sampleRate: Int) {
             val inL = inLeft[i]
             val inR = inRight[i]
 
-            targetLeft[i] = (if (abs(outL) <= Double.MAX_VALUE) outL else 0.0) * u +
-                (if (abs(inL) <= Double.MAX_VALUE) inL else 0.0) * t
-            targetRight[i] = (if (abs(outR) <= Double.MAX_VALUE) outR else 0.0) * u +
-                (if (abs(inR) <= Double.MAX_VALUE) inR else 0.0) * t
+            targetLeft[i] = outL.finiteOrZero() * u + inL.finiteOrZero() * t
+            targetRight[i] = outR.finiteOrZero() * u + inR.finiteOrZero() * t
 
             at++
         }
@@ -201,8 +199,8 @@ internal class Crossfade(sampleRate: Int) {
             val left = sourceLeft[i]
             val right = sourceRight[i]
 
-            targetLeft[i] = (if (abs(left) <= Double.MAX_VALUE) left else 0.0) * u
-            targetRight[i] = (if (abs(right) <= Double.MAX_VALUE) right else 0.0) * u
+            targetLeft[i] = left.finiteOrZero() * u
+            targetRight[i] = right.finiteOrZero() * u
 
             at++
         }
@@ -234,10 +232,8 @@ internal class Crossfade(sampleRate: Int) {
             val outL = outLeft[i]
             val outR = outRight[i]
 
-            targetLeft[i] = (if (abs(inL) <= Double.MAX_VALUE) inL else 0.0) * t +
-                (if (abs(outL) <= Double.MAX_VALUE) outL else 0.0)
-            targetRight[i] = (if (abs(inR) <= Double.MAX_VALUE) inR else 0.0) * t +
-                (if (abs(outR) <= Double.MAX_VALUE) outR else 0.0)
+            targetLeft[i] = inL.finiteOrZero() * t + outL.finiteOrZero()
+            targetRight[i] = inR.finiteOrZero() * t + outR.finiteOrZero()
 
             at++
         }

@@ -6,9 +6,10 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.fastExp
-import io.peekandpoke.klang.audio_be.safeDiv
-import io.peekandpoke.klang.audio_be.safeOut
+import io.peekandpoke.klang.audio_be.utils.fastExp
+import io.peekandpoke.klang.audio_be.utils.safeDiv
+import io.peekandpoke.klang.audio_be.utils.safeOut
+import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.ln
@@ -1519,7 +1520,7 @@ private class DetuneIgnitor(
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val s = semitones.blockStartValue(freqHz, ctx)
-        val ratio = 2.0.pow(s / 12.0)
+        val ratio = s.semitones()
         upstream.generate(buffer, freqHz * ratio, ctx)
     }
 }
@@ -1528,7 +1529,7 @@ private class DetuneIgnitor(
 fun Ignitor.detune(semitones: Double): Ignitor {
     if (semitones == 0.0) return this
 
-    return DetuneConstIgnitor(this, 2.0.pow(semitones / 12.0))
+    return DetuneConstIgnitor(this, semitones.semitones())
 }
 
 private class DetuneConstIgnitor(

@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.fusedDistort
 import io.peekandpoke.klang.audio_be.ignitor.shape
+import io.peekandpoke.klang.audio_be.utils.nanGuard
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random

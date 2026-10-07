@@ -26,4 +26,26 @@ class StereoBuffer(blockFrames: Int) {
         left.fill(value)
         right.fill(value)
     }
+
+    /**
+     * Adds the first [frames] frames of [source] into this buffer, per channel: `left[i] += source.left[i]`, the
+     * same for the right. A bus summing another bus into itself (the orbits into the fusion mix, an engine's own
+     * bus into the output, a draining chain's ring-out into the orbit's mix). Allocates nothing.
+     *
+     * No range check: a [frames] past either buffer throws on the JVM, and on JS reads `undefined` (the sum is
+     * NaN) and drops a write past the end. Values are added as they are: a non-finite sample in [source] makes the
+     * target's sample non-finite.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun addFrom(source: StereoBuffer, frames: Int) {
+        val targetLeft = left
+        val targetRight = right
+        val sourceLeft = source.left
+        val sourceRight = source.right
+
+        for (i in 0 until frames) {
+            targetLeft[i] = targetLeft[i] + sourceLeft[i]
+            targetRight[i] = targetRight[i] + sourceRight[i]
+        }
+    }
 }

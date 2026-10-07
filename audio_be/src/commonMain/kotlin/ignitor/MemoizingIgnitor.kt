@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 
 /**
  * Wraps an [Ignitor] so that its output is computed at most once per block.
@@ -120,6 +121,6 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
             cachedFreqHz = freqHz
         }
 
-        cache.copyInto(destination = buffer, destinationOffset = ctx.offset, startIndex = ctx.offset, endIndex = ctx.windowEnd)
+        cache.copyRangeInto(destination = buffer, destinationOffset = ctx.offset, startIndex = ctx.offset, endIndex = ctx.windowEnd)
     }
 }

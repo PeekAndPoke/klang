@@ -177,15 +177,15 @@ step 9.
 
 `audio_be/src/commonMain/kotlin/StereoBuffer.kt`
 
-Holds two `FloatArray`s (left, right) of `blockFrames` length.
+Holds two `AudioBuffer`s (`DoubleArray`; left, right) of `blockFrames` length.
 Used at cylinder level and at master mix level.
 
 ```kotlin
-class StereoBuffer(val blockFrames: Int) {
-    val left: FloatArray
-    val right: FloatArray
+class StereoBuffer(blockFrames: Int) {
+    val left: AudioBuffer
+    val right: AudioBuffer
     fun clear()
-    fun addFrom(other: StereoBuffer, gain: Float = 1f)
-    fun limit(threshold: Float, ratio: Float, attack: Float, release: Float)
+    fun fill(value: AudioSample)
+    inline fun addFrom(source: StereoBuffer, frames: Int) // left into left, right into right, no gain
 }
 ```

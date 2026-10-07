@@ -1,7 +1,8 @@
 # One home for generic helpers in every module
 
-Status: **non-audio modules done, uncommitted, awaiting review (2026-10-07).** The verdict per module is below. The `audio_*` modules are part of
-[`engine-tidy-up.md`](engine-tidy-up.md) ("Extract reusable helpers"); this file covers the rest.
+Status: **non-audio modules done, uncommitted, awaiting review (2026-10-07); the audio modules done in engine tidy-up step 6
+(2026-10-08, uncommitted, awaiting review).** The verdict per module is below. The `audio_*` modules are part of
+[`engine-tidy-up.md`](engine-tidy-up.md) ("Extract reusable helpers", step 6); their verdict is the last section here.
 
 ## The rule
 
@@ -84,3 +85,23 @@ stays. No `utils/`.
 - `MnEditorBase` and `NoteStaffEditor` both carry `highlightTimeouts` + `scheduleTracked` + `cancelPendingHighlights`
   (a tracked set of window timeouts). A small class in `sprudel`'s `utils/` would hold it once; that is an extraction,
   not a move.
+
+## Verdict and what was done (2026-10-08, audio modules, engine tidy-up step 6)
+
+| Helper | Verdict | Where now |
+|---|---|---|
+| `audio_be/.../DspUtil.kt` | generic DSP laws, split by content | `audio_be/src/commonMain/kotlin/utils/`: `math_constants.kt`, `fast_math.kt`, `numerical_safety.kt`, `phase_wrap.kt`; package `io.peekandpoke.klang.audio_be.utils`, every importer updated, `inline` kept |
+| `applySemitoneDetuneToFrequency` (was in `DspUtil.kt`) | a duplicate of `common.math.semitones()` | deleted; its callers and three inline copies call `semitones()` |
+| `waveTrapezoid` (was in `DspUtil.kt`) | the oscillators' waveform, a feature helper | next to its state class, `audio_be/.../ignitor/WaveVoiceState.kt` |
+| `audio_be/src/jsMain/.../js_helpers.kt` | generic JS interop | `audio_be/src/jsMain/kotlin/utils/js_objects.kt`, spec `JsObjectsSpec` (`jsTest`) |
+| `audio_fe/.../utils/utils.kt` | renamed after what is inside | `audio_fe/.../utils/url_checks.kt`, spec `UrlChecksSpec`; `safeEnumOf` / `safeEnumOrNull` had no caller in any module and are deleted |
+| `audio_be/.../utils/retain_in_order.kt` | already there (voice lifecycle step 5) | unchanged |
+| new in step 6 | the B2 twins and the per-block copy | `utils/`: `finiteOrZero` (in `numerical_safety.kt`), `fade_to_zero.kt`, `time_constant.kt`, `wrapPhaseFastOrSafe` (in `phase_wrap.kt`), `ramp_step.kt`, `buffer_copy.kt`; one spec each |
+| the stereo add (new in step 6) | an operation of the module's bus type | a member, `StereoBuffer.addFrom`, next to `clear()` and `fill()`; spec `StereoBufferAddFromSpec` |
+| `audio_be/.../_pcm16_edge.kt` (`pcm16`, `writePcm16`) | the output edge, a feature: `writePcm16` takes a `StereoBuffer`, and `pcm16`'s rule is the partner of the output clip | stays at the module root |
+
+`audio_be`'s `utils/` imports nothing from the rest of the module (`AudioSample` is written `Double` there).
+`audio_bridge` and `audio_jsworklet`: no domain-free helper with a second caller; no `utils/`. Specs of the moved
+`audio_be` helpers moved to `audio_be/src/commonTest/kotlin/utils/` (`DspUtilSpec` is `NumericalSafetySpec`); their
+integration rows (the oscillator, the envelope shape, the two pitch envelopes) sit next to those features, so the
+`utils` specs import nothing from the rest of the module either.

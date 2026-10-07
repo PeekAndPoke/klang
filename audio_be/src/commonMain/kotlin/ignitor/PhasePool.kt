@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.ln

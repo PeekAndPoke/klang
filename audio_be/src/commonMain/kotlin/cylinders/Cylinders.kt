@@ -133,23 +133,7 @@ class Cylinders(
         for (cylinder in id2cylinder.values) {
             if (!cylinder.isActive) continue
 
-            run {
-                val fusionLeft = fusionMix.left
-                val cylinderLeft = cylinder.mixBuffer.left
-
-                for (i in 0 until blockFrames) {
-                    fusionLeft[i] = fusionLeft[i] + cylinderLeft[i]
-                }
-            }
-
-            run {
-                val fusionRight = fusionMix.right
-                val cylinderRight = cylinder.mixBuffer.right
-
-                for (i in 0 until blockFrames) {
-                    fusionRight[i] = fusionRight[i] + cylinderRight[i]
-                }
-            }
+            fusionMix.addFrom(source = cylinder.mixBuffer, frames = blockFrames)
         }
 
         // Step 4: Cleanup stale cylinders (round-robin, no allocation)

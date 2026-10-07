@@ -216,8 +216,8 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **On Kotlin/JS, hoist every per-block value into a LOCAL before the sample loop.** Reading a container's fields
   through an inline method inside the loop is free on the JVM and cost a drifting supersaw 16 percent on V8
   (`DriftLanes`: `ownLane(n)`, `sharedWalk()`, the weights as locals, one inline `driftStep`). `copyInto` allocates
-  a typed-array view per call on JS: use a plain loop in a hot path.
-- **Fast math, `DspUtil.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
+  a typed-array view per call on JS: in a hot path use `copyRangeInto` (`utils/buffer_copy.kt`), a plain loop.
+- **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per
   sample in the oscillators, the modulators, the envelopes and the compressor. **Contract: wrap the phase first.**

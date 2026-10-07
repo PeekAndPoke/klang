@@ -126,16 +126,7 @@ class PlaybackEngine(
         ownBus.clear()
         cylinders.processAndMix(ownBus, cursorFrame)
         masterBus.process(ownBus, blockFrames)
-
-        val targetL = target.left
-        val targetR = target.right
-        val busL = ownBus.left
-        val busR = ownBus.right
-
-        for (i in 0 until blockFrames) {
-            targetL[i] += busL[i]
-            targetR[i] += busR[i]
-        }
+        target.addFrom(source = ownBus, frames = blockFrames)
 
         markMasterBusRendered()
     }

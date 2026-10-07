@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.audio_be
+package io.peekandpoke.klang.audio_be.utils
 
 fun jsObject(): dynamic = js("({})")
 

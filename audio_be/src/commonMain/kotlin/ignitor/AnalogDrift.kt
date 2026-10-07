@@ -46,7 +46,7 @@ import kotlin.random.Random
  * ```
  * drift.beginBlock()
  * var m = drift.blockStart
- * val dm = (drift.blockEnd - m) / length
+ * val dm = rampStep(from = m, to = drift.blockEnd, frames = length)
  * for (...) { phase += inc * m; m += dm }
  * ```
  * [nextMultiplier] is the raw step; the filter drift (`FilterHumanization`) holds one per block

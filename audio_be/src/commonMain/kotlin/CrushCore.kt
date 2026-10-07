@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.utils.nanGuard
 import kotlin.math.floor
 import kotlin.math.pow
 

@@ -6,14 +6,13 @@
 package io.peekandpoke.klang.audio_be.voices.strip.pitch
 
 import io.peekandpoke.klang.audio_be.EnvelopeCore
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.fastSin
-import io.peekandpoke.klang.audio_be.smallNumFastMod
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.fastSin
+import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
-import io.peekandpoke.klang.audio_be.wrapPhase
 import kotlin.math.abs
 
 /**
@@ -56,7 +55,7 @@ class FmRenderer(
             val fmMult = 1.0 + fastSin(modPhase) * depthOverFreq
 
             modPhase += modInc
-            modPhase = if (safeWrap) modPhase.wrapPhase(TWO_PI) else modPhase.smallNumFastMod(TWO_PI)
+            modPhase = modPhase.wrapPhaseFastOrSafe(period = TWO_PI, safe = safeWrap)
             buf[off + i] *= fmMult
         }
 
