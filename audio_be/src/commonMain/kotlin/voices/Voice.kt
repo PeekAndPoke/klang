@@ -35,10 +35,12 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
  * onset, `Sounding` through the gate, `Releasing` once a block starts at or after the gate end, `Zombie` once the
  * release has stayed silent for the cull window, and `Done` from the first block that starts at or after
  * [endFrame]. [render] advances the state at the start of every block (the time-driven transitions) and then
- * dispatches on it; the cull measurement moves a `Releasing` voice to `Zombie` at the end of a block. `Zombie`
- * and `Done` are terminal: nothing leads out of them but `Zombie` to `Done` at [endFrame]. The state describes a
- * whole block, so a block may still hold frames of the next phase (the gate end, the death frame) that the
- * stages see frame by frame. The plan this is step 1 of: `docs/tasks/voice-lifecycle-state-machine.md`.
+ * dispatches on it; the cull measurement moves a `Releasing` voice to `Zombie` at the end of a block. Events from
+ * outside arrive as methods, and the voice decides by its state whether they apply: the note-off
+ * ([releaseGate]) and the hard kill ([kill], `Done` from any state). `Zombie` and `Done` are terminal: nothing
+ * leads out of them but `Zombie` to `Done` (at [endFrame], or killed). The state describes a whole block, so a
+ * block may still hold frames of the next phase (the gate end, the death frame) that the stages see frame by
+ * frame. The plan: `docs/tasks/voice-lifecycle-state-machine.md`.
  */
 class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -119,8 +121,9 @@ class Voice(
     private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
 
     /**
-     * The lifecycle state as of the last [render] call (see the class KDoc and [State]). `Pending` before
-     * the first call.
+     * The lifecycle state (see the class KDoc and [State]). [render] moves it at the start and the end of
+     * a block; the events move it between blocks ([kill] sends it to `Done` at once). `Pending` until the
+     * first block that reaches the onset.
      */
     var state: State = State.Pending
         private set
@@ -181,7 +184,7 @@ class Voice(
     }
 
     /**
-     * Releases the gate NOW (realtime note-off): it moves the gate and the end in [limits], the one
+     * The note-off event: releases the gate NOW (realtime note-off). It moves the gate and the end in [limits], the one
      * home every gate consumer reads (the stages through [BlockContext.limits], the ignitors through
      * the gate the ignite stage derives from it per block), and the envelopes
      * enter their release from the level the envelope law gives AT the new gate frame
@@ -197,14 +200,16 @@ class Voice(
      * level 0 (`EnvelopeCore.prepare`): every envelope is 0 on every frame (an amplitude envelope
      * silences the voice), no exception, no error.
      *
-     * A `Zombie` or `Done` voice ignores it (terminal states). Through the scheduler that is what it
-     * did before the state existed: a zombie's gate lies at or before the start of the last rendered
-     * block and the scheduler releases at the next one, so the natural-gate check below returned, and
-     * a `Done` voice has left the active list. A `Sounding` voice whose gate moves into the past turns
-     * `Releasing` at the start of the next block that starts at or after the new gate.
+     * The voice decides by its state whether the event applies. It applies to a `Pending` and a
+     * `Sounding` voice; a `Sounding` voice whose gate moves into the past turns `Releasing` at the
+     * start of the next block that starts at or after the new gate. A `Releasing` voice has been
+     * released already, and `Zombie` and `Done` are terminal: they ignore it. Through the scheduler
+     * that is what happened before the state existed: such a voice rendered a block that started at
+     * or after its gate, and the scheduler releases at its cursor, which lies after that block's
+     * start, so the natural-gate check below returned (a `Done` voice has left the active list).
      */
     fun releaseGate(atFrame: Double) {
-        if (state == State.Zombie || state == State.Done) {
+        if (state != State.Pending && state != State.Sounding) {
             return
         }
 
@@ -226,6 +231,16 @@ class Voice(
         // voice-relative gate from it per block, so no copy can be left behind (amendment A1).
         limits.gateEndFrame = atFrame
         limits.endFrame = atFrame + releaseSpan
+    }
+
+    /**
+     * The hard-kill event: the voice is `Done` NOW, from any state, and renders nothing more (no
+     * fade: the caller is a teardown path, `VoiceScheduler.cleanupHard` at the end of the warmup
+     * handshake). The scheduler removes `Done` voices; it never ends a
+     * voice any other way (step 4 turns the cut, the one exception left, into an event too).
+     */
+    fun kill() {
+        state = State.Done
     }
 
     /**
@@ -378,7 +393,7 @@ class Voice(
         /** Culled (terminal): renders nothing, renews its orbit lease until [endFrame] (see [culled]). */
         Zombie,
 
-        /** At or past [endFrame] (terminal): [render] returns false. */
+        /** At or past [endFrame], or killed (terminal): [render] returns false and the scheduler removes it. */
         Done,
     }
 

@@ -1,6 +1,6 @@
 # A voice's lifecycle is one state machine inside the voice
 
-Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07 (awaiting review).
+Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07, step 3 done 2026-10-07 (awaiting review).
 
 ## Why (maintainer, 2026-10-07)
 
@@ -51,7 +51,7 @@ In the scheduler (`voices/VoiceScheduler.kt`):
 | cut | `:632-641` | `iterator.remove()`: instant death decided outside the voice, a click; removing mid-list also reorders the orbit lease succession |
 | realtime note-off | `:411` | `releaseRealtimeVoice` calls `voice.releaseGate` |
 | stop | `:264` | `cleanup` releases held realtime voices only; the rest rings out |
-| hard kill | `:285`, `:184` | `cleanupHard` (end of the warmup handshake), `clear` |
+| hard kill | `:285`, `:184` | `cleanupHard` (end of the warmup handshake), `clear` (no caller; deleted in step 3) |
 | re-send dedup | `:323` | a playing voice (a zombie too) absorbs an identical incoming one |
 | `ActiveVoice.origin` | `:82` | timeline or realtime, `held`: lifecycle facts kept beside the voice |
 | culled count | `:487-491` | reads `culled` before and after `render` |
@@ -164,6 +164,29 @@ before and after.
    scheduler removes only done voices. Decide whether `held` / `liveId` move onto the voice or stay as the
    scheduler's provenance. Bit-identical.
 
+   **What was done (2026-10-07).** Two events on the voice, each deciding by the state whether it applies. The
+   note-off (`Voice.releaseGate`) applies to `Pending` and `Sounding` only; `Releasing` joined `Zombie` and `Done`
+   in ignoring it (through the scheduler it already did nothing there: such a voice rendered a block starting at
+   or after its gate, and the scheduler releases at its later cursor, so the natural-gate check returned). The
+   hard kill (`Voice.kill`) sends any state to `Done`. The scheduler writes no voice state and no limit (F2):
+   `cleanupHard` kills, then `removeDoneVoices` removes the `Done` voices order-preserving (`removeAll`, what
+   `cleanupHard` did before); the render loop removes a voice whose `render` returned false (`Done`) by
+   swap-with-last, as before. `VoiceScheduler.clear` had no caller anywhere in the repo and is deleted.
+   **A deliberate deviation from "in one place": two removal paths.** A killed voice must leave `active` at once,
+   because `cleanupHard` is followed by the engine's disposal and no render comes that could remove it; and
+   folding the render loop's swap-with-last into a sweep after the loop would change the render order within a
+   block, so no single path keeps today's renders bit-identical. (The order the sweep keeps is not observable in
+   production: each playback has its own scheduler, `engineFor(playbackId)`, and `cleanupHard` kills every voice
+   in it.) Equivalence: between blocks no voice is `Done` except the killed ones (the render loop removes each at
+   once), so `cleanupHard` removes the same voices in the same order. The cut (`activateVoice`) still removes
+   without the event: the seam step 4 closes. `held` / `liveId` / `Timeline.source` stay in the scheduler
+   (`ActiveVoice.origin`): they answer WHO an event goes to (a stop by `liveId`, `cleanup`'s held voices, the
+   re-send dedup), which the plan gives the scheduler; the voice needs none of them to decide WHAT happens (a
+   held voice is a voice whose gate lies at the horizon). Proof: `VoiceLifecycleSpec` (a kill from every state,
+   a note-off on every state), `VoiceSchedulerHardKillSpec` (the sweep after `cleanupHard`); 8 mutations all red
+   (S7 tested `clear`, deleted since); the step 1 campaign re-run with the fixed runner (M1 to M18 and the `SampleInstrumentSpec` pair, all
+   red). Report: `tmp/reviews/vl-step3-report.md`.
+
    **Forward note F2 (step 2 review, 2026-10-07).** The single writer of `VoiceLimits` is a convention, not a
    compiler guarantee: its setters are `internal`, so anything in `audio_be` could write them. Every event, the
    cut included, writes through a `Voice` method, never from the scheduler.
@@ -178,6 +201,17 @@ before and after.
    `TeardownFadeRenderer` reads that field, so a voice without its own envelope would get two fades multiplied, and
    a young voice would get the shortened midpoint window. Use a separate fade-start frame and fade end, or skip
    the teardown stage while `Fading`.
+
+   **Forward notes from the step 3 review (2026-10-07).**
+   - **F3.** A cut that sends a `Pending` or `Zombie` voice straight to `Done` must be removed by the order-keeping
+     sweep (`removeDoneVoices()`), not left for the render loop's swap-with-last, or a different voice takes the
+     orbit.
+   - **F4.** A `Fading` voice holds the lease about 4 ms longer than today's cut, then leaves by swap-with-last,
+     while today's cut removes it at once and keeps the order. So the owner of a shared orbit after a cut
+     changes; expect `VoiceSchedulerSoloCutSpec` and lease-order rows to move. A deliberate step 4 change.
+   - **L3.** One scheduler serves exactly one playback in production (`engineFor(playbackId)`), so a cut group
+     reaches at most the whole playback. The open `cut-group-semantics.md` question is "the whole playback or one
+     orbit".
 5. **The lease per state (maintainer decision, by ear).** Which states hold the orbit lease. Today a zombie holds
    it until `endFrame`; restricting it changes which voice owns a shared orbit (the culling design avoided that on
    purpose, measured on Der Schmetterling 2026-09-15). Corpus render plus listening.

@@ -181,12 +181,6 @@ class VoiceScheduler(
         scratchBuffers = scratchBuffers,
     )
 
-    fun clear() {
-        scheduled.clear()
-        active.clear()
-        playbackContexts.clear()
-    }
-
     fun addSample(msg: KlangCommLink.Cmd.Sample) = context.sampleStore.addSample(msg)
 
     fun getCompleteSample(req: SampleRequest): SampleStore.SampleEntry.Complete? =
@@ -284,7 +278,33 @@ class VoiceScheduler(
      */
     fun cleanupHard(playbackId: String) {
         cleanup(playbackId)
-        active.removeAll { it.playbackId == playbackId }
+
+        // The hard kill is an event on the voice; the removal takes only what is Done.
+        for (activeVoice in active) {
+            if (activeVoice.playbackId == playbackId) {
+                activeVoice.voice.kill()
+            }
+        }
+
+        removeDoneVoices()
+    }
+
+    /**
+     * Removes the `Done` voices between blocks, keeping the survivors' order. The scheduler removes only `Done`
+     * voices, by two paths, on purpose: here, for voices killed between blocks ([Voice.kill]), and in the render
+     * loop of [process], for a voice that turns `Done` while it renders (swap with the last, which then renders
+     * in the same block). Why two:
+     * - a killed voice must leave [active] at once: [cleanupHard] is followed by the engine's disposal, so no
+     *   render comes that could remove it;
+     * - folding the render loop's swap-with-last into a sweep after the loop would change the render order
+     *   within a block, so no single path keeps today's renders bit-identical.
+     * The order kept here is not observable in production: each playback has its own scheduler, and
+     * [cleanupHard] kills every voice in it. Between blocks no other voice is `Done`: the render loop removes
+     * each at once. The cut in [activateVoice] still removes without the event (step 4 of the lifecycle plan
+     * makes it one).
+     */
+    private fun removeDoneVoices() {
+        active.removeAll { it.voice.state == Voice.State.Done }
     }
 
     fun clearScheduled(playbackId: String) {
@@ -485,6 +505,7 @@ class VoiceScheduler(
             }
 
             val wasCulled = activeVoice.voice.culled
+            // false = the voice is Done: it is removed here, see [removeDoneVoices] for the order.
             val isAlive = activeVoice.voice.render(ctx)
 
             if (!wasCulled && activeVoice.voice.culled) {
@@ -635,7 +656,8 @@ class VoiceScheduler(
             while (iterator.hasNext()) {
                 val activeVoice = iterator.next()
                 if (activeVoice.voice.cut == cut) {
-                    // TODO: Use a fade out / release phase instead of hard cut?
+                    // The one removal that is not an event on the voice yet: lifecycle step 4 turns the cut
+                    // into `Fading` (docs/tasks/voice-lifecycle-state-machine.md).
                     iterator.remove()
                 }
             }

@@ -239,6 +239,96 @@ class VoiceLifecycleSpec : StringSpec({
         withClue("still rendering") { ctx.voiceBuffer[0] shouldNotBe sentinel }
     }
 
+    "a hard kill ends a voice in Done from every state, and nothing renders after it" {
+        val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
+
+        /** A voice rendered block by block from frame 0 until it is in [target]. */
+        fun inState(target: State): Pair<Voice, Double> {
+            val v = when (target) {
+                State.Pending -> voice(start = 1024.0, gate = 4096.0, end = 8192.0)
+                State.Zombie -> voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.0, envelope = percussive)
+                else -> voice(start = 0.0, gate = 1024.0, end = 4096.0)
+            }
+            var start = 0.0
+
+            block(v, start)
+
+            while (v.state != target) {
+                start += blockFrames
+                withClue("reaching $target") { (start < 8192.0) shouldBe true }
+                block(v, start)
+            }
+
+            return v to start + blockFrames
+        }
+
+        for (from in State.entries) {
+            val (v, next) = inState(from)
+            val endBefore = v.endFrame
+
+            v.kill()
+            withClue("$from: killed") { v.state shouldBe State.Done }
+
+            withClue("$from: the next render ends it") { block(v, next) shouldBe false }
+            withClue("$from: and renders nothing") { untouched() shouldBe true }
+            v.state shouldBe State.Done
+
+            v.releaseGate(next)
+            withClue("$from: a note-off after the kill is ignored") { v.endFrame shouldBe endBefore }
+        }
+    }
+
+    "a note-off does what the state says: Pending and Sounding take it, Releasing, Zombie and Done ignore it" {
+        // Pending: the gate and the end move (the scheduler floors a note-off at onset + one block).
+        val pending = voice(start = 1024.0, gate = 1_000_000.0, end = 1_004_800.0)
+
+        block(pending, 0.0)
+        pending.releaseGate(2048.0)
+        withClue("Pending: the end moves with the gate") { pending.endFrame shouldBe 2048.0 + 4800.0 }
+        withClue("Pending: still pending") { pending.state shouldBe State.Pending }
+        block(pending, 1024.0)
+        withClue("Pending: sounds at its onset") { pending.state shouldBe State.Sounding }
+        block(pending, 2048.0)
+        withClue("Pending: releases at the moved gate") { pending.state shouldBe State.Releasing }
+
+        // Sounding: the gate and the end move, Releasing from the next block.
+        val sounding = voice(start = 0.0, gate = 1_000_000.0, end = 1_004_800.0)
+
+        block(sounding, 0.0)
+        sounding.releaseGate(128.0)
+        withClue("Sounding: the end moves") { sounding.endFrame shouldBe 128.0 + 4800.0 }
+        block(sounding, 128.0)
+        withClue("Sounding: releases") { sounding.state shouldBe State.Releasing }
+
+        // Releasing: already released. Called directly with a frame before its gate it would move the end.
+        val releasing = voice(start = 0.0, gate = 1024.0, end = 5824.0)
+
+        block(releasing, 0.0)
+        block(releasing, 1024.0)
+        withClue("Releasing: in its release") { releasing.state shouldBe State.Releasing }
+        releasing.releaseGate(512.0)
+        withClue("Releasing: ignored, the end stays") { releasing.endFrame shouldBe 5824.0 }
+
+        // Zombie and Done: terminal (their rows above cover the details).
+        val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
+        val zombie = voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.0, envelope = percussive)
+        var start = 0.0
+
+        while (zombie.state != State.Zombie) {
+            block(zombie, start)
+            start += blockFrames
+        }
+
+        zombie.releaseGate(1000.0)
+        withClue("Zombie: ignored") { zombie.endFrame shouldBe 5376.0 }
+
+        val done = voice(start = 0.0, gate = 128.0, end = 256.0)
+
+        block(done, 256.0) shouldBe false
+        done.releaseGate(200.0)
+        withClue("Done: ignored") { done.endFrame shouldBe 256.0 }
+    }
+
     "a realtime note-off reaches every gate consumer through the voice's limits: it renders what a voice scheduled with that gate renders" {
         // Every gate consumer at once (step 2, "amendment A1"): the ignitor door's own envelope (it reads the
         // voice-relative gate the ignite stage derives per block), the pitch envelope and the FM envelope (they read

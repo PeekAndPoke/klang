@@ -31,8 +31,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   Done terminal), advanced per block in `Voice.render`, which dispatches on it (the `Voice` KDoc). `Voice.culled`
   reads the Zombie state, so it is false again once the zombie is Done. Onset, gate end and end live in ONE place,
   `VoiceLimits` (the voice owns and writes it, `releaseGate` included; the stages read it via `BlockContext.limits`;
-  the ignite stage derives `IgniteContext.gateEndFrame` from it per block). Plan and steps:
-  `docs/tasks/voice-lifecycle-state-machine.md` (steps 1 and 2 done).
+  the ignite stage derives `IgniteContext.gateEndFrame` from it per block). Events from outside are `Voice` methods
+  that decide by the state: the note-off (`releaseGate`, applies to Pending and Sounding) and the hard kill
+  (`kill`, Done from any state). The scheduler removes only Done voices (`removeDoneVoices` order-preserving, the
+  render loop by swap-with-last); the cut is the one removal left without an event. Plan and steps:
+  `docs/tasks/voice-lifecycle-state-machine.md` (steps 1 to 3 done).
 - **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `SendRenderer`); a frontend's
   `velocity` is multiplied into `gain` before the wire. The orbit is the routing.
 - **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
@@ -195,6 +198,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 Note-off and hard kill are events on the voice; the scheduler removes only Done voices (lifecycle
+  step 3, no sound change by design): `docs/tasks/voice-lifecycle-state-machine.md`
 - 2026-10-07 One home for a voice's time limits, `VoiceLimits` (lifecycle step 2, no sound change by design):
   `docs/tasks/voice-lifecycle-state-machine.md`
 - 2026-10-07 The voice's lifecycle is a state machine inside `Voice` (step 1, read-only, no sound change by design):
