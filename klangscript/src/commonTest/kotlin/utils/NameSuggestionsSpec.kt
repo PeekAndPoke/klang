@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.script.runtime
+package io.peekandpoke.klang.script.utils
 
 import io.kotest.core.spec.style.StringSpec
 import io.peekandpoke.klang.common.strings.osaDistance
@@ -15,7 +15,7 @@ class NameSuggestionsSpec : StringSpec({
 
     val patternish = listOf("ignp", "ignitorParam", "gain", "lpf", "lpq", "rev", "note", "sound")
 
-    "suggests the transposed neighbour — the case this exists for" {
+    "suggests the transposed neighbour, the case this exists for" {
         // A transposed door name cost a full debugging session on 2026-08-22; the row spells today's door,
         // `.ingp` for `.ignp`. Plain Levenshtein scores it 2 and
         // would be filtered out at the 4-letter threshold of 1, so this row also guards the
@@ -61,12 +61,12 @@ class NameSuggestionsSpec : StringSpec({
         // The previous version used three candidates all at distance 1 and length 3, so only the
         // alphabetical tiebreak fired and deleting the distance comparator left it green. This
         // is the property that makes `ignp` beat `ignitorParam`.
-        // Both candidates must be INSIDE the threshold, at DIFFERENT distances — otherwise the
+        // Both candidates must be INSIDE the threshold, at DIFFERENT distances; otherwise the
         // filter does the work and the ordering is never exercised. ("gian" vs "grain" cannot
         // show this: that pair is 2 edits and a 4-char name only admits 1.)
         // The nearer candidate is also the LONGER one, so distance-ordering and the
         // length tiebreak disagree. Without that, the row cannot see the distance comparator
-        // at all — a same-length pair sorts identically either way, which is how the previous
+        // at all: a same-length pair sorts identically either way, which is how the previous
         // version of this row stayed green with the comparator deleted.
         "gaindd".osaDistance("gainddx") shouldBe 1
         "gaindd".osaDistance("gainxx") shouldBe 2

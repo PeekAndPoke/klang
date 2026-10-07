@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.script.ast
 
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.script.utils.buildLineOffsets
+import io.peekandpoke.klang.script.utils.lineColToOffset
 
 /**
  * Result of finding a CallExpression at a cursor position.
@@ -179,8 +181,8 @@ private class IndexBuilder(
     private val parents: MutableMap<AstNode, AstNode>,
     private val offsets: MutableMap<AstNode, IntRange>,
 ) {
-    private fun SourceLocation.toStartOffset(): Int? = lineColToOffset(lineOffsets, startLine, startColumn)
-    private fun SourceLocation.toEndOffset(): Int? = lineColToOffset(lineOffsets, endLine, endColumn)
+    private fun SourceLocation.toStartOffset(): Int? = lineColToOffset(lineOffsets = lineOffsets, line = startLine, column = startColumn)
+    private fun SourceLocation.toEndOffset(): Int? = lineColToOffset(lineOffsets = lineOffsets, line = endLine, column = endColumn)
 
     private fun index(node: AstNode, parent: AstNode, level: Int) {
         parents[node] = parent
@@ -326,20 +328,4 @@ private fun extractFunctionName(callee: Expression): String = when (callee) {
     is Identifier -> callee.name
     is MemberAccess -> callee.property
     else -> ""
-}
-
-internal fun buildLineOffsets(source: String): IntArray {
-    val offsets = mutableListOf(0)
-    for (i in source.indices) {
-        if (source[i] == '\n') {
-            offsets.add(i + 1)
-        }
-    }
-    return offsets.toIntArray()
-}
-
-internal fun lineColToOffset(lineOffsets: IntArray, line: Int, column: Int): Int? {
-    val lineIdx = line - 1
-    if (lineIdx < 0 || lineIdx >= lineOffsets.size) return null
-    return lineOffsets[lineIdx] + (column - 1)
 }

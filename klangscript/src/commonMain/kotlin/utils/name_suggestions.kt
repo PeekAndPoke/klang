@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.script.runtime
+package io.peekandpoke.klang.script.utils
 
 import io.peekandpoke.klang.common.strings.osaDistance
 
@@ -17,7 +17,7 @@ import io.peekandpoke.klang.common.strings.osaDistance
  *
  * Ranks with [osaDistance], NOT plain Levenshtein: a transposition is ONE edit there and two
  * under Levenshtein, and at the tight thresholds short names need, the plain version cannot
- * suggest `ignp` for `ingp` at all. That was measured, not assumed — the first version of this
+ * suggest `ignp` for `ingp` at all. That was measured, not assumed: the first version of this
  * helper used Levenshtein and failed the very case it was written for.
  *
  * Returns an empty string when nothing is close enough, so callers can append it unconditionally.
@@ -44,7 +44,7 @@ fun suggestNames(
         .asSequence()
         .map { it to typed.lowercase().osaDistance(it.lowercase()) }
         .filter { it.second <= maxDistance }
-        // Distance first, then shorter names, then alphabetical — so the order is stable and
+        // Distance first, then shorter names, then alphabetical, so the order is stable and
         // does not depend on the iteration order of whatever set was passed in.
         .sortedWith(compareBy({ it.second }, { it.first.length }, { it.first }))
         .take(limit)

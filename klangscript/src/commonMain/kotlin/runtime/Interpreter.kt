@@ -46,6 +46,8 @@ import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.ast.UnaryOperator
 import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import io.peekandpoke.klang.script.utils.formatAvailableNames
+import io.peekandpoke.klang.script.utils.suggestNames
 import kotlin.math.pow
 
 /**
