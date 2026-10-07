@@ -202,7 +202,7 @@ class KatalystDuckEffect(
 
     /**
      * Applies the orbit owner's duck settings, null for none (the stage is off). Called by the
-     * chain's writer on every block the lease is held, so an unchanged owner must cost nothing:
+     * chain's writer on every block the orbit has an owner, so an unchanged owner must cost nothing:
      * every write here is a store of the same number or a [KnobGlide.retarget] that already stands.
      */
     fun configure(settings: Voice.Ducking?) {

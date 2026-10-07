@@ -20,12 +20,14 @@ import kotlin.math.pow
  */
 class AccelerateRenderer(
     private val accelerate: Voice.Accelerate,
-    // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
-    private val startFrame: Double,
-    endFrame: Double,
+    /**
+     * The glide span in frames: the SCHEDULED voice length (end minus onset), baked at construction on
+     * purpose. A realtime note-off moves the voice's end but must not move the glide base (decided
+     * semantics, docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md). The onset is
+     * read from the voice's limits per block.
+     */
+    private val totalFrames: Double,
 ) : BlockRenderer {
-
-    private val totalFrames = (endFrame - startFrame)
 
     // Per-sample multiplicative step: ratio = 2^((semitones/12) / totalFrames) — the wire
     // value is SEMITONES over the voice (unit changed from octaves, 2026-08-24)
@@ -36,7 +38,7 @@ class AccelerateRenderer(
         val buf = ctx.freqModBuffer
 
         // Seed with pow() once at the block start, then multiply per sample
-        val blockRelStart = (ctx.blockStart + ctx.offset) - startFrame
+        val blockRelStart = (ctx.blockStart + ctx.offset) - ctx.limits.startFrame
         var ratio = 2.0.pow(octaves * blockRelStart / totalFrames)
 
         if (ctx.freqModBufferWritten) {

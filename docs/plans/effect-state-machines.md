@@ -11,6 +11,18 @@
 
 ## 1. The shape
 
+> **The rule since 2026-10-07 (maintainer, "as it fits"):** a state that carries data only it may see is a class
+> (an instance per state, created with its owner, as below); a state without data is a `data object`. Classes are
+> the usual case, because they extend without a rewrite. Effects kept flag-based on purpose (section 3, "done
+> without state classes") stay as they are: state machines only where they pay off.
+>
+> **Which shape fits (2026-10-07, voice lifecycle step 5b).** States that run DIFFERENT bodies (the delay's Off,
+> Active and Draining do different DSP) take the template below: inner-class states with a virtual `process` and
+> `enter`. States that share ONE body and differ by small hooks, with few events, take a sealed type and an
+> exhaustive `when` over it (the `Voice`: one pipeline, the cut's ramp and the cull's count as hooks), the shape a
+> Zig tagged union with a `switch` takes one to one. There a nested state cannot set its owner's `state`, so its
+> `enter` returns the state and the owner writes the transition as one line, `state = fading.enter(...)`.
+
 Every effect that has a lifecycle (off, active, draining, fading out, crossfading) owns ONE
 instance of each of its states, created with the effect, and a `state` field that points at the
 current one. A transition is a pointer swap after an `enter(...)` call on the target; the state
@@ -83,8 +95,11 @@ The rule of thumb for every `State.process()`, in three lines (maintainer, 2026-
    silent input buffer. The live knobs stayed on the `DelayLine`, where the DSP reads them and `configure` writes
    them onto whatever line `ensureRing` returns: a copy on `Active` would have been a second
    source of truth. `Active` ended up carrying no data at all, and that is the correct answer, not a
-   smell. Data-less states are plain `inner class`es too, not `object`s, so every state is
-   written the same way. **An outer member a state reads stays `private`.** Measured with `javap`
+   smell. Data-less states: the §1 rule of 2026-10-07 (a `data object`); the effects converted
+   before it keep their data-less `inner class`es. In this inner-class template, where the states run different
+   bodies, a data-less state that needs its owner (the delay's `Active` runs on the effect's ring) stays an `inner
+   class`, because a `data object` cannot be inner; a `data object` fits where the owner dispatches with a `when`
+   (the `Voice`). **An outer member a state reads stays `private`.** Measured with `javap`
    in step 5c-1 (Kotlin 2.3.10, JVM target 17): a private outer member reached from an inner
    class costs a synthetic `access$getX$p`, a STATIC call; making it `internal` replaces that
    with `getX$module()`, a VIRTUAL call. Neither is a plain field load, only `@JvmField` would

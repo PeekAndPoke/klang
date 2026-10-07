@@ -211,8 +211,8 @@ class PlaybackEngineDispatcher(
         var deniedRents = 0
         val cylinderStates = mutableListOf<KlangCommLink.Feedback.Diagnostics.CylinderState>()
         fun count(engine: PlaybackEngine) {
-            // The gauge is "voices rendering audio": a culled zombie keeps its slot but runs no DSP.
-            voiceCount += engine.scheduler.renderingVoiceCount()
+            // The gauge is "voices rendering audio": every listed voice renders (a culled one has left).
+            voiceCount += engine.scheduler.getActiveVoiceCount()
             droppedVoices += engine.scheduler.droppedVoicesTotal()
             for (cylinder in engine.cylinders.cylinders) {
                 cylinderStates.add(

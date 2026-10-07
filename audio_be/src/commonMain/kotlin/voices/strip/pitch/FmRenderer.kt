@@ -25,8 +25,6 @@ class FmRenderer(
     private val fm: Voice.Fm,
     private val freqHz: Double,
     private val sampleRate: Int,
-        // Absolute backend frame — Double, see RenderClock.cursorFrame.
-    private val startFrame: Double,
 ) : BlockRenderer {
     private val core = EnvelopeCore()
 
@@ -46,8 +44,9 @@ class FmRenderer(
         // raw-Motor ratio, either sign) takes the full wrap. NaN and infinite inc take it too.
         val safeWrap = !(abs(modInc) < TWO_PI)
 
-        // Gate read from the ctx per call — a realtime note-off may move it (Voice.releaseGate)
-        val envLevel = calculateControlRateEnvelope(fm.envelope, ctx.blockStart, startFrame, ctx.gateEndFrame, core)
+        // Onset and gate read from the voice's limits per call: a realtime note-off moves the gate.
+        val limits = ctx.limits
+        val envLevel = calculateControlRateEnvelope(fm.envelope, ctx.blockStart, limits.startFrame, limits.gateEndFrame, core)
         // Hoisted: the divide and the offset read are loop-invariant, and after the sine swap
         // the divide would be the loop's largest remaining cost.
         val depthOverFreq = fm.depth * envLevel / freqHz

@@ -43,9 +43,11 @@ Manages up to 16 effect buses (cylinder IDs 0–15). Each voice is routed to one
 4. Round-robin: deactivate one stale cylinder per block
 ```
 
-### getOrInit(orbitId, voice)
+### offer(orbitId, voice, blockStart) and checkIn(orbitId, blockStart)
 
-Returns the existing `Cylinder` or creates a new one, copying effect parameters from the voice's `VoiceData`.
+The voice's send routes into its orbit's `Cylinder`, rented on first use. A voice that claims the orbit
+(`Voice.claimsOrbit`) offers itself as the owner; any other rendering voice only checks in, which keeps the orbit
+in use. `processAndMix` commits the block's newest offer once (`Cylinder.commitOwner`) before the orbit processes.
 
 ## Cylinder
 
@@ -59,11 +61,11 @@ The `gain` stage is the orbit's group fader, at unity on the classic chain and b
 a pattern moves it with `katp("gain.gain", x)`.
 
 **Every knob of every stage comes from ONE place since Katalyst step 5b-1 (2026-09-19): the orbit's
-param state, which is the `katalystParams` map of the voice holding the orbit's lease.** The bus
+param state, which is the `katalystParams` map of the voice that owns the orbit.** The bus
 doors write those slots (a door and its `katp` slot are the same knob), the chain re-resolves only
 when the map instance changes, and the voice's bus fields are not a knob source any more (the
-delay, reverb, compressor and duck fields left the wire in step 5b-3). Ownership is the
-`VoiceLease`'s **first-writer-wins**, so all voices on an orbit SHARE these; put voices on different
+delay, reverb, compressor and duck fields left the wire in step 5b-3). Ownership:
+the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut (lifecycle step 5, `Cylinder.offer`), so all voices on an orbit SHARE these; put voices on different
 orbits for independent bus effects. Everything else is **per-voice**: `lpf`/`hpf`/`bpf`/`notch` +
 envelopes, `distort`, `crush`, `coarse`, `adsr`, `tremolo` as `classic()`'s slots in the instrument's
 Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; `vibrato`, `fm`, pitch env in the

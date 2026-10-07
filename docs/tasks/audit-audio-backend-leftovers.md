@@ -1,6 +1,7 @@
 # Audio backend audit: the leftovers
 
-Status: **§1 follow-up, §3 and §5 done 2026-10-07; §2 and §4 open for the maintainer**, investigated, with the
+Status: **§1 follow-up, §3 and §5 done 2026-10-07; §4 done 2026-10-07 by voice lifecycle step 4 (a cut fades the
+choked voice over 4 ms, `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`); §2 open for the maintainer**, investigated, with the
 findings and a proposal each in "What was done" at the end (§2: what a worklet spec can reach, and its cost; §4: the
 cut-group hard cut today and what the teardown fade would change). Carved out 2026-09-27 when the audio backend audit campaign
 closed (brief: `docs/tasks-archive/2026-09/20260927-audio-backend-audit.md`, ledger:
@@ -69,6 +70,10 @@ near `Int.MAX_VALUE` in a spec and step across.
 
 ## 4. Cut groups hard-cut
 
+**Done 2026-10-07 by voice lifecycle step 4:** the choked voice fades over `CUT_FADE_SECONDS` (4 ms) from the
+cutting voice's onset, with a cut-only ramp before its send (`Voice.cutOff`, the `Fading` state); `endFrame` does
+not move; `VoiceSchedulerSoloCutSpec` and `VoiceLifecycleSpec` guard it. The text below is the item as it stood.
+
 `voices/VoiceScheduler.kt:638`: `// TODO: Use a fade out / release phase instead of hard cut?` A
 choked voice is removed mid-sample, a known and untested click source. Decide by ear whether the
 teardown fade the voice already has (`TeardownFadeRenderer`) should run here, then guard it in
@@ -115,12 +120,14 @@ Each site now carries its argument in a comment, checked on the code:
 - `Cylinder.silentBlockCount` counts cleanup visits; once it reaches the grace every path leaves it at most the grace
   (reset on a tail, held at the grace while a voice plays, reset on deactivation), so an orbit silent forever, a muted
   one with notes included, never counts past it.
-- `Voice.idCounter` turns negative after 2^31 ids and repeats only after 2^32. Its one reader, `VoiceLease`, compares
-  ids for equality between voices co-active on one orbit and has no sentinel id (`VoiceLeaseSpec` already pins an
-  owner with id -1), so neither a negative id nor a repeat can pass for a live owner.
+- `Voice.idCounter` turns negative after 2^31 ids and repeats only after 2^32. Its one reader is the ownership
+  tie-break (`Cylinder.isNewer`, voice lifecycle step 5, 2026-10-07): of two offers with the SAME onset, the higher id
+  owns the orbit. A wrap can mis-order only such a tie between two voices created on either side of the wrap, and
+  then the older of the two owns until one of them gives the orbit up; there is no sentinel id. (Until step 5 the
+  reader was `VoiceLease`, which compared ids for equality only.)
 
-No spec was seeded: three counters are bounded by construction and the fourth is equality-only, so a spec near
-`Int.MAX_VALUE` would need a test hook into a private counter to restate the comment.
+No spec was seeded: three counters are bounded by construction and the fourth can at most mis-order one same-onset
+tie at the wrap, so a spec near `Int.MAX_VALUE` would need a test hook into a private counter to restate the comment.
 
 ### §5: the wasm stub (done)
 
@@ -193,7 +200,8 @@ What running `TeardownFadeRenderer` there would change:
   Negligible.
 - What else moves: a voice that stays in `active` longer keeps renewing its orbit lease, so for those blocks it can
   stay the orbit's owner (the zombie guardrail in `audio/MEMORY.md`: when a voice leaves `active` decides who owns the
-  orbit's bus settings). On an orbit shared with other voices the mix can change; on a hat's own orbit it does not.
+  orbit's bus settings). On an orbit shared with other voices the mix can change; on a hat's own orbit it does not. (Superseded by
+  lifecycle step 5: a fading voice never owns its orbit, the newest sounding voice does.)
 - The release phase the TODO also names is not the answer: a voice's own release can be long (an open hat's sample
   tail), which defeats the choke.
 

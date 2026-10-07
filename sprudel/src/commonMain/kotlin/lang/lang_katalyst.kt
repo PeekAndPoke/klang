@@ -206,14 +206,15 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  * ```
  *
  * **It is a mix knob, not an articulation**, and for the ordinary reason every `katp` value is:
- * the fader follows the orbit's lease, so the first voice that sounds there owns it and a new
- * value lands once the previous owner has lapsed. Set it and leave it. For something that moves
+ * the fader follows the orbit's owner: the orbit's bus settings are owned by the newest sounding
+ * voice, a voice gives the orbit up when its gate closes or it is cut, so a new value lands with
+ * the next note's onset. Set it and leave it. For something that moves
  * per note, reach for `gain` (the level a voice leaves at) or `pregain` (how hard it is played in).
  *
  * **Patterning it through exactly 0 keeps the orbit running**: an orbit never deactivates while a
  * voice plays on it, so the fader waits at zero and glides back up from there. It is still not a
- * per-note mute: the way back up starts when the lease hands the fader its new value, which is
- * after the muted notes' owner has lapsed and can fall mid-note. Mute a note with `gain` on the
+ * per-note mute: the way back up starts when the next owner hands the fader its new value, which
+ * can fall mid-note of an older voice still ringing. Mute a note with `gain` on the
  * pattern instead.
  *
  * **Which chain hears this map.** THIS IS THE ONE HOME of that rule; every other mention of it is
@@ -244,8 +245,8 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  *
  *  - **No per-note snapshot.** The value is orbit state: the chain re-reads it when the owner's map
  *    changes, so a chord writes it once, not once per note.
- *  - **Only the OWNER is heard.** The first voice to sound owns the orbit; a second pattern on the
- *    same orbit writes into nothing. Give it its own orbit.
+ *  - **Only the OWNER is heard.** The newest sounding voice owns the orbit; an older pattern's note on
+ *    the same orbit writes into nothing while a newer one sounds. Give it its own orbit.
  *  - **Only a SLOT moves.** A knob the chain wrote as a number (`k.reverb(size = 4)`) is
  *    fixed; write `Katalyst.param` where the chain should listen.
  *

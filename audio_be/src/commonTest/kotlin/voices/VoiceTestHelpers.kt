@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.adsr
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
+import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
@@ -84,18 +85,19 @@ object VoiceTestHelpers {
         // Silence culling window in seconds (null = engine default, negative = never)
         cull: Double? = null,
 
-        // The orbit chain's param state this voice carries while it owns the orbit's lease.
+        // The orbit chain's param state this voice carries while it owns the orbit.
         katalystParams: Map<String, Double>? = null,
+
+        // Stages after the tree, as the factory's `treeStages` (e.g. the teardown fade).
+        treeStages: List<BlockRenderer> = emptyList(),
     ): Voice {
         // Voice-RELATIVE duration — Int, mirrors VoiceFactory. (Absolute frames are Double.)
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-        val releaseFrames = (endFrame - gateEndFrame).toInt()
 
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
-            releaseFrames = releaseFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 
@@ -129,27 +131,18 @@ object VoiceTestHelpers {
             signal = instrument,
             signalCtx = signalCtx,
             freqHz = freqHz,
-            startFrame = startFrame,
-        )
+        ) + treeStages
 
         val blockCtx = BlockContext(
             audioBuffer = AudioBuffer(blockFrames), // placeholder, updated per block
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
-            freqHz = freqHz,
-            signal = instrument,
-            signalCtx = signalCtx,
+            limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
         return Voice(
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
             cylinderId = cylinderId,
             gain = gain,
             pan = pan,

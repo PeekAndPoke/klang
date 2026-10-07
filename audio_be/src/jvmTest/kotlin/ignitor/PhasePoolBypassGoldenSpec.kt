@@ -76,7 +76,6 @@ class PhasePoolBypassGoldenSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
-            releaseFrames = blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         var weighted = 0.0

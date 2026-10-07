@@ -41,6 +41,21 @@ even when they are valuable.
 | ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
 | ~~9a~~ | ~~Master limiter surge after deep limiting~~ | [`20260929-bugfix-master-limiter-surge.md`](../tasks-archive/2026-09/20260929-bugfix-master-limiter-surge.md) | ✅ **CLOSED 2026-09-29, measured, not audible**: the limiter dips under every snare hit, but the maintainer heard no surge after it |
 
+## The engine order from here (maintainer, 2026-10-07)
+
+"Quite beefy work on the engine, but worth it": revisiting the engine surfaces subtle bugs (the 16-bit browser
+output was one), so each pass is also quality control. The backend should end up as tidy as it can be, for a later
+port to Zig.
+
+1. ~~The voice lifecycle state machine~~ **done 2026-10-07 (v0.5.5)**: [`20261007-voice-lifecycle-state-machine.md`](../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md); then [`code-style-named-args-pass.md`](code-style-named-args-pass.md).
+2. The pitch pipeline into the tree: [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md).
+3. The Katalyst DSL leftovers and the engine tidy-up: [`engine-tidy-up.md`](engine-tidy-up.md) (audit 2026-10-07; the
+   effect state machines verified done, kept flags respected). Its one bug, an empty `variants()` crashing the audio
+   thread, goes right after lifecycle step 5.
+4. Takeover / voice stealing and the cut-group semantics: [`future/cut-group-semantics.md`](future/cut-group-semantics.md)
+   decided first, then [`voice-takeover.md`](voice-takeover.md) Phase 1.
+5. Pitch takeover (`glide`): [`voice-takeover.md`](voice-takeover.md) Phase 2.
+
 ## Layer 2: widen and harden the interface (7 open, 2 of them parked: 1 blocked on a design decision, 2 maintainer calls; the rest done or closed; reviewed 2026-09-29)
 
 | # | Task | Source | Why V1 |
@@ -66,6 +81,7 @@ even when they are valuable.
 | — | The tremolo becomes a composition of the oscillators | [`tremolo-as-composition.md`](../tasks-archive/2026-10/20261002-tremolo-as-composition.md) | **DONE 2026-10-02** (built 2026-09-29, start points accepted by ear 2026-10-02). Removes `TremoloIgnitor` and its own LFO; the doors stay, `skew` and `phase` go; square, sawtooth and ramp lose their clicks (16 ms edges) |
 | — | Rename the Ignitor's script object and setter to its own words | [`../plans/signal-flow-redesign.md`](../plans/signal-flow-redesign.md) §11 | **Added 2026-09-28.** A shape change (every instrument a tutorial teaches spells them), held back "until the slot vocabulary has settled", which it has since phase 3. **DONE 2026-10-04**: the maintainer kept the engine words with a short form each (`Ignitor` / `Ign`, `Katalyst` / `Kat`, `ignitorParam` / `ignp`, `katalystParam` / `katp`), [`../plans/ignitor-katalyst-naming.md`](../plans/ignitor-katalyst-naming.md) |
 | ~~—~~ | ~~Stereo reverb: every room reaches both ears~~ | [`20260930-stereo-reverb.md`](../tasks-archive/2026-09/20260930-stereo-reverb.md) | ✅ **DONE 2026-09-30.** The reverb was two mono reverbs side by side; now each side's combs are fed `(L + R) / 2`, one room (`CROSS_FEED` 0.5, by ear). Equal-sided input unchanged bit for bit. Follow-ups: [`future/reverb-models.md`](future/reverb-models.md), [`20260930-kokon-one-room.md`](../tasks-archive/2026-09/20260930-kokon-one-room.md) (done) |
+| — | **The pitch pipeline moves into the Ignitor tree** | [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md) | **Added 2026-10-07, HIGH priority (maintainer).** Sprudel's `vib`, `accelerate`, `penv` and `fm` still run as a fixed pitch strip on the `Voice` (`Voice.Vibrato` and friends, their own wire fields), the last stage outside the tree. Shape: the pitch doors become `classic()` slots and the wire fields go; sound: the vibrato `range` knob and the composed pitch nodes, with a listening pair wherever not bit-identical. Toward the fully configurable signal path. Next after `voice-lifecycle-state-machine.md` step 5 |
 
 **Applied as a gate, not as its own item:** [`dsl-kotlin-surface-parity.md`](dsl-kotlin-surface-parity.md).
 Every surface addition above lands on **both doors** (script stdlib + Kotlin extensions) in the same

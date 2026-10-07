@@ -349,8 +349,9 @@ private fun applyCut(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * Assigns the sample to a cut group (choke group) by number.
  *
  * Samples in the same cut group cut each other off when a new sample in the group triggers.
- * This is useful for hi-hats: an open hi-hat stops when the closed hi-hat hits. Group `0`
- * means no choke.
+ * This is useful for hi-hats: an open hi-hat stops when the closed hi-hat hits. The choked
+ * sound fades out over 4 ms from the new sound's start instead of stopping dead, so the
+ * choke does not click. Group `0` means no choke.
  *
  * @param group Cut group number; 0 = no choke.
  * @return A pattern with the cut group assigned.

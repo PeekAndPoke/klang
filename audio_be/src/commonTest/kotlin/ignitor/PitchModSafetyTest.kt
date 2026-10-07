@@ -33,7 +33,6 @@ class PitchModSafetyTest : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = durationFrames,
         gateEndFrame = durationFrames,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
         updateOffsetAndLength(0, blockFrames)
@@ -234,7 +233,6 @@ class PitchModSafetyTest : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = frames * blocks,
             gateEndFrame = frames * blocks,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(frames),
         )
         val ignitor = dsl.buildExciter(freqHz = 220.0, sampleRate = sampleRate).ignitor

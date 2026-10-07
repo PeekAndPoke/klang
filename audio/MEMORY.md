@@ -22,16 +22,34 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   bandpass, notch, lowpass, tremolo, adsr. Its knobs are `<door>.<param>` slots the pattern fills through
   `VoiceData.ignitorParams`; a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
 - **The pitch stage stays outside the tree**: vibrato, accelerate, pitch envelope and FM in `voices/strip/pitch/`
-  (moving in is `docs/tasks/future/pitch-pipeline-into-the-tree.md`).
+  (moving in is `docs/tasks/pitch-pipeline-into-the-tree.md`).
 - **Voice lifetime** = gate end plus the tree's own release tail (`VoiceFactory.treeLifetime`, floored at 0;
   `VOICE_ADSR_RELEASE_SEC` when the tree has no static answer). `TeardownFadeRenderer` runs unless the root is a
-  built amplitude envelope with a static release (`BuiltIgnitor.endsInEnvelope`). A silent release is culled and
-  stays a zombie until its end. All three: `audio/ref/voice-synthesis.md`.
+  built amplitude envelope with a static release (`BuiltIgnitor.endsInEnvelope`). A silent release is culled: the
+  voice ends at once (no zombie since lifecycle step 5). All three: `audio/ref/voice-synthesis.md`.
+- **Voice lifecycle** = the state machine `Voice.State` (Pending, Sounding, Releasing, Fading, Done; Fading and
+  Done terminal), advanced per block in `Voice.render`, which dispatches on it with an exhaustive `when` (the `Voice`
+  KDoc). A sealed type: the states without data are `data object`s, `Releasing` (the cull's silence count) and
+  `Fading` (the cut's fade window) are classes, one instance each created with the voice; a transition is
+  `state = x.enter(...)`, so none allocates (the rule of `docs/plans/effect-state-machines.md` §1). The one list of
+  the transitions is the table in the `Voice` class KDoc. A culled voice
+  is Done at its cull block (`Voice.culled`, a latch for the scheduler's count). Onset, gate end and end live in ONE place,
+  `VoiceLimits` (the voice owns and writes it, `releaseGate` included; the stages read it via `BlockContext.limits`;
+  the ignite stage derives `IgniteContext.gateEndFrame` from it per block). Events from outside are `Voice` methods
+  that decide by the state: the note-off (`releaseGate`, applies to Pending and Sounding) and the hard kill
+  (`kill`, Done from any state), and the cut (`cutOff`: a sounding voice turns Fading, a 4 ms linear ramp to exact
+  zero from the cutting voice's onset, before its send, `CUT_FADE_SECONDS`, its window held by `Fading`; a silent
+  one is Done at once). The
+  scheduler removes only Done voices, always keeping the list's order, by one allocation-free compaction pass,
+  `retainInOrder` (`removeDoneVoices` between blocks, and the render loop).
+  Plan and steps: `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md` (steps 1 to 5b done).
 - **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `SendRenderer`); a frontend's
   `velocity` is multiplied into `gain` before the wire. The orbit is the routing.
 - **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
-  reverb, phaser, compressor, gain; duck in a cross-orbit pass), knobs from the lease holder's
-  `VoiceData.katalystParams`. Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
+  reverb, phaser, compressor, gain; duck in a cross-orbit pass), knobs from the owner's
+  `VoiceData.katalystParams`: the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the
+  orbit up when its gate closes or it is cut (lifecycle step 5: the block's newest offer, committed once per block
+  by `Cylinders.processAndMix`; an ownerless orbit keeps its last settings). Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
 - **Reverb**: one room for both ears: each side's combs are fed `(L + R) / 2` (`Reverb.CROSS_FEED` 0.5, by ear
   2026-09-30); an input with equal sides feeds what it did before, bit for bit. A Freeverb tail only: no pre-delay,
   no early reflections (`docs/tasks/future/reverb-models.md`).
@@ -121,8 +139,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   0; recompute them if `fastTanh` changes.
 - **The unity-`mul` fold drops a `safeOut`** only over a signal survivor; in a parameter position the clamp does
   work and the fold does not fire (`survivesUnityFold`). The Karplus family's raw `decay` is authored character.
-- **A culled voice is a zombie** (keeps its active-list slot and renews its orbit lease): any change to WHEN a
-  voice leaves `active` changes which voice owns an orbit, and so the mix.
+- **The active list's order still reaches the sound** through one path: unison phase-pool takes are drawn on a
+  voice's first rendered block, so a change to the removal order re-deals phases (`docs/tasks/engine-tidy-up.md`).
+  Ownership no longer depends on it (newest onset wins).
 - **Do not remove the past-cutoff in `VoiceScheduler.promoteScheduled`**: it stops `ReplaceVoices` from
   re-promoting voices that already played. `replaceVoices` dedups against active voices
   (`ScheduledVoice.isDuplicate`); the frontend's resync grace window is 0.2 s (`KlangPatternScheduler`).
@@ -162,8 +181,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 - **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
   `duck-orbit-switch-click.md`, and the owed rounds listed there.
-- **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md` (§2 worklet tests and §4 the cut-group fade
-  wait on the maintainer), `docs/tasks/svf-coefficient-cache-never-engages.md`,
+- **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
+  §4, the cut-group fade, done by lifecycle step 4), `docs/tasks/svf-coefficient-cache-never-engages.md`,
   `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (the sprudel strip's raw pitch amounts, two NaN signals),
   `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md` (two residues, both an author rule today: a shared modulator that reads
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
@@ -175,7 +194,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md`, `idea-master-saturation.md` (all in
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
-- **Voice and instruments, future**: `pitch-pipeline-into-the-tree.md`, `svf-resonator-class-collapse.md`,
+- **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
+- **Voice and instruments, future**: `svf-resonator-class-collapse.md`,
   `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
 - **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
@@ -189,6 +209,20 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 The voice's states are a sealed type; the fade window lives in `Fading`, the silence count in
+  `Releasing` (lifecycle step 5b, no sound change by design; the 18-song corpus bit-identical to step 5,
+  coordinator, 2026-10-07): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+- 2026-10-07 The newest Sounding voice owns its orbit's bus settings, gives them up at its gate or cut; the zombie
+  is retired and every removal keeps the list's order (lifecycle step 5, maintainer, a sound change):
+  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+- 2026-10-07 A cut fades its victim over 4 ms (`Fading`) instead of removing it (lifecycle step 4; no shipped song
+  uses cut): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+- 2026-10-07 Note-off and hard kill are events on the voice; the scheduler removes only Done voices (lifecycle
+  step 3, no sound change by design): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+- 2026-10-07 One home for a voice's time limits, `VoiceLimits` (lifecycle step 2, no sound change by design):
+  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+- 2026-10-07 The voice's lifecycle is a state machine inside `Voice` (step 1, read-only, no sound change by design):
+  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
 - 2026-10-07 The engine's output is floating point: the master clips into a `StereoBuffer`, the browser hears the
   floats, the 16-bit step lives only at the JVM/WAV edge (`docs/tasks-archive/2026-10/20261007-float-output.md`)
 - 2026-10-07 One pitch mod over several pitched sources at one pitch advances once per block; Sakura's `shaku` and Irish Lament's

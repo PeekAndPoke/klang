@@ -50,7 +50,6 @@ class WaveshaperKnobsSpec : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = blockFrames * blocks,
         gateEndFrame = blockFrames * blocks,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = rng,
     ).apply {

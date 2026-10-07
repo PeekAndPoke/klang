@@ -24,7 +24,7 @@ class ShimmerSchedulerSpec : StringSpec({
 
     fun ctx() = IgniteContext(
         sampleRate = sampleRate, voiceDurationFrames = 200_000, gateEndFrame = 200_000,
-        releaseFrames = 0,  scratchBuffers = ScratchBuffers(blockFrames),
+        scratchBuffers = ScratchBuffers(blockFrames),
     )
 
     class TestTone : Ignitor {

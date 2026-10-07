@@ -9,8 +9,10 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
@@ -68,7 +70,6 @@ class SampleInstrumentSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = size,
             gateEndFrame = size,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(1),
         )
@@ -126,7 +127,7 @@ class SampleInstrumentSpec : StringSpec({
             ctx.blockStart = (block * blockFrames).toDouble()
             voice.render(ctx)
 
-            val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, 0.0)
+            val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
             cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
@@ -242,8 +243,10 @@ class SampleInstrumentSpec : StringSpec({
         val (plain, _) = render(base.copy(sound = "probe"), sampleRate, pcm, doors = long)
         val (tremolo, _) = render(base.copy(sound = "probe", ignitorParams = mapOf(depthSlot to 0.8)), sampleRate, pcm, doors = long)
 
+        // The tremolo voice's STATE, not only "not culled": a render that ran past its end would also read "not
+        // culled", for the wrong reason. Releasing pins that it is still in its release here.
         withClue("engaged: the silent release culls a voice without the tremolo") { plain.culled shouldBe true }
-        withClue("the tree's tremolo marks the voice never-cull") { tremolo.culled shouldBe false }
+        withClue("the tree's tremolo marks the voice never-cull") { tremolo.state.shouldBeInstanceOf<Voice.State.Releasing>() }
     }
 
     "a non-finite envelope slot reads as unset: the sample's meta envelope fills it" {

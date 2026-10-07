@@ -26,7 +26,7 @@ class SuperPluckParamReadSpec : StringSpec({
 
     fun ctx() = IgniteContext(
         sampleRate = sampleRate, voiceDurationFrames = 4096, gateEndFrame = 4096,
-        releaseFrames = 0,  scratchBuffers = ScratchBuffers(blockFrames),
+        scratchBuffers = ScratchBuffers(blockFrames),
     )
 
     fun render(ig: Ignitor, c: IgniteContext, pos: Int, len: Int): DoubleArray {

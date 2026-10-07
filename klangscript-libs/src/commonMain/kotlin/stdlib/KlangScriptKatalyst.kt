@@ -100,7 +100,7 @@ object KlangScriptKatalyst {
      * Creates a named **chain slot** with a default value: the knob a pattern can then move with
      * `.katp("<name>", value)`, or with `.katp(slot, value)` when the slot is held in a variable.
      *
-     * A slot is read per block from the voice that holds the orbit's lease, so it is orbit state and
+     * A slot is read per block from the orbit's owner, the newest note that is still held on it (its gate open; a release tail does not own), so it is orbit state and
      * not a per-note snapshot. When nothing has written the name, the knob is [default]. Write a
      * plain number instead of a slot where the chain should stay fixed.
      *

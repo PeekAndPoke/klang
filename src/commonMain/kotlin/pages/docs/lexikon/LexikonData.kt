@@ -759,10 +759,11 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
                 "chain of effects: body, vowel, delay, reverb, phaser, compressor, the orbit's own " +
                 "fader, and ducking last. " +
                 "There is exactly ONE of each per orbit, which is why they are cheap and why they are " +
-                "shared. The settings belong to the FIRST voice that sounds on the orbit while it lives " +
-                "(first-writer-wins): a second voice asking for a different reverb size is simply ignored, " +
-                "it is not averaged and it does not take over. If you want different bus settings, that " +
-                "is what a second orbit is for. This is the opposite of a per-voice setting, and it is " +
+                "shared. The newest note that is still held sets the orbit's effects, and a note gives " +
+                "the orbit up when it is released or cut. So two patterns that ask one orbit for different " +
+                "reverb sizes take turns, note by note: the settings are never averaged, and an older " +
+                "note's release rings on in whatever the newer note asked for. If you want different bus " +
+                "settings, that is what a second orbit is for. This is the opposite of a per-voice setting, and it is " +
                 "the single most common surprise when a pattern sounds wetter or more compressed than " +
                 "it was written to be.",
         conventional = "Bus, group, aux channel, DAW insert chain",

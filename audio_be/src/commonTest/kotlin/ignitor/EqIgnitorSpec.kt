@@ -47,7 +47,6 @@ class EqIgnitorSpec : StringSpec({
         sampleRate = sr,
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
         updateOffsetAndLength(0, blockFrames)
@@ -201,7 +200,6 @@ class EqIgnitorSpec : StringSpec({
             sampleRate = sr,
             voiceDurationFrames = blockFrames * 16,
             gateEndFrame = blockFrames * 16,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
             random = r,
         ).apply {
@@ -329,7 +327,6 @@ class EqIgnitorSpec : StringSpec({
                 sampleRate = 48000,
                 voiceDurationFrames = blockFrames * 16,
                 gateEndFrame = blockFrames * 16,
-                releaseFrames = 0,
                 scratchBuffers = ScratchBuffers(blockFrames),
             ).apply {
                 updateOffsetAndLength(0, blockFrames)

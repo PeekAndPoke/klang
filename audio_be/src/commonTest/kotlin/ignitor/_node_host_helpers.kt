@@ -30,7 +30,6 @@ fun renderNodeWindows(node: Ignitor, lengths: List<Int>, sampleRate: Int): Doubl
         sampleRate = sampleRate,
         voiceDurationFrames = total,
         gateEndFrame = total,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(widest),
     )
     val out = DoubleArray(total)

@@ -37,7 +37,6 @@ class SharedModulatorRateSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(7),
         )
@@ -169,7 +168,6 @@ class SharedModulatorRateSpec : StringSpec({
                 sampleRate = sampleRate,
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
-                releaseFrames = 0,
                 scratchBuffers = ScratchBuffers(blockFrames),
                 random = Random(7),
             )

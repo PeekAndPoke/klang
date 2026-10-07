@@ -51,7 +51,7 @@ class FilterEnvelopeCurvesSpec : StringSpec({
 
     fun ctx(rng: Random) = IgniteContext(
         sampleRate = sr, voiceDurationFrames = blockFrames * blocks / 2, gateEndFrame = blockFrames * blocks / 2,
-        releaseFrames = blockFrames, scratchBuffers = ScratchBuffers(blockFrames), random = rng,
+        scratchBuffers = ScratchBuffers(blockFrames), random = rng,
     ).apply {
         updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0

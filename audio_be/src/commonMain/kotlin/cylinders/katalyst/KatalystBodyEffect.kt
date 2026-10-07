@@ -25,8 +25,8 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
  * around the wet-only [ResonatorBank], so the dry/wet blend is intact. It is **mono**, so we keep
  * one instance per stereo channel (independent SVF state).
  *
- * Ownership: `Cylinder.updateFromVoice` only calls [configure] for the voice that OWNS the orbit's body
- * (via [VoiceLease], first-writer-wins while alive). Because only the owner configures, `null` (the owner
+ * Ownership: `Cylinder.commitOwner` only calls [configure] for the voice that OWNS the orbit (the
+ * rule's home is `Cylinder.offer`). Because only the owner configures, `null` (the owner
  * has no body) authoritatively turns the resonator OFF: it is NOT a no-op.
  *
  * **Every edge fades** (Katalyst step 5c-6, decided with the maintainer 2026-09-19): off fades the

@@ -16,9 +16,9 @@ package io.peekandpoke.klang.script.annotations
  * - each orbit owns ONE shared bus, Body to Vowel to Delay to Reverb to Phaser to Compressor,
  *   processing the orbit's summed mix, plus ducking after all orbits (`Cylinder.kt`); the delay and
  *   the reverb are fed from that mix too, by one amount per orbit (Katalyst step 5b-2);
- * - that bus is configured by ONE voice, the first to sound while it lives ("first-writer-wins",
- *   `Cylinder.kt`): a second voice asking for different bus settings is simply ignored, and the
- *   answer is to route it to its own orbit.
+ * - that bus is configured by ONE voice at a time (`Cylinder.kt`): the orbit's bus settings are owned
+ *   by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut. A
+ *   voice that wants its own bus settings belongs on its own orbit.
  *
  * Set it with `@scope voice|orbit|master` in the KDoc of the primary declaration.
  *
@@ -32,7 +32,8 @@ enum class KlangScope(val tag: String, val label: String) {
     VOICE("voice", "PER VOICE"),
 
     /**
-     * One shared processor per orbit, configured by the orbit's owning voice (first-writer-wins).
+     * One shared processor per orbit, configured by the orbit's owning voice: the orbit's bus settings are
+     * owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut.
      * Every voice on the orbit is processed by it whether it asked for it or not.
      */
     ORBIT("orbit", "ORBIT BUS"),

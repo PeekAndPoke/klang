@@ -48,7 +48,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
     }
 
     fun ctx(random: Random): IgniteContext = IgniteContext(
-        sampleRate = sr, voiceDurationFrames = blockFrames * 16, gateEndFrame = blockFrames * 16, releaseFrames = 0,
+        sampleRate = sr, voiceDurationFrames = blockFrames * 16, gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames), random = random,
     )
 

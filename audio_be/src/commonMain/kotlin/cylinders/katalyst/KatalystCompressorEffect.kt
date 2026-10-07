@@ -416,7 +416,7 @@ class KatalystCompressorEffect(
 
     /**
      * Applies the orbit owner's compressor settings, null for none. Called by the chain's writer on
-     * every block the lease is held (`KatalystChain.applyParams`), so an unchanged owner must cost
+     * every block the orbit has an owner (`KatalystChain.applyParams`), so an unchanged owner must cost
      * nothing: the knobs are written only when the settings object changes (see [applied]).
      */
     fun configure(settings: Voice.Compressor?) {

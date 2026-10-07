@@ -187,7 +187,7 @@ Ignitor.register("supersaw", Ignitor.supersaw().classic())
   writes the frequency modulation buffer as today and is untouched by this plan, **so its wire
   fields STAY** (`vibrato`, `vibratoMod`, `accelerate`, `pAttack` to `pSustain` (`pAnchor` renamed in step 5b c1), `fmh` to `fmEnv`):
   section 4's minimum gains a pitch row for phase 3, and moving that pipeline into the tree is its
-  own later item (`../tasks/future/pitch-pipeline-into-the-tree.md`). Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
+  own later item (`../tasks/pitch-pipeline-into-the-tree.md`). Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
   `BlockContext.freqModBuffer`, the ignitor reads it as `phaseMod`, and the tree's own pitch mods
   compose with it on every Der Schmetterling voice today.
 - **The order `classic()` must have** is today's strip order with the canonical filter sub-order of
@@ -442,8 +442,8 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   switch, the effect state machines), where the gain stage gets its states anyway.
   **DECIDED 2026-09-19 with the maintainer: an orbit never deactivates while a voice plays on it.**
   `Cylinder.tryDeactivate` already refuses while the chain has a tail or a swap runs; it also
-  refuses while the orbit's `VoiceLease` is held (every voice sounding on the orbit checks in each
-  block). A muted orbit with notes keeps running with the fader at 0, and the fader glides back up
+  refuses while a voice checks in on the orbit (every voice rendering on it does, each block; since
+  voice lifecycle step 5 that is `Cylinder.checkIn`, separate from ownership). A muted orbit with notes keeps running with the fader at 0, and the fader glides back up
   from where it stands. Judging liveness before the fader was rejected (in a user chain the gain
   stage can sit anywhere). BUILT in Katalyst 5c-8 (2026-09-19): `VoiceLease.isHeld` (the one
   liveness rule, `claim` uses it) and `tryDeactivate(blockStart)` refusing while held; an orbit

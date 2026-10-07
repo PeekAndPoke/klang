@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  * a voice that names none clears it at once or glides it out on a sounding orbit.
  *
  * What the slots resolve to is `KatalystSlotResolverSpec`'s, the host wiring of all five knobs is
- * `OrbitBusPipelineSpec`'s one updateFromVoice row, who may write them (the lease) is
+ * `OrbitBusPipelineSpec`'s one owner row, who may write them (the owner) is
  * `CylinderKatalystParamsSpec`'s, and the reused instance with its envelope is
  * `KatalystCompressorEffectSpec`'s knob rows (a bare-compressor oracle run across the change).
  */
@@ -48,18 +48,18 @@ class OrbitCompressorSpec : StringSpec({
 
         cylinder.compressor!!.compressor shouldBe null
 
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
+        cylinder.offerAndCommit(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
 
         cylinder.compressor!!.compressor shouldBe null
     }
 
     "when a non-compressor voice takes over the orbit before anything sounded, the compressor is cleared at once" {
         val cylinder = createOrbit()
-        cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0.0)
+        cylinder.offerAndCommit(voiceWithCompressor(), blockStart = 0.0)
         cylinder.compressor!!.compressor shouldNotBe null
 
         // Compressor owner ends; a plain voice (no compressor) becomes the owner → compressor cleared.
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 2.0 * blockFrames)
+        cylinder.offerAndCommit(VoiceTestHelpers.createSynthVoice(), blockStart = 2.0 * blockFrames)
         cylinder.compressor!!.compressor shouldBe null
     }
 
@@ -71,7 +71,7 @@ class OrbitCompressorSpec : StringSpec({
         val fadeBlocks = (sampleRate * KNOB_GLIDE_SECONDS / blockFrames).toInt() + 1
 
         fun block(b: Int, voice: Voice) {
-            cylinder.updateFromVoice(voice, blockStart = b * blockFrames.toDouble())
+            cylinder.offerAndCommit(voice, blockStart = b * blockFrames.toDouble())
             cylinder.mixBuffer.left.fill(0.5)
             cylinder.mixBuffer.right.fill(0.5)
             cylinder.processEffects()
@@ -81,11 +81,9 @@ class OrbitCompressorSpec : StringSpec({
         block(1, compressing)
         val instance = cylinder.compressor!!.compressor.shouldNotBeNull()
 
-        // The owner lapses; the plain voice claims the lease on block 3 (the one-block grace).
-        block(2, plain)
-        cylinder.compressor!!.compressor shouldBeSameInstanceAs instance
-
-        for (b in 3 until 3 + fadeBlocks - 1) {
+        // The owner stops offering (its gate closed); the plain voice owns from block 2 (lifecycle step 5: the
+        // block's newest offer, no grace).
+        for (b in 2 until 2 + fadeBlocks - 1) {
             block(b, plain)
 
             withClue("block $b: still gliding out, the instance is kept") {
@@ -93,7 +91,7 @@ class OrbitCompressorSpec : StringSpec({
             }
         }
 
-        block(3 + fadeBlocks - 1, plain)
+        block(2 + fadeBlocks - 1, plain)
 
         withClue("the gain reduction has landed on 0 dB: the stage is off") {
             cylinder.compressor!!.compressor shouldBe null

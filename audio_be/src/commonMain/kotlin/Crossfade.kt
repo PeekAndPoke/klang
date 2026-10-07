@@ -106,7 +106,7 @@ internal class Crossfade(sampleRate: Int) {
     /**
      * True while the ramp has not moved yet: the block the swap was decided in, where the two
      * chains still stand at their starting weights and a host may still change what it hands them
-     * without a step (`Cylinder.updateFromVoice`'s late duck takeover).
+     * without a step (`Cylinder.commitOwner`'s late duck takeover).
      */
     val isAtStart: Boolean get() = pos == 0
 

@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.master.MasterBus
+import io.peekandpoke.klang.audio_be.utils.retainInOrder
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -181,12 +182,6 @@ class VoiceScheduler(
         scratchBuffers = scratchBuffers,
     )
 
-    fun clear() {
-        scheduled.clear()
-        active.clear()
-        playbackContexts.clear()
-    }
-
     fun addSample(msg: KlangCommLink.Cmd.Sample) = context.sampleStore.addSample(msg)
 
     fun getCompleteSample(req: SampleRequest): SampleStore.SampleEntry.Complete? =
@@ -194,20 +189,20 @@ class VoiceScheduler(
 
     fun getActiveVoiceCount(): Int = active.size
 
-    // Voices whose release stayed silent through the cull window (Voice.culled): zombies that
-    // stay in [active] until their scheduled end but render nothing.
+    // Voices whose release stayed silent through the cull window (Voice.culled): they end at that
+    // block, long before their scheduled end, and leave [active] like any finished voice.
     private var culledVoices: Int = 0
 
     /**
-     * Voices culled since this scheduler was created, counted at the moment they turned into
-     * zombies. Read by the song benchmark (its `culled` column); not yet on the diagnostics feed,
+     * Voices culled since this scheduler was created, counted at the block the cull ended them.
+     * Read by the song benchmark (its `culled` column); not yet on the diagnostics feed,
      * which reports dropped voices only.
      */
     fun culledVoicesTotal(): Int = culledVoices
 
     /**
-     * The voice data of the timeline voices that still render (zombies excluded), one
-     * entry per voice. A diagnostic for the song benchmark's work columns: it allocates, so it is
+     * The voice data of the active timeline voices, in list order, one entry per voice (every listed
+     * voice renders: a culled voice has left the list). A diagnostic for the song benchmark's work columns: it allocates, so it is
      * never called on the render path. A live (non-timeline) voice has no scheduled data and is
      * left out.
      */
@@ -215,29 +210,14 @@ class VoiceScheduler(
         val out = ArrayList<VoiceData>(active.size)
 
         for (activeVoice in active) {
-            if (!activeVoice.voice.culled) {
-                val origin = activeVoice.origin
+            val origin = activeVoice.origin
 
-                if (origin is VoiceOrigin.Timeline) {
-                    out.add(origin.source.data)
-                }
+            if (origin is VoiceOrigin.Timeline) {
+                out.add(origin.source.data)
             }
         }
 
         return out
-    }
-
-    /** Active voices that still render: [getActiveVoiceCount] minus the zombies. */
-    fun renderingVoiceCount(): Int {
-        var count = 0
-
-        for (activeVoice in active) {
-            if (!activeVoice.voice.culled) {
-                count++
-            }
-        }
-
-        return count
     }
 
     /**
@@ -284,7 +264,27 @@ class VoiceScheduler(
      */
     fun cleanupHard(playbackId: String) {
         cleanup(playbackId)
-        active.removeAll { it.playbackId == playbackId }
+
+        // The hard kill is an event on the voice; the removal takes only what is Done.
+        for (activeVoice in active) {
+            if (activeVoice.playbackId == playbackId) {
+                activeVoice.voice.kill()
+            }
+        }
+
+        removeDoneVoices()
+    }
+
+    /**
+     * Removes the `Done` voices between blocks. The scheduler removes only `Done` voices, and always keeping the
+     * survivors' order (one law, lifecycle step 5): here, for voices sent to `Done` between blocks (a hard kill,
+     * [Voice.kill], must leave at once because the engine is disposed right after [cleanupHard]; a voice a cut
+     * finds `Pending`), and in the render loop of [process], for a voice that ends while it renders. Both use
+     * [retainInOrder], one pass and no allocation. The list therefore stays in activation order. Between blocks
+     * no other voice is `Done`.
+     */
+    private fun removeDoneVoices() {
+        active.retainInOrder { it.voice.state !is Voice.State.Done }
     }
 
     fun clearScheduled(playbackId: String) {
@@ -471,35 +471,26 @@ class VoiceScheduler(
         val blockDurationSec = context.blockFrames.toDouble() / context.sampleRateDouble
         val currentBackgroundGain = soloMuteRamp.step(targetGain, blockDurationSec)
 
-        // 3. Render Loop
-        var i = 0
-
-        while (i < active.size) {
-            val activeVoice = active[i]
-
+        // 3. Render Loop. A voice that ends here (render returns false: `Done`) leaves the list in the same pass
+        // ([retainInOrder], as [removeDoneVoices]): the survivors keep their order.
+        active.retainInOrder { activeVoice ->
             val isFromSoloSource = activeVoice.sourceId != null && activeVoice.sourceId in soloSourceIds
+
             if (isFromSoloSource) {
                 activeVoice.voice.setGainMultiplier(1.0)
             } else {
                 activeVoice.voice.setGainMultiplier(currentBackgroundGain)
             }
 
-            val wasCulled = activeVoice.voice.culled
             val isAlive = activeVoice.voice.render(ctx)
 
-            if (!wasCulled && activeVoice.voice.culled) {
+            if (!isAlive && activeVoice.voice.culled) {
                 culledVoices++
             }
 
-            if (isAlive) {
-                i++
-            } else {
-                if (i < active.size - 1) {
-                    active[i] = active.last()
-                }
-                active.removeLast()
-            }
+            isAlive
         }
+
         // Diagnostics emission lives on the dispatcher now (D5): it always runs renderBlock — even
         // with zero engines — so the gauges can report idle/zero, and it times the WHOLE block.
     }
@@ -604,7 +595,7 @@ class VoiceScheduler(
             // counted — observability, not a clamp. This replaces a 5-block tolerance window that
             // admitted such voices LATE: oscillator phase fresh, envelope already blocks in, neither
             // on time nor shifted, and two silent-note bugs reachable only in that state.
-            if (absoluteStartSec < nowSec) {
+            if (!(absoluteStartSec >= nowSec)) { // NaN-guard: a non-finite start is dropped like a late one
                 pCtx.droppedVoices++
                 continue
             }
@@ -628,17 +619,22 @@ class VoiceScheduler(
         origin: VoiceOrigin,
         pCtx: PlaybackCtx,
     ) {
-        // Handle Cut / Choke Groups before creating the new voice
+        // Cut / choke groups, before the new voice exists (so it never cuts itself): the scheduler decides WHO
+        // (every active voice of the group), the voice decides WHAT by its state (`Voice.cutOff`: a silent one is
+        // Done at once, a sounding one fades from the cutting voice's onset). The Done ones leave here,
+        // order-preserving (F3); a fading one leaves through the render loop once its fade has ended.
         val cut = absoluteVoice.data.cut
+
         if (cut != null) {
-            val iterator = active.iterator()
-            while (iterator.hasNext()) {
-                val activeVoice = iterator.next()
+            val fadeStartFrame = voiceFactory.onsetFrame(absoluteVoice, context.clock.startTimeSec)
+
+            for (activeVoice in active) {
                 if (activeVoice.voice.cut == cut) {
-                    // TODO: Use a fade out / release phase instead of hard cut?
-                    iterator.remove()
+                    activeVoice.voice.cutOff(fadeStartFrame)
                 }
             }
+
+            removeDoneVoices()
         }
 
         voiceFactory.makeVoice(

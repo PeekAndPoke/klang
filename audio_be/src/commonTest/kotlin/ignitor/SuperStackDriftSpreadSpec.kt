@@ -35,7 +35,6 @@ class SuperStackDriftSpreadSpec : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = sampleRate * 8,
         gateEndFrame = sampleRate * 8,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = rng,
     )

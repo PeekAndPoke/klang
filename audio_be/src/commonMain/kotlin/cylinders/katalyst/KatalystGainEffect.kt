@@ -56,7 +56,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  *     next life snaps, it does not glide from the old life's level".
  *  3. *Its Off precondition*: it has no Off and no tail ([hasTail] is a constant false, so a row on it
  *     would be vacuous). The one precondition that matters is the HOST's: `Cylinder.tryDeactivate`
- *     resets the chain only once no voice plays on the orbit (its lease has lapsed), so a reset never
+ *     resets the chain only once no voice plays on the orbit (no check-in holds it), so a reset never
  *     lands under a sounding note, and a fader at exactly 0 keeps its orbit alive. Row:
  *     `CylinderFaderThroughZeroSpec`.
  *  4. *Which state data are references*: none. The whole state is [KnobGlide]'s numbers and flag, so

@@ -23,7 +23,7 @@ import kotlin.math.sin
 
 /**
  * Contract for the orbit-level body resonator: inactive until configured; since only the OWNER voice
- * configures it (via VoiceLease), `null` (owner has no body) turns it off; and `reset()` deactivates it.
+ * configures it (`Cylinder.commitOwner`), `null` (owner has no body) turns it off; and `reset()` deactivates it.
  */
 class KatalystBodyEffectSpec : StringSpec({
 

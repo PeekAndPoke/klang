@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
@@ -132,7 +133,7 @@ object ClassicVoiceRig {
             ctx.blockStart = (block * blockFrames).toDouble()
             voice.render(ctx)
 
-            val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, 0.0)
+            val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
             cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
             cylinder.mixBuffer.left.fill(0.0)

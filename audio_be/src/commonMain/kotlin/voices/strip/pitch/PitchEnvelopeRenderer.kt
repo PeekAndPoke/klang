@@ -23,19 +23,20 @@ import io.peekandpoke.klang.audio_be.voices.strip.prepareControlRateEnvelope
  * render the same numbers on both hosts.
  *
  * Per sample, from the voice-relative frame `blockStart + offset - startFrame` (block-framing Class 1).
- * The gate is read from the [BlockContext] on every call, as the voice's FM envelope reads
- * it, so a realtime note-off moves the release. The first pitch stage of a block WRITES the frequency
+ * The onset and the gate are read from the voice's limits ([BlockContext.limits]) on every call, as the
+ * voice's FM envelope reads them, so a realtime note-off moves the release. The first pitch stage of a block WRITES the frequency
  * modulation buffer, a later one multiplies into it.
  */
 class PitchEnvelopeRenderer(
     private val pitchEnvelope: Voice.PitchEnvelope,
-    // Absolute backend frame, Double, see RenderClock.cursorFrame.
-    private val startFrame: Double,
 ) : BlockRenderer {
     private val core = EnvelopeCore()
 
     override fun render(ctx: BlockContext) {
-        core.prepareControlRateEnvelope(pitchEnvelope.envelope, startFrame, ctx.gateEndFrame)
+        // Absolute frames, Double, see RenderClock.cursorFrame.
+        val startFrame = ctx.limits.startFrame
+
+        core.prepareControlRateEnvelope(pitchEnvelope.envelope, startFrame, ctx.limits.gateEndFrame)
 
         // Voice-relative position of the block's first rendered frame, Int (no Long on Kotlin/JS).
         val firstPos = (ctx.blockStart + ctx.offset - startFrame).toInt()

@@ -39,7 +39,6 @@ class IgnitorDryFloorSpec : StringSpec({
         sampleRate = 48000,
         voiceDurationFrames = frames * 2,
         gateEndFrame = frames * 2,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
     )

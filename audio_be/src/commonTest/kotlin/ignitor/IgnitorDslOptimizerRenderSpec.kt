@@ -65,7 +65,6 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         sampleRate = sr,
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = random,
     ).apply {

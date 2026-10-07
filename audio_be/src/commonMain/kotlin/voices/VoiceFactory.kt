@@ -63,6 +63,18 @@ class VoiceFactory(
     }
 
     /**
+     * The onset frame a voice built from [scheduled] gets (absolute backend frame, floored), the one formula
+     * [makeVoice] and the scheduler's cut sweep share: the cut fades its victims from the cutting voice's onset,
+     * also when that voice cannot be built.
+     */
+    fun onsetFrame(scheduled: ScheduledVoice, backendStartTimeSec: Double): Double {
+        // Convert absolute time to backend-relative time, then to frames.
+        val relativeStartTime = scheduled.startTime - backendStartTimeSec
+
+        return kotlin.math.floor(relativeStartTime * sampleRate)
+    }
+
+    /**
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
      *
      * There is no "now" here: since block-framing B2 the scheduler drops any voice whose start is
@@ -80,13 +92,12 @@ class VoiceFactory(
         val data = scheduled.data
 
         // Convert absolute time to backend-relative time, then to frames
-        val relativeStartTime = scheduled.startTime - backendStartTimeSec
         val relativeGateEndTime = scheduled.gateEndTime - backendStartTimeSec
 
         // Absolute backend frames — Double (see RenderClock.cursorFrame). `.toInt()` here would
         // overflow after ~12.4 h of backend uptime, silently placing every new voice at a nonsense
         // frame. Durations derived below are relative and stay Int.
-        val startFrame = kotlin.math.floor(relativeStartTime * sampleRate)
+        val startFrame = onsetFrame(scheduled, backendStartTimeSec)
         val gateEndFrameFromTime = kotlin.math.floor(relativeGateEndTime * sampleRate)
 
         // Handle legato (clip) logic
@@ -402,13 +413,11 @@ class VoiceFactory(
         treeStages: List<BlockRenderer>,
     ): Voice {
         val endFrame = gateEndFrame + releaseSec * sampleRate
-        val releaseFrames = (releaseSec * sampleRate).toInt()
 
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
-            releaseFrames = releaseFrames,
             scratchBuffers = scratchBuffers,
             random = voiceRandom,
         )
@@ -426,7 +435,6 @@ class VoiceFactory(
             signal = signal,
             signalCtx = signalCtx,
             freqHz = freqHz,
-            startFrame = startFrame,
         ) + treeStages
 
         val blockCtx = BlockContext(
@@ -434,20 +442,13 @@ class VoiceFactory(
             freqModBuffer = freqModBuffer,
             scratchBuffers = scratchBuffers,
             sampleRate = sampleRate,
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
-            freqHz = freqHz,
-            signal = signal,
-            signalCtx = signalCtx,
+            // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.
+            limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
             cylinders = cylinders,
         )
 
         return Voice(
             cylinderId = cylinder,
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
             gain = gain,
             pan = data.pan ?: 0.5,
             // By reference, never a copy: the map is immutable on the wire and only the orbit's

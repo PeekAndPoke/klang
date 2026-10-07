@@ -29,7 +29,6 @@ class IgnitorOctaveShiftSpec : StringSpec({
         sampleRate = 44100,
         voiceDurationFrames = blockFrames * 4,
         gateEndFrame = blockFrames * 4,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
         updateOffsetAndLength(0, blockFrames)

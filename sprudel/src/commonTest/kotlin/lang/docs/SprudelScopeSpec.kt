@@ -23,7 +23,7 @@ import io.peekandpoke.klang.script.annotations.KlangScope
  * the popup and the library page actually render.
  *
  * The expectations come from the engine, not from a doc: a voice runs its own strip (`Voice.kt`),
- * each orbit owns ONE shared bus configured by its first sounding voice (`Cylinder.kt`), and `reverb`
+ * each orbit owns ONE shared bus whose settings are owned by the newest `Sounding` voice (`Cylinder.kt`), and `reverb`
  * and `delay` are the pair whose processor is the orbit's while the wet amount is per voice
  * (`SendRenderer.kt`).
  */

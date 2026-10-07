@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.PitchEnvelopeRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
@@ -106,7 +107,7 @@ class FastExp2Spec : StringSpec({
             releaseCurve = AdsrCurve.Linear,
         )
         val ctx = IgniteContext(
-            sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate, releaseFrames = 0,
+            sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val buf = AudioBuffer(blockFrames)
@@ -167,21 +168,13 @@ class FastExp2Spec : StringSpec({
             attackCurve = lin, decayCurve = lin, releaseCurve = lin,
         )
         val pEnv = Voice.PitchEnvelope(semitones = 9.0, envelope = env)
-        val renderer = PitchEnvelopeRenderer(pEnv, startFrame = 0.0)
+        val renderer = PitchEnvelopeRenderer(pEnv)
         val ctx = BlockContext(
             audioBuffer = AudioBuffer(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
-            startFrame = 0.0,
-            endFrame = 100_000.0,
-            gateEndFrame = 50_000.0,
-            freqHz = 440.0,
-            signal = Ignitors.silence(),
-            signalCtx = IgniteContext(
-                sampleRate = sampleRate, voiceDurationFrames = 50_000, gateEndFrame = 50_000, releaseFrames = 100,
-                scratchBuffers = ScratchBuffers(blockFrames),
-            ),
+            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = 50_000.0, endFrame = 100_000.0),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 

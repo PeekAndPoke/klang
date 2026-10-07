@@ -42,7 +42,6 @@ class AbsoluteFreqPitchModSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = blockFrames * (blocks + 2),
             gateEndFrame = blockFrames * (blocks + 2),
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
             random = rng,
         )

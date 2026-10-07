@@ -21,7 +21,7 @@ class OrbitCleanupTest : StringSpec({
     val blockFrames = 128
     val sampleRate = 44100
 
-    // A block long after every claim below: no voice plays any more, so the orbit lease has lapsed
+    // A block long after every claim below: no voice plays any more, so no check-in holds the orbit
     // and what each row tests (the silence gate, the tails, the clean slate) is all that decides.
     val afterLastVoice = 100.0 * blockFrames
 
@@ -35,7 +35,7 @@ class OrbitCleanupTest : StringSpec({
             startFrame = 0.0,
             endFrame = 1000.0
         )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
+        cylinder.offerAndCommit(voice, blockStart = 0.0)
     }
 
     "tryDeactivate() frees the orbit only when both channels stay within the silence floor at every sample" {
@@ -93,7 +93,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.isActive shouldBe false
     }
 
-    "cylinder reactivates when updateFromVoice is called" {
+    "cylinder reactivates when a voice offers and the owner is committed" {
         val cylinder = createTestOrbit()
         makeOrbitActive(cylinder)
 
@@ -102,7 +102,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.tryDeactivate(afterLastVoice)
         cylinder.isActive shouldBe false
 
-        // Reactivate by calling updateFromVoice
+        // Reactivate by an offer and a commit
         makeOrbitActive(cylinder)
 
         // Should be active again
@@ -118,7 +118,7 @@ class OrbitCleanupTest : StringSpec({
         // that wiring line unguarded.
         val cylinder = createTestOrbit()
 
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("delay.wet" to 1.0, "delay.time" to 0.02, "delay.feedback" to 0.4),
             ),
@@ -153,7 +153,7 @@ class OrbitCleanupTest : StringSpec({
         // had reverb immortal, leaking one PlaybackEngine per stop.
         val cylinder = createTestOrbit()
 
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 // lowpass set so the reset's `lowpass = null` line has something to clear —
                 // a fresh-default null would make that assert vacuous (review round 3).
@@ -191,7 +191,7 @@ class OrbitCleanupTest : StringSpec({
         // Owner A configures a self-oscillating delay; nothing is ever sent into it, so the ring
         // never holds anything: the orbit mix stays silent, so the line is fed nothing. The
         // `delay.wet` is WRITTEN, so the line runs, and the ring stays empty.)
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("delay.wet" to 1.0, "delay.time" to 0.5, "delay.feedback" to 1.2),
             ),
@@ -200,7 +200,7 @@ class OrbitCleanupTest : StringSpec({
 
         // A lapses; a no-delay owner takes over. The ring never held anything, so the off-config
         // lands in Off directly (the silent-window check outranks the |fb| >= 1 sentinel).
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(),
             blockStart = 2.0 * blockFrames,
         )
@@ -216,7 +216,7 @@ class OrbitCleanupTest : StringSpec({
     "the duck is in the lifecycle set: deactivation clears it" {
         val cylinder = createTestOrbit()
 
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("duck.orbit" to 3.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
             ),
@@ -238,7 +238,7 @@ class OrbitCleanupTest : StringSpec({
     "the duck is in the lifecycle set: retiring to the shelf clears it" {
         val cylinder = createTestOrbit()
 
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("duck.orbit" to 4.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
             ),

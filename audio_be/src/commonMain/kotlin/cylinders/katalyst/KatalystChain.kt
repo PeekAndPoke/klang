@@ -162,7 +162,7 @@ class KatalystChain internal constructor(
      * Apply EVERY stage of this chain from the orbit's param state ([params], the owner voice's
      * `katalystParams`). **Null is the no-owner door**: no state, so every slot resolves to what
      * the chain itself authored, which is what a chain entering service needs before any voice has
-     * claimed the orbit's lease, and what an orbit whose owner has died falls back to.
+     * owned the orbit, and what a chain arriving on an orbit without an owner resolves from.
      *
      * **This is the ONE way a bus knob reaches a stage** since step 5b-1, on a declared chain and
      * on the chain a cylinder is born with alike. The rule and its one home are the `katalystParam` door's
@@ -186,7 +186,7 @@ class KatalystChain internal constructor(
      * and the blocks in between cost exactly what step 3a's fixed writers cost: one virtual call
      * per stage, writing numbers that are already in hand. The values are re-WRITTEN every block
      * regardless, because that is what makes a writer idempotent after a [reset] the orbit reached
-     * while the same voice was still holding the lease.
+     * while the same voice still owned the orbit.
      *
      * A map is immutable by contract (`VoiceData.katalystParams`), so identity is a sound test for
      * "these are the same values"; a producer that mutated one in place would be breaking that
@@ -209,7 +209,7 @@ class KatalystChain internal constructor(
      * this chain something that depends on its slots before its writers may run.
      *
      * The callers are the two swap paths (`Cylinder.beginFade` and the late-duck correction in
-     * `Cylinder.updateFromVoice`), which ask [ducksWith] before a live envelope is handed over and
+     * `Cylinder.commitOwner`), which ask [ducksWith] before a live envelope is handed over and
      * must NOT write the stages first: the carried envelope is updated in place by the arriving
      * chain's own writer AFTER the handover (see [KatalystDuckEffect.configure] and
      * [KatalystDuckEffect.takeOver]).
@@ -261,7 +261,7 @@ class KatalystChain internal constructor(
 
     /**
      * Turn every stage off AND clear its internal state: the clean slate a cylinder reaches when
-     * its orbit deactivates (the lease is freed), so a reused orbit never replays a previous
+     * its orbit deactivates (the owner is forgotten), so a reused orbit never replays a previous
      * owner's tail.
      */
     fun reset() {

@@ -46,7 +46,6 @@ class PhasePoolDslSeamSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
-            releaseFrames = n,
             scratchBuffers = ScratchBuffers(n),
         ).apply { updateOffsetAndLength(0, n); voiceElapsedFrames = 0 }
         dsl.toExciter(phasePools = pools, orbit = orbit).generate(buffer, freqHz, ctx)

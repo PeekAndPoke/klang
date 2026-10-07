@@ -136,7 +136,7 @@ class KatalystPhaserEffect(
 
     /**
      * Applies the orbit owner's five phaser knobs. Called by the chain's writer on every block the
-     * lease is held, so an unchanged owner must cost nothing: every write here is either a store of
+     * orbit has an owner, so an unchanged owner must cost nothing: every write here is either a store of
      * the same number or a [KnobGlide.retarget] to the target that already stands.
      *
      * THE GATE lives here, and there is only one: [depth] BELOW [Phaser.MIN_ACTIVE_DEPTH] aims the

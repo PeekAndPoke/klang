@@ -106,13 +106,16 @@ class Cylinders(
      * 4. Round-robin cleanup check for silent cylinders
      *
      * [blockStart] is the block's start frame, the one this block's voices claimed their orbits
-     * with: the cleanup asks the orbit lease whether a voice still plays (see
+     * with: it commits each orbit's owner for it, and the cleanup asks the orbit whether a voice still checks in (see
      * [Cylinder.tryDeactivate]).
      */
     // blockStart is an ABSOLUTE backend frame, a Double (see RenderClock.cursorFrame).
     fun processAndMix(fusionMix: StereoBuffer, blockStart: Double) {
         // Step 1: Process katalyst pipeline on all cylinders
         for (cylinder in id2cylinder.values) {
+            // The block's owner, once, after every voice has rendered: the newest `Sounding` offer
+            // ([Cylinder.commitOwner]). Before the pending poll, which resolves an arriving chain from it.
+            cylinder.commitOwner()
             // A chain requested before its registration arrived lands here, on the first block
             // where the name resolves, and so does one that waited behind a running crossfade.
             // One field read per cylinder when nothing is queued, which is the normal case (see
@@ -170,16 +173,25 @@ class Cylinders(
     }
 
     /**
-     * Gets a cylinder.
-     *
-     * If the cylinder exists, it will be returned.
-     *
-     * When a new cylinder is created, it will be initialized with the given voice.
+     * A `Sounding` voice renders on orbit [id] this block and offers itself as its owner ([Cylinder.offer]): the
+     * orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate
+     * closes or it is cut. The cylinder is rented on first use.
      */
-    // blockStart is an ABSOLUTE backend frame — Double, see RenderClock.cursorFrame.
-    fun getOrInit(id: Int, voice: Voice, blockStart: Double): Cylinder {
+    // blockStart is an ABSOLUTE backend frame, Double, see RenderClock.cursorFrame.
+    fun offer(id: Int, voice: Voice, blockStart: Double): Cylinder {
         return cylinderFor(id).also {
-            it.updateFromVoice(voice, blockStart)
+            it.offer(voice, blockStart)
+        }
+    }
+
+    /**
+     * A voice renders on orbit [id] this block without offering itself (past its gate, or fading): it routes its
+     * audio and keeps the orbit in use ([Cylinder.checkIn]). The cylinder is rented on first use.
+     */
+    // blockStart is an ABSOLUTE backend frame, Double, see RenderClock.cursorFrame.
+    fun checkIn(id: Int, blockStart: Double): Cylinder {
+        return cylinderFor(id).also {
+            it.checkIn(blockStart)
         }
     }
 

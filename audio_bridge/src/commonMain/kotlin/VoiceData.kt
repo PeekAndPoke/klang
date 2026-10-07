@@ -44,7 +44,8 @@ data class VoiceData(
      * names them (`"reverb.size"`, `"compressor.ratio"`, `"duck.orbit"`). The [ignitorParams] shape, the
      * other host: `ignitorParams` is the voice's own instrument, this is the orbit's chain.
      *
-     * **Applied by the orbit's OWNER voice**, the one holding the cylinder's lease: a declared
+     * **Applied by the orbit's OWNER voice** (the orbit's bus settings are owned by the newest `Sounding` voice; a
+     * voice gives the orbit up when its gate closes or it is cut): a declared
      * chain's [IgnitorDsl.Param] knobs resolve to `katalystParams[name]` and fall back to the
      * slot's authored default when the map does not carry it. The chain RE-READS the map when its
      * instance changes, not every block; per block it only re-writes the numbers it already

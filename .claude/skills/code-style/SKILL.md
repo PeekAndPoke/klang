@@ -141,6 +141,13 @@ never nested under `io/peekandpoke/...` directories. Sub-packages get one flat d
 **Correct:** `_staff_pos_helpers.kt` (utility file alongside class files — `_` groups it at top)
 **Correct:** `math.kt`, `chain_rendering.kt` (utility-only folder — no `_` prefix needed)
 
+**One home for generic helpers, the same name in every module (maintainer, 2026-10-07).** A helper that knows
+nothing of its module's domain (list compaction, a NaN guard, a numeric law, a byte conversion) lives in the
+module's `utils/` directory, package `io.peekandpoke.klang.<module>.utils`, the name `audio_fe`, `tones` and the root
+module already use. Never `util`, `helpers` or `common` for this. A helper that belongs to one feature (the
+mini-notation editor's node helpers, a tutorial's page helpers) stays next to that feature as `_<feature>_helpers.kt`.
+Each `utils` helper has a spec of its exact behaviour; a hot-path helper taking a lambda is `inline`.
+
 ---
 
 ## No Duplication Rules
@@ -413,6 +420,20 @@ the "raw" half (no unasked safety clamps on AUDIO parameters) lives there too.
 Never `—` or `–` in docs, KDoc, UI strings, tutorials, commit messages or reports. Use commas,
 colons, parentheses or a new sentence. The A/B comment suffix convention is `, swap`.
 (Maintainer, 2026-08: the dash reads as an AI tell.)
+
+### 24. Name Arguments That Could Be Swapped
+
+At a call site, pass arguments by name whenever two or more of them could be swapped and still
+compile (two `Int` ids, several `Double` frames or seconds, two `Boolean` flags), or whenever a
+later refactoring that reorders the parameters would silently shift them. Positional is fine for
+a single argument or for arguments whose types cannot be confused.
+
+```kotlin
+cylinders.checkIn(orbit = voice.cylinderId, voiceId = voice.id, blockStart = ctx.blockStart) // not checkIn(7, 42, 1024.0)
+```
+
+(Maintainer, 2026-10-07, after a review found `Cylinders.checkIn(id: Int, voiceId: Int, ...)`
+whose two ids swap silently and whose order differed from `Cylinder.checkIn`.)
 
 ## Test Rules
 

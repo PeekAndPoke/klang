@@ -4,6 +4,27 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-07) Every voice knows where it is in life ... v0.5.5
+
+- a voice is a small state machine now: pending, sounding, releasing, fading, done ... one table in the Voice KDoc, every cell pinned by a test
+- its start, gate and end live in one place, written by one hand ... the "forgot one copy" bug class is gone
+- note-off and hard kill are events the voice decides, every voice ends in Done
+- a cut fades its victim over 4 ms instead of stopping it dead ... the click is gone, from every delay echo too, and the old cut landed up to 2.65 ms early
+- only a note that is still held owns its orbit's effects, the newest one wins ... a release tail no longer holds a new note's reverb hostage
+- the zombie is retired: a culled voice is simply done ... and the voice list keeps its start order, without allocating
+- Kirschbluete's noise and the Piper's clap, crash and stab got orbits of their own
+- found on the way: a solo makes the rests play a sine, and solo(1.0) never fully quiets the rest ... diagnosed, solo() becomes 0.95 and 1.0 means silence
+- the engine audited for a tidy future (and a Zig port some day) ... one crash found, an empty variants()
+
+### (2026-10-07) Little things that were wrong ... v0.5.4
+
+- one LFO shared by layers at different pitches ran twice as fast ... now it runs once per block
+- a vibrato over a stack of sounds ran once per layer ... Sakura and the flute retuned to what we heard
+- a NaN pitch amount no longer freezes the oscillator
+- true.toString() works, and hover shows what a name is where it stands
+- the browser played every sample through 16 bits for no reason ... floats all the way to the speakers now, 2.5x cheaper per block
+- the deploy names a build after itself, a dirty one says so
+
 ### (2026-10-06) A lighter bundle ... v0.5.3
 
 - the KSP registration slimmed for every library it runs on ... one call per door, no arity ladders any more

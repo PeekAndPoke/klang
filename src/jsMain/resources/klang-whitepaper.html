@@ -879,7 +879,7 @@
                 <span>Pre-Alpha</span>
                 <span>Kotlin Multiplatform</span>
                 <span>AGPL-3.0</span>
-                <span>Last modified: 2026-10-02</span>
+                <span>Last modified: 2026-10-07</span>
             </p>
 
             <h1>Klangmotor</h1>
@@ -1921,9 +1921,9 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
             </p>
 
             <p>
-                An orbit has one set of knob values, and they come from one voice at a time: the first voice sounding
-                on it. A second pattern that asks the same orbit for a different reverb is therefore ignored; give it
-                an orbit of its own.
+                An orbit has one set of knob values, and they come from one voice at a time: the newest note that is
+                still held on it (a release tail does not count). Two patterns that ask the same orbit for different reverbs therefore take turns,
+                note by note; give each of them an orbit of its own.
             </p>
 
             <p>
@@ -3134,7 +3134,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
         <p>
             <b>Klangmotor</b> · Copyright © 2025-2026 The Klangmotor Authors.<br/>
             Licensed under the GNU Affero General Public License v3. The <code>tones</code> module: MIT.<br/>
-            Built in Kotlin Multiplatform. Pre-alpha. Last modified 2026-10-02.<br/>
+            Built in Kotlin Multiplatform. Pre-alpha. Last modified 2026-10-07.<br/>
             Demo: <a href="https://klang.finzo.de">klang.finzo.de</a> ·
             Repo: <a href="https://github.com/PeekAndPoke/klang">github.com/PeekAndPoke/klang</a>
         </p>

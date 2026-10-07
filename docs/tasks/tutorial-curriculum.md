@@ -229,7 +229,8 @@ stages must not carry it.
   (recorded in the lesson's KDoc + docs/tasks-archive/2026-09/20260908-orbit-level-effect-docs.md): reverb processor is
   per-orbit but `reverb(wet)` is a per-voice SEND; a bare `reverb(wet)` plays in the default room (size 5, since
   2026-09-16; before that it was SILENT); orbit
-  bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
+  bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is
+  cut (voice lifecycle step 5; first-writer-wins before 2026-10-07). The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
 - **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
   `reverb(wet, size)` preview under its own intuitions, plus the delay family, `distort`,

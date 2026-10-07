@@ -64,16 +64,16 @@ class OrbitBusPipelineSpec : StringSpec({
         (cylinder.pipeline[1] is KatalystFormantEffect) shouldBe true
     }
 
-    "body is owned by the first voice to set it; a later non-body owner turns it off (lease hand-off)" {
+    "a body owner's settings hold while it owns; a later non-body owner turns the body off (hand-off)" {
         val cylinder = createOrbit()
         val bf = blockFrames
 
         // Voice A (has body) claims the orbit body at block 0.
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(katalystParams = woodBody), blockStart = 0.0)
+        cylinder.offerAndCommit(VoiceTestHelpers.createSynthVoice(katalystParams = woodBody), blockStart = 0.0)
         bodyActiveOn(cylinder) shouldBe true
 
-        // A stops checking in; voice B (no body) claims after the 1-block grace → body turns OFF.
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 2.0 * bf)
+        // A stops offering; voice B (no body) owns from its block → body turns OFF.
+        cylinder.offerAndCommit(VoiceTestHelpers.createSynthVoice(), blockStart = 2.0 * bf)
         cylinder.body!!.isEngaged shouldBe false // the intent flips at once
         bodyActiveOn(cylinder) shouldBe true // the sound does not: the first block still carries the fading body
 
@@ -85,13 +85,17 @@ class OrbitBusPipelineSpec : StringSpec({
         bodyActiveOn(cylinder) shouldBe false
     }
 
-    "while the body owner is alive, a non-body voice on the same orbit does NOT turn the body off" {
+    "while the newest voice owns the body, an older non-body voice on the same orbit does NOT turn the body off" {
         val cylinder = createOrbit()
-        val bf = blockFrames
+        // Same onset: the voice created later is the newer one and owns (lifecycle step 5).
+        val older = VoiceTestHelpers.createSynthVoice()
+        val owner = VoiceTestHelpers.createSynthVoice(katalystParams = woodBody)
 
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(katalystParams = woodBody), blockStart = 0.0) // A owns
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = bf.toDouble())               // B within grace → denied
-        bodyActiveOn(cylinder) shouldBe true // still A's body
+        // Both offer in one block, in either order; the commit picks the newest.
+        cylinder.offer(owner, blockStart = 0.0)
+        cylinder.offer(older, blockStart = 0.0)
+        cylinder.commitOwner()
+        bodyActiveOn(cylinder) shouldBe true // still the owner's body
     }
 
     "switching reverb off starts the drain: the orbit rings out, stays alive, then deactivates clean" {
@@ -102,7 +106,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val bf = blockFrames
 
         // Owner A: reverb on — build up a comb-filter tail (small room = a drain the test can afford).
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("reverb.wet" to 0.8, "reverb.size" to 0.5),
             ),
@@ -116,7 +120,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Owner A ends; a no-reverb voice takes over → the off-config starts the DRAIN under the
         // RETAINED params (the countdown decays at owner A's size, not the new owner's 0.0).
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("reverb.wet" to 0.0, "reverb.size" to 0.0),
             ),
@@ -128,8 +132,8 @@ class OrbitBusPipelineSpec : StringSpec({
         // The tail CHECK itself must hold the orbit, not just the mix-silence gate: with the mix
         // cleared, only the reverbHasTail() wiring stands between a charged drain and
         // deactivation (mutation campaign: `reverbHasTail() = false` survived without this).
-        // Every cleanup visit below happens long after the last claim, so the orbit lease has
-        // lapsed and cannot be what holds the orbit (Katalyst 5c-8).
+        // Every cleanup visit below happens long after the last claim, so no check-in can be what
+        // holds the orbit (Katalyst 5c-8).
         val afterLastVoice = 100.0 * bf
         cylinder.mixBuffer.clear()
         cylinder.tryDeactivate(afterLastVoice)
@@ -158,7 +162,7 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
-        cylinder.reverb!!.reverb!!.hasTail(0.0) shouldBe false // literally zero on lease free
+        cylinder.reverb!!.reverb!!.hasTail(0.0) shouldBe false // literally zero once the orbit is free
     }
 
     "cylinder bus context shares buffers with cylinder" {
@@ -174,7 +178,7 @@ class OrbitBusPipelineSpec : StringSpec({
             endFrame = 1000.0,
             katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 5.0),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
+        cylinder.offerAndCommit(voice, blockStart = 0.0)
 
         // Reverb comb filters need time to build up signal
         repeat(20) {
@@ -189,7 +193,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
     "processEffects does nothing when inactive" {
         val cylinder = createOrbit()
-        // cylinder is NOT active (no updateFromVoice called)
+        // cylinder is NOT active (no voice offered)
 
         cylinder.mixBuffer.left.fill(0.5)
 
@@ -206,7 +210,7 @@ class OrbitBusPipelineSpec : StringSpec({
             endFrame = 1000.0,
             katalystParams = mapOf("duck.orbit" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
+        cylinder.offerAndCommit(voice, blockStart = 0.0)
 
         cylinder.mixBuffer.left.fill(0.5)
         cylinder.mixBuffer.right.fill(0.5)
@@ -230,7 +234,7 @@ class OrbitBusPipelineSpec : StringSpec({
             endFrame = 1000.0,
             katalystParams = mapOf("duck.orbit" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
+        cylinder.offerAndCommit(voice, blockStart = 0.0)
 
         cylinder.mixBuffer.left.fill(0.5)
 
@@ -265,7 +269,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Life 1: engaged phaser, several blocks of signal — cascade and LFO both move.
         val reused = createOrbit()
-        reused.updateFromVoice(phaserVoice(), blockStart = 0.0)
+        reused.offerAndCommit(phaserVoice(), blockStart = 0.0)
 
         repeat(6) {
             reused.clear()
@@ -274,14 +278,14 @@ class OrbitBusPipelineSpec : StringSpec({
         }
 
         reused.clear()
-        reused.tryDeactivate(10.0 * blockFrames) // after the lease taken at frame 0 has lapsed
+        reused.tryDeactivate(10.0 * blockFrames) // long after the check-in at frame 0
         reused.isActive shouldBe false
 
         // Life 2 opens with a PHASER-LESS stretch before a phaser voice engages. Review round 3:
         // the first clean-slate fix zeroed the phase but kept the dead owner's RATE, so this
         // stretch free-ran the sweep at 1.7 Hz and the engagement landed mid-sweep, offset by a
         // cleanup-schedule artifact. The interlude is what makes that observable.
-        reused.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 20.0 * blockFrames)
+        reused.offerAndCommit(VoiceTestHelpers.createSynthVoice(), blockStart = 20.0 * blockFrames)
 
         repeat(10) {
             reused.clear()
@@ -289,14 +293,14 @@ class OrbitBusPipelineSpec : StringSpec({
             reused.processEffects()
         }
 
-        reused.updateFromVoice(phaserVoice(), blockStart = 23.0 * blockFrames)
+        reused.offerAndCommit(phaserVoice(), blockStart = 23.0 * blockFrames)
         reused.clear()
         fillTone(reused)
         reused.processEffects()
 
         // Reference: a genuinely fresh orbit, same phaser-less prelude, same voice, same tone.
         val fresh = createOrbit()
-        fresh.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
+        fresh.offerAndCommit(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
 
         repeat(10) {
             fresh.clear()
@@ -304,7 +308,7 @@ class OrbitBusPipelineSpec : StringSpec({
             fresh.processEffects()
         }
 
-        fresh.updateFromVoice(phaserVoice(), blockStart = 3.0 * blockFrames)
+        fresh.offerAndCommit(phaserVoice(), blockStart = 3.0 * blockFrames)
         fresh.clear()
         fillTone(fresh)
         fresh.processEffects()
@@ -323,7 +327,7 @@ class OrbitBusPipelineSpec : StringSpec({
     "a non-finite depth cannot desync the two phaser gates" {
         val cylinder = createOrbit()
 
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf(
                     "phaser.rate" to 2.0, "phaser.wet" to 0.8, "phaser.center" to 1200.0,
@@ -338,7 +342,7 @@ class OrbitBusPipelineSpec : StringSpec({
         // where they were: the two gates (this one and `Phaser.process`'s) never disagree, which
         // is what this row is about. On the FIELD path the same NaN was handed to the setter,
         // which drops it, and the phaser stayed engaged at 0.8 with the new owner's kernel params.
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf(
                     "phaser.rate" to 3.0, "phaser.wet" to Double.NaN, "phaser.center" to 800.0,
@@ -356,7 +360,7 @@ class OrbitBusPipelineSpec : StringSpec({
     "a no-phaser owner keeps the sweep clock: kernel params retained, only depth drops" {
         val cylinder = createOrbit()
 
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf(
                     "phaser.rate" to 2.0, "phaser.wet" to 0.8, "phaser.center" to 1200.0,
@@ -370,7 +374,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Owner lapses; a plain voice takes over, carrying no slot state at all, so the phaser
         // resolves to the classic chain's own defaults (rate 0, wet 0).
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(),
             blockStart = 2.0 * blockFrames,
         )
@@ -382,11 +386,11 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.phaser!!.phaser.center shouldBe 1200.0
     }
 
-    "updateFromVoice: the owner's slots reach every stage of the orbit's chain" {
+    "a committed owner's slots reach every stage of the orbit's chain" {
         // The HOST wiring, once for every stage, with values that differ from every stage's
         // constant, so a knob that is dropped on the way reads as its default and goes red. What a
         // slot resolves to is `KatalystSlotResolverSpec`'s subject; who may write it (the one
-        // lease for every stage) is `CylinderKatalystParamsSpec`'s.
+        // owner for every stage) is `CylinderKatalystParamsSpec`'s.
         val cylinder = createOrbit()
         val phaser = mapOf(
             "phaser.rate" to 2.0, "phaser.wet" to 0.5, "phaser.center" to 800.0, "phaser.sweep" to 600.0,
@@ -402,7 +406,7 @@ class OrbitBusPipelineSpec : StringSpec({
             ),
         )
 
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
+        cylinder.offerAndCommit(voice, blockStart = 0.0)
 
         withClue("delay") {
             val line = cylinder.delay!!.delayLine.shouldNotBeNull()
@@ -452,7 +456,7 @@ class OrbitBusPipelineSpec : StringSpec({
         withClue("a phaser floor nobody writes arrives as the additive default 1.0") {
             val unfloored = createOrbit()
 
-            unfloored.updateFromVoice(VoiceTestHelpers.createSynthVoice(katalystParams = phaser), blockStart = 0.0)
+            unfloored.offerAndCommit(VoiceTestHelpers.createSynthVoice(katalystParams = phaser), blockStart = 0.0)
 
             unfloored.phaser!!.phaser.floor shouldBe 1.0
         }
@@ -460,7 +464,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
     "clear resets all buffers" {
         val cylinder = createOrbit()
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
+        cylinder.offerAndCommit(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
 
         cylinder.mixBuffer.left.fill(0.5)
         cylinder.mixBuffer.right.fill(0.3)

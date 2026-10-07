@@ -38,14 +38,14 @@ fun buildPitchPipeline(
     }
 
     if (accelerate.semitones != 0.0 && endFrame > startFrame) {
-        add(AccelerateRenderer(accelerate, startFrame, endFrame))
+        add(AccelerateRenderer(accelerate, totalFrames = endFrame - startFrame))
     }
 
     if (pitchEnvelope != null) {
-        add(PitchEnvelopeRenderer(pitchEnvelope, startFrame))
+        add(PitchEnvelopeRenderer(pitchEnvelope))
     }
 
     if (fm != null && fm.depth != 0.0) {
-        add(FmRenderer(fm, freqHz, sampleRate, startFrame))
+        add(FmRenderer(fm, freqHz, sampleRate))
     }
 }

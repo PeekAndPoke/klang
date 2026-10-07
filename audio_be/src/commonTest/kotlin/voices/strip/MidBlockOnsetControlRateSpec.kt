@@ -9,10 +9,10 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.FmRenderer
 
 /**
@@ -52,18 +52,7 @@ class MidBlockOnsetControlRateSpec : StringSpec({
         freqModBuffer = DoubleArray(blockFrames),
         scratchBuffers = ScratchBuffers(blockFrames),
         sampleRate = sampleRate,
-        startFrame = startFrame,
-        endFrame = 100_000.0,
-        gateEndFrame = 100_000.0,
-        freqHz = 440.0,
-        signal = Ignitors.silence(),
-        signalCtx = IgniteContext(
-            sampleRate = sampleRate,
-            voiceDurationFrames = 100_000,
-            gateEndFrame = 100_000,
-            releaseFrames = 0,
-            scratchBuffers = ScratchBuffers(blockFrames),
-        ),
+        limits = VoiceLimits(startFrame = startFrame, gateEndFrame = 100_000.0, endFrame = 100_000.0),
         cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
     ).apply {
         updateOffsetAndLength(offset, length)
@@ -82,7 +71,7 @@ class MidBlockOnsetControlRateSpec : StringSpec({
         val fm = Voice.Fm(ratio = 1.0, depth = 50.0, envelope = flatEnvelope())
         val c = ctx()
 
-        FmRenderer(fm = fm, freqHz = 440.0, sampleRate = sampleRate, startFrame = startFrame).render(c)
+        FmRenderer(fm = fm, freqHz = 440.0, sampleRate = sampleRate).render(c)
 
         // Sustained depth modulates the pitch multiplier away from 1.0 across the rendered window.
         // At blockStart the envelope reads 0.0, effectiveDepth collapses to 0, and every multiplier

@@ -90,7 +90,6 @@ class IgnitorGateSpec : StringSpec({
         sampleRate = 48000,
         voiceDurationFrames = blockFrames * blocks,
         gateEndFrame = blockFrames * blocks,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = rng,
     ).apply {

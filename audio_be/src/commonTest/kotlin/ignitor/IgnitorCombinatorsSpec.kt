@@ -37,7 +37,6 @@ class ExciterCombinatorsSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = blockFrames,
             gateEndFrame = blockFrames,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             updateOffsetAndLength(0, blockFrames)

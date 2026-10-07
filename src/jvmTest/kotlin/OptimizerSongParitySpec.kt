@@ -77,7 +77,7 @@ class OptimizerSongParitySpec : StringSpec({
     }
 
     fun ctx(random: Random): IgniteContext = IgniteContext(
-        sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate, releaseFrames = 0,
+        sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(blockFrames), random = random,
     )
 

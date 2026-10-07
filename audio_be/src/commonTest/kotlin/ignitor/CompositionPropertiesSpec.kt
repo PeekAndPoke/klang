@@ -39,7 +39,6 @@ class CompositionPropertiesSpec : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
         updateOffsetAndLength(0, blockFrames)

@@ -11,6 +11,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -107,7 +108,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         // hardcoded rate in the builder call shows up immediately.
         val cylinder = Cylinder(id = 0, blockFrames = 128, sampleRate = 22050)
 
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("delay.wet" to 0.5, "delay.time" to 0.25, "delay.feedback" to 0.3),
             ),
@@ -130,7 +131,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         val cylinder = Cylinder(id = 0, blockFrames = bigBlock, sampleRate = 44100)
 
         // Owner A charges a small room.
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("reverb.wet" to 0.8, "reverb.size" to 0.5),
             ),
@@ -143,7 +144,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
         // Owner B has no room: the off-config starts the drain, which runs on SILENT input from
         // the stage's own buffer.
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("reverb.wet" to 0.0, "reverb.size" to 0.0),
             ),
@@ -170,7 +171,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         val cylinder = Cylinder(id = 0, blockFrames = bigBlock, sampleRate = 44100)
 
         // Owner A charges the ring with a delay short enough that echoes land inside one block.
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("delay.wet" to 0.8, "delay.time" to 0.01, "delay.feedback" to 0.8),
             ),
@@ -183,7 +184,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
         // Owner B has no delay: the off-config starts the drain, which runs on SILENT input from
         // the stage's own buffer.
-        cylinder.updateFromVoice(
+        cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(),
             blockStart = 2.0 * bigBlock,
         )

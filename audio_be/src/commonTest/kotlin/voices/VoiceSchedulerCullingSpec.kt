@@ -22,7 +22,7 @@ import io.peekandpoke.klang.audio_bridge.tremolo
 /**
  * Silence culling through the real path: a scheduled voice, the factory, the scheduler's render
  * loop. A percussive note with a one-second release stops rendering and is counted as culled long
- * before its scheduled end, but stays in the active list as a zombie until that end; the same
+ * before its scheduled end and leaves the active list at once (lifecycle step 5); the same
  * note with `noCull()` keeps rendering.
  */
 class VoiceSchedulerCullingSpec : StringSpec({
@@ -74,7 +74,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
         }
     }
 
-    "a silent release stops rendering, is counted as culled, and stays listed until its scheduled end" {
+    "a silent release stops rendering, is counted as culled, and leaves the list at once" {
         val d = newDispatcher()
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = percussive(cull = null)))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
@@ -83,16 +83,10 @@ class VoiceSchedulerCullingSpec : StringSpec({
         clock.render(0.4)                              // the scheduled end is at 1.1 s
 
         scheduler.culledVoicesTotal() shouldBe 1
-        scheduler.renderingVoiceCount() shouldBe 0
-        scheduler.getActiveVoiceCount() shouldBe 1     // the zombie keeps its slot
+        scheduler.getActiveVoiceCount() shouldBe 0     // gone at the cull, long before its scheduled end
 
-        clock.render(0.6)                              // 1.0 s: still before the scheduled end
+        clock.render(0.8)                              // 1.2 s: past the scheduled end
 
-        scheduler.getActiveVoiceCount() shouldBe 1     // the zombie is still listed
-
-        clock.render(0.2)                              // 1.2 s: past it
-
-        scheduler.getActiveVoiceCount() shouldBe 0     // expired on schedule
         scheduler.culledVoicesTotal() shouldBe 1       // counted once, at the cull
     }
 
@@ -104,7 +98,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
         Clock(d).render(0.4)
 
         scheduler.culledVoicesTotal() shouldBe 0
-        scheduler.renderingVoiceCount() shouldBe 1
+        scheduler.getActiveVoiceCount() shouldBe 1
     }
 
     "an explicit cull(...) on a tremolo voice is the author's call and wins" {
@@ -124,7 +118,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
         Clock(d).render(0.4)
 
-        scheduler.renderingVoiceCount() shouldBe 1
+        scheduler.getActiveVoiceCount() shouldBe 1
         scheduler.culledVoicesTotal() shouldBe 0
     }
 
@@ -169,7 +163,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
         Clock(d).render(0.4)                           // past the off-half (125 to 250 ms), into the next on-half
 
         scheduler.culledVoicesTotal() shouldBe 0
-        scheduler.renderingVoiceCount() shouldBe 1
+        scheduler.getActiveVoiceCount() shouldBe 1
     }
 
     "the tree tremolo's off-half IS a cull hazard: with the author's cull(...) the voice dies there" {
@@ -212,7 +206,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
         Clock(d).render(0.4)
 
         scheduler.culledVoicesTotal() shouldBe 0
-        scheduler.renderingVoiceCount() shouldBe 1
+        scheduler.getActiveVoiceCount() shouldBe 1
     }
 
     "the slot-written tremolo's off-half IS a cull hazard: with the author's cull(...) the voice dies there" {

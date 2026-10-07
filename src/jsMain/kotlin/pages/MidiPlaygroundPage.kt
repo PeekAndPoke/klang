@@ -6,17 +6,31 @@
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.comp.MidiPanel
 import io.peekandpoke.klang.comp.RealtimePlaybackCtrl
 import io.peekandpoke.klang.midi.KeyLabEssential49Mk3
 import io.peekandpoke.klang.midi.MidiConnector
+import io.peekandpoke.klang.midi.MidiInstrument
+import io.peekandpoke.klang.midi.MidiInstrumentStorage
 import io.peekandpoke.klang.midi.NoteKey
 import io.peekandpoke.klang.midi.padBankOf
+import io.peekandpoke.klang.script.KlangScriptEngine
+import io.peekandpoke.klang.script.runtime.FunctionValue
+import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
+import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.sound
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
+import io.peekandpoke.klang.sprudel.lang.velocity
 import io.peekandpoke.klang.tones.midi.Midi
+import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -112,11 +126,44 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
      */
     private var selectedSound: String by value("supersaw")
 
+    /**
+     * What the two editors hold right now, and the name it is saved under. Takes effect on
+     * [applyInstrument]; until then notes keep playing the last applied version.
+     */
+    private var draft: MidiInstrument by value(MidiInstrumentStorage.loadDraft() ?: DEFAULT_INSTRUMENT)
+
+    /** The instruments saved in localStorage, in the order they were first saved. */
+    private var savedInstruments: List<MidiInstrument> by value(MidiInstrumentStorage.loadAll())
+
+    /** Bumped when a saved instrument is loaded, so the editors remount with its code. */
+    private var editorGeneration: Int by value(0)
+
+    /** The applied ignitor; null = the built-in [selectedSound]. */
+    private var appliedIgnitor: IgnitorDsl? by value(null)
+
+    /** The applied sprudel mapper (`x => x.reverb(wet = 0.2)`); null = none. */
+    private var appliedMapper: ((Any?) -> Any?)? by value(null)
+
+    private var ignitorError: String? by value(null)
+
+    private var mapperError: String? by value(null)
+
     companion object {
         /** The device this page draws and binds. One value per supported controller. */
         private val DEVICE = KeyLabEssential49Mk3
 
         private const val EVENT_LOG_SIZE = 16
+
+        /** The tempo a mapper sees: 30 rpm, the song page's default. Only time-aware mappers notice. */
+        private const val MAPPER_CPS = 0.5
+
+        private val EDITOR_LIBS = listOf(stdlibLib, sprudelLib)
+
+        private val DEFAULT_INSTRUMENT = MidiInstrument(
+            name = "Warm saw",
+            ignitorCode = "Ign.saw()\n  .plus(Ign.sine().detune(12).mul(0.3))\n  .lowpass(1800)\n  .adsr(0.01, 0.3, 0.6, 0.4)",
+            mapperCode = "x => x.reverb(wet = 0.2)",
+        )
 
         /** Pad bank A / B highlight colours — distinct hues, since the bank is otherwise invisible. */
         private const val BANK_A_COLOR = "#4a9eff"
@@ -142,6 +189,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     init {
         lifecycle {
             onMount {
+                applyInstrument()
                 midi.start()
                 midi.events.subscribeToStream { evt -> evt?.let { handle(it) } }
             }
@@ -155,13 +203,113 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  THE TRANSLATION — voice shape, sound and params live here  //////////////////////////////
 
-    // Key velocity is this frontend's articulation shorthand and folds into the wire's one level
-    // word, exactly as sprudel folds its own `velocity` (signal-flow plan section 6).
-    private fun voiceFor(evt: MidiConnector.Event.NoteOn): VoiceData = VoiceData.empty.copy(
-        sound = selectedSound,
-        freqHz = Midi.midiToFreq(evt.key.note.toDouble()),
-        gain = evt.velocity / 127.0,
-    )
+    /**
+     * A key becomes a one-note sprudel pattern: the note, its velocity, the applied ignitor (or the
+     * built-in sound). The applied mapper then shapes it like any sprudel pattern, and whatever
+     * starts at cycle 0 sounds now, under the key's liveId. Later onsets (a mapper with `off` or
+     * `fast`) are dropped: a realtime voice has no timeline to land on.
+     *
+     * Key velocity goes through sprudel's own `velocity`, which folds into the wire's one level word
+     * (signal-flow plan section 6).
+     */
+    private fun eventsFor(evt: MidiConnector.Event.NoteOn): List<KlangPatternEvent> {
+        val base = note(evt.key.note.toString())
+            .velocity(evt.velocity / 127.0)
+            .sound(appliedIgnitor ?: selectedSound)
+
+        val pattern = appliedMapper?.let { mapper -> mapPattern(mapper, base) } ?: base
+
+        return pattern.queryEvents(fromCycles = 0.0, toCycles = 1.0, cps = MAPPER_CPS)
+            .filter { it.startCycles == 0.0 }
+    }
+
+    /** Runs the user's mapper; a failure shows under its editor and the note plays unmapped. */
+    private fun mapPattern(mapper: (Any?) -> Any?, base: SprudelPattern): SprudelPattern = try {
+        mapper(base) as? SprudelPattern ?: error("The mapper must return a pattern")
+    } catch (e: Throwable) {
+        mapperError = e.message ?: e.toString()
+        base
+    }
+
+    //  THE INSTRUMENT — two KlangScript inputs, compiled on apply  /////////////////////////////
+
+    /**
+     * Compiles both inputs and stores the draft. An input that fails keeps its previous applied
+     * version, so a typo never silences the keyboard mid-play.
+     */
+    private fun applyInstrument() {
+        MidiInstrumentStorage.saveDraft(draft)
+
+        val engine = Player.createEngine()
+        engine.execute("""import * from "stdlib"""")
+        engine.execute("""import * from "sprudel"""")
+
+        ignitorError = null
+        mapperError = null
+
+        try {
+            appliedIgnitor = compileIgnitor(engine, draft.ignitorCode)
+        } catch (e: Throwable) {
+            ignitorError = e.message ?: e.toString()
+        }
+
+        try {
+            appliedMapper = compileMapper(engine, draft.mapperCode)
+        } catch (e: Throwable) {
+            mapperError = e.message ?: e.toString()
+        }
+    }
+
+    private fun compileIgnitor(engine: KlangScriptEngine, code: String): IgnitorDsl? {
+        if (code.isBlank()) {
+            return null
+        }
+
+        val result = engine.execute(code + "\n")
+
+        return result.value as? IgnitorDsl
+            ?: error("Expected an Ignitor, e.g. Ign.saw(), got ${result.toDisplayString()}")
+    }
+
+    private fun compileMapper(engine: KlangScriptEngine, code: String): ((Any?) -> Any?)? {
+        if (code.isBlank()) {
+            return null
+        }
+
+        val result = engine.execute(code + "\n")
+
+        @Suppress("UNCHECKED_CAST")
+        return when (result) {
+            is FunctionValue -> result.convertFunctionToKotlin(arity = 1)
+            // A native mapper value, e.g. one sprudel hands out.
+            else -> result.value as? Function1<Any?, Any?>
+        } ?: error("Expected a function, e.g. x => x.reverb(wet = 0.2), got ${result.toDisplayString()}")
+    }
+
+    /** Saves the draft under its name, replacing a saved instrument of the same name. */
+    private fun saveInstrument() {
+        val toSave = draft.copy(name = draft.name.trim().ifBlank { "Untitled" })
+        val exists = savedInstruments.any { it.name == toSave.name }
+
+        draft = toSave
+        savedInstruments = when {
+            exists -> savedInstruments.map { if (it.name == toSave.name) toSave else it }
+            else -> savedInstruments + toSave
+        }
+        MidiInstrumentStorage.saveAll(savedInstruments)
+        applyInstrument()
+    }
+
+    private fun loadInstrument(instrument: MidiInstrument) {
+        draft = instrument
+        editorGeneration += 1
+        applyInstrument()
+    }
+
+    private fun deleteInstrument(name: String) {
+        savedInstruments = savedInstruments.filter { it.name != name }
+        MidiInstrumentStorage.saveAll(savedInstruments)
+    }
 
     /** Exhaustive by design: a new connector event fails the build until this page decides. */
     private fun handle(evt: MidiConnector.Event): Unit = when (evt) {
@@ -173,7 +321,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             if (DEVICE.bindings.notes[evt.key.channel to evt.key.note] != null) {
                 padBankOf(evt.key.note)?.let { activeBank = it }
             }
-            ctrl.startVoice(liveId = evt.liveId, data = voiceFor(evt), gateDurSec = null)
+            ctrl.startEvents(liveId = evt.liveId, events = eventsFor(evt), gateDurSec = null)
         }
 
         is MidiConnector.Event.NoteOff -> {
@@ -354,6 +502,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     private fun FlowContent.renderPlayground() {
         renderDevices()
         renderPanel()
+        renderInstrument()
         renderSoundPicker()
         renderPressedKeys()
         renderMonitor()
@@ -466,11 +615,130 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
+    private fun FlowContent.renderInstrument() {
+        ui.segment {
+            key = "instrument"
+
+            ui.header H4 { +"Instrument" }
+
+            if (savedInstruments.isNotEmpty()) {
+                noui.tiny.header { +"Saved" }
+
+                ui.basic.segment {
+                    css { padding = Padding(0.px, 0.px, 8.px, 0.px) }
+
+                    savedInstruments.forEach { instrument ->
+                        ui.small.given(instrument.name == draft.name) { primary }.button {
+                            key = "instrument-${instrument.name}"
+                            onClick { loadInstrument(instrument) }
+                            +instrument.name
+                        }
+                    }
+                }
+            }
+
+            ui.form {
+                UiInputField(draft.name, { draft = draft.copy(name = it) }) {
+                    placeholder("Instrument name")
+                    leftLabel {
+                        ui.grey.label { +"Name" }
+                    }
+                }
+            }
+
+            ui.basic.segment {
+                css { padding = Padding(8.px, 0.px) }
+
+                ui.primary.button {
+                    onClick { applyInstrument() }
+                    icon.play()
+                    +"Apply"
+                }
+
+                ui.button {
+                    onClick { saveInstrument() }
+                    icon.save()
+                    +"Save"
+                }
+
+                if (savedInstruments.any { it.name == draft.name }) {
+                    ui.basic.button {
+                        onClick { deleteInstrument(draft.name) }
+                        icon.trash()
+                        +"Delete"
+                    }
+                }
+            }
+
+            ui.two.column.stackable.grid {
+                noui.column {
+                    renderCodeInput(
+                        id = "ignitor",
+                        title = "Ignitor",
+                        hint = "Evaluates to an Ignitor, e.g. Ign.saw().lowpass(1800). Blank plays the built-in sound below.",
+                        code = draft.ignitorCode,
+                        onChange = { draft = draft.copy(ignitorCode = it) },
+                        error = ignitorError,
+                    )
+                }
+
+                noui.column {
+                    renderCodeInput(
+                        id = "mapper",
+                        title = "Sprudel mapper",
+                        hint = "Evaluates to a function from pattern to pattern, e.g. x => x.reverb(wet = 0.2). Blank = none.",
+                        code = draft.mapperCode,
+                        onChange = { draft = draft.copy(mapperCode = it) },
+                        error = mapperError,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.renderCodeInput(
+        id: String,
+        title: String,
+        hint: String,
+        code: String,
+        onChange: (String) -> Unit,
+        error: String?,
+    ) {
+        noui.tiny.header { +title }
+
+        noui.content {
+            css { padding = Padding(0.px, 0.px, 4.px, 0.px) }
+            +hint
+        }
+
+        // Keyed by generation: loading a saved instrument remounts the editor with its code.
+        ui.segment {
+            key = "$id-editor-$editorGeneration"
+            css { padding = Padding(0.px) }
+
+            KlangScriptEditorComp(
+                code = code,
+                onCodeChanged = onChange,
+                availableLibraries = EDITOR_LIBS,
+                autoImportedLibraries = EDITOR_LIBS,
+            )
+        }
+
+        if (error != null) {
+            ui.negative.message { +error }
+        }
+    }
+
     private fun FlowContent.renderSoundPicker() {
         ui.segment {
             key = "sound-picker"
 
-            ui.header H4 { +"Sound" }
+            ui.header H4 { +"Built-in sound" }
+
+            noui.content {
+                css { padding = Padding(0.px, 0.px, 4.px, 0.px) }
+                +"Plays while the Ignitor input is blank."
+            }
 
             ui.two.column.grid {
                 SOUND_GROUPS.forEach { (groupName, sounds) ->

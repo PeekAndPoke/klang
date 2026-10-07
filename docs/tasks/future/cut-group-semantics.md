@@ -1,6 +1,8 @@
 # Cut / choke groups: what `cut(0)` means, and what else was never decided
 
-Status: **future / needs a design round.** Not a bug fix — the feature has never been used in a
+Status: **to be decided before takeover starts** (maintainer, 2026-10-07: `cut(0)` is "not ideal" and the
+semantics are unclear on the user side; a precondition of step 6 of `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`).
+Needs a design round. Not a bug fix: the feature has never been used in a
 shipped song, so nothing is broken for anyone today, and the question is what it *should* do rather
 than what it does. Raised by audit finding
 [F19](../../audio-audit/FINDINGS.md#f19) on 2026-08-31 and deliberately not settled on the fly.
@@ -53,6 +55,11 @@ Alternatives: scope per orbit, or per source id. This is the question most likel
 song, because group numbers are small integers that two people will collide on.
 
 ### 3. The hard kill is a click
+
+**Answered 2026-10-07 (voice lifecycle step 4): it fades.** A cut no longer removes the victim: the voice gets a
+cut event (`Voice.cutOff`) and, if it is sounding, enters `Fading`, a linear ramp to exact zero over
+`CUT_FADE_SECONDS` (4 ms) from the cutting voice's onset, before its send; a silent victim (not yet started, or
+culled) ends at once. The text below is the question as it stood.
 
 `VoiceScheduler.kt:558` still carries its original TODO — *"Use a fade out / release phase instead of
 hard cut?"*. The victim is removed from the active list mid-waveform, so a ringing sample is chopped

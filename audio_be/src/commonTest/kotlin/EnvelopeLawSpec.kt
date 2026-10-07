@@ -25,6 +25,7 @@ import io.peekandpoke.klang.audio_be.ignitor.fmModIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.PitchEnvelopeRenderer
@@ -193,7 +194,7 @@ class EnvelopeLawSpec : StringSpec({
     fun renderNode(ig: Ignitor, total: Int, gate: Int, freqHz: Double = 100.0): DoubleArray {
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
-            releaseFrames = 0, scratchBuffers = ScratchBuffers(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = DoubleArray(total)
         val tmp = AudioBuffer(blockFrames)
@@ -311,22 +312,13 @@ class EnvelopeLawSpec : StringSpec({
         gate: Int,
         moveGateTo: Int? = null,
     ): DoubleArray {
-        val renderer = PitchEnvelopeRenderer(Voice.PitchEnvelope(semitones, env), startFrame = 0.0)
+        val renderer = PitchEnvelopeRenderer(Voice.PitchEnvelope(semitones, env))
         val ctx = BlockContext(
             audioBuffer = AudioBuffer(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
-            startFrame = 0.0,
-            endFrame = far.toDouble(),
-            gateEndFrame = gate.toDouble(),
-            freqHz = 100.0,
-            signal = Ignitors.silence(),
-            signalCtx = IgniteContext(
-                // unused by the pitch renderer, which reads the BlockContext's gate
-                sampleRate = sampleRate, voiceDurationFrames = far, gateEndFrame = far,
-                releaseFrames = 0, scratchBuffers = ScratchBuffers(blockFrames),
-            ),
+            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = far.toDouble()),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
         val out = DoubleArray(total)
@@ -336,7 +328,7 @@ class EnvelopeLawSpec : StringSpec({
             val n = minOf(blockFrames, total - pos)
 
             if (pos > 0 && moveGateTo != null) {
-                ctx.gateEndFrame = moveGateTo.toDouble()
+                ctx.limits.gateEndFrame = moveGateTo.toDouble()
             }
 
             ctx.blockStart = pos.toDouble()

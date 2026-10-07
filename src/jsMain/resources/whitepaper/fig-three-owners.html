@@ -235,7 +235,7 @@
             <section class="st" data-owner="bus" tabindex="0" role="group" aria-labelledby="h-bus">
                 <h4 id="h-bus">Bus</h4>
                 <p class="what">a Katalyst chain, one per orbit</p>
-                <p>Works on the sum of the voices sent to the orbit. Its knob values come from the first voice sounding on it.</p>
+                <p>Works on the sum of the voices sent to the orbit. Its knob values come from the newest note that is still held on it; a release tail does not count.</p>
                 <ul class="knobs" aria-label="Knobs of the bus">
                     <li>reverb</li><li>delay</li><li>compressor</li><li>eq</li><li>phaser</li><li>body</li><li>vowel</li><li>duck</li>
                 </ul>
@@ -316,7 +316,7 @@
         },
         reverb: {
             owner: "bus", title: ".reverb(0.3, 5)",
-            text: "Fills the reverb slots of the chain orbit 1 runs, for the whole orbit. The first voice sounding on the orbit supplies them.",
+            text: "Fills the reverb slots of the chain orbit 1 runs, for the whole orbit. The newest note still held on the orbit supplies them; a release tail does not.",
             wire: 'katalystParams["reverb.wet"] = 0.3, ["reverb.size"] = 5.0'
         },
         master: {

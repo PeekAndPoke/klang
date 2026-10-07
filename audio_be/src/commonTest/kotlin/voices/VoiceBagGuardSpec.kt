@@ -13,6 +13,7 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
@@ -159,7 +160,7 @@ class VoiceBagGuardSpec : StringSpec({
             ctx.blockStart = (block * blockFrames).toDouble()
             voice.render(ctx)
 
-            val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, 0.0)
+            val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
             cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
@@ -357,7 +358,6 @@ class VoiceBagGuardSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = frames * 2,
             gateEndFrame = frames * 2,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
             voiceElapsedFrames = 0,
         )

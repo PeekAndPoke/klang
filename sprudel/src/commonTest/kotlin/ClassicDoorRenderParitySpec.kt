@@ -54,7 +54,6 @@ class ClassicDoorRenderParitySpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(7),
         )

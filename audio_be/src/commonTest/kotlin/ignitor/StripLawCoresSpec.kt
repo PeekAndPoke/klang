@@ -74,7 +74,6 @@ class StripLawCoresSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = blocks * blockFrames,
             gateEndFrame = blocks * blockFrames,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = DoubleArray(blocks * blockFrames)

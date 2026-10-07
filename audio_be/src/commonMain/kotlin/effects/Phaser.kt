@@ -28,7 +28,8 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  * SEND this is genuinely expressible per orbit. Blast radius: with `floor < 1` the knob
  * scales the dry of the WHOLE orbit mix — co-resident voices that never asked for a phaser
  * and the delay/reverb returns included (bus order: body/vowel -> delay -> reverb -> phaser;
- * first-writer-wins owns the knobs, route to another orbit for different bus settings).
+ * the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate
+ * closes or it is cut; route to another orbit for different bus settings).
  *
  * THE BUS OWNS THE PHASER (maintainer decision, 2026-08-24): this bus pass is the ONE application
  * of the knobs, the DAW-insert model, one coherent sweep over the summed orbit. `phaserFloor < 1` is

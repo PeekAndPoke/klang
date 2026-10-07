@@ -12,7 +12,6 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.VoiceLease
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -73,9 +72,9 @@ class Cylinder(
         internal const val MAX_CACHED_CHAINS: Int = 8
 
         /**
-         * How many blocks the orbit's param state survives its owner's last check-in: the lease's
-         * own one-block grace plus the block it was written on (`VoiceLease`). Past that the state
-         * is dropped and a chain arriving on the orbit's tail resolves from what it authored.
+         * How many blocks the orbit's param state survives its owner's last commit ([commitOwner]): the
+         * block it was written on plus one. Past that the state is dropped and a chain arriving on the
+         * orbit's tail resolves from what it authored.
          */
         private const val OWNER_STATE_BLOCKS: Int = 2
     }
@@ -284,15 +283,15 @@ class Cylinder(
      */
     private var silentBlockCount: Int = 0
 
-    // ONE owner per orbit: the first voice to sound owns ALL of the orbit's bus effects while it is alive
-    // (first-writer-wins). Other voices on the orbit are ignored — route to a different orbit if you want
-    // different bus settings. Overlapping voices with different reverb/delay/compressor make no musical
-    // sense, so we don't support it. This also kills the last-writer-wins per-block flip-flop (and the
-    // body-filter rebuild thrash it caused on mixed-material orbits).
-    private val lease = VoiceLease()
+    // ONE owner per orbit, chosen once per block: the orbit's bus settings are owned by the newest `Sounding`
+    // voice; a voice gives the orbit up when its gate closes or it is cut ([offer], [commitOwner]). Other voices
+    // on the orbit are ignored; route to a different orbit for different bus settings. One owner per block
+    // also rules out the per-block flip-flop (and the body-filter rebuild thrash it caused on mixed-material
+    // orbits). The newest offer of the current block, cleared by [commitOwner].
+    private var candidate: Voice? = null
 
     /**
-     * The orbit's param state, as the voice holding the lease last handed it over: the map
+     * The orbit's param state, as its owner last handed it over: the map
      * `.katp` and the bus doors wrote (`Voice.katalystParams`), by reference.
      *
      * Kept for the ONE moment a swap needs it. [beginFade] runs before this block's voices have
@@ -302,91 +301,138 @@ class Cylinder(
      * handover, the reduction is ramped out, and the arriving chain's own writer then drops a fresh
      * one on the orbit a block later (review round 1).
      *
-     * **Aged with the lease** (review round 2): an owner that
-     * misses a block has lapsed (`VoiceLease`), and a chain arriving while the orbit merely rings
-     * out its tail must resolve from the authored defaults, not from a dead voice's state. The
-     * reference is dropped at the same moment, so nothing here outlives the owner by more than the
-     * lease's own grace (the allocation-cleanup rule).
+     * **Aged** (review round 2): a block without an owner ([commitOwner] found no offer) ages the state, and a
+     * chain arriving while the orbit merely rings out its tail resolves from the authored defaults, not from a
+     * voice that gave the orbit up. The reference is dropped after [OWNER_STATE_BLOCKS], so nothing here
+     * outlives its owner by more than that (the allocation-cleanup rule).
      */
     private var ownerParams: Map<String, Double>? = null
 
     /**
      * Blocks since the orbit's owner last handed [ownerParams] over, capped at
-     * [OWNER_STATE_BLOCKS], where the state is dropped. Counted in blocks and not in frames because
-     * the lease's own liveness is (see `VoiceLease`).
+     * [OWNER_STATE_BLOCKS], where the state is dropped. Counted in blocks: an owner is chosen once per block.
      */
     private var ownerParamsAge: Int = OWNER_STATE_BLOCKS
+
+    /**
+     * Whether any voice has checked in since the orbit's last reset, and the block it last did ([checkIn]): the
+     * orbit is in use while a voice renders on it, owner or not (tails, fading and culled voices included).
+     * [tryDeactivate] reads it. Separate from ownership, which only `Sounding` voices take ([offer]).
+     */
+    private var checkedIn: Boolean = false
+
+    // Absolute backend frame, Double, see RenderClock.cursorFrame.
+    private var lastCheckInFrame: Double = 0.0
 
     // ════════════════════════════════════════════════════════════════════════════
     // API
     // ════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Update orbit settings from a voice. [blockStart] is the current block's start frame, used by the
-     * orbit ownership [lease] to tell voices apart across blocks (production passes it via
-     * `Cylinders.getOrInit`). Only the OWNER voice's settings are applied; other voices are ignored.
-     *
-     * Block-framing ledger D14 (named Class 2 knob): bus params apply at BLOCK granularity, never
-     * at the onset sample — a new owner's settings also govern the `ctx.offset` samples before its
-     * own first sample (the previous owner's still-decaying tail), and the transition frame moves
-     * with alignment. Inherent to a block-continuous bus driven by per-voice triggers.
+     * [voice], `Sounding` this block, offers itself as the owner of the orbit's bus settings: the orbit's bus
+     * settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is
+     * cut (lifecycle step 5, maintainer 2026-10-07). The offer only records the newest offer of the block ([isNewer]);
+     * [commitOwner] applies it once, after every voice has rendered, so the outcome does not depend on the order
+     * the voices render in, and a block applies one owner's settings, not each offerer's in turn. Allocation-free.
      */
-    // blockStart is an ABSOLUTE backend frame — Double, see RenderClock.cursorFrame.
-    fun updateFromVoice(voice: Voice, blockStart: Double) {
-        isActive = true
+    // blockStart is an ABSOLUTE backend frame, Double, see RenderClock.cursorFrame.
+    fun offer(voice: Voice, blockStart: Double) {
+        checkIn(blockStart)
 
-        if (lease.claim(voice.id, blockStart, blockFrames)) {
-            ownerParams = voice.katalystParams
-            ownerParamsAge = 0
+        val current = candidate
 
-            // BEFORE the late-duck question below, and before any writer runs: `ducksWith` asks
-            // the chain what its duck stage RESOLVES to, and until this owner's state has been read
-            // that answer is the chain's authored default. Resolving does not write, so the
-            // handover order the carried envelope depends on is untouched, and the `applyParams`
-            // further down re-uses this resolve (same map instance, gated).
-            chain.resolveParams(voice.katalystParams)
-
-            // A ducking owner whose FIRST claim lands in the swap's own block. The swap was decided
-            // at promotion, before this voice offered itself, so [handOverDuck] saw no owner and
-            // chose the ramp-out path. Corrected here ([ChainSwap.ownerClaimed]), before the writers
-            // run: otherwise the orbit ramps the old reduction out while this voice's fresh envelope
-            // sits unprocessed behind it, and drops by the whole depth the moment the ramp ends.
-            //
-            // ONLY in that block ([Crossfade.isAtStart]). Once the ramp has moved, the orbit's gain
-            // is already `g * (1 - t) + t` and handing the envelope over would jump it back to `g`
-            // (0.053 on a 0.5 probe three blocks in, 0.2 mid-fade). A claim after that keeps
-            // ramping out, and the arriving chain's own fresh envelope makes its duck-down on the
-            // first block past the ramp: the ducker's documented behaviour for a new owner, not a
-            // step the swap put there.
-            //
-            // NOT gated on the voice's own duck settings (dropped in review round 3; the voice
-            // has none since step 5b-3): a duck named through `.katp("duck.orbit", n)` alone left
-            // the voice's then `duckCylinder` field null, so the correction skipped it
-            // and the arriving chain's fresh envelope then pulled the orbit down by the full depth
-            // one block past the ramp. What the arriving chain will do is `ducksWith`'s answer, and
-            // the resolve above is what makes it current.
-            swap.ownerClaimed(chain)
-
-            // EVERY chain resolves EVERY knob from the owner's param state, the born-with one
-            // included (step 5b-1): one way for a bus knob to reach a stage (the voice's bus
-            // fields left the wire in step 5b-3). The rule's one home is the `katalystParam` door's KDoc in
-            // `sprudel/lang/lang_katalyst.kt`.
-            //
-            // The state is READ THROUGH THE LEASE and never copied into this cylinder: it is the
-            // owner's map, so it lives exactly as long as the owner does, and an orbit whose owner
-            // died is back to what its chain authored. The chain re-resolves only when the map
-            // INSTANCE changes (`KatalystChain.applyParams`), so a live owner costs one reference
-            // compare per block and no lookup.
-            chain.applyParams(voice.katalystParams)
-
-            // The chain FADING OUT is still audible, so it is still configured (step 3b): the
-            // owner keeps steering it until the fade ends. Not while it DRAINS: the ring-out runs
-            // on the settings the chain had when it left service, and a new owner's settings (a
-            // different time or room, or an off-config that would cut the room's feed of echoes)
-            // are the arriving chain's business.
-            swap.configureLeaving(voice.katalystParams)
+        if (current == null || isNewer(voice.startFrame, voice.id, current.startFrame, current.id)) {
+            candidate = voice
         }
     }
+
+    /**
+     * Applies this block's newest offer ([offer]) as the orbit's owner: production calls it once per block from
+     * `Cylinders.processAndMix`, after the voices rendered and before the orbit's own processing. No offer this
+     * block: the orbit has no owner and keeps the settings it last applied. Re-applying the same owner is cheap
+     * (the chain re-resolves only when the owner's map instance changes).
+     *
+     * Block-framing ledger D14 (named Class 2 knob): bus params apply at BLOCK granularity, never at the onset
+     * sample: a new owner's settings also govern the `ctx.offset` samples before its own first sample (the
+     * previous owner's still-decaying tail), and the transition frame moves with alignment. Inherent to a
+     * block-continuous bus driven by per-voice triggers.
+     */
+    fun commitOwner() {
+        val voice = candidate ?: return
+
+        candidate = null
+        ownerParams = voice.katalystParams
+        ownerParamsAge = 0
+
+        // BEFORE the late-duck question below, and before any writer runs: `ducksWith` asks
+        // the chain what its duck stage RESOLVES to, and until this owner's state has been read
+        // that answer is the chain's authored default. Resolving does not write, so the
+        // handover order the carried envelope depends on is untouched, and the `applyParams`
+        // further down re-uses this resolve (same map instance, gated).
+        chain.resolveParams(voice.katalystParams)
+
+        // A ducking owner whose FIRST claim lands in the swap's own block. The swap was decided
+        // at promotion, before this voice offered itself, so [handOverDuck] saw no owner and
+        // chose the ramp-out path. Corrected here ([ChainSwap.ownerClaimed]), before the writers
+        // run: otherwise the orbit ramps the old reduction out while this voice's fresh envelope
+        // sits unprocessed behind it, and drops by the whole depth the moment the ramp ends.
+        //
+        // ONLY in that block ([Crossfade.isAtStart]). Once the ramp has moved, the orbit's gain
+        // is already `g * (1 - t) + t` and handing the envelope over would jump it back to `g`
+        // (0.053 on a 0.5 probe three blocks in, 0.2 mid-fade). A claim after that keeps
+        // ramping out, and the arriving chain's own fresh envelope makes its duck-down on the
+        // first block past the ramp: the ducker's documented behaviour for a new owner, not a
+        // step the swap put there.
+        //
+        // NOT gated on the voice's own duck settings (dropped in review round 3; the voice
+        // has none since step 5b-3): a duck named through `.katp("duck.orbit", n)` alone left
+        // the voice's then `duckCylinder` field null, so the correction skipped it
+        // and the arriving chain's fresh envelope then pulled the orbit down by the full depth
+        // one block past the ramp. What the arriving chain will do is `ducksWith`'s answer, and
+        // the resolve above is what makes it current.
+        swap.ownerClaimed(chain)
+
+        // EVERY chain resolves EVERY knob from the owner's param state, the born-with one
+        // included (step 5b-1): one way for a bus knob to reach a stage (the voice's bus
+        // fields left the wire in step 5b-3). The rule's one home is the `katalystParam` door's KDoc in
+        // `sprudel/lang/lang_katalyst.kt`.
+        //
+        // The state is READ FROM THE OWNER and never copied into this cylinder: it is the owner's
+        // map, by reference. An orbit without an owner keeps the stages as they were last written
+        // (only a chain arriving meanwhile resolves its authored defaults). The chain re-resolves only when the map
+        // INSTANCE changes (`KatalystChain.applyParams`), so a live owner costs one reference
+        // compare per block and no lookup.
+        chain.applyParams(voice.katalystParams)
+
+        // The chain FADING OUT is still audible, so it is still configured (step 3b): the
+        // owner keeps steering it until the fade ends. Not while it DRAINS: the ring-out runs
+        // on the settings the chain had when it left service, and a new owner's settings (a
+        // different time or room, or an off-config that would cut the room's feed of echoes)
+        // are the arriving chain's business.
+        swap.configureLeaving(voice.katalystParams)
+    }
+
+    /**
+     * A voice renders on this orbit this block without offering itself as the owner (a voice past its gate, or
+     * a fading one): it activates the orbit and keeps it in use ([tryDeactivate]). It does not offer, so it gives
+     * the orbit up simply by not offering. Allocation-free.
+     */
+    // blockStart is an ABSOLUTE backend frame, Double, see RenderClock.cursorFrame.
+    fun checkIn(blockStart: Double) {
+        isActive = true
+        checkedIn = true
+        lastCheckInFrame = blockStart
+    }
+
+    /**
+     * The order of the ownership rule ([offer]): the later onset wins; on the same onset the voice created later
+     * (the higher [Voice.id]; ids grow monotonically and wrap only after 2^31 voices).
+     */
+    private fun isNewer(aStart: Double, aId: Int, bStart: Double, bId: Int): Boolean =
+        aStart > bStart || (aStart == bStart && aId > bId)
+
+    /** True while a voice checked in during this block or the one before (a one-block grace). */
+    private fun voiceCheckedIn(blockStart: Double): Boolean = checkedIn && (blockStart - lastCheckInFrame) <= blockFrames
 
     /**
      * Requests the chain registered as [name], the orbit twin of `MasterBus.requestSwap`: the
@@ -529,7 +575,7 @@ class Cylinder(
      *    tail after [ChainSwap.MAX_DRAIN_SECONDS] (a self-oscillating delay never stops) has its
      *    output released exponentially and retires about 4.5 s later (step 12 decision (i)), so a
      *    request queued behind a drain waits about 24.5 s at most. No owner configures it any more
-     *    (see [updateFromVoice]).
+     *    (see [commitOwner]).
      *
      *    The orbit drained from the start (decided 2026-09-17: its delay and reverb already own the
      *    drain; nothing here invents a decay); the master bus cut its leaving chain until step 12
@@ -538,7 +584,7 @@ class Cylinder(
     fun processEffects() {
         if (!isActive) return
 
-        // The owner's check-in ages one block here, the one place that runs once per block per
+        // The owner's committed state ages one block here, the one place that runs once per block per
         // orbit and after the voices have offered themselves (see [ownerParams]).
         if (ownerParamsAge < OWNER_STATE_BLOCKS) {
             ownerParamsAge++
@@ -576,7 +622,7 @@ class Cylinder(
 
     /**
      * Retires this cylinder for the shelf (resource warehouse, cylinders): every bus effect off and
-     * cleared, the lease freed, the buffers zeroed, and the rented units (delay ring, reverb
+     * cleared, the owner forgotten, the buffers zeroed, and the rented units (delay ring, reverb
      * network) handed back to THEIR shelves — a shelved cylinder holds nothing. The same clean slate
      * [tryDeactivate] reaches, plus the return. Only for a cylinder that will never render again
      * on its current orbit: `CylinderUnits.giveBack` is the one caller.
@@ -631,7 +677,8 @@ class Cylinder(
 
         chains.clear()
         selectClassicChain()
-        lease.reset()
+        candidate = null
+        checkedIn = false
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
         mixBuffer.clear()
@@ -642,7 +689,7 @@ class Cylinder(
     /**
      * Deactivates the orbit once its mix has been silent for the grace, nothing rings in its chain,
      * no swap runs, AND no voice plays on it. [blockStart] is the start frame of the block just
-     * rendered (production: `Cylinders.processAndMix`, fed the engine's cursor), which the lease
+     * rendered (production: `Cylinders.processAndMix`, fed the engine's cursor), which the check-in
      * test needs.
      *
      * Two phases, so a tail is never cut: while the mix is silent a counter runs instead of
@@ -652,23 +699,22 @@ class Cylinder(
      * **An orbit never deactivates while a voice plays on it** (decided 2026-09-19 with the
      * maintainer, Katalyst 5c-8). The silence test reads the POST-fader mix, so a group fader at 0
      * used to make a playing orbit look dead: it was reset every tenth block (measured with one
-     * orbit allocated; the grace is counted in cleanup visits), the lease was
+     * orbit allocated; the grace is counted in cleanup visits), the owner was
      * re-dealt, and the fader came back either as a one-sample jump (a fresh stage snaps) or as a
-     * one-block ramp mid-note, depending on which voice claimed first. The lease is held whenever
-     * any voice on the orbit checked in this block or its owner did in the block before
-     * ([VoiceLease.isHeld]), so a muted orbit with notes keeps running at 0 and its fader glides
+     * one-block ramp mid-note, depending on which voice claimed first. The orbit counts as in use
+     * while any voice on it checked in this block or the one before ([checkIn], owner or not,
+     * separate from ownership), so a muted orbit with notes keeps running at 0 and its fader glides
      * back from where it stands. Judging silence BEFORE the fader was rejected: in a user chain the
      * gain stage can sit anywhere.
      *
-     * The lease test does NOT restart the silence grace, unlike a tail: silence already counted
-     * stays counted, and an orbit whose notes have all ended goes at the first visit once its
-     * lease has lapsed, two blocks after the last check-in (the owner's grace covers the block
-     * after it, see [VoiceLease.isHeld]). Every voice checks in until its scheduled end, a culled
-     * one included, so an orbit stays active through an inaudible release. That is NOT a new
-     * processing cost: before 5c-8 every check-in reactivated the orbit ([updateFromVoice] sets
+     * The check-in test does NOT restart the silence grace, unlike a tail: silence already counted
+     * stays counted, and an orbit whose notes have all ended goes at the first visit two blocks
+     * after the last check-in (the one-block grace covers the block after it). Every voice checks in while it
+     * renders, its release included, audible or not (a culled voice has ended and checks in no more). That is NOT a new
+     * processing cost: before 5c-8 every check-in reactivated the orbit (the owner claim set
      * `isActive`), so the same orbit was reactivated the block after each deactivation and its
      * chain ran every block anyway, to the same final deactivation block. What the refusal
-     * removes is the repeated reset of the chain and the re-dealing of the lease in between.
+     * removes is the repeated reset of the chain and the re-dealing of the owner in between.
      */
     fun tryDeactivate(blockStart: Double) {
         if (!isActive) return
@@ -696,8 +742,8 @@ class Cylinder(
         }
 
         // A voice still plays here (see the KDoc). The count is held at the grace rather than
-        // restarted, so the orbit goes at the first visit after the lease lapses.
-        if (lease.isHeld(blockStart, blockFrames)) {
+        // restarted, so the orbit goes at the first visit after the last check-in's grace.
+        if (voiceCheckedIn(blockStart)) {
             silentBlockCount = silentBlocksBeforeTailCheck
             return
         }
@@ -711,7 +757,7 @@ class Cylinder(
 
         // A chain that was requested while this orbit was sounding lands HERE, the first moment
         // the swap is inaudible. An install that SWAPPED retires the outgoing chain (units back to
-        // the shelves) and frees the lease, which is the clean slate the reset below would reach,
+        // the shelves) and forgets the owner, which is the clean slate the reset below would reach,
         // so only one of the two runs: resetting first would zero a ring we are about to hand back
         // dirty on purpose (see KatalystChain.retire). A pending key that resolved to the chain
         // already in service installs nothing, and then the reset below is still owed: it is what
@@ -720,10 +766,11 @@ class Cylinder(
             return
         }
 
-        // Free the orbit lease and reset all bus effects so a reused/reactivated orbit starts clean and
-        // is reconfigured by whichever voice next claims it.
+        // Forget the owner and reset all bus effects so a reused/reactivated orbit starts clean and
+        // is reconfigured by whichever voice next owns it.
         chain.reset()
-        lease.reset()
+        candidate = null
+        checkedIn = false
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
     }
@@ -816,8 +863,8 @@ class Cylinder(
         // The requested chain is the one already in service, under a name it did not carry before:
         // a content-classic declaration on an orbit still running the chain it was born with (see
         // [chainFor]). Adopting the name is the whole of the install; retiring `leaving` below
-        // would hand back the ring and the network of the chain we just "installed", and resetting
-        // the lease would re-deal the orbit for nothing. FALSE, not true: the caller has to know
+        // would hand back the ring and the network of the chain we just "installed", and forgetting
+        // the owner would re-deal the orbit for nothing. FALSE, not true: the caller has to know
         // that nothing was installed, or [tryDeactivate] would skip the reset that is its own job.
         if (next === chain) {
             return false
@@ -828,9 +875,9 @@ class Cylinder(
         // The denied rents are carried BEFORE the retire, which zeroes the stage's own count: the
         // orbit's diagnostics number is about this cylinder's life, not about its current chain.
         swap.retire(leaving)
-        // The next voice on this orbit becomes the owner cleanly and writes the new chain's
-        // stages, instead of the incoming chain waiting for the previous owner to die.
-        lease.reset()
+        // The next commit writes the new chain's stages from whichever voice owns the orbit then.
+        candidate = null
+        checkedIn = false
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
 
@@ -848,14 +895,12 @@ class Cylinder(
      * would be audible, so the clean slate is asserted here rather than assumed (`MasterBus.land`
      * does the same).
      *
-     * **The lease is NOT reset**, unlike [install]'s: the owner voice is alive and sounding, and
-     * it is what configures BOTH chains for the length of the fade (see [updateFromVoice]).
-     * Handing ownership to whichever voice offers itself next, mid-note, would reconfigure the
-     * orbit from a different voice's fields in the middle of a swap.
+     * **The owner is NOT forgotten**, unlike in [install]: the owner voice is alive and sounding, and
+     * it is what configures BOTH chains for the length of the fade (see [commitOwner]).
      *
      * A fade started from [pollPendingChain] rather than from the promotion path begins after this
      * block's voices have already offered themselves, and may find no owner alive at all, so a
-     * declared chain is configured from its own slots right here rather than waiting for a lease.
+     * declared chain is configured from its own slots right here rather than waiting for an owner.
      */
     private fun beginFade(key: String, rawName: String, dsl: KatalystDsl) {
         val next = chainFor(key, dsl)
@@ -889,8 +934,8 @@ class Cylinder(
         handOverDuck(from = leaving, to = next)
 
         // The arriving chain reads the orbit's slot state here, because nothing else would run its
-        // writers until a voice claims the lease: this block's voices have already offered
-        // themselves when a fade starts from the pending poll, and an owner may not even be alive.
+        // writers until the next commit: this block's owner has already been committed when a fade
+        // starts from the pending poll, and an owner may not even be alive.
         // Gated on the same map instance the resolve above took, so it only writes. With no state
         // at all every knob lands on what the chain authored, which is the clean slate a chain
         // entering service wants.

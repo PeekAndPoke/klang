@@ -50,7 +50,8 @@ object TeardownFadeRenderer : BlockRenderer {
         // `offset + length - 1 == floor(endFrame) - blockStart - 1` hold even when a voice starts
         // and ends inside one block, and hence what makes the endpoint exact. `BareTreeVoiceSpec`
         // renders a REAL Voice to pin the coupling; if sub-sample onsets ever arrive, revisit here.
-        val lastFrame = floor(ctx.endFrame) - 1.0
+        val limits = ctx.limits
+        val lastFrame = floor(limits.endFrame) - 1.0
         val fadeFrames = VCA_OFF_TEARDOWN_FADE_SECONDS * ctx.sampleRateD
         // The guard always gets its full window ON THE TIMELINE PATH, where endFrame is known
         // before the window is rendered. A realtime note-off rewrites endFrame between blocks
@@ -67,7 +68,7 @@ object TeardownFadeRenderer : BlockRenderer {
         // Taking the window from the gate tail when the release is too short is the lesser evil.
         val ideal = lastFrame - (fadeFrames - 1.0)
         // ...but never more than the second half of the voice: this is a fade guard, not an envelope.
-        val midpoint = (ctx.startFrame + lastFrame) * 0.5
+        val midpoint = (limits.startFrame + lastFrame) * 0.5
         val fadeStart = maxOf(ideal, midpoint).coerceAtMost(lastFrame)
         // A reciprocal is safe here, unlike the release ramp: the endpoint that must be exact is
         // `remaining == 0.0`, which comes from `lastIdx - idx == 0`, and 0.0 * x is 0.0 exactly.
