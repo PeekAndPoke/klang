@@ -14,6 +14,10 @@ One reverb cannot be every room. What the stereo reverb round showed, by ear:
   The far ear hears the room but never the source itself; a real ear would also get the direct sound,
   later and duller (the head's shadow), and early reflections that lean towards the source's side.
   Our network has no early part at all.
+- **Character (maintainer, 2026-10-07):** "the reverb is too sterile somehow and could need some
+  character." For later; a design question for this round (what gives a room its character: early
+  reflections, modulation of the tail, frequency-dependent decay, diffusion, and which of these are the
+  2 to 4 tells worth having).
 
 ## What there is today
 
