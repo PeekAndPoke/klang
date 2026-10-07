@@ -63,3 +63,28 @@ Maintainer: if the fix would introduce undue complexity, keep as is and defer. M
 `IgnitorDsl` kind, so adding a kind without deciding whether it is warmed does not compile";
 `WarmupVocabularySpec` enumerates the sealed hierarchy by reflection and fails at test time instead.
 The spec is the guard; the KDoc sentence is stale and should say so.
+
+## Idea 2026-10-07: warmup in the worklet constructor (nice to have, far future)
+
+Maintainer: "doing the warmup in the constructor at some point, this should remove even more first
+voice stutter, but this is a very future and very nice to have thing."
+
+Today `KlangAudioWorklet` builds its context and starts `WarmupRunner` on the first `process()`
+call (`contextFor()`), and the warmup ticks one block per callback, silenced, until `BackendReady`.
+Nothing blocks a constructor version: the class already compiles to a real ES class with a plain
+`super()` constructor (es2015 target), `port` and `sampleRate` are available there, and the block
+size would be `RENDER_QUANTUM_FRAMES` with a one-time check on the first `process()`.
+
+What it would and would not buy, to weigh when we get here:
+
+- **Would:** the warmup's own render spike leaves the audio callback (no overrun, no 100 % gauge
+  spike), and `BackendReady` arrives as soon as the node exists instead of after ~20 callbacks.
+- **Would not, by itself:** warm anything new. The same code runs in the same realm either way,
+  so the suspects above (the song's own ignitors, per-shape JIT, GC at the tutti) stay where they
+  are. Measure the first tutti before and after.
+- **Cost to check:** `WarmupRunner` is block-paced on purpose (the warehouse zeroes a bounded slice
+  per block). Run synchronously in the constructor it becomes one long call; harmless while silent,
+  but it delays node creation, which matters most on a phone.
+
+The `contextFor()` lazy setup stays as it is until then: it works reliably and its per-block cost is
+one null check (maintainer, 2026-10-07).
