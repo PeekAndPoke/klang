@@ -92,7 +92,7 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 | `Ignitor.ramp(freq?)`     | Reverse sawtooth                         |
 | `Ignitor.zawtooth(freq?)` | Naive sawtooth (brighter, no anti-alias) |
 | `Ignitor.impulse(freq?)`  | Single-sample impulse per cycle          |
-| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse; one `duty` LFO shared by pulses at different pitches runs too fast today, build one per pulse (`docs/tasks/shared-modulator-memo-rate.md`) |
+| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse; one `duty` modulator may be shared by pulses at any pitches unless it reads `Ignitor.freq()` anywhere (see `phase(x)` below for the rule) |
 
 ### Super Oscillators (Unison/Detuned)
 
@@ -128,8 +128,10 @@ new random start phases on every note, a constant there is not audible, a moving
 banks every partial moves by the same fraction of its own cycle (0.5 inverts the wave, 0.25 starts every partial on
 its peak), and a partial that joins mid-note at a phase other than 0 or 0.5 enters with a step. A fast-moving phase
 also squeezes the soft edges of the saw and square family, which then alias like their raw twins. One phase LFO
-shared by layers at different pitches runs too fast today (`docs/tasks/shared-modulator-memo-rate.md`): build a
-separate LFO per layer until that task lands.
+may be shared by layers at different pitches (`let wob = Ignitor.sine(30).mul(0.3)` in two layers is one LFO). The
+rule: a shared modulator that reads `Ignitor.freq()` anywhere (its rate, its depth, a scaling next to it, as in
+`wob.mul(Ignitor.freq().recip().mul(220))`) renders once per pitch, so every LFO only in it runs too fast; build it once per
+layer (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`).
 
 ```javascript
 Ignitor.sine(4, x => x.phase(0.25))                      // an LFO that starts at its peak
@@ -464,6 +466,13 @@ sustain (a share of `semitones`, usually 0 = the note) over the decay, and from 
 the release. `x => x.adsr(0.001, 0.04, 0, 0)` is a kick's sweep. Without the lambda: `adsr(0.01, 0.1, 0, 0)`. Its
 stages are exponential unless its `adsr` shapes them (since 2026-09-25; the drop reaches the note sooner than a linear
 one): `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("linear", "linear", "linear"))` gives a straight, slower sweep.
+
+A pitch mod over a stack (`Ignitor.sine().plus(Ignitor.tri()).vibrato(5, 0.1)`) is ONE modulator for the whole stack:
+every pitched layer bends with the same LFO, at the written rate. One exception: a layer detuned with `.detune` under
+an `fm`, or under a pitch mod whose knobs read `Ignitor.freq()`, renders the whole mod again, LFO and modulator
+included; give such a layer its own mod. Until 2026-10-07 a pitch mod ran once per pitched layer, so a vibrato over
+three layers was heard at three times its rate; a patch tuned before then may sound slower now
+(`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, section B-1).
 
 ### Analog Drift
 

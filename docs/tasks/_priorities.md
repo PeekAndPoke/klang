@@ -165,8 +165,8 @@ The release-defining set, regardless of when they're sequenced:
   [`20261006-oscillator-names-across-dsls.md`](../tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md);
   sprudel sounds get no `phase` slot,
   [`20261006-oscillator-phase-knob.md`](../tasks-archive/2026-10/20261006-oscillator-phase-knob.md), "Recorded
-  asymmetries". Queued from review: [`shared-modulator-memo-rate.md`](shared-modulator-memo-rate.md), a stateful
-  modulator shared by oscillators at different pitches runs at double rate (pre-existing, `duty` and `phase`).
+  asymmetries". Done 2026-10-07: [`20261007-shared-modulator-memo-rate.md`](../tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md), a stateful
+  modulator shared by oscillators at different pitches ran at double rate (pre-existing, `duty` and `phase`); open from that batch: [`bugfix-non-finite-pitch-strip-and-signals.md`](bugfix-non-finite-pitch-strip-and-signals.md), and the audit leftovers §2 (worklet tests) and §4 (cut groups, by ear) in [`audit-audio-backend-leftovers.md`](audit-audio-backend-leftovers.md).
   Answered 2026-10-07: (4) the saw's node is `IgnitorDsl.Saw` (wire name `saw`, factory `Ignitors.saw`), like its
   door `Ign.saw`; sprudel's `sndTriangle()` is `sndTri()` (it still sets the sound `triangle`); the sound names and
   the LFO shape `sawtooth` stay,

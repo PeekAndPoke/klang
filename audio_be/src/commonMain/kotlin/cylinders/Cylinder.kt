@@ -276,6 +276,12 @@ class Cylinder(
     var isActive = false
         private set
 
+    /**
+     * Silent cleanup visits since the mix last sounded. Wrap-safe by construction (audit leftovers §3): it counts
+     * visits (blocks), and [tryDeactivate] leaves it at most [silentBlocksBeforeTailCheck] on every path once it
+     * reaches that grace (reset on a tail, held at the grace while a voice plays, reset on deactivation), so an
+     * orbit that stays silent forever, a muted one with notes included, never counts past the grace.
+     */
     private var silentBlockCount: Int = 0
 
     // ONE owner per orbit: the first voice to sound owns ALL of the orbit's bus effects while it is alive

@@ -38,7 +38,8 @@ class PlaybackEngine(
 
     /**
      * Consecutive rendered blocks in which this engine had no active voice: how long its notes
-     * have been over, saturated at [maxTailHoldBlocks] (an always-on engine never overflows it).
+     * have been over, saturated at [maxTailHoldBlocks] (an always-on engine never overflows it: the `min` in
+     * [renderInto] caps it before `+ 1` could reach `Int.MAX_VALUE`, on every path, a never-audible one included).
      * A stopped playback's endless tails are held for this long before they are released (see
      * [isIdle]); a tail that sustains itself on an orbit keeps the orbit active, so a count that
      * waited for the orbits too would never start.

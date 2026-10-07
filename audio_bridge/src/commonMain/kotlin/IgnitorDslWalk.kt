@@ -18,10 +18,13 @@ package io.peekandpoke.klang.audio_bridge
  * never consume the freq ARGUMENT except to forward it — freq-dependence is expressed as a
  * param defaulting to [IgnitorDsl.Freq], so the D13 fold predicate can see it structurally
  * (`Fm.freq` is the precedent; it used to be a special case in `usesMusicalFreq` and a node
- * that breaks the convention re-creates that bug: a detune above it folds away silently).
+ * that breaks the convention re-creates that bug: a detune above it folds away silently). Since
+ * 2026-10-07 the same predicate also decides `MemoizingIgnitor.freqInvariant`, so such a node has
+ * a second, worse consequence: when it is shared by readers at two pitches, its memo drops the
+ * freq key and hands one reader's freq-dependent samples to the other (a wrong sound).
  * The complete, deliberate exception list (the baseline for the next sweep): `FreqIgnitor`
  * EMITS the argument (it is the leaf), the two detune ignitors MULTIPLY it (that is detune's
- * whole mechanism), and `MemoizingIgnitor` KEYS on it (defensive + the fm-modulator door).
+ * whole mechanism), and `MemoizingIgnitor` KEYS on it (unless the subtree reads no `Freq`).
  *
  * **Child order is part of the contract** — [withChildNodes] re-reads the list positionally, so
  * the order here must match constructor order for every node, and both functions must agree.

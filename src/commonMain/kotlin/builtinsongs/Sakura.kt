@@ -35,7 +35,8 @@ let shaku = Ign.sine().mul(0.6)
       .highpass(600, x => x.analog(Ign.slot.analog))
       // NOTE: `.analog(0.2)` was here and INERT (receiver was the Lowpass wrapper). The
       // filters above still get their own `analog = Ign.slot.analog` saturation.
-      .vibrato(2, Ign.perlin(1).mul(0.15).plus(0.15))
+      // 4 Hz and perlin(2): what was heard when this was tuned; the engine ran a vibrato over two sources twice per block (fixed 2026-10-07)
+      .vibrato(4, Ign.perlin(2).mul(0.15).plus(0.15))
       .pitchEnvelope(1, x => x.adsr(0.02, 0.1, 0, 0))
       .adsr(0.07, 0.15, 0.8, 0.3)
       .classic()

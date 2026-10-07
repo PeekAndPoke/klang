@@ -162,18 +162,47 @@ internal class IgnitorBuildCache(
         for (i in dslKeys.indices) {
             if (dslKeys[i] === key && modKeys[i] === mod && ctxKeys[i] === ctx) {
                 val existing = values[i]
-                val ignitor = existing.ignitor
-                if (ignitor is MemoizingIgnitor) ignitor.incConsumers()
+
+                onShared(i)
+
                 // The tail rides along with the cached value on purpose — see [BuiltIgnitor].
                 return existing
             }
         }
+
         val v = compute()
+
         dslKeys.add(key)
         modKeys.add(mod)
         ctxKeys.add(ctx)
         values.add(v)
+
         return v
+    }
+
+    /**
+     * Entry [i] was reached a second time: its memo now has two consumers and caches per block, and its freq key is
+     * resolved here, at the share, not at every wrap: resolving at every wrap made a voice build about five times
+     * slower (16-layer tree, 15 to 77 us; measured 2026-10-07), and only a shared memo reads the key.
+     */
+    fun onShared(i: Int) {
+        val memo = values[i].ignitor as? MemoizingIgnitor ?: return
+
+        memo.incConsumers()
+        resolveFreqKey(i, memo)
+    }
+
+    /**
+     * A subtree with no [IgnitorDsl.Freq] consumer and no pitch mod renders the same at any freq, so its memo drops the
+     * freq key (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`). The mod is excluded because the memo wraps it too, and a
+     * vibrato's knobs may read `Freq` where the subtree does not.
+     */
+    fun isFreqInvariant(node: IgnitorDsl, mod: Ignitor?): Boolean = mod == null && !usesMusicalFreq(node)
+
+    private fun resolveFreqKey(i: Int, memo: MemoizingIgnitor) {
+        if (!memo.freqInvariant && isFreqInvariant(dslKeys[i], modKeys[i])) {
+            memo.markFreqInvariant()
+        }
     }
 
     // ── The D13 fold predicate, identity-memoized per build ─────────────────────────────────
@@ -301,19 +330,19 @@ internal fun IgnitorDsl.buildIgnitor(
         return pick(cache.soundIndex).buildIgnitor(ignitorParams, cache, accumulatedMod)
     }
 
-    // ── Pitch-mod nodes: absorb into mod, descend. No cache/Memoized for this node itself. ──
+    // ── Pitch-mod nodes: absorb into mod, descend. No cache entry for this node itself; its mod is memoized (`combineMods`). ──
     when (this) {
         is IgnitorDsl.Vibrato -> {
             val vibMod = vibratoModIgnitor(
                 rate = this.rate.buildIgnitor(ignitorParams, cache).ignitor,
                 semitones = this.semitones.buildIgnitor(ignitorParams, cache).ignitor,
             )
-            return inner.buildIgnitor(ignitorParams, cache, combineMods(accumulatedMod, vibMod))
+            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, vibMod, node = this))
         }
 
         is IgnitorDsl.Accelerate -> {
             val accelMod = accelerateModIgnitor(this.semitones.buildIgnitor(ignitorParams, cache).ignitor)
-            return inner.buildIgnitor(ignitorParams, cache, combineMods(accumulatedMod, accelMod))
+            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, accelMod, node = this))
         }
 
         is IgnitorDsl.PitchEnvelope -> {
@@ -331,13 +360,13 @@ internal fun IgnitorDsl.buildIgnitor(
                 decayCurve = this.decayCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
                 releaseCurve = this.releaseCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
             )
-            return inner.buildIgnitor(ignitorParams, cache, combineMods(accumulatedMod, peMod))
+            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, peMod, node = this))
         }
 
         is IgnitorDsl.PitchMod -> {
             val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
             val ratioMod = deviationToRatioIgnitor(userMod)
-            return inner.buildIgnitor(ignitorParams, cache, combineMods(accumulatedMod, ratioMod))
+            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, ratioMod, node = this))
         }
 
         is IgnitorDsl.Fm -> {
@@ -352,7 +381,7 @@ internal fun IgnitorDsl.buildIgnitor(
                 envReleaseSec = this.envReleaseSec.buildIgnitor(ignitorParams, cache).ignitor,
                 freq = this.freq.buildIgnitor(ignitorParams, cache).ignitor,
             )
-            val carrierBuilt = carrier.buildIgnitor(ignitorParams, cache, combineMods(accumulatedMod, fmMod))
+            val carrierBuilt = carrier.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, fmMod, node = this))
             // The modulator is not on the amplitude spine, but the old `maxReleaseSec` counted it
             // (`maxOf(carrier, modulator)`). Keep counting it: over-counting only over-allocates
             // lifetime, whereas dropping it would silently shorten voices that render fine today.
@@ -375,12 +404,40 @@ internal fun IgnitorDsl.buildIgnitor(
         // exactly like sharing the child directly: a later reference to either node
         // incConsumers() the ONE memo, and if a caller ever presents a different freq (the fm
         // MODULATOR door can — E8), the memo's freq key keeps it honest, same as any share.
+        // The memo's freq key is resolved at the first share (`IgnitorBuildCache.onShared`).
         raw.copy(ignitor = if (ignitor is MemoizingIgnitor) ignitor else MemoizingIgnitor(ignitor))
     }
 }
 
-private fun combineMods(existing: Ignitor?, newMod: Ignitor): Ignitor =
-    if (existing != null) existing * newMod else newMod
+/**
+ * The mod a pitch-mod [node] hands down to the child it bends: its own [newMod] times the [existing] mods of the pitch-mod
+ * nodes around it, behind ONE [MemoizingIgnitor] that caches per block (review round 1, B-1). Every pitched source
+ * under the node applies the mod ([applyMod]), and without the memo each one generated it: a vibrato's LFO, an fm
+ * modulator and any LFO in their knobs advanced once per SOURCE per block (a vibrato over two pitched sources ran at
+ * twice its rate, each source on alternate blocks). It caches even for a single source: the copy writes the same
+ * samples the delegate would, and counting readers to skip it cost more code than the copy costs time (review round 2).
+ *
+ * The memo drops its freq key when the node's knobs read no `Freq` and neither does [existing]: a detuned source
+ * under the mod calls it at another freq. A mod whose knobs read `Freq` (FM, whose `freq` defaults to the note, or a
+ * vibrato whose depth reads `Ignitor.freq()`) keeps the key: sources at one pitch share it, a source detuned under it
+ * renders it again (the second residue of `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`).
+ */
+private fun IgnitorBuildCache.combineMods(existing: Ignitor?, newMod: Ignitor, node: IgnitorDsl): Ignitor {
+    val memo = MemoizingIgnitor(if (existing != null) existing * newMod else newMod)
+    val outerInvariant = existing == null || (existing is MemoizingIgnitor && existing.freqInvariant)
+    // The knobs are every child but the first: every pitch-mod node lists the child it bends (`inner`, FM's
+    // `carrier`) first. By position, not identity: a knob may be the inner node itself (`x.pitchMod(x)`).
+    val children = node.childNodes()
+    val knobsReadFreq = (1 until children.size).any { usesMusicalFreq(children[it]) }
+
+    if (outerInvariant && !knobsReadFreq) {
+        memo.markFreqInvariant()
+    }
+
+    memo.cachePerBlock()
+
+    return memo
+}
 
 private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
     if (mod != null) ModApplyingIgnitor(source, mod) else source

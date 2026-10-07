@@ -71,7 +71,9 @@ fun Ignitor.adsr(
  * is nulled where the build reads it (`IgnitorDslRuntime`'s Adsr arm).
  *
  * The pitch envelope's sustain (`PitchModFactories`) takes the same substitution for the same
- * reason: it multiplies every ratio of a settled block, so a NaN would freeze the pitch.
+ * reason: it multiplies every ratio of a settled block, so a NaN would freeze the pitch. So do the
+ * pitch modulators' amounts there (vibrato `rate` and `semitones`, accelerate's and the pitch
+ * envelope's `semitones`, FM `ratio` and `depth`, since 2026-10-07), each with its node's default.
  */
 internal fun finiteOr(value: Double, fallback: Double): Double = if (value.isFinite()) value else fallback
 

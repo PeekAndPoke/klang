@@ -22,11 +22,13 @@ import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -128,7 +130,7 @@ class VoiceFactory(
         val vibratoDepthSemitones = data.vibratoMod ?: 0.0
         val vibrato = Voice.Vibrato(
             semitones = vibratoDepthSemitones,
-            rate = if (vibratoDepthSemitones > 0.0) data.vibrato ?: 5.0 else 0.0,
+            rate = if (vibratoDepthSemitones > 0.0) data.vibrato ?: VIBRATO_RATE_HZ else 0.0,
         )
 
         // Pitch Envelope: the Ignitor pitch envelope's law and defaults (`PitchEnvelopeDefaults.kt`),
@@ -174,7 +176,7 @@ class VoiceFactory(
 
         // FM Synthesis
         val fm = if (data.fmh != null || (data.fmEnv ?: 0.0) != 0.0) {
-            val ratio = data.fmh ?: 1.0
+            val ratio = data.fmh ?: FM_RATIO
             val depth = data.fmEnv ?: 0.0
             // The modulation envelopes' curve, the Ignitor FM node's (decision D3).
             val fmEnv = Voice.Envelope(

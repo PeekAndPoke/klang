@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -86,6 +87,10 @@ class EqIgnitorSpec : StringSpec({
      * Builds BOTH trees through toExciter and renders [blocks] blocks at each voice
      * frequency (fresh exciters per frequency — per-voice state), asserting raw-bit
      * equality sample by sample.
+     *
+     * Not-silence floor (audit leftovers §1, 2026-10-07): the chained side's finite peak must pass 0.01 at
+     * every voice frequency. Two silent renders compare equal whatever the adapter does; a silent source kept
+     * every parity row green before the floor.
      */
     fun assertDslParity(
         chained: IgnitorDsl,
@@ -100,16 +105,28 @@ class EqIgnitorSpec : StringSpec({
             val bufB = AudioBuffer(blockFrames)
             val ca = ctx()
             val cb = ctx()
+            var peak = 0.0
+
             repeat(blocks) {
                 a.generate(bufA, f, ca)
                 b.generate(bufB, f, cb)
                 for (i in 0 until blockFrames) {
+                    val y = abs(bufA[i])
+
+                    if (y.isFinite() && y > peak) {
+                        peak = y
+                    }
+
                     if (!(bufA[i].isNaN() && bufB[i].isNaN())) {
                         bufA[i].toRawBits() shouldBe bufB[i].toRawBits()
                     }
                 }
                 ca.voiceElapsedFrames += blockFrames
                 cb.voiceElapsedFrames += blockFrames
+            }
+
+            withClue("the parity render at $f Hz is (near) silence: peak $peak") {
+                peak shouldBeGreaterThan 0.01
             }
         }
     }

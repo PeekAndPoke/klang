@@ -17,9 +17,12 @@ import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import kotlin.math.pow
 import kotlin.math.abs
 
@@ -72,8 +75,12 @@ private class VibratoModIgnitor(
     private var lfoPhase: Double = 0.0
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-        val depthSemitones = Ignitors.readParam(semitones, freqHz, ctx)
+        // NaN-guard: a non-finite rate or depth reads as UNSET and takes the node's default, the chain
+        // `adsr`'s rule (`finiteOr`). Raw, a NaN depth skips the `<= 0.0` bypass and `safeOut` turns every
+        // ratio into 0 (the oscillator holds still), and a NaN rate pins the LFO at phase 0 (no vibrato).
+        // No clamp: every finite value passes raw.
+        val rateVal = finiteOr(Ignitors.readParam(rate, freqHz, ctx), VIBRATO_RATE_HZ)
+        val depthSemitones = finiteOr(Ignitors.readParam(semitones, freqHz, ctx), VIBRATO_SEMITONES)
         val end = ctx.windowEnd
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val depthOctaves = depthSemitones / 12.0
@@ -124,7 +131,10 @@ fun accelerateModIgnitor(semitones: Ignitor): Ignitor = AccelerateModIgnitor(sem
 
 private class AccelerateModIgnitor(private val semitones: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val amountVal = Ignitors.readParam(semitones, freqHz, ctx) / 12.0 // semitones -> octaves
+        // NaN-guard: a non-finite amount reads as UNSET, 0 (no glide), the chain `adsr`'s rule (`finiteOr`).
+        // Raw, a NaN skips the `== 0.0` bypass and `safeOut` turns every ratio into 0: the oscillator holds
+        // still. No clamp.
+        val amountVal = finiteOr(Ignitors.readParam(semitones, freqHz, ctx), 0.0) / 12.0 // semitones -> octaves
         val end = ctx.windowEnd
 
         if (amountVal == 0.0) {
@@ -206,7 +216,10 @@ private class PitchEnvelopeModIgnitor(
     private val core = EnvelopeCore()
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val amountVal = Ignitors.readParam(semitones, freqHz, ctx)
+        // NaN-guard: a non-finite amount reads as UNSET, 0 (no envelope), the chain `adsr`'s rule
+        // (`finiteOr`). Raw, a NaN skips the `== 0.0` bypass and `safeOut` turns every ratio into 0: the
+        // oscillator holds still. No clamp.
+        val amountVal = finiteOr(Ignitors.readParam(semitones, freqHz, ctx), 0.0)
         val end = ctx.windowEnd
 
         if (amountVal == 0.0) {
@@ -376,8 +389,12 @@ private class FmModIgnitor(
 
         // Every other param reads at the RESOLVED fm frequency — the same actualFreq convention
         // the wave/super oscillators use for their own params.
-        val ratioVal = Ignitors.readParam(ratio, fmFreqVal, ctx)
-        val depthVal = Ignitors.readParam(depth, fmFreqVal, ctx)
+        // NaN-guard: a non-finite ratio or depth reads as UNSET and takes the node's default (ratio 1,
+        // depth 0 = no fm), the chain `adsr`'s rule (`finiteOr`). Raw, a NaN depth skips the `== 0.0`
+        // bypass and `safeOut` turns every ratio into 0 (the carrier holds still), and a NaN ratio drives
+        // the modulator at a NaN frequency. No clamp.
+        val ratioVal = finiteOr(Ignitors.readParam(ratio, fmFreqVal, ctx), FM_RATIO)
+        val depthVal = finiteOr(Ignitors.readParam(depth, fmFreqVal, ctx), 0.0)
         // Read — and thereby advance — the env subtrees BEFORE the depth gate below: state moves
         // once per rendered block whatever the output, or a depth passing through zero would
         // freeze a modulated envelope time. The same E2 shape, one level down.
