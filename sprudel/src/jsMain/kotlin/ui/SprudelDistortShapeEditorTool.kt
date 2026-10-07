@@ -37,13 +37,6 @@ import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.exp
-import kotlin.math.floor
-import kotlin.math.sign
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
@@ -93,7 +86,7 @@ private class SprudelDistortShapeEditorComp(ctx: Ctx<Props>) :
 
     private val parsed
         get() = run {
-            val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
+            val raw = parseStr(initialValue).orEmpty()
             if (raw in allOptions) raw else "default"
         }
 
@@ -226,51 +219,5 @@ private class SprudelDistortShapeEditorComp(ctx: Ctx<Props>) :
             svgText(padL - 3, padT + drawH, "-1", fill = "#ccc", fontSize = "5", textAnchor = "end")
             svgText(padL + drawW / 2, h - 4, "Input", fill = "#ccc", fontSize = "5", textAnchor = "middle")
         }
-    }
-
-    private fun waveshape(x: Double, shape: String): Double = when (shape) {
-        "soft" -> tanh(x)
-        "hard" -> x.coerceIn(-1.0, 1.0)
-        "gentle" -> x / (1.0 + abs(x))
-        "cubic" -> {
-            val c = x.coerceIn(-1.0, 1.0)
-            c - c * c * c / 3.0
-        }
-
-        "diode" -> if (x >= 0.0) tanh(x) else tanh(x * 0.5)
-        "fold" -> sin(x * PI / 2.0)
-        "chebyshev" -> {
-            val c = x.coerceIn(-1.0, 1.0)
-            4.0 * c * c * c - 3.0 * c
-        }
-
-        "rectify" -> abs(tanh(x))
-        "exp" -> sign(x) * (1.0 - exp(-abs(x)))
-
-        "softsat" -> x / sqrt(1.0 + x * x)
-        "tube" -> (tanh(x + 0.5) - 0.46211715726000974) * 0.6839397205857212
-        "linearfold" -> {
-            val shifted = x + 1.0
-            val phase = shifted - 4.0 * floor(shifted * 0.25)
-            1.0 - abs(phase - 2.0)
-        }
-
-        "zerosquare" -> tanh(x * 8.0)
-        "sineshaper" -> sin(x * PI * 0.5)
-        "asym" -> if (x >= 0.0) {
-            val xc = if (x > 1.0) 1.0 else x
-            1.5 * xc - 0.5 * xc * xc * xc
-        } else {
-            val xc = if (x < -1.0) 1.0 else -x
-            -sqrt(xc)
-        }
-
-        "stompbox" -> if (x >= 0.0) 1.0 - exp(-x * 1.5) else -(1.0 - exp(x * 3.0))
-        else -> tanh(x)
-    }
-
-    private fun tanh(x: Double): Double {
-        val e2x = exp(2.0 * x)
-        return (e2x - 1.0) / (e2x + 1.0)
     }
 }

@@ -82,7 +82,7 @@ private class SprudelWaveformEditorComp(ctx: Ctx<Props>) : Component<SprudelWave
 
     private val parsed
         get() = run {
-            val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
+            val raw = parseStr(initialValue).orEmpty()
             if (raw in waveforms) raw else "sine"
         }
 

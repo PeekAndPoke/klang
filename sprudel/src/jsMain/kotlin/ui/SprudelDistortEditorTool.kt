@@ -22,7 +22,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -43,13 +42,6 @@ import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.label
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.exp
-import kotlin.math.floor
-import kotlin.math.sign
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
@@ -107,15 +99,6 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
-    private fun parseStr(text: String?): String? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")
-
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
     private val parsedAmount
         get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
@@ -144,14 +127,11 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
         if (call != null) {
-            "${amount.fmt()}, ${shape ?: "-"}, ${oversample?.takeIf { it > 1 }?.toString() ?: "-"}"
+            "${amount.formatArg()}, ${shape ?: "-"}, ${oversample?.takeIf { it > 1 }?.toString() ?: "-"}"
         } else {
-            amount.fmt()
+            amount.formatArg()
         }
 
     /**
@@ -171,14 +151,14 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 3) texts.add(null)
-            put(texts, 0, amount.fmt())
+            put(texts, 0, amount.formatArg())
             // shape is a STRING param — commits as a quoted string literal; unset = null slot
             put(texts, 1, shape?.let { "\"$it\"" })
             // "Off" / 1x is the engine default — omit the arg
             put(texts, 2, oversample?.takeIf { it > 1 }?.toString())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(amount.fmt())
+            props.toolCtx.onCommit(amount.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()
@@ -394,51 +374,5 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
                 transform = "rotate(-90, 4, $midY)",
             )
         }
-    }
-
-    private fun waveshape(x: Double, shape: String): Double = when (shape) {
-        "soft" -> tanh(x)
-        "hard" -> x.coerceIn(-1.0, 1.0)
-        "gentle" -> x / (1.0 + abs(x))
-        "cubic" -> {
-            val c = x.coerceIn(-1.0, 1.0)
-            c - c * c * c / 3.0
-        }
-
-        "diode" -> if (x >= 0.0) tanh(x) else tanh(x * 0.5)
-        "fold" -> sin(x * PI / 2.0)
-        "chebyshev" -> {
-            val c = x.coerceIn(-1.0, 1.0)
-            4.0 * c * c * c - 3.0 * c
-        }
-
-        "rectify" -> abs(tanh(x))
-        "exp" -> sign(x) * (1.0 - exp(-abs(x)))
-
-        "softsat" -> x / sqrt(1.0 + x * x)
-        "tube" -> (tanh(x + 0.5) - 0.46211715726000974) * 0.6839397205857212
-        "linearfold" -> {
-            val shifted = x + 1.0
-            val phase = shifted - 4.0 * floor(shifted * 0.25)
-            1.0 - abs(phase - 2.0)
-        }
-
-        "zerosquare" -> tanh(x * 8.0)
-        "sineshaper" -> sin(x * PI * 0.5)
-        "asym" -> if (x >= 0.0) {
-            val xc = if (x > 1.0) 1.0 else x
-            1.5 * xc - 0.5 * xc * xc * xc
-        } else {
-            val xc = if (x < -1.0) 1.0 else -x
-            -sqrt(xc)
-        }
-
-        "stompbox" -> if (x >= 0.0) 1.0 - exp(-x * 1.5) else -(1.0 - exp(x * 3.0))
-        else -> tanh(x)
-    }
-
-    private fun tanh(x: Double): Double {
-        val e2x = exp(2.0 * x)
-        return (e2x - 1.0) / (e2x + 1.0)
     }
 }

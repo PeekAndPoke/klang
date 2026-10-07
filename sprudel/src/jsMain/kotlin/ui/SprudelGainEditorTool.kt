@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
+import io.peekandpoke.klang.sprudel.utils.roundTo
+import io.peekandpoke.klang.sprudel.utils.toFixedTrimmed
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -17,7 +19,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onMouseDown
@@ -97,10 +98,7 @@ private class SprudelGainEditorComp(ctx: Ctx<Props>) : Component<SprudelGainEdit
     private val initialValue = props.toolCtx.currentValue ?: ""
 
     private val parsed
-        get() = run {
-            val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
-            raw.toDoubleOrNull() ?: 1.0
-        }
+        get() = parseNum(initialValue, 1.0)
 
     private var gain by value(parsed)
 
@@ -139,10 +137,7 @@ private class SprudelGainEditorComp(ctx: Ctx<Props>) : Component<SprudelGainEdit
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
-    private fun buildValue(): String = "\"${gain.fmt()}\""
+    private fun buildValue(): String = "\"${gain.formatArg()}\""
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
@@ -304,7 +299,7 @@ private class SprudelGainEditorComp(ctx: Ctx<Props>) : Component<SprudelGainEdit
                                 color = Color("#aaa")
                                 put("transform", "translateX(-50%)")
                             }
-                            +v.toFixed(1).removeSuffix(".0")
+                            +v.toFixedTrimmed(1)
                         }
                     }
                 }

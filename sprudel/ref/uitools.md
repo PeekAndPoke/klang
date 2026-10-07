@@ -181,6 +181,8 @@ All helpers live in `sprudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`.
 | `klangui/src/jsMain/kotlin/KlangUiTool.kt`              | Interfaces + registry                       |
 | `klangscript/src/commonMain/kotlin/types/KlangParam.kt` | `uitools` field                             |
 | `sprudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`  | Info icon helpers + `HoverPopupCtrl`        |
+| `sprudel/src/jsMain/kotlin/ui/_editor_tool_arg_helpers.kt` | `parseNum` / `parseNumOrNull` / `parseStr` read an arg's text, `formatArg()` writes a number back; use these, never a private copy |
+| `sprudel/src/jsMain/kotlin/ui/_distort_curve_helpers.kt` | `waveshape()`, the distortion tools' transfer-curve preview |
 | `src/jsMain/kotlin/codemirror/ArgFinder.kt`             | Finds arg under cursor                      |
 | `src/jsMain/kotlin/codemirror/DslGoToDocsExtension.kt`  | Right-click → tool launch                   |
 | `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`        | Registration function                       |

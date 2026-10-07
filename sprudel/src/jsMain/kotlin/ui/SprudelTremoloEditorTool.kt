@@ -21,7 +21,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -117,15 +116,6 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
-    private fun parseStr(text: String?): String? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")
-
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
     private val parsedDepth
         get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
@@ -154,14 +144,11 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
         if (call != null) {
-            "${depth.fmt()}, ${rate?.fmt() ?: "-"}, ${shape ?: "-"}"
+            "${depth.formatArg()}, ${rate?.formatArg() ?: "-"}, ${shape ?: "-"}"
         } else {
-            depth.fmt()
+            depth.formatArg()
         }
 
     /**
@@ -181,13 +168,13 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 3) texts.add(null)
-            put(texts, 0, depth.fmt())
-            put(texts, 1, rate?.fmt())
+            put(texts, 0, depth.formatArg())
+            put(texts, 1, rate?.formatArg())
             // shape is a STRING param — commits as a quoted string literal
             put(texts, 2, shape?.let { "\"$it\"" })
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(depth.fmt())
+            props.toolCtx.onCommit(depth.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()

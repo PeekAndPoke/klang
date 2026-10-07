@@ -24,7 +24,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -92,12 +91,6 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
     private val parsedWet
         get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, REVERB_WET)
@@ -122,14 +115,11 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
         if (call != null) {
-            "${wet.fmt()}, ${size.fmt()}, ${lowpass?.fmt() ?: "-"}"
+            "${wet.formatArg()}, ${size.formatArg()}, ${lowpass?.formatArg() ?: "-"}"
         } else {
-            wet.fmt()
+            wet.formatArg()
         }
 
     /**
@@ -149,12 +139,12 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 3) texts.add(null)
-            put(texts, 0, wet.fmt())
-            put(texts, 1, size.fmt())
-            put(texts, 2, lowpass?.fmt())
+            put(texts, 0, wet.formatArg())
+            put(texts, 1, size.formatArg())
+            put(texts, 2, lowpass?.formatArg())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(wet.fmt())
+            props.toolCtx.onCommit(wet.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()
@@ -337,7 +327,7 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
             for (v in listOf(0.0, 0.5, 1.0)) {
                 val y = padT + drawH - drawH * v
                 svgLine(padL, y, padL + drawW, y, stroke = "rgba(255,255,255,0.2)", strokeWidth = "0.5")
-                svgText(padL - 3, y + 2, v.fmt(), fill = "#ccc", fontSize = "5", textAnchor = "end")
+                svgText(padL - 3, y + 2, v.formatArg(), fill = "#ccc", fontSize = "5", textAnchor = "end")
             }
 
             // X-axis tick marks and labels

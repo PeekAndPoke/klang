@@ -7,6 +7,9 @@ package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 import io.peekandpoke.klang.sprudel.lang.parser.MnRenderer
+import io.peekandpoke.klang.sprudel.utils.decimalPlaces
+import io.peekandpoke.klang.sprudel.utils.roundTo
+import io.peekandpoke.klang.sprudel.utils.roundToString
 import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
@@ -389,7 +392,7 @@ private fun FlowContent.mnModChip(
             input(classes = laf.styles.mnChipInput()) {
                 type = InputType.text
                 attributes["inputmode"] = "numeric"
-                value = current.toFixed(4)
+                value = current.roundToString(4)
                 attributes["min"] = min.toString()
                 if (max != null) attributes["max"] = max.toString()
                 attributes["step"] = step.toString()

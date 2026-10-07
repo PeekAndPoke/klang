@@ -75,7 +75,7 @@ private class SprudelEuclidEditorComp(ctx: Ctx<Props>) : Component<SprudelEuclid
 
     private val parsed
         get() = run {
-            val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
+            val raw = parseStr(initialValue).orEmpty()
             val parts = raw.split(":").map { it.toIntOrNull() }
             Triple(
                 parts.getOrNull(0) ?: 3,   // pulses

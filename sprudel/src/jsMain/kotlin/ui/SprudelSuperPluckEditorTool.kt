@@ -17,7 +17,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -110,12 +109,6 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
     private val parsedVoices
         get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, 5.0).toInt()
@@ -152,12 +145,9 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
         if (call != null) {
-            "$voices, ${detune.fmt()}, ${decay.fmt()}, ${brightness.fmt()}, ${pickPosition.fmt()}, ${stiffness.fmt()}"
+            "$voices, ${detune.formatArg()}, ${decay.formatArg()}, ${brightness.formatArg()}, ${pickPosition.formatArg()}, ${stiffness.formatArg()}"
         } else {
             voices.toString()
         }
@@ -181,11 +171,11 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
             while (texts.size < 6) texts.add(null)
             // voices is an integer param — no decimal point
             put(texts, 0, voices.toString())
-            put(texts, 1, detune.fmt())
-            put(texts, 2, decay.fmt())
-            put(texts, 3, brightness.fmt())
-            put(texts, 4, pickPosition.fmt())
-            put(texts, 5, stiffness.fmt())
+            put(texts, 1, detune.formatArg())
+            put(texts, 2, decay.formatArg())
+            put(texts, 3, brightness.formatArg())
+            put(texts, 4, pickPosition.formatArg())
+            put(texts, 5, stiffness.formatArg())
             c.onCommitCall(texts)
         } else {
             props.toolCtx.onCommit(voices.toString())
