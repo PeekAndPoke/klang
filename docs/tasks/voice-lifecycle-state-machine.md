@@ -95,9 +95,14 @@ Pending ──onset──▶ Sounding ──gate end / note-off──▶ Releasi
 Each step: one commit after the review loop, mutation-checked at the engine tier, and the corpus rendered
 before and after.
 
-0. **Kokon's ending (a measurement, no code).** The last chord fades and then stops audibly. Render the last
-   cycles, trace the level in 10 ms windows, and name the stage that drops (suspect: a voice reaching `endFrame`
-   while still audible, and the 4 ms teardown fade dropping it). Cut is not involved: Kokon uses none.
+0. **Kokon's ending (a measurement, no code). Done 2026-10-07: not the engine.** The last chord's release is
+   LINEAR (`makeGuitar`: `e.curves("linear", "linear", "linear")`, 8 s): the first 6.8 s lose 10 dB, the last
+   second loses about 30 dB, and the rig after the envelope holds the upper part up, so the fall bunches at the
+   end. No voice ends audibly (each is 35 to 38 dB under its peak at its teardown window; keeping the voices 2 s
+   longer changes the output by at most 1.1e-5), no orbit or master stage cuts, and the browser never stops the
+   song (it loops after 6 s of silence). A "cube" release makes the fade steady. A song decision by ear (the
+   curve is set for every guitar in `makeGuitar`). Report and WAVs: `tmp/reviews/kokon-end-report.md`,
+   `tmp/kokon-end/`.
 1. **The state, read-only.** Add the state and derive it from today's fields; `render` dispatches on it.
    Bit-identical.
 2. **One writer for the time limits.** The state machine owns gate end, end frame and (later) fade start, and the
