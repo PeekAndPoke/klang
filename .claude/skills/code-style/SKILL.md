@@ -414,6 +414,20 @@ Never `—` or `–` in docs, KDoc, UI strings, tutorials, commit messages or re
 colons, parentheses or a new sentence. The A/B comment suffix convention is `, swap`.
 (Maintainer, 2026-08: the dash reads as an AI tell.)
 
+### 24. Name Arguments That Could Be Swapped
+
+At a call site, pass arguments by name whenever two or more of them could be swapped and still
+compile (two `Int` ids, several `Double` frames or seconds, two `Boolean` flags), or whenever a
+later refactoring that reorders the parameters would silently shift them. Positional is fine for
+a single argument or for arguments whose types cannot be confused.
+
+```kotlin
+cylinders.checkIn(orbit = voice.cylinderId, voiceId = voice.id, blockStart = ctx.blockStart) // not checkIn(7, 42, 1024.0)
+```
+
+(Maintainer, 2026-10-07, after a review found `Cylinders.checkIn(id: Int, voiceId: Int, ...)`
+whose two ids swap silently and whose order differed from `Cylinder.checkIn`.)
+
 ## Test Rules
 
 ### 23. Negated Equality Is `shouldNotBe`
