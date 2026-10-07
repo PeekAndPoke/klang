@@ -122,15 +122,22 @@ let makeGuitar = (rig) => {
   let pSustain    = Ign.param("sustain",      0.000, "sustain")
   let pRelease    = Ign.param("release",      0.030, "Release")
 
-  let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
-    .phasePool(on = 1, kMin = 0.75, kMax = 0.90, warmup = 0, selection = "normal")
-    .spreadPower(1.0).sideAtten(0.2).gainJitter(0.20).centerJitter(0.30)
-    .analog(pAnalog).analogSpread(0.25)
+let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
+    // enable the phase-pool for consistent onsets and fundamentals
+    .phasePool(on = 1, kMin = 0.70, kMax = 0.95, warmup = 0, selection = "normal")
+    // character knobs, plain scalars on the supersaw builder
+    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.50).centerJitter(0.30)
+    // analog settings
+    .analog(pAnalog).analogSpread(0.3)
   )
 
   let signal = saw.mul(Ign.slot.pregain)
-    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.03, 0, 0))
+    // Simulate plucked string
+    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))
+    //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
+    // noise burst
     .plus(Ign.crackle(1.2).highpass(1200).adsr(0.003, 0.05, 0.0, 0.05).mul(1.2))
+    // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
 
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
@@ -450,7 +457,7 @@ let lifting = stack(
 let landing = stack(
   spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.35).ignp("sustain", 0.15).clip(0.66),
   soar("[4@6 ~@2]")
-    .tremolo(rate = beatRate(0.25), depth = 0.50)
+    .tremolo(rate = beatRate(0.25), depth = 0.35)
     .vibrato(rate = beatRate(0.25), depth = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.0),
   beat("0").gain(0.45),
@@ -464,7 +471,7 @@ let flyingOff = stack(
 
 // The last chord is D major: this part brings its own scale, and the first scale on a note wins.
 let lastChord = stack(
-  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").ignp("release", 10.0),
+  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").ignp("release", 8.0),
 )
 
 // The heavy block: the cocoon breaks open, the arpeggio unravels, the lift, the landing. Played twice, the second time
