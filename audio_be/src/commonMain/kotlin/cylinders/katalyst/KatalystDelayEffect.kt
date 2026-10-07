@@ -222,7 +222,7 @@ class KatalystDelayEffect(
      * - at `|feedback| > 1` the ring GROWS under the frozen ceiling (to the cap, from a charge the
      *   ceiling froze at a fraction of it), and a new owner returning with a tame feedback used to
      *   resume that stale value: ring and ceiling then decayed together and the ceiling crossed
-     *   [TailCeiling.SILENCE] with the ring still at -39 to -87 dBFS (0.4 s, charges 0.1 to
+     *   `SILENCE_FLOOR` with the ring still at -39 to -87 dBFS (0.4 s, charges 0.1 to
      *   0.0002). CLOSED: that return RE-MEASURES ([Draining.resume]); after it, nothing above
      *   -110 dBFS is left when the orbit resets.
      * - a feedback REDUCED to (near) zero, after a drain or LIVE on an owner handover or a glide:
@@ -506,7 +506,7 @@ class KatalystDelayEffect(
         // Non-finite reads as OFF (time) or as the shared default (feedback, cap, wet), never as the
         // previous owner's value: DelayLine's setters DROP non-finite writes, so passing one through
         // would leave whatever the last owner set. The slot writer never hands a non-finite wet to a
-        // running stage (`sendStageRuns`); this guard is the door's own contract for a direct caller
+        // running stage (`stageAskedFor`); this guard is the door's own contract for a direct caller
         // (the reverb door reads a non-finite size as off the same way).
         if (time.isFinite() && time >= MIN_ACTIVE_DELAY_SECONDS) {
             // No ring and none to be had: the orbit stays dry rather than the worklet dying.

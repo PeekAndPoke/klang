@@ -18,6 +18,10 @@ import io.peekandpoke.klang.audio_bridge.optimize
 import kotlin.math.abs
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * Guards the `warmth -> onepole(freq)` unification (2026-08-24):
  *
@@ -42,6 +46,7 @@ class OnepoleParitySpec : StringSpec({
         gateEndFrame = frames * 2,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
+        random = testRandom,
     )
 
     fun render(chain: Ignitor): DoubleArray {

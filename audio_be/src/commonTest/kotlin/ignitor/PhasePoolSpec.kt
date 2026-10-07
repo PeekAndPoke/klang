@@ -52,6 +52,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * Behavioral guards for the banded best-of-M start-phase selection
  * (docs/tasks/unison-phase-pool.md §3.1–§3.2): with the pool on, the "fundamental lottery" tail
@@ -97,6 +101,7 @@ class PhasePoolSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         var sumSq = 0.0
         for (b in 0 until blocks) {
@@ -161,6 +166,7 @@ class PhasePoolSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         var re = 0.0
         var im = 0.0
@@ -307,6 +313,7 @@ class PhasePoolSpec : StringSpec({
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
                 scratchBuffers = ScratchBuffers(blockFrames),
+                random = testRandom,
             ).apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = 0 }
             sig.generate(buffer, freqHz, ctx)
             withClue(name) { rng.nextDouble() shouldBe expected }
@@ -345,6 +352,7 @@ class PhasePoolSpec : StringSpec({
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
                 scratchBuffers = ScratchBuffers(blockFrames),
+                random = testRandom,
             )
             var maxDelta = 0.0
             var prev = 0.0

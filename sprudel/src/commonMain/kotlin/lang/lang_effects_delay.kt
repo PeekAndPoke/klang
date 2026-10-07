@@ -24,7 +24,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 // -- the call sets every slot ----------------------------------------------------------------------------------------
 
 /**
- * Fills the delay stage's companions from `constants/SendEffectDefaults.kt`, the same constants the
+ * Fills the delay stage's companions from `constants/BusEffectDefaults.kt`, the same constants the
  * master delay uses (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from
  * every delay setter, because the delay has no name knob: `delay(time = 0.5)` fills `wet` and the
  * echo is ON.

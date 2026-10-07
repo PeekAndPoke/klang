@@ -51,7 +51,7 @@ import kotlin.math.exp
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the wet (send) plus the optional
  *   time/feedback/cap params of the host call and commits the full argument list. Unset optionals
- *   stay omitted (null slots), so the shared defaults apply (`constants/SendEffectDefaults.kt`).
+ *   stay omitted (null slots), so the shared defaults apply (`constants/BusEffectDefaults.kt`).
  * - Scalar fallback (embedded / sequence atom): edits a single wet (send) value.
  */
 object SprudelDelayEditorTool : KlangUiToolEmbeddable {

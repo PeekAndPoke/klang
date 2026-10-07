@@ -21,6 +21,11 @@ import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * The LAWS of the two cores phase 3 step 4 made shared (`CrushCore`, decision D1; `DistortionCore`,
@@ -76,6 +81,7 @@ class StripLawCoresSpec : StringSpec({
             voiceDurationFrames = blocks * blockFrames,
             gateEndFrame = blocks * blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = DoubleArray(blocks * blockFrames)
         val buffer = AudioBuffer(blockFrames)

@@ -14,6 +14,11 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Safety tests for pitch-mod factories — ensures extreme user inputs don't produce
@@ -34,6 +39,7 @@ class PitchModSafetyTest : StringSpec({
         voiceDurationFrames = durationFrames,
         gateEndFrame = durationFrames,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = elapsedFrames
@@ -234,8 +240,9 @@ class PitchModSafetyTest : StringSpec({
             voiceDurationFrames = frames * blocks,
             gateEndFrame = frames * blocks,
             scratchBuffers = ScratchBuffers(frames),
+            random = testRandom,
         )
-        val ignitor = dsl.buildExciter(freqHz = 220.0, sampleRate = sampleRate).ignitor
+        val ignitor = dsl.buildExciter(freqHz = 220.0, sampleRate = sampleRate, random = testRandom).ignitor
         val buf = AudioBuffer(frames)
         val out = DoubleArray(frames * blocks)
 

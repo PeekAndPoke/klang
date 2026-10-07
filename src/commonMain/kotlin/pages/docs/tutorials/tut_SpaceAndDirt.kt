@@ -15,7 +15,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * Engine truth (verified in audio_be):
  *
  * - An unset slot of either space effect takes the shared musical default
- *   (`audio_bridge` `constants/SendEffectDefaults.kt`, maintainer 2026-09-16): reverb wet 0.25
+ *   (`audio_bridge` `constants/BusEffectDefaults.kt`, maintainer 2026-09-16): reverb wet 0.25
  *   and size 5; delay wet 0.25, time 0.25 s, feedback 0.3. So a bare `reverb(0.4)` and a bare
  *   `delay(0.4)` both sound. §1 introduces wet and size, §2 lets the reader hear the default
  *   size take over (4 deleted, 5 heard), §3's `time = 0.25` equals the default, which at this

@@ -23,6 +23,10 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * The Ignitor pitch envelope on ADSR fields (phase 3 step 3d(i)).
  *
@@ -83,6 +87,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
     fun ctx(sr: Int, gateEnd: Int) = IgniteContext(
         sampleRate = sr, voiceDurationFrames = gateEnd + 10 * blockFrames, gateEndFrame = gateEnd,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     )
 
     fun mod(e: Env) = pitchEnvelopeModIgnitor(
@@ -302,6 +307,6 @@ class PitchEnvelopeAdsrSpec : StringSpec({
     "the pitch release does NOT extend the voice's life" {
         IgnitorDsl.PitchEnvelope(
             inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0), releaseSec = IgnitorDsl.Constant(5.0),
-        ).buildExciter(freqHz = 440.0).releaseTailSec.shouldBeNull()
+        ).buildExciter(freqHz = 440.0, random = testRandom).releaseTailSec.shouldBeNull()
     }
 })

@@ -21,7 +21,7 @@ import kotlin.math.round
  * what lets a German lyric be sung rather than transliterated.
  *
  * Lives in `audio_bridge` (Katalyst step 3c, 2026-09-17) so that both readers of a vowel NAME reach
- * it: sprudel's `toVoiceData`, which resolves a voice's vowel, and the backend's `KatalystSlots`,
+ * it: sprudel's `toVoiceData`, which resolves a voice's vowel, and the backend's `KatalystVowelWriter`,
  * which resolves a declared Katalyst chain's `vowel` stage.
  *
  * **A vowel is also an INDEX** (Katalyst step 5a-2, 2026-09-18): [names] flattens the

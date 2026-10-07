@@ -19,6 +19,11 @@ import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.exp as kexp
 import kotlin.math.tanh as ktanh
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Runtime semantic tests for the arithmetic ops added in the IgnitorDsl arithmetic batch
@@ -35,6 +40,7 @@ class IgnitorArithmeticTest : StringSpec({
         voiceDurationFrames = blockFrames * 4,
         gateEndFrame = blockFrames * 4,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0

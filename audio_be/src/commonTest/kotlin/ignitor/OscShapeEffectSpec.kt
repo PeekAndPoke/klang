@@ -9,6 +9,11 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Render-effect guard: each newly-exposed *single-oscillator shape* knob must actually reach the audio,
@@ -34,6 +39,7 @@ class OscShapeEffectSpec : StringSpec({
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
@@ -41,7 +47,7 @@ class OscShapeEffectSpec : StringSpec({
 
     fun render(dsl: IgnitorDsl, freqHz: Double): List<Double> {
         val buffer = AudioBuffer(blockFrames)
-        dsl.toExciter().generate(buffer, freqHz, createCtx())
+        dsl.toExciter(random = testRandom).generate(buffer, freqHz, createCtx())
         return buffer.toList()
     }
 

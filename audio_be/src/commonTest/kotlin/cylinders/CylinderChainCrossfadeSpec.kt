@@ -151,7 +151,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     /**
      * A chain that DECLARES a duck which will never be configured: no orbit is named, so
-     * `KatalystSlots.duckSettings` resolves to nothing.
+     * `KatalystDuckWriter` resolves to no settings.
      */
     fun duckChainWithNoOrbit() = KatalystDsl.of(
         KatalystStageDsl.Duck(depth = IgnitorDsl.Constant(0.8))

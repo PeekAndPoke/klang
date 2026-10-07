@@ -15,6 +15,10 @@ import io.peekandpoke.klang.audio_bridge.UNISON_MAX_VOICES
 import kotlin.math.abs
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * A unison voice count is a RESOURCE count: it sizes arrays at note-on on the render thread. User input
  * (`voices(1e9)`, an infinite signal) used to reach `Array(v)` unbounded. `coerceUnisonVoices` caps it at
@@ -34,6 +38,7 @@ class UnisonVoiceCapSpec : StringSpec({
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = 8192, gateEndFrame = 8192,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val tmp = AudioBuffer(blockFrames)
         val out = DoubleArray(blocks * blockFrames)

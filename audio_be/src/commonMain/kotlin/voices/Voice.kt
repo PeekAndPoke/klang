@@ -12,11 +12,6 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
@@ -618,47 +613,6 @@ class Voice(
         val attackCurve: AdsrCurve = AdsrCurve.Default,
         val decayCurve: AdsrCurve = AdsrCurve.Default,
         val releaseCurve: AdsrCurve = AdsrCurve.Default,
-    )
-
-    class Compressor(
-        val thresholdDb: Double,
-        val ratio: Double,
-        val kneeDb: Double,
-        val attackSeconds: Double,
-        val releaseSeconds: Double,
-    ) {
-        companion object {
-            /**
-             * Builds the orbit compressor's settings from its five knobs, as
-             * `KatalystSlots.compressorSettings` resolves them from the owner's slots (a
-             * non-finite slot arrives here as null). Null when no knob is set; a missing knob
-             * falls back to its `COMPRESSOR_*` constant.
-             */
-            fun fromParams(
-                threshold: Double?,
-                ratio: Double?,
-                knee: Double?,
-                attack: Double?,
-                release: Double?,
-            ): Compressor? {
-                if (threshold == null && ratio == null && knee == null && attack == null && release == null) {
-                    return null
-                }
-                return Compressor(
-                    thresholdDb = threshold ?: COMPRESSOR_THRESHOLD_DB,
-                    ratio = ratio ?: COMPRESSOR_RATIO,
-                    kneeDb = knee ?: COMPRESSOR_KNEE_DB,
-                    attackSeconds = attack ?: COMPRESSOR_ATTACK_SECONDS,
-                    releaseSeconds = release ?: COMPRESSOR_RELEASE_SECONDS,
-                )
-            }
-        }
-    }
-
-    class Ducking(
-        val cylinderId: Int,
-        val attackSeconds: Double,
-        val depth: Double,
     )
 
     companion object {

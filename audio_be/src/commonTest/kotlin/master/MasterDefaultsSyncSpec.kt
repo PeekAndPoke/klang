@@ -79,7 +79,7 @@ class MasterDefaultsSyncSpec : StringSpec({
     }
 
     // NOTE (2026-09-16): the reverb size and delay cap sync tests went the way of the limiter's: both
-    // sides read `constants/SendEffectDefaults.kt` now, so they compared a value with itself. Drift
+    // sides read one constant now (`constants/BusEffectDefaults.kt`), so they compared a value with itself. Drift
     // between the surfaces is guarded by `KatalystDefaultsSyncSpec`; the output runs the orbit's
     // stages since step 12 C3 and the orbit's chain type since C5.
 

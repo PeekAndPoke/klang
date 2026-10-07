@@ -22,6 +22,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * The sine partial bank (`docs/plans/sine-partial-banks.md`): `IgnitorDsl.Sine` with `harmonics`,
  * `octaves`, `suboctaves`, `fundamental` and `analogSpread`, rendered by `Ignitors.sinePartials`.
@@ -37,7 +41,7 @@ class SinePartialBankSpec : StringSpec({
     val blockFrames = 128
     val blocks = 8
 
-    fun ctx(random: Random = Random, frames: Int = blockFrames): IgniteContext = IgniteContext(
+    fun ctx(random: Random = testRandom, frames: Int = blockFrames): IgniteContext = IgniteContext(
         sampleRate = sampleRate,
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
@@ -49,7 +53,7 @@ class SinePartialBankSpec : StringSpec({
     }
 
     /** Renders [blocks] consecutive blocks into one long buffer. */
-    fun render(sig: Ignitor, freqHz: Double, random: Random = Random, count: Int = blocks): DoubleArray {
+    fun render(sig: Ignitor, freqHz: Double, random: Random = testRandom, count: Int = blocks): DoubleArray {
         val c = ctx(random)
         val out = DoubleArray(count * blockFrames)
         val buf = AudioBuffer(blockFrames)
@@ -100,7 +104,7 @@ class SinePartialBankSpec : StringSpec({
     }
 
     "IgnitorDsl.Sine with literal defaults still renders bit-identically to Ignitors.sine" {
-        assertBits(a = render(IgnitorDsl.Sine().toExciter(), 440.0), b = render(Ignitors.sine(), 440.0))
+        assertBits(a = render(IgnitorDsl.Sine().toExciter(random = testRandom), 440.0), b = render(Ignitors.sine(), 440.0))
     }
 
     "isPlainSine: literal defaults yes, any bank knob set (a Param at 0 included) no" {
@@ -122,9 +126,9 @@ class SinePartialBankSpec : StringSpec({
     }
 
     "GOLDEN: Sine(harmonics = 7) is the Der Schmetterling sub + seven-sine stack, per sample" {
-        val bank = IgnitorDsl.Sine(harmonics = c(7.0)).toExciter()
+        val bank = IgnitorDsl.Sine(harmonics = c(7.0)).toExciter(random = testRandom)
         val tree = (2..8).fold(IgnitorDsl.Sine() as IgnitorDsl) { acc, k -> acc + dslPartial(k = k.toDouble(), g = 1.0 / k) }
-            .toExciter()
+            .toExciter(random = testRandom)
 
         for (freqHz in listOf(41.2, 220.0, 440.0)) {
             assertClose(a = render(bank, freqHz), b = render(tree, freqHz), tol = 1e-12)
@@ -132,17 +136,17 @@ class SinePartialBankSpec : StringSpec({
     }
 
     "fundamental 0 leaves the overtones only: the golden tree without the sub" {
-        val bank = IgnitorDsl.Sine(harmonics = c(7.0), fundamental = c(0.0)).toExciter()
-        val tree = (3..8).fold(dslPartial(k = 2.0, g = 0.5)) { acc, k -> acc + dslPartial(k = k.toDouble(), g = 1.0 / k) }.toExciter()
+        val bank = IgnitorDsl.Sine(harmonics = c(7.0), fundamental = c(0.0)).toExciter(random = testRandom)
+        val tree = (3..8).fold(dslPartial(k = 2.0, g = 0.5)) { acc, k -> acc + dslPartial(k = k.toDouble(), g = 1.0 / k) }.toExciter(random = testRandom)
         assertClose(a = render(bank, 41.2), b = render(tree, 41.2), tol = 1e-12)
     }
 
     "octaves 5 on a 2f sine scaled by 1/2 is the original six-sine grind stack" {
-        val bank = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(c(2.0)), octaves = c(5.0)).mul(c(0.5)).toExciter()
+        val bank = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(c(2.0)), octaves = c(5.0)).mul(c(0.5)).toExciter(random = testRandom)
         val tree = (2..6).fold(dslPartial(k = 2.0, g = 0.5)) { acc, i ->
             val k = 1 shl i
             acc + dslPartial(k = k.toDouble(), g = 1.0 / k)
-        }.toExciter()
+        }.toExciter(random = testRandom)
         assertClose(a = render(bank, 41.2), b = render(tree, 41.2), tol = 1e-12)
     }
 
@@ -358,14 +362,14 @@ class SinePartialBankSpec : StringSpec({
 
     "the pitch envelope moves every partial: bank under PitchEnvelope == tree under PitchEnvelope" {
         fun env(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner, semitones = c(12.0), attackSec = c(0.001), decaySec = c(0.02))
-        val bank = env(IgnitorDsl.Sine(harmonics = c(2.0))).toExciter()
-        val tree = env(IgnitorDsl.Sine() + dslPartial(k = 2.0, g = 0.5) + dslPartial(k = 3.0, g = 1.0 / 3.0)).toExciter()
+        val bank = env(IgnitorDsl.Sine(harmonics = c(2.0))).toExciter(random = testRandom)
+        val tree = env(IgnitorDsl.Sine() + dslPartial(k = 2.0, g = 0.5) + dslPartial(k = 3.0, g = 1.0 / 3.0)).toExciter(random = testRandom)
         val a = render(bank, 110.0)
         val b = render(tree, 110.0)
         assertClose(a = a, b = b, tol = 1e-9)
         // and the envelope did something (otherwise the test proves nothing)
         var moved = 0.0
-        val still = render(IgnitorDsl.Sine(harmonics = c(2.0)).toExciter(), 110.0)
+        val still = render(IgnitorDsl.Sine(harmonics = c(2.0)).toExciter(random = testRandom), 110.0)
         for (i in a.indices) moved = maxOf(moved, abs(a[i] - still[i]))
         (moved > 0.1) shouldBe true
     }

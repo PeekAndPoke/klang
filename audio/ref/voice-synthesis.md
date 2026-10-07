@@ -220,7 +220,7 @@ its release and its own output has stayed under the audibility floor for the cul
   does not move the orbit's ownership either.
 - **Knobs:** `cull(seconds)` sets the window per voice (`VoiceData.cull`, default
   `VOICE_CULL_SECONDS` = 50 ms), `noCull()` writes `VOICE_CULL_NEVER` (negative = never). Floor
-  `VOICE_CULL_FLOOR` = `ORBIT_SILENCE_FLOOR` = 1e-5 (-100 dBFS; one constant shared with the
+  `VOICE_CULL_FLOOR` = `SILENCE_FLOOR` = 1e-5 (-100 dBFS; one constant shared with the
   cylinder's silence test, so per voice and per bus a culled voice is already below what keeps an
   orbit alive; the known exceptions, summed sub-floor tails and a feedback delay's tail ceiling,
   are on the constant's KDoc). Constants in `audio_bridge/constants/VoiceCullingDefaults.kt`.

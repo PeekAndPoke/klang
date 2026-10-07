@@ -52,7 +52,7 @@ import kotlin.random.Random
  * [nextMultiplier] is the raw step; the filter drift (`FilterHumanization`) holds one per block
  * without a ramp.
  */
-class AnalogDrift(analog: Double, stepRate: Int, rng: Random = Random) {
+class AnalogDrift(analog: Double, stepRate: Int, rng: Random) {
     /** Whether analog drift is active. Check this to skip the drift path entirely. */
     val active: Boolean = analog > 0.0
 

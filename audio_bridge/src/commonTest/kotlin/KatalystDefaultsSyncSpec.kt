@@ -46,7 +46,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *     the touched constant would switch that effect on for every song that never asked for it:
  *     `delay.wet`, `reverb.wet`, `phaser.wet`, `duck.depth`.
  *  2. **unset** ([SLOT_UNSET]): where "off" is an absence rather than a number, so the wire's
- *     non-finite marker carries it: all five compressor slots (`Voice.Compressor.fromParams`
+ *     non-finite marker carries it: all five compressor slots (`KatalystCompressorWriter`
  *     gates on "any of the five set", so even one finite constant is a compressor already on),
  *     `duck.orbit`, `reverb.lowpass`, and the four name-and-amount slots of the two stages gated
  *     on a NAME, `body.material`, `body.wet`, `vowel.vowel` and `vowel.wet`.
@@ -137,7 +137,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
     }
 
     "family 2, the unset slots: off is an absence, carried by the non-finite marker" {
-        // ALL FIVE compressor slots, not just the threshold. `Voice.Compressor.fromParams` gates on
+        // ALL FIVE compressor slots, not just the threshold. `KatalystCompressorWriter` gates on
         // "any of the five set", so a single finite constant among them is a compressor that is
         // already on for every song that never wrote `compressor(...)`.
         //
@@ -147,7 +147,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // belt to that braces, not the mechanism.
         //
         // `body.wet` and `vowel.wet` joined them in round 1 of that step's review, for the
-        // compressor's reason and not the index's: `KatalystSlots.bodyDef` substitutes BODY_WET for
+        // compressor's reason and not the index's: `KatalystBodyEffect.configure` substitutes BODY_WET for
         // an UNSET mix, and a 0.0 default is set, so a material-only `body(material = "wood")` ran the bank
         // fully dry on a declared chain. Safe here and nowhere else in this family, because these
         // two stages are gated on their NAME: no material, no stage, whatever the amount says.

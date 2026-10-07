@@ -18,6 +18,10 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * Guards for the saw config of the unified shape ([WaveVoiceState.setSawShape]) and the super-saw
  * tuning anchor ([Ignitors.getUnisonDetune]).
@@ -92,6 +96,7 @@ class AnalogSawSpec : StringSpec({
             voiceDurationFrames = onsetSampleRate,
             gateEndFrame = onsetSampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = 0 }
         sig.generate(buffer, freqHz, ctx)
         return buffer

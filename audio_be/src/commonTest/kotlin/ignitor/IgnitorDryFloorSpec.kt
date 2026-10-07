@@ -14,6 +14,10 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * C4.2 guard: the ignitor-door `floor` follows the shared wet/dry law on both routed
  * effects: phaser `dry = max(floor, cos²(w·π/2))` (correlated, p = 2), shimmer
@@ -41,6 +45,7 @@ class IgnitorDryFloorSpec : StringSpec({
         gateEndFrame = frames * 2,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
+        random = testRandom,
     )
 
     val noise = DoubleArray(frames).also {

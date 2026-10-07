@@ -25,6 +25,10 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import kotlin.math.abs
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * Guards the teardown fade (`TeardownFadeRenderer`): the voice's last frames when its tree does not end in a
  * built envelope with a static release (`BuiltIgnitor.endsInEnvelope`, the one home of the rule), as for a bare
@@ -79,10 +83,11 @@ class VcaOffTeardownSpec : StringSpec({
      */
     fun renderSpan(dsl: IgnitorDsl, freqHz: Double, gate: Int, rel: Int, endFrame: Double): AudioBuffer {
         val total = gate + rel
-        val signal: Ignitor = dsl.toExciter()
+        val signal: Ignitor = dsl.toExciter(random = testRandom)
         val signalCtx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = AudioBuffer(total)
         val block = AudioBuffer(blockFrames)
@@ -107,12 +112,13 @@ class VcaOffTeardownSpec : StringSpec({
 
     /** Renders a whole voice through the teardown fade. */
     fun renderVoiceVcaOff(dsl: IgnitorDsl, freqHz: Double): AudioBuffer {
-        val signal: Ignitor = dsl.toExciter()
+        val signal: Ignitor = dsl.toExciter(random = testRandom)
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = AudioBuffer(totalFrames)
         val block = AudioBuffer(blockFrames)
@@ -142,12 +148,13 @@ class VcaOffTeardownSpec : StringSpec({
 
     /** The same signal with NO fade at all: the reference the fade must not shape. */
     fun renderRaw(dsl: IgnitorDsl, freqHz: Double): AudioBuffer {
-        val signal: Ignitor = dsl.toExciter()
+        val signal: Ignitor = dsl.toExciter(random = testRandom)
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = AudioBuffer(totalFrames)
         val block = AudioBuffer(blockFrames)
@@ -183,7 +190,7 @@ class VcaOffTeardownSpec : StringSpec({
             // the gate, so widening the window makes it red immediately.
             val gated = renderVoiceVcaOff(envelopeBeforeAmp, freq)
             val raw = renderRaw(envelopeBeforeAmp, freq)
-            // A FIXED ceiling, deliberately not derived from VCA_OFF_TEARDOWN_FADE_SECONDS: deriving
+            // A FIXED ceiling, deliberately not derived from TEARDOWN_FADE_SECONDS: deriving
             // it lets the test follow the constant, and a 60x widening then still passes (it did).
             // 10 ms is the bound this guard must stay under to remain a guard rather than an envelope.
             val maxGuardFrames = sampleRate * 10 / 1000

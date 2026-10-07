@@ -12,6 +12,11 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * ENGINE half of the ADSR curve-default pin (2026-08-24): a node with UNSET curves must
@@ -36,6 +41,7 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
         gateEndFrame = frames / 2,      // 1024 frames: attack (240) + decay (240) + sustain fit
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
+        random = testRandom,
     )
 
     fun render(chain: Ignitor): DoubleArray {
@@ -58,7 +64,7 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
         return out
     }
 
-    fun buildDsl(node: IgnitorDsl): Ignitor = node.toExciter()
+    fun buildDsl(node: IgnitorDsl): Ignitor = node.toExciter(random = testRandom)
 
     "DSL runtime: unset curves render bit-identical to explicit Exponential (and NOT to Square)" {
         // `null` = unset: the node's own default knob (since step 3c a curve is an index knob).

@@ -17,6 +17,11 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.ln
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Bit-exact guards for the `controlRateValueOrNull` contract (unified-eq plan, D1a step 1):
@@ -47,6 +52,7 @@ class ControlRateScalarParitySpec : StringSpec({
         voiceDurationFrames = blockFrames * 8,
         gateEndFrame = blockFrames * 8,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0

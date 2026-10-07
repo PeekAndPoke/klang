@@ -13,6 +13,11 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Property-based checks for DSL composition semantics.
@@ -40,6 +45,7 @@ class CompositionPropertiesSpec : StringSpec({
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
@@ -66,8 +72,8 @@ class CompositionPropertiesSpec : StringSpec({
         val plusTree = IgnitorDsl.Plus(left = s, right = s)
         val mulTree = IgnitorDsl.Times(left = s, right = IgnitorDsl.Constant(2.0))
 
-        val plus = plusTree.toExciter()
-        val mul = mulTree.toExciter()
+        val plus = plusTree.toExciter(random = testRandom)
+        val mul = mulTree.toExciter(random = testRandom)
 
         val plusOut = render(plus, 440.0, createCtx())
         val mulOut = render(mul, 440.0, createCtx())
@@ -83,8 +89,8 @@ class CompositionPropertiesSpec : StringSpec({
         val threeSum = IgnitorDsl.Plus(left = IgnitorDsl.Plus(left = s, right = s), right = s)
         val tripled = IgnitorDsl.Times(left = s, right = IgnitorDsl.Constant(3.0))
 
-        val a = render(threeSum.toExciter(), 440.0, createCtx())
-        val b = render(tripled.toExciter(), 440.0, createCtx())
+        val a = render(threeSum.toExciter(random = testRandom), 440.0, createCtx())
+        val b = render(tripled.toExciter(random = testRandom), 440.0, createCtx())
 
         for (i in 0 until blockFrames) {
             a[i] shouldBe (b[i] plusOrMinus 1e-5)
@@ -102,7 +108,7 @@ class CompositionPropertiesSpec : StringSpec({
         (a === b) shouldBe false
         a shouldBe b
 
-        val cache = IgnitorBuildCache()
+        val cache = IgnitorBuildCache(random = testRandom)
         val ia = a.buildIgnitor(null, cache)
         val ib = b.buildIgnitor(null, cache)
 
@@ -112,7 +118,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared Sine DSL node maps to a single Ignitor under the identity cache" {
         val s = IgnitorDsl.Sine()
-        val cache = IgnitorBuildCache()
+        val cache = IgnitorBuildCache(random = testRandom)
 
         val ia = s.buildIgnitor(null, cache)
         val ib = s.buildIgnitor(null, cache)
@@ -126,17 +132,17 @@ class CompositionPropertiesSpec : StringSpec({
 
     "Constant leaves bypass the memoising wrap" {
         val c = IgnitorDsl.Constant(0.5)
-        val ig = c.toExciter()
+        val ig = c.toExciter(random = testRandom)
         (ig is MemoizingIgnitor) shouldBe false
     }
 
     "Freq leaf bypasses the memoising wrap" {
-        val ig = IgnitorDsl.Freq.toExciter()
+        val ig = IgnitorDsl.Freq.toExciter(random = testRandom)
         (ig is MemoizingIgnitor) shouldBe false
     }
 
     "signal-producing nodes are wrapped in MemoizingIgnitor" {
-        val ig = IgnitorDsl.Sine().toExciter()
+        val ig = IgnitorDsl.Sine().toExciter(random = testRandom)
         (ig is MemoizingIgnitor) shouldBe true
     }
 
@@ -147,12 +153,12 @@ class CompositionPropertiesSpec : StringSpec({
     "shared source (let s; s + s) returns identical samples to both readers" {
         val s = IgnitorDsl.Sine()
         val tree = IgnitorDsl.Plus(left = s, right = s) // shared → consumers=2 on memS
-        val ig = tree.toExciter()
+        val ig = tree.toExciter(random = testRandom)
         val ctx = createCtx()
 
         // Plus calls left.generate(buf) and right.generate(tmp). Both should be identical
         // (same memoised sine). Their sum = 2·sine.
-        val singleSine = IgnitorDsl.Sine().toExciter()
+        val singleSine = IgnitorDsl.Sine().toExciter(random = testRandom)
         val singleBuf = render(singleSine, 440.0, createCtx())
         val sumBuf = render(ig, 440.0, ctx)
 
@@ -162,7 +168,7 @@ class CompositionPropertiesSpec : StringSpec({
     }
 
     "advancing voiceElapsedFrames produces new samples (cache invalidated)" {
-        val ig = IgnitorDsl.Sine().toExciter()
+        val ig = IgnitorDsl.Sine().toExciter(random = testRandom)
         val ctx = createCtx()
 
         val first = render(ig, 440.0, ctx)
@@ -183,8 +189,8 @@ class CompositionPropertiesSpec : StringSpec({
 
     "summed shared sine has RMS ≈ 2× single sine" {
         val s = IgnitorDsl.Sine()
-        val single = s.toExciter()
-        val doubled = IgnitorDsl.Plus(left = s, right = s).toExciter()
+        val single = s.toExciter(random = testRandom)
+        val doubled = IgnitorDsl.Plus(left = s, right = s).toExciter(random = testRandom)
 
         val singleRms = render(single, 440.0, createCtx()).rms()
         val doubledRms = render(doubled, 440.0, createCtx()).rms()
@@ -207,7 +213,7 @@ class CompositionPropertiesSpec : StringSpec({
         val b = IgnitorDsl.Dust(IgnitorDsl.Constant(2000.0))
         (a === b) shouldBe false
 
-        val cache = IgnitorBuildCache()
+        val cache = IgnitorBuildCache(random = testRandom)
         val igA = a.buildIgnitor(null, cache)
         val igB = b.buildIgnitor(null, cache)
 
@@ -229,7 +235,7 @@ class CompositionPropertiesSpec : StringSpec({
         val b = IgnitorDsl.WhiteNoise()
         (a === b) shouldBe false
 
-        val cache = IgnitorBuildCache()
+        val cache = IgnitorBuildCache(random = testRandom)
         val ia = a.buildIgnitor(null, cache)
         val ib = b.buildIgnitor(null, cache)
         (ia === ib) shouldBe false
@@ -237,7 +243,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     "re-using a single WhiteNoise DSL node shares one Ignitor" {
         val s = IgnitorDsl.WhiteNoise()
-        val cache = IgnitorBuildCache()
+        val cache = IgnitorBuildCache(random = testRandom)
         val ia = s.buildIgnitor(null, cache)
         val ib = s.buildIgnitor(null, cache)
         (ia === ib) shouldBe true
@@ -251,14 +257,14 @@ class CompositionPropertiesSpec : StringSpec({
         val s = IgnitorDsl.Sine()
         val tree = IgnitorDsl.Plus(left = s, right = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0)))
 
-        val cache = IgnitorBuildCache()
+        val cache = IgnitorBuildCache(random = testRandom)
         val plus = tree.buildIgnitor(null, cache).ignitor
 
         // The two arms should be independent (different cache entries due to different mods).
         // Verify by rendering over multiple blocks: if both were the same oscillator,
         // zero crossings would match. With vibrato on one arm, they diverge.
         val ctx = createCtx()
-        val single = IgnitorDsl.Sine().toExciter()
+        val single = IgnitorDsl.Sine().toExciter(random = testRandom)
         val singleBuf = render(single, 440.0, ctx)
         val plusBuf = render(plus, 440.0, createCtx())
 
@@ -275,8 +281,8 @@ class CompositionPropertiesSpec : StringSpec({
         val v = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0))
         val tree = IgnitorDsl.Plus(left = v, right = v)
 
-        val ig = tree.toExciter()
-        val singleV = v.toExciter()
+        val ig = tree.toExciter(random = testRandom)
+        val singleV = v.toExciter(random = testRandom)
 
         val sumBuf = render(ig, 440.0, createCtx())
         val singleBuf = render(singleV, 440.0, createCtx())
@@ -292,7 +298,7 @@ class CompositionPropertiesSpec : StringSpec({
             .let { IgnitorDsl.Vibrato(it, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(0.5)) }
             .let { IgnitorDsl.Accelerate(it, semitones = IgnitorDsl.Constant(2.0)) }
 
-        val ig = tree.toExciter()
+        val ig = tree.toExciter(random = testRandom)
         val ctx = createCtx()
         val buf = render(ig, 440.0, ctx)
 
@@ -308,8 +314,8 @@ class CompositionPropertiesSpec : StringSpec({
         val mod = IgnitorDsl.Constant(0.0) // 0.0 deviation = no change
         val tree = IgnitorDsl.PitchMod(inner = s, mod = mod)
 
-        val plain = s.toExciter()
-        val modded = tree.toExciter()
+        val plain = s.toExciter(random = testRandom)
+        val modded = tree.toExciter(random = testRandom)
 
         val plainBuf = render(plain, 440.0, createCtx())
         val moddedBuf = render(modded, 440.0, createCtx())
@@ -332,11 +338,11 @@ class CompositionPropertiesSpec : StringSpec({
             semitones = vibDepth,
         )
 
-        val ig = sumVib.toExciter()
+        val ig = sumVib.toExciter(random = testRandom)
         val buf = render(ig, 440.0, createCtx())
 
         // Output should be non-zero (both sources producing) and differ from plain sum.
-        val plainSum = IgnitorDsl.Plus(left = IgnitorDsl.Sine(), right = IgnitorDsl.Saw()).toExciter()
+        val plainSum = IgnitorDsl.Plus(left = IgnitorDsl.Sine(), right = IgnitorDsl.Saw()).toExciter(random = testRandom)
         val plainBuf = render(plainSum, 440.0, createCtx())
 
         var diffs = 0
@@ -355,12 +361,12 @@ class CompositionPropertiesSpec : StringSpec({
             left = IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(0.0)),
             right = IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(7.0)),
         )
-        val ig = tree.toExciter()
+        val ig = tree.toExciter(random = testRandom)
         val out = render(ig, 440.0, createCtx())
 
         // If the two branches collapsed to `2·sine(440)`, RMS would be ≈ 2·(sine RMS) ≈ 2·0.707 ≈ 1.414.
         // Two distinct sine frequencies beat against each other — their summed RMS is ≈ sqrt(2) × singleRms.
-        val single = render(IgnitorDsl.Sine().toExciter(), 440.0, createCtx())
+        val single = render(IgnitorDsl.Sine().toExciter(random = testRandom), 440.0, createCtx())
         val summedRms = out.rms()
         val single2x = 2.0 * single.rms()
 

@@ -33,7 +33,7 @@ import kotlin.random.Random
  *
  * The source is a CONSTANT 0.5, so every expectation below is arithmetic written here: the level the channel
  * leaves ([level], measured on a frame the rule does not touch), the teardown fade's linear ramp over its 192
- * frames at 48 kHz (`VCA_OFF_TEARDOWN_FADE_SECONDS`), and a linear envelope's release (`EnvelopeCore`: `floor(N)`
+ * frames at 48 kHz (`TEARDOWN_FADE_SECONDS`), and a linear envelope's release (`EnvelopeCore`: `floor(N)`
  * frames over `floor(N) - 1`, an exact 0.0 on the last one).
  */
 class BareTreeVoiceSpec : StringSpec({

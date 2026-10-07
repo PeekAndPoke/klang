@@ -21,6 +21,11 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Shared test helpers for voice tests.
@@ -99,6 +104,7 @@ object VoiceTestHelpers {
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
 
         val instrument = if (envelope == null) {
@@ -216,6 +222,7 @@ object VoiceTestHelpers {
             isLooping = isLooping,
             stopFrame = stopFrame,
             sampleRate = sampleRate,
+            rng = testRandom,
         ),
         fm = fm, accelerate = accelerate,
         vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,

@@ -17,6 +17,11 @@ import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.plus
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Guards [BuiltIgnitor.releaseTailSec] — the number `VoiceFactory` turns into voice lifetime.
@@ -31,7 +36,7 @@ import io.peekandpoke.klang.audio_bridge.plus
 class IgnitorTailSpec : StringSpec({
 
     fun tailOf(dsl: IgnitorDsl, ignitorParams: Map<String, Double>? = null, freqHz: Double = 440.0): Double? =
-        dsl.buildExciter(ignitorParams, freqHz = freqHz).releaseTailSec
+        dsl.buildExciter(ignitorParams, freqHz = freqHz, random = testRandom).releaseTailSec
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
@@ -176,11 +181,11 @@ class IgnitorTailSpec : StringSpec({
             )
         )
 
-        dsl.buildExciter(soundIndex = 0).releaseTailSec shouldBe 0.2
-        dsl.buildExciter(soundIndex = 1).releaseTailSec shouldBe 1.5
-        dsl.buildExciter(soundIndex = 2).releaseTailSec shouldBe 0.8
+        dsl.buildExciter(soundIndex = 0, random = testRandom).releaseTailSec shouldBe 0.2
+        dsl.buildExciter(soundIndex = 1, random = testRandom).releaseTailSec shouldBe 1.5
+        dsl.buildExciter(soundIndex = 2, random = testRandom).releaseTailSec shouldBe 0.8
         // Wraps, like the render dispatch does.
-        dsl.buildExciter(soundIndex = 3).releaseTailSec shouldBe 0.2
+        dsl.buildExciter(soundIndex = 3, random = testRandom).releaseTailSec shouldBe 0.2
     }
 
     // ── The registry seam ─────────────────────────────────────────────────────
@@ -190,17 +195,17 @@ class IgnitorTailSpec : StringSpec({
         registry.register("pad", IgnitorDsl.Sine().adsr(attackSec = 0.01, decaySec = 0.1, sustainLevel = 0.5, releaseSec = 1.1))
 
         val data = io.peekandpoke.klang.audio_bridge.VoiceData.empty.copy(sound = "pad")
-        registry.createExciter("pad", data, 440.0)?.releaseTailSec shouldBe 1.1
+        registry.createExciter("pad", data, 440.0, random = testRandom)?.releaseTailSec shouldBe 1.1
 
         // The onepole wrap replaces the ignitor; it must not drop the finding with it.
         val withOnepole = data.copy(ignitorParams = mapOf("onepole" to 900.0))
-        registry.createExciter("pad", withOnepole, 440.0)?.releaseTailSec shouldBe 1.1
+        registry.createExciter("pad", withOnepole, 440.0, random = testRandom)?.releaseTailSec shouldBe 1.1
     }
     // ── endsInEnvelope: the root is a BUILT amplitude envelope (phase 3 step 6) ──────────────────
 
     "endsInEnvelope: classic()'s envelope when it is on; switched off it hands on what is below it; not for a bare source, not under a later stage" {
         fun ends(dsl: IgnitorDsl, ignitorParams: Map<String, Double>? = null): Boolean =
-            dsl.buildExciter(ignitorParams, freqHz = 440.0).endsInEnvelope
+            dsl.buildExciter(ignitorParams, freqHz = 440.0, random = testRandom).endsInEnvelope
 
         ends(IgnitorDsl.Sine().classic()) shouldBe true
         ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 0.0)) shouldBe false
@@ -241,7 +246,7 @@ class IgnitorTailSpec : StringSpec({
         val optimized = IgnitorDsl.Sine().adsr(attackSec = 0.01, decaySec = 0.1, sustainLevel = 0.5, releaseSec = 0.2).mul(IgnitorDsl.Param("level", 1.0)).optimize()
 
         optimized.shouldBeInstanceOf<IgnitorDsl.Affine>()
-        optimized.buildExciter(freqHz = 440.0).endsInEnvelope shouldBe true
-        optimized.buildExciter(mapOf("level" to 0.5), freqHz = 440.0).endsInEnvelope shouldBe false
+        optimized.buildExciter(freqHz = 440.0, random = testRandom).endsInEnvelope shouldBe true
+        optimized.buildExciter(mapOf("level" to 0.5), freqHz = 440.0, random = testRandom).endsInEnvelope shouldBe false
     }
 })

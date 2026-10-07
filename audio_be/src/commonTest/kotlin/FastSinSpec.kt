@@ -15,6 +15,11 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * [fastSin] replaces `kotlin.math.sin` in the oscillators' per-sample loops. Its contract: for a
@@ -81,6 +86,7 @@ class FastSinSpec : StringSpec({
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = 48000, gateEndFrame = 48000,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val sine = Ignitors.sine()
         val buf = AudioBuffer(blockFrames)

@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import io.peekandpoke.klang.audio_bridge.constants.VCA_OFF_TEARDOWN_FADE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.TEARDOWN_FADE_SECONDS
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -29,7 +29,7 @@ import kotlin.math.floor
  * amplified signal to zero before `Voice.render` dropped the voice. Switching the curve off
  * removes that, and the instrument's own envelope cannot replace it: it sits BEFORE the
  * instrument's amp stages, so a tail it has taken to ~1e-4 comes back out of a tube/drive stage
- * 20 dB louder, and teardown steps that straight to zero. See [VCA_OFF_TEARDOWN_FADE_SECONDS]
+ * 20 dB louder, and teardown steps that straight to zero. See [TEARDOWN_FADE_SECONDS]
  * for the measurements and `VcaOffTeardownSpec` for the guard.
  *
  * It runs after the whole tree, so it guarantees silence at the voice's output (only the send stage follows).
@@ -52,7 +52,7 @@ object TeardownFadeRenderer : BlockRenderer {
         // renders a REAL Voice to pin the coupling; if sub-sample onsets ever arrive, revisit here.
         val limits = ctx.limits
         val lastFrame = floor(limits.endFrame) - 1.0
-        val fadeFrames = VCA_OFF_TEARDOWN_FADE_SECONDS * ctx.sampleRateD
+        val fadeFrames = TEARDOWN_FADE_SECONDS * ctx.sampleRateD
         // The guard always gets its full window ON THE TIMELINE PATH, where endFrame is known
         // before the window is rendered. A realtime note-off rewrites endFrame between blocks
         // (Voice.releaseGate), so an authored release SHORTER than this window enters the ramp

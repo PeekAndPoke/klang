@@ -20,6 +20,11 @@ import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 class IgnitorRegistryTest : StringSpec({
 
@@ -84,7 +89,7 @@ class IgnitorRegistryTest : StringSpec({
         val registry = IgnitorRegistry()
         registry.register("gtr", IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0))
 
-        val exciter = registry.createExciter("gtr", VoiceData.empty.copy(sound = "gtr"), 440.0)!!.ignitor
+        val exciter = registry.createExciter("gtr", VoiceData.empty.copy(sound = "gtr"), 440.0, random = testRandom)!!.ignitor
 
         exciter.shouldBeInstanceOf<MemoizingIgnitor>()
             .inner.shouldBeInstanceOf<EqIgnitor>()
@@ -188,7 +193,7 @@ class IgnitorRegistryTest : StringSpec({
         registry.register("sine", IgnitorDsl.Sine())
 
         val data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0)
-        val signal = registry.createExciter("sine", data, 440.0)?.ignitor
+        val signal = registry.createExciter("sine", data, 440.0, random = testRandom)?.ignitor
 
         signal shouldNotBe null
 
@@ -199,6 +204,7 @@ class IgnitorRegistryTest : StringSpec({
             voiceDurationFrames = 44100,
             gateEndFrame = 44100,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = 0 }
 
         val buffer = AudioBuffer(blockFrames)
@@ -208,7 +214,7 @@ class IgnitorRegistryTest : StringSpec({
 
     "createExciter returns null for unknown name" {
         val registry = IgnitorRegistry()
-        val signal = registry.createExciter("xyznotreal", VoiceData.empty, 440.0)
+        val signal = registry.createExciter("xyznotreal", VoiceData.empty, 440.0, random = testRandom)
         signal shouldBe null
     }
 
@@ -218,8 +224,8 @@ class IgnitorRegistryTest : StringSpec({
 
         val data = VoiceData.empty.copy(sound = "test", freqHz = 440.0)
 
-        val sig1 = registry.createExciter("test", data, 440.0)?.ignitor
-        val sig2 = registry.createExciter("test", data, 440.0)?.ignitor
+        val sig1 = registry.createExciter("test", data, 440.0, random = testRandom)?.ignitor
+        val sig2 = registry.createExciter("test", data, 440.0, random = testRandom)?.ignitor
 
         sig1 shouldNotBe null
         sig2 shouldNotBe null
@@ -243,18 +249,19 @@ class IgnitorRegistryTest : StringSpec({
             voiceDurationFrames = 44100,
             gateEndFrame = 44100,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = 0 }
 
         fun render(soundIndex: Int?): AudioBuffer {
             val data = VoiceData.empty.copy(sound = "v", freqHz = 440.0, soundIndex = soundIndex)
-            val sig = registry.createExciter("v", data, 440.0)!!.ignitor
+            val sig = registry.createExciter("v", data, 440.0, random = testRandom)!!.ignitor
             val buffer = AudioBuffer(blockFrames)
             sig.generate(buffer, 440.0, ctx())
             return buffer
         }
 
         fun reference(dsl: IgnitorDsl): AudioBuffer {
-            val sig = dsl.toExciter()
+            val sig = dsl.toExciter(random = testRandom)
             val buffer = AudioBuffer(blockFrames)
             sig.generate(buffer, 440.0, ctx())
             return buffer
@@ -353,12 +360,12 @@ class IgnitorRegistryTest : StringSpec({
 
         fun rootOf(bag: Map<String, Double>): Ignitor {
             val data = VoiceData.empty.copy(freqHz = 220.0, sound = "saw", ignitorParams = bag)
-            val root = registry.createExciter("saw", data, freqHz = 220.0)?.ignitor ?: error("no exciter")
+            val root = registry.createExciter("saw", data, freqHz = 220.0, random = testRandom)?.ignitor ?: error("no exciter")
 
             return (root as MemoizingIgnitor).inner
         }
 
-        val bareSource = (builtInSources().getValue("saw").buildExciter(freqHz = 220.0).ignitor as MemoizingIgnitor).inner
+        val bareSource = (builtInSources().getValue("saw").buildExciter(freqHz = 220.0, random = testRandom).ignitor as MemoizingIgnitor).inner
 
         rootOf(mapOf("adsr.on" to 0.0))::class shouldBe bareSource::class
         rootOf(mapOf("adsr.on" to 0.0, "pregain" to 1.0))::class shouldBe bareSource::class

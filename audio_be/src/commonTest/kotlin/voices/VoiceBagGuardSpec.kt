@@ -26,6 +26,10 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.math.abs
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * The Ignitor slot bag has THREE raw reads across two readers, and all of them are guarded
  * here. The rule they follow is the one every wire number follows (`/dsl-design` section 4) and the
@@ -356,6 +360,7 @@ class VoiceBagGuardSpec : StringSpec({
             gateEndFrame = frames * 2,
             scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
             voiceElapsedFrames = 0,
+            random = testRandom,
         )
         val chain = exciter(onepole)
         val buf = AudioBuffer(blockFrames)

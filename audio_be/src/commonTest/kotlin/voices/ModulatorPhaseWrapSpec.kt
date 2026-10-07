@@ -23,6 +23,11 @@ import io.peekandpoke.klang.audio_be.voices.strip.pitch.VibratoRenderer
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * The FM modulator and the vibrato LFOs evaluate the polynomial sine, whose fold is exact only a
@@ -166,6 +171,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = 500_000, gateEndFrame = 500_000,
                 scratchBuffers = ScratchBuffers(blockFrames),
+                random = testRandom,
             )
             val buf = AudioBuffer(blockFrames)
             val blocks = if (rate == -5.0) 1500 else 100

@@ -145,7 +145,8 @@ sealed class FilterDef {
 
 - Not a wire type any more: the orbit builds these from its slots. The bands resolve from the
   `body.material` / `vowel.vowel` INDEX slot through `BodyMaterials.modesAt` / `VowelBands.bandsAt`
-  (`KatalystSlotWriters`, `KatalystSlots`); DSP = one `ResonatorBank` (band gain rules in `bodyBand` /
+  (`KatalystBodyWriter` / `KatalystVowelWriter`; an unset `wet` / `floor` takes its constant in the
+  effect's `configure`); DSP = one `ResonatorBank` (band gain rules in `bodyBand` /
   `vowelBand`) + `createBody`/`createFormant`; blend + declick-crossfade in `ParallelMixFilter` /
   `KatalystFilterSwap`. See `ref/architecture.md` "Per-Playback Engine".
 - The per-voice filters are `classic()`'s `lpf`/`hpf`/`bpf`/`notch` stages, each an `Ignitor.svf` node

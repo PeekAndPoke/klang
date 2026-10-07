@@ -15,7 +15,6 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.PI
 import kotlin.math.round
@@ -55,7 +54,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         kneeDb: Double = 6.0,
         attackSeconds: Double = 0.005,
         releaseSeconds: Double = 0.1,
-    ) = Voice.Compressor(
+    ) = CompressorSettings(
         thresholdDb = thresholdDb,
         ratio = ratio,
         kneeDb = kneeDb,
@@ -63,7 +62,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         releaseSeconds = releaseSeconds,
     )
 
-    fun bare(s: Voice.Compressor) = Compressor(
+    fun bare(s: CompressorSettings) = Compressor(
         sampleRate = sampleRate,
         thresholdDb = s.thresholdDb,
         ratio = s.ratio,
@@ -407,7 +406,7 @@ class KatalystCompressorEffectSpec : StringSpec({
      * ratio linear in its INVERSE (the curve's slope `1 / ratio - 1` is linear in it), each over the
      * knob glide's whole blocks and landing on the target.
      */
-    fun knobReference(a: Voice.Compressor, z: Voice.Compressor, change: Int, total: Int): Take {
+    fun knobReference(a: CompressorSettings, z: CompressorSettings, change: Int, total: Int): Take {
         val glide = glideBlocks * blockFrames
         val c = bare(a)
         val ref = Take(l = DoubleArray(total), r = DoubleArray(total))
@@ -440,7 +439,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         return ref
     }
 
-    fun knobRow(a: Voice.Compressor, z: Voice.Compressor) {
+    fun knobRow(a: CompressorSettings, z: CompressorSettings) {
         val changeAt = 25
         val change = changeAt * blockFrames
         val blocks = changeAt + glideBlocks + 10

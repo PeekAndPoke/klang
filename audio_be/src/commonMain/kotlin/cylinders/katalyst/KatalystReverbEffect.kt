@@ -391,6 +391,8 @@ class KatalystReverbEffect(
             val boundedSize = size.coerceIn(0.0, 1.0)
 
             unit.size = boundedSize
+            // NaN-guard on a value the author can write: a non-finite lowpass is unset, the
+            // engine's own fixed damping. The one home of that rule; the writer hands the slot raw.
             unit.lowpass = lowpass?.takeIf { it.isFinite() }
             sizeGlide.retarget(boundedSize)
             // NaN-guard on a value a direct caller can pass: the shared default, see above.

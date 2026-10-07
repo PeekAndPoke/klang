@@ -21,6 +21,11 @@ import io.peekandpoke.klang.audio_be.voices.strip.pitch.PitchEnvelopeRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * [fastExp2] replaces `2.0.pow(x)` in the pitch paths' per-sample loops. Its contract: for any
@@ -108,6 +113,7 @@ class FastExp2Spec : StringSpec({
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val buf = AudioBuffer(blockFrames)
         val attackFrames = attackSec * sampleRate

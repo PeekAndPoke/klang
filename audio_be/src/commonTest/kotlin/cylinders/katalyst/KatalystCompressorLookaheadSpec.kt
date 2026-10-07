@@ -19,7 +19,6 @@ import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -31,7 +30,7 @@ import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
-import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
@@ -109,7 +108,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         return Take(l = l, r = r)
     }
 
-    val settings = Voice.Compressor(
+    val settings = CompressorSettings(
         thresholdDb = -25.0,
         ratio = 4.0,
         kneeDb = 6.0,
@@ -602,7 +601,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
 
             for (k in (retiredAfter + 1) * bf until twinOut.size) {
                 withClue("$name, sample $k: nothing audible left behind (retired after block $retiredAfter)") {
-                    abs(twinOut[k]) shouldBeLessThanOrEqual ORBIT_SILENCE_FLOOR
+                    abs(twinOut[k]) shouldBeLessThanOrEqual SILENCE_FLOOR
                 }
             }
         }

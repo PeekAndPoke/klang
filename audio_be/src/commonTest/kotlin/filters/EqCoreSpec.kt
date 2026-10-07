@@ -31,6 +31,10 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * ULP-0 bit-parity guards for [EqCore] against chained per-voice SVF nodes (unified-eq plan,
  * D2a/D2b): the fused core must equal the chained `SvfIgnitor`s bit-for-bit — that is the graph
@@ -82,6 +86,7 @@ class EqCoreSpec : StringSpec({
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0

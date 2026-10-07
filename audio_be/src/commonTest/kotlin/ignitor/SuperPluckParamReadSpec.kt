@@ -12,6 +12,10 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * Guards ledger O1: `superpluck` must read its `voices` param via `readParam`, never by rendering
  * into scratch and indexing. The raw read returned stale cross-voice pool residue on a zero-length
@@ -27,6 +31,7 @@ class SuperPluckParamReadSpec : StringSpec({
     fun ctx() = IgniteContext(
         sampleRate = sampleRate, voiceDurationFrames = 4096, gateEndFrame = 4096,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     )
 
     fun render(ig: Ignitor, c: IgniteContext, pos: Int, len: Int): DoubleArray {

@@ -16,7 +16,6 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Ducking
-import io.peekandpoke.klang.audio_be.voices.Voice
 import kotlin.math.abs
 
 /**
@@ -38,8 +37,8 @@ class KatalystDuckEffectSpec : StringSpec({
 
     fun ctx(): KatalystContext = KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
 
-    fun settings(orbit: Int, depth: Double, attack: Double = 0.1): Voice.Ducking =
-        Voice.Ducking(cylinderId = orbit, attackSeconds = attack, depth = depth)
+    fun settings(orbit: Int, depth: Double, attack: Double = 0.1): DuckSettings =
+        DuckSettings(cylinderId = orbit, attackSeconds = attack, depth = depth)
 
     /** A steady mix to duck, and a steady loud trigger: the worst case, a reduction in force. */
     fun mix(blocks: Int): DoubleArray = DoubleArray(blocks * frames) { 0.5 }
@@ -55,7 +54,7 @@ class KatalystDuckEffectSpec : StringSpec({
         side: DoubleArray,
         resetAt: Int = -1,
         fx: KatalystDuckEffect = stage(),
-        settingsAt: (Int) -> Voice.Ducking?,
+        settingsAt: (Int) -> DuckSettings?,
     ): DoubleArray {
         val context = ctx()
         val sideBuf = StereoBuffer(frames)
@@ -304,7 +303,7 @@ class KatalystDuckEffectSpec : StringSpec({
         side.left.fill(0.9)
         side.right.fill(0.9)
 
-        fun block(s: Voice.Ducking?) {
+        fun block(s: DuckSettings?) {
             fx.configure(s)
             fx.orbitBlockRan()
             context.mixBuffer.fill(0.5)
@@ -437,7 +436,7 @@ class KatalystDuckEffectSpec : StringSpec({
         side.left.fill(0.9)
         side.right.fill(0.9)
 
-        fun block(fx: KatalystDuckEffect, s: Voice.Ducking?) {
+        fun block(fx: KatalystDuckEffect, s: DuckSettings?) {
             fx.configure(s)
             fx.orbitBlockRan()
             context.mixBuffer.fill(0.5)
@@ -488,7 +487,7 @@ class KatalystDuckEffectSpec : StringSpec({
         side.left.fill(0.9)
         side.right.fill(0.9)
 
-        fun block(fx: KatalystDuckEffect, s: Voice.Ducking?) {
+        fun block(fx: KatalystDuckEffect, s: DuckSettings?) {
             fx.configure(s)
             fx.orbitBlockRan()
             context.mixBuffer.fill(0.5)
@@ -538,7 +537,7 @@ class KatalystDuckEffectSpec : StringSpec({
         side.left.fill(0.9)
         side.right.fill(0.9)
 
-        fun block(s: Voice.Ducking?) {
+        fun block(s: DuckSettings?) {
             fx.configure(s)
             fx.orbitBlockRan()
             context.mixBuffer.fill(0.5)

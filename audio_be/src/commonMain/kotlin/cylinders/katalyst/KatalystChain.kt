@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  *
  * **Two methods, because the orbit's param state changes far more rarely than a block goes by**
  * (Katalyst step 5a). [resolve] re-reads this stage's [KatalystKnob]s from the state and rebuilds
- * whatever composite the stage wants (a `FilterDef`, a `Voice.Compressor`); [apply] writes what is
+ * whatever composite the stage wants (a `FilterDef`, a [CompressorSettings]); [apply] writes what is
  * already resolved into the stage and does no lookup and no allocation, so it can run on every
  * block. [KatalystChain.applyParams] is the one place that decides
  * which of the two a block needs.
@@ -66,7 +66,7 @@ class KatalystChain internal constructor(
      */
     private val serial: Array<KatalystEffect>,
     /** One writer per declared stage, in DSL order, the duck's last. See [KatalystSlotWriter]. */
-    private val statics: Array<KatalystSlotWriter>,
+    private val writers: Array<KatalystSlotWriter>,
     /** The duck stage, or null when the chain declares none. The LAST declared duck wins. */
     val duck: KatalystDuckEffect?,
     /**
@@ -95,10 +95,10 @@ class KatalystChain internal constructor(
      * duplicate has no writer" from "it has one that nothing runs", which is what the last-duck
      * rule turns on.
      */
-    internal val writerCount: Int get() = statics.size
+    internal val writerCount: Int get() = writers.size
 
     /**
-     * The param state [statics] last resolved from, by REFERENCE: the gate of [applyParams]. Null
+     * The param state [writers] last resolved from, by REFERENCE: the gate of [applyParams]. Null
      * both before anything resolved (see [everResolved]) and after a resolve from no owner.
      */
     private var resolvedFrom: Map<String, Double>? = null
@@ -199,8 +199,8 @@ class KatalystChain internal constructor(
     fun applyParams(params: Map<String, Double>?) {
         resolveParams(params)
 
-        for (i in statics.indices) {
-            statics[i].apply()
+        for (i in writers.indices) {
+            writers[i].apply()
         }
     }
 
@@ -229,8 +229,8 @@ class KatalystChain internal constructor(
         resolvedFrom = params
         resolveCount++
 
-        for (i in statics.indices) {
-            statics[i].resolve(params)
+        for (i in writers.indices) {
+            writers[i].resolve(params)
         }
     }
 
@@ -323,8 +323,8 @@ class KatalystChain internal constructor(
         resolvedFrom = null
         resolveCount++
 
-        for (i in statics.indices) {
-            statics[i].resolve(null)
+        for (i in writers.indices) {
+            writers[i].resolve(null)
         }
     }
 

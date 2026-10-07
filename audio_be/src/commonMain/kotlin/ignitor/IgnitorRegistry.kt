@@ -153,7 +153,7 @@ class IgnitorRegistry(
         freqHz: Double,
         phasePools: PhasePools? = null,
         /** The voice's random stream (seeded-voice-rng; see IgniteContext.random). */
-        random: Random = Random,
+        random: Random,
         /** The backend's sample rate and block size. Read only by a `humanize` filter's drift
          *  lane, whose time constants follow the rate it is stepped at. */
         sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,

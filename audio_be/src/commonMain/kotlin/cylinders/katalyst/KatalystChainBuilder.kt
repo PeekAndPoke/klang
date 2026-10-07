@@ -86,7 +86,7 @@ object KatalystChainBuilder {
         reverbs: ReverbUnits,
     ): KatalystChain {
         val pipeline = mutableListOf<KatalystEffect>()
-        val statics = mutableListOf<KatalystSlotWriter>()
+        val writers = mutableListOf<KatalystSlotWriter>()
         var duck: KatalystDuckEffect? = null
         var duckStage: KatalystStageDsl.Duck? = null
 
@@ -103,7 +103,7 @@ object KatalystChainBuilder {
                     // `BodyMaterials.names` (Katalyst step 5a-2). Its fallback is the wire's
                     // "never set", so a knob the bus cannot read leaves the stage off rather
                     // than picking a box nobody asked for.
-                    statics.add(
+                    writers.add(
                         KatalystBodyWriter(
                             fx = fx,
                             material = KatalystKnob(stage.material, SLOT_UNSET),
@@ -117,7 +117,7 @@ object KatalystChainBuilder {
                     val fx = KatalystFormantEffect(sampleRate.toDouble(), blockFrames)
                     pipeline.add(fx)
 
-                    statics.add(
+                    writers.add(
                         KatalystVowelWriter(
                             fx = fx,
                             vowel = KatalystKnob(stage.vowel, SLOT_UNSET),
@@ -127,7 +127,7 @@ object KatalystChainBuilder {
                     )
                 }
 
-                // No ring until a voice asks for one (resource warehouse, 2b). This used to
+                // No ring until the stage is asked for ([stageAskedFor], resource warehouse 2b). This used to
                 // construct a 10-second DelayLine per orbit (7.68 MB, 97 % of the cylinder)
                 // delay or not.
                 is KatalystStageDsl.Delay -> {
@@ -144,8 +144,8 @@ object KatalystChainBuilder {
                     // `delay.wet` is how much of the orbit mix feeds the line (step 5b-2). An
                     // AUTHORED `wet(0.0)` rents no ring (decided 2026-09-17, consistent with the
                     // phaser gated on depth and the duck on orbit), while a wet a PATTERN wrote runs
-                    // the stage whatever its value. The one home of that rule is [sendStageRuns].
-                    statics.add(
+                    // the stage whatever its value. The one home of that rule is [stageAskedFor].
+                    writers.add(
                         KatalystDelayWriter(
                             fx = fx,
                             wet = KatalystKnob(stage.wet, DELAY_WET),
@@ -156,7 +156,7 @@ object KatalystChainBuilder {
                     )
                 }
 
-                // No network until a voice asks for room (resource warehouse, 2d): ~200 KB per
+                // No network until the stage is asked for ([stageAskedFor], resource warehouse 2d): ~200 KB per
                 // orbit otherwise.
                 is KatalystStageDsl.Reverb -> {
                     val fx = KatalystReverbEffect(
@@ -170,8 +170,8 @@ object KatalystChainBuilder {
                     // KatalystReverbEffect). The slot carries the AUTHORED 0..10 size, so the writer
                     // passes it through the one shared conversion, and configure bounds it again
                     // at the door. `reverb.wet` is how much of the orbit mix feeds the room, and
-                    // whether the stage runs is [sendStageRuns], as on the delay above.
-                    statics.add(
+                    // whether the stage runs is [stageAskedFor], as on the delay above.
+                    writers.add(
                         KatalystReverbWriter(
                             fx = fx,
                             wet = KatalystKnob(stage.wet, REVERB_WET),
@@ -189,7 +189,7 @@ object KatalystChainBuilder {
                     )
                     pipeline.add(fx)
 
-                    statics.add(
+                    writers.add(
                         KatalystPhaserWriter(
                             fx = fx,
                             wet = KatalystKnob(stage.wet, PHASER_WET),
@@ -211,7 +211,7 @@ object KatalystChainBuilder {
                     )
                     pipeline.add(fx)
 
-                    statics.add(
+                    writers.add(
                         KatalystCompressorWriter(
                             fx = fx,
                             threshold = KatalystKnob(stage.threshold, COMPRESSOR_THRESHOLD_DB),
@@ -247,7 +247,7 @@ object KatalystChainBuilder {
                     // 2026-09-19, which is bit-transparent and is what let `katp("gain.gain", x)`
                     // reach the fader of an orbit that declares nothing one step before every
                     // other knob could.
-                    statics.add(KatalystEqWriter(fx = fx, knobs = eqKnobs(specs)))
+                    writers.add(KatalystEqWriter(fx = fx, knobs = eqKnobs(specs)))
                 }
 
                 // The group fader, after the inserts (the signal-flow plan's D5).
@@ -258,7 +258,7 @@ object KatalystChainBuilder {
                     // Unity is the identity element of the stage, not a tuned value, which is why
                     // it is a literal here and in `KatalystStageDsl.Gain` rather than a shared
                     // constant (the wire KDoc says so).
-                    statics.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain, 1.0)))
+                    writers.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain, 1.0)))
                 }
             }
         }
@@ -280,12 +280,12 @@ object KatalystChainBuilder {
                 attack = KatalystKnob(winner.attack, DUCK_ATTACK_SECONDS),
             )
 
-            statics.add(duckWriter)
+            writers.add(duckWriter)
         }
 
         return KatalystChain(
             serial = pipeline.toTypedArray(),
-            statics = statics.toTypedArray(),
+            writers = writers.toTypedArray(),
             duck = theDuck,
             // The duck's own writer answers whether the stage will be configured: a chain that
             // names no orbit (or a depth of zero) declares a duck that will never be configured,
@@ -354,7 +354,7 @@ object KatalystChainBuilder {
  * stays inside the effect (where it also drains a live tail instead of freezing it) and this
  * function only decides whether anybody asked for the stage at all.
  */
-internal fun sendStageRuns(wet: KatalystKnob): Boolean {
+internal fun stageAskedFor(wet: KatalystKnob): Boolean {
     // NaN-guard on a value the author can write: a non-finite wet was never set, so it is neither
     // a write nor a positive amount, and an unset stage is off. That is the same reading the voice
     // path gave an untouched effect.

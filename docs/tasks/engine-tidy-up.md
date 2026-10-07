@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); step 1 (dead code, with its deferred `VoiceFactory` items) and step 2 (the oversampler closure) done, see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 5 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -139,6 +139,70 @@ channel. The copy back into the caller's buffer is a plain loop now. It was `cop
   `decimate`): the contract is in the `upsample` KDoc and pinned by the parity rows. If a third caller ever
   appears, promote the test helper `Oversampler.roundTrip` (`_oversampler_test_helpers.kt`) to the main source
   set as the one wrapper, `inline`.
+
+## Step 3, the RNG defaults (B4.14): done 2026-10-07 (uncommitted, awaiting review and the corpus render)
+
+The 15 `random: Random = Random` / `rng: Random = Random` defaults are gone (the audit's "about 16"): `IgniteContext`,
+`buildExciter`, `toExciter`, `IgnitorBuildCache`, `IgnitorRegistry.createExciter`, `AnalogDrift`, `SampleIgnitor`, and
+the eight unison and string factories in `Ignitors.kt`. A forgotten stream is now a compile error. Report:
+`tmp/reviews/tidy-steps3-5-report.md`.
+
+- **Production callers:** every voice path already passed its voice's stream (`VoiceFactory`, `IgnitorRegistry`, the
+  DSL runtime). ONE caller did not: `KatalystSlots.coerce` built an orbit knob's graph with `buildExciter()` bare, so
+  its draws came off the process-wide `Random`. Not an audible bug: the nodes that draw at build (noise, the unison
+  stacks, a humanized filter) answer null at control rate, so the knob takes its fallback whatever was drawn, and no
+  production code reads the global stream. It now builds with a fixed-seed stream, `Random(KNOB_BUILD_SEED)`
+  (0), per coerced knob, so nothing hidden is left for a second backend to reproduce.
+- **Specs** (59 files) pass one seeded stream per file (`private val testRandom = Random(0x5EED)`), not a fresh
+  `Random(0)` per call: several specs average over repeated builds and need successive builds to draw differently,
+  as they did from the global stream. A fresh `Random(0)` per call collapsed `PhasePoolDslSeamSpec`'s 60-note means
+  to one note and turned it red; the per-file stream keeps that meaning and makes every run repeatable. The
+  benchmark's two `IgniteContext`s take `Random(0)`.
+- **Bit-identity:** the production change is the knob build's stream, which no answer reads.
+
+## Step 4, the `KatalystSlots` helpers and the settings types (B2.11, A1.7): done 2026-10-07 (uncommitted, awaiting review and the corpus render)
+
+- **Folded:** `bodyDef`, `vowelDef`, `compressorSettings`, `duckSettings` and `finiteOrNull` left `KatalystSlots`;
+  each rule lives in its one caller, the writer (`KatalystSlotWriters.kt`). `Voice.Compressor.fromParams` and its
+  `Double?` hop went with them: the compressor writer reads the five slots as `Double`s ("any finite = on, each
+  non-finite = its constant"). `VoiceCompressorSpec` (which tested `fromParams`) is replaced by a
+  `KatalystSlotResolverSpec` row, one sub-case per slot.
+- **One NaN rule per knob:** body and vowel substituted their unset `wet` / `floor` twice, in the writer and again
+  in the effect's `configure`; the reverb's lowpass likewise. The writer's copy is the one dropped, the stage's
+  kept, because the stage is where the compare and the cache are (`/review-loop`: compare and store SUBSTITUTED
+  values), and its born-from-a-bug rows (`KatalystBodyEffectSpec`, `KatalystFormantEffectSpec`, root
+  `KatalystBodyNonFiniteWetSpec`) pin it there. The writers now hand those slots through raw (the reverb writer
+  boxes its `Double?` once per resolve, never per block). Same numbers reach the DSP: the effect substitutes the
+  same constants the writer did.
+- **Not folded, the phaser:** the audit's "phaser depth three times" is not one rule written thrice. The writer
+  turns an unset `wet` into `PHASER_WET` (off); `Phaser.depth`'s setter DROPS a non-finite value and keeps the old
+  one; the effect's gate is a threshold. Only the writer substitutes, so there is no second guard to drop.
+- **Moved:** `Voice.Compressor` and `Voice.Ducking` are `CompressorSettings` and `DuckSettings` in
+  `cylinders/katalyst/` (their own files). The type names had to change: the katalyst package already uses
+  `effects.Compressor` and `effects.Ducking` next to them (`KatalystCompressorEffect`, `KatalystDuckEffect`), so the
+  old names would clash. The FIELD names stay (`cylinderId`, `attackSeconds`) until the duck rename (A2.7).
+- **Rows:** the four helper-level resolver rows now go through a declared chain and read what the stage installed.
+  Seven mutants (the body and vowel stage guards, the body floor and vowel mix pass-through, the compressor gate
+  and one substitution, the duck attack) each went red on the intended row; the body guard mutant also turns
+  root `KatalystBodyNonFiniteWetSpec` red, as its rewritten KDoc says.
+
+## Step 5, constants and names (A2.4, B3.9, B2.6): done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+
+- **`SendEffectDefaults.kt` is gone:** delay and reverb live in `BusEffectDefaults.kt`, whose header now names the
+  readers that exist (the stage DSL and script slots, the sprudel doors and editor tools, `KatalystChainBuilder`,
+  the slot writers and stages for a raw `katp` write, the shared DSP). `VoiceFactory`, `Voice.Compressor.fromParams`,
+  `Cylinder` and `SprudelVoiceData.toVoiceData` are no longer named: none reads these constants. "Send" left the
+  delay and reverb KDocs.
+- **Renamed:** `VCA_OFF_TEARDOWN_FADE_SECONDS` is `TEARDOWN_FADE_SECONDS` (`CUT_FADE_SECONDS`'s KDoc links the new
+  name); `sendStageRuns` is `stageAskedFor` (it decides whether anybody asked for the delay or reverb stage);
+  `KatalystChain.statics` is `writers`. The builder's "until a voice asks for one" comments say what gates the
+  rent now.
+- **One silence floor:** `SILENCE_FLOOR` (1e-5, -100 dBFS) in `VoiceCullingDefaults.kt` replaces
+  `ORBIT_SILENCE_FLOOR`, `TailCeiling.SILENCE`, `Reverb.TAIL_THRESHOLD` and `DelayLine`'s two `0.00001` literals
+  (the same double). The master's `TAIL_SILENCE_THRESHOLD` (1e-4) is untouched: decision D9.
+- **Grepped** for every old name over the code, docs, skills and refs; the dated records (`tasks-archive/`,
+  `memory-history.md`, the audit, the blog) keep their words.
+- **Left:** the spec `VcaOffTeardownSpec` keeps its file name.
 
 ## Decisions for the maintainer
 

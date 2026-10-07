@@ -31,6 +31,10 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * P0 of `docs/plans/block-framing-invariance.md`: a voice's output must depend only on when the
  * note starts and what it is made of, never on how the renderer chops time into blocks.
@@ -200,6 +204,7 @@ class BlockFramingInvarianceSpec : StringSpec({
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             scratchBuffers = ScratchBuffers(256),
+            random = testRandom,
         )
         val out = DoubleArray(total)
         val tmp = AudioBuffer(256)
@@ -416,7 +421,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         // early window stays dark. lengths=[1] makes every chord one sample long: the analytic
         // reference.
         val env = FilterEnvDef(depth = 60.0, attackSec = 0.0005, decaySec = 0.05, sustainLevel = 0.0, releaseSec = 0.05)
-        fun chain(): Ignitor = IgnitorDsl.Sine().toExciter().lowpass(cutoffHz = 150.0, q = 0.707, env = env)
+        fun chain(): Ignitor = IgnitorDsl.Sine().toExciter(random = testRandom).lowpass(cutoffHz = 150.0, q = 0.707, env = env)
 
         fun rmsEarly(x: DoubleArray): Double {
             var acc = 0.0

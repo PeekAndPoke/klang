@@ -42,11 +42,11 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * fills `body.wet` and `body.floor`, so a `body(material = "wood")` never reaches the engine with an unset
  * amount at all. These render rows therefore pin the DOOR's fill: breaking it (the door's default
  * changed to 0.0) turns the material-only row red, verified. The ENGINE's own non-finite rule
- * (`KatalystSlots.bodyDef` substituting BODY_WET for an unset mix, the second line of defence
+ * (`KatalystBodyEffect.configure` substituting BODY_WET for an unset mix, the second line of defence
  * behind the fill and what a raw `katp("body.material", n)` still needs) is guarded one level down,
  * by `KatalystClassicMatchesUntouchedVoiceSpec`'s "a MATERIAL-ONLY body reaches the classic chain
- * at the engine's own wet" row, which writes the slot by hand; breaking `bodyDef` turns THAT row
- * red and leaves these green, also verified.
+ * at the engine's own wet" row, which writes the slot by hand; breaking that substitution turns
+ * THAT row red and leaves these green, also verified (2026-09, when it lived in `KatalystSlots`).
  *
  * The constants come from `audio_bridge/constants/`, interpolated into the song text, so the
  * explicit side cannot drift from the fill it is the oracle for.
@@ -83,7 +83,7 @@ class KatalystDoorFillRenderSpec : StringSpec({
     "a MATERIAL-ONLY body(material) plays at the shared BODY_WET and BODY_FLOOR, not dry" {
         // The subject is the SUBSTITUTION, and the oracle is the same door called the long way.
         // `body(material = "wood")` writes the index and leaves the amount and the floor to the door's fill and
-        // to `KatalystSlots.bodyDef`'s non-finite rule; the right side spells both out at the
+        // to the engine's non-finite rule (`KatalystBodyEffect.configure`); the right side spells both out at the
         // constants. Equal samples say the substitution lands on those numbers. With a SET 0.0
         // default the left side rendered a fully dry orbit and this pair failed by thousands of
         // counts, which is the bug round 1 of step 5a-2 found.
@@ -134,7 +134,7 @@ class KatalystDoorFillRenderSpec : StringSpec({
     "a partial compressor(ratio = 8) compresses at the four filled constants" {
         // The compressor has no name knob, so ANY of its five knobs is the gate, and since step
         // 5a-3 the door fills the other four with exactly the constants
-        // `Voice.Compressor.fromParams` substituted for a null field. The oracle is the same call
+        // the engine substitutes for an unset slot (`KatalystCompressorWriter`). The oracle is the same call
         // with all five spelled out.
         val short = render("$voices.gain(1.4).compressor(ratio = 8).orbit(1)")
         val long = render(

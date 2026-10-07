@@ -35,7 +35,7 @@ class SampleIgnitor(
     /** The engine's block size: the drift lane steps once per block (see [AnalogDrift]). */
     blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     /** The voice's random stream (seeded-voice-rng) — wow/flutter drift seeds from it. */
-    rng: Random = Random,
+    rng: Random,
 ) : Ignitor {
 
     private val drift = AnalogDrift(analog, analogDriftStepRate(sampleRate = sampleRate, blockFrames = blockFrames), rng)

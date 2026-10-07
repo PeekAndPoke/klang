@@ -32,6 +32,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.random.Random
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
@@ -215,6 +216,7 @@ class EffectBenchmark(
                 gateEndFrame = Int.MAX_VALUE / 2,
                 scratchBuffers = scratch,
                 voiceElapsedFrames = 0,
+                random = Random(0),
             ).apply {
                 updateOffsetAndLength(0, bf)
             }
@@ -404,6 +406,7 @@ class EffectBenchmark(
                     gateEndFrame = Int.MAX_VALUE / 2,
                     scratchBuffers = ScratchBuffers(bf),
                     voiceElapsedFrames = 0,
+                    random = Random(0),
                 ).apply {
                     updateOffsetAndLength(0, bf)
                 }

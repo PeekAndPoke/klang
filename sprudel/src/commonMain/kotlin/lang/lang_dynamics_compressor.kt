@@ -37,8 +37,8 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  * there are no voice fields beside them.
  *
  * Byte-identical to the engine's own fallback, which is what let the fill move to the door: the
- * five constants written here are exactly what `Voice.Compressor.fromParams` substituted for a null
- * field. Until step 5a-3 this door filled nothing and the asymmetry with `reverb(...)` was recorded
+ * five constants written here are exactly what the engine substitutes for an unset slot
+ * (`KatalystCompressorWriter`). Until step 5a-3 this door filled nothing and the asymmetry with `reverb(...)` was recorded
  * rather than fixed.
  *
  * The HEAD setter, the threshold, is the one setter here a bare call can reach with a null; it then

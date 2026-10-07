@@ -22,6 +22,11 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tan
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * **The tree's SVF (`Ignitor.svf`, its lowpass, highpass and notch taps): the laws the voice strip's filter classes
@@ -273,6 +278,7 @@ class SvfNodeLawSpec : StringSpec({
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = 10 * total, gateEndFrame = 10 * total,
                 scratchBuffers = ScratchBuffers(block),
+                random = testRandom,
             )
             val out = DoubleArray(total)
             val buffer = AudioBuffer(block)

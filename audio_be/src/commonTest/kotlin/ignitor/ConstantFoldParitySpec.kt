@@ -14,6 +14,11 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Bit-parity guards for the constant-fold in the binary combinators' `generate()` — Plus/Times
@@ -36,6 +41,7 @@ class ConstantFoldParitySpec : StringSpec({
         voiceDurationFrames = blockFrames * 8,
         gateEndFrame = blockFrames * 8,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         this.updateOffsetAndLength(offset = offset, length = length)
         voiceElapsedFrames = 0

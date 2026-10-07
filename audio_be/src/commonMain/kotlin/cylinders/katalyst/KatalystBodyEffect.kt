@@ -122,9 +122,9 @@ class KatalystBodyEffect(
      * Configure from the chain's slots (`KatalystBodyWriter`); a voice's `body(...)` door reaches
      * here through those slots. `null` (nobody asks for a body) turns the resonator off.
      *
-     * A non-finite `mix` or `floor` is UNSET and takes [BODY_WET] / [BODY_FLOOR], the rule
-     * `KatalystSlots.bodyDef` already applies to the slots, applied here as well so a direct
-     * caller installs the same bank.
+     * A non-finite `mix` or `floor` is UNSET and takes [BODY_WET] / [BODY_FLOOR]. This is the ONE
+     * home of that rule: the writer hands the slots through raw, so a raw `katp` write arrives
+     * here non-finite.
      *
      * A null fades the bank out (see the class KDoc); a second null while it fades is free. Closed
      * here: the open question of 2026-09-18 (off was a hard cut while every change crossfaded).
@@ -150,11 +150,11 @@ class KatalystBodyEffect(
             return
         }
 
-        // **No production caller can hand this a non-finite value any more** (Katalyst step 5b-1,
-        // 2026-09-19): the one caller is `KatalystSlots.bodyDef`, which substitutes BODY_WET and the
-        // matching floor one layer up, on every chain. The guard stays as this stage's contract for
-        // a DIRECT caller, which is what the effect specs are, and because the failure it prevents
-        // is a per-block allocation on the audio thread rather than a wrong number.
+        // **The ONE home of the body's NaN rule** (since 2026-10-07, audit B2.11): the writer
+        // (`KatalystBodyWriter`) hands its slots through raw, so a raw `katp("body.wet", ...)`
+        // write arrives here non-finite. It lives here and not in the writer because this is where
+        // the compare is, and the failure it prevents is a per-block allocation on the audio
+        // thread rather than a wrong number.
         // NaN-guards, and they sit BEFORE the comparison on purpose: a NaN is never equal to
         // itself, so an unguarded non-finite mix made the test below true on EVERY block and
         // rebuilt two filter banks per block on the audio thread, restarting a crossfade

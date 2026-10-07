@@ -10,6 +10,10 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * Guards the DECIDED voice-count-transition semantics (block-framing ledger O3/O4, maintainer
  * 2026-08-28): transitions are observed at block start BY DESIGN, and at a mid-note change the
@@ -57,6 +61,7 @@ class SuperStackTransitionSpec : StringSpec({
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = 4096, gateEndFrame = 4096,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val tmp = AudioBuffer(blockFrames)
         fun renderBlock(pos: Int) {

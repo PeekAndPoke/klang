@@ -133,8 +133,8 @@ class KatalystBodyEffectSpec : StringSpec({
     // ── Non-finite knobs ─────────────────────────────────────────────────────────────────────────
     //
     // A pattern can write one: `body(material = "wood", wet = "NaN")` parses to a NaN, and
-    // `SprudelVoiceData.toVoiceData` guards a null mix, not a non-finite one. The declared path
-    // substitutes in `KatalystSlots.bodyDef`, so these rows are the born-with half of one rule.
+    // `SprudelVoiceData.toVoiceData` guards a null mix, not a non-finite one. The writer hands
+    // the slots through raw, so these rows pin the one home of the rule (audit B2.11, 2026-10-07).
 
     val nonFinite = listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)
 

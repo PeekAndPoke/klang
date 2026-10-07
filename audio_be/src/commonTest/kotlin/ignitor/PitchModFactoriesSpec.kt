@@ -16,6 +16,11 @@ import io.peekandpoke.klang.audio_be.safeOut
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.sqrt
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 class PitchModFactoriesSpec : StringSpec({
 
@@ -27,6 +32,7 @@ class PitchModFactoriesSpec : StringSpec({
         voiceDurationFrames = sampleRate, // 1 second
         gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(frames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = frames)
         voiceElapsedFrames = 0
@@ -194,6 +200,7 @@ class PitchModFactoriesSpec : StringSpec({
             voiceDurationFrames = totalFrames * 4,
             gateEndFrame = totalFrames * 4,   // gate far away: the env release never engages
             scratchBuffers = ScratchBuffers(128),
+            random = testRandom,
         )
         val out = DoubleArray(totalFrames)
         val tmp = AudioBuffer(128)
@@ -264,6 +271,7 @@ class PitchModFactoriesSpec : StringSpec({
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
                 scratchBuffers = ScratchBuffers(128),
+                random = testRandom,
             )
             val out = DoubleArray(total)
             val tmp = AudioBuffer(128)
@@ -319,6 +327,7 @@ class PitchModFactoriesSpec : StringSpec({
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
                 scratchBuffers = ScratchBuffers(128),
+                random = testRandom,
             )
             val out = DoubleArray(total)
             val tmp = AudioBuffer(128)
@@ -403,6 +412,7 @@ class PitchModFactoriesSpec : StringSpec({
             val ctx = IgniteContext(
                 sampleRate = sr, voiceDurationFrames = gate, gateEndFrame = gate,
                 scratchBuffers = ScratchBuffers(128),
+                random = testRandom,
             )
             val out = DoubleArray(total)
             val tmp = AudioBuffer(128)

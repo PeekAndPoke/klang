@@ -27,6 +27,10 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.optimize
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * **The sample instrument (phase 3 step 7): a sample voice IS the built-in shape over its PCM.**
  *
@@ -61,7 +65,7 @@ class SampleInstrumentSpec : StringSpec({
      * into blocks.
      */
     fun sinePcm(sampleRate: Int): DoubleArray {
-        val source = IgnitorDsl.Sine(freq = IgnitorDsl.Freq).toExciter()
+        val source = IgnitorDsl.Sine(freq = IgnitorDsl.Freq).toExciter(random = testRandom)
         val size = frames + blockFrames
         val out = DoubleArray(size)
         val buffer = DoubleArray(blockFrames)

@@ -102,7 +102,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The voice rng**: one stream per voice, and the draw ORDER is part of the sound (`audio/ref/voice-synthesis.md`,
   "The voice rng").
 - **Silence culling**: a voice in its release whose output stays under `VOICE_CULL_FLOOR` (=
-  `ORBIT_SILENCE_FLOOR`, 1e-5) for `VOICE_CULL_SECONDS` (0.05) stops rendering; never in the gate, never before it
+  `SILENCE_FLOOR`, 1e-5) for `VOICE_CULL_SECONDS` (0.05) stops rendering; never in the gate, never before it
   was heard, and not with a tremolo on the output unless `cull` is set.
 - **The optimizer's promise** is `OPTIMIZER_PARITY` (1e-12 relative to the block's loudest sample), not bit
   identity; every registered tree renders optimized. A synthesized coefficient may be zero only when the authored
@@ -218,6 +218,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-08 One silence floor, `SILENCE_FLOOR` (1e-5; the master's 1e-4 stays, D9); `BusEffectDefaults` holds
+  delay and reverb; `TEARDOWN_FADE_SECONDS`, `stageAskedFor`, `KatalystChain.writers`: `docs/tasks/engine-tidy-up.md` step 5
+- 2026-10-07 The `KatalystSlots` composites live in their writers, one NaN rule per knob (body, vowel, reverb
+  lowpass: the stage's); `CompressorSettings` / `DuckSettings` left `Voice`: `docs/tasks/engine-tidy-up.md` step 4
+- 2026-10-07 No `Random` default anywhere in the engine; an orbit knob's build draws from a fixed seed:
+  `docs/tasks/engine-tidy-up.md` step 3
 - 2026-10-07 The oversampler is two halves, `upsample` and `decimate`, with the caller's shaping loop between
   them inline (no closure per block, no `copyInto` view on JS): `docs/tasks/engine-tidy-up.md` step 2
 - 2026-10-07 The gate covers the four pitch arms, a fold (a non-finite vibrato depth stays built, its default);

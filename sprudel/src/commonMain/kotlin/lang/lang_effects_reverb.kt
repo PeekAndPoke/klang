@@ -24,7 +24,7 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
 // -- the call sets every slot ----------------------------------------------------------------------------------------
 
 /**
- * Fills the reverb stage's companions from `constants/SendEffectDefaults.kt`, the same constants the
+ * Fills the reverb stage's companions from `constants/BusEffectDefaults.kt`, the same constants the
  * master reverb uses (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from
  * every reverb setter, because the reverb has no name knob: `reverb(size = 4)` fills `wet` and the
  * room is ON.

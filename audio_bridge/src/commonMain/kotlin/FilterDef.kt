@@ -10,7 +10,7 @@ import kotlin.math.roundToInt
 
 /**
  * The orbit's resonator band carriers: a vowel's formant bands ([Formant]) and a body's modes ([Body]), resolved from
- * their tables (`VowelBands`, `BodyMaterials`) by the orbit's slots (`KatalystSlots`). The voice filter variants
+ * their tables (`VowelBands`, `BodyMaterials`) by the orbit's slots (`KatalystBodyWriter`, `KatalystVowelWriter`). The voice filter variants
  * (low-pass, high-pass, band-pass, notch) left with the typed `VoiceData.filters` field in phase 3 step 9: a voice
  * filter is a `classic()` slot now.
  */

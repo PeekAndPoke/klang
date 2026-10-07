@@ -35,6 +35,11 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * The orbit's mix EQ ([KatalystEqEffect]): the same curve as on a voice, in one place instead of
@@ -182,6 +187,7 @@ class KatalystEqEffectSpec : StringSpec({
             voiceDurationFrames = data.size,
             gateEndFrame = data.size,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply {
             updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0

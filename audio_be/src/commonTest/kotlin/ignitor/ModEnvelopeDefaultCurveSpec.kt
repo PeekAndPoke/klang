@@ -28,6 +28,10 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * **Every modulation envelope defaults to the house EXPONENTIAL curve** (decision D3 (b), 2026-09-25): an
  * envelope whose author writes no curve bends every stage by `g(x) = (e^(3x) - 1) / (e^3 - 1)`, the curve
@@ -80,6 +84,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = DoubleArray(total)
         val tmp = AudioBuffer(blockFrames)

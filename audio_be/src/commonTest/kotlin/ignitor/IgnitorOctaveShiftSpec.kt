@@ -9,6 +9,11 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Covers [octaveUp] and [octaveDown], which had no callers and therefore no tests until
@@ -30,6 +35,7 @@ class IgnitorOctaveShiftSpec : StringSpec({
         voiceDurationFrames = blockFrames * 4,
         gateEndFrame = blockFrames * 4,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
@@ -73,8 +79,8 @@ class IgnitorOctaveShiftSpec : StringSpec({
     "a sine one octave up renders identically to the same sine an octave higher" {
         // Pins the DIRECTION as well as the ratio: swapping the two functions makes this red
         // even though the ratio assertions above would still pass in isolation.
-        val shifted = render(IgnitorDsl.Sine().toExciter().octaveUp(), 220.0)
-        val direct = render(IgnitorDsl.Sine().toExciter(), 440.0)
+        val shifted = render(IgnitorDsl.Sine().toExciter(random = testRandom).octaveUp(), 220.0)
+        val direct = render(IgnitorDsl.Sine().toExciter(random = testRandom), 440.0)
 
         for (i in 0 until blockFrames) {
             shifted[i] shouldBe direct[i]
@@ -82,8 +88,8 @@ class IgnitorOctaveShiftSpec : StringSpec({
     }
 
     "a sine one octave down renders identically to the same sine an octave lower" {
-        val shifted = render(IgnitorDsl.Sine().toExciter().octaveDown(), 880.0)
-        val direct = render(IgnitorDsl.Sine().toExciter(), 440.0)
+        val shifted = render(IgnitorDsl.Sine().toExciter(random = testRandom).octaveDown(), 880.0)
+        val direct = render(IgnitorDsl.Sine().toExciter(random = testRandom), 440.0)
 
         for (i in 0 until blockFrames) {
             shifted[i] shouldBe direct[i]

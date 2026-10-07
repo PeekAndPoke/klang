@@ -10,6 +10,10 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * C4 guard (docs/tasks-archive/2026-09/20260927-filter-unification.md): `wet == 0` IS bypass, bit-identically, on
  * every routed additive effect. The helper cannot early-return per sample (`dry*1 + wet*0`
@@ -30,6 +34,7 @@ class WetZeroBypassSpec : StringSpec({
         gateEndFrame = blocks * blockFrames * 2,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
+        random = testRandom,
     )
 
     val noise = DoubleArray(blocks * blockFrames).also {

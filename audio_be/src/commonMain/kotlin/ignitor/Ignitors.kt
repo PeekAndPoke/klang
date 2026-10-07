@@ -1425,7 +1425,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         // Unison character — defaults are the SUPERSAW_* tuning constants; the DSL threads per-voice overrides.
         sideAtten: Double = SUPERSAW_SIDE_ATTEN,
         gainJitter: Double = SUPERSAW_GAIN_JITTER,
@@ -1459,7 +1459,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERSAW_SIDE_ATTEN,
         gainJitter: Double = SUPERSAW_GAIN_JITTER,
         spreadPower: Double = SUPERSAW_SPREAD_POWER,
@@ -2122,7 +2122,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERSINE_SIDE_ATTEN,
         gainJitter: Double = SUPERSINE_GAIN_JITTER,
         spreadPower: Double = SUPERSINE_SPREAD_POWER,
@@ -2160,7 +2160,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERSQUARE_SIDE_ATTEN,
         gainJitter: Double = SUPERSQUARE_GAIN_JITTER,
         spreadPower: Double = SUPERSQUARE_SPREAD_POWER,
@@ -2199,7 +2199,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERTRI_SIDE_ATTEN,
         gainJitter: Double = SUPERTRI_GAIN_JITTER,
         spreadPower: Double = SUPERTRI_SPREAD_POWER,
@@ -2238,7 +2238,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERRAMP_SIDE_ATTEN,
         gainJitter: Double = SUPERRAMP_GAIN_JITTER,
         spreadPower: Double = SUPERRAMP_SPREAD_POWER,
@@ -2277,7 +2277,7 @@ object Ignitors {
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
-        rng: Random = Random,
+        rng: Random,
     ): Ignitor = KarplusStrongIgnitor(freq = freq, decay = decay, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, rng = rng)
 
     private class KarplusStrongIgnitor(
@@ -2409,7 +2409,7 @@ object Ignitors {
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
     ): Ignitor = SuperKarplusStrongIgnitor(
         freq = freq, voices = voices, detune = detune, decay = decay, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, analogSpread = analogSpread, rng = rng,
     )

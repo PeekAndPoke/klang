@@ -35,7 +35,7 @@ holds the full text, this file names it and gives the short form. How each law w
   accepted so that "non-finite is unset" holds on every knob. Guard: `KatalystSlotResolverSpec`.
 - **Delay and reverb are insert-style**: the feed is the orbit mix at the stage's position times the owner's one
   `wet`, the return is added to the mix, the dry stays. A stage runs when its wet is WRITTEN (a written 0 included)
-  or authored above 0 (`sendStageRuns` in `KatalystChainBuilder.kt`); an authored 0 nobody writes rents nothing.
+  or authored above 0 (`stageAskedFor` in `KatalystChainBuilder.kt`); an authored 0 nobody writes rents nothing.
 - **The orbit's group fader** is the `gain` stage (`gain.gain`, unity on the classic chain and bit-transparent
   there). It scales dry and returns alike.
 

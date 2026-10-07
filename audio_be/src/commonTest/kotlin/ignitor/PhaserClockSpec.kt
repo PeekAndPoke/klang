@@ -12,6 +12,11 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import kotlin.math.abs
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Guards ledger D1/D2/D5/D7: the phaser LFO is a CLOCK — it advances with note-relative time on
@@ -29,6 +34,7 @@ class PhaserClockSpec : StringSpec({
     fun ctx() = IgniteContext(
         sampleRate = sampleRate, voiceDurationFrames = 100_000, gateEndFrame = 100_000,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     )
 
     // Deterministic, stateless tone — depends only on the note-relative sample position.

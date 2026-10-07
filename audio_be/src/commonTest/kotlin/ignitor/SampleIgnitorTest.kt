@@ -9,6 +9,11 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 class SampleIgnitorTest : StringSpec({
 
@@ -19,6 +24,7 @@ class SampleIgnitorTest : StringSpec({
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
@@ -37,6 +43,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = false,
             stopFrame = Double.MAX_VALUE,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         val buffer = AudioBuffer(5)
@@ -65,6 +72,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = false,
             stopFrame = Double.MAX_VALUE,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         val buffer = AudioBuffer(4)
@@ -92,6 +100,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = true,
             stopFrame = Double.MAX_VALUE,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         val buffer = AudioBuffer(6)
@@ -120,6 +129,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = false,
             stopFrame = 2.0,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         val buffer = AudioBuffer(4)
@@ -146,6 +156,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = false,
             stopFrame = Double.MAX_VALUE,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         // Double speed via phaseMod
@@ -175,6 +186,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = false,
             stopFrame = Double.MAX_VALUE,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         val buffer = AudioBuffer(4) { 999.0 } // prefill to detect changes
@@ -198,6 +210,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = false,
             stopFrame = Double.MAX_VALUE,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         val buffer = AudioBuffer(4) { 999.0 }
@@ -224,6 +237,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = false,
             stopFrame = Double.MAX_VALUE,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         val buffer = AudioBuffer(3) { 999.0 }
@@ -250,6 +264,7 @@ class SampleIgnitorTest : StringSpec({
             isLooping = true,
             stopFrame = Double.MAX_VALUE,
             sampleRate = 48000,
+            rng = testRandom,
         )
 
         val buffer = AudioBuffer(3)
@@ -266,8 +281,8 @@ class SampleIgnitorTest : StringSpec({
     "freqHz is ignored" {
         val pcm = doubleArrayOf(0.0, 1.0, 0.0)
 
-        val gen1 = SampleIgnitor(pcm = pcm, rate = 1.0, playhead = 0.0, loopStart = -1.0, loopEnd = -1.0, isLooping = false, stopFrame = Double.MAX_VALUE, sampleRate = 48000)
-        val gen2 = SampleIgnitor(pcm = pcm, rate = 1.0, playhead = 0.0, loopStart = -1.0, loopEnd = -1.0, isLooping = false, stopFrame = Double.MAX_VALUE, sampleRate = 48000)
+        val gen1 = SampleIgnitor(pcm = pcm, rate = 1.0, playhead = 0.0, loopStart = -1.0, loopEnd = -1.0, isLooping = false, stopFrame = Double.MAX_VALUE, sampleRate = 48000, rng = testRandom)
+        val gen2 = SampleIgnitor(pcm = pcm, rate = 1.0, playhead = 0.0, loopStart = -1.0, loopEnd = -1.0, isLooping = false, stopFrame = Double.MAX_VALUE, sampleRate = 48000, rng = testRandom)
 
         val buf1 = AudioBuffer(3)
         val buf2 = AudioBuffer(3)

@@ -12,6 +12,11 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Tests that predefined oscillators from registerDefaults() respond correctly to ignitorParams.
@@ -33,7 +38,7 @@ class IgnitorDefaultsTest : StringSpec({
         freqHz: Double = 440.0,
     ): AudioBuffer {
         val data = VoiceData.empty.copy(sound = soundName, ignitorParams = ignitorParams)
-        val exciter = registry.createExciter(soundName, data, freqHz)
+        val exciter = registry.createExciter(soundName, data, freqHz, random = testRandom)
             ?.ignitor ?: error("Unknown sound: $soundName")
         val buffer = AudioBuffer(blockFrames)
         val ctx = IgniteContext(
@@ -41,6 +46,7 @@ class IgnitorDefaultsTest : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply {
             updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0

@@ -48,10 +48,11 @@ class IgniteContext(
      * construction reads it here; build-time consumers get the SAME instance via
      * `IgnitorBuildCache.random`). One instance per voice is safe because in-graph draw
      * order is deterministic; deriving per voice is what makes draw order BETWEEN voices
-     * irrelevant and playback runs bit-reproducible. Default = the global (test/tool
-     * convenience; production always passes the voice's own).
+     * irrelevant and playback runs bit-reproducible. No default: every caller passes a stream
+     * (production the voice's own, a spec a seeded `Random(n)`), so a forgotten one is a compile
+     * error, never the process-wide `Random`.
      */
-    val random: Random = Random,
+    val random: Random,
 
     // ── Mutable per block (updated by caller before each generate() call) ──────
     // NOTE: `offset` and `length` are NOT here — they live in the body, because they carry

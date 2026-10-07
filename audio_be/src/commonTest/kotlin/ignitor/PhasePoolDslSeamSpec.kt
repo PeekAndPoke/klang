@@ -16,6 +16,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * End-to-end seam guard for the phase-pool knobs: DSL node → `IgnitorDslRuntime.buildRaw`
  * forwarding → `Ignitors.*` factory → shared engine. This is the ONE path real users take
@@ -47,8 +51,9 @@ class PhasePoolDslSeamSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(n),
+            random = testRandom,
         ).apply { updateOffsetAndLength(offset = 0, length = n); voiceElapsedFrames = 0 }
-        dsl.toExciter(phasePools = pools, orbit = orbit).generate(buffer, freqHz, ctx)
+        dsl.toExciter(phasePools = pools, orbit = orbit, random = testRandom).generate(buffer, freqHz, ctx)
         var re = 0.0
         var im = 0.0
         val w = TWO_PI * freqHz / sampleRate

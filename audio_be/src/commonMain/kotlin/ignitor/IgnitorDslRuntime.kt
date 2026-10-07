@@ -61,7 +61,7 @@ fun IgnitorDsl.buildExciter(
     soundIndex: Int = 0,
     phasePools: PhasePools? = null,
     orbit: Int = 0,
-    random: Random = Random,
+    random: Random,
     freqHz: Double = 0.0,
     sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
     blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
@@ -74,18 +74,18 @@ fun IgnitorDsl.buildExciter(
 }
 
 /**
- * The sample rate a build assumes when the caller does not say, a test/tool convenience exactly
- * like `random = Random` above. Only ONE build-time consumer reads it: the drift lane of a
- * filter with `humanize = true` derives its time constants from it (`analogDriftStepRate`).
+ * The sample rate a build assumes when the caller does not say, a test/tool convenience. Only ONE
+ * build-time consumer reads it: the drift lane of a filter with `humanize = true` derives its time
+ * constants from it (`analogDriftStepRate`).
  *
  * Every path that RENDERS A VOICE passes the backend's own rate, through
  * `IgnitorRegistry.createExciter`. Two callers do NOT, and neither renders a voice: [toExciter],
  * the signal-only convenience, does not forward the parameter at all, and `KatalystSlots` calls
- * `buildExciter()` bare to resolve an orbit knob. A filter node CAN appear in a `katp` override
- * (nothing rejects one); what it cannot do there is render, because `KatalystSlots` reads the
+ * `buildExciter` with only its fixed-seed stream to resolve an orbit knob. A filter node CAN appear
+ * in a `katp` override (nothing rejects one); what it cannot do there is render, because `KatalystSlots` reads the
  * built graph through `controlRateValueOrNull`, which returns null for a filter and sends the knob
  * to its fallback. So a humanized filter written into an orbit knob would take its four draws off
- * the wrong stream and build a lane at 44100 that nothing ever steps. Absurd rather than
+ * that fixed stream and build a lane at 44100 that nothing ever steps. Absurd rather than
  * dangerous, and named here so the next reader does not have to rediscover it.
  */
 const val DEFAULT_BUILD_SAMPLE_RATE: Int = 44100
@@ -100,7 +100,7 @@ fun IgnitorDsl.toExciter(
     soundIndex: Int = 0,
     phasePools: PhasePools? = null,
     orbit: Int = 0,
-    random: Random = Random,
+    random: Random,
 ): Ignitor = buildExciter(ignitorParams = ignitorParams, soundIndex = soundIndex, phasePools = phasePools, orbit = orbit, random = random).ignitor
 
 /**
@@ -127,7 +127,7 @@ internal class IgnitorBuildCache(
      *  supersaw jitter) capture it here; generate-time constructions (drift) read the SAME
      *  instance from the context. Carried like [soundIndex] to reach the source branches
      *  without threading a parameter through every recursive call. */
-    val random: Random = Random,
+    val random: Random,
     /** The note's base frequency. Build-time control-rate reads need it ([FreqIgnitor] answers with
      *  it), which is how a pitch-relative release such as `Ignitor.freq().recip().mul(200)` resolves for
      *  voice lifetime. Carried here like [soundIndex] rather than threaded through every arm. */

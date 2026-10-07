@@ -23,6 +23,11 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.tanh
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Click hunt for the "guitar" ignitor in TestTextPatterns.kt (rhythm cat() pattern, lines 222–228).
@@ -117,6 +122,7 @@ class GuitarClickHuntTest : StringSpec({
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
 
         val out = AudioBuffer(totalFrames)
@@ -134,14 +140,14 @@ class GuitarClickHuntTest : StringSpec({
     }
 
     fun renderVoice(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): AudioBuffer =
-        renderVoiceFromIgnitor(ig = dsl.toExciter(), freqHz = freqHz, gateMs = gateMs, releaseMs = releaseMs)
+        renderVoiceFromIgnitor(ig = dsl.toExciter(random = testRandom), freqHz = freqHz, gateMs = gateMs, releaseMs = releaseMs)
 
     /**
      * Renders the ignitor through the engine's `IgniteRenderer` wrapper (which hard-clips
      * to ±1 per output sample). Use this to verify the in-engine ±1 invariant.
      */
     fun renderVoiceThroughWrapper(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): AudioBuffer {
-        val out = renderVoiceFromIgnitor(ig = dsl.toExciter(), freqHz = freqHz, gateMs = gateMs, releaseMs = releaseMs)
+        val out = renderVoiceFromIgnitor(ig = dsl.toExciter(random = testRandom), freqHz = freqHz, gateMs = gateMs, releaseMs = releaseMs)
         for (i in out.indices) {
             out[i] = out[i].coerceIn(-1.0, 1.0)
         }
@@ -445,7 +451,7 @@ class GuitarClickHuntTest : StringSpec({
                 val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
                 val perNote = mutableListOf<Pair<Int, Metrics>>()
                 for (m in rhythmMidis) {
-                    val preIg = swept.toExciter()
+                    val preIg = swept.toExciter(random = testRandom)
                     val distortedIg = preIg.distortVariant(
                         amount = d,
                         shape = "soft",
@@ -476,7 +482,7 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(freq = 1000.0, q = 0.1).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val preDistortIg = swept.toExciter()
+            val preDistortIg = swept.toExciter(random = testRandom)
             val distortedIg = preDistortIg.distortVariant(
                 amount = drive,
                 shape = shape,

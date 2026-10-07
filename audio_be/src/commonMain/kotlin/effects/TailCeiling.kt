@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 
 /**
  * "Does this delay or reverb still hold audible energy?" — answered from a running CEILING on its
@@ -97,7 +98,7 @@ class TailCeiling {
     private var elapsed = 0.0
 
     /** True while the unit can still contribute audio. O(1). */
-    val hasTail: Boolean get() = previous > SILENCE || current > SILENCE
+    val hasTail: Boolean get() = previous > SILENCE_FLOOR || current > SILENCE_FLOOR
 
     /**
      * Once per block, before or after the unit processes it (the bound holds either way).
@@ -233,9 +234,6 @@ class TailCeiling {
     }
 
     companion object {
-        /** ~-100 dBFS: the silence threshold the drain math and the old scans share. */
-        const val SILENCE: Double = 0.00001
-
         /**
          * Louder than any audio the engine stores (the soft cap keeps cells near the user's cap,
          * 1.0 by default): the ceiling saturates here, so it stays finite under self-oscillation

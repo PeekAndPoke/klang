@@ -17,6 +17,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * The `selection` modes (user decisions, 2026-08-24): STRING-valued, value-colon compound
  * `"name[:width[:outliers]]"` — `"normal"` (NEW DEFAULT: median-centered normal serving over
@@ -185,6 +189,7 @@ class PhasePoolSelectionModesSpec : StringSpec({
                     voiceDurationFrames = 128,
                     gateEndFrame = 128,
                     scratchBuffers = ScratchBuffers(blockFrames = 128),
+                    random = testRandom,
                 )
                 ctx.updateOffsetAndLength(offset = 0, length = 128)
                 val buf = AudioBuffer(128)

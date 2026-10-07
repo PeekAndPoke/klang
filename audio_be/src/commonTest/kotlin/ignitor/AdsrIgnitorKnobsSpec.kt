@@ -14,6 +14,11 @@ import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.abs
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * The opt-in de-click knob on the ignitor envelope `.adsr(...)`, `declickSeconds`, and the ONE
@@ -33,6 +38,7 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         voiceDurationFrames = blockFrames,
         gateEndFrame = blockFrames,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
@@ -94,7 +100,7 @@ class AdsrIgnitorKnobsSpec : StringSpec({
             sustainLevel = IgnitorDsl.Constant(0.0),
             releaseSec = IgnitorDsl.Constant(0.1),
         )
-        val buf = render(dsl.toExciter(), n)
+        val buf = render(dsl.toExciter(random = testRandom), n)
 
         fun law(k: Double, i: Int): Double = adsrExpShape(x = 1.0 - i * (1.0 / decFrames), k = k, norm = adsrExpNorm(k))
 
@@ -118,8 +124,8 @@ class AdsrIgnitorKnobsSpec : StringSpec({
             sustainLevel = IgnitorDsl.Constant(0.0),
             releaseSec = IgnitorDsl.Constant(0.1),
         )
-        val bufDefault = render(dsl.toExciter(), n)
-        val bufOverride = render(dsl.toExciter(mapOf("expK" to 8.0)), n)
+        val bufDefault = render(dsl.toExciter(random = testRandom), n)
+        val bufOverride = render(dsl.toExciter(mapOf("expK" to 8.0), random = testRandom), n)
         for (i in 0 until n) bufOverride[i].toRawBits() shouldBe bufDefault[i].toRawBits()
     }
 
@@ -133,8 +139,8 @@ class AdsrIgnitorKnobsSpec : StringSpec({
             sustainLevel = IgnitorDsl.Constant(0.4),
             releaseSec = IgnitorDsl.Constant(0.1),
         )
-        val bufDefault = render(dsl.toExciter(), n)
-        val bufOverride = render(dsl.toExciter(mapOf("declickSeconds" to 0.002)), n)
+        val bufDefault = render(dsl.toExciter(random = testRandom), n)
+        val bufOverride = render(dsl.toExciter(mapOf("declickSeconds" to 0.002), random = testRandom), n)
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 })

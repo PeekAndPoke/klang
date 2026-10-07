@@ -184,7 +184,7 @@ the new voice's onset, a short gap in the group.
 
 What running `TeardownFadeRenderer` there would change:
 
-- The fade is 4 ms (`VCA_OFF_TEARDOWN_FADE_SECONDS`: 192 frames at 48 kHz, 176 at 44.1), a linear ramp to exact
+- The fade is 4 ms (`TEARDOWN_FADE_SECONDS`: 192 frames at 48 kHz, 176 at 44.1), a linear ramp to exact
   zero. Run at the cut, the choked voice keeps sounding until the new onset and fades over 4 ms after it: the choke
   lands on the onset frame instead of up to a block early, and the two overlap for 4 ms. An acoustic hat choke takes
   longer than that, so it would still read as "stopped dead".

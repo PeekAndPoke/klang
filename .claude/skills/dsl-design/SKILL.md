@@ -152,9 +152,9 @@ the bug.
 - Shared conversions live in ONE place (`Reverb.normalizeSize` serves both buses). Never let
   each host convert on its own.
 - **Defaults are the same on every surface, and live in ONE place** (maintainer, 2026-09-16): the
-  wire defaults in `audio_bridge/constants/` (`SendEffectDefaults.kt` for delay and reverb). The
+  wire defaults in `audio_bridge/constants/` (`BusEffectDefaults.kt` for every Katalyst stage). The
   Katalyst stage (on an orbit or at the output), a sprudel call (it sets every slot it leaves unset at write time), the engine's
-  wire fallback (`VoiceFactory`) and the editor tools all read the same constant; a non-finite
+  rule for a slot written raw through `katp` and the editor tools all read the same constant; a non-finite
   value reads as unset. Never a literal default per host.
 - **A compound door fills per param, at the door, everywhere** (maintainer, 2026-09-18): when a
   call NAMES a stage, the door checks every companion slot of that stage and, if it is not yet

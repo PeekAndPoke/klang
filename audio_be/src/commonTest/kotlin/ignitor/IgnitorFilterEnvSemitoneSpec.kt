@@ -12,6 +12,10 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * C3 guard, IGNITOR path (docs/tasks-archive/2026-09/20260927-filter-unification.md): envelope depth is SEMITONES
  * in the svf kernel: `cutoff = base * 2^(depth/12 * env)`. (The strip-pipeline path had its own
@@ -34,6 +38,7 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         gateEndFrame = blocks * blockFrames * 2,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
+        random = testRandom,
     )
 
     val noise = DoubleArray(blocks * blockFrames).also {

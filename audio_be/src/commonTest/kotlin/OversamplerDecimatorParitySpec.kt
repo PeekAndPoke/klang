@@ -18,6 +18,11 @@ import io.peekandpoke.klang.audio_be.ignitor.fusedDistort
 import io.peekandpoke.klang.audio_be.ignitor.shape
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * The polyphase decimator against the ring-buffer form it replaced, bit for bit.
@@ -103,6 +108,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
             voiceDurationFrames = total,
             gateEndFrame = total,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val buffer = AudioBuffer(blockFrames)
         val out = DoubleArray(total)

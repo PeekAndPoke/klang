@@ -88,8 +88,8 @@ class KatalystFormantEffectSpec : StringSpec({
     // ── Non-finite knobs: the twin of KatalystBodyEffectSpec's rows, same rule, vowel constants ───
     //
     // `vowel(vowel = "a", wet = "NaN")` parses to a NaN and `SprudelVoiceData.toVoiceData` guards a null
-    // mix, not a non-finite one, so the born-with chain has to substitute here exactly as
-    // `KatalystSlots.vowelDef` does for a declared chain's slots.
+    // mix, not a non-finite one, and the writer hands the slots through raw, so the stage is the
+    // one home of the substitution (audit B2.11, 2026-10-07).
 
     val nonFinite = listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)
 

@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.effects.DelayLine.Companion.MIN_DELAY_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.ln
@@ -223,7 +224,7 @@ class DelayLine(
      * is below threshold, no future feedback iteration can bring the output
      * back above threshold, so a `false` return is safe.
      */
-    fun hasTail(threshold: Double = 0.00001): Boolean {
+    fun hasTail(threshold: Double = SILENCE_FLOOR): Boolean {
         // Test/diagnostic only since the content-ceiling tail (`TailCeiling`): no production caller,
         // and none should return — this is O(ring) with no ceiling on the ring.
         for (i in 0 until bufferSize) {
@@ -296,7 +297,7 @@ class DelayLine(
     fun drainSamplesUntilSilent(
         peak: Double,
         feedback: Double = this.feedback,
-        threshold: Double = 0.00001,
+        threshold: Double = SILENCE_FLOOR,
     ): Double {
         if (peak <= threshold) {
             return 0.0

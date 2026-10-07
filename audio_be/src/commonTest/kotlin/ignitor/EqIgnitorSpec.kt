@@ -26,6 +26,10 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * End-to-end ULP-0 parity for the D3b adapter path: `IgnitorDsl.Eq → EqIgnitor → EqCore`
  * against the CHAINED DSL built through the very same runtime (`toExciter()` on both sides —
@@ -48,6 +52,7 @@ class EqIgnitorSpec : StringSpec({
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
         updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
@@ -60,8 +65,8 @@ class EqIgnitorSpec : StringSpec({
      * trees see real time.
      */
     fun maxAbsDiff(a: IgnitorDsl, b: IgnitorDsl): Double {
-        val ea = a.toExciter(null)
-        val eb = b.toExciter(null)
+        val ea = a.toExciter(null, random = testRandom)
+        val eb = b.toExciter(null, random = testRandom)
         val bufA = AudioBuffer(blockFrames)
         val bufB = AudioBuffer(blockFrames)
         val ca = ctx()
@@ -98,8 +103,8 @@ class EqIgnitorSpec : StringSpec({
         freqs: List<Double> = listOf(220.0),
     ) {
         for (f in freqs) {
-            val a = chained.toExciter(ignitorParams)
-            val b = fused.toExciter(ignitorParams)
+            val a = chained.toExciter(ignitorParams, random = testRandom)
+            val b = fused.toExciter(ignitorParams, random = testRandom)
             val bufA = AudioBuffer(blockFrames)
             val bufB = AudioBuffer(blockFrames)
             val ca = ctx()
@@ -320,14 +325,15 @@ class EqIgnitorSpec : StringSpec({
             inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Lowpass(freq = c(2000.0), q = c(0.9))),
         )
-        val a = chained.toExciter()
-        val b = fused.toExciter()
+        val a = chained.toExciter(random = testRandom)
+        val b = fused.toExciter(random = testRandom)
         val mk = {
             IgniteContext(
                 sampleRate = 48000,
                 voiceDurationFrames = blockFrames * 16,
                 gateEndFrame = blockFrames * 16,
                 scratchBuffers = ScratchBuffers(blockFrames),
+                random = testRandom,
             ).apply {
                 updateOffsetAndLength(offset = 0, length = blockFrames)
                 voiceElapsedFrames = 0
@@ -383,14 +389,14 @@ class EqIgnitorSpec : StringSpec({
             ),
             freq = trackingCutoff(),
             q = c(1.3),
-        ).toExciter()
+        ).toExciter(random = testRandom)
         val b = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
                 EqSection.Highpass(freq = IgnitorDsl.Freq, q = c(0.9)),
                 EqSection.Highpass(freq = trackingCutoff(), q = c(1.3)),
             ),
-        ).toExciter()
+        ).toExciter(random = testRandom)
 
         val glide = listOf(220.0, 262.0, 330.0, 440.0)
         val bufA = AudioBuffer(blockFrames)
@@ -422,8 +428,8 @@ class EqIgnitorSpec : StringSpec({
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(EqSection.Bell(freq = c(850.0), q = c(0.9), db = dbExpr())),
-        ).toExciter()
-        val srcOnly = IgnitorDsl.Saw().toExciter()
+        ).toExciter(random = testRandom)
+        val srcOnly = IgnitorDsl.Saw().toExciter(random = testRandom)
         val core = EqCore(1)
 
         val glide = listOf(220.0, 330.0, 330.0)
@@ -631,8 +637,8 @@ class EqIgnitorSpec : StringSpec({
                 EqSection.Lowpass(freq = c(5300.0), q = c(0.707)),
             ),
         )
-        val a = chained.toExciter()
-        val b = fused.toExciter()
+        val a = chained.toExciter(random = testRandom)
+        val b = fused.toExciter(random = testRandom)
         val offset = 37
         val length = 64
         val sentinel = 123.456
@@ -718,7 +724,7 @@ class EqIgnitorSpec : StringSpec({
                 freq = IgnitorDsl.Constant(1200.0),
                 q = IgnitorDsl.Param("res", 1.2),
                 passes = IgnitorDsl.Constant(3.0),
-            ).optimize().toExciter()
+            ).optimize().toExciter(random = testRandom)
         )
 
         val buf = AudioBuffer(blockFrames)

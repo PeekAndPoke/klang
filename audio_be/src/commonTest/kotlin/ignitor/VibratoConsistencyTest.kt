@@ -15,6 +15,11 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.sqrt
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Verifies that vibrato depth is interpreted consistently across the Sprudel path
@@ -64,7 +69,7 @@ class VibratoConsistencyTest : StringSpec({
      */
     fun renderIgnitorDslPath(depthSemitones: Double): AudioBuffer {
         val dsl = IgnitorDsl.Sine().vibrato(rate = rate, semitones = depthSemitones)
-        val signal = dsl.toExciter()
+        val signal = dsl.toExciter(random = testRandom)
 
         val voice = createSynthVoice(
             blockFrames = bf,
@@ -112,7 +117,7 @@ class VibratoConsistencyTest : StringSpec({
 
     "ignitor DSL vibrato with depth 1 semitone does NOT produce ±100% frequency swing" {
         val dsl = IgnitorDsl.Sine().vibrato(rate = rate, semitones = 1.0)
-        val signal = dsl.toExciter()
+        val signal = dsl.toExciter(random = testRandom)
 
         val voiceWith = createSynthVoice(
             blockFrames = bf, sampleRate = sr,
@@ -121,7 +126,7 @@ class VibratoConsistencyTest : StringSpec({
         )
         val voiceWithout = createSynthVoice(
             blockFrames = bf, sampleRate = sr,
-            signal = IgnitorDsl.Sine().toExciter(),
+            signal = IgnitorDsl.Sine().toExciter(random = testRandom),
             vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         )
 

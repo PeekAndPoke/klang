@@ -188,7 +188,7 @@ class IgnitorBenchmark(
          * song writes (phase 3 step 8), through the one translation and no copy of it. A case that asks for a room
          * writes what the `reverb(...)` door does: the named knob plus the companion the door would fill (the
          * orbit reverb reads its slots alone; a size-only case would measure a dry orbit, because the stage's
-         * gate is "the wet was written or is positive", `sendStageRuns`).
+         * gate is "the wet was written or is positive", `stageAskedFor`).
          */
         private fun voice(
             sound: String,

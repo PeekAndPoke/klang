@@ -24,7 +24,7 @@ import kotlin.math.round
  *
  * Lives in `audio_bridge` (Katalyst step 3c, 2026-09-17) so that both readers of a body NAME reach
  * it: sprudel's `toVoiceData`, which resolves a voice's material, and the backend's
- * `KatalystSlots`, which resolves a declared Katalyst chain's `body` stage. Public so UI tools
+ * `KatalystBodyWriter`, which resolves a declared Katalyst chain's `body` stage. Public so UI tools
  * (e.g. the `body()` editor) can visualize a material's modal response.
  *
  * **A material is also an INDEX** (Katalyst step 5a-2, 2026-09-18): [names] is a closed, ordered

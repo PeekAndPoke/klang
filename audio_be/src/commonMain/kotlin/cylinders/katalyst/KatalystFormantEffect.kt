@@ -79,8 +79,8 @@ class KatalystFormantEffect(
      * here through those slots. `null` (nobody asks for a vowel) turns the formant bank off.
      *
      * A non-finite `mix` or `floor` is UNSET and takes [VOWEL_WET] / [VOWEL_FLOOR], the twin of the
-     * substitution [KatalystBodyEffect.configure] makes and of the one `KatalystSlots.vowelDef`
-     * already makes for the slots, so a direct caller installs the same bank.
+     * substitution [KatalystBodyEffect.configure] makes. This is the ONE home of that rule: the
+     * writer hands the slots through raw.
      *
      * A null fades the bank out and a change that arrives mid-fade is parked, both the twin of
      * [KatalystBodyEffect.configure].
@@ -103,10 +103,9 @@ class KatalystFormantEffect(
             return
         }
 
-        // No production caller can hand this a non-finite value any more (Katalyst step 5b-1): the
-        // one caller is `KatalystSlots.vowelDef`, which substitutes VOWEL_WET and the floor one
-        // layer up, on every chain. Kept as the stage's contract for a DIRECT caller, which is what
-        // the effect specs are; the twin's KDoc carries the full note.
+        // The ONE home of the vowel's NaN rule (since 2026-10-07, audit B2.11): the writer
+        // (`KatalystVowelWriter`) hands its slots through raw, so a raw `katp` write arrives here
+        // non-finite. The twin's comment carries the full note.
         // NaN-guards, before the comparison for the reason [KatalystBodyEffect.configure] spells
         // out: a NaN is never equal to itself, so an unguarded non-finite mix rebuilt the whole
         // bank on every block and restarted a crossfade that never completed, and being nullable

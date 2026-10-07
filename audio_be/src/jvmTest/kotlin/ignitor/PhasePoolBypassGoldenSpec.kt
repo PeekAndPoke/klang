@@ -12,6 +12,10 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * The phase-pool BYPASS guarantee (docs/tasks/unison-phase-pool.md §7.4): with `phasePool` off
  * (the default), every unison oscillator must render identically to the pre-phase-pool
@@ -77,6 +81,7 @@ class PhasePoolBypassGoldenSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         var weighted = 0.0
         var first = 0.0

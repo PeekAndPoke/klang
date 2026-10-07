@@ -13,6 +13,10 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * One stateful modulator shared by two oscillators at different pitches (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`).
  *
@@ -269,7 +273,7 @@ class SharedModulatorRateSpec : StringSpec({
     }
 
     "the build resolves the freq key at the share: kept for a Freq reader, dropped for a Freq-free node" {
-        val cache = IgnitorBuildCache(freqHz = noteHz)
+        val cache = IgnitorBuildCache(freqHz = noteHz, random = testRandom)
         val reader = IgnitorDsl.Sine(analog = c(0.0))
         val lfo = phaseLfo()
 
@@ -302,7 +306,7 @@ class SharedModulatorRateSpec : StringSpec({
     }
 
     "the freq key: dropped exactly for a subtree that reads no Freq and carries no pitch mod" {
-        val cache = IgnitorBuildCache(freqHz = noteHz)
+        val cache = IgnitorBuildCache(freqHz = noteHz, random = testRandom)
         val mod = ConstantIgnitor(1.0)
 
         // No Freq anywhere below: the LFO.

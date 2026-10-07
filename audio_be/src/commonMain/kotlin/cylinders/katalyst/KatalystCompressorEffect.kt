@@ -9,9 +9,8 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.min
 
 /**
@@ -133,7 +132,7 @@ class KatalystCompressorEffect(
      * the setters store the same coerced values and compute the same coefficients). Proven by every
      * spec row that compares a new life against a FRESH bare `Compressor` bit for bit. One difference remains for a direct caller only: a
      * non-finite knob keeps the previous value where a constructor takes its default; the writer
-     * never hands one (`Voice.Compressor.fromParams` substitutes the constants).
+     * never hands one (`KatalystCompressorWriter` substitutes the constants).
      */
     private val instance = Compressor(
         sampleRate = sampleRate,
@@ -147,7 +146,7 @@ class KatalystCompressorEffect(
     private val latent: Boolean = latencyFrames > 0
 
     /**
-     * Frames since the last input block that held a sample above [ORBIT_SILENCE_FLOOR], counted at
+     * Frames since the last input block that held a sample above [SILENCE_FLOOR], counted at
      * block ends and held at [latencyFrames]. Below [latencyFrames] the ring may still hold audio
      * the orbit has not heard yet, which is the tail [hasTail] reports. Only a latent instance
      * counts; [reset] sets it to "nothing in the ring".
@@ -166,7 +165,7 @@ class KatalystCompressorEffect(
      * instead of five setters and about fifteen `exp()` (the open item on `writeCompressor`,
      * closed here). Forgotten in [Off.enter], so the ON arm out of Off always writes the knobs.
      */
-    private var applied: Voice.Compressor? = null
+    private var applied: CompressorSettings? = null
 
     private val thresholdGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
     /** The ratio glides as its INVERSE, `1 / ratio`: see [Compressor.processGliding]. */
@@ -418,7 +417,7 @@ class KatalystCompressorEffect(
      * every block the orbit has an owner (`KatalystChain.applyParams`), so an unchanged owner must cost
      * nothing: the knobs are written only when the settings object changes (see [applied]).
      */
-    fun configure(settings: Voice.Compressor?) {
+    fun configure(settings: CompressorSettings?) {
         if (settings == null) {
             state.switchOff()
 
@@ -508,7 +507,7 @@ class KatalystCompressorEffect(
         val n = ctx.blockFrames
         val left = ctx.mixBuffer.left
         val right = ctx.mixBuffer.right
-        val floor = ORBIT_SILENCE_FLOOR
+        val floor = SILENCE_FLOOR
 
         for (i in 0 until n) {
             val l = left[i]
@@ -530,7 +529,7 @@ class KatalystCompressorEffect(
      * fading or not. See [KatalystBodyEffect.hasTail] for the insert-vs-send rule a future stage has
      * to apply.
      *
-     * With a lookahead, true while the ring may still hold audio above [ORBIT_SILENCE_FLOOR] (fewer
+     * With a lookahead, true while the ring may still hold audio above [SILENCE_FLOOR] (fewer
      * than [latencyFrames] quiet frames since the last loud input block): the orbit has not heard it
      * yet, and a chain swap retires a leaving chain at the end of its ramp unless it reports a tail
      * (`ChainSwap`), which would cut it.

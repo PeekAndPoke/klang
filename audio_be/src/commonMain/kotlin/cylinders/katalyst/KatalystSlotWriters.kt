@@ -6,10 +6,15 @@
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
@@ -23,14 +28,25 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 // therefore resolves exactly once, when it is built, and every block after that costs what step 3a
 // cost.
 //
-// Nothing here decides a gate of its own: each writer reproduces the per-stage contract of
-// `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7 through the same KatalystSlots functions the build used, so a
-// value that arrives from a slot and one that was authored as a constant take the identical path.
+// Each writer holds the per-stage contract of `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`
+// §7 for its stage (the gate, and the rule for an unset slot), so a value that arrives from a slot
+// and one that was authored as a constant take the identical path. A NaN rule lives in ONE place per
+// knob: here, or in the stage's `configure` when that stage compares and caches what it is handed
+// (body, vowel, the reverb's lowpass), never in both (audit B2.11, 2026-10-07).
 
 /**
  * Body: all three knobs are slots, the material as the INDEX of a name in the shared catalogue
  * (Katalyst step 5a-2). The index-to-bands lookup lives in [resolve] with the rest of the
  * composite, never in [apply]: `apply` writes a `FilterDef` that is already in hand.
+ *
+ * The bands come from `BodyMaterials.modesAt(index)`. An unset slot (non-finite), an index of 0
+ * (`none`) and an index out of range are the same answer, null, which is the stage off whatever
+ * `wet` says: the rule `SprudelVoiceData.toVoiceData` follows for an unknown NAME on the voice
+ * path; the name-to-index half is `BodyMaterials.indexOf`, and both doors call it.
+ *
+ * `wet` and `floor` pass through RAW: a non-finite one is unset, and [KatalystBodyEffect.configure]
+ * substitutes `BODY_WET` / `BODY_FLOOR` for it before its compare (a raw `katp` write is the only
+ * way one arrives: the `body(...)` door fills its own companions, `/dsl-design` §4, checklist 11).
  */
 internal class KatalystBodyWriter(
     private val fx: KatalystBodyEffect,
@@ -54,11 +70,17 @@ internal class KatalystBodyWriter(
         fx.configure(def)
     }
 
-    private fun buildDef(): FilterDef.Body? =
-        KatalystSlots.bodyDef(bands = BodyMaterials.modesAt(material.value), mix = wet.value, floor = floor.value)
+    private fun buildDef(): FilterDef.Body? {
+        val bands = BodyMaterials.modesAt(material.value) ?: return null
+
+        return FilterDef.Body(bands = bands, mix = wet.value, floor = floor.value)
+    }
 }
 
-/** Vowel: the twin of [KatalystBodyWriter], with the formant bank. */
+/**
+ * Vowel: the twin of [KatalystBodyWriter], with the formant bank, `VowelBands.bandsAt` as the
+ * lookup, and [KatalystFormantEffect.configure] substituting `VOWEL_WET` / `VOWEL_FLOOR`.
+ */
 internal class KatalystVowelWriter(
     private val fx: KatalystFormantEffect,
     private val vowel: KatalystKnob,
@@ -79,14 +101,17 @@ internal class KatalystVowelWriter(
         fx.configure(def)
     }
 
-    private fun buildDef(): FilterDef.Formant? =
-        KatalystSlots.vowelDef(bands = VowelBands.bandsAt(vowel.value), mix = wet.value, floor = floor.value)
+    private fun buildDef(): FilterDef.Formant? {
+        val bands = VowelBands.bandsAt(vowel.value) ?: return null
+
+        return FilterDef.Formant(bands = bands, mix = wet.value, floor = floor.value)
+    }
 }
 
 /**
  * Delay: an off stage is expressed by handing the line a non-finite TIME, which is also what makes
  * a live tail drain instead of freeze (see [KatalystDelayEffect]). `wet` is the amount of the orbit
- * mix the line is fed; whether the stage runs at all is [sendStageRuns].
+ * mix the line is fed; whether the stage runs at all is [stageAskedFor].
  */
 internal class KatalystDelayWriter(
     private val fx: KatalystDelayEffect,
@@ -110,12 +135,12 @@ internal class KatalystDelayWriter(
         fx.configure(time = gatedTime, feedback = feedback.value, cap = cap.value, wet = wet.value)
     }
 
-    private fun gate(): Double = if (sendStageRuns(wet)) time.value else SLOT_UNSET
+    private fun gate(): Double = if (stageAskedFor(wet)) time.value else SLOT_UNSET
 }
 
 /**
  * Reverb: the slot carries the AUTHORED 0 to 10 size, so it passes through the one shared
- * conversion ([Reverb.normalizeSize]) here. The stage's gate is [sendStageRuns] and `wet` is the
+ * conversion ([Reverb.normalizeSize]) here. The stage's gate is [stageAskedFor] and `wet` is the
  * amount of the orbit mix the room is fed, as on the delay above.
  */
 internal class KatalystReverbWriter(
@@ -126,14 +151,19 @@ internal class KatalystReverbWriter(
 ) : KatalystSlotWriter {
 
     private var gatedSize: Double = gate()
-    private var damping: Double? = damping()
+
+    /**
+     * The lowpass slot, RAW: a non-finite one is unset, which [KatalystReverbEffect.configure] turns
+     * into the engine's own fixed damping. Boxed here, once per resolve, and not in [apply].
+     */
+    private var damping: Double? = lowpass.value
 
     override fun resolve(params: Map<String, Double>?) {
         wet.resolve(params)
         size.resolve(params)
         lowpass.resolve(params)
         gatedSize = gate()
-        damping = damping()
+        damping = lowpass.value
     }
 
     override fun apply() {
@@ -141,18 +171,14 @@ internal class KatalystReverbWriter(
     }
 
     private fun gate(): Double =
-        if (sendStageRuns(wet)) Reverb.normalizeSize(size.value) else SLOT_UNSET
-
-    // NaN-guard on a value the author can write: non-finite is "unset", which is the engine's own
-    // fixed damping.
-    private fun damping(): Double? = lowpass.value.takeIf { it.isFinite() }
+        if (stageAskedFor(wet)) Reverb.normalizeSize(size.value) else SLOT_UNSET
 }
 
 /**
  * Phaser: the five knobs, through the one gate and kernel-param rule in
  * [KatalystPhaserEffect.configure].
  *
- * `wet` and `floor` are NaN-guarded here, the way the reverb writer guards its `lowpass`, because
+ * `wet` and `floor` are NaN-guarded here, and here only, because
  * the two knobs behind them read a non-finite value as something other than unset:
  * `Phaser.depth`'s setter DROPS it and keeps the depth it had (so a cleared `phaser.wet` would
  * leave the phaser engaged at the previous amount), and `Phaser.floor` stores it RAW, where
@@ -202,7 +228,14 @@ internal class KatalystPhaserWriter(
     private fun guardedFloor(): Double = if (floor.value.isFinite()) floor.value else PHASER_FLOOR
 }
 
-/** Compressor: on iff ANY of the five slots is finite, the voice path's own rule. */
+/**
+ * Compressor: on iff ANY of the five slots is finite, and then every unset (non-finite) one takes
+ * its `COMPRESSOR_*` constant. Null (the stage off) when none is set.
+ *
+ * The substitution is the NaN rule for a raw `katp` write, not a second fill: since Katalyst step
+ * 5a-3 the `compressor(...)` door fills the other four itself, whichever of the five the call
+ * named, so the values it writes are already the ones this writer would supply.
+ */
 internal class KatalystCompressorWriter(
     private val fx: KatalystCompressorEffect,
     private val threshold: KatalystKnob,
@@ -212,7 +245,7 @@ internal class KatalystCompressorWriter(
     private val release: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var settings: Voice.Compressor? = settings()
+    private var settings: CompressorSettings? = settings()
 
     override fun resolve(params: Map<String, Double>?) {
         threshold.resolve(params)
@@ -227,13 +260,26 @@ internal class KatalystCompressorWriter(
         fx.configure(settings)
     }
 
-    private fun settings(): Voice.Compressor? = KatalystSlots.compressorSettings(
-        threshold = threshold.value,
-        ratio = ratio.value,
-        knee = knee.value,
-        attack = attack.value,
-        release = release.value,
-    )
+    private fun settings(): CompressorSettings? {
+        val t = threshold.value
+        val r = ratio.value
+        val k = knee.value
+        val a = attack.value
+        val rel = release.value
+
+        // NaN-guards on values the author can write: a non-finite slot was never set.
+        if (!t.isFinite() && !r.isFinite() && !k.isFinite() && !a.isFinite() && !rel.isFinite()) {
+            return null
+        }
+
+        return CompressorSettings(
+            thresholdDb = if (t.isFinite()) t else COMPRESSOR_THRESHOLD_DB,
+            ratio = if (r.isFinite()) r else COMPRESSOR_RATIO,
+            kneeDb = if (k.isFinite()) k else COMPRESSOR_KNEE_DB,
+            attackSeconds = if (a.isFinite()) a else COMPRESSOR_ATTACK_SECONDS,
+            releaseSeconds = if (rel.isFinite()) rel else COMPRESSOR_RELEASE_SECONDS,
+        )
+    }
 }
 
 /**
@@ -314,6 +360,10 @@ internal class KatalystGainWriter(
  * Duck: on iff the stage names a source orbit AND asks for depth. The instance is reused so the
  * envelope follower survives, and the writer holds the settings the arriving chain applies after a
  * handover (see [KatalystDuckEffect.configure]).
+ *
+ * `orbit` is a number the runtime coerces to an Int, exactly as the sprudel door does; a finite
+ * negative is a request like any other, not an off switch (the off switch is the non-finite
+ * default). A non-finite attack takes `DUCK_ATTACK_SECONDS`.
  */
 internal class KatalystDuckWriter(
     private val fx: KatalystDuckEffect,
@@ -322,7 +372,7 @@ internal class KatalystDuckWriter(
     private val attack: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var settings: Voice.Ducking? = settings()
+    private var settings: DuckSettings? = settings()
 
     /**
      * Whether this stage will be CONFIGURED rather than cleared, which the host asks BEFORE it
@@ -345,9 +395,21 @@ internal class KatalystDuckWriter(
         fx.configure(settings)
     }
 
-    private fun settings(): Voice.Ducking? = KatalystSlots.duckSettings(
-        orbit = orbit.value,
-        depth = depth.value,
-        attack = attack.value,
-    )
+    private fun settings(): DuckSettings? {
+        val source = orbit.value
+        val amount = depth.value
+        val attackSeconds = attack.value
+
+        // NaN-guard on values the author can write: a non-finite orbit is "no source named".
+        if (!source.isFinite() || !(amount > 0.0)) {
+            return null
+        }
+
+        return DuckSettings(
+            cylinderId = source.toInt(),
+            // NaN-guard on a value the author can write: a non-finite attack is unset.
+            attackSeconds = if (attackSeconds.isFinite()) attackSeconds else DUCK_ATTACK_SECONDS,
+            depth = amount,
+        )
+    }
 }

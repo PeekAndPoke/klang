@@ -12,6 +12,11 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Guards ledger D6/D7: the shimmer's bypass clear must take the grain SCHEDULER with it
@@ -27,6 +32,7 @@ class ShimmerSchedulerSpec : StringSpec({
     fun ctx() = IgniteContext(
         sampleRate = sampleRate, voiceDurationFrames = 200_000, gateEndFrame = 200_000,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     )
 
     class TestTone : Ignitor {

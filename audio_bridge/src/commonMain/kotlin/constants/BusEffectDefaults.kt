@@ -6,31 +6,36 @@
 package io.peekandpoke.klang.audio_bridge.constants
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Defaults of the per-orbit bus effects that are NOT sends: phaser, compressor,
-// duck, body, vowel. The send pair (delay, reverb) lives next door in
-// `SendEffectDefaults.kt`; the master limiter in `MasterLimiterDefaults.kt`.
-// At the end, two timings that are not knob defaults but belong to the orbit
-// knobs and stages whose jump is audible, sends included: [KNOB_GLIDE_SECONDS]
-// for a level or dynamics glide, [BANK_CROSSFADE_SECONDS] for a filter bank
-// crossfade.
+// Defaults of the per-orbit bus effects, the Katalyst stages: delay, reverb,
+// phaser, compressor, duck, body, vowel. The master limiter's live in
+// `MasterLimiterDefaults.kt`. At the end, two timings that are not knob
+// defaults but belong to the orbit knobs and stages whose jump is audible:
+// [KNOB_GLIDE_SECONDS] for a level or dynamics glide, [BANK_CROSSFADE_SECONDS]
+// for a filter bank crossfade.
 //
-// Same contract as its neighbours: ONE declaration that every surface reads, so
-// the `KatalystStageDsl` knob defaults, the engine's fill for a voice field the
-// author left unset (`VoiceFactory`, `Voice.Compressor.fromParams`,
-// `LowPassHighPassFilters`, `Cylinder`, `Phaser.resetForReuse`) and
-// `SprudelVoiceData.toVoiceData` cannot drift apart. The values are the ones
-// those fills already used; this file gave them a name, it did not retune them
-// (Katalyst DSL step 1, 2026-09-17).
-//
-// Since Katalyst step 5a-3 (2026-09-18) the sprudel compound doors fill their
-// companions from here; the rule is `/dsl-design` §4, its one home. The engine
-// keeps the same constants for a slot written raw through `katp`, which is the
-// NaN rule, not a second fill.
+// ONE declaration that every surface reads, so they cannot drift apart:
+// - the stage knob defaults (`KatalystStageDsl` and its builders, the script
+//   door's `KlangScriptKatalystSlots`) and the classic chain's slots;
+// - the sprudel compound doors (`delay(...)`, `reverb(...)`, `phaser(...)`,
+//   `compressor(...)`, `duck(...)`, `body(...)`, `vowel(...)`), which fill the
+//   companions of the stage a call names (`/dsl-design` §4 is the rule, its one
+//   home), and the sprudel editor tools;
+// - the engine: `KatalystChainBuilder`'s knob fallbacks, and the NaN rule for a
+//   slot written raw through `katp`, which takes the same constant (the slot
+//   writers in `KatalystSlotWriters.kt`, or the stage's own `configure` where it
+//   compares what it is handed). That is the NaN rule, not a second fill;
+// - the shared DSP's own defaults (`DelayLine`, `Reverb`, `Phaser`,
+//   `LowPassHighPassFilters`, `FilterDef`).
+// The values are the ones the engine used before they had a name; naming them
+// retuned nothing (Katalyst DSL step 1, 2026-09-17; the delay and reverb pair,
+// `docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`, lived
+// in `SendEffectDefaults.kt` until 2026-10-08).
 //
 // These are the TOUCHED defaults: what a knob means once the author has reached
-// for its effect. What an UNTOUCHED effect carries is a separate question, and
-// the answer is the engine's own untouched value, a zero or [SLOT_UNSET], never
-// one of these (see `KatalystDsl.classic`).
+// for its effect. Musical, not neutral (maintainer, 2026-09-16): a reached-for
+// knob that is left unset means a usable sound. What an UNTOUCHED effect carries
+// is a separate question, and the answer is the engine's own untouched value, a
+// zero or [SLOT_UNSET], never one of these (see `KatalystDsl.classic`).
 //
 // "Touched" does not always mean "audible": PHASER_WET and DUCK_DEPTH are 0.0
 // here, because the phaser is gated on its depth and the duck on its source, so
@@ -45,14 +50,39 @@ package io.peekandpoke.klang.audio_bridge.constants
  * null to carry instead.
  *
  * Not a new convention: `/dsl-design` §4 already says a NON-FINITE value reads as unset, and the
- * engine reads it that way everywhere a `Double?` cannot reach (the `KatalystSlots` resolvers,
- * every shared DSP setter, `KatalystDelayEffect` and `KatalystReverbEffect`
+ * engine reads it that way everywhere a `Double?` cannot reach (the slot writers and the stages'
+ * `configure`, every shared DSP setter, the `KatalystDelayEffect` and `KatalystReverbEffect`
  * off-configs). NaN is simply the non-finite value we WRITE, so an unset slot has one spelling.
  *
  * A consumer must test `isFinite()`, never `== SLOT_UNSET`: NaN is not equal to itself, and an
  * infinity means unset too.
  */
 const val SLOT_UNSET: Double = Double.NaN
+
+// ── Delay ────────────────────────────────────────────────────────────────────
+
+/** Delay wet: how much of the orbit mix feeds the line, 0..1. */
+const val DELAY_WET: Double = 0.25
+
+/** Delay time in seconds. */
+const val DELAY_TIME_SECONDS: Double = 0.25
+
+/** Delay feedback; at or above 1.0 the delay self-oscillates, bounded by the cap. */
+const val DELAY_FEEDBACK: Double = 0.3
+
+/** Level the recirculating delay signal saturates toward. 1.0 is the engine's plain soft cap. */
+const val DELAY_CAP: Double = 1.0
+
+// ── Reverb ───────────────────────────────────────────────────────────────────
+
+/** Reverb wet: how much of the orbit mix feeds the room, 0..1. */
+const val REVERB_WET: Double = 0.25
+
+/**
+ * Reverb size on the authored ~0..10 scale. `5.0 / 10 == 0.5`, the Freeverb default, about a
+ * 1.4 s tail.
+ */
+const val REVERB_SIZE: Double = 5.0
 
 // ── Phaser ───────────────────────────────────────────────────────────────────
 
