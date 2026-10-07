@@ -38,12 +38,12 @@ echo "Working in $(pwd)"
 
 shopt -s dotglob
 
-HASH="$(git rev-parse --short=12 HEAD)"
-
-# The build must come from this commit: the distribution's version.json carries the git revision it was built at.
-BUILT_REV="$(sed -n 's/.*"gitRev": *"\([0-9a-f]*\)".*/\1/p' "$DIST/version.json" 2>/dev/null || true)"
-if [ -z "$BUILT_REV" ] || [ "${HASH#"$BUILT_REV"}" = "$HASH" ]; then
-  echo "The build is from '${BUILT_REV:-unknown}', HEAD is $HASH: run ./gradlew jsBrowserDistribution first." >&2
+# The release is named after what was built: the distribution's version.json carries the version and the git
+# revision it was built at, and `-dirty` when the tree had uncommitted changes (maintainer, 2026-10-07: deploying
+# a build with uncommitted changes is allowed; its name says so).
+HASH="$(sed -n 's/.*"gitRev": *"\([0-9a-f]*\)".*/\1/p' "$DIST/version.json" 2>/dev/null || true)"
+if [ -z "$HASH" ]; then
+  echo "No gitRev in $DIST/version.json: run ./gradlew jsBrowserDistribution first." >&2
   exit 1
 fi
 
@@ -54,13 +54,16 @@ if [ -z "$VERSION" ]; then
 fi
 
 NAME="v$VERSION-$HASH"
-RELEASE="$BASE/versions/$NAME"
-
-# A build made on a dirty tree carries `-dirty` in its gitDesc: its code is not the commit it is named after.
 if grep -q '"gitDesc": *"[^"]*-dirty"' "$DIST/version.json"; then
-  echo "The build was made on a dirty tree: commit, then run ./gradlew jsBrowserDistribution again." >&2
-  exit 1
+  NAME="$NAME-dirty"
 fi
+
+HEAD_HASH="$(git rev-parse --short=8 HEAD)"
+if [ "$HEAD_HASH" != "$HASH" ]; then
+  echo "Note: the build is from $HASH, HEAD is $HEAD_HASH."
+fi
+
+RELEASE="$BASE/versions/$NAME"
 
 echo "Release $NAME -> $HOST:$RELEASE"
 ssh "$HOST" "mkdir -p '$RELEASE' && touch '$RELEASE'"
