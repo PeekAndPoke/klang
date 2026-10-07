@@ -55,7 +55,7 @@ internal class KatalystBodyWriter(
     }
 
     private fun buildDef(): FilterDef.Body? =
-        KatalystSlots.bodyDef(BodyMaterials.modesAt(material.value), wet.value, floor.value)
+        KatalystSlots.bodyDef(bands = BodyMaterials.modesAt(material.value), mix = wet.value, floor = floor.value)
 }
 
 /** Vowel: the twin of [KatalystBodyWriter], with the formant bank. */
@@ -80,7 +80,7 @@ internal class KatalystVowelWriter(
     }
 
     private fun buildDef(): FilterDef.Formant? =
-        KatalystSlots.vowelDef(VowelBands.bandsAt(vowel.value), wet.value, floor.value)
+        KatalystSlots.vowelDef(bands = VowelBands.bandsAt(vowel.value), mix = wet.value, floor = floor.value)
 }
 
 /**

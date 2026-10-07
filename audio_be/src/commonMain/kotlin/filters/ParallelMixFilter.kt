@@ -37,7 +37,7 @@ class ParallelMixFilter(
     // Block-constant (amount/floor are fixed at construction) — precompute both coefficients
     // via the shared wet/dry law (C4), correlated branch (p = 2): the wet is the dry through a
     // resonator bank, coherent in the passbands, so amplitudes add.
-    private val dryGain: Double = WetDryMix.dryCoeff(this.amount, this.floor, p = 2)
+    private val dryGain: Double = WetDryMix.dryCoeff(w = this.amount, floor = this.floor, p = 2)
     private val wetGain: Double = WetDryMix.wetCoeff(this.amount, p = 2)
 
     private var wetBuffer: AudioBuffer = AudioBuffer(0)
@@ -51,8 +51,8 @@ class ParallelMixFilter(
         }
 
         // 1. Copy the dry input, then run the inner filter on the copy → it becomes the wet signal.
-        buffer.copyInto(wetBuffer, 0, offset, offset + length)
-        inner.process(wetBuffer, 0, length)
+        buffer.copyInto(destination = wetBuffer, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
+        inner.process(buffer = wetBuffer, offset = 0, length = length)
 
         // 2. Blend: dry attenuated to dryGain (≥ floor) + the resonant peaks on top.
         for (i in 0 until length) {

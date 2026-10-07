@@ -46,7 +46,7 @@ class FmRenderer(
 
         // Onset and gate read from the voice's limits per call: a realtime note-off moves the gate.
         val limits = ctx.limits
-        val envLevel = calculateControlRateEnvelope(fm.envelope, ctx.blockStart, limits.startFrame, limits.gateEndFrame, core)
+        val envLevel = calculateControlRateEnvelope(env = fm.envelope, blockStart = ctx.blockStart, startFrame = limits.startFrame, gateEndFrame = limits.gateEndFrame, core = core)
         // Hoisted: the divide and the offset read are loop-invariant, and after the sine swap
         // the divide would be the loop's largest remaining cost.
         val depthOverFreq = fm.depth * envLevel / freqHz

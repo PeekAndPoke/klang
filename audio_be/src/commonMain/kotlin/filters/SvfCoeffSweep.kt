@@ -45,7 +45,7 @@ internal class SvfCoeffSweep {
      * samples. [frames] at or below 0 steps nothing.
      */
     fun prepare(cutoffStartHz: Double, cutoffEndHz: Double, q: Double, sampleRate: Double, frames: Int) {
-        computeSvfCoeffs(cutoffStartHz, q, sampleRate, start)
+        computeSvfCoeffs(cutoffHz = cutoffStartHz, q = q, sampleRate = sampleRate, out = start)
 
         if (frames <= 0 || cutoffEndHz == cutoffStartHz) {
             a1Step = 0.0
@@ -57,7 +57,7 @@ internal class SvfCoeffSweep {
             return
         }
 
-        computeSvfCoeffs(cutoffEndHz, q, sampleRate, end)
+        computeSvfCoeffs(cutoffHz = cutoffEndHz, q = q, sampleRate = sampleRate, out = end)
 
         val invFrames = 1.0 / frames
 

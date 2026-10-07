@@ -79,8 +79,8 @@ private class VibratoModIgnitor(
         // `adsr`'s rule (`finiteOr`). Raw, a NaN depth skips the `<= 0.0` bypass and `safeOut` turns every
         // ratio into 0 (the oscillator holds still), and a NaN rate pins the LFO at phase 0 (no vibrato).
         // No clamp: every finite value passes raw.
-        val rateVal = finiteOr(Ignitors.readParam(rate, freqHz, ctx), VIBRATO_RATE_HZ)
-        val depthSemitones = finiteOr(Ignitors.readParam(semitones, freqHz, ctx), VIBRATO_SEMITONES)
+        val rateVal = finiteOr(value = Ignitors.readParam(rate, freqHz, ctx), fallback = VIBRATO_RATE_HZ)
+        val depthSemitones = finiteOr(value = Ignitors.readParam(semitones, freqHz, ctx), fallback = VIBRATO_SEMITONES)
         val end = ctx.windowEnd
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val depthOctaves = depthSemitones / 12.0
@@ -108,10 +108,10 @@ private class VibratoModIgnitor(
     }
 }
 
-fun vibratoModIgnitor(rate: Ignitor, semitones: Ignitor): Ignitor = VibratoModIgnitor(rate, semitones)
+fun vibratoModIgnitor(rate: Ignitor, semitones: Ignitor): Ignitor = VibratoModIgnitor(rate = rate, semitones = semitones)
 
 fun vibratoModIgnitor(rate: Double, semitones: Double): Ignitor =
-    vibratoModIgnitor(ParamIgnitor("rate", rate), ParamIgnitor("semitones", semitones))
+    vibratoModIgnitor(rate = ParamIgnitor("rate", rate), semitones = ParamIgnitor("semitones", semitones))
 
 /**
  * Accelerate — exponential pitch ramp in ratio space.
@@ -134,7 +134,7 @@ private class AccelerateModIgnitor(private val semitones: Ignitor) : Ignitor {
         // NaN-guard: a non-finite amount reads as UNSET, 0 (no glide), the chain `adsr`'s rule (`finiteOr`).
         // Raw, a NaN skips the `== 0.0` bypass and `safeOut` turns every ratio into 0: the oscillator holds
         // still. No clamp.
-        val amountVal = finiteOr(Ignitors.readParam(semitones, freqHz, ctx), 0.0) / 12.0 // semitones -> octaves
+        val amountVal = finiteOr(value = Ignitors.readParam(semitones, freqHz, ctx), fallback = 0.0) / 12.0 // semitones -> octaves
         val end = ctx.windowEnd
 
         if (amountVal == 0.0) {
@@ -200,7 +200,7 @@ fun pitchEnvelopeModIgnitor(
     decayCurve: AdsrCurve = MOD_ENV_CURVE,
     releaseCurve: AdsrCurve = MOD_ENV_CURVE,
 ): Ignitor = PitchEnvelopeModIgnitor(
-    attackSec, decaySec, releaseSec, semitones, sustainLevel, attackCurve, decayCurve, releaseCurve,
+    attackSec = attackSec, decaySec = decaySec, releaseSec = releaseSec, semitones = semitones, sustainLevel = sustainLevel, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve,
 )
 
 private class PitchEnvelopeModIgnitor(
@@ -219,7 +219,7 @@ private class PitchEnvelopeModIgnitor(
         // NaN-guard: a non-finite amount reads as UNSET, 0 (no envelope), the chain `adsr`'s rule
         // (`finiteOr`). Raw, a NaN skips the `== 0.0` bypass and `safeOut` turns every ratio into 0: the
         // oscillator holds still. No clamp.
-        val amountVal = finiteOr(Ignitors.readParam(semitones, freqHz, ctx), 0.0)
+        val amountVal = finiteOr(value = Ignitors.readParam(semitones, freqHz, ctx), fallback = 0.0)
         val end = ctx.windowEnd
 
         if (amountVal == 0.0) {
@@ -234,7 +234,7 @@ private class PitchEnvelopeModIgnitor(
         val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx)
         // NaN-guard: a non-finite sustain reads as UNSET and takes the shared default, the chain
         // `adsr`'s rule (`finiteOr`). No clamp: every finite sustain passes raw (the Motor stays raw).
-        val sustainVal = finiteOr(Ignitors.readParam(sustainLevel, freqHz, ctx), PITCH_ENV_SUSTAIN_LEVEL)
+        val sustainVal = finiteOr(value = Ignitors.readParam(sustainLevel, freqHz, ctx), fallback = PITCH_ENV_SUSTAIN_LEVEL)
 
         core.prepare(
             attackFrames = attackSecVal * ctx.sampleRate,
@@ -247,7 +247,7 @@ private class PitchEnvelopeModIgnitor(
             releaseCurve = releaseCurve,
         )
 
-        renderPitchEnvelopeRatios(core, amountVal, buffer, ctx.offset, end, ctx.voiceElapsedFrames, multiply = false)
+        renderPitchEnvelopeRatios(core = core, amount = amountVal, buffer = buffer, from = ctx.offset, to = end, firstPos = ctx.voiceElapsedFrames, multiply = false)
     }
 }
 
@@ -342,7 +342,7 @@ fun fmModIgnitor(
     envSustainLevel: Ignitor = ParamIgnitor("envSustainLevel", 1.0),
     envReleaseSec: Ignitor = ParamIgnitor("envReleaseSec", 0.0),
     freq: Ignitor = FreqIgnitor,
-): Ignitor = FmModIgnitor(modulator, ratio, depth, envAttackSec, envDecaySec, envSustainLevel, envReleaseSec, freq)
+): Ignitor = FmModIgnitor(modulator = modulator, ratio = ratio, depth = depth, envAttackSec = envAttackSec, envDecaySec = envDecaySec, envSustainLevel = envSustainLevel, envReleaseSec = envReleaseSec, freq = freq)
 
 private class FmModIgnitor(
     private val modulator: Ignitor,
@@ -393,8 +393,8 @@ private class FmModIgnitor(
         // depth 0 = no fm), the chain `adsr`'s rule (`finiteOr`). Raw, a NaN depth skips the `== 0.0`
         // bypass and `safeOut` turns every ratio into 0 (the carrier holds still), and a NaN ratio drives
         // the modulator at a NaN frequency. No clamp.
-        val ratioVal = finiteOr(Ignitors.readParam(ratio, fmFreqVal, ctx), FM_RATIO)
-        val depthVal = finiteOr(Ignitors.readParam(depth, fmFreqVal, ctx), 0.0)
+        val ratioVal = finiteOr(value = Ignitors.readParam(ratio, fmFreqVal, ctx), fallback = FM_RATIO)
+        val depthVal = finiteOr(value = Ignitors.readParam(depth, fmFreqVal, ctx), fallback = 0.0)
         // Read — and thereby advance — the env subtrees BEFORE the depth gate below: state moves
         // once per rendered block whatever the output, or a depth passing through zero would
         // freeze a modulated envelope time. The same E2 shape, one level down.
@@ -406,7 +406,7 @@ private class FmModIgnitor(
         // clamped to [0, 1] below, the depth range, as the filter envelope clamps it. The three stage
         // times need no guard: the envelope law reads a NaN or negative time as a zero-length stage,
         // and an infinite one as a stage that never ends, never a NaN.
-        val envSustainLevelVal = finiteOr(Ignitors.readParam(envSustainLevel, fmFreqVal, ctx), 1.0)
+        val envSustainLevelVal = finiteOr(value = Ignitors.readParam(envSustainLevel, fmFreqVal, ctx), fallback = 1.0)
         val envReleaseSecVal = Ignitors.readParam(envReleaseSec, fmFreqVal, ctx)
 
         ctx.scratchBuffers.use { modBuf ->
@@ -452,8 +452,8 @@ private class FmModIgnitor(
             // the FM index envelope has no curve surface yet (`future/envelope-shape-followups.md` §4), so the
             // default is all it gets.
             envCore.prepareModEnvelope(
-                ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal,
-                MOD_ENV_CURVE, MOD_ENV_CURVE, MOD_ENV_CURVE,
+                ctx = ctx, attackSec = envAttackSecVal, decaySec = envDecaySecVal, sustainLevel = envSustainLevelVal, releaseSec = envReleaseSecVal,
+                attackCurve = MOD_ENV_CURVE, decayCurve = MOD_ENV_CURVE, releaseCurve = MOD_ENV_CURVE,
             )
 
             for (i in ctx.offset until end) {

@@ -52,7 +52,7 @@ class Ducking(
         }
 
     /** Attack time in seconds (return to normal). Setter silently ignores non-finite values. */
-    var attackSeconds: Double = guardOr(attackSeconds, 0.1)
+    var attackSeconds: Double = guardOr(value = attackSeconds, fallback = 0.1)
         set(value) {
             if (!value.isFinite()) return
             field = value
@@ -93,7 +93,7 @@ class Ducking(
         blockSize: Int,
     ) {
         for (i in 0 until blockSize) {
-            val gain = stepGain(max(abs(sidechainL[i]), abs(sidechainR[i])), depth)
+            val gain = stepGain(sidechainLevel = max(abs(sidechainL[i]), abs(sidechainR[i])), depthNow = depth)
             inputL[i] = inputL[i] * gain
             inputR[i] = inputR[i] * gain
         }
@@ -138,7 +138,7 @@ class Ducking(
 
         for (i in 0 until blockSize) {
             val back = (last - i).toDouble()
-            val gain = stepGain(max(abs(sidechainL[i]), abs(sidechainR[i])), depthTo - depthStep * back)
+            val gain = stepGain(sidechainLevel = max(abs(sidechainL[i]), abs(sidechainR[i])), depthNow = depthTo - depthStep * back)
             val weighted = 1.0 + (weightTo - weightStep * back) * (gain - 1.0)
 
             inputL[i] = inputL[i] * weighted
@@ -155,7 +155,7 @@ class Ducking(
      */
     fun process(input: AudioBuffer, sidechain: AudioBuffer, blockSize: Int) {
         for (i in 0 until blockSize) {
-            input[i] = input[i] * stepGain(abs(sidechain[i]), depth)
+            input[i] = input[i] * stepGain(sidechainLevel = abs(sidechain[i]), depthNow = depth)
         }
     }
 

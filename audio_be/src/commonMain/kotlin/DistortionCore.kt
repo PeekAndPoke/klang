@@ -76,7 +76,7 @@ internal class DistortionCore(
             }
         }
 
-        dcBlocker.process(buffer, offset, length)
+        dcBlocker.process(buffer = buffer, offset = offset, length = length)
     }
 
     companion object {

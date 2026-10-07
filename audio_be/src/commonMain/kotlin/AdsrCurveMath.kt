@@ -61,7 +61,7 @@ internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm:
     AdsrCurve.Cube -> x * x * x
     AdsrCurve.SCurve -> if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
     AdsrCurve.InvSquare -> x * (2.0 - x)
-    AdsrCurve.Exponential -> adsrExpShape(x, k, norm)
+    AdsrCurve.Exponential -> adsrExpShape(x = x, k = k, norm = norm)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -117,15 +117,15 @@ class MasterStage(
      */
     fun process(mix: StereoBuffer, out: StereoBuffer) {
         // Master-out DC blockers (per channel, in-place), ahead of the limiter. See above.
-        dcBlockerL.process(mix.left, 0, blockFrames)
-        dcBlockerR.process(mix.right, 0, blockFrames)
+        dcBlockerL.process(buffer = mix.left, offset = 0, length = blockFrames)
+        dcBlockerR.process(buffer = mix.right, offset = 0, length = blockFrames)
 
         // Apply dynamic limiter: handles the bulk of loudness management musically. With lookahead
         // it also delays the mix by HOUSE_LIMITER_LOOKAHEAD_SECONDS; uniform, so nothing desyncs.
-        limiter.process(mix.left, mix.right, blockFrames)
+        limiter.process(left = mix.left, right = mix.right, blockSize = blockFrames)
 
         // Transparent clip into the floating-point output.
-        clipOutput(mix, blockFrames, out)
+        clipOutput(mix = mix, frames = blockFrames, out = out)
     }
 }
 

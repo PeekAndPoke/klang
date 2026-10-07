@@ -73,5 +73,5 @@ internal class WaveVoiceState {
     }
 
     /** Bipolar value at normalised phase [p] (the shared [waveTrapezoid]). */
-    fun sampleAt(p: Double): Double = waveTrapezoid(p, riseEnd, highEnd, fallEnd, riseSlope, fallSlope)
+    fun sampleAt(p: Double): Double = waveTrapezoid(p = p, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
 }

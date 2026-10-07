@@ -142,7 +142,7 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
-    ): Ignitor = SineIgnitor(freq, analog, phase?.let { PhaseOffset(it) })
+    ): Ignitor = SineIgnitor(freq = freq, analog = analog, phaseIn = phase?.let { PhaseOffset(it) })
 
     private class SineIgnitor(
         private val freq: Ignitor,
@@ -170,7 +170,7 @@ object Ignitors {
                 }
 
                 if (phaseIn.perSample) {
-                    renderPhased(buffer, actualFreq, ctx, d, phaseInc, phaseIn)
+                    renderPhased(buffer = buffer, actualFreq = actualFreq, ctx = ctx, d = d, phaseInc = phaseInc, phaseIn = phaseIn)
 
                     return
                 }
@@ -316,9 +316,9 @@ object Ignitors {
         analogSpread: Ignitor = ConstantIgnitor(1.0),
         phase: Ignitor? = null,
     ): Ignitor = PartialBankIgnitor(
-        freq, analog, fundamental,
-        harmonics, harmonicsRolloff, octaves, octavesRolloff, suboctaves, suboctavesRolloff,
-        analogSpread, phase?.let { PhaseOffset(it) },
+        freq = freq, analog = analog, fundamental = fundamental,
+        harmonics = harmonics, harmonicsRolloff = harmonicsRolloff, octaves = octaves, octavesRolloff = octavesRolloff, suboctaves = suboctaves, suboctavesRolloff = suboctavesRolloff,
+        analogSpread = analogSpread, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     private class PartialBankIgnitor(
@@ -514,7 +514,7 @@ object Ignitors {
             val baseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val fund = readParam(fundamental, actualFreq, ctx)
             // NaN-guard: a non-finite fundamental gain reads as 0 (the hand-rolled `.mul(gain)` scrubbed NaN too).
-            fundGain = gate(actualFreq, if (fund.isFinite()) fund else 0.0, ctx)
+            fundGain = gate(partialFreq = actualFreq, g = if (fund.isFinite()) fund else 0.0, ctx = ctx)
             fundInc = baseInc
 
             val rh = readParam(harmonicsRolloff, actualFreq, ctx)
@@ -523,7 +523,7 @@ object Ignitors {
 
             for (i in 0 until h) {
                 val m = (2 + i).toDouble()
-                harmonicsBank.gain[i] = gate(m * actualFreq, law(m, rh), ctx)
+                harmonicsBank.gain[i] = gate(partialFreq = m * actualFreq, g = law(m = m, rolloff = rh), ctx = ctx)
                 harmonicsBank.inc[i] = TWO_PI * (m * actualFreq) / ctx.sampleRateD
             }
 
@@ -531,7 +531,7 @@ object Ignitors {
 
             for (i in 0 until o) {
                 m *= 2.0
-                octavesBank.gain[i] = gate(m * actualFreq, law(m, ro), ctx)
+                octavesBank.gain[i] = gate(partialFreq = m * actualFreq, g = law(m = m, rolloff = ro), ctx = ctx)
                 octavesBank.inc[i] = TWO_PI * (m * actualFreq) / ctx.sampleRateD
             }
 
@@ -540,7 +540,7 @@ object Ignitors {
             for (i in 0 until sub) {
                 m *= 2.0
                 val partialFreq = actualFreq / m
-                suboctavesBank.gain[i] = gate(partialFreq, law(m, rs), ctx)
+                suboctavesBank.gain[i] = gate(partialFreq = partialFreq, g = law(m = m, rolloff = rs), ctx = ctx)
                 suboctavesBank.inc[i] = TWO_PI * partialFreq / ctx.sampleRateD
             }
 
@@ -566,14 +566,14 @@ object Ignitors {
                 if (phaseIn.perSample) {
                     ctx.scratchBuffers.use { offsets ->
                         phaseIn.render(offsets, actualFreq, ctx)
-                        renderPartials(buffer, off, end, pm, lanes, offsets)
+                        renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = offsets)
                     }
 
                     return
                 }
             }
 
-            renderPartials(buffer, off, end, pm, lanes, null)
+            renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = null)
         }
 
         /** Moves every live accumulator by a block-constant phase change of [shift] cycles (0: nothing moves). */
@@ -601,9 +601,9 @@ object Ignitors {
 
             if (fundGain != 0.0) {
                 fundPhase = if (offsets == null) {
-                    renderPartial(buffer, off, end, first, fundPhase, fundInc, fundGain, pm, lanes, 0)
+                    renderPartial(buffer = buffer, off = off, end = end, first = first, phaseIn = fundPhase, d = fundInc, g = fundGain, pm = pm, drift = lanes, lane = 0)
                 } else {
-                    renderPartialPhased(buffer, off, end, first, fundPhase, fundInc, fundGain, pm, lanes, 0, offsets)
+                    renderPartialPhased(buffer = buffer, off = off, end = end, first = first, phaseIn = fundPhase, d = fundInc, g = fundGain, pm = pm, drift = lanes, lane = 0, offsets = offsets)
                 }
                 first = false
             }
@@ -617,10 +617,10 @@ object Ignitors {
                     }
 
                     bank.phase[i] = if (offsets == null) {
-                        renderPartial(buffer, off, end, first, bank.phase[i], bank.inc[i], g, pm, lanes, bank.laneIdx[i])
+                        renderPartial(buffer = buffer, off = off, end = end, first = first, phaseIn = bank.phase[i], d = bank.inc[i], g = g, pm = pm, drift = lanes, lane = bank.laneIdx[i])
                     } else {
                         renderPartialPhased(
-                            buffer, off, end, first, bank.phase[i], bank.inc[i], g, pm, lanes, bank.laneIdx[i], offsets,
+                            buffer = buffer, off = off, end = end, first = first, phaseIn = bank.phase[i], d = bank.inc[i], g = g, pm = pm, drift = lanes, lane = bank.laneIdx[i], offsets = offsets,
                         )
                     }
                     first = false
@@ -709,9 +709,9 @@ object Ignitors {
                 }
 
                 if (phased != null) {
-                    renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, null, 0.0)
+                    renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = null, floor = 0.0)
                 } else {
-                    renderHoisted(buffer, off, end, dt, pm, safeWrap)
+                    renderHoisted(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap)
                 }
 
                 return
@@ -728,13 +728,13 @@ object Ignitors {
 
                 if (d != lastDuty || dt != lastDt) {
                     lastDuty = d; lastDt = dt
-                    voice.setPulseShape(d, riseFlank, fallFlank, flankSamples * dt)
+                    voice.setPulseShape(duty = d, riseFlank = riseFlank, fallFlank = fallFlank, floor = flankSamples * dt)
                 }
 
                 if (phased != null) {
-                    renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, null, 0.0)
+                    renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = null, floor = 0.0)
                 } else {
-                    renderHoisted(buffer, off, end, dt, pm, safeWrap)
+                    renderHoisted(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap)
                 }
             } else {
                 if (dt != lastDt) {
@@ -747,7 +747,7 @@ object Ignitors {
                     duty.generate(dutyBuf, actualFreq, ctx)
 
                     if (phased != null) {
-                        renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, dutyBuf, floor)
+                        renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = dutyBuf, floor = floor)
 
                         return
                     }
@@ -768,11 +768,11 @@ object Ignitors {
                         val d = dutyBuf[i]
 
                         if (d != lastDuty) {
-                            lastDuty = d; voice.setPulseShape(d, riseFlank, fallFlank, floor)
+                            lastDuty = d; voice.setPulseShape(duty = d, riseFlank = riseFlank, fallFlank = fallFlank, floor = floor)
                         }
 
                         buffer[i] = pol * waveTrapezoid(
-                            phase, voice.riseEnd, voice.highEnd, voice.fallEnd, voice.riseSlope, voice.fallSlope,
+                            p = phase, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope,
                         )
 
                         var inc = dt * m
@@ -814,7 +814,7 @@ object Ignitors {
             val fallSlope = voice.fallSlope
 
             for (i in off until end) {
-                buffer[i] = pol * waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope)
+                buffer[i] = pol * waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
 
                 var inc = dt * m
 
@@ -859,7 +859,7 @@ object Ignitors {
                         val d = dutyBuf[i]
 
                         if (d != lastDuty) {
-                            lastDuty = d; voice.setPulseShape(d, riseFlank, fallFlank, floor)
+                            lastDuty = d; voice.setPulseShape(duty = d, riseFlank = riseFlank, fallFlank = fallFlank, floor = floor)
                         }
                     }
 
@@ -870,7 +870,7 @@ object Ignitors {
                     }
 
                     buffer[i] = pol * waveTrapezoid(
-                        p, voice.riseEnd, voice.highEnd, voice.fallEnd, voice.riseSlope, voice.fallSlope,
+                        p = p, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope,
                     )
 
                     var inc = dt * m
@@ -901,7 +901,7 @@ object Ignitors {
         shapeMax: Double = SAW_SHAPE_MAX,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = resetSamples, shapeMax = shapeMax,
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = 1.0, flankSamples = resetSamples, shapeMax = shapeMax,
         phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -913,7 +913,7 @@ object Ignitors {
         shapeMax: Double = RAMP_SHAPE_MAX,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = resetSamples, shapeMax = shapeMax,
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = -1.0, flankSamples = resetSamples, shapeMax = shapeMax,
         phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -922,7 +922,7 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
-    ): Ignitor = pulze(freq, ConstantIgnitor(0.5), analog, phase = phase)
+    ): Ignitor = pulze(freq = freq, duty = ConstantIgnitor(0.5), analog = analog, phase = phase)
 
     /** Triangle wave: the pulse engine with both flanks fully open (duty 0.5, rise = fall = 1). Phase 0 is -1, its lowest point. */
     fun tri(
@@ -930,7 +930,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
+        freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
         duty = ConstantIgnitor(0.5), riseFlank = 1.0, fallFlank = 1.0, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -981,7 +981,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = 1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /** Raw ramp ("zamp"): the negated [zawtooth] (naive reverse saw, no anti-aliasing). Phase 0 is +1. */
@@ -990,7 +990,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = -1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /**
@@ -1004,7 +1004,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = 0.0,
+        freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = 0.0,
         duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -1018,7 +1018,7 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
-    ): Ignitor = ImpulseIgnitor(freq, analog, phase?.let { PhaseOffset(it) })
+    ): Ignitor = ImpulseIgnitor(freq = freq, analog = analog, phaseIn = phase?.let { PhaseOffset(it) })
 
     private class ImpulseIgnitor(
         private val freq: Ignitor,
@@ -1046,7 +1046,7 @@ object Ignitors {
                 }
 
                 if (phaseIn.perSample) {
-                    renderPhased(buffer, actualFreq, ctx, d, phaseInc, phaseIn)
+                    renderPhased(buffer = buffer, actualFreq = actualFreq, ctx = ctx, d = d, phaseInc = phaseInc, phaseIn = phaseIn)
 
                     return
                 }
@@ -1196,7 +1196,7 @@ object Ignitors {
         fallFlank: Double = PULSE_FALL_FLANK,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = flankSamples,
+        freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = flankSamples,
         duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -1263,7 +1263,7 @@ object Ignitors {
         rate: Ignitor = rateDefault,
         octaves: Ignitor = octavesDefault,
         persistence: Ignitor = persistenceDefault,
-    ): Ignitor = PerlinNoiseIgnitor(rng, rate, octaves, persistence)
+    ): Ignitor = PerlinNoiseIgnitor(rng = rng, rate = rate, octaves = octaves, persistence = persistence)
 
     private class PerlinNoiseIgnitor(
         rng: Random,
@@ -1285,7 +1285,7 @@ object Ignitors {
             val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
-                buffer[i] = noise.fbm(pos, oct, pers)
+                buffer[i] = noise.fbm(x = pos, octaves = oct, persistence = pers)
                 pos += step
             }
         }
@@ -1297,7 +1297,7 @@ object Ignitors {
         rate: Ignitor = rateDefault,
         octaves: Ignitor = octavesDefault,
         persistence: Ignitor = persistenceDefault,
-    ): Ignitor = BerlinNoiseIgnitor(rng, rate, octaves, persistence)
+    ): Ignitor = BerlinNoiseIgnitor(rng = rng, rate = rate, octaves = octaves, persistence = persistence)
 
     private class BerlinNoiseIgnitor(
         rng: Random,
@@ -1317,7 +1317,7 @@ object Ignitors {
 
             for (i in ctx.offset until end) {
                 // BerlinNoise outputs 0..1, scale to -1..1
-                buffer[i] = (noise.fbm(pos, oct, pers) * 2.0 - 1.0)
+                buffer[i] = (noise.fbm(t = pos, octaves = oct, persistence = pers) * 2.0 - 1.0)
                 pos += step
             }
         }
@@ -1334,7 +1334,7 @@ object Ignitors {
         tail: Ignitor = tailDefault,
         bipolar: Ignitor = bipolarDefault,
         maxRateHz: Double = 200.0,
-    ): Ignitor = DustIgnitor(rng, density, tail, bipolar, maxRateHz)
+    ): Ignitor = DustIgnitor(rng = rng, density = density, tail = tail, bipolar = bipolar, maxRateHz = maxRateHz)
 
     private class DustIgnitor(
         private val rng: Random,
@@ -1443,7 +1443,7 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
     ): Ignitor = SawStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1476,7 +1476,7 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
     ): Ignitor = superSawRaw(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
@@ -1633,7 +1633,7 @@ object Ignitors {
 
                     if (pool != null) {
                         val sel = parsedSelection ?: parsePhasePoolSelection(selection).also { parsedSelection = it }
-                        val entry = pool.next(sel.mode, sel.width, sel.outliers)
+                        val entry = pool.next(mode = sel.mode, width = sel.width, outliers = sel.outliers)
 
                         for (n in 0 until v) {
                             voiceStates[n].phase = entry[n]
@@ -1657,7 +1657,7 @@ object Ignitors {
             if (actualFreq != lastFreq || spread != lastSpread) {
                 lastFreq = actualFreq
                 lastSpread = spread
-                computeDetunes(actualFreq, spread, ctx.sampleRateD)
+                computeDetunes(actualFreq = actualFreq, spread = spread, sr = ctx.sampleRateD)
             }
 
             // Voice-major: each voice runs its whole sample block in one call (register residency);
@@ -1696,7 +1696,7 @@ object Ignitors {
                         phaseIn.render(offsets, actualFreq, ctx)
 
                         for (n in 0 until v) {
-                            renderVoicePhased(buffer, off, end, voiceStates[n], n, n == 0, pm, lanes, offsets)
+                            renderVoicePhased(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes, offsets = offsets)
                         }
                     }
 
@@ -1705,7 +1705,7 @@ object Ignitors {
             }
 
             for (n in 0 until v) {
-                renderVoice(buffer, off, end, voiceStates[n], n, n == 0, pm, lanes)
+                renderVoice(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes)
             }
         }
 
@@ -1829,7 +1829,7 @@ object Ignitors {
             for (n in 0 until v) {
                 val g = voiceStates[n].gain
 
-                wsum += getUnisonDetune(v, spread, n, spreadPower) * g; gsum += g
+                wsum += getUnisonDetune(unison = v, detune = spread, voiceIndex = n, spreadPower = spreadPower) * g; gsum += g
             }
 
             val mean = if (gsum != 0.0) wsum / gsum else 0.0
@@ -1837,7 +1837,7 @@ object Ignitors {
             for (n in 0 until v) {
                 val vs = voiceStates[n]
 
-                vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(v, spread, n, spreadPower) - mean) / sr
+                vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(unison = v, detune = spread, voiceIndex = n, spreadPower = spreadPower) - mean) / sr
                 configureShape(vs, vs.dt)
             }
         }
@@ -1851,7 +1851,7 @@ object Ignitors {
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
     ) : DetunedStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1889,7 +1889,7 @@ object Ignitors {
             }
 
             for (i in off until end) {
-                val s = waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
+                val s = waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
 
                 buffer[i] = if (first) s else buffer[i] + s
 
@@ -1938,7 +1938,7 @@ object Ignitors {
                     p -= 1.0
                 }
 
-                val s = waveTrapezoid(p, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
+                val s = waveTrapezoid(p = p, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
 
                 buffer[i] = if (first) s else buffer[i] + s
 
@@ -1966,7 +1966,7 @@ object Ignitors {
         phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
         private val resetSamples: Double, private val shapeMax: Double,
     ) : TrapezoidStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1993,7 +1993,7 @@ object Ignitors {
         private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
         private val flankSamples: Double,
     ) : TrapezoidStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -2001,7 +2001,7 @@ object Ignitors {
         phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
     ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) {
-            vs.setPulseShape(duty, riseFlank, fallFlank, flankSamples * dt)
+            vs.setPulseShape(duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, floor = flankSamples * dt)
         }
     }
 
@@ -2013,7 +2013,7 @@ object Ignitors {
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
     ) : DetunedStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -2139,7 +2139,7 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
     ): Ignitor = SineStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -2177,7 +2177,7 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
     ): Ignitor = PulseStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
@@ -2216,7 +2216,7 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
     ): Ignitor = PulseStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
@@ -2255,7 +2255,7 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
     ): Ignitor = SawStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = -1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
@@ -2278,7 +2278,7 @@ object Ignitors {
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random,
-    ): Ignitor = KarplusStrongIgnitor(freq, decay, brightness, pickPosition, stiffness, analog, rng)
+    ): Ignitor = KarplusStrongIgnitor(freq = freq, decay = decay, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, rng = rng)
 
     private class KarplusStrongIgnitor(
         private val freq: Ignitor,
@@ -2411,7 +2411,7 @@ object Ignitors {
         analogSpread: Ignitor = analogSpreadDefault,
         rng: Random = Random,
     ): Ignitor = SuperKarplusStrongIgnitor(
-        freq, voices, detune, decay, brightness, pickPosition, stiffness, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, decay = decay, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, analogSpread = analogSpread, rng = rng,
     )
 
     private class SuperKarplusStrongIgnitor(
@@ -2534,7 +2534,7 @@ object Ignitors {
                 // one held its own lane; a string that came back after a shrink draws a fresh one.
                 lanes?.ensureLanes(n + 1)
 
-                val detuneSemitones = getUnisonDetune(v, spread, n)
+                val detuneSemitones = getUnisonDetune(unison = v, detune = spread, voiceIndex = n)
                 val detunedFreq = actualFreq.applySemitoneDetuneToFrequency(detuneSemitones)
                 val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1.0))
 

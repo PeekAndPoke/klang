@@ -194,7 +194,7 @@ class VoiceFactory(
                 decayCurve = MOD_ENV_CURVE,
                 releaseCurve = MOD_ENV_CURVE,
             )
-            Voice.Fm(ratio, depth, fmEnv)
+            Voice.Fm(ratio = ratio, depth = depth, envelope = fmEnv)
         } else {
             null
         }
@@ -213,9 +213,9 @@ class VoiceFactory(
                 ) ?: return null
 
                 buildVoice(
-                    data, treeLifetime(built), startFrame, gateEndFrame, voiceDurationFrames, cylinder,
-                    gain, accelerate, vibrato, pitchEnvelope,
-                    fm, built.ignitor, freqHz ?: 0.0, voiceRandom = voiceRandom,
+                    data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
+                    gain = gain, accelerate = accelerate, vibrato = vibrato, pitchEnvelope = pitchEnvelope,
+                    fm = fm, signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
                     treeStages = treeStages(built),
@@ -335,9 +335,9 @@ class VoiceFactory(
                 )
 
                 buildVoice(
-                    data, treeLifetime(built), sampleStartFrame, gateEndFrame, voiceDurationFrames, cylinder,
-                    gain, accelerate, vibrato, pitchEnvelope,
-                    fm, built.ignitor, baseSamplePitchHz,
+                    data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
+                    gain = gain, accelerate = accelerate, vibrato = vibrato, pitchEnvelope = pitchEnvelope,
+                    fm = fm, signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),

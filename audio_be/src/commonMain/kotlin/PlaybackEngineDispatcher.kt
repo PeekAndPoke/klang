@@ -153,7 +153,7 @@ class PlaybackEngineDispatcher(
         mix.clear()
 
         try {
-            renderBlockAt(cursorFrame, out, startMs)
+            renderBlockAt(cursorFrame = cursorFrame, out = out, startMs = startMs)
         } finally {
             // The clock convention (see RenderClock.cursorFrame): between renders it is the NEXT
             // block. Advanced in `finally` so an exception mid-block cannot leave "now" in the past.
@@ -174,7 +174,7 @@ class PlaybackEngineDispatcher(
             detached[i].renderInto(mix, cursorFrame)
         }
 
-        master.process(mix, out)
+        master.process(mix = mix, out = out)
 
         disposeDrainedEngines()
         // Deferred clearing of returned rings and networks, a bounded slice per block (round 3).

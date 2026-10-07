@@ -124,7 +124,7 @@ fun Ignitor.svf(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env, analog, humanize)
+): Ignitor = SvfIgnitor(upstream = this, mode = mode, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 private class SvfIgnitor(
     private val upstream: Ignitor,
@@ -185,16 +185,16 @@ private class SvfIgnitor(
 
             if (hasEnv) {
                 envCore.prepareModEnvelope(
-                    ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
-                    env.attackCurve, env.decayCurve, env.releaseCurve,
+                    ctx = ctx, attackSec = env.attackSec, decaySec = env.decaySec, sustainLevel = env.sustainLevel, releaseSec = env.releaseSec,
+                    attackCurve = env.attackCurve, decayCurve = env.decayCurve, releaseCurve = env.releaseCurve,
                 )
                 // The cutoff at the block's two ends, the drift held across the block
                 // (`filterEnvCutoff`: depth in SEMITONES, C3), swept linearly in between.
                 val pos = ctx.voiceElapsedFrames
-                val cutoffStart = envCore.filterEnvCutoff(pos, baseCutoff, env.depth) * driftMul * offsetMul
-                val cutoffEnd = envCore.filterEnvCutoff(pos + length, baseCutoff, env.depth) * driftMul * offsetMul
+                val cutoffStart = envCore.filterEnvCutoff(pos = pos, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
+                val cutoffEnd = envCore.filterEnvCutoff(pos = pos + length, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
 
-                sweep.prepare(cutoffStart, cutoffEnd, qVal, sr, length)
+                sweep.prepare(cutoffStartHz = cutoffStart, cutoffEndHz = cutoffEnd, q = qVal, sampleRate = sr, frames = length)
 
                 val c = sweep.start
 
@@ -205,7 +205,7 @@ private class SvfIgnitor(
                 // `hasDrift` is false without a lane, so the cheap latch below is untouched for
                 // every node that does not humanize; with one, the cutoff moves every block and
                 // there is nothing to latch.
-                computeSvfCoeffs(baseCutoff * driftMul * offsetMul, qVal, sr, coefs)
+                computeSvfCoeffs(cutoffHz = baseCutoff * driftMul * offsetMul, q = qVal, sampleRate = sr, out = coefs)
                 a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
                 initialized = true
             } else {
@@ -336,8 +336,8 @@ fun Ignitor.svf(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Double = 0.0,
 ): Ignitor = svf(
-    mode, ParamIgnitor("cutoffHz", cutoffHz), ParamIgnitor("q", q), env,
-    ParamIgnitor("analog", analog),
+    mode = mode, cutoffHz = ParamIgnitor("cutoffHz", cutoffHz), q = ParamIgnitor("q", q), env = env,
+    analog = ParamIgnitor("analog", analog),
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -394,7 +394,7 @@ fun Ignitor.lowpass(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = svf(SvfMode.LOWPASS, cutoffHz, q, env, analog, humanize)
+): Ignitor = svf(mode = SvfMode.LOWPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 /**
  * Lowpass filter (convenience overload with fixed values).
@@ -405,7 +405,7 @@ fun Ignitor.lowpass(
  * @param analog Analog character amount. Default: 0 (clean linear). >0 engages OB-X-style state-dependent damping.
  */
 fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
-    svf(SvfMode.LOWPASS, cutoffHz, q, env, analog)
+    svf(mode = SvfMode.LOWPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog)
 
 /**
  * Highpass filter — lets high frequencies through, removes the bottom.
@@ -420,7 +420,7 @@ fun Ignitor.highpass(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog, humanize)
+): Ignitor = svf(mode = SvfMode.HIGHPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 /**
  * Highpass filter (convenience overload with fixed values).
@@ -431,7 +431,7 @@ fun Ignitor.highpass(
  * @param analog Analog character amount. Default: 0 (clean linear). >0 engages OB-X-style state-dependent damping.
  */
 fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
-    svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog)
+    svf(mode = SvfMode.HIGHPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog)
 
 /**
  * Bandpass filter — keeps only a frequency band, removes everything above and below.
@@ -446,7 +446,7 @@ fun Ignitor.bandpass(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog, humanize)
+): Ignitor = svf(mode = SvfMode.BANDPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 /**
  * Bandpass filter (convenience overload with fixed values).
@@ -457,7 +457,7 @@ fun Ignitor.bandpass(
  * @param analog Reserved — currently a no-op (BP saturation not implemented).
  */
 fun Ignitor.bandpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
-    svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
+    svf(mode = SvfMode.BANDPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog)
 
 /**
  * Notch (band-reject) filter — removes one frequency band, keeps everything else.
@@ -472,7 +472,7 @@ fun Ignitor.notch(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog, humanize)
+): Ignitor = svf(mode = SvfMode.NOTCH, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 /**
  * Notch (band-reject) filter (convenience overload with fixed values).
@@ -483,7 +483,7 @@ fun Ignitor.notch(
  * @param analog Reserved — currently a no-op.
  */
 fun Ignitor.notch(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
-    svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
+    svf(mode = SvfMode.NOTCH, cutoffHz = cutoffHz, q = q, env = env, analog = analog)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // One-Pole Lowpass (for warmth / simple smoothing)
@@ -516,7 +516,7 @@ private class OnePoleLowpassIgnitor(
             upstream.generate(input, freqHz, ctx)
 
             val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
-            val a = onePoleLpfCoeff(fc, ctx.sampleRate.toDouble())
+            val a = onePoleLpfCoeff(cutoffHz = fc, sampleRate = ctx.sampleRate.toDouble())
 
             val end = ctx.windowEnd
             for (i in ctx.offset until end) {
@@ -528,7 +528,7 @@ private class OnePoleLowpassIgnitor(
     }
 }
 
-fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor = OnePoleLowpassIgnitor(this, cutoffHz)
+fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor = OnePoleLowpassIgnitor(upstream = this, cutoffHz = cutoffHz)
 
 /**
  * One-pole lowpass with constant cutoff (convenience overload).
@@ -566,7 +566,7 @@ private class OnePoleHighpassIgnitor(
             upstream.generate(input, freqHz, ctx)
 
             val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
-            val k = bilinearK(fc, ctx.sampleRate.toDouble())
+            val k = bilinearK(cutoffHz = fc, sampleRate = ctx.sampleRate.toDouble())
             val invOnePlusK = 1.0 / (1.0 + k)
             val b0 = invOnePlusK
             val a1 = (1.0 - k) * invOnePlusK
@@ -583,7 +583,7 @@ private class OnePoleHighpassIgnitor(
     }
 }
 
-fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor = OnePoleHighpassIgnitor(this, cutoffHz)
+fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor = OnePoleHighpassIgnitor(upstream = this, cutoffHz = cutoffHz)
 
 /**
  * One-pole highpass with constant cutoff (convenience overload).

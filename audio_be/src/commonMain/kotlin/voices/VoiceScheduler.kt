@@ -305,7 +305,7 @@ class VoiceScheduler(
         ensureEpoch(voice)
         scheduled.push(voice)
         val cursor = context.clock.cursorFrame
-        promoteScheduled(cursor, cursor + context.blockFrames)
+        promoteScheduled(nowFrame = cursor, blockEnd = cursor + context.blockFrames)
         prefetchSampleSound(voice)
     }
 
@@ -404,7 +404,7 @@ class VoiceScheduler(
             prefetchSampleSound(voice)
         }
         val cursor = context.clock.cursorFrame
-        promoteScheduled(cursor, cursor + context.blockFrames)
+        promoteScheduled(nowFrame = cursor, blockEnd = cursor + context.blockFrames)
     }
 
     // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
@@ -414,7 +414,7 @@ class VoiceScheduler(
         val blockEnd = cursorFrame + context.blockFrames
 
         // 1. Promote scheduled to active
-        promoteScheduled(cursorFrame, blockEnd)
+        promoteScheduled(nowFrame = cursorFrame, blockEnd = blockEnd)
 
         // 2. Prepare Context
         ctx.blockStart = cursorFrame
@@ -425,7 +425,7 @@ class VoiceScheduler(
         soloTracker.advance(nowSec = context.clock.secAt(cursorFrame))
 
         val blockDurationSec = context.blockFrames.toDouble() / context.sampleRateDouble
-        val currentBackgroundGain = soloMuteRamp.step(soloTracker.targetGain(), blockDurationSec)
+        val currentBackgroundGain = soloMuteRamp.step(target = soloTracker.targetGain(), dt = blockDurationSec)
 
         // 3. Render Loop. A voice that ends here (render returns false: `Done`) leaves the list in the same pass
         // ([retainInOrder], as [removeDoneVoices]): the survivors keep their order.

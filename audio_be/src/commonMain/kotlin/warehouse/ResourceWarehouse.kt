@@ -49,7 +49,7 @@ class ResourceWarehouse(
     allocateReverb: (sampleRate: Int) -> Reverb? = ReverbUnits::allocateOrNull,
 ) {
     /** Delay rings. Class 0 is [MIN_RING_SECONDS] at [sampleRate]. */
-    val sized: SizedBuffers = SizedBuffers.forRings(sampleRate, budgetBytes, allocate)
+    val sized: SizedBuffers = SizedBuffers.forRings(sampleRate = sampleRate, budgetBytes = budgetBytes, allocate = allocate)
 
     /** Reverb units — one size, lazy on the first `room`, shelved by return (step 2d). */
     val reverbs: ReverbUnits = ReverbUnits(sampleRate, allocate = allocateReverb)

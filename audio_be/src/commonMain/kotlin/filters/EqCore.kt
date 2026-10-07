@@ -205,9 +205,9 @@ class EqCore(
         this.gain[index] = gain
 
         if (type == BELL) {
-            computeSvfBellCoeffs(freq, q, db, sampleRate, coefs)
+            computeSvfBellCoeffs(cutoffHz = freq, q = q, db = db, sampleRate = sampleRate, out = coefs)
         } else {
-            computeSvfCoeffs(freq, q, sampleRate, coefs)
+            computeSvfCoeffs(cutoffHz = freq, q = q, sampleRate = sampleRate, out = coefs)
         }
 
         a1[index] = coefs.a1
@@ -270,7 +270,7 @@ class EqCore(
             inputCopy = AudioBuffer(((length + grain - 1) / grain) * grain)
         }
 
-        buffer.copyInto(inputCopy, 0, offset, offset + length)
+        buffer.copyInto(destination = inputCopy, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
     }
 
     /**
@@ -303,7 +303,7 @@ class EqCore(
         }
 
         if (hasRawTap) {
-            captureInput(buffer, offset, length)
+            captureInput(buffer = buffer, offset = offset, length = length)
         }
 
         val n = sectionCount

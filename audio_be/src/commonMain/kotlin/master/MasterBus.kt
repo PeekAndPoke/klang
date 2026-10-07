@@ -132,7 +132,7 @@ class MasterBus(
      * refusal of a second begin (it retires the offered chain) is the leak-safe backstop, never
      * reached from here.
      */
-    private val swap = ChainSwap(sampleRate, blockFrames)
+    private val swap = ChainSwap(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /** Built chains by (lowercased) key: built when a request for them first lands, then a map lookup. */
     private val chains = mutableMapOf<String, KatalystChain>()
@@ -344,7 +344,7 @@ class MasterBus(
         // The last expressed intent wins: an earlier request still parked must not land after this one.
         pendingKey = null
 
-        land(key, name, dsl)
+        land(key = key, rawName = name, dsl = dsl)
     }
 
     /**
@@ -365,7 +365,7 @@ class MasterBus(
 
         pendingKey = null
 
-        land(key, key, dsl)
+        land(key = key, rawName = key, dsl = dsl)
     }
 
     /**

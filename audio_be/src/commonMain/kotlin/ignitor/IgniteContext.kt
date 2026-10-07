@@ -128,7 +128,7 @@ class IgniteContext(
     val sampleRateD: Double = sampleRate.toDouble()
 
     /** The rate an [AnalogDrift] lane built for this context steps at: once per block. */
-    val driftStepRate: Int = analogDriftStepRate(sampleRate, scratchBuffers.blockFrames)
+    val driftStepRate: Int = analogDriftStepRate(sampleRate = sampleRate, blockFrames = scratchBuffers.blockFrames)
 
     /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */
     val voiceDurationFramesD: Double = voiceDurationFrames.toDouble()

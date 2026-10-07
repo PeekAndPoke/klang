@@ -165,7 +165,7 @@ class KatalystFilterSwap(
             }
 
             // Dry is what sounds now: it becomes the outgoing entry, the new pair fades in from 0.
-            crossfading.enter(null, null)
+            crossfading.enter(fromL = null, fromR = null)
             curL = left
             curR = right
         }
@@ -196,7 +196,7 @@ class KatalystFilterSwap(
                 return
             }
 
-            crossfading.enter(curL, curR)
+            crossfading.enter(fromL = curL, fromR = curR)
             curL = left
             curR = right
         }
@@ -210,7 +210,7 @@ class KatalystFilterSwap(
                 return
             }
 
-            crossfading.enter(curL, curR)
+            crossfading.enter(fromL = curL, fromR = curR)
             curL = null
             curR = null
         }
@@ -224,8 +224,8 @@ class KatalystFilterSwap(
             val l = curL ?: return
             val r = curR ?: return
 
-            l.process(mix.left, 0, n)
-            r.process(mix.right, 0, n)
+            l.process(buffer = mix.left, offset = 0, length = n)
+            r.process(buffer = mix.right, offset = 0, length = n)
         }
     }
 
@@ -324,16 +324,16 @@ class KatalystFilterSwap(
             val w0 = outFrom
 
             // Keep the dry input: the outgoing pair and the dry partner both read it.
-            mixL.copyInto(dL, 0, 0, n)
-            mixR.copyInto(dR, 0, 0, n)
+            mixL.copyInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
+            mixR.copyInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
 
             // The target in place: the mix becomes its output (untouched when the target is dry).
             val tL = curL
             val tR = curR
 
             if (tL != null && tR != null) {
-                tL.process(mixL, 0, n)
-                tR.process(mixR, 0, n)
+                tL.process(buffer = mixL, offset = 0, length = n)
+                tR.process(buffer = mixR, offset = 0, length = n)
             }
 
             val bL = outL
@@ -343,10 +343,10 @@ class KatalystFilterSwap(
 
             if (bL != null && bR != null) {
                 // The entry runs the whole block, so its own state stays continuous.
-                dL.copyInto(sL, 0, 0, n)
-                dR.copyInto(sR, 0, 0, n)
-                bL.process(sL, 0, n)
-                bR.process(sR, 0, n)
+                dL.copyInto(destination = sL, destinationOffset = 0, startIndex = 0, endIndex = n)
+                dR.copyInto(destination = sR, destinationOffset = 0, startIndex = 0, endIndex = n)
+                bL.process(buffer = sL, offset = 0, length = n)
+                bR.process(buffer = sR, offset = 0, length = n)
                 srcL = sL
                 srcR = sR
             } else {
@@ -431,7 +431,7 @@ class KatalystFilterSwap(
      * Only while [settled]. A call while a fade runs is REFUSED and changes nothing.
      */
     fun set(left: AudioFilter, right: AudioFilter) {
-        state.set(left, right)
+        state.set(left = left, right = right)
     }
 
     /**

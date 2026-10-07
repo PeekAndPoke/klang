@@ -146,9 +146,9 @@ class KatalystFormantEffect(
             return
         }
 
-        val left = LowPassHighPassFilters.createFormant(vowel.bands, mix, sampleRate, floor)
+        val left = LowPassHighPassFilters.createFormant(bands = vowel.bands, mix = mix, sampleRate = sampleRate, floor = floor)
 
-        swap.set(left, LowPassHighPassFilters.createFormant(vowel.bands, mix, sampleRate, floor))
+        swap.set(left = left, right = LowPassHighPassFilters.createFormant(bands = vowel.bands, mix = mix, sampleRate = sampleRate, floor = floor))
         curLeft = left
         curBands = vowel.bands
         curMix = mix

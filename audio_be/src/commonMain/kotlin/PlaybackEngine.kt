@@ -50,7 +50,7 @@ class PlaybackEngine(
     private var stopped: Boolean = false
 
     /** The release of the stopped engine's whole output, started once when its hold ends ([renderInto]). */
-    private val tailRelease: TailRelease = TailRelease(sampleRate, blockFrames)
+    private val tailRelease: TailRelease = TailRelease(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /** True while the stopped engine's output is being released; there is no way back. */
     var isReleasing: Boolean = false

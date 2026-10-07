@@ -77,21 +77,21 @@ class Compressor(
     val lookaheadSeconds: Double = 0.0,
 ) {
     // Compressor parameters (all mutable for real-time changes; setters silently ignore non-finite values).
-    var thresholdDb: Double = guardOr(thresholdDb, -20.0)
+    var thresholdDb: Double = guardOr(value = thresholdDb, fallback = -20.0)
         set(value) {
             if (!value.isFinite()) return
             field = value
             updateCoefficients()
         }
 
-    var ratio: Double = guardOr(ratio, 4.0).coerceAtLeast(1.0)
+    var ratio: Double = guardOr(value = ratio, fallback = 4.0).coerceAtLeast(1.0)
         set(value) {
             if (!value.isFinite()) return
             field = value.coerceAtLeast(1.0)
             updateCoefficients()
         }
 
-    var kneeDb: Double = guardOr(kneeDb, 6.0).coerceAtLeast(0.0)
+    var kneeDb: Double = guardOr(value = kneeDb, fallback = 6.0).coerceAtLeast(0.0)
         set(value) {
             if (!value.isFinite()) return
             field = value.coerceAtLeast(0.0)
@@ -107,7 +107,7 @@ class Compressor(
      * [primeBoxes]), so a live write causes a small gain step bounded by the smoother's own lag.
      * Fine at a settings change, not something to call per block.
      */
-    var attackSeconds: Double = guardOr(attackSeconds, 0.003)
+    var attackSeconds: Double = guardOr(value = attackSeconds, fallback = 0.003)
         set(value) {
             if (!value.isFinite()) return
             field = value
@@ -115,7 +115,7 @@ class Compressor(
             if (delayFrames > 0) resizeSmoothing()
         }
 
-    var releaseSeconds: Double = guardOr(releaseSeconds, 0.1)
+    var releaseSeconds: Double = guardOr(value = releaseSeconds, fallback = 0.1)
         set(value) {
             if (!value.isFinite()) return
             field = value
@@ -139,7 +139,7 @@ class Compressor(
         // guardOr like every sibling param: Infinity would saturate .toInt() to Int.MAX_VALUE and
         // ask for a 2-billion-element array. KatalystCompressorEffect already guards, but this class is public
         // with two other call sites (MasterStage and EffectBenchmark).
-        val seconds = guardOr(lookaheadSeconds, 0.0)
+        val seconds = guardOr(value = lookaheadSeconds, fallback = 0.0)
         val frames = (seconds * sampleRate).toInt()
         if (frames < MIN_LOOKAHEAD_FRAMES) 0 else frames
     }
@@ -299,7 +299,7 @@ class Compressor(
         // lookahead loop is [processLookahead]'s, with the block itself as the delayed-dry target
         // (every sample is read before it is written, so the aliasing is safe).
         if (delayFrames > 0) {
-            processLookahead(left, right, blockSize, left, right)
+            processLookahead(left = left, right = right, blockSize = blockSize, delayedLeft = left, delayedRight = right)
 
             return
         }
@@ -352,7 +352,7 @@ class Compressor(
         kneeTo: Double,
     ) {
         if (delayFrames > 0 || blockSize <= 0) {
-            process(left, right, blockSize)
+            process(left = left, right = right, blockSize = blockSize)
 
             return
         }
@@ -402,9 +402,9 @@ class Compressor(
         delayedRight: AudioBuffer,
     ) {
         if (delayFrames <= 0) {
-            left.copyInto(delayedLeft, 0, 0, blockSize)
-            right.copyInto(delayedRight, 0, 0, blockSize)
-            process(left, right, blockSize)
+            left.copyInto(destination = delayedLeft, destinationOffset = 0, startIndex = 0, endIndex = blockSize)
+            right.copyInto(destination = delayedRight, destinationOffset = 0, startIndex = 0, endIndex = blockSize)
+            process(left = left, right = right, blockSize = blockSize)
 
             return
         }
@@ -626,7 +626,7 @@ class Compressor(
      */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun calculateGainReduction(inputDb: Double): Double =
-        gainReductionDb(inputDb, thresholdDb, 1.0 / ratio - 1.0, kneeDb)
+        gainReductionDb(inputDb = inputDb, thresholdDb = thresholdDb, slope = 1.0 / ratio - 1.0, kneeDb = kneeDb)
 
     /**
      * [calculateGainReduction] with the knobs passed in: the one home of the curve, shared by the

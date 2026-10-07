@@ -28,9 +28,9 @@ internal fun calculateControlRateEnvelope(
     gateEndFrame: Double,
     core: EnvelopeCore,
 ): Double {
-    core.prepareControlRateEnvelope(env, startFrame, gateEndFrame)
+    core.prepareControlRateEnvelope(env = env, startFrame = startFrame, gateEndFrame = gateEndFrame)
 
-    return core.at(controlRatePos(blockStart, startFrame)).coerceIn(0.0, 1.0)
+    return core.at(controlRatePos(blockStart = blockStart, startFrame = startFrame)).coerceIn(0.0, 1.0)
 }
 
 /**

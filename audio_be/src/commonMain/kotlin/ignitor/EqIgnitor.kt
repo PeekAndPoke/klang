@@ -142,6 +142,6 @@ internal class EqIgnitor(
             configured[i] = true
         }
 
-        core.process(buffer, ctx.offset, ctx.length)
+        core.process(buffer = buffer, offset = ctx.offset, length = ctx.length)
     }
 }

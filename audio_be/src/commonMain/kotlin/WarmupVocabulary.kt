@@ -106,9 +106,9 @@ object WarmupVocabulary {
         IgnitorDsl.Sine(phase = slowPhase()),
         IgnitorDsl.Saw(phase = slowPhase()),
         IgnitorDsl.RawPulze(phase = slowPhase()),
-        IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = Constant(3.0)).range(Constant(0.3), Constant(0.7)), phase = slowPhase()),
+        IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = Constant(3.0)).range(from = Constant(0.3), to = Constant(0.7)), phase = slowPhase()),
         IgnitorDsl.Impulse(phase = slowPhase()),
-    ).reduce { acc, osc -> IgnitorDsl.Plus(acc, osc) }.mul(Constant(0.1))
+    ).reduce { acc, osc -> IgnitorDsl.Plus(left = acc, right = osc) }.mul(Constant(0.1))
 
     /** The unison families and the plucks — the phase pools and the Karplus paths. */
     val supers: IgnitorDsl = listOf<IgnitorDsl>(
@@ -126,7 +126,7 @@ object WarmupVocabulary {
         IgnitorDsl.SuperSine(voices = Constant(5.0), phase = slowPhase()),
         IgnitorDsl.Sine(harmonics = Constant(3.0), phase = Constant(0.25)),
         IgnitorDsl.Sine(harmonics = Constant(3.0), phase = slowPhase()),
-    ).reduce { acc, osc -> IgnitorDsl.Plus(acc, osc) }.mul(Constant(0.15))
+    ).reduce { acc, osc -> IgnitorDsl.Plus(left = acc, right = osc) }.mul(Constant(0.15))
 
     /** Every noise and chaos generator. */
     val noises: IgnitorDsl = listOf<IgnitorDsl>(
@@ -137,22 +137,22 @@ object WarmupVocabulary {
         IgnitorDsl.BerlinNoise(),
         IgnitorDsl.Dust(density = Constant(200.0)),
         IgnitorDsl.Crackle(),
-    ).reduce { acc, osc -> IgnitorDsl.Plus(acc, osc) }.mul(Constant(0.15))
+    ).reduce { acc, osc -> IgnitorDsl.Plus(left = acc, right = osc) }.mul(Constant(0.15))
 
     /** Every arithmetic and shaping node, on a sine, kept finite at every step. */
     val math: IgnitorDsl = run {
         val s = sine()
         val t = sine(1.5)
         // a 0..1 LFO: range maps the sine's -1..1 onto it
-        val lfo = IgnitorDsl.Sine(freq = Constant(2.0)).range(Constant(0.0), Constant(1.0))
+        val lfo = IgnitorDsl.Sine(freq = Constant(2.0)).range(from = Constant(0.0), to = Constant(1.0))
         val a = s.mul(Constant(0.5)).div(Constant(2.0)).minus(t.mul(Constant(0.1))).neg().abs()
         // `max(t).min(-t)` bounds to [-t, t]: cap first, then floor. Builds Max(Min(x, t), -t),
         // the same node pair as before the min/max doors became clamps.
-        val b = a.clamp(Constant(-1.0), Constant(1.0)).pow(Constant(2.0)).max(t).min(t.neg())
+        val b = a.clamp(lo = Constant(-1.0), hi = Constant(1.0)).pow(Constant(2.0)).max(t).min(t.neg())
         // `Constant(0.5).neg()`: a negation the optimizer leaves standing (a signal's folds into an Affine)
-        val c = b.exp().log().sqrt().sign().mul(b.tanh()).lerp(t, lfo).range(Constant(0.5).neg(), Constant(0.5))
+        val c = b.exp().log().sqrt().sign().mul(b.tanh()).lerp(other = t, t = lfo).range(from = Constant(0.5).neg(), to = Constant(0.5))
         // 0..1 onto -1..1 and back: `mul(2).minus(1)`, then `range(0, 1)`
-        val d = c.mul(Constant(2.0)).minus(Constant(1.0)).range(Constant(0.0), Constant(1.0))
+        val d = c.mul(Constant(2.0)).minus(Constant(1.0)).range(from = Constant(0.0), to = Constant(1.0))
             .mul(Constant(4.0)).floor().mul(Constant(0.1))
             .mul(t.ceil().round().mul(Constant(0.1)).mul(t.frac()))
             .mod(Constant(0.5)).mul(t.sq().plus(Constant(2.0)).recip().mul(Constant(0.5))) // recip of `+2`: never near zero
@@ -204,7 +204,7 @@ object WarmupVocabulary {
     /** Every envelope, modulation and effect node. */
     val effects: IgnitorDsl = IgnitorDsl.Sine()
         .fm(modulator = IgnitorDsl.Sine(), ratio = 2.0, depth = 0.3)
-        .adsr(0.005, 0.1, 0.6, 0.2)
+        .adsr(attackSec = 0.005, decaySec = 0.1, sustainLevel = 0.6, releaseSec = 0.2)
         .drive(0.4)
         .shape("soft")
         .distort(0.5, "hard", oversample = 4) // = Drive + Shape (oversampled)

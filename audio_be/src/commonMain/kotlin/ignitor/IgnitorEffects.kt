@@ -92,7 +92,7 @@ fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: In
  * Gain without a curve: every colour belongs to `shape`, which is why there is no drive type.
  */
 fun Ignitor.drive(amount: Ignitor): Ignitor =
-    DriveIgnitor(this, amount)
+    DriveIgnitor(upstream = this, amount = amount)
 
 private class DriveIgnitor(
     private val upstream: Ignitor,
@@ -192,7 +192,7 @@ private class ShapeIgnitor(
                 }
             }
 
-            dcBlocker.process(work, ctx.offset, ctx.length)
+            dcBlocker.process(buffer = work, offset = ctx.offset, length = ctx.length)
 
             for (i in ctx.offset until end) {
                 buffer[i] = ShapingFuncs.softCap(work[i])
@@ -224,7 +224,7 @@ private class ShapeIgnitor(
  * @param oversampleStages 2x stages, read at build; 0 is the plain path.
  */
 internal fun Ignitor.fusedDistort(amount: Ignitor, shape: DistortionShape, oversampleStages: Int): Ignitor =
-    FusedDistortIgnitor(this, amount, DistortionCore(shape, oversampleStages))
+    FusedDistortIgnitor(upstream = this, amount = amount, core = DistortionCore(shape, oversampleStages))
 
 private class FusedDistortIgnitor(
     private val upstream: Ignitor,
@@ -239,7 +239,7 @@ private class FusedDistortIgnitor(
             // Unity at or below 0, never a bypass: see the KDoc (W5's hazard).
             val drive = if (amt <= 0.0) 1.0 else DistortionCore.drive(amt)
 
-            core.process(work, ctx.offset, ctx.length, drive, ctx.scratchBuffers)
+            core.process(buffer = work, offset = ctx.offset, length = ctx.length, drive = drive, scratchBuffers = ctx.scratchBuffers)
 
             val end = ctx.windowEnd
 
@@ -273,7 +273,7 @@ private class FusedDistortIgnitor(
  *   4.0 = 16 levels, 8.0 = 256 levels, 16.0 = 65536 levels (subtle).
  *   Internally: `levels = 2^amount`. Typical range: 2.0–8.0.
  */
-fun Ignitor.crush(amount: Ignitor): Ignitor = CrushIgnitor(this, amount)
+fun Ignitor.crush(amount: Ignitor): Ignitor = CrushIgnitor(upstream = this, amount = amount)
 
 private class CrushIgnitor(
     private val upstream: Ignitor,
@@ -293,7 +293,7 @@ private class CrushIgnitor(
                 return@use
             }
 
-            CrushCore.quantize(work, buffer, ctx.offset, end, halfLevels)
+            CrushCore.quantize(input = work, output = buffer, from = ctx.offset, to = end, halfLevels = halfLevels)
         }
     }
 }
@@ -381,7 +381,7 @@ private class CoarseIgnitor(
     }
 }
 
-fun Ignitor.coarse(amount: Ignitor): Ignitor = CoarseIgnitor(this, amount)
+fun Ignitor.coarse(amount: Ignitor): Ignitor = CoarseIgnitor(upstream = this, amount = amount)
 
 /**
  * Sample-rate reducer (convenience overload with fixed amount).
@@ -426,7 +426,7 @@ fun Ignitor.phaser(
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
     floor: Ignitor = ParamIgnitor("floor", 0.0),
-): Ignitor = PhaserIgnitor(this, rate, wet, center, sweep, floor)
+): Ignitor = PhaserIgnitor(upstream = this, rate = rate, wet = wet, center = center, sweep = sweep, floor = floor)
 
 private class PhaserIgnitor(
     private val upstream: Ignitor,
@@ -444,7 +444,7 @@ private class PhaserIgnitor(
     private var stateDirty = false
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val phaser = core ?: PhaserCore(PhaserCore.DEFAULT_STAGES, ctx.sampleRate).also { core = it }
+        val phaser = core ?: PhaserCore(stages = PhaserCore.DEFAULT_STAGES, sampleRate = ctx.sampleRate).also { core = it }
 
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
@@ -528,11 +528,11 @@ fun Ignitor.phaser(
 ): Ignitor {
     if (wet <= 0.0) return this
     return phaser(
-        ParamIgnitor("wet", wet),
-        ParamIgnitor("rate", rate),
-        ParamIgnitor("center", center),
-        ParamIgnitor("sweep", sweep),
-        ParamIgnitor("floor", floor),
+        wet = ParamIgnitor("wet", wet),
+        rate = ParamIgnitor("rate", rate),
+        center = ParamIgnitor("center", center),
+        sweep = ParamIgnitor("sweep", sweep),
+        floor = ParamIgnitor("floor", floor),
     )
 }
 
@@ -566,7 +566,7 @@ fun Ignitor.shimmer(
     tone: Ignitor,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
     floor: Ignitor = ParamIgnitor("floor", 0.0),
-): Ignitor = ShimmerIgnitor(this, wet, feedback, tone, pitches, floor)
+): Ignitor = ShimmerIgnitor(upstream = this, wet = wet, feedback = feedback, tone = tone, pitches = pitches, floor = floor)
 
 // NOTE: shimmer is WIP — internal grain bookkeeping may still change. Keep the
 // per-block logic readable; revisit perf rules (audio/ref/performance.md) once
@@ -764,11 +764,11 @@ fun Ignitor.shimmer(
 ): Ignitor {
     if (wet <= 0.0) return this
     return shimmer(
-        ParamIgnitor("wet", wet),
-        ParamIgnitor("feedback", feedback),
-        ParamIgnitor("tone", tone),
-        pitches,
-        ParamIgnitor("floor", floor),
+        wet = ParamIgnitor("wet", wet),
+        feedback = ParamIgnitor("feedback", feedback),
+        tone = ParamIgnitor("tone", tone),
+        pitches = pitches,
+        floor = ParamIgnitor("floor", floor),
     )
 }
 
@@ -806,7 +806,7 @@ private class DcBlockIgnitor(
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
-            dcBlocker.process(input, buffer, ctx.offset, ctx.length)
+            dcBlocker.process(input = input, output = buffer, offset = ctx.offset, length = ctx.length)
         }
     }
 }

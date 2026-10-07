@@ -148,7 +148,7 @@ private fun mulConstInPlace(buffer: AudioBuffer, ctx: IgniteContext, k: Double) 
  * Mix two signals additively per-sample. A block-constant operand folds as a scalar (no scratch
  * render); otherwise the second signal renders into a scratch buffer.
  */
-operator fun Ignitor.plus(other: Ignitor): Ignitor = PlusIgnitor(this, other)
+operator fun Ignitor.plus(other: Ignitor): Ignitor = PlusIgnitor(a = this, b = other)
 
 private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     // Structural — computed once so the non-folding hot path pays no per-block subtree walk.
@@ -229,7 +229,7 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
  * Output magnitude is clamped to `±SAFE_MAX` and `NaN` is scrubbed to `0` per sample.
  * See `audio/ref/numerical-safety.md` for the safety contract.
  */
-operator fun Ignitor.times(other: Ignitor): Ignitor = TimesIgnitor(this, other)
+operator fun Ignitor.times(other: Ignitor): Ignitor = TimesIgnitor(a = this, b = other)
 
 // `internal` with exposed operands so EqIgnitor can see through a scaled voice-constant
 // (a `passes` cascade stage's staggered q) instead of demoting the whole section to
@@ -323,7 +323,7 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
  * per sample through scratch, three buffers held at once where the chain holds one: correct, and
  * slower than the chain; a node for the optimizer, not a door.
  */
-fun Ignitor.affine(pre: Ignitor, mul: Ignitor, add: Ignitor): Ignitor = AffineIgnitor(this, pre, mul, add)
+fun Ignitor.affine(pre: Ignitor, mul: Ignitor, add: Ignitor): Ignitor = AffineIgnitor(inner = this, pre = pre, mul = mul, add = add)
 
 /**
  * `internal` with `internal` operands, like [TimesIgnitor]: `EqIgnitor` looks through it to tell a
@@ -453,7 +453,7 @@ private class MulConstIgnitor(private val upstream: Ignitor, private val factor:
  * preserved) so the engine never produces `NaN`/`Inf`. The output is also clamped to
  * `±SAFE_MAX`. See `audio/ref/numerical-safety.md`.
  */
-fun Ignitor.div(divisor: Ignitor): Ignitor = DivIgnitor(this, divisor)
+fun Ignitor.div(divisor: Ignitor): Ignitor = DivIgnitor(a = this, b = divisor)
 
 private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     private val aConst = a.isBlockConstant
@@ -474,7 +474,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val ka = a.controlRateValueOrNull(freqHz)
             val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
-                buffer.fill(divide(ka, kb), ctx.offset, ctx.windowEnd)
+                buffer.fill(divide(a = ka, b = kb), ctx.offset, ctx.windowEnd)
 
                 return
             }
@@ -506,7 +506,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
                 b.generate(buffer, freqHz, ctx)
                 val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
-                    buffer[i] = divide(ka, buffer[i])
+                    buffer[i] = divide(a = ka, b = buffer[i])
                 }
 
                 return
@@ -519,7 +519,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             b.generate(tmp, freqHz, ctx)
             val end = ctx.windowEnd
             for (i in ctx.offset until end) {
-                buffer[i] = divide(buffer[i], tmp[i])
+                buffer[i] = divide(a = buffer[i], b = tmp[i])
             }
         }
     }
@@ -528,7 +528,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return divide(x, y)
+        return divide(a = x, b = y)
     }
 
     /** The guarded quotient: zero for a zero divisor, else `safeOut(a / safeDiv(b))`. */
@@ -552,7 +552,7 @@ fun Ignitor.div(divisor: Double): Ignitor {
 }
 
 /** Subtract another signal from this one (per-sample). Uses a scratch buffer for the second signal. */
-fun Ignitor.minus(other: Ignitor): Ignitor = MinusIgnitor(this, other)
+fun Ignitor.minus(other: Ignitor): Ignitor = MinusIgnitor(a = this, b = other)
 
 private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     private val aConst = a.isBlockConstant
@@ -652,7 +652,7 @@ private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
  * Signed-magnitude: negative bases produce `-(|base|^exp)` to avoid `NaN`.
  * `0^negative = +Inf` is caught by the output clamp (`±SAFE_MAX`).
  */
-fun Ignitor.pow(exp: Ignitor): Ignitor = PowIgnitor(this, exp)
+fun Ignitor.pow(exp: Ignitor): Ignitor = PowIgnitor(base = this, exp = exp)
 
 private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : Ignitor {
     private val baseConst = base.isBlockConstant
@@ -728,7 +728,7 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
 }
 
 /** Per-sample minimum of this signal and [other]. Uses a scratch buffer for [other]. */
-fun Ignitor.min(other: Ignitor): Ignitor = MinIgnitor(this, other)
+fun Ignitor.min(other: Ignitor): Ignitor = MinIgnitor(a = this, b = other)
 
 private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     private val aConst = a.isBlockConstant
@@ -799,7 +799,7 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
 }
 
 /** Per-sample maximum of this signal and [other]. Uses a scratch buffer for [other]. */
-fun Ignitor.max(other: Ignitor): Ignitor = MaxIgnitor(this, other)
+fun Ignitor.max(other: Ignitor): Ignitor = MaxIgnitor(a = this, b = other)
 
 private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     private val aConst = a.isBlockConstant
@@ -868,7 +868,7 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
 }
 
 /** Bound this signal to `[lo, hi]` per sample. Uses two scratch buffers. */
-fun Ignitor.clamp(lo: Ignitor, hi: Ignitor): Ignitor = ClampIgnitor(this, lo, hi)
+fun Ignitor.clamp(lo: Ignitor, hi: Ignitor): Ignitor = ClampIgnitor(upstream = this, lo = lo, hi = hi)
 
 private class ClampIgnitor(
     private val upstream: Ignitor,
@@ -1070,7 +1070,7 @@ private class TanhIgnitor(private val upstream: Ignitor) : Ignitor {
  * are deliberately NOT clamped (see `audio/ref/numerical-safety.md`). One scratch buffer for a
  * block-constant [t], two when [t] is audio-rate.
  */
-fun Ignitor.lerp(other: Ignitor, t: Ignitor): Ignitor = LerpIgnitor(this, other, t)
+fun Ignitor.lerp(other: Ignitor, t: Ignitor): Ignitor = LerpIgnitor(from = this, to = other, weight = t)
 
 /**
  * @param from The signal heard at `weight = 0` — `IgnitorDsl.Lerp.left`, the chain the DSL call
@@ -1154,7 +1154,7 @@ private class LerpIgnitor(
 }
 
 /** Maps `[-1, 1]` → `[from, to]` per sample: `from + (x + 1)·0.5·(to − from)`. */
-fun Ignitor.range(from: Ignitor, to: Ignitor): Ignitor = RangeIgnitor(this, from, to)
+fun Ignitor.range(from: Ignitor, to: Ignitor): Ignitor = RangeIgnitor(upstream = this, from = from, to = to)
 
 private class RangeIgnitor(
     private val upstream: Ignitor,
@@ -1322,7 +1322,7 @@ private class FracIgnitor(private val upstream: Ignitor) : Ignitor {
  * Divisor magnitudes below `SAFE_MIN` are clamped (sign preserved). Uses one scratch buffer.
  * See `audio/ref/numerical-safety.md`.
  */
-fun Ignitor.mod(other: Ignitor): Ignitor = ModIgnitor(this, other)
+fun Ignitor.mod(other: Ignitor): Ignitor = ModIgnitor(a = this, b = other)
 
 private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     private val aConst = a.isBlockConstant
@@ -1458,7 +1458,7 @@ private class SqIgnitor(private val upstream: Ignitor) : Ignitor {
  * sources advance regardless of which branch is selected.
  */
 fun Ignitor.select(whenTrue: Ignitor, whenFalse: Ignitor): Ignitor =
-    SelectIgnitor(this, whenTrue, whenFalse)
+    SelectIgnitor(cond = this, whenTrue = whenTrue, whenFalse = whenFalse)
 
 private class SelectIgnitor(
     private val cond: Ignitor,
@@ -1508,7 +1508,7 @@ private class SelectIgnitor(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /** Shift frequency by [semitones] from an audio-rate exciter. Reads the first sample per block for the detune value. */
-fun Ignitor.detune(semitones: Ignitor): Ignitor = DetuneIgnitor(this, semitones)
+fun Ignitor.detune(semitones: Ignitor): Ignitor = DetuneIgnitor(upstream = this, semitones = semitones)
 
 // Detune (both forms) deliberately has NO controlRateValueOrNull/isBlockConstant override:
 // it is a PITCH node — it changes the freqHz its upstream sees, not a pointwise value — so

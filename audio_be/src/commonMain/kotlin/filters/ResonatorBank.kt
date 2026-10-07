@@ -47,7 +47,7 @@ class ResonatorBank(
     private val count: Int = bands.size
 
     private val filters =
-        Array(count) { LowPassHighPassFilters.SvfBPF(freqOf(bands, it), qOf(bands, it), sampleRate) }
+        Array(count) { LowPassHighPassFilters.SvfBPF(cutoffHz = freqOf(bands, it), q = qOf(bands, it), sampleRate = sampleRate) }
 
     private val gains = DoubleArray(count) { bands[it].gain }
 
@@ -61,15 +61,15 @@ class ResonatorBank(
         }
 
         // 1. Copy the input to scratch (we overwrite `buffer` with the band sum below).
-        buffer.copyInto(inputCopy, 0, offset, offset + length)
+        buffer.copyInto(destination = inputCopy, destinationOffset = 0, startIndex = offset, endIndex = offset + length)
 
         // 2. Clear the output region: the first band sums into zero. No bands: silence.
         buffer.fill(0.0, offset, offset + length)
 
         // 3. Run each band on its own copy of the input; sum into the output with its gain.
         for (b in 0 until count) {
-            inputCopy.copyInto(bandBuffer, 0, 0, length)
-            filters[b].process(bandBuffer, 0, length)
+            inputCopy.copyInto(destination = bandBuffer, destinationOffset = 0, startIndex = 0, endIndex = length)
+            filters[b].process(buffer = bandBuffer, offset = 0, length = length)
 
             val gain = gains[b]
 
@@ -80,7 +80,7 @@ class ResonatorBank(
     }
 
     /** The SVF's own cutoff guard, applied here so a band is built from a finite number. */
-    private fun freqOf(bands: List<Band>, index: Int): Double = clampSvfCutoff(bands[index].freq, sampleRate)
+    private fun freqOf(bands: List<Band>, index: Int): Double = clampSvfCutoff(cutoffHz = bands[index].freq, sampleRate = sampleRate)
 
     /** The SVF's own q guard, for the same reason as [freqOf]. */
     private fun qOf(bands: List<Band>, index: Int): Double = clampSvfQ(bands[index].q)

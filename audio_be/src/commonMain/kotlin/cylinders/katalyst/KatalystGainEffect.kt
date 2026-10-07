@@ -139,6 +139,6 @@ class KatalystGainEffect(
             ramps++
         }
 
-        glide.advanceScaled(ctx.mixBuffer, ctx.mixBuffer, ctx.blockFrames)
+        glide.advanceScaled(into = ctx.mixBuffer, source = ctx.mixBuffer, frames = ctx.blockFrames)
     }
 }

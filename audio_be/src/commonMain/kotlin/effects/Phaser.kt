@@ -62,8 +62,8 @@ class Phaser(sampleRate: Int) {
         const val MIN_ACTIVE_DEPTH: Double = 0.01
     }
 
-    private val coreL = PhaserCore(PhaserCore.DEFAULT_STAGES, sampleRate)
-    private val coreR = PhaserCore(PhaserCore.DEFAULT_STAGES, sampleRate)
+    private val coreL = PhaserCore(stages = PhaserCore.DEFAULT_STAGES, sampleRate = sampleRate)
+    private val coreR = PhaserCore(stages = PhaserCore.DEFAULT_STAGES, sampleRate = sampleRate)
 
     /** LFO frequency in Hz. */
     var rate: Double
@@ -236,8 +236,8 @@ class Phaser(sampleRate: Int) {
         // stop the sweep — the phase would otherwise resume framing-dependently after a patterned
         // depth dips through zero. Cost on the gated path: two sin + two tan per core per block
         // (alphaAt runs at both block boundaries).
-        coreL.prepareBlock(frames, centerTo, sweepTo)
-        coreR.prepareBlock(frames, centerTo, sweepTo)
+        coreL.prepareBlock(blockFrames = frames, centerTo = centerTo, sweepTo = sweepTo)
+        coreR.prepareBlock(blockFrames = frames, centerTo = centerTo, sweepTo = sweepTo)
 
         if (identity) {
             // Same policy as the ignitor door (ledger D5): a bypass clears the cascade instead of

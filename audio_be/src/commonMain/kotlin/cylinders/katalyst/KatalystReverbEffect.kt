@@ -253,7 +253,7 @@ class KatalystReverbEffect(
                 feedback = unit.tailFeedback,
                 lapsPerWindow = unit.tailLapsPerWindow,
             )
-            unit.process(feed, ctx.mixBuffer, frames)
+            unit.process(input = feed, output = ctx.mixBuffer, length = frames)
         }
 
         /** A ceiling, not a scan: [process] maintains it from the feed. */
@@ -314,7 +314,7 @@ class KatalystReverbEffect(
             val frames = min(ctx.blockFrames, silentInput.left.size)
 
             advanceGlide(unit)
-            unit.process(silentInput, ctx.mixBuffer, frames)
+            unit.process(input = silentInput, output = ctx.mixBuffer, length = frames)
 
             // A plain end test: a non-finite countdown never gets here, [Active.deactivate] heals it.
             val left = remaining - frames

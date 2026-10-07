@@ -123,9 +123,9 @@ internal fun buildFilterHumanization(
     }
 
     // DRAW 1 of 4: the fixed tolerance.
-    val offsetMul = perVoiceCutoffOffsetMul(analog, FILTER_CUTOFF_OFFSET_PER_ANALOG, rng)
+    val offsetMul = perVoiceCutoffOffsetMul(analog = analog, cutoffOffsetPerAnalog = FILTER_CUTOFF_OFFSET_PER_ANALOG, rng = rng)
     // DRAWS 2, 3 and 4: the lane's Box-Muller seed and its xorshift state, inside the init.
-    val drift = AnalogDrift(analog * FILTER_DRIFT_RELATIVE_TO_OSC, analogDriftStepRate(sampleRate, blockFrames), rng)
+    val drift = AnalogDrift(analog * FILTER_DRIFT_RELATIVE_TO_OSC, analogDriftStepRate(sampleRate = sampleRate, blockFrames = blockFrames), rng)
 
     // `takeIf { it.active }` is alignment with the retired strip, which tested `drift.active` before every
     // `nextMultiplier()`, not a live case: `analog > 0` here, and

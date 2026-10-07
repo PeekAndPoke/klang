@@ -276,9 +276,9 @@ class KatalystCompressorEffect(
             val mixL = ctx.mixBuffer.left
             val mixR = ctx.mixBuffer.right
 
-            instance.processLookahead(mixL, mixR, n, dryL, dryR)
-            dryL.copyInto(mixL, 0, 0, n)
-            dryR.copyInto(mixR, 0, 0, n)
+            instance.processLookahead(left = mixL, right = mixR, blockSize = n, delayedLeft = dryL, delayedRight = dryR)
+            dryL.copyInto(destination = mixL, destinationOffset = 0, startIndex = 0, endIndex = n)
+            dryR.copyInto(destination = mixR, destinationOffset = 0, startIndex = 0, endIndex = n)
         }
     }
 
@@ -299,7 +299,7 @@ class KatalystCompressorEffect(
         }
 
         override fun process(ctx: KatalystContext) {
-            compress(instance, ctx.mixBuffer.left, ctx.mixBuffer.right, ctx.blockFrames)
+            compress(c = instance, left = ctx.mixBuffer.left, right = ctx.mixBuffer.right, n = ctx.blockFrames)
         }
     }
 
@@ -360,11 +360,11 @@ class KatalystCompressorEffect(
             // is what the orbit would sound like uncompressed at this moment: the input itself,
             // or with a lookahead the input D frames ago, straight out of the instance's ring.
             if (latent) {
-                c.processLookahead(mixL, mixR, n, dL, dR)
+                c.processLookahead(left = mixL, right = mixR, blockSize = n, delayedLeft = dL, delayedRight = dR)
             } else {
-                mixL.copyInto(dL, 0, 0, n)
-                mixR.copyInto(dR, 0, 0, n)
-                compress(c, mixL, mixR, n)
+                mixL.copyInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
+                mixR.copyInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
+                compress(c = c, left = mixL, right = mixR, n = n)
             }
 
             val end = min(n, len - p0)
@@ -385,8 +385,8 @@ class KatalystCompressorEffect(
             // Landed: the samples from `end` on carry `to` exactly.
             if (t == 0.0) {
                 // Gain reduction 0 dB: the rest of the block IS the dry mix, and the life ends.
-                dL.copyInto(mixL, end, end, n)
-                dR.copyInto(mixR, end, end, n)
+                dL.copyInto(destination = mixL, destinationOffset = end, startIndex = end, endIndex = n)
+                dR.copyInto(destination = mixR, destinationOffset = end, startIndex = end, endIndex = n)
                 off.enter()
             } else {
                 // Full weight: the rest of the block is the compressed mix as it stands.
@@ -467,7 +467,7 @@ class KatalystCompressorEffect(
         val kneeTo = kneeGlide.advance()
 
         if (thresholdFrom == thresholdTo && inverseRatioFrom == inverseRatioTo && kneeFrom == kneeTo) {
-            c.process(left, right, n)
+            c.process(left = left, right = right, blockSize = n)
 
             return
         }

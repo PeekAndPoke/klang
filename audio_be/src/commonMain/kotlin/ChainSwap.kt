@@ -77,7 +77,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
     private val fade: Crossfade = Crossfade(sampleRate)
 
     /** The release at the drain's cap ([Releasing]). One per host, created once; it outlives every state. */
-    private val release: TailRelease = TailRelease(sampleRate, blockFrames)
+    private val release: TailRelease = TailRelease(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /**
      * What the leaving chain is fed: the host's mix scaled by the outgoing weight during the fade,
@@ -246,8 +246,8 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
                 // back in with the weights reversed, so the orbit's gain travels from "not ducked" to
                 // "ducked" across the fade instead of dropping by the whole reduction on the first
                 // sample the trigger is seen.
-                mix.left.copyInto(duckMix.left, 0, 0, blockFrames)
-                mix.right.copyInto(duckMix.right, 0, 0, blockFrames)
+                mix.left.copyInto(destination = duckMix.left, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+                mix.right.copyInto(destination = duckMix.right, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
                 chain.processDuck(ctx)
                 fade.blendHeld(target = mix, incoming = mix, outgoing = duckMix, frames = blockFrames)
 
@@ -272,8 +272,8 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             // in with the weights this block's chains were blended with. NOT by ramping the duck's
             // depth: that knob can only be written per block, and a per-block step in a gain that
             // multiplies the whole orbit is a zipper (measured at 0.038 on a 0.5 probe, depth 0.8).
-            mix.left.copyInto(duckMix.left, 0, 0, blockFrames)
-            mix.right.copyInto(duckMix.right, 0, 0, blockFrames)
+            mix.left.copyInto(destination = duckMix.left, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+            mix.right.copyInto(destination = duckMix.right, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
             leavingDuck.process(ctx)
             fade.blendHeld(target = mix, incoming = duckMix, outgoing = mix, frames = blockFrames)
 

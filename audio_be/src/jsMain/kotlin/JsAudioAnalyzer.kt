@@ -17,7 +17,7 @@ class JsAudioAnalyzer(
     private val node: () -> AnalyserNode?,
 ) : AudioAnalyzer {
 
-    private val history = AnalyzerBufferHistory(fftSize, HISTORY_CAPACITY)
+    private val history = AnalyzerBufferHistory(bufferSize = fftSize, capacity = HISTORY_CAPACITY)
 
     companion object {
         private const val HISTORY_CAPACITY = 50

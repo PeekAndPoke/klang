@@ -206,9 +206,9 @@ class KatalystBodyEffect(
             return
         }
 
-        val left = LowPassHighPassFilters.createBody(body.bands, mix, sampleRate, floor)
+        val left = LowPassHighPassFilters.createBody(bands = body.bands, mix = mix, sampleRate = sampleRate, floor = floor)
 
-        swap.set(left, LowPassHighPassFilters.createBody(body.bands, mix, sampleRate, floor))
+        swap.set(left = left, right = LowPassHighPassFilters.createBody(bands = body.bands, mix = mix, sampleRate = sampleRate, floor = floor))
         curLeft = left
         curBands = body.bands
         curMix = mix

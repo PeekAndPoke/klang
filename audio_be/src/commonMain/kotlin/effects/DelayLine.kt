@@ -88,7 +88,7 @@ class DelayLine(
         sampleRate: Int,
         time: Double = 0.5,
         feedback: Double = 0.0,
-    ) : this(StereoBuffer((maxDelaySeconds * sampleRate).toInt()), sampleRate, time, feedback)
+    ) : this(ring = StereoBuffer((maxDelaySeconds * sampleRate).toInt()), sampleRate = sampleRate, time = time, feedback = feedback)
 
     /** The ring itself, so an owner can give it back to the warehouse. */
     internal val ring: StereoBuffer = ring
@@ -421,7 +421,7 @@ class DelayLine(
         }
 
         if (fading) {
-            processCrossfade(input, output, length, fbEnd, fbStep)
+            processCrossfade(input = input, output = output, length = length, fbEnd = fbEnd, fbStep = fbStep)
 
             return
         }
@@ -451,10 +451,10 @@ class DelayLine(
             val chunk = min(length - done, bufferSize - pos)
 
             processInternal(
-                buffer.left, input.left, output.left, done, chunk, pos, delayInt, alpha, fbEnd, fbStep, last, safeCap,
+                buffer = buffer.left, input = input.left, output = output.left, offset = done, length = chunk, startWritePos = pos, delayInt = delayInt, alpha = alpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap,
             )
             processInternal(
-                buffer.right, input.right, output.right, done, chunk, pos, delayInt, alpha, fbEnd, fbStep, last, safeCap,
+                buffer = buffer.right, input = input.right, output = output.right, offset = done, length = chunk, startWritePos = pos, delayInt = delayInt, alpha = alpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap,
             )
 
             done += chunk
@@ -490,12 +490,12 @@ class DelayLine(
             val chunk = min(length - done, bufferSize - pos)
 
             processInternalCrossfade(
-                buffer.left, input.left, output.left, done, chunk, pos,
-                fromInt, fromAlpha, toInt, toAlpha, fbEnd, fbStep, last, safeCap, fadeStart,
+                buffer = buffer.left, input = input.left, output = output.left, offset = done, length = chunk, startWritePos = pos,
+                fromInt = fromInt, fromAlpha = fromAlpha, toInt = toInt, toAlpha = toAlpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap, fadeStart = fadeStart,
             )
             processInternalCrossfade(
-                buffer.right, input.right, output.right, done, chunk, pos,
-                fromInt, fromAlpha, toInt, toAlpha, fbEnd, fbStep, last, safeCap, fadeStart,
+                buffer = buffer.right, input = input.right, output = output.right, offset = done, length = chunk, startWritePos = pos,
+                fromInt = fromInt, fromAlpha = fromAlpha, toInt = toInt, toAlpha = toAlpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap, fadeStart = fadeStart,
             )
 
             done += chunk

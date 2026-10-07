@@ -69,7 +69,7 @@ fun IgnitorDsl.buildExciter(
      *  (every voice that is not a sample) builds that leaf as silence. See [IgnitorBuildCache.sampleSource]. */
     sampleSource: Ignitor? = null,
 ): BuiltIgnitor {
-    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit, random, freqHz, sampleRate, blockFrames, sampleSource)
+    val cache = IgnitorBuildCache(soundIndex = soundIndex, phasePools = phasePools, orbit = orbit, random = random, freqHz = freqHz, sampleRate = sampleRate, blockFrames = blockFrames, sampleSource = sampleSource)
     return buildIgnitor(ignitorParams, cache)
 }
 
@@ -101,7 +101,7 @@ fun IgnitorDsl.toExciter(
     phasePools: PhasePools? = null,
     orbit: Int = 0,
     random: Random = Random,
-): Ignitor = buildExciter(ignitorParams, soundIndex, phasePools, orbit, random).ignitor
+): Ignitor = buildExciter(ignitorParams = ignitorParams, soundIndex = soundIndex, phasePools = phasePools, orbit = orbit, random = random).ignitor
 
 /**
  * Identity-based cache for DSL → Ignitor conversion, keyed on `(DSL node identity, mod
@@ -419,7 +419,7 @@ internal fun IgnitorDsl.buildIgnitor(
             // (`maxOf(carrier, modulator)`). Keep counting it: over-counting only over-allocates
             // lifetime, whereas dropping it would silently shorten voices that render fine today.
             return carrierBuilt.copy(
-                releaseTailSec = maxTail(carrierBuilt.releaseTailSec, modulatorBuilt.releaseTailSec),
+                releaseTailSec = maxTail(a = carrierBuilt.releaseTailSec, b = modulatorBuilt.releaseTailSec),
             )
         }
 
@@ -473,7 +473,7 @@ private fun IgnitorBuildCache.combineMods(existing: Ignitor?, newMod: Ignitor, n
 }
 
 private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
-    if (mod != null) ModApplyingIgnitor(source, mod) else source
+    if (mod != null) ModApplyingIgnitor(inner = source, mod = mod) else source
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 // The build-time GATE (`docs/plans/signal-flow-redesign.md` section 5, phase 3 step 2)
@@ -730,7 +730,7 @@ private fun filterEnvDef(
     // THE SLOT-LAYER FILL (phase 3 step 5, maintainer 2026-09-25): an UNSET depth slot the bag did not
     // write takes the shared depth when any of the four STAGE knobs is written, the strip's `depth ?: 7`.
     // See `writtenIn` for what "written" means, and `slotLayerDepth` for the whole rule.
-    val depth = slotLayerDepth(authoredDepth, env, attackSec, decaySec, sustainLevel, releaseSec, ignitorParams)
+    val depth = slotLayerDepth(authoredDepth = authoredDepth, env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, ignitorParams = ignitorParams)
 
     // The depth is the switch: with no sweep the four stage knobs are inert, and not reading
     // them keeps a filter without an envelope exactly as cheap to build as it was.
@@ -865,11 +865,11 @@ private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Igni
     // Each catalogue name picks its oscillator (the LFO shape `triangle` is the oscillator `tri`); `sine` is also
     // every index `indexAt` falls back to.
     val lfo = when (LfoShapes.names[lfoShapeIndex]) {
-        "triangle" -> Ignitors.tri(rate, analog)
-        "square" -> Ignitors.pulze(rate, ConstantIgnitor(0.5), analog, flankSamples = edgeSamples)
-        "sawtooth" -> Ignitors.saw(rate, analog, resetSamples = edgeSamples)
-        "ramp" -> Ignitors.ramp(rate, analog, resetSamples = edgeSamples)
-        else -> Ignitors.sine(rate, analog)
+        "triangle" -> Ignitors.tri(freq = rate, analog = analog)
+        "square" -> Ignitors.pulze(freq = rate, duty = ConstantIgnitor(0.5), analog = analog, flankSamples = edgeSamples)
+        "sawtooth" -> Ignitors.saw(freq = rate, analog = analog, resetSamples = edgeSamples)
+        "ramp" -> Ignitors.ramp(freq = rate, analog = analog, resetSamples = edgeSamples)
+        else -> Ignitors.sine(freq = rate, analog = analog)
     }
 
     return ModBlockingIgnitor(lfo)
@@ -888,7 +888,7 @@ private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Igni
 internal fun tremoloGain(rate: Ignitor, depth: Ignitor, lfoShapeIndex: Int, sampleRate: Int): Ignitor {
     val floored = depth.max(ConstantIgnitor(0.0))
 
-    return tremoloLfo(lfoShapeIndex, rate, sampleRate).range(ConstantIgnitor(1.0).minus(floored), ConstantIgnitor(1.0))
+    return tremoloLfo(lfoShapeIndex = lfoShapeIndex, rate = rate, sampleRate = sampleRate).range(from = ConstantIgnitor(1.0).minus(floored), to = ConstantIgnitor(1.0))
 }
 
 /**
@@ -906,7 +906,7 @@ internal fun tremoloGainInRange(
     val floored = if (max.isBlockConstant) max else MemoizingIgnitor(max).also { it.incConsumers() }
     val one = ConstantIgnitor(1.0)
 
-    return tremoloLfo(lfoShapeIndex, rate, sampleRate).range(one + floored * from, one + floored * to)
+    return tremoloLfo(lfoShapeIndex = lfoShapeIndex, rate = rate, sampleRate = sampleRate).range(from = one + floored * from, to = one + floored * to)
 }
 
 /**
@@ -974,7 +974,7 @@ private fun IgnitorDsl.filterHumanization(
 
     val analogValue = buildTimeKnobValue(ignitorParams, cache) ?: 0.0
 
-    return buildFilterHumanization(analogValue, cache.sampleRate, cache.blockFrames, cache.random)
+    return buildFilterHumanization(analog = analogValue, sampleRate = cache.sampleRate, blockFrames = cache.blockFrames, rng = cache.random)
 }
 
 /**
@@ -1017,7 +1017,7 @@ private fun IgnitorDsl.buildRaw(
 
     fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor {
         val built = buildIgnitor(ignitorParams, cache, mod)
-        spineTail = maxTail(spineTail, built.releaseTailSec)
+        spineTail = maxTail(a = spineTail, b = built.releaseTailSec)
         spineGatesOutput = spineGatesOutput || built.gatesOutput
         lastChildEndsInEnvelope = built.endsInEnvelope
         return built.ignitor
@@ -1079,42 +1079,42 @@ private fun IgnitorDsl.buildRaw(
         // Literal defaults build the plain sine, bit-identical to before the partial banks existed;
         // any bank knob set builds the bank (a Param included: its value is only known at voice build).
         is IgnitorDsl.Sine -> if (isPlainSine()) {
-            pitchedSource(freq, Ignitors.sine(freq.noMod(), analog.noMod(), phase.phaseInput()))
+            pitchedSource(freq, Ignitors.sine(freq = freq.noMod(), analog = analog.noMod(), phase = phase.phaseInput()))
         } else {
             pitchedSource(
                 freq,
                 Ignitors.sinePartials(
-                    freq.noMod(), analog.noMod(), fundamental.noMod(),
-                    harmonics.noMod(), harmonicsRolloff.noMod(), octaves.noMod(), octavesRolloff.noMod(),
-                    suboctaves.noMod(), suboctavesRolloff.noMod(), analogSpread.noMod(), phase.phaseInput(),
+                    freq = freq.noMod(), analog = analog.noMod(), fundamental = fundamental.noMod(),
+                    harmonics = harmonics.noMod(), harmonicsRolloff = harmonicsRolloff.noMod(), octaves = octaves.noMod(), octavesRolloff = octavesRolloff.noMod(),
+                    suboctaves = suboctaves.noMod(), suboctavesRolloff = suboctavesRolloff.noMod(), analogSpread = analogSpread.noMod(), phase = phase.phaseInput(),
                 ),
             )
         }
         is IgnitorDsl.Saw -> pitchedSource(
             freq,
             Ignitors.saw(
-                freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax, phase = phase.phaseInput(),
+                freq = freq.noMod(), analog = analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax, phase = phase.phaseInput(),
             ),
         )
-        is IgnitorDsl.Square -> pitchedSource(freq, Ignitors.square(freq.noMod(), analog.noMod(), phase.phaseInput()))
-        is IgnitorDsl.Tri -> pitchedSource(freq, Ignitors.tri(freq.noMod(), analog.noMod(), phase.phaseInput()))
+        is IgnitorDsl.Square -> pitchedSource(freq, Ignitors.square(freq = freq.noMod(), analog = analog.noMod(), phase = phase.phaseInput()))
+        is IgnitorDsl.Tri -> pitchedSource(freq, Ignitors.tri(freq = freq.noMod(), analog = analog.noMod(), phase = phase.phaseInput()))
         is IgnitorDsl.Ramp -> pitchedSource(
             freq,
             Ignitors.ramp(
-                freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax, phase = phase.phaseInput(),
+                freq = freq.noMod(), analog = analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax, phase = phase.phaseInput(),
             ),
         )
-        is IgnitorDsl.Zawtooth -> pitchedSource(freq, Ignitors.zawtooth(freq.noMod(), analog.noMod(), phase.phaseInput()))
-        is IgnitorDsl.Zamp -> pitchedSource(freq, Ignitors.zamp(freq.noMod(), analog.noMod(), phase.phaseInput()))
+        is IgnitorDsl.Zawtooth -> pitchedSource(freq, Ignitors.zawtooth(freq = freq.noMod(), analog = analog.noMod(), phase = phase.phaseInput()))
+        is IgnitorDsl.Zamp -> pitchedSource(freq, Ignitors.zamp(freq = freq.noMod(), analog = analog.noMod(), phase = phase.phaseInput()))
         is IgnitorDsl.Pulze -> pitchedSource(
             freq,
             Ignitors.pulze(
-                freq.noMod(), duty.noMod(), analog.noMod(),
+                freq = freq.noMod(), duty = duty.noMod(), analog = analog.noMod(),
                 flankSamples = flankSamples, riseFlank = riseFlank, fallFlank = fallFlank, phase = phase.phaseInput(),
             ),
         )
-        is IgnitorDsl.RawPulze -> pitchedSource(freq, Ignitors.rawPulze(freq.noMod(), duty.noMod(), analog.noMod(), phase.phaseInput()))
-        is IgnitorDsl.Impulse -> pitchedSource(freq, Ignitors.impulse(freq.noMod(), analog.noMod(), phase.phaseInput()))
+        is IgnitorDsl.RawPulze -> pitchedSource(freq, Ignitors.rawPulze(freq = freq.noMod(), duty = duty.noMod(), analog = analog.noMod(), phase = phase.phaseInput()))
+        is IgnitorDsl.Impulse -> pitchedSource(freq, Ignitors.impulse(freq = freq.noMod(), analog = analog.noMod(), phase = phase.phaseInput()))
         is IgnitorDsl.Silence -> applyMod(Ignitors.silence(), accumulatedMod)
         // The voice's sample (step 7): a playhead, pitched by `phaseMod` like every source. Silence without one.
         is IgnitorDsl.Sample -> applyMod(cache.sampleSource ?: Ignitors.silence(), accumulatedMod)
@@ -1123,15 +1123,15 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(cache.random, color.noMod())
         is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(cache.random, depth.noMod())
         is IgnitorDsl.PinkNoise -> Ignitors.pinkNoise(cache.random)
-        is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(cache.random, rate.noMod(), octaves.noMod(), persistence.noMod())
-        is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(cache.random, rate.noMod(), octaves.noMod(), persistence.noMod())
-        is IgnitorDsl.Dust -> Ignitors.dust(cache.random, density.noMod(), tail.noMod(), bipolar.noMod())
+        is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(rng = cache.random, rate = rate.noMod(), octaves = octaves.noMod(), persistence = persistence.noMod())
+        is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(rng = cache.random, rate = rate.noMod(), octaves = octaves.noMod(), persistence = persistence.noMod())
+        is IgnitorDsl.Dust -> Ignitors.dust(rng = cache.random, density = density.noMod(), tail = tail.noMod(), bipolar = bipolar.noMod())
         is IgnitorDsl.Crackle -> Ignitors.crackle(cache.random, chaos.noMod())
 
         is IgnitorDsl.SuperSaw -> pitchedSource(
             freq,
             Ignitors.superSaw(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                freq = freq.noMod(), voices = voices.noMod(), detune = spread.noMod(), analog = analog.noMod(), analogSpread = analogSpread.noMod(),
                 rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
@@ -1144,7 +1144,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperSine -> pitchedSource(
             freq,
             Ignitors.superSine(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                freq = freq.noMod(), voices = voices.noMod(), detune = spread.noMod(), analog = analog.noMod(), analogSpread = analogSpread.noMod(),
                 rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
@@ -1157,7 +1157,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperSquare -> pitchedSource(
             freq,
             Ignitors.superSquare(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                freq = freq.noMod(), voices = voices.noMod(), detune = spread.noMod(), analog = analog.noMod(), analogSpread = analogSpread.noMod(),
                 rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
@@ -1170,7 +1170,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperTri -> pitchedSource(
             freq,
             Ignitors.superTri(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                freq = freq.noMod(), voices = voices.noMod(), detune = spread.noMod(), analog = analog.noMod(), analogSpread = analogSpread.noMod(),
                 rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
@@ -1183,7 +1183,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperRamp -> pitchedSource(
             freq,
             Ignitors.superRamp(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                freq = freq.noMod(), voices = voices.noMod(), detune = spread.noMod(), analog = analog.noMod(), analogSpread = analogSpread.noMod(),
                 rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
@@ -1196,12 +1196,12 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Pluck -> pitchedSource(
             freq,
             Ignitors.karplusStrong(
-                freq.noMod(),
-                decay.noMod(),
-                brightness.noMod(),
-                pickPosition.noMod(),
-                stiffness.noMod(),
-                analog.noMod(),
+                freq = freq.noMod(),
+                decay = decay.noMod(),
+                brightness = brightness.noMod(),
+                pickPosition = pickPosition.noMod(),
+                stiffness = stiffness.noMod(),
+                analog = analog.noMod(),
                 rng = cache.random,
             ),
         )
@@ -1209,15 +1209,15 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperPluck -> pitchedSource(
             freq,
             Ignitors.superKarplusStrong(
-                freq.noMod(),
-                voices.noMod(),
-                spread.noMod(),
-                decay.noMod(),
-                brightness.noMod(),
-                pickPosition.noMod(),
-                stiffness.noMod(),
-                analog.noMod(),
-                analogSpread.noMod(),
+                freq = freq.noMod(),
+                voices = voices.noMod(),
+                detune = spread.noMod(),
+                decay = decay.noMod(),
+                brightness = brightness.noMod(),
+                pickPosition = pickPosition.noMod(),
+                stiffness = stiffness.noMod(),
+                analog = analog.noMod(),
+                analogSpread = analogSpread.noMod(),
                 rng = cache.random,
             ),
         )
@@ -1280,7 +1280,7 @@ private fun IgnitorDsl.buildRaw(
                 builtEnvelope = survivorEnds
                 survivor
             } else {
-                survivor.affine(pre.withMod(), mul.withMod(), add.withMod())
+                survivor.affine(pre = pre.withMod(), mul = mul.withMod(), add = add.withMod())
             }
         }
 
@@ -1291,14 +1291,14 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Pow -> base.withMod().pow(exp.withMod())
         is IgnitorDsl.Min -> left.withMod().min(right.withMod())
         is IgnitorDsl.Max -> left.withMod().max(right.withMod())
-        is IgnitorDsl.Clamp -> inner.withMod().clamp(lo.withMod(), hi.withMod())
+        is IgnitorDsl.Clamp -> inner.withMod().clamp(lo = lo.withMod(), hi = hi.withMod())
         is IgnitorDsl.Exp -> inner.withMod().exp()
         is IgnitorDsl.Log -> inner.withMod().log()
         is IgnitorDsl.Sqrt -> inner.withMod().sqrt()
         is IgnitorDsl.Sign -> inner.withMod().sign()
         is IgnitorDsl.Tanh -> inner.withMod().tanh()
-        is IgnitorDsl.Lerp -> left.withMod().lerp(right.withMod(), t.withMod())
-        is IgnitorDsl.Range -> inner.withMod().range(from.withMod(), to.withMod())
+        is IgnitorDsl.Lerp -> left.withMod().lerp(other = right.withMod(), t = t.withMod())
+        is IgnitorDsl.Range -> inner.withMod().range(from = from.withMod(), to = to.withMod())
         is IgnitorDsl.Floor -> inner.withMod().floor()
         is IgnitorDsl.Ceil -> inner.withMod().ceil()
         is IgnitorDsl.Round -> inner.withMod().round()
@@ -1306,7 +1306,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Mod -> left.withMod().mod(right.withMod())
         is IgnitorDsl.Recip -> inner.withMod().recip()
         is IgnitorDsl.Sq -> inner.withMod().sq()
-        is IgnitorDsl.Select -> cond.withMod().select(whenTrue.withMod(), whenFalse.withMod())
+        is IgnitorDsl.Select -> cond.withMod().select(whenTrue = whenTrue.withMod(), whenFalse = whenFalse.withMod())
 
         // ── Frequency: pass mod through ──
 
@@ -1358,18 +1358,18 @@ private fun IgnitorDsl.buildRaw(
             // and hoisting it would change the memo's shape for the whole voice.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, ignitorParams, cache,
+                env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
             val n = passes.passesKnob(ignitorParams, cache)
 
             if (n == 1) {
-                built.lowpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
+                built.lowpass(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
             } else {
                 val rel = butterworthQLadder(n, 1.0)
                 var chain = built
                 for (k in 0 until n) {
-                    chain = chain.lowpass(freq.noMod(), q.noMod().scaledBy(rel[k]), envDef, analog.noMod(), hum)
+                    chain = chain.lowpass(cutoffHz = freq.noMod(), q = q.noMod().scaledBy(rel[k]), env = envDef, analog = analog.noMod(), humanize = hum)
                 }
                 chain
             }
@@ -1383,18 +1383,18 @@ private fun IgnitorDsl.buildRaw(
             // order and the same one shared lane for the whole cascade.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, ignitorParams, cache,
+                env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
             val n = passes.passesKnob(ignitorParams, cache)
 
             if (n == 1) {
-                built.highpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
+                built.highpass(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
             } else {
                 val rel = butterworthQLadder(n, 1.0)
                 var chain = built
                 for (k in 0 until n) {
-                    chain = chain.highpass(freq.noMod(), q.noMod().scaledBy(rel[k]), envDef, analog.noMod(), hum)
+                    chain = chain.highpass(cutoffHz = freq.noMod(), q = q.noMod().scaledBy(rel[k]), env = envDef, analog = analog.noMod(), humanize = hum)
                 }
                 chain
             }
@@ -1419,10 +1419,10 @@ private fun IgnitorDsl.buildRaw(
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, ignitorParams, cache,
+                env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
-            built.bandpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
+            built.bandpass(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
         }
 
         is IgnitorDsl.Notch -> if (freq.gatedOffWhenUnset(ignitorParams, cache)) {
@@ -1431,10 +1431,10 @@ private fun IgnitorDsl.buildRaw(
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, ignitorParams, cache,
+                env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
-            built.notch(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
+            built.notch(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
         }
 
         // Eq: withMod ONLY on inner; noMod on all section params — mirrors the filter arms
@@ -1475,7 +1475,7 @@ private fun IgnitorDsl.buildRaw(
         // authored static-release envelope with nothing built over it.
         is IgnitorDsl.Adsr -> if (on.switchedOff(ignitorParams, cache)) {
             val signal = inner.passThrough()
-            spineTail = maxTail(spineTail, releaseSec.offEnvelopeTail(ignitorParams, cache))
+            spineTail = maxTail(a = spineTail, b = releaseSec.offEnvelopeTail(ignitorParams, cache))
             signal
         } else {
             // Order matters and is unchanged: build order IS rng draw order (IgniteContext.random),
@@ -1507,7 +1507,7 @@ private fun IgnitorDsl.buildRaw(
             // frames); its TAIL is not.
             val ownTail = release.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() }
 
-            spineTail = maxTail(spineTail, ownTail)
+            spineTail = maxTail(a = spineTail, b = ownTail)
             // It ENDS the voice only with a release of static length: a modulated or non-finite release cannot
             // promise to reach zero by the voice's end, which is set from static tails, so such an envelope
             // leaves the voice its teardown fade (`BuiltIgnitor.endsInEnvelope`, step 10's review). No built-in
@@ -1515,13 +1515,13 @@ private fun IgnitorDsl.buildRaw(
             builtEnvelope = ownTail != null
 
             innerIgnitor.adsr(
-                attack, decay, sustain, release,
+                attackSec = attack, decaySec = decay, sustainLevel = sustain, releaseSec = release,
                 // Unset curve = "exp" on every stage of every AMPLITUDE envelope, on every door
                 // (maintainer decision, 2026-08-24), as the strip's VCA did. The modulation envelopes (filter cutoff, pitch) fall back to
                 // `MOD_ENV_CURVE` instead, which decision D3 sets.
-                attackCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
-                decayCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
-                releaseCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
+                attackCurve = attackCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
+                decayCurve = decayCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
+                releaseCurve = releaseCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
                 declickSeconds = declickSeconds.noMod(),
             )
         }
@@ -1654,8 +1654,8 @@ private fun IgnitorDsl.buildRaw(
                 )
             }
         }
-        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, floor.noMod())
+        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet = wet.noMod(), feedback = feedback.noMod(), tone = tone.noMod(), pitches = pitches, floor = floor.noMod())
     }
 
-    return BuiltIgnitor(ignitor, spineTail, spineGatesOutput, builtEnvelope)
+    return BuiltIgnitor(ignitor = ignitor, releaseTailSec = spineTail, gatesOutput = spineGatesOutput, endsInEnvelope = builtEnvelope)
 }

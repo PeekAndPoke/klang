@@ -145,13 +145,13 @@ internal inline fun clampSvfQ(q: Double): Double =
 /** Bilinear-prewarped angle factor `K = tan(π·fc/fs)` with NaN/Inf-safe cutoff clamp. */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun bilinearK(cutoffHz: Double, sampleRate: Double): Double {
-    return tan(PI * clampSvfCutoff(cutoffHz, sampleRate) / sampleRate)
+    return tan(PI * clampSvfCutoff(cutoffHz = cutoffHz, sampleRate = sampleRate) / sampleRate)
 }
 
 /** First-order LPF coefficient `α = K/(1+K)` for `y[ n ] = α·x + (1−α)·y[n-1]`. */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun onePoleLpfCoeff(cutoffHz: Double, sampleRate: Double): Double {
-    val k = bilinearK(cutoffHz, sampleRate)
+    val k = bilinearK(cutoffHz = cutoffHz, sampleRate = sampleRate)
     return k / (1.0 + k)
 }
 
@@ -253,7 +253,7 @@ internal class SvfCoeffs {
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun computeSvfCoeffs(cutoffHz: Double, q: Double, sampleRate: Double, out: SvfCoeffs) {
-    val g = bilinearK(cutoffHz, sampleRate)
+    val g = bilinearK(cutoffHz = cutoffHz, sampleRate = sampleRate)
     val safeQ = clampSvfQ(q)
     out.k = 1.0 / safeQ
     out.a1 = 1.0 / (1.0 + g * (g + out.k))
@@ -306,7 +306,7 @@ internal inline fun computeSvfBellCoeffs(
 ) {
     val safeDb = if (db.isFinite()) db else 0.0 // NaN-guard
     val a = 10.0.pow(safeDb / 40.0)
-    computeSvfCoeffs(cutoffHz, q * a, sampleRate, out)
+    computeSvfCoeffs(cutoffHz = cutoffHz, q = q * a, sampleRate = sampleRate, out = out)
     out.m1 = safeOut(out.k * (a * a - 1.0))
 }
 
@@ -546,7 +546,7 @@ object LowPassHighPassFilters {
         private val sweep = SvfCoeffSweep()
 
         init {
-            sweepCutoff(cutoffHz, cutoffHz, 0)
+            sweepCutoff(startHz = cutoffHz, endHz = cutoffHz, frames = 0)
         }
 
         /**
@@ -556,7 +556,7 @@ object LowPassHighPassFilters {
          * sweep that used the frames retired in phase 3 step 9.
          */
         fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
-            sweep.prepare(startHz * cutoffOffsetMul, endHz * cutoffOffsetMul, q, sampleRate, frames)
+            sweep.prepare(cutoffStartHz = startHz * cutoffOffsetMul, cutoffEndHz = endHz * cutoffOffsetMul, q = q, sampleRate = sampleRate, frames = frames)
 
             val c = sweep.start
 
@@ -579,7 +579,7 @@ object LowPassHighPassFilters {
         q: Double,
         sampleRate: Double,
         cutoffOffsetMul: Double = 1.0,
-    ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
+    ) : BaseSvf(cutoffHz = cutoffHz, q = q, sampleRate = sampleRate, cutoffOffsetMul = cutoffOffsetMul) {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             var left = sweepFrames

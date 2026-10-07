@@ -173,7 +173,7 @@ class KatalystEqEffect(
         val bank = banks[index]
 
         bank.install(types, current, sampleRate)
-        swap.set(bank.left, bank.right)
+        swap.set(left = bank.left, right = bank.right)
         lastInstalledBank = index
         installs++
     }
@@ -253,7 +253,7 @@ class KatalystEqEffect(
  */
 private class EqCoreFilter(val core: EqCore) : AudioFilter {
     override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-        core.process(buffer, offset, length)
+        core.process(buffer = buffer, offset = offset, length = length)
     }
 }
 

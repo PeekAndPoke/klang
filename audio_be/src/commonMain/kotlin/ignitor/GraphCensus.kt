@@ -51,10 +51,10 @@ import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
     operator fun plus(other: GraphCensus): GraphCensus =
-        GraphCensus(passes + other.passes, traffic + other.traffic, bytes + other.bytes)
+        GraphCensus(passes = passes + other.passes, traffic = traffic + other.traffic, bytes = bytes + other.bytes)
 
     companion object {
-        val NONE = GraphCensus(0, 0, 0)
+        val NONE = GraphCensus(passes = 0, traffic = 0, bytes = 0)
 
         /** Two state doubles and four coefficients: one SVF section. */
         private const val SECTION_BYTES = 48
@@ -78,7 +78,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         private const val DECIMATOR_TAPS = 9
 
         fun of(dsl: IgnitorDsl, blockFrames: Int = 128, params: Map<String, Double> = emptyMap(), soundIndex: Int = 0): GraphCensus {
-            val walker = Walker(blockFrames, params, soundIndex)
+            val walker = Walker(blockFrames = blockFrames, params = params, soundIndex = soundIndex)
 
             walker.count(dsl)
 
@@ -86,7 +86,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         }
 
         /** A leaf or arithmetic over leaves that is one value per block: no pass, no traffic. */
-        fun isScalar(dsl: IgnitorDsl): Boolean = Walker(128, emptyMap(), 0).isScalar(dsl)
+        fun isScalar(dsl: IgnitorDsl): Boolean = Walker(blockFrames = 128, params = emptyMap(), soundIndex = 0).isScalar(dsl)
 
         /** The buffer traffic per input sample of an [Oversampler] round trip at [factor], without the shaper's own work. */
         fun oversampleTraffic(factor: Int): Int {
@@ -224,12 +224,12 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // a shared node renders once into a memo, and every consumer, the first included,
             // copies the memo out: a read and a write per consumer
             if (done.any { it === node }) {
-                return GraphCensus(0, 2, 0)
+                return GraphCensus(passes = 0, traffic = 2, bytes = 0)
             }
 
             done.add(node)
 
-            val memo = if (shared) GraphCensus(0, 2, blockFrames * 8) else NONE
+            val memo = if (shared) GraphCensus(passes = 0, traffic = 2, bytes = blockFrames * 8) else NONE
 
             return own(node) + children(node) + memo
         }
@@ -269,25 +269,25 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             else -> 0
         }
 
-        private fun source(bytes: Int = SOURCE_BYTES) = GraphCensus(1, 1, bytes)
+        private fun source(bytes: Int = SOURCE_BYTES) = GraphCensus(passes = 1, traffic = 1, bytes = bytes)
 
         /** A moving `phase` signal is read once per sample by each of [voices] voice loops; a scalar one costs nothing. */
-        private fun phaseReads(phase: IgnitorDsl, voices: Int = 1) = if (isScalar(phase)) NONE else GraphCensus(0, voices, 0)
+        private fun phaseReads(phase: IgnitorDsl, voices: Int = 1) = if (isScalar(phase)) NONE else GraphCensus(passes = 0, traffic = voices, bytes = 0)
 
         /**
          * One bound of a tremolo off its classic range, `1 + floored * bound`: nothing when it folds (a scalar depth and
          * bound), else the multiply (in place over a scalar side, a third stream over two signals) and the add of 1.
          */
         private fun tremoloBound(depth: IgnitorDsl, bound: IgnitorDsl): GraphCensus =
-            if (isScalar(depth) && isScalar(bound)) NONE else GraphCensus(1, 1 + signals(depth, bound), 0) + inPlace()
+            if (isScalar(depth) && isScalar(bound)) NONE else GraphCensus(passes = 1, traffic = 1 + signals(depth, bound), bytes = 0) + inPlace()
 
-        private fun inPlace(bytes: Int = 0) = GraphCensus(1, 2, bytes)
+        private fun inPlace(bytes: Int = 0) = GraphCensus(passes = 1, traffic = 2, bytes = bytes)
 
         /** A unison stack: its loop is voice-major, a pass per voice, the first writing and the rest adding in. */
         private fun stack(voices: IgnitorDsl): GraphCensus {
             val n = countOf(voices)
 
-            return GraphCensus(n, 2 * n - 1, SOURCE_BYTES + n * UNISON_VOICE_BYTES)
+            return GraphCensus(passes = n, traffic = 2 * n - 1, bytes = SOURCE_BYTES + n * UNISON_VOICE_BYTES)
         }
 
         private fun shaped(oversample: Int): GraphCensus {
@@ -295,7 +295,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // (the soft cap on `Shape`, the copy out on the fused `Distort`, whose drive rides in the loop)
             val f = 1 shl Oversampler.factorToStages(oversample)
 
-            return GraphCensus(1, 2 * f + 2 + 2 + oversampleTraffic(oversample), oversampleBytes(oversample) + 24)
+            return GraphCensus(passes = 1, traffic = 2 * f + 2 + 2 + oversampleTraffic(oversample), bytes = oversampleBytes(oversample) + 24)
         }
 
         /**
@@ -312,7 +312,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         private fun filter(passes: IgnitorDsl): GraphCensus {
             val n = passesOf(passes)
 
-            return GraphCensus(n, 2 * n, SECTION_BYTES * n)
+            return GraphCensus(passes = n, traffic = 2 * n, bytes = SECTION_BYTES * n)
         }
 
         private fun own(node: IgnitorDsl): GraphCensus = when (node) {
@@ -320,7 +320,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq -> NONE
 
             // sources: one pass that writes the block (silence fills it)
-            is IgnitorDsl.Silence -> GraphCensus(1, 1, 0)
+            is IgnitorDsl.Silence -> GraphCensus(passes = 1, traffic = 1, bytes = 0)
             is IgnitorDsl.WhiteNoise, is IgnitorDsl.PinkNoise, is IgnitorDsl.BrownNoise,
             is IgnitorDsl.Crackle, is IgnitorDsl.Dust, is IgnitorDsl.PerlinNoise, is IgnitorDsl.BerlinNoise,
             is IgnitorDsl.Sample -> source()
@@ -355,11 +355,11 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.SuperRamp -> stack(node.voices) + phaseReads(node.phase, countOf(node.voices))
 
             // strings: the source writes, the ring is read and written per sample, a string per voice
-            is IgnitorDsl.Pluck -> GraphCensus(1, 3, STRING_BYTES)
+            is IgnitorDsl.Pluck -> GraphCensus(passes = 1, traffic = 3, bytes = STRING_BYTES)
             is IgnitorDsl.SuperPluck -> {
                 val n = countOf(node.voices)
 
-                GraphCensus(n, 3 * n, STRING_BYTES * n)
+                GraphCensus(passes = n, traffic = 3 * n, bytes = STRING_BYTES * n)
             }
 
             // pointwise unary, in place
@@ -368,23 +368,23 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Round, is IgnitorDsl.Frac, is IgnitorDsl.Recip -> inPlace()
 
             // binary: in place over a scalar side, a scratch render and a third stream otherwise
-            is IgnitorDsl.Plus -> GraphCensus(1, 1 + signals(node.left, node.right), 0)
-            is IgnitorDsl.Minus -> GraphCensus(1, 1 + signals(node.left, node.right), 0)
-            is IgnitorDsl.Times -> GraphCensus(1, 1 + signals(node.left, node.right), 0)
-            is IgnitorDsl.Div -> GraphCensus(1, 1 + signals(node.left, node.right), 0)
-            is IgnitorDsl.Mod -> GraphCensus(1, 1 + signals(node.left, node.right), 0)
-            is IgnitorDsl.Min -> GraphCensus(1, 1 + signals(node.left, node.right), 0)
-            is IgnitorDsl.Max -> GraphCensus(1, 1 + signals(node.left, node.right), 0)
-            is IgnitorDsl.Pow -> GraphCensus(1, 1 + signals(node.base, node.exp), 0)
+            is IgnitorDsl.Plus -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            is IgnitorDsl.Minus -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            is IgnitorDsl.Times -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            is IgnitorDsl.Div -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            is IgnitorDsl.Mod -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            is IgnitorDsl.Min -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            is IgnitorDsl.Max -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            is IgnitorDsl.Pow -> GraphCensus(passes = 1, traffic = 1 + signals(node.base, node.exp), bytes = 0)
 
             // one pass; a signal coefficient makes the node render every coefficient through scratch
-            is IgnitorDsl.Affine -> GraphCensus(1, 2 + coefficientReads(node.pre, node.mul, node.add), 0)
-            is IgnitorDsl.Clamp -> GraphCensus(1, 2 + coefficientReads(node.lo, node.hi), 0)
-            is IgnitorDsl.Range -> GraphCensus(1, 2 + coefficientReads(node.from, node.to), 0)
+            is IgnitorDsl.Affine -> GraphCensus(passes = 1, traffic = 2 + coefficientReads(node.pre, node.mul, node.add), bytes = 0)
+            is IgnitorDsl.Clamp -> GraphCensus(passes = 1, traffic = 2 + coefficientReads(node.lo, node.hi), bytes = 0)
+            is IgnitorDsl.Range -> GraphCensus(passes = 1, traffic = 2 + coefficientReads(node.from, node.to), bytes = 0)
 
             // a lerp folds its weight only and always renders its second signal; a select has no fold and renders both branches
-            is IgnitorDsl.Lerp -> GraphCensus(1, 3 + signals(node.t), 0)
-            is IgnitorDsl.Select -> GraphCensus(1, 4, 0)
+            is IgnitorDsl.Lerp -> GraphCensus(passes = 1, traffic = 3 + signals(node.t), bytes = 0)
+            is IgnitorDsl.Select -> GraphCensus(passes = 1, traffic = 4, bytes = 0)
 
             // filters: a section per pass, in place, the passes clamped as the engine clamps them
             is IgnitorDsl.Lowpass -> filter(node.passes)
@@ -397,9 +397,9 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Eq -> {
                 val taps = node.sections.count { it is IgnitorDsl.EqSection.RawTap }
                 val serial = node.sections.size - taps
-                val copy = if (taps > 0) GraphCensus(1, 2, blockFrames * 8) else NONE
+                val copy = if (taps > 0) GraphCensus(passes = 1, traffic = 2, bytes = blockFrames * 8) else NONE
 
-                GraphCensus(node.sections.size, 2 * serial + 3 * taps, SECTION_BYTES * node.sections.size) + copy
+                GraphCensus(passes = node.sections.size, traffic = 2 * serial + 3 * taps, bytes = SECTION_BYTES * node.sections.size) + copy
             }
 
             // shapers
@@ -420,30 +420,30 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // is counted: a signal depth's floor (in place, memoized for its two readers: a copy out each), each bound
             // that does not fold, the range (reading both bounds when either is a signal) and the multiply.
             is IgnitorDsl.Tremolo -> if (!node.hasClassicRange()) {
-                val floor = if (isScalar(node.depth)) NONE else inPlace() + GraphCensus(0, 2 * 2, blockFrames * 8)
-                val from = tremoloBound(node.depth, node.rangeFrom)
-                val to = tremoloBound(node.depth, node.rangeTo)
+                val floor = if (isScalar(node.depth)) NONE else inPlace() + GraphCensus(passes = 0, traffic = 2 * 2, bytes = blockFrames * 8)
+                val from = tremoloBound(depth = node.depth, bound = node.rangeFrom)
+                val to = tremoloBound(depth = node.depth, bound = node.rangeTo)
                 val boundsScalar = from == NONE && to == NONE
 
-                source() + floor + from + to + GraphCensus(1, if (boundsScalar) 2 else 2 + 2, 0) + GraphCensus(1, 3, 0)
+                source() + floor + from + to + GraphCensus(passes = 1, traffic = if (boundsScalar) 2 else 2 + 2, bytes = 0) + GraphCensus(passes = 1, traffic = 3, bytes = 0)
             } else if (isScalar(node.depth)) {
-                source() + GraphCensus(1, 2, 0) + GraphCensus(1, 3, 0)
+                source() + GraphCensus(passes = 1, traffic = 2, bytes = 0) + GraphCensus(passes = 1, traffic = 3, bytes = 0)
             } else {
-                source() + inPlace() + inPlace() + GraphCensus(1, 2 + 2, 0) + GraphCensus(1, 3, 0)
+                source() + inPlace() + inPlace() + GraphCensus(passes = 1, traffic = 2 + 2, bytes = 0) + GraphCensus(passes = 1, traffic = 3, bytes = 0)
             }
             is IgnitorDsl.Phaser -> inPlace(4 * 16 + 32)
-            is IgnitorDsl.Shimmer -> GraphCensus(1, SHIMMER_TRAFFIC, SHIMMER_BYTES)
+            is IgnitorDsl.Shimmer -> GraphCensus(passes = 1, traffic = SHIMMER_TRAFFIC, bytes = SHIMMER_BYTES)
 
             // pitch modulation: the mod renders a block (1 write), the ratio loop reads it and writes
             // the ratios (2), and the source reads the ratio per sample (1); a detune is a constant
             // factor folded into the source's increment
             is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod ->
-                GraphCensus(1, 4, 64)
+                GraphCensus(passes = 1, traffic = 4, bytes = 64)
 
             is IgnitorDsl.Detune -> NONE
 
             // FM: the modulator renders (counted as a child), the ratio block is read and written, the carrier reads it
-            is IgnitorDsl.Fm -> GraphCensus(1, 5, 64)
+            is IgnitorDsl.Fm -> GraphCensus(passes = 1, traffic = 5, bytes = 64)
 
             // structure that leaves no trace at render time
             is IgnitorDsl.Variants, is IgnitorDsl.OptimizerHint -> NONE

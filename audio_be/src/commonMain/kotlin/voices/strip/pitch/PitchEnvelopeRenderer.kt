@@ -36,7 +36,7 @@ class PitchEnvelopeRenderer(
         // Absolute frames, Double, see RenderClock.cursorFrame.
         val startFrame = ctx.limits.startFrame
 
-        core.prepareControlRateEnvelope(pitchEnvelope.envelope, startFrame, ctx.limits.gateEndFrame)
+        core.prepareControlRateEnvelope(env = pitchEnvelope.envelope, startFrame = startFrame, gateEndFrame = ctx.limits.gateEndFrame)
 
         // Voice-relative position of the block's first rendered frame, Int (no Long on Kotlin/JS).
         val firstPos = (ctx.blockStart + ctx.offset - startFrame).toInt()

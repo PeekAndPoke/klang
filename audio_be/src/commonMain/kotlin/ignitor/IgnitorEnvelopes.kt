@@ -41,9 +41,9 @@ fun Ignitor.adsr(
     releaseCurve: AdsrCurve = AdsrCurve.Default,
     declickSeconds: Ignitor = ParamIgnitor("declickSeconds", 0.0),
 ): Ignitor = AdsrIgnitor(
-    this, attackSec, decaySec, sustainLevel, releaseSec,
-    attackCurve, decayCurve, releaseCurve,
-    declickSeconds,
+    upstream = this, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec,
+    attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve,
+    declickSeconds = declickSeconds,
 )
 
 /**
@@ -100,13 +100,13 @@ private class AdsrIgnitor(
             // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default (see the note
             // on `finiteOr`). No clamp: every finite sustain passes raw (the Motor stays raw); the
             // amplitude floor at 0 below is the only bound.
-            val sustainLevelVal = finiteOr(Ignitors.readParam(sustainLevel, freqHz, ctx), ADSR_SUSTAIN_LEVEL)
+            val sustainLevelVal = finiteOr(value = Ignitors.readParam(sustainLevel, freqHz, ctx), fallback = ADSR_SUSTAIN_LEVEL)
             val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx)
 
             // declick is a control-rate slot: read per block, derive its coefficient once here.
             val declickSecondsVal = Ignitors.readParam(declickSeconds, freqHz, ctx)
             val declickOn = declickSecondsVal > 0.0
-            val declickCoeff = if (declickOn) envDeclickCoeff(declickSecondsVal, ctx.sampleRateD) else 0.0
+            val declickCoeff = if (declickOn) envDeclickCoeff(declickSeconds = declickSecondsVal, sampleRate = ctx.sampleRateD) else 0.0
 
             val gateEndPos = ctx.gateEndFrame
 
@@ -132,7 +132,7 @@ private class AdsrIgnitor(
 
                 // Opt-in de-click: one-pole low-pass on the gain, primed to the first rendered
                 // level so always-on voices / mid-phase block starts don't fade in.
-                val gain = if (declickOn) declick.next(currentLevel, declickCoeff) else currentLevel
+                val gain = if (declickOn) declick.next(level = currentLevel, coeff = declickCoeff) else currentLevel
 
                 buffer[i] = (input[i] * gain)
                 absPos++
@@ -152,10 +152,10 @@ fun Ignitor.adsr(
     releaseCurve: AdsrCurve = AdsrCurve.Default,
     declickSeconds: Double = 0.0,
 ): Ignitor = adsr(
-    ParamIgnitor("attackSec", attackSec),
-    ParamIgnitor("decaySec", decaySec),
-    ParamIgnitor("sustainLevel", sustainLevel),
-    ParamIgnitor("releaseSec", releaseSec),
-    attackCurve, decayCurve, releaseCurve,
-    ParamIgnitor("declickSeconds", declickSeconds),
+    attackSec = ParamIgnitor("attackSec", attackSec),
+    decaySec = ParamIgnitor("decaySec", decaySec),
+    sustainLevel = ParamIgnitor("sustainLevel", sustainLevel),
+    releaseSec = ParamIgnitor("releaseSec", releaseSec),
+    attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve,
+    declickSeconds = ParamIgnitor("declickSeconds", declickSeconds),
 )

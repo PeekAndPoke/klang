@@ -61,7 +61,7 @@ class KlangAudioRenderer private constructor(
         clock.cursorFrame = cursorFrame
         mix.clear()
         engine.renderInto(mix, cursorFrame)
-        master.process(mix, out)
+        master.process(mix = mix, out = out)
         // The same per-block housekeeping as the live dispatcher: offline is not realtime, but
         // "every render loop housekeeps" keeps the shelf contract a renderer contract, not a host one.
         context.warehouse.housekeep()

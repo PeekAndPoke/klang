@@ -101,7 +101,7 @@ internal class PhaserCore(
      * `blockFrames = 0` is a no-op (alphaIncrement set to 0; α unchanged).
      */
     fun prepareBlock(blockFrames: Int) {
-        prepareBlock(blockFrames, center, sweep)
+        prepareBlock(blockFrames = blockFrames, centerTo = center, sweepTo = sweep)
     }
 
     /**

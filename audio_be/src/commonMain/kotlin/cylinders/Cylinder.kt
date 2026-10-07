@@ -175,7 +175,7 @@ class Cylinder(
      * It also carries the rents the warehouse refused the chains this cylinder has swapped AWAY
      * from ([ChainSwap.retire]), because a stage zeroes its own count when it retires.
      */
-    private val swap = ChainSwap(sampleRate, blockFrames)
+    private val swap = ChainSwap(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /**
      * Test seams: which phase of a swap this cylinder is in. The audio shows the blend, but a spec
@@ -341,7 +341,7 @@ class Cylinder(
 
         val current = candidate
 
-        if (current == null || isNewer(voice.startFrame, voice.id, current.startFrame, current.id)) {
+        if (current == null || isNewer(aStart = voice.startFrame, aId = voice.id, bStart = current.startFrame, bId = current.id)) {
             candidate = voice
         }
     }
@@ -508,12 +508,12 @@ class Cylinder(
         pendingKey = null
 
         if (isActive) {
-            beginFade(key, name, dsl)
+            beginFade(key = key, rawName = name, dsl = dsl)
 
             return
         }
 
-        install(key, name, dsl)
+        install(key = key, rawName = name, dsl = dsl)
     }
 
     /**
@@ -820,7 +820,7 @@ class Cylinder(
         pendingKey = null
 
         if (isActive) {
-            beginFade(key, key, dsl)
+            beginFade(key = key, rawName = key, dsl = dsl)
 
             return true
         }
@@ -828,7 +828,7 @@ class Cylinder(
         // What the caller needs is "did the chain change", not "was the key consumed": a
         // content-classic key lands on the chain already in service (see [chainFor]), and
         // [tryDeactivate] must still reach its own clean slate in that case (review round 1, m1).
-        return install(key, key, dsl)
+        return install(key = key, rawName = key, dsl = dsl)
     }
 
     /**

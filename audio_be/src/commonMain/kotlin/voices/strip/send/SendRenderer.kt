@@ -52,12 +52,12 @@ class SendRenderer(
         val length = ctx.length
 
         if (ctx.measurePeak) {
-            measurePeak(ctx, audioBuffer, offset, length)
+            measurePeak(ctx = ctx, audioBuffer = audioBuffer, offset = offset, length = length)
         }
 
         // The solo/mute multiplier moved since the last block: ramp it across this one (no step, no click).
         if (voice.gainMultiplierFrom != voice.gainMultiplier) {
-            mixRamped(ctx, panAngle, audioBuffer, outL, outR)
+            mixRamped(ctx = ctx, panAngle = panAngle, audioBuffer = audioBuffer, outL = outL, outR = outR)
 
             return
         }

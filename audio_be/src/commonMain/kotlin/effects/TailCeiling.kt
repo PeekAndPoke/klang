@@ -147,7 +147,7 @@ class TailCeiling {
             feedbackInWindow = fb
         }
 
-        current = saturate(fresh(inputPeakInWindow, feedbackInWindow, lapsPerWindow) + feedbackInWindow * previous)
+        current = saturate(fresh(peak = inputPeakInWindow, fb = feedbackInWindow, laps = lapsPerWindow) + feedbackInWindow * previous)
 
         // Bounded by `frames / window + 1` by construction: one close through both 10 ms doors.
         elapsed += frames
@@ -159,7 +159,7 @@ class TailCeiling {
             // likewise, except the value it ended on, where the next block's ramp starts.
             inputPeakInWindow = if (elapsed > 0.0) peak else 0.0
             feedbackInWindow = if (elapsed > 0.0) fb else fbEnd
-            current = saturate(fresh(inputPeakInWindow, feedbackInWindow, lapsPerWindow) + feedbackInWindow * previous)
+            current = saturate(fresh(peak = inputPeakInWindow, fb = feedbackInWindow, laps = lapsPerWindow) + feedbackInWindow * previous)
         }
     }
 

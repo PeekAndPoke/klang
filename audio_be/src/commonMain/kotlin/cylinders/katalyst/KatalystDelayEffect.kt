@@ -350,7 +350,7 @@ class KatalystDelayEffect(
                 feedback = line.feedback,
                 lapsPerWindow = line.tailLapsPerWindow,
             )
-            line.process(feed, ctx.mixBuffer, frames)
+            line.process(input = feed, output = ctx.mixBuffer, length = frames)
         }
 
         /** A ceiling, not a scan: [process] maintains it from the feed. */
@@ -446,7 +446,7 @@ class KatalystDelayEffect(
             val frames = min(ctx.blockFrames, silentInput.left.size)
 
             advanceGlide(line)
-            line.process(silentInput, ctx.mixBuffer, frames)
+            line.process(input = silentInput, output = ctx.mixBuffer, length = frames)
 
             // Infinity minus a block stays Infinity, so the self-oscillating case needs no branch.
             val left = remaining - frames
