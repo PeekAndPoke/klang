@@ -153,10 +153,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
             val freqModBuffer = DoubleArray(blockFrames)
             val factory = VoiceFactory(
                 sampleRate = sampleRate,
-                sampleRateDouble = sampleRate.toDouble(),
                 blockFrames = blockFrames,
-                ignitorRegistry = registry,
-                cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
                 voiceBuffer = voiceBuffer,
                 freqModBuffer = freqModBuffer,
                 scratchBuffers = ScratchBuffers(blockFrames),
@@ -223,10 +220,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
             val freqModBuffer = DoubleArray(blockFrames)
             val factory = VoiceFactory(
                 sampleRate = sampleRate,
-                sampleRateDouble = sampleRate.toDouble(),
                 blockFrames = blockFrames,
-                ignitorRegistry = registry,
-                cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
                 voiceBuffer = voiceBuffer,
                 freqModBuffer = freqModBuffer,
                 scratchBuffers = ScratchBuffers(blockFrames),

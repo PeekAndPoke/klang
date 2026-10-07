@@ -141,10 +141,7 @@ class VoiceScheduler(
     // Voice factory — creates Voice instances from VoiceData
     private val voiceFactory = VoiceFactory(
         sampleRate = context.sampleRate,
-        sampleRateDouble = context.sampleRateDouble,
         blockFrames = context.blockFrames,
-        ignitorRegistry = ignitorFork,
-        cylinders = options.cylinders,
         voiceBuffer = voiceBuffer,
         freqModBuffer = freqModBuffer,
         scratchBuffers = scratchBuffers,

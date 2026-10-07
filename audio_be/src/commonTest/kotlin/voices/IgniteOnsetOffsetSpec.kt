@@ -53,9 +53,7 @@ class IgniteOnsetOffsetSpec : StringSpec({
         val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", instrument) }
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
-            sampleRate = sampleRate, sampleRateDouble = sampleRate.toDouble(), blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
+            sampleRate = sampleRate, blockFrames = blockFrames,
             voiceBuffer = voiceBuffer, freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )

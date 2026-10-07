@@ -39,9 +39,7 @@ class ZeroLengthWindowSpec : StringSpec({
     "VoiceFactory floors startFrame to a whole sample — the tripwire (ledger O8)" {
         val registry = IgnitorRegistry().apply { registerDefaults() }
         val factory = VoiceFactory(
-            sampleRate = sampleRate, sampleRateDouble = sampleRate.toDouble(), blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
+            sampleRate = sampleRate, blockFrames = blockFrames,
             voiceBuffer = DoubleArray(blockFrames), freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )

@@ -63,10 +63,7 @@ class StripPitchEnvelopeParitySpec : StringSpec({
         val freqModBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
             sampleRate = sampleRate,
-            sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = freqModBuffer,
             scratchBuffers = ScratchBuffers(blockFrames),

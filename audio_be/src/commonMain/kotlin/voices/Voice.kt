@@ -22,10 +22,6 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
 import kotlin.math.ceil
 
-// Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
-// object), causing heap allocation on every operation. Int maps directly to a JS number.
-// At 48kHz with 128-sample blocks, Int overflows after ~12.4 hours — sufficient for any session.
-
 /**
  * A voice in the audio engine.
  *

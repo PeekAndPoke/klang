@@ -11,7 +11,6 @@ package io.peekandpoke.klang.audio_bridge
  */
 data class VoiceData(
     // note, freq
-    // TODO: note can also be numbers -> Midi and detune, f.e. 50.3
     val note: String?,
     val freqHz: Double?,
 

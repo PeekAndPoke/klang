@@ -7,7 +7,6 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
@@ -48,10 +47,7 @@ import kotlin.random.Random
  */
 class VoiceFactory(
     private val sampleRate: Int,
-    private val sampleRateDouble: Double,
     private val blockFrames: Int,
-    private val ignitorRegistry: IgnitorRegistry,
-    private val cylinders: Cylinders,
     private val voiceBuffer: AudioBuffer,
     private val freqModBuffer: DoubleArray,
     private val scratchBuffers: ScratchBuffers,
@@ -123,12 +119,11 @@ class VoiceFactory(
         // the sample playhead, and the render context (IgniteContext.random).
         val voiceRandom = Random(playbackCtx.coreRandom.nextInt())
 
-        // Decision: oscillator vs sample. A name that is not a registered instrument is a sample. `isOsci` asks the
-        // factory's registry and the build asks the playback's; in production both are the scheduler's fork
-        // (`VoiceScheduler`), while a test may hand in two different ones.
+        // Decision: oscillator vs sample. A name that is not a registered instrument is a sample. `isOsci` and the
+        // build ask the same registry, the playback's (in production the scheduler's fork, `VoiceScheduler`).
         val freqHz = data.freqHz
         val sound = data.sound
-        val isOsci = ignitorRegistry.contains(sound)
+        val isOsci = playbackCtx.ignitorRegistry.contains(sound)
         val isSample = !isOsci && sound != null
 
         // Routing
