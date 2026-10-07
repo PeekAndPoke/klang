@@ -9,14 +9,15 @@ package io.peekandpoke.klang.audio_be.voices
  * A voice's time limits, in absolute backend frames (Double, see `RenderClock.cursorFrame`): its onset, its gate
  * end and its end (the gate end plus the release tail).
  *
- * The ONE home of these values (and of a cut's fade window). The [Voice] owns the instance and is its only writer in production
- * (`Voice.releaseGate` moves the gate and the end on a realtime note-off, `Voice.cutOff` sets the fade window); every stage reads it through
+ * The ONE home of these values. The [Voice] owns the instance and is its only writer in production
+ * (`Voice.releaseGate` moves the gate and the end on a realtime note-off); every stage reads it through
  * `BlockContext.limits` on every call and never keeps a copy, so a moved limit reaches every reader at once (the
  * "amendment A1" bug class, a reader of a copy the writer forgot, cannot come back). The ignite stage derives the
  * voice-relative gate the ignitors read (`IgniteContext.gateEndFrame`) from it once per block.
  *
  * Not a limit and deliberately not here: the `accelerate` glide base (`AccelerateRenderer`,
- * `IgniteContext.voiceDurationFrames`), which a note-off must not move.
+ * `IgniteContext.voiceDurationFrames`), which a note-off must not move; and a cut's fade window, which only the
+ * voice reads and which lives with the state that uses it, `Voice.State.Fading` (lifecycle step 5b).
  */
 class VoiceLimits(
     /** The onset. Fixed for the voice's life. */
@@ -33,21 +34,5 @@ class VoiceLimits(
      * [gateEndFrame]; earlier in every real case, see `Voice.endFrame`.
      */
     var endFrame: Double = endFrame
-        internal set
-
-    /**
-     * Where a cut's fade begins (the cutting voice's onset), or +Infinity while the voice is not cut. Written only
-     * by `Voice.cutOff`. The fade does NOT move [endFrame] (`TeardownFadeRenderer` reads that): the voice ends at
-     * [fadeEndFrame] or at its own [endFrame], whichever block comes first.
-     */
-    var fadeStartFrame: Double = Double.POSITIVE_INFINITY
-        internal set
-
-    /**
-     * Where the cut's fade ends ([fadeStartFrame] plus the cut fade), or +Infinity while not cut. The voice is
-     * `Done` from the first block that starts at or after it; the ramp's exact zero lies on the last frame before
-     * it, `ceil(fadeEndFrame) - 1`, which always renders.
-     */
-    var fadeEndFrame: Double = Double.POSITIVE_INFINITY
         internal set
 }

@@ -33,18 +33,30 @@ import kotlin.math.ceil
  * ignite stage renders IS the instrument, envelope and filters included; the voice strip that used to run after
  * it retired in phase 3 step 9.
  *
- * **Lifecycle.** The voice is a state machine ([state], [State]): `Pending` until the block that holds its
- * onset, `Sounding` through the gate, `Releasing` once a block starts at or after the gate end, `Fading` once its
- * cut group cut it ([cutOff]), and `Done` from the first block that starts at or after [endFrame] (or a cut's fade
- * end), or at the end of the release block that completes the cull window of silence ([culled]). [render] advances
- * the state at the start of every block (the time-driven transitions) and then dispatches on it. Events from
- * outside arrive as methods, and the voice decides by its state whether they apply: the note-off
- * ([releaseGate]), the cut ([cutOff]) and the hard kill ([kill], `Done` from any state). `Fading` and `Done` are
- * terminal: nothing leads out of them but `Fading` to `Done` (at the fade end or [endFrame], or killed). The
- * orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes
- * or it is cut ([claimsOrbit]). The state describes a whole block, so a
- * block may still hold frames of the next phase (the gate end, the death frame) that the stages see frame by
- * frame. The plan: `docs/tasks/voice-lifecycle-state-machine.md`.
+ * **Lifecycle.** The voice is a state machine ([state], [State]). [render] advances the state at the start of
+ * every block (the time-driven transitions, [advance]) and then dispatches on it; the cull may end it at the
+ * block's end. Events from outside arrive as methods ([releaseGate], [cutOff], [kill]), and the voice decides by its
+ * state whether they apply. The state describes a whole block, so a block may still hold frames of the next phase
+ * (the gate end, the death frame) that the stages see frame by frame.
+ *
+ * The transitions, states times events. This table is the one list of them; the methods point here.
+ *
+ * | state \ event | block start ([advance]) | block end (the cull) | [releaseGate] | [cutOff], finite onset | [kill] |
+ * |---|---|---|---|---|---|
+ * | **Pending** | **Done** at [endFrame]; else **Sounding** once the block ends after the onset, and **Releasing** in the same call if the block starts at or after the gate end | (renders nothing) | moves the gate and the end, stays Pending | **Done** | **Done** |
+ * | **Sounding** | **Done** at [endFrame]; else **Releasing** once the block starts at or after the gate end | measures until heard, never counts | moves the gate and the end; Releasing from the first block that starts at or after the new gate | **Fading** | **Done** |
+ * | **Releasing** | **Done** at [endFrame] | **Done** ([culled]) at the end of the block that completes the cull window of silence, once heard | ignored | **Fading** | **Done** |
+ * | **Fading** | **Done** at [endFrame] or at the fade end, whichever comes first | no measurement | ignored | ignored | **Done** |
+ * | **Done** | stays Done | (renders nothing; [render] returns false) | ignored | ignored | stays Done |
+ *
+ * "At [endFrame]" (or the fade end) means from the first block that starts at or after it. A note-off moves the
+ * gate only to an earlier frame than the one it has. A [cutOff] with a non-finite onset is **Done** from every
+ * state. `Fading` and `Done` are terminal: nothing leads out of them but `Fading` to `Done`.
+ *
+ * The orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate
+ * closes or it is cut ([claimsOrbit]). The states are a sealed type: `Releasing` carries the cull's silence count
+ * and `Fading` the cut's fade window, each one instance created with the voice, so no transition allocates
+ * ([State]). The plan: `docs/tasks/voice-lifecycle-state-machine.md`.
  */
 class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -129,12 +141,17 @@ class Voice(
     private val send: BlockRenderer = SendRenderer(voice = this)
 
     /**
-     * The lifecycle state (see the class KDoc and [State]). [render] moves it at the start and the end of
-     * a block; the events move it between blocks ([kill] sends it to `Done` at once). `Pending` until the
-     * first block that reaches the onset.
+     * The lifecycle state, `Pending` at construction. [render] moves it at the start and the end of a block, the
+     * events between blocks; every transition: the table in the class KDoc.
      */
     var state: State = State.Pending
         private set
+
+    // The states with data of their own, one instance each, created with the voice. `enter` returns its state, so
+    // a transition is written as one line with its entry, `state = x.enter(...)` (a convention: `state = fading`
+    // alone would still compile). Neither a transition nor a block allocates.
+    private val releasing = State.Releasing()
+    private val fading = State.Fading()
 
     /**
      * True once this voice ended by culling: its release stayed under [VOICE_CULL_FLOOR] for the whole cull
@@ -155,7 +172,7 @@ class Voice(
      * offers.
      */
     fun claimsOrbit(blockStart: Double): Boolean =
-        state == State.Sounding && gateEndFrame > maxOf(blockStart, startFrame)
+        state is State.Sounding && gateEndFrame > maxOf(blockStart, startFrame)
 
     /**
      * True once any block of this voice has been audible (peak at or above [VOICE_CULL_FLOOR]).
@@ -181,9 +198,6 @@ class Voice(
         cull < 0.0 -> -1
         else -> (cull * blockCtx.sampleRateD).toInt()
     }
-
-    /** Consecutive release frames whose output stayed under the floor. Reset by any audible block. */
-    private var silentFrames: Int = 0
 
     // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
     private var _gainMultiplier: Double = 1.0
@@ -211,16 +225,14 @@ class Voice(
      * level 0 (`EnvelopeCore.prepare`): every envelope is 0 on every frame (an amplitude envelope
      * silences the voice), no exception, no error.
      *
-     * The voice decides by its state whether the event applies. It applies to a `Pending` and a
-     * `Sounding` voice; a `Sounding` voice whose gate moves into the past turns `Releasing` at the
-     * start of the next block that starts at or after the new gate. A `Releasing` voice has been
-     * released already, and `Fading` and `Done` are terminal: they ignore it. Through the scheduler
-     * that is what happened before the state existed: such a voice rendered a block that started at
-     * or after its gate, and the scheduler releases at its cursor, which lies after that block's
-     * start, so the natural-gate check below returned (a `Done` voice has left the active list).
+     * Which states take it: the transition table in the class KDoc. A `Releasing` voice ignores it because it
+     * has been released already; through the scheduler that is what happened before the state existed: such a
+     * voice rendered a block that started at or after its gate, and the scheduler releases at its cursor, which
+     * lies after that block's start, so the natural-gate check below returned (a `Done` voice has left the
+     * active list).
      */
     fun releaseGate(atFrame: Double) {
-        if (state != State.Pending && state != State.Sounding) {
+        if (state !is State.Pending && state !is State.Sounding) {
             return
         }
 
@@ -245,8 +257,8 @@ class Voice(
     }
 
     /**
-     * The hard-kill event: the voice is `Done` NOW, from any state, and renders nothing more (no
-     * fade: the caller is a teardown path, `VoiceScheduler.cleanupHard` at the end of the warmup
+     * The hard-kill event: the voice is `Done` NOW (the transition table in the class KDoc) and renders nothing
+     * more (no fade: the caller is a teardown path, `VoiceScheduler.cleanupHard` at the end of the warmup
      * handshake). The scheduler removes `Done` voices; it never ends a voice any other way (the cut
      * is an event too, [cutOff]).
      */
@@ -256,14 +268,14 @@ class Voice(
 
     /**
      * The cut event: a voice of the same cut group begins at [fadeStartFrame] (its onset, absolute frame; it may
-     * fall inside a block). The voice decides by its state:
-     * - `Pending`: silent so far, `Done` at once (the scheduler removes it, keeping the list's order);
-     * - `Sounding` or `Releasing`: `Fading`. It plays on until [fadeStartFrame], then ramps linearly to exact zero
-     *   over [CUT_FADE_SECONDS] (after the instrument tree, before the send, so the orbit sends fade too), and is
-     *   `Done` from the first block that starts at or after the fade end. The fade window lives in [limits]; the
-     *   end frame does not move, so a voice whose own end comes first ends there as usual (its teardown, where it
-     *   has one, stays at its own end and multiplies with the ramp in the overlap; both are continuous);
-     * - `Fading` or `Done`: no-op.
+     * fall inside a block). What it does in each state: the transition table in the class KDoc (a `Pending` voice
+     * is silent so far and ends at once; the scheduler removes it, keeping the list's order).
+     *
+     * A `Fading` voice plays on until [fadeStartFrame], then ramps linearly to exact zero over [CUT_FADE_SECONDS]
+     * (after the instrument tree, before the send, so the orbit sends fade too). The fade window lives in the
+     * `Fading` state ([State.Fading]); the end frame does not move, so a voice whose own end comes first ends there
+     * as usual (its teardown, where it has one, stays at its own end and multiplies with the ramp in the overlap;
+     * both are continuous).
      *
      * A non-finite [fadeStartFrame] cannot place a fade: the voice is `Done` at once, whatever its state (the
      * scheduler already drops a voice with a non-finite start before it can cut; this guards a direct call).
@@ -275,16 +287,21 @@ class Voice(
             return
         }
 
-        when (state) {
-            State.Pending -> state = State.Done
-
-            State.Sounding, State.Releasing -> {
-                limits.fadeStartFrame = fadeStartFrame
-                limits.fadeEndFrame = fadeStartFrame + CUT_FADE_SECONDS * blockCtx.sampleRateD
-                state = State.Fading
+        state = when (state) {
+            is State.Pending -> {
+                State.Done
             }
 
-            State.Fading, State.Done -> Unit
+            is State.Sounding, is State.Releasing -> {
+                fading.enter(
+                    fadeStartFrame = fadeStartFrame,
+                    fadeEndFrame = fadeStartFrame + CUT_FADE_SECONDS * blockCtx.sampleRateD,
+                )
+            }
+
+            is State.Fading, is State.Done -> {
+                state
+            }
         }
     }
 
@@ -301,50 +318,48 @@ class Voice(
     fun render(ctx: RenderContext): Boolean {
         val blockEnd = ctx.blockStart + ctx.blockFrames
 
-        advance(ctx.blockStart, blockEnd)
+        advance(blockStart = ctx.blockStart, blockEnd = blockEnd)
 
         return when (state) {
-            State.Pending -> true
+            is State.Pending -> true
 
-            State.Sounding -> {
-                renderStages(ctx, blockEnd, releasing = false, fading = false)
+            is State.Sounding -> {
+                renderStages(ctx, blockEnd, isReleasing = false, isFading = false)
 
                 true
             }
 
-            State.Releasing -> {
-                renderStages(ctx, blockEnd, releasing = true, fading = false)
+            is State.Releasing -> {
+                renderStages(ctx, blockEnd, isReleasing = true, isFading = false)
 
                 // The cull may have ended it at this block's end.
-                state != State.Done
+                state !is State.Done
             }
 
-            State.Fading -> {
-                renderStages(ctx, blockEnd, releasing = false, fading = true)
+            is State.Fading -> {
+                renderStages(ctx, blockEnd, isReleasing = false, isFading = true)
 
                 true
             }
 
-            State.Done -> false
+            is State.Done -> false
         }
     }
 
     /**
-     * The time-driven transitions, at the start of the block `[blockStart, blockEnd)`: `Done` from the
-     * first block that starts at or after [endFrame] or a cut's fade end (+Infinity unless cut; from every
-     * state), `Sounding`
-     * from the first block that ends after [startFrame], `Releasing` from the first block that starts at
-     * or after [gateEndFrame]. A voice whose onset and gate end fall into one pending block passes
-     * through `Sounding` to `Releasing` in one call. Forward only: no branch leaves `Done`.
+     * The time-driven transitions at the start of the block `[blockStart, blockEnd)`: the "block start" column
+     * of the transition table in the class KDoc. The `Done` check comes first, for every state; a voice whose
+     * onset and gate end fall into one pending block passes through `Sounding` to `Releasing` in one call.
+     * Forward only: no branch leaves `Done`.
      */
     private fun advance(blockStart: Double, blockEnd: Double) {
-        if (blockStart >= endFrame || blockStart >= limits.fadeEndFrame) {
+        if (blockStart >= endFrame || (state is State.Fading && blockStart >= fading.fadeEndFrame)) {
             state = State.Done
 
             return
         }
 
-        if (state == State.Pending) {
+        if (state is State.Pending) {
             if (blockEnd <= startFrame) {
                 return
             }
@@ -352,17 +367,17 @@ class Voice(
             state = State.Sounding
         }
 
-        if (state == State.Sounding && blockStart >= gateEndFrame) {
-            state = State.Releasing
+        if (state is State.Sounding && blockStart >= gateEndFrame) {
+            state = releasing.enter()
         }
     }
 
     /**
      * One block of the pipeline, for a `Sounding`, `Releasing` or `Fading` voice, and the cull measurement
-     * that may end a releasing voice (`Done`, [culled]) at the block's end. A `Fading` voice gets the cut's ramp
-     * between the stages and the send, and no cull measurement.
+     * that may end a releasing voice (`Done`, [culled]) at the block's end (the "block end" column of the
+     * transition table in the class KDoc). A `Fading` voice gets the cut's ramp between the stages and the send.
      */
-    private fun renderStages(ctx: RenderContext, blockEnd: Double, releasing: Boolean, fading: Boolean) {
+    private fun renderStages(ctx: RenderContext, blockEnd: Double, isReleasing: Boolean, isFading: Boolean) {
         val vStart = maxOf(ctx.blockStart, startFrame)
         val vEnd = minOf(blockEnd, endFrame)
         // Relative to this block / this voice — Int, and everything downstream of here is Int.
@@ -379,7 +394,7 @@ class Voice(
         // Silence culling reads the output peak only on a cullable voice, and only while it is
         // needed: until the voice has been heard (the [heard] latch), then in the release. A heard
         // `Sounding` voice pays nothing for the rest of its gate, a `Fading` one nothing at all.
-        val measure = !fading && cullWindowFrames >= 0 && (!heard || releasing)
+        val measure = !isFading && cullWindowFrames >= 0 && (!heard || isReleasing)
         blockCtx.measurePeak = measure
         blockCtx.voiceOutputPeak = 0.0 // never a stale read from the previous block
 
@@ -389,7 +404,7 @@ class Voice(
             renderer.render(blockCtx)
         }
 
-        if (fading) {
+        if (isFading) {
             applyCutFade()
         }
 
@@ -410,16 +425,10 @@ class Voice(
                 heard = true
             }
 
-            if (heard && releasing) {
-                if (silent) {
-                    silentFrames += length
-
-                    if (silentFrames >= cullWindowFrames) {
-                        culled = true
-                        state = State.Done
-                    }
-                } else {
-                    silentFrames = 0
+            if (heard && isReleasing) {
+                if (releasing.countSilence(silent = silent, frames = length, windowFrames = cullWindowFrames)) {
+                    culled = true
+                    state = State.Done
                 }
             }
         }
@@ -427,15 +436,15 @@ class Voice(
 
     /**
      * The cut's ramp on this block's window: gain 1 up to the fade start, then linear to exact zero on the LAST
-     * frame the voice renders, `ceil(fadeEnd) - 1` ([VoiceLimits.fadeEndFrame]; the voice is `Done` from the first
+     * frame the voice renders, `ceil(fadeEnd) - 1` ([State.Fading.fadeEndFrame]; the voice is `Done` from the first
      * block that starts at or after the fade end, so that frame always renders), zero after it. The law of
      * `TeardownFadeRenderer`, whose zero is `floor(endFrame) - 1`: the ramp spans the fade length minus one frame
      * (191 steps at 48 kHz). The clamps absorb a 1-ulp overshoot at the entry frame.
      */
     private fun applyCutFade() {
         val buffer = blockCtx.audioBuffer
-        val fadeStart = limits.fadeStartFrame
-        val zeroFrame = ceil(limits.fadeEndFrame) - 1.0
+        val fadeStart = fading.fadeStartFrame
+        val zeroFrame = ceil(fading.fadeEndFrame) - 1.0
         val scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0)
         // The buffer index at which the gain reaches zero (frame = blockStart + index).
         val zeroIdx = zeroFrame - blockCtx.blockStart
@@ -454,31 +463,89 @@ class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
 
     /**
-     * A voice's lifecycle state (a closed, param-less set: an enum, no allocation per block). Who moves it
-     * and when: the class KDoc and `docs/tasks/voice-lifecycle-state-machine.md`.
+     * A voice's lifecycle state, a sealed type (`docs/plans/effect-state-machines.md` §1, the maintainer's rule
+     * of 2026-10-07): a state without data of its own is a `data object`; a state with data only it may see is a
+     * class whose one instance is created with the voice; its `enter(...)` sets the state's data and returns the
+     * state, and a transition is the one line `state = x.enter(...)`, so neither a transition nor a block
+     * allocates. [render] dispatches with an exhaustive `when`. What stays on the voice because more than one
+     * state reads it: the [heard] latch (`Sounding` and `Releasing`), the cull window, [culled] (the scheduler) and
+     * the time limits ([VoiceLimits], the stages). Every transition: the table in the class KDoc.
      */
-    enum class State {
+    sealed class State {
         /** No block has reached the onset yet: [render] renders nothing and keeps the voice. */
-        Pending,
+        data object Pending : State()
 
         /** The gate holds: the pipeline runs; the cull measures only until the voice has been heard. */
-        Sounding,
-
-        /** The block starts at or after the gate end: the pipeline runs and the cull measures. */
-        Releasing,
+        data object Sounding : State()
 
         /**
-         * Cut by its group (terminal, [cutOff]): the pipeline runs with the cut's ramp before the send, no cull
-         * measurement, a note-off is ignored; `Done` at the fade end (or at [endFrame], if that comes first).
+         * The block starts at or after the gate end: the pipeline runs and the cull measures. Carries the cull's
+         * count of consecutive silent release frames, which no other state reads.
          */
-        Fading,
+        class Releasing internal constructor() : State() {
+            /** Consecutive release frames whose output stayed under the floor. Reset by any audible block. */
+            private var silentFrames: Int = 0
 
+            /** Entered once, from `Sounding`: the count starts at zero. Returns this state, for `state = ...`. */
+            internal fun enter(): Releasing {
+                silentFrames = 0
+
+                return this
+            }
+
+            /**
+             * Counts one release block of [frames] frames: a [silent] block adds them, an audible one resets the
+             * count. True once the count reaches [windowFrames], the cull window (the voice then ends, [culled]).
+             */
+            internal fun countSilence(silent: Boolean, frames: Int, windowFrames: Int): Boolean {
+                if (!silent) {
+                    silentFrames = 0
+
+                    return false
+                }
+
+                silentFrames += frames
+
+                return silentFrames >= windowFrames
+            }
+        }
 
         /**
-         * At or past [endFrame] or a cut's fade end, culled ([culled]), or killed (terminal): [render] returns false
-         * and the scheduler removes it.
+         * Cut by its group (terminal, [cutOff]): the pipeline runs with the cut's ramp before the send, and no cull
+         * measurement. Carries the fade window, which the voice reads only while in this state (`internal`, because
+         * an outer class cannot read a nested class's private members; the specs read it too).
          */
-        Done,
+        class Fading internal constructor() : State() {
+            /** Where the cut's fade begins (the cutting voice's onset, absolute frame; it may fall inside a block). */
+            internal var fadeStartFrame: Double = Double.POSITIVE_INFINITY
+                private set
+
+            /**
+             * Where the fade ends ([fadeStartFrame] plus the cut fade). The voice is `Done` from the first block that
+             * starts at or after it; the ramp's exact zero lies on the last frame before it, `ceil(fadeEndFrame) - 1`,
+             * which always renders. It does NOT move the voice's end frame (`TeardownFadeRenderer` reads that): the
+             * voice ends here or at its own end, whichever block comes first.
+             */
+            internal var fadeEndFrame: Double = Double.POSITIVE_INFINITY
+                private set
+
+            /**
+             * Entered once, by the cut ([cutOff]); `Fading` is terminal, so a second cut never re-enters it. Returns
+             * this state, for `state = ...`.
+             */
+            internal fun enter(fadeStartFrame: Double, fadeEndFrame: Double): Fading {
+                this.fadeStartFrame = fadeStartFrame
+                this.fadeEndFrame = fadeEndFrame
+
+                return this
+            }
+        }
+
+        /**
+         * Terminal: [render] returns false and the scheduler removes the voice. The ways in: the transition table in
+         * the class KDoc.
+         */
+        data object Done : State()
     }
 
     /**

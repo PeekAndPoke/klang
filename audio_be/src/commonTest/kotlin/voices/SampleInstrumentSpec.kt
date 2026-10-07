@@ -9,6 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
@@ -245,7 +246,7 @@ class SampleInstrumentSpec : StringSpec({
         // The tremolo voice's STATE, not only "not culled": a render that ran past its end would also read "not
         // culled", for the wrong reason. Releasing pins that it is still in its release here.
         withClue("engaged: the silent release culls a voice without the tremolo") { plain.culled shouldBe true }
-        withClue("the tree's tremolo marks the voice never-cull") { tremolo.state shouldBe Voice.State.Releasing }
+        withClue("the tree's tremolo marks the voice never-cull") { tremolo.state.shouldBeInstanceOf<Voice.State.Releasing>() }
     }
 
     "a non-finite envelope slot reads as unset: the sample's meta envelope fills it" {

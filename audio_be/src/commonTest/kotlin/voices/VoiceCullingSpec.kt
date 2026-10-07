@@ -171,8 +171,10 @@ class VoiceCullingSpec : StringSpec({
     }
 
     "an audible block inside the release restarts the window" {
-        // Silent from the gate on, one 256-frame burst 2000 frames into the release (inside the
-        // 2400-frame window), silent again: the window must start over after the burst.
+        // Audible in its first block (so the `heard` latch is set and the release counts from the gate end),
+        // silent from there on, one 256-frame burst 2000 frames into the release (inside the 2400-frame window),
+        // silent again: the window must start over after the burst. Without the first block the voice would be
+        // unheard until the burst and the count would start there anyway, reset or not (lifecycle step 5b).
         val burstStart = gateEndFrame.toInt() + 2000
         val burstEnd = burstStart + 256
         val burst = object : Ignitor {
@@ -181,7 +183,7 @@ class VoiceCullingSpec : StringSpec({
 
                 for (i in ctx.offset until end) {
                     val frame = ctx.voiceElapsedFrames + (i - ctx.offset)
-                    buffer[i] = if (frame in burstStart until burstEnd) 1.0 else 0.0
+                    buffer[i] = if (frame < 128 || frame in burstStart until burstEnd) 1.0 else 0.0
                 }
             }
         }

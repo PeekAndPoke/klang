@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
@@ -124,7 +125,7 @@ class OrbitOwnershipSpec : StringSpec({
         newer.cutOff(1024.0)
 
         withClue("the cut block: the fading voice no longer owns") { engaged(block(1024.0, older, newer)) shouldBe true }
-        withClue("still fading") { newer.state shouldBe Voice.State.Fading }
+        withClue("still fading") { newer.state.shouldBeInstanceOf<Voice.State.Fading>() }
         withClue("and on") { engaged(block(1152.0, older, newer)) shouldBe true }
     }
 
@@ -182,7 +183,7 @@ class OrbitOwnershipSpec : StringSpec({
         val tail = voice(start = 0.0, gate = 0.0, end = 4800.0, body = true)
         val c = block(0.0, tail)
 
-        withClue("releasing from its first block") { tail.state shouldBe Voice.State.Releasing }
+        withClue("releasing from its first block") { tail.state.shouldBeInstanceOf<Voice.State.Releasing>() }
         withClue("the orbit is active") { c.isActive shouldBe true }
         withClue("the audio arrived") { (c.mixBuffer.left.maxOf { abs(it) } > 0.1) shouldBe true }
         withClue("but its settings were never applied") { engaged(c) shouldBe false }

@@ -28,16 +28,21 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   built amplitude envelope with a static release (`BuiltIgnitor.endsInEnvelope`). A silent release is culled: the
   voice ends at once (no zombie since lifecycle step 5). All three: `audio/ref/voice-synthesis.md`.
 - **Voice lifecycle** = the state machine `Voice.State` (Pending, Sounding, Releasing, Fading, Done; Fading and
-  Done terminal), advanced per block in `Voice.render`, which dispatches on it (the `Voice` KDoc). A culled voice
+  Done terminal), advanced per block in `Voice.render`, which dispatches on it with an exhaustive `when` (the `Voice`
+  KDoc). A sealed type: the states without data are `data object`s, `Releasing` (the cull's silence count) and
+  `Fading` (the cut's fade window) are classes, one instance each created with the voice; a transition is
+  `state = x.enter(...)`, so none allocates (the rule of `docs/plans/effect-state-machines.md` §1). The one list of
+  the transitions is the table in the `Voice` class KDoc. A culled voice
   is Done at its cull block (`Voice.culled`, a latch for the scheduler's count). Onset, gate end and end live in ONE place,
   `VoiceLimits` (the voice owns and writes it, `releaseGate` included; the stages read it via `BlockContext.limits`;
   the ignite stage derives `IgniteContext.gateEndFrame` from it per block). Events from outside are `Voice` methods
   that decide by the state: the note-off (`releaseGate`, applies to Pending and Sounding) and the hard kill
   (`kill`, Done from any state), and the cut (`cutOff`: a sounding voice turns Fading, a 4 ms linear ramp to exact
-  zero from the cutting voice's onset, before its send, `CUT_FADE_SECONDS`; a silent one is Done at once). The
+  zero from the cutting voice's onset, before its send, `CUT_FADE_SECONDS`, its window held by `Fading`; a silent
+  one is Done at once). The
   scheduler removes only Done voices, always keeping the list's order, by one allocation-free compaction pass,
   `retainInOrder` (`removeDoneVoices` between blocks, and the render loop).
-  Plan and steps: `docs/tasks/voice-lifecycle-state-machine.md` (steps 1 to 5 done).
+  Plan and steps: `docs/tasks/voice-lifecycle-state-machine.md` (steps 1 to 5b done).
 - **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `SendRenderer`); a frontend's
   `velocity` is multiplied into `gain` before the wire. The orbit is the routing.
 - **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
@@ -204,6 +209,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 The voice's states are a sealed type; the fade window lives in `Fading`, the silence count in
+  `Releasing` (lifecycle step 5b, no sound change by design; the 18-song corpus bit-identical to step 5,
+  coordinator, 2026-10-07): `docs/tasks/voice-lifecycle-state-machine.md`
 - 2026-10-07 The newest Sounding voice owns its orbit's bus settings, gives them up at its gate or cut; the zombie
   is retired and every removal keeps the list's order (lifecycle step 5, maintainer, a sound change):
   `docs/tasks/voice-lifecycle-state-machine.md`

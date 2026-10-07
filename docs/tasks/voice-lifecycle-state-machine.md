@@ -1,6 +1,6 @@
 # A voice's lifecycle is one state machine inside the voice
 
-Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07, step 3 done 2026-10-07, step 4 done 2026-10-07, step 5 done 2026-10-07 (awaiting review).
+Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07, step 3 done 2026-10-07, step 4 done 2026-10-07, step 5 done 2026-10-07, step 5b done 2026-10-07 (awaiting review).
 
 ## Why (maintainer, 2026-10-07)
 
@@ -185,7 +185,9 @@ before and after.
 
    **Forward note F2 (step 2 review, 2026-10-07).** The single writer of `VoiceLimits` is a convention, not a
    compiler guarantee: its setters are `internal`, so anything in `audio_be` could write them. Every event, the
-   cut included, writes through a `Voice` method, never from the scheduler.
+   cut included, writes through a `Voice` method, never from the scheduler. The same holds for the states' own
+   data since step 5b: `enter` and `countSilence` are `internal` on the public nested classes `Voice.State.Releasing`
+   and `Voice.State.Fading`, so "single writer" holds by convention within `audio_be`, not by the compiler.
 4. **Cut becomes `Fading`** with the house teardown fade length (4 ms) instead of `iterator.remove()`. The voice
    applies the ramp itself, from a fade-start FRAME (a cut lands mid-block): it cannot rely on
    `TeardownFadeRenderer`, which `VoiceFactory.treeStages` leaves out when the tree ends in its own envelope. A sound change by
@@ -320,7 +322,56 @@ before and after.
      `CylinderFaderThroughZeroSpec`). 10 mutations, all red. Report: `tmp/reviews/vl-step5-report.md`.
 5b. **The states as a sealed type** (decided 2026-10-07, after step 5 lands): `Voice.State` becomes a sealed type,
    `data object`s for the param-less states and a `Fading` class that carries its fade window, so the fade frames
-   live with the state that uses them instead of in `VoiceLimits`. Not started.
+   live with the state that uses them instead of in `VoiceLimits`.
+
+   **What was done (2026-10-07).** `Voice.State` is a `sealed class`. `Pending`, `Sounding` and `Done` carry no
+   data of their own and are `data object`s. `Releasing` and `Fading` are classes, one instance each per voice,
+   created with it (`Voice.releasing`, `Voice.fading`); `enter(...)` sets the state's data and returns the state,
+   so a transition is written as one line with its entry, `state = fading.enter(...)` (a convention: `state =
+   fading` alone would still compile). No
+   transition and no block allocates. The dispatch stays an exhaustive `when` in expression form, now over `is`
+   checks, and every other state check is an `is` check too (`claimsOrbit`, `releaseGate`, the scheduler's
+   `removeDoneVoices`). The transitions are listed in ONE place, a states-by-events table in the `Voice` class
+   KDoc (the house form of `docs/plans/effect-state-machines.md` §1); the methods' KDocs point to it. Why a `when`
+   and not the effects' virtual `process` per state: plan §1, "Which shape fits".
+   - **Moved, because only that state reads it:** the fade window (`fadeStartFrame`, `fadeEndFrame`) from
+     `VoiceLimits` into `Fading` (no stage read it through `BlockContext.limits`; the voice's `advance` and
+     `applyCutFade` were its only readers, `cutOff` its only writer, now `Fading.enter`); the cull's silence count
+     (`silentFrames`) from the voice into `Releasing` (`enter` zeroes it, `countSilence` adds a silent block,
+     resets on an audible one and answers whether the window is complete).
+   - **Kept on the voice, because more than one state or a reader outside reads it:** `heard` (measured and
+     latched in `Sounding` and `Releasing`), the cull window (decides the measurement in both), `culled` (the
+     scheduler's count) and `VoiceLimits` (onset, gate end, end: the stages read them).
+   - **Equivalence.** `advance` ends a voice at the fade end only while `Fading`; before, the window was
+     +Infinity until a cut, and a cut leads only to `Fading` and then `Done`, which `advance` never leaves.
+     `Releasing` is entered exactly once (from `Sounding`), so `enter`'s zero is the zero the field started at.
+   - **Cost:** not measured, by the maintainer's choice ("we can accept a tiny performance hit here").
+   - **Corpus:** the 18-song corpus is bit-identical to step 5 (coordinator, 2026-10-07).
+   - **Proof.** `VoiceLifecycleSpec` and the other specs assert the class states by kind (`shouldBeInstanceOf`)
+     and the data objects by equality, the meaning of every row unchanged; the kill row walks one token of each
+     state (the enum's `entries` before), and its setup is an exhaustive `when` with no `else`, so a new state
+     breaks the spec's compile next to the list. New row: the fade window read from the `Fading` state, set by the
+     first cut, kept by a second (the same instance), the end frame unmoved. `VoiceCullingSpec`'s "an audible
+     block inside the release restarts the window" was toothless for its claim (its voice was unheard until the
+     burst, so nothing counted before it and the reset never mattered); its voice is now audible in its first
+     block. 11 mutations, all red. Report: `tmp/reviews/vl-step5b-report.md`.
+   - **Round 1 (2026-10-07).** The transition table in the class KDoc (B-1); `enter` returns its state (A-1);
+     `Fading`'s window getters `internal` (A-2); the kill row's exhaustive `when` (A-3, B-5); plan §1 "Which shape
+     fits" and §2 rule 2 pointing to §1 (B-2, B-3); F2's clause on the states' `internal` mutators (B-8); named
+     `advance` arguments and `cutOff`'s `when` as an expression (B-7). B-4 (the state objects instead of two
+     Booleans for `renderStages`) not taken: nullable payloads add null checks and shadow the voice's `releasing`
+     and `fading` fields, not clearly plainer. 7 more mutations: 5 red, one equivalent (`Releasing.enter` returning
+     a fresh instance: its count starts at the same zero), and the tripwire proven at compile time (a sixth state
+     handled in `Voice` breaks only the spec, at the kill row's `when`).
+   - **Round 2 (2026-10-07).** The table cell "Releasing, cut: Fading" had no guard anywhere in `audio_be` (every
+     cut row cut a `Sounding` voice; a gap since step 4): new row "a cut on a Releasing voice fades it like a
+     sounding one", red under the mutant that moves `Releasing` into `cutOff`'s no-op arm. `Fading`'s KDoc gives
+     the real reason for `internal` (the voice reads the window); plan §2 says a data-less state that needs its
+     owner stays an `inner class` in the inner-class template; "returns the state" is worded as a convention.
+   - **Round 3 (2026-10-07), clean; three table cells pinned.** A cut after a kill is ignored (the kill row, every
+     state); a non-finite cut ends a `Pending`, `Sounding`, `Releasing` and `Fading` voice; a note-off at or after the
+     natural gate changes nothing (`Sounding` and the scheduler's `Pending` floor case; the check predates 5b). Each
+     guard red under its mutant.
 6. **Then, as their own tasks:** `takeover` (the `Fading` event with its own time) and `glide` (a value the new
    voice gets at its onset), `docs/tasks/voice-takeover.md`. **Precondition (maintainer, 2026-10-07):** the
    cut-group semantics (`cut(0)`, a group's reach) are revisited BEFORE takeover starts; the maintainer finds

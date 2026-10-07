@@ -9,6 +9,8 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
@@ -95,7 +97,7 @@ class VoiceLifecycleSpec : StringSpec({
         block(onBoundary, 1920.0)
         withClue("the last block of the gate") { onBoundary.state shouldBe State.Sounding }
         block(onBoundary, 2048.0)
-        withClue("the block that starts ON the gate end") { onBoundary.state shouldBe State.Releasing }
+        withClue("the block that starts ON the gate end") { onBoundary.state.shouldBeInstanceOf<State.Releasing>() }
         withClue("a releasing voice renders") { ctx.voiceBuffer[0] shouldBe 1.0 }
 
         // Gate inside a block: the block holding it is still Sounding, the next one is Releasing.
@@ -105,7 +107,7 @@ class VoiceLifecycleSpec : StringSpec({
         block(inside, 2048.0)
         withClue("the block [2048, 2176) holds the gate end: sounding") { inside.state shouldBe State.Sounding }
         block(inside, 2176.0)
-        withClue("the next block") { inside.state shouldBe State.Releasing }
+        withClue("the next block") { inside.state.shouldBeInstanceOf<State.Releasing>() }
     }
 
     "Done from the first block that starts at or after endFrame, the block before it renders its frames" {
@@ -114,7 +116,7 @@ class VoiceLifecycleSpec : StringSpec({
         block(v, 0.0)
         block(v, 1024.0)
         block(v, 2048.0) shouldBe true
-        withClue("the block [2048, 2176) holds the end: releasing") { v.state shouldBe State.Releasing }
+        withClue("the block [2048, 2176) holds the end: releasing") { v.state.shouldBeInstanceOf<State.Releasing>() }
         withClue("its frames up to the end render") { ctx.voiceBuffer[51] shouldBe 1.0 }
         withClue("past the end nothing renders") { ctx.voiceBuffer[52] shouldBe sentinel }
 
@@ -137,9 +139,9 @@ class VoiceLifecycleSpec : StringSpec({
         }
 
         block(v, 1280.0)
-        withClue("first silent release block") { v.state shouldBe State.Releasing }
+        withClue("first silent release block") { v.state.shouldBeInstanceOf<State.Releasing>() }
         block(v, 1408.0)
-        withClue("second silent release block, 256 of 384 frames") { v.state shouldBe State.Releasing }
+        withClue("second silent release block, 256 of 384 frames") { v.state.shouldBeInstanceOf<State.Releasing>() }
         withClue("the third silent release block completes the window: render ends the voice") { block(v, 1536.0) shouldBe false }
         withClue("Done") { v.state shouldBe State.Done }
         withClue("culled, not expired") { v.culled shouldBe true }
@@ -182,7 +184,7 @@ class VoiceLifecycleSpec : StringSpec({
         val v = voice(start = 0.0, gate = 128.0, end = 8192.0)
 
         block(v, 256.0) shouldBe true
-        v.state shouldBe State.Releasing
+        v.state.shouldBeInstanceOf<State.Releasing>()
         withClue("and it renders") { ctx.voiceBuffer[0] shouldBe 1.0 }
     }
 
@@ -200,7 +202,7 @@ class VoiceLifecycleSpec : StringSpec({
         withClue("the state moves with the next block, not with the call") { v.state shouldBe State.Sounding }
 
         block(v, 256.0)
-        v.state shouldBe State.Releasing
+        v.state.shouldBeInstanceOf<State.Releasing>()
 
         // A note-off inside a block: that block is still sounding.
         val w = voice(start = 0.0, gate = 1_000_000.0, end = 1_004_800.0)
@@ -210,40 +212,49 @@ class VoiceLifecycleSpec : StringSpec({
         block(w, 128.0)
         withClue("the block [128, 256) holds the new gate end") { w.state shouldBe State.Sounding }
         block(w, 256.0)
-        w.state shouldBe State.Releasing
+        w.state.shouldBeInstanceOf<State.Releasing>()
         withClue("still rendering") { ctx.voiceBuffer[0] shouldNotBe sentinel }
     }
 
     "a hard kill ends a voice in Done from every state, and nothing renders after it" {
-        /** A voice rendered block by block from frame 0 until it is in [target]. */
+        /** A voice rendered block by block from frame 0 until its state is of the kind of [target]. */
         fun inState(target: State): Pair<Voice, Double> {
+            // Exhaustive, no `else`: a new state fails to compile here, next to the list below.
             val v = when (target) {
-                State.Pending -> voice(start = 1024.0, gate = 4096.0, end = 8192.0)
-                else -> voice(start = 0.0, gate = 1024.0, end = 4096.0)
+                is State.Pending -> voice(start = 1024.0, gate = 4096.0, end = 8192.0)
+                is State.Sounding, is State.Releasing, is State.Fading, is State.Done -> voice(start = 0.0, gate = 1024.0, end = 4096.0)
             }
             var start = 0.0
 
             block(v, start)
 
-            if (target == State.Fading) {
+            if (target is State.Fading) {
                 v.cutOff(blockFrames.toDouble())
             }
 
-            while (v.state != target) {
+            while (v.state::class != target::class) {
                 start += blockFrames
-                withClue("reaching $target") { (start < 8192.0) shouldBe true }
+                withClue("reaching ${target::class.simpleName}") { (start < 8192.0) shouldBe true }
                 block(v, start)
             }
 
             return v to start + blockFrames
         }
 
-        for (from in State.entries) {
-            val (v, next) = inState(from)
+        // One token of every state (the enum's `entries` until step 5b); `inState`'s `when` breaks the compile
+        // when a state is added, so it lands here too.
+        val everyState: List<State> = listOf(State.Pending, State.Sounding, State.Releasing(), State.Fading(), State.Done)
+
+        for (kind in everyState) {
+            val from = kind::class.simpleName
+            val (v, next) = inState(kind)
             val endBefore = v.endFrame
 
             v.kill()
             withClue("$from: killed") { v.state shouldBe State.Done }
+
+            v.cutOff(next)
+            withClue("$from: a cut after the kill is ignored") { v.state shouldBe State.Done }
 
             withClue("$from: the next render ends it") { block(v, next) shouldBe false }
             withClue("$from: and renders nothing") { untouched() shouldBe true }
@@ -265,7 +276,7 @@ class VoiceLifecycleSpec : StringSpec({
         block(pending, 1024.0)
         withClue("Pending: sounds at its onset") { pending.state shouldBe State.Sounding }
         block(pending, 2048.0)
-        withClue("Pending: releases at the moved gate") { pending.state shouldBe State.Releasing }
+        withClue("Pending: releases at the moved gate") { pending.state.shouldBeInstanceOf<State.Releasing>() }
 
         // Sounding: the gate and the end move, Releasing from the next block.
         val sounding = voice(start = 0.0, gate = 1_000_000.0, end = 1_004_800.0)
@@ -274,14 +285,30 @@ class VoiceLifecycleSpec : StringSpec({
         sounding.releaseGate(128.0)
         withClue("Sounding: the end moves") { sounding.endFrame shouldBe 128.0 + 4800.0 }
         block(sounding, 128.0)
-        withClue("Sounding: releases") { sounding.state shouldBe State.Releasing }
+        withClue("Sounding: releases") { sounding.state.shouldBeInstanceOf<State.Releasing>() }
+
+        // A note-off moves the gate only to an earlier frame: one at or after the natural gate changes nothing.
+        val lateOnSounding = voice(start = 0.0, gate = 1024.0, end = 5824.0)
+
+        block(lateOnSounding, 0.0)
+        lateOnSounding.releaseGate(2048.0)
+        withClue("Sounding, a note-off after the natural gate: the end stays") { lateOnSounding.endFrame shouldBe 5824.0 }
+        block(lateOnSounding, 128.0)
+        withClue("Sounding, a note-off after the natural gate: still sounding") { lateOnSounding.state shouldBe State.Sounding }
+
+        // The scheduler's floor case: a short tap whose gate ends before onset + one block.
+        val lateOnPending = voice(start = 1024.0, gate = 1100.0, end = 5900.0)
+
+        block(lateOnPending, 0.0)
+        lateOnPending.releaseGate(1152.0)
+        withClue("Pending, a note-off after the natural gate: the end stays") { lateOnPending.endFrame shouldBe 5900.0 }
 
         // Releasing: already released. Called directly with a frame before its gate it would move the end.
         val releasing = voice(start = 0.0, gate = 1024.0, end = 5824.0)
 
         block(releasing, 0.0)
         block(releasing, 1024.0)
-        withClue("Releasing: in its release") { releasing.state shouldBe State.Releasing }
+        withClue("Releasing: in its release") { releasing.state.shouldBeInstanceOf<State.Releasing>() }
         releasing.releaseGate(512.0)
         withClue("Releasing: ignored, the end stays") { releasing.endFrame shouldBe 5824.0 }
 
@@ -323,11 +350,11 @@ class VoiceLifecycleSpec : StringSpec({
     "a cut fades a sounding voice from the cutting onset, mid-block too, to exact zero, then Done" {
         val v = cutVoice()
 
-        withClue("Fading at once") { v.state shouldBe State.Fading }
+        withClue("Fading at once") { v.state.shouldBeInstanceOf<State.Fading>() }
 
         for (start in listOf(128.0, 256.0, 384.0)) {
             withClue("block $start renders") { block(v, start) shouldBe true }
-            withClue("block $start: fading") { v.state shouldBe State.Fading }
+            withClue("block $start: fading") { v.state.shouldBeInstanceOf<State.Fading>() }
 
             for (i in 0 until blockFrames) {
                 val f = start.toInt() + i
@@ -362,14 +389,24 @@ class VoiceLifecycleSpec : StringSpec({
         withClue("Done at the block that starts on the fade end") { block(v, 256.0) shouldBe false }
     }
 
-    "a cut with a non-finite fade start ends the voice at once" {
-        for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY)) {
-            val v = voice(start = 0.0, gate = 1_000_000.0, end = 1_004_800.0)
+    "a cut with a non-finite fade start ends the voice at once, from every state" {
+        /** A voice in the named state, and the start of the next block it would render. */
+        fun inState(kind: String): Pair<Voice, Double> = when (kind) {
+            "Pending" -> voice(start = 1024.0, gate = 4096.0, end = 8192.0).also { block(it, 0.0) } to 128.0
+            "Sounding" -> voice(start = 0.0, gate = 1_000_000.0, end = 1_004_800.0).also { block(it, 0.0) } to 128.0
+            "Releasing" -> voice(start = 0.0, gate = 128.0, end = 1_004_800.0).also { block(it, 0.0) }.also { block(it, 128.0) } to 256.0
+            else -> cutVoice() to 128.0
+        }
 
-            block(v, 0.0)
-            v.cutOff(bad)
-            withClue("$bad: Done, no NaN fade") { v.state shouldBe State.Done }
-            withClue("$bad: renders nothing") { block(v, 128.0) shouldBe false }
+        for (kind in listOf("Pending", "Sounding", "Releasing", "Fading")) {
+            for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY)) {
+                val (v, next) = inState(kind)
+
+                withClue("$kind: the setup reaches it") { v.state::class.simpleName shouldBe kind }
+                v.cutOff(bad)
+                withClue("$kind, $bad: Done, no NaN fade") { v.state shouldBe State.Done }
+                withClue("$kind, $bad: renders nothing") { block(v, next) shouldBe false }
+            }
         }
     }
 
@@ -429,12 +466,39 @@ class VoiceLifecycleSpec : StringSpec({
         withClue("Pending: renders nothing") { untouched() shouldBe true }
     }
 
+    "a cut on a Releasing voice fades it like a sounding one" {
+        // The choke case: an open hat whose gate has closed and whose release still rings when the closed hat of
+        // its group starts. Constant 1.0, no envelope, never culled, so the release renders 1.0 until the cut. Block 128
+        // turns it Releasing and renders again after the cut, since it holds the cutting onset (the source is stateless).
+        val v = voice(start = 0.0, gate = 128.0, end = 1_004_800.0)
+
+        block(v, 0.0)
+        block(v, 128.0)
+        withClue("in its release") { v.state.shouldBeInstanceOf<State.Releasing>() }
+
+        v.cutOff(cutAt)
+        withClue("Fading at once") { v.state.shouldBeInstanceOf<State.Fading>() }
+
+        for (start in listOf(128.0, 256.0, 384.0)) {
+            withClue("block $start renders") { block(v, start) shouldBe true }
+
+            for (i in 0 until blockFrames) {
+                val f = start.toInt() + i
+
+                withClue("frame $f: the cut's ramp, bit for bit") { ctx.voiceBuffer[i].toRawBits() shouldBe cutGain(f, start).toRawBits() }
+            }
+        }
+
+        withClue("Done from the first block that starts at or after the fade end") { block(v, 512.0) shouldBe false }
+        v.state shouldBe State.Done
+    }
+
     "a second cut on a Fading voice changes nothing" {
         val once = cutVoice()
         val twice = cutVoice()
 
         twice.cutOff(300.0)
-        withClue("still fading") { twice.state shouldBe State.Fading }
+        withClue("still fading") { twice.state.shouldBeInstanceOf<State.Fading>() }
 
         for (start in listOf(128.0, 256.0, 384.0)) {
             block(once, start)
@@ -449,12 +513,32 @@ class VoiceLifecycleSpec : StringSpec({
         }
     }
 
+    "the fade window lives with the Fading state: set by the first cut, kept by a second, the end frame unmoved" {
+        // Lifecycle step 5b: the window moved from the voice's limits into the state that alone reads it.
+        val v = cutVoice()
+        val fadingState = v.state.shouldBeInstanceOf<State.Fading>()
+
+        withClue("the fade starts at the cutting onset") { fadingState.fadeStartFrame shouldBe cutAt }
+        withClue("and ends 192 frames (4 ms at 48 kHz) later") { fadingState.fadeEndFrame shouldBe fadeEnd }
+        withClue("the end frame does not move") { v.endFrame shouldBe 1_004_800.0 }
+
+        v.cutOff(300.0)
+        withClue("a second cut: the same state instance") { v.state shouldBeSameInstanceAs fadingState }
+        withClue("a second cut: the window kept") {
+            fadingState.fadeStartFrame shouldBe cutAt
+            fadingState.fadeEndFrame shouldBe fadeEnd
+        }
+
+        block(v, 128.0)
+        withClue("a rendered block keeps the same instance") { v.state shouldBeSameInstanceAs fadingState }
+    }
+
     "a note-off during Fading is ignored" {
         val v = cutVoice()
 
         v.releaseGate(256.0)
         withClue("the end stays") { v.endFrame shouldBe 1_004_800.0 }
-        withClue("still fading") { v.state shouldBe State.Fading }
+        withClue("still fading") { v.state.shouldBeInstanceOf<State.Fading>() }
         block(v, 256.0)
         withClue("the ramp goes on: frame 300 is on it") { (abs(ctx.voiceBuffer[300 - 256] - (zeroAt - 300) / 191.0) < 1e-12) shouldBe true }
     }
@@ -474,7 +558,7 @@ class VoiceLifecycleSpec : StringSpec({
         for (start in listOf(0.0, 128.0, 256.0, 384.0, 512.0, 640.0, 768.0, 896.0, 1024.0)) {
             if (start == 896.0) {
                 cut.cutOff(1000.0)
-                withClue("fading") { cut.state shouldBe State.Fading }
+                withClue("fading") { cut.state.shouldBeInstanceOf<State.Fading>() }
             }
 
             block(reference, start)
@@ -569,7 +653,7 @@ class VoiceLifecycleSpec : StringSpec({
             }
 
             withClue("block $start: alive alike") { relAlive shouldBe refAlive }
-            withClue("block $start: same state") { released.state shouldBe reference.state }
+            withClue("block $start: same state") { released.state::class shouldBe reference.state::class }
 
             for (i in 0 until blockFrames) {
                 withClue("frame ${start + i}") { relCtx.voiceBuffer[i].toRawBits() shouldBe refCtx.voiceBuffer[i].toRawBits() }

@@ -284,7 +284,7 @@ class VoiceScheduler(
      * no other voice is `Done`.
      */
     private fun removeDoneVoices() {
-        active.retainInOrder { it.voice.state != Voice.State.Done }
+        active.retainInOrder { it.voice.state !is Voice.State.Done }
     }
 
     fun clearScheduled(playbackId: String) {
