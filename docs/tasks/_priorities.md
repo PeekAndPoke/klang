@@ -146,8 +146,9 @@ The release-defining set, regardless of when they're sequenced:
     - **NICE, a naming decision:** [`future/tremolo-rate-naming-parity.md`](future/tremolo-rate-naming-parity.md)
       (sprudel's `sync` against the Ignitor's `rate`).
     - **NICE, parked:** [`future/svf-resonator-class-collapse.md`](future/svf-resonator-class-collapse.md) (dead
-      sweep code in `BaseSvf`/`SvfBPF`), [`future/pitch-pipeline-into-the-tree.md`](future/pitch-pipeline-into-the-tree.md)
-      (vibrato, accelerate, `penv`, `fm` still outside the tree).
+      sweep code in `BaseSvf`/`SvfBPF`). **Promoted to V1, high priority, 2026-10-07:**
+      [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md) (vibrato, accelerate, `penv`, `fm` still
+      outside the tree; `_v1-scope.md` Layer 2).
     - Existing homes: [`future/envelope-shape-followups.md`](future/envelope-shape-followups.md) sections 4 to 6 (FM
       curves, a per-curve bend, the in-block corner), [`future/one-chain-host.md`](future/one-chain-host.md),
       [`future/onepole-highpass-door.md`](future/onepole-highpass-door.md),

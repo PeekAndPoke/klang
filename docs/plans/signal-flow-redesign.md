@@ -187,7 +187,7 @@ Ignitor.register("supersaw", Ignitor.supersaw().classic())
   writes the frequency modulation buffer as today and is untouched by this plan, **so its wire
   fields STAY** (`vibrato`, `vibratoMod`, `accelerate`, `pAttack` to `pSustain` (`pAnchor` renamed in step 5b c1), `fmh` to `fmEnv`):
   section 4's minimum gains a pitch row for phase 3, and moving that pipeline into the tree is its
-  own later item (`../tasks/future/pitch-pipeline-into-the-tree.md`). Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
+  own later item (`../tasks/pitch-pipeline-into-the-tree.md`). Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
   `BlockContext.freqModBuffer`, the ignitor reads it as `phaseMod`, and the tree's own pitch mods
   compose with it on every Der Schmetterling voice today.
 - **The order `classic()` must have** is today's strip order with the canonical filter sub-order of
