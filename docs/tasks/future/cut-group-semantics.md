@@ -1,6 +1,8 @@
 # Cut / choke groups: what `cut(0)` means, and what else was never decided
 
-Status: **future / needs a design round.** Not a bug fix — the feature has never been used in a
+Status: **to be decided before takeover starts** (maintainer, 2026-10-07: `cut(0)` is "not ideal" and the
+semantics are unclear on the user side; a precondition of step 6 of `docs/tasks/voice-lifecycle-state-machine.md`).
+Needs a design round. Not a bug fix: the feature has never been used in a
 shipped song, so nothing is broken for anyone today, and the question is what it *should* do rather
 than what it does. Raised by audit finding
 [F19](../../audio-audit/FINDINGS.md#f19) on 2026-08-31 and deliberately not settled on the fly.

@@ -74,7 +74,7 @@ internal class CylinderSwapRig(val sampleRate: Int = 44100) {
         beforeEffects: () -> Unit = {},
     ): DoubleArray {
         if (owned) {
-            cylinder.updateFromVoice(voice, blockStart)
+            cylinder.offerAndCommit(voice, blockStart)
         }
 
         val left = cylinder.mixBuffer.left

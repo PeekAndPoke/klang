@@ -22,7 +22,7 @@ The chain is complete from DSL to DSP:
 |-------|------|---------|
 | DSL — `duck()` / `duck(depth = ...)` / `duck(attack = ...)` | `sprudel/lang_dynamics_orbit.kt` | ✅ `LangDuckingSpec` |
 | wire | `VoiceData.ducking` → `Voice.Ducking(cylinderId, attackSeconds, depth)` | — |
-| **per-voice → per-orbit join** | `KatalystChainBuilder.applyDuck` configures the chain's `KatalystDuckEffect` from whichever voice owns the orbit's lease | ❌ **nothing** |
+| **per-voice → per-orbit join** | `KatalystChainBuilder.applyDuck` configures the chain's `KatalystDuckEffect` from whichever voice owns the orbit (the newest `Sounding` voice, committed once per block) | ❌ **nothing** |
 | **cross-orbit sidechain resolution** | `Cylinders.kt:87-89`, step 2 of `processAndMix`, after every cylinder has rendered | ❌ **nothing** |
 | bus effect | `KatalystDuckEffect` | ✅ `KatalystDuckEffectSpec` |
 | DSP | `effects/Ducking.kt` | ✅ `DuckingSpec` |

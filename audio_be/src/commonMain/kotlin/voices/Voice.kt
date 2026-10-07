@@ -34,21 +34,22 @@ import kotlin.math.ceil
  * it retired in phase 3 step 9.
  *
  * **Lifecycle.** The voice is a state machine ([state], [State]): `Pending` until the block that holds its
- * onset, `Sounding` through the gate, `Releasing` once a block starts at or after the gate end, `Zombie` once the
- * release has stayed silent for the cull window, `Fading` once its cut group cut it ([cutOff]), and `Done` from
- * the first block that starts at or after [endFrame] (or a cut's fade end). [render] advances the state at the start of every block (the time-driven transitions) and then
- * dispatches on it; the cull measurement moves a `Releasing` voice to `Zombie` at the end of a block. Events from
+ * onset, `Sounding` through the gate, `Releasing` once a block starts at or after the gate end, `Fading` once its
+ * cut group cut it ([cutOff]), and `Done` from the first block that starts at or after [endFrame] (or a cut's fade
+ * end), or at the end of the release block that completes the cull window of silence ([culled]). [render] advances
+ * the state at the start of every block (the time-driven transitions) and then dispatches on it. Events from
  * outside arrive as methods, and the voice decides by its state whether they apply: the note-off
- * ([releaseGate]), the cut ([cutOff]) and the hard kill ([kill], `Done` from any state). `Fading`, `Zombie` and
- * `Done` are terminal: nothing leads out of them but `Fading` and `Zombie` to `Done` (at the fade end or
- * [endFrame], cut, or killed). The state describes a whole block, so a
+ * ([releaseGate]), the cut ([cutOff]) and the hard kill ([kill], `Done` from any state). `Fading` and `Done` are
+ * terminal: nothing leads out of them but `Fading` to `Done` (at the fade end or [endFrame], or killed). The
+ * orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes
+ * or it is cut ([claimsOrbit]). The state describes a whole block, so a
  * block may still hold frames of the next phase (the gate end, the death frame) that the stages see frame by
  * frame. The plan: `docs/tasks/voice-lifecycle-state-machine.md`.
  */
 class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Identity — globally-unique, monotonic. Used by per-orbit effect ownership (VoiceLease) to tell voices
-    // apart by value (not by object reference, which a future voice pool could recycle). Defaulted so every
+    // Identity: globally-unique, monotonic. Used by per-orbit effect ownership (`Cylinder.offer`) to order
+    // voices with the same onset (the later-created wins). Defaulted so every
     // constructed voice gets a fresh id. Voice creation is single-threaded (the render thread).
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     val id: Int = nextId(),
@@ -73,9 +74,10 @@ class Voice(
      * the wire map is immutable by contract and the copy would be per voice, for a map only the
      * orbit's owner ever reads.
      *
-     * While this voice holds the orbit's lease, the orbit's chain resolves every `Param` knob
-     * against it (`KatalystChain.applyParams`), so this is the orbit's param state and it dies with
-     * the voice. Null when the pattern wrote no slot, which is the same answer as an empty map: the
+     * While this voice owns the orbit (the newest `Sounding` voice, see [claimsOrbit]), the orbit's
+     * chain resolves every `Param` knob against it (`KatalystChain.applyParams`), so this is the orbit's
+     * param state; the reference is dropped when the voice gives the orbit up, and the orbit keeps the
+     * settings applied last until the next `Sounding` voice claims. Null when the pattern wrote no slot, which is the same answer as an empty map: the
      * chain's authored defaults. Which chain reads which slot of it is one rule with one home, the
      * `katalystParam` door's KDoc in `sprudel/lang/lang_katalyst.kt`: EVERY chain reads it, for every stage
      * it declares, the chain a cylinder is born with included (Katalyst step 5b-1).
@@ -135,22 +137,25 @@ class Voice(
         private set
 
     /**
-     * True while this voice is a [State.Zombie]: its release has stayed under [VOICE_CULL_FLOOR] for
-     * the whole cull window. From then on [render] runs no stage: the zombie only renews its orbit
-     * lease and keeps its slot in the scheduler's active list until its scheduled [endFrame], where
-     * it turns `Done` and expires like any other voice. Staying in the list is the point: the orbit
-     * lease passes to whichever voice renders FIRST after an owner dies, and that order is the active
-     * list, so an early removal would reorder it and hand orbits to different successors (measured
-     * 2026-09-15 on Der Schmetterling: a culled hat changed which of guitar 3 and the bass owned
-     * orbit 3, at -32 dBFS). The zombie's per-block cost is the lease renewal, and as the owner the
-     * bus config re-application that comes with it, exactly what a sounding tail paid; the stages it
-     * skips are the win.
-     *
-     * A read of [state], not a latch: once the zombie is `Done` this is false again. The scheduler's
-     * culled count reads it around one [render] call, and no call turns a voice into a zombie and
-     * `Done` at once (`Done` is decided at the block's start, `Zombie` at its end).
+     * True once this voice ended by culling: its release stayed under [VOICE_CULL_FLOOR] for the whole cull
+     * window, so it turned `Done` at the end of that release block and the scheduler removed it, long before
+     * its scheduled [endFrame] (the rest of the tail would only have produced silence). A latch, set with
+     * that `Done`; the scheduler's culled count reads it. Until lifecycle step 5 a culled voice stayed listed
+     * as a zombie to keep the active list's order (it decided who took an orbit next); since ownership goes by
+     * onset ([claimsOrbit]) and the list keeps its order on every removal, nothing needs it any more.
      */
-    val culled: Boolean get() = state == State.Zombie
+    var culled: Boolean = false
+        private set
+
+    /**
+     * Whether this voice offers itself as the owner of its orbit's bus settings in the block starting at
+     * [blockStart]: `Sounding`, and the gate still open at the voice's first frame in the block. The orbit's bus
+     * settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is
+     * cut (lifecycle step 5, maintainer 2026-10-07; the order is `Cylinder.offer`'s). A zero-length gate never
+     * offers.
+     */
+    fun claimsOrbit(blockStart: Double): Boolean =
+        state == State.Sounding && gateEndFrame > maxOf(blockStart, startFrame)
 
     /**
      * True once any block of this voice has been audible (peak at or above [VOICE_CULL_FLOOR]).
@@ -209,7 +214,7 @@ class Voice(
      * The voice decides by its state whether the event applies. It applies to a `Pending` and a
      * `Sounding` voice; a `Sounding` voice whose gate moves into the past turns `Releasing` at the
      * start of the next block that starts at or after the new gate. A `Releasing` voice has been
-     * released already, and `Fading`, `Zombie` and `Done` are terminal: they ignore it. Through the scheduler
+     * released already, and `Fading` and `Done` are terminal: they ignore it. Through the scheduler
      * that is what happened before the state existed: such a voice rendered a block that started at
      * or after its gate, and the scheduler releases at its cursor, which lies after that block's
      * start, so the natural-gate check below returned (a `Done` voice has left the active list).
@@ -252,7 +257,7 @@ class Voice(
     /**
      * The cut event: a voice of the same cut group begins at [fadeStartFrame] (its onset, absolute frame; it may
      * fall inside a block). The voice decides by its state:
-     * - `Pending` or `Zombie`: silent already, `Done` at once (the scheduler removes it order-preserving);
+     * - `Pending`: silent so far, `Done` at once (the scheduler removes it, keeping the list's order);
      * - `Sounding` or `Releasing`: `Fading`. It plays on until [fadeStartFrame], then ramps linearly to exact zero
      *   over [CUT_FADE_SECONDS] (after the instrument tree, before the send, so the orbit sends fade too), and is
      *   `Done` from the first block that starts at or after the fade end. The fade window lives in [limits]; the
@@ -271,7 +276,7 @@ class Voice(
         }
 
         when (state) {
-            State.Pending, State.Zombie -> state = State.Done
+            State.Pending -> state = State.Done
 
             State.Sounding, State.Releasing -> {
                 limits.fadeStartFrame = fadeStartFrame
@@ -288,8 +293,8 @@ class Voice(
      *
      * Advances the [state] for this block, then dispatches on it: `Pending` renders nothing,
      * `Sounding` and `Releasing` run the BlockRenderer pipeline (Pitch → Ignite → (teardown fade) →
-     * Send), `Fading` runs it with the cut's ramp before the send, `Zombie` only renews the orbit lease,
-     * `Done` returns false.
+     * Send), `Fading` runs it with the cut's ramp before the send, `Done` returns false. A releasing
+     * voice that the cull ends in its block returns false at once.
      *
      * @return true if the voice is still active, false if it has finished (`Done`)
      */
@@ -310,18 +315,12 @@ class Voice(
             State.Releasing -> {
                 renderStages(ctx, blockEnd, releasing = true, fading = false)
 
-                true
+                // The cull may have ended it at this block's end.
+                state != State.Done
             }
 
             State.Fading -> {
                 renderStages(ctx, blockEnd, releasing = false, fading = true)
-
-                true
-            }
-
-            // A zombie renews its orbit lease and nothing else (see [culled]).
-            State.Zombie -> {
-                ctx.cylinders.getOrInit(cylinderId, this, ctx.blockStart)
 
                 true
             }
@@ -333,11 +332,10 @@ class Voice(
     /**
      * The time-driven transitions, at the start of the block `[blockStart, blockEnd)`: `Done` from the
      * first block that starts at or after [endFrame] or a cut's fade end (+Infinity unless cut; from every
-     * state, a zombie included), `Sounding`
+     * state), `Sounding`
      * from the first block that ends after [startFrame], `Releasing` from the first block that starts at
      * or after [gateEndFrame]. A voice whose onset and gate end fall into one pending block passes
-     * through `Sounding` to `Releasing` in one call. Forward only: no branch leaves `Done`, and a `Zombie`
-     * only reaches `Done`.
+     * through `Sounding` to `Releasing` in one call. Forward only: no branch leaves `Done`.
      */
     private fun advance(blockStart: Double, blockEnd: Double) {
         if (blockStart >= endFrame || blockStart >= limits.fadeEndFrame) {
@@ -361,7 +359,7 @@ class Voice(
 
     /**
      * One block of the pipeline, for a `Sounding`, `Releasing` or `Fading` voice, and the cull measurement
-     * that may turn a releasing voice into a `Zombie` at the block's end. A `Fading` voice gets the cut's ramp
+     * that may end a releasing voice (`Done`, [culled]) at the block's end. A `Fading` voice gets the cut's ramp
      * between the stages and the send, and no cull measurement.
      */
     private fun renderStages(ctx: RenderContext, blockEnd: Double, releasing: Boolean, fading: Boolean) {
@@ -401,8 +399,7 @@ class Voice(
         // Only in the release: the gate is the held part of the note, and a note may be silent
         // there on purpose (a slow attack, a gated tremolo, sparse crackle). The release has been
         // told to stop; once its output has stayed under the floor for the window, the rest of
-        // the scheduled tail is work that produces nothing: the voice turns into a zombie (see
-        // [culled]). Reverb and delay tails live on the cylinder buses and keep ringing; only
+        // the scheduled tail is work that produces nothing: the voice ends here (see [culled]). Reverb and delay tails live on the cylinder buses and keep ringing; only
         // future ~zero sends are removed. A release that goes silent and comes back (a gated
         // tremolo: excluded by the factory; a sparse source inside an ignitor: `noCull()`) is the
         // author's call. A voice that has not sounded yet is not silent, it is late (see [heard]).
@@ -418,7 +415,8 @@ class Voice(
                     silentFrames += length
 
                     if (silentFrames >= cullWindowFrames) {
-                        state = State.Zombie
+                        culled = true
+                        state = State.Done
                     }
                 } else {
                     silentFrames = 0
@@ -475,10 +473,11 @@ class Voice(
          */
         Fading,
 
-        /** Culled (terminal): renders nothing, renews its orbit lease until [endFrame] (see [culled]). */
-        Zombie,
 
-        /** At or past [endFrame], or killed (terminal): [render] returns false and the scheduler removes it. */
+        /**
+         * At or past [endFrame] or a cut's fade end, culled ([culled]), or killed (terminal): [render] returns false
+         * and the scheduler removes it.
+         */
         Done,
     }
 
@@ -579,9 +578,9 @@ class Voice(
     companion object {
         // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain
         // counter is enough. Wrap-safe (audit leftovers §3): after 2^31 ids it turns negative and an id repeats
-        // only after 2^32. The one reader, `VoiceLease`, compares ids for EQUALITY between voices co-active on
-        // one orbit and has no sentinel id (`VoiceLeaseSpec` pins an owner with id -1), so neither a negative id
-        // nor a repeat 2^32 voices later can be mistaken for a live owner.
+        // only after 2^32. The one reader, `Cylinder.offer`, compares ids only between voices of the same onset
+        // on one orbit, to order them; across the one wrap (2^31 voices, about a year of dense playing) one tie
+        // would go the other way, inaudibly.
         private var idCounter: Int = 0
         private fun nextId(): Int = idCounter++
     }

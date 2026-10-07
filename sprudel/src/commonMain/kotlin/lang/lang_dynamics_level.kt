@@ -187,7 +187,7 @@ private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *
  * **Per VOICE, which is what makes it touch at all**: every note carries its own value, so
  * `"1 0.6 1 0.4"` is four different notes. The orbit's own knobs (`katp`, the bus doors) are per
- * ORBIT and belong to the first voice that sounds there, so they cannot articulate a line.
+ * ORBIT: the newest note that is still held (not its release tail) sets the orbit's effects, so they cannot articulate a line.
  *
  * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
  *

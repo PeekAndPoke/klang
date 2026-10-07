@@ -120,12 +120,14 @@ Each site now carries its argument in a comment, checked on the code:
 - `Cylinder.silentBlockCount` counts cleanup visits; once it reaches the grace every path leaves it at most the grace
   (reset on a tail, held at the grace while a voice plays, reset on deactivation), so an orbit silent forever, a muted
   one with notes included, never counts past it.
-- `Voice.idCounter` turns negative after 2^31 ids and repeats only after 2^32. Its one reader, `VoiceLease`, compares
-  ids for equality between voices co-active on one orbit and has no sentinel id (`VoiceLeaseSpec` already pins an
-  owner with id -1), so neither a negative id nor a repeat can pass for a live owner.
+- `Voice.idCounter` turns negative after 2^31 ids and repeats only after 2^32. Its one reader is the ownership
+  tie-break (`Cylinder.isNewer`, voice lifecycle step 5, 2026-10-07): of two offers with the SAME onset, the higher id
+  owns the orbit. A wrap can mis-order only such a tie between two voices created on either side of the wrap, and
+  then the older of the two owns until one of them gives the orbit up; there is no sentinel id. (Until step 5 the
+  reader was `VoiceLease`, which compared ids for equality only.)
 
-No spec was seeded: three counters are bounded by construction and the fourth is equality-only, so a spec near
-`Int.MAX_VALUE` would need a test hook into a private counter to restate the comment.
+No spec was seeded: three counters are bounded by construction and the fourth can at most mis-order one same-onset
+tie at the wrap, so a spec near `Int.MAX_VALUE` would need a test hook into a private counter to restate the comment.
 
 ### §5: the wasm stub (done)
 
@@ -198,7 +200,8 @@ What running `TeardownFadeRenderer` there would change:
   Negligible.
 - What else moves: a voice that stays in `active` longer keeps renewing its orbit lease, so for those blocks it can
   stay the orbit's owner (the zombie guardrail in `audio/MEMORY.md`: when a voice leaves `active` decides who owns the
-  orbit's bus settings). On an orbit shared with other voices the mix can change; on a hat's own orbit it does not.
+  orbit's bus settings). On an orbit shared with other voices the mix can change; on a hat's own orbit it does not. (Superseded by
+  lifecycle step 5: a fading voice never owns its orbit, the newest sounding voice does.)
 - The release phase the TODO also names is not the answer: a voice's own release can be long (an open hat's sample
   tail), which defeats the choke.
 

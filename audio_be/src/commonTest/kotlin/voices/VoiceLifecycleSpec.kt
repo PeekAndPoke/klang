@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.Voice.State
@@ -25,8 +26,8 @@ import kotlin.math.ceil
  * which state a real `Voice` is in on which block, and that the terminal states stay terminal.
  *
  * The state describes a whole block: `Pending` until the block that holds the onset, `Sounding` from there,
- * `Releasing` from the first block that STARTS at or after the gate end, `Zombie` at the end of the release block
- * that completes the cull window of silence, `Done` from the first block that starts at or after `endFrame`.
+ * `Releasing` from the first block that STARTS at or after the gate end, `Done` at the end of the release block
+ * that completes the cull window of silence (culled) or from the first block that starts at or after `endFrame`.
  *
  * The voices are the helper's constant 1.0 source (no envelope unless a row says so), 48 kHz, 128-frame blocks.
  * Every frame below is a multiple of 128 unless the row is about a frame inside a block.
@@ -77,7 +78,7 @@ class VoiceLifecycleSpec : StringSpec({
         block(v, 896.0) shouldBe true
         withClue("the block [896, 1024) ends ON the onset: still pending") { v.state shouldBe State.Pending }
         withClue("nothing rendered") { untouched() shouldBe true }
-        withClue("a pending voice does not touch its orbit (no lease claim)") { ctx.cylinders.cylindersIds.isEmpty() shouldBe true }
+        withClue("a pending voice does not touch its orbit (no claim)") { ctx.cylinders.cylindersIds.isEmpty() shouldBe true }
 
         block(v, 1024.0) shouldBe true
         withClue("the block that starts on the onset") { v.state shouldBe State.Sounding }
@@ -122,7 +123,7 @@ class VoiceLifecycleSpec : StringSpec({
         withClue("a done block renders nothing") { untouched() shouldBe true }
     }
 
-    "Zombie at the end of the release block that completes the cull window, never inside the gate" {
+    "culled: Done at the end of the release block that completes the cull window, never inside the gate" {
         // Silent 10 ms (480 frames) into a 1280-frame gate; the cull window is 0.008 s = 384 frames = 3 blocks.
         val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
         val v = voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.008, envelope = percussive)
@@ -139,37 +140,10 @@ class VoiceLifecycleSpec : StringSpec({
         withClue("first silent release block") { v.state shouldBe State.Releasing }
         block(v, 1408.0)
         withClue("second silent release block, 256 of 384 frames") { v.state shouldBe State.Releasing }
-        block(v, 1536.0)
-        withClue("third silent release block completes the window") { v.state shouldBe State.Zombie }
-        withClue("a zombie is still alive") { v.culled shouldBe true }
-    }
-
-    "a zombie never renders again, ignores a note-off, and turns Done exactly at its endFrame" {
-        val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
-        val v = voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.0, envelope = percussive)
-        var start = 0.0
-
-        while (v.state != State.Zombie) {
-            withClue("must turn zombie before its end") { (start < 5376.0) shouldBe true }
-            block(v, start)
-            start += blockFrames
-        }
-
-        // Through the scheduler a zombie's note-off is a no-op anyway; called directly with a frame before its gate
-        // end it would move the end earlier, and the zombie must ignore it.
-        v.releaseGate(1000.0)
-        withClue("the note-off left the end where it was") { v.endFrame shouldBe 5376.0 }
-
-        while (start < 5376.0) {
-            withClue("block $start: a zombie stays alive") { block(v, start) shouldBe true }
-            withClue("block $start: zombie") { v.state shouldBe State.Zombie }
-            withClue("block $start: a zombie renders nothing") { untouched() shouldBe true }
-            start += blockFrames
-        }
-
-        withClue("the block starting on the end") { block(v, 5376.0) shouldBe false }
-        v.state shouldBe State.Done
-        withClue("done, the zombie reading is off") { v.culled shouldBe false }
+        withClue("the third silent release block completes the window: render ends the voice") { block(v, 1536.0) shouldBe false }
+        withClue("Done") { v.state shouldBe State.Done }
+        withClue("culled, not expired") { v.culled shouldBe true }
+        withClue("and stays done") { block(v, 1664.0) shouldBe false }
     }
 
     "Done is never left: not by an earlier block, not by a note-off that would move the end later" {
@@ -241,13 +215,10 @@ class VoiceLifecycleSpec : StringSpec({
     }
 
     "a hard kill ends a voice in Done from every state, and nothing renders after it" {
-        val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
-
         /** A voice rendered block by block from frame 0 until it is in [target]. */
         fun inState(target: State): Pair<Voice, Double> {
             val v = when (target) {
                 State.Pending -> voice(start = 1024.0, gate = 4096.0, end = 8192.0)
-                State.Zombie -> voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.0, envelope = percussive)
                 else -> voice(start = 0.0, gate = 1024.0, end = 4096.0)
             }
             var start = 0.0
@@ -283,7 +254,7 @@ class VoiceLifecycleSpec : StringSpec({
         }
     }
 
-    "a note-off does what the state says: Pending and Sounding take it, Releasing, Zombie and Done ignore it" {
+    "a note-off does what the state says: Pending and Sounding take it, Releasing and Done ignore it" {
         // Pending: the gate and the end move (the scheduler floors a note-off at onset + one block).
         val pending = voice(start = 1024.0, gate = 1_000_000.0, end = 1_004_800.0)
 
@@ -314,19 +285,7 @@ class VoiceLifecycleSpec : StringSpec({
         releasing.releaseGate(512.0)
         withClue("Releasing: ignored, the end stays") { releasing.endFrame shouldBe 5824.0 }
 
-        // Zombie and Done: terminal (their rows above cover the details).
-        val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
-        val zombie = voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.0, envelope = percussive)
-        var start = 0.0
-
-        while (zombie.state != State.Zombie) {
-            block(zombie, start)
-            start += blockFrames
-        }
-
-        zombie.releaseGate(1000.0)
-        withClue("Zombie: ignored") { zombie.endFrame shouldBe 5376.0 }
-
+        // Done: terminal (the rows above cover the details).
         val done = voice(start = 0.0, gate = 128.0, end = 256.0)
 
         block(done, 256.0) shouldBe false
@@ -435,7 +394,7 @@ class VoiceLifecycleSpec : StringSpec({
 
     "a cut's sends fade too: the orbit mix carries the ramp" {
         val v = cutVoice()
-        val cylinder = ctx.cylinders.getOrInit(v.cylinderId, v, 0.0)
+        val cylinder = ctx.cylinders.offerAndCommit(v.cylinderId, v, 0.0)
         val held = cylinder.mixBuffer.left[100]
 
         withClue("the held voice reaches its orbit") { (held > 0.1) shouldBe true }
@@ -460,7 +419,7 @@ class VoiceLifecycleSpec : StringSpec({
         }
     }
 
-    "a cut on a Pending voice and on a Zombie sends it straight to Done" {
+    "a cut on a Pending voice sends it straight to Done" {
         val pending = voice(start = 1024.0, gate = 4096.0, end = 8192.0)
 
         block(pending, 0.0)
@@ -468,19 +427,6 @@ class VoiceLifecycleSpec : StringSpec({
         withClue("Pending: Done") { pending.state shouldBe State.Done }
         withClue("Pending: never sounds") { block(pending, 1024.0) shouldBe false }
         withClue("Pending: renders nothing") { untouched() shouldBe true }
-
-        val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
-        val zombie = voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.0, envelope = percussive)
-        var start = 0.0
-
-        while (zombie.state != State.Zombie) {
-            block(zombie, start)
-            start += blockFrames
-        }
-
-        zombie.cutOff(start)
-        withClue("Zombie: Done") { zombie.state shouldBe State.Done }
-        withClue("Zombie: render ends it") { block(zombie, start) shouldBe false }
     }
 
     "a second cut on a Fading voice changes nothing" {

@@ -27,6 +27,18 @@ each one reviewable commit. Section E: 11 decisions for the maintainer.
 arguments. Per `/code-style` §21 (coerce user input, never `require()` it): an empty `variants()` is silence.
 S, with a row on both doors. Do it right after voice lifecycle step 5 lands (the audit item B4.7).
 
+## Extract reusable helpers (maintainer, 2026-10-07)
+
+A review dimension for every step of this task, across all `audio_*` modules (`audio_bridge`, `audio_be`,
+`audio_fe`, `audio_jsworklet`): code blocks that are self-contained and could be reusable and testable helpers
+are extracted into the module's `utils/` package (`io.peekandpoke.klang.<module>.utils`, the same name in every
+module, `/code-style` §3; existing helpers such as `audio_be`'s `DspUtil.kt` and `js_helpers.kt` move there too), each with a spec of its exact behaviour. The model is `retainInOrder` (voice lifecycle step 5,
+round 2): an `inline` extension that keeps order, allocates nothing on either platform, and is pinned by
+`RetainInOrderSpec`. The audit's B2 items are the first candidates (`finiteOrZero`, the stereo add, the fade to
+zero shared by the teardown and the cut, the one-pole time constant, the wrap helper, the drift-ramp prologue).
+Rules: a helper earns its place by a second caller or by a behaviour worth pinning; hot-path helpers taking a lambda
+are `inline` (no closure per call); no helper hides an allocation.
+
 ## The order
 
 Audit section D, unchanged, steps 1 to 20. Steps that touch `Voice`, `VoiceScheduler` or `Cylinders` wait for
@@ -60,3 +72,15 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   because another backend has things to solve to use the inputs. The duty is on the other side, not here."
   A general rule for the port: the Kotlin engine defines the contract; a second backend adapts to it.
 
+
+## Found during voice lifecycle step 5
+
+- **Phase draws depend on the render order of the active list.** A unison oscillator takes its start phases from
+  the orbit's phase pool on the voice's first rendered block (`Ignitors.kt`, the `pool.next(...)` take in the
+  super-oscillator's first generate). The pool is shared per orbit and voice count, so which entry a note gets
+  depends on the order the voices render in, and every change to that order (a removal law, a voice leaving
+  earlier) changes which phases notes get. Retiring the zombie and making removal order-keeping (lifecycle step 5,
+  2026-10-07) changed several songs this way, audibly in places (reviewer B, `tmp/reviews/vl5-r1-B.md`: Der
+  Schmetterling 0.54 peak with identical settings). Accepted as a one-time change; not a correctness bug. The
+  tidy-up: a note's phase take should not depend on list order (for example drawn at promotion, in onset order,
+  or keyed by the voice), so a scheduling change never re-deals phases. Not fixed yet.

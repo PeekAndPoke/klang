@@ -121,7 +121,7 @@ class LazyReverbSpec : StringSpec({
         alloc.asked shouldBe 0
     }
 
-    "reset() keeps the unit — a re-leased orbit does not re-rent" {
+    "reset() keeps the unit: a reused orbit does not re-rent" {
         val (units, alloc) = shelf()
         val fx = effect(units)
         fx.configureSize(size = 0.6)

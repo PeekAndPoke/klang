@@ -11,6 +11,7 @@ import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
@@ -23,8 +24,8 @@ import kotlin.math.abs
 
 /**
  * Silence culling: a voice whose release has stayed under the audibility floor for the cull
- * window turns into a zombie (`Voice.culled`): it renders nothing more, keeps its active-list slot
- * and its orbit lease, and expires at its scheduled end. The gate is never culled; an audible
+ * window ends there (`Voice.culled`, `Done` at the end of that block): it renders nothing more and
+ * leaves the scheduler's list at once, long before its scheduled end (lifecycle step 5 retired the zombie). The gate is never culled; an audible
  * release is never culled; the solo/mute fade is not silence.
  *
  * The voices here are a constant signal through the amp VCA. A `sustain = 0` envelope with a
@@ -59,29 +60,26 @@ class VoiceCullingSpec : StringSpec({
 
     /**
      * Renders block after block until the voice reports itself finished. Returns the start frame of
-     * the block on which it turned into a zombie ([Voice.culled]), or the frame it expired on when it
-     * never did; [Ending.culled] tells the two apart. It is recorded while rendering, because
-     * [Voice.culled] reads the zombie state and is false again once the zombie is done. Also asserts
-     * the zombie contract: a culled voice stays alive (render returns true) until its scheduled end,
-     * and the voice never expires early.
+     * that block, the block the cull completed on ([Voice.culled]) or the one it expired on, and
+     * [Ending.culled] tells the two apart. Also asserts: a voice that was not culled never ends before
+     * its scheduled end, and a culled one ends before it.
      */
     fun cullFrame(voice: Voice, blockFrames: Int = 128, end: Double = endFrame): Ending {
         val ctx = createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
         var start = 0.0
-        var culledAt = -1.0
 
         while (start < end + 10 * blockFrames) {
             ctx.blockStart = start
             val alive = voice.render(ctx)
 
             if (!alive) {
-                withClue("a voice expires at its scheduled end, culled or not") { start shouldBeGreaterThanOrEqualTo end }
+                if (voice.culled) {
+                    withClue("a culled voice ends before its scheduled end") { (start < end) shouldBe true }
+                } else {
+                    withClue("a voice that was not culled expires at its scheduled end") { start shouldBeGreaterThanOrEqualTo end }
+                }
 
-                return Ending(frame = if (culledAt >= 0.0) culledAt else start, culled = culledAt >= 0.0)
-            }
-
-            if (voice.culled && culledAt < 0.0) {
-                culledAt = start
+                return Ending(frame = start, culled = voice.culled)
             }
 
             start += blockFrames
@@ -198,27 +196,26 @@ class VoiceCullingSpec : StringSpec({
         death shouldBeGreaterThanOrEqualTo burstEnd + defaultWindowFrames - 128
         death shouldBeLessThanOrEqualTo burstEnd + defaultWindowFrames + 128
     }
-    "a zombie renders nothing and renews its orbit lease until its scheduled end" {
+    "a culled voice ends at the block that completes the window: Done, and nothing renders after it" {
         val v = voice(percussive(releaseFrames), cull = 0.0)
         val ctx = createContext(blockStart = 0.0, blockFrames = 128, sampleRate = sampleRate)
         var start = 0.0
 
-        while (!v.culled) {
-            withClue("must be culled before its scheduled end") { start shouldBeLessThanOrEqualTo endFrame }
-            ctx.blockStart = start
-            v.render(ctx) shouldBe true
+        while (v.render(ctx.also { it.blockStart = start })) {
+            withClue("must be culled before its scheduled end") { (start < endFrame) shouldBe true }
             start += 128
         }
 
-        // Zombie blocks: the voice buffer stays untouched (no strip ran) and the voice stays alive.
-        ctx.voiceBuffer.fill(0.5)
-        ctx.blockStart = start
-        v.render(ctx) shouldBe true
-        ctx.voiceBuffer.all { it == 0.5 } shouldBe true
+        withClue("culled, not expired") { v.culled shouldBe true }
+        v.state shouldBe Voice.State.Done
+        withClue("long before its scheduled end") { (start < endFrame - 10_000) shouldBe true }
 
-        ctx.blockStart = endFrame
-        withClue("expires at the scheduled end") { v.render(ctx) shouldBe false }
+        ctx.voiceBuffer.fill(0.5)
+        ctx.blockStart = start + 128
+        withClue("stays done") { v.render(ctx) shouldBe false }
+        withClue("and renders nothing") { ctx.voiceBuffer.all { it == 0.5 } shouldBe true }
     }
+
     "a voice that has not sounded yet is never culled, however long past its gate" {
         // Silent through the whole gate and well past the default window, then audible: a sample
         // with leading silence pitched down, or an ignitor attack outliving a short gate.
@@ -244,11 +241,8 @@ class VoiceCullingSpec : StringSpec({
         death shouldBeGreaterThanOrEqualTo endFrame
     }
 
-    "a zombie keeps its orbit lease: a later voice with its own bus config is refused" {
-        // The zombie has no body; the challenger brings one. While the zombie renews its lease every
-        // block the challenger's claim is denied and the orbit's body stays off. Two blocks without
-        // the zombie and the lease lapses: the challenger takes over and the body engages.
-        val zombie = voice(percussive(releaseFrames), cull = 0.0)
+    "a culled voice leaves its orbit: a later voice with its own bus config owns it at once" {
+        val culledVoice = voice(percussive(releaseFrames), cull = 0.0)
         val challenger = createVoice(
             startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = endFrame,
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
@@ -259,27 +253,18 @@ class VoiceCullingSpec : StringSpec({
         val ctx = createContext(blockStart = 0.0, blockFrames = 128, sampleRate = sampleRate)
         var start = 0.0
 
-        while (!zombie.culled) {
-            withClue("must be culled before its scheduled end") { start shouldBeLessThanOrEqualTo endFrame }
-            ctx.blockStart = start
-            zombie.render(ctx)
+        while (culledVoice.render(ctx.also { it.blockStart = start })) {
             start += 128
         }
 
-        val cylinder = ctx.cylinders.getOrInit(zombie.cylinderId, zombie, start - 128)
+        val cylinder = ctx.cylinders.cylinders.first()
 
-        repeat(4) {
-            ctx.blockStart = start
-            zombie.render(ctx)                                          // renews first, like the active list
-            ctx.cylinders.getOrInit(challenger.cylinderId, challenger, start)
-            withClue("block $it: the zombie holds the lease") { cylinder.body!!.isEngaged shouldBe false }
-            start += 128
-        }
+        withClue("nobody owns the orbit any more") { cylinder.body!!.isEngaged shouldBe false }
 
-        start += 2 * 128                                                // the zombie missed two blocks
-        ctx.cylinders.getOrInit(challenger.cylinderId, challenger, start)
-        withClue("the lease lapsed without the zombie") { cylinder.body!!.isEngaged shouldBe true }
+        ctx.cylinders.offerAndCommit(challenger.cylinderId, challenger, start + 128)
+        withClue("the challenger owns at once") { cylinder.body!!.isEngaged shouldBe true }
     }
+
     "a hand-muted voice (gain 0) can never be heard and is culled like any silent tail" {
         val v = createVoice(
             startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = endFrame,

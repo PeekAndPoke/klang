@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * Like body, a vowel is a timbre shaper of the whole orbit, so it runs once on the summed stereo mix
  * (one mono formant bank per channel) instead of per voice. The whole stage is one call,
  * [LowPassHighPassFilters.createFormant]: a [ResonatorBank] inside its dry/wet blend. Only the
- * orbit's owning voice configures it (see `Cylinder`'s VoiceLease), so `null` (owner has no vowel)
+ * orbit's owning voice configures it (see `Cylinder.offer`), so `null` (owner has no vowel)
  * turns the resonator OFF; [reset] deactivates it on orbit teardown.
  *
  * Every edge fades, a change that arrives mid-fade waits in the ONE parking slot as the config it

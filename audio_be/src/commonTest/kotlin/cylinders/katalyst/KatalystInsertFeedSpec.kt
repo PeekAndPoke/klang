@@ -11,6 +11,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -235,7 +236,7 @@ class KatalystInsertFeedSpec : StringSpec({
         // 30 blocks: past the room's shortest comb (1116 samples) and the 0.05 s echo.
         for (b in 0 until 30) {
             ctx.blockStart = (b * blockFrames).toDouble()
-            val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, ctx.blockStart)
+            val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, ctx.blockStart)
 
             cylinder.clear()
             voice.render(ctx)

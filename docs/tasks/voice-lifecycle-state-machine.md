@@ -1,13 +1,13 @@
 # A voice's lifecycle is one state machine inside the voice
 
-Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07, step 3 done 2026-10-07, step 4 done 2026-10-07 (awaiting review).
+Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07, step 3 done 2026-10-07, step 4 done 2026-10-07, step 5 done 2026-10-07 (awaiting review).
 
 ## Why (maintainer, 2026-10-07)
 
 A voice's lifecycle is spread over several layers today: the voice, copies in two contexts, the scheduler and the
 orbit lease. That spread leads to bugs that are hard to find, for example pruning and cut getting in each other's
 way. The goal: **a state machine inside each `Voice`**. The voice decides from its state how it renders. Terminal
-states cannot be left: a culled zombie never sounds again, and a cut voice never comes back.
+states cannot be left: a culled voice never sounds again, and a cut voice never comes back.
 
 Rules for the work:
 
@@ -67,32 +67,28 @@ engine-wide, not per voice, and stays where it is.
 
 ```
 Pending ──onset──▶ Sounding ──gate end / note-off──▶ Releasing ──endFrame──▶ Done
-                      │                                  │
+                      │                                  │  │
+                      │                                  │  └──silent for the cull window (culled)──▶ Done
                       └──────── cut / takeover ──────────┴──▶ Fading ──fade end──▶ Done
-                                                         │
-                                          silent for the cull window
-                                                         ▼
-                                                      Zombie ──endFrame / cut / takeover──▶ Done
 
 Any state ──endFrame reached (a release of 0, a negative release), or a hard kill──▶ Done
 Pending ──cut / takeover──▶ Done (it has not sounded; promotion runs one block ahead, so a cut can reach it)
 ```
 
-- `Zombie`, `Fading` and `Done` are terminal: nothing leads back to a sounding state. A cut, takeover or hard kill
-  on a silent voice (`Pending`, `Zombie`) needs no fade and sends it straight to `Done`: that keeps today's orbit
-  hand-over (today's cut removes zombies too, so the cutting voice takes the orbit after one block; a zombie that
-  ignored the cut would keep refusing the new voice's bus settings for its whole remaining release, round-1
-  review of step 1). Culling does not run in `Fading`, and a note-off in `Fading` or `Zombie` is ignored.
+- `Fading` and `Done` are terminal: nothing leads back to a sounding state. A cut, takeover or hard kill on a
+  voice that has not sounded (`Pending`) needs no fade and sends it straight to `Done`. Culling does not run in
+  `Fading`, and a note-off in `Fading` is ignored. A culled voice is `Done` at once (step 5 retired the zombie).
+- The orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate
+  closes or it is cut (step 5). Every state that renders routes its audio and keeps the orbit in use.
 - `render` dispatches on the state: `Pending` returns early, `Sounding` / `Releasing` run the pipeline, `Fading`
-  runs it with the fade ramp, and `Zombie` only renews the lease.
+  runs it with the fade ramp, `Done` returns false.
 - Culling measures where it measures today: until the voice has been heard, and in `Releasing`. Never in
   `Sounding` once heard (the gate is the held part of a note and may be silent on purpose), and never in
-  `Fading` or `Zombie`. That is the organic saving: the states that do not need the measurement skip it.
+  `Fading`. That is the organic saving: the states that do not need the measurement skip it.
 
 ## Who drives which transition (maintainer, 2026-10-07)
 
-- **Inside the voice:** every time-driven transition (onset, gate end, `endFrame`, fade end) and becoming a
-  zombie. The thresholds come in as parameters (the cull window per voice, the floor a constant).
+- **Inside the voice:** every time-driven transition (onset, gate end, `endFrame`, fade end) and the cull. The thresholds come in as parameters (the cull window per voice, the floor a constant).
 - **From outside, the scheduler:** note-off, cut, takeover, hard kill. The scheduler decides WHO (the group, the
   same-onset rule); it sends an event, and the voice decides by its state whether the event applies and WHAT
   happens.
@@ -272,8 +268,63 @@ before and after.
    pluck takes its slot and the lease, and the orbit stays dry for the run. Difference signal -13 dB against the
    mix over 2.5 s (all of it reverb). Neither is "right" under first-writer-wins; the new one is what a natural
    death already does. WAVs: `tmp/cut-fade/shared-orbit-lease-*`.
+
+   **Decided (maintainer, 2026-10-07): only the active state owns the orbit state, active meaning `Sounding`
+   only; among them the newest onset wins.** The orbit's bus settings are owned by the newest `Sounding` voice; a
+   voice gives the orbit up when its gate closes or it is cut. Newest = the latest `startFrame`, on a tie the
+   voice created later (the higher id): ownership no longer depends on the order the voices render in. `Releasing`,
+   `Fading` and `Pending` never own: the newest sounding voice takes over even while an older tail still rings
+   under the new settings ("the stolen voice might still fade for say 10 ms but the new voice wants new orbit
+   settings, so the new voice needs to win the settings"). The zombie is retired ("cut out the zombie state if it
+   adds no additional benefits"). A deliberate sound change; the corpus render reports which songs move.
+
+   **What was done (2026-10-07, after round 1).**
+   - **Routing and ownership split.** Every rendering voice routes into its orbit and keeps it in use
+     (`Cylinders.checkIn(id, blockStart)`: activates the orbit, records the check-in, one-block grace that
+     `tryDeactivate` reads). A voice that claims the orbit (`Voice.claimsOrbit(blockStart)`: `Sounding` and the
+     gate still open at its first frame in the block, so a zero-length gate never claims) OFFERS itself instead
+     (`Cylinders.offer` / `Cylinder.offer`, which checks in too).
+   - **One owner per block, chosen after the voices.** The offers of a block only record the newest
+     (`Cylinder.isNewer`: later onset, then higher id). `Cylinders.processAndMix` commits it once
+     (`Cylinder.commitOwner`) before the orbit's own processing: the owner's settings are applied once, in no
+     render order's favour, and a newer voice owns from its first block. No offer in a block: no owner, and the
+     orbit keeps the settings it last applied (the stages are written only on a commit; a chain arriving meanwhile
+     resolves its authored defaults). `VoiceLease` (first-writer-wins with a one-block grace, the give-up release)
+     is deleted, with its spec. `Cylinder.updateFromVoice` and `Cylinders.getOrInit` are deleted too (review
+     round 2: no production caller); the specs use a test helper that offers and commits, so they run the
+     production path.
+   - **The zombie is retired.** A culled voice is `Done` at the end of the release block that completes the
+     window and leaves at once; `Voice.culled` is a latch the scheduler's culled count reads. With ownership by
+     onset, list order no longer decides ownership, and the check-in liveness a zombie gave its orbit was measured
+     inaudible (at most 4.6e-7, reviewer B). `State.Zombie`, its render branch, its case in `cutOff` and the
+     zombie filters of the diagnostics are gone; the voice-count gauge reads `getActiveVoiceCount`.
+   - **One removal law.** The render loop removes `Done` voices by a one-pass compaction, `retainInOrder`
+     (each survivor moves down to the next free slot, then the tail is dropped from the end; `RetainInOrderSpec`),
+     instead of swap-with-last; `removeDoneVoices` uses the same pass between blocks (hard kill, a cut's `Pending` victim). The list stays in
+     activation order, and nothing allocates on either platform (review round 2: `removeAt(i)` is a `splice` on
+     Kotlin/JS, which allocates).
+   - **Known side effect, accepted by the maintainer (2026-10-07, "accept, listen later"):** unison phase-pool takes
+     are drawn on a voice's first rendered block, so the removal order changes which phases notes get; songs with
+     `.phasePool(on = 1)` change once, audibly (Kokon from 13.6 s, Der Schmetterling -6.8 dB, frozen 09_25 -7.4 dB,
+     round 2). Different phases, not wrong ones; the maintainer listens after the merge and retunes by ear if needed.
+     Making the draws independent of list order is a tidy-up item (`docs/tasks/engine-tidy-up.md`, "Found during
+     voice lifecycle step 5"); it re-deals once more, then the draws stay stable.
+   - **Proof.** `OrbitOwnershipSpec` (newest wins over an older owner at its first block; a tie goes to the
+     later-created voice in either render order; when the owner's gate closes the newest remaining claims; a
+     cutter owns from its first block; a voice cut with no cutter on its orbit gives it up in the cut block; a zero-length gate never owns, aligned or mid-block; an ownerless orbit
+     keeps its settings; a held realtime voice owns until its note-off; a voice past its gate routes without
+     owning), `VoiceCullingSpec` and `VoiceLifecycleSpec` (a culled voice is `Done` at its cull block and renders
+     nothing after), `VoiceSchedulerRemovalSpec` (a culled voice leaves in place, the order kept),
+     `VoiceSchedulerCullingSpec` (counted once, gone at once). Rows that pinned first-writer-wins rewritten
+     (`CylinderKatalystParamsSpec`, `CylinderKatalystPipelineSpec`, `CylinderCompressorSpec`,
+     `CylinderFaderThroughZeroSpec`). 10 mutations, all red. Report: `tmp/reviews/vl-step5-report.md`.
+5b. **The states as a sealed type** (decided 2026-10-07, after step 5 lands): `Voice.State` becomes a sealed type,
+   `data object`s for the param-less states and a `Fading` class that carries its fade window, so the fade frames
+   live with the state that uses them instead of in `VoiceLimits`. Not started.
 6. **Then, as their own tasks:** `takeover` (the `Fading` event with its own time) and `glide` (a value the new
-   voice gets at its onset), `docs/tasks/voice-takeover.md`.
+   voice gets at its onset), `docs/tasks/voice-takeover.md`. **Precondition (maintainer, 2026-10-07):** the
+   cut-group semantics (`cut(0)`, a group's reach) are revisited BEFORE takeover starts; the maintainer finds
+   `cut(0)` "not ideal" and the semantics unclear on the user side (`future/cut-group-semantics.md`).
 7. **Optimisation, only if measured to be needed.**
 
 ## Open decisions
@@ -281,6 +332,9 @@ before and after.
 - ~~Step 4: does a `Fading` voice end in `Done` at the fade end, or in `Zombie` until its old `endFrame`?~~
   Decided 2026-10-07 by the coordinator under the maintainer's "continue unless you need my judgement": `Done` at
   the fade end (it keeps today's orbit hand-over). Revisit at step 5 with the lease rule.
-- Step 4, by ear: linear or smoothstep for the cut fade (see step 4's notes).
-- Step 5: the lease rule per state.
-- `cut-group-semantics.md`: `cut(0)`, and whether a group reaches the whole playback or one orbit.
+- Step 4, by ear: linear or smoothstep for the cut fade (see step 4's notes). Linear for now (maintainer,
+  2026-10-07).
+- ~~Step 5: the lease rule per state.~~ Decided 2026-10-07 (maintainer): only `Sounding` owns, the newest onset
+  wins, and the zombie is retired.
+- `cut-group-semantics.md`: `cut(0)`, and whether a group reaches the whole playback or one orbit. To be decided
+  before takeover starts (maintainer, 2026-10-07).

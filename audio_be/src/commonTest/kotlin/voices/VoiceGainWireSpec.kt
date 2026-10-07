@@ -11,6 +11,7 @@ import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -103,7 +104,7 @@ class VoiceGainWireSpec : StringSpec({
 
         voice.render(ctx)
 
-        val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, 0.0)
+        val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
         return Pair(
             cylinder.mixBuffer.left.copyOf(),

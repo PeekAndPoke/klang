@@ -465,7 +465,7 @@ class KatalystReverbEffectSpec : StringSpec({
         }
         effect.hasTail() shouldBe true // mid-drain
 
-        // New owner takes the lease with the LONGEST room: network kept, params written, sends live.
+        // New owner takes the orbit with the LONGEST room: network kept, params written, sends live.
         effect.configureSize(size = 1.0)
 
         effect.hasTail() shouldBe true // the tail was NOT cut

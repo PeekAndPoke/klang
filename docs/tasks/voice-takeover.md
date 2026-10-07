@@ -96,9 +96,9 @@ behaviour is conditional), `handover` (right idea, but the time felt like a prop
 **`takeover`** won because the number belongs to the *event*, not to either note: "a takeover takes 5 ms". It also
 matches the physical picture the feature models — the new note takes the resource over.
 
-The word already appears in engine prose for `VoiceLease` ownership (`Cylinder.kt:129`,
-`VoiceLease.kt:21`); that is a different mechanism but the same underlying idea (a newer voice displaces an older one),
-so it reads as consistent. No rename needed.
+The word already appears in engine prose for orbit ownership (`Cylinder.offer`, since voice lifecycle step 5: the
+newest `Sounding` voice owns the orbit); that is a different mechanism but the same underlying idea (a newer voice
+displaces an older one), so it reads as consistent. No rename needed.
 
 ---
 

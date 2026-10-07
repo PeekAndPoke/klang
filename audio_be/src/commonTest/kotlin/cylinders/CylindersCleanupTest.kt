@@ -23,7 +23,7 @@ class OrbitsCleanupTest : StringSpec({
     val blockFrames = 128
     val sampleRate = 44100
 
-    // A block long after every claim below: no voice plays any more, so the orbit lease has lapsed
+    // A block long after every claim below: no voice plays any more, so no check-in holds the orbit
     // and the round-robin cleanup is decided by the silence gate alone.
     val afterLastVoice = 100.0 * blockFrames
 
@@ -40,8 +40,8 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Orbit 0 silent, orbit 1 sounding. The first block's cleanup visits orbit 0 and frees it.
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
-        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
+        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
 
         orbit0.mixBuffer.clear()
         orbit1.mixBuffer.left[0] = 0.5
@@ -71,9 +71,9 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 3 cylinders, all active but silent
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
-        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
-        val orbit2 = cylinders.getOrInit(2, createTestVoice(2), blockStart = 0.0)
+        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
+        val orbit2 = cylinders.offerAndCommit(2, createTestVoice(2), blockStart = 0.0)
 
         orbit0.mixBuffer.clear()
         orbit1.mixBuffer.clear()
@@ -111,8 +111,8 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 2 cylinders
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
-        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
+        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
 
         orbit0.mixBuffer.clear()
         orbit1.mixBuffer.clear()
@@ -128,8 +128,8 @@ class OrbitsCleanupTest : StringSpec({
             orbit1.isActive shouldBe false
 
             // Reactivate both
-            cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
-            cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
+            cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+            cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
             orbit0.mixBuffer.clear()
             orbit1.mixBuffer.clear()
 
@@ -157,7 +157,7 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create only cylinder 0 (sparse map)
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
         orbit0.mixBuffer.clear()
 
         // Process 8 times (full round-robin cycle)
@@ -175,9 +175,9 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 3 active cylinders with different signals
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
-        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
-        val orbit2 = cylinders.getOrInit(2, createTestVoice(2), blockStart = 0.0)
+        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
+        val orbit2 = cylinders.offerAndCommit(2, createTestVoice(2), blockStart = 0.0)
 
         orbit0.mixBuffer.left[0] = 0.1
         orbit1.mixBuffer.left[0] = 0.2

@@ -31,7 +31,7 @@ Three rules of the output position, each pinned today (see the `MasterBus` class
 3. **The tail keep-alive**: the output's `isRinging` keeps a stopped engine alive while its chain has a tail
    (`PlaybackEngine.isIdle`); an orbit does the same through its own activity.
 
-The orbit adds its own: the duck handover of `ChainSwap` (`Cylinder.handOverDuck`), the owner lease and
+The orbit adds its own: the duck handover of `ChainSwap` (`Cylinder.handOverDuck`), the owner commit (`Cylinder.offer`, `Cylinder.commitOwner`) and
 `katalystParams` (the output fills no slots: `applyParams(null)`), and the born-with classic chain.
 
 ## The idea

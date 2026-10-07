@@ -11,6 +11,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
@@ -125,7 +126,7 @@ class SampleInstrumentSpec : StringSpec({
             ctx.blockStart = (block * blockFrames).toDouble()
             voice.render(ctx)
 
-            val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, 0.0)
+            val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
             cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
@@ -241,9 +242,9 @@ class SampleInstrumentSpec : StringSpec({
         val (plain, _) = render(base.copy(sound = "probe"), sampleRate, pcm, doors = long)
         val (tremolo, _) = render(base.copy(sound = "probe", ignitorParams = mapOf(depthSlot to 0.8)), sampleRate, pcm, doors = long)
 
-        // The states, not `culled` alone: `culled` is false again once a voice is Done, so a render that ran past
-        // the end would pass the tremolo row for the wrong reason. Both voices are still in their release here.
-        withClue("engaged: the silent release culls a voice without the tremolo") { plain.state shouldBe Voice.State.Zombie }
+        // The tremolo voice's STATE, not only "not culled": a render that ran past its end would also read "not
+        // culled", for the wrong reason. Releasing pins that it is still in its release here.
+        withClue("engaged: the silent release culls a voice without the tremolo") { plain.culled shouldBe true }
         withClue("the tree's tremolo marks the voice never-cull") { tremolo.state shouldBe Voice.State.Releasing }
     }
 

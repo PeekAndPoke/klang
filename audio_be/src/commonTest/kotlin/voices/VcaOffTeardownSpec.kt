@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
@@ -285,7 +286,7 @@ class VcaOffTeardownSpec : StringSpec({
             ctx.blockStart = (b * blockFrames).toDouble()
             voice.render(ctx)
 
-            val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, 0.0)
+            val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
             cylinder.mixBuffer.left.copyInto(out, b * blockFrames, 0, blockFrames)
             cylinder.mixBuffer.left.fill(0.0)

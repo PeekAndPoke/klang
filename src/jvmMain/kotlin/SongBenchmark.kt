@@ -88,7 +88,7 @@ class SongBenchmark(
         val error: String? = null,
         /** Voices that ended early because their release stayed silent (`VoiceScheduler.culledVoicesTotal`). */
         val culled: Int = 0,
-        /** Rendering voices per block (zombies excluded), the median block. */
+        /** Rendering voices per block, the median block. */
         val medianVoices: Double = 0.0,
         /** Passes over the block per block, summed over the rendering voices (`GraphCensus.passes`), the median block. */
         val medianWork: Double = 0.0,

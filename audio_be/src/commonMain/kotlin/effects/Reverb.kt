@@ -173,7 +173,7 @@ class Reverb(
      * until a reset.
      *
      * **Cost**: one O(all comb cells) scan (~22k samples at 44.1 kHz) — the same class as
-     * [hasTail], intended for the off-transition (at most once per lease handoff), never
+     * [hasTail], intended for the off-transition (at most once per owner change), never
      * per block.
      */
     fun combPeakAbs(): Double {

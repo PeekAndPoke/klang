@@ -43,7 +43,7 @@ import kotlin.math.min
  *
  * The effect owns an active/draining/off lifecycle so that turning the delay off never freezes a
  * live tail inside the ring (block-framing ledger D3: the ring's write clock used to stop dead the
- * moment a no-delay voice took the orbit lease, and the stale tail resurrected later, detached
+ * moment a no-delay voice took over the orbit, and the stale tail resurrected later, detached
  * from time). The transition table on [State] is AUTHORITATIVE for the edges: which event moves
  * which state where is settled there and nowhere else. The bullets below give the reasoning, and
  * where one of them names an edge it is quoting that table, not competing with it.
@@ -496,7 +496,7 @@ class KatalystDelayEffect(
 
     /**
      * Applies the orbit owner's delay settings. Called by `KatalystChain.applyParams` on every
-     * block the lease is (re)claimed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
+     * block an owner is committed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
      *
      * [wet] is how much of the orbit mix feeds the line. Raw: no clamp, a negative wet feeds the

@@ -23,8 +23,11 @@ holds the full text, this file names it and gives the short form. How each law w
 
 ## Where a knob comes from
 
-- **The orbit's param state is the `katalystParams` map of the voice holding the orbit's lease**
-  (`VoiceLease`, first-writer-wins, and "first" is render order). Every chain, the born-with one included, reads
+- **The orbit's param state is the `katalystParams` map of the voice that owns the orbit**: the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut
+  (lifecycle step 5, maintainer 2026-10-07; newest = the latest onset, on a tie the voice created later). The
+  block's offers are committed once, after the voices rendered (`Cylinder.offer`, `Cylinder.commitOwner` from
+  `Cylinders.processAndMix`), so render order decides nothing. An orbit without a `Sounding` voice keeps the
+  settings it last applied. Every chain, the born-with one included, reads
   its knobs from there; the voice has no bus fields any more. Voices that need independent bus effects go on
   different orbits. The chain re-resolves only when the owner's map instance changes (`KatalystChain.resolvedFrom`).
 - **A non-finite knob is the declared OFF state** (`KatalystKnob.written` is false for it). This includes a
@@ -66,8 +69,9 @@ The glide time itself is an open question for the maintainer's ear: `docs/tasks/
 ## When an orbit may stop, and when a chain leaves
 
 - **An orbit deactivates only when** its silence grace has run (`silentBlocksBeforeTailCheck`, 10 blocks), its
-  chain reports no tail, AND its lease has lapsed (`VoiceLease.isHeld`, one block of grace after the owner's last
-  check-in). A muted or culled voice keeps its orbit, so the fader glides and a phaser sweep continues.
+  chain reports no tail, AND no voice has checked in on it (`Cylinder.checkIn`, owner or not, tails included; one
+  block of grace). A muted voice keeps its orbit while it plays, so the fader glides and a phaser sweep continues;
+  a culled voice has ended and keeps nothing.
   `tryDeactivate` clears the orbit's mix buffer (a stale buffer once leaked into a room).
 - **The tail question** is `KatalystChain.hasTail()`, answered by `TailCeiling` compares (`effects/TailCeiling.kt`),
   never by a scan (`Reverb.hasTail()` has no production caller). The ceiling may only err towards holding longer.

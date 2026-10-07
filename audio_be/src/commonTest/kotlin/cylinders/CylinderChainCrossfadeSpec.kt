@@ -225,7 +225,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         /** The orbit's owner voice. Replaced (with a skipped block) to hand ownership over. */
         var voice: Voice = VoiceTestHelpers.createSynthVoice()
 
-        /** Absolute backend frame of the next block, as `Cylinders.getOrInit` passes it. */
+        /** Absolute backend frame of the next block, as `Cylinders.offer` passes it. */
         var blockStart: Double = 0.0
 
         /** What another orbit's mix hands the duck pass; filled per block from `sidechainLevel`. */
@@ -239,13 +239,13 @@ class CylinderChainCrossfadeSpec : StringSpec({
         fun block(
             level: Double = 0.0,
             sidechainLevel: Double = 0.0,
-            /** False renders a block no voice offered itself on: the owner lease lapses over it. */
+            /** False renders a block no voice offered itself on: the orbit has no owner for it. */
             owned: Boolean = true,
             /** False renders a block whose duck pass `Cylinders` skips (no sidechain orbit). */
             duckPass: Boolean = true,
         ): DoubleArray {
             if (owned) {
-                cylinder.updateFromVoice(voice, blockStart)
+                cylinder.offerAndCommit(voice, blockStart)
             }
 
             cylinder.mixBuffer.fill(level)
@@ -266,7 +266,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             return cylinder.mixBuffer.left.copyOf()
         }
 
-        /** A block this orbit is not offered at all: the owner lease lapses over it. */
+        /** A block this orbit is not offered at all: the orbit has no owner for it. */
         fun skipBlock() {
             blockStart += blockFrames
         }
@@ -594,7 +594,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
     }
 
-    "the orbit's param state is aged with the lease: a dead owner configures nothing" {
+    "the orbit's param state is aged: a dead owner configures nothing" {
         // The state is the OWNER's, so it dies with the owner (review round 2). A chain arriving
         // while the orbit merely rings out its tail must resolve from what it authored, not from a
         // voice that stopped checking in.
@@ -943,7 +943,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("room", roomChain(6.0))
 
         // The note has ended and the orbit is still audible, so no voice offers itself: the
-        // pending poll starts the fade, and nothing will claim the lease to write the chain.
+        // pending poll starts the fade, and no owner will write the chain.
         rig.block(level = probe, owned = false)
 
         rig.cylinder.isFading shouldBe true
@@ -1216,8 +1216,8 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // Everything goes quiet at the swap, which is exactly when the cleanup would like to
         // deactivate the orbit. With a fade running, that would drop the outgoing chain at
         // whatever weight it had. Every cleanup visit in this row is placed one block past the
-        // owner's grace, as if the voice had just stopped: the lease has lapsed, so the refusal
-        // is the chain's own (Katalyst 5c-8: a held lease refuses too, and would mask it).
+        // check-in's grace, as if the voice had just stopped: no check-in holds the orbit, so the
+        // refusal is the chain's own (Katalyst 5c-8: a check-in refuses too, and would mask it).
         rig.block()
         rig.cylinder.mixBuffer.clear()
         rig.cylinder.tryDeactivate(rig.blockStart + blockFrames)
@@ -1348,7 +1348,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // At the ramp's endpoints one weight is exactly 0.0, and `Inf * 0.0` is NaN: a chain that
         // contributes nothing yet could still inject NaN into the orbit's output, and the master's
         // DC blocker downstream latches one for good.
-        rig.cylinder.updateFromVoice(rig.voice, rig.blockStart)
+        rig.cylinder.offerAndCommit(rig.voice, rig.blockStart)
         rig.cylinder.mixBuffer.fill(Double.POSITIVE_INFINITY)
         rig.cylinder.processEffects()
 

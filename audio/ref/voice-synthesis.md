@@ -197,15 +197,13 @@ its release and its own output has stayed under the audibility floor for the cul
 - **Decide:** `Voice.render`, after the stage loop, only when `blockStart >= gateEndFrame`.
   Silent frames accumulate (frames, not blocks, so the window has the same length at any block
   size and the cut lands within one block of the same frame); an audible block resets them; when
-  they cover the window, `Voice.culled` is set and the scheduler counts it
-  (`VoiceScheduler.culledVoicesTotal`, `renderingVoiceCount`).
-- **A culled voice is a ZOMBIE, not a removal.** It runs no stage any more, but it keeps its slot
-  in the scheduler's active list and renews its orbit lease every block until its scheduled
-  `endFrame`, where it expires like any voice. Removing it early was measured to change the
-  MIX: the orbit lease passes to whichever voice renders first after an owner dies, that order
-  is the active list, and a swap-remove reorders it, so a culled hat on orbit 7 changed which of
-  guitar 3 and the bass owned orbit 3 (-32 dBFS difference on Der Schmetterling). With the zombie
-  the null-diff against no culling is at the floor: only the sub-floor tails are gone.
+  they cover the window, `Voice.culled` is set, the voice is `Done` at that block and the scheduler counts it
+  (`VoiceScheduler.culledVoicesTotal`) and removes it, keeping the list's order.
+- **A culled voice ends at once** (lifecycle step 5, 2026-10-07). Until then it stayed listed as a ZOMBIE until
+  its scheduled `endFrame`, because the list order decided who took an orbit next (measured 2026-09-15 on Der
+  Schmetterling: -32 dBFS). Ownership now goes by onset (the newest `Sounding` voice), and every removal keeps the
+  list's order, so nothing needs the zombie. One order effect remains, the unison phase-pool take on a voice's
+  first block (`docs/tasks/engine-tidy-up.md`).
 - **Never in the gate, and never before the voice has sounded.** The held part of a note may be
   silent on purpose (a slow attack, a silent lead-in). Only the release, which has been told to
   stop, is culled, and only once at least one block has been audible (`Voice.heard`): a sample
@@ -215,8 +213,8 @@ its release and its own output has stayed under the audibility floor for the cul
   tremolo on the output (`BuiltIgnitor.gatesOutput`; a square shape at full depth is exact silence
   for half a cycle) unless `cull` is set explicitly; a sparse source inside an ignitor is the author's call (`noCull()`).
 - **Tails on the orbit are untouched:** reverb and delay live on the cylinder buses; culling
-  only stops future ~zero sends. The orbit lease does not move either (the zombie renews it), so
-  the handover sequence on an orbit with mixed bus configs is the same as without culling.
+  only stops future ~zero sends. A culled voice is past its gate and owns nothing, so culling
+  does not move the orbit's ownership either.
 - **Knobs:** `cull(seconds)` sets the window per voice (`VoiceData.cull`, default
   `VOICE_CULL_SECONDS` = 50 ms), `noCull()` writes `VOICE_CULL_NEVER` (negative = never). Floor
   `VOICE_CULL_FLOOR` = `ORBIT_SILENCE_FLOOR` = 1e-5 (-100 dBFS; one constant shared with the

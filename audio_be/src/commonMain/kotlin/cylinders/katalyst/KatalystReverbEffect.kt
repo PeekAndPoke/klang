@@ -27,7 +27,7 @@ import kotlin.math.min
  * Owns the same active/draining/off lifecycle as [KatalystDelayEffect] (block-framing ledger D3,
  * adopted here as the decided follow-up): turning the reverb off must never freeze a live tail
  * inside the comb network. The old short-circuit stopped the comb clocks dead the moment a
- * no-reverb voice took the orbit lease, and the stale tail resurrected when a reverb voice
+ * no-reverb voice took over the orbit, and the stale tail resurrected when a reverb voice
  * reclaimed it, displaced by the (block-quantised, framing-dependent) freeze length — and the
  * cylinder's param-gated tail check could not see the frozen energy either.
  *
@@ -360,7 +360,7 @@ class KatalystReverbEffect(
 
     /**
      * Applies the orbit owner's reverb settings. Called by `KatalystChain.applyParams` on every
-     * block the lease is (re)claimed. An off-config does NOT reach the [reverb]: the retained
+     * block an owner is committed. An off-config does NOT reach the [reverb]: the retained
      * last-active parameters are what the drain runs on.
      *
      * [wet] is how much of the orbit mix feeds the room. Raw: no clamp; a non-finite wet reads as

@@ -11,6 +11,7 @@ import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -115,10 +116,10 @@ class VoicePregainWireSpec : StringSpec({
 
         for (b in 0 until blocks) {
             ctx.blockStart = (b * blockFrames).toDouble()
-            ctx.cylinders.getOrInit(voice.cylinderId, voice, ctx.blockStart).clear()
+            ctx.cylinders.offerAndCommit(voice.cylinderId, voice, ctx.blockStart).clear()
             voice.render(ctx)
 
-            val mix = ctx.cylinders.getOrInit(voice.cylinderId, voice, ctx.blockStart).mixBuffer.left
+            val mix = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, ctx.blockStart).mixBuffer.left
 
             for (i in 0 until blockFrames) {
                 out[b * blockFrames + i] = mix[i]

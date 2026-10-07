@@ -71,12 +71,12 @@ class CylinderChainSwapSpec : StringSpec({
 
         /** A voice claims the orbit: the chain's stages are written and the orbit sounds. */
         fun sound(voice: Voice = VoiceTestHelpers.createSynthVoice()) {
-            cylinder.updateFromVoice(voice, blockStart = 0.0)
+            cylinder.offerAndCommit(voice, blockStart = 0.0)
         }
 
         /**
          * The orbit falls silent and the round-robin cleanup reaches it, long after [sound]'s claim:
-         * no voice plays any more, so the orbit lease has lapsed.
+         * no voice plays any more, so no check-in holds the orbit.
          */
         fun goQuiet() {
             cylinder.mixBuffer.clear()
@@ -323,7 +323,7 @@ class CylinderChainSwapSpec : StringSpec({
         // Review round 1, m1. `install` returns FALSE when the requested chain is the one already
         // in service, so `installPending` reports "nothing installed" and `tryDeactivate` falls
         // through to its own reset. Without that the orbit went inactive with its DSP state and its
-        // lease intact, and the next life's first owner inherited this life's settings, which the
+        // owner state intact, and the next life's first owner inherited this life's settings, which the
         // reset exists to prevent.
         val rig = Rig()
 
@@ -354,17 +354,15 @@ class CylinderChainSwapSpec : StringSpec({
 
         rig.cylinder.isActive shouldBe false
 
-        // The observable is the LEASE, which `tryDeactivate`'s reset frees along with the orbit's
-        // param state. A second voice offering itself in the SAME block as the first is inside the
-        // lease's grace: if the lease still stood, its claim would be refused and the orbit would
-        // keep the dead owner's 6. Granted, it writes its own 2.
+        // The observable is the owner's param state, which `tryDeactivate`'s reset forgets along
+        // with the owner: the next voice configures the orbit from scratch and writes its own 2.
         rig.sound(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 2.0),
             )
         )
 
-        withClue("the lease was freed, so the next owner configures the orbit from scratch") {
+        withClue("the owner was forgotten, so the next owner configures the orbit from scratch") {
             rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe
                     Reverb.normalizeSize(2.0)
         }

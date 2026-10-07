@@ -55,7 +55,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * compared a declared chain against an undeclared one.
  *
  * Why an end-to-end render and not a stage-level comparison: only a render exercises the cylinder,
- * the lease and the order in which a chain is installed. The stage-level half lives in
+ * the orbit's owner and the order in which a chain is installed. The stage-level half lives in
  * `KatalystClassicMatchesUntouchedVoiceSpec`, which cannot see the cylinder.
  */
 class KatalystDoorFillRenderSpec : StringSpec({

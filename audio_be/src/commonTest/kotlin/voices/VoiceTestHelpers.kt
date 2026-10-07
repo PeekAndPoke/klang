@@ -85,7 +85,7 @@ object VoiceTestHelpers {
         // Silence culling window in seconds (null = engine default, negative = never)
         cull: Double? = null,
 
-        // The orbit chain's param state this voice carries while it owns the orbit's lease.
+        // The orbit chain's param state this voice carries while it owns the orbit.
         katalystParams: Map<String, Double>? = null,
 
         // Stages after the tree, as the factory's `treeStages` (e.g. the teardown fade).

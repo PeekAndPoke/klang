@@ -61,17 +61,18 @@ Cmd → PlaybackEngineDispatcher.handle
 - `voices/TeardownFadeRenderer.kt`: the fade after a tree for which `BuiltIgnitor.endsInEnvelope` is false.
 - `voices/strip/pitch/` — `PitchPipelineBuilder`, `Vibrato`, `Accelerate`, `Fm`, `PitchEnvelope`.
 - `voices/strip/ignite/IgniteRenderer.kt` — runs the Ignitor into the buffer.
-- `voices/strip/send/SendRenderer.kt` — pans + sums the voice into its cylinder (the `getOrInit` routing seam).
+- `voices/strip/send/SendRenderer.kt`: pans + sums the voice into its cylinder (the `Cylinders.offer` / `checkIn` routing seam).
 
 ## Cylinders and the master: the Katalyst hosts
 
 - `cylinders/Cylinders.kt` **[changed]** — `Map<orbitId, Cylinder>`, additive `processAndMix`, round-robin cleanup.
 - `cylinders/Cylinder.kt`: one orbit: its `KatalystChain` (the born-with `Katalyst.classic`, or a declared one),
-  the owner `VoiceLease`, the chain cache and the swap, `tryDeactivate` (tail check).
+  its owner (the newest `Sounding` voice: `offer`, `commitOwner`), the check-in, the chain cache and the swap,
+  `tryDeactivate` (tail check).
 - `cylinders/katalyst/`: `KatalystChain` + `KatalystChainBuilder` (the wire `KatalystDsl` to stages), one effect per
   stage (`Eq`, `Gain`, `Delay`, `Reverb`, `Phaser`, `Compressor`, `Body`, `Formant` for the vowel, `Duck`),
   `KatalystFilterSwap` (the body and vowel bank crossfade), `KatalystSlots` + `KatalystSlotWriters` (`katp`),
-  `KatalystRegistry` (one fork per playback, serving orbits and the output), `KatalystContext`, `VoiceLease`.
+  `KatalystRegistry` (one fork per playback, serving orbits and the output), `KatalystContext`.
 - `master/MasterBus.kt`: the same `KatalystChain` at the output position (phase 3 step 12); `master(Katalyst())`
   switches it off.
 - `ChainSwap.kt` (the swap law both hosts share: fade the leaving chain's input, drain its tail, release it after

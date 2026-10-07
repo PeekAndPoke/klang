@@ -32,13 +32,13 @@ import kotlin.math.abs
 
 /**
  * The orbit's **param state** (Katalyst step 5a): what `.katp` and the bus doors write reaches a
- * DECLARED chain's `Param` slots through the voice that holds the orbit's lease, and nothing else
+ * DECLARED chain's `Param` slots through the voice that owns the orbit, and nothing else
  * about the orbit changes.
  *
  * Three questions, and they are separate on purpose:
  *
  *  - what a chain RESOLVES from a state, and what it costs (the chain rows);
- *  - who supplies that state and when it is re-read (the cylinder rows, where the lease lives);
+ *  - who supplies that state and when it is re-read (the cylinder rows, where ownership lives);
  *  - that the chain a cylinder is BORN with reads it exactly like a declared one (the last rows;
  *    since step 5b-1 the map is the ONE way a bus knob reaches a stage).
  *
@@ -233,30 +233,34 @@ class CylinderKatalystParamsSpec : StringSpec({
         chain.ducksWith() shouldBe false
     }
 
-    // ── The lease supplies the state ─────────────────────────────────────────────────────────────
+    // ── The owner supplies the state ─────────────────────────────────────────────────────────────
 
     "on a cylinder: the OWNER's state configures the orbit, and an owner change hands it over" {
         val rig = Rig()
         rig.registry.register("bus", declaredClassic)
         rig.cylinder.requestChain("bus")
 
-        rig.cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
+        rig.cylinder.offerAndCommit(voice(room(size = 6.0)), blockStart = 0.0)
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
 
-        // The owner misses more than a block, so the next voice takes the lease with ITS state.
-        rig.cylinder.updateFromVoice(voice(room(size = 2.0)), blockStart = 4.0 * blockFrames)
+        // The owner stops offering (its gate closed), so the next voice owns the orbit with ITS state.
+        rig.cylinder.offerAndCommit(voice(room(size = 2.0)), blockStart = 4.0 * blockFrames)
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(2.0)
     }
 
-    "on a cylinder: a NON-owner's state is ignored while the owner is alive" {
+    "on a cylinder: an older voice's state is ignored while the newest owns the orbit" {
         val rig = Rig()
         rig.registry.register("bus", declaredClassic)
         rig.cylinder.requestChain("bus")
 
+        // Same onset: the voice created later is the newer one and owns (lifecycle step 5).
+        val older = voice(room(size = 2.0))
         val owner = voice(room(size = 6.0))
 
-        rig.cylinder.updateFromVoice(owner, blockStart = 0.0)
-        rig.cylinder.updateFromVoice(voice(room(size = 2.0)), blockStart = 0.0)
+        // Both offer in one block; the commit picks the newest.
+        rig.cylinder.offer(owner, blockStart = 0.0)
+        rig.cylinder.offer(older, blockStart = 0.0)
+        rig.cylinder.commitOwner()
 
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
     }
@@ -274,7 +278,7 @@ class CylinderKatalystParamsSpec : StringSpec({
 
         // No `requestChain`, so the cylinder runs the chain it was born with. The voice carries a
         // room in its slot state, which is the only place a voice can carry one.
-        rig.cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
+        rig.cylinder.offerAndCommit(voice(room(size = 6.0)), blockStart = 0.0)
 
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
     }
@@ -290,7 +294,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         fun render(ownerSlots: Map<String, Double>): Pair<Cylinder, Double> {
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
-            cylinder.updateFromVoice(voice(ownerSlots), blockStart = 0.0)
+            cylinder.offerAndCommit(voice(ownerSlots), blockStart = 0.0)
 
             var worst = 0.0
 
@@ -341,7 +345,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         fun render(params: Map<String, Double>?): DoubleArray {
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
-            cylinder.updateFromVoice(
+            cylinder.offerAndCommit(
                 VoiceTestHelpers.createSynthVoice(katalystParams = params),
                 blockStart = 0.0,
             )
@@ -378,7 +382,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         rig.registry.register("classic", KatalystDsl.classic)
         rig.cylinder.requestChain("classic")
 
-        rig.cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
+        rig.cylinder.offerAndCommit(voice(room(size = 6.0)), blockStart = 0.0)
 
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
 
@@ -397,7 +401,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         val rig = Rig()
         rig.registry.register("classic", KatalystDsl.classic)
 
-        rig.cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
+        rig.cylinder.offerAndCommit(voice(room(size = 6.0)), blockStart = 0.0)
 
         val before = rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
 

@@ -33,12 +33,13 @@ import kotlin.math.round
  *
  * Before the decision the silence gate read the post-fader mix, so the orbit was reset every
  * tenth block while its voices played (one orbit: deactivated at the tenth silent visit,
- * reactivated by the next check-in, the count restarting), the lease was re-dealt, and the fader came back as a
+ * reactivated by the next check-in, the count restarting), the owner was re-dealt, and the fader came back as a
  * one-sample jump or a one-block ramp mid-note depending on which voice claimed first.
  *
- * The oracles are the two decided laws, never numbers read off a run: the LEASE (every rendering
- * voice checks in each block; a lapsed owner is replaced one block after its last check-in, see
- * `VoiceLease`), and the knob-glide LEVEL law (linear over `KNOB_GLIDE_SECONDS` rounded to whole
+ * The oracles are the decided laws, never numbers read off a run: the CHECK-IN (every rendering voice
+ * checks in each block and keeps the orbit in use until one block after its last check-in), OWNERSHIP
+ * (the newest sounding voice owns; when it stops, the next owns from that block, `Cylinder.offer`), and
+ * the knob-glide LEVEL law (linear over `KNOB_GLIDE_SECONDS` rounded to whole
  * blocks, per sample, landing exactly; `docs/plans/knob-glide.md`), applied to a reference render of
  * the same voices at unity.
  */
@@ -93,25 +94,25 @@ class CylinderFaderThroughZeroSpec : StringSpec({
         }
     }
 
-    "a muted orbit never deactivates while its voice plays, and goes on the first block its lease has lapsed" {
+    "a muted orbit never deactivates while its voice plays, and goes on the first block after the check-in's grace" {
         // The voice renders blocks 0..29 and is muted by the fader throughout, so the post-fader
         // mix is silent from the first block and the silence grace is served by block 9.
         val out = render(listOf(voice(fromBlock = 0, toBlock = 30, fader = 0.0)), blocks = 40)
 
         for (b in 0 until 40) {
             withClue("block $b") {
-                // The lease law: the last check-in is block 29, the owner's grace covers block 30,
+                // The check-in law: the last check-in is block 29, its grace covers block 30,
                 // and the first visit after that (one cylinder: every block) deactivates.
                 out[b].active shouldBe (b <= 30)
-                // And nothing ever comes out: no reset, no re-dealt lease, no snap.
+                // And nothing ever comes out: no reset, no re-dealt owner, no snap.
                 out[b].left.all { it == 0.0 } shouldBe true
             }
         }
     }
 
     "a voice that is not the owner keeps the orbit alive after the owner has ended" {
-        // A owns (it offers itself first) and ends after block 19; B, turned away while A's lease
-        // holds, plays on until block 39. Both muted, so only the lease can hold the orbit.
+        // A ends after block 19; B (newer, so the owner from block 5) plays on until block 39. Both
+        // muted, so only the check-in can hold the orbit.
         val out = render(
             listOf(voice(fromBlock = 0, toBlock = 20, fader = 0.0), voice(fromBlock = 5, toBlock = 40, fader = 0.0)),
             blocks = 50,
@@ -119,8 +120,7 @@ class CylinderFaderThroughZeroSpec : StringSpec({
 
         for (b in 0 until 50) {
             withClue("block $b") {
-                // In block 20 nobody renews the lease (A has ended, B is turned away by A's grace)
-                // and it is held all the same; B takes it in block 21, and its own grace ends it.
+                // B checks in through block 39; its grace holds block 40, and the orbit goes after it.
                 out[b].active shouldBe (b <= 40)
             }
         }
@@ -128,19 +128,21 @@ class CylinderFaderThroughZeroSpec : StringSpec({
 
     "the fader comes back up from 0 by the glide, from where it stands, when the next owner takes over" {
         // A (fader 0) owns the orbit and ends after block 19; B (fader 1) has been playing, muted,
-        // since block 5. The reference renders the same two voices with no fader value (unity).
-        val muted = render(
-            listOf(voice(fromBlock = 0, toBlock = 20, fader = 0.0), voice(fromBlock = 5, toBlock = 80, fader = 1.0)),
-            blocks = 80,
-        )
-        val reference = render(
-            listOf(voice(fromBlock = 0, toBlock = 20, fader = null), voice(fromBlock = 5, toBlock = 80, fader = null)),
-            blocks = 80,
-        )
+        // all along. Same onset: A is created later, so it is the newer voice and owns (lifecycle step 5).
+        // The reference renders the same two voices with no fader value (unity).
+        fun pair(faderB: Double?, faderA: Double?): List<Voice> {
+            val b = voice(fromBlock = 0, toBlock = 80, fader = faderB)
+            val a = voice(fromBlock = 0, toBlock = 20, fader = faderA)
 
-        // B takes the lease in block 21 (A's last check-in is block 19, its grace covers block 20),
-        // and the fader glides from 0 there, per sample, over the decided number of blocks.
-        val takeover = 21
+            return listOf(a, b)
+        }
+
+        val muted = render(pair(faderB = 1.0, faderA = 0.0), blocks = 80)
+        val reference = render(pair(faderB = null, faderA = null), blocks = 80)
+
+        // B owns from block 20, the first block A does not offer in (it ended), and the fader glides
+        // from 0 there, per sample, over the decided number of blocks.
+        val takeover = 20
 
         fun level(k: Int): Double = if (k <= 0) 0.0 else if (k >= glideBlocks) 1.0 else k.toDouble() / glideBlocks
 

@@ -27,7 +27,15 @@ class SendRenderer(
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
-        val cylinder = ctx.renderContext.cylinders.getOrInit(voice.cylinderId, voice, ctx.renderContext.blockStart)
+        // Every rendering voice routes into its orbit; only a voice whose gate is open offers itself as the owner
+        // of the orbit's bus settings (`Voice.claimsOrbit`), the newest offer of the block wins (`Cylinder.offer`).
+        val cylinders = ctx.renderContext.cylinders
+        val blockStart = ctx.renderContext.blockStart
+        val cylinder = if (voice.claimsOrbit(blockStart)) {
+            cylinders.offer(id = voice.cylinderId, voice = voice, blockStart = blockStart)
+        } else {
+            cylinders.checkIn(id = voice.cylinderId, blockStart = blockStart)
+        }
 
         // Equal Power Panning
         // Input: 0.0 (Left) .. 1.0 (Right)

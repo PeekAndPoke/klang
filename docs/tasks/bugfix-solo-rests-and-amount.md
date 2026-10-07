@@ -185,7 +185,7 @@ Read from the code; each point gets a test below.
   only.
 - **Side effects inside the mix.** A `duck` stage listening to a muted orbit hears zeros, so the soloed part stops
   pumping while soloed. A muted voice is still `Sounding`, so it can still own an orbit's bus settings (step 5's
-  lease rule) when it shares the orbit with the soloed part. Both exist today at 0.05; at 0 they are easier to
+  ownership rule) when it shares the orbit with the soloed part. Both exist today at 0.05; at 0 they are easier to
   notice.
 
 ### Is `control` the right name for "data only"?
