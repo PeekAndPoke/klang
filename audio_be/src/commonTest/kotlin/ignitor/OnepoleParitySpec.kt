@@ -46,12 +46,12 @@ class OnepoleParitySpec : StringSpec({
 
     fun render(chain: Ignitor): DoubleArray {
         val c = ctx()
-        c.updateOffsetAndLength(0, blockFrames)
+        c.updateOffsetAndLength(offset = 0, length = blockFrames)
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(frames)
         repeat(blocks) { blk ->
             chain.generate(buf, 220.0, c)
-            buf.copyInto(out, blk * blockFrames, 0, blockFrames)
+            buf.copyInto(destination = out, destinationOffset = blk * blockFrames, startIndex = 0, endIndex = blockFrames)
             c.voiceElapsedFrames += blockFrames
         }
         var peak = 0.0
@@ -75,7 +75,7 @@ class OnepoleParitySpec : StringSpec({
         // slot as `classic()`'s first stage (the row below).
         val registry = IgnitorRegistry().apply {
             registerDefaults()
-            register("rawsine", IgnitorDsl.OnePoleLowpass(IgnitorDsl.Sine(), IgnitorDsl.Slots.onepole))
+            register("rawsine", IgnitorDsl.OnePoleLowpass(inner = IgnitorDsl.Sine(), freq = IgnitorDsl.Slots.onepole))
         }
         fun exciter(params: Map<String, Double>?): Ignitor {
             val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", ignitorParams = params)
@@ -124,7 +124,7 @@ class OnepoleParitySpec : StringSpec({
         // old `warmth` was); the pin is the measured truth, not a design claim.
         fun rms(chain: Ignitor, freqHz: Double): Double {
             val c = ctx()
-            c.updateOffsetAndLength(0, blockFrames)
+            c.updateOffsetAndLength(offset = 0, length = blockFrames)
             val buf = AudioBuffer(blockFrames)
             var sum = 0.0
             var n = 0
@@ -149,6 +149,6 @@ class OnepoleParitySpec : StringSpec({
     "conversion pin: onepole(12000) at 48 kHz has coefficient 0.5 == the old warmth(0.5)" {
         // a = K/(1+K), K = tan(π·fc/sr); fc = 12000, sr = 48000 → K = tan(π/4) = 1 → a = 0.5.
         // The migration formula fc = sr/π·atan((1-w)/w) inverts exactly this mapping.
-        onePoleLpfCoeff(12000.0, 48000.0) shouldBe (0.5 plusOrMinus 1e-12)
+        onePoleLpfCoeff(cutoffHz = 12000.0, sampleRate = 48000.0) shouldBe (0.5 plusOrMinus 1e-12)
     }
 })

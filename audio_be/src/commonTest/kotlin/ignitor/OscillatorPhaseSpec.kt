@@ -103,7 +103,7 @@ class OscillatorPhaseSpec : StringSpec({
         val out = ArrayList<Double>()
 
         for ((offset, length) in blocks) {
-            c.updateOffsetAndLength(offset, length)
+            c.updateOffsetAndLength(offset = offset, length = length)
             ignitor.generate(buffer, freqHz, c)
 
             for (i in offset until offset + length) {
@@ -128,7 +128,7 @@ class OscillatorPhaseSpec : StringSpec({
         val out = ArrayList<Double>()
 
         for ((offset, length) in blocks) {
-            c.updateOffsetAndLength(offset, length)
+            c.updateOffsetAndLength(offset = offset, length = length)
             ignitor.generate(buffer, freqHz, c)
 
             for (i in offset until offset + length) {
@@ -164,7 +164,7 @@ class OscillatorPhaseSpec : StringSpec({
         "sawtooth" to IgnitorDsl.Saw(analog = analog, phase = phase),
         "ramp" to IgnitorDsl.Ramp(analog = analog, phase = phase),
         "square (Pulze)" to IgnitorDsl.Pulze(analog = analog, phase = phase),
-        "square (PWM)" to IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = c(3.0)).range(c(0.3), c(0.7)), analog = analog, phase = phase),
+        "square (PWM)" to IgnitorDsl.Pulze(duty = IgnitorDsl.Sine(freq = c(3.0)).range(from = c(0.3), to = c(0.7)), analog = analog, phase = phase),
         "pulze" to IgnitorDsl.RawPulze(analog = analog, phase = phase),
         "square (internal)" to IgnitorDsl.Square(analog = analog, phase = phase),
         "tri" to IgnitorDsl.Tri(analog = analog, phase = phase),
@@ -292,10 +292,10 @@ class OscillatorPhaseSpec : StringSpec({
 
     "a phase input of 0 renders bit for bit what the oscillator without one renders, with and without drift" {
         for (analog in listOf(c(0.0), c(2.0))) {
-            val plain = nodes(c(0.0), analog)
-            val slotted = nodes(IgnitorDsl.Param("ph", 0.0), analog)
+            val plain = nodes(phase = c(0.0), analog = analog)
+            val slotted = nodes(phase = IgnitorDsl.Param("ph", 0.0), analog = analog)
             // a moving phase that is 0 everywhere (the product of an oscillator and 0 is no block constant)
-            val zeroSignal = nodes(IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(3.0)), c(0.0)), analog)
+            val zeroSignal = nodes(phase = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = c(3.0)), right = c(0.0)), analog = analog)
 
             for (name in plain.keys) {
                 withClue("$name, analog $analog") {
@@ -411,7 +411,7 @@ class OscillatorPhaseSpec : StringSpec({
         val sineShifted = render(Ignitors.sine(phase = ConstantIgnitor(0.25)), exactHz, full(10))
         val sineCut = render(Ignitors.sine(), exactHz, full(11)).copyOfRange(quarter, quarter + n)
 
-        maxDiff(sineShifted, sineCut) shouldBeLessThan 1e-12
+        maxDiff(a = sineShifted, b = sineCut) shouldBeLessThan 1e-12
         // a sine a quarter cycle on starts at its peak (the polynomial sine is within about 1.3e-11 of 1 there)
         abs(sineShifted[0] - 1.0) shouldBeLessThan 1e-10
     }
@@ -432,8 +432,8 @@ class OscillatorPhaseSpec : StringSpec({
                 val cut = render(make(null), exactHz, full(11)).copyOfRange(quarter, quarter + n)
 
                 // the random start phases are not on the exact clock: agreement to rounding
-                maxDiff(shifted, cut) shouldBeLessThan 1e-12
-                maxDiff(shifted, render(make(null), exactHz, full(10))) shouldNotBe 0.0
+                maxDiff(a = shifted, b = cut) shouldBeLessThan 1e-12
+                maxDiff(a = shifted, b = render(make(null), exactHz, full(10))) shouldNotBe 0.0
             }
         }
     }
@@ -461,13 +461,13 @@ class OscillatorPhaseSpec : StringSpec({
 
         val sineModulated = render(Ignitors.sine(phase = ArrayIgnitor(ramp)), exactHz, full(12))
 
-        maxDiff(sineModulated, render(Ignitors.sine(), exactHz * 1.5, full(12))) shouldBeLessThan 1e-9
+        maxDiff(a = sineModulated, b = render(Ignitors.sine(), exactHz * 1.5, full(12))) shouldBeLessThan 1e-9
 
         // the stacks read the same offsets on every voice: a ramp shifts the whole stack's frequency (the supertri: its
         // flanks are fully open, so like the triangle its shape does not depend on the frequency)
         val stack = { p: Ignitor? -> Ignitors.superTri(voices = ConstantIgnitor(5.0), detune = ConstantIgnitor(0.0), rng = Random(3), phase = p) }
 
-        maxDiff(render(stack(ArrayIgnitor(ramp)), exactHz, full(12)), render(stack(null), exactHz * 1.5, full(12))) shouldBeLessThan 1e-9
+        maxDiff(a = render(stack(ArrayIgnitor(ramp)), exactHz, full(12)), b = render(stack(null), exactHz * 1.5, full(12))) shouldBeLessThan 1e-9
     }
 
     "a sine LFO on the phase of a sine is sin(wt + 2 pi m(t)): phase modulation" {
@@ -480,8 +480,8 @@ class OscillatorPhaseSpec : StringSpec({
             sin(2.0 * PI * 440.0 * i / sampleRate + 2.0 * PI * m)
         }
 
-        maxDiff(modulated, expected) shouldBeLessThan 1e-8
-        maxDiff(modulated, render(Ignitors.sine(), 440.0, full(12))) shouldNotBe 0.0
+        maxDiff(a = modulated, b = expected) shouldBeLessThan 1e-8
+        maxDiff(a = modulated, b = render(Ignitors.sine(), 440.0, full(12))) shouldNotBe 0.0
     }
 
     // ── THE STACK MOVES AS ONE ──────────────────────────────────────────────────────────────────
@@ -498,9 +498,9 @@ class OscillatorPhaseSpec : StringSpec({
                 val plain = render(make(null), 220.0)
                 val negated = DoubleArray(plain.size) { -plain[it] }
 
-                maxDiff(render(make(ConstantIgnitor(0.5)), 220.0), negated) shouldBeLessThan 1e-12
+                maxDiff(a = render(make(ConstantIgnitor(0.5)), 220.0), b = negated) shouldBeLessThan 1e-12
                 // the moving path: a constant half cycle as a signal
-                maxDiff(render(make(ArrayIgnitor(DoubleArray(4000) { 0.5 })), 220.0), negated) shouldBeLessThan 1e-12
+                maxDiff(a = render(make(ArrayIgnitor(DoubleArray(4000) { 0.5 })), 220.0), b = negated) shouldBeLessThan 1e-12
             }
         }
     }
@@ -523,8 +523,8 @@ class OscillatorPhaseSpec : StringSpec({
                 plainCount.value = 3.0
             }
 
-            c1.updateOffsetAndLength(0, blockFrames)
-            c2.updateOffsetAndLength(0, blockFrames)
+            c1.updateOffsetAndLength(offset = 0, length = blockFrames)
+            c2.updateOffsetAndLength(offset = 0, length = blockFrames)
             bank.generate(a, 220.0, c1)
             plain.generate(b, 220.0, c2)
 
@@ -565,7 +565,7 @@ class OscillatorPhaseSpec : StringSpec({
 
             for (block in 0 until 6) {
                 input.breach = block == breachBlock
-                cc.updateOffsetAndLength(0, 100)
+                cc.updateOffsetAndLength(offset = 0, length = 100)
                 imp.generate(buffer, exactHz, cc)
 
                 for (i in 0 until 100) {
@@ -618,7 +618,7 @@ class OscillatorPhaseSpec : StringSpec({
 
         for ((block, length) in listOf(96, 128, 96).withIndex()) {
             stepped.value = listOf(0.26, 0.2, 0.6)[block]
-            c.updateOffsetAndLength(0, length)
+            c.updateOffsetAndLength(offset = 0, length = length)
             impulse.generate(buffer, exactHz, c)
 
             for (i in 0 until length) {
@@ -641,7 +641,7 @@ class OscillatorPhaseSpec : StringSpec({
 
             for ((block, length) in lengths.withIndex()) {
                 offset.value = values[block]
-                cc.updateOffsetAndLength(0, length)
+                cc.updateOffsetAndLength(offset = 0, length = length)
                 imp.generate(buffer, exactHz, cc)
 
                 for (i in 0 until length) {

@@ -36,7 +36,7 @@ class IgnitorArithmeticTest : StringSpec({
         gateEndFrame = blockFrames * 4,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -157,17 +157,17 @@ class IgnitorArithmeticTest : StringSpec({
     }
 
     "clamp bounds within range" {
-        val out = render(const(2.0).clamp(const(-1.0), const(1.0)))
+        val out = render(const(2.0).clamp(lo = const(-1.0), hi = const(1.0)))
         out[0] shouldBe (1.0 plusOrMinus 1e-6)
     }
 
     "clamp passes through if in range" {
-        val out = render(const(0.3).clamp(const(-1.0), const(1.0)))
+        val out = render(const(0.3).clamp(lo = const(-1.0), hi = const(1.0)))
         out[0] shouldBe (0.3 plusOrMinus 1e-6)
     }
 
     "clamp lower bound" {
-        val out = render(const(-2.0).clamp(const(-1.0), const(1.0)))
+        val out = render(const(-2.0).clamp(lo = const(-1.0), hi = const(1.0)))
         out[0] shouldBe (-1.0 plusOrMinus 1e-6)
     }
 
@@ -287,33 +287,33 @@ class IgnitorArithmeticTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "lerp at t=0 is left" {
-        val out = render(const(0.2).lerp(const(0.8), const(0.0)))
+        val out = render(const(0.2).lerp(other = const(0.8), t = const(0.0)))
         out[0] shouldBe (0.2 plusOrMinus 1e-6)
     }
 
     "lerp at t=1 is right" {
-        val out = render(const(0.2).lerp(const(0.8), const(1.0)))
+        val out = render(const(0.2).lerp(other = const(0.8), t = const(1.0)))
         out[0] shouldBe (0.8 plusOrMinus 1e-6)
     }
 
     "lerp at t=0.5 is midpoint" {
-        val out = render(const(0.2).lerp(const(0.8), const(0.5)))
+        val out = render(const(0.2).lerp(other = const(0.8), t = const(0.5)))
         out[0] shouldBe (0.5 plusOrMinus 1e-6)
     }
 
     "range maps -1..1 to from..to, the midpoint" {
         // input = 0 (midpoint of [-1,1]) → output = midpoint of [from, to]
-        val out = render(const(0.0).range(const(2.0), const(10.0)))
+        val out = render(const(0.0).range(from = const(2.0), to = const(10.0)))
         out[0] shouldBe (6.0 plusOrMinus 1e-5)
     }
 
     "range maps -1 to from" {
-        val out = render(const(-1.0).range(const(2.0), const(10.0)))
+        val out = render(const(-1.0).range(from = const(2.0), to = const(10.0)))
         out[0] shouldBe (2.0 plusOrMinus 1e-5)
     }
 
     "range maps +1 to to" {
-        val out = render(const(1.0).range(const(2.0), const(10.0)))
+        val out = render(const(1.0).range(from = const(2.0), to = const(10.0)))
         out[0] shouldBe (10.0 plusOrMinus 1e-5)
     }
 
@@ -468,17 +468,17 @@ class IgnitorArithmeticTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "select picks whenTrue when cond > 0" {
-        val out = render(const(0.5).select(const(7.0), const(3.0)))
+        val out = render(const(0.5).select(whenTrue = const(7.0), whenFalse = const(3.0)))
         out[0] shouldBe (7.0 plusOrMinus 1e-6)
     }
 
     "select picks whenFalse when cond <= 0" {
-        val out = render(const(-0.5).select(const(7.0), const(3.0)))
+        val out = render(const(-0.5).select(whenTrue = const(7.0), whenFalse = const(3.0)))
         out[0] shouldBe (3.0 plusOrMinus 1e-6)
     }
 
     "select cond=0 picks whenFalse (strict > 0 semantics)" {
-        val out = render(const(0.0).select(const(7.0), const(3.0)))
+        val out = render(const(0.0).select(whenTrue = const(7.0), whenFalse = const(3.0)))
         out[0] shouldBe (3.0 plusOrMinus 1e-6)
     }
 

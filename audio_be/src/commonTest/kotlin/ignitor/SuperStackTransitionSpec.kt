@@ -60,7 +60,7 @@ class SuperStackTransitionSpec : StringSpec({
         )
         val tmp = AudioBuffer(blockFrames)
         fun renderBlock(pos: Int) {
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, 220.0, ctx)
         }

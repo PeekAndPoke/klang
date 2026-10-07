@@ -145,7 +145,7 @@ class AnalogDriftSpec : StringSpec({
         for (rate in listOf(375, 48_000)) {
             val c = AnalogDriftCoeffs(8.0, rate)
             val rng = Random(5)
-            val fast = realisedSigma(20_000_000, (1.0 / c.alphaFast).toInt()) { y ->
+            val fast = realisedSigma(steps = 20_000_000, correlationSteps = (1.0 / c.alphaFast).toInt()) { y ->
                 y + c.alphaFast * ((rng.nextDouble() * 2.0 - 1.0) - y)
             }
 
@@ -154,7 +154,7 @@ class AnalogDriftSpec : StringSpec({
 
         val c = AnalogDriftCoeffs(8.0, 375)
         val rng = Random(6)
-        val slow = realisedSigma(20_000_000, (1.0 / (c.alphaSlow + c.betaSlow)).toInt()) { y ->
+        val slow = realisedSigma(steps = 20_000_000, correlationSteps = (1.0 / (c.alphaSlow + c.betaSlow)).toInt()) { y ->
             y + c.alphaSlow * ((rng.nextDouble() * 2.0 - 1.0) - y) - c.betaSlow * y
         }
 

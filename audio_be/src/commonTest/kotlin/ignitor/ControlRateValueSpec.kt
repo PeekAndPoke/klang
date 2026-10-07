@@ -26,7 +26,7 @@ class ControlRateValueSpec : StringSpec({
         gateEndFrame = blockFrames * 4,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 

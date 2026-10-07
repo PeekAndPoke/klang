@@ -37,7 +37,7 @@ class IgnitorRegistryTest : StringSpec({
         // keeps the two trees comparable for debugging. (The by-ear A/B does NOT go through here —
         // .optimizer(0) travels inside the tree and comes back out of optimized() untouched.)
         val registry = IgnitorRegistry()
-        val authored = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0)
+        val authored = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0)
         registry.register("gtr", authored)
 
         registry.get("gtr") shouldBe authored
@@ -51,7 +51,7 @@ class IgnitorRegistryTest : StringSpec({
         // FORK. A local-only optimized() lookup returns null for every built-in and
         // VoiceFactory then drops the voice: the whole song goes silent.
         val root = IgnitorRegistry()
-        root.register("gtr", IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0))
+        root.register("gtr", IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0))
         val fork = root.fork()
 
         fork.optimized("gtr") shouldNotBe null
@@ -63,7 +63,7 @@ class IgnitorRegistryTest : StringSpec({
         // old sound forever.
         val registry = IgnitorRegistry()
         registry.register("s", IgnitorDsl.Saw().lowpass(1000.0))
-        registry.register("s", IgnitorDsl.Sine().lowpass(2000.0).notch(300.0, 1.0))
+        registry.register("s", IgnitorDsl.Sine().lowpass(2000.0).notch(freq = 300.0, q = 1.0))
 
         (registry.optimized("s") as IgnitorDsl.Eq).let {
             it.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
@@ -82,7 +82,7 @@ class IgnitorRegistryTest : StringSpec({
         // every other spec in the repo stays green while every voice silently ships unfused.
         // White-box by necessity.
         val registry = IgnitorRegistry()
-        registry.register("gtr", IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0))
+        registry.register("gtr", IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0))
 
         val exciter = registry.createExciter("gtr", VoiceData.empty.copy(sound = "gtr"), 440.0)!!.ignitor
 
@@ -199,7 +199,7 @@ class IgnitorRegistryTest : StringSpec({
             voiceDurationFrames = 44100,
             gateEndFrame = 44100,
             scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = 0 }
 
         val buffer = AudioBuffer(blockFrames)
         signal!!.generate(buffer, 440.0, ctx)
@@ -243,7 +243,7 @@ class IgnitorRegistryTest : StringSpec({
             voiceDurationFrames = 44100,
             gateEndFrame = 44100,
             scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = 0 }
 
         fun render(soundIndex: Int?): AudioBuffer {
             val data = VoiceData.empty.copy(sound = "v", freqHz = 440.0, soundIndex = soundIndex)

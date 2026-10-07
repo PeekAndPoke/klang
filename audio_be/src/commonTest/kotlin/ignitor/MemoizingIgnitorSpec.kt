@@ -21,7 +21,7 @@ class MemoizingIgnitorSpec : StringSpec({
         gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -118,7 +118,7 @@ class MemoizingIgnitorSpec : StringSpec({
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames * 2)
 
-        ctx.updateOffsetAndLength(0, blockFrames)
+        ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 1
 
@@ -160,7 +160,7 @@ class MemoizingIgnitorSpec : StringSpec({
         val buf = AudioBuffer(blockFrames)
         val blocks = 8
         for (b in 0 until blocks) {
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             ctx.voiceElapsedFrames = b * blockFrames
             sig.generate(buf, 220.0, ctx)
         }

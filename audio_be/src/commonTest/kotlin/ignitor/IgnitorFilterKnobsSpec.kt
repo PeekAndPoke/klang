@@ -62,7 +62,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         random = rng,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -180,7 +180,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         // `FilterEnvDef.NONE`, which is literally the code path that existed before this step.
         val rng = seed()
         val oracleSource = saw.buildExciter(random = rng, freqHz = freqHz).ignitor
-        val oracle = oracleSource.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707))
+        val oracle = oracleSource.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707))
         val out = DoubleArray(blockFrames * blocks)
         val buffer = AudioBuffer(blockFrames)
         val context = ctx(rng)
@@ -219,7 +219,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
             // without the knobs rendered" row above, deliberately: that row is the identity claim
             // and this one is the fill's negative case, and they would be deleted for different
             // reasons. Do not fold them together without checking both clues.
-            renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707)) } shouldBe render(plain)
+            renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707)) } shouldBe render(plain)
 
             // ...and through a passes cascade, which the single-stage oracle does not reach.
             //
@@ -232,8 +232,8 @@ class IgnitorFilterKnobsSpec : StringSpec({
 
             renderRaw {
                 it
-                    .lowpass(ConstantIgnitor(800.0), ConstantIgnitor(1.2 * ladder[0]))
-                    .lowpass(ConstantIgnitor(800.0), ConstantIgnitor(1.2 * ladder[1]))
+                    .lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(1.2 * ladder[0]))
+                    .lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(1.2 * ladder[1]))
             } shouldBe render(saw.lowpass(800.0, q = 1.2, passes = 2))
         }
     }
@@ -273,8 +273,8 @@ class IgnitorFilterKnobsSpec : StringSpec({
             // The node KDoc's claim that `analog` is not inert on the taps without saturation.
             val tolerance = FilterHumanization(cutoffOffsetMul = 1.25, drift = null)
 
-            renderRaw { it.bandpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), humanize = tolerance) } shouldBe
-                renderRaw { it.bandpass(ConstantIgnitor(1000.0), ConstantIgnitor(0.707)) }
+            renderRaw { it.bandpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), humanize = tolerance) } shouldBe
+                renderRaw { it.bandpass(cutoffHz = ConstantIgnitor(1000.0), q = ConstantIgnitor(0.707)) }
         }
     }
 
@@ -349,7 +349,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val expressionDepth = IgnitorDsl.Lowpass(
             inner = saw,
             freq = IgnitorDsl.Constant(800.0),
-            env = IgnitorDsl.Max(IgnitorDsl.Param("lpenv", 24.0), IgnitorDsl.Constant(36.0)),
+            env = IgnitorDsl.Max(left = IgnitorDsl.Param("lpenv", 24.0), right = IgnitorDsl.Constant(36.0)),
             decaySec = IgnitorDsl.Constant(0.3),
             sustainLevel = IgnitorDsl.Constant(0.2),
         )
@@ -361,7 +361,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val expressionAnalog = IgnitorDsl.Lowpass(
             inner = saw,
             freq = IgnitorDsl.Constant(800.0),
-            analog = IgnitorDsl.Max(IgnitorDsl.Param("analog", 4.0), IgnitorDsl.Constant(8.0)),
+            analog = IgnitorDsl.Max(left = IgnitorDsl.Param("analog", 4.0), right = IgnitorDsl.Constant(8.0)),
             humanize = true,
         )
 
@@ -421,9 +421,9 @@ class IgnitorFilterKnobsSpec : StringSpec({
             // Same function, same stream position: `perVoiceCutoffOffsetMul` has one home and
             // both callers reach it. A second copy of the expression is what this row forbids.
             val replay = seed()
-            val expected = perVoiceCutoffOffsetMul(4.0, FILTER_CUTOFF_OFFSET_PER_ANALOG, replay)
+            val expected = perVoiceCutoffOffsetMul(analog = 4.0, cutoffOffsetPerAnalog = FILTER_CUTOFF_OFFSET_PER_ANALOG, rng = replay)
 
-            buildFilterHumanization(4.0, sampleRate, blockFrames, seed())!!
+            buildFilterHumanization(analog = 4.0, sampleRate = sampleRate, blockFrames = blockFrames, rng = seed())!!
                 .cutoffOffsetMul shouldBe expected
         }
     }
@@ -469,12 +469,12 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val tolerance = FilterHumanization(cutoffOffsetMul = 1.25, drift = null)
 
         // 800 * 1.25 is exactly 1000 in binary, so the claim is an exact bit equality.
-        renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), humanize = tolerance) } shouldBe
-            renderRaw { it.lowpass(ConstantIgnitor(1000.0), ConstantIgnitor(0.707)) }
+        renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), humanize = tolerance) } shouldBe
+            renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(1000.0), q = ConstantIgnitor(0.707)) }
 
         withClue("...and it is NOT the same as the untouched 800 Hz filter") {
-            renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), humanize = tolerance) } shouldNotBe
-                renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707)) }
+            renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), humanize = tolerance) } shouldNotBe
+                renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707)) }
         }
 
         withClue("the ENVELOPE path carries the tolerance too") {
@@ -485,8 +485,8 @@ class IgnitorFilterKnobsSpec : StringSpec({
             val swept = FilterEnvDef(depth = 24.0, attackSec = 0.01, decaySec = 0.2, sustainLevel = 0.3, releaseSec = 0.1)
 
             renderRaw {
-                it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), swept, humanize = tolerance)
-            } shouldNotBe renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), swept) }
+                it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), env = swept, humanize = tolerance)
+            } shouldNotBe renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), env = swept) }
         }
     }
 
@@ -494,7 +494,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         // Two stages sharing one lane must see ONE multiplier per block. If each stage stepped
         // it, the second stage would filter at a different cutoff than the first and the render
         // would differ from a lane that is stepped once and held.
-        val lane = buildFilterHumanization(4.0, sampleRate, blockFrames, seed())!!
+        val lane = buildFilterHumanization(analog = 4.0, sampleRate = sampleRate, blockFrames = blockFrames, rng = seed())!!
         val context = ctx(seed())
 
         val first = lane.blockDriftMultiplier(context)
@@ -510,9 +510,9 @@ class IgnitorFilterKnobsSpec : StringSpec({
         // A contract, not the constant restated: the drift's trajectory does not depend on `analog`, only its
         // scale does, so a pitch lane at the same analog on the same stream must move exactly half as far.
         val analog = 3.0
-        val lane = buildFilterHumanization(analog, sampleRate, blockFrames, seed())!!
+        val lane = buildFilterHumanization(analog = analog, sampleRate = sampleRate, blockFrames = blockFrames, rng = seed())!!
         // Skip the tolerance draw `buildFilterHumanization` takes before its drift lane.
-        val pitch = AnalogDrift(analog, analogDriftStepRate(sampleRate, blockFrames), seed().also { it.nextDouble() })
+        val pitch = AnalogDrift(analog, analogDriftStepRate(sampleRate = sampleRate, blockFrames = blockFrames), seed().also { it.nextDouble() })
         val context = ctx(seed())
 
         repeat(2000) {

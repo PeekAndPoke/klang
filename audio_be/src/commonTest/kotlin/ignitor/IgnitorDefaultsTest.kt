@@ -42,7 +42,7 @@ class IgnitorDefaultsTest : StringSpec({
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
         exciter.generate(buffer, freqHz, ctx)
@@ -113,19 +113,19 @@ class IgnitorDefaultsTest : StringSpec({
     "supersaw responds to ignitorParam 'voices'" {
         val bufDefault = createAndGenerate("supersaw")
         val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("voices" to 3.0))
-        buffersDiffer(bufDefault, bufOverride) shouldBe true
+        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
     }
 
     "supersaw responds to ignitorParam 'detune'" {
         val bufDefault = createAndGenerate("supersaw")
         val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("spread" to 0.8))
-        buffersDiffer(bufDefault, bufOverride) shouldBe true
+        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
     }
 
     "supersaw responds to ignitorParam 'analog'" {
         val bufDefault = createAndGenerate("supersaw")
         val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("analog" to 0.5))
-        buffersDiffer(bufDefault, bufOverride) shouldBe true
+        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -135,7 +135,7 @@ class IgnitorDefaultsTest : StringSpec({
     "sine responds to ignitorParam 'analog'" {
         val bufDefault = createAndGenerate("sine")
         val bufOverride = createAndGenerate("sine", ignitorParams = mapOf("analog" to 0.5))
-        buffersDiffer(bufDefault, bufOverride) shouldBe true
+        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -157,25 +157,25 @@ class IgnitorDefaultsTest : StringSpec({
     "pluck responds to ignitorParam 'decay'" {
         val bufDefault = createAndGenerate("pluck")
         val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("decay" to 0.9))
-        buffersDiffer(bufDefault, bufOverride) shouldBe true
+        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
     }
 
     "pluck responds to ignitorParam 'brightness'" {
         val bufDefault = createAndGenerate("pluck")
         val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("brightness" to 0.9))
-        buffersDiffer(bufDefault, bufOverride) shouldBe true
+        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
     }
 
     "pluck responds to ignitorParam 'pickPosition'" {
         val bufDefault = createAndGenerate("pluck")
         val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("pickPosition" to 0.1))
-        buffersDiffer(bufDefault, bufOverride) shouldBe true
+        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
     }
 
     "pluck responds to ignitorParam 'stiffness'" {
         val bufDefault = createAndGenerate("pluck")
         val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("stiffness" to 0.8))
-        buffersDiffer(bufDefault, bufOverride) shouldBe true
+        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

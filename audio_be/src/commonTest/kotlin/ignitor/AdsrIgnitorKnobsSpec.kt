@@ -34,7 +34,7 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         gateEndFrame = blockFrames,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -54,8 +54,8 @@ class AdsrIgnitorKnobsSpec : StringSpec({
 
     "defaults are behaviour-identical: bare adsr() == explicit declick=0" {
         val n = 22050
-        val bare = render(dc.adsr(0.05, 0.2, 0.4, 0.1), n)
-        val explicit = render(dc.adsr(0.05, 0.2, 0.4, 0.1, declickSeconds = 0.0), n)
+        val bare = render(dc.adsr(attackSec = 0.05, decaySec = 0.2, sustainLevel = 0.4, releaseSec = 0.1), n)
+        val explicit = render(dc.adsr(attackSec = 0.05, decaySec = 0.2, sustainLevel = 0.4, releaseSec = 0.1, declickSeconds = 0.0), n)
         for (i in 0 until n) explicit[i] shouldBe bare[i]
     }
 
@@ -74,8 +74,8 @@ class AdsrIgnitorKnobsSpec : StringSpec({
             return m
         }
 
-        val raw = render(dc.adsr(attack, 0.2, 0.4, 0.1, declickSeconds = 0.0), n)
-        val smoothed = render(dc.adsr(attack, 0.2, 0.4, 0.1, declickSeconds = 0.001), n)
+        val raw = render(dc.adsr(attackSec = attack, decaySec = 0.2, sustainLevel = 0.4, releaseSec = 0.1, declickSeconds = 0.0), n)
+        val smoothed = render(dc.adsr(attackSec = attack, decaySec = 0.2, sustainLevel = 0.4, releaseSec = 0.1, declickSeconds = 0.001), n)
         maxCornerNearJoin(smoothed) shouldBeLessThan maxCornerNearJoin(raw)
     }
 
@@ -96,7 +96,7 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         )
         val buf = render(dsl.toExciter(), n)
 
-        fun law(k: Double, i: Int): Double = adsrExpShape(1.0 - i * (1.0 / decFrames), k, adsrExpNorm(k))
+        fun law(k: Double, i: Int): Double = adsrExpShape(x = 1.0 - i * (1.0 / decFrames), k = k, norm = adsrExpNorm(k))
 
         for (i in 0 until decFrames) {
             buf[i].toRawBits() shouldBe law(ADSR_EXP_K, i).toRawBits()

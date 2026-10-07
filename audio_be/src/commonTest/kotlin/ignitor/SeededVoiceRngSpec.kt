@@ -38,7 +38,7 @@ class SeededVoiceRngSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         random = random,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -47,14 +47,14 @@ class SeededVoiceRngSpec : StringSpec({
     // path), and noise (the cache channel). A severed channel ANYWHERE diverges the two
     // same-seeded renders.
     fun wildDsl(): IgnitorDsl = IgnitorDsl.Plus(
-        IgnitorDsl.Plus(
-            IgnitorDsl.Plus(
-                IgnitorDsl.Saw(analog = IgnitorDsl.Constant(0.7)),
-                IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.5)),
+        left = IgnitorDsl.Plus(
+            left = IgnitorDsl.Plus(
+                left = IgnitorDsl.Saw(analog = IgnitorDsl.Constant(0.7)),
+                right = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.5)),
             ),
-            IgnitorDsl.Pluck(),
+            right = IgnitorDsl.Pluck(),
         ),
-        IgnitorDsl.Times(IgnitorDsl.WhiteNoise(), IgnitorDsl.Constant(0.2)),
+        right = IgnitorDsl.Times(left = IgnitorDsl.WhiteNoise(), right = IgnitorDsl.Constant(0.2)),
     )
 
     fun render(seed: Int): List<AudioBuffer> {

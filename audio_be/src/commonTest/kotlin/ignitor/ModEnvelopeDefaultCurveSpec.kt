@@ -88,7 +88,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
 
-            ctx.updateOffsetAndLength(0, n)
+            ctx.updateOffsetAndLength(offset = 0, length = n)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, freqHz, ctx)
 
@@ -132,8 +132,8 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
 
         // The node's own field defaults, through the whole build: the same as the curve named Exponential.
         val bare = IgnitorDsl.PitchEnvelope(
-            saw, IgnitorDsl.Constant(12.0), IgnitorDsl.Constant(sec(a)), IgnitorDsl.Constant(sec(d)),
-            IgnitorDsl.Constant(s), IgnitorDsl.Constant(sec(r)),
+            inner = saw, semitones = IgnitorDsl.Constant(12.0), attackSec = IgnitorDsl.Constant(sec(a)), decaySec = IgnitorDsl.Constant(sec(d)),
+            sustainLevel = IgnitorDsl.Constant(s), releaseSec = IgnitorDsl.Constant(sec(r)),
         )
 
         renderDsl(bare) shouldBe renderDsl(bare.copy(attackCurve = expKnob, decayCurve = expKnob, releaseCurve = expKnob))
@@ -190,8 +190,8 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
             }
         }
 
-        val shaped = multipliers(sec(a), sec(d), s)
-        val flat = multipliers(0.0, 0.0, 1.0)
+        val shaped = multipliers(attack = sec(a), decay = sec(d), sustain = s)
+        val flat = multipliers(attack = 0.0, decay = 0.0, sustain = 1.0)
         var compared = 0
 
         for (b in shaped.indices) {

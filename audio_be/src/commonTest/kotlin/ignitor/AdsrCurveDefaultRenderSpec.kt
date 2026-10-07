@@ -40,12 +40,12 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
 
     fun render(chain: Ignitor): DoubleArray {
         val c = ctx()
-        c.updateOffsetAndLength(0, blockFrames)
+        c.updateOffsetAndLength(offset = 0, length = blockFrames)
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(frames)
         repeat(blocks) { blk ->
             chain.generate(buf, 220.0, c)
-            buf.copyInto(out, blk * blockFrames, 0, blockFrames)
+            buf.copyInto(destination = out, destinationOffset = blk * blockFrames, startIndex = 0, endIndex = blockFrames)
             c.voiceElapsedFrames += blockFrames
         }
         var peak = 0.0
@@ -77,13 +77,13 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
                 releaseCurve = r?.let(AdsrCurves::knob) ?: base.releaseCurve,
             )
         }
-        val unset = render(buildDsl(adsrNode(null, null, null)))
-        val explicit = render(buildDsl(adsrNode(AdsrCurve.Exponential, AdsrCurve.Exponential, AdsrCurve.Exponential)))
+        val unset = render(buildDsl(adsrNode(a = null, d = null, r = null)))
+        val explicit = render(buildDsl(adsrNode(a = AdsrCurve.Exponential, d = AdsrCurve.Exponential, r = AdsrCurve.Exponential)))
         for (i in 0 until frames) {
             unset[i].toRawBits() shouldBe explicit[i].toRawBits()
         }
         // anti-vacuous: the curve genuinely matters in this fixture
-        val square = render(buildDsl(adsrNode(AdsrCurve.Square, AdsrCurve.Square, AdsrCurve.Square)))
+        val square = render(buildDsl(adsrNode(a = AdsrCurve.Square, d = AdsrCurve.Square, r = AdsrCurve.Square)))
         var differs = false
         for (i in 0 until frames) {
             if (unset[i] != square[i]) {
@@ -95,10 +95,10 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
     }
 
     "raw factory (Double overload): no curves renders bit-identical to explicit Exponential" {
-        val defaulted = render(Ignitors.sine().adsr(0.005, 0.005, 0.6, 0.01))
+        val defaulted = render(Ignitors.sine().adsr(attackSec = 0.005, decaySec = 0.005, sustainLevel = 0.6, releaseSec = 0.01))
         val explicit = render(
             Ignitors.sine().adsr(
-                0.005, 0.005, 0.6, 0.01,
+                attackSec = 0.005, decaySec = 0.005, sustainLevel = 0.6, releaseSec = 0.01,
                 attackCurve = AdsrCurve.Exponential,
                 decayCurve = AdsrCurve.Exponential,
                 releaseCurve = AdsrCurve.Exponential,
@@ -114,11 +114,11 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
         // curves explicitly, so without this row a reverted default there survives green.
         fun p(name: String, v: Double): Ignitor = ParamIgnitor(name, v)
         val defaulted = render(
-            Ignitors.sine().adsr(p("a", 0.005), p("d", 0.005), p("s", 0.6), p("r", 0.01))
+            Ignitors.sine().adsr(attackSec = p("a", 0.005), decaySec = p("d", 0.005), sustainLevel = p("s", 0.6), releaseSec = p("r", 0.01))
         )
         val explicit = render(
             Ignitors.sine().adsr(
-                p("a", 0.005), p("d", 0.005), p("s", 0.6), p("r", 0.01),
+                attackSec = p("a", 0.005), decaySec = p("d", 0.005), sustainLevel = p("s", 0.6), releaseSec = p("r", 0.01),
                 attackCurve = AdsrCurve.Exponential,
                 decayCurve = AdsrCurve.Exponential,
                 releaseCurve = AdsrCurve.Exponential,

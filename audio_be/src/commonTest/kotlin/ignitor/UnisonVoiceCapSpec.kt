@@ -39,10 +39,10 @@ class UnisonVoiceCapSpec : StringSpec({
         val out = DoubleArray(blocks * blockFrames)
 
         for (block in 0 until blocks) {
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             ctx.voiceElapsedFrames = block * blockFrames
             ig.generate(tmp, 110.0, ctx)
-            tmp.copyInto(out, block * blockFrames, 0, blockFrames)
+            tmp.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
         }
 
         return out
@@ -65,7 +65,7 @@ class UnisonVoiceCapSpec : StringSpec({
                 val huge = render(make(c(1e9)))
 
                 peak(capped) shouldBeGreaterThan 0.01
-                maxDiff(huge, capped) shouldBe 0.0
+                maxDiff(a = huge, b = capped) shouldBe 0.0
             }
         }
     }

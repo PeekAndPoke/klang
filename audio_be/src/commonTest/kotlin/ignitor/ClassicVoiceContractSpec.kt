@@ -37,10 +37,10 @@ class ClassicVoiceContractSpec : StringSpec({
                     val named = classic(env + curves, rate)
 
                     withClue("first mismatching frame against the node with Linear, SCurve, InvSquare named") {
-                        firstMismatch(classic(emptyMap(), rate, sound = "curved$door"), named) shouldBe -1
+                        firstMismatch(a = classic(emptyMap(), rate, sound = "curved$door"), b = named) shouldBe -1
                     }
                     withClue("anti-vacuous: the named curves change the sweep") {
-                        firstMismatch(classic(env, rate), named) shouldNotBe -1
+                        firstMismatch(a = classic(env, rate), b = named) shouldNotBe -1
                     }
                 }
             }
@@ -57,10 +57,10 @@ class ClassicVoiceContractSpec : StringSpec({
                     val afterTheStage = classic(bag, rate).map { 2.0 * it }.toDoubleArray()
 
                     withClue("$label: first mismatch against the doubled source through classic()") {
-                        firstMismatch(oracle, builtIn) shouldBe -1
+                        firstMismatch(a = oracle, b = builtIn) shouldBe -1
                     }
                     withClue("$label: anti-vacuous, doubling AFTER the stage is a different signal") {
-                        firstMismatch(afterTheStage, builtIn) shouldNotBe -1
+                        firstMismatch(a = afterTheStage, b = builtIn) shouldNotBe -1
                     }
                 }
             }
@@ -72,10 +72,10 @@ class ClassicVoiceContractSpec : StringSpec({
                 val oracle = classic(mapOf("onepole" to 900.0), rate, sound = "saw1p7x")
 
                 withClue("first mismatch against the 1.7x source through classic()'s onepole") {
-                    firstMismatch(oracle, builtIn) shouldBe -1
+                    firstMismatch(a = oracle, b = builtIn) shouldBe -1
                 }
                 withClue("anti-vacuous, the onepole-then-gain order is a different signal") {
-                    firstMismatch(classic(emptyMap(), rate, sound = "onepolethen1p7x"), builtIn) shouldNotBe -1
+                    firstMismatch(a = classic(emptyMap(), rate, sound = "onepolethen1p7x"), b = builtIn) shouldNotBe -1
                 }
             }
         }

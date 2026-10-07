@@ -49,7 +49,7 @@ class EqIgnitorSpec : StringSpec({
         gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -136,12 +136,12 @@ class EqIgnitorSpec : StringSpec({
         // The one variant no other row renders — a swapped Bandpass mapping arm in the
         // runtime (e.g. -> NOTCH) would ship a spectrally INVERTED filter with every other
         // row green.
-        val chained = IgnitorDsl.Bandpass(IgnitorDsl.Saw(), c(1200.0), c(3.0))
+        val chained = IgnitorDsl.Bandpass(inner = IgnitorDsl.Saw(), freq = c(1200.0), q = c(3.0))
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
-            sections = listOf(EqSection.Bandpass(c(1200.0), c(3.0))),
+            sections = listOf(EqSection.Bandpass(freq = c(1200.0), q = c(3.0))),
         )
-        assertDslParity(chained, fused)
+        assertDslParity(chained = chained, fused = fused)
     }
 
     "DYNAMIC section param (oscillator-backed cutoff) reconfigures per block bit-equally" {
@@ -153,8 +153,8 @@ class EqIgnitorSpec : StringSpec({
         // value-bearing draw (active drift, noise) diverges the trees REGARDLESS of adapter
         // ordering. The ordering property itself is pinned white-box in the next row.
         fun lfoCutoff() = IgnitorDsl.Plus(
-            c(2000.0),
-            IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(2.0)), c(500.0)),
+            left = c(2000.0),
+            right = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = c(2.0)), right = c(500.0)),
         )
         val chained = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Saw(),
@@ -163,9 +163,9 @@ class EqIgnitorSpec : StringSpec({
         )
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
-            sections = listOf(EqSection.Lowpass(lfoCutoff(), c(0.9))),
+            sections = listOf(EqSection.Lowpass(freq = lfoCutoff(), q = c(0.9))),
         )
-        assertDslParity(chained, fused)
+        assertDslParity(chained = chained, fused = fused)
     }
 
     "chained vs fused stays bit-equal WITH ACTIVE DRIFT (same-seeded voice streams)" {
@@ -175,8 +175,8 @@ class EqIgnitorSpec : StringSpec({
         // seeds before the LFO cutoff's) — a reorder hands the saw the LFO's numbers and
         // diverges, no probes needed. (Relaxes dossier item 10 for same-seed setups.)
         fun lfoCutoff() = IgnitorDsl.Plus(
-            c(2000.0),
-            IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(2.0), analog = c(0.3)), c(500.0)),
+            left = c(2000.0),
+            right = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = c(2.0), analog = c(0.3)), right = c(500.0)),
         )
         val chained = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Saw(analog = c(0.7)),
@@ -185,7 +185,7 @@ class EqIgnitorSpec : StringSpec({
         )
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(analog = c(0.7)),
-            sections = listOf(EqSection.Lowpass(lfoCutoff(), c(0.9))),
+            sections = listOf(EqSection.Lowpass(freq = lfoCutoff(), q = c(0.9))),
         )
 
         val ra = Random(11)
@@ -203,7 +203,7 @@ class EqIgnitorSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             random = r,
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
 
@@ -244,7 +244,7 @@ class EqIgnitorSpec : StringSpec({
         }
         val eq = EqIgnitor(
             upstream = upstreamProbe,
-            sections = listOf(EqIgnitor.Section(EqCore.LOWPASS, paramProbe, ConstantIgnitor(1.0))),
+            sections = listOf(EqIgnitor.Section(type = EqCore.LOWPASS, freq = paramProbe, q = ConstantIgnitor(1.0))),
         )
         eq.generate(AudioBuffer(blockFrames), 220.0, ctx())
         order shouldBe listOf("upstream", "param")
@@ -257,8 +257,8 @@ class EqIgnitorSpec : StringSpec({
         // oscillator-backed cutoff must NOT receive the mod (the chained arm noMods its
         // params — a withMod section param vibratos the LFO and diverges).
         fun lfoCutoff() = IgnitorDsl.Plus(
-            c(2000.0),
-            IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(2.0)), c(500.0)),
+            left = c(2000.0),
+            right = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = c(2.0)), right = c(500.0)),
         )
         val chained = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Lowpass(
@@ -272,12 +272,12 @@ class EqIgnitorSpec : StringSpec({
         val fused = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Eq(
                 inner = IgnitorDsl.Saw(),
-                sections = listOf(EqSection.Lowpass(lfoCutoff(), c(0.9))),
+                sections = listOf(EqSection.Lowpass(freq = lfoCutoff(), q = c(0.9))),
             ),
             rate = c(5.0),
             semitones = c(0.3),
         )
-        assertDslParity(chained, fused)
+        assertDslParity(chained = chained, fused = fused)
     }
 
     "static skip machinery is LIVE across blocks (white-box counters)" {
@@ -290,9 +290,9 @@ class EqIgnitorSpec : StringSpec({
         val eq = EqIgnitor(
             upstream = ConstantIgnitor(0.0),
             sections = listOf(
-                EqIgnitor.Section(EqCore.LOWPASS, ConstantIgnitor(2000.0), ConstantIgnitor(1.0)),
+                EqIgnitor.Section(type = EqCore.LOWPASS, freq = ConstantIgnitor(2000.0), q = ConstantIgnitor(1.0)),
                 EqIgnitor.Section(
-                    EqCore.BELL, ConstantIgnitor(850.0), ConstantIgnitor(0.9),
+                    type = EqCore.BELL, freq = ConstantIgnitor(850.0), q = ConstantIgnitor(0.9),
                     db = ParamIgnitor("d", 0.0),
                 ),
             ),
@@ -315,10 +315,10 @@ class EqIgnitorSpec : StringSpec({
         // the adapter (instead of ctx.sampleRate) would mistune every fused section on the
         // 48k worklet with the whole suite green. One chained-vs-fused row at 48k pins the
         // plumbing against the SvfIgnitor oracle.
-        val chained = IgnitorDsl.Lowpass(IgnitorDsl.Saw(), c(2000.0), c(0.9))
+        val chained = IgnitorDsl.Lowpass(inner = IgnitorDsl.Saw(), freq = c(2000.0), q = c(0.9))
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
-            sections = listOf(EqSection.Lowpass(c(2000.0), c(0.9))),
+            sections = listOf(EqSection.Lowpass(freq = c(2000.0), q = c(0.9))),
         )
         val a = chained.toExciter()
         val b = fused.toExciter()
@@ -329,7 +329,7 @@ class EqIgnitorSpec : StringSpec({
                 gateEndFrame = blockFrames * 16,
                 scratchBuffers = ScratchBuffers(blockFrames),
             ).apply {
-                updateOffsetAndLength(0, blockFrames)
+                updateOffsetAndLength(offset = 0, length = blockFrames)
                 voiceElapsedFrames = 0
             }
         }
@@ -353,7 +353,7 @@ class EqIgnitorSpec : StringSpec({
         // must re-resolve per voice frequency (and per block) — the static-cache predicate
         // deliberately excludes FreqIgnitor. A mis-classified section freezes the cutoff at
         // the first frequency and reddens the 110/440 runs.
-        fun trackingCutoff() = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Param("track", 4.0))
+        fun trackingCutoff() = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Param("track", 4.0))
         val chained = IgnitorDsl.Highpass(
             inner = IgnitorDsl.Saw(),
             freq = trackingCutoff(),
@@ -361,9 +361,9 @@ class EqIgnitorSpec : StringSpec({
         )
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
-            sections = listOf(EqSection.Highpass(trackingCutoff(), c(0.9))),
+            sections = listOf(EqSection.Highpass(freq = trackingCutoff(), q = c(0.9))),
         )
-        assertDslParity(chained, fused, freqs = listOf(110.0, 220.0, 440.0))
+        assertDslParity(chained = chained, fused = fused, freqs = listOf(110.0, 220.0, 440.0))
     }
 
     "tracking highpass retracks when the voice frequency changes MID-VOICE" {
@@ -374,7 +374,7 @@ class EqIgnitorSpec : StringSpec({
         // — expressions arrive MemoizingIgnitor-wrapped and are dynamic regardless) and a
         // composite `Freq`-based expression. A section wrongly classified static freezes
         // its cutoff at 220 Hz and diverges from block 1 on.
-        fun trackingCutoff() = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Param("track", 4.0))
+        fun trackingCutoff() = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Param("track", 4.0))
         val a = IgnitorDsl.Highpass(
             inner = IgnitorDsl.Highpass(
                 inner = IgnitorDsl.Saw(),
@@ -387,8 +387,8 @@ class EqIgnitorSpec : StringSpec({
         val b = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
-                EqSection.Highpass(IgnitorDsl.Freq, c(0.9)),
-                EqSection.Highpass(trackingCutoff(), c(1.3)),
+                EqSection.Highpass(freq = IgnitorDsl.Freq, q = c(0.9)),
+                EqSection.Highpass(freq = trackingCutoff(), q = c(1.3)),
             ),
         ).toExciter()
 
@@ -416,12 +416,12 @@ class EqIgnitorSpec : StringSpec({
         // semantic the adapter must reproduce). db = (freq - 220)/100: 0 at 220 Hz, 1.1 at
         // 330 Hz.
         fun dbExpr() = IgnitorDsl.Times(
-            IgnitorDsl.Minus(IgnitorDsl.Freq, c(220.0)),
-            c(0.01),
+            left = IgnitorDsl.Minus(left = IgnitorDsl.Freq, right = c(220.0)),
+            right = c(0.01),
         )
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
-            sections = listOf(EqSection.Bell(c(850.0), c(0.9), dbExpr())),
+            sections = listOf(EqSection.Bell(freq = c(850.0), q = c(0.9), db = dbExpr())),
         ).toExciter()
         val srcOnly = IgnitorDsl.Saw().toExciter()
         val core = EqCore(1)
@@ -435,10 +435,10 @@ class EqIgnitorSpec : StringSpec({
             fused.generate(bufFused, f, cf)
 
             core.configureSection(
-                0, EqCore.BELL, 850.0, 0.9, (f - 220.0) * 0.01, 0.0, sr.toDouble(),
+                index = 0, type = EqCore.BELL, freq = 850.0, q = 0.9, db = (f - 220.0) * 0.01, gain = 0.0, sampleRate = sr.toDouble(),
             )
             srcOnly.generate(bufRef, f, cr)
-            core.process(bufRef, 0, blockFrames)
+            core.process(buffer = bufRef, offset = 0, length = blockFrames)
 
             for (i in 0 until blockFrames) {
                 bufFused[i].toRawBits() shouldBe bufRef[i].toRawBits()
@@ -454,35 +454,35 @@ class EqIgnitorSpec : StringSpec({
         // node to Eq as inner — taps read the Eq input by definition.
         val sharedLegacy = IgnitorDsl.Saw()
         val legacy = IgnitorDsl.Plus(
-            IgnitorDsl.Plus(
-                sharedLegacy,
-                IgnitorDsl.Times(
-                    IgnitorDsl.Bandpass(sharedLegacy, c(1000.0), c(0.8)),
-                    c(2.0),
+            left = IgnitorDsl.Plus(
+                left = sharedLegacy,
+                right = IgnitorDsl.Times(
+                    left = IgnitorDsl.Bandpass(inner = sharedLegacy, freq = c(1000.0), q = c(0.8)),
+                    right = c(2.0),
                 ),
             ),
-            IgnitorDsl.Times(
-                IgnitorDsl.Bandpass(sharedLegacy, c(4000.0), c(0.85)),
-                c(5.5),
+            right = IgnitorDsl.Times(
+                left = IgnitorDsl.Bandpass(inner = sharedLegacy, freq = c(4000.0), q = c(0.85)),
+                right = c(5.5),
             ),
         )
-            .notch(210.0, 2.5)
-            .highpass(440.0, 0.707)
-            .lowpass(5300.0, 0.707)
-            .lowpass(5300.0, 0.707)
+            .notch(freq = 210.0, q = 2.5)
+            .highpass(freq = 440.0, q = 0.707)
+            .lowpass(freq = 5300.0, q = 0.707)
+            .lowpass(freq = 5300.0, q = 0.707)
 
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
-                EqSection.RawTap(c(1000.0), c(0.8), c(2.0)),
-                EqSection.RawTap(c(4000.0), c(0.85), c(5.5)),
-                EqSection.Notch(c(210.0), c(2.5)),
-                EqSection.Highpass(c(440.0), c(0.707)),
-                EqSection.Lowpass(c(5300.0), c(0.707)),
-                EqSection.Lowpass(c(5300.0), c(0.707)),
+                EqSection.RawTap(freq = c(1000.0), q = c(0.8), gain = c(2.0)),
+                EqSection.RawTap(freq = c(4000.0), q = c(0.85), gain = c(5.5)),
+                EqSection.Notch(freq = c(210.0), q = c(2.5)),
+                EqSection.Highpass(freq = c(440.0), q = c(0.707)),
+                EqSection.Lowpass(freq = c(5300.0), q = c(0.707)),
+                EqSection.Lowpass(freq = c(5300.0), q = c(0.707)),
             ),
         )
-        assertDslParity(legacy, fused)
+        assertDslParity(chained = legacy, fused = fused)
     }
 
     "the .eq().tap() SURFACE reproduces the legacy parallel chain bit-exactly" {
@@ -494,30 +494,30 @@ class EqIgnitorSpec : StringSpec({
         // separate nodes after the Eq (that shape is pinned by StdLibIgnitorTest instead).
         val sharedLegacy = IgnitorDsl.Saw()
         val legacy = IgnitorDsl.Plus(
-            IgnitorDsl.Plus(
-                sharedLegacy,
-                IgnitorDsl.Times(IgnitorDsl.Bandpass(sharedLegacy, c(1000.0), c(0.8)), c(2.0)),
+            left = IgnitorDsl.Plus(
+                left = sharedLegacy,
+                right = IgnitorDsl.Times(left = IgnitorDsl.Bandpass(inner = sharedLegacy, freq = c(1000.0), q = c(0.8)), right = c(2.0)),
             ),
-            IgnitorDsl.Times(IgnitorDsl.Bandpass(sharedLegacy, c(4000.0), c(0.85)), c(5.5)),
+            right = IgnitorDsl.Times(left = IgnitorDsl.Bandpass(inner = sharedLegacy, freq = c(4000.0), q = c(0.85)), right = c(5.5)),
         )
-            .notch(210.0, 2.5)
-            .lowpass(5300.0, 0.707)
+            .notch(freq = 210.0, q = 2.5)
+            .lowpass(freq = 5300.0, q = 0.707)
 
         val authored = IgnitorDsl.Saw()
             .eq()
-            .tap(1000.0, 0.8, 2.0)
-            .tap(4000.0, 0.85, 5.5)
+            .tap(freq = 1000.0, q = 0.8, gain = 2.0)
+            .tap(freq = 4000.0, q = 0.85, gain = 5.5)
             .let {
                 // No section methods for the serial filters yet (they stay chained nodes
                 // until the optimizer folds them), so the tail is appended directly.
                 it.copy(
                     sections = it.sections +
-                            EqSection.Notch(c(210.0), c(2.5)) +
-                            EqSection.Lowpass(c(5300.0), c(0.707)),
+                            EqSection.Notch(freq = c(210.0), q = c(2.5)) +
+                            EqSection.Lowpass(freq = c(5300.0), q = c(0.707)),
                 )
             }
 
-        assertDslParity(legacy, authored)
+        assertDslParity(chained = legacy, fused = authored)
     }
 
     "ONE tap equals its exactly-converted bell" {
@@ -532,10 +532,10 @@ class EqIgnitorSpec : StringSpec({
         val qBell = q / sqrt(aSq)
         val db = 20.0 * log10(aSq)
 
-        val oneTap = IgnitorDsl.Saw().eq().tap(850.0, q, gain)
-        val oneBell = IgnitorDsl.Saw().eq().band(850.0, qBell, db)
+        val oneTap = IgnitorDsl.Saw().eq().tap(freq = 850.0, q = q, gain = gain)
+        val oneBell = IgnitorDsl.Saw().eq().band(freq = 850.0, q = qBell, db = db)
 
-        maxAbsDiff(oneTap, oneBell) shouldBeLessThan 1e-9
+        maxAbsDiff(a = oneTap, b = oneBell) shouldBeLessThan 1e-9
     }
 
     "TWO taps do NOT equal two exactly-converted bells (the cross term)" {
@@ -559,40 +559,40 @@ class EqIgnitorSpec : StringSpec({
         for ((freq, spec) in bands) {
             val (q, gain) = spec
             val aSq = 1.0 + gain // C2 unity-peak taps: q is out of the level
-            taps = taps.tap(freq, q, gain)
-            bells = bells.band(freq, q / sqrt(aSq), 20.0 * log10(aSq))
+            taps = taps.tap(freq = freq, q = q, gain = gain)
+            bells = bells.band(freq = freq, q = q / sqrt(aSq), db = 20.0 * log10(aSq))
         }
 
         // Far above any rounding: this is a real, audible gap.
-        maxAbsDiff(taps, bells) shouldBeGreaterThan 0.05
+        maxAbsDiff(a = taps, b = bells) shouldBeGreaterThan 0.05
     }
 
     "static 0 dB bell is skipped: bit-equal to the chain WITHOUT the bell" {
         // The adapter-owned skip (EqCore KDoc): Param-backed db is per-voice constant, so a
         // 0 dB bell can never move off zero and its slot is retired to passthrough.
-        val without = IgnitorDsl.Saw().lowpass(2000.0, 1.0)
+        val without = IgnitorDsl.Saw().lowpass(freq = 2000.0, q = 1.0)
         val with = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
-                EqSection.Bell(c(850.0), c(0.9), IgnitorDsl.Param("belldb", 0.0)),
-                EqSection.Lowpass(c(2000.0), c(1.0)),
+                EqSection.Bell(freq = c(850.0), q = c(0.9), db = IgnitorDsl.Param("belldb", 0.0)),
+                EqSection.Lowpass(freq = c(2000.0), q = c(1.0)),
             ),
         )
-        assertDslParity(without, with)
+        assertDslParity(chained = without, fused = with)
     }
 
     "EXPRESSION-backed 0 dB bell stays transparent through the running-state path" {
         // Not static (Times is neither Param nor Constant) -> the core's explicit 0 dB
         // branch runs state every block and emits v0 — still bit-transparent.
-        val without = IgnitorDsl.Saw().lowpass(2000.0, 1.0)
+        val without = IgnitorDsl.Saw().lowpass(freq = 2000.0, q = 1.0)
         val with = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
-                EqSection.Bell(c(850.0), c(0.9), IgnitorDsl.Times(c(0.0), IgnitorDsl.Freq)),
-                EqSection.Lowpass(c(2000.0), c(1.0)),
+                EqSection.Bell(freq = c(850.0), q = c(0.9), db = IgnitorDsl.Times(left = c(0.0), right = IgnitorDsl.Freq)),
+                EqSection.Lowpass(freq = c(2000.0), q = c(1.0)),
             ),
         )
-        assertDslParity(without, with)
+        assertDslParity(chained = without, fused = with)
     }
 
     "ignitorParams override reaches section params" {
@@ -601,13 +601,13 @@ class EqIgnitorSpec : StringSpec({
         // path as every other param.
         val overridden = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
-            sections = listOf(EqSection.Bell(c(850.0), c(0.9), IgnitorDsl.Param("belldb", 0.0))),
+            sections = listOf(EqSection.Bell(freq = c(850.0), q = c(0.9), db = IgnitorDsl.Param("belldb", 0.0))),
         )
         val explicit = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
-            sections = listOf(EqSection.Bell(c(850.0), c(0.9), c(6.0))),
+            sections = listOf(EqSection.Bell(freq = c(850.0), q = c(0.9), db = c(6.0))),
         )
-        assertDslParity(explicit, overridden, ignitorParams = mapOf("belldb" to 6.0))
+        assertDslParity(chained = explicit, fused = overridden, ignitorParams = mapOf("belldb" to 6.0))
     }
 
     "an Eq with zero sections is bit-transparent" {
@@ -619,16 +619,16 @@ class EqIgnitorSpec : StringSpec({
         // pin loop-index arithmetic — the 1-section rows carry that.
         val bare = IgnitorDsl.Saw()
         val emptyEq = IgnitorDsl.Eq(inner = IgnitorDsl.Saw(), sections = emptyList())
-        assertDslParity(bare, emptyEq)
+        assertDslParity(chained = bare, fused = emptyEq)
     }
 
     "production sub-block onset renders bit-equal (offset != 0, partial length, first call)" {
-        val chained = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0, 0.707)
+        val chained = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(freq = 5300.0, q = 0.707)
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
-                EqSection.Notch(c(210.0), c(2.5)),
-                EqSection.Lowpass(c(5300.0), c(0.707)),
+                EqSection.Notch(freq = c(210.0), q = c(2.5)),
+                EqSection.Lowpass(freq = c(5300.0), q = c(0.707)),
             ),
         )
         val a = chained.toExciter()
@@ -640,8 +640,8 @@ class EqIgnitorSpec : StringSpec({
         val bufB = AudioBuffer(blockFrames).apply { fill(sentinel) }
         // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer index
         // `offset`, the voice's first frame (never negative).
-        val ca = ctx().apply { this.updateOffsetAndLength(offset, length); voiceElapsedFrames = 0 }
-        val cb = ctx().apply { this.updateOffsetAndLength(offset, length); voiceElapsedFrames = 0 }
+        val ca = ctx().apply { this.updateOffsetAndLength(offset = offset, length = length); voiceElapsedFrames = 0 }
+        val cb = ctx().apply { this.updateOffsetAndLength(offset = offset, length = length); voiceElapsedFrames = 0 }
         a.generate(bufA, 220.0, ca)
         b.generate(bufB, 220.0, cb)
         var windowPeak = 0.0
@@ -663,40 +663,40 @@ class EqIgnitorSpec : StringSpec({
         // dynamic (block-constant but NOT voice-constant); expressions arrive wrapped
         // (MemoizingIgnitor) and are dynamic. Output-visible in the tracking-HP row for the
         // dangerous direction (frozen tracking); pinned directly here for both directions.
-        EqIgnitor.Section(EqCore.LOWPASS, ParamIgnitor("f", 1000.0), ConstantIgnitor(1.0))
+        EqIgnitor.Section(type = EqCore.LOWPASS, freq = ParamIgnitor("f", 1000.0), q = ConstantIgnitor(1.0))
             .isStatic shouldBe true
-        EqIgnitor.Section(EqCore.HIGHPASS, FreqIgnitor, ConstantIgnitor(1.0))
+        EqIgnitor.Section(type = EqCore.HIGHPASS, freq = FreqIgnitor, q = ConstantIgnitor(1.0))
             .isStatic shouldBe false
         // A wrapped voice-constant IS voice-constant (C5 round 2): `buildIgnitor` wraps every
         // non-leaf node, so treating the wrapper itself as "dynamic" would classify by
         // packaging rather than by value. Configuring once is output-identical here.
         EqIgnitor.Section(
-            EqCore.BELL,
-            ConstantIgnitor(850.0),
-            ConstantIgnitor(0.9),
+            type = EqCore.BELL,
+            freq = ConstantIgnitor(850.0),
+            q = ConstantIgnitor(0.9),
             db = MemoizingIgnitor(ConstantIgnitor(0.0)),
         ).isStatic shouldBe true
 
         // ...but the recursion must not launder a DYNAMIC operand into static: a scaled
         // FreqIgnitor is still note-tracking and must reconfigure per block.
         EqIgnitor.Section(
-            EqCore.LOWPASS,
-            ParamIgnitor("f", 1000.0),
-            MemoizingIgnitor(FreqIgnitor * ConstantIgnitor(0.5412)),
+            type = EqCore.LOWPASS,
+            freq = ParamIgnitor("f", 1000.0),
+            q = MemoizingIgnitor(FreqIgnitor * ConstantIgnitor(0.5412)),
         ).isStatic shouldBe false
 
         // The staged cascade q as the optimizer will fold it (an affine of voice-constants) stays
         // static; an affine over Freq stays dynamic. Without the arm every ignitorParam-driven
         // cascade would re-derive its tan() per block once step 2 lands.
         EqIgnitor.Section(
-            EqCore.LOWPASS,
-            ParamIgnitor("f", 1000.0),
-            MemoizingIgnitor(ParamIgnitor("q", 1.2).affine(ConstantIgnitor(-0.0), ConstantIgnitor(0.5412), ConstantIgnitor(-0.0))),
+            type = EqCore.LOWPASS,
+            freq = ParamIgnitor("f", 1000.0),
+            q = MemoizingIgnitor(ParamIgnitor("q", 1.2).affine(pre = ConstantIgnitor(-0.0), mul = ConstantIgnitor(0.5412), add = ConstantIgnitor(-0.0))),
         ).isStatic shouldBe true
         EqIgnitor.Section(
-            EqCore.LOWPASS,
-            ParamIgnitor("f", 1000.0),
-            MemoizingIgnitor(FreqIgnitor.affine(ConstantIgnitor(-0.0), ConstantIgnitor(0.5412), ConstantIgnitor(-0.0))),
+            type = EqCore.LOWPASS,
+            freq = ParamIgnitor("f", 1000.0),
+            q = MemoizingIgnitor(FreqIgnitor.affine(pre = ConstantIgnitor(-0.0), mul = ConstantIgnitor(0.5412), add = ConstantIgnitor(-0.0))),
         ).isStatic shouldBe false
     }
 
@@ -735,9 +735,9 @@ class EqIgnitorSpec : StringSpec({
         val dsl = IgnitorDsl.Eq(
             inner = IgnitorDsl.Sine(freq = IgnitorDsl.Param("innerFreq", 440.0)),
             sections = listOf(
-                EqSection.Highpass(IgnitorDsl.Param("hpFreq", 440.0), IgnitorDsl.Param("hpQ", 0.7)),
-                EqSection.Bell(c(850.0), c(0.9), IgnitorDsl.Param("bellDb", 6.0)),
-                EqSection.RawTap(c(1000.0), c(0.8), IgnitorDsl.Param("tapGain", 2.0)),
+                EqSection.Highpass(freq = IgnitorDsl.Param("hpFreq", 440.0), q = IgnitorDsl.Param("hpQ", 0.7)),
+                EqSection.Bell(freq = c(850.0), q = c(0.9), db = IgnitorDsl.Param("bellDb", 6.0)),
+                EqSection.RawTap(freq = c(1000.0), q = c(0.8), gain = IgnitorDsl.Param("tapGain", 2.0)),
             ),
         )
         val out = mutableListOf<IgnitorDsl.Param>()

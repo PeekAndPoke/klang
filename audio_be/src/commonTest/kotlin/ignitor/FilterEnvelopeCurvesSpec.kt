@@ -53,7 +53,7 @@ class FilterEnvelopeCurvesSpec : StringSpec({
         sampleRate = sr, voiceDurationFrames = blockFrames * blocks / 2, gateEndFrame = blockFrames * blocks / 2,
         scratchBuffers = ScratchBuffers(blockFrames), random = rng,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -96,17 +96,17 @@ class FilterEnvelopeCurvesSpec : StringSpec({
 
     fun raw(kind: String, env: FilterEnvDef): (Ignitor) -> Ignitor = { src ->
         when (kind) {
-            "lowpass" -> src.lowpass(ConstantIgnitor(900.0), ConstantIgnitor(0.707), env = env)
-            "highpass" -> src.highpass(ConstantIgnitor(300.0), ConstantIgnitor(0.707), env = env)
-            "bandpass" -> src.bandpass(ConstantIgnitor(900.0), ConstantIgnitor(0.707), env = env)
-            else -> src.notch(ConstantIgnitor(900.0), ConstantIgnitor(0.707), env = env)
+            "lowpass" -> src.lowpass(cutoffHz = ConstantIgnitor(900.0), q = ConstantIgnitor(0.707), env = env)
+            "highpass" -> src.highpass(cutoffHz = ConstantIgnitor(300.0), q = ConstantIgnitor(0.707), env = env)
+            "bandpass" -> src.bandpass(cutoffHz = ConstantIgnitor(900.0), q = ConstantIgnitor(0.707), env = env)
+            else -> src.notch(cutoffHz = ConstantIgnitor(900.0), q = ConstantIgnitor(0.707), env = env)
         }
     }
 
     "each curve field of the node reaches the SVF, on all four kinds (oracle: the runtime door)" {
         for (kind in kinds) {
             // Three different curves, so a build arm that swaps two of them goes red.
-            val dsl = node(kind, 24.0, AdsrCurve.Square, AdsrCurve.Exponential, AdsrCurve.Cube)
+            val dsl = node(kind = kind, env = 24.0, ac = AdsrCurve.Square, dc = AdsrCurve.Exponential, rc = AdsrCurve.Cube)
             val oracle = raw(
                 kind,
                 FilterEnvDef(
@@ -121,16 +121,16 @@ class FilterEnvelopeCurvesSpec : StringSpec({
 
     "an UNSET curve is MOD_ENV_CURVE, exponential: bit for bit the explicit Exponential and the resolved envelope without curves" {
         for (kind in kinds) {
-            val unset = render(node(kind, 24.0, null, null, null))
+            val unset = render(node(kind = kind, env = 24.0, ac = null, dc = null, rc = null))
 
             withClue("$kind: null == Exponential") {
-                unset shouldBe render(node(kind, 24.0, AdsrCurve.Exponential, AdsrCurve.Exponential, AdsrCurve.Exponential))
+                unset shouldBe render(node(kind = kind, env = 24.0, ac = AdsrCurve.Exponential, dc = AdsrCurve.Exponential, rc = AdsrCurve.Exponential))
             }
             withClue("$kind: == the runtime door with a resolved envelope that names no curve") {
                 unset shouldBe renderRaw(raw(kind, FilterEnvDef(depth = 24.0, attackSec = 0.01, decaySec = 0.02, sustainLevel = 0.2, releaseSec = 0.01)))
             }
             withClue("$kind: a shaped decay is heard (the control)") {
-                render(node(kind, 24.0, null, AdsrCurve.Linear, null)) shouldNotBe unset
+                render(node(kind = kind, env = 24.0, ac = null, dc = AdsrCurve.Linear, rc = null)) shouldNotBe unset
             }
         }
     }
@@ -141,8 +141,8 @@ class FilterEnvelopeCurvesSpec : StringSpec({
     "a node at depth 0 renders the same whatever its curves: the depth is the only switch" {
         for (kind in kinds) {
             withClue(kind) {
-                render(node(kind, 0.0, AdsrCurve.Square, AdsrCurve.Exponential, AdsrCurve.Cube)) shouldBe
-                    render(node(kind, 0.0, null, null, null))
+                render(node(kind = kind, env = 0.0, ac = AdsrCurve.Square, dc = AdsrCurve.Exponential, rc = AdsrCurve.Cube)) shouldBe
+                    render(node(kind = kind, env = 0.0, ac = null, dc = null, rc = null))
             }
         }
     }

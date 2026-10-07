@@ -44,7 +44,7 @@ class SinePartialBankSpec : StringSpec({
         scratchBuffers = ScratchBuffers(frames),
         random = random,
     ).apply {
-        updateOffsetAndLength(0, frames)
+        updateOffsetAndLength(offset = 0, length = frames)
         voiceElapsedFrames = 0
     }
 
@@ -96,11 +96,11 @@ class SinePartialBankSpec : StringSpec({
     // ── the plain sine is untouched ──────────────────────────────────────────────
 
     "a bank of one partial renders bit-identically to the plain sine" {
-        assertBits(render(Ignitors.sinePartials(), 440.0), render(Ignitors.sine(), 440.0))
+        assertBits(a = render(Ignitors.sinePartials(), 440.0), b = render(Ignitors.sine(), 440.0))
     }
 
     "IgnitorDsl.Sine with literal defaults still renders bit-identically to Ignitors.sine" {
-        assertBits(render(IgnitorDsl.Sine().toExciter(), 440.0), render(Ignitors.sine(), 440.0))
+        assertBits(a = render(IgnitorDsl.Sine().toExciter(), 440.0), b = render(Ignitors.sine(), 440.0))
     }
 
     "isPlainSine: literal defaults yes, any bank knob set (a Param at 0 included) no" {
@@ -117,57 +117,57 @@ class SinePartialBankSpec : StringSpec({
 
     "harmonics 2: f + 2f/2 + 3f/3, the sum of three plain sines" {
         val bank = Ignitors.sinePartials(harmonics = const(2.0))
-        val ref = sum(partial(1.0, 1.0, 440.0), partial(2.0, 0.5, 440.0), partial(3.0, 1.0 / 3.0, 440.0))
-        assertClose(render(bank, 440.0), render(ref, 440.0), 1e-12)
+        val ref = sum(partial(multiple = 1.0, gain = 1.0, freqHz = 440.0), partial(multiple = 2.0, gain = 0.5, freqHz = 440.0), partial(multiple = 3.0, gain = 1.0 / 3.0, freqHz = 440.0))
+        assertClose(a = render(bank, 440.0), b = render(ref, 440.0), tol = 1e-12)
     }
 
     "GOLDEN: Sine(harmonics = 7) is the Der Schmetterling sub + seven-sine stack, per sample" {
         val bank = IgnitorDsl.Sine(harmonics = c(7.0)).toExciter()
-        val tree = (2..8).fold(IgnitorDsl.Sine() as IgnitorDsl) { acc, k -> acc + dslPartial(k.toDouble(), 1.0 / k) }
+        val tree = (2..8).fold(IgnitorDsl.Sine() as IgnitorDsl) { acc, k -> acc + dslPartial(k = k.toDouble(), g = 1.0 / k) }
             .toExciter()
 
         for (freqHz in listOf(41.2, 220.0, 440.0)) {
-            assertClose(render(bank, freqHz), render(tree, freqHz), 1e-12)
+            assertClose(a = render(bank, freqHz), b = render(tree, freqHz), tol = 1e-12)
         }
     }
 
     "fundamental 0 leaves the overtones only: the golden tree without the sub" {
         val bank = IgnitorDsl.Sine(harmonics = c(7.0), fundamental = c(0.0)).toExciter()
-        val tree = (3..8).fold(dslPartial(2.0, 0.5)) { acc, k -> acc + dslPartial(k.toDouble(), 1.0 / k) }.toExciter()
-        assertClose(render(bank, 41.2), render(tree, 41.2), 1e-12)
+        val tree = (3..8).fold(dslPartial(k = 2.0, g = 0.5)) { acc, k -> acc + dslPartial(k = k.toDouble(), g = 1.0 / k) }.toExciter()
+        assertClose(a = render(bank, 41.2), b = render(tree, 41.2), tol = 1e-12)
     }
 
     "octaves 5 on a 2f sine scaled by 1/2 is the original six-sine grind stack" {
         val bank = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(c(2.0)), octaves = c(5.0)).mul(c(0.5)).toExciter()
-        val tree = (2..6).fold(dslPartial(2.0, 0.5)) { acc, i ->
+        val tree = (2..6).fold(dslPartial(k = 2.0, g = 0.5)) { acc, i ->
             val k = 1 shl i
-            acc + dslPartial(k.toDouble(), 1.0 / k)
+            acc + dslPartial(k = k.toDouble(), g = 1.0 / k)
         }.toExciter()
-        assertClose(render(bank, 41.2), render(tree, 41.2), 1e-12)
+        assertClose(a = render(bank, 41.2), b = render(tree, 41.2), tol = 1e-12)
     }
 
     "suboctaves 1: f + (f/2)/2; rolloff 0 puts the sub at gain 1" {
         val half = Ignitors.sinePartials(suboctaves = const(1.0))
-        assertClose(render(half, 440.0), render(sum(partial(1.0, 1.0, 440.0), partial(0.5, 0.5, 440.0)), 440.0), 1e-12)
+        assertClose(a = render(half, 440.0), b = render(sum(partial(multiple = 1.0, gain = 1.0, freqHz = 440.0), partial(multiple = 0.5, gain = 0.5, freqHz = 440.0)), 440.0), tol = 1e-12)
 
         val flat = Ignitors.sinePartials(suboctaves = const(1.0), suboctavesRolloff = const(0.0))
-        assertClose(render(flat, 440.0), render(sum(partial(1.0, 1.0, 440.0), partial(0.5, 1.0, 440.0)), 440.0), 1e-12)
+        assertClose(a = render(flat, 440.0), b = render(sum(partial(multiple = 1.0, gain = 1.0, freqHz = 440.0), partial(multiple = 0.5, gain = 1.0, freqHz = 440.0)), 440.0), tol = 1e-12)
     }
 
     "rolloff 2 is the 1/m² law: the 2f partial at 1/4" {
         val bank = Ignitors.sinePartials(fundamental = const(0.0), harmonics = const(1.0), harmonicsRolloff = const(2.0))
-        assertClose(render(bank, 440.0), render(partial(2.0, 0.25, 440.0), 440.0), 1e-12)
+        assertClose(a = render(bank, 440.0), b = render(partial(multiple = 2.0, gain = 0.25, freqHz = 440.0), 440.0), tol = 1e-12)
     }
 
     "rolloff 0 is flat: three partials at gain 1" {
         val bank = Ignitors.sinePartials(harmonics = const(2.0), harmonicsRolloff = const(0.0))
-        val ref = sum(partial(1.0, 1.0, 440.0), partial(2.0, 1.0, 440.0), partial(3.0, 1.0, 440.0))
-        assertClose(render(bank, 440.0), render(ref, 440.0), 1e-12)
+        val ref = sum(partial(multiple = 1.0, gain = 1.0, freqHz = 440.0), partial(multiple = 2.0, gain = 1.0, freqHz = 440.0), partial(multiple = 3.0, gain = 1.0, freqHz = 440.0))
+        assertClose(a = render(bank, 440.0), b = render(ref, 440.0), tol = 1e-12)
     }
 
     "banks sum without deduplication: harmonics 1 + octaves 1 doubles the 2f partial" {
         val bank = Ignitors.sinePartials(fundamental = const(0.0), harmonics = const(1.0), octaves = const(1.0))
-        assertClose(render(bank, 440.0), render(partial(2.0, 1.0, 440.0), 440.0), 1e-12)
+        assertClose(a = render(bank, 440.0), b = render(partial(multiple = 2.0, gain = 1.0, freqHz = 440.0), 440.0), tol = 1e-12)
     }
 
     "each partial sits at its multiple: zero crossings of a lone 2f partial" {
@@ -217,7 +217,7 @@ class SinePartialBankSpec : StringSpec({
 
         // block 0: plain sine
         block()
-        assertBits(buf.copyOf(), ref.copyOf())
+        assertBits(a = buf.copyOf(), b = ref.copyOf())
 
         // block 1: a 2f partial appears at the block start
         count.value = 1.0
@@ -229,7 +229,7 @@ class SinePartialBankSpec : StringSpec({
         // block 2: gone again, and the fundamental's phase was never disturbed
         count.value = 0.0
         block()
-        assertBits(buf.copyOf(), ref.copyOf())
+        assertBits(a = buf.copyOf(), b = ref.copyOf())
     }
 
     /** A count signal the test drives per block. */
@@ -246,7 +246,7 @@ class SinePartialBankSpec : StringSpec({
             fundamental = const(0.0), harmonics = h, harmonicsRolloff = const(1000.0),
             suboctaves = const(1.0), suboctavesRolloff = const(0.0),
         )
-        val ref = partial(0.5, 1.0, 440.0)
+        val ref = partial(multiple = 0.5, gain = 1.0, freqHz = 440.0)
         val c1 = ctx()
         val c2 = ctx()
         val buf = AudioBuffer(blockFrames)
@@ -255,7 +255,7 @@ class SinePartialBankSpec : StringSpec({
             if (b == 2) h.value = 3.0
             bank.generate(buf, 440.0, c1)
             ref.generate(exp, 440.0, c2)
-            assertClose(buf.copyOf(), exp.copyOf(), 1e-12)
+            assertClose(a = buf.copyOf(), b = exp.copyOf(), tol = 1e-12)
             c1.voiceElapsedFrames += blockFrames
             c2.voiceElapsedFrames += blockFrames
         }
@@ -264,21 +264,21 @@ class SinePartialBankSpec : StringSpec({
     "a surviving partial keeps its phase when its own bank grows" {
         val h = CountSignal(1.0)
         val bank = Ignitors.sinePartials(fundamental = const(0.0), harmonics = h)
-        val ref = partial(2.0, 0.5, 440.0) // the 2f partial, alone
+        val ref = partial(multiple = 2.0, gain = 0.5, freqHz = 440.0) // the 2f partial, alone
         val c1 = ctx()
         val c2 = ctx()
         val buf = AudioBuffer(blockFrames)
         val exp = AudioBuffer(blockFrames)
         // block 0: 2f alone. block 1: 3f joins; 2f must continue, so (bank - fresh 3f) == 2f continued.
         bank.generate(buf, 440.0, c1); ref.generate(exp, 440.0, c2)
-        assertClose(buf.copyOf(), exp.copyOf(), 1e-12)
+        assertClose(a = buf.copyOf(), b = exp.copyOf(), tol = 1e-12)
         c1.voiceElapsedFrames += blockFrames; c2.voiceElapsedFrames += blockFrames
         h.value = 2.0
         bank.generate(buf, 440.0, c1); ref.generate(exp, 440.0, c2)
         val fresh3f = AudioBuffer(blockFrames)
-        partial(3.0, 1.0 / 3.0, 440.0).generate(fresh3f, 440.0, ctx())
+        partial(multiple = 3.0, gain = 1.0 / 3.0, freqHz = 440.0).generate(fresh3f, 440.0, ctx())
         val twoF = DoubleArray(blockFrames) { buf[it] - fresh3f[it] }
-        assertClose(twoF, exp.copyOf(), 1e-12)
+        assertClose(a = twoF, b = exp.copyOf(), tol = 1e-12)
     }
 
     "a re-activated partial starts at phase 0 (a zero crossing), not at its stale phase" {
@@ -292,8 +292,8 @@ class SinePartialBankSpec : StringSpec({
         h.value = 1.0
         bank.generate(buf, 440.0, c1)                                          // on again: fresh start
         val fresh = AudioBuffer(blockFrames)
-        partial(2.0, 0.5, 440.0).generate(fresh, 440.0, ctx())
-        assertClose(buf.copyOf(), fresh.copyOf(), 1e-12)
+        partial(multiple = 2.0, gain = 0.5, freqHz = 440.0).generate(fresh, 440.0, ctx())
+        assertClose(a = buf.copyOf(), b = fresh.copyOf(), tol = 1e-12)
     }
 
     "a mid-block window renders only its frames, like the plain sines it equals" {
@@ -302,9 +302,9 @@ class SinePartialBankSpec : StringSpec({
         val sentinel = 123.456
         // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer index
         // `offset`, the voice's first frame (never negative).
-        fun windowCtx() = ctx().apply { updateOffsetAndLength(offset, length); voiceElapsedFrames = 0 }
+        fun windowCtx() = ctx().apply { updateOffsetAndLength(offset = offset, length = length); voiceElapsedFrames = 0 }
         val bank = Ignitors.sinePartials(harmonics = const(1.0))
-        val ref = sum(partial(1.0, 1.0, 440.0), partial(2.0, 0.5, 440.0))
+        val ref = sum(partial(multiple = 1.0, gain = 1.0, freqHz = 440.0), partial(multiple = 2.0, gain = 0.5, freqHz = 440.0))
         val a = AudioBuffer(blockFrames).apply { fill(sentinel) }
         val b = AudioBuffer(blockFrames).apply { fill(sentinel) }
         bank.generate(a, 440.0, windowCtx())
@@ -324,18 +324,18 @@ class SinePartialBankSpec : StringSpec({
 
     "a non-finite fundamental gain reads as 0: the overtones play, no NaN reaches the buffer" {
         val bank = Ignitors.sinePartials(fundamental = const(Double.NaN), harmonics = const(1.0))
-        assertClose(render(bank, 440.0), render(partial(2.0, 0.5, 440.0), 440.0), 1e-12)
+        assertClose(a = render(bank, 440.0), b = render(partial(multiple = 2.0, gain = 0.5, freqHz = 440.0), 440.0), tol = 1e-12)
         val inf = Ignitors.sinePartials(fundamental = const(Double.POSITIVE_INFINITY))
         render(inf, 440.0).all { it == 0.0 } shouldBe true
     }
 
     "counts are coerced: negative and NaN read as none, a runaway count clamps to 64 without throwing" {
         val negative = Ignitors.sinePartials(harmonics = const(-3.0), octaves = const(Double.NaN))
-        assertBits(render(negative, 440.0), render(Ignitors.sine(), 440.0))
+        assertBits(a = render(negative, 440.0), b = render(Ignitors.sine(), 440.0))
 
         val runaway = Ignitors.sinePartials(harmonics = const(1e9), harmonicsRolloff = const(0.0))
         val capped = Ignitors.sinePartials(harmonics = const(64.0), harmonicsRolloff = const(0.0))
-        assertClose(render(runaway, 100.0), render(capped, 100.0), 1e-12)
+        assertClose(a = render(runaway, 100.0), b = render(capped, 100.0), tol = 1e-12)
     }
 
     "a NaN analog read on the first block latches as inactive and a later value cannot resurrect drift" {
@@ -350,7 +350,7 @@ class SinePartialBankSpec : StringSpec({
             if (b == 1) analog.value = 3.0
             bank.generate(buf, 440.0, c1) // must not throw
             still.generate(exp, 440.0, c2)
-            assertBits(buf.copyOf(), exp.copyOf())
+            assertBits(a = buf.copyOf(), b = exp.copyOf())
             c1.voiceElapsedFrames += blockFrames
             c2.voiceElapsedFrames += blockFrames
         }
@@ -359,10 +359,10 @@ class SinePartialBankSpec : StringSpec({
     "the pitch envelope moves every partial: bank under PitchEnvelope == tree under PitchEnvelope" {
         fun env(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner, semitones = c(12.0), attackSec = c(0.001), decaySec = c(0.02))
         val bank = env(IgnitorDsl.Sine(harmonics = c(2.0))).toExciter()
-        val tree = env(IgnitorDsl.Sine() + dslPartial(2.0, 0.5) + dslPartial(3.0, 1.0 / 3.0)).toExciter()
+        val tree = env(IgnitorDsl.Sine() + dslPartial(k = 2.0, g = 0.5) + dslPartial(k = 3.0, g = 1.0 / 3.0)).toExciter()
         val a = render(bank, 110.0)
         val b = render(tree, 110.0)
-        assertClose(a, b, 1e-9)
+        assertClose(a = a, b = b, tol = 1e-9)
         // and the envelope did something (otherwise the test proves nothing)
         var moved = 0.0
         val still = render(IgnitorDsl.Sine(harmonics = c(2.0)).toExciter(), 110.0)
@@ -382,7 +382,7 @@ class SinePartialBankSpec : StringSpec({
     fun driftReference(seed: Int, analog: Double, spread: Double, multiples: DoubleArray, gains: DoubleArray, freqHz: Double): DoubleArray {
         val r = Random(seed)
         val sharedSeed = r.nextInt()
-        val rate = analogDriftStepRate(sampleRate, blockFrames)
+        val rate = analogDriftStepRate(sampleRate = sampleRate, blockFrames = blockFrames)
         val lanes = Array(multiples.size) { AnalogDrift(analog, rate, r) }
         val shared = if (spread < 1.0) AnalogDrift(analog, rate, Random(sharedSeed)) else null
         val ph = DoubleArray(multiples.size)
@@ -416,8 +416,8 @@ class SinePartialBankSpec : StringSpec({
                 for (p in multiples.indices) {
                     acc += gains[p] * sin(ph[p])
 
-                    val m0 = blend(shared?.blockStart ?: 1.0, if (spread > 0.0) lanes[p].blockStart else 1.0)
-                    val m1 = blend(shared?.blockEnd ?: 1.0, if (spread > 0.0) lanes[p].blockEnd else 1.0)
+                    val m0 = blend(sharedV = shared?.blockStart ?: 1.0, ownV = if (spread > 0.0) lanes[p].blockStart else 1.0)
+                    val m1 = blend(sharedV = shared?.blockEnd ?: 1.0, ownV = if (spread > 0.0) lanes[p].blockEnd else 1.0)
                     val mul = m0 + (m1 - m0) * i / blockFrames
 
                     ph[p] = (ph[p] + inc[p] * mul).wrapPhase(TWO_PI)
@@ -438,23 +438,23 @@ class SinePartialBankSpec : StringSpec({
 
     "analogSpread 0: every partial follows the one shared walk" {
         assertClose(
-            render(driftBank(0.0), 220.0, random = Random(11)),
-            driftReference(11, 20.0, 0.0, driftMultiples, driftGains, 220.0),
-            1e-9,
+            a = render(driftBank(0.0), 220.0, random = Random(11)),
+            b = driftReference(seed = 11, analog = 20.0, spread = 0.0, multiples = driftMultiples, gains = driftGains, freqHz = 220.0),
+            tol = 1e-9,
         )
     }
 
     "analogSpread 1: every partial walks on its own lane" {
         assertClose(
-            render(driftBank(1.0), 220.0, random = Random(11)),
-            driftReference(11, 20.0, 1.0, driftMultiples, driftGains, 220.0),
-            1e-9,
+            a = render(driftBank(1.0), 220.0, random = Random(11)),
+            b = driftReference(seed = 11, analog = 20.0, spread = 1.0, multiples = driftMultiples, gains = driftGains, freqHz = 220.0),
+            tol = 1e-9,
         )
     }
 
     "analogSpread 0.25: mostly shared, some own (unequal weights pin the blend direction), and the three settings differ" {
         val mid = render(driftBank(0.25), 220.0, random = Random(11))
-        assertClose(mid, driftReference(11, 20.0, 0.25, driftMultiples, driftGains, 220.0), 1e-9)
+        assertClose(a = mid, b = driftReference(seed = 11, analog = 20.0, spread = 0.25, multiples = driftMultiples, gains = driftGains, freqHz = 220.0), tol = 1e-9)
 
         val locked = render(driftBank(0.0), 220.0, random = Random(11))
         val free = render(driftBank(1.0), 220.0, random = Random(11))
@@ -463,15 +463,15 @@ class SinePartialBankSpec : StringSpec({
             for (i in a.indices) d = maxOf(d, abs(a[i] - b[i]))
             return d
         }
-        (maxDiff(locked, free) > 1e-6) shouldBe true
-        (maxDiff(locked, mid) > 1e-6) shouldBe true
-        (maxDiff(mid, free) > 1e-6) shouldBe true
+        (maxDiff(a = locked, b = free) > 1e-6) shouldBe true
+        (maxDiff(a = locked, b = mid) > 1e-6) shouldBe true
+        (maxDiff(a = mid, b = free) > 1e-6) shouldBe true
     }
 
     "same seed, same render: the bank with drift is reproducible" {
         val a = render(driftBank(1.0), 220.0, random = Random(3))
         val b = render(driftBank(1.0), 220.0, random = Random(3))
-        assertBits(a, b)
+        assertBits(a = a, b = b)
         render(driftBank(1.0), 220.0, random = Random(4)).contentEquals(a) shouldNotBe true
     }
 })

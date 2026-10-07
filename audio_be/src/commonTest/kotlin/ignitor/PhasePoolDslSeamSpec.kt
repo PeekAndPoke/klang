@@ -47,7 +47,7 @@ class PhasePoolDslSeamSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(n),
-        ).apply { updateOffsetAndLength(0, n); voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(offset = 0, length = n); voiceElapsedFrames = 0 }
         dsl.toExciter(phasePools = pools, orbit = orbit).generate(buffer, freqHz, ctx)
         var re = 0.0
         var im = 0.0
@@ -118,10 +118,10 @@ class PhasePoolDslSeamSpec : StringSpec({
             fun mean(pool: Double, lo: Double, hi: Double, tries: Double): Double =
                 (1..notes).sumOf { fundamentalAmp(make(pool, lo, hi, tries, 1000.0, 10.0, 16.0)) } / notes
 
-            val deep = mean(1.0, 0.85, 0.95, 64.0)
-            val off = mean(0.0, 0.85, 0.95, 64.0)
-            val shallow = mean(1.0, 0.85, 0.95, 1.0)
-            val lowBand = mean(1.0, 0.02, 0.10, 64.0)
+            val deep = mean(pool = 1.0, lo = 0.85, hi = 0.95, tries = 64.0)
+            val off = mean(pool = 0.0, lo = 0.85, hi = 0.95, tries = 64.0)
+            val shallow = mean(pool = 1.0, lo = 0.85, hi = 0.95, tries = 1.0)
+            val lowBand = mean(pool = 1.0, lo = 0.02, hi = 0.10, tries = 64.0)
             deep shouldBeGreaterThan off * 1.5      // dropped phasePool → ratio ~1
             deep shouldBeGreaterThan shallow * 1.5  // dropped drawTries → both sides = family default
             deep shouldBeGreaterThan lowBand * 3.0  // dropped kMin/kMax → both sides = default band
@@ -149,7 +149,7 @@ class PhasePoolDslSeamSpec : StringSpec({
             // 4 and 16 BOTH coerce to 2 and the probe would be blind.)
             fundamentalAmp(make(1.0, 0.30, 0.55, 5.0, 32.0, 0.0, 4.0), pools, 5)
             pools.size shouldBe 3
-            pools.pool(5, 11, 0.1, 0.30, 0.55, 5.0, 32.0, 0.0, warmup = 4.0)
+            pools.pool(orbit = 5, voices = 11, sideAtten = 0.1, kMin = 0.30, kMax = 0.55, drawTries = 5.0, poolSize = 32.0, refreshEvery = 0.0, warmup = 4.0)
             pools.size shouldBe 3
         }
     }

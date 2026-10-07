@@ -46,7 +46,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
         AdsrCurve.Cube -> x * x * x
         AdsrCurve.SCurve -> if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
         AdsrCurve.InvSquare -> x * (2.0 - x)
-        AdsrCurve.Exponential -> adsrExpShape(x, ADSR_EXP_K, ADSR_EXP_NORM)
+        AdsrCurve.Exponential -> adsrExpShape(x = x, k = ADSR_EXP_K, norm = ADSR_EXP_NORM)
     }
 
     class Env(
@@ -102,7 +102,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
         repeat(blocks) { b ->
             val offset = if (b % 2 == 0) 0 else 16
-            c.updateOffsetAndLength(offset, blockFrames - offset)
+            c.updateOffsetAndLength(offset = offset, length = blockFrames - offset)
             c.voiceElapsedFrames = b * blockFrames
             buf.fill(-1.0)
             ig.generate(buf, 440.0, c)
@@ -130,11 +130,11 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
                 for (gateEnd in listOf(sweepEnd, sweepEnd + 1000)) {
                     for (r in listOf(0.0, 0.05)) {
-                        val e = Env(amount, a, d, 0.0, r)
+                        val e = Env(amount = amount, a = a, d = d, s = 0.0, r = r)
 
-                        renderMod(mod(e), ctx(sr, gateEnd), blocks = 72) { pos, v ->
+                        renderMod(mod(e), ctx(sr = sr, gateEnd = gateEnd), blocks = 72) { pos, v ->
                             withClue("sr=$sr ($amount, $a, $d) gate=$gateEnd r=$r pos=$pos") {
-                                v.toRawBits() shouldBe adsrLaw(pos, gateEnd, e, sr).toRawBits()
+                                v.toRawBits() shouldBe adsrLaw(absPos = pos, gateEnd = gateEnd, e = e, sr = sr).toRawBits()
                             }
                         }
                     }
@@ -145,12 +145,12 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
     "a gate that ends INSIDE the sweep releases, as the chain's envelope does" {
         val sr = 48000
-        val e = Env(24.0, 0.001, 0.04, 0.0, 0.0)
+        val e = Env(amount = 24.0, a = 0.001, d = 0.04, s = 0.0, r = 0.0)
         val gateEnd = 1000 // 20.8 ms, inside the 41 ms sweep
-        val c = ctx(sr, gateEnd)
+        val c = ctx(sr = sr, gateEnd = gateEnd)
 
         renderMod(mod(e), c, blocks = 24) { pos, v ->
-            withClue("pos=$pos") { v.toRawBits() shouldBe adsrLaw(pos, gateEnd, e, sr).toRawBits() }
+            withClue("pos=$pos") { v.toRawBits() shouldBe adsrLaw(absPos = pos, gateEnd = gateEnd, e = e, sr = sr).toRawBits() }
 
             if (pos >= gateEnd) {
                 withClue("release 0 returns to the note at the gate frame, pos=$pos") { v shouldBe safeOut(fastExp2(0.0)) }
@@ -158,18 +158,18 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
         }
 
-        val withRelease = Env(24.0, 0.001, 0.04, 0.0, 0.03)
-        renderMod(mod(withRelease), ctx(sr, gateEnd), blocks = 24) { pos, v ->
-            withClue("with release, pos=$pos") { v.toRawBits() shouldBe adsrLaw(pos, gateEnd, withRelease, sr).toRawBits() }
+        val withRelease = Env(amount = 24.0, a = 0.001, d = 0.04, s = 0.0, r = 0.03)
+        renderMod(mod(withRelease), ctx(sr = sr, gateEnd = gateEnd), blocks = 24) { pos, v ->
+            withClue("with release, pos=$pos") { v.toRawBits() shouldBe adsrLaw(absPos = pos, gateEnd = gateEnd, e = withRelease, sr = sr).toRawBits() }
         }
     }
 
     "sustain holds and the release returns to the note from the gate (settled blocks included)" {
         for (sr in listOf(44100, 48000)) {
             for (gateEnd in listOf(3000, 3050, 20 * blockFrames)) {
-                val e = Env(12.0, 0.005, 0.03, 0.5, 0.02)
-                renderMod(mod(e), ctx(sr, gateEnd), blocks = 60) { pos, v ->
-                    withClue("sr=$sr gate=$gateEnd pos=$pos") { v.toRawBits() shouldBe adsrLaw(pos, gateEnd, e, sr).toRawBits() }
+                val e = Env(amount = 12.0, a = 0.005, d = 0.03, s = 0.5, r = 0.02)
+                renderMod(mod(e), ctx(sr = sr, gateEnd = gateEnd), blocks = 60) { pos, v ->
+                    withClue("sr=$sr gate=$gateEnd pos=$pos") { v.toRawBits() shouldBe adsrLaw(absPos = pos, gateEnd = gateEnd, e = e, sr = sr).toRawBits() }
                 }
             }
         }
@@ -183,11 +183,11 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
         for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
             for (gateEnd in listOf(1000, 3050, 20 * blockFrames)) {
-                val substituted = Env(12.0, 0.005, 0.03, 0.0, 0.02)
+                val substituted = Env(amount = 12.0, a = 0.005, d = 0.03, s = 0.0, r = 0.02)
 
-                renderMod(mod(Env(12.0, 0.005, 0.03, bad, 0.02)), ctx(sr, gateEnd), blocks = 40) { pos, v ->
+                renderMod(mod(Env(amount = 12.0, a = 0.005, d = 0.03, s = bad, r = 0.02)), ctx(sr = sr, gateEnd = gateEnd), blocks = 40) { pos, v ->
                     withClue("sustain=$bad gate=$gateEnd pos=$pos") {
-                        v.toRawBits() shouldBe adsrLaw(pos, gateEnd, substituted, sr).toRawBits()
+                        v.toRawBits() shouldBe adsrLaw(absPos = pos, gateEnd = gateEnd, e = substituted, sr = sr).toRawBits()
                     }
                 }
             }
@@ -205,11 +205,11 @@ class PitchEnvelopeAdsrSpec : StringSpec({
             for (amount in listOf(24.0, -12.0)) {
                 for (sustain in listOf(0.0, -0.0)) {
                     for (gateEnd in listOf(2000, 2050, 20 * blockFrames)) {
-                        val e = Env(amount, 0.004, 0.02, sustain, 0.05, rc = curve)
+                        val e = Env(amount = amount, a = 0.004, d = 0.02, s = sustain, r = 0.05, rc = curve)
 
-                        renderMod(mod(e), ctx(sr, gateEnd), blocks = 40) { pos, v ->
+                        renderMod(mod(e), ctx(sr = sr, gateEnd = gateEnd), blocks = 40) { pos, v ->
                             withClue("$curve amount=$amount sustain=$sustain gate=$gateEnd pos=$pos") {
-                                v.toRawBits() shouldBe adsrLaw(pos, gateEnd, e, sr).toRawBits()
+                                v.toRawBits() shouldBe adsrLaw(absPos = pos, gateEnd = gateEnd, e = e, sr = sr).toRawBits()
                             }
                         }
                     }
@@ -224,13 +224,13 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
         for (curve in AdsrCurve.entries) {
             val envs = listOf(
-                Env(12.0, 0.01, 0.02, 0.3, 0.02, ac = curve),
-                Env(12.0, 0.01, 0.02, 0.3, 0.02, dc = curve),
-                Env(12.0, 0.01, 0.02, 0.3, 0.02, rc = curve),
+                Env(amount = 12.0, a = 0.01, d = 0.02, s = 0.3, r = 0.02, ac = curve),
+                Env(amount = 12.0, a = 0.01, d = 0.02, s = 0.3, r = 0.02, dc = curve),
+                Env(amount = 12.0, a = 0.01, d = 0.02, s = 0.3, r = 0.02, rc = curve),
             )
             for ((stage, e) in envs.withIndex()) {
-                renderMod(mod(e), ctx(sr, gateEnd), blocks = 40) { pos, v ->
-                    withClue("$curve on stage $stage, pos=$pos") { v.toRawBits() shouldBe adsrLaw(pos, gateEnd, e, sr).toRawBits() }
+                renderMod(mod(e), ctx(sr = sr, gateEnd = gateEnd), blocks = 40) { pos, v ->
+                    withClue("$curve on stage $stage, pos=$pos") { v.toRawBits() shouldBe adsrLaw(absPos = pos, gateEnd = gateEnd, e = e, sr = sr).toRawBits() }
                 }
             }
         }
@@ -252,7 +252,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
         repeat(blocks) { b ->
             c.voiceElapsedFrames = b * blockFrames
-            c.updateOffsetAndLength(0, blockFrames)
+            c.updateOffsetAndLength(offset = 0, length = blockFrames)
 
             if (ratio != null) {
                 for (i in 0 until blockFrames) {
@@ -278,8 +278,8 @@ class PitchEnvelopeAdsrSpec : StringSpec({
         fun c(v: Double) = IgnitorDsl.Constant(v)
 
         val cases = listOf(
-            Env(24.0, 0.001, 0.04, 0.0, 0.0),
-            Env(12.0, 0.004, 0.02, 0.4, 0.015, ac = AdsrCurve.Square, dc = AdsrCurve.Exponential, rc = AdsrCurve.Cube),
+            Env(amount = 24.0, a = 0.001, d = 0.04, s = 0.0, r = 0.0),
+            Env(amount = 12.0, a = 0.004, d = 0.02, s = 0.4, r = 0.015, ac = AdsrCurve.Square, dc = AdsrCurve.Exponential, rc = AdsrCurve.Cube),
         )
 
         for (e in cases) {
@@ -290,8 +290,8 @@ class PitchEnvelopeAdsrSpec : StringSpec({
                 decayCurve = AdsrCurves.knob(e.dc),
                 releaseCurve = AdsrCurves.knob(e.rc),
             )
-            val viaNode = renderVoice(dsl, sr, gateEnd, blocks = 40)
-            val viaOracle = renderVoice(IgnitorDsl.Sine(), sr, gateEnd, blocks = 40) { pos -> adsrLaw(pos, gateEnd, e, sr) }
+            val viaNode = renderVoice(dsl = dsl, sr = sr, gateEnd = gateEnd, blocks = 40)
+            val viaOracle = renderVoice(dsl = IgnitorDsl.Sine(), sr = sr, gateEnd = gateEnd, blocks = 40) { pos -> adsrLaw(absPos = pos, gateEnd = gateEnd, e = e, sr = sr) }
 
             for (i in viaNode.indices) {
                 withClue("case s=${e.s} frame $i") { viaNode[i].toRawBits() shouldBe viaOracle[i].toRawBits() }

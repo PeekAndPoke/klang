@@ -57,7 +57,7 @@ class AnalogDriftRampSpec : StringSpec({
         repeat(blocks) { b ->
             val offset = if (b == 0) firstOffset else 0
 
-            c.updateOffsetAndLength(offset, blockFrames - offset)
+            c.updateOffsetAndLength(offset = offset, length = blockFrames - offset)
             c.voiceElapsedFrames = b * blockFrames
             sig.generate(buf, freqHz, c)
 
@@ -70,7 +70,7 @@ class AnalogDriftRampSpec : StringSpec({
     }
 
     /** The lane a site builds from [seed]: its first draws off the voice stream are the lane's. */
-    fun lane(seed: Int): AnalogDrift = AnalogDrift(analog, analogDriftStepRate(sampleRate, blockFrames), Random(seed))
+    fun lane(seed: Int): AnalogDrift = AnalogDrift(analog, analogDriftStepRate(sampleRate = sampleRate, blockFrames = blockFrames), Random(seed))
 
     /**
      * Drives [step] once per sample with the block ramp's multiplier, the reference for every site:
@@ -116,7 +116,7 @@ class AnalogDriftRampSpec : StringSpec({
         var phase = 0.0
         var i = firstOffset
 
-        rampReference(3, firstOffset) { m ->
+        rampReference(seed = 3, firstOffset = firstOffset) { m ->
             expected[i++] = fastSin(phase)
             phase = (phase + inc * m).wrapPhase(TWO_PI)
         }
@@ -131,7 +131,7 @@ class AnalogDriftRampSpec : StringSpec({
         var phase = 0.0
         var i = firstOffset
 
-        rampReference(3, firstOffset) { m ->
+        rampReference(seed = 3, firstOffset = firstOffset) { m ->
             expected[i++] = -1.0 + 2.0 * phase
             phase = (phase + dt * m).wrapPhase(1.0)
         }
@@ -140,18 +140,18 @@ class AnalogDriftRampSpec : StringSpec({
     }
 
     "the mono sine's phase follows the block ramp, on both of its loops" {
-        assertClose(render(Ignitors.sine(analog = ConstantIgnitor(analog)), seed = 3), sineExpected(0), "sine")
+        assertClose(actual = render(Ignitors.sine(analog = ConstantIgnitor(analog)), seed = 3), expected = sineExpected(0), clue = "sine")
         assertClose(
-            render(Ignitors.sine(analog = ConstantIgnitor(analog)), seed = 3, withPhaseMod = true),
-            sineExpected(0), "sine under a unity phaseMod",
+            actual = render(Ignitors.sine(analog = ConstantIgnitor(analog)), seed = 3, withPhaseMod = true),
+            expected = sineExpected(0), clue = "sine under a unity phaseMod",
         )
     }
 
     "the single-voice saw's phase follows the block ramp, on both of its loops" {
         val saw = { Ignitors.saw(analog = ConstantIgnitor(analog), resetSamples = 0.0) }
 
-        assertClose(render(saw(), seed = 3), sawExpected(0), "saw")
-        assertClose(render(saw(), seed = 3, withPhaseMod = true), sawExpected(0), "saw under a unity phaseMod")
+        assertClose(actual = render(saw(), seed = 3), expected = sawExpected(0), clue = "saw")
+        assertClose(actual = render(saw(), seed = 3, withPhaseMod = true), expected = sawExpected(0), clue = "saw under a unity phaseMod")
     }
 
     "a mid-block onset ramps across the partial first window, not across a whole block" {
@@ -161,8 +161,8 @@ class AnalogDriftRampSpec : StringSpec({
         val sine = Ignitors.sine(analog = ConstantIgnitor(analog))
         val saw = Ignitors.saw(analog = ConstantIgnitor(analog), resetSamples = 0.0)
 
-        assertClose(render(sine, seed = 3, firstOffset = 37), sineExpected(37), "sine, first window 37..128")
-        assertClose(render(saw, seed = 3, firstOffset = 37), sawExpected(37), "saw, first window 37..128")
+        assertClose(actual = render(sine, seed = 3, firstOffset = 37), expected = sineExpected(37), clue = "sine, first window 37..128")
+        assertClose(actual = render(saw, seed = 3, firstOffset = 37), expected = sawExpected(37), clue = "saw, first window 37..128")
     }
 
     "the sample player's playhead follows the block ramp" {
@@ -185,7 +185,7 @@ class AnalogDriftRampSpec : StringSpec({
             ph += m
         }
 
-        assertClose(out, expected, "sample player")
+        assertClose(actual = out, expected = expected, clue = "sample player")
     }
 
     "a one-voice supersine's increment wanders across blocks and only ramps within them" {

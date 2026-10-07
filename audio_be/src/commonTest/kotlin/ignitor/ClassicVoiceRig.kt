@@ -66,24 +66,24 @@ object ClassicVoiceRig {
         val an = IgnitorDsl.Slots.analog
         val filter: IgnitorDsl = when (door) {
             "lpf" -> IgnitorDsl.Lowpass(
-                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
                 releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             "hpf" -> IgnitorDsl.Highpass(
-                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
                 releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             "bpf" -> IgnitorDsl.Bandpass(
-                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
                 releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             else -> IgnitorDsl.Notch(
-                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
                 releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
         }
 
-        return filter.adsr(VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
+        return filter.adsr(attackSec = VOICE_ADSR_ATTACK_SEC, decaySec = VOICE_ADSR_DECAY_SEC, sustainLevel = VOICE_ADSR_SUSTAIN_LEVEL, releaseSec = VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
     }
 
     fun render(data: VoiceData, sampleRate: Int): DoubleArray {
@@ -95,7 +95,7 @@ object ClassicVoiceRig {
             register("saw2x", source.mul(IgnitorDsl.Constant(2.0)).classic())
             register("saw1p7x", source.mul(IgnitorDsl.Constant(1.7)).classic())
             // The other order, for the 1.7 row's anti-vacuous side: the source, a onepole, THEN the gain.
-            register("onepolethen1p7x", IgnitorDsl.OnePoleLowpass(source, IgnitorDsl.Constant(900.0)).mul(IgnitorDsl.Constant(1.7)).classic())
+            register("onepolethen1p7x", IgnitorDsl.OnePoleLowpass(inner = source, freq = IgnitorDsl.Constant(900.0)).mul(IgnitorDsl.Constant(1.7)).classic())
 
             for ((door, freq) in curveFilters) {
                 register("curved$door", namedCurveNode(door, freq))
@@ -131,7 +131,7 @@ object ClassicVoiceRig {
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }

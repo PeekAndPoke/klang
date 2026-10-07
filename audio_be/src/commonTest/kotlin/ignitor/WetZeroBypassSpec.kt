@@ -52,12 +52,12 @@ class WetZeroBypassSpec : StringSpec({
 
     fun render(chain: Ignitor): DoubleArray {
         val c = ctx()
-        c.updateOffsetAndLength(0, blockFrames)
+        c.updateOffsetAndLength(offset = 0, length = blockFrames)
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(blocks * blockFrames)
         repeat(blocks) { blk ->
             chain.generate(buf, 220.0, c)
-            buf.copyInto(out, blk * blockFrames, 0, blockFrames)
+            buf.copyInto(destination = out, destinationOffset = blk * blockFrames, startIndex = 0, endIndex = blockFrames)
             c.voiceElapsedFrames += blockFrames
         }
         return out

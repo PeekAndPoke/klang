@@ -67,7 +67,7 @@ class ShimmerSchedulerSpec : StringSpec({
 
     fun render(ig: Ignitor, c: IgniteContext, pos: Int, len: Int): DoubleArray {
         val tmp = AudioBuffer(blockFrames)
-        c.updateOffsetAndLength(0, len)
+        c.updateOffsetAndLength(offset = 0, length = len)
         c.voiceElapsedFrames = pos
         ig.generate(tmp, 220.0, c)
         return tmp.copyOf(maxOf(len, 1))
@@ -105,11 +105,11 @@ class ShimmerSchedulerSpec : StringSpec({
             gapWet.value = if (block < 4 || block >= 10) 1.0 else 0.0
             ctlWet.value = if (block >= 10) 1.0 else 0.0
 
-            val g = render(gapIg, gapCtx, block * blockFrames, blockFrames)
-            val c = render(ctlIg, ctlCtx, block * blockFrames, blockFrames)
+            val g = render(ig = gapIg, c = gapCtx, pos = block * blockFrames, len = blockFrames)
+            val c = render(ig = ctlIg, c = ctlCtx, pos = block * blockFrames, len = blockFrames)
 
             if (block >= 10) {
-                m = maxOf(m, maxDiff(g, c))
+                m = maxOf(m, maxDiff(a = g, b = c))
             }
         }
 
@@ -155,11 +155,11 @@ class ShimmerSchedulerSpec : StringSpec({
         var m = 0.0
 
         for (block in 0 until 70) {
-            val a = render(sharedIg, sharedCtx, block * blockFrames, blockFrames)
-            val b = render(refIg, refCtx, block * blockFrames, blockFrames)
+            val a = render(ig = sharedIg, c = sharedCtx, pos = block * blockFrames, len = blockFrames)
+            val b = render(ig = refIg, c = refCtx, pos = block * blockFrames, len = blockFrames)
 
             if (block >= 60) {
-                m = maxOf(m, maxDiff(a, b))
+                m = maxOf(m, maxDiff(a = a, b = b))
             }
         }
 
@@ -181,17 +181,17 @@ class ShimmerSchedulerSpec : StringSpec({
         // plays zeros and a wipe is invisible (this probe sat at block 45 first and pinned
         // nothing — its own mutation check said so).
         for (block in 0 until 82) {
-            val r = render(refIg, refCtx, block * blockFrames, blockFrames)
+            val r = render(ig = refIg, c = refCtx, pos = block * blockFrames, len = blockFrames)
 
             if (block == 65) {
                 // A zero-length window: blockStartValue reads the modulated wet as 0.0 there —
                 // the false bypass must not wipe the cloud.
-                render(probeIg, probeCtx, block * blockFrames, 0)
+                render(ig = probeIg, c = probeCtx, pos = block * blockFrames, len = 0)
             }
-            val p = render(probeIg, probeCtx, block * blockFrames, blockFrames)
+            val p = render(ig = probeIg, c = probeCtx, pos = block * blockFrames, len = blockFrames)
 
             if (block >= 65) {
-                m = maxOf(m, maxDiff(r, p))
+                m = maxOf(m, maxDiff(a = r, b = p))
             }
         }
 
@@ -217,8 +217,8 @@ class ShimmerSchedulerSpec : StringSpec({
         var m = 0.0
 
         for (block in 0 until 90) {
-            val out = render(ig, igCtx, block * blockFrames, blockFrames)
-            val input = render(dry, dryCtx, block * blockFrames, blockFrames)
+            val out = render(ig = ig, c = igCtx, pos = block * blockFrames, len = blockFrames)
+            val input = render(ig = dry, c = dryCtx, pos = block * blockFrames, len = blockFrames)
 
             for (i in out.indices) {
                 m = maxOf(m, abs(out[i] - input[i] * dryC))
@@ -242,7 +242,7 @@ class ShimmerSchedulerSpec : StringSpec({
         var m = 0.0
 
         for (block in 0 until 90) {
-            m = maxOf(m, maxDiff(render(a, aCtx, block * blockFrames, blockFrames), render(b, bCtx, block * blockFrames, blockFrames)))
+            m = maxOf(m, maxDiff(a = render(ig = a, c = aCtx, pos = block * blockFrames, len = blockFrames), b = render(ig = b, c = bCtx, pos = block * blockFrames, len = blockFrames)))
         }
 
         return m
@@ -258,7 +258,7 @@ class ShimmerSchedulerSpec : StringSpec({
         var nonFinite = 0
 
         for (block in 0 until 90) {
-            for (x in render(ig, c, block * blockFrames, blockFrames)) {
+            for (x in render(ig = ig, c = c, pos = block * blockFrames, len = blockFrames)) {
                 if (!x.isFinite()) {
                     nonFinite++
                 }
@@ -269,10 +269,10 @@ class ShimmerSchedulerSpec : StringSpec({
     }
 
     "an infinite pitch reads as rate 1.0, the unshifted grain" {
-        maxDiffOver90Blocks(shimmerOf(listOf(Double.POSITIVE_INFINITY)), shimmerOf(listOf(0.0))) shouldBe 0.0
+        maxDiffOver90Blocks(a = shimmerOf(listOf(Double.POSITIVE_INFINITY)), b = shimmerOf(listOf(0.0))) shouldBe 0.0
     }
 
     "a NaN pitch reads as rate 1.0, the unshifted grain, and never poisons the voice" {
-        maxDiffOver90Blocks(shimmerOf(listOf(Double.NaN)), shimmerOf(listOf(0.0))) shouldBe 0.0
+        maxDiffOver90Blocks(a = shimmerOf(listOf(Double.NaN)), b = shimmerOf(listOf(0.0))) shouldBe 0.0
     }
 })

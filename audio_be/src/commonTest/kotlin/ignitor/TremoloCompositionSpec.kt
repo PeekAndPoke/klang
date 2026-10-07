@@ -58,12 +58,12 @@ class TremoloCompositionSpec : StringSpec({
 
     /** Every window of [ignitor], concatenated. */
     fun renderWindows(ignitor: Ignitor, sampleRate: Int, blocks: List<Pair<Int, Int>> = windows): DoubleArray {
-        val ctx = igniteCtx(sampleRate, blocks.sumOf { it.second })
+        val ctx = igniteCtx(sampleRate = sampleRate, frames = blocks.sumOf { it.second })
         val buffer = AudioBuffer(blockFrames)
         val out = ArrayList<Double>()
 
         for ((offset, length) in blocks) {
-            ctx.updateOffsetAndLength(offset, length)
+            ctx.updateOffsetAndLength(offset = offset, length = length)
             ignitor.generate(buffer, freqHz, ctx)
 
             for (i in offset until offset + length) {
@@ -96,11 +96,11 @@ class TremoloCompositionSpec : StringSpec({
         val edge = edgeSeconds * sampleRate
 
         return when (shape) {
-            "sine" -> Ignitors.sine(rate, analog)
-            "triangle" -> Ignitors.tri(rate, analog)
-            "square" -> Ignitors.pulze(rate, ConstantIgnitor(0.5), analog, flankSamples = edge)
-            "sawtooth" -> Ignitors.saw(rate, analog, resetSamples = edge)
-            "ramp" -> Ignitors.ramp(rate, analog, resetSamples = edge)
+            "sine" -> Ignitors.sine(freq = rate, analog = analog)
+            "triangle" -> Ignitors.tri(freq = rate, analog = analog)
+            "square" -> Ignitors.pulze(freq = rate, duty = ConstantIgnitor(0.5), analog = analog, flankSamples = edge)
+            "sawtooth" -> Ignitors.saw(freq = rate, analog = analog, resetSamples = edge)
+            "ramp" -> Ignitors.ramp(freq = rate, analog = analog, resetSamples = edge)
             else -> error("a new LFO shape needs its oscillator in this spec: $shape")
         }
     }
@@ -138,13 +138,13 @@ class TremoloCompositionSpec : StringSpec({
                 for (rate in listOf(4.0, 37.3)) {
                     for (depth in listOf(0.33, 1.0)) {
                         withClue("sr=$sampleRate rate=$rate depth=$depth") {
-                            val node = renderNode(inner.tremolo(rate, depth, shape = shape), sampleRate)
+                            val node = renderNode(inner.tremolo(rate = rate, depth = depth, shape = shape), sampleRate)
                             val osc = renderWindows(oscillator(shape, ConstantIgnitor(rate), sampleRate), sampleRate)
 
-                            (maxDiff(node, law(dry, osc, depth)) < tolerance) shouldBe true
+                            (maxDiff(a = node, b = law(dry = dry, osc = osc, depth = depth)) < tolerance) shouldBe true
 
                             // Not vacuous: the tremolo moved the signal by far more than the tolerance.
-                            (maxDiff(node, dry) > 0.1) shouldBe true
+                            (maxDiff(a = node, b = dry) > 0.1) shouldBe true
                         }
                     }
                 }
@@ -168,7 +168,7 @@ class TremoloCompositionSpec : StringSpec({
                 val node = renderNode(slotted, sampleRate, bag)
                 val osc = renderWindows(oscillator(shape, ConstantIgnitor(6.1), sampleRate), sampleRate)
 
-                (maxDiff(node, law(dry, osc, 0.8)) < tolerance) shouldBe true
+                (maxDiff(a = node, b = law(dry = dry, osc = osc, depth = 0.8)) < tolerance) shouldBe true
             }
         }
     }
@@ -177,8 +177,8 @@ class TremoloCompositionSpec : StringSpec({
         // A pattern-driven or modulated rate: 4 Hz plus a 0.7 Hz sine of 3 Hz. The reference oscillator takes the
         // same rate signal, built on its own, so both read it at each block's first sample.
         val rate = IgnitorDsl.Plus(
-            IgnitorDsl.Constant(4.0),
-            IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.7)), IgnitorDsl.Constant(3.0)),
+            left = IgnitorDsl.Constant(4.0),
+            right = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.7)), right = IgnitorDsl.Constant(3.0)),
         )
         val sampleRate = 48000
         val dry = renderNode(inner, sampleRate)
@@ -196,10 +196,10 @@ class TremoloCompositionSpec : StringSpec({
                 )
                 val osc = renderWindows(oscillator(shape, build(rate, sampleRate), sampleRate), sampleRate)
 
-                (maxDiff(node, law(dry, osc, 0.9)) < tolerance) shouldBe true
+                (maxDiff(a = node, b = law(dry = dry, osc = osc, depth = 0.9)) < tolerance) shouldBe true
 
                 // Not vacuous: the moving rate is not the steady 4 Hz.
-                (maxDiff(node, renderNode(inner.tremolo(4.0, 0.9, shape = shape), sampleRate)) > 0.01) shouldBe true
+                (maxDiff(a = node, b = renderNode(inner.tremolo(rate = 4.0, depth = 0.9, shape = shape), sampleRate)) > 0.01) shouldBe true
             }
         }
     }
@@ -217,7 +217,7 @@ class TremoloCompositionSpec : StringSpec({
                 for (rate in listOf(2.5, 4.0, 20.0)) {
                     for (depth in listOf(0.5, 1.0)) {
                         withClue("sr=$sampleRate rate=$rate depth=$depth") {
-                            val gain = renderNode(steady.tremolo(rate, depth, shape = shape), sampleRate, blocks = twoSeconds)
+                            val gain = renderNode(steady.tremolo(rate = rate, depth = depth, shape = shape), sampleRate, blocks = twoSeconds)
                             var steepest = 0.0
 
                             for (i in 1 until gain.size) {
@@ -247,7 +247,7 @@ class TremoloCompositionSpec : StringSpec({
 
         for (shape in LfoShapes.names) {
             withClue(shape) {
-                val dsl = inner.tremolo(23.0, 0.8, shape = shape)
+                val dsl = inner.tremolo(rate = 23.0, depth = 0.8, shape = shape)
 
                 renderNode(dsl, 48000, blocks = ragged).map { it.toRawBits() } shouldBe
                         renderNode(dsl, 48000, blocks = whole).map { it.toRawBits() }
@@ -261,7 +261,7 @@ class TremoloCompositionSpec : StringSpec({
             for (rate in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
                 withClue("$shape at $rate") {
                     val gain = renderWindows(
-                        tremoloGain(ConstantIgnitor(rate), ConstantIgnitor(0.5), LfoShapes.indexOf(shape).toInt(), 48000),
+                        tremoloGain(rate = ConstantIgnitor(rate), depth = ConstantIgnitor(0.5), lfoShapeIndex = LfoShapes.indexOf(shape).toInt(), sampleRate = 48000),
                         48000,
                     )
 
@@ -282,8 +282,8 @@ class TremoloCompositionSpec : StringSpec({
         // A depth swinging from -0.4 to 0.6 at 3 Hz: per sample, the floor at 0 makes the gain exactly 1 wherever
         // the depth is at or below 0 (no boost), and the tremolo acts wherever it is above.
         val depth = IgnitorDsl.Plus(
-            IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0), analog = IgnitorDsl.Constant(0.0)), IgnitorDsl.Constant(0.5)),
-            IgnitorDsl.Constant(0.1),
+            left = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0), analog = IgnitorDsl.Constant(0.0)), right = IgnitorDsl.Constant(0.5)),
+            right = IgnitorDsl.Constant(0.1),
         )
         val sampleRate = 48000
         val twoSeconds = List(750) { 0 to blockFrames }
@@ -320,7 +320,7 @@ class TremoloCompositionSpec : StringSpec({
         // `Ignitor.freq().div(-200).plus(0.8)` at the 220 Hz note is -0.3: block-constant but not a leaf, so the gate
         // cannot read it. Unfloored it would boost (gain 1 to 1.3). The same expression at `plus(1.5)` is 0.4 and acts.
         fun depthOf(offset: Double): IgnitorDsl =
-            IgnitorDsl.Plus(IgnitorDsl.Div(IgnitorDsl.Freq, IgnitorDsl.Constant(-200.0)), IgnitorDsl.Constant(offset))
+            IgnitorDsl.Plus(left = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(-200.0)), right = IgnitorDsl.Constant(offset))
 
         val sampleRate = 48000
         val dry = renderNode(inner, sampleRate)
@@ -334,7 +334,7 @@ class TremoloCompositionSpec : StringSpec({
                 renderNode(tremolo(depthOf(0.8)), sampleRate).map { it.toRawBits() } shouldBe dry.map { it.toRawBits() }
 
                 // Engagement: the same expression above 0 modulates.
-                (maxDiff(renderNode(tremolo(depthOf(1.5)), sampleRate), dry) > 0.1) shouldBe true
+                (maxDiff(a = renderNode(tremolo(depthOf(1.5)), sampleRate), b = dry) > 0.1) shouldBe true
             }
         }
     }
@@ -375,12 +375,12 @@ class TremoloCompositionSpec : StringSpec({
         val ramp = DoubleArray(blockFrames) { 1.0 + it * 0.02 }
 
         fun renderUnder(ignitor: Ignitor, phaseMod: DoubleArray?): DoubleArray {
-            val ctx = igniteCtx(sampleRate, windows.sumOf { it.second })
+            val ctx = igniteCtx(sampleRate = sampleRate, frames = windows.sumOf { it.second })
             val buffer = AudioBuffer(blockFrames)
             val out = ArrayList<Double>()
 
             for ((offset, length) in windows) {
-                ctx.updateOffsetAndLength(offset, length)
+                ctx.updateOffsetAndLength(offset = offset, length = length)
                 ctx.phaseMod = phaseMod
                 ignitor.generate(buffer, freqHz, ctx)
 
@@ -397,8 +397,8 @@ class TremoloCompositionSpec : StringSpec({
         for (shape in LfoShapes.names) {
             withClue(shape) {
                 val index = LfoShapes.indexOf(shape).toInt()
-                val plain = renderUnder(tremoloGain(ConstantIgnitor(6.0), ConstantIgnitor(0.8), index, sampleRate), null)
-                val modulated = renderUnder(tremoloGain(ConstantIgnitor(6.0), ConstantIgnitor(0.8), index, sampleRate), ramp)
+                val plain = renderUnder(tremoloGain(rate = ConstantIgnitor(6.0), depth = ConstantIgnitor(0.8), lfoShapeIndex = index, sampleRate = sampleRate), null)
+                val modulated = renderUnder(tremoloGain(rate = ConstantIgnitor(6.0), depth = ConstantIgnitor(0.8), lfoShapeIndex = index, sampleRate = sampleRate), ramp)
 
                 modulated.map { it.toRawBits() } shouldBe plain.map { it.toRawBits() }
 
@@ -433,17 +433,17 @@ class TremoloCompositionSpec : StringSpec({
         for (shape in LfoShapes.names) {
             for (depth in listOf(0.33, 1.0)) {
                 withClue("$shape depth=$depth") {
-                    val classic = renderNode(inner.tremolo(5.3, depth, shape = shape), sampleRate)
+                    val classic = renderNode(inner.tremolo(rate = 5.3, depth = depth, shape = shape), sampleRate)
                     val general = renderNode(
-                        rangedNode(shape, depth, IgnitorDsl.Param("r.from", 0.5), IgnitorDsl.Param("r.to", 0.5)),
+                        rangedNode(shape = shape, depth = depth, from = IgnitorDsl.Param("r.from", 0.5), to = IgnitorDsl.Param("r.to", 0.5)),
                         sampleRate,
                         slots,
                     )
 
                     general.map { it.toRawBits() } shouldBe classic.map { it.toRawBits() }
                     // the default node itself carries (-1, 0)
-                    (inner.tremolo(5.3, depth, shape = shape) as IgnitorDsl.Tremolo).rangeFrom shouldBe IgnitorDsl.Constant(-1.0)
-                    (inner.tremolo(5.3, depth, shape = shape) as IgnitorDsl.Tremolo).rangeTo shouldBe IgnitorDsl.Constant(0.0)
+                    (inner.tremolo(rate = 5.3, depth = depth, shape = shape) as IgnitorDsl.Tremolo).rangeFrom shouldBe IgnitorDsl.Constant(-1.0)
+                    (inner.tremolo(rate = 5.3, depth = depth, shape = shape) as IgnitorDsl.Tremolo).rangeTo shouldBe IgnitorDsl.Constant(0.0)
                 }
             }
         }
@@ -452,8 +452,8 @@ class TremoloCompositionSpec : StringSpec({
     "the general law at (-1, 0) with a SIGNAL depth renders the classic bits too (the floor shared by both bounds)" {
         val sampleRate = 48000
         val depth = IgnitorDsl.Plus(
-            IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0), analog = IgnitorDsl.Constant(0.0)), IgnitorDsl.Constant(0.5)),
-            IgnitorDsl.Constant(0.1),
+            left = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0), analog = IgnitorDsl.Constant(0.0)), right = IgnitorDsl.Constant(0.5)),
+            right = IgnitorDsl.Constant(0.1),
         )
         val slots = mapOf("r.from" to -1.0, "r.to" to 0.0)
 
@@ -466,9 +466,9 @@ class TremoloCompositionSpec : StringSpec({
 
                 // two seconds: the depth swings below 0 (from about 0.13 s on), where only the floor keeps the gain at 1
                 val twoSeconds = List(750) { 0 to blockFrames }
-                val classic = renderNode(node(IgnitorDsl.Constant(-1.0), IgnitorDsl.Constant(0.0)), sampleRate, blocks = twoSeconds)
+                val classic = renderNode(node(from = IgnitorDsl.Constant(-1.0), to = IgnitorDsl.Constant(0.0)), sampleRate, blocks = twoSeconds)
                 val general = renderNode(
-                    node(IgnitorDsl.Param("r.from", 0.5), IgnitorDsl.Param("r.to", 0.5)), sampleRate, slots, twoSeconds,
+                    node(from = IgnitorDsl.Param("r.from", 0.5), to = IgnitorDsl.Param("r.to", 0.5)), sampleRate, slots, twoSeconds,
                 )
 
                 general.map { it.toRawBits() } shouldBe classic.map { it.toRawBits() }
@@ -486,12 +486,12 @@ class TremoloCompositionSpec : StringSpec({
 
             for ((from, to) in listOf(0.0 to 1.0, -1.0 to 1.0, 0.0 to 2.0, 0.5 to -0.5)) {
                 withClue("$shape range($from, $to)") {
-                    val node = renderNode(rangedNode(shape, 0.4, IgnitorDsl.Constant(from), IgnitorDsl.Constant(to)), sampleRate)
-                    val expected = rangedLaw(dry, osc, 0.4, DoubleArray(n) { from }, DoubleArray(n) { to })
+                    val node = renderNode(rangedNode(shape = shape, depth = 0.4, from = IgnitorDsl.Constant(from), to = IgnitorDsl.Constant(to)), sampleRate)
+                    val expected = rangedLaw(dry = dry, osc = osc, depth = 0.4, from = DoubleArray(n) { from }, to = DoubleArray(n) { to })
 
-                    (maxDiff(node, expected) < tolerance) shouldBe true
+                    (maxDiff(a = node, b = expected) < tolerance) shouldBe true
                     // Not vacuous: off the classic dip.
-                    (maxDiff(node, renderNode(inner.tremolo(5.3, 0.4, shape = shape), sampleRate)) > 0.05) shouldBe true
+                    (maxDiff(a = node, b = renderNode(inner.tremolo(rate = 5.3, depth = 0.4, shape = shape), sampleRate)) > 0.05) shouldBe true
                 }
             }
         }
@@ -506,9 +506,9 @@ class TremoloCompositionSpec : StringSpec({
         for (shape in LfoShapes.names) {
             withClue(shape) {
                 val osc = renderWindows(oscillator(shape, ConstantIgnitor(5.3), sampleRate), sampleRate)
-                val node = renderNode(rangedNode(shape, 0.7, IgnitorDsl.Constant(0.0), to), sampleRate)
+                val node = renderNode(rangedNode(shape = shape, depth = 0.7, from = IgnitorDsl.Constant(0.0), to = to), sampleRate)
 
-                (maxDiff(node, rangedLaw(dry, osc, 0.7, DoubleArray(dry.size) { 0.0 }, toValues)) < tolerance) shouldBe true
+                (maxDiff(a = node, b = rangedLaw(dry = dry, osc = osc, depth = 0.7, from = DoubleArray(dry.size) { 0.0 }, to = toValues)) < tolerance) shouldBe true
             }
         }
     }
@@ -517,7 +517,7 @@ class TremoloCompositionSpec : StringSpec({
         val sampleRate = 48000
         val dry = renderNode(inner, sampleRate).map { it.toRawBits() }
         // block-constant arithmetic the gate cannot read, at -0.3: only the floor stops a range(0, 2) from boosting
-        val negative = IgnitorDsl.Plus(IgnitorDsl.Div(IgnitorDsl.Freq, IgnitorDsl.Constant(-200.0)), IgnitorDsl.Constant(0.8))
+        val negative = IgnitorDsl.Plus(left = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(-200.0)), right = IgnitorDsl.Constant(0.8))
 
         for (shape in LfoShapes.names) {
             withClue(shape) {

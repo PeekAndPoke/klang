@@ -218,8 +218,8 @@ class DoorDistortionLawSpec : StringSpec({
 
             // 1e-13: measured at most 8.3e-16 (JVM, 2026-09-28), the tube curve's last-bit difference carried through
             // the blocker. A wrong chain (a step dropped or moved, another drive law) is orders of magnitude further.
-            withClue("$label: distort(...)") { maxAbsDiff(viaDistort, expected) shouldBeLessThan 1e-13 }
-            withClue("$label: drive(...).shape(...)") { maxAbsDiff(viaChain, expected) shouldBeLessThan 1e-13 }
+            withClue("$label: distort(...)") { maxAbsDiff(a = viaDistort, b = expected) shouldBeLessThan 1e-13 }
+            withClue("$label: drive(...).shape(...)") { maxAbsDiff(a = viaChain, b = expected) shouldBeLessThan 1e-13 }
         }
     }
 })

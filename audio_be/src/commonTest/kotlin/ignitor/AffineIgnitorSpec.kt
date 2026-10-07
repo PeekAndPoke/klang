@@ -59,7 +59,7 @@ class AffineIgnitorSpec : StringSpec({
             val end = if (b == blocks - 1) lastLength else blockFrames
 
             buf.fill(SENTINEL)
-            c.updateOffsetAndLength(off, end - off)
+            c.updateOffsetAndLength(offset = off, length = end - off)
             sig.generate(buf, freqHzPerBlock?.invoke(b) ?: freqHz, c)
 
             for (i in 0 until blockFrames) {
@@ -97,32 +97,32 @@ class AffineIgnitorSpec : StringSpec({
     val none = Constant(-0.0)
 
     "the DSL node lowers to the one-pass runtime, and its fast path touches no scratch" {
-        val sig = IgnitorDsl.Affine(saw, none, Constant(0.5), Constant(0.25)).toExciter(null, random = Random(1))
+        val sig = IgnitorDsl.Affine(inner = saw, pre = none, mul = Constant(0.5), add = Constant(0.25)).toExciter(null, random = Random(1))
 
         withClue("lowered to AffineIgnitor, not to the chain") {
             ((sig as? MemoizingIgnitor)?.inner ?: sig).let { it is AffineIgnitor } shouldBe true
         }
 
-        render(IgnitorDsl.Affine(saw, none, Constant(0.5), Constant(0.25)), 220.0)
+        render(IgnitorDsl.Affine(inner = saw, pre = none, mul = Constant(0.5), add = Constant(0.25)), 220.0)
         withClue("block-constant coefficients render without scratch") { scratchHighWater shouldBe 0 }
 
-        render(IgnitorDsl.Affine(saw, none, IgnitorDsl.Sine(freq = Constant(3.0)), Constant(0.25)), 220.0)
+        render(IgnitorDsl.Affine(inner = saw, pre = none, mul = IgnitorDsl.Sine(freq = Constant(3.0)), add = Constant(0.25)), 220.0)
         withClue("a modulated coefficient takes the scratch path, three buffers") { scratchHighWater shouldBe 3 }
     }
 
     "block-constant coefficients: the same bits as the chain, in both authored orders, on a mid-block onset and a short last window" {
         for ((m, a) in listOf(0.5 to 0.25, 4.0 to 10.0, -1.2 to 0.0, 1.0 to -3.0)) {
             // x.mul(m).add(a)
-            val forward = IgnitorDsl.Affine(saw, none, Constant(m), Constant(a))
+            val forward = IgnitorDsl.Affine(inner = saw, pre = none, mul = Constant(m), add = Constant(a))
             val forwardChain = saw.mul(Constant(m)).plus(Constant(a))
             // x.add(a).mul(m): the pre-add, exact at the zero crossings where x ≈ -a
-            val reverse = IgnitorDsl.Affine(saw, Constant(a), Constant(m), none)
+            val reverse = IgnitorDsl.Affine(inner = saw, pre = Constant(a), mul = Constant(m), add = none)
             val reverseChain = saw.plus(Constant(a)).mul(Constant(m))
 
-            assertSameBits(forward, forwardChain, "mul $m add $a")
-            assertSameBits(forward, forwardChain, "mul $m add $a, onset at 37, last window 64", offset = 37, lastLength = 64)
-            assertSameBits(reverse, reverseChain, "add $a mul $m")
-            assertSameBits(reverse, reverseChain, "add $a mul $m, onset at 37, last window 64", offset = 37, lastLength = 64)
+            assertSameBits(affine = forward, chain = forwardChain, clue = "mul $m add $a")
+            assertSameBits(affine = forward, chain = forwardChain, clue = "mul $m add $a, onset at 37, last window 64", offset = 37, lastLength = 64)
+            assertSameBits(affine = reverse, chain = reverseChain, clue = "add $a mul $m")
+            assertSameBits(affine = reverse, chain = reverseChain, clue = "add $a mul $m, onset at 37, last window 64", offset = 37, lastLength = 64)
         }
     }
 
@@ -131,8 +131,8 @@ class AffineIgnitorSpec : StringSpec({
         val inf = Double.POSITIVE_INFINITY
 
         for ((m, a) in listOf(0.0 to 1.0, inf to 1.0, nan to 1.0, 2.0 to inf, 2.0 to nan, 1e300 to 1e300)) {
-            assertSameBits(IgnitorDsl.Affine(saw, none, Constant(m), Constant(a)), saw.mul(Constant(m)).plus(Constant(a)), "mul $m add $a")
-            assertSameBits(IgnitorDsl.Affine(saw, Constant(a), Constant(m), none), saw.plus(Constant(a)).mul(Constant(m)), "add $a mul $m")
+            assertSameBits(affine = IgnitorDsl.Affine(inner = saw, pre = none, mul = Constant(m), add = Constant(a)), chain = saw.mul(Constant(m)).plus(Constant(a)), clue = "mul $m add $a")
+            assertSameBits(affine = IgnitorDsl.Affine(inner = saw, pre = Constant(a), mul = Constant(m), add = none), chain = saw.plus(Constant(a)).mul(Constant(m)), clue = "add $a mul $m")
         }
 
         // an infinite and a NaN SIGNAL: scrubbed by the multiply's safeOut, the add applied after;
@@ -140,8 +140,8 @@ class AffineIgnitorSpec : StringSpec({
         for (x in listOf(inf, nan, -inf, 0.75)) {
             val src = Constant(x)
 
-            assertSameBits(IgnitorDsl.Affine(src, none, Constant(2.0), Constant(1.0)), src.mul(Constant(2.0)).plus(Constant(1.0)), "signal $x")
-            assertSameBits(IgnitorDsl.Affine(src, none, Constant(2.0), Constant(1.0)), src.mul(Constant(2.0)).plus(Constant(1.0)), "signal $x, onset at 37", offset = 37)
+            assertSameBits(affine = IgnitorDsl.Affine(inner = src, pre = none, mul = Constant(2.0), add = Constant(1.0)), chain = src.mul(Constant(2.0)).plus(Constant(1.0)), clue = "signal $x")
+            assertSameBits(affine = IgnitorDsl.Affine(inner = src, pre = none, mul = Constant(2.0), add = Constant(1.0)), chain = src.mul(Constant(2.0)).plus(Constant(1.0)), clue = "signal $x, onset at 37", offset = 37)
         }
     }
 
@@ -152,17 +152,17 @@ class AffineIgnitorSpec : StringSpec({
         for (x in listOf(0.0, -0.0)) {
             val src = Constant(x)
 
-            assertSameBits(IgnitorDsl.Affine(src, Constant(0.0), Constant(-1.2), none), src.plus(Constant(0.0)).mul(Constant(-1.2)), "signal $x, add(0.0).mul(-1.2)")
-            assertSameBits(IgnitorDsl.Affine(src, none, Constant(-1.2), none), src.mul(Constant(-1.2)), "signal $x, mul(-1.2) alone")
-            assertSameBits(IgnitorDsl.Affine(src, none, Constant(-1.2), Constant(0.0)), src.mul(Constant(-1.2)).plus(Constant(0.0)), "signal $x, mul(-1.2).add(0.0)")
+            assertSameBits(affine = IgnitorDsl.Affine(inner = src, pre = Constant(0.0), mul = Constant(-1.2), add = none), chain = src.plus(Constant(0.0)).mul(Constant(-1.2)), clue = "signal $x, add(0.0).mul(-1.2)")
+            assertSameBits(affine = IgnitorDsl.Affine(inner = src, pre = none, mul = Constant(-1.2), add = none), chain = src.mul(Constant(-1.2)), clue = "signal $x, mul(-1.2) alone")
+            assertSameBits(affine = IgnitorDsl.Affine(inner = src, pre = none, mul = Constant(-1.2), add = Constant(0.0)), chain = src.mul(Constant(-1.2)).plus(Constant(0.0)), clue = "signal $x, mul(-1.2).add(0.0)")
         }
 
         // and on the per-sample loop, not only the fill: a saw times zero is not block-constant
         // and yields +0.0 or -0.0 per sample with the saw's sign
         val zeros = saw.mul(Constant(0.0))
 
-        assertSameBits(IgnitorDsl.Affine(zeros, none, Constant(-1.2), none), zeros.mul(Constant(-1.2)), "signed zeros, mul(-1.2) alone")
-        assertSameBits(IgnitorDsl.Affine(zeros, Constant(0.0), Constant(-1.2), none), zeros.plus(Constant(0.0)).mul(Constant(-1.2)), "signed zeros, add(0.0).mul(-1.2)")
+        assertSameBits(affine = IgnitorDsl.Affine(inner = zeros, pre = none, mul = Constant(-1.2), add = none), chain = zeros.mul(Constant(-1.2)), clue = "signed zeros, mul(-1.2) alone")
+        assertSameBits(affine = IgnitorDsl.Affine(inner = zeros, pre = Constant(0.0), mul = Constant(-1.2), add = none), chain = zeros.plus(Constant(0.0)).mul(Constant(-1.2)), clue = "signed zeros, add(0.0).mul(-1.2)")
     }
 
     "a block-constant coefficient EXPRESSION is read per block, at that block's voice frequency" {
@@ -170,11 +170,11 @@ class AffineIgnitorSpec : StringSpec({
         // frequency changes between blocks (a pitch envelope), so a coefficient cached at first
         // use would render the wrong blocks.
         val mul = IgnitorDsl.Freq.mul(Constant(2.0 / 220.0))
-        val affine = IgnitorDsl.Affine(saw, none, mul, Constant(0.5))
+        val affine = IgnitorDsl.Affine(inner = saw, pre = none, mul = mul, add = Constant(0.5))
         val chain = saw.mul(mul).plus(Constant(0.5))
         val perBlock = { b: Int -> if (b % 2 == 0) 220.0 else 440.0 }
 
-        assertSameBits(affine, chain, "220 and 440 alternating per block", freqHzPerBlock = perBlock)
+        assertSameBits(affine = affine, chain = chain, clue = "220 and 440 alternating per block", freqHzPerBlock = perBlock)
 
         // and it really scales: the loud blocks are the 440 Hz ones
         val out = render(affine, 220.0, freqHzPerBlock = perBlock)
@@ -189,44 +189,44 @@ class AffineIgnitorSpec : StringSpec({
         val affine = IgnitorDsl.Affine(saw, pre = none, mul = lfo, add = Constant(0.2))
         val chain = saw.mul(lfo).plus(Constant(0.2))
 
-        assertSameBits(affine, chain, "modulated mul")
-        assertSameBits(affine, chain, "modulated mul, onset at 37, last window 64", offset = 37, lastLength = 64)
+        assertSameBits(affine = affine, chain = chain, clue = "modulated mul")
+        assertSameBits(affine = affine, chain = chain, clue = "modulated mul, onset at 37, last window 64", offset = 37, lastLength = 64)
 
         val affine2 = IgnitorDsl.Affine(saw, pre = none, mul = Constant(0.5), add = lfo)
         val chain2 = saw.mul(Constant(0.5)).plus(lfo)
 
-        assertSameBits(affine2, chain2, "modulated add")
+        assertSameBits(affine = affine2, chain = chain2, clue = "modulated add")
 
         // a pitched coefficient follows the voice's pitch mod like the chain's does (withMod),
         // in every slot: under a vibrato the coefficient sine must wobble with the carrier
         val pitched = IgnitorDsl.Sine()
 
         assertSameBits(
-            IgnitorDsl.Vibrato(IgnitorDsl.Affine(saw, pre = pitched, mul = Constant(0.5), add = none), semitones = Constant(2.0)),
-            IgnitorDsl.Vibrato(saw.plus(pitched).mul(Constant(0.5)), semitones = Constant(2.0)),
-            "pitched pre-add under a vibrato",
+            affine = IgnitorDsl.Vibrato(IgnitorDsl.Affine(saw, pre = pitched, mul = Constant(0.5), add = none), semitones = Constant(2.0)),
+            chain = IgnitorDsl.Vibrato(saw.plus(pitched).mul(Constant(0.5)), semitones = Constant(2.0)),
+            clue = "pitched pre-add under a vibrato",
         )
         assertSameBits(
-            IgnitorDsl.Vibrato(IgnitorDsl.Affine(saw, pre = none, mul = pitched, add = none), semitones = Constant(2.0)),
-            IgnitorDsl.Vibrato(saw.mul(pitched), semitones = Constant(2.0)),
-            "pitched mul under a vibrato",
+            affine = IgnitorDsl.Vibrato(IgnitorDsl.Affine(saw, pre = none, mul = pitched, add = none), semitones = Constant(2.0)),
+            chain = IgnitorDsl.Vibrato(saw.mul(pitched), semitones = Constant(2.0)),
+            clue = "pitched mul under a vibrato",
         )
         assertSameBits(
-            IgnitorDsl.Vibrato(IgnitorDsl.Affine(saw, pre = none, mul = Constant(0.5), add = pitched), semitones = Constant(2.0)),
-            IgnitorDsl.Vibrato(saw.mul(Constant(0.5)).plus(pitched), semitones = Constant(2.0)),
-            "pitched add under a vibrato",
+            affine = IgnitorDsl.Vibrato(IgnitorDsl.Affine(saw, pre = none, mul = Constant(0.5), add = pitched), semitones = Constant(2.0)),
+            chain = IgnitorDsl.Vibrato(saw.mul(Constant(0.5)).plus(pitched), semitones = Constant(2.0)),
+            clue = "pitched add under a vibrato",
         )
     }
 
     "control rate: an all-constant affine is block-constant with the chain's value, a signal one is not" {
-        val constant = IgnitorDsl.Affine(Constant(3.0), Constant(0.5), Constant(2.0), Constant(1.0)).toExciter(null, random = Random(1))
+        val constant = IgnitorDsl.Affine(inner = Constant(3.0), pre = Constant(0.5), mul = Constant(2.0), add = Constant(1.0)).toExciter(null, random = Random(1))
         val chain = Constant(3.0).plus(Constant(0.5)).mul(Constant(2.0)).plus(Constant(1.0)).toExciter(null, random = Random(1))
 
         constant.isBlockConstant shouldBe true
         constant.controlRateValueOrNull(220.0) shouldBe chain.controlRateValueOrNull(220.0)
         constant.controlRateValueOrNull(220.0) shouldBe 8.0
 
-        val signal = IgnitorDsl.Affine(saw, none, Constant(2.0), Constant(1.0)).toExciter(null, random = Random(1))
+        val signal = IgnitorDsl.Affine(inner = saw, pre = none, mul = Constant(2.0), add = Constant(1.0)).toExciter(null, random = Random(1))
 
         signal.isBlockConstant shouldBe false
         signal.controlRateValueOrNull(220.0) shouldBe null

@@ -65,7 +65,7 @@ class ModulationClockSpec : StringSpec({
 
         for (seg in segments) {
             ctx.voiceElapsedFrames = elapsed
-            ctx.updateOffsetAndLength(0, seg)
+            ctx.updateOffsetAndLength(offset = 0, length = seg)
             buf.fill(0.0)
             ignitor.generate(buf, freqHz, ctx)
 
@@ -96,7 +96,7 @@ class ModulationClockSpec : StringSpec({
         val split = renderSegments(coarse(), listOf(4, 124) + List(7) { blockFrames })
 
         contiguous.any { it != 0.0 } shouldBe true
-        maxDiff(contiguous, split) shouldBe 0.0
+        maxDiff(a = contiguous, b = split) shouldBe 0.0
     }
 
     "W1: the first hold is `amount` samples, like every other hold (the 2x bootstrap quirk is gone)" {
@@ -185,11 +185,11 @@ class ModulationClockSpec : StringSpec({
     "W2: the tremolo LFO advances through a depth gap — resume equals a free-running clock" {
         val rate = 4.0
         val gated = TremoloDoor.tremolo(
-            RampProbe(), ParamIgnitor("rate", rate),
-            ElapsedStep { e -> if (e < 256 || e >= 512) 0.6 else 0.0 },
+            upstream = RampProbe(), rate = ParamIgnitor("rate", rate),
+            depth = ElapsedStep { e -> if (e < 256 || e >= 512) 0.6 else 0.0 },
         )
         val ungated = TremoloDoor.tremolo(
-            RampProbe(), ParamIgnitor("rate", rate), ParamIgnitor("depth", 0.6),
+            upstream = RampProbe(), rate = ParamIgnitor("rate", rate), depth = ParamIgnitor("depth", 0.6),
         )
 
         val g = renderSegments(gated, List(8) { blockFrames })
@@ -212,7 +212,7 @@ class ModulationClockSpec : StringSpec({
     "W2: a non-finite rate no longer kills the LFO for the voice's life" {
         val rate = ElapsedStep { e -> if (e < 256) Double.NaN else 5.0 }
         val out = renderSegments(
-            TremoloDoor.tremolo(RampProbe(), rate, ParamIgnitor("depth", 0.5)),
+            TremoloDoor.tremolo(upstream = RampProbe(), rate = rate, depth = ParamIgnitor("depth", 0.5)),
             List(8) { blockFrames },
         )
 
@@ -236,5 +236,5 @@ class ModulationClockSpec : StringSpec({
  */
 private object TremoloDoor {
     fun tremolo(upstream: Ignitor, rate: Ignitor, depth: Ignitor): Ignitor =
-        upstream * tremoloGain(rate, depth, LfoShapes.SINE_INDEX, sampleRate = 44100)
+        upstream * tremoloGain(rate = rate, depth = depth, lfoShapeIndex = LfoShapes.SINE_INDEX, sampleRate = 44100)
 }

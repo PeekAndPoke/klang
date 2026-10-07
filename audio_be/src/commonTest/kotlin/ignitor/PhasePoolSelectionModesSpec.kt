@@ -186,10 +186,10 @@ class PhasePoolSelectionModesSpec : StringSpec({
                     gateEndFrame = 128,
                     scratchBuffers = ScratchBuffers(blockFrames = 128),
                 )
-                ctx.updateOffsetAndLength(0, 128)
+                ctx.updateOffsetAndLength(offset = 0, length = 128)
                 val buf = AudioBuffer(128)
                 chain.generate(buf, 110.0, ctx)
-                buf.copyInto(out, note * 128, 0, 128)
+                buf.copyInto(destination = out, destinationOffset = note * 128, startIndex = 0, endIndex = 128)
             }
             return out
         }

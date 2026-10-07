@@ -39,7 +39,7 @@ class ExciterCombinatorsSpec : StringSpec({
             gateEndFrame = blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -226,8 +226,8 @@ class ExciterCombinatorsSpec : StringSpec({
         // If a by-ear retune goes below ≈ 0.125, that is NOT a topology regression — widen the
         // bound and note the new value here.
         val cutoff = 800.0
-        val linBuf = generate(Ignitors.sine().lowpass(cutoff, 5.0, analog = 0.0), freqHz = cutoff)
-        val satBuf = generate(Ignitors.sine().lowpass(cutoff, 5.0, analog = 5.0), freqHz = cutoff)
+        val linBuf = generate(Ignitors.sine().lowpass(cutoffHz = cutoff, q = 5.0, analog = 0.0), freqHz = cutoff)
+        val satBuf = generate(Ignitors.sine().lowpass(cutoffHz = cutoff, q = 5.0, analog = 5.0), freqHz = cutoff)
 
         var linMax = 0.0
         var satMax = 0.0
@@ -248,7 +248,7 @@ class ExciterCombinatorsSpec : StringSpec({
         val cutoff = 2500.0
         val lowFreq = 200.0
         val dry = generate(Ignitors.sine(), freqHz = lowFreq)
-        val wet = generate(Ignitors.sine().highpass(cutoff, 1.0, analog = 3.0), freqHz = lowFreq)
+        val wet = generate(Ignitors.sine().highpass(cutoffHz = cutoff, q = 1.0, analog = 3.0), freqHz = lowFreq)
         wet.rms() shouldBeLessThan (dry.rms() * 0.3)
     }
 
@@ -261,11 +261,11 @@ class ExciterCombinatorsSpec : StringSpec({
         val q = 5.0
 
         // Signal at center frequency should pass through
-        val atCenter = generate(Ignitors.sine().svf(SvfMode.BANDPASS, centerFreq, q), freqHz = centerFreq)
+        val atCenter = generate(Ignitors.sine().svf(mode = SvfMode.BANDPASS, cutoffHz = centerFreq, q = q), freqHz = centerFreq)
         val rmsAtCenter = atCenter.rms()
 
         // Signal far from center should be attenuated
-        val offCenter = generate(Ignitors.sine().svf(SvfMode.BANDPASS, centerFreq, q), freqHz = 8000.0)
+        val offCenter = generate(Ignitors.sine().svf(mode = SvfMode.BANDPASS, cutoffHz = centerFreq, q = q), freqHz = 8000.0)
         val rmsOffCenter = offCenter.rms()
 
         rmsAtCenter shouldBeGreaterThan (rmsOffCenter * 2.0)
@@ -323,7 +323,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "vibrato(rate, depth) - output differs from plain sine (frequency modulation)" {
         val dry = generate(IgnitorDsl.Sine().toExciter())
-        val wet = generate(IgnitorDsl.Sine().vibrato(5.0, 0.05).toExciter())
+        val wet = generate(IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.05).toExciter())
 
         var differs = false
         for (i in dry.indices) {
@@ -358,8 +358,8 @@ class ExciterCombinatorsSpec : StringSpec({
         }
 
         val half = blockFrames / 2
-        val crossingsFirstHalf = zeroCrossingsInRange(wet, 0, half)
-        val crossingsSecondHalf = zeroCrossingsInRange(wet, half, blockFrames)
+        val crossingsFirstHalf = zeroCrossingsInRange(buf = wet, start = 0, end = half)
+        val crossingsSecondHalf = zeroCrossingsInRange(buf = wet, start = half, end = blockFrames)
 
         // With positive accelerate, pitch rises over time so second half should have more crossings
         crossingsSecondHalf intShouldBeGreaterThan crossingsFirstHalf

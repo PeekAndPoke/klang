@@ -63,7 +63,7 @@ class VibratoConsistencyTest : StringSpec({
      * with build-time mod bubbling. Depth is in semitones.
      */
     fun renderIgnitorDslPath(depthSemitones: Double): AudioBuffer {
-        val dsl = IgnitorDsl.Sine().vibrato(rate, depthSemitones)
+        val dsl = IgnitorDsl.Sine().vibrato(rate = rate, semitones = depthSemitones)
         val signal = dsl.toExciter()
 
         val voice = createSynthVoice(
@@ -82,7 +82,7 @@ class VibratoConsistencyTest : StringSpec({
         val sprudel = renderSprudelPath(0.5)
         val ignitor = renderIgnitorDslPath(0.5)
 
-        val diff = diffRms(sprudel, ignitor)
+        val diff = diffRms(a = sprudel, b = ignitor)
         diff shouldBeLessThan 1e-3
     }
 
@@ -90,7 +90,7 @@ class VibratoConsistencyTest : StringSpec({
         val sprudel = renderSprudelPath(1.0)
         val ignitor = renderIgnitorDslPath(1.0)
 
-        val diff = diffRms(sprudel, ignitor)
+        val diff = diffRms(a = sprudel, b = ignitor)
         diff shouldBeLessThan 1e-3
     }
 
@@ -98,7 +98,7 @@ class VibratoConsistencyTest : StringSpec({
         val sprudel = renderSprudelPath(2.0)
         val ignitor = renderIgnitorDslPath(2.0)
 
-        val diff = diffRms(sprudel, ignitor)
+        val diff = diffRms(a = sprudel, b = ignitor)
         diff shouldBeLessThan 1e-3
     }
 
@@ -106,12 +106,12 @@ class VibratoConsistencyTest : StringSpec({
         val sprudel = renderSprudelPath(0.0)
         val ignitor = renderIgnitorDslPath(0.0)
 
-        val diff = diffRms(sprudel, ignitor)
+        val diff = diffRms(a = sprudel, b = ignitor)
         diff shouldBeLessThan 1e-3
     }
 
     "ignitor DSL vibrato with depth 1 semitone does NOT produce ±100% frequency swing" {
-        val dsl = IgnitorDsl.Sine().vibrato(rate, 1.0)
+        val dsl = IgnitorDsl.Sine().vibrato(rate = rate, semitones = 1.0)
         val signal = dsl.toExciter()
 
         val voiceWith = createSynthVoice(
@@ -131,7 +131,7 @@ class VibratoConsistencyTest : StringSpec({
         voiceWithout.render(ctxWithout)
 
         // The difference should be audible but not extreme
-        val diff = diffRms(ctxWith.voiceBuffer, ctxWithout.voiceBuffer)
+        val diff = diffRms(a = ctxWith.voiceBuffer, b = ctxWithout.voiceBuffer)
         // ±1 semitone = ±8.3% frequency deviation — noticeable but not destructive
         (diff > 1e-4) shouldBe true   // should be audibly different
         (diff < 0.5) shouldBe true    // but not insanely different

@@ -39,7 +39,7 @@ internal fun renderVoiceWindows(
         val offset = if (block == 0) 37 else 0
         val length = blockFrames - offset
 
-        ctx.updateOffsetAndLength(offset, length)
+        ctx.updateOffsetAndLength(offset = offset, length = length)
         ignitor.generate(buffer, freqHz, ctx)
 
         for (i in offset until offset + length) {

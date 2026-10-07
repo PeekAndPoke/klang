@@ -23,7 +23,7 @@ class PulseShapeSpec : StringSpec({
     val floor = PULSE_MIN_FLANK_SAMPLES * dt        // min flank length in phase
 
     fun state(duty: Double, rise: Double, fall: Double) =
-        WaveVoiceState().apply { setPulseShape(duty, rise, fall, floor) }
+        WaveVoiceState().apply { setPulseShape(duty = duty, riseFlank = rise, fallFlank = fall, floor = floor) }
 
     fun mean(s: WaveVoiceState, n: Int = 200_000): Double {
         var sum = 0.0
@@ -32,13 +32,13 @@ class PulseShapeSpec : StringSpec({
     }
 
     "square (duty 0.5, flanks 0) is ±1 between the edges" {
-        val s = state(0.5, 0.0, 0.0)
+        val s = state(duty = 0.5, rise = 0.0, fall = 0.0)
         s.sampleAt(0.25) shouldBe (1.0 plusOrMinus 1e-9)   // mid high plateau
         s.sampleAt(0.75) shouldBe (-1.0 plusOrMinus 1e-9)  // mid low plateau
     }
 
     "square edges carry the minimum sample-flank floor (no instant edge)" {
-        val s = state(0.5, 0.0, 0.0)
+        val s = state(duty = 0.5, rise = 0.0, fall = 0.0)
         s.riseEnd shouldBe (floor plusOrMinus 1e-9)           // rise ramp = a floor at the start
         s.highEnd shouldBe (0.5 plusOrMinus 1e-9)             // high plateau ends at duty
         s.fallEnd shouldBe ((0.5 + floor) plusOrMinus 1e-9)   // fall ramp = a floor after duty
@@ -47,11 +47,11 @@ class PulseShapeSpec : StringSpec({
     }
 
     "square is zero-mean" {
-        mean(state(0.5, 0.0, 0.0)) shouldBe (0.0 plusOrMinus 1e-3)
+        mean(state(duty = 0.5, rise = 0.0, fall = 0.0)) shouldBe (0.0 plusOrMinus 1e-3)
     }
 
     "triangle (duty 0.5, flanks 1) is a zero-mean triangle (peak at 0.5)" {
-        val s = state(0.5, 1.0, 1.0)
+        val s = state(duty = 0.5, rise = 1.0, fall = 1.0)
         s.sampleAt(0.0) shouldBe (-1.0 plusOrMinus 1e-9)
         s.sampleAt(0.25) shouldBe (0.0 plusOrMinus 1e-9)
         s.sampleAt(0.5) shouldBe (1.0 plusOrMinus 1e-9)
@@ -60,7 +60,7 @@ class PulseShapeSpec : StringSpec({
     }
 
     "pulze duty 0.25 is high for the first quarter" {
-        val s = state(0.25, 0.0, 0.0)
+        val s = state(duty = 0.25, rise = 0.0, fall = 0.0)
         s.sampleAt(0.1) shouldBe (1.0 plusOrMinus 1e-9)    // inside the high quarter
         s.sampleAt(0.6) shouldBe (-1.0 plusOrMinus 1e-9)   // inside the low region
         // a narrow-duty pulse is mostly low → negative DC (raw, not corrected)
@@ -69,7 +69,7 @@ class PulseShapeSpec : StringSpec({
     }
 
     "raw config (floor 0) has instant edges" {
-        val s = WaveVoiceState().apply { setPulseShape(0.25, 0.0, 0.0, 0.0) }
+        val s = WaveVoiceState().apply { setPulseShape(duty = 0.25, riseFlank = 0.0, fallFlank = 0.0, floor = 0.0) }
         s.riseEnd shouldBe (0.0 plusOrMinus 1e-12)         // no rise ramp
         s.sampleAt(0.1) shouldBe (1.0 plusOrMinus 1e-12)   // +1 while phase < duty
         s.sampleAt(0.6) shouldBe (-1.0 plusOrMinus 1e-12)  // −1 otherwise

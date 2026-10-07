@@ -102,7 +102,7 @@ class StripPitchEnvelopeParitySpec : StringSpec({
 
             val cylinder = rc.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -145,14 +145,14 @@ class StripPitchEnvelopeParitySpec : StringSpec({
     }
 
     val rows = listOf(
-        Row("a kick: the gate after the sweep", 24.0, 0.001, 0.08, 0.0, 0.0),
-        Row("a held sustain, the release inside the render", 12.0, 0.02, 0.1, 0.5, 0.3),
-        Row("the gate inside the decay, a short release", 24.0, 0.001, 0.3, 0.0, 0.05),
-        Row("the gate inside the attack", 7.0, 0.3, 0.1, 0.0, 0.02),
-        Row("named curves", 12.0, 0.05, 0.1, 0.3, 0.1, Triple(AdsrCurve.Linear, AdsrCurve.SCurve, AdsrCurve.Square)),
-        Row("a negative amount and a raw sustain above 1", -12.0, 0.01, 0.05, 1.5, 0.1),
-        Row("every stage unwritten: the shared defaults", 24.0, null, null, null, null),
-        Row("fractional frame counts", 9.0, 0.00501, 0.10001, 0.2, 0.05001),
+        Row(title = "a kick: the gate after the sweep", amount = 24.0, attack = 0.001, decay = 0.08, sustain = 0.0, release = 0.0),
+        Row(title = "a held sustain, the release inside the render", amount = 12.0, attack = 0.02, decay = 0.1, sustain = 0.5, release = 0.3),
+        Row(title = "the gate inside the decay, a short release", amount = 24.0, attack = 0.001, decay = 0.3, sustain = 0.0, release = 0.05),
+        Row(title = "the gate inside the attack", amount = 7.0, attack = 0.3, decay = 0.1, sustain = 0.0, release = 0.02),
+        Row(title = "named curves", amount = 12.0, attack = 0.05, decay = 0.1, sustain = 0.3, release = 0.1, curves = Triple(AdsrCurve.Linear, AdsrCurve.SCurve, AdsrCurve.Square)),
+        Row(title = "a negative amount and a raw sustain above 1", amount = -12.0, attack = 0.01, decay = 0.05, sustain = 1.5, release = 0.1),
+        Row(title = "every stage unwritten: the shared defaults", amount = 24.0, attack = null, decay = null, sustain = null, release = null),
+        Row(title = "fractional frame counts", amount = 9.0, attack = 0.00501, decay = 0.10001, sustain = 0.2, release = 0.05001),
     )
 
     for (row in rows) {

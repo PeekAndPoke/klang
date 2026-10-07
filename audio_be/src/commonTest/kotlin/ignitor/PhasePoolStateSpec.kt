@@ -153,59 +153,59 @@ class PhasePoolStateSpec : StringSpec({
     }
 
     "seeded registry - identical seeds produce identical vocabularies (offline reproducibility)" {
-        val a = PhasePools(Random(42)).pool(2, v, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0)
-        val b = PhasePools(Random(42)).pool(2, v, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0)
+        val a = PhasePools(Random(42)).pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        val b = PhasePools(Random(42)).pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
         (1..16).map { a.next(PhasePoolSelection.RoundRobin).toList() } shouldBe (1..16).map { b.next(PhasePoolSelection.RoundRobin).toList() }
     }
 
     "registry - caps at MAX_POOLS via least-recently-served eviction; the active key stays pooled" {
         val pools = PhasePools(Random(2))
-        val first = pools.pool(0, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0)
-        val second = pools.pool(1, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0)
-        val last = pools.pool(2, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0)
+        val first = pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
+        val second = pools.pool(orbit = 1, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
+        val last = pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
         for (orbit in 3 until PhasePools.MAX_POOLS) {
-            pools.pool(orbit, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0)
+            pools.pool(orbit = orbit, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
         }
         pools.size shouldBe PhasePools.MAX_POOLS
         // Touch orbits 0 and 2 so orbit 1 becomes the least-recently-served...
-        (pools.pool(0, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0) === first).shouldBeTrue()
-        (pools.pool(2, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0) === last).shouldBeTrue()
+        (pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === first).shouldBeTrue()
+        (pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === last).shouldBeTrue()
         // ...then a fresh key evicts EXACTLY orbit 1 — not the touched keys, not the newcomer,
         // not whatever the map happens to iterate first or last.
-        pools.pool(999, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0)
+        pools.pool(orbit = 999, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
         pools.size shouldBe PhasePools.MAX_POOLS
-        (pools.pool(0, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0) === first).shouldBeTrue()
-        (pools.pool(2, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0) === last).shouldBeTrue()
+        (pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === first).shouldBeTrue()
+        (pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === last).shouldBeTrue()
         // Re-requesting the evicted key mints a FRESH pool (identity differs from the original).
-        (pools.pool(1, v, 0.1, lo, hi, 5.0, 4.0, 0.0, warmup = 16.0) === second) shouldBe false
+        (pools.pool(orbit = 1, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === second) shouldBe false
     }
 
     "registry - keys are coerced: settings beyond the clamps share one pool" {
         val pools = PhasePools(Random(6))
-        val a = pools.pool(0, v, 0.1, lo, hi, 80.0, 5000.0, 0.0, warmup = 16.0)
-        val b = pools.pool(0, v, 0.1, lo, hi, 200.0, 9000.0, 0.0, warmup = 16.0) // both coerce to (64, 1024)
+        val a = pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 80.0, poolSize = 5000.0, refreshEvery = 0.0, warmup = 16.0)
+        val b = pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 200.0, poolSize = 9000.0, refreshEvery = 0.0, warmup = 16.0) // both coerce to (64, 1024)
         (a === b).shouldBeTrue()
         pools.size shouldBe 1
     }
 
     "registry - identical settings share ONE pool; every key component mints its own" {
         val pools = PhasePools(Random(1))
-        val g2a = pools.pool(2, v, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0)
-        val g2b = pools.pool(2, v, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0) // superimpose copy, same orbit
+        val g2a = pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        val g2b = pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0) // superimpose copy, same orbit
         (g2a === g2b).shouldBeTrue()
         pools.size shouldBe 1
         // Each key component isolates: orbit, voices, gain profile, band edges, and the
         // maintenance knobs (a knob whose effect depends on note-arrival order would be the
         // parameter-parity bug class).
-        pools.pool(3, v, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0)
-        pools.pool(2, v + 2, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0)
-        pools.pool(2, v, 0.5, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0)
-        pools.pool(2, v, 0.1, 0.10, hi, 5.0, 16.0, 0.0, warmup = 16.0)
-        pools.pool(2, v, 0.1, lo, 0.90, 5.0, 16.0, 0.0, warmup = 16.0)
-        pools.pool(2, v, 0.1, lo, hi, 40.0, 16.0, 0.0, warmup = 16.0)
-        pools.pool(2, v, 0.1, lo, hi, 5.0, 24.0, 0.0, warmup = 16.0)
-        pools.pool(2, v, 0.1, lo, hi, 5.0, 16.0, 10.0, warmup = 16.0)
-        pools.pool(2, v, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 4.0)
+        pools.pool(orbit = 3, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(orbit = 2, voices = v + 2, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(orbit = 2, voices = v, sideAtten = 0.5, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = 0.10, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = 0.90, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 40.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 24.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 10.0, warmup = 16.0)
+        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 4.0)
         pools.size shouldBe 10
     }
 
@@ -220,7 +220,7 @@ class PhasePoolStateSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(n),
-        ).apply { updateOffsetAndLength(0, n); voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(offset = 0, length = n); voiceElapsedFrames = 0 }
         sig.generate(buffer, 375.0, ctx)
         var re = 0.0
         var im = 0.0

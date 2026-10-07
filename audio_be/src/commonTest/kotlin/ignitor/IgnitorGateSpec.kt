@@ -95,7 +95,7 @@ class IgnitorGateSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         random = rng,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -284,26 +284,26 @@ class IgnitorGateSpec : StringSpec({
 
     /** The four arms, each hung on an inner with its switch knob. */
     val pitchArms: Map<String, (IgnitorDsl, IgnitorDsl) -> IgnitorDsl> = mapOf(
-        "vibrato" to { inner, knob -> vibrato(inner, knob) },
-        "accelerate" to { inner, knob -> accelerate(inner, knob) },
-        "pitch envelope" to { inner, knob -> pitchEnvelope(inner, knob) },
-        "fm" to { inner, knob -> fm(inner, knob) },
+        "vibrato" to { inner, knob -> vibrato(inner = inner, depth = knob) },
+        "accelerate" to { inner, knob -> accelerate(inner = inner, amount = knob) },
+        "pitch envelope" to { inner, knob -> pitchEnvelope(inner = inner, amount = knob) },
+        "fm" to { inner, knob -> fm(inner = inner, depth = knob) },
     )
 
     "vibrato: a FINITE depth at or below 0.0 is not built, above it is" {
-        stageRow("vibrato", listOf(0.0, -0.0, -0.5), on = 0.5) { vibrato(saw, it) }
+        stageRow("vibrato", listOf(0.0, -0.0, -0.5), on = 0.5) { vibrato(inner = saw, depth = it) }
 
         withClue("the RATE is not a gating knob: a vibrato at rate 0 is still built") {
             // At rate 0 the LFO sits at phase 0 and its law writes 2^0, so the BITS are the bare saw's;
             // the graph is where "not a gating knob" shows.
-            shapeOf(build(vibrato(saw, IgnitorDsl.Constant(1.0), rate = IgnitorDsl.Constant(0.0)))) shouldNotBe bareShape
+            shapeOf(build(vibrato(inner = saw, depth = IgnitorDsl.Constant(1.0), rate = IgnitorDsl.Constant(0.0)))) shouldNotBe bareShape
         }
     }
 
     "vibrato: a NON-FINITE depth is built and renders the default depth, it is not off" {
         // The one pitch arm whose unset is not off: the runtime reads a non-finite depth as the node's
         // DEFAULT, VIBRATO_SEMITONES (`finiteOr`), so gating it would change the sound, not fold a stage.
-        val atDefault = render(vibrato(saw, IgnitorDsl.Constant(VIBRATO_SEMITONES))).bits()
+        val atDefault = render(vibrato(inner = saw, depth = IgnitorDsl.Constant(VIBRATO_SEMITONES))).bits()
 
         atDefault shouldNotBe bare
 
@@ -316,40 +316,40 @@ class IgnitorGateSpec : StringSpec({
 
         for (depth in nonFinite) {
             withClue("depth $depth") {
-                shapeOf(build(vibrato(saw, depth))) shouldNotBe bareShape
-                render(vibrato(saw, depth)).bits() shouldBe atDefault
+                shapeOf(build(vibrato(inner = saw, depth = depth))) shouldNotBe bareShape
+                render(vibrato(inner = saw, depth = depth)).bits() shouldBe atDefault
             }
         }
     }
 
     "accelerate: exactly 0.0 is not built, any other amount is" {
         stageRow("accelerate", listOf(0.0, -0.0, SLOT_UNSET, Double.POSITIVE_INFINITY), on = 12.0) {
-            accelerate(saw, it)
+            accelerate(inner = saw, amount = it)
         }
 
         withClue("a NEGATIVE amount glides down and is built") {
-            shapeOf(build(accelerate(saw, IgnitorDsl.Constant(-12.0)))) shouldNotBe bareShape
-            render(accelerate(saw, IgnitorDsl.Constant(-12.0))).bits() shouldNotBe bare
+            shapeOf(build(accelerate(inner = saw, amount = IgnitorDsl.Constant(-12.0)))) shouldNotBe bareShape
+            render(accelerate(inner = saw, amount = IgnitorDsl.Constant(-12.0))).bits() shouldNotBe bare
         }
     }
 
     "pitch envelope: an amount of exactly 0.0 is not built, any other amount is" {
         stageRow("pitch envelope", listOf(0.0, -0.0, SLOT_UNSET, Double.NEGATIVE_INFINITY), on = 12.0) {
-            pitchEnvelope(saw, it)
+            pitchEnvelope(inner = saw, amount = it)
         }
 
         withClue("a NEGATIVE amount sweeps from below and is built") {
-            shapeOf(build(pitchEnvelope(saw, IgnitorDsl.Constant(-12.0)))) shouldNotBe bareShape
-            render(pitchEnvelope(saw, IgnitorDsl.Constant(-12.0))).bits() shouldNotBe bare
+            shapeOf(build(pitchEnvelope(inner = saw, amount = IgnitorDsl.Constant(-12.0)))) shouldNotBe bareShape
+            render(pitchEnvelope(inner = saw, amount = IgnitorDsl.Constant(-12.0))).bits() shouldNotBe bare
         }
     }
 
     "fm: a depth of exactly 0.0 is not built, any other depth is" {
-        stageRow("fm", listOf(0.0, -0.0, SLOT_UNSET), on = 200.0) { fm(saw, it) }
+        stageRow("fm", listOf(0.0, -0.0, SLOT_UNSET), on = 200.0) { fm(inner = saw, depth = it) }
 
         withClue("a NEGATIVE depth renders on both hosts and is built") {
-            shapeOf(build(fm(saw, IgnitorDsl.Constant(-200.0)))) shouldNotBe bareShape
-            render(fm(saw, IgnitorDsl.Constant(-200.0))).bits() shouldNotBe bare
+            shapeOf(build(fm(inner = saw, depth = IgnitorDsl.Constant(-200.0)))) shouldNotBe bareShape
+            render(fm(inner = saw, depth = IgnitorDsl.Constant(-200.0))).bits() shouldNotBe bare
         }
     }
 
@@ -364,7 +364,7 @@ class IgnitorGateSpec : StringSpec({
         }
 
         withClue("vibrato ungated at a NEGATIVE depth, its other off value") {
-            render(vibrato(saw, ungated(-0.5))).bits() shouldBe bare
+            render(vibrato(inner = saw, depth = ungated(-0.5))).bits() shouldBe bare
         }
     }
 
@@ -438,7 +438,7 @@ class IgnitorGateSpec : StringSpec({
 
     "a gated OUTER pitch arm leaves a built inner one alone: the product folds" {
         // `combineMods` multiplies the outer mod into the inner's: at an outer 1.0 the inner's ratios exactly.
-        val inner = vibrato(saw, IgnitorDsl.Constant(0.5))
+        val inner = vibrato(inner = saw, depth = IgnitorDsl.Constant(0.5))
         val innerAlone = render(inner).bits()
 
         innerAlone shouldNotBe bare
@@ -461,15 +461,15 @@ class IgnitorGateSpec : StringSpec({
 
         fun withStage(stage: IgnitorDsl) = IgnitorDsl.Plus(left = stage, right = crackle)
 
-        val drawingRate = vibrato(IgnitorDsl.Silence, IgnitorDsl.Constant(0.0), rate = IgnitorDsl.PerlinNoise())
-        val drawingModulator = fm(IgnitorDsl.Silence, IgnitorDsl.Constant(0.0), modulator = IgnitorDsl.Crackle())
+        val drawingRate = vibrato(inner = IgnitorDsl.Silence, depth = IgnitorDsl.Constant(0.0), rate = IgnitorDsl.PerlinNoise())
+        val drawingModulator = fm(inner = IgnitorDsl.Silence, depth = IgnitorDsl.Constant(0.0), modulator = IgnitorDsl.Crackle())
 
         render(withStage(drawingRate)).bits() shouldBe render(never).bits()
         render(withStage(drawingModulator)).bits() shouldBe render(never).bits()
 
         withClue("engagement: ungated, each one draws and the crackle moves") {
-            val ungatedRate = vibrato(IgnitorDsl.Silence, ungated(0.0), rate = IgnitorDsl.PerlinNoise())
-            val ungatedModulator = fm(IgnitorDsl.Silence, ungated(0.0), modulator = IgnitorDsl.Crackle())
+            val ungatedRate = vibrato(inner = IgnitorDsl.Silence, depth = ungated(0.0), rate = IgnitorDsl.PerlinNoise())
+            val ungatedModulator = fm(inner = IgnitorDsl.Silence, depth = ungated(0.0), modulator = IgnitorDsl.Crackle())
 
             render(withStage(ungatedRate)).bits() shouldNotBe render(never).bits()
             render(withStage(ungatedModulator)).bits() shouldNotBe render(never).bits()
@@ -480,11 +480,11 @@ class IgnitorGateSpec : StringSpec({
         // The FM arm counts the modulator's tail (`maxTail(carrier, modulator)`); gated, there is no modulator.
         val longModulator = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Constant(2.0))
 
-        fm(saw, IgnitorDsl.Constant(0.0), modulator = longModulator).tail() shouldBe null
+        fm(inner = saw, depth = IgnitorDsl.Constant(0.0), modulator = longModulator).tail() shouldBe null
 
         withClue("engagement: built, at a written depth or an ungated 0, the tail counts") {
-            fm(saw, IgnitorDsl.Constant(200.0), modulator = longModulator).tail() shouldBe 2.0
-            fm(saw, ungated(0.0), modulator = longModulator).tail() shouldBe 2.0
+            fm(inner = saw, depth = IgnitorDsl.Constant(200.0), modulator = longModulator).tail() shouldBe 2.0
+            fm(inner = saw, depth = ungated(0.0), modulator = longModulator).tail() shouldBe 2.0
         }
     }
 
@@ -494,11 +494,11 @@ class IgnitorGateSpec : StringSpec({
         val noise = IgnitorDsl.WhiteNoise()
         val never = IgnitorDsl.Plus(left = saw, right = noise)
 
-        render(IgnitorDsl.Plus(left = fm(saw, IgnitorDsl.Constant(0.0)), right = noise)).bits() shouldBe
+        render(IgnitorDsl.Plus(left = fm(inner = saw, depth = IgnitorDsl.Constant(0.0)), right = noise)).bits() shouldBe
                 render(never).bits()
 
         withClue("engagement: ungated at depth 0 the modulator renders, draws, and the noise moves") {
-            render(IgnitorDsl.Plus(left = fm(saw, ungated(0.0)), right = noise)).bits() shouldNotBe
+            render(IgnitorDsl.Plus(left = fm(inner = saw, depth = ungated(0.0)), right = noise)).bits() shouldNotBe
                     render(never).bits()
         }
     }
@@ -526,13 +526,13 @@ class IgnitorGateSpec : StringSpec({
     "a gated pitch arm INSIDE a built one descends with the outer mod: the outer still bends the source" {
         // The shape `classic()` builds from step 1 on (vibrato outermost, fm innermost): an unwritten inner stage
         // must fold away WITHOUT dropping the mod of the written stages around it.
-        val outerAlone = render(vibrato(saw, IgnitorDsl.Constant(0.5))).bits()
+        val outerAlone = render(vibrato(inner = saw, depth = IgnitorDsl.Constant(0.5))).bits()
 
         outerAlone shouldNotBe bare
 
         for ((name, arm) in pitchArms) {
             withClue("$name gated at 0 inside a built vibrato") {
-                val nested = vibrato(arm(saw, IgnitorDsl.Constant(0.0)), IgnitorDsl.Constant(0.5))
+                val nested = vibrato(inner = arm(saw, IgnitorDsl.Constant(0.0)), depth = IgnitorDsl.Constant(0.5))
 
                 render(nested).bits() shouldBe outerAlone
             }
@@ -546,21 +546,21 @@ class IgnitorGateSpec : StringSpec({
         // (residue 2 of the shared-modulator record), and its LFO runs double. Gated, the outer node is absent,
         // the inner memo is freq-invariant and renders once: the tree without the node.
         val layered = IgnitorDsl.Plus(left = saw, right = IgnitorDsl.Detune(inner = saw, semitones = IgnitorDsl.Constant(7.0)))
-        val inner = vibrato(layered, IgnitorDsl.Constant(0.5))
+        val inner = vibrato(inner = layered, depth = IgnitorDsl.Constant(0.5))
         val without = render(inner).bits()
         val freqRate = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(0.01))
 
         withClue("fm gated: the tree without the node") {
-            render(fm(inner, IgnitorDsl.Constant(0.0))).bits() shouldBe without
+            render(fm(inner = inner, depth = IgnitorDsl.Constant(0.0))).bits() shouldBe without
         }
 
         withClue("fm ungated at 0: the inner vibrato renders twice per block under the detune") {
-            render(fm(inner, ungated(0.0))).bits() shouldNotBe without
+            render(fm(inner = inner, depth = ungated(0.0))).bits() shouldNotBe without
         }
 
         withClue("a vibrato whose rate reads the note, gated and ungated") {
-            render(vibrato(inner, IgnitorDsl.Constant(0.0), rate = freqRate)).bits() shouldBe without
-            render(vibrato(inner, ungated(0.0), rate = freqRate)).bits() shouldNotBe without
+            render(vibrato(inner = inner, depth = IgnitorDsl.Constant(0.0), rate = freqRate)).bits() shouldBe without
+            render(vibrato(inner = inner, depth = ungated(0.0), rate = freqRate)).bits() shouldNotBe without
         }
     }
 
@@ -846,11 +846,11 @@ class IgnitorGateSpec : StringSpec({
         )
         val never = IgnitorDsl.Plus(left = IgnitorDsl.Silence, right = crackle)
 
-        render(envelope(IgnitorDsl.PerlinNoise(), IgnitorDsl.PerlinNoise(), on = 0.0)).bits() shouldBe render(never).bits()
+        render(envelope(attack = IgnitorDsl.PerlinNoise(), declick = IgnitorDsl.PerlinNoise(), on = 0.0)).bits() shouldBe render(never).bits()
 
         withClue("engagement: ON, each knob's perlin draws on its own, and the crackle moves") {
-            render(envelope(IgnitorDsl.PerlinNoise(), null, on = 1.0)).bits() shouldNotBe render(never).bits()
-            render(envelope(null, IgnitorDsl.PerlinNoise(), on = 1.0)).bits() shouldNotBe render(never).bits()
+            render(envelope(attack = IgnitorDsl.PerlinNoise(), declick = null, on = 1.0)).bits() shouldNotBe render(never).bits()
+            render(envelope(attack = null, declick = IgnitorDsl.PerlinNoise(), on = 1.0)).bits() shouldNotBe render(never).bits()
         }
     }
 

@@ -55,7 +55,7 @@ class IgnitorRangexSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(7),
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
         val buffer = AudioBuffer(blockFrames)
@@ -70,47 +70,47 @@ class IgnitorRangexSpec : StringSpec({
         }
     }
 
-    fun rendered(x: Double, from: Double, to: Double): Double = render(c(x).rangex(c(from), c(to))).first()
+    fun rendered(x: Double, from: Double, to: Double): Double = render(c(x).rangex(from = c(from), to = c(to))).first()
 
     "rangex(100, 1600): from at -1, the geometric mean at 0, to at 1" {
-        close(rendered(-1.0, 100.0, 1600.0), 100.0)
-        close(rendered(0.0, 100.0, 1600.0), 400.0)
-        close(rendered(1.0, 100.0, 1600.0), 1600.0)
+        close(actual = rendered(x = -1.0, from = 100.0, to = 1600.0), expected = 100.0)
+        close(actual = rendered(x = 0.0, from = 100.0, to = 1600.0), expected = 400.0)
+        close(actual = rendered(x = 1.0, from = 100.0, to = 1600.0), expected = 1600.0)
         // and equal ratios between: a quarter of the swing is one octave of the four
-        close(rendered(-0.5, 100.0, 1600.0), 200.0)
-        close(rendered(0.5, 100.0, 1600.0), 800.0)
+        close(actual = rendered(x = -0.5, from = 100.0, to = 1600.0), expected = 200.0)
+        close(actual = rendered(x = 0.5, from = 100.0, to = 1600.0), expected = 800.0)
     }
 
     "rangex(1600, 100) turns the swing upside down" {
-        close(rendered(-1.0, 1600.0, 100.0), 1600.0)
-        close(rendered(0.0, 1600.0, 100.0), 400.0)
-        close(rendered(1.0, 1600.0, 100.0), 100.0)
+        close(actual = rendered(x = -1.0, from = 1600.0, to = 100.0), expected = 1600.0)
+        close(actual = rendered(x = 0.0, from = 1600.0, to = 100.0), expected = 400.0)
+        close(actual = rendered(x = 1.0, from = 1600.0, to = 100.0), expected = 100.0)
     }
 
     "the law holds per sample over a moving signal" {
         val lfo = IgnitorDsl.Sine(freq = c(300.0), analog = c(0.0))
         val x = render(lfo)
-        val y = render(lfo.rangex(c(200.0), c(3200.0)))
+        val y = render(lfo.rangex(from = c(200.0), to = c(3200.0)))
 
         // Not vacuous: the signal sweeps most of its swing in this block
         (x.max() - x.min()) shouldBeGreaterThan 1.5
 
         for (i in 0 until blockFrames) {
             withClue("sample $i, x = ${x[i]}") {
-                close(y[i], 200.0 * (3200.0 / 200.0).pow((x[i] + 1.0) / 2.0))
+                close(actual = y[i], expected = 200.0 * (3200.0 / 200.0).pow((x[i] + 1.0) / 2.0))
             }
         }
     }
 
     "a value at or below 0 is coerced to the floor 0.0001: finite, never ln(0)" {
-        close(rendered(-1.0, 0.0, 1000.0), 0.0001)
-        close(rendered(1.0, 0.0, 1000.0), 1000.0)
-        close(rendered(0.0, 0.0, 1000.0), sqrt(0.0001 * 1000.0))
+        close(actual = rendered(x = -1.0, from = 0.0, to = 1000.0), expected = 0.0001)
+        close(actual = rendered(x = 1.0, from = 0.0, to = 1000.0), expected = 1000.0)
+        close(actual = rendered(x = 0.0, from = 0.0, to = 1000.0), expected = sqrt(0.0001 * 1000.0))
         // a negative value is the same floor, not a mirrored logarithm
-        close(rendered(-1.0, -5.0, 1000.0), 0.0001)
-        close(rendered(1.0, 1000.0, 0.0), 0.0001)
+        close(actual = rendered(x = -1.0, from = -5.0, to = 1000.0), expected = 0.0001)
+        close(actual = rendered(x = 1.0, from = 1000.0, to = 0.0), expected = 0.0001)
 
-        val sweep = render(IgnitorDsl.Sine(freq = c(300.0), analog = c(0.0)).rangex(c(0.0), c(1000.0)))
+        val sweep = render(IgnitorDsl.Sine(freq = c(300.0), analog = c(0.0)).rangex(from = c(0.0), to = c(1000.0)))
         sweep.forEach { it.isFinite() shouldBe true }
         sweep.min() shouldBeGreaterThan 0.0
         sweep.max() shouldBeLessThan 1000.0 * (1.0 + tolerance)
@@ -119,10 +119,10 @@ class IgnitorRangexSpec : StringSpec({
     "a signal bound that dips below 0 is floored per sample, and the law holds per sample" {
         val lfo = IgnitorDsl.Sine(freq = c(300.0), analog = c(0.0))
         // A bound that swings from -50 to 400 Hz: below 0 for part of the block, so the floor works per sample
-        val fromSignal = IgnitorDsl.Sine(freq = c(400.0), analog = c(0.0)).range(c(-50.0), c(400.0))
+        val fromSignal = IgnitorDsl.Sine(freq = c(400.0), analog = c(0.0)).range(from = c(-50.0), to = c(400.0))
         val x = render(lfo)
         val f = render(fromSignal)
-        val y = render(lfo.rangex(fromSignal, c(3200.0)))
+        val y = render(lfo.rangex(from = fromSignal, to = c(3200.0)))
 
         // Not vacuous: the bound is below 0 for some samples and well above the floor for others
         f.min() shouldBeLessThan 0.0
@@ -131,7 +131,7 @@ class IgnitorRangexSpec : StringSpec({
         for (i in 0 until blockFrames) {
             withClue("sample $i, x = ${x[i]}, from = ${f[i]}") {
                 val from = if (f[i] > 0.0001) f[i] else 0.0001
-                close(y[i], from * (3200.0 / from).pow((x[i] + 1.0) / 2.0))
+                close(actual = y[i], expected = from * (3200.0 / from).pow((x[i] + 1.0) / 2.0))
             }
         }
     }
@@ -140,8 +140,8 @@ class IgnitorRangexSpec : StringSpec({
         // With the floor on the other side of Max, a NaN would pass through and the engine's Log maps NaN to 0: the
         // first two rows would render 1, not the floor. A constant (or block-constant) NaN is the case that reaches
         // the bound; the arithmetic nodes end in `safeOut`, which maps NaN to 0, so a signal does not carry one.
-        close(rendered(-1.0, Double.NaN, 1000.0), 0.0001)
-        close(rendered(1.0, 1000.0, Double.NaN), 0.0001)
-        close(rendered(0.0, Double.NaN, 1000.0), sqrt(0.0001 * 1000.0))
+        close(actual = rendered(x = -1.0, from = Double.NaN, to = 1000.0), expected = 0.0001)
+        close(actual = rendered(x = 1.0, from = 1000.0, to = Double.NaN), expected = 0.0001)
+        close(actual = rendered(x = 0.0, from = Double.NaN, to = 1000.0), expected = sqrt(0.0001 * 1000.0))
     }
 })

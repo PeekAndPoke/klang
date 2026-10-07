@@ -35,7 +35,7 @@ class PitchModSafetyTest : StringSpec({
         gateEndFrame = durationFrames,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = elapsedFrames
     }
 
@@ -214,7 +214,7 @@ class PitchModSafetyTest : StringSpec({
         // Without the safety clamp, an extreme depth would set phase=Inf on first sample
         // and the oscillator would output 0/NaN forever. With the clamp, output stays bounded.
         val mod = vibratoModIgnitor(rate = 5.0, semitones = 10000.0)
-        val osc = ModApplyingIgnitor(Ignitors.sine(), mod)
+        val osc = ModApplyingIgnitor(inner = Ignitors.sine(), mod = mod)
         val out = render(osc, freqHz = 440.0)
         out.allFinite() shouldBe true
         // Output isn't silent — at least one sample is non-zero (oscillator is still running).
@@ -240,9 +240,9 @@ class PitchModSafetyTest : StringSpec({
         val out = DoubleArray(frames * blocks)
 
         for (b in 0 until blocks) {
-            c.updateOffsetAndLength(0, frames)
+            c.updateOffsetAndLength(offset = 0, length = frames)
             ignitor.generate(buf, 220.0, c)
-            buf.copyInto(out, b * frames, 0, frames)
+            buf.copyInto(destination = out, destinationOffset = b * frames, startIndex = 0, endIndex = frames)
             c.voiceElapsedFrames += frames
         }
 
@@ -273,13 +273,13 @@ class PitchModSafetyTest : StringSpec({
         ),
         Triple(
             "fm ratio",
-            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = nan, depth = k(300.0)),
-            IgnitorDsl.Fm(fmCarrier, fmModulator, depth = k(300.0)),
+            IgnitorDsl.Fm(carrier = fmCarrier, modulator = fmModulator, ratio = nan, depth = k(300.0)),
+            IgnitorDsl.Fm(carrier = fmCarrier, modulator = fmModulator, depth = k(300.0)),
         ),
         Triple(
             "fm depth",
-            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0), depth = nonLeafNan),
-            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0)),
+            IgnitorDsl.Fm(carrier = fmCarrier, modulator = fmModulator, ratio = k(2.0), depth = nonLeafNan),
+            IgnitorDsl.Fm(carrier = fmCarrier, modulator = fmModulator, ratio = k(2.0)),
         ),
         Triple(
             "vibrato rate",

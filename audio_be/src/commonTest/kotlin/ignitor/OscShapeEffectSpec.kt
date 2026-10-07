@@ -35,7 +35,7 @@ class OscShapeEffectSpec : StringSpec({
         gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -55,51 +55,51 @@ class OscShapeEffectSpec : StringSpec({
 
     "Saw.resetSamples reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Saw(analog = clean, resetSamples = 2.0),
-            IgnitorDsl.Saw(analog = clean, resetSamples = 20.0),
+            default = IgnitorDsl.Saw(analog = clean, resetSamples = 2.0),
+            perturbed = IgnitorDsl.Saw(analog = clean, resetSamples = 20.0),
         )
     }
 
     "Saw.shapeMax reaches the audio (clamps the flyback at high pitch)" {
         assertTakesEffect(
-            IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.1),
-            IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.5),
+            default = IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.1),
+            perturbed = IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.5),
             freqHz = 4000.0,
         )
     }
 
     "Ramp.resetSamples reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Ramp(analog = clean, resetSamples = 2.0),
-            IgnitorDsl.Ramp(analog = clean, resetSamples = 20.0),
+            default = IgnitorDsl.Ramp(analog = clean, resetSamples = 2.0),
+            perturbed = IgnitorDsl.Ramp(analog = clean, resetSamples = 20.0),
         )
     }
 
     "Pulze.flankSamples reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Pulze(analog = clean, flankSamples = 2.0),
-            IgnitorDsl.Pulze(analog = clean, flankSamples = 20.0),
+            default = IgnitorDsl.Pulze(analog = clean, flankSamples = 2.0),
+            perturbed = IgnitorDsl.Pulze(analog = clean, flankSamples = 20.0),
         )
     }
 
     "Pulze.riseFlank reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Pulze(analog = clean, riseFlank = 0.0),
-            IgnitorDsl.Pulze(analog = clean, riseFlank = 0.9),
+            default = IgnitorDsl.Pulze(analog = clean, riseFlank = 0.0),
+            perturbed = IgnitorDsl.Pulze(analog = clean, riseFlank = 0.9),
         )
     }
 
     "Pulze.fallFlank reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Pulze(analog = clean, fallFlank = 0.0),
-            IgnitorDsl.Pulze(analog = clean, fallFlank = 0.9),
+            default = IgnitorDsl.Pulze(analog = clean, fallFlank = 0.0),
+            perturbed = IgnitorDsl.Pulze(analog = clean, fallFlank = 0.9),
         )
     }
 
     "Pulze.duty reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Pulze(analog = clean, duty = IgnitorDsl.Constant(0.5)),
-            IgnitorDsl.Pulze(analog = clean, duty = IgnitorDsl.Constant(0.2)),
+            default = IgnitorDsl.Pulze(analog = clean, duty = IgnitorDsl.Constant(0.5)),
+            perturbed = IgnitorDsl.Pulze(analog = clean, duty = IgnitorDsl.Constant(0.2)),
         )
     }
 })

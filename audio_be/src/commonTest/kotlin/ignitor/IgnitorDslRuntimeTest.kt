@@ -30,7 +30,7 @@ class IgnitorDslRuntimeTest : StringSpec({
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -98,7 +98,7 @@ class IgnitorDslRuntimeTest : StringSpec({
         val dsl = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
-                IgnitorDsl.EqSection.Lowpass(IgnitorDsl.Constant(2000.0), IgnitorDsl.Constant(1.0)),
+                IgnitorDsl.EqSection.Lowpass(freq = IgnitorDsl.Constant(2000.0), q = IgnitorDsl.Constant(1.0)),
             ),
         )
         generateBlock(dsl.toExciter()).hasNonZeroSamples() shouldBe true
@@ -148,7 +148,7 @@ class IgnitorDslRuntimeTest : StringSpec({
             gateEndFrame = sr,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
 

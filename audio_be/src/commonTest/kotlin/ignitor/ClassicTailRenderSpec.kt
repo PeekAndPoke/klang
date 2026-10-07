@@ -34,18 +34,18 @@ class ClassicTailRenderSpec : StringSpec({
     val tail = saw.classic()
 
     val envelopeAlone = saw.adsr(
-        VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC,
+        attackSec = VOICE_ADSR_ATTACK_SEC, decaySec = VOICE_ADSR_DECAY_SEC, sustainLevel = VOICE_ADSR_SUSTAIN_LEVEL, releaseSec = VOICE_ADSR_RELEASE_SEC,
         declickSeconds = ENV_DECLICK_SECONDS,
     )
 
     "an unwritten classic() renders the envelope alone, bit for bit" {
         val expected = renderVoiceWindows(envelopeAlone)
 
-        withClue("raw tree") { firstBitMismatch(expected, renderVoiceWindows(tail, emptyMap())) shouldBe -1 }
+        withClue("raw tree") { firstBitMismatch(a = expected, b = renderVoiceWindows(tail, emptyMap())) shouldBe -1 }
         withClue("optimized tree, as a registered instrument renders") {
-            firstBitMismatch(expected, renderVoiceWindows(tail.optimize(), emptyMap())) shouldBe -1
+            firstBitMismatch(a = expected, b = renderVoiceWindows(tail.optimize(), emptyMap())) shouldBe -1
         }
-        withClue("and the envelope is really there") { firstBitMismatch(renderVoiceWindows(saw), expected) shouldNotBe -1 }
+        withClue("and the envelope is really there") { firstBitMismatch(a = renderVoiceWindows(saw), b = expected) shouldNotBe -1 }
     }
 
     "classic()'s FIRST stage is the pattern's onepole: the `onepole` slot renders the source's onepole in front of the envelope" {
@@ -53,29 +53,29 @@ class ClassicTailRenderSpec : StringSpec({
         // under the unwritten envelope, bit for bit, and an unwritten slot builds no onepole (the row above).
         val expected = renderVoiceWindows(
             saw.onepole(900.0).adsr(
-                VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC,
+                attackSec = VOICE_ADSR_ATTACK_SEC, decaySec = VOICE_ADSR_DECAY_SEC, sustainLevel = VOICE_ADSR_SUSTAIN_LEVEL, releaseSec = VOICE_ADSR_RELEASE_SEC,
                 declickSeconds = ENV_DECLICK_SECONDS,
             ),
         )
 
-        withClue("raw tree") { firstBitMismatch(expected, renderVoiceWindows(tail, mapOf("onepole" to 900.0))) shouldBe -1 }
-        withClue("optimized tree") { firstBitMismatch(expected, renderVoiceWindows(tail.optimize(), mapOf("onepole" to 900.0))) shouldBe -1 }
-        withClue("engaged: the onepole changes the sound") { firstBitMismatch(renderVoiceWindows(envelopeAlone), expected) shouldNotBe -1 }
+        withClue("raw tree") { firstBitMismatch(a = expected, b = renderVoiceWindows(tail, mapOf("onepole" to 900.0))) shouldBe -1 }
+        withClue("optimized tree") { firstBitMismatch(a = expected, b = renderVoiceWindows(tail.optimize(), mapOf("onepole" to 900.0))) shouldBe -1 }
+        withClue("engaged: the onepole changes the sound") { firstBitMismatch(a = renderVoiceWindows(envelopeAlone), b = expected) shouldNotBe -1 }
         withClue("in front of crush, not behind it: the other order is a different signal") {
             val behind = renderVoiceWindows(
                 IgnitorDsl.Crush(inner = saw, amount = IgnitorDsl.Constant(5.0)).onepole(900.0).adsr(
-                    VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC,
+                    attackSec = VOICE_ADSR_ATTACK_SEC, decaySec = VOICE_ADSR_DECAY_SEC, sustainLevel = VOICE_ADSR_SUSTAIN_LEVEL, releaseSec = VOICE_ADSR_RELEASE_SEC,
                     declickSeconds = ENV_DECLICK_SECONDS,
                 ),
             )
             val inFront = renderVoiceWindows(tail, mapOf("onepole" to 900.0, "crush.amount" to 5.0))
 
-            firstBitMismatch(behind, inFront) shouldNotBe -1
+            firstBitMismatch(a = behind, b = inFront) shouldNotBe -1
         }
     }
 
     "adsr.on = 0 builds no stage at all: the source passes bit for bit" {
-        firstBitMismatch(renderVoiceWindows(saw), renderVoiceWindows(tail, mapOf("adsr.on" to 0.0))) shouldBe -1
+        firstBitMismatch(a = renderVoiceWindows(saw), b = renderVoiceWindows(tail, mapOf("adsr.on" to 0.0))) shouldBe -1
     }
 
     "an OFF envelope still reports its release as the voice's tail, the voice envelope's 0.05 or the written one" {
@@ -98,7 +98,7 @@ class ClassicTailRenderSpec : StringSpec({
     "an unset or non-finite adsr.on is ON: the envelope is built by default" {
         val expected = renderVoiceWindows(envelopeAlone)
 
-        firstBitMismatch(expected, renderVoiceWindows(tail, mapOf("adsr.on" to Double.NaN))) shouldBe -1
-        firstBitMismatch(expected, renderVoiceWindows(tail, mapOf("adsr.on" to 1.0))) shouldBe -1
+        firstBitMismatch(a = expected, b = renderVoiceWindows(tail, mapOf("adsr.on" to Double.NaN))) shouldBe -1
+        firstBitMismatch(a = expected, b = renderVoiceWindows(tail, mapOf("adsr.on" to 1.0))) shouldBe -1
     }
 })

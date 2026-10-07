@@ -38,9 +38,9 @@ fun renderNodeWindows(node: Ignitor, lengths: List<Int>, sampleRate: Int): Doubl
 
     for (len in lengths) {
         ctx.voiceElapsedFrames = at
-        ctx.updateOffsetAndLength(0, len)
+        ctx.updateOffsetAndLength(offset = 0, length = len)
         node.generate(buffer, 220.0, ctx)
-        buffer.copyInto(out, at, 0, len)
+        buffer.copyInto(destination = out, destinationOffset = at, startIndex = 0, endIndex = len)
         at += len
     }
 

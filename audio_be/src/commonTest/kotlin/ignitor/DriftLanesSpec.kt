@@ -53,7 +53,7 @@ class DriftLanesSpec : StringSpec({
         lanes.active shouldBe true
         lanes.ensureLanes(3)
 
-        val ref = Reference(7, 3, analog, rate)
+        val ref = Reference(seed = 7, count = 3, analog = analog, rate = rate)
 
         repeat(blocks) {
             lanes.prepareBlock(1.0)
@@ -72,7 +72,7 @@ class DriftLanesSpec : StringSpec({
 
         lanes.ensureLanes(3)
 
-        val ref = Reference(7, 3, analog, rate)
+        val ref = Reference(seed = 7, count = 3, analog = analog, rate = rate)
 
         repeat(blocks) {
             lanes.prepareBlock(0.0)
@@ -103,7 +103,7 @@ class DriftLanesSpec : StringSpec({
 
         lanes.ensureLanes(2)
 
-        val ref = Reference(7, 2, analog, rate)
+        val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
         val wShared = sqrt(1.0 - 0.25)
         val wOwn = sqrt(0.25)
 
@@ -125,7 +125,7 @@ class DriftLanesSpec : StringSpec({
 
         lanes.ensureLanes(2)
 
-        val ref = Reference(7, 2, analog, rate)
+        val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
 
         // Before any step an own lane sits at its seeded state, the same value at both ends
         // (prepareBlock steps the shared lane, advanceLane the own one; neither has run for it).
@@ -190,7 +190,7 @@ class DriftLanesSpec : StringSpec({
         nan.ensureLanes(2)
         nan.prepareBlock(Double.NaN)
 
-        val ref = Reference(7, 2, analog, rate)
+        val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
 
         for (n in 0 until 2) {
             end(nan, n).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
@@ -202,7 +202,7 @@ class DriftLanesSpec : StringSpec({
 
         high.ensureLanes(2)
         high.prepareBlock(4.0)
-        end(high, 0).toRawBits() shouldBe Reference(7, 1, analog, rate).own[0].nextMultiplier().toRawBits()
+        end(high, 0).toRawBits() shouldBe Reference(seed = 7, count = 1, analog = analog, rate = rate).own[0].nextMultiplier().toRawBits()
 
         val low = DriftLanes(analog, rate, Random(7))
 
@@ -218,7 +218,7 @@ class DriftLanesSpec : StringSpec({
         lanes.ensureLanes(2)
         lanes.laneCount shouldBe 2
 
-        val ref = Reference(7, 2, analog, rate)
+        val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
 
         repeat(blocks) {
             lanes.prepareBlock(1.0)
@@ -247,7 +247,7 @@ class DriftLanesSpec : StringSpec({
 
         lanes.ensureLanes(3)
 
-        val ref = Reference(7, 3, analog, rate)
+        val ref = Reference(seed = 7, count = 3, analog = analog, rate = rate)
 
         repeat(blocks) {
             lanes.prepareBlock(1.0)

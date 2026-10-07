@@ -57,13 +57,13 @@ class FilterSlotLayerFillSpec : StringSpec({
     val filledSeven: DoubleArray by lazy { renderVoiceWindows(saw.lowpass(800.0, attackSec = FILTER_ENV_ATTACK_SEC)) }
 
     fun shouldRenderStatic(clue: String, actual: DoubleArray) {
-        withClue("$clue: renders the static filter") { firstBitMismatch(static, actual) shouldBe -1 }
-        withClue("$clue: the fill would have been audible here") { firstBitMismatch(filledSeven, actual) shouldNotBe -1 }
+        withClue("$clue: renders the static filter") { firstBitMismatch(a = static, b = actual) shouldBe -1 }
+        withClue("$clue: the fill would have been audible here") { firstBitMismatch(a = filledSeven, b = actual) shouldNotBe -1 }
     }
 
     fun shouldRenderDoor(clue: String, door: DoubleArray, actual: DoubleArray) {
-        withClue("$clue: renders what the door renders") { firstBitMismatch(door, actual) shouldBe -1 }
-        withClue("$clue: and that is not the static filter") { firstBitMismatch(static, actual) shouldNotBe -1 }
+        withClue("$clue: renders what the door renders") { firstBitMismatch(a = door, b = actual) shouldBe -1 }
+        withClue("$clue: and that is not the static filter") { firstBitMismatch(a = static, b = actual) shouldNotBe -1 }
     }
 
     "none written: no envelope" {
@@ -73,38 +73,38 @@ class FilterSlotLayerFillSpec : StringSpec({
 
     "attack written alone: the depth fills with the shared 7 semitones, as `lowpass(800, attackSec = x)` does" {
         shouldRenderDoor(
-            "attack", renderVoiceWindows(saw.lowpass(800.0, attackSec = 0.05)),
-            renderVoiceWindows(slotted(), mapOf("a" to 0.05)),
+            clue = "attack", door = renderVoiceWindows(saw.lowpass(800.0, attackSec = 0.05)),
+            actual = renderVoiceWindows(slotted(), mapOf("a" to 0.05)),
         )
     }
 
     "decay written alone: the same fill" {
         shouldRenderDoor(
-            "decay", renderVoiceWindows(saw.lowpass(800.0, decaySec = 0.3)),
-            renderVoiceWindows(slotted(), mapOf("d" to 0.3)),
+            clue = "decay", door = renderVoiceWindows(saw.lowpass(800.0, decaySec = 0.3)),
+            actual = renderVoiceWindows(slotted(), mapOf("d" to 0.3)),
         )
     }
 
     "sustain written alone: the same fill" {
         shouldRenderDoor(
-            "sustain", renderVoiceWindows(saw.lowpass(800.0, sustainLevel = 0.2)),
-            renderVoiceWindows(slotted(), mapOf("s" to 0.2)),
+            clue = "sustain", door = renderVoiceWindows(saw.lowpass(800.0, sustainLevel = 0.2)),
+            actual = renderVoiceWindows(slotted(), mapOf("s" to 0.2)),
         )
     }
 
     "release written alone: the same fill" {
         shouldRenderDoor(
-            "release", renderVoiceWindows(saw.lowpass(800.0, releaseSec = 0.2)),
-            renderVoiceWindows(slotted(), mapOf("r" to 0.2)),
+            clue = "release", door = renderVoiceWindows(saw.lowpass(800.0, releaseSec = 0.2)),
+            actual = renderVoiceWindows(slotted(), mapOf("r" to 0.2)),
         )
     }
 
     "the depth written alone: its own value stands, not the shared 7" {
         val actual = renderVoiceWindows(slotted(), mapOf("e" to 24.0))
 
-        shouldRenderDoor("env 24", renderVoiceWindows(saw.lowpass(800.0, env = 24.0)), actual)
+        shouldRenderDoor(clue = "env 24", door = renderVoiceWindows(saw.lowpass(800.0, env = 24.0)), actual = actual)
 
-        withClue("not the shared depth") { firstBitMismatch(filledSeven, actual) shouldNotBe -1 }
+        withClue("not the shared depth") { firstBitMismatch(a = filledSeven, b = actual) shouldNotBe -1 }
     }
 
     "an explicit depth of 0 with a stage written stays static: a written value is never overwritten by a fill" {
@@ -132,9 +132,9 @@ class FilterSlotLayerFillSpec : StringSpec({
 
     "an authored non-zero depth default stands when a stage is written: the fill only answers an unset slot" {
         shouldRenderDoor(
-            "authored depth 12",
-            renderVoiceWindows(saw.lowpass(800.0, env = 12.0, attackSec = 0.05)),
-            renderVoiceWindows(slotted(env = IgnitorDsl.Param("e", 12.0)), mapOf("a" to 0.05)),
+            clue = "authored depth 12",
+            door = renderVoiceWindows(saw.lowpass(800.0, env = 12.0, attackSec = 0.05)),
+            actual = renderVoiceWindows(slotted(env = IgnitorDsl.Param("e", 12.0)), mapOf("a" to 0.05)),
         )
     }
 
@@ -156,8 +156,8 @@ class FilterSlotLayerFillSpec : StringSpec({
         val actual = renderVoiceWindows(slottedHp, mapOf("s" to 0.3))
 
         withClue("highpass sustain alone") {
-            firstBitMismatch(renderVoiceWindows(saw.highpass(800.0, sustainLevel = 0.3)), actual) shouldBe -1
-            firstBitMismatch(renderVoiceWindows(saw.highpass(800.0)), actual) shouldNotBe -1
+            firstBitMismatch(a = renderVoiceWindows(saw.highpass(800.0, sustainLevel = 0.3)), b = actual) shouldBe -1
+            firstBitMismatch(a = renderVoiceWindows(saw.highpass(800.0)), b = actual) shouldNotBe -1
         }
     }
 })

@@ -52,12 +52,12 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
 
     fun render(chain: Ignitor): DoubleArray {
         val c = ctx()
-        c.updateOffsetAndLength(0, blockFrames)
+        c.updateOffsetAndLength(offset = 0, length = blockFrames)
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(blocks * blockFrames)
         repeat(blocks) { blk ->
             chain.generate(buf, 220.0, c)
-            buf.copyInto(out, blk * blockFrames, 0, blockFrames)
+            buf.copyInto(destination = out, destinationOffset = blk * blockFrames, startIndex = 0, endIndex = blockFrames)
             c.voiceElapsedFrames += blockFrames
         }
         // vacuous-pass tripwire: a mis-set context renders silence, and two silent
@@ -70,8 +70,8 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
 
     fun envEqualsStatic(depth: Double, expectedMul: Double, base: Double = 800.0) {
         val env = FilterEnvDef(depth = depth, attackSec = 0.0, decaySec = 0.0, sustainLevel = 1.0, releaseSec = 0.0)
-        val modded = render(noiseSource().lowpass(base, 0.707, env))
-        val static = render(noiseSource().lowpass(base * expectedMul, 0.707))
+        val modded = render(noiseSource().lowpass(cutoffHz = base, q = 0.707, env = env))
+        val static = render(noiseSource().lowpass(cutoffHz = base * expectedMul, q = 0.707))
         var maxDiff = 0.0
         for (i in modded.indices) {
             val d = abs(modded[i] - static[i])
@@ -81,11 +81,11 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
     }
 
     "ignitor path: -12 semitones equals a static filter at 0.5x base" {
-        envEqualsStatic(-12.0, 0.5)
+        envEqualsStatic(depth = -12.0, expectedMul = 0.5)
     }
 
     "ignitor path: +7 semitones equals a static filter at 2^(7/12)x (fractional exponent)" {
-        envEqualsStatic(+7.0, 1.4983070768766815)
+        envEqualsStatic(depth = +7.0, expectedMul = 1.4983070768766815)
     }
 
     "clamp saturation: a deep positive depth on a high base drives HIGHPASS silent" {
@@ -93,7 +93,7 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         // passes (near) nothing. The row pins that the semitone law goes THROUGH the
         // shared clamp rather than around it.
         val env = FilterEnvDef(depth = +48.0, attackSec = 0.0, decaySec = 0.0, sustainLevel = 1.0, releaseSec = 0.0)
-        val out = render(noiseSource().highpass(15000.0, 0.707, env))
+        val out = render(noiseSource().highpass(cutoffHz = 15000.0, q = 0.707, env = env))
         var peakTail = 0.0
         for (i in out.size / 2 until out.size) {
             if (abs(out[i]) > peakTail) peakTail = abs(out[i])
@@ -101,7 +101,7 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         peakTail shouldBeLessThan 0.02
 
         // control: the SAME filter without the envelope passes plenty
-        val ref = render(noiseSource().highpass(15000.0, 0.707))
+        val ref = render(noiseSource().highpass(cutoffHz = 15000.0, q = 0.707))
         var peakRef = 0.0
         for (i in ref.size / 2 until ref.size) {
             if (abs(ref[i]) > peakRef) peakRef = abs(ref[i])

@@ -20,7 +20,7 @@ class SampleIgnitorTest : StringSpec({
         gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -266,8 +266,8 @@ class SampleIgnitorTest : StringSpec({
     "freqHz is ignored" {
         val pcm = doubleArrayOf(0.0, 1.0, 0.0)
 
-        val gen1 = SampleIgnitor(pcm, 1.0, 0.0, -1.0, -1.0, false, Double.MAX_VALUE, sampleRate = 48000)
-        val gen2 = SampleIgnitor(pcm, 1.0, 0.0, -1.0, -1.0, false, Double.MAX_VALUE, sampleRate = 48000)
+        val gen1 = SampleIgnitor(pcm = pcm, rate = 1.0, playhead = 0.0, loopStart = -1.0, loopEnd = -1.0, isLooping = false, stopFrame = Double.MAX_VALUE, sampleRate = 48000)
+        val gen2 = SampleIgnitor(pcm = pcm, rate = 1.0, playhead = 0.0, loopStart = -1.0, loopEnd = -1.0, isLooping = false, stopFrame = Double.MAX_VALUE, sampleRate = 48000)
 
         val buf1 = AudioBuffer(3)
         val buf2 = AudioBuffer(3)

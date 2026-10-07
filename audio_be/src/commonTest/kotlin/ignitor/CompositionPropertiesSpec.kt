@@ -41,7 +41,7 @@ class CompositionPropertiesSpec : StringSpec({
         gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -63,8 +63,8 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared Sine node: Plus(s, s) is bit-identical to Times(s, Constant(2.0))" {
         val s = IgnitorDsl.Sine()
-        val plusTree = IgnitorDsl.Plus(s, s)
-        val mulTree = IgnitorDsl.Times(s, IgnitorDsl.Constant(2.0))
+        val plusTree = IgnitorDsl.Plus(left = s, right = s)
+        val mulTree = IgnitorDsl.Times(left = s, right = IgnitorDsl.Constant(2.0))
 
         val plus = plusTree.toExciter()
         val mul = mulTree.toExciter()
@@ -80,8 +80,8 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared node used 3x: sum equals 3·s" {
         val s = IgnitorDsl.Sine()
-        val threeSum = IgnitorDsl.Plus(IgnitorDsl.Plus(s, s), s)
-        val tripled = IgnitorDsl.Times(s, IgnitorDsl.Constant(3.0))
+        val threeSum = IgnitorDsl.Plus(left = IgnitorDsl.Plus(left = s, right = s), right = s)
+        val tripled = IgnitorDsl.Times(left = s, right = IgnitorDsl.Constant(3.0))
 
         val a = render(threeSum.toExciter(), 440.0, createCtx())
         val b = render(tripled.toExciter(), 440.0, createCtx())
@@ -146,7 +146,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared source (let s; s + s) returns identical samples to both readers" {
         val s = IgnitorDsl.Sine()
-        val tree = IgnitorDsl.Plus(s, s) // shared → consumers=2 on memS
+        val tree = IgnitorDsl.Plus(left = s, right = s) // shared → consumers=2 on memS
         val ig = tree.toExciter()
         val ctx = createCtx()
 
@@ -184,7 +184,7 @@ class CompositionPropertiesSpec : StringSpec({
     "summed shared sine has RMS ≈ 2× single sine" {
         val s = IgnitorDsl.Sine()
         val single = s.toExciter()
-        val doubled = IgnitorDsl.Plus(s, s).toExciter()
+        val doubled = IgnitorDsl.Plus(left = s, right = s).toExciter()
 
         val singleRms = render(single, 440.0, createCtx()).rms()
         val doubledRms = render(doubled, 440.0, createCtx()).rms()
@@ -249,7 +249,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared source + vibrato: s + s.vibrato() produces two independent oscillators" {
         val s = IgnitorDsl.Sine()
-        val tree = IgnitorDsl.Plus(s, IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0)))
+        val tree = IgnitorDsl.Plus(left = s, right = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0)))
 
         val cache = IgnitorBuildCache()
         val plus = tree.buildIgnitor(null, cache).ignitor
@@ -273,7 +273,7 @@ class CompositionPropertiesSpec : StringSpec({
     "shared source + same vibrato: let v = s.vibrato(); v + v shares one oscillator" {
         val s = IgnitorDsl.Sine()
         val v = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0))
-        val tree = IgnitorDsl.Plus(v, v)
+        val tree = IgnitorDsl.Plus(left = v, right = v)
 
         val ig = tree.toExciter()
         val singleV = v.toExciter()
@@ -327,7 +327,7 @@ class CompositionPropertiesSpec : StringSpec({
         val vibDepth = IgnitorDsl.Constant(1.0)
 
         val sumVib = IgnitorDsl.Vibrato(
-            inner = IgnitorDsl.Plus(a, b),
+            inner = IgnitorDsl.Plus(left = a, right = b),
             rate = vibRate,
             semitones = vibDepth,
         )
@@ -336,7 +336,7 @@ class CompositionPropertiesSpec : StringSpec({
         val buf = render(ig, 440.0, createCtx())
 
         // Output should be non-zero (both sources producing) and differ from plain sum.
-        val plainSum = IgnitorDsl.Plus(IgnitorDsl.Sine(), IgnitorDsl.Saw()).toExciter()
+        val plainSum = IgnitorDsl.Plus(left = IgnitorDsl.Sine(), right = IgnitorDsl.Saw()).toExciter()
         val plainBuf = render(plainSum, 440.0, createCtx())
 
         var diffs = 0
@@ -352,8 +352,8 @@ class CompositionPropertiesSpec : StringSpec({
     "detuned shared source: two detunes with different semitones do NOT collapse" {
         val s = IgnitorDsl.Sine()
         val tree = IgnitorDsl.Plus(
-            IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(0.0)),
-            IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(7.0)),
+            left = IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(0.0)),
+            right = IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(7.0)),
         )
         val ig = tree.toExciter()
         val out = render(ig, 440.0, createCtx())

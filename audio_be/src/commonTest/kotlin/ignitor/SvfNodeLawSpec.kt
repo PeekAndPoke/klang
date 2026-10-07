@@ -65,9 +65,9 @@ class SvfNodeLawSpec : StringSpec({
     "topology identity: notch[n] == lowpass[n] + highpass[n] on the linear path" {
         // The TPT-SVF's taps: notch `v0 - k*v1`, lowpass `v2`, highpass `v0 - k*v1 - v2`.
         val src = sine(800.0)
-        val lp = through(src) { it.lowpass(1500.0, 0.7) }
-        val hp = through(src) { it.highpass(1500.0, 0.7) }
-        val notch = through(src) { it.notch(1500.0, 0.7) }
+        val lp = through(src) { it.lowpass(cutoffHz = 1500.0, q = 0.7) }
+        val hp = through(src) { it.highpass(cutoffHz = 1500.0, q = 0.7) }
+        val notch = through(src) { it.notch(cutoffHz = 1500.0, q = 0.7) }
 
         var maxAbsDiff = 0.0
 
@@ -81,7 +81,7 @@ class SvfNodeLawSpec : StringSpec({
 
     "a NaN cutoff is guarded: the state stays finite" {
         // `bilinearK` falls back to 1 kHz for a non-finite cutoff, so a NaN cannot poison the IIR state.
-        for (build in listOf<(Ignitor) -> Ignitor>({ it.lowpass(Double.NaN, 1.0) }, { it.highpass(Double.NaN, 1.0) })) {
+        for (build in listOf<(Ignitor) -> Ignitor>({ it.lowpass(cutoffHz = Double.NaN, q = 1.0) }, { it.highpass(cutoffHz = Double.NaN, q = 1.0) })) {
             through(sine(440.0), build).all { it.isFinite() } shouldBe true
         }
     }
@@ -93,7 +93,7 @@ class SvfNodeLawSpec : StringSpec({
         // highpass `v0 - k * v1 - v2`.
         val src = sine(800.0, amplitude = 0.8, length = 1024)
         val c = SvfCoeffs()
-        computeSvfCoeffs(800.0, 5.0, sampleRate.toDouble(), c)
+        computeSvfCoeffs(cutoffHz = 800.0, q = 5.0, sampleRate = sampleRate.toDouble(), out = c)
 
         fun oracle(tap: (v0: Double, v1: Double, v2: Double) -> Double): DoubleArray {
             var ic1eq = 0.0
@@ -114,8 +114,8 @@ class SvfNodeLawSpec : StringSpec({
         }
 
         val taps = listOf(
-            Triple("lowpass", through(src) { it.lowpass(800.0, 5.0, analog = 0.0) }, oracle { _, _, v2 -> v2 }),
-            Triple("highpass", through(src) { it.highpass(800.0, 5.0, analog = 0.0) }, oracle { v0, v1, v2 -> v0 - c.k * v1 - v2 }),
+            Triple("lowpass", through(src) { it.lowpass(cutoffHz = 800.0, q = 5.0, analog = 0.0) }, oracle { _, _, v2 -> v2 }),
+            Triple("highpass", through(src) { it.highpass(cutoffHz = 800.0, q = 5.0, analog = 0.0) }, oracle { v0, v1, v2 -> v0 - c.k * v1 - v2 }),
         )
 
         for ((name, out, ref) in taps) {
@@ -129,8 +129,8 @@ class SvfNodeLawSpec : StringSpec({
         // One-sided like its lowpass twin in ExciterCombinatorsSpec: it goes red when the drive is LOWERED
         // below about 0.125 (the shipped 0.25 measures 0.842 against the 0.9 bound).
         val src = sine(800.0)
-        val lin = through(src) { it.highpass(800.0, 5.0, analog = 0.0) }
-        val sat = through(src) { it.highpass(800.0, 5.0, analog = 5.0) }
+        val lin = through(src) { it.highpass(cutoffHz = 800.0, q = 5.0, analog = 0.0) }
+        val sat = through(src) { it.highpass(cutoffHz = 800.0, q = 5.0, analog = 5.0) }
         val linPeak = peak(lin, 2048)
 
         linPeak shouldBeGreaterThan 2.0
@@ -142,14 +142,14 @@ class SvfNodeLawSpec : StringSpec({
         // as the state grows (the old tanh-in-the-loop trap) runs past the linear peak (about q times the input);
         // measured: the shipped node about 5.7, the linear filter about 10, a sign-flipped damping term about 26.
         val src = sine(800.0)
-        val lin = through(src) { it.lowpass(800.0, 10.0, analog = 0.0) }
-        val sat = through(src) { it.lowpass(800.0, 10.0, analog = 5.0) }
+        val lin = through(src) { it.lowpass(cutoffHz = 800.0, q = 10.0, analog = 0.0) }
+        val sat = through(src) { it.lowpass(cutoffHz = 800.0, q = 10.0, analog = 5.0) }
 
         peak(sat, 0) shouldBeLessThan peak(lin, 0)
     }
 
     "lowpass(analog > 0): no DC and no sub-bass pumping under hot resonance" {
-        val out = through(sine(1000.0)) { it.lowpass(2000.0, 5.0, analog = 5.0) }
+        val out = through(sine(1000.0)) { it.lowpass(cutoffHz = 2000.0, q = 5.0, analog = 5.0) }
         val settled = frames / 2
 
         // 1) DC: the diode polynomial's small asymmetry leaves at most a tiny bias.
@@ -170,8 +170,8 @@ class SvfNodeLawSpec : StringSpec({
     "lowpass(analog > 0): a low-amplitude signal stays near-linear" {
         // Small state keeps `diodePairResistanceApprox` near 1, so kEff is near k.
         val src = sine(500.0, amplitude = 0.001)
-        val lin = through(src) { it.lowpass(2000.0, 1.0, analog = 0.0) }
-        val sat = through(src) { it.lowpass(2000.0, 1.0, analog = 3.0) }
+        val lin = through(src) { it.lowpass(cutoffHz = 2000.0, q = 1.0, analog = 0.0) }
+        val sat = through(src) { it.lowpass(cutoffHz = 2000.0, q = 1.0, analog = 3.0) }
         val ratio = rms(sat, 1024) / rms(lin, 1024)
 
         ratio shouldBeGreaterThan 0.97
@@ -269,7 +269,7 @@ class SvfNodeLawSpec : StringSpec({
 
         /** In blocks, the gate far past the render, so every block end reads the open envelope. */
         fun node(mode: SvfMode, analogKnob: Double): DoubleArray {
-            val ig = ArrayIgnitor(input).svf(mode, ParamIgnitor("f", base), ParamIgnitor("q", q), env, ParamIgnitor("analog", analogKnob))
+            val ig = ArrayIgnitor(input).svf(mode = mode, cutoffHz = ParamIgnitor("f", base), q = ParamIgnitor("q", q), env = env, analog = ParamIgnitor("analog", analogKnob))
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = 10 * total, gateEndFrame = 10 * total,
                 scratchBuffers = ScratchBuffers(block),
@@ -279,9 +279,9 @@ class SvfNodeLawSpec : StringSpec({
 
             for (at in 0 until total step block) {
                 ctx.voiceElapsedFrames = at
-                ctx.updateOffsetAndLength(0, block)
+                ctx.updateOffsetAndLength(offset = 0, length = block)
                 ig.generate(buffer, 220.0, ctx)
-                buffer.copyInto(out, at, 0, block)
+                buffer.copyInto(destination = out, destinationOffset = at, startIndex = 0, endIndex = block)
             }
 
             return out

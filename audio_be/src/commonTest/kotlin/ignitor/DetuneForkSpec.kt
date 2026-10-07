@@ -41,7 +41,7 @@ class DetuneForkSpec : StringSpec({
 
         repeat(blocks) { b ->
             ctx.voiceElapsedFrames = b * blockFrames
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             buf.fill(0.0)
             ignitor.generate(buf, freqHz, ctx)
 
@@ -64,19 +64,19 @@ class DetuneForkSpec : StringSpec({
     "sharing never crosses a detune boundary: s + s.detune(12) is bit-identical to authoring s twice" {
         // Shared: one Sine node referenced plainly AND under a detune.
         val s = IgnitorDsl.Sine()
-        val shared = IgnitorDsl.Plus(s, IgnitorDsl.Detune(s, IgnitorDsl.Constant(12.0)))
+        val shared = IgnitorDsl.Plus(left = s, right = IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(12.0)))
 
         // The twin: two distinct instances, which is what the fork must be indistinguishable from.
         val twice = IgnitorDsl.Plus(
-            IgnitorDsl.Sine(),
-            IgnitorDsl.Detune(IgnitorDsl.Sine(), IgnitorDsl.Constant(12.0)),
+            left = IgnitorDsl.Sine(),
+            right = IgnitorDsl.Detune(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0)),
         )
 
         val a = render(shared, freqHz = 220.0)
         val b = render(twice, freqHz = 220.0)
 
         a.any { it != 0.0 } shouldBe true
-        maxDiff(a, b) shouldBe 0.0
+        maxDiff(a = a, b = b) shouldBe 0.0
     }
 
     "the detune-FIRST ordering shares nothing either: s.detune(12) + s equals its authored-twice twin" {
@@ -85,18 +85,18 @@ class DetuneForkSpec : StringSpec({
         // instance, and the memo double-advances it at two freqs — every other row builds its
         // detune last or symmetrically and cannot see that.
         val s = IgnitorDsl.Sine()
-        val shared = IgnitorDsl.Plus(IgnitorDsl.Detune(s, IgnitorDsl.Constant(12.0)), s)
+        val shared = IgnitorDsl.Plus(left = IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(12.0)), right = s)
 
         val twice = IgnitorDsl.Plus(
-            IgnitorDsl.Detune(IgnitorDsl.Sine(), IgnitorDsl.Constant(12.0)),
-            IgnitorDsl.Sine(),
+            left = IgnitorDsl.Detune(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0)),
+            right = IgnitorDsl.Sine(),
         )
 
         val a = render(shared, freqHz = 220.0)
         val b = render(twice, freqHz = 220.0)
 
         a.any { it != 0.0 } shouldBe true
-        maxDiff(a, b) shouldBe 0.0
+        maxDiff(a = a, b = b) shouldBe 0.0
     }
 
     "the D13 headline: a stateful EFFECT shared across the boundary forks — grain clocks advance once per instance" {
@@ -104,18 +104,18 @@ class DetuneForkSpec : StringSpec({
         // split memo key. The fork must make the shared authoring bit-identical to the honest
         // twice-authoring, shimmer state included.
         val s = IgnitorDsl.Shimmer(IgnitorDsl.Sine())
-        val shared = IgnitorDsl.Plus(s, IgnitorDsl.Detune(s, IgnitorDsl.Constant(12.0)))
+        val shared = IgnitorDsl.Plus(left = s, right = IgnitorDsl.Detune(inner = s, semitones = IgnitorDsl.Constant(12.0)))
 
         val twice = IgnitorDsl.Plus(
-            IgnitorDsl.Shimmer(IgnitorDsl.Sine()),
-            IgnitorDsl.Detune(IgnitorDsl.Shimmer(IgnitorDsl.Sine()), IgnitorDsl.Constant(12.0)),
+            left = IgnitorDsl.Shimmer(IgnitorDsl.Sine()),
+            right = IgnitorDsl.Detune(inner = IgnitorDsl.Shimmer(IgnitorDsl.Sine()), semitones = IgnitorDsl.Constant(12.0)),
         )
 
         val a = render(shared, freqHz = 220.0)
         val b = render(twice, freqHz = 220.0)
 
         a.any { it != 0.0 } shouldBe true
-        maxDiff(a, b) shouldBe 0.0
+        maxDiff(a = a, b = b) shouldBe 0.0
     }
 
     "semitones is controlled from OUTSIDE the detune scope: a node shared with the plain arm stays shared" {
@@ -126,19 +126,19 @@ class DetuneForkSpec : StringSpec({
         // mutant that builds semitones inside the child context forks n and becomes R.
         val n = IgnitorDsl.WhiteNoise()
         val t = IgnitorDsl.Plus(
-            IgnitorDsl.Detune(IgnitorDsl.Sine(), IgnitorDsl.Times(n, IgnitorDsl.Constant(5.0))),
-            n,
+            left = IgnitorDsl.Detune(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Times(left = n, right = IgnitorDsl.Constant(5.0))),
+            right = n,
         )
 
         val r = IgnitorDsl.Plus(
-            IgnitorDsl.Detune(IgnitorDsl.Sine(), IgnitorDsl.Times(IgnitorDsl.WhiteNoise(), IgnitorDsl.Constant(5.0))),
-            IgnitorDsl.WhiteNoise(),
+            left = IgnitorDsl.Detune(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Times(left = IgnitorDsl.WhiteNoise(), right = IgnitorDsl.Constant(5.0))),
+            right = IgnitorDsl.WhiteNoise(),
         )
 
         val a = render(t, freqHz = 220.0)
         val b = render(r, freqHz = 220.0)
 
-        (maxDiff(a, b) > 0.001) shouldBe true
+        (maxDiff(a = a, b = b) > 0.001) shouldBe true
     }
 
     "the identity fold: a pitch-free subtree under detune stays SHARED — the same noise doubled, not decorrelated" {
@@ -146,7 +146,7 @@ class DetuneForkSpec : StringSpec({
         // must be EXACTLY the one noise instance summed with itself. A fork would give the
         // second instance its own rng draws — decorrelated, audibly wider, wrong.
         val n = IgnitorDsl.WhiteNoise()
-        val shared = IgnitorDsl.Plus(n, IgnitorDsl.Detune(n, IgnitorDsl.Constant(12.0)))
+        val shared = IgnitorDsl.Plus(left = n, right = IgnitorDsl.Detune(inner = n, semitones = IgnitorDsl.Constant(12.0)))
 
         val tree = render(shared, freqHz = 220.0)
         val bare = render(n, freqHz = 220.0)
@@ -167,15 +167,15 @@ class DetuneForkSpec : StringSpec({
         // (Runtime CHARACTERIZATION — this row passes pre-D13 too; the fork/fold rows above
         // are the D13 guards.)
         fun tree() = IgnitorDsl.Times(
-            IgnitorDsl.Sine(),
-            IgnitorDsl.Sine(freq = IgnitorDsl.Constant(5.0)),
+            left = IgnitorDsl.Sine(),
+            right = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(5.0)),
         )
 
-        val detuned = render(IgnitorDsl.Detune(tree(), IgnitorDsl.Constant(12.0)), freqHz = 220.0)
+        val detuned = render(IgnitorDsl.Detune(inner = tree(), semitones = IgnitorDsl.Constant(12.0)), freqHz = 220.0)
         val plain = render(tree(), freqHz = 440.0)
 
         detuned.any { it != 0.0 } shouldBe true
-        maxDiff(detuned, plain) shouldBe 0.0
+        maxDiff(a = detuned, b = plain) shouldBe 0.0
     }
 
     "FM defaults to the note: detune moves the index — the default freq param is this tree's only Freq leaf" {
@@ -191,11 +191,11 @@ class DetuneForkSpec : StringSpec({
             depth = IgnitorDsl.Constant(60.0),
         )
 
-        val detuned = render(IgnitorDsl.Detune(fm(), IgnitorDsl.Constant(12.0)), freqHz = 220.0)
+        val detuned = render(IgnitorDsl.Detune(inner = fm(), semitones = IgnitorDsl.Constant(12.0)), freqHz = 220.0)
         val plain = render(fm(), freqHz = 440.0)
 
         detuned.any { it != 0.0 } shouldBe true
-        maxDiff(detuned, plain) shouldBe 0.0
+        maxDiff(a = detuned, b = plain) shouldBe 0.0
     }
 
     "absolute-freq FM is ARGUMENT-independent — immune to detune and to the note itself" {
@@ -216,7 +216,7 @@ class DetuneForkSpec : StringSpec({
         val atHigh = render(fmAbs(), freqHz = 440.0)
 
         atLow.any { it != 0.0 } shouldBe true
-        maxDiff(atLow, atHigh) shouldBe 0.0
+        maxDiff(a = atLow, b = atHigh) shouldBe 0.0
     }
 
     "inside a FORKED subtree, absolute FM keeps its own pitch — the machinery reads the param, not the argument" {
@@ -231,21 +231,21 @@ class DetuneForkSpec : StringSpec({
             carrier = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(200.0)),
             modulator = IgnitorDsl.Sine(),
             ratio = IgnitorDsl.Constant(2.0),
-            depth = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(0.25)),
+            depth = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(0.25)),
             freq = IgnitorDsl.Constant(220.0),
         )
 
         val wholeDetuned = render(
-            IgnitorDsl.Detune(IgnitorDsl.Times(fmAbs(), IgnitorDsl.Sine()), IgnitorDsl.Constant(12.0)),
+            IgnitorDsl.Detune(inner = IgnitorDsl.Times(left = fmAbs(), right = IgnitorDsl.Sine()), semitones = IgnitorDsl.Constant(12.0)),
             freqHz = 220.0,
         )
         val sineDetuned = render(
-            IgnitorDsl.Times(fmAbs(), IgnitorDsl.Detune(IgnitorDsl.Sine(), IgnitorDsl.Constant(12.0))),
+            IgnitorDsl.Times(left = fmAbs(), right = IgnitorDsl.Detune(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0))),
             freqHz = 220.0,
         )
 
         wholeDetuned.any { it != 0.0 } shouldBe true
-        maxDiff(wholeDetuned, sineDetuned) shouldBe 0.0
+        maxDiff(a = wholeDetuned, b = sineDetuned) shouldBe 0.0
     }
 
     "a shared Detune node dedups at its own wrapper: d + d is the one detuned instance doubled" {
@@ -253,10 +253,10 @@ class DetuneForkSpec : StringSpec({
         // a mutant that stops caching the Detune node breaks the 2x identity — at the default
         // analog 0.0 two phase-0 sines at the same freq are bit-identical and the row was blind.
         val d = IgnitorDsl.Detune(
-            IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.9)),
-            IgnitorDsl.Constant(12.0),
+            inner = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.9)),
+            semitones = IgnitorDsl.Constant(12.0),
         )
-        val tree = render(IgnitorDsl.Plus(d, d), freqHz = 220.0)
+        val tree = render(IgnitorDsl.Plus(left = d, right = d), freqHz = 220.0)
         val bare = render(d, freqHz = 220.0)
 
         bare.any { it != 0.0 } shouldBe true
@@ -274,10 +274,10 @@ class DetuneForkSpec : StringSpec({
         // walker answers a nested Detune from its inner only).
         val n = IgnitorDsl.WhiteNoise()
         val nested = IgnitorDsl.Detune(
-            IgnitorDsl.Detune(n, IgnitorDsl.Freq),
-            IgnitorDsl.Constant(12.0),
+            inner = IgnitorDsl.Detune(inner = n, semitones = IgnitorDsl.Freq),
+            semitones = IgnitorDsl.Constant(12.0),
         )
-        val tree = render(IgnitorDsl.Plus(nested, n), freqHz = 220.0)
+        val tree = render(IgnitorDsl.Plus(left = nested, right = n), freqHz = 220.0)
         val bare = render(n, freqHz = 220.0)
 
         bare.any { it != 0.0 } shouldBe true
@@ -294,8 +294,8 @@ class DetuneForkSpec : StringSpec({
         // READS the memo — the one path where a poisoned memo table would flip the fold
         // decision (everything else short-circuits before the table).
         val a = IgnitorDsl.WhiteNoise()
-        val diamond = IgnitorDsl.Plus(a, a)
-        val tree = render(IgnitorDsl.Plus(diamond, IgnitorDsl.Detune(diamond, IgnitorDsl.Constant(12.0))), freqHz = 220.0)
+        val diamond = IgnitorDsl.Plus(left = a, right = a)
+        val tree = render(IgnitorDsl.Plus(left = diamond, right = IgnitorDsl.Detune(inner = diamond, semitones = IgnitorDsl.Constant(12.0))), freqHz = 220.0)
         val bare = render(diamond, freqHz = 220.0)
 
         bare.any { it != 0.0 } shouldBe true
@@ -312,7 +312,7 @@ class DetuneForkSpec : StringSpec({
         // subtree, not the union of all variants — a noise variant still folds (stays shared)
         // even when a sibling variant is pitched.
         val v = IgnitorDsl.Variants(listOf(IgnitorDsl.WhiteNoise(), IgnitorDsl.Sine()))
-        val shared = IgnitorDsl.Plus(v, IgnitorDsl.Detune(v, IgnitorDsl.Constant(12.0)))
+        val shared = IgnitorDsl.Plus(left = v, right = IgnitorDsl.Detune(inner = v, semitones = IgnitorDsl.Constant(12.0)))
 
         // Index 0 (noise): fold — the doubled-single-instance oracle.
         val tree0 = render(shared, freqHz = 220.0, soundIndex = 0)
@@ -334,12 +334,12 @@ class DetuneForkSpec : StringSpec({
         val tree1 = render(shared, freqHz = 220.0, soundIndex = 1)
         val twice1 = render(
             IgnitorDsl.Plus(
-                IgnitorDsl.Sine(),
-                IgnitorDsl.Detune(IgnitorDsl.Sine(), IgnitorDsl.Constant(12.0)),
+                left = IgnitorDsl.Sine(),
+                right = IgnitorDsl.Detune(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0)),
             ),
             freqHz = 220.0,
             soundIndex = 1,
         )
-        maxDiff(tree1, twice1) shouldBe 0.0
+        maxDiff(a = tree1, b = twice1) shouldBe 0.0
     }
 })
