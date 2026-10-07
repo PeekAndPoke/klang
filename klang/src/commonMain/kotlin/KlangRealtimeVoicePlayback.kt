@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -60,6 +61,25 @@ class KlangRealtimeVoicePlayback internal constructor(
      */
     fun startVoice(data: VoiceData, gateDurSec: Double? = null): Int =
         (liveIdCounter++).also { startVoice(liveId = it, data = data, gateDurSec = gateDurSec) }
+
+    /**
+     * Starts one voice per pattern event, all under the same [liveId], so a single [stopVoice]
+     * releases them together (a mapper that turns one key into a chord).
+     *
+     * This is how a pattern language reaches the realtime path: the caller queries its pattern
+     * and hands over the events; their timing is ignored, every voice starts now. Inline DSLs the
+     * events reference are announced first, exactly as the cyclic scheduler does before it
+     * schedules (see [InlineDslRegistrar.announceAll]).
+     *
+     * @param gateDurSec Gate length in seconds; null = held until [stopVoice].
+     */
+    fun startEvents(liveId: Int, events: List<KlangPatternEvent>, gateDurSec: Double? = null) {
+        registrar.announceAll(events)
+
+        events.forEach { event ->
+            startVoice(liveId = liveId, data = event.toVoiceData(), gateDurSec = gateDurSec)
+        }
+    }
 
     /**
      * Announces an inline [IgnitorDsl] to this playback's backend engine and returns the

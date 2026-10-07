@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_engine.KlangRealtimeVoicePlayback
 import io.peekandpoke.kraft.utils.launch
@@ -108,6 +109,16 @@ class RealtimePlaybackCtrl(
      */
     fun startVoice(liveId: Int, data: VoiceData, gateDurSec: Double? = null) {
         playback?.startVoice(liveId = liveId, data = data, gateDurSec = gateDurSec)
+    }
+
+    /**
+     * Fires one voice per pattern event, all under [liveId], announcing inline DSLs first. No-op
+     * until [start] has completed.
+     *
+     * @param gateDurSec null = held until [stopVoice].
+     */
+    fun startEvents(liveId: Int, events: List<KlangPatternEvent>, gateDurSec: Double? = null) {
+        playback?.startEvents(liveId = liveId, events = events, gateDurSec = gateDurSec)
     }
 
     /** Releases the voice(s) under [liveId] into their ADSR tail. Unknown id = no-op. */
