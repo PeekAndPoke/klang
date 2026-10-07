@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_benchmark
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -140,7 +141,7 @@ class IgnitorBenchmark(
             renderer.ignitorRegistry.register(name, dsl)
         }
 
-        val outBuffer = ShortArray(blockFrames * 2)
+        val outBuffer = StereoBuffer(blockFrames)
 
         // Schedule voices
         for (i in 0 until case.voiceCount) {

@@ -7,12 +7,12 @@
 The top-level render loop driver. Called once per audio block by the platform backend.
 
 ```
-renderBlock(outputBuffer: ShortArray, blockFrames: Int)
+renderBlock(cursorFrame: Double, out: StereoBuffer)
   1. Clear mix buffers + orbits
   2. VoiceScheduler.processBlock()        → voices write to voiceBuffer + orbits
   3. Cylinders.processAndMix()               → cylinder effects + mix to StereoBuffer
   4. Master limiter (lookahead 5 ms, anticipating) (−1 dB threshold)     → gain reduction applied to StereoBuffer
-  5. Clip ±1.0, interleave L/R, scale     → ShortArray (16-bit PCM)
+  5. Clip ±1.0 (no quantisation)        → StereoBuffer out (floating point; 16-bit only at the JVM/WAV edge)
 ```
 
 ### Master Limiter Settings

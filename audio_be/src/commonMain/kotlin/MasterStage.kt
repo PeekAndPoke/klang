@@ -13,8 +13,12 @@ import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
 
 /**
- * The final master / output stage: a brick-wall safety limiter, master-out DC blockers, and the
- * transparent clip + stereo interleave into the platform's 16-bit PCM buffer.
+ * The final master / output stage: master-out DC blockers, a brick-wall safety limiter, and the
+ * transparent clip into the engine's floating-point stereo output.
+ *
+ * The output is a [StereoBuffer] of doubles: Web Audio takes floats per channel, so the browser
+ * worklet copies each channel straight into its output. The edges that need 16-bit integers (the JVM
+ * `SourceDataLine` player, the WAV writer) convert there, through [pcm16] and [writePcm16].
  *
  * Extracted from [KlangAudioRenderer] so the per-playback mixdown can run it **once** on the summed
  * mix — the safety brick belongs on the final output, not per engine. See
@@ -110,54 +114,58 @@ class MasterStage(
     }
 
     /**
-     * Applies the master limiter + DC block to [mix] in place, then writes a transparent
-     * clip + stereo interleave into [out] (which must hold `2 * blockFrames` shorts).
+     * Applies the DC blockers and the limiter to [mix] in place, then writes the transparent clip of
+     * it into [out] (which must hold `blockFrames` frames per channel). [mix] keeps the unclipped
+     * doubles; [out] is the engine's output.
      */
-    fun process(mix: StereoBuffer, out: ShortArray) {
-        // Master-out DC blockers (per channel, in-place), ahead of the limiter — see above.
+    fun process(mix: StereoBuffer, out: StereoBuffer) {
+        // Master-out DC blockers (per channel, in-place), ahead of the limiter. See above.
         dcBlockerL.process(mix.left, 0, blockFrames)
         dcBlockerR.process(mix.right, 0, blockFrames)
 
-        // Apply dynamic limiter — handles the bulk of loudness management musically. With lookahead
+        // Apply dynamic limiter: handles the bulk of loudness management musically. With lookahead
         // it also delays the mix by HOUSE_LIMITER_LOOKAHEAD_SECONDS; uniform, so nothing desyncs.
         limiter.process(mix.left, mix.right, blockFrames)
 
-        // Transparent clip + interleave into the platform's 16-bit PCM.
-        interleavePcm16(mix.left, mix.right, blockFrames, out)
+        // Transparent clip into the floating-point output.
+        clipOutput(mix, blockFrames, out)
     }
 }
 
 /**
- * The master's clip + stereo interleave: writes `[L0, R0, L1, R1, ...]` into [out] (which must hold
- * `2 * frames` shorts), every sample through [pcm16]. [MasterStage.process] runs it once per block,
- * after the limiter; it is its own function so the specs exercise the real loop, not a copy.
+ * The master's clip: writes [clipSample] of the first [frames] frames of [mix] into [out], channel by
+ * channel. [MasterStage.process] runs it once per block, after the limiter; it is its own function so
+ * the specs exercise the real loop, not a copy.
  */
-internal fun interleavePcm16(left: AudioBuffer, right: AudioBuffer, frames: Int, out: ShortArray) {
+internal fun clipOutput(mix: StereoBuffer, frames: Int, out: StereoBuffer) {
+    val inL = mix.left
+    val inR = mix.right
+    val outL = out.left
+    val outR = out.right
+
     for (i in 0 until frames) {
-        val idx = i * 2
-        out[idx] = pcm16(left[i])
-        out[idx + 1] = pcm16(right[i])
+        outL[i] = clipSample(inL[i])
+        outR[i] = clipSample(inR[i])
     }
 }
 
 /**
- * One sample to 16-bit PCM: in `[-1, 1]` it scales by [Short.MAX_VALUE] and truncates (so -1.0 lands
- * on `-Short.MAX_VALUE`, not on [Short.MIN_VALUE]); above 1 it is [Short.MAX_VALUE], anything else
- * [Short.MIN_VALUE]. Most samples are in range, and they take the first branch with no clamp math.
+ * One sample of the engine's output: in `[-1, 1]` it passes untouched (no quantisation); above 1 it is
+ * 1.0, anything else -1.0. Most samples are in range, and they take the first branch with no clamp math.
  *
- * NaN fails both comparisons and lands on [Short.MIN_VALUE], a full-scale negative click. It cannot
- * arrive through [MasterStage.process]: the house limiter's delay ring stores every non-finite
- * sample as 0.0 (`Compressor.processLookahead`), so the clip only ever sees finite values.
+ * NaN fails both comparisons and lands on -1.0, a full-scale negative click. It cannot arrive through
+ * [MasterStage.process]: the house limiter's delay ring stores every non-finite sample as 0.0
+ * (`Compressor.processLookahead`), so the clip only ever sees finite values.
  *
- * Inline so the hot loop in [interleavePcm16] stays one flat body on both platforms.
+ * Inline so the hot loop in [clipOutput] stays one flat body on both platforms.
  */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun pcm16(sample: AudioSample): Short {
+internal inline fun clipSample(sample: AudioSample): AudioSample {
     return if (sample >= -1.0 && sample <= 1.0) {
-        (sample * Short.MAX_VALUE).toInt().toShort()
+        sample
     } else if (sample > 1.0) {
-        Short.MAX_VALUE
+        1.0
     } else {
-        Short.MIN_VALUE
+        -1.0
     }
 }

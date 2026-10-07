@@ -16,8 +16,8 @@ Sprudel code (String)
   --> KlangPattern (last expression)
   --> KlangOfflineRenderer.render(pattern, cycles, cps, tailSec, onBlock)
       --> VoiceScheduler + KlangAudioRenderer (tight loop, full CPU speed)
-      --> onBlock(ShortArray, count) callback per block
-  --> WavFileWriter (JVM) streams blocks to disk
+      --> onBlock(StereoBuffer, frames) callback per block (the engine's float output)
+  --> WavFileWriter (JVM) converts to 16-bit (writePcm16) and streams blocks to disk
   --> 16-bit stereo PCM WAV @ 48kHz
 ```
 
@@ -72,7 +72,8 @@ Sprudel code (String)
 3. Converts each event to a `ScheduledVoice` with timing relative to time zero
 4. Pre-schedules all voices into `VoiceScheduler` (min-heap handles progressive activation)
 5. Renders blocks in a tight loop — no delays, no real-time pacing
-6. Calls `onBlock(ShortArray, count)` for each block (caller decides what to do with the audio)
+6. Calls `onBlock(StereoBuffer, frames)` for each block with the engine's clipped float output; the buffer is
+   reused, so a caller copies what it keeps (caller decides what to do with the audio)
 
 This bypasses the real-time infrastructure entirely (`KlangPatternScheduler`, `JvmAudioBackend`, `KlangCommLink` IPC).
 The `KlangCommLink` instance is created but its feedback is never consumed — harmless.

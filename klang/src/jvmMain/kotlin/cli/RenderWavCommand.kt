@@ -98,7 +98,7 @@ class RenderWavCommand(
                     tailSec = tail,
                     customIgnitors = compileResult.customIgnitors,
                     samples = samples,
-                    onBlock = { samples, count -> wav.writeBlock(samples, count) },
+                    onBlock = { out, frames -> wav.writeBlock(out, frames) },
                 )
             }
         } finally {

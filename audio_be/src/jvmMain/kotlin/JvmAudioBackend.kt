@@ -9,8 +9,6 @@ import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.isActive
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
@@ -75,11 +73,9 @@ class JvmAudioBackend(
         line.open(format, bufferBytes)
         line.start()
 
-        // Pre-allocate output buffers
-        val outShorts = ShortArray(blockSize * 2)
+        // Pre-allocate output buffers: the engine's floating-point block, and the line's 16-bit bytes
+        val out = StereoBuffer(blockSize)
         val outBytes = ByteArray(blockSize * 4)
-        val byteBuffer = ByteBuffer.wrap(outBytes).order(ByteOrder.LITTLE_ENDIAN)
-        val shortBuffer = byteBuffer.asShortBuffer()
 
         try {
             while (scope.isActive) {
@@ -92,16 +88,15 @@ class JvmAudioBackend(
                 // rendering ///////////////////////////////////////////////////////////////////////////////////////
                 // Always render — warmup voices live on the real scheduler so this exercises
                 // the actual render path for JIT / cache priming.
-                dispatcher.renderBlock(cursorFrame = currentFrame, out = outShorts)
+                dispatcher.renderBlock(cursorFrame = currentFrame, out = out)
 
                 if (warmup.isWarming) {
-                    outShorts.fill(0)
+                    out.clear()
                     warmup.tick()
                 }
 
-                // Convert ShortArray to ByteArray efficiently via ByteBuffer
-                shortBuffer.clear()
-                shortBuffer.put(outShorts)
+                // The 16-bit edge: the line takes signed 16-bit little-endian stereo
+                writePcm16(source = out, frames = blockSize, bytes = outBytes)
 
                 // Advance Cursor (State Write)
                 currentFrame += blockSize

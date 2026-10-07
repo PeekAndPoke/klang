@@ -434,11 +434,11 @@ class Compressor(
             val outL = delayL[delayPos]
             val outR = delayR[delayPos]
 
-            // NaN-guard on the ring write too, not just the detector: MasterStage maps NaN to
-            // Short.MIN_VALUE (full-scale negative), so an unguarded NaN would surface as a click
+            // NaN-guard on the ring write too, not just the detector: MasterStage's clip maps NaN
+            // to -1.0 (full-scale negative), so an unguarded NaN would surface as a click
             // delayFrames samples later, far from whatever produced it. Non-finite generally: an
             // Infinity survives `l != l`, is stored, and later emerges as `Inf * 0.0` = NaN, which
-            // MasterStage maps to Short.MIN_VALUE, the exact full-scale click this guard prevents.
+            // MasterStage maps to -1.0, the exact full-scale click this guard prevents.
             delayL[delayPos] = if (l.isFinite()) l else 0.0
             delayR[delayPos] = if (r.isFinite()) r else 0.0
             delayPos = if (delayPos + 1 == delayFrames) 0 else delayPos + 1

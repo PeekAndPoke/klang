@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -187,7 +188,7 @@ class KlangBenchmark(
         val scheduler = renderer.voices
         renderer.setBackendStartTime(0.0)
 
-        val outBuffer = ShortArray(blockFrames * 2)
+        val outBuffer = StereoBuffer(blockFrames)
 
         var cursorFrame = 0.0
 

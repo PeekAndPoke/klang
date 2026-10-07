@@ -59,7 +59,7 @@ class KlangOfflineRendererSampleTest : StringSpec({
 
     "render with sample sounds produces non-zero audio" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocks = mutableListOf<ShortArray>()
+        val blocks = mutableListOf<DoubleArray>()
 
         renderer.render(
             pattern = alternatingPattern(listOf("bd", "sd", "hh", "oh")),
@@ -67,15 +67,15 @@ class KlangOfflineRendererSampleTest : StringSpec({
             cyclesPerSecond = 1.0,
             tailSec = 0.5,
             samples = samples,
-            onBlock = { s, _ -> blocks.add(s.copyOf()) },
+            onBlock = { out, _ -> blocks.add(out.left + out.right) },
         )
 
-        blocks.any { block -> block.any { it != 0.toShort() } } shouldBe true
+        blocks.any { block -> block.any { it != 0.0 } } shouldBe true
     }
 
     "render with alternating samples loads a new sample every cycle" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocks = mutableListOf<ShortArray>()
+        val blocks = mutableListOf<DoubleArray>()
 
         renderer.render(
             pattern = alternatingPattern(listOf("bd", "hh", "sd", "cp")),
@@ -83,7 +83,7 @@ class KlangOfflineRendererSampleTest : StringSpec({
             cyclesPerSecond = 1.0,
             tailSec = 0.5,
             samples = samples,
-            onBlock = { s, _ -> blocks.add(s.copyOf()) },
+            onBlock = { out, _ -> blocks.add(out.left + out.right) },
         )
 
         // Each cycle should produce audio (4 different samples across 4 cycles)
@@ -94,23 +94,23 @@ class KlangOfflineRendererSampleTest : StringSpec({
             val cycleEnd = minOf(cycleStart + blocksPerCycle, blocks.size)
             val cycleBlocks = blocks.subList(cycleStart, cycleEnd)
 
-            val hasAudio = cycleBlocks.any { block -> block.any { it != 0.toShort() } }
+            val hasAudio = cycleBlocks.any { block -> block.any { it != 0.0 } }
             hasAudio shouldBe true
         }
     }
 
     "render without samples parameter produces silence for sample sounds" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocks = mutableListOf<ShortArray>()
+        val blocks = mutableListOf<DoubleArray>()
 
         renderer.render(
             pattern = alternatingPattern(listOf("bd", "sd")),
             cycles = 1,
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
-            onBlock = { s, _ -> blocks.add(s.copyOf()) },
+            onBlock = { out, _ -> blocks.add(out.left + out.right) },
         )
 
-        blocks.all { block -> block.all { it == 0.toShort() } } shouldBe true
+        blocks.all { block -> block.all { it == 0.0 } } shouldBe true
     }
 })

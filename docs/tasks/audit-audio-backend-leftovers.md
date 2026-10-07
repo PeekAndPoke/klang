@@ -141,8 +141,8 @@ envelope or the worklet's own code.
 
 What is not: (a) `WorkletContract` (`audio_be` jsMain): the `#v` schema stamp, the mismatch error, and the trip
 through a real `MessagePort` (structured clone of the encoded object: a `DoubleArray`, NaN, nulls, maps). (b) The
-glue in `KlangAudioWorklet`: `port.onmessage` into `dispatcher.handle`, the 16-bit to Float32 conversion and the
-L/R split, the silenced warmup blocks, the cursor advance, the feedback drain into `port.sendFeed`.
+glue in `KlangAudioWorklet`: `port.onmessage` into `dispatcher.handle`, the per-channel copy of the engine's
+floats into the output `Float32Array`s, the silenced warmup blocks, the cursor advance, the feedback drain into `port.sendFeed`.
 
 What a Kotlin/JS spec can reach without an `AudioWorkletGlobalScope`:
 
@@ -158,13 +158,13 @@ What a Kotlin/JS spec can reach without an `AudioWorkletGlobalScope`:
   the `Ctx` body (render, convert, warmup, cursor, feedback drain) and the message handler into a plain class in
   `audio_be` jsMain (a block pump taking the output `Float32Array`s and a `MessagePort`), leave `KlangAudioWorklet`
   a shell of about 20 lines, and spec the pump over a `MessageChannel`: schedule a voice through the port, render
-  blocks, assert the output equals the dispatcher's samples over `Short.MAX_VALUE` (non-silent, L and R apart),
+  blocks, assert the output equals the dispatcher's float samples (non-silent, L and R apart),
   the warmup blocks exactly 0, and the feedback arriving on the other port. Cost: half a day, the move mechanical
   (about 80 lines), one spec. The JS suite runs whole (`--tests` does not filter JS), a few seconds more.
 
-Noticed on the way, not in scope: the worklet renders into a `ShortArray` (`PlaybackEngineDispatcher.renderBlock`),
-so every browser sample is quantized to 16 bits before Web Audio's float path, and `Short` is on the stone rule's
-banned list. Worth a look when (b) moves that code.
+Noticed on the way, done since: the worklet rendered into a `ShortArray`, so every browser sample was quantized to
+16 bits before Web Audio's float path. Since 2026-10-07 the engine's output is floating point and the worklet copies
+it straight into its outputs (`docs/tasks-archive/2026-10/20261007-float-output.md`).
 
 ### §4: the cut-group hard cut (investigated, not built; decide by ear)
 

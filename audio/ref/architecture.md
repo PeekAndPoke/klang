@@ -56,8 +56,9 @@ AUDIO BACKEND (audio thread)
 
        KlangAudioRenderer
          ├─ Apply DC blockers, then master limiter (−1 dB, 20:1, 5 ms lookahead)
-         ├─ Clip ±1.0 and interleave L/R to ShortArray
-         └─ Send to platform audio output
+         ├─ Clip ±1.0 into the floating-point output (a StereoBuffer, no quantisation)
+         └─ Send to platform audio output (Web Audio takes the floats; the JVM line and the
+            WAV writer convert to 16-bit bytes at their edge, `writePcm16`)
 ```
 
 ## Per-Playback Engine Isolation
@@ -130,7 +131,8 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 ### JVM (`audio_be/src/jvmMain/`)
 
 - `JvmAudioBackend` uses `javax.sound.sampled.SourceDataLine`
-- Format: 16-bit signed PCM, stereo, little-endian
+- Format: 16-bit signed PCM, stereo, little-endian; the engine's float output is converted at this edge by
+  `writePcm16` (`audio_be/src/commonMain/kotlin/_pcm16_edge.kt`, the one home of the 16-bit conversion)
 - Buffer: ~250 ms for glitch-free playback
 - `KlangTime.internalMsNow()` → `System.nanoTime() / 1_000_000L`
 

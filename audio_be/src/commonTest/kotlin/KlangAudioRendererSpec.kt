@@ -41,24 +41,24 @@ class KlangAudioRendererSpec : StringSpec({
         val renderer = createRenderer()
         renderer.clockForTest.cursorFrame shouldBe 0.0
 
-        renderer.renderBlock(cursorFrame = 0.0, out = ShortArray(blockFrames * 2))
+        renderer.renderBlock(cursorFrame = 0.0, out = StereoBuffer(blockFrames))
 
         renderer.clockForTest.cursorFrame shouldBe blockFrames.toDouble()
     }
 
     "with no voices every block is written with exact zeros, and one voice is heard" {
-        // Every slot of the 2 * blockFrames interleave is pre-filled with a non-zero, so a block
-        // that leaves any of `out` unwritten goes red, on consecutive blocks and after cursor jumps.
+        // Every sample of both channels is pre-filled with a non-zero, so a block that leaves any
+        // of `out` unwritten goes red, on consecutive blocks and after cursor jumps.
         val renderer = createRenderer()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         val cursors = List(10) { it * blockFrames } + listOf(44100, 1_000_000)
 
         for (cursor in cursors) {
-            out.fill(999.toShort())
+            out.fill(0.999)
             renderer.renderBlock(cursorFrame = cursor.toDouble(), out = out)
 
             withClue("cursor $cursor") {
-                out.all { it == 0.toShort() } shouldBe true
+                out.isExactlySilent() shouldBe true
             }
         }
 
@@ -84,102 +84,13 @@ class KlangAudioRendererSpec : StringSpec({
 
         repeat(8) { block ->
             playing.renderBlock(cursorFrame = (block * blockFrames).toDouble(), out = out)
-            heard = heard || out.any { it != 0.toShort() }
+            heard = heard || !out.isExactlySilent()
         }
 
-        withClue("a scheduled voice reaches the PCM") { heard shouldBe true }
+        withClue("a scheduled voice reaches the output") { heard shouldBe true }
     }
 
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Clipping boundaries (unit-level: the real pcm16 that MasterStage.process runs per sample)
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "clip: in [-1, 1] scales by Short.MAX_VALUE and truncates, above clamps to MAX, below to MIN" {
-        // The boundaries are entries: -1.0 is INSIDE the scaling branch, so it lands on
-        // -Short.MAX_VALUE, not on Short.MIN_VALUE.
-        val max = Short.MAX_VALUE.toInt()
-        val min = Short.MIN_VALUE.toInt()
-        val table = listOf(
-            0.0 to 0,
-            1.0 to max,
-            -1.0 to -max,
-            0.5 to (0.5 * max).toInt(),
-            -0.5 to (-0.5 * max).toInt(),
-            0.999 to (0.999 * max).toInt(),
-            -0.999 to (-0.999 * max).toInt(),
-            1.0001 to max,
-            1.5 to max,
-            2.0 to max,
-            100.0 to max,
-            -1.0001 to min,
-            -1.5 to min,
-            -2.0 to min,
-            -100.0 to min,
-        )
-
-        for ((sample, expected) in table) {
-            withClue("sample $sample") { pcm16(sample).toInt() shouldBe expected }
-        }
-    }
-
-    "clip: non-finite samples, today's behaviour pinned (NaN is a full-scale negative click)" {
-        // NaN fails both `in [-1, 1]` and `> 1`, so it takes the last branch: Short.MIN_VALUE. That
-        // is a click, and it is pinned here as it is, not endorsed: through MasterStage.process no
-        // NaN reaches the clip, because the house limiter's ring stores non-finite samples as 0.0
-        // (MasterStageSpec guards that end to end). Changing the NaN branch is a sound decision.
-        pcm16(Double.NaN) shouldBe Short.MIN_VALUE
-        pcm16(Double.POSITIVE_INFINITY) shouldBe Short.MAX_VALUE
-        pcm16(Double.NEGATIVE_INFINITY) shouldBe Short.MIN_VALUE
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Stereo interleaving (the real interleavePcm16 that MasterStage.process runs per block)
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "interleave: output is [L0, R0, L1, R1, ...]" {
-        val frames = 4
-        val left = doubleArrayOf(0.1, 0.2, 0.3, 0.4)
-        val right = doubleArrayOf(0.5, 0.6, 0.7, 0.8)
-        val out = ShortArray(frames * 2)
-
-        interleavePcm16(left, right, frames, out)
-
-        val maxShort = Short.MAX_VALUE
-
-        for (i in 0 until frames) {
-            val expectedL = (left[i] * maxShort).toInt().toShort()
-            val expectedR = (right[i] * maxShort).toInt().toShort()
-            out[i * 2] shouldBe expectedL
-            out[i * 2 + 1] shouldBe expectedR
-        }
-    }
-
-    "interleave with clipping: mixed in-range and out-of-range samples" {
-        val frames = 4
-        val left = doubleArrayOf(0.5, 1.5, -0.5, -1.5)
-        val right = doubleArrayOf(-1.5, -0.5, 1.5, 0.5)
-        val out = ShortArray(frames * 2)
-
-        interleavePcm16(left, right, frames, out)
-
-        val maxShort = Short.MAX_VALUE
-
-        // Frame 0: L=0.5 (scaled), R=-1.5 (clamped)
-        out[0] shouldBe (0.5 * maxShort).toInt().toShort()
-        out[1] shouldBe Short.MIN_VALUE
-
-        // Frame 1: L=1.5 (clamped), R=-0.5 (scaled)
-        out[2] shouldBe Short.MAX_VALUE
-        out[3] shouldBe (-0.5 * maxShort).toInt().toShort()
-
-        // Frame 2: L=-0.5 (scaled), R=1.5 (clamped)
-        out[4] shouldBe (-0.5 * maxShort).toInt().toShort()
-        out[5] shouldBe Short.MAX_VALUE
-
-        // Frame 3: L=-1.5 (clamped), R=0.5 (scaled)
-        out[6] shouldBe Short.MIN_VALUE
-        out[7] shouldBe (0.5 * maxShort).toInt().toShort()
-    }
+    // The clip's boundary table is OutputClipSpec; the 16-bit edge is Pcm16EdgeSpec.
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Limiter behavior (end-to-end via renderer with loud voices)

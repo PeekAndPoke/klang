@@ -14,8 +14,8 @@ Cmd → PlaybackEngineDispatcher.handle
     → Cylinders.processAndMix (per orbit: its Katalyst chain, swapped through ChainSwap)
     → MasterBus.process (the Katalyst chain at the output; skipped while it is off) }
     → accumulate into the shared mix
-    → MasterStage (DC block → limiter[5 ms lookahead] → clip + interleave)
-    → ShortArray out
+    → MasterStage (DC block → limiter[5 ms lookahead] → clip)
+    → StereoBuffer out (floating point; the JVM line and the WAV writer convert to 16-bit at their edge)
 ```
 
 ## Changed/created by the per-playback-engine work (D1 + D2)
@@ -25,7 +25,7 @@ Cmd → PlaybackEngineDispatcher.handle
 | `PlaybackEngineDispatcher.kt` **[NEW]**                  | Host: `Map<playbackId, PlaybackEngine>`, `handle(cmd)` routing, `renderBlock` mixdown, drain-dispose lifecycle    |
 | `PlaybackEngine.kt` **[NEW]**                            | One isolated engine per playback (`VoiceScheduler` + `Cylinders` + `renderInto` + `isIdle`)                       |
 | `SampleStore.kt` **[NEW]**                               | Shared PCM sample cache (extracted from `VoiceScheduler`)                                                         |
-| `MasterStage.kt` **[NEW]**                               | Final stage: DC block → safety limiter (5 ms lookahead) → clip + interleave (extracted from `KlangAudioRenderer`) |
+| `MasterStage.kt` **[NEW]**                               | Final stage: DC block → safety limiter (5 ms lookahead) → clip + interleave (extracted from `KlangAudioRenderer`; float output, interleave and 16-bit at the JVM/WAV edge since 2026-10-07) |
 | `KlangAudioRenderer.kt` **[changed]**                    | Now a thin standalone wrapper delegating to `PlaybackEngine.renderInto + MasterStage` (offline + benchmarks)      |
 | `WarmupRunner.kt` **[changed]**                          | Runs on a dedicated warmup engine via the dispatcher; **dropped global `preallocateAll`**                         |
 | `cylinders/Cylinders.kt` **[changed]**                   | Added alloc-free `anyActive()`                                                                                    |

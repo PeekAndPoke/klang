@@ -366,7 +366,7 @@ class EngineStopReleaseSpec : StringSpec({
             commLink = KlangCommLink(capacity = 1024).backend,
             performanceTimeMs = { 0.0 },
         ).also { it.setBackendStartTime(0.0) }
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(blip())))
         d.renderBlock(cursorFrame = 0.0, out = out)
@@ -420,12 +420,12 @@ class EngineStopReleaseSpec : StringSpec({
                 ),
                 clock = clock,
             ).also { it.setBackendStartTime(0.0) }
-            val out = ShortArray(blockFrames * 2)
+            val out = StereoBuffer(blockFrames)
 
-            fun render(blk: Int): ShortArray {
+            fun render(blk: Int): DoubleArray {
                 d.renderBlock(cursorFrame = blk * blockFrames.toDouble(), out = out)
 
-                return out.copyOf()
+                return out.interleavedCopy()
             }
         }
 
@@ -485,7 +485,7 @@ class EngineStopReleaseSpec : StringSpec({
                 got.contentEquals(want) shouldBe true
             }
 
-            if (want.any { abs(it.toInt()) > 1000 }) {
+            if (want.any { abs(it) > 0.03 }) { // about 1000 16-bit counts
                 loud++
             }
 

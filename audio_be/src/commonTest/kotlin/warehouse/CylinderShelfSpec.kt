@@ -19,6 +19,9 @@ import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WarmupVocabulary
+import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.interleavedCopy
+import io.peekandpoke.klang.audio_be.peak
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
@@ -43,12 +46,12 @@ class CylinderShelfSpec : StringSpec({
     val blockFrames = AudioBackendContext.RENDER_QUANTUM_FRAMES
 
     class Fixture(val dispatcher: PlaybackEngineDispatcher, val warehouse: ResourceWarehouse, val commLink: KlangCommLink) {
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         fun render(blocks: Int): Double {
             var peak = 0.0
             repeat(blocks) {
                 dispatcher.renderBlock(dispatcher.clockForTest.cursorFrame, out)
-                for (i in out.indices) peak = maxOf(peak, abs(out[i].toDouble()))
+                peak = maxOf(peak, out.peak())
             }
             return peak
         }
@@ -132,7 +135,7 @@ class CylinderShelfSpec : StringSpec({
             val samples = DoubleArray(blockFrames * 2 * 60)
             repeat(60) { block ->
                 f.dispatcher.renderBlock(f.dispatcher.clockForTest.cursorFrame, f.out)
-                for (i in f.out.indices) samples[block * f.out.size + i] = f.out[i].toDouble()
+                f.out.interleavedCopy().copyInto(samples, destinationOffset = block * blockFrames * 2)
             }
             return samples
         }

@@ -16,6 +16,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.interleavedCopy
 import io.peekandpoke.klang.audio_be.cylinders.CapLaw
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
@@ -85,13 +86,13 @@ class MasterBusTest : StringSpec({
 
     /** Peak absolute sample over [blocks] rendered blocks, as a 0..1 float scale. */
     fun renderPeak(d: PlaybackEngineDispatcher, blocks: Int): Double {
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         var peak = 0.0
 
         for (b in 0 until blocks) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
-            for (s in out) {
-                val v = abs(s.toDouble() / Short.MAX_VALUE)
+            for (s in out.interleavedCopy()) {
+                val v = abs(s)
                 if (v > peak) {
                     peak = v
                 }
@@ -145,7 +146,7 @@ class MasterBusTest : StringSpec({
         // is the number its author wrote as the default, even when the carrier event carries a
         // value under that very name (which is what an orbit's owner voice would hand an orbit
         // chain). Before step 12 C5 no Param could reach the output; now `Katalyst.param(...)` can.
-        fun render(dsl: KatalystDsl?): ShortArray {
+        fun render(dsl: KatalystDsl?): DoubleArray {
             val d = newDispatcher()
             val voices = mutableListOf(quietSineVoice())
 
@@ -157,17 +158,17 @@ class MasterBusTest : StringSpec({
 
             d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = voices))
 
-            val all = ShortArray(blockFrames * 2 * 40)
-            val out = ShortArray(blockFrames * 2)
+            val all = DoubleArray(blockFrames * 2 * 40)
+            val out = StereoBuffer(blockFrames)
             for (b in 0 until 40) {
                 d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
-                out.copyInto(all, destinationOffset = b * blockFrames * 2)
+                out.interleavedCopy().copyInto(all, destinationOffset = b * blockFrames * 2)
             }
 
             return all
         }
 
-        fun peak(samples: ShortArray): Int = samples.maxOf { abs(it.toInt()) }
+        fun peak(samples: DoubleArray): Double = samples.maxOf { abs(it) }
 
         val slotted = render(KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Param("level", 2.5))))
         val constant = render(KatalystDsl.of(KatalystStageDsl.Gain(gain = c(2.5))))
@@ -176,7 +177,7 @@ class MasterBusTest : StringSpec({
         // The slot renders exactly as the default written as a constant, sample for sample...
         slotted.contentEquals(constant) shouldBe true
         // ...and that is really the 2.5 and not two unity chains agreeing (0.25 would be quieter).
-        peak(slotted) shouldBeGreaterThan (peak(plain) * 2.4).toInt()
+        peak(slotted) shouldBeGreaterThan peak(plain) * 2.4
     }
 
     "the FIRST master is adopted at full gain, not faded up from unity" {
@@ -235,7 +236,7 @@ class MasterBusTest : StringSpec({
                 voices = listOf(masterEvent("mute", pid = "a"), sineVoice(pid = "a")),
             )
         )
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         // Skip past the crossfade window (60 ms ≈ 21 blocks at 128/44100), then measure.
         for (b in 0 until 40) {
             muted.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
@@ -243,8 +244,8 @@ class MasterBusTest : StringSpec({
         var tailPeak = 0.0
         for (b in 40 until 60) {
             muted.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
-            for (s in out) {
-                val v = abs(s.toDouble() / Short.MAX_VALUE)
+            for (s in out.interleavedCopy()) {
+                val v = abs(s)
                 if (v > tailPeak) {
                     tailPeak = v
                 }
@@ -262,13 +263,13 @@ class MasterBusTest : StringSpec({
 
     /** Per-block peak of the left channel, over [blocks] blocks starting at block 0. */
     fun blockPeaks(d: PlaybackEngineDispatcher, blocks: Int): List<Double> {
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         return (0 until blocks).map { b ->
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             var peak = 0.0
-            for (i in out.indices step 2) {
-                val v = abs(out[i].toDouble() / Short.MAX_VALUE)
+            for (i in out.left.indices) {
+                val v = abs(out.left[i])
                 if (v > peak) {
                     peak = v
                 }
@@ -397,12 +398,12 @@ class MasterBusTest : StringSpec({
             )
         )
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         var after = 0.0
         for (b in 200 until 600) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
-            for (i in out.indices step 2) {
-                val v = abs(out[i].toDouble() / Short.MAX_VALUE)
+            for (i in out.left.indices) {
+                val v = abs(out.left[i])
                 if (v > after) {
                     after = v
                 }
@@ -445,13 +446,13 @@ class MasterBusTest : StringSpec({
         // The sine first — this fixes the playback epoch at t=0.
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(quietSineVoice())))
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         for (b in 0 until 344) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
         var beforePeak = 0.0
-        for (i in out.indices step 2) {
-            val v = abs(out[i].toDouble() / Short.MAX_VALUE)
+        for (i in out.left.indices) {
+            val v = abs(out.left[i])
             if (v > beforePeak) {
                 beforePeak = v
             }
@@ -470,8 +471,8 @@ class MasterBusTest : StringSpec({
         var afterPeak = 0.0
         for (b in 344 until 700) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
-            for (i in out.indices step 2) {
-                val v = abs(out[i].toDouble() / Short.MAX_VALUE)
+            for (i in out.left.indices) {
+                val v = abs(out.left[i])
                 if (v > afterPeak) {
                     afterPeak = v
                 }
@@ -505,7 +506,7 @@ class MasterBusTest : StringSpec({
             )
         )
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         for (b in 0 until 200) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
@@ -539,7 +540,7 @@ class MasterBusTest : StringSpec({
             )
         )
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         for (b in 0 until 3000) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
@@ -573,7 +574,7 @@ class MasterBusTest : StringSpec({
             )
         )
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         // ~0.35 s in: the note is long over and the first echo has not arrived yet, so the master
         // OUTPUT is silent — but the delay ring is full. Watching the output would call this
         // finished and cut every remaining echo.
@@ -605,7 +606,7 @@ class MasterBusTest : StringSpec({
             )
         )
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         for (b in 0 until 40) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
@@ -643,7 +644,7 @@ class MasterBusTest : StringSpec({
         events += masterEvent("keep", startTime = 3.4)
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = events))
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         for (b in 0 until 1300) { // ~3.8 s: every edit and the return to "keep" have landed
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
@@ -655,8 +656,8 @@ class MasterBusTest : StringSpec({
         var peak = 0.0
         for (b in 1300 until 1400) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
-            for (i in out.indices step 2) {
-                val v = abs(out[i].toDouble() / Short.MAX_VALUE)
+            for (i in out.left.indices) {
+                val v = abs(out.left[i])
                 if (v > peak) {
                     peak = v
                 }
@@ -690,7 +691,7 @@ class MasterBusTest : StringSpec({
             )
         )
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         for (b in 0 until 500) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
@@ -740,7 +741,7 @@ class MasterBusTest : StringSpec({
             )
         )
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         // Render past the note (25.2 s ≈ block 8680), stop the playback there, and a little beyond.
         for (b in 0 until 8800) {
             if (b == 8700) {
@@ -793,7 +794,7 @@ class MasterBusTest : StringSpec({
                     )
                 )
 
-                val out = ShortArray(blockFrames * 2)
+                val out = StereoBuffer(blockFrames)
                 for (b in 0 until 1000) {
                     d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
                 }

@@ -11,6 +11,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -68,7 +69,7 @@ class KatalystChainRequestSpec : StringSpec({
     )
 
     fun render(d: PlaybackEngineDispatcher, blocks: Int, from: Int = 0) {
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         for (b in from until from + blocks) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)

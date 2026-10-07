@@ -58,7 +58,7 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
     "no diagnostics within the first ~20ms, then one is emitted" {
         var t = 0.0
         val (d, commLink) = createDispatcher { t }
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.renderBlock(0.0, out)
         commLink.readAllDiagnostics() shouldHaveSize 0
@@ -71,7 +71,7 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
     "diagnostics carry the SYSTEM playbackId" {
         var t = 0.0
         val (d, commLink) = createDispatcher { t }
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         d.renderBlock(0.0, out); t = 60.0; d.renderBlock(blockFrames.toDouble(), out)
 
         commLink.readAllDiagnostics().first().playbackId shouldBe KlangCommLink.SYSTEM_PLAYBACK_ID
@@ -80,7 +80,7 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
     "an idle backend (no engines) still emits zero voices and zero cylinders" {
         var t = 0.0
         val (d, commLink) = createDispatcher { t }
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.renderBlock(0.0, out); t = 60.0; d.renderBlock(blockFrames.toDouble(), out)
 
@@ -92,7 +92,7 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
     "diagnostics aggregate the active voice count across engines" {
         var t = 0.0
         val (d, commLink) = createDispatcher { t }
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "a", voice = voice("a")))
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "b", voice = voice("b")))
@@ -104,7 +104,7 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
     "diagnostics report active cylinder states" {
         var t = 0.0
         val (d, commLink) = createDispatcher { t }
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song", cylinder = 0)))
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song", cylinder = 2, freqHz = 880.0)))
@@ -118,7 +118,7 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
     "headroom is a valid ratio (≤ 1.0)" {
         var t = 0.0
         val (d, commLink) = createDispatcher { t }
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         d.renderBlock(0.0, out); t = 60.0; d.renderBlock(blockFrames.toDouble(), out)
 
         commLink.readAllDiagnostics().first().renderHeadroom shouldBeLessThan 1.1
@@ -127,7 +127,7 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
     "scheduling voices lazily allocates exactly their cylinders" {
         var t = 0.0
         val (d, _) = createDispatcher { t }
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song", cylinder = 0)))
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song", cylinder = 3, freqHz = 880.0)))

@@ -11,7 +11,9 @@ import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
- * Standalone single-engine render-to-PCM, used by the offline renderer and the benchmarks.
+ * Standalone single-engine render, used by the offline renderer and the benchmarks. Its output is the
+ * engine's floating-point stereo block (see [MasterStage.process]); a caller that needs 16-bit PCM
+ * converts at its own edge with [writePcm16].
  *
  * It owns its own [AudioBackendContext] + clock + one [PlaybackEngine], and runs the **same**
  * canonical chain as the live dispatcher — [PlaybackEngine.renderInto] (voices → cylinders → mix)
@@ -51,10 +53,11 @@ class KlangAudioRenderer private constructor(
         master.reset()
     }
 
+    /** Renders one block into [out] (`blockFrames` frames per channel), clipped to `[-1, 1]`. */
     // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
     // grows for the life of the backend and overflows Int after ~12.4 h. Exact below 2^53
     // (~5,950 years at 48 kHz). See RenderClock.cursorFrame. Per-sample offsets stay Int.
-    fun renderBlock(cursorFrame: Double, out: ShortArray) {
+    fun renderBlock(cursorFrame: Double, out: StereoBuffer) {
         clock.cursorFrame = cursorFrame
         mix.clear()
         engine.renderInto(mix, cursorFrame)
