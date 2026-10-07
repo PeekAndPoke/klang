@@ -31,20 +31,20 @@ internal val soundOfTheSeaSong = Song(
                  stack( //   Lean back and relax... let the waves carry you away
               // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-           note("c").fast(8).sound("brown").adsr(0.5, 1.0, 1.0, 3.5).onepole(22309)  // . solo()
+           note("c").fast(8).sound("brown").adsr(0.5, 1.0, 1.0, 3.5)  // . solo()
          .gain(wind).pan(berlin.range(0.2, 0.8).slow(34))//.lpf(1500)
         .hpf(300).bpf(freq = perlin.range(110, 110 * 15).slow(64), q = perlin.range(0.5, 5.0).slow(21))
 
         , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        sound("pink pink pink pink").legato(2).degrade(0.5).adsr(1.5, 3.0, 0.5, 5.0) //  . solo()
-       .gain(water).hpf(120).lpf(freq = 4000, env = 19).bpf(freq = 300, q = 1.0).early(2)
+       .gain(water).hpf(120).lpf(freq = 8000, env = 19).bpf(freq = 300, q = 1.0).early(2)
 
         , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         note("~ c ~ c ~ c ~").legato(4).degrade(96/100).sound("pink").adsr(1.0, 5.0, 0.6, 20.0) // . solo()
-        .gain(waves).hpf(120).lpf(freq = 5000, env = 31, attack = 1.0, decay = 3.0, sustain = 0.4, release = 20.0)
+        .gain(waves).hpf(80).lpf(freq = 4000, env = 31, attack = 1.0, decay = 3.0, sustain = 0.4, release = 20.0)
         .bpf(freq = perlin.range(120, 500).slow(22), q = rand.range(0.5, 1.5))
          .pan(sine.range(0.1, 0.4).slow(4)).superimpose(x => x.pan(sine.range(0.9, 0.6).slow(5)))
-          .superimpose(x => x.sound("pink").adsr(0.3, 0.8, 0.2, 1.5).velocity(0.2).hpf(2500).lpf(8000))
+          .superimpose(x => x.sound("pink").adsr(0.3, 0.8, 0.2, 1.5).velocity(0.2).hpf(2500).lpf(13500))
 
              , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                n(randrun(16)).orbit(2).fast(4).degradeBy(0.995).sound("glockenspiel").scale("f2:pentatonic").pan(0.3).body(material = "glass")
@@ -61,5 +61,5 @@ internal val soundOfTheSeaSong = Song(
 
 
 
-            """,
+    """,
 )
