@@ -53,7 +53,7 @@ let core = stack(kick, hat, bass)
 
 // ── Build layers ────────────────────────────────────────────────────
 let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr(0.005, 0.05, 0.5, 0.02).hpf(70).lpf(freq = 180, env = 19).gain(0.42).orbit(3)
-let clap = s("~ cp ~ cp").gain(0.22).hpf(600).orbit(1).reverb(wet = 0.2, size = 3)
+let clap = s("~ cp ~ cp").gain(0.22).hpf(600).orbit(8).reverb(wet = 0.2, size = 3) // own orbit: its reverb is not the hats'
 let oh   = s("[~ ~ ~ oh]!4").gain(0.20).hpf(4000).orbit(1)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.4).hpf(800).orbit(1)
 
@@ -95,7 +95,7 @@ let hitBass = note("d2").sound("saw").distort(0.8, "hard", 4)
 let hitSub  = note("d1").sound("sine")
     .adsr(0.005, 0.3, 0.5, 10.0).lpf(120).gain(0.45)
     .orbit(1)
-let hitCrash = s("cr").gain(0.75).hpf(200).orbit(2).reverb(wet = 0.25, size = 4).adsr(0.005, 0.3, 1.0, 2.0)
+let hitCrash = s("cr").gain(0.75).hpf(200).orbit(9).reverb(wet = 0.25, size = 4).adsr(0.005, 0.3, 1.0, 2.0)
 let hitStab = chord("Dm").voicing()
     .sound("superpulse").unison(voices = 8, spread = 0.25).distort(0.3)
     .adsr(0.005, 0.3, 0.5, 10.0)
@@ -103,7 +103,7 @@ let hitStab = chord("Dm").voicing()
     .lpfCurves(attack = "invsquare") // opens fast, then slowly: the original sweep, before depth became semitones
     .pan(0.2).superimpose(pan(0.8), transpose(-12).pan(0.5), transpose(-24).pan(0.5), pan(0.5).transpose(12).velocity(0.8))
     .gain(0.32 * 0.3)
-    .orbit(3).reverb(wet = 0.4, size = 5)
+    .orbit(10).reverb(wet = 0.4, size = 5) // own orbit: its 10 s tail rings into the next section's sub (orbit 3)
 // Offbeat hi-hat keeps the rhythmic flow alive through the hit + tail.
 // No filterWhen — plays naturally across the full 2-cycle hit segment.
 let hitHat = s("[oh ~]!2").gain(0.25).hpf(7000).adsr(0.005, 0.2, 0.2, 0.5).orbit(2)
@@ -202,14 +202,14 @@ let darkBuild = stack(
         .superimpose(transpose("<-12 0 12 0>/8").gain(0.2 * 0.7).pan(0.1), transpose("<0 12 24 12>/8").gain(saw.range(0.1, 0.2).slow(64).mul(0.7)).pan(0.8))
         .phaser(rate = 1/11, wet = 0.25, center = 3500, sweep = 500)
         .hpf(300).lpf(freq = saw.range(3500, 5000).slow(64), env = 13.7, q = 2.5).adsr(0.005, 0.35, 0.5, 0.12)
-        .orbit(5),
+        .orbit(6), // the same orbits as the build: bassline 6, stabs 5 (tails cross the section edge)
     // Syncopated pad stabs — keep the 90s rhythm but darken with section
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.4)))
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]").transpose(0)
         .sound("superpulse").unison(voices = 2, spread = 0.05).pan(0.2).superimpose(pan(0.8))
         .hpf(400).lpf(freq = saw.range(1500, 2500).slow(32), env = 24).onepole(12000)
         .adsr(0.005, 0.1, 0.25, 0.1).legato(0.7)
-        .gain(0.11).orbit(6).reverb(wet = 0.4, size = 6),
+        .gain(0.11).orbit(5).reverb(wet = 0.4, size = 6),
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift
     note("<a5 d6 bb5 c6 g5 f5 a5 d6>")
         .sound("supersine").unison(voices = 8, spread = 0.15).adsr(0.5, 0.3, 0.5, 0.5)
