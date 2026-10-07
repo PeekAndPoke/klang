@@ -175,6 +175,13 @@ class Voice(
         state is State.Sounding && gateEndFrame > maxOf(blockStart, startFrame)
 
     /**
+     * Whether the gate is still open at [frame]: the voice has not been released, cut or ended (`Pending` or
+     * `Sounding`) and its gate ends after [frame]. The scheduler's realtime solo reads it once per block.
+     */
+    fun gateOpenAt(frame: Double): Boolean =
+        (state is State.Pending || state is State.Sounding) && gateEndFrame > frame
+
+    /**
      * True once any block of this voice has been audible (peak at or above [VOICE_CULL_FLOOR]).
      * A voice that has not sounded yet is never culled, whatever its gate says: a sample with
      * leading silence pitched two octaves down, or an ignitor envelope whose attack outlives a
@@ -199,13 +206,29 @@ class Voice(
         else -> (cull * blockCtx.sampleRateD).toInt()
     }
 
-    // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
+    // Dynamic gain multiplier (set by VoiceScheduler once per block, for solo/mute)
     private var _gainMultiplier: Double = 1.0
+    private var _gainMultiplierFrom: Double = 1.0
+    private var gainMultiplierSet: Boolean = false
 
+    /** The multiplier this block ends on. */
     val gainMultiplier: Double get() = _gainMultiplier
 
+    /**
+     * The multiplier this block starts from: the one the previous block ended on. `SendRenderer` ramps linearly
+     * from here to [gainMultiplier] across the block, so a change is never a step inside a sample (a click); when
+     * the two are equal (no solo anywhere: 1.0 to 1.0) it applies the plain constant, bit for bit as before.
+     */
+    val gainMultiplierFrom: Double get() = _gainMultiplierFrom
+
+    /**
+     * Sets the multiplier for the coming block; called once per block. The first call sets both ends, so a voice
+     * starts at its multiplier instead of ramping in from 1.0.
+     */
     fun setGainMultiplier(multiplier: Double) {
+        _gainMultiplierFrom = if (gainMultiplierSet) _gainMultiplier else multiplier
         _gainMultiplier = multiplier
+        gainMultiplierSet = true
     }
 
     /**

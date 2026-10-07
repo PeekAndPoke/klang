@@ -43,12 +43,6 @@ class SendRenderer(
         val panNorm = voice.pan.coerceIn(0.0, 1.0)
         val panAngle = panNorm * (PI / 2.0)
 
-        // Apply dynamic gain multiplier (e.g., for solo/mute, fades, etc.)
-        val effectiveGain = voice.gain * voice.gainMultiplier
-
-        val gainL = cos(panAngle) * effectiveGain
-        val gainR = sin(panAngle) * effectiveGain
-
         // Pre-fetch cylinder buffers
         val audioBuffer = ctx.audioBuffer
         val outL = cylinder.mixBuffer.left
@@ -60,6 +54,19 @@ class SendRenderer(
         if (ctx.measurePeak) {
             measurePeak(ctx, audioBuffer, offset, length)
         }
+
+        // The solo/mute multiplier moved since the last block: ramp it across this one (no step, no click).
+        if (voice.gainMultiplierFrom != voice.gainMultiplier) {
+            mixRamped(ctx, panAngle, audioBuffer, outL, outR)
+
+            return
+        }
+
+        // Apply dynamic gain multiplier (e.g., for solo/mute, fades, etc.)
+        val effectiveGain = voice.gain * voice.gainMultiplier
+
+        val gainL = cos(panAngle) * effectiveGain
+        val gainR = sin(panAngle) * effectiveGain
 
         for (i in 0 until length) {
             val idx = offset + i
@@ -74,6 +81,36 @@ class SendRenderer(
             // Sum to cylinder mix buffer
             outL[idx] = (outL[idx] + left)
             outR[idx] = (outR[idx] + right)
+        }
+    }
+
+    /**
+     * The mix loop with the multiplier ramped linearly across the whole block, from [Voice.gainMultiplierFrom] to
+     * [Voice.gainMultiplier]: frame `k` of the block uses `from + (to - from) * (k + 1) / blockFrames`, so the
+     * block's last frame lands on the new value and the next block continues from there. A voice that renders only
+     * part of the block (it starts or ends inside it) reads the same line at its own frames.
+     */
+    private fun mixRamped(
+        ctx: BlockContext,
+        panAngle: Double,
+        audioBuffer: AudioBuffer,
+        outL: AudioBuffer,
+        outR: AudioBuffer,
+    ) {
+        val from = voice.gainMultiplierFrom
+        val delta = voice.gainMultiplier - from
+        val blockFrames = ctx.renderContext.blockFrames.toDouble()
+        val baseL = cos(panAngle) * voice.gain
+        val baseR = sin(panAngle) * voice.gain
+        val offset = ctx.offset
+
+        for (i in 0 until ctx.length) {
+            val idx = offset + i
+            val multiplier = from + delta * (idx + 1) / blockFrames
+            val signal = audioBuffer[idx]
+
+            outL[idx] = (outL[idx] + signal * (baseL * multiplier))
+            outR[idx] = (outR[idx] + signal * (baseR * multiplier))
         }
     }
 

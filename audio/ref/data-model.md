@@ -37,7 +37,7 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 |--------------|------------|----------------------------------------|
 | `gain`       | `Double?`  | The channel fader: the one level word on the wire (1.0 = unity, null = unset). A frontend's articulation shorthand (sprudel's `velocity`, a MIDI key velocity) is multiplied into it BEFORE it crosses, so `velocity` and the retired second multiplier are not wire fields (signal-flow plan section 6, 2026-09-19). |
 | `legato`     | `Double?`  | Legato                                 |
-| `solo`       | `Double?`  | 1.0 = full solo (mute others), 0.0 = no solo |
+| `solo`       | `Double?`  | 0.0 = no solo, 1.0 = full solo; the other voices play at `1 - amount` (1.0 silences them, the strongest solo wins). Recorded per `sourceId` from any event, `control` events included |
 
 ### Sound Selection
 
@@ -111,8 +111,8 @@ phase 3 step 9. The one rule of which chain reads which slot lives in the `katal
 
 ### Control and metadata
 
-`master` and `katalyst` (chain names in the one Katalyst namespace since phase 3 step 12, last writer wins), `control` (a control-only event, never
-synthesized), `tags` (UI only), `sourceId`.
+`master` and `katalyst` (chain names in the one Katalyst namespace since phase 3 step 12, last writer wins), `control` (a control-only event carrying engine state: a master or orbit chain swap, a solo keep-alive; never
+synthesized), `tags` (UI only), `sourceId` (the id solo state is tracked by).
 
 ## AdsrDef
 

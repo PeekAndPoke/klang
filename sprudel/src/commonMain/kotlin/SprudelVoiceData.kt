@@ -132,10 +132,16 @@ data class SprudelVoiceData(
     var bodyFx: SvdBody?,
 
     // Playback control
-    /** Solo value - 0.0 = disabled, 0.0..1.0 = enabled (amount), null = not set */
+    /**
+     * Solo amount: 0.0 = no solo, up to 1.0 = full solo; the other patterns play at `1 - amount`. Null = not set.
+     * Written by `solo(...)` (`SoloPattern`) on its sounding events and on its control events.
+     */
     var solo: Double?,
 
-    /** Unique pattern ID for tracking solo state across pattern changes */
+    /**
+     * The id the engine tracks solo state by (`VoiceData.sourceId` on the wire): the atom's source id, replaced by
+     * the `solo` call's own id on everything that call solos.
+     */
     var patternId: String?,
 
     /**
@@ -160,9 +166,9 @@ data class SprudelVoiceData(
     var katalyst: KatalystValue?,
 
     /**
-     * Control-only event: carries engine-level data (a [master] or [katalyst] swap) and is never
-     * synthesized. Set by the top-level `master(...)` / `katalyst(...)` carriers; a
-     * `note("c3").master(...)` leaves it null so the note still sounds.
+     * Control-only event: carries engine state (a [master] or [katalyst] swap, a [solo] keep-alive) and is never
+     * synthesized. Set by the top-level `master(...)` / `katalyst(...)` carriers and by `solo(...)` for the
+     * events that cover its whole query window; a `note("c3").master(...)` leaves it null so the note still sounds.
      */
     var control: Boolean?,
 

@@ -118,7 +118,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   truncates, no upper clamp (the D7 stopgap until `docs/tasks/oversampling-regions.md`).
 - **Solo**: background gain `1 - max(live amounts)` (`solo(1.0)` is exact silence, `solo()` is 0.95); `SoloTracker` (per
   playback, fixed arrays) records "soloed at a until t" from any event, control events included; live = `end + 4 blocks >
-  now`, protected = `end + SOLO_HOLD_SEC > now`; `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`).
+  now`, protected = `end + SOLO_HOLD_SEC > now`; `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`). Realtime voices have no
+  control events: each one whose gate is open records its source until the block's end, so a realtime solo follows the
+  held gates.
 - **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
   `UNISON_MAX_VOICES` = 64, non-finite is 0), both in `audio_bridge/FilterDef.kt`, read by the runtime and the census.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes

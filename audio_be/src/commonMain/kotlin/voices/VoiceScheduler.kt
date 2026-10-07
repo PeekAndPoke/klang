@@ -34,6 +34,18 @@ class VoiceScheduler(
          * this by sample rate so Int frame counts cannot overflow.
          */
         const val REALTIME_HELD_GATE_SEC: Double = 36_000.0
+
+        /** The background's solo ramp, in and out (cubic). Today's value, kept by default (maintainer to confirm). */
+        const val SOLO_RAMP_SEC: Double = 1.5
+
+        /**
+         * How long a soloed source keeps its voices at full level after its last solo event ends. At least
+         * [SOLO_RAMP_SEC], so its tail never dips while the others come back.
+         */
+        const val SOLO_HOLD_SEC: Double = 2.0
+
+        /** Blocks a solo entry stays live past its end, so two back-to-back events never leave a hole at a seam. */
+        const val SOLO_GRACE_BLOCKS: Int = 4
     }
 
     /** A scheduler is per-playback now; the shared backend state arrives via [context]. */
@@ -75,15 +87,17 @@ class VoiceScheduler(
          * [held] = the voice was started with `gateDurSec == null` (gate open until a stop).
          * Fixed-gate realtime voices ([held] = false) end on their own and are NOT released by
          * [cleanup] — only an explicit [stopRealtimeVoice] may cut them short.
+         *
+         * [solo] = the voice's solo amount ([VoiceData.solo]). The realtime path has no control events, so [process]
+         * records it for the voice's source in every block in which the voice's gate is open.
          */
-        data class Realtime(val liveId: Int, val held: Boolean) : VoiceOrigin
+        data class Realtime(val liveId: Int, val held: Boolean, val solo: Double?) : VoiceOrigin
     }
 
-    // Wrapper to track playbackId and solo state alongside Voice
+    // Wrapper to track playbackId and the source id (what solo protects) alongside Voice
     private data class ActiveVoice(
         val voice: Voice,
         val playbackId: String,
-        val soloAmount: Double,
         val sourceId: String?,
         val origin: VoiceOrigin,
     )
@@ -91,58 +105,13 @@ class VoiceScheduler(
     // State with active voices
     private val active = ArrayList<ActiveVoice>(64)
 
-    // Smooth gain transition for solo/mute
-    private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = 1.5, ease = Ease.InOut.cubic)
+    // Smooth gain transition for solo/mute: the level of every voice whose source is not soloed
+    private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = SOLO_RAMP_SEC, ease = Ease.InOut.cubic)
 
-    /**
-     * Tracks solo state for source IDs with delayed cleanup.
-     */
-    private class SoloSourceTracker(val rampDurationSec: Double, val sampleRate: Int) {
-        private data class SourceState(
-            val sourceId: String,
-            // Absolute backend frame — Double, see RenderClock.cursorFrame.
-            val cleanupFrame: Double?,
-        )
-
-        private val sources = mutableMapOf<String, SourceState>()
-
-        // Pre-allocated list for deferred mutations — avoids toList() allocation on the audio thread.
-        // Entries are (sourceId, newState) pairs to apply after the read-only iteration.
-        private val pendingUpdates = mutableListOf<Pair<String, SourceState>>()
-
-        fun update(activeSoloSourceIds: Set<String>, currentFrame: Double): Set<String> {
-            // Pass 1: find sources that need a cleanup frame — collect updates without mutating
-            pendingUpdates.clear()
-            for ((sourceId, state) in sources) {
-                if (sourceId !in activeSoloSourceIds && state.cleanupFrame == null) {
-                    val cleanupFrame = currentFrame + rampDurationSec * sampleRate
-                    pendingUpdates.add(sourceId to state.copy(cleanupFrame = cleanupFrame))
-                }
-            }
-            // Apply deferred mutations
-            for ((sourceId, newState) in pendingUpdates) {
-                sources[sourceId] = newState
-            }
-
-            for (sourceId in activeSoloSourceIds) {
-                sources[sourceId] = SourceState(sourceId, cleanupFrame = null)
-            }
-
-            val iterator = sources.entries.iterator()
-            while (iterator.hasNext()) {
-                val (_, state) = iterator.next()
-                if (state.cleanupFrame != null && currentFrame >= state.cleanupFrame) {
-                    iterator.remove()
-                }
-            }
-
-            return sources.keys
-        }
-    }
-
-    private val soloSourceTracker = SoloSourceTracker(
-        rampDurationSec = 2.0,
-        sampleRate = context.sampleRate,
+    // Who is soloed, at which amount, until when (per playback: this scheduler is the playback's)
+    private val soloTracker = SoloTracker(
+        holdSec = SOLO_HOLD_SEC,
+        graceSec = SOLO_GRACE_BLOCKS * context.blockFrames / context.sampleRateDouble,
     )
 
     // Map playbackId -> per-playback context (registry, epoch, ...)
@@ -158,7 +127,6 @@ class VoiceScheduler(
 
     /** The pool this scheduler renders with, for the spec that proves it is the shared one. */
     internal val scratchBuffersForTest: ScratchBuffers get() = scratchBuffers
-    private val activeSoloSourceIds = mutableSetOf<String>()
 
     // Context reused per block
     private val ctx = Voice.RenderContext(
@@ -375,7 +343,7 @@ class VoiceScheduler(
         prefetchSampleSound(absolute)
         activateVoice(
             absoluteVoice = absolute,
-            origin = VoiceOrigin.Realtime(liveId = voice.liveId, held = voice.gateDurSec == null),
+            origin = VoiceOrigin.Realtime(liveId = voice.liveId, held = voice.gateDurSec == null, solo = voice.data.solo),
             pCtx = pCtx,
         )
     }
@@ -454,29 +422,18 @@ class VoiceScheduler(
         // 2. Prepare Context
         ctx.blockStart = cursorFrame
 
-        // 2.5. Calculate solo/mute gain multipliers
-        activeSoloSourceIds.clear()
-        var maxSoloAmount = 0.0
-        for (voice in active) {
-            if (voice.soloAmount > 0.0 && voice.sourceId != null) {
-                activeSoloSourceIds.add(voice.sourceId)
-                maxSoloAmount = maxOf(maxSoloAmount, voice.soloAmount)
-            }
-        }
+        // 2.5. Solo: the tracker (recorded at promotion, and here for the held realtime voices) says who is
+        // protected and what the others play at, `1 - amount` of the strongest live solo, reached on the ramp.
+        recordRealtimeSolo(cursorFrame = cursorFrame, blockEnd = blockEnd)
+        soloTracker.advance(nowSec = context.clock.secAt(cursorFrame))
 
-        val soloSourceIds = soloSourceTracker.update(activeSoloSourceIds, cursorFrame)
-        val hasSoloSources = soloSourceIds.isNotEmpty()
-
-        val targetGain = if (hasSoloSources) 1.0 - (maxSoloAmount * 0.95) else 1.0
         val blockDurationSec = context.blockFrames.toDouble() / context.sampleRateDouble
-        val currentBackgroundGain = soloMuteRamp.step(targetGain, blockDurationSec)
+        val currentBackgroundGain = soloMuteRamp.step(soloTracker.targetGain(), blockDurationSec)
 
         // 3. Render Loop. A voice that ends here (render returns false: `Done`) leaves the list in the same pass
         // ([retainInOrder], as [removeDoneVoices]): the survivors keep their order.
         active.retainInOrder { activeVoice ->
-            val isFromSoloSource = activeVoice.sourceId != null && activeVoice.sourceId in soloSourceIds
-
-            if (isFromSoloSource) {
+            if (soloTracker.isProtected(activeVoice.sourceId)) {
                 activeVoice.voice.setGainMultiplier(1.0)
             } else {
                 activeVoice.voice.setGainMultiplier(currentBackgroundGain)
@@ -581,6 +538,9 @@ class VoiceScheduler(
             // because it is the same kind of engine-level state, and the default orbit is the one
             // `VoiceFactory` resolves for a voice that names none.
             head.data.katalyst?.let { cylinders.requestChain(orbit = head.data.cylinder ?: 0, name = it) }
+            // Solo state, the same kind of engine state and the same rule: "this source is soloed at this amount
+            // until this event ends", from a control event (what `solo(...)` puts over a rest) or a sounding note.
+            recordSolo(head.data, untilSec = epoch + head.gateEndTime)
 
             // A control-only event has now been consumed — it must never reach voice creation.
             // The flag is explicit because a null `sound` is NOT silent: the ignitor registry
@@ -643,9 +603,43 @@ class VoiceScheduler(
             playbackCtx = pCtx,
             getSample = ::getCompleteSample,
         )?.let { voice ->
-            val soloAmount = absoluteVoice.data.solo ?: 0.0
-            val sourceId = absoluteVoice.data.sourceId
-            active.add(ActiveVoice(voice, absoluteVoice.playbackId, soloAmount, sourceId, origin = origin))
+            active.add(
+                ActiveVoice(
+                    voice = voice,
+                    playbackId = absoluteVoice.playbackId,
+                    sourceId = absoluteVoice.data.sourceId,
+                    origin = origin,
+                )
+            )
         }
+    }
+
+    /**
+     * The realtime path's solo: every realtime voice whose gate is open at the block start records its source until
+     * the block's end, so the solo lasts while ANY voice of the source is held and ends the grace after the last gate
+     * closes (one block more only for a fixed gate closing inside a block; a note-off lands on a block boundary): a note-off, a cut, a voice that ended on its own. A note that made no voice records
+     * nothing. Timeline voices are not read here: their solo comes from the events, control events included.
+     */
+    private fun recordRealtimeSolo(cursorFrame: Double, blockEnd: Double) {
+        val untilSec = context.clock.secAt(blockEnd)
+
+        for (activeVoice in active) {
+            val origin = activeVoice.origin
+            val sourceId = activeVoice.sourceId
+
+            if (origin is VoiceOrigin.Realtime && origin.solo != null && sourceId != null &&
+                activeVoice.voice.gateOpenAt(cursorFrame)
+            ) {
+                soloTracker.record(sourceId = sourceId, amount = origin.solo, untilSec = untilSec)
+            }
+        }
+    }
+
+    /** Records [data]'s solo amount for its source until [untilSec]; nothing without both (see [SoloTracker.record]). */
+    private fun recordSolo(data: VoiceData, untilSec: Double) {
+        val amount = data.solo ?: return
+        val sourceId = data.sourceId ?: return
+
+        soloTracker.record(sourceId = sourceId, amount = amount, untilSec = untilSec)
     }
 }
