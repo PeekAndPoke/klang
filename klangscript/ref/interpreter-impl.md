@@ -19,6 +19,10 @@ Helper extension: `.toIntOrNull()`, `.toDoubleOrNull()`, `.isNumber()`, `.isStri
 ## Environment & Scoping (`runtime/Environment.kt`)
 
 Lexical scoping via parent-chain `Environment`. Each function call creates a child environment.
+A `let` / `const` is defined when execution reaches it, and a closure looks its names up when it runs, in the
+scope it was created in: a closure called after a later declaration of its enclosing scope sees that local, code
+before the declaration, and a closure that runs there (a call argument, an IIFE), sees the outer or library name.
+How the editor's analyzer follows this: `ref/intel-analyzer.md`, "Locals declared further down".
 `NativeRegistry` (produced by builder) is injected at engine creation — immutable after that.
 
 ## Error Handling (`runtime/Errors.kt`)
@@ -78,8 +82,9 @@ registerObject("Math", MathObject) {
   object, `KlangSymbol.callForm`); no docs symbol is named after the operator. The editor resolves a call on
   the object's name like any top-level call (`getCallable(name, null)`), and a call on another value of the
   object's type (`Kat(...)`, a local) through `KlangDocsRegistry.getCallForm(type)` (by simple name, else by
-  FQCN); a local is never a same-named global, in the inferrer and in `NamedArgumentChecker` alike. The docs page
-  shows the object's call form on an alias card too (`KlangDocsRegistry.callFormFor`). The param tools bind a call
+  FQCN); a local is never a same-named global, in the inferrer, in `NamedArgumentChecker` and in the param tools
+  (`argumentAt`) alike. The docs page and the hover show the object's call form on an alias too
+  (`KlangDocsRegistry.callFormFor`, `topLevelView`), and an editor diagnostic names the call as written (`lowpass`). The param tools bind a call
   form's arguments to its own parameters, except where a method has the very same parameter list and declares
   tools for the argument (the field accessors and compounds mirror their pattern method: `pan(0.7)`,
   `lpf(800)`), and then the whole-call rewrite is open, since the twin has the same parameter names; the signals'
@@ -105,8 +110,14 @@ registerObject("Math", MathObject) {
 
 ## Built-in Type Methods
 
-Handled in `Interpreter.evaluateMemberAccess()` — checks for extension methods on `ArrayValue`, `StringValue`,
-`ObjectValue` before throwing reference error. Registered in `klangscript-libs/src/commonMain/kotlin/stdlib/KlangStdLib.kt` via `registerType<ArrayValue>` etc.
+Handled in `Interpreter.evaluateMemberAccess()`: a native object looks up its type's extensions, and every other value
+kind except a script object (number, string, boolean, array, null, a function, a bound method) looks up the
+extensions registered on its runtime class the same way, so `true.toString()` reaches `KlangScriptBooleanExtensions`
+(2026-10-07, `docs/tasks-archive/2026-10/20261007-boolean-member-access.md`). A kind with none registered ends at "Cannot access property 'x'
+on non-object value". The ranked error names a script value kind by its script name, the one the editor's
+types use (`Type 'Boolean' has no method 'toStrin'`, `Environment.getDisplayTypeName`). A script object (`ObjectValue`) keeps plain property access: its own properties are its
+members, a missing one is `null`. The stdlib methods are declared with `@KlangScript.TypeExtensions(StringValue::class)`
+and friends in `klangscript-libs/src/commonMain/kotlin/stdlib/` and registered by KSP. Guard: `MemberAccessValueKindsSpec`.
 
 ## Import/Export
 

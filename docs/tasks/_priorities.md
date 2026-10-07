@@ -175,7 +175,7 @@ The release-defining set, regardless of when they're sequenced:
   (source and built copy); (3) the deploy is versioned, `klang.finzo.de/versions/v<version>-<git hash>` with a `current`
   symlink, the newest 10 releases kept with their source maps (`console/deploy-finzo.sh`); (5) the repo-scanning guard
   `RetiredIgnitorNamesSpec` goes (it guarded what the compiler and the song smoke test already catch); the retired
-  names moved from `CLAUDE.md` to `docs/retired-names.md`. Queued: [`callable-object-docs.md`](callable-object-docs.md),
+  names moved from `CLAUDE.md` to `docs/retired-names.md`. Done 2026-10-07: [`20261007-callable-object-docs.md`](../tasks-archive/2026-10/20261007-callable-object-docs.md),
   a callable object's docs show its object form and its callable form.
 - **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
   `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [

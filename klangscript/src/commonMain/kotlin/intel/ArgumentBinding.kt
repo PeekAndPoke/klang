@@ -7,6 +7,7 @@ package io.peekandpoke.klang.script.intel
 
 import io.peekandpoke.klang.script.ast.ArrowFunction
 import io.peekandpoke.klang.script.ast.CallExpressionAtResult
+import io.peekandpoke.klang.script.ast.Identifier
 import io.peekandpoke.klang.script.ast.MemberAccess
 import io.peekandpoke.klang.script.docs.callableForReceiver
 import io.peekandpoke.klang.script.types.KlangCallable
@@ -117,6 +118,11 @@ data class ArgumentAt(
  * The call argument at [pos] and what it binds to ([bindArgument]), or null when [pos] is not in
  * a call argument or nothing binds. [symbolLookup] finds the called name's symbol, by default in
  * this analysis's registry.
+ *
+ * A local shadows a same-named global here as everywhere in the analysis: `const gain = (a) => a; gain(0.5)` calls
+ * the local, which has no tools. A local holding a callable object (`let d = duck; d(0.5)`) binds through the
+ * object's symbol, the way the call dispatches, and so does a second name of the object (`lowpass(800)` binds
+ * through `lpf`).
  */
 fun AnalyzedAst.argumentAt(
     pos: Int,
@@ -128,8 +134,22 @@ fun AnalyzedAst.argumentAt(
         return null
     }
 
-    val symbol = symbolLookup(site.functionName) ?: return null
     val callee = site.call.callee
+    val local = (callee as? Identifier)?.let { localBindingOf(it) }
+
+    val symbol = if (local != null) {
+        val callForm = local.type?.let { registry.getCallForm(it) } ?: return null
+
+        symbolLookup(callForm.name) ?: return null
+    } else {
+        val named = symbolLookup(site.functionName) ?: return null
+
+        // A second name of a callable object (`lowpass(800)`, `vel(0.5)`): no top-level callable of its own, so the
+        // call dispatches to the object's call form, and the object's symbol carries the tools
+        val aliasOf = if (callee is Identifier && named.callableForReceiver(null) == null) registry.callFormFor(named) else null
+
+        aliasOf?.let { symbolLookup(it.name) } ?: named
+    }
 
     val receiver = if (callee is MemberAccess) {
         typeOf(callee.obj)?.let { CallReceiver.Typed(it) } ?: CallReceiver.Untyped

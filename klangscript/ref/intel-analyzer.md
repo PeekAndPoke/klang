@@ -23,14 +23,24 @@ All that logic lives inside `AnalyzedAst.build`.
    and the receiver's type is known, look up via `registry.getSymbolWithReceiver(name, type)`.
    Strict: returns null when the receiver is known but no variant matches (so unrelated DSL
    variants don't leak — e.g. hovering `.distort` on an `IgnitorDsl` chain doesn't show the
-   sprudel `String.distort` variant).
+   sprudel `String.distort` variant). With the receiver type unknown and the receiver a local
+   (`x => x.gain(...)`) the symbol's member variants (`registry.memberView`); any other receiver
+   of unknown type (a namespace import, `sp.note(...)`, which calls the top-level `note`) the
+   whole symbol. The receiver identifier of a same-named member (`gain` in `gain.gain`) is no
+   member.
 
 2. **Local-binding shadowing** — if the cursor sits on an Identifier resolved by the scope
    walk to a local `let` / `const` / `export` / arrow-parameter binding, returns a
    synthesised `KlangSymbol(origin = Origin.Local, variants = [KlangProperty(name, type)])`.
    Locals shadow same-named registry entries even when the local's inferred type is null.
 
-3. **Bare-name fallback** — for everything else, `registry.get(name)`.
+3. **Bare name**: for everything else, `registry.topLevelView(registry.get(name))`: the
+   top-level variants only (a property, a function, a callable object's call form; the object
+   first), plus the object's call form for a second name of a callable object (`Kat`,
+   `lowpass`, via `callFormFor`), with the first variant's library as the origin. A name stdlib
+   and sprudel share (`perlin`, `gain`, `duck`, ...) so hovers as sprudel's object at the top
+   level, not as the stdlib method registered first (2026-10-07, guards `PositionAwareIntelSpec`,
+   sprudel's `EditorPositionIntelSpec`).
 
 ## Lexical scoping in `TypeMapBuilder`
 
@@ -45,6 +55,30 @@ A child scope is pushed when entering:
 - `IfExpression.thenBranch` and `ElseBranch.Block.statements`
 - `WhileStatement.body`, `DoWhileStatement.body`
 - `ForStatement` (init/cond/update/body all share one scope started at the for)
+
+**Locals declared further down (the one home of this rule).** A statement list announces its
+`let` / `const` / `export` names first (`TypeScope.declareAhead`). Code written before a
+declaration does not see it: the interpreter defines a local when it reaches it, and a closure
+looks its names up when it runs. A scope's later locals are visible to everything written inside an arrow that is a direct `let` /
+`const` / `export` initialiser of that scope, eager bodies nested in it included (they run when the
+arrow runs, or later), and to nothing else: a block, an IIFE or a call-argument body that is not
+inside such an arrow of that scope finishes before the scope reaches the declaration.
+Such an arrow's scope is `TypeScope.deferredBody()`. So `const f = () => gain(level = 1); const
+gain = (level) => level` checks `gain` as the local, so does a helper inside an eager call inside
+`f` (`const f = () => { run(() => { const h = () => gain(); h() }) }`), a helper declared and
+called inside a block or an IIFE at the top level (`if (c) { const h = () => gain(); h() }`,
+`(() => { const h = ...; return h() })()`) calls the outer or library name, and a recursive local
+sees itself. Every other arrow runs
+where it is written and gets a plain child scope, seeing only what is declared above it: a call
+argument (a sprudel transform, a configure lambda, `run(f)`), an IIFE, an arrow in an array or
+object, a returned arrow (the only later declarations it could see follow its `return` and never
+run). Once the walk reaches the declaration, the identifiers that read it early take its
+binding and type (hover, param tools, the check); an expression built on them (the return type
+of `d(800)`) stays untyped. Where the editor and the runtime still disagree: a deferred arrow
+that is called before the declaration runs (`const f = () => gain(); f(); const gain = ...`, or a
+declared function handed to an eager call above the declaration) calls the global at runtime,
+while the editor reads the local. Guards: `PositionAwareIntelSpec`, sprudel's
+`EditorPositionIntelSpec`.
 
 Bindings are added on visiting:
 
@@ -61,10 +95,10 @@ Bindings are added on visiting:
   trailing vararg parameter's type. Named arguments bind by name. Unknown callee, mixed
   named/positional, or a bare arrow (not a call argument): type = null.
 
-`TypeScope.contains(name)` returns true even when the bound type is null — "bound with
+`TypeScope.resolve(name)` returns a binding even when its type is null: "bound with
 unknown type" is meaningfully different from "not bound", and only the former should
-shadow the registry. This is why `ExpressionTypeInferrer.inferIdentifier` checks
-`scope.contains(id.name)` before falling through to the registry, instead of just doing
+shadow the registry. This is why `ExpressionTypeInferrer.inferIdentifier` returns the
+resolved binding's type, null included, before falling through to the registry, instead of
 `scope.resolve(id.name)?.type ?: registry.get(...)`.
 
 ## `ExpressionTypeInferrer` contract
@@ -89,7 +123,11 @@ callable object (`let d = duck; d(1)`) resolves through `registry.getCallForm` o
 and any other local returns null (we don't infer return types of locally-bound arrow functions yet).
 Crucially, it does NOT fall through to `registry.getCallable(name, null)` in that case: otherwise `f()`
 on a local arrow `let f = ...` would resolve to a same-named global like sprudel's `signal()`.
-`NamedArgumentChecker` applies the same rule through the analyzer's locally bound identifiers.
+`NamedArgumentChecker` applies the same rule through the analyzer's locally bound identifiers, and so
+does `argumentAt` for the param tools (`AnalyzedAst.localBindingOf`): a local function has no tools, a
+local holding a callable object binds through the object's symbol, and so does a second name of the
+object with no top-level callable of its own (`lowpass(800)` binds through `lpf`, `callFormFor`). A diagnostic names the call as
+written (`lowpass(fre = 800)` says `on 'lowpass'`, not the `lpf` it resolves to), as the runtime does.
 
 ## `KlangSymbol.Origin`
 

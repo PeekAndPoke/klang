@@ -1,7 +1,7 @@
 # Callable objects show both their forms in the docs
 
-Status: **done 2026-10-07** (branch `callable-object-docs`, reviews clean in round 2), except the open items at the
-end. Report: `tmp/reviews/cod-report.md`.
+Status: **done 2026-10-07** (branch `callable-object-docs`, reviews clean in round 2); the open items at the end
+done 2026-10-07 on `correctness-fixes`. Reports: `tmp/reviews/cod-report.md`, `tmp/reviews/fix-script-report.md`.
 
 ## The ask (maintainer, 2026-10-07)
 
@@ -81,8 +81,8 @@ What we built, in one pass with the coordinator's brief:
 - **KDoc "or call it" sentences kept.** On the sprudel docs page the object's description comes first and the
   sentence is the only prose there naming the shorthand before the call form's card. In the editor hover the first
   non-blank description in variant order wins, and the editor registers stdlib before sprudel, so on a name both
-  libraries share (`perlin`, `sine`, `adsr`, `duck`, `tremolo`, `gain`, `compressor`, ...) the hover prose is the
-  stdlib variant's (`Ignitor.perlin`). The sentence stays either way.
+  libraries share (`perlin`, `sine`, `adsr`, `duck`, `tremolo`, `gain`, `compressor`, ...) the hover prose was the
+  stdlib variant's (`Ignitor.perlin`; fixed since, see the last section). The sentence stays either way.
 
 Numbers: the docs data before and after differ only by the 52 moves (51 sprudel, 1 stdlib, order included) and the
 removed `invoke` symbol; the registries only by `invoke` -> `__invoke__` (52 registrations); production bundle
@@ -112,16 +112,43 @@ no default; `getCallForm` stops once it has found the object (an object that is 
 scan runs only for a type no symbol of its name holds); the whole-call rewrite on a tooled top-level setter
 (`superimpose(tremolo(5, 0.3))`) is asserted.
 
-## Open items
+## Open items, done (2026-10-07, branch `correctness-fixes`)
 
-- **Hover prose on shared names.** The hover shows the first non-blank description in variant order, so for a name
-  stdlib and sprudel share the stdlib variant's prose comes first (`perlin` hovers as `Ignitor.perlin`). A follow-up
-  could prefer the variant that matches the bare identifier (top-level property or call form). Not fixed here.
-- **Hover on an alias** (`Kat`, `lowpass`) lists `val Kat: Katalyst` only; the docs page shows the call form, the
-  hover does not (`KlangSymbolDocsComp` gets the symbol, not the registry).
-- **A closure calling a local declared after it** gets a false named-argument error (older than this change): the
-  analyzer binds the name only from its declaration on, so the call inside the closure resolves to a same-named global.
-- **The param tools ignore local bindings** (older): `const gain = (a) => a; note("c").superimpose(gain(0.5))` opens the
-  Sprudel gain tool on `0.5`, because `argumentAt` looks the callee up by name with no scope check.
-- **The editor diagnostic names the canonical object** (`Unknown parameter 'fre' on 'lpf'` for `lowpass(fre = 800)`)
-  while the runtime names the call as written (`in lowpass`).
+The five items left open above, fixed in one pass; report `tmp/reviews/fix-script-report.md`. All live in the
+analyzer (`klangscript/intel`, `KlangDocsRegistry`), none in the UI.
+
+- **Hover prose on shared names.** `AnalyzedAst.symbolAt` narrows the symbol to what the name is where it stands: a
+  bare name (called or not) shows its top-level variants only (`KlangDocsRegistry.topLevelView`: the property, a
+  function, the call form; the object first, as decided above), a member of a known receiver the receiver's method (as
+  before), a member of an unknown receiver the methods (`memberView`). The origin chip follows the first variant. So
+  `perlin`, `sine`, `adsr`, `duck`, `tremolo`, `gain`, `compressor` hover with sprudel's prose and chip, and
+  `Ignitor.perlin` with the stdlib's. A member of a receiver of unknown type is narrowed to the methods only when the
+  receiver is a local; a namespace import (`sp.note(...)`) keeps the whole symbol (round 1). The receiver identifier of a same-named member (`gain` in `gain.gain`) is no
+  longer read as the member.
+- **Hover on an alias.** `topLevelView` adds the object's call form (`callFormFor`) for a second name of a callable
+  object, so `Kat` hovers as `val Kat: Katalyst` and `Katalyst(configure: ...)`, and `lowpass` with `lpf`'s call
+  form, as the docs page shows them. The hover component still gets a symbol only; the analyzer hands it the right one.
+- **A closure calling a local declared after it.** The runtime defines a `let` / `const` when execution reaches it and
+  looks a closure's names up when the closure runs, so a closure run after the declaration calls the local, code
+  before it the global (pinned on the runtime too). The analyzer announces each statement list's declarations first
+  (`TypeScope.declareAhead`). Only an arrow that is the whole initialiser of a `let` / `const` / `export` sees a local
+  declared further down (`TypeScope.deferredBody()`), with the declaration's type once the walk reaches it; which
+  scopes' later locals it sees is stated once in the rule's home (below; round 2 corrected a helper inside a block, an
+  IIFE or a transform body, round 3 the wording). Every other arrow (a call argument such as a sprudel
+  transform or a configure lambda, an IIFE, an arrow in an array or object, a returned arrow) sees only what is
+  declared above it, as before. A recursive local sees itself. Where
+  the editor and the runtime still disagree: such a deferred arrow called before the declaration runs (`const f = () =>
+  gain(); f(); const gain = ...`) calls the global at runtime, while the editor reads the local. The rule's home:
+  `klangscript/ref/intel-analyzer.md`, "Locals declared further down" (round 1 narrowed it from every arrow, which read
+  eager call-argument arrows wrongly).
+- **The param tools and local bindings.** `argumentAt` asks the analysis for the callee's local binding
+  (`AnalyzedAst.localBindingOf`): a local function has no tools (`const gain = (a) => a; ...superimpose(gain(0.5))`
+  opens nothing), a local holding a callable object (`let d = lpf; d(800)`) binds through the object's symbol, and so
+  does a second name of the object (`lowpass(800)` opens `lpf`'s filter tool, round 1).
+- **The diagnostic's name.** `NamedArgumentChecker` names the call as written (`Unknown parameter 'fre' on 'lowpass'`,
+  `on 'Kat'`), as the runtime does; the mixing message lost its dash too.
+
+Specs: `PositionAwareIntelSpec` (klangscript, common, so JVM and JS, a hand-built registry with the KSP shapes) and
+`EditorPositionIntelSpec` (sprudel, JVM, the real registries in the editor's order). Eleven mutations in the report,
+twelve more in its round-1 section, each red; the two existing specs that pin "the object first, then the call" (`InvokeAnalysisTest`,
+`KatalystCallFormSpec`) stay as they are.

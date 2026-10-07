@@ -29,6 +29,13 @@ record), and put the narrative in the task record, which gets archived. The full
   under the internal symbol `__invoke__` (`NativeOperatorNames.INVOKE`, no script spells it); the docs carry it as
   the object's second variant (`perlin: perlin` and `perlin(from, to)` on one symbol, `KlangSymbol.callForm`), the
   editor resolves `Kat(...)` through `KlangDocsRegistry.getCallForm(type)`. `ref/interpreter-impl.md`.
+- **Member access**: every value kind except a script object (number, string, boolean, array, null, a function)
+  looks up the extensions registered on its runtime class the same way (`true.toString()`); a script object keeps
+  plain property access. `ref/interpreter-impl.md`, guard `MemberAccessValueKindsSpec`.
+- **Editor reads a name by position**: the hover of a bare name shows its top-level variants (a name stdlib and
+  sprudel share hovers as sprudel's object, an alias with the object's call form), a member its receiver's method;
+  which later locals a closure sees is stated once in `ref/intel-analyzer.md`, "Locals declared further down";
+  a local shadows a global for the checker and the param tools alike. `ref/intel-analyzer.md`.
 - **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
   on immutable oscillator builder wrappers (`IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
   `octaves`, `suboctaves`, `fundamental` (a gain), `analog` and `analogSpread`, and the six super builders
@@ -150,4 +157,7 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   output no longer depends on the file system's directory order (sprudel 150 chunk functions to 56)
   (`docs/tasks/reduce-js-bundle-size.md`, "Step 3: source order").
 - 2026-10-07: callable objects show both forms in the docs, the call form as the object's second variant (the stray
-  `invoke` docs symbol is gone), and the call's internal symbol is `__invoke__` (`docs/tasks/callable-object-docs.md`).
+  `invoke` docs symbol is gone), and the call's internal symbol is `__invoke__` (`docs/tasks-archive/2026-10/20261007-callable-object-docs.md`).
+- 2026-10-07: member access reaches every value kind's extensions (`true.toString()`), and the editor reads a name by
+  position (hover, closures seeing later locals, param tools and locals, diagnostics name the call as written)
+  (`docs/tasks-archive/2026-10/20261007-boolean-member-access.md`, `docs/tasks-archive/2026-10/20261007-callable-object-docs.md` "Open items, done").
