@@ -7,6 +7,7 @@ package io.peekandpoke.klang
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.ignitor.GraphCensus
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.KlangPattern
@@ -239,7 +240,7 @@ class SongBenchmark(
         }
 
         val totalFrames = (case.cycles * secPerCycle * sampleRate).toInt()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         val numBlocks = totalFrames / blockFrames
 
         var maxBlockUs = 0.0

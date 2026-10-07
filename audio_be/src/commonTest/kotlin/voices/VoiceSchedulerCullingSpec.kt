@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -60,7 +61,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
     /** Drives the dispatcher forward by [seconds] of blocks, continuing from where the last call stopped. */
     class Clock(private val d: PlaybackEngineDispatcher) {
-        private val out = ShortArray(blockFrames * 2)
+        private val out = StereoBuffer(blockFrames)
         private var cursor = 0.0
 
         fun render(seconds: Double) {

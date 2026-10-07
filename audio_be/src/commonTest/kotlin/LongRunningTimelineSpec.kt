@@ -10,7 +10,6 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import kotlin.math.abs
 
 /**
  * **The engine must still make sound after a very long uptime.**
@@ -47,7 +46,7 @@ class LongRunningTimelineSpec : StringSpec({
     /** Schedules one sustained voice just after [startFrame] and reports how many blocks sounded. */
     fun blocksWithAudio(startFrame: Double): Int {
         val d = newDispatcher()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         val startSec = startFrame / sampleRate + 0.01
 
         d.handle(
@@ -69,7 +68,7 @@ class LongRunningTimelineSpec : StringSpec({
         var frame = startFrame
         repeat(60) {
             d.renderBlock(cursorFrame = frame, out = out)
-            if (out.any { abs(it.toInt()) > 200 }) heard++
+            if (out.peak() > 0.006) heard++ // about 200 16-bit counts, -44 dBFS
             frame += blockFrames
         }
         return heard

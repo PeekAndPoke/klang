@@ -12,10 +12,10 @@ import io.kotest.matchers.shouldBe
 
 /**
  * Guards the final master/output stage extracted from KlangAudioRenderer (D2·1): [MasterStage.process] runs on the
- * summed mix, so the wiring (DC → limiter → clip + interleave) is covered here in isolation. The clip is the real
- * one: [MasterStage.process] calls [interleavePcm16] and [pcm16], whose boundary table (both clamp branches, the
- * -1.0 boundary, the non-finite rows) lives in `KlangAudioRendererSpec`; the rows below show the clamp firing
- * through [MasterStage.process], and that no non-finite sample reaches it (phase 3 step 12, risk R0).
+ * summed mix, so the wiring (DC → limiter → clip) is covered here in isolation. The clip is the real one:
+ * [MasterStage.process] calls [clipOutput] and [clipSample], whose boundary table (both clamp branches, the
+ * boundaries, the non-finite rows, no quantisation) lives in `OutputClipSpec`; the rows below show the clamp
+ * firing through [MasterStage.process], and that no non-finite sample reaches it (phase 3 step 12, risk R0).
  */
 class MasterStageSpec : StringSpec({
 
@@ -25,19 +25,19 @@ class MasterStageSpec : StringSpec({
     "silent mix produces all-zero output" {
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val mix = StereoBuffer(blockFrames)            // cleared on construction
-        val out = ShortArray(blockFrames * 2) { 999 }  // non-zero, must be overwritten
+        val out = StereoBuffer(blockFrames).apply { fill(0.999) }  // non-zero, must be overwritten
 
         master.process(mix, out)
 
-        out.all { it == 0.toShort() } shouldBe true
+        out.isExactlySilent() shouldBe true
     }
 
-    "output is interleaved L/R and routes channels independently" {
+    "output routes channels independently" {
         // The master limiter has lookahead, so a left-only impulse emerges
         // HOUSE_LIMITER_LOOKAHEAD_SECONDS later — past the end of a single 64-frame block. Render enough
         // blocks to carry it through, then look for it wherever it lands.
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         val leftSeen = mutableListOf<Int>()
         val rightSeen = mutableListOf<Int>()
 
@@ -49,8 +49,8 @@ class MasterStageSpec : StringSpec({
             master.process(mix, out)
 
             for (i in 0 until blockFrames) {
-                if (out[i * 2].toInt() != 0) leftSeen += block * blockFrames + i
-                if (out[i * 2 + 1].toInt() != 0) rightSeen += block * blockFrames + i
+                if (out.left[i] != 0.0) leftSeen += block * blockFrames + i
+                if (out.right[i] != 0.0) rightSeen += block * blockFrames + i
             }
         }
 
@@ -69,10 +69,10 @@ class MasterStageSpec : StringSpec({
         // Measured on the SETTLED portion only: a DC blocker is a high-pass with a ~21 ms time
         // constant, so the first blocks legitimately still carry the offset. Including them would
         // measure the settling transient rather than the ordering.
-        fun renderPeak(offset: Double): Int {
+        fun renderPeak(offset: Double): Double {
             val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
-            val out = ShortArray(blockFrames * 2)
-            var peak = 0
+            val out = StereoBuffer(blockFrames)
+            var peak = 0.0
             val settleBlocks = 200
 
             repeat(400) {
@@ -86,7 +86,7 @@ class MasterStageSpec : StringSpec({
                 master.process(mix, out)
                 if (it >= settleBlocks) {
                     for (i in 0 until blockFrames) {
-                        val a = kotlin.math.abs(out[i * 2].toInt())
+                        val a = kotlin.math.abs(out.left[i])
                         if (a > peak) peak = a
                     }
                 }
@@ -112,7 +112,7 @@ class MasterStageSpec : StringSpec({
         master.latencyMs shouldBe (expected * 1000.0 / sampleRate)
 
         // ...and it must match what the stage really does. Feed one impulse, find it in the output.
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         var foundAt = -1
         var frame = 0
 
@@ -121,7 +121,7 @@ class MasterStageSpec : StringSpec({
             if (block == 0) mix.left[0] = 0.5
             master.process(mix, out)
             for (i in 0 until blockFrames) {
-                if (foundAt < 0 && out[i * 2].toInt() != 0) foundAt = frame + i
+                if (foundAt < 0 && out.left[i] != 0.0) foundAt = frame + i
             }
             frame += blockFrames
         }
@@ -133,7 +133,7 @@ class MasterStageSpec : StringSpec({
         // The limiter is 20:1, not infinite: a sine at +60 dBFS leaves it near +2 dBFS, so the clip's
         // two clamp branches fire through process(), on the settled part.
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         var sawMax = false
         var sawMin = false
 
@@ -149,8 +149,8 @@ class MasterStageSpec : StringSpec({
 
             if (block >= 100) {
                 for (i in 0 until blockFrames) {
-                    sawMax = sawMax || out[i * 2] == Short.MAX_VALUE
-                    sawMin = sawMin || out[i * 2] == Short.MIN_VALUE
+                    sawMax = sawMax || out.left[i] == 1.0
+                    sawMin = sawMin || out.left[i] == -1.0
                 }
             }
         }
@@ -160,12 +160,12 @@ class MasterStageSpec : StringSpec({
     }
 
     "a non-finite sample in the mix never reaches the clip, so it never clicks a rail" {
-        // pcm16 maps NaN to Short.MIN_VALUE (a full-scale negative click) and +/-Inf to the rails.
+        // The clip maps NaN to -1.0 (a full-scale negative click) and +/-Inf to the rails.
         // None of that is heard: the DC blockers pass a non-finite sample on (and one more after
         // it), but the house limiter's delay ring stores it as 0.0, so the clip sees only finite
         // values. A quiet sine cannot reach a rail, so any rail sample here is a leaked non-finite.
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         val poison = mapOf(3 to Double.NaN, 5 to Double.POSITIVE_INFINITY, 7 to Double.NEGATIVE_INFINITY)
         var railHits = 0
         var heard = false
@@ -187,12 +187,12 @@ class MasterStageSpec : StringSpec({
 
             master.process(mix, out)
 
-            for (s in out) {
-                if (s == Short.MIN_VALUE || s == Short.MAX_VALUE) {
+            for (s in out.interleavedCopy()) {
+                if (s == -1.0 || s == 1.0) {
                     railHits++
                 }
 
-                heard = heard || s != 0.toShort()
+                heard = heard || s != 0.0
             }
         }
 

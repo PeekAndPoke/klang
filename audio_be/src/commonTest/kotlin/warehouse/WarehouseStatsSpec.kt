@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.BackendClock
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -147,7 +148,7 @@ class WarehouseStatsSpec : StringSpec({
                 ),
             )
         )
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         // Diagnostics go out every ~20 ms of wall time; advance the fake clock past that.
         repeat(3) {
             now += 25.0

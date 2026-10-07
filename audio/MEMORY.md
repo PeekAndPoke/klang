@@ -38,8 +38,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Master**: the same Katalyst chain at the output (`MasterBus`, `master(Katalyst(k => ...))`, off with
   `master(Katalyst())`). The Master DSL is retired.
 - **House stage**: `MasterStage`: DC blockers, the limiter (-1 dB, 20:1, 5 ms lookahead, always on, not
-  authorable; `MasterLimiterDefaults.kt`, `MasterStage.HOUSE_LIMITER_*`), then clip and interleave to 16-bit.
-  The lookahead delays the whole output uniformly.
+  authorable; `MasterLimiterDefaults.kt`, `MasterStage.HOUSE_LIMITER_*`), then the clip into the engine's output:
+  a floating-point `StereoBuffer`, no quantisation (in `[-1, 1]` a sample passes, above 1 is 1.0, else -1.0). The
+  worklet copies it straight into Web Audio; only the JVM line and the WAV writer go to 16 bits, at their edge
+  (`writePcm16` in `_pcm16_edge.kt`, the one home). The lookahead delays the whole output uniformly.
 - **The wire** (`VoiceData`, `KlangCommLink`): pitch, gain, pan, routing, lifetime, and two slot maps; only seconds
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
   `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`). Fields: `audio/ref/data-model.md`.
@@ -187,6 +189,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 The engine's output is floating point: the master clips into a `StereoBuffer`, the browser hears the
+  floats, the 16-bit step lives only at the JVM/WAV edge (`docs/tasks-archive/2026-10/20261007-float-output.md`)
 - 2026-10-07 One pitch mod over several pitched sources at one pitch advances once per block; Sakura's `shaku` and Irish Lament's
   `blockfloete` vibrato rates written as heard (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, B-1)
 - 2026-10-07 A shared modulator that reads no `Freq` runs once per block at any pitch; a non-finite pitch amount reads

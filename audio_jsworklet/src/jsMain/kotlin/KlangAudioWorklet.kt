@@ -5,6 +5,7 @@
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
@@ -64,10 +65,11 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         fun handle(cmd: KlangCommLink.Cmd) = dispatcher.handle(cmd)
 
         /** Render one block via the shared dispatcher. */
-        fun renderBlock(cursorFrame: Double, out: ShortArray) = dispatcher.renderBlock(cursorFrame, out)
+        fun renderBlock(cursorFrame: Double, out: StereoBuffer) = dispatcher.renderBlock(cursorFrame, out)
 
-        // Buffers
-        val renderBuffer = ShortArray(blockFrames * 2) // 16-bit Stereo PCM (2 shorts per frame)
+        // The engine's output block: clipped floating-point stereo, one channel per buffer, the same
+        // layout Web Audio's outputs have, so each channel is one straight copy.
+        val renderBuffer = StereoBuffer(blockFrames)
 
         // Double, not Int and not Long.
         //
@@ -94,8 +96,11 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
     private var ctx: Ctx? = null
 
-    @JsName("init")
-    private fun init(outputs: Array<Array<Float32Array>>, block: Ctx.() -> Boolean): Boolean {
+    /**
+     * The worklet's context, created on the first [process] call (the render quantum is read from the
+     * first output). A plain function returning it, so [process] allocates no closure per block.
+     */
+    private fun contextFor(outputs: Array<Array<Float32Array>>): Ctx {
 
         fun makeContext(): Ctx {
             console.log("[WORKLET] Creating context")
@@ -140,15 +145,21 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         val ctx = ctx ?: makeContext()
         this.ctx = ctx
 
-        return block(ctx)
+        return ctx
     }
 
     override fun process(
         inputs: Array<Array<Float32Array>>,
         outputs: Array<Array<Float32Array>>,
         parameters: dynamic,
-    ): Boolean = init(outputs) {
-        if (!isPlaying) return@init true
+    ): Boolean {
+        // Plain calls, no lambda: a block allocates nothing here.
+        return contextFor(outputs).renderInto(outputs)
+    }
+
+    /** One render quantum into Web Audio's [outputs]; always true (keep the processor alive). */
+    private fun Ctx.renderInto(outputs: Array<Array<Float32Array>>): Boolean {
+        if (!isPlaying) return true
 
         // Update KlangTime with current frame for accurate timing
         klangTime.updateCurrentFrame(cursorFrame)
@@ -156,12 +167,12 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         // Port 0
         val output = outputs[0]
         val numChannels = output.size
-        if (numChannels == 0) return@init true
+        if (numChannels == 0) return true
 
         val output0 = output[0]
         val output1 = output.getOrNull(1)
 
-        // 1. Render the block into our intermediate ShortArray — always, so the warmup voices
+        // 1. Render the block into our intermediate buffer, always, so the warmup voices
         // running on the real scheduler exercise the actual render path (V8 inline caches,
         // lazy allocations inside VoiceScheduler / KlangAudioRenderer).
         renderBlock(cursorFrame, renderBuffer)
@@ -175,20 +186,18 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             }
             warmup.tick()
         } else {
-            // 2. Convert PCM 16-bit back to Float32 for Web Audio.
-            // renderer.renderBlock interleaves L/R: [L, R, L, R, ...]
+            // 2. Copy the engine's floats straight into Web Audio's output channels (no 16-bit step).
+            val left = renderBuffer.left
+
             for (i in 0 until blockFrames) {
-                val idx = i * 2
+                output0[i] = left[i].toFloat()
+            }
 
-                // Read Short and normalize to -1.0..1.0
-                val lSample = renderBuffer[idx].toFloat() / Short.MAX_VALUE
-                val rSample = renderBuffer[idx + 1].toFloat() / Short.MAX_VALUE
+            if (output1 != null) {
+                val right = renderBuffer.right
 
-                // Write to output channels
-                output0[i] = lSample
-
-                if (output1 != null) {
-                    output1[i] = rSample
+                for (i in 0 until blockFrames) {
+                    output1[i] = right[i].toFloat()
                 }
             }
         }
@@ -203,6 +212,6 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             // console.log("[WORKLET] Sending feedback to frontend:", feed::class.simpleName)
         }
 
-        true
+        return true
     }
 }

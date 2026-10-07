@@ -92,7 +92,7 @@ let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 1.0, db =  3.3)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  8.0)         // roar:  low mids
-    .band(freq = 2700, q = 2.0, db =  3.5)         // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 2.0, db =  3.6)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2))          // the low end
@@ -310,19 +310,19 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .orbit(3)
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
-export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  x x")
+export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 15, spread = 0.08)
-  .ignp("decay", 0.8).clip(1)
+  .ignp("decay", "0.3 0.8!2 0.3 0.8!2 0.3!2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2)))
-  .gain(0.92).pan(0.5).late(perlin(0.0000, 0.0006))
+  .gain(0.95).pan(0.5).late(perlin(0.0000, 0.0006))
   .orbit(4)
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 15, spread = 0.08)
-  .ignp("decay", 0.5).clip(1)
+  .ignp("decay", 0.25).clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2)))
-  .gain(0.45).late(perlin(0.0007, 0.0015)).apply(
+  .gain(0.50).late(perlin(0.0007, 0.0015)).apply(
     x => x.pan(0.10),
     x => x.pan(0.90),
   )
@@ -379,7 +379,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 0.97).ignp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.40).pan(0.5)
+  .gain(1.45).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------

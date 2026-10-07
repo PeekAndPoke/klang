@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
@@ -43,7 +44,9 @@ class KlangOfflineRenderer(
      * @param cycles number of cycles to render
      * @param cyclesPerSecond tempo (cps = rpm / 60.0)
      * @param tailSec extra seconds after last note for reverb/delay tails
-     * @param onBlock called for each rendered block with interleaved stereo 16-bit PCM
+     * @param onBlock called for each rendered block with the engine's clipped floating-point stereo
+     *   output and its frame count. The buffer is reused for the next block: copy what you keep. A
+     *   16-bit consumer converts with `writePcm16` (audio_be), the one home of that conversion.
      */
     suspend fun render(
         pattern: KlangPattern,
@@ -52,7 +55,7 @@ class KlangOfflineRenderer(
         tailSec: Double = 2.0,
         customIgnitors: List<Pair<String, IgnitorDsl>> = emptyList(),
         samples: Samples? = null,
-        onBlock: (samples: ShortArray, count: Int) -> Unit,
+        onBlock: (out: StereoBuffer, frames: Int) -> Unit,
     ): Result {
         val klangTime = KlangTime.create()
         val startMs = klangTime.internalMsNow()
@@ -160,14 +163,14 @@ class KlangOfflineRenderer(
         val totalFrames = (totalDurationSec * sampleRate).toInt() + renderer.latencyFrames
 
         // 6. Render loop
-        val outShorts = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         // Absolute backend frame — Double, see RenderClock.cursorFrame. An offline render is short
         // enough that Int would do, but the type has to match the live path.
         var currentFrame = 0.0
 
         while (currentFrame < totalFrames) {
-            renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)
-            onBlock(outShorts, blockFrames * 2)
+            renderer.renderBlock(cursorFrame = currentFrame, out = out)
+            onBlock(out, blockFrames)
             currentFrame += blockFrames
         }
 

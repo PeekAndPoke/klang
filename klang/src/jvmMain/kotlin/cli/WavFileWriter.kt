@@ -5,33 +5,39 @@
 
 package io.peekandpoke.klang.audio_engine.cli
 
+import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.writePcm16
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * Streams 16-bit stereo PCM data to a WAV file.
+ * Streams the engine's stereo output to a 16-bit PCM WAV file.
  *
  * Writes a placeholder header on open, appends PCM blocks during rendering,
- * then patches the RIFF/data chunk sizes on close.
+ * then patches the RIFF/data chunk sizes on close. The 16-bit conversion is
+ * [writePcm16], the one home of it.
  */
 class WavFileWriter(
     private val filePath: String,
     private val sampleRate: Int,
-    private val channels: Int = 2,
-    private val bitsPerSample: Int = 16,
 ) {
+    private companion object {
+        const val CHANNELS = 2
+        const val BITS_PER_SAMPLE = 16
+        const val BYTES_PER_FRAME = CHANNELS * BITS_PER_SAMPLE / 8
+    }
+
     private var file: RandomAccessFile? = null
     private var dataBytes = 0
-    private var blockBuf: ByteBuffer? = null
+    private var blockBytes = ByteArray(0)
 
     fun open() {
         val f = RandomAccessFile(filePath, "rw")
         f.setLength(0)
         file = f
 
-        val byteRate = sampleRate * channels * bitsPerSample / 8
-        val blockAlign = channels * bitsPerSample / 8
+        val byteRate = sampleRate * BYTES_PER_FRAME
 
         // Write 44-byte WAV header with placeholder sizes
         val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
@@ -44,12 +50,12 @@ class WavFileWriter(
         // fmt sub-chunk
         header.put("fmt ".toByteArray())
         header.putInt(16)                    // PCM format chunk size
-        header.putShort(1)                   // audio format: PCM
-        header.putShort(channels.toShort())
+        putUInt16(header, 1)                 // audio format: PCM
+        putUInt16(header, CHANNELS)
         header.putInt(sampleRate)
         header.putInt(byteRate)
-        header.putShort(blockAlign.toShort())
-        header.putShort(bitsPerSample.toShort())
+        putUInt16(header, BYTES_PER_FRAME)   // block align
+        putUInt16(header, BITS_PER_SAMPLE)
 
         // data sub-chunk
         header.put("data".toByteArray())
@@ -59,25 +65,20 @@ class WavFileWriter(
     }
 
     /**
-     * Write a block of interleaved 16-bit PCM samples.
-     * @param samples interleaved stereo ShortArray [L, R, L, R, ...]
-     * @param count number of short values to write
+     * Write the first [frames] frames of [out], the engine's floating-point stereo block, as
+     * interleaved 16-bit little-endian PCM.
      */
-    fun writeBlock(samples: ShortArray, count: Int) {
+    fun writeBlock(out: StereoBuffer, frames: Int) {
         val f = file ?: return
-        val needed = count * 2
+        val needed = frames * BYTES_PER_FRAME
 
-        // Reuse buffer across blocks to avoid per-block allocation
-        var buf = blockBuf
-        if (buf == null || buf.capacity() < needed) {
-            buf = ByteBuffer.allocate(needed).order(ByteOrder.LITTLE_ENDIAN)
-            blockBuf = buf
+        // Reuse the byte buffer across blocks to avoid per-block allocation
+        if (blockBytes.size < needed) {
+            blockBytes = ByteArray(needed)
         }
-        buf.clear()
-        for (i in 0 until count) {
-            buf.putShort(samples[i])
-        }
-        f.write(buf.array(), 0, needed)
+
+        writePcm16(source = out, frames = frames, bytes = blockBytes)
+        f.write(blockBytes, 0, needed)
         dataBytes += needed
     }
 
@@ -101,5 +102,11 @@ class WavFileWriter(
 
         f.close()
         file = null
+    }
+
+    /** A 16-bit header field, little-endian, written as two bytes from an [Int]. */
+    private fun putUInt16(buf: ByteBuffer, value: Int) {
+        buf.put((value and 0xFF).toByte())
+        buf.put((value shr 8 and 0xFF).toByte())
     }
 }

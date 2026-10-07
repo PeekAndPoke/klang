@@ -31,7 +31,7 @@ import kotlin.math.tanh
  * Two things about how this is measured, both load-bearing:
  *
  * 1. **It asserts on [Compressor] output directly, NOT on [MasterStage] output.** `MasterStage`
- *    emits a `ShortArray` through a hard clip, so "no sample exceeds 1.0" measured there is
+ *    emits its output through a hard clip, so "no sample exceeds 1.0" measured there is
  *    trivially true *with the bug present* — a textbook toothless guard.
  * 2. **Drive is bounded at +18 dB over threshold.** At `ratio = 20` the best achievable output is
  *    `threshold + overshoot/ratio`, so ≥ +20 dB over legitimately exceeds 0 dBFS no matter how good
@@ -324,7 +324,7 @@ class LimiterLookaheadSpec : StringSpec({
         // the whole hold window, and the master then fades the entire mix back in over ~160 ms — a
         // far bigger event than the click the guard was originally written for. Without the ring
         // guard the Inf is stored and emerges `delayFrames` later as `Inf * 0.0` = NaN, which
-        // MasterStage maps to Short.MIN_VALUE: full-scale negative.
+        // MasterStage's clip maps to -1.0: full-scale negative.
         //
         // Reachable in a raw engine via runaway feedback, and the DC blocker ahead of the limiter
         // passes the first Inf through unchanged.

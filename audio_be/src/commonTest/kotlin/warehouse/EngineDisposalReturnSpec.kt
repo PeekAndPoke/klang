@@ -15,6 +15,8 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.BackendClock
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
+import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.peak
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
@@ -40,7 +42,7 @@ class EngineDisposalReturnSpec : StringSpec({
     val sampleRate = 44100
     val blockFrames = AudioBackendContext.RENDER_QUANTUM_FRAMES
 
-    class Fixture(val dispatcher: PlaybackEngineDispatcher, val warehouse: ResourceWarehouse, val out: ShortArray)
+    class Fixture(val dispatcher: PlaybackEngineDispatcher, val warehouse: ResourceWarehouse, val out: StereoBuffer)
 
     fun fixture(): Fixture {
         val clock = BackendClock(sampleRate)
@@ -57,7 +59,7 @@ class EngineDisposalReturnSpec : StringSpec({
             warehouse = warehouse,
         )
         val dispatcher = PlaybackEngineDispatcher(context = context, clock = clock).also { it.setBackendStartTime(0.0) }
-        return Fixture(dispatcher, warehouse, ShortArray(blockFrames * 2))
+        return Fixture(dispatcher, warehouse, StereoBuffer(blockFrames))
     }
 
     /** A short sine on orbit [cylinder] with a delay and a reverb — both units get rented. */
@@ -83,7 +85,7 @@ class EngineDisposalReturnSpec : StringSpec({
         var peak = 0.0
         repeat(blocks) {
             dispatcher.renderBlock(dispatcher.clockForTest.cursorFrame, out)
-            for (i in out.indices) peak = maxOf(peak, abs(out[i].toDouble()))
+            peak = maxOf(peak, out.peak())
         }
         return peak
     }

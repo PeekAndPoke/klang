@@ -52,18 +52,23 @@ class BlockSizeParitySpec : StringSpec({
     "the offline renderer actually emits blocks of the canonical render quantum" {
         // Behavioural, not a constant comparison: this is the path that produces WAV files, and a
         // WAV sounding unlike the browser is the whole defect being guarded. `onBlock` reports
-        // interleaved stereo, so count == blockFrames * 2.
+        // the frame count, and the buffer it hands over holds exactly that many frames.
         val counts = mutableSetOf<Int>()
+        val sizes = mutableSetOf<Int>()
 
         KlangOfflineRenderer().render(
             pattern = silentPattern,
             cycles = 1,
             cyclesPerSecond = 4.0,
             tailSec = 0.0,
-            onBlock = { _, count -> counts.add(count) },
+            onBlock = { out, frames ->
+                counts.add(frames)
+                sizes.add(out.left.size)
+            },
         )
 
-        counts shouldBe setOf(AudioBackendContext.RENDER_QUANTUM_FRAMES * 2)
+        counts shouldBe setOf(AudioBackendContext.RENDER_QUANTUM_FRAMES)
+        sizes shouldBe setOf(AudioBackendContext.RENDER_QUANTUM_FRAMES)
     }
 
     "the canonical render quantum is the Web Audio render quantum" {

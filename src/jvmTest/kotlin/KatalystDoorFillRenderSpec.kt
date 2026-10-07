@@ -78,7 +78,7 @@ class KatalystDoorFillRenderSpec : StringSpec({
     // The renderer, the sample-for-sample comparison and the peak read are shared with the other
     // small Katalyst render rows: `_katalyst_render_helpers.kt`, which also owns the numbers (48
     // kHz, four cycles at the frozen song's 34.5 rpm) so they are stated once.
-    suspend fun render(code: String): List<ShortArray> = renderSong(code)
+    suspend fun render(code: String): List<IntArray> = renderSong(code)
 
     "a MATERIAL-ONLY body(material) plays at the shared BODY_WET and BODY_FLOOR, not dry" {
         // The subject is the SUBSTITUTION, and the oracle is the same door called the long way.

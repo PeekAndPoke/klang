@@ -72,9 +72,9 @@ class SchedulerStartupSpec : StringSpec({
 
     /** Renders one block through the dispatcher and returns the left channel's peak per frame. */
     fun renderOne(d: PlaybackEngineDispatcher, cursor: Double): DoubleArray {
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         d.renderBlock(cursorFrame = cursor, out = out)
-        return DoubleArray(blockFrames) { abs(out[it * 2].toDouble()) / Short.MAX_VALUE }
+        return DoubleArray(blockFrames) { abs(out.left[it]) }
     }
 
     "B1: renderBlock leaves the clock on the NEXT block, so 'now' between renders is renderable" {

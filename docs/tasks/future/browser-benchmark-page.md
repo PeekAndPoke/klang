@@ -74,7 +74,7 @@ Portability findings (all checked, not guessed):
    solid everywhere; label `peakBlockRtf` approximate (or hide) on coarse timers.
 4. **Bundle size**: first real reference to `audio_be` from the main bundle grows the DCE'd output
    (the worklet copy is a separate artifact). Check before/after.
-5. It renders offline into a `ShortArray` — the page makes **no sound**.
+5. It renders offline into a `StereoBuffer`: the page makes **no sound**.
 
 ## Later evolution: benchmarks as a backend capability
 

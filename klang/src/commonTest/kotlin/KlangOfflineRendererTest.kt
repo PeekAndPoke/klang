@@ -18,11 +18,10 @@ import io.peekandpoke.klang.common.SourceLocationChain
 class KlangOfflineRendererTest : StringSpec({
 
     /**
-     * True if two renders differ anywhere. Compares block-by-block via [ShortArray.contentEquals]
-     * rather than flattening — flattening would box ~100k `Short`s per render, and this spec also
-     * runs on Kotlin/JS where boxed types are the thing the project bans outright.
+     * True if two renders differ anywhere. Compares block-by-block via [DoubleArray.contentEquals],
+     * each block being one block's left channel followed by its right (`out.left + out.right`).
      */
-    fun rendersDiffer(a: List<ShortArray>, b: List<ShortArray>): Boolean =
+    fun rendersDiffer(a: List<DoubleArray>, b: List<DoubleArray>): Boolean =
         a.size != b.size || a.indices.any { !a[it].contentEquals(b[it]) }
 
     /**
@@ -48,24 +47,24 @@ class KlangOfflineRendererTest : StringSpec({
 
     "render with default ignitors produces non-zero audio" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocks = mutableListOf<ShortArray>()
+        val blocks = mutableListOf<DoubleArray>()
 
         val result = renderer.render(
             pattern = singleNotePattern("sine"),
             cycles = 1,
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
-            onBlock = { samples, _ -> blocks.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocks.add(out.left + out.right) },
         )
 
         result.totalFrames shouldBeGreaterThan 0
         result.durationSec shouldBeGreaterThan 0.0
-        blocks.any { block -> block.any { it != 0.toShort() } } shouldBe true
+        blocks.any { block -> block.any { it != 0.0 } } shouldBe true
     }
 
     "render with empty customIgnitors still uses defaults" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocks = mutableListOf<ShortArray>()
+        val blocks = mutableListOf<DoubleArray>()
 
         renderer.render(
             pattern = singleNotePattern("triangle"),
@@ -73,15 +72,15 @@ class KlangOfflineRendererTest : StringSpec({
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
             customIgnitors = emptyList(),
-            onBlock = { samples, _ -> blocks.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocks.add(out.left + out.right) },
         )
 
-        blocks.any { block -> block.any { it != 0.toShort() } } shouldBe true
+        blocks.any { block -> block.any { it != 0.0 } } shouldBe true
     }
 
     "render with custom ignitor produces non-zero audio" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocks = mutableListOf<ShortArray>()
+        val blocks = mutableListOf<DoubleArray>()
 
         val customDsl = IgnitorDsl.Sine()
 
@@ -91,31 +90,31 @@ class KlangOfflineRendererTest : StringSpec({
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
             customIgnitors = listOf("myCustomOsc" to customDsl),
-            onBlock = { samples, _ -> blocks.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocks.add(out.left + out.right) },
         )
 
-        blocks.any { block -> block.any { it != 0.toShort() } } shouldBe true
+        blocks.any { block -> block.any { it != 0.0 } } shouldBe true
     }
 
     "render with unknown sound produces silence" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocks = mutableListOf<ShortArray>()
+        val blocks = mutableListOf<DoubleArray>()
 
         renderer.render(
             pattern = singleNotePattern("nonExistentSound_xyz"),
             cycles = 1,
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
-            onBlock = { samples, _ -> blocks.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocks.add(out.left + out.right) },
         )
 
-        blocks.all { block -> block.all { it == 0.toShort() } } shouldBe true
+        blocks.all { block -> block.all { it == 0.0 } } shouldBe true
     }
 
     "custom ignitor overrides built-in default" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocksDefault = mutableListOf<ShortArray>()
-        val blocksOverride = mutableListOf<ShortArray>()
+        val blocksDefault = mutableListOf<DoubleArray>()
+        val blocksOverride = mutableListOf<DoubleArray>()
 
         // Render with default sine
         renderer.render(
@@ -123,7 +122,7 @@ class KlangOfflineRendererTest : StringSpec({
             cycles = 1,
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
-            onBlock = { samples, _ -> blocksDefault.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocksDefault.add(out.left + out.right) },
         )
 
         // Render with custom "sine" that's actually a sawtooth
@@ -133,12 +132,12 @@ class KlangOfflineRendererTest : StringSpec({
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
             customIgnitors = listOf("sine" to IgnitorDsl.Saw()),
-            onBlock = { samples, _ -> blocksOverride.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocksOverride.add(out.left + out.right) },
         )
 
         // Both should produce non-zero audio
-        blocksDefault.any { block -> block.any { it != 0.toShort() } } shouldBe true
-        blocksOverride.any { block -> block.any { it != 0.toShort() } } shouldBe true
+        blocksDefault.any { block -> block.any { it != 0.0 } } shouldBe true
+        blocksOverride.any { block -> block.any { it != 0.0 } } shouldBe true
 
         // But they should differ (sawtooth != sine).
         // Compare the WHOLE render, not blocks.first(): at the canonical 128-frame block the first
@@ -155,30 +154,30 @@ class KlangOfflineRendererTest : StringSpec({
         )
 
         // Render oscA
-        val blocksA = mutableListOf<ShortArray>()
+        val blocksA = mutableListOf<DoubleArray>()
         renderer.render(
             pattern = singleNotePattern("oscA"),
             cycles = 1,
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
             customIgnitors = customs,
-            onBlock = { samples, _ -> blocksA.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocksA.add(out.left + out.right) },
         )
 
         // Render oscB
-        val blocksB = mutableListOf<ShortArray>()
+        val blocksB = mutableListOf<DoubleArray>()
         renderer.render(
             pattern = singleNotePattern("oscB"),
             cycles = 1,
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
             customIgnitors = customs,
-            onBlock = { samples, _ -> blocksB.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocksB.add(out.left + out.right) },
         )
 
         // Both produce audio
-        blocksA.any { block -> block.any { it != 0.toShort() } } shouldBe true
-        blocksB.any { block -> block.any { it != 0.toShort() } } shouldBe true
+        blocksA.any { block -> block.any { it != 0.0 } } shouldBe true
+        blocksB.any { block -> block.any { it != 0.0 } } shouldBe true
 
         // And they differ (sine vs sawtooth) — whole render, see the note above.
         rendersDiffer(blocksA, blocksB) shouldBe true
@@ -186,7 +185,7 @@ class KlangOfflineRendererTest : StringSpec({
 
     "custom ignitor with composed DSL renders correctly" {
         val renderer = KlangOfflineRenderer(sampleRate = 48_000)
-        val blocks = mutableListOf<ShortArray>()
+        val blocks = mutableListOf<DoubleArray>()
 
         // A more complex DSL: sine with lowpass filter
         val composedDsl = IgnitorDsl.Lowpass(
@@ -200,9 +199,9 @@ class KlangOfflineRendererTest : StringSpec({
             cyclesPerSecond = 1.0,
             tailSec = 0.0,
             customIgnitors = listOf("composedSound" to composedDsl),
-            onBlock = { samples, _ -> blocks.add(samples.copyOf()) },
+            onBlock = { out, _ -> blocks.add(out.left + out.right) },
         )
 
-        blocks.any { block -> block.any { it != 0.toShort() } } shouldBe true
+        blocks.any { block -> block.any { it != 0.0 } } shouldBe true
     }
 })

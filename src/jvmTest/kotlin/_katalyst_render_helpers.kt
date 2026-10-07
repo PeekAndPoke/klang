@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.audio_be.pcm16
 import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import kotlin.math.abs
@@ -12,9 +13,10 @@ import kotlin.math.abs
 /**
  * The three moves every small Katalyst render row makes: render a sprudel song offline, compare two
  * renders sample for sample, and read a render's peak so a row can prove it is asserting about
- * sound. Shared by [KatalystDoorFillRenderSpec] and [KatalystBodyNonFiniteWetSpec], which the
- * signal-flow plan's §12 gives different lifetimes (a migration fixture and a contract), so the
- * helpers live apart from both.
+ * sound. A render is kept as its 16-bit values (the WAV writer's, through the edge's `pcm16`),
+ * interleaved per block, so the rows read in 16-bit counts. Shared by [KatalystDoorFillRenderSpec]
+ * and [KatalystBodyNonFiniteWetSpec], which the signal-flow plan's §12 gives different lifetimes (a
+ * migration fixture and a contract), so the helpers live apart from both.
  *
  * The defaults are the frozen song's: 48 kHz, four cycles at 34.5 rpm.
  *
@@ -27,16 +29,18 @@ suspend fun renderSong(
     cycles: Int = 4,
     cyclesPerSecond: Double = 0.575,
     tailSec: Double = 0.5,
-): List<ShortArray> {
+): List<IntArray> {
     val pattern = SprudelPattern.compile(code) ?: error("the song did not compile: $code")
-    val blocks = mutableListOf<ShortArray>()
+    val blocks = mutableListOf<IntArray>()
 
     KlangOfflineRenderer(sampleRate = sampleRate).render(
         pattern = pattern,
         cycles = cycles,
         cyclesPerSecond = cyclesPerSecond,
         tailSec = tailSec,
-        onBlock = { samples, count -> blocks.add(samples.copyOf(count)) },
+        onBlock = { out, frames ->
+            blocks.add(IntArray(frames * 2) { if (it % 2 == 0) pcm16(out.left[it / 2]) else pcm16(out.right[it / 2]) })
+        },
     )
 
     return blocks
@@ -49,7 +53,7 @@ suspend fun renderSong(
  * so a render that diverges in length is reported by the row that compares the counts, never as an
  * index crash from here.
  */
-fun maxDiff(a: List<ShortArray>, b: List<ShortArray>): Int {
+fun maxDiff(a: List<IntArray>, b: List<IntArray>): Int {
     var worst = 0
 
     for (block in 0 until minOf(a.size, b.size)) {
@@ -57,7 +61,7 @@ fun maxDiff(a: List<ShortArray>, b: List<ShortArray>): Int {
         val right = b[block]
 
         for (i in 0 until minOf(left.size, right.size)) {
-            val diff = abs(left[i].toInt() - right[i].toInt())
+            val diff = abs(left[i] - right[i])
 
             if (diff > worst) {
                 worst = diff
@@ -69,12 +73,12 @@ fun maxDiff(a: List<ShortArray>, b: List<ShortArray>): Int {
 }
 
 /** The loudest sample of a render, so a row can prove it is asserting about actual sound. */
-fun peakOf(blocks: List<ShortArray>): Int {
+fun peakOf(blocks: List<IntArray>): Int {
     var peak = 0
 
     for (block in blocks) {
         for (i in block.indices) {
-            val level = abs(block[i].toInt())
+            val level = abs(block[i])
 
             if (level > peak) {
                 peak = level

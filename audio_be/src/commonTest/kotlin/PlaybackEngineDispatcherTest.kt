@@ -98,7 +98,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
 
     "ReplaceVoices does not double a voice already promoted to active (live-update race)" {
         val d = newDispatcher()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         val far = (sampleRate * 10).toDouble() // frame where the startTime=10s voice becomes due
 
         // 1. Schedule a future voice — stays in the heap at frame 0.
@@ -128,7 +128,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
 
     "ReplaceVoices keeps legit simultaneous same-time voices (chord/superimpose safety)" {
         val d = newDispatcher()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         val far = (sampleRate * 10).toDouble()
 
         // Two voices at the SAME time differing only in payload — like two chord tones / layers.
@@ -158,7 +158,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
 
     "ClearScheduled drops not-yet-played voices" {
         val d = newDispatcher()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(futureVoice("song"))))
         d.handle(KlangCommLink.Cmd.ClearScheduled(playbackId = "song"))
@@ -169,7 +169,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
 
     "Cleanup drains then disposes the engine once idle" {
         val d = newDispatcher()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(futureVoice("song"))))
         d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
@@ -180,7 +180,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
 
     "two playbacks on the same orbit get independent cylinders (the isolation fix)" {
         val d = newDispatcher()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "A", voice = voice("A", cylinder = 0)))
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "B", voice = voice("B", cylinder = 0)))
@@ -196,7 +196,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
 
     "a late-created engine's first voice is not judged in the past (clock snap)" {
         val d = newDispatcher()   // startTimeSec = 0 via setBackendStartTime(0.0)
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         // The backend has been running ~10s (global cursor advanced); no engines exist yet.
         val lateFrame = sampleRate * 10

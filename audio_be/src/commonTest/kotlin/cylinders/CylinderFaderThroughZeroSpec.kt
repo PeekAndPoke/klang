@@ -207,7 +207,7 @@ class CylinderFaderThroughZeroSpec : StringSpec({
 
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = if (withMaster) listOf(master, muted) else listOf(muted)))
 
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
 
         return List(400) { b ->
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)

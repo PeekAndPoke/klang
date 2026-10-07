@@ -140,7 +140,6 @@ class PlaybackEngineDispatcher(
         draining.remove(playbackId)
     }
 
-    /** Render one block to [out]: advance the clock, every engine accumulates into the mix, then master. */
     /**
      * Latency the master post-chain adds, in milliseconds.
      *
@@ -149,11 +148,14 @@ class PlaybackEngineDispatcher(
      */
     val masterLatencyMs: Double get() = master.latencyMs
 
-    /** Render one block to [out]: sum every engine into the shared mix, then run the master stage. */
+    /**
+     * Render one block to [out] (`blockFrames` frames per channel): sum every engine into the shared
+     * mix, then run the master stage, which writes the clipped floating-point output.
+     */
     // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
     // grows for the life of the backend and overflows Int after ~12.4 h. Exact below 2^53
     // (~5,950 years at 48 kHz). See RenderClock.cursorFrame. Per-sample offsets stay Int.
-    fun renderBlock(cursorFrame: Double, out: ShortArray) {
+    fun renderBlock(cursorFrame: Double, out: StereoBuffer) {
         val startMs = context.performanceTimeMs()
         clock.cursorFrame = cursorFrame
         mix.clear()
@@ -167,7 +169,7 @@ class PlaybackEngineDispatcher(
         }
     }
 
-    private fun renderBlockAt(cursorFrame: Double, out: ShortArray, startMs: Double) {
+    private fun renderBlockAt(cursorFrame: Double, out: StereoBuffer, startMs: Double) {
 
         // processAndMix accumulates additively, so engines simply render into the same mix in turn.
         // (#11: with one engine this is a straight render into the final mix.) Per-engine master gain

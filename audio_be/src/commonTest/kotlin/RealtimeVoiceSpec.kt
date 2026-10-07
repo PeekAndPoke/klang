@@ -54,7 +54,8 @@ class RealtimeVoiceSpec : StringSpec({
         freqHz = 440.0,
     ).withClassicSlots(DoorFields(adsr = DoorAdsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.01)))
 
-    fun hasAudio(out: ShortArray): Boolean = out.any { abs(it.toInt()) > 200 }
+    // About 200 16-bit counts, -44 dBFS.
+    fun hasAudio(out: StereoBuffer): Boolean = out.peak() > 0.006
 
     /**
      * Renders [warmupBlocks] to move the cursor, sends the voice, renders on and reports which
@@ -66,7 +67,7 @@ class RealtimeVoiceSpec : StringSpec({
         blocksAfter: Int,
     ): List<Boolean> {
         val d = newDispatcher()
-        val out = ShortArray(blockFrames * 2)
+        val out = StereoBuffer(blockFrames)
         var frame = 0.0
 
         repeat(warmupBlocks) {
@@ -136,18 +137,18 @@ class RealtimeVoiceSpec : StringSpec({
         fromFrame: Double,
         blocks: Int,
         onBlock: (Int) -> Unit = {},
-    ): List<ShortArray> {
+    ): List<StereoBuffer> {
         var frame = fromFrame
         return (0 until blocks).map { i ->
             onBlock(i) // commands land BETWEEN blocks, like the real pump
-            val out = ShortArray(blockFrames * 2)
+            val out = StereoBuffer(blockFrames)
             d.renderBlock(cursorFrame = frame, out = out)
             frame += blockFrames
             out
         }
     }
 
-    fun maxAbs(out: ShortArray): Int = out.maxOf { abs(it.toInt()) }
+    fun maxAbs(out: StereoBuffer): Double = out.peak()
 
     fun start(d: PlaybackEngineDispatcher, liveId: Int, data: VoiceData = sustained) =
         d.handle(KlangCommLink.Cmd.StartRealtimeVoice("rt", RealtimeVoice(liveId = liveId, data = data, gateDurSec = null)))
@@ -198,7 +199,7 @@ class RealtimeVoiceSpec : StringSpec({
     }
 
     "a double-stop is bit-identical to a single stop" {
-        fun run(stopAtBlocks: Set<Int>): List<ShortArray> {
+        fun run(stopAtBlocks: Set<Int>): List<StereoBuffer> {
             val d = newDispatcher()
             renderBlocks(d, 0.0, 4)
             start(d, liveId = 1)
@@ -211,7 +212,7 @@ class RealtimeVoiceSpec : StringSpec({
 
         val once = run(setOf(10))
         val twice = run(setOf(10, 12))
-        once.zip(twice).forEach { (a, b) -> a.contentEquals(b).shouldBeTrue() }
+        once.zip(twice).forEach { (a, b) -> a.interleavedCopy().contentEquals(b.interleavedCopy()).shouldBeTrue() }
     }
 
     "I4: the release enters at the same note-relative sample regardless of block alignment" {
@@ -295,10 +296,10 @@ class RealtimeVoiceSpec : StringSpec({
 
         stop(d, liveId = 1)
         // release 0.2 s ≈ 69 blocks at 44.1k/128. The mid-tail threshold is the AUDIBLE bar
-        // (200, like hasAudio) — a hard cut leaves at most 1-2 LSB of DC-blocker residue there,
+        // (0.006, like hasAudio): a hard cut leaves at most a few 1e-5 of DC-blocker residue there,
         // which a bare `> 0` would mistake for a tail.
         val peaks = renderBlocks(d, 14.0 * blockFrames, 69).map { maxAbs(it) }
-        (peaks[10] > 200).shouldBeTrue()
+        (peaks[10] > 0.006).shouldBeTrue()
         (peaks[10] < heldPeak).shouldBeTrue()
         (peaks[20] < peaks[10]).shouldBeTrue()
         (peaks[30] < peaks[20]).shouldBeTrue()
@@ -322,7 +323,7 @@ class RealtimeVoiceSpec : StringSpec({
         // output block 1 carries only the first ~36 attack frames (220-frame pipe) — near
         // silence. A stamp one block late (dropping `+ blockFrames`) skips 128 frames of attack
         // AND seeds the de-click smoother mid-ramp: the same block comes out ~15x hotter
-        // (measured 116 vs 1736 against steady 23178). The 3%-of-steady bar sits between with
+        // (measured 116 vs 1736 against steady 23178, in 16-bit counts). The 3%-of-steady bar sits between with
         // wide margins both ways.
         val slowAttack = sustained.withClassicSlots(
             DoorFields(
@@ -339,7 +340,7 @@ class RealtimeVoiceSpec : StringSpec({
         val steady = blocks.subList(20, 25).maxOf { maxAbs(it) }
 
         (maxAbs(blocks[1]) < steady * 3 / 100).shouldBeTrue()
-        (maxAbs(blocks[5]) > 200).shouldBeTrue() // ...and the ramp is really rising, not silence
+        (maxAbs(blocks[5]) > 0.006).shouldBeTrue() // ...and the ramp is really rising, not silence
     }
 
     "the release enters its curve at position 0 (one-block-ahead stamp, stop side)" {
@@ -386,8 +387,8 @@ class RealtimeVoiceSpec : StringSpec({
         // Max adjacent-sample step across the death region (left channel): a 440 Hz sine moves
         // ~6% of amplitude per sample and the fade adds ~0.6%; a missing fade is a step of the
         // FULL amplitude in one sample.
-        val samples = tail.flatMap { blk -> (0 until blockFrames).map { blk[it * 2].toInt() } }
-        var maxStep = 0
+        val samples = tail.flatMap { blk -> (0 until blockFrames).map { blk.left[it] } }
+        var maxStep = 0.0
         for (i in 1 until samples.size) {
             maxStep = maxOf(maxStep, abs(samples[i] - samples[i - 1]))
         }

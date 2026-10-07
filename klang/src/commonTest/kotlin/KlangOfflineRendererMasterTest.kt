@@ -66,9 +66,9 @@ class KlangOfflineRendererMasterTest : StringSpec({
             cycles = 4,
             cyclesPerSecond = 0.5,
             tailSec = 0.0,
-        ) { samples, count ->
-            for (i in 0 until count) {
-                val v = abs(samples[i].toDouble() / Short.MAX_VALUE)
+        ) { out, frames ->
+            for (i in 0 until frames) {
+                val v = maxOf(abs(out.left[i]), abs(out.right[i]))
                 if (v > peak) {
                     peak = v
                 }
