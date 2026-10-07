@@ -2,7 +2,7 @@
 
 Status: **diagnosed 2026-10-07, not started.** Two bugs the maintainer reported on 2026-10-07. Two decisions taken
 the same day (below, "Decided"). The fix touches `VoiceScheduler.kt` and sprudel's `SoloPattern`; schedule it after
-voice lifecycle step 5 has landed and been reviewed (`voice-lifecycle-state-machine.md`), because the culling row it
+voice lifecycle step 5 has landed and been reviewed (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done 2026-10-07), because the culling row it
 needs lives in `VoiceCullingSpec`, which step 5 is editing.
 
 All numbers below come from a probe that rendered KlangScript through the real engine the way the corpus harness

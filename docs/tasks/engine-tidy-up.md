@@ -1,7 +1,7 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
 Status: **V1, queued (maintainer, 2026-10-07).** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
-the voice lifecycle (`voice-lifecycle-state-machine.md`) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
+the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
 ## Why
@@ -65,7 +65,7 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
 - **D3, the state-machine shape:** "as it fits". A state that carries data only it may see is a class; a state
   without data is a `data object`. Classes are the usual case, because they extend without a rewrite. Recorded in
   `../plans/effect-state-machines.md`. Consequence: the voice's `State` enum becomes a sealed type in a second,
-  bit-identical round (`voice-lifecycle-state-machine.md`, step 5b).
+  bit-identical round (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, step 5b, done).
 - **D7, owning the RNG:** a prerequisite for the Zig port, not needed now. Deferred to the port's preparation.
 - **D5, bus knobs typed as Ignitor expressions:** KEPT as they are. The maintainer: "the Zig side will in any case
   need to understand this data model and the contract ... I would not bend our implementation on this side just

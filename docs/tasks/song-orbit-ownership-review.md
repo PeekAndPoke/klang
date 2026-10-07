@@ -1,7 +1,7 @@
 # Song review: patterns with different bus settings share one orbit
 
 Status: **for the maintainer to review in the song code (2026-10-07).** Found by voice lifecycle step 5
-(`voice-lifecycle-state-machine.md`), measured in review (`tmp/reviews/vl5-r1-B.md`, reviewer B, round 1).
+(`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`), measured in review (`tmp/reviews/vl5-r1-B.md`, reviewer B, round 1).
 
 ## What this is
 

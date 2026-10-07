@@ -1,6 +1,6 @@
 # A voice's lifecycle is one state machine inside the voice
 
-Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07, step 3 done 2026-10-07, step 4 done 2026-10-07, step 5 done 2026-10-07, step 5b done 2026-10-07 (awaiting review).
+Status: **done 2026-10-07** (branch `voice-lifecycle`, v0.5.5): steps 0 to 5b. Step 6 lives on as its own tasks (`docs/tasks/voice-takeover.md`, with `docs/tasks/future/cut-group-semantics.md` decided first); step 7 (optimisation) only if a measurement asks for it.
 
 ## Why (maintainer, 2026-10-07)
 

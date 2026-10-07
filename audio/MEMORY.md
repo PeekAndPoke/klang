@@ -42,7 +42,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   one is Done at once). The
   scheduler removes only Done voices, always keeping the list's order, by one allocation-free compaction pass,
   `retainInOrder` (`removeDoneVoices` between blocks, and the render loop).
-  Plan and steps: `docs/tasks/voice-lifecycle-state-machine.md` (steps 1 to 5b done).
+  Plan and steps: `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md` (steps 1 to 5b done).
 - **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `SendRenderer`); a frontend's
   `velocity` is multiplied into `gain` before the wire. The orbit is the routing.
 - **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
@@ -211,18 +211,18 @@ One line per step, newest first. A link to the archived task record where one ex
 
 - 2026-10-07 The voice's states are a sealed type; the fade window lives in `Fading`, the silence count in
   `Releasing` (lifecycle step 5b, no sound change by design; the 18-song corpus bit-identical to step 5,
-  coordinator, 2026-10-07): `docs/tasks/voice-lifecycle-state-machine.md`
+  coordinator, 2026-10-07): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
 - 2026-10-07 The newest Sounding voice owns its orbit's bus settings, gives them up at its gate or cut; the zombie
   is retired and every removal keeps the list's order (lifecycle step 5, maintainer, a sound change):
-  `docs/tasks/voice-lifecycle-state-machine.md`
+  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
 - 2026-10-07 A cut fades its victim over 4 ms (`Fading`) instead of removing it (lifecycle step 4; no shipped song
-  uses cut): `docs/tasks/voice-lifecycle-state-machine.md`
+  uses cut): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
 - 2026-10-07 Note-off and hard kill are events on the voice; the scheduler removes only Done voices (lifecycle
-  step 3, no sound change by design): `docs/tasks/voice-lifecycle-state-machine.md`
+  step 3, no sound change by design): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
 - 2026-10-07 One home for a voice's time limits, `VoiceLimits` (lifecycle step 2, no sound change by design):
-  `docs/tasks/voice-lifecycle-state-machine.md`
+  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
 - 2026-10-07 The voice's lifecycle is a state machine inside `Voice` (step 1, read-only, no sound change by design):
-  `docs/tasks/voice-lifecycle-state-machine.md`
+  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
 - 2026-10-07 The engine's output is floating point: the master clips into a `StereoBuffer`, the browser hears the
   floats, the 16-bit step lives only at the JVM/WAV edge (`docs/tasks-archive/2026-10/20261007-float-output.md`)
 - 2026-10-07 One pitch mod over several pitched sources at one pitch advances once per block; Sakura's `shaku` and Irish Lament's

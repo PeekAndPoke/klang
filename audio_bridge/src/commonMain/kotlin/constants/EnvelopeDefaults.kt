@@ -150,7 +150,7 @@ const val VCA_OFF_TEARDOWN_FADE_SECONDS: Double = 0.004
  * enough that the new voice's attack masks it. A smoother curve (the smoothstep sketched in
  * `docs/tasks/voice-takeover.md`) is an option for `takeover`, which fades over a longer, authored time. For the
  * cut it is a by-ear choice left to the maintainer: measured quieter above 500 Hz on pure low tones, a little
- * louder below, and a different law from the teardown (`docs/tasks/voice-lifecycle-state-machine.md`, step 4).
+ * louder below, and a different law from the teardown (`docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, step 4).
  * The ramp's exact zero sits on the last frame that renders, as the teardown's does.
  *
  * Consumer: `Voice.cutOff`.

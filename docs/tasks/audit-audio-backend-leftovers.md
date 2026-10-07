@@ -1,7 +1,7 @@
 # Audio backend audit: the leftovers
 
 Status: **§1 follow-up, §3 and §5 done 2026-10-07; §4 done 2026-10-07 by voice lifecycle step 4 (a cut fades the
-choked voice over 4 ms, `docs/tasks/voice-lifecycle-state-machine.md`); §2 open for the maintainer**, investigated, with the
+choked voice over 4 ms, `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`); §2 open for the maintainer**, investigated, with the
 findings and a proposal each in "What was done" at the end (§2: what a worklet spec can reach, and its cost; §4: the
 cut-group hard cut today and what the teardown fade would change). Carved out 2026-09-27 when the audio backend audit campaign
 closed (brief: `docs/tasks-archive/2026-09/20260927-audio-backend-audit.md`, ledger:

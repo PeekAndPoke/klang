@@ -1,6 +1,6 @@
 # Code-style pass: name the arguments that could be swapped
 
-Status: **queued 2026-10-07 (maintainer).** After step 5 of `voice-lifecycle-state-machine.md` lands (the same
+Status: **queued 2026-10-07 (maintainer).** Now unblocked: voice lifecycle step 5 landed (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`) (the same
 files are being edited there).
 
 ## Why

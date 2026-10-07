@@ -1,6 +1,6 @@
 # The pitch pipeline moves into the Ignitor tree
 
-Status: **V1, high priority (maintainer, 2026-10-07).** Next after `voice-lifecycle-state-machine.md` step 5 and
+Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and
 `code-style-named-args-pass.md`. Was: future, not planned. Named "its own later item" by the phase 3 spike (2026-09-20); opened as a file
 2026-09-28 when the phase 3 record was archived (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md`,
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.

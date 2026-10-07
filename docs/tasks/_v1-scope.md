@@ -47,8 +47,7 @@ even when they are valuable.
 output was one), so each pass is also quality control. The backend should end up as tidy as it can be, for a later
 port to Zig.
 
-1. The voice lifecycle state machine: [`voice-lifecycle-state-machine.md`](voice-lifecycle-state-machine.md)
-   (steps 1 to 4 done, step 5 in review), then [`code-style-named-args-pass.md`](code-style-named-args-pass.md).
+1. ~~The voice lifecycle state machine~~ **done 2026-10-07 (v0.5.5)**: [`20261007-voice-lifecycle-state-machine.md`](../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md); then [`code-style-named-args-pass.md`](code-style-named-args-pass.md).
 2. The pitch pipeline into the tree: [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md).
 3. The Katalyst DSL leftovers and the engine tidy-up: [`engine-tidy-up.md`](engine-tidy-up.md) (audit 2026-10-07; the
    effect state machines verified done, kept flags respected). Its one bug, an empty `variants()` crashing the audio

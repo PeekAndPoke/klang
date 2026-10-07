@@ -56,7 +56,7 @@ import kotlin.math.ceil
  * The orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate
  * closes or it is cut ([claimsOrbit]). The states are a sealed type: `Releasing` carries the cull's silence count
  * and `Fading` the cut's fade window, each one instance created with the voice, so no transition allocates
- * ([State]). The plan: `docs/tasks/voice-lifecycle-state-machine.md`.
+ * ([State]). The plan: `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`.
  */
 class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
