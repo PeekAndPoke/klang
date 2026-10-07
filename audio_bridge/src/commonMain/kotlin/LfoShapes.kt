@@ -50,5 +50,5 @@ object LfoShapes {
     }
 
     /** The position in [names] a knob value selects, or [SINE_INDEX]. See [catalogueIndexAt]. */
-    fun indexAt(index: Double): Int = catalogueIndexAt(index, names.size, SINE_INDEX)
+    fun indexAt(index: Double): Int = catalogueIndexAt(index = index, size = names.size, fallback = SINE_INDEX)
 }

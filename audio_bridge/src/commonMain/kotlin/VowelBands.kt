@@ -34,7 +34,7 @@ import kotlin.math.round
 object VowelBands {
 
     /** Helper for band creation. */
-    private fun b(freq: Double, db: Double, q: Double) = FilterDef.Formant.Band(freq, db, q)
+    private fun b(freq: Double, db: Double, q: Double) = FilterDef.Formant.Band(freq = freq, db = db, q = q)
 
     /**
      * The voice registers [bandsOf] accepts, in table order. `alto` and `countertenor` are two

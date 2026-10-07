@@ -2536,7 +2536,7 @@ fun IgnitorDsl.lowpass(
     releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Lowpass {
-    val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
+    val envelope = fillFilterEnvelope(env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec)
 
     return IgnitorDsl.Lowpass(
         inner = this,
@@ -2572,9 +2572,9 @@ fun IgnitorDsl.lowpass(
     releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Lowpass = lowpass(
-    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
-    env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), humanize,
+    freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), passes = passes, analog = IgnitorDsl.Constant(analog),
+    env = env.asKnob(), attackSec = attackSec.asKnob(), decaySec = decaySec.asKnob(), sustainLevel = sustainLevel.asKnob(), releaseSec = releaseSec.asKnob(),
+    attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), humanize = humanize,
 )
 
 /**
@@ -2597,7 +2597,7 @@ fun IgnitorDsl.highpass(
     releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Highpass {
-    val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
+    val envelope = fillFilterEnvelope(env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec)
 
     return IgnitorDsl.Highpass(
         inner = this,
@@ -2633,9 +2633,9 @@ fun IgnitorDsl.highpass(
     releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Highpass = highpass(
-    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
-    env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), humanize,
+    freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), passes = passes, analog = IgnitorDsl.Constant(analog),
+    env = env.asKnob(), attackSec = attackSec.asKnob(), decaySec = decaySec.asKnob(), sustainLevel = sustainLevel.asKnob(), releaseSec = releaseSec.asKnob(),
+    attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), humanize = humanize,
 )
 
 /**
@@ -2686,7 +2686,7 @@ fun IgnitorDsl.Eq.band(
 
 /** Scalar convenience overload of [band]. */
 fun IgnitorDsl.Eq.band(freq: Double, q: Double = 0.707, db: Double = 0.0): IgnitorDsl.Eq =
-    band(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(db))
+    band(freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), db = IgnitorDsl.Constant(db))
 
 /**
  * Appends a PARALLEL band: a bandpass of the Eq INPUT, scaled by [gain] and added onto the
@@ -2720,7 +2720,7 @@ fun IgnitorDsl.Eq.tap(
 
 /** Scalar convenience overload of [tap]. */
 fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 0.707, gain: Double = 1.0): IgnitorDsl.Eq =
-    tap(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(gain))
+    tap(freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), gain = IgnitorDsl.Constant(gain))
 
 /**
  * Applies a one-pole lowpass at [freq] Hz — 6 dB/oct, no resonance; musically a warmth/tone
@@ -2749,7 +2749,7 @@ fun IgnitorDsl.bandpass(
     releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Bandpass {
-    val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
+    val envelope = fillFilterEnvelope(env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec)
 
     return IgnitorDsl.Bandpass(
         inner = this,
@@ -2783,9 +2783,9 @@ fun IgnitorDsl.bandpass(
     releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Bandpass = bandpass(
-    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog),
-    env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), humanize,
+    freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), analog = IgnitorDsl.Constant(analog),
+    env = env.asKnob(), attackSec = attackSec.asKnob(), decaySec = decaySec.asKnob(), sustainLevel = sustainLevel.asKnob(), releaseSec = releaseSec.asKnob(),
+    attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), humanize = humanize,
 )
 
 fun IgnitorDsl.notch(
@@ -2802,7 +2802,7 @@ fun IgnitorDsl.notch(
     releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Notch {
-    val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
+    val envelope = fillFilterEnvelope(env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec)
 
     return IgnitorDsl.Notch(
         inner = this,
@@ -2836,14 +2836,14 @@ fun IgnitorDsl.notch(
     releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Notch = notch(
-    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog),
-    env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), humanize,
+    freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), analog = IgnitorDsl.Constant(analog),
+    env = env.asKnob(), attackSec = attackSec.asKnob(), decaySec = decaySec.asKnob(), sustainLevel = sustainLevel.asKnob(), releaseSec = releaseSec.asKnob(),
+    attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), humanize = humanize,
 )
 
 /** Pre-amplification: gain without a curve, see [IgnitorDsl.Drive]. */
 fun IgnitorDsl.drive(amount: Double) =
-    IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount))
+    IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount))
 
 /**
  * Pure waveshaping without drive. See [IgnitorDsl.Shape] for the full list of supported [shape] values.
@@ -2917,9 +2917,9 @@ fun IgnitorDsl.adsr(
     releaseCurve: AdsrCurve? = null,
     declickSeconds: Double? = null,
 ): IgnitorDsl.Adsr = adsr(
-    IgnitorDsl.Constant(attackSec), IgnitorDsl.Constant(decaySec),
-    IgnitorDsl.Constant(sustainLevel), IgnitorDsl.Constant(releaseSec),
-    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), declickSeconds.asKnob(),
+    attackSec = IgnitorDsl.Constant(attackSec), decaySec = IgnitorDsl.Constant(decaySec),
+    sustainLevel = IgnitorDsl.Constant(sustainLevel), releaseSec = IgnitorDsl.Constant(releaseSec),
+    attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), declickSeconds = declickSeconds.asKnob(),
 )
 
 // FM

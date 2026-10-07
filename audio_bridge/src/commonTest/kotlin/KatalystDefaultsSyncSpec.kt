@@ -357,33 +357,33 @@ class KatalystDefaultsSyncSpec : StringSpec({
             KatalystDsl.classic.stages.map { stage ->
                 when (stage) {
                     is KatalystStageDsl.Body -> KatalystStageDsl.Body(
-                        freshKnob(stage.material), freshKnob(stage.wet), freshKnob(stage.floor),
+                        material = freshKnob(stage.material), wet = freshKnob(stage.wet), floor = freshKnob(stage.floor),
                     )
 
                     is KatalystStageDsl.Vowel -> KatalystStageDsl.Vowel(
-                        freshKnob(stage.vowel), freshKnob(stage.wet), freshKnob(stage.floor),
+                        vowel = freshKnob(stage.vowel), wet = freshKnob(stage.wet), floor = freshKnob(stage.floor),
                     )
 
                     is KatalystStageDsl.Delay -> KatalystStageDsl.Delay(
-                        freshKnob(stage.wet), freshKnob(stage.time), freshKnob(stage.feedback), freshKnob(stage.cap),
+                        wet = freshKnob(stage.wet), time = freshKnob(stage.time), feedback = freshKnob(stage.feedback), cap = freshKnob(stage.cap),
                     )
 
                     is KatalystStageDsl.Reverb -> KatalystStageDsl.Reverb(
-                        freshKnob(stage.wet), freshKnob(stage.size), stage.lowpass?.let { freshKnob(it) },
+                        wet = freshKnob(stage.wet), size = freshKnob(stage.size), lowpass = stage.lowpass?.let { freshKnob(it) },
                     )
 
                     is KatalystStageDsl.Phaser -> KatalystStageDsl.Phaser(
-                        freshKnob(stage.rate), freshKnob(stage.wet), freshKnob(stage.center),
-                        freshKnob(stage.sweep), freshKnob(stage.floor),
+                        rate = freshKnob(stage.rate), wet = freshKnob(stage.wet), center = freshKnob(stage.center),
+                        sweep = freshKnob(stage.sweep), floor = freshKnob(stage.floor),
                     )
 
                     is KatalystStageDsl.Compressor -> KatalystStageDsl.Compressor(
-                        freshKnob(stage.threshold), freshKnob(stage.ratio), freshKnob(stage.knee),
-                        freshKnob(stage.attack), freshKnob(stage.release),
+                        threshold = freshKnob(stage.threshold), ratio = freshKnob(stage.ratio), knee = freshKnob(stage.knee),
+                        attack = freshKnob(stage.attack), release = freshKnob(stage.release),
                     )
 
                     is KatalystStageDsl.Duck -> KatalystStageDsl.Duck(
-                        freshKnob(stage.orbit), freshKnob(stage.depth), freshKnob(stage.attack),
+                        orbit = freshKnob(stage.orbit), depth = freshKnob(stage.depth), attack = freshKnob(stage.attack),
                     )
 
                     is KatalystStageDsl.Eq -> KatalystStageDsl.Eq(stage.sections.toList())

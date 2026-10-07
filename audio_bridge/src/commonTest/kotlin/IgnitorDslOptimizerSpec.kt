@@ -24,9 +24,9 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "a run of adjacent filters collapses into ONE Eq, in written order" {
         val dsl = IgnitorDsl.Saw()
-            .notch(210.0, 2.5)
-            .highpass(440.0, 0.707)
-            .lowpass(5300.0, 0.707)
+            .notch(freq = 210.0, q = 2.5)
+            .highpass(freq = 440.0, q = 0.707)
+            .lowpass(freq = 5300.0, q = 0.707)
             .optimize()
 
         val eq = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -38,7 +38,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "C5/D6: passes = N expands into N staggered sections — never one section that loses slope" {
-        val eq = IgnitorDsl.Sine().lowpass(2000.0, 1.0, passes = 2).optimize()
+        val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0, q = 1.0, passes = 2).optimize()
             .shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.sections.size shouldBe 2
         val q0 = (eq.sections[0] as IgnitorDsl.EqSection.Lowpass).q
@@ -71,7 +71,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "a filter on top of an existing authored Eq appends into it" {
-        val eq = IgnitorDsl.Saw().eq().band(1200.0, 0.9, 6.0)
+        val eq = IgnitorDsl.Saw().eq().band(freq = 1200.0, q = 0.9, db = 6.0)
             .lowpass(5000.0)
             .optimize()
             .shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -82,7 +82,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "section params are carried across unchanged" {
-        val eq = IgnitorDsl.Sine().lowpass(5300.0, 0.9).optimize() as IgnitorDsl.Eq
+        val eq = IgnitorDsl.Sine().lowpass(freq = 5300.0, q = 0.9).optimize() as IgnitorDsl.Eq
         val lp = eq.sections.single() as IgnitorDsl.EqSection.Lowpass
         (lp.freq as IgnitorDsl.Constant).value shouldBe 5300.0
         (lp.q as IgnitorDsl.Constant).value shouldBe 0.9
@@ -95,18 +95,18 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // still carry the older hand-built parallel form.)
         val authored = IgnitorDsl.Saw()
             .eq()
-            .tap(850.0, 0.707, 1.7)
-            .tap(2500.0, 0.7, 5.0)
-            .notch(210.0, 2.5)
+            .tap(freq = 850.0, q = 0.707, gain = 1.7)
+            .tap(freq = 2500.0, q = 0.7, gain = 5.0)
+            .notch(freq = 210.0, q = 2.5)
             .let {
                 IgnitorDsl.Highpass(
                     inner = it,
-                    freq = IgnitorDsl.Times(IgnitorDsl.Freq, c(1.0)),
+                    freq = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = c(1.0)),
                     q = c(0.707),
                 )
             }
-            .lowpass(5250.0, 0.707)
-            .lowpass(5250.0, 0.707)
+            .lowpass(freq = 5250.0, q = 0.707)
+            .lowpass(freq = 5250.0, q = 0.707)
 
         val eq = authored.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
@@ -195,10 +195,10 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // would render a STATIC one and lose the sweep without a word.
         eachFilterKindSurvivesUnfused { inner, kind ->
             when (kind) {
-                "lowpass" -> IgnitorDsl.Lowpass(inner, c(2000.0), c(0.707), env = c(24.0))
-                "highpass" -> IgnitorDsl.Highpass(inner, c(200.0), c(0.707), env = c(24.0))
-                "bandpass" -> IgnitorDsl.Bandpass(inner, c(1000.0), c(0.707), env = c(24.0))
-                else -> IgnitorDsl.Notch(inner, c(1000.0), c(0.707), env = c(24.0))
+                "lowpass" -> IgnitorDsl.Lowpass(inner = inner, freq = c(2000.0), q = c(0.707), env = c(24.0))
+                "highpass" -> IgnitorDsl.Highpass(inner = inner, freq = c(200.0), q = c(0.707), env = c(24.0))
+                "bandpass" -> IgnitorDsl.Bandpass(inner = inner, freq = c(1000.0), q = c(0.707), env = c(24.0))
+                else -> IgnitorDsl.Notch(inner = inner, freq = c(1000.0), q = c(0.707), env = c(24.0))
             }
         }
     }
@@ -206,7 +206,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "a Param-backed env never fuses even when it defaults to zero" {
         // Same argument as the analog row above: `ignp("lpenv", 24)` could switch the sweep on
         // per note, and the decision is made once, here.
-        IgnitorDsl.Lowpass(IgnitorDsl.Sine(), c(2000.0), c(0.707), env = IgnitorDsl.Param("lpenv", 0.0))
+        IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine(), freq = c(2000.0), q = c(0.707), env = IgnitorDsl.Param("lpenv", 0.0))
             .optimize()
             .shouldBeInstanceOf<IgnitorDsl.Lowpass>()
     }
@@ -222,17 +222,17 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // exactly why the fuzz spec's humanized arm cannot reach this clause; see its comment.)
         eachFilterKindSurvivesUnfused { inner, kind ->
             when (kind) {
-                "lowpass" -> IgnitorDsl.Lowpass(inner, c(2000.0), c(0.707), humanize = true)
-                "highpass" -> IgnitorDsl.Highpass(inner, c(200.0), c(0.707), humanize = true)
-                "bandpass" -> IgnitorDsl.Bandpass(inner, c(1000.0), c(0.707), humanize = true)
-                else -> IgnitorDsl.Notch(inner, c(1000.0), c(0.707), humanize = true)
+                "lowpass" -> IgnitorDsl.Lowpass(inner = inner, freq = c(2000.0), q = c(0.707), humanize = true)
+                "highpass" -> IgnitorDsl.Highpass(inner = inner, freq = c(200.0), q = c(0.707), humanize = true)
+                "bandpass" -> IgnitorDsl.Bandpass(inner = inner, freq = c(1000.0), q = c(0.707), humanize = true)
+                else -> IgnitorDsl.Notch(inner = inner, freq = c(1000.0), q = c(0.707), humanize = true)
             }
         }
     }
 
     "the CONTROL for those three: a filter at their defaults still fuses" {
         // Without this row the three above would pass on an optimizer that fused nothing.
-        IgnitorDsl.Lowpass(IgnitorDsl.Sine(), c(2000.0), c(0.707)).optimize()
+        IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine(), freq = c(2000.0), q = c(0.707)).optimize()
             .shouldBeInstanceOf<IgnitorDsl.Eq>()
     }
 
@@ -240,9 +240,9 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // A rendered parity row cannot see this: a regression that makes the optimizer MORE
         // conservative below a wall is bit-identical. Only a shape assertion catches it.
         val dsl = IgnitorDsl.Saw()
-            .lowpass(2000.0, 0.707)
+            .lowpass(freq = 2000.0, q = 0.707)
             .onepole(800.0)
-            .lowpass(4000.0, 0.707)
+            .lowpass(freq = 4000.0, q = 0.707)
             .optimize()
 
         val outer = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -253,11 +253,11 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "an analog filter between two fusible ones splits them the same way" {
         val dsl = IgnitorDsl.Lowpass(
-            inner = IgnitorDsl.Saw().lowpass(2000.0, 0.707),
+            inner = IgnitorDsl.Saw().lowpass(freq = 2000.0, q = 0.707),
             freq = IgnitorDsl.Constant(3000.0),
             q = IgnitorDsl.Constant(0.707),
             analog = IgnitorDsl.Constant(2.0),
-        ).lowpass(4000.0, 0.707).optimize()
+        ).lowpass(freq = 4000.0, q = 0.707).optimize()
 
         val outer = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         outer.sections.size shouldBe 1
@@ -276,8 +276,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // let t = sig.notch(...); t.lowpass(a).add(t.lowpass(b))
         // Absorbing the shared notch into either branch would compute it twice — a silent CPU
         // regression, which is the opposite of the point.
-        val shared = IgnitorDsl.Saw().notch(210.0, 2.5)
-        val dsl = IgnitorDsl.Plus(shared.lowpass(3000.0), shared.lowpass(6000.0)).optimize()
+        val shared = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5)
+        val dsl = IgnitorDsl.Plus(left = shared.lowpass(3000.0), right = shared.lowpass(6000.0)).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
         val left = plus.left.shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -297,8 +297,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // is a silent CPU regression landing exactly in the .optimizer(0) -> (1) A/B flow.
         val shared = IgnitorDsl.Saw().lowpass(1000.0)
         val dsl = IgnitorDsl.Plus(
-            shared.optimizer(on = 1).notch(210.0, 2.5),
-            shared.highpass(300.0),
+            left = shared.optimizer(on = 1).notch(freq = 210.0, q = 2.5),
+            right = shared.highpass(300.0),
         ).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
@@ -314,7 +314,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "a shared subtree is rewritten once and stays shared" {
         val shared = IgnitorDsl.Saw().lowpass(1000.0)
-        val dsl = IgnitorDsl.Plus(shared, shared).optimize()
+        val dsl = IgnitorDsl.Plus(left = shared, right = shared).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
         (plus.left === plus.right) shouldBe true
@@ -323,7 +323,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     // ── Purity / stability ────────────────────────────────────────────────────
 
     "optimize is idempotent" {
-        val once = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0).optimize()
+        val once = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0).optimize()
         once.optimize() shouldBe once
     }
 
@@ -361,7 +361,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     // ── Kill switch ───────────────────────────────────────────────────────────
 
     "optimizer(0) disables fusion for the WHOLE definition" {
-        val dsl = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0).optimizer(on = 0)
+        val dsl = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0).optimizer(on = 0)
         (dsl.optimize() === dsl) shouldBe true
     }
 
@@ -375,13 +375,13 @@ class IgnitorDslOptimizerSpec : StringSpec({
                     q = c(0.707),
                 )
             }
-            .notch(210.0, 2.5)
+            .notch(freq = 210.0, q = 2.5)
 
         (dsl.optimize() === dsl) shouldBe true
     }
 
     "optimizer(1) leaves fusion ON and dissolves the marker" {
-        val marked = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0).optimizer(on = 1)
+        val marked = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0).optimizer(on = 1)
         val eq = marked.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.sections.size shouldBe 2
     }
@@ -393,7 +393,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         val marked = IgnitorDsl.Saw()
             .lowpass(5000.0)
             .optimizer(on = 1)
-            .notch(210.0, 2.5)
+            .notch(freq = 210.0, q = 2.5)
 
         val eq = marked.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
@@ -529,7 +529,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
                 pre = none, mul = c(3.0), add = none,
             )
         IgnitorDsl.Saw().mul(c(2.0)).plus(c(1.0)).plus(c(2.0)).optimize() shouldBe
-            IgnitorDsl.Plus(IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = c(1.0)), c(2.0))
+            IgnitorDsl.Plus(left = IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = c(2.0), add = c(1.0)), right = c(2.0))
     }
 
     "R2: a subtract after the multiply fills the add with the negation, bare (no Neg: that clamps now)" {
@@ -674,8 +674,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "R2: a range over block-constant operands is a scalar: alone it is left alone, as a coefficient it folds" {
         // `range(0, 1)` spells the retired `unipolar()`, which was a scalar over a scalar inner; the spelling
         // that replaced it must fold the same
-        val unipolarFreq = IgnitorDsl.Freq.range(c(0.0), c(1.0))
-        val depth = IgnitorDsl.Param("depth", 0.5).range(c(0.0), c(1.0))
+        val unipolarFreq = IgnitorDsl.Freq.range(from = c(0.0), to = c(1.0))
+        val depth = IgnitorDsl.Param("depth", 0.5).range(from = c(0.0), to = c(1.0))
 
         unipolarFreq.div(c(-1.17)).optimize() shouldBe unipolarFreq.div(c(-1.17))
         IgnitorDsl.Saw().mul(depth).optimize() shouldBe
@@ -683,7 +683,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "R2: a range over a signal is a signal: mul(lfo.range(0, 1)) stays Times" {
-        val ring = IgnitorDsl.Saw().mul(IgnitorDsl.Sine(freq = c(3.0)).range(c(0.0), c(1.0)))
+        val ring = IgnitorDsl.Saw().mul(IgnitorDsl.Sine(freq = c(3.0)).range(from = c(0.0), to = c(1.0)))
 
         ring.optimize() shouldBe ring
     }
@@ -691,14 +691,14 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "R2: rangex over block-constant operands is a scalar too: its composed chain folds as a coefficient" {
         // rangex is composed (exp of a range between two logs of maxes), no node of its own; every node of the
         // chain must be classified control-rate, or a slot-driven rangex would cost a per-sample multiply
-        val depth = IgnitorDsl.Param("depth", 0.5).rangex(c(100.0), c(1600.0))
+        val depth = IgnitorDsl.Param("depth", 0.5).rangex(from = c(100.0), to = c(1600.0))
 
         IgnitorDsl.Saw().mul(depth).optimize() shouldBe
             IgnitorDsl.Affine(IgnitorDsl.Saw(), pre = none, mul = depth, add = none)
     }
 
     "R2: rangex over a signal is a signal: mul(lfo.rangex(...)) stays Times" {
-        val ring = IgnitorDsl.Saw().mul(IgnitorDsl.Sine(freq = c(3.0)).rangex(c(0.5), c(2.0)))
+        val ring = IgnitorDsl.Saw().mul(IgnitorDsl.Sine(freq = c(3.0)).rangex(from = c(0.5), to = c(2.0)))
 
         ring.optimize() shouldBe ring
     }

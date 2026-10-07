@@ -79,5 +79,5 @@ object AdsrCurves {
      * even one), and [fallback] for a non-finite value, a negative position or one past the end.
      */
     fun curveAt(index: Double, fallback: AdsrCurve): AdsrCurve =
-        AdsrCurve.entries[catalogueIndexAt(index, names.size, fallback.ordinal)]
+        AdsrCurve.entries[catalogueIndexAt(index = index, size = names.size, fallback = fallback.ordinal)]
 }

@@ -190,13 +190,13 @@ private fun rewrite(node: IgnitorDsl, refCounts: RefCounts, memo: IdentityMemo):
     // render a tree that production never renders, which defeats the whole point of the A/B.
     if (rebuilt is IgnitorDsl.OptimizerHint) {
         val dissolved = rebuilt.inner
-        memo.put(node, dissolved)
+        memo.put(key = node, value = dissolved)
         return dissolved
     }
 
-    val result = foldArithmetic(fuseSerialFilters(rebuilt, node, refCounts), node, refCounts)
+    val result = foldArithmetic(node = fuseSerialFilters(node = rebuilt, original = node, refCounts = refCounts), original = node, refCounts = refCounts)
 
-    memo.put(node, result)
+    memo.put(key = node, value = result)
     return result
 }
 
@@ -273,7 +273,7 @@ private fun expandPasses(
         return listOf(build(q))
     }
     return List(n) { k ->
-        val rel = passesLadderRel(k, n)
+        val rel = passesLadderRel(k = k, n = n)
         val stageQ = when {
             // Odd N has a middle stage at EXACTLY 1.0 (sqrt(2)/(2*cos(pi/4)); never 1.0 by
             // rounding). Passing q through unwrapped there mirrors the chained door's
@@ -304,7 +304,7 @@ private fun expandPasses(
             // callers, both fed `q.noMod()`).
             rel == 1.0 -> q
             q is IgnitorDsl.Constant -> IgnitorDsl.Constant(q.value * rel)
-            else -> IgnitorDsl.Times(q, IgnitorDsl.Constant(rel))
+            else -> IgnitorDsl.Times(left = q, right = IgnitorDsl.Constant(rel))
         }
         build(stageQ)
     }
@@ -348,7 +348,7 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
         val count = passes
 
         if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
-            expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq, stageQ) }
+            expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq = freq, q = stageQ) }
         } else {
             null
         }
@@ -358,7 +358,7 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
         val count = passes
 
         if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
-            expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq, stageQ) }
+            expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq = freq, q = stageQ) }
         } else {
             null
         }
@@ -366,14 +366,14 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
 
     is IgnitorDsl.Bandpass ->
         if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
-            listOf(IgnitorDsl.EqSection.Bandpass(freq, q))
+            listOf(IgnitorDsl.EqSection.Bandpass(freq = freq, q = q))
         } else {
             null
         }
 
     is IgnitorDsl.Notch ->
         if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
-            listOf(IgnitorDsl.EqSection.Notch(freq, q))
+            listOf(IgnitorDsl.EqSection.Notch(freq = freq, q = q))
         } else {
             null
         }
@@ -495,8 +495,8 @@ private fun foldArithmetic(node: IgnitorDsl, original: IgnitorDsl, refCounts: Re
 
         when {
             orig == null || leftScalar == rightScalar -> node
-            rightScalar -> foldMultiply(node.left, node.right, orig.left, refCounts)
-            node.left.carriesNoParams() -> foldMultiply(node.right, node.left, orig.right, refCounts)
+            rightScalar -> foldMultiply(signal = node.left, k = node.right, originalSignal = orig.left, refCounts = refCounts)
+            node.left.carriesNoParams() -> foldMultiply(signal = node.right, k = node.left, originalSignal = orig.right, refCounts = refCounts)
             else -> node
         }
     }
@@ -508,8 +508,8 @@ private fun foldArithmetic(node: IgnitorDsl, original: IgnitorDsl, refCounts: Re
 
         when {
             orig == null || leftScalar == rightScalar -> node
-            rightScalar -> foldAdd(node, node.left, node.right, orig.left, refCounts)
-            node.left.carriesNoParams() -> foldAdd(node, node.right, node.left, orig.right, refCounts)
+            rightScalar -> foldAdd(node = node, signal = node.left, k = node.right, originalSignal = orig.left, refCounts = refCounts)
+            node.left.carriesNoParams() -> foldAdd(node = node, signal = node.right, k = node.left, originalSignal = orig.right, refCounts = refCounts)
             else -> node
         }
     }
@@ -521,7 +521,7 @@ private fun foldArithmetic(node: IgnitorDsl, original: IgnitorDsl, refCounts: Re
 
         when {
             orig == null || node.left.isControlRate() || !node.right.isControlRate() -> node
-            else -> foldAdd(node, node.left, node.right.negated(), orig.left, refCounts)
+            else -> foldAdd(node = node, signal = node.left, k = node.right.negated(), originalSignal = orig.left, refCounts = refCounts)
         }
     }
 
@@ -534,8 +534,8 @@ private fun foldArithmetic(node: IgnitorDsl, original: IgnitorDsl, refCounts: Re
 
         when {
             orig == null || node.left.isControlRate() || !node.right.isControlRate() -> node
-            node.right.isLiteralZero() -> foldMultiply(node.left, IgnitorDsl.Constant(0.0), orig.left, refCounts)
-            else -> foldMultiply(node.left, IgnitorDsl.Constant(1.0).div(node.right), orig.left, refCounts)
+            node.right.isLiteralZero() -> foldMultiply(signal = node.left, k = IgnitorDsl.Constant(0.0), originalSignal = orig.left, refCounts = refCounts)
+            else -> foldMultiply(signal = node.left, k = IgnitorDsl.Constant(1.0).div(node.right), originalSignal = orig.left, refCounts = refCounts)
         }
     }
 
@@ -545,7 +545,7 @@ private fun foldArithmetic(node: IgnitorDsl, original: IgnitorDsl, refCounts: Re
 
         when {
             orig == null || node.inner.isControlRate() -> node
-            else -> foldMultiply(node.inner, IgnitorDsl.Constant(-1.0), orig.inner, refCounts)
+            else -> foldMultiply(signal = node.inner, k = IgnitorDsl.Constant(-1.0), originalSignal = orig.inner, refCounts = refCounts)
         }
     }
 
@@ -560,7 +560,7 @@ private fun foldArithmetic(node: IgnitorDsl, original: IgnitorDsl, refCounts: Re
  */
 private fun IgnitorDsl.negated(): IgnitorDsl = when (this) {
     is IgnitorDsl.Constant -> IgnitorDsl.Constant(-value)
-    else -> IgnitorDsl.Minus(IgnitorDsl.Constant(-0.0), this)
+    else -> IgnitorDsl.Minus(left = IgnitorDsl.Constant(-0.0), right = this)
 }
 
 /** `signal · k`, [signal] already rewritten, [originalSignal] its pre-rewrite node. */

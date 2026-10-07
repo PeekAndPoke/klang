@@ -35,7 +35,7 @@ import kotlin.math.round
  */
 object BodyMaterials {
 
-    private fun m(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq, db, q)
+    private fun m(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq = freq, db = db, q = q)
 
     /**
      * All selectable names (`none` = off), grouped by family in display order.

@@ -285,7 +285,7 @@ class IgnitorDslWalkSpec : StringSpec({
         // Eq is the only node whose children are CHUNKED ACROSS SUB-OBJECTS: 1 + sum(section
         // arities. Variants is variable-arity too, but it is one flat list). A mis-chunk keeps
         // the child COUNT identical, so the generic round-trip above cannot see it.
-        val eq = IgnitorDsl.Sine().eq().band(1200.0, 0.9, 6.0).tap(850.0, 0.8, 1.7)
+        val eq = IgnitorDsl.Sine().eq().band(freq = 1200.0, q = 0.9, db = 6.0).tap(freq = 850.0, q = 0.8, gain = 1.7)
         val replaced = eq.withChildNodes(eq.childNodes().indices.map { m(it + 500) })
                 as IgnitorDsl.Eq
 
