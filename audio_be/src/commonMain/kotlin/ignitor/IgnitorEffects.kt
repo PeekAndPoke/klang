@@ -174,11 +174,17 @@ private class ShapeIgnitor(
             val os = oversampler
 
             if (os != null) {
-                // NaN-guard fused into the per-sample loop — see Oversampler.process KDoc.
-                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
+                // The round trip in two halves with the loop between them, inline: no closure per block
+                // (engine tidy-up step 2, audit B4.1).
+                ctx.scratchBuffers.oversample(os.factor).use { w ->
+                    val count = os.upsample(source = work, offset = ctx.offset, length = ctx.length, work = w)
+
+                    // NaN-guard fused into the per-sample loop: see the Oversampler.upsample KDoc.
                     for (i in 0 until count) {
                         w[i] = applyDistortionShape(s, w[i]).nanGuard()
                     }
+
+                    os.decimate(work = w, target = work, offset = ctx.offset, length = ctx.length)
                 }
             } else {
                 for (i in ctx.offset until end) {

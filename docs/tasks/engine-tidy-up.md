@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); step 1 (dead code) done, see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); step 1 (dead code) and step 2 (the oversampler closure) done, see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -98,6 +98,44 @@ PolyBLEP", `CREDITS.MD` credits PolyBLEP, and `klang-music-writing/ref/ignitor-r
 step either. Three `IgnitorsTest` row names say "PolyBLEP" too, and so do the in-app Credits page (`CreditsPage.kt:337`) and the
 Zawtooth KDoc (`IgnitorDsl.kt:446`).
 
+## Step 2, the ShapeIgnitor closure (B4.1): done 2026-10-07 (uncommitted, awaiting review and the corpus render)
+
+`Oversampler.process(buffer, offset, length, scratch, transformBlock)` is gone. In its place are two halves:
+`upsample(source, offset, length, work): Int` and `decimate(work, target, offset, length)`. The caller holds
+the oversampled scratch lease (`ScratchBuffers.use`, inline) across both and runs its shaping loop between them.
+That leaves no function-typed parameter on the audio path. Both production callers use the halves: `ShapeIgnitor`
+had built a capturing closure every block, and `DistortionCore` loses its field lambda and the `blockDrive` side
+channel. The copy back into the caller's buffer is a plain loop now. It was `copyInto`, which on JS allocated a
+`subarray` view every block (`audio/ref/performance.md`). Stage 0 still does nothing in either half. Report:
+`tmp/reviews/tidy-step2-report.md`.
+
+- **Callers, every module:** only those two in production. The Katalyst chain has no distort or crush stage, and
+  crush (`CrushCore`, `CrushIgnitor`) never oversampled. The specs (`OversamplerSpec`,
+  `OversamplerDecimatorParitySpec`, `DoorDistortionLawSpec`, `StripLawCoresSpec`, `GuitarClickHuntTest`) go
+  through one test helper, `Oversampler.roundTrip` (`audio_be/src/commonTest/kotlin/_oversampler_test_helpers.kt`):
+  the halves composed the way the callers compose them, `inline`.
+- **No `utils/` helper:** nothing self-contained fell out with a second caller. The copy loop is the candidate (see
+  below), but it has one caller in this step.
+- **Proof:** a probe compared HEAD's classes (copied from `git show HEAD:`) with the new code. It covered the DSL
+  runtime's `Shape`, `Distort` and `Crush`-after-either nodes over every shape, factors 2, 3, 4, 8, 16 and 32,
+  constant and LFO amounts, and 60 ragged windows. A second part ran the nodes over a hostile source (NaN,
+  infinities, 1e300, a denormal, -0.0) at stages 1 to 5 and five amounts, NaN among them. 2,400 configurations and
+  9.8 million samples matched bit for bit. In the compiled JS (`klang-engine-audio_be.js`, test build),
+  `ShapeIgnitor.generate` and `DistortionCore.process` now call `upsample_*` and `decimate_*` with the loop
+  inlined. `ShapeIgnitor$generate$lambda`, `DistortionCore$oversampledTransform$lambda` and the `arrayCopy` in
+  the round trip are gone.
+- **Rows:** `OversamplerDecimatorParitySpec` pins both production nodes, oversampled (stages 1 to 4, every shape,
+  the fused node at a drive and at unity), against the independent ring oracle, bit for bit. The windows are
+  ragged and start mid-block, and the source carries NaN. `OversamplerSpec` pins the stage-0 no-op of both
+  halves. Seven mutants each went red on the intended row. The three mutants in the callers (the loop bound, the
+  decimate offset, the distort NaN guard) went red only on the new rows.
+- **Found, not done:** the other `copyInto` sites on per-block paths, which make the same JS view. The
+  inventory and the decision (step 6) live in "Found during tidy-up step 2" below.
+- **The halves can be combined wrongly** (an offset or length that differs between the two calls, a missing
+  `decimate`): the contract is in the `upsample` KDoc and pinned by the parity rows. If a third caller ever
+  appears, promote the test helper `Oversampler.roundTrip` (`_oversampler_test_helpers.kt`) to the main source
+  set as the one wrapper, `inline`.
+
 ## Decisions for the maintainer
 
 Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that change the most:
@@ -144,3 +182,35 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   cannot interrupt a busy loop on the JVM (found 2026-10-07: a shimmer row under the old wrap loops hung the run
   until a shell timeout killed it, its 30 s kotest timeout never fired). If that row's mutant spins, the suite
   hangs instead of going red. Not checked yet.
+
+## Found during tidy-up step 2
+
+- **`copyInto` on per-block paths makes a JS `subarray` view every block** (the house rule in
+  `audio/ref/performance.md`; Kotlin/JS `arrayCopy` calls `source.subarray(...)` for typed arrays). This list is
+  the one home of the inventory: every `copyInto`, `copyOf` and `copyOfRange` in `audio_be` (`commonMain`;
+  `jsMain` and `jvmMain` have none), re-grepped after review round 1 of step 2. Step 2 turned the `Oversampler`'s
+  into a plain loop. Converting the per-block sites together earns a `utils/` copy helper with a spec,
+  bit-identical; it belongs with step 6 (small shared helpers). Coordinator decision 2026-10-07: do it there.
+
+  **Per block, steady state (19 sites in all with the fades below):**
+  - `ignitor/MemoizingIgnitor.kt:123`: per voice, per shared node, every block. Probably the hottest.
+  - `filters/ResonatorBank.kt:64` once per block, and `:71` once per BAND per block (body and vowel).
+  - `filters/ParallelMixFilter.kt:54`.
+  - `filters/EqCore.kt:273` (`captureInput`).
+  - `cylinders/katalyst/KatalystCompressorEffect.kt:280-281`: every block while a lookahead compressor is Off.
+
+  **Per block, only while a fade runs:**
+  - `ChainSwap.kt:249-250` and `:275-276` (the duck's fade in and out across a chain swap).
+  - `cylinders/katalyst/KatalystFilterSwap.kt:327-328` and `:346-347` (4 sites).
+  - `cylinders/katalyst/KatalystCompressorEffect.kt:365-366`, and `:388-389` on the landing block only.
+
+  **Not per block (leave them, or convert only for uniformity):**
+  - `effects/Compressor.kt:405-406`: the no-lookahead fallback of `processLookahead`. Unreachable today: every
+    production caller reaches `processLookahead` only with a lookahead (`Compressor.process` guards on
+    `delayFrames > 0`, `KatalystCompressorEffect` on `latent`, which is `latencyFrames > 0`). Convert it with the
+    rest, or drop the branch with a spec of the guard.
+  - `cylinders/katalyst/KatalystEqEffect.kt:164, 170`: control rate (`configure`, on a knob change).
+  - `ignitor/PhasePool.kt:468, 472`: once per note, at the phase draw of its first block.
+  - `ignitor/Ignitors.kt:351-354` (`copyOf`): `Bank.resize` growth, which allocates anyway (audit B4.5).
+  - `cylinders/katalyst/KatalystChain.kt:91` (`copyOf`): chain build. `SampleStore.kt:172`: a sample upload
+    message.

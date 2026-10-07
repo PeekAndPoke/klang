@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
+import io.peekandpoke.klang.audio_be.roundTrip
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
@@ -160,7 +161,7 @@ class DoorDistortionLawSpec : StringSpec({
             }
 
             if (os != null) {
-                os.process(work, 0, n, scratch) { w, count ->
+                os.roundTrip(buffer = work, offset = 0, length = n, scratch = scratch) { w, count ->
                     for (i in 0 until count) {
                         w[i] = curve(shape, w[i]).first
                     }

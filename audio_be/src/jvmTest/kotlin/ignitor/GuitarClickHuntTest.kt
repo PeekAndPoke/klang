@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.parseDistortionShape
+import io.peekandpoke.klang.audio_be.roundTrip
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -628,7 +629,7 @@ internal fun Ignitor.distortVariant(
 
                 val os = oversampler
                 if (os != null) {
-                    os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
+                    os.roundTrip(buffer = work, offset = ctx.offset, length = ctx.length, scratch = ctx.scratchBuffers) { w, count ->
                         for (i in 0 until count) {
                             w[i] = applyDistortionShape(s, w[i] * driveGain)
                         }

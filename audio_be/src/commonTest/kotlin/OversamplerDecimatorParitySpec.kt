@@ -8,7 +8,14 @@ package io.peekandpoke.klang.audio_be
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
+import io.peekandpoke.klang.audio_be.ignitor.ArrayIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.ConstantIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.fusedDistort
+import io.peekandpoke.klang.audio_be.ignitor.shape
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -22,6 +29,12 @@ import kotlin.math.sin
  * block shorter than the prefix, a block that ends inside the in-place region, an empty block).
  * Samples are compared with `Double.equals`, which keeps `-0.0` and `0.0` apart where `==` would
  * not: the claim is the same bits, not the same value.
+ *
+ * The last rows pin the two production callers of the oversampler, the `Shape` node (`ShapeIgnitor`) and the
+ * fused `Distort` node (`DistortionCore`), through their nodes against the same ring oracle (engine tidy-up step 2,
+ * audit B4.1: the callers run their shaping loop between `Oversampler.upsample` and `Oversampler.decimate`). The
+ * windows are ragged inside a 128-frame block, as a voice sees them (a note starting mid-block, an empty window),
+ * and the source carries NaN samples, so the callers' offsets, loop bounds and NaN guards are part of the pin.
  */
 class OversamplerDecimatorParitySpec : StringSpec({
 
@@ -52,12 +65,12 @@ class OversamplerDecimatorParitySpec : StringSpec({
                 val a = AudioBuffer(blockFrames) { i -> signal(pos + i - offset) }
                 val b = a.copyOf()
 
-                fast.process(a, offset, length, scratch) { w, count ->
+                fast.roundTrip(buffer = a, offset = offset, length = length, scratch = scratch) { w, count ->
                     for (i in 0 until count) {
                         w[i] = ShapingFuncs.hardClip(w[i] * 1.7)
                     }
                 }
-                ring.process(b, offset, length, scratch) { w, count ->
+                ring.process(buffer = b, offset = offset, length = length, scratchBuffers = scratch) { w, count ->
                     for (i in 0 until count) {
                         w[i] = ShapingFuncs.hardClip(w[i] * 1.7)
                     }
@@ -70,6 +83,110 @@ class OversamplerDecimatorParitySpec : StringSpec({
                 }
 
                 pos += length
+            }
+        }
+    }
+
+    // ── The two production callers, through their nodes ─────────────────────────────────────────────
+
+    /** (offset, length) inside one 128-frame block per call: full blocks, mid-block starts, short and empty windows. */
+    val windows = listOf(
+        0 to 128, 37 to 91, 0 to 1, 64 to 0, 100 to 28, 0 to 13, 5 to 7, 64 to 64, 3 to 125, 0 to 128, 90 to 38, 0 to 128,
+    )
+    val total = windows.sumOf { it.second }
+    val source = DoubleArray(total) { i -> if (i == 200 || i == 418) Double.NaN else signal(i) }
+
+    /** [node] rendered one window per `generate`, at the window's offset in the block, the windows concatenated. */
+    fun renderNode(node: Ignitor): DoubleArray {
+        val ctx = IgniteContext(
+            sampleRate = 48000,
+            voiceDurationFrames = total,
+            gateEndFrame = total,
+            scratchBuffers = ScratchBuffers(blockFrames),
+        )
+        val buffer = AudioBuffer(blockFrames)
+        val out = DoubleArray(total)
+        var at = 0
+
+        for ((offset, length) in windows) {
+            ctx.voiceElapsedFrames = at
+            ctx.updateOffsetAndLength(offset, length)
+            node.generate(buffer, 220.0, ctx)
+
+            for (i in 0 until length) {
+                out[at + i] = buffer[offset + i]
+            }
+
+            at += length
+        }
+
+        return out
+    }
+
+    /**
+     * The callers' laws on the ring oracle. [drive] null is the `Shape` node: the shape, the DC blocker, the soft cap.
+     * Otherwise the fused `Distort` node: the shape of `x * drive` inside the oversampler, the DC blocker, no cap.
+     */
+    fun oracle(stages: Int, shape: DistortionShape, drive: Double?): DoubleArray {
+        val ring = RingOversampler(stages)
+        val dc = LowPassHighPassFilters.DcBlocker()
+        val scratch = ScratchBuffers(blockFrames)
+        val work = AudioBuffer(blockFrames)
+        val out = DoubleArray(total)
+        var at = 0
+
+        for ((offset, length) in windows) {
+            for (i in 0 until length) {
+                work[offset + i] = source[at + i]
+            }
+
+            ring.process(buffer = work, offset = offset, length = length, scratchBuffers = scratch) { w, count ->
+                for (i in 0 until count) {
+                    w[i] = if (drive == null) {
+                        applyDistortionShape(shape, w[i]).nanGuard()
+                    } else {
+                        applyDistortionShape(shape, w[i] * drive).nanGuard()
+                    }
+                }
+            }
+
+            dc.process(work, offset, length)
+
+            for (i in 0 until length) {
+                out[at + i] = if (drive == null) ShapingFuncs.softCap(work[offset + i]) else work[offset + i]
+            }
+
+            at += length
+        }
+
+        return out
+    }
+
+    fun sameBits(actual: DoubleArray, expected: DoubleArray, clue: String) {
+        for (i in 0 until total) {
+            withClue("$clue, sample $i") {
+                actual[i].equals(expected[i]) shouldBe true
+            }
+        }
+    }
+
+    for (stages in 1..4) {
+        "stages $stages: the Shape node renders every shape, oversampled, bit for bit as the ring form" {
+            for (shape in DistortionShape.entries) {
+                val node = ArrayIgnitor(source).shape(shape, stages)
+
+                sameBits(renderNode(node), oracle(stages, shape, drive = null), "$shape")
+            }
+        }
+
+        "stages $stages: the fused Distort node renders every shape, oversampled, bit for bit as the ring form" {
+            // 0.6 drives; -0.2 is a modulated-style amount at or below 0, which runs at unity drive (never a bypass).
+            for (shape in DistortionShape.entries) {
+                for ((amount, drive) in listOf(0.6 to DistortionCore.drive(0.6), -0.2 to 1.0)) {
+                    val node = ArrayIgnitor(source).fusedDistort(ConstantIgnitor(amount), shape, stages)
+
+                    sameBits(renderNode(node), oracle(stages, shape, drive), "$shape at $amount")
+                }
             }
         }
     }

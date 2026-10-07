@@ -43,24 +43,6 @@ internal class DistortionCore(
 
     private val dcBlocker = LowPassHighPassFilters.DcBlocker()
 
-    /** The drive of the block being processed, read by [oversampledTransform]. */
-    private var blockDrive: Double = 1.0
-
-    /**
-     * The oversampled block transform, built ONCE per instance: a lambda that captured the block's
-     * locals would be a new closure object on every block. It reads the shape and [blockDrive] into
-     * locals first, so the expression per sample is the one a per-block lambda evaluated.
-     */
-    private val oversampledTransform: (AudioBuffer, Int) -> Unit = { work, count ->
-        val s = shape
-        val d = blockDrive
-
-        // NaN-guard fused into the per-sample loop: see the Oversampler.process KDoc.
-        for (i in 0 until count) {
-            work[i] = applyDistortionShape(s, work[i] * d).nanGuard()
-        }
-    }
-
     /**
      * Drives, shapes and DC-blocks `buffer[offset, offset + length)` in place, at [drive] (a gain, see
      * [drive] in the companion for the amount conversion).
@@ -69,8 +51,20 @@ internal class DistortionCore(
         val os = oversampler
 
         if (os != null) {
-            blockDrive = drive
-            os.process(buffer, offset, length, scratchBuffers, oversampledTransform)
+            // The round trip in two halves with the loop between them, inline: no closure per block and
+            // no side channel for the drive (engine tidy-up step 2, audit B4.1).
+            scratchBuffers.oversample(os.factor).use { work ->
+                val count = os.upsample(source = buffer, offset = offset, length = length, work = work)
+                val s = shape
+                val d = drive
+
+                // NaN-guard fused into the per-sample loop: see the Oversampler.upsample KDoc.
+                for (i in 0 until count) {
+                    work[i] = applyDistortionShape(s, work[i] * d).nanGuard()
+                }
+
+                os.decimate(work = work, target = buffer, offset = offset, length = length)
+            }
         } else {
             val s = shape
             val d = drive

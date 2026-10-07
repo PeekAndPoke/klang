@@ -218,6 +218,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 The oversampler is two halves, `upsample` and `decimate`, with the caller's shaping loop between
+  them inline (no closure per block, no `copyInto` view on JS): `docs/tasks/engine-tidy-up.md` step 2
 - 2026-10-07 The gate covers the four pitch arms, a fold (a non-finite vibrato depth stays built, its default);
   a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/pitch-pipeline-into-the-tree.md` step 0
 - 2026-10-07 Solo is engine state per source: the rest fillers are control-only events, `SoloTracker` records from any

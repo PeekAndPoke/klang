@@ -190,9 +190,9 @@ class ResourceWarehouse(
          * beyond it the trade is the user's.
          *
          * A sub-pool is NOT pre-sized beyond its construction default (4 work buffers): the real
-         * depth is ONE — `Oversampler.process` opens a single `use`, and `ShapeIgnitor` renders its
-         * upstream BEFORE opening it, so oversampled work never nests even when shaped nodes stack —
-         * and the DoubleArray half stays EMPTY, since nothing on an oversampled path calls
+         * depth is ONE (an oversampled round trip holds a single `use` across `Oversampler.upsample` and
+         * `Oversampler.decimate`, and `ShapeIgnitor` renders its upstream BEFORE opening it, so
+         * oversampled work never nests even when shaped nodes stack), and the DoubleArray half stays EMPTY, since nothing on an oversampled path calls
          * `useDouble` (only `ModApplyingIgnitor`, on the main pool). Review round 1 had warmed both
          * halves to depth 8, ~460 KB that no render can reach, paid eagerly in the worklet's first
          * `process()` (review round 2). The proof is the sub-pool's own counters after a render.

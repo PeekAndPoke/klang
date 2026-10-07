@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.parseDistortionShape
+import io.peekandpoke.klang.audio_be.roundTrip
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.floor
@@ -134,7 +135,7 @@ class StripLawCoresSpec : StringSpec({
 
                 val inside = if (driveInside) d else 1.0
 
-                os.process(out, from, blockFrames, scratch) { work, count ->
+                os.roundTrip(buffer = out, offset = from, length = blockFrames, scratch = scratch) { work, count ->
                     for (i in 0 until count) {
                         val y = applyDistortionShape(shape, work[i] * inside)
                         work[i] = if (y.isNaN()) 0.0 else y

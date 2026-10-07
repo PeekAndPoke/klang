@@ -102,7 +102,8 @@ more than one place per effect, the factoring is not done.
 ## 4. The mechanism, as far as the code shows it today (2026-09-23)
 
 - **The region node** upsamples its input, renders its body under a child `IgniteContext` at factor
-  times the rate, and decimates. `Oversampler.process` already takes a block callback, and
+  times the rate, and decimates. `Oversampler.upsample` and `Oversampler.decimate` are already the two
+  halves a region wraps around its body (engine tidy-up step 2, 2026-10-07), and
   `ScratchBuffers.oversample(factor)` already keeps a scratch pool at factor times the block.
 - **How the rate travels.** The maintainer's phrasing: the buffers carry their rate. In the Ignitor that
   is the context that accompanies the buffer: `IgniteContext.sampleRate` is read at render time by the
