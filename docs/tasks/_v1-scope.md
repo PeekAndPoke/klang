@@ -41,6 +41,21 @@ even when they are valuable.
 | ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
 | ~~9a~~ | ~~Master limiter surge after deep limiting~~ | [`20260929-bugfix-master-limiter-surge.md`](../tasks-archive/2026-09/20260929-bugfix-master-limiter-surge.md) | ✅ **CLOSED 2026-09-29, measured, not audible**: the limiter dips under every snare hit, but the maintainer heard no surge after it |
 
+## The engine order from here (maintainer, 2026-10-07)
+
+"Quite beefy work on the engine, but worth it": revisiting the engine surfaces subtle bugs (the 16-bit browser
+output was one), so each pass is also quality control. The backend should end up as tidy as it can be, for a later
+port to Zig.
+
+1. The voice lifecycle state machine: [`voice-lifecycle-state-machine.md`](voice-lifecycle-state-machine.md)
+   (steps 1 to 4 done, step 5 in review), then [`code-style-named-args-pass.md`](code-style-named-args-pass.md).
+2. The pitch pipeline into the tree: [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md).
+3. The Katalyst DSL leftovers and the engine tidy-up (audit 2026-10-07, `tmp/reviews/engine-tidy-audit.md`, to be
+   turned into a task); includes checking that every effect follows `../plans/effect-state-machines.md`.
+4. Takeover / voice stealing and the cut-group semantics: [`future/cut-group-semantics.md`](future/cut-group-semantics.md)
+   decided first, then [`voice-takeover.md`](voice-takeover.md) Phase 1.
+5. Pitch takeover (`glide`): [`voice-takeover.md`](voice-takeover.md) Phase 2.
+
 ## Layer 2: widen and harden the interface (7 open, 2 of them parked: 1 blocked on a design decision, 2 maintainer calls; the rest done or closed; reviewed 2026-09-29)
 
 | # | Task | Source | Why V1 |
