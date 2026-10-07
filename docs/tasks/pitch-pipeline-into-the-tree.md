@@ -161,7 +161,7 @@ one") applied; every clause not named here is kept.
 | door | old expression (strip) | new (classic stage) | identity |
 |---|---|---|---|
 | pitch envelope | built when `pEnv` finite and `!= 0`; stages `(p* ?: PITCH_ENV_*) * sampleRate`; sustain non-finite reads unset; curves `?: MOD_ENV_CURVE`; gate from the voice's limits per block; `renderPitchEnvelopeRatios` multiplying into the buffer | gate off at a leaf amount `== 0` or non-finite; the node's arm with the same constants; the same `renderPitchEnvelopeRatios` writing, combined by `Times` | **bit-identical** (one law, one mapping, `x * p == p * x`). Only a NaN stage TIME differs: the strip passed it to `EnvelopeCore` (a zero-length stage), a slot reads it as unset (the default time) |
-| vibrato | built when `vibratoMod > 0`; rate `vibrato ?: VIBRATO_RATE_HZ`; phase from 0, `(TWO_PI * rate) / sampleRate`, the one-subtract or full wrap; `fastExp2(fastSin(phase) * depth / 12)` | gate off at a leaf depth `<= 0`; `VibratoModIgnitor`: the same accumulator, increment, wrap pair and ratio, plus `safeOut` (the identity on a finite ratio) | **bit-identical**. A NaN rate poisoned the strip's phase; the slot reads it as unset |
+| vibrato | built when `vibratoMod > 0`; rate `vibrato ?: VIBRATO_RATE_HZ`; phase from 0, `(TWO_PI * rate) / sampleRate`, the one-subtract or full wrap; `fastExp2(fastSin(phase) * depth / 12)` | gate off at a FINITE leaf depth `<= 0` (a non-finite depth stays built and renders the default, step 0); `VibratoModIgnitor`: the same accumulator, increment, wrap pair and ratio, plus `safeOut` (the identity on a finite ratio) | **bit-identical**. A NaN rate poisoned the strip's phase; the slot reads it as unset |
 | accelerate | built when `accelerate != 0` and `end > onset`; base = `endFrame - startFrame` (scheduled end, the release tail INCLUDED, a Double); per block `2^(octaves * rel / total)`, then `ratio *= 2^(octaves / total)` per sample | today's node: base = `voiceDurationFrames` (the GATE length, an Int) and `2^(octaves * (rel / total))` | **not identical as the node stands**: a different base and a different rounding. Bit-identical once the node takes the strip's base and expression order (step 3, decision D2). The per-block seed keeps the known float-reassociation class (P4: 5.3e-15 across onsets, 1.7e-13 across block sizes, bounded at 1e-11) on both |
 | FM | built when `fmh` set or `fmEnv != 0`, rendered when depth `!= 0`; modulator phase in radians, `fastSin`; depth envelope evaluated ONCE per block at the block's first frame and held (ledger E11, Class 2), release always 0; `1 + sin * ((depth * env) / freq)`; divides by the raw note, no bypass at freq 0 | the `Fm` node: depth envelope PER SAMPLE (E1's fix), `1 + (mod * depth) / safeDiv(freq)` (with an envelope `(mod * (depth * env)) / freq`), bypass at `freq <= 0`, `safeOut`; the modulator a `Sine` whose drift lane seeds from the voice rng on its first block | **not bit-identical.** See below |
 
@@ -210,28 +210,60 @@ parity spec over the shared core (`audio/ref/verification.md`, "One law, two hos
 
 The four classic stages would otherwise put a memo and a `ModApplyingIgnitor` on every pitched source of every voice.
 The pitch arms in `buildIgnitor` get the gate's existing move: a stage whose gating knob is a `Param` or `Constant` leaf
-at its off value, or non-finite, is not built and the walk descends with the UNCHANGED `accumulatedMod`.
+at its off value, or non-finite, is not built and the walk descends with the UNCHANGED `accumulatedMod`. **Except the
+vibrato's non-finite depth** (coordinator, 2026-10-07): the vibrato reads a non-finite depth as its DEFAULT
+(`VIBRATO_SEMITONES`, `finiteOr`), not as 0, so it stays built; the other three read a non-finite switch as 0, so
+for them non-finite is off and a fold.
 
 ```kotlin
 is IgnitorDsl.Vibrato -> {
-    // Gate row "vibrato" (audio/ref/off-values.md): off at a leaf depth <= 0.
-    if (semitones.gatedOff(ignitorParams = ignitorParams, cache = cache) { it <= 0.0 }) {
+    // GATE ROW `vibrato` (audio/ref/off-values.md): off at a FINITE leaf depth <= 0 only.
+    if (semitones.gatedOffWhenFinite(ignitorParams = ignitorParams, cache = cache) { it <= 0.0 }) {
         return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
     }
     // ... as today
 }
 ```
 
-Rows: vibrato depth `<= 0`; accelerate `== 0`; pitch envelope amount `== 0`; FM depth `== 0` (a negative depth
+Rows: vibrato a finite depth `<= 0`; accelerate `== 0`; pitch envelope amount `== 0`; FM depth `== 0` (a negative depth
 renders on both hosts, so the off value is exactly 0). Each is a FOLD: a built stage at its off value outputs exactly
 1.0 and every reader multiplies by it (`x * 1.0 == x`, also inside the oscillators' `phaseInc * phaseMod[i] * m`, the
 sample's `rate * phaseMod[i] * m` and the Karplus `dl / phaseMod[i]`). Three consequences that are not folds, named
 like the existing sibling rows of `IgnitorGateSpec`: a drawing sibling knob (a `perlin` rate under a literal-0 depth)
 no longer draws; a gated FM no longer counts its modulator's release tail; a gated FM's modulator `Sine` no longer
-takes its drift seed. Proof: `IgnitorGateSpec` rows (an authored `vibrato(5, 0)`, `accelerate(0)`,
+takes its drift seed. A fourth, found while building it (coordinator, 2026-10-07: accepted and named): a gated
+pitch arm's inner SHARES the build of the same node elsewhere, because the walk descends with the unchanged mod
+(`s + s.vibrato(5, 0)` is `s + s`, one instance read twice; D13: one `let` is one signal); the ungated build had two
+instances (+4.6 dB for a supersaw, +7.0 dB for a pluck, a step at exactly depth 0). A fifth, from review round 1: a
+gated outer arm no longer hands its freq key to the pitch mods inside it, so a detuned layer under them renders the
+inner mod once per block instead of twice. In both, the gated build equals the tree without the node. One
+qualification: the gated arm builds nothing, but a build-time walk over the DSL (the detune fold predicate) still
+sees its knobs. Proof: `IgnitorGateSpec` rows (an authored `vibrato(5, 0)`, `accelerate(0)`,
 `pitchEnvelope(0, ...)`, `fm(..., depth = 0)` render the same bits as the tree without the node, each with a positive
 control at a non-zero value), four rows in `audio/ref/off-values.md`, and the corpus (predicted identical: no song
 writes a literal-0 pitch stage).
+
+**What was done (2026-10-07, uncommitted, for review).** The four arms in `IgnitorDslRuntime.buildIgnitor` gate
+first: accelerate and the pitch envelope on `gatedOff { it == 0.0 }`, fm on `depth.gatedOff { it == 0.0 }` (returns the
+carrier built under the unchanged mod), the vibrato on the new `gatedOffWhenFinite { it <= 0.0 }` (its KDoc says why
+the vibrato differs). The `gatedOff` KDoc names the fourth and fifth consequences. `IgnitorGateSpec`, 13 new rows and the
+guardrail map extended: a stage row per arm with a positive control and the negative ON values (accelerate, penv,
+fm); the vibrato's non-finite depths (NaN, both infinities, an unset-default `Param`) built and rendering
+`VIBRATO_SEMITONES`; the four arms UNGATED (a non-leaf knob at the off value) rendering the bare source; that fold
+over every source family (sine, sine at analog 0.5, square, tri, supersaw, pluck, the sample playhead), under a
+strip `phaseMod`, and as a gated outer arm over a built vibrato; the four named consequences (a perlin vibrato rate
+and a crackle fm modulator take no draws; a gated fm counts no modulator tail; a gated fm's modulator takes no drift
+seed; the inner shares, `s + s`). The family row pins the seed consequence where it shows: fm ungated at 0 over a
+source that draws at render (the analog sine, the supersaw, the pluck) is NOT the source alone, the gated build is.
+`IgnitorTailSpec`'s "an FM modulator's envelope still counts" now writes a depth (200): at the default depth 0
+the stage is gated and has no modulator to count, the named consequence. 16 mutants, each red on its predicted
+rows (report: `tmp/reviews/pitch-step0-report.md`). Review round 1 (2 MAJOR, 6 MINOR): `PitchModSafetyTest`'s
+NaN rows for the accelerate amount, the pitch envelope amount and the fm depth write the NaN as a NON-LEAF
+(`OptimizerHint(Constant(NaN))`), because a leaf NaN is now gated and never reached the `finiteOr` they guard; a
+row per arm gated INSIDE a built vibrato (the outer mod must survive, `classic()`'s nesting); a row for the fifth
+consequence; the share row on a supersaw; the measured sizes in `off-values.md`. Docs: four rows and the
+fourth and fifth consequences in `audio/ref/off-values.md`, the gate line in `audio/MEMORY.md` plus one History line. The
+corpus run is the coordinator's (predicted identical: no song writes a literal-0 pitch stage).
 
 #### Step 1. The pitch envelope (M, bit-identical)
 
@@ -263,6 +295,11 @@ so its identity rests on the door matrix, and the corpus engages the new plumbin
   place). Sprudel writes both keys from its `pitchMod` group (`vib(4)` alone writes only the rate, the depth stays 0,
   no vibrato: the strip's behaviour). `VoiceData` loses `vibrato`, `vibratoMod`; `VibratoRenderer` and
   `Voice.Vibrato` go; `Ignitor.slot.vibrato` on the script door.
+- **Guard from step 0** (audio review, round 1): the vibrato's gate keeps a NON-FINITE depth built (it renders the
+  default 0.25 st), so `vibrato.depth`'s slot default must be the finite literal 0.0, never `SLOT_UNSET`, or every
+  voice of every song gets a vibrato. State it in the slot group's KDoc (the shape of `mul`'s "must default to a
+  safe literal"), and add a spec row "an unwritten `vibrato.depth` slot builds no vibrato" (`shapeOf` equal to the
+  bare tree).
 - Specs: `VibratoConsistencyTest` (strip against node) becomes an oracle row; the benchmark case
   `sine+vibrato+tremolo` (`IgnitorBenchmark`) now runs through the slot. Measure it: the strip wrote one buffer per
   voice, the tree writes one memo plus one `ModApplyingIgnitor` per pitched source (two scratch buffers and a copy).

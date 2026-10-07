@@ -338,9 +338,18 @@ internal fun IgnitorDsl.buildIgnitor(
         return pick(cache.soundIndex).buildIgnitor(ignitorParams, cache, accumulatedMod)
     }
 
-    // ── Pitch-mod nodes: absorb into mod, descend. No cache entry for this node itself; its mod is memoized (`combineMods`). ──
+    // ── Pitch-mod nodes: absorb into mod, descend. No cache entry for this node itself; its mod is memoized (`combineMods`).
+    //    The four with a switch knob are GATED first (pitch pipeline step 0): off, the walk descends with the UNCHANGED
+    //    mod and builds nothing of the node (see `gatedOff`, "a gated PITCH arm"; a build-time walk over the DSL, the
+    //    detune fold predicate, still sees its knobs). `PitchMod` has no switch. ──
     when (this) {
         is IgnitorDsl.Vibrato -> {
+            // GATE ROW `vibrato` (audio/ref/off-values.md): off at a FINITE leaf depth <= 0 only. A non-finite
+            // depth stays built and renders the node's default depth, as before the gate (see `gatedOffWhenFinite`).
+            if (semitones.gatedOffWhenFinite(ignitorParams = ignitorParams, cache = cache) { it <= 0.0 }) {
+                return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
+            }
+
             val vibMod = vibratoModIgnitor(
                 rate = this.rate.buildIgnitor(ignitorParams, cache).ignitor,
                 semitones = this.semitones.buildIgnitor(ignitorParams, cache).ignitor,
@@ -349,11 +358,21 @@ internal fun IgnitorDsl.buildIgnitor(
         }
 
         is IgnitorDsl.Accelerate -> {
+            // GATE ROW `accelerate`: off at a leaf amount == 0, or non-finite (the runtime reads that as 0).
+            if (semitones.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+                return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
+            }
+
             val accelMod = accelerateModIgnitor(this.semitones.buildIgnitor(ignitorParams, cache).ignitor)
             return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, accelMod, node = this))
         }
 
         is IgnitorDsl.PitchEnvelope -> {
+            // GATE ROW `pitch envelope`: off at a leaf amount == 0, or non-finite (the runtime reads that as 0).
+            if (semitones.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+                return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
+            }
+
             // Build order IS rng draw order: attack, decay, release, semitones as before, then the
             // sustain in the slot the anchor had (the dropped `curve` was a leaf and drew nothing).
             // The three curves are read leaf-only (`adsrCurveKnob`) and build nothing.
@@ -378,6 +397,12 @@ internal fun IgnitorDsl.buildIgnitor(
         }
 
         is IgnitorDsl.Fm -> {
+            // GATE ROW `fm`: off at a leaf depth == 0, or non-finite (the runtime reads that as 0). Not <= 0: a
+            // negative depth renders. Gated, the modulator is not built, so its release tail is not counted.
+            if (depth.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+                return carrier.buildIgnitor(ignitorParams, cache, accumulatedMod)
+            }
+
             val modulatorBuilt = modulator.buildIgnitor(ignitorParams, cache)
             val fmMod = fmModIgnitor(
                 modulator = modulatorBuilt.ignitor,
@@ -513,6 +538,23 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
  *  3. **Gate, and let the siblings go with the stage.** Taken. Simple, and the consequence is
  *     visible in a spec row rather than lurking.
  *
+ * **A gated PITCH arm, two consequences more (pitch pipeline step 0, 2026-10-07).** Both follow
+ * from the walk descending with the UNCHANGED mod, and both make the gated build equal the tree
+ * without the node where the ungated build did not:
+ *  - **The inner SHARES.** A built pitch arm builds its inner under a NEW mod (`combineMods` mints
+ *    one per visit), so the inner's cache key differs from the same node built anywhere else.
+ *    Gated, the inner hits the cache entry of the same node elsewhere under that mod: `s +
+ *    s.vibrato(5, 0)` builds one `s`, read twice, exactly like `s + s` (D13: one `let` is one
+ *    signal). For a source with per-instance dice (a supersaw, a pluck) two different copies
+ *    become one doubled, measured +4.6 to +7.0 dB.
+ *  - **The inner mods lose an outer FREQ KEY.** `combineMods` keeps a mod's freq key when its knobs
+ *    read `Freq` (fm always does) and hands it to every pitch mod inside. Ungated, a detuned layer
+ *    under the inner mod renders it twice per block; gated, once.
+ * Accepted and named (coordinator, 2026-10-07). One qualification: the arm builds NOTHING, but a
+ * build-time walk over the DSL still sees its knobs: the detune fold predicate (`usesMusicalFreq`)
+ * reads a gated fm's `freq` and modulator, so a detune above it forks where the tree without the
+ * node would fold. `IgnitorGateSpec` pins the two consequences.
+ *
  * Cost: the ON path builds the knob leaf twice (once to ask, once in the arm) and the query boxes
  * one `Double` on JVM. Both are note-on, both are one small object, and the OFF path removes far
  * more than that (the stage node, its `BuiltIgnitor` and its [MemoizingIgnitor]). Nothing here
@@ -543,6 +585,29 @@ private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: Map<String, Double>?, c
     // The leaf resolves the wire bag and the unset rule in ONE place (the Param arm of
     // buildIgnitor); asking the built leaf keeps this function from owning a second copy of it.
     return buildIgnitor(ignitorParams, cache).ignitor.controlRateValueOrNull(cache.freqHz)
+}
+
+/**
+ * The `vibrato` row of the gate: off at a FINITE off value only; a non-finite knob keeps the stage.
+ *
+ * **Why the vibrato differs from the other three pitch arms.** The gate reads a non-finite knob as
+ * unset, and for most gated stages unset IS off (`mul` and the envelope's `on` are the other two
+ * exceptions, for their own reasons). The vibrato's runtime reads a non-finite
+ * depth as unset too, but unset there is the node's DEFAULT depth (`VIBRATO_SEMITONES`, the
+ * `finiteOr` rule in `PitchModFactories.kt`, stated once in `PitchModDefaults.kt`), not 0. So a
+ * non-finite depth renders a vibrato, and gating it off would change the sound instead of folding
+ * a stage that writes exactly 1.0. Accelerate, the pitch envelope and FM read a non-finite switch
+ * as 0, so for them [gatedOff]'s non-finite arm IS a fold. There is no NaN hazard to guard here
+ * either: the runtime already substitutes. Decided 2026-10-07 (coordinator, pitch pipeline step 0).
+ */
+private inline fun IgnitorDsl.gatedOffWhenFinite(
+    ignitorParams: Map<String, Double>?,
+    cache: IgnitorBuildCache,
+    isOff: (Double) -> Boolean,
+): Boolean {
+    val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
+
+    return value.isFinite() && isOff(value)
 }
 
 /**

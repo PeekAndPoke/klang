@@ -155,8 +155,10 @@ class IgnitorTailSpec : StringSpec({
     "an FM modulator's envelope still counts" {
         // Not on the amplitude spine, but `maxReleaseSec` counted it (maxOf(carrier, modulator)).
         // Keeping it errs large; dropping it would silently shorten voices that render fine today.
+        // A written depth: at depth 0 the FM stage is gated off and has no modulator to count
+        // (`IgnitorGateSpec`, "a gated fm no longer counts its modulator's release tail").
         val modulator = IgnitorDsl.Sine().adsr(0.001, 0.1, 0.5, 0.9)
-        val dsl = IgnitorDsl.Fm(carrier = IgnitorDsl.Sine(), modulator = modulator)
+        val dsl = IgnitorDsl.Fm(carrier = IgnitorDsl.Sine(), modulator = modulator, depth = c(200.0))
 
         tailOf(dsl) shouldBe 0.9
     }

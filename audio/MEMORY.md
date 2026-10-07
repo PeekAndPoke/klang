@@ -72,8 +72,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The envelope law** is `EnvelopeCore` (its KDoc). Voice defaults `VOICE_ADSR_*` (0.01, 0.1, 1.0, 0.05); curves
   are index knobs with the reader's default, both Exponential; `ADSR_EXP_K` 3.0; de-click `ENV_DECLICK_SECONDS`
   1 ms on `classic()`. Knobs and `Adsr.on`: `audio/ref/voice-synthesis.md`.
-- **The gate**: a stage whose gating knob is a leaf at its off value (or unset) is not built. The rule's text is
-  the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
+- **The gate**: a stage whose gating knob is a leaf at its off value (or unset, except where the table says
+  otherwise) is not built; since 2026-10-07 the four pitch arms too (vibrato, accelerate, pitch envelope, fm). The
+  rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
   at most `MAX_DRAIN_SECONDS` 20 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
   under -90 dB. **A stopped playback is never hard-cut**; only an endless tail triggers the release, 20 s after the
@@ -115,6 +116,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Build-time knobs** (shapes, the oversample factor, `passes`, curves, the tremolo shape) are read once,
   leaf-only; a non-leaf takes the default and is not built. `Oversampler.factorOf`: non-finite is 0, a fraction
   truncates, no upper clamp (the D7 stopgap until `docs/tasks/oversampling-regions.md`).
+- **Solo**: background gain `1 - max(live amounts)` (`solo(1.0)` is exact silence, `solo()` is 0.95); `SoloTracker` (per
+  playback, fixed arrays) records "soloed at a until t" from any event, control events included; live = `end + 4 blocks >
+  now`, protected = `end + SOLO_HOLD_SEC > now`; `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`).
 - **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
   `UNISON_MAX_VOICES` = 64, non-finite is 0), both in `audio_bridge/FilterDef.kt`, read by the runtime and the census.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
@@ -212,6 +216,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 The gate covers the four pitch arms, a fold (a non-finite vibrato depth stays built, its default);
+  a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/pitch-pipeline-into-the-tree.md` step 0
+- 2026-10-07 Solo is engine state per source: the rest fillers are control-only events, `SoloTracker` records from any
+  event before the control drop and the late guard, the others play at `1 - amount`; `ActiveVoice.soloAmount` gone,
+  audit B4.2 closed: `docs/tasks/bugfix-solo-rests-and-amount.md`
 - 2026-10-07 An empty `Ignitor.variants()` is silence, no longer a `require` at note-on; the shimmer survives an empty,
   a huge or a non-finite pitch (no index error, no hang); a unison count is capped at `UNISON_MAX_VOICES` (64):
   `docs/tasks/engine-tidy-up.md` ("First, a bug")

@@ -41,6 +41,13 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
 
 ## For later (not blocking anything now)
 
+- **Solo ramp times** (solo fix review, reviewer B): today 1.5 s in and out (a cubic swell) with a 2 s hold, so
+  `solo("<1 0>")` is a slow swell, not a toggle (at cps 1 it never settles). Recommendation from review: one ramp of about
+  0.1 to 0.25 s both ways, hold `max(ramp, 0.5 s)`. Kept at 1.5 s until you decide; the KDoc now says it fades.
+- **A soloed release tail beside another solo** (same review): protection now ends 2 s after the source's last solo
+  event, not after its last voice, so a long release (a 5 s pad) is ducked mid-tail if another solo is live (measured
+  -23.6 to -40.8 dB at 4 s). The old code let it ring at full level. The click is fixed (a 128-frame ramp); whether the
+  tail should stay protected until the voice ends is yours.
 - **Pitch pipeline, the composition block (D8 to D11)** (§8): the semitone pitch primitive's name (`pitchMod` stays the
   linear one); no vibrato `range` or `phase` on sprudel for now; compose the pitch envelope through `adsr` only after a
   spike; accelerate and FM stay nodes. Recommendations as written in §8.

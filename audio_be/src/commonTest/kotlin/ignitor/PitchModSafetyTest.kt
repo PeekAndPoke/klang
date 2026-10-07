@@ -252,6 +252,12 @@ class PitchModSafetyTest : StringSpec({
     fun k(v: Double) = IgnitorDsl.Constant(v)
 
     val nan = k(Double.NaN)
+
+    // The same NaN as a NON-LEAF knob. A `Constant` or `Param` leaf at a non-finite value is gated off at build
+    // for accelerate, the pitch envelope and fm (pitch pipeline step 0, `audio/ref/off-values.md`), so a leaf NaN
+    // never reaches the runtime's `finiteOr` these rows guard. The marker dissolves to the NaN at build but has no
+    // build-time answer for the gate. Not `Times`: its `safeOut` would scrub the NaN to 0 before the node sees it.
+    val nonLeafNan = IgnitorDsl.OptimizerHint(inner = nan)
     val saw = IgnitorDsl.Saw(analog = k(0.0))
     val fmCarrier = IgnitorDsl.Sine(analog = k(0.0))
     // Note-pitched, so a NaN ratio reaches its drive (an absolute modulator would ignore the ratio).
@@ -262,7 +268,7 @@ class PitchModSafetyTest : StringSpec({
     listOf(
         Triple(
             "pitch envelope semitones",
-            IgnitorDsl.PitchEnvelope(saw, semitones = nan),
+            IgnitorDsl.PitchEnvelope(saw, semitones = nonLeafNan),
             IgnitorDsl.PitchEnvelope(saw),
         ),
         Triple(
@@ -272,7 +278,7 @@ class PitchModSafetyTest : StringSpec({
         ),
         Triple(
             "fm depth",
-            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0), depth = nan),
+            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0), depth = nonLeafNan),
             IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0)),
         ),
         Triple(
@@ -287,7 +293,7 @@ class PitchModSafetyTest : StringSpec({
         ),
         Triple(
             "accelerate semitones",
-            IgnitorDsl.Accelerate(saw, semitones = nan),
+            IgnitorDsl.Accelerate(saw, semitones = nonLeafNan),
             IgnitorDsl.Accelerate(saw),
         ),
     ).forEach { (knob, withNan, withDefault) ->
