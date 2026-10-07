@@ -266,13 +266,13 @@ object KatalystChainBuilder {
         // The duck's writer is installed after the loop so that only the winning instance is ever
         // configured; its position among the writers is unobservable (every writer touches exactly
         // one stage), and the duck's list position is documented as ignored anyway.
+        // The winning stage's slots, for the same reason: the dropped duplicate's are never read.
+        // `duck` and `duckStage` are set together, so both are null or neither is.
         val theDuck = duck
+        val winner = duckStage
         var duckWriter: KatalystDuckWriter? = null
 
-        if (theDuck != null) {
-            // The winning stage's slots, for the same reason: the dropped duplicate's are never read.
-            val winner = duckStage ?: KatalystStageDsl.Duck()
-
+        if (theDuck != null && winner != null) {
             duckWriter = KatalystDuckWriter(
                 fx = theDuck,
                 orbit = KatalystKnob(winner.orbit, SLOT_UNSET),

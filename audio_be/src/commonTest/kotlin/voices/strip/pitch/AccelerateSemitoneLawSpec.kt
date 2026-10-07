@@ -9,7 +9,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -41,7 +40,6 @@ class AccelerateSemitoneLawSpec : StringSpec({
             scratchBuffers = ScratchBuffers(frames),
             sampleRate = 48000,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = frames.toDouble(), endFrame = frames.toDouble()),
-            cylinders = Cylinders(blockFrames = frames, sampleRate = 48000),
         )
         ctx.updateOffsetAndLength(0, frames)
         ctx.blockStart = 0.0

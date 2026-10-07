@@ -13,7 +13,7 @@ import io.peekandpoke.ultra.streams.ops.animTicker
 import io.peekandpoke.ultra.streams.ops.map
 
 class JsAudioAnalyzer(
-    override val fftSize: Int = 2048,
+    fftSize: Int = 2048,
     private val node: () -> AnalyserNode?,
 ) : AudioAnalyzer {
 

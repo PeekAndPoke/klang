@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, queued (maintainer, 2026-10-07).** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); step 1 (dead code) done, see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -58,6 +58,45 @@ are `inline` (no closure per call); no helper hides an allocation.
 Audit section D, unchanged, steps 1 to 20. Steps that touch `Voice`, `VoiceScheduler` or `Cylinders` wait for
 lifecycle step 5; the named-arguments pass (`code-style-named-args-pass.md`) goes before or after them, never in
 parallel. Bit-identity (the 18-song corpus) is the proof for every behaviour-neutral step.
+
+## Step 1, dead code: done 2026-10-07 (uncommitted, awaiting review and the corpus render)
+
+Each item re-verified against the working tree (not the audit's `4481ea25`) over every module, the tests, the
+docs, the stdlib registrations and the KSP output. Report: `tmp/reviews/tidy-step1-report.md`.
+
+**Deleted:** B1.1 `Ignitor.formant` / `FormantIgnitor` / `FormantBand` (not a script door: the Ignitor DSL has no
+formant node; the vowel is the Katalyst stage); B1.2 `Double.polyBlep`; B1.3 `KlangAudioDebug.kt`; B1.4
+`PlaybackEngineDispatcher.masterLatencyMs` with `MasterStage.latencyMs` and `Compressor.latencyMs` (the FE adds
+`HOUSE_LIMITER_LOOKAHEAD_SECONDS`; `latencyFrames` and its spec row stay); B1.6 `BlockContext.cylinders`; A2.8
+`Compressor.makeupGainDb` and its block multiplier (it was always exactly 1.0, so dropping `* makeupLinear` is
+bit-identical); from B1.8: `Compressor.LN10`, `KlangPlaybackSignal.Custom`, four unused browser externals
+(`AudioContext.currentTime`, `getOutputTimestamp`, `AudioTimestamp`, `AnalyserNode.frequencyBinCount`),
+`AudioAnalyzer.fftSize`, the `ParallelMixFilter` import, the unreachable `?: KatalystStageDsl.Duck()`, the doubled
+`Cylinders` KDoc, `MAX_CYLINDERS` set to the 255 it was clamped to (effective value unchanged), the unused
+destructured `cylinderId`. Stale KDocs fixed: A2.2 (`Cylinder`), A2.6 (`KatalystBodyEffect`,
+`KatalystFormantEffect`, `KatalystRegistry`, `KatalystContext`).
+
+**Kept, with the reason:**
+- B1.8 `ShapingFuncs.nativeTanh` and `softCapTo`: `/code-style` §14 accepts unused members on that API object, and
+  `DelayLine`'s KDoc names `softCapTo` as the law its feedback path inlines.
+- B1.9 counters read by specs (`KatalystGainEffect.ramps`, `KatalystEqEffect.installs` / `lastInstalledBank`,
+  `KatalystChain.resolveCount`, `KatalystRegistry.namesNormalized`, `IgnitorRegistry.optimizerFailures`,
+  `EqIgnitor.staticZeroDbSkips` / `staticConfigureSkips`, `WarmupRunner.readyWhileDirty`, the warehouse
+  `doubleReturns` / `housekeptUnits` / `housekeptFrames`, `ScratchBuffers.doubleHighWater`): each is a spec seam,
+  which the audit's own rule keeps.
+- B1.9 `WarehouseStats.reverbFailures` / `reverbDropped`: a wire change, and the ring twins are shown in
+  `PlayerWarehouseStats`, so the likelier fix is to show these too. For the coordinator.
+- B1.9 `CycleCompleted.atTimeSec` and the `VoiceData.tags` KDoc: not counters, out of this step.
+
+**Deferred until the solo fix lands** (the files are in flight): B1.5 `VoiceFactory.sampleRateDouble`, B1.7
+`VoiceFactory.ignitorRegistry` and the now-unused `VoiceFactory.cylinders` (all three need the constructor call in
+`VoiceScheduler.kt`); the stale `Voice.kt` "Frame counters use Int" comment; the `VoiceData.kt:14` TODO.
+
+**Stale mentions outside the engine, for the maintainer:** `/code-style` §9 says saw, square and pulse "must use
+PolyBLEP", `CREDITS.MD` credits PolyBLEP, and `klang-music-writing/ref/ignitor-reference.md` calls the saw
+"anti-aliased (PolyBLEP)"; the oscillators use finite-slope flanks instead, and nothing used `polyBlep` before this
+step either. Three `IgnitorsTest` row names say "PolyBLEP" too, and so do the in-app Credits page (`CreditsPage.kt:337`) and the
+Zawtooth KDoc (`IgnitorDsl.kt:446`).
 
 ## Decisions for the maintainer
 

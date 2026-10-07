@@ -17,10 +17,6 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  * never handed a name runs its fixed historical chain, which is what keeps a song without
  * `katalyst(…)` byte-identical to the pre-Katalyst-DSL engine, and a bus that was never handed one
  * runs the empty chain.
- *
- * Katalyst step 1 (2026-09-17) registers chains and nothing reads them. Step 2 made the
- * cylinder build its chain from `KatalystDsl.classic` through `KatalystChainBuilder`, still
- * without consulting this registry; step 3 is where a cylinder looks a NAME up here and swaps.
  */
 class KatalystRegistry(
     /** Parent registry; lookups delegate here when not found locally. */

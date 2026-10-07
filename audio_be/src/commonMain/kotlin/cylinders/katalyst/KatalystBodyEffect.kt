@@ -119,13 +119,12 @@ class KatalystBodyEffect(
     internal val installedFloor: Double? get() = curFloor
 
     /**
-     * Configure from the OWNER voice's body, or from a declared chain's slots. `null` (nobody asks
-     * for a body) turns the resonator off.
+     * Configure from the chain's slots (`KatalystBodyWriter`); a voice's `body(...)` door reaches
+     * here through those slots. `null` (nobody asks for a body) turns the resonator off.
      *
      * A non-finite `mix` or `floor` is UNSET and takes [BODY_WET] / [BODY_FLOOR], the rule
-     * `KatalystSlots.bodyDef` applies to a declared chain's slots, applied here so the BORN-WITH
-     * chain answers the same. The voice path can carry one: `body(material = "wood", wet = "NaN")` parses to a
-     * NaN and `SprudelVoiceData.toVoiceData` only guards a null.
+     * `KatalystSlots.bodyDef` already applies to the slots, applied here as well so a direct
+     * caller installs the same bank.
      *
      * A null fades the bank out (see the class KDoc); a second null while it fades is free. Closed
      * here: the open question of 2026-09-18 (off was a hard cut while every change crossfaded).

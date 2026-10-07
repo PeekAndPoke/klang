@@ -11,7 +11,6 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -44,7 +43,6 @@ class ModulatorPhaseWrapSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         sampleRate = sampleRate,
         limits = VoiceLimits(startFrame = 0.0, gateEndFrame = 500_000.0, endFrame = 1_000_000.0),
-        cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
     )
 
     /**

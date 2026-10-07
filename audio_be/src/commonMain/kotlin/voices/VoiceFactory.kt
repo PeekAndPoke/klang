@@ -444,7 +444,6 @@ class VoiceFactory(
             sampleRate = sampleRate,
             // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.
             limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
-            cylinders = cylinders,
         )
 
         return Voice(

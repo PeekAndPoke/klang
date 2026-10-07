@@ -9,7 +9,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
@@ -175,7 +174,6 @@ class FastExp2Spec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = 50_000.0, endFrame = 100_000.0),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
         for (multiplyIn in listOf(false, true)) {

@@ -122,15 +122,6 @@ class Compressor(
             updateCoefficients()
         }
 
-    /**
-     * Make-up gain in decibels to compensate for volume loss after compression.
-     */
-    var makeupGainDb: Double = 0.0
-        set(value) {
-            if (!value.isFinite()) return
-            field = value
-        }
-
     // Envelope follower state.
     private var envelopeDb: Double = SILENCE_DB
 
@@ -159,9 +150,6 @@ class Compressor(
 
     /** Frames of signal delay this instance actually adds — 0 on the classic path. */
     val latencyFrames: Int get() = delayFrames
-
-    /** [latencyFrames] in milliseconds. */
-    val latencyMs: Double get() = delayFrames * 1000.0 / sampleRate
 
     private var delayPos = 0
 
@@ -306,8 +294,6 @@ class Compressor(
      * Process a stereo buffer in-place.
      */
     fun process(left: AudioBuffer, right: AudioBuffer, blockSize: Int) {
-        val makeupLinear = computeMakeupLinear()
-
         // Two loop bodies, branched OUTSIDE the per-sample loop: `envelopeStep` is inlined into the
         // classic one so the zero-lookahead path stays exactly as specialized as it was. The
         // lookahead loop is [processLookahead]'s, with the block itself as the delayed-dry target
@@ -319,7 +305,7 @@ class Compressor(
         }
 
         for (i in 0 until blockSize) {
-            val totalGain = envelopeStep(max(abs(left[i]), abs(right[i]))) * makeupLinear
+            val totalGain = envelopeStep(max(abs(left[i]), abs(right[i])))
             left[i] = left[i] * totalGain
             right[i] = right[i] * totalGain
         }
@@ -371,7 +357,6 @@ class Compressor(
             return
         }
 
-        val makeupLinear = computeMakeupLinear()
         val thresholdStep = (thresholdTo - thresholdFrom) / blockSize
         val inverseRatioStep = (inverseRatioTo - inverseRatioFrom) / blockSize
         val kneeStep = (kneeTo - kneeFrom) / blockSize
@@ -388,7 +373,7 @@ class Compressor(
                 slope = (inverseRatioTo - inverseRatioStep * back) - 1.0,
                 kneeDb = kneeTo - kneeStep * back,
             )
-            val totalGain = gainFor(reductionDb) * makeupLinear
+            val totalGain = gainFor(reductionDb)
 
             left[i] = left[i] * totalGain
             right[i] = right[i] * totalGain
@@ -424,12 +409,10 @@ class Compressor(
             return
         }
 
-        val makeupLinear = computeMakeupLinear()
-
         for (i in 0 until blockSize) {
             val l = left[i]
             val r = right[i]
-            val gain = lookaheadStep(max(abs(l), abs(r))) * makeupLinear
+            val gain = lookaheadStep(max(abs(l), abs(r)))
             // Emit the DELAYED sample, then park the current one. One shared write index.
             val outL = delayL[delayPos]
             val outR = delayR[delayPos]
@@ -459,10 +442,9 @@ class Compressor(
      * one). No production caller does this today; do not add one.
      */
     fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-        val makeupLinear = computeMakeupLinear()
         for (i in 0 until length) {
             val idx = offset + i
-            val totalGain = envelopeStep(abs(buffer[idx])) * makeupLinear
+            val totalGain = envelopeStep(abs(buffer[idx]))
             buffer[idx] = buffer[idx] * totalGain
         }
     }
@@ -630,12 +612,6 @@ class Compressor(
         minTail = 1
     }
 
-    /** Block-rate makeup-gain linear multiplier; precomputed once per `process()` call. */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun computeMakeupLinear(): Double {
-        return if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * LN10_OVER_20) else 1.0
-    }
-
     /** Clamped cubic smoothstep: 0 below 0, 1 above 1, C1 at both ends. Polynomial (no `exp`). */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun smoothstep01(x: Double): Double {
@@ -730,7 +706,6 @@ class Compressor(
         // Compile-time constants for the dB↔linear math — saves one `ln(10.0)` per sample
         // in the hot loop. Full elimination of `exp`/`ln` would require a linear-domain
         // rewrite (deferred — see file KDoc).
-        private const val LN10: Double = 2.302585092994046
         private const val DB20_OVER_LN10: Double = 8.685889638065035   // 20 / ln(10)
         private const val LN10_OVER_20: Double = 0.11512925464970229   // ln(10) / 20
 

@@ -10,7 +10,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.ignitor.FilterEnvDef
@@ -319,7 +318,6 @@ class EnvelopeLawSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = far.toDouble()),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
         val out = DoubleArray(total)
         var pos = 0

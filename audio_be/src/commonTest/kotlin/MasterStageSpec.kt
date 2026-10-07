@@ -102,14 +102,13 @@ class MasterStageSpec : StringSpec({
     }
 
     "the stage reports the latency it actually adds" {
-        // Phase 5: the FE latency budget and the offline frame count both read this. If it drifts
-        // from the real delay, visuals misalign and offline renders truncate — silently, in both
-        // cases, because nothing throws.
+        // Phase 5: the FE latency budget adds HOUSE_LIMITER_LOOKAHEAD_SECONDS (JsAudioBackend), and the
+        // offline renderer adds latencyFrames to its frame count (KlangOfflineRenderer), so the tail is not
+        // cut. If either drifts from the real delay, visuals misalign or renders lose their end silently.
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val expected = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
 
         master.latencyFrames shouldBe expected
-        master.latencyMs shouldBe (expected * 1000.0 / sampleRate)
 
         // ...and it must match what the stage really does. Feed one impulse, find it in the output.
         val out = StereoBuffer(blockFrames)

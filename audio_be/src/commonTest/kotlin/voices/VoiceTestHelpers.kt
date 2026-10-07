@@ -139,7 +139,6 @@ object VoiceTestHelpers {
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
         return Voice(

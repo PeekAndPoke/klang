@@ -57,5 +57,12 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
   `MnRenderer.renderNumber` for `formatAsIntOrDouble` (fixes a clamp above `Int.MAX_VALUE`); one home in `common` for the
   four text-position helpers; a small class for the tracked-timeouts code shared by `MnEditorBase` and
   `NoteStaffEditor`. The coordinator would do all four as small reviewed steps unless you say otherwise.
+- **The oscillators do not use PolyBLEP** (tidy-up step 1): `/code-style` §9, `CREDITS.MD` and
+  `klang-music-writing/ref/ignitor-reference.md` say they do; they use finite-slope flanks, and the unused `polyBlep`
+  helper was deleted. The coordinator would correct the texts (those three, the in-app Credits page, the Zawtooth KDoc, and three
+  `IgnitorsTest` row names) to say what
+  the code does; §9 is a rule text, so it waits for your word.
+- **`WarehouseStats.reverbFailures` / `reverbDropped`** (tidy-up step 1): wire fields the UI never shows (it shows
+  their ring twins). Show them in the warehouse panel, or drop them?
 - **Frozen songs** ([`song-orbit-ownership-review.md`](song-orbit-ownership-review.md)): fix their shared-orbit
   conflicts, or keep them as snapshots of the old sound?

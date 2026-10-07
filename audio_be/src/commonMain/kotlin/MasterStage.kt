@@ -77,9 +77,6 @@ class MasterStage(
      */
     val latencyFrames: Int get() = limiter.latencyFrames
 
-    /** [latencyFrames] in milliseconds — the unit the FE latency budget works in. */
-    val latencyMs: Double get() = limiter.latencyMs
-
     private val limiter = Compressor(
         sampleRate = sampleRate,
         thresholdDb = LIMITER_THRESHOLD_DB,

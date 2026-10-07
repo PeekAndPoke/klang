@@ -38,9 +38,9 @@ class Cylinders(
     private val katalysts: KatalystRegistry = KatalystRegistry(),
 ) {
     companion object {
-        const val MAX_CYLINDERS = 256
+        const val MAX_CYLINDERS = 255
     }
-    private val maxCylinders = maxCylinders.coerceIn(1, 255)
+    private val maxCylinders = maxCylinders.coerceIn(1, MAX_CYLINDERS)
     private val id2cylinder = mutableMapOf<Int, Cylinder>()
     private var cleanupIndex = 0
 
@@ -72,9 +72,6 @@ class Cylinders(
         return false
     }
 
-    /**
-     * Clear all cylinders
-     */
     /**
      * Returns every cylinder to the warehouse (which retires it: units back to their shelves,
      * state to a clean slate) and forgets them — the engine is being disposed (resource warehouse,
@@ -161,7 +158,7 @@ class Cylinders(
             val keyIndex = cleanupIndex % size
             // Iterate to the keyIndex-th entry without allocating a list
             var idx = 0
-            for ((cylinderId, cylinder) in id2cylinder) {
+            for ((_, cylinder) in id2cylinder) {
                 if (idx == keyIndex) {
                     cylinder.tryDeactivate(blockStart)
                     break

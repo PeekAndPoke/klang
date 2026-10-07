@@ -98,13 +98,4 @@ sealed class KlangPlaybackSignal {
     data class Diagnostics(
         val diagnostics: KlangCommLink.Feedback.Diagnostics,
     ) : KlangPlaybackSignal()
-
-    /**
-     * Generic custom signal for module-specific data.
-     * Modules like Strudel can wrap their own signals in this.
-     */
-    data class Custom(
-        val type: String,
-        val data: Any,
-    ) : KlangPlaybackSignal()
 }

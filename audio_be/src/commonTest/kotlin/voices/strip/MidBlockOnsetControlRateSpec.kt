@@ -8,7 +8,6 @@ package io.peekandpoke.klang.audio_be.voices.strip
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -53,7 +52,6 @@ class MidBlockOnsetControlRateSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         sampleRate = sampleRate,
         limits = VoiceLimits(startFrame = startFrame, gateEndFrame = 100_000.0, endFrame = 100_000.0),
-        cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
     ).apply {
         updateOffsetAndLength(offset, length)
         blockStart = 0.0

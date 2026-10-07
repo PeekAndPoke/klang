@@ -17,7 +17,6 @@ import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.random.Random
@@ -1200,9 +1199,6 @@ class ExcitersTest : StringSpec({
             scratchBuffers = ScratchBuffers(defaultBlockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = defaultBlockFrames.toDouble(), endFrame = defaultBlockFrames.toDouble()),
-            cylinders = Cylinders(
-                blockFrames = defaultBlockFrames, sampleRate = sampleRate,
-            ),
         ).apply {
             updateOffsetAndLength(0, defaultBlockFrames); blockStart = 0.0
         }

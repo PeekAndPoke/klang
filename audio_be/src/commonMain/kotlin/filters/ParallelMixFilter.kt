@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import kotlin.math.max
 
 /**
  * Parallel wet path with a dry floor: copies the input, runs [inner] on the copy, and blends

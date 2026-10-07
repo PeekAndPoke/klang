@@ -75,12 +75,12 @@ class KatalystFormantEffect(
     internal val installedFloor: Double? get() = curFloor
 
     /**
-     * Configure from the OWNER voice's vowel, or from a declared chain's slots. `null` (nobody asks
-     * for a vowel) turns the formant bank off.
+     * Configure from the chain's slots (`KatalystVowelWriter`); a voice's `vowel(...)` door reaches
+     * here through those slots. `null` (nobody asks for a vowel) turns the formant bank off.
      *
      * A non-finite `mix` or `floor` is UNSET and takes [VOWEL_WET] / [VOWEL_FLOOR], the twin of the
      * substitution [KatalystBodyEffect.configure] makes and of the one `KatalystSlots.vowelDef`
-     * makes for a declared chain's slots, so all three paths install the same bank.
+     * already makes for the slots, so a direct caller installs the same bank.
      *
      * A null fades the bank out and a change that arrives mid-fade is parked, both the twin of
      * [KatalystBodyEffect.configure].

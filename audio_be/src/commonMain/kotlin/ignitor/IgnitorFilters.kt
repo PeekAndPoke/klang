@@ -19,9 +19,6 @@ import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
-import kotlin.math.PI
-import kotlin.math.pow
-import kotlin.math.tan
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SVF Mode enum — determines which output tap is used
@@ -594,86 +591,6 @@ fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor = OnePoleHighpassIgnitor
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 30–500.
  */
 fun Ignitor.onePoleHighpass(cutoffHz: Double): Ignitor = onePoleHighpass(ParamIgnitor("cutoffHz", cutoffHz))
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Formant Filter (parallel bandpass bank)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Formant filter — parallel bandpass filter bank for vowel synthesis.
- *
- * Sums multiple SVF bandpass filters, each at a different frequency with its own Q and gain.
- * Use to create vowel sounds ("ah", "ee", "oo") or instrument body resonances.
- *
- * @param bands List of [FormantBand] specifications, each with freq (Hz), q, and db (gain).
- *   Typical vowel: 3–5 bands between 300–3500 Hz with Q of 5–15.
- */
-fun Ignitor.formant(bands: List<FormantBand>): Ignitor = FormantIgnitor(this, bands)
-
-private class FormantIgnitor(
-    private val upstream: Ignitor,
-    bands: List<FormantBand>,
-) : Ignitor {
-    private class BandState(val freq: Double, val q: Double, val linearGain: Double) {
-        var ic1eq = 0.0
-        var ic2eq = 0.0
-        var a1 = 0.0
-        var a2 = 0.0
-        var a3 = 0.0
-        var initialized = false
-    }
-
-    private val bandStates = bands.map { band ->
-        BandState(band.freq, band.q, 10.0.pow(band.db / 20.0))
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        ctx.scratchBuffers.use { input ->
-            upstream.generate(input, freqHz, ctx)
-
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                buffer[i] = 0.0
-            }
-
-            for (band in bandStates) {
-                if (!band.initialized) {
-                    val nyquist = 0.5 * ctx.sampleRate
-                    val fc = band.freq.coerceIn(5.0, nyquist - 1.0)
-                    val Q = band.q.coerceIn(0.1, 50.0)
-                    val g = tan(PI * fc / ctx.sampleRate)
-                    band.a1 = 1.0 / (1.0 + g * (g + 1.0 / Q))
-                    band.a2 = g * band.a1
-                    band.a3 = g * band.a2
-                    band.initialized = true
-                }
-
-                for (i in ctx.offset until end) {
-                    val v0 = input[i]
-                    val v3 = v0 - band.ic2eq
-                    val v1 = band.a1 * band.ic1eq + band.a2 * v3
-                    val v2 = band.ic2eq + band.a2 * band.ic1eq + band.a3 * v3
-                    band.ic1eq = (2.0 * v1 - band.ic1eq).flushState()
-                    band.ic2eq = (2.0 * v2 - band.ic2eq).flushState()
-                    buffer[i] = (buffer[i] + v1 * band.linearGain)
-                }
-            }
-        }
-    }
-}
-
-/**
- * A single formant band specification.
- *
- * @property freq Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–3500.
- * @property q Bandwidth (resonance). Higher = narrower peak. Typical: 5–15.
- * @property db Gain in decibels. 0 = unity, negative = attenuated, positive = boosted.
- */
-data class FormantBand(
-    val freq: Double,
-    val q: Double,
-    val db: Double,
-)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Internal: the filter and FM envelopes' block setup, one place for both node hosts

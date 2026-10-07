@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
 
 /**
- * Mixing channel / Effect bus — called "Cylinder" in strudel.
+ * Mixing channel / effect bus: a cylinder (Strudel and sprudel's `orbit()` call it an orbit).
  *
  * Each orbit runs one [KatalystChain], the per-orbit effect chain, built from a [KatalystDsl]:
  * **Body → Vowel → Delay → Reverb → Phaser → Compressor → Gain** for [KatalystDsl.classic], which is what

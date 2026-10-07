@@ -141,14 +141,6 @@ class PlaybackEngineDispatcher(
     }
 
     /**
-     * Latency the master post-chain adds, in milliseconds.
-     *
-     * Belongs in the FE's latency budget: the browser reports its own output latency, but this delay
-     * happens *inside* the worklet where `AudioContext.outputLatency` cannot see it.
-     */
-    val masterLatencyMs: Double get() = master.latencyMs
-
-    /**
      * Render one block to [out] (`blockFrames` frames per channel): sum every engine into the shared
      * mix, then run the master stage, which writes the clipped floating-point output.
      */

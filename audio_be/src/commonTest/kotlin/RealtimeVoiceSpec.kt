@@ -13,7 +13,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -548,7 +547,6 @@ class RealtimeVoiceSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         sampleRate = sampleRate,
         limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = 1_000_000.0),
-        cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
     ).apply {
         updateOffsetAndLength(0, blockFrames)
         blockStart = 0.0

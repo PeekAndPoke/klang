@@ -130,9 +130,8 @@ class KatalystCompressorEffect(
      * `Compressor` on the audio thread). It outlives every state: [Off.enter] resets it (the
      * envelope back to rest) and the ON arm of [configure] writes all five knobs, which together
      * give the same doubles as a freshly built instance on the classic path (the constructor and
-     * the setters store the same coerced values and compute the same coefficients; nothing on an
-     * orbit writes `makeupGainDb`). Proven by every spec row that compares a new life against a
-     * FRESH bare `Compressor` bit for bit. One difference remains for a direct caller only: a
+     * the setters store the same coerced values and compute the same coefficients). Proven by every
+     * spec row that compares a new life against a FRESH bare `Compressor` bit for bit. One difference remains for a direct caller only: a
      * non-finite knob keeps the previous value where a constructor takes its default; the writer
      * never hands one (`Voice.Compressor.fromParams` substitutes the constants).
      */

@@ -92,7 +92,6 @@ class VcaOffTeardownSpec : StringSpec({
             audioBuffer = block, freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames), sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = endFrame),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
         var pos = 0
         while (pos < total) {
@@ -125,7 +124,6 @@ class VcaOffTeardownSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateFrames.toDouble(), endFrame = totalFrames.toDouble()),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
         var pos = 0

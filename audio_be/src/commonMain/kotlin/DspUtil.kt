@@ -273,28 +273,6 @@ inline fun Double.wrapToUnitCycle(): Double {
 }
 
 /**
- * First-order PolyBLEP residual for anti-aliased discontinuities.
- *
- * Used in band-limited oscillators (saw, square, pulse) to smooth the signal discontinuity.
- * The receiver `t` is the normalised phase (`0..1`); [dt] is the normalised phase increment
- * per sample. Returns the correction to subtract from the naive waveform at the discontinuity.
- */
-@Suppress("NOTHING_TO_INLINE")
-inline fun Double.polyBlep(dt: Double): Double {
-    val t = this
-    var correction = 0.0
-    if (t < dt) {
-        val r = t / dt
-        correction += r + r - r * r - 1.0
-    }
-    if (t > 1.0 - dt) {
-        val r = (t - 1.0) / dt
-        correction += r * r + r + r + 1.0
-    }
-    return correction
-}
-
-/**
  * The **one** piecewise-linear waveform shape behind saw / ramp / square / pulse / triangle (and their
  * raw variants). A `±1` trapezoid in four segments: a **rise** ramp `−1→+1` over `[0, riseEnd]`, a
  * **high** plateau `+1` to [highEnd], a **fall** ramp `+1→−1` to [fallEnd], then a **low** plateau `−1`.
