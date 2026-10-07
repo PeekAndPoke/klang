@@ -141,6 +141,13 @@ never nested under `io/peekandpoke/...` directories. Sub-packages get one flat d
 **Correct:** `_staff_pos_helpers.kt` (utility file alongside class files — `_` groups it at top)
 **Correct:** `math.kt`, `chain_rendering.kt` (utility-only folder — no `_` prefix needed)
 
+**One home for generic helpers, the same name in every module (maintainer, 2026-10-07).** A helper that knows
+nothing of its module's domain (list compaction, a NaN guard, a numeric law, a byte conversion) lives in the
+module's `utils/` directory, package `io.peekandpoke.klang.<module>.utils`, the name `audio_fe`, `tones` and the root
+module already use. Never `util`, `helpers` or `common` for this. A helper that belongs to one feature (the
+mini-notation editor's node helpers, a tutorial's page helpers) stays next to that feature as `_<feature>_helpers.kt`.
+Each `utils` helper has a spec of its exact behaviour; a hot-path helper taking a lambda is `inline`.
+
 ---
 
 ## No Duplication Rules
