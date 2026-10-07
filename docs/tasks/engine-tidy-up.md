@@ -55,5 +55,8 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   `../plans/effect-state-machines.md`. Consequence: the voice's `State` enum becomes a sealed type in a second,
   bit-identical round (`voice-lifecycle-state-machine.md`, step 5b).
 - **D7, owning the RNG:** a prerequisite for the Zig port, not needed now. Deferred to the port's preparation.
-- **D5, bus knobs typed as Ignitor expressions:** explained to the maintainer 2026-10-07, decision pending.
+- **D5, bus knobs typed as Ignitor expressions:** KEPT as they are. The maintainer: "the Zig side will in any case
+  need to understand this data model and the contract ... I would not bend our implementation on this side just
+  because another backend has things to solve to use the inputs. The duty is on the other side, not here."
+  A general rule for the port: the Kotlin engine defines the contract; a second backend adapts to it.
 
