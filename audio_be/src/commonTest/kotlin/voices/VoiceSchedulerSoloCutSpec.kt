@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
@@ -29,7 +30,7 @@ import kotlin.math.abs
  * `cutGroup` in `commonTest` returned nothing. The [Rig] below is the same shape as those two.
  *
  * **Why the two halves are observed differently.** Cut is a question about *membership* of the
- * active list, so `getActiveVoiceCount()` answers it exactly and no DSP measurement can blur it.
+ * active list (since lifecycle step 4 after the choked voice's 4 ms fade), so `getActiveVoiceCount()` answers it exactly and no DSP measurement can blur it.
  * Solo is a question about *gain*, so it has to be heard: the soloed voice is panned hard left and
  * the background hard right (equal-power pan, `SendRenderer:32-39`), which puts each one in its own
  * channel and lets the right channel be read as "the background, alone".
@@ -73,6 +74,20 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
                     playbackStartTime = 0.0,
                 )
             )
+        }
+
+        /** Renders [blocks] blocks and returns the left channel of all of them, in order. */
+        fun renderLeft(blocks: Int): DoubleArray {
+            val out = DoubleArray(blocks * blockFrames)
+
+            for (block in 0 until blocks) {
+                mix.clear()
+                engine.renderInto(mix, clock.cursorFrame)
+                mix.left.copyInto(out, block * blockFrames, 0, blockFrames)
+                clock.cursorFrame += blockFrames
+            }
+
+            return out
         }
 
         /** Renders [blocks] blocks and returns the (left, right) peak of the LAST one. */
@@ -198,8 +213,13 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
     }
 
     // ── Cut / choke groups: membership of the active list ────────────────────────────────────────
+    //
+    // Since lifecycle step 4 a cut FADES the choked voice (`Voice.cutOff`): it stays in the list, `Fading`, for
+    // the 4 ms fade (`CUT_FADE_SECONDS`, 192 frames here, so the first block that starts at or after the fade end
+    // is the third after the cutting onset) and leaves through the render loop. Every row below renders past
+    // that, so "coexist" means coexisting after the fade.
 
-    "cut: a new voice hard-kills the voice already sounding in its cut group" {
+    "cut: a new voice cuts the voice already sounding in its cut group: it fades, then leaves" {
         val rig = Rig()
         rig.schedule(0.0, tone(sourceId = "hat", pan = 0.5, cut = 1))
         rig.renderPeaks(2)
@@ -208,8 +228,58 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         rig.schedule(rig.nowSec(), tone(sourceId = "hat", pan = 0.5, cut = 1))
         rig.renderPeaks(2)
 
+        // Two blocks after the cutting onset the old voice is still fading (the fade ends 192 frames in).
+        rig.activeCount shouldBe 2
+
+        rig.renderPeaks(1)
+
         // The arriving voice replaced the sounding one rather than joining it.
         rig.activeCount shouldBe 1
+    }
+
+    "cut: the fade starts at the cutting voice's onset, mid-block too, and reaches zero 191 frames later" {
+        // The cutting voice is silent (gain 0), so the mix is the cut voice alone. The reference rig is the same,
+        // with the second voice in another group: the two mixes agree up to the cutting onset and part there.
+        fun rig(secondCut: Int): Pair<Rig, DoubleArray> {
+            val rig = Rig()
+            rig.schedule(0.0, tone(sourceId = "hat", pan = 0.0, cut = 1))
+            rig.renderPeaks(4)
+
+            // 50 frames into the next block (the quarter frame keeps the floor away from a rounding edge).
+            val onsetSec = (rig.clock.cursorFrame + 50.25) / sampleRate
+            rig.schedule(onsetSec, tone(sourceId = "hat2", pan = 0.0, cut = secondCut).copy(gain = 0.0))
+
+            return rig to rig.renderLeft(4)
+        }
+
+        val (_, cut) = rig(secondCut = 1)
+        val (_, reference) = rig(secondCut = 2)
+        val onset = 50
+
+        for (i in 0 until onset) {
+            withClue("frame $i: before the onset the cut voice is untouched") { cut[i] shouldBe reference[i] }
+        }
+
+        withClue("one frame after the onset the ramp is under way") { (abs(cut[onset + 1]) < abs(reference[onset + 1])) shouldBe true }
+
+        for (i in onset + 191 until cut.size) {
+            withClue("frame $i: silent from the ramp's zero") { (cut[i] == 0.0) shouldBe true }
+        }
+
+        withClue("the reference keeps sounding") { (reference.drop(onset + 192).maxOf { abs(it) } > 0.1) shouldBe true }
+    }
+
+    "cut: a cutting voice with a non-finite start is dropped (counted) and cuts nothing" {
+        val rig = Rig()
+        rig.schedule(0.0, tone(sourceId = "hat", pan = 0.0, cut = 1))
+        rig.renderPeaks(4)
+
+        rig.schedule(Double.NaN, tone(sourceId = "hat2", pan = 0.0, cut = 1))
+        val out = rig.renderLeft(4)
+
+        withClue("dropped like a late voice") { rig.engine.scheduler.droppedVoiceCount("song") shouldBe 1 }
+        withClue("the sounding voice was not cut") { rig.activeCount shouldBe 1 }
+        withClue("and keeps sounding, finite") { (out.all { it.isFinite() } && out.takeLast(64).maxOf { abs(it) } > 0.1) shouldBe true }
     }
 
     "cut: the arriving voice does not cut ITSELF" {
@@ -227,7 +297,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         rig.renderPeaks(2)
 
         rig.schedule(rig.nowSec(), tone(sourceId = "oh", pan = 0.5, cut = 2))
-        rig.renderPeaks(2)
+        rig.renderPeaks(4)
 
         rig.activeCount shouldBe 2
     }
@@ -242,7 +312,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         rig.activeCount shouldBe 1
 
         rig.schedule(rig.nowSec(), tone(sourceId = "str", pan = 0.5, cut = null))
-        rig.renderPeaks(2)
+        rig.renderPeaks(4)
 
         rig.activeCount shouldBe 2
     }

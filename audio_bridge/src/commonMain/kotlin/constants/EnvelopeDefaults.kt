@@ -139,3 +139,20 @@ const val ENV_DECLICK_SECONDS: Double = 0.001
  * Consumer: `TeardownFadeRenderer`.
  */
 const val VCA_OFF_TEARDOWN_FADE_SECONDS: Double = 0.004
+
+/**
+ * The cut fade, in seconds: how long a voice choked by its cut group (`cut(n)`) takes to reach exact zero once
+ * the cutting voice begins. A linear ramp from the cutting voice's onset frame to exact zero, the law of the
+ * teardown fade ([VCA_OFF_TEARDOWN_FADE_SECONDS]), applied by the choked voice itself after its instrument tree and
+ * before its send stage (`Voice.cutOff`), so its orbit sends fade with it.
+ *
+ * **Why this length.** It is today's teardown length: long enough to turn the cut's step into a ramp, short
+ * enough that the new voice's attack masks it. A smoother curve (the smoothstep sketched in
+ * `docs/tasks/voice-takeover.md`) is an option for `takeover`, which fades over a longer, authored time. For the
+ * cut it is a by-ear choice left to the maintainer: measured quieter above 500 Hz on pure low tones, a little
+ * louder below, and a different law from the teardown (`docs/tasks/voice-lifecycle-state-machine.md`, step 4).
+ * The ramp's exact zero sits on the last frame that renders, as the teardown's does.
+ *
+ * Consumer: `Voice.cutOff`.
+ */
+const val CUT_FADE_SECONDS: Double = 0.004

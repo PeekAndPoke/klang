@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import kotlin.math.abs
+import kotlin.math.ceil
 
 /**
  * The voice's lifecycle state machine (`Voice.state`, step 1 of `docs/tasks/voice-lifecycle-state-machine.md`):
@@ -253,6 +254,10 @@ class VoiceLifecycleSpec : StringSpec({
 
             block(v, start)
 
+            if (target == State.Fading) {
+                v.cutOff(blockFrames.toDouble())
+            }
+
             while (v.state != target) {
                 start += blockFrames
                 withClue("reaching $target") { (start < 8192.0) shouldBe true }
@@ -327,6 +332,228 @@ class VoiceLifecycleSpec : StringSpec({
         block(done, 256.0) shouldBe false
         done.releaseGate(200.0)
         withClue("Done: ignored") { done.endFrame shouldBe 256.0 }
+    }
+
+    // ── The cut (lifecycle step 4): Fading ────────────────────────────────────────────────────────────
+
+    // At 48 kHz the cut fade is 0.004 s = 192 frames. A cut whose cutting voice begins at frame 200 (inside the
+    // block [128, 256)) has its fade end at 392; the ramp reaches exact zero on frame 391, the last frame before
+    // the fade end (the teardown's rule: zero on the last frame that renders), so it runs 191 steps.
+    val cutAt = 200.0
+    val fadeEnd = 392.0
+    val zeroAt = 391
+
+    /** The cut's gain at absolute frame [f] for a block starting at [blockStart]: the law, written out here. */
+    fun cutGain(f: Int, blockStart: Double, start: Double = cutAt, end: Double = fadeEnd): Double {
+        val zero = ceil(end) - 1.0
+        val remaining = ((zero - blockStart) - (f - blockStart.toInt())) * (1.0 / (zero - start))
+
+        return if (remaining < 0.0) 0.0 else if (remaining > 1.0) 1.0 else remaining
+    }
+
+    /** A held constant voice (1.0, no envelope, never culled), cut after its first block. */
+    fun cutVoice(): Voice {
+        val v = voice(start = 0.0, gate = 1_000_000.0, end = 1_004_800.0)
+
+        block(v, 0.0)
+        v.cutOff(cutAt)
+
+        return v
+    }
+
+    "a cut fades a sounding voice from the cutting onset, mid-block too, to exact zero, then Done" {
+        val v = cutVoice()
+
+        withClue("Fading at once") { v.state shouldBe State.Fading }
+
+        for (start in listOf(128.0, 256.0, 384.0)) {
+            withClue("block $start renders") { block(v, start) shouldBe true }
+            withClue("block $start: fading") { v.state shouldBe State.Fading }
+
+            for (i in 0 until blockFrames) {
+                val f = start.toInt() + i
+                val out = ctx.voiceBuffer[i]
+
+                when {
+                    f < cutAt -> withClue("frame $f: before the cutting onset, untouched") { out shouldBe 1.0 }
+                    f >= zeroAt -> withClue("frame $f: exact zero from the last frame before the fade end") { (out == 0.0) shouldBe true }
+                    else -> {
+                        withClue("frame $f: on the linear ramp") { (abs(out - (zeroAt - f) / 191.0) < 1e-12) shouldBe true }
+                        withClue("frame $f: the law, bit for bit") { out.toRawBits() shouldBe cutGain(f, start).toRawBits() }
+                    }
+                }
+            }
+        }
+
+        withClue("Done from the first block that starts at or after the fade end") { block(v, 512.0) shouldBe false }
+        v.state shouldBe State.Done
+        withClue("and renders nothing") { untouched() shouldBe true }
+    }
+
+    "a fade end on a block start: the block before it renders the ramp's zero, and the voice is Done at it" {
+        // Cut at 64: the fade ends exactly on 256, a block start. Frame 255 is the last frame that renders and the
+        // ramp's zero; a voice that ended one block later, or a ramp aimed at 256, would miss it.
+        val v = voice(start = 0.0, gate = 1_000_000.0, end = 1_004_800.0)
+
+        block(v, 0.0)
+        v.cutOff(64.0)
+        block(v, 128.0) shouldBe true
+        withClue("the last rendered frame is exact zero") { (ctx.voiceBuffer[127] == 0.0) shouldBe true }
+        withClue("one step before it, one ramp step") { (abs(ctx.voiceBuffer[126] - 1.0 / 191.0) < 1e-12) shouldBe true }
+        withClue("Done at the block that starts on the fade end") { block(v, 256.0) shouldBe false }
+    }
+
+    "a cut with a non-finite fade start ends the voice at once" {
+        for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY)) {
+            val v = voice(start = 0.0, gate = 1_000_000.0, end = 1_004_800.0)
+
+            block(v, 0.0)
+            v.cutOff(bad)
+            withClue("$bad: Done, no NaN fade") { v.state shouldBe State.Done }
+            withClue("$bad: renders nothing") { block(v, 128.0) shouldBe false }
+        }
+    }
+
+    "a cut does not click: no step between frames larger than the ramp's slope" {
+        val v = cutVoice()
+        var prev = 1.0
+        var maxStep = 0.0
+
+        for (start in listOf(128.0, 256.0, 384.0)) {
+            block(v, start)
+
+            for (i in 0 until blockFrames) {
+                maxStep = maxOf(maxStep, abs(ctx.voiceBuffer[i] - prev))
+                prev = ctx.voiceBuffer[i]
+            }
+        }
+
+        // A hard cut steps by the full 1.0; the ramp moves 1/191 per frame.
+        (maxStep <= 1.0 / 191.0 + 1e-12) shouldBe true
+        (maxStep > 0.0) shouldBe true
+    }
+
+    "a cut's sends fade too: the orbit mix carries the ramp" {
+        val v = cutVoice()
+        val cylinder = ctx.cylinders.getOrInit(v.cylinderId, v, 0.0)
+        val held = cylinder.mixBuffer.left[100]
+
+        withClue("the held voice reaches its orbit") { (held > 0.1) shouldBe true }
+
+        for (start in listOf(128.0, 256.0, 384.0)) {
+            cylinder.mixBuffer.left.fill(0.0)
+            cylinder.mixBuffer.right.fill(0.0)
+            block(v, start)
+
+            for (i in 0 until blockFrames) {
+                val f = start.toInt() + i
+                val mix = cylinder.mixBuffer.left[i]
+
+                if (f >= zeroAt) {
+                    withClue("frame $f: the send is silent from the ramp's zero") { (mix == 0.0) shouldBe true }
+                }
+
+                if (f == 296) {
+                    withClue("frame 296: half way down the ramp, in the send too") { (abs(mix - held * 95.0 / 191.0) < 1e-9) shouldBe true }
+                }
+            }
+        }
+    }
+
+    "a cut on a Pending voice and on a Zombie sends it straight to Done" {
+        val pending = voice(start = 1024.0, gate = 4096.0, end = 8192.0)
+
+        block(pending, 0.0)
+        pending.cutOff(512.0)
+        withClue("Pending: Done") { pending.state shouldBe State.Done }
+        withClue("Pending: never sounds") { block(pending, 1024.0) shouldBe false }
+        withClue("Pending: renders nothing") { untouched() shouldBe true }
+
+        val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
+        val zombie = voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.0, envelope = percussive)
+        var start = 0.0
+
+        while (zombie.state != State.Zombie) {
+            block(zombie, start)
+            start += blockFrames
+        }
+
+        zombie.cutOff(start)
+        withClue("Zombie: Done") { zombie.state shouldBe State.Done }
+        withClue("Zombie: render ends it") { block(zombie, start) shouldBe false }
+    }
+
+    "a second cut on a Fading voice changes nothing" {
+        val once = cutVoice()
+        val twice = cutVoice()
+
+        twice.cutOff(300.0)
+        withClue("still fading") { twice.state shouldBe State.Fading }
+
+        for (start in listOf(128.0, 256.0, 384.0)) {
+            block(once, start)
+
+            val reference = ctx.voiceBuffer.copyOf()
+
+            block(twice, start)
+
+            for (i in 0 until blockFrames) {
+                withClue("frame ${start + i}") { ctx.voiceBuffer[i].toRawBits() shouldBe reference[i].toRawBits() }
+            }
+        }
+    }
+
+    "a note-off during Fading is ignored" {
+        val v = cutVoice()
+
+        v.releaseGate(256.0)
+        withClue("the end stays") { v.endFrame shouldBe 1_004_800.0 }
+        withClue("still fading") { v.state shouldBe State.Fading }
+        block(v, 256.0)
+        withClue("the ramp goes on: frame 300 is on it") { (abs(ctx.voiceBuffer[300 - 256] - (zeroAt - 300) / 191.0) < 1e-12) shouldBe true }
+    }
+
+    "a cut on a voice whose end falls inside the fade ends at its end: its own teardown stays where it was" {
+        // Constant 1.0, no envelope, the teardown fade appended (as the factory does for a tree without its own
+        // envelope): its window ends on frame 1099. Cut at 1000: the cut fade would end at 1192, after the end.
+        fun withTeardown() = createVoice(
+            startFrame = 0.0, gateEndFrame = 1000.0, endFrame = 1100.0,
+            sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER,
+            treeStages = listOf(TeardownFadeRenderer),
+        )
+
+        val reference = withTeardown()
+        val cut = withTeardown()
+
+        for (start in listOf(0.0, 128.0, 256.0, 384.0, 512.0, 640.0, 768.0, 896.0, 1024.0)) {
+            if (start == 896.0) {
+                cut.cutOff(1000.0)
+                withClue("fading") { cut.state shouldBe State.Fading }
+            }
+
+            block(reference, start)
+
+            val ref = ctx.voiceBuffer.copyOf()
+
+            block(cut, start)
+
+            for (i in 0 until blockFrames) {
+                val f = start.toInt() + i
+
+                if (f >= 1100) {
+                    withClue("frame $f: past the end, nothing") { ctx.voiceBuffer[i] shouldBe sentinel }
+                } else {
+                    val expected = ref[i] * cutGain(f, start, start = 1000.0, end = 1192.0)
+
+                    withClue("frame $f: the uncut voice times the cut ramp, teardown unmoved") {
+                        ctx.voiceBuffer[i].toRawBits() shouldBe expected.toRawBits()
+                    }
+                }
+            }
+        }
+
+        withClue("the end did not move") { cut.endFrame shouldBe 1100.0 }
+        withClue("Done at the first block at or after its own end, not the fade end") { block(cut, 1152.0) shouldBe false }
     }
 
     "a realtime note-off reaches every gate consumer through the voice's limits: it renders what a voice scheduled with that gate renders" {

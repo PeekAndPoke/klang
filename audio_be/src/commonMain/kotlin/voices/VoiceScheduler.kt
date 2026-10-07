@@ -295,13 +295,13 @@ class VoiceScheduler(
      * loop of [process], for a voice that turns `Done` while it renders (swap with the last, which then renders
      * in the same block). Why two:
      * - a killed voice must leave [active] at once: [cleanupHard] is followed by the engine's disposal, so no
-     *   render comes that could remove it;
+     *   render comes that could remove it; a voice a cut sends to `Done` leaves here too, keeping the order it had;
      * - folding the render loop's swap-with-last into a sweep after the loop would change the render order
      *   within a block, so no single path keeps today's renders bit-identical.
      * The order kept here is not observable in production: each playback has its own scheduler, and
      * [cleanupHard] kills every voice in it. Between blocks no other voice is `Done`: the render loop removes
-     * each at once. The cut in [activateVoice] still removes without the event (step 4 of the lifecycle plan
-     * makes it one).
+     * each at once. The cut ([activateVoice]) sends a silent victim to `Done` and removes it here; a sounding
+     * victim fades and leaves through the render loop.
      */
     private fun removeDoneVoices() {
         active.removeAll { it.voice.state == Voice.State.Done }
@@ -625,7 +625,7 @@ class VoiceScheduler(
             // counted — observability, not a clamp. This replaces a 5-block tolerance window that
             // admitted such voices LATE: oscillator phase fresh, envelope already blocks in, neither
             // on time nor shifted, and two silent-note bugs reachable only in that state.
-            if (absoluteStartSec < nowSec) {
+            if (!(absoluteStartSec >= nowSec)) { // NaN-guard: a non-finite start is dropped like a late one
                 pCtx.droppedVoices++
                 continue
             }
@@ -649,18 +649,22 @@ class VoiceScheduler(
         origin: VoiceOrigin,
         pCtx: PlaybackCtx,
     ) {
-        // Handle Cut / Choke Groups before creating the new voice
+        // Cut / choke groups, before the new voice exists (so it never cuts itself): the scheduler decides WHO
+        // (every active voice of the group), the voice decides WHAT by its state (`Voice.cutOff`: a silent one is
+        // Done at once, a sounding one fades from the cutting voice's onset). The Done ones leave here,
+        // order-preserving (F3); a fading one leaves through the render loop once its fade has ended.
         val cut = absoluteVoice.data.cut
+
         if (cut != null) {
-            val iterator = active.iterator()
-            while (iterator.hasNext()) {
-                val activeVoice = iterator.next()
+            val fadeStartFrame = voiceFactory.onsetFrame(absoluteVoice, context.clock.startTimeSec)
+
+            for (activeVoice in active) {
                 if (activeVoice.voice.cut == cut) {
-                    // The one removal that is not an event on the voice yet: lifecycle step 4 turns the cut
-                    // into `Fading` (docs/tasks/voice-lifecycle-state-machine.md).
-                    iterator.remove()
+                    activeVoice.voice.cutOff(fadeStartFrame)
                 }
             }
+
+            removeDoneVoices()
         }
 
         voiceFactory.makeVoice(

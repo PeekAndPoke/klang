@@ -96,7 +96,7 @@ A tree without it plays as it is, and the door slots in the bag go unread.
 |------------|-----------|----------------------------------------------|
 | `cylinder` | `Int?`    | Cylinder (orbit bus) ID for this voice       |
 | `pan`      | `Double?` | Stereo pan, 0 = full left, 1 = full right, unset = 0.5 (center) |
-| `cut`      | `Int?`    | Choke group: a new voice in the group ends the ones still sounding |
+| `cut`      | `Int?`    | Choke group: a new voice in the group ends the ones still sounding (a 4 ms fade, `Voice.cutOff`) |
 | `cull`     | `Double?` | Silence-culling window in seconds; null = `VOICE_CULL_SECONDS`, negative = never |
 
 ### Orbit bus slots: `katalystParams`

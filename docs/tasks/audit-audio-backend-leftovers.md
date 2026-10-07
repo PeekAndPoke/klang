@@ -1,6 +1,7 @@
 # Audio backend audit: the leftovers
 
-Status: **§1 follow-up, §3 and §5 done 2026-10-07; §2 and §4 open for the maintainer**, investigated, with the
+Status: **§1 follow-up, §3 and §5 done 2026-10-07; §4 done 2026-10-07 by voice lifecycle step 4 (a cut fades the
+choked voice over 4 ms, `docs/tasks/voice-lifecycle-state-machine.md`); §2 open for the maintainer**, investigated, with the
 findings and a proposal each in "What was done" at the end (§2: what a worklet spec can reach, and its cost; §4: the
 cut-group hard cut today and what the teardown fade would change). Carved out 2026-09-27 when the audio backend audit campaign
 closed (brief: `docs/tasks-archive/2026-09/20260927-audio-backend-audit.md`, ledger:
@@ -68,6 +69,10 @@ Per site: prove wrap-safety by inspection and write the argument in a comment, o
 near `Int.MAX_VALUE` in a spec and step across.
 
 ## 4. Cut groups hard-cut
+
+**Done 2026-10-07 by voice lifecycle step 4:** the choked voice fades over `CUT_FADE_SECONDS` (4 ms) from the
+cutting voice's onset, with a cut-only ramp before its send (`Voice.cutOff`, the `Fading` state); `endFrame` does
+not move; `VoiceSchedulerSoloCutSpec` and `VoiceLifecycleSpec` guard it. The text below is the item as it stood.
 
 `voices/VoiceScheduler.kt:638`: `// TODO: Use a fade out / release phase instead of hard cut?` A
 choked voice is removed mid-sample, a known and untested click source. Decide by ear whether the

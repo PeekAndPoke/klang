@@ -85,7 +85,8 @@ A sample voice runs the sample instrument (`IgnitorRegistry.SAMPLE_INSTRUMENT`, 
 Its playback slots are `begin`, `end`, `speed` and `loop` (`IgnitorDsl.Slots.sample`), read where the
 playhead is built; a loop region is sprudel's `loop().begin(x).end(y)`. A sample's own envelope
 (`SampleMetadata.adsr`) fills the `adsr.*` slots the pattern left unset (`withSampleEnvelopeDefaults`).
-Cut groups: a new voice in the same `cut` group ends the ones still sounding.
+Cut groups: a new voice in the same `cut` group ends the ones still sounding: each fades over 4 ms from the new
+voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`); one not yet started or culled ends at once.
 
 ## VoiceScheduler
 

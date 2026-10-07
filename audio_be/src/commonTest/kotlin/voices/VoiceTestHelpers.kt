@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.adsr
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
+import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
@@ -86,6 +87,9 @@ object VoiceTestHelpers {
 
         // The orbit chain's param state this voice carries while it owns the orbit's lease.
         katalystParams: Map<String, Double>? = null,
+
+        // Stages after the tree, as the factory's `treeStages` (e.g. the teardown fade).
+        treeStages: List<BlockRenderer> = emptyList(),
     ): Voice {
         // Voice-RELATIVE duration — Int, mirrors VoiceFactory. (Absolute frames are Double.)
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
@@ -127,7 +131,7 @@ object VoiceTestHelpers {
             signal = instrument,
             signalCtx = signalCtx,
             freqHz = freqHz,
-        )
+        ) + treeStages
 
         val blockCtx = BlockContext(
             audioBuffer = AudioBuffer(blockFrames), // placeholder, updated per block

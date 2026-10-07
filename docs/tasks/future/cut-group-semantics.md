@@ -54,6 +54,11 @@ song, because group numbers are small integers that two people will collide on.
 
 ### 3. The hard kill is a click
 
+**Answered 2026-10-07 (voice lifecycle step 4): it fades.** A cut no longer removes the victim: the voice gets a
+cut event (`Voice.cutOff`) and, if it is sounding, enters `Fading`, a linear ramp to exact zero over
+`CUT_FADE_SECONDS` (4 ms) from the cutting voice's onset, before its send; a silent victim (not yet started, or
+culled) ends at once. The text below is the question as it stood.
+
 `VoiceScheduler.kt:558` still carries its original TODO — *"Use a fade out / release phase instead of
 hard cut?"*. The victim is removed from the active list mid-waveform, so a ringing sample is chopped
 at an arbitrary sample value, which is a step discontinuity. It has never been heard because nothing

@@ -1,6 +1,6 @@
 # A voice's lifecycle is one state machine inside the voice
 
-Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07, step 3 done 2026-10-07 (awaiting review).
+Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07, step 3 done 2026-10-07, step 4 done 2026-10-07 (awaiting review).
 
 ## Why (maintainer, 2026-10-07)
 
@@ -183,7 +183,7 @@ before and after.
    (`ActiveVoice.origin`): they answer WHO an event goes to (a stop by `liveId`, `cleanup`'s held voices, the
    re-send dedup), which the plan gives the scheduler; the voice needs none of them to decide WHAT happens (a
    held voice is a voice whose gate lies at the horizon). Proof: `VoiceLifecycleSpec` (a kill from every state,
-   a note-off on every state), `VoiceSchedulerHardKillSpec` (the sweep after `cleanupHard`); 8 mutations all red
+   a note-off on every state), `VoiceSchedulerHardKillSpec` (the sweep after `cleanupHard`; renamed `VoiceSchedulerRemovalSpec` in step 4); 8 mutations all red
    (S7 tested `clear`, deleted since); the step 1 campaign re-run with the fixed runner (M1 to M18 and the `SampleInstrumentSpec` pair, all
    red). Report: `tmp/reviews/vl-step3-report.md`.
 
@@ -212,16 +212,75 @@ before and after.
    - **L3.** One scheduler serves exactly one playback in production (`engineFor(playbackId)`), so a cut group
      reaches at most the whole playback. The open `cut-group-semantics.md` question is "the whole playback or one
      orbit".
+
+   **What was done (2026-10-07).** The cut-group SEMANTICS are unchanged (maintainer: continue without their
+   judgement): who is cut is today's rule (`cut(0)` an ordinary group, the reach the whole playback);
+   `cut-group-semantics.md` stays open except question 3, answered: it fades. Only the hard removal changed.
+   - **The event.** `Voice.cutOff(fadeStartFrame)` (the property `cut` is the group, so the event is `cutOff`).
+     `Pending` and `Zombie` go to `Done` at once; `Sounding` and `Releasing` go to `Fading`; `Fading` and `Done`
+     ignore it. The scheduler's sweep in `activateVoice` still runs before the new voice exists (it never cuts
+     itself), sends `cutOff` to every voice of the group, then `removeDoneVoices()` (F3).
+   - **The fade start** is the cutting voice's onset frame, from `VoiceFactory.onsetFrame`, the one formula
+     `makeVoice` uses too, so the sweep needs no built voice (a cutting voice that cannot be built still cuts,
+     as before).
+   - **The fade.** `CUT_FADE_SECONDS = 0.004` (`audio_bridge/.../constants/EnvelopeDefaults.kt`), linear to exact
+     zero (the teardown law), applied by the voice between its stages and its send (`Voice.applyCutFade`), so the
+     orbit sends fade too. The fade window lives in `VoiceLimits` (`fadeStartFrame`, `fadeEndFrame`, +Infinity
+     until cut), written only by `cutOff`. `endFrame` does not move (F1): `advance` ends the voice at the first
+     block that starts at or after the fade end or `endFrame`, whichever is first. A voice whose own end falls
+     inside the fade ends at its end; where it has a teardown fade, that stays at its own end and multiplies
+     with the cut ramp in the overlap (both continuous, so the product is click-free; skipping the teardown
+     while `Fading` would put a step at the cut when the cut lands inside the teardown window). The smoothstep
+     of `docs/tasks/voice-takeover.md` is left for `takeover`.
+   - **`Fading` in the machine.** The pipeline runs, the ramp, then the send; no cull measurement; a note-off is
+     ignored; `kill()` ends it. It renews the orbit lease while it renders and leaves by swap-with-last (F4: the
+     orbit owner after a cut changes on purpose).
+   - **Not equivalent, by design:** a cut voice keeps sounding (fading) for 4 ms and holds its slot and lease
+     until the fade has ended. No shipped song uses cut, so the corpus is bit-identical.
+   - **Proof.** `VoiceLifecycleSpec` (the ramp from a mid-block onset to exact zero and `Done` after it, no step
+     larger than the slope, the sends fade, `Pending` and `Zombie` to `Done`, a second cut changes nothing, a
+     note-off in `Fading` is ignored, an end inside the fade ends at the end with the teardown unmoved, a kill
+     from `Fading`); `VoiceSchedulerSoloCutSpec` (the four cut rows rewritten to the fade, plus the fade starting
+     at the cutting onset mid-block through the scheduler); `VoiceSchedulerRemovalSpec` (a cut zombie leaves by
+     the sweep, the order kept). 16 mutations: 15 red; one equivalent (measuring the cull peak in `Fading` has no
+     observable effect, only cost, since culling counts only in `Releasing`). Report: `tmp/reviews/vl-step4-report.md`.
+   - **Round 1 (2026-10-07).** The ramp's exact zero sits on the last frame that renders, `ceil(fadeEnd) - 1`, as
+     the teardown puts its zero on `floor(endFrame) - 1` (the ramp spans 191 steps at 48 kHz; the voice still ends
+     at the first block at or after the fade end). Before, a fade end on a block's last frame left one ramp step
+     (1/192) as the last value. A non-finite start is dropped at promotion like a late voice and counted
+     (`if (!(absoluteStartSec >= nowSec))`, which also closes the old leak of such a voice staying `Pending` for
+     ever), and `cutOff` sends a non-finite fade start straight to `Done`. A NaN rpm would pass
+     `KlangPatternScheduler.updateRpm`'s `coerceAtLeast` and reach the start times; no producer was found (the UI
+     guards `newRpm > 0.0`, the songs set literals), so it is reported, not fixed here.
+   - **Decided: a `Fading` voice ends in `Done` at the fade end** (coordinator, 2026-10-07, under the maintainer's
+     "continue unless you need my judgement"). It keeps today's orbit hand-over: the cut victim gives up its lease
+     once its fade ends. Revisit with step 5's lease rule.
+   - **By ear, for the maintainer: the curve.** Linear stays. Reviewer B measured smoothstep (`1 - p*p*(3 - 2p)`)
+     at the same 4 ms on the worst case (a full-scale low sine cut by a low sine): linear leaves 1-2 kHz at -59.8 dB
+     and 2-4 kHz at -68.7 dB, 5 to 11 dB above the new note's own onset; smoothstep gives -73.4 and -88.9, below
+     the new onset in every band above 500 Hz, at the price of 3.8 dB more at 250-500 Hz and a law that differs
+     from the teardown's. Audible only on pure low tones in a quiet room; a one-line law swap if wanted. WAVs:
+     `tmp/cut-fade/` (`sine60-fullscale-*`, `sine110-pluck-*`), notes in `tmp/reviews/vl4-r1-B.md`.
 5. **The lease per state (maintainer decision, by ear).** Which states hold the orbit lease. Today a zombie holds
    it until `endFrame`; restricting it changes which voice owns a shared orbit (the culling design avoided that on
    purpose, measured on Der Schmetterling 2026-09-15). Corpus render plus listening.
+
+   **Input from step 4 (reviewer B, 2026-10-07): the F4 owner change, measured.** Three voices on orbit 0: V1
+   (cut 1, reverb wet 0) owns it, a pad V2 (no cut, reverb wet 0.8) is refused, and a run of plucks (cut 1, dry)
+   every 0.25 s cuts V1 and then each other. Before step 4 the removal kept the order, so the pad took the lease
+   and the whole orbit played with reverb 0.8; since step 4 the faded owner leaves by swap-with-last, the newest
+   pluck takes its slot and the lease, and the orbit stays dry for the run. Difference signal -13 dB against the
+   mix over 2.5 s (all of it reverb). Neither is "right" under first-writer-wins; the new one is what a natural
+   death already does. WAVs: `tmp/cut-fade/shared-orbit-lease-*`.
 6. **Then, as their own tasks:** `takeover` (the `Fading` event with its own time) and `glide` (a value the new
    voice gets at its onset), `docs/tasks/voice-takeover.md`.
 7. **Optimisation, only if measured to be needed.**
 
 ## Open decisions
 
-- Step 4: does a `Fading` voice end in `Done` at the fade end (today's cut drops its lease at once), or in
-  `Zombie` until its old `endFrame`?
+- ~~Step 4: does a `Fading` voice end in `Done` at the fade end, or in `Zombie` until its old `endFrame`?~~
+  Decided 2026-10-07 by the coordinator under the maintainer's "continue unless you need my judgement": `Done` at
+  the fade end (it keeps today's orbit hand-over). Revisit at step 5 with the lease rule.
+- Step 4, by ear: linear or smoothstep for the cut fade (see step 4's notes).
 - Step 5: the lease rule per state.
 - `cut-group-semantics.md`: `cut(0)`, and whether a group reaches the whole playback or one orbit.

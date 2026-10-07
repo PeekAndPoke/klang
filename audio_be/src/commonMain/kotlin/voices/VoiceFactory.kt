@@ -63,6 +63,18 @@ class VoiceFactory(
     }
 
     /**
+     * The onset frame a voice built from [scheduled] gets (absolute backend frame, floored), the one formula
+     * [makeVoice] and the scheduler's cut sweep share: the cut fades its victims from the cutting voice's onset,
+     * also when that voice cannot be built.
+     */
+    fun onsetFrame(scheduled: ScheduledVoice, backendStartTimeSec: Double): Double {
+        // Convert absolute time to backend-relative time, then to frames.
+        val relativeStartTime = scheduled.startTime - backendStartTimeSec
+
+        return kotlin.math.floor(relativeStartTime * sampleRate)
+    }
+
+    /**
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
      *
      * There is no "now" here: since block-framing B2 the scheduler drops any voice whose start is
@@ -80,13 +92,12 @@ class VoiceFactory(
         val data = scheduled.data
 
         // Convert absolute time to backend-relative time, then to frames
-        val relativeStartTime = scheduled.startTime - backendStartTimeSec
         val relativeGateEndTime = scheduled.gateEndTime - backendStartTimeSec
 
         // Absolute backend frames — Double (see RenderClock.cursorFrame). `.toInt()` here would
         // overflow after ~12.4 h of backend uptime, silently placing every new voice at a nonsense
         // frame. Durations derived below are relative and stay Int.
-        val startFrame = kotlin.math.floor(relativeStartTime * sampleRate)
+        val startFrame = onsetFrame(scheduled, backendStartTimeSec)
         val gateEndFrameFromTime = kotlin.math.floor(relativeGateEndTime * sampleRate)
 
         // Handle legato (clip) logic

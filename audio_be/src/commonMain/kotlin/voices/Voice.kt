@@ -17,8 +17,10 @@ import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
+import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
+import kotlin.math.ceil
 
 // Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
 // object), causing heap allocation on every operation. Int maps directly to a JS number.
@@ -33,12 +35,13 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
  *
  * **Lifecycle.** The voice is a state machine ([state], [State]): `Pending` until the block that holds its
  * onset, `Sounding` through the gate, `Releasing` once a block starts at or after the gate end, `Zombie` once the
- * release has stayed silent for the cull window, and `Done` from the first block that starts at or after
- * [endFrame]. [render] advances the state at the start of every block (the time-driven transitions) and then
+ * release has stayed silent for the cull window, `Fading` once its cut group cut it ([cutOff]), and `Done` from
+ * the first block that starts at or after [endFrame] (or a cut's fade end). [render] advances the state at the start of every block (the time-driven transitions) and then
  * dispatches on it; the cull measurement moves a `Releasing` voice to `Zombie` at the end of a block. Events from
  * outside arrive as methods, and the voice decides by its state whether they apply: the note-off
- * ([releaseGate]) and the hard kill ([kill], `Done` from any state). `Zombie` and `Done` are terminal: nothing
- * leads out of them but `Zombie` to `Done` (at [endFrame], or killed). The state describes a whole block, so a
+ * ([releaseGate]), the cut ([cutOff]) and the hard kill ([kill], `Done` from any state). `Fading`, `Zombie` and
+ * `Done` are terminal: nothing leads out of them but `Fading` and `Zombie` to `Done` (at the fade end or
+ * [endFrame], cut, or killed). The state describes a whole block, so a
  * block may still hold frames of the next phase (the gate end, the death frame) that the stages see frame by
  * frame. The plan: `docs/tasks/voice-lifecycle-state-machine.md`.
  */
@@ -117,8 +120,11 @@ class Voice(
     /** Frame where release begins. Moves earlier on a realtime note-off ([releaseGate]). */
     private val gateEndFrame: Double get() = limits.gateEndFrame
 
-    // Full pipeline: Pitch → Ignite → (teardown fade) → Send
-    private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
+    // The stages before the send: Pitch → Ignite → (teardown fade). A cut's fade runs between them and the send.
+    private val stages: List<BlockRenderer> = pipeline
+
+    // The last stage: the send into the orbit.
+    private val send: BlockRenderer = SendRenderer(voice = this)
 
     /**
      * The lifecycle state (see the class KDoc and [State]). [render] moves it at the start and the end of
@@ -203,7 +209,7 @@ class Voice(
      * The voice decides by its state whether the event applies. It applies to a `Pending` and a
      * `Sounding` voice; a `Sounding` voice whose gate moves into the past turns `Releasing` at the
      * start of the next block that starts at or after the new gate. A `Releasing` voice has been
-     * released already, and `Zombie` and `Done` are terminal: they ignore it. Through the scheduler
+     * released already, and `Fading`, `Zombie` and `Done` are terminal: they ignore it. Through the scheduler
      * that is what happened before the state existed: such a voice rendered a block that started at
      * or after its gate, and the scheduler releases at its cursor, which lies after that block's
      * start, so the natural-gate check below returned (a `Done` voice has left the active list).
@@ -236,11 +242,45 @@ class Voice(
     /**
      * The hard-kill event: the voice is `Done` NOW, from any state, and renders nothing more (no
      * fade: the caller is a teardown path, `VoiceScheduler.cleanupHard` at the end of the warmup
-     * handshake). The scheduler removes `Done` voices; it never ends a
-     * voice any other way (step 4 turns the cut, the one exception left, into an event too).
+     * handshake). The scheduler removes `Done` voices; it never ends a voice any other way (the cut
+     * is an event too, [cutOff]).
      */
     fun kill() {
         state = State.Done
+    }
+
+    /**
+     * The cut event: a voice of the same cut group begins at [fadeStartFrame] (its onset, absolute frame; it may
+     * fall inside a block). The voice decides by its state:
+     * - `Pending` or `Zombie`: silent already, `Done` at once (the scheduler removes it order-preserving);
+     * - `Sounding` or `Releasing`: `Fading`. It plays on until [fadeStartFrame], then ramps linearly to exact zero
+     *   over [CUT_FADE_SECONDS] (after the instrument tree, before the send, so the orbit sends fade too), and is
+     *   `Done` from the first block that starts at or after the fade end. The fade window lives in [limits]; the
+     *   end frame does not move, so a voice whose own end comes first ends there as usual (its teardown, where it
+     *   has one, stays at its own end and multiplies with the ramp in the overlap; both are continuous);
+     * - `Fading` or `Done`: no-op.
+     *
+     * A non-finite [fadeStartFrame] cannot place a fade: the voice is `Done` at once, whatever its state (the
+     * scheduler already drops a voice with a non-finite start before it can cut; this guards a direct call).
+     */
+    fun cutOff(fadeStartFrame: Double) {
+        if (!fadeStartFrame.isFinite()) { // NaN-guard: a non-finite onset ends the voice, never a NaN fade
+            state = State.Done
+
+            return
+        }
+
+        when (state) {
+            State.Pending, State.Zombie -> state = State.Done
+
+            State.Sounding, State.Releasing -> {
+                limits.fadeStartFrame = fadeStartFrame
+                limits.fadeEndFrame = fadeStartFrame + CUT_FADE_SECONDS * blockCtx.sampleRateD
+                state = State.Fading
+            }
+
+            State.Fading, State.Done -> Unit
+        }
     }
 
     /**
@@ -248,7 +288,8 @@ class Voice(
      *
      * Advances the [state] for this block, then dispatches on it: `Pending` renders nothing,
      * `Sounding` and `Releasing` run the BlockRenderer pipeline (Pitch → Ignite → (teardown fade) →
-     * Send), `Zombie` only renews the orbit lease, `Done` returns false.
+     * Send), `Fading` runs it with the cut's ramp before the send, `Zombie` only renews the orbit lease,
+     * `Done` returns false.
      *
      * @return true if the voice is still active, false if it has finished (`Done`)
      */
@@ -261,13 +302,19 @@ class Voice(
             State.Pending -> true
 
             State.Sounding -> {
-                renderStages(ctx, blockEnd, releasing = false)
+                renderStages(ctx, blockEnd, releasing = false, fading = false)
 
                 true
             }
 
             State.Releasing -> {
-                renderStages(ctx, blockEnd, releasing = true)
+                renderStages(ctx, blockEnd, releasing = true, fading = false)
+
+                true
+            }
+
+            State.Fading -> {
+                renderStages(ctx, blockEnd, releasing = false, fading = true)
 
                 true
             }
@@ -285,14 +332,15 @@ class Voice(
 
     /**
      * The time-driven transitions, at the start of the block `[blockStart, blockEnd)`: `Done` from the
-     * first block that starts at or after [endFrame] (from every state, a zombie included), `Sounding`
+     * first block that starts at or after [endFrame] or a cut's fade end (+Infinity unless cut; from every
+     * state, a zombie included), `Sounding`
      * from the first block that ends after [startFrame], `Releasing` from the first block that starts at
      * or after [gateEndFrame]. A voice whose onset and gate end fall into one pending block passes
      * through `Sounding` to `Releasing` in one call. Forward only: no branch leaves `Done`, and a `Zombie`
      * only reaches `Done`.
      */
     private fun advance(blockStart: Double, blockEnd: Double) {
-        if (blockStart >= endFrame) {
+        if (blockStart >= endFrame || blockStart >= limits.fadeEndFrame) {
             state = State.Done
 
             return
@@ -312,10 +360,11 @@ class Voice(
     }
 
     /**
-     * One block of the pipeline, for a `Sounding` or a `Releasing` voice, and the cull measurement
-     * that may turn a releasing voice into a `Zombie` at the block's end.
+     * One block of the pipeline, for a `Sounding`, `Releasing` or `Fading` voice, and the cull measurement
+     * that may turn a releasing voice into a `Zombie` at the block's end. A `Fading` voice gets the cut's ramp
+     * between the stages and the send, and no cull measurement.
      */
-    private fun renderStages(ctx: RenderContext, blockEnd: Double, releasing: Boolean) {
+    private fun renderStages(ctx: RenderContext, blockEnd: Double, releasing: Boolean, fading: Boolean) {
         val vStart = maxOf(ctx.blockStart, startFrame)
         val vEnd = minOf(blockEnd, endFrame)
         // Relative to this block / this voice — Int, and everything downstream of here is Int.
@@ -331,16 +380,22 @@ class Voice(
 
         // Silence culling reads the output peak only on a cullable voice, and only while it is
         // needed: until the voice has been heard (the [heard] latch), then in the release. A heard
-        // `Sounding` voice pays nothing for the rest of its gate.
-        val measure = cullWindowFrames >= 0 && (!heard || releasing)
+        // `Sounding` voice pays nothing for the rest of its gate, a `Fading` one nothing at all.
+        val measure = !fading && cullWindowFrames >= 0 && (!heard || releasing)
         blockCtx.measurePeak = measure
         blockCtx.voiceOutputPeak = 0.0 // never a stale read from the previous block
 
         // ── Pitch → Ignite → (teardown fade) → Send ───────────────────────────────
 
-        for (renderer in pipeline) {
+        for (renderer in stages) {
             renderer.render(blockCtx)
         }
+
+        if (fading) {
+            applyCutFade()
+        }
+
+        send.render(blockCtx)
 
         // ── Silence culling ───────────────────────────────────────────────────────
         // Only in the release: the gate is the held part of the note, and a note may be silent
@@ -372,6 +427,30 @@ class Voice(
         }
     }
 
+    /**
+     * The cut's ramp on this block's window: gain 1 up to the fade start, then linear to exact zero on the LAST
+     * frame the voice renders, `ceil(fadeEnd) - 1` ([VoiceLimits.fadeEndFrame]; the voice is `Done` from the first
+     * block that starts at or after the fade end, so that frame always renders), zero after it. The law of
+     * `TeardownFadeRenderer`, whose zero is `floor(endFrame) - 1`: the ramp spans the fade length minus one frame
+     * (191 steps at 48 kHz). The clamps absorb a 1-ulp overshoot at the entry frame.
+     */
+    private fun applyCutFade() {
+        val buffer = blockCtx.audioBuffer
+        val fadeStart = limits.fadeStartFrame
+        val zeroFrame = ceil(limits.fadeEndFrame) - 1.0
+        val scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0)
+        // The buffer index at which the gain reaches zero (frame = blockStart + index).
+        val zeroIdx = zeroFrame - blockCtx.blockStart
+        val end = blockCtx.windowEnd
+
+        for (idx in blockCtx.offset until end) {
+            val remaining = (zeroIdx - idx) * scale
+            val gain = if (remaining < 0.0) 0.0 else if (remaining > 1.0) 1.0 else remaining
+
+            buffer[idx] = buffer[idx] * gain
+        }
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Nested types
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -389,6 +468,12 @@ class Voice(
 
         /** The block starts at or after the gate end: the pipeline runs and the cull measures. */
         Releasing,
+
+        /**
+         * Cut by its group (terminal, [cutOff]): the pipeline runs with the cut's ramp before the send, no cull
+         * measurement, a note-off is ignored; `Done` at the fade end (or at [endFrame], if that comes first).
+         */
+        Fading,
 
         /** Culled (terminal): renders nothing, renews its orbit lease until [endFrame] (see [culled]). */
         Zombie,
