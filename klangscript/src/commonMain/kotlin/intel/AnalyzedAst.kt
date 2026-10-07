@@ -104,7 +104,9 @@ class AnalyzedAst(
      * 2. If the node is an [Identifier] resolved to a local binding → a
      *    synthesised [KlangSymbol] with `origin = KlangSymbol.Origin.Local`.
      *    Locals shadow same-named registry entries.
-     * 3. Otherwise → bare-name lookup in the registry.
+     * 3. Otherwise → the registry symbol narrowed to what the name is at that position: a member of an unknown
+     *    receiver shows the methods ([KlangDocsRegistry.memberView]), a bare name its top-level variants and,
+     *    for a second name of a callable object, the object's call form ([KlangDocsRegistry.topLevelView]).
      */
     fun symbolAt(pos: Int): KlangSymbol? {
         val node = astIndex.nodeAt(pos) ?: return null
@@ -117,7 +119,12 @@ class AnalyzedAst(
             if (receiverType != null) {
                 return registry.getSymbolWithReceiver(name, receiverType)
             }
-            // Receiver type unknown — fall through to bare lookup (best effort).
+
+            // Receiver type unknown. A local value (the `x` of `x => x.gain(...)`) is no namespace: the methods of
+            // that name. Anything else (a namespace import, `sp.note(...)`, calls the top-level form): the whole symbol.
+            val receiverIsLocal = (memberAccess.obj as? Identifier)?.let { bindingMap[it] } != null
+
+            return registry.get(name)?.let { if (receiverIsLocal) registry.memberView(it) else it }
         }
 
         // Case 2: cursor sits on an Identifier reference that was resolved to a
@@ -126,9 +133,12 @@ class AnalyzedAst(
             bindingMap[node]?.let { return synthesizeLocalSymbol(it) }
         }
 
-        // Case 3: bare-name registry lookup.
-        return registry.get(name)
+        // Case 3: a bare name, as it stands at the top level.
+        return registry.get(name)?.let { registry.topLevelView(it) }
     }
+
+    /** The local binding [identifier] resolved to (`let`, `const`, `export`, a lambda parameter), or null for a global. */
+    fun localBindingOf(identifier: Identifier): TypeScope.LocalBinding? = bindingMap[identifier]
 
     /**
      * Resolve the receiver type for code completion triggered at offset [pos]
@@ -148,9 +158,8 @@ class AnalyzedAst(
 
     /**
      * Returns the MemberAccess whose `property` slot is the symbol under the
-     * cursor — when the cursor is sitting on that property (either directly on
-     * the MemberAccess, or wrapped in a CallExpression `obj.foo(...)`, or on
-     * the property Identifier nested inside).
+     * cursor: when the cursor is sitting on that property, directly on the
+     * MemberAccess or wrapped in a CallExpression `obj.foo(...)`.
      */
     private fun memberAccessFor(node: io.peekandpoke.klang.script.ast.AstNode, name: String): MemberAccess? {
         if (node is MemberAccess && node.property == name) return node
@@ -158,8 +167,7 @@ class AnalyzedAst(
             val cm = node.callee as? MemberAccess
             if (cm != null && cm.property == name) return cm
         }
-        val parent = astIndex.parentOf(node)
-        if (parent is MemberAccess && parent.property == name) return parent
+        // No parent branch: the index holds only a MemberAccess's `obj` under it, the receiver, never the member
         return null
     }
 
@@ -281,7 +289,7 @@ class AnalyzedAst(
             val astIndex = AstIndex.build(program, source)
             val inferrer = ExpressionTypeInferrer(registry)
             val builder = TypeMapBuilder(inferrer)
-            program.statements.forEach { builder.visitStmt(it) }
+            builder.visitStatements(program.statements)
             val typeMap = builder.map
             val bindingMap = builder.bindingMap
             val diagnostics = if (computeDiagnostics) {
@@ -321,9 +329,9 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
 
     private var scope: TypeScope = TypeScope()
 
-    private inline fun <T> withChildScope(block: () -> T): T {
+    private inline fun <T> withChildScope(deferred: Boolean = false, block: () -> T): T {
         val saved = scope
-        scope = scope.child()
+        scope = if (deferred) scope.deferredBody() else scope.child()
         try {
             return block()
         } finally {
@@ -334,7 +342,7 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
     fun visitExpr(expr: Expression) {
         map[expr] = inferrer.inferType(expr, scope)
         if (expr is Identifier) {
-            scope.resolve(expr.name)?.let { bindingMap[expr] = it }
+            scope.resolveReference(expr)?.let { bindingMap[expr] = it }
         }
         // Recurse into children
         when (expr) {
@@ -394,15 +402,16 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
                 expr.properties.forEach { (_, v) -> visitExpr(v) }
             }
 
-            // A bare arrow (not a call argument) has no expected type: its parameters
-            // are untyped locals that still shadow same-named registry symbols.
+            // An arrow with no expected type: its parameters are untyped locals that still shadow same-named
+            // registry symbols. Here it runs where it is written (an argument, an IIFE, an array element); an arrow
+            // bound by a declaration is visited by [visitDeferrable].
             is ArrowFunction -> visitArrowBody(expr, paramTypes = null)
 
             is IfExpression -> {
                 visitExpr(expr.condition)
-                withChildScope { expr.thenBranch.forEach { visitStmt(it) } }
+                withChildScope { visitStatements(expr.thenBranch) }
                 when (val e = expr.elseBranch) {
-                    is ElseBranch.Block -> withChildScope { e.statements.forEach { visitStmt(it) } }
+                    is ElseBranch.Block -> withChildScope { visitStatements(e.statements) }
                     is ElseBranch.If -> visitExpr(e.ifExpr)
                     null -> {}
                 }
@@ -426,7 +435,11 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
      * function-typed) the parameters are bound WITH those types; extra parameters beyond
      * the declared arity bind untyped (the runtime binds them to null).
      */
-    private fun visitArrowBody(expr: ArrowFunction, paramTypes: List<KlangType>?) = withChildScope {
+    private fun visitArrowBody(
+        expr: ArrowFunction,
+        paramTypes: List<KlangType>?,
+        deferred: Boolean = false,
+    ) = withChildScope(deferred = deferred) {
         expr.parameters.forEachIndexed { i, p ->
             scope.bind(
                 TypeScope.LocalBinding(name = p, type = paramTypes?.getOrNull(i), kind = KlangSymbol.LocalKind.PARAM)
@@ -434,7 +447,30 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
         }
         when (val body = expr.body) {
             is ArrowFunctionBody.ExpressionBody -> visitExpr(body.expression)
-            is ArrowFunctionBody.BlockBody -> body.statements.forEach { visitStmt(it) }
+            is ArrowFunctionBody.BlockBody -> visitStatements(body.statements)
+        }
+    }
+
+    /**
+     * Visit the initialiser of a `let` / `const` / `export`. An arrow there runs later than where it is written, so its
+     * body is deferred ([TypeScope.deferredBody]) and sees a local the declaring scope declares further down. Every
+     * other arrow runs where it is written (a call argument, an IIFE) and sees what the runtime sees there. A returned
+     * arrow is not deferred: the only later declarations it could see follow its `return`, and those never run.
+     */
+    private fun visitDeferrable(expr: Expression) {
+        if (expr is ArrowFunction) {
+            map[expr] = inferrer.inferType(expr, scope)
+            visitArrowBody(expr, paramTypes = null, deferred = true)
+        } else {
+            visitExpr(expr)
+        }
+    }
+
+    /** Bind a declaration, and give the identifiers that read it early from a deferred body its binding and type. */
+    private fun bindDeclaration(binding: TypeScope.LocalBinding) {
+        scope.bind(binding).forEach { reader ->
+            bindingMap[reader] = binding
+            map[reader] = binding.type
         }
     }
 
@@ -476,18 +512,36 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
         return targets.map { t -> params.getOrNull(t)?.type ?: varargType }
     }
 
+    /**
+     * Visit the statements of one scope. Their declarations are announced first ([TypeScope.declareAhead]), so a
+     * deferred body written above a declaration ([visitDeferrable]) sees the local it will see when it runs.
+     */
+    fun visitStatements(statements: List<Statement>) {
+        statements.forEach { declareAhead(it) }
+        statements.forEach { visitStmt(it) }
+    }
+
+    private fun declareAhead(stmt: Statement) {
+        when (stmt) {
+            is LetDeclaration -> scope.declareAhead(stmt.name, KlangSymbol.LocalKind.LET)
+            is ConstDeclaration -> scope.declareAhead(stmt.name, KlangSymbol.LocalKind.CONST)
+            is ExportDeclaration -> scope.declareAhead(stmt.name, KlangSymbol.LocalKind.EXPORT)
+            else -> Unit
+        }
+    }
+
     fun visitStmt(stmt: Statement) {
         when (stmt) {
             is ExpressionStatement -> visitExpr(stmt.expression)
             is LetDeclaration -> {
-                stmt.initializer?.let { visitExpr(it) }
+                stmt.initializer?.let { visitDeferrable(it) }
                 val type = stmt.initializer?.let { map[it] }
-                scope.bind(TypeScope.LocalBinding(name = stmt.name, type = type, kind = KlangSymbol.LocalKind.LET))
+                bindDeclaration(TypeScope.LocalBinding(name = stmt.name, type = type, kind = KlangSymbol.LocalKind.LET))
             }
 
             is ConstDeclaration -> {
-                visitExpr(stmt.initializer)
-                scope.bind(
+                visitDeferrable(stmt.initializer)
+                bindDeclaration(
                     TypeScope.LocalBinding(
                         name = stmt.name, type = map[stmt.initializer], kind = KlangSymbol.LocalKind.CONST
                     )
@@ -495,21 +549,22 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
             }
 
             is ExportDeclaration -> {
-                visitExpr(stmt.initializer)
-                scope.bind(
+                visitDeferrable(stmt.initializer)
+                bindDeclaration(
                     TypeScope.LocalBinding(
                         name = stmt.name, type = map[stmt.initializer], kind = KlangSymbol.LocalKind.EXPORT
                     )
                 )
             }
+
             is ReturnStatement -> stmt.value?.let { visitExpr(it) }
             is WhileStatement -> {
                 visitExpr(stmt.condition)
-                withChildScope { stmt.body.forEach { visitStmt(it) } }
+                withChildScope { visitStatements(stmt.body) }
             }
 
             is DoWhileStatement -> {
-                withChildScope { stmt.body.forEach { visitStmt(it) } }
+                withChildScope { visitStatements(stmt.body) }
                 visitExpr(stmt.condition)
             }
 
@@ -517,6 +572,7 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
                 // `for (let i = 0; ...)` — the init's binding must be visible to
                 // condition/update/body, so they all share one scope started here.
                 stmt.init?.let { visitStmt(it) }
+                stmt.body.forEach { declareAhead(it) }
                 stmt.condition?.let { visitExpr(it) }
                 stmt.update?.let { visitExpr(it) }
                 stmt.body.forEach { visitStmt(it) }

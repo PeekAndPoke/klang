@@ -332,7 +332,8 @@ class Environment(
     }
 
     /**
-     * A human-readable type name for error messages.
+     * A human-readable type name for error messages. A script value kind goes by its script name, the one the
+     * editor's types use: `Number`, `String`, `Boolean`, `Array`, `Object`, `null`, `Function`.
      *
      * [NativeObjectValue.qualifiedName] is computed at wrap time from `kClass.simpleName`, which
      * is NULL for an anonymous or local class — sprudel builds patterns from 21 different
@@ -350,6 +351,9 @@ class Environment(
      * get whichever was registered first, not the most specific.
      */
     fun getDisplayTypeName(value: RuntimeValue): String {
+        // A script value kind goes by the name the script and the editor use (`Boolean`, not `BooleanValue`)
+        scriptTypeName(value)?.let { return it }
+
         val obj = value.unpackForSupertypeLookup()
 
         obj::class.simpleName?.let { return it }
@@ -402,6 +406,18 @@ class Environment(
             allTypes.firstNotNullOfOrNull { nativeExtensionProperties[it]?.get(propertyName) }
                 ?: parent?.getExtensionProperty(value, propertyName)
         }
+    }
+
+    /** The name the script and the editor's types use for a script value kind; null for a native object. */
+    private fun scriptTypeName(value: RuntimeValue): String? = when (value) {
+        is NumberValue -> "Number"
+        is StringValue -> "String"
+        is BooleanValue -> "Boolean"
+        is ArrayValue -> "Array"
+        is ObjectValue -> "Object"
+        NullValue -> "null"
+        is FunctionValue, is NativeFunctionValue, is BoundNativeMethod -> "Function"
+        is NativeObjectValue<*> -> null
     }
 
     private fun RuntimeValue.unpackForSupertypeLookup() = when (this) {

@@ -164,6 +164,8 @@ class NamedArgumentChecker(
 
     private fun checkCall(call: CallExpression, out: MutableList<AnalyzerDiagnostic>) {
         val callable = resolveCallable(call) ?: return
+        // The call as written (`lowpass`, `Kat`), as the runtime names it, not the declaration it resolved to (`lpf`)
+        val calledAs = calledName(call) ?: callable.name
 
         val positional = call.arguments.filterIsInstance<Argument.Positional>()
         val named = call.arguments.filterIsInstance<Argument.Named>()
@@ -175,7 +177,7 @@ class NamedArgumentChecker(
             val firstOfOtherStyle = call.arguments.firstOrNull { it::class != firstKind }
             out += diagnostic(
                 firstOfOtherStyle?.location ?: call.location,
-                "Call to '${callable.name}' uses both positional and named arguments — pick one style",
+                "Call to '$calledAs' uses both positional and named arguments: pick one style",
             )
             return
         }
@@ -191,11 +193,11 @@ class NamedArgumentChecker(
             val loc = argLocation(arg, call)
             if (arg.name !in specNames) {
                 val expectedHint = if (specNames.isEmpty()) {
-                    "'${callable.name}' takes no parameters"
+                    "'$calledAs' takes no parameters"
                 } else {
                     "expected: ${specNames.joinToString(", ")}"
                 }
-                out += diagnostic(loc, "Unknown parameter '${arg.name}' on '${callable.name}' ($expectedHint)")
+                out += diagnostic(loc, "Unknown parameter '${arg.name}' on '$calledAs' ($expectedHint)")
                 hasUnknown = true
             }
             if (!seen.add(arg.name)) {
@@ -215,7 +217,7 @@ class NamedArgumentChecker(
         if (missing.isNotEmpty()) {
             out += diagnostic(
                 call.location,
-                "Call to '${callable.name}' is missing required parameter(s): ${missing.joinToString(", ")}",
+                "Call to '$calledAs' is missing required parameter(s): ${missing.joinToString(", ")}",
             )
         }
     }
@@ -250,6 +252,12 @@ class NamedArgumentChecker(
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private fun calledName(call: CallExpression): String? = when (val callee = call.callee) {
+        is Identifier -> callee.name
+        is MemberAccess -> callee.property
+        else -> null
+    }
 
     private fun argLocation(arg: Argument.Named, call: CallExpression): SourceLocation? =
         arg.nameLocation ?: arg.value.location ?: call.location

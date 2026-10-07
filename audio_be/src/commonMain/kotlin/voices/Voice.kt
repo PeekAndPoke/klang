@@ -376,8 +376,10 @@ class Voice(
 
     companion object {
         // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain
-        // counter is enough; a wrap after 2^31 ids is harmless (identity only has to hold between two voices
-        // that are co-active on the same orbit).
+        // counter is enough. Wrap-safe (audit leftovers §3): after 2^31 ids it turns negative and an id repeats
+        // only after 2^32. The one reader, `VoiceLease`, compares ids for EQUALITY between voices co-active on
+        // one orbit and has no sentinel id (`VoiceLeaseSpec` pins an owner with id -1), so neither a negative id
+        // nor a repeat 2^32 voices later can be mistaken for a live owner.
         private var idCounter: Int = 0
         private fun nextId(): Int = idCounter++
     }

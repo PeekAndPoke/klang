@@ -131,6 +131,18 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **The Katalyst traps** (a same-value retarget must be free; a per-block retarget low-passes the knob; a config
   cache compares substituted values; every door into a terminal state sets the same precondition):
   `audio/ref/katalyst.md`.
+- **The memo's freq key** (`MemoizingIgnitor.freqInvariant`, resolved at a share, never per wrap: per wrap made a voice
+  build five times slower): a shared subtree that reads no `Freq` and carries no pitch mod ignores the caller's freq,
+  so one LFO in the `phase` or `duty` of two oscillators at different pitches runs once per block. The author rule for
+  the rest: a shared modulator that reads `Ignitor.freq()` anywhere (its rate, its depth, a scaling next to it)
+  renders once per pitch; build it once per layer. The predicate is the detune fold's
+  (`IgnitorBuildCache.usesMusicalFreq`): a node that consumed the freq ARGUMENT without a `Freq` leaf would break
+  both. Guard: `SharedModulatorRateSpec`.
+- **One pitch mod per pitch-mod node** (`combineMods`): the mod a vibrato, fm, pitch envelope, accelerate or
+  `pitchMod` hands to the pitched sources under it sits behind one memo that always caches per block, so its LFO or
+  modulator advances once per block for every source at one pitch (it ran once per source until 2026-10-07; Sakura and
+  Irish Lament were retuned to keep their sound). Except: a source detuned under a mod that keeps its freq key (an
+  `fm`, or a mod whose knobs read `Freq`) renders the whole mod again. Guard: the B-1 rows of `SharedModulatorRateSpec`.
 - **`phaseMod` save and restore has no try/finally** (`ModApplyingIgnitor`, `ModBlockingIgnitor`): accepted, an
   exception on the audio thread is fatal anyway.
 - **The click-hunt harness** `GuitarClickHuntTest` is tagged `ClickHunt`, out of the default run
@@ -148,9 +160,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 - **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
   `duck-orbit-switch-click.md`, and the owed rounds listed there.
-- **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md`,
-  `docs/tasks/bugfix-ignitor-non-finite-pitch-amount.md`, `docs/tasks/svf-coefficient-cache-never-engages.md`,
-  `docs/tasks/shared-modulator-memo-rate.md` (a `duty` or `phase` LFO shared across pitches runs twice per block).
+- **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md` (§2 worklet tests and §4 the cut-group fade
+  wait on the maintainer), `docs/tasks/svf-coefficient-cache-never-engages.md`,
+  `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (the sprudel strip's raw pitch amounts, two NaN signals),
+  `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md` (two residues, both an author rule today: a shared modulator that reads
+  `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
+  the mod again).
 - **Scheduled or designed**: `docs/tasks/oversampling-regions.md`, `docs/tasks/master-dsl-followups.md`,
   `docs/tasks/katalyst-master-configure-doors.md`, `docs/tasks/pluck-release-tail.md`,
   `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
@@ -172,6 +187,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 One pitch mod over several pitched sources at one pitch advances once per block; Sakura's `shaku` and Irish Lament's
+  `blockfloete` vibrato rates written as heard (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, B-1)
+- 2026-10-07 A shared modulator that reads no `Freq` runs once per block at any pitch; a non-finite pitch amount reads
+  as unset; silence floors on the Eq parity specs; the wasm stub deleted (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`,
+  `docs/tasks-archive/2026-10/20261007-bugfix-ignitor-non-finite-pitch-amount.md`, `docs/tasks/audit-audio-backend-leftovers.md`)
 - 2026-10-07 The saw's node is `Saw` end to end: the node `IgnitorDsl.Saw` (wire name `saw`), the factory
   `Ignitors.saw`; the sound names `sawtooth` / `saw` and the LFO shape `sawtooth` stay
   (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 3)

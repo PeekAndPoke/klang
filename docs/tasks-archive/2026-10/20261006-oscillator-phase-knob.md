@@ -3,7 +3,7 @@
 Status: **DONE 2026-10-06, archived.** Built on branch `oscillator-phase` (on top of `signals-range`), commit
 `1207ed50`; review round 1 (blind pair) and round 2 (reviewer-high, clean) applied. The sprudel tremolo `range` is
 decided (decision 4: not in sprudel yet); the vibrato's `range` moved to `docs/tasks/future/pitch-pipeline-into-the-tree.md`;
-the shared-modulator defect found in review is `docs/tasks/shared-modulator-memo-rate.md`.
+the shared-modulator defect found in review is `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`.
 
 ## Decided at the start (maintainer, 2026-10-06)
 
@@ -139,7 +139,7 @@ inharmonic, and its sign pattern is already within 0.15 dB of the best free phas
 ## Open
 
 - **A modulator shared by oscillators at different pitches** runs twice per block (pre-existing for `duty`, inherited
-  by `phase`): parked as `docs/tasks/shared-modulator-memo-rate.md`; the reference tells authors to build one LFO per
+  by `phase`): parked as `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`; the reference tells authors to build one LFO per
   layer meanwhile.
 - **The partial banks' phase semantics.** As built, every partial moves by the same fraction of its OWN cycle (so 1 is
   0 for every partial and the stack rule holds); a time shift of the summed wave would move a partial at `m f` by

@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val sakuraSong = Song(
     id = "${BuiltInSongs.PREFIX}-synthkura",
     title = "Die Kirschblüte",
-    rpm = 28.0,
+    rpm = 27.0,
     icon = "globe asia",
     code = """
 import * from "stdlib"
@@ -33,9 +33,7 @@ let shaku = Ign.sine().mul(0.6)
       .plus(Ign.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
       .lowpass(3500, 1.0, x => x.analog(Ign.slot.analog))
       .highpass(600, x => x.analog(Ign.slot.analog))
-      // NOTE: `.analog(0.2)` was here and INERT (receiver was the Lowpass wrapper). The
-      // filters above still get their own `analog = Ign.slot.analog` saturation.
-      .vibrato(2, Ign.perlin(1).mul(0.15).plus(0.15))
+      .vibrato(4, Ign.perlin(2).mul(0.15).plus(0.15))
       .pitchEnvelope(1, x => x.adsr(0.02, 0.1, 0, 0))
       .adsr(0.07, 0.15, 0.8, 0.3)
       .classic()

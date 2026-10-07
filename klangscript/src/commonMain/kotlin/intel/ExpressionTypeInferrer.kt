@@ -58,9 +58,8 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
     private fun inferIdentifier(id: Identifier, scope: TypeScope?): KlangType? {
         // 1. Local binding (shadows the registry — even if its type is unknown,
         //    we don't want to fall through to a same-named registered symbol).
-        if (scope != null && scope.contains(id.name)) {
-            return scope.resolve(id.name)?.type
-        }
+        scope?.resolve(id.name)?.let { return it.type }
+
         // 2. Registry global (e.g. `Ignitor`, `Math`, registered as KlangProperty). Only a top-level property is
         //    the value of the bare name: an owned one (the stdlib's `Katalyst.slot.duck`) is a member elsewhere.
         val symbol = registry.get(id.name) ?: return null
@@ -98,9 +97,8 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
                 // call-site / function-body inference, but we must NOT resolve via
                 // a same-named global like `signal()` from sprudel. A local holding a
                 // callable object (`let d = duck; d(1)`) calls the call form of its type.
-                if (scope != null && scope.contains(callee.name)) {
-                    return scope.resolve(callee.name)?.type?.let { registry.getCallForm(it) }
-                }
+                scope?.resolve(callee.name)?.let { local -> return local.type?.let { registry.getCallForm(it) } }
+
                 // A plain function or a callable object's call form (`Katalyst(...)`, both receiver-less on
                 // the symbol of that name), or a value holding a callable object (`Kat(...)`): the call form
                 // of its type, the same way the interpreter dispatches it.

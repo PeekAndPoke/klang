@@ -189,7 +189,11 @@ class MasterBus(
     /** Last computed answer for [isRinging] — refreshed by [updateTailState], not per read. */
     private var ringing: Boolean = false
 
-    /** Consecutive silent blocks since the last tail check. */
+    /**
+     * Consecutive silent blocks since the last tail check. Wrap-safe by construction (audit leftovers §3): it counts
+     * blocks, and every path of [updateTailState] resets it or lets it reach [TAIL_CHECK_INTERVAL_BLOCKS], where it
+     * resets, so it never exceeds 10, however long the output stays silent.
+     */
     private var silentBlocks: Int = 0
 
     /**

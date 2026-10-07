@@ -23,7 +23,7 @@ import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 
 /**
- * The stdlib's one callable object, `Katalyst`, shows both its forms (`docs/tasks/callable-object-docs.md`),
+ * The stdlib's one callable object, `Katalyst`, shows both its forms (`docs/tasks-archive/2026-10/20261007-callable-object-docs.md`),
  * against the real generated stdlib registry, on every platform: the symbol carries `val Katalyst: Katalyst`
  * and `Katalyst(configure)`, hover shows both, completion offers the name once, `Katalyst(` and `Kat(` resolve
  * to the call form, no symbol is named after the call operator, and a runtime error at the call names

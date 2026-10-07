@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
@@ -86,6 +87,8 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_FROM
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_TO
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 
 
 
@@ -1892,7 +1895,7 @@ sealed interface IgnitorDsl {
     data class Fm(
         val carrier: IgnitorDsl,
         val modulator: IgnitorDsl,
-        val ratio: IgnitorDsl = Constant(1.0),
+        val ratio: IgnitorDsl = Constant(FM_RATIO),
         val depth: IgnitorDsl = Constant(0.0),
         val envAttackSec: IgnitorDsl = Constant(0.0),
         val envDecaySec: IgnitorDsl = Constant(0.0),
@@ -2165,8 +2168,8 @@ sealed interface IgnitorDsl {
     @WireName("vibrato")
     data class Vibrato(
         val inner: IgnitorDsl,
-        val rate: IgnitorDsl = Constant(5.0),
-        val semitones: IgnitorDsl = Constant(0.25),
+        val rate: IgnitorDsl = Constant(VIBRATO_RATE_HZ),
+        val semitones: IgnitorDsl = Constant(VIBRATO_SEMITONES),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); semitones.collectParams(out)

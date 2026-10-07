@@ -1401,8 +1401,10 @@ class Interpreter(
                 callStackTrace = getStackTrace()
             )
         }
-        // Handle built-in runtime types (ArrayValue, StringValue, etc.) - lookup extension methods
-        else if (objValue is ArrayValue || objValue is StringValue || objValue is NumberValue) {
+        // Every other value kind except a script object (number, string, boolean, array, null, a function) looks
+        // up its registered extensions the same way. A kind with none registered falls through to the generic
+        // error below. A script object keeps plain property access: its own properties are its members.
+        else if (objValue !is ObjectValue) {
             val extensionProperty = engine.getExtensionProperty(objValue, memberAccess.property)
             if (extensionProperty != null) {
                 return extensionProperty.getter(objValue)

@@ -21,7 +21,7 @@
 # across a deploy loses the old release's on-demand chunks (webpack's ChunkLoadError) until it is reloaded. The newest
 # KEEP_VERSIONS releases are kept; older ones are deleted, never the one `current` points at.
 #
-# Run after `./gradlew jsBrowserDistribution` on a clean, committed tree. The distribution folder holds the bundle
+# Run after `./gradlew jsBrowserDistribution`. The distribution folder holds the bundle
 # AND a copy of every file in src/jsMain/resources, including the version.json the build wrote, so it is the one
 # thing uploaded and the one thing checked.
 
@@ -38,18 +38,12 @@ echo "Working in $(pwd)"
 
 shopt -s dotglob
 
-# The release must match its name: no uncommitted tracked change, nothing untracked in the resources the build copies.
-if [ -n "$(git status --porcelain --untracked-files=no)" ] || [ -n "$(git status --porcelain -- src/jsMain/resources)" ]; then
-  echo "The working tree has uncommitted or untracked changes: the release would not match its git hash." >&2
-  exit 1
-fi
-
-HASH="$(git rev-parse --short=12 HEAD)"
-
-# The build must come from this commit: the distribution's version.json carries the git revision it was built at.
-BUILT_REV="$(sed -n 's/.*"gitRev": *"\([0-9a-f]*\)".*/\1/p' "$DIST/version.json" 2>/dev/null || true)"
-if [ -z "$BUILT_REV" ] || [ "${HASH#"$BUILT_REV"}" = "$HASH" ]; then
-  echo "The build is from '${BUILT_REV:-unknown}', HEAD is $HASH: run ./gradlew jsBrowserDistribution first." >&2
+# The release is named after what was built: the distribution's version.json carries the version and the git
+# revision it was built at, and `-dirty` when the tree had uncommitted changes (maintainer, 2026-10-07: deploying
+# a build with uncommitted changes is allowed; its name says so).
+HASH="$(sed -n 's/.*"gitRev": *"\([0-9a-f]*\)".*/\1/p' "$DIST/version.json" 2>/dev/null || true)"
+if [ -z "$HASH" ]; then
+  echo "No gitRev in $DIST/version.json: run ./gradlew jsBrowserDistribution first." >&2
   exit 1
 fi
 
@@ -60,13 +54,16 @@ if [ -z "$VERSION" ]; then
 fi
 
 NAME="v$VERSION-$HASH"
-RELEASE="$BASE/versions/$NAME"
-
-# A build made on a dirty tree carries `-dirty` in its gitDesc: its code is not the commit it is named after.
 if grep -q '"gitDesc": *"[^"]*-dirty"' "$DIST/version.json"; then
-  echo "The build was made on a dirty tree: commit, then run ./gradlew jsBrowserDistribution again." >&2
-  exit 1
+  NAME="$NAME-dirty"
 fi
+
+HEAD_HASH="$(git rev-parse --short=8 HEAD)"
+if [ "$HEAD_HASH" != "$HASH" ]; then
+  echo "Note: the build is from $HASH, HEAD is $HEAD_HASH."
+fi
+
+RELEASE="$BASE/versions/$NAME"
 
 echo "Release $NAME -> $HOST:$RELEASE"
 ssh "$HOST" "mkdir -p '$RELEASE' && touch '$RELEASE'"

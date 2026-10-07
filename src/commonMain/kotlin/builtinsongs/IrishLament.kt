@@ -34,7 +34,8 @@ let blockfloete =
         .plus(Ign.perlin(10).mul(0.035).lowpass(3500).highpass(1000))
         .plus(Ign.whitenoise().mul(0.28).highpass(4000).lowpass(8000).adsr(0.001, 0.03, 0.0, 0.001))
         .lowpass(3500, 0.8).highpass(300).onepole(3500)
-        .vibrato(1/2, 0.1)
+        // 7/2 Hz: what was heard when this was tuned; the engine ran a vibrato over the seven pitched layers seven times per block (fixed 2026-10-07)
+        .vibrato(7/2, 0.1)
         // NOTE: `.analog(5)` was here and INERT (receiver was the Vibrato wrapper).
         .pitchEnvelope(0.15, x => x.adsr(0.01, 0.03, 0, 0))
         .adsr(0.01, 0.08, 0.5, 0.1)

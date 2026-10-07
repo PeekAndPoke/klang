@@ -116,7 +116,10 @@ effects for the rest of the playback, so each reader substitutes at its own read
   `Voice` stores what it is given. Guard: `VoiceGainWireSpec`.
 - **The gate**: a stage whose gating knob resolves non-finite is not built, which is what keeps `SLOT_UNSET`
   (NaN) out of the DSP (`audio/ref/off-values.md`). An UNGATED knob needs its own substitution: the envelope's
-  sustain (`AdsrIgnitor`, `finiteOr`).
+  sustain (`AdsrIgnitor`, `finiteOr`), and the pitch modulators' amounts (`PitchModFactories`: vibrato `rate` and
+  `semitones`, accelerate's and the pitch envelope's `semitones`, FM `ratio` and `depth`, each with its node's
+  default; the two pitch sustains already had it). Raw, a NaN amount froze the oscillator into a DC hold. Guard:
+  the NaN rows of `PitchModSafetyTest` (2026-10-07).
 - **Katalyst slots**: a non-finite knob is the stage's declared OFF state (`audio/ref/katalyst.md`).
 - **A stage that caches its config compares the substituted value**, never the raw input (NaN != NaN).
 - **Not a render path**: `GraphCensus` reads the bag unguarded; it is a benchmark diagnostic only.

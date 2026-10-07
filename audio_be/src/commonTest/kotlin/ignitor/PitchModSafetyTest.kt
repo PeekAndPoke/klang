@@ -9,8 +9,10 @@ import io.peekandpoke.klang.audio_be.SAFE_MAX
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 
 /**
@@ -218,5 +220,85 @@ class PitchModSafetyTest : StringSpec({
         out.allFinite() shouldBe true
         // Output isn't silent — at least one sample is non-zero (oscillator is still running).
         out.any { it != 0.0 } shouldBe true
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // A non-finite pitch amount reads as unset (docs/tasks-archive/2026-10/20261007-bugfix-ignitor-non-finite-pitch-amount.md)
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    /** Renders [dsl] as a voice at 220 Hz, 16 blocks of the pinned 128 frames. */
+    fun renderVoice(dsl: IgnitorDsl): DoubleArray {
+        val frames = 128
+        val blocks = 16
+        val c = IgniteContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = frames * blocks,
+            gateEndFrame = frames * blocks,
+            releaseFrames = 0,
+            scratchBuffers = ScratchBuffers(frames),
+        )
+        val ignitor = dsl.buildExciter(freqHz = 220.0, sampleRate = sampleRate).ignitor
+        val buf = AudioBuffer(frames)
+        val out = DoubleArray(frames * blocks)
+
+        for (b in 0 until blocks) {
+            c.updateOffsetAndLength(0, frames)
+            ignitor.generate(buf, 220.0, c)
+            buf.copyInto(out, b * frames, 0, frames)
+            c.voiceElapsedFrames += frames
+        }
+
+        return out
+    }
+
+    fun k(v: Double) = IgnitorDsl.Constant(v)
+
+    val nan = k(Double.NaN)
+    val saw = IgnitorDsl.Saw(analog = k(0.0))
+    val fmCarrier = IgnitorDsl.Sine(analog = k(0.0))
+    // Note-pitched, so a NaN ratio reaches its drive (an absolute modulator would ignore the ratio).
+    val fmModulator = IgnitorDsl.Sine(analog = k(0.0))
+
+    // Each row: the knob NaN, against the same node with the knob left at its default. Raw, every NaN row
+    // freezes the oscillator (a DC hold) or, for the vibrato rate, drops the vibrato.
+    listOf(
+        Triple(
+            "pitch envelope semitones",
+            IgnitorDsl.PitchEnvelope(saw, semitones = nan),
+            IgnitorDsl.PitchEnvelope(saw),
+        ),
+        Triple(
+            "fm ratio",
+            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = nan, depth = k(300.0)),
+            IgnitorDsl.Fm(fmCarrier, fmModulator, depth = k(300.0)),
+        ),
+        Triple(
+            "fm depth",
+            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0), depth = nan),
+            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0)),
+        ),
+        Triple(
+            "vibrato rate",
+            IgnitorDsl.Vibrato(saw, rate = nan, semitones = k(1.0)),
+            IgnitorDsl.Vibrato(saw, semitones = k(1.0)),
+        ),
+        Triple(
+            "vibrato semitones",
+            IgnitorDsl.Vibrato(saw, rate = k(7.0), semitones = nan),
+            IgnitorDsl.Vibrato(saw, rate = k(7.0)),
+        ),
+        Triple(
+            "accelerate semitones",
+            IgnitorDsl.Accelerate(saw, semitones = nan),
+            IgnitorDsl.Accelerate(saw),
+        ),
+    ).forEach { (knob, withNan, withDefault) ->
+        "a NaN $knob reads as unset: the voice keeps sounding and equals the default-knob render" {
+            val got = renderVoice(withNan)
+            val expected = renderVoice(withDefault)
+
+            got.maxOf { abs(it) } shouldBeGreaterThan 0.1
+            got.toList() shouldBe expected.toList()
+        }
     }
 })

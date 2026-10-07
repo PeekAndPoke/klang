@@ -646,7 +646,7 @@ Review round 2 was clean on both roles (`tmp/reviews/ksp-r2-code.md`, `tmp/revie
   unchanged.
 - **Records (NIT).** This section's "Behaviour" bullet and names corrected; the claim that `main` let `sine(true, 2)`
   pass in the browser corrected (it did not; only step 1 before round 1 did).
-- **Queued (out of scope):** `docs/tasks/boolean-member-access.md` (`true.toString()` fails although
+- **Queued (out of scope):** `docs/tasks-archive/2026-10/20261007-boolean-member-access.md` (`true.toString()` fails although
   `KlangScriptBooleanExtensions` registers it).
 
 After round 2: all step 1 suites green (`:klangscript-ksp:test` 134, `:klangscript:jvmTest` 1,150,

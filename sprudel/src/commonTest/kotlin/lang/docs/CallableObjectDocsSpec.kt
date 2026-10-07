@@ -26,7 +26,7 @@ import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.parametersByName
 
 /**
- * A callable object shows both its forms (`docs/tasks/callable-object-docs.md`), against the real generated
+ * A callable object shows both its forms (`docs/tasks-archive/2026-10/20261007-callable-object-docs.md`), against the real generated
  * registries, the way the editor builds them (stdlib, then sprudel), on every platform: the object's own symbol
  * carries the object (`perlin: perlin`) and its call form (`perlin(from, to)`), hover shows both, completion
  * offers the name once, `perlin(` resolves to the call form, and no symbol is named after the call operator.

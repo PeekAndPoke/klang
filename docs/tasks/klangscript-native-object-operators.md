@@ -40,7 +40,7 @@ with ^ for the moment").
 5. **The editor** knows the result type of an operator expression (completion after `(saw(1, 2) * 4).` keeps working)
    and reports a missing operator method as an error at the operator.
 
-The `invoke` -> `__invoke__` rename goes with `docs/tasks/callable-object-docs.md`, which removes the stray `invoke`
+The `invoke` -> `__invoke__` rename goes with `docs/tasks-archive/2026-10/20261007-callable-object-docs.md`, which removes the stray `invoke`
 docs symbol anyway (done 2026-10-07: `KlangScript.Invoke.NAME` is `__invoke__`, `NativeOperatorNames.INVOKE` reads
 it); the arithmetic operators follow as their own step.
 

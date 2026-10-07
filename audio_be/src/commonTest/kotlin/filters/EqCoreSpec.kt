@@ -191,6 +191,11 @@ class EqCoreSpec : StringSpec({
      * commutative ops may select either operand's NaN), so payload bits are outside every
      * layer's contract. A NaN state never returns to finite in an SVF, so the exception can
      * never mask a finite divergence.
+     *
+     * Not-silence floor (audit leftovers §1, 2026-10-07): the oracle's finite output must reach 0.1 % of the
+     * rendered input's finite peak: relative, so the denormal row's 1e-14 impulse passes, and that low because the
+     * q-200 bandpass of the extreme-clamp row is still ringing up (0.6 % of the input over the four blocks). Two silent renders
+     * compare equal whatever the loops do; a zeroed input kept every parity row green before the floor.
      */
     fun assertChainParity(sections: List<Section>, data: DoubleArray = input) {
         val core = buildCore(sections)
@@ -202,11 +207,29 @@ class EqCoreSpec : StringSpec({
         // node is unity-peak, so the oracle re-scales by clamped(q·A) — ONE extra rounding
         // step. Everything else stays raw-bits.
         val bellTolerance = if (sections.any { it.type == EqCore.BELL }) 1e-12 else null
+        var inPeak = 0.0
+        var outPeak = 0.0
+
         repeat(blocks) { blk ->
             data.copyInto(bufCore, 0, blk * blockFrames, (blk + 1) * blockFrames)
+
+            for (i in 0 until blockFrames) {
+                val x = abs(bufCore[i])
+
+                if (x.isFinite() && x > inPeak) {
+                    inPeak = x
+                }
+            }
+
             core.process(bufCore, 0, blockFrames)
             oracle.generate(bufOracle, 220.0, c)
             for (i in 0 until blockFrames) {
+                val y = abs(bufOracle[i])
+
+                if (y.isFinite() && y > outPeak) {
+                    outPeak = y
+                }
+
                 if (!(bufCore[i].isNaN() && bufOracle[i].isNaN())) {
                     if (bellTolerance != null) {
                         val scale = max(abs(bufCore[i]), abs(bufOracle[i]))
@@ -217,6 +240,10 @@ class EqCoreSpec : StringSpec({
                 }
             }
             c.voiceElapsedFrames += blockFrames
+        }
+
+        withClue("the parity render is (near) silence: input peak $inPeak, output peak $outPeak") {
+            outPeak shouldBeGreaterThan inPeak * 0.001
         }
     }
 

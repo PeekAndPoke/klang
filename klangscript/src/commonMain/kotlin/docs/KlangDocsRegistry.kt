@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.script.docs
 
 import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangDecl
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
@@ -176,6 +177,37 @@ class KlangDocsRegistry {
             ?.type
             ?.let { getCallForm(it) }
 
+    /**
+     * [symbol] as a bare name means it where it stands at the top level (`perlin`, `perlin(100, 200)`, `Kat(...)`): its
+     * top-level variants (a property, a function, a callable object's call form) and, for a second name of a callable
+     * object (`Kat`, `lowpass`), the object's call form ([callFormFor]), as the docs page shows it; the object first,
+     * then the call. A name stdlib and sprudel share (`perlin`: the method `Ignitor.perlin` and sprudel's object) so
+     * shows sprudel's object at the top level, the way the interpreter resolves the bare name. A symbol with no
+     * top-level variant comes back unchanged.
+     */
+    fun topLevelView(symbol: KlangSymbol): KlangSymbol {
+        val topLevel = symbol.variants.filter { it.isTopLevel() }
+
+        if (topLevel.isEmpty()) {
+            return symbol
+        }
+
+        val callForm = callFormFor(symbol)
+        val withCallForm = if (callForm == null || callForm in topLevel) topLevel else topLevel + callForm
+
+        return symbol.withVariants(withCallForm.sortedBy { it is KlangCallable })
+    }
+
+    /**
+     * [symbol] as a member whose receiver type is unknown (the `x` of `x => x.gain(0.5)`): its variants that are
+     * methods or properties of some type. A symbol with no such variant comes back unchanged.
+     */
+    fun memberView(symbol: KlangSymbol): KlangSymbol {
+        val members = symbol.variants.filter { !it.isTopLevel() }
+
+        return if (members.isEmpty()) symbol else symbol.withVariants(members)
+    }
+
     /** The call form of the object whose own type has [type]'s FQCN, whatever the simple names say. */
     private fun callFormByFqcn(type: KlangType): KlangCallable? {
         val fqcn = type.fqcn ?: return null
@@ -232,17 +264,27 @@ class KlangDocsRegistry {
             chain.any { typeMatches(owner, it) }
         }
         if (filtered.isEmpty()) return null
-        // Promote the filtered variant's library into the symbol's origin so the
-        // popup chip shows the right library (e.g. "STDLIB") instead of the merged
-        // symbol's original origin (which would still point to whichever library
-        // registered first, before the merge).
-        val variantLibrary = filtered.firstOrNull()?.library
-        val newOrigin = when {
-            !variantLibrary.isNullOrBlank() -> KlangSymbol.Origin.Library(variantLibrary)
-            else -> symbol.origin
-        }
-        return symbol.copy(variants = filtered, origin = newOrigin)
+
+        return symbol.withVariants(filtered)
     }
+}
+
+/**
+ * This symbol narrowed to [variants], with the first variant's library promoted into the origin, so the popup chip
+ * shows the right library (e.g. "STDLIB") instead of the merged symbol's original origin (which still points to
+ * whichever library registered first, before the merge).
+ */
+private fun KlangSymbol.withVariants(variants: List<KlangDecl>): KlangSymbol {
+    val variantLibrary = variants.firstOrNull()?.library
+    val newOrigin = if (!variantLibrary.isNullOrBlank()) KlangSymbol.Origin.Library(variantLibrary) else origin
+
+    return copy(variants = variants, origin = newOrigin)
+}
+
+/** True for a declaration that is no member of a type: a top-level function or property, a callable object's call form. */
+private fun KlangDecl.isTopLevel(): Boolean = when (this) {
+    is KlangCallable -> receiver == null
+    is KlangProperty -> owner == null
 }
 
 /**
