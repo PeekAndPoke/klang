@@ -90,7 +90,7 @@ class LazyRingSpec : StringSpec({
         val (rings, alloc) = shelf()
         val cylinders = Cylinders(
             blockFrames = blockFrames, sampleRate = sampleRate,
-            units = CylinderUnits(blockFrames, sampleRate, rings = rings, reverbs = ReverbUnits(sampleRate)),
+            units = CylinderUnits(blockFrames = blockFrames, sampleRate = sampleRate, rings = rings, reverbs = ReverbUnits(sampleRate)),
         )
 
         // Touching an orbit constructs its cylinder; that used to cost 7.68 MB each, eight times.

@@ -432,6 +432,12 @@ a single argument or for arguments whose types cannot be confused.
 cylinders.checkIn(orbit = voice.cylinderId, voiceId = voice.id, blockStart = ctx.blockStart) // not checkIn(7, 42, 1024.0)
 ```
 
+Exempt, because naming cannot or need not help: calls to the standard library whose order is standard or does not
+matter (`maxOf`, `minOf`, `coerceIn`, `fill`, `copyOfRange`, `subList`, `Pair`, `Triple`; `copyInto` IS named, its
+destination offset sits next to a range), calls of a function-typed value (Kotlin forbids names there) and Java calls.
+Whether literal data tables with their column helper declared right above stay positional is open
+(`docs/tasks/_maintainer-questions.md`).
+
 (Maintainer, 2026-10-07, after a review found `Cylinders.checkIn(id: Int, voiceId: Int, ...)`
 whose two ids swap silently and whose order differed from `Cylinder.checkIn`.)
 

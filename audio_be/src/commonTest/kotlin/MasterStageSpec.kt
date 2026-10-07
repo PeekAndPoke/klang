@@ -27,7 +27,7 @@ class MasterStageSpec : StringSpec({
         val mix = StereoBuffer(blockFrames)            // cleared on construction
         val out = StereoBuffer(blockFrames).apply { fill(0.999) }  // non-zero, must be overwritten
 
-        master.process(mix, out)
+        master.process(mix = mix, out = out)
 
         out.isExactlySilent() shouldBe true
     }
@@ -46,7 +46,7 @@ class MasterStageSpec : StringSpec({
             // left-only impulse in the first block, well below the -1 dB limiter threshold
             if (block == 0) mix.left[0] = 0.5
 
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
 
             for (i in 0 until blockFrames) {
                 if (out.left[i] != 0.0) leftSeen += block * blockFrames + i
@@ -83,7 +83,7 @@ class MasterStageSpec : StringSpec({
                     mix.left[i] = v
                     mix.right[i] = v
                 }
-                master.process(mix, out)
+                master.process(mix = mix, out = out)
                 if (it >= settleBlocks) {
                     for (i in 0 until blockFrames) {
                         val a = kotlin.math.abs(out.left[i])
@@ -118,7 +118,7 @@ class MasterStageSpec : StringSpec({
         repeat(16) { block ->
             val mix = StereoBuffer(blockFrames)
             if (block == 0) mix.left[0] = 0.5
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
             for (i in 0 until blockFrames) {
                 if (foundAt < 0 && out.left[i] != 0.0) foundAt = frame + i
             }
@@ -144,7 +144,7 @@ class MasterStageSpec : StringSpec({
                 mix.left[i] = 1000.0 * kotlin.math.sin(2.0 * kotlin.math.PI * 220.0 * t)
             }
 
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
 
             if (block >= 100) {
                 for (i in 0 until blockFrames) {
@@ -184,7 +184,7 @@ class MasterStageSpec : StringSpec({
                 mix.right[20] = it
             }
 
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
 
             for (s in out.interleavedCopy()) {
                 if (s == -1.0 || s == 1.0) {

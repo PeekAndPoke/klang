@@ -92,7 +92,7 @@ class MasterOutputChainSpec : StringSpec({
 
         for (block in 0 until 180) {
             for (i in 0 until blockFrames) {
-                val x = input(block, i)
+                val x = input(block = block, i = i)
 
                 onBus.left[i] = x
                 onBus.right[i] = x * 0.5
@@ -127,8 +127,8 @@ class MasterOutputChainSpec : StringSpec({
 
     fun fill(into: StereoBuffer, block: Int) {
         for (i in 0 until blockFrames) {
-            into.left[i] = sine(block, i)
-            into.right[i] = sine(block, i) * 0.5
+            into.left[i] = sine(block = block, i = i)
+            into.right[i] = sine(block = block, i = i) * 0.5
         }
     }
 
@@ -149,7 +149,7 @@ class MasterOutputChainSpec : StringSpec({
 
             for (i in 0 until blockFrames) {
                 withClue("refused block $b frame $i") {
-                    onBus.left[i].toRawBits() shouldBe sine(b, i).toRawBits()
+                    onBus.left[i].toRawBits() shouldBe sine(block = b, i = i).toRawBits()
                 }
             }
         }
@@ -181,7 +181,7 @@ class MasterOutputChainSpec : StringSpec({
                     onBus.right[i].toRawBits() shouldBe ctx.mixBuffer.right[i].toRawBits()
                 }
 
-                wet = maxOf(wet, abs(onBus.left[i] - sine(b, i)))
+                wet = maxOf(wet, abs(onBus.left[i] - sine(block = b, i = i)))
             }
         }
 
@@ -216,7 +216,7 @@ class MasterOutputChainSpec : StringSpec({
             left.fill(0.5)
             right.fill(0.5)
         }
-        repeat(40) { returned.process(charge, StereoBuffer(blockFrames), blockFrames) }
+        repeat(40) { returned.process(input = charge, output = StereoBuffer(blockFrames), length = blockFrames) }
         returned.hasTail() shouldBe true
         units.giveBack(returned)
 

@@ -257,9 +257,9 @@ class KatalystFormantEffectSpec : StringSpec({
     val landBlocks = fadeBlocks + 1
 
     fun script(fx: KatalystFormantEffect, blocks: Int): SwapHostScript =
-        SwapHostScript(n, fadeLen, drySine(700.0, blocks)) { fx.process(it) }
+        SwapHostScript(n = n, fadeLen = fadeLen, input = drySine(700.0, blocks)) { fx.process(it) }
 
-    fun ref(def: FilterDef.Formant) = LowPassHighPassFilters.createFormant(def.bands, def.mix, sampleRate, def.floor)
+    fun ref(def: FilterDef.Formant) = LowPassHighPassFilters.createFormant(bands = def.bands, mix = def.mix, sampleRate = sampleRate, floor = def.floor)
 
     "off fades the bank to dry and releases it; the SAME vowel after that fade-out installs afresh" {
         // Question 2 of the plan: the config cache survives the fade-out, and an unchanged def with
@@ -471,7 +471,7 @@ class KatalystFormantEffectSpec : StringSpec({
         val (fx, nextRun) = lifeThenCut()
         val fresh = ref(ohish)
         val next = nextRun.inputBlock(nextRun.block)
-        fresh.process(next, 0, n)
+        fresh.process(buffer = next, offset = 0, length = n)
         fx.configure(ohish)
         val got = nextRun.raw()
 

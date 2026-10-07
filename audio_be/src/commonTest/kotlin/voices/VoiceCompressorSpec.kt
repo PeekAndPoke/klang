@@ -12,11 +12,11 @@ import io.kotest.matchers.shouldNotBe
 class VoiceCompressorSpec : StringSpec({
 
     "fromParams returns null when no field is set" {
-        Voice.Compressor.fromParams(null, null, null, null, null) shouldBe null
+        Voice.Compressor.fromParams(threshold = null, ratio = null, knee = null, attack = null, release = null) shouldBe null
     }
 
     "fromParams builds full settings" {
-        val c = Voice.Compressor.fromParams(-20.0, 4.0, 6.0, 0.003, 0.1)
+        val c = Voice.Compressor.fromParams(threshold = -20.0, ratio = 4.0, knee = 6.0, attack = 0.003, release = 0.1)
 
         c shouldNotBe null
         c!!.thresholdDb shouldBe -20.0
@@ -27,7 +27,7 @@ class VoiceCompressorSpec : StringSpec({
     }
 
     "fromParams applies classic defaults for missing tails (threshold + ratio only)" {
-        val c = Voice.Compressor.fromParams(-15.0, 3.0, null, null, null)
+        val c = Voice.Compressor.fromParams(threshold = -15.0, ratio = 3.0, knee = null, attack = null, release = null)
 
         c shouldNotBe null
         c!!.thresholdDb shouldBe -15.0
@@ -38,7 +38,7 @@ class VoiceCompressorSpec : StringSpec({
     }
 
     "fromParams applies defaults for a missing head (knee only)" {
-        val c = Voice.Compressor.fromParams(null, null, 2.0, null, null)
+        val c = Voice.Compressor.fromParams(threshold = null, ratio = null, knee = 2.0, attack = null, release = null)
 
         c shouldNotBe null
         c!!.thresholdDb shouldBe -20.0

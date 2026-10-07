@@ -78,7 +78,7 @@ class KatalystGainEffectSpec : StringSpec({
                     if (k > glideBlocks || k == glideBlocks && i == blockFrames - 1) {
                         samples[i] shouldBe probe * to
                     } else {
-                        samples[i] shouldBe (probe * law(from, to, k, i) plusOrMinus 1e-12)
+                        samples[i] shouldBe (probe * law(from = from, to = to, k = k, i = i) plusOrMinus 1e-12)
                     }
                 }
             }
@@ -222,7 +222,7 @@ class KatalystGainEffectSpec : StringSpec({
             fx.configure(to)
             val glide = List(glideBlocks + 2) { block(fx) }
 
-            shouldGlide(glide, from, to)
+            shouldGlide(blocks = glide, from = from, to = to)
 
             withClue("$from -> $to: one glide, $glideBlocks blocks long, then a constant") {
                 fx.ramps shouldBe glideBlocks
@@ -255,7 +255,7 @@ class KatalystGainEffectSpec : StringSpec({
         fx.configure(2.0)
         repeat(5) { block(fx) }
 
-        val stands = law(1.0, 2.0, 5, blockFrames - 1)
+        val stands = law(from = 1.0, to = 2.0, k = 5, i = blockFrames - 1)
 
         withClue("where the fader stands after five blocks of the first glide") {
             fx.gain shouldBe (stands plusOrMinus 1e-12)
@@ -265,7 +265,7 @@ class KatalystGainEffectSpec : StringSpec({
         val turn = List(glideBlocks + 1) { block(fx) }
 
         // A full glide from THERE, continuous with the last sample of the first glide.
-        shouldGlide(turn, stands, 0.0)
+        shouldGlide(blocks = turn, from = stands, to = 0.0)
     }
 
     "a reset mid-glide: the next life snaps, it does not glide from the old life's level" {
@@ -400,7 +400,7 @@ class KatalystGainEffectSpec : StringSpec({
         chain.applyParams(mapOf("gain" to 0.5))
 
         // The glide, landing exactly on what the pattern wrote.
-        shouldGlide(List(glideBlocks + 1) { renderBlock() }, 1.0, 0.5)
+        shouldGlide(blocks = List(glideBlocks + 1) { renderBlock() }, from = 1.0, to = 0.5)
     }
 
     // ── The mute idiom, through a real cylinder ──────────────────────────────────────────────────

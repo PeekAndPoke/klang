@@ -48,14 +48,14 @@ class FilterNormalizationSpec : StringSpec({
     }
 
     fun svfBpfPeak(q: Double, freq: Double = 1000.0): Double {
-        val f = LowPassHighPassFilters.SvfBPF(freq, q, sr)
-        return sinePeakThrough(freq) { buf -> f.process(buf, 0, blockFrames) }
+        val f = LowPassHighPassFilters.SvfBPF(cutoffHz = freq, q = q, sampleRate = sr)
+        return sinePeakThrough(freq) { buf -> f.process(buffer = buf, offset = 0, length = blockFrames) }
     }
 
     fun eqCorePeak(type: Int, q: Double, freq: Double = 1000.0, gain: Double = 1.0, warmBlocks: Int = 60): Double {
         val core = EqCore(1)
-        core.configureSection(0, type, freq, q, db = 0.0, gain = gain, sampleRate = sr)
-        return sinePeakThrough(freq, warmBlocks = warmBlocks) { buf -> core.process(buf, 0, blockFrames) }
+        core.configureSection(index = 0, type = type, freq = freq, q = q, db = 0.0, gain = gain, sampleRate = sr)
+        return sinePeakThrough(freq, warmBlocks = warmBlocks) { buf -> core.process(buffer = buf, offset = 0, length = blockFrames) }
     }
 
     "SvfBPF peaks at unity at fc regardless of q" {

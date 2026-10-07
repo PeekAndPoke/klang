@@ -64,5 +64,9 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
   the code does; §9 is a rule text, so it waits for your word.
 - **`WarehouseStats.reverbFailures` / `reverbDropped`** (tidy-up step 1): wire fields the UI never shows (it shows
   their ring twins). Show them in the warehouse panel, or drop them?
+- **Named arguments in data tables** (`/code-style` §24 pass, `engine-pass-1`): the vowel and body-material tables
+  (`VowelBands.b`, 180 rows; `BodyMaterials.m`, 120 rows) stay positional, because their column order is the helper
+  declared right above each table and naming every cell would triple each row. Add a "data table" exception to §24, or
+  name them too (one more script run)?
 - **Frozen songs** ([`song-orbit-ownership-review.md`](song-orbit-ownership-review.md)): fix their shared-orbit
   conflicts, or keep them as snapshots of the old sound?

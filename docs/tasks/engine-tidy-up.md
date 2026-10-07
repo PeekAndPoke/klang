@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); step 1 (dead code) and step 2 (the oversampler closure) done, see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); step 1 (dead code, with its deferred `VoiceFactory` items) and step 2 (the oversampler closure) done, see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -88,9 +88,13 @@ destructured `cylinderId`. Stale KDocs fixed: A2.2 (`Cylinder`), A2.6 (`Katalyst
   `PlayerWarehouseStats`, so the likelier fix is to show these too. For the coordinator.
 - B1.9 `CycleCompleted.atTimeSec` and the `VoiceData.tags` KDoc: not counters, out of this step.
 
-**Deferred until the solo fix lands** (the files are in flight): B1.5 `VoiceFactory.sampleRateDouble`, B1.7
-`VoiceFactory.ignitorRegistry` and the now-unused `VoiceFactory.cylinders` (all three need the constructor call in
-`VoiceScheduler.kt`); the stale `Voice.kt` "Frame counters use Int" comment; the `VoiceData.kt:14` TODO.
+**Deferred until the solo fix landed, done 2026-10-07 (uncommitted, awaiting review and the corpus render):** B1.5
+`VoiceFactory.sampleRateDouble` and the dead `VoiceFactory.cylinders` are gone from the constructor, the
+`VoiceScheduler.kt` call and the 18 `VoiceFactory(...)` constructions in 16 spec files. B1.7: `isOsci` now asks
+`playbackCtx.ignitorRegistry`, the registry the build already used, and `VoiceFactory.ignitorRegistry` is gone (every
+spec rig handed both places the same registry, so no rig loses a case). The stale `Voice.kt` "Frame counters use Int"
+comment and the `VoiceData.kt:14` TODO are deleted. Done with the named-arguments pass, as its own commit (the patch
+`tmp/reviews/named-args-taskB.patch`; report `tmp/reviews/named-args-report.md`).
 
 **Stale mentions outside the engine, for the maintainer:** `/code-style` §9 says saw, square and pulse "must use
 PolyBLEP", `CREDITS.MD` credits PolyBLEP, and `klang-music-writing/ref/ignitor-reference.md` calls the saw

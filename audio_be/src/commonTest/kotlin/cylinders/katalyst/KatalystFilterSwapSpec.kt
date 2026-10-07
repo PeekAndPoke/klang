@@ -83,7 +83,7 @@ class KatalystFilterSwapSpec : StringSpec({
         }
 
         fun set(id: Int) {
-            swap.set(gains[id].first, gains[id].second)
+            swap.set(left = gains[id].first, right = gains[id].second)
             law.set(id)
         }
 
@@ -135,16 +135,16 @@ class KatalystFilterSwapSpec : StringSpec({
         fun ranLastBlock(): Int = gains.count { it.first.lastBlock == blocks - 1 }
     }
 
-    fun twin() = Twin(sampleRate, fadeLen, n)
+    fun twin() = Twin(sampleRate = sampleRate, fadeLen = fadeLen, n = n)
 
     // ── A change ──────────────────────────────────────────────────────────────────────────────────
 
     /** Installs x1.0, swaps to x0.0, then renders [blocks] blocks of DC and concatenates the left channel. */
     fun rampAfterSwap(blocks: Int): DoubleArray {
         val swap = KatalystFilterSwap(sampleRate)
-        swap.set(Gain(1.0), Gain(1.0))
+        swap.set(left = Gain(1.0), right = Gain(1.0))
         swap.process(dcBlock(), n)
-        swap.set(Gain(0.0), Gain(0.0))
+        swap.set(left = Gain(0.0), right = Gain(0.0))
 
         val out = DoubleArray(blocks * n)
 
@@ -186,9 +186,9 @@ class KatalystFilterSwapSpec : StringSpec({
         fun landingAt(rate: Double): Int {
             val swap = KatalystFilterSwap(rate)
 
-            swap.set(Gain(1.0), Gain(1.0))
+            swap.set(left = Gain(1.0), right = Gain(1.0))
             swap.process(dcBlock(), n)
-            swap.set(Gain(0.0), Gain(0.0))
+            swap.set(left = Gain(0.0), right = Gain(0.0))
 
             var landed = -1
             var k = 0
@@ -293,25 +293,25 @@ class KatalystFilterSwapSpec : StringSpec({
         }
 
         val fresh = KatalystFilterSwap(sampleRate)
-        fresh.set(Gain(0.5), Gain(0.5))
+        fresh.set(left = Gain(0.5), right = Gain(0.5))
         firstBlockIs(fresh, 0.5, "a fresh set is alone from its first sample")
 
         val twice = KatalystFilterSwap(sampleRate)
-        twice.set(Gain(0.5), Gain(0.5))
-        twice.set(Gain(0.25), Gain(0.25))
+        twice.set(left = Gain(0.5), right = Gain(0.5))
+        twice.set(left = Gain(0.25), right = Gain(0.25))
         firstBlockIs(twice, 0.25, "two sets before the first block: the second replaces the first")
 
         val cleared = KatalystFilterSwap(sampleRate)
-        cleared.set(Gain(0.5), Gain(0.5))
+        cleared.set(left = Gain(0.5), right = Gain(0.5))
         cleared.clear()
         cleared.sounding shouldBe false
         firstBlockIs(cleared, 1.0, "a clear before the first block is dry at once")
 
         val relive = KatalystFilterSwap(sampleRate)
-        relive.set(Gain(0.5), Gain(0.5))
+        relive.set(left = Gain(0.5), right = Gain(0.5))
         relive.process(dcBlock(), n)
         relive.reset()
-        relive.set(Gain(0.25), Gain(0.25))
+        relive.set(left = Gain(0.25), right = Gain(0.25))
         firstBlockIs(relive, 0.25, "after reset the next set snaps again")
     }
 
@@ -456,7 +456,7 @@ class KatalystFilterSwapSpec : StringSpec({
             val u = twin()
             prepare(u)
             u.reset()
-            u.swap.set(Gain(0.125), Gain(0.125))
+            u.swap.set(left = Gain(0.125), right = Gain(0.125))
             val next = dcBlock()
             u.swap.process(next, n)
 
@@ -539,9 +539,9 @@ class KatalystFilterSwapSpec : StringSpec({
         val aRight = 5000
         val bRight = 7000
 
-        swap.set(Clock(0), Clock(aRight))
+        swap.set(left = Clock(0), right = Clock(aRight))
         swap.process(dcBlock(), n)
-        swap.set(Clock(0), Clock(bRight))
+        swap.set(left = Clock(0), right = Clock(bRight))
 
         // A was in service for one block, so it enters the fade at 128; B starts at its own start.
         for (block in 0 until fadeBlocks) {

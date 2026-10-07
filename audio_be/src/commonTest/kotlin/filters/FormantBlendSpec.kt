@@ -29,30 +29,30 @@ class FormantBlendSpec : StringSpec({
 
     // Soprano "u": F1 325, F2 700, then steep rolloff.
     val uBands = listOf(
-        FilterDef.Formant.Band(325.0, 0.0, 80.0),
-        FilterDef.Formant.Band(700.0, -16.0, 90.0),
-        FilterDef.Formant.Band(2700.0, -35.0, 120.0),
-        FilterDef.Formant.Band(3800.0, -40.0, 130.0),
-        FilterDef.Formant.Band(4950.0, -60.0, 140.0),
+        FilterDef.Formant.Band(freq = 325.0, db = 0.0, q = 80.0),
+        FilterDef.Formant.Band(freq = 700.0, db = -16.0, q = 90.0),
+        FilterDef.Formant.Band(freq = 2700.0, db = -35.0, q = 120.0),
+        FilterDef.Formant.Band(freq = 3800.0, db = -40.0, q = 130.0),
+        FilterDef.Formant.Band(freq = 4950.0, db = -60.0, q = 140.0),
     )
     val woodModes = listOf(
-        FilterDef.Body.Mode(100.0, 3.0, 12.0), FilterDef.Body.Mode(200.0, 2.0, 11.0),
-        FilterDef.Body.Mode(300.0, 1.0, 10.0), FilterDef.Body.Mode(430.0, 0.0, 9.0),
-        FilterDef.Body.Mode(650.0, -1.0, 8.0), FilterDef.Body.Mode(900.0, -2.0, 7.0),
-        FilterDef.Body.Mode(1300.0, -4.0, 6.0), FilterDef.Body.Mode(1900.0, -6.0, 5.0),
+        FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0), FilterDef.Body.Mode(freq = 200.0, db = 2.0, q = 11.0),
+        FilterDef.Body.Mode(freq = 300.0, db = 1.0, q = 10.0), FilterDef.Body.Mode(freq = 430.0, db = 0.0, q = 9.0),
+        FilterDef.Body.Mode(freq = 650.0, db = -1.0, q = 8.0), FilterDef.Body.Mode(freq = 900.0, db = -2.0, q = 7.0),
+        FilterDef.Body.Mode(freq = 1300.0, db = -4.0, q = 6.0), FilterDef.Body.Mode(freq = 1900.0, db = -6.0, q = 5.0),
     )
 
     fun gainAt(freq: Double, filters: List<AudioFilter>): Double {
         val buf = sine(freq)
         val inR = rms(buf)
-        filters.forEach { it.process(buf, 0, buf.size) }
+        filters.forEach { it.process(buffer = buf, offset = 0, length = buf.size) }
         return rms(buf) / inR
     }
 
     "createFormant - vowel formants clearly dominate the floor" {
-        val f1 = gainAt(325.0, listOf(LowPassHighPassFilters.createFormant(uBands, 1.0, sr)))
-        val f2 = gainAt(700.0, listOf(LowPassHighPassFilters.createFormant(uBands, 1.0, sr)))
-        val valley = gainAt(1200.0, listOf(LowPassHighPassFilters.createFormant(uBands, 1.0, sr)))
+        val f1 = gainAt(325.0, listOf(LowPassHighPassFilters.createFormant(bands = uBands, mix = 1.0, sampleRate = sr)))
+        val f2 = gainAt(700.0, listOf(LowPassHighPassFilters.createFormant(bands = uBands, mix = 1.0, sampleRate = sr)))
+        val valley = gainAt(1200.0, listOf(LowPassHighPassFilters.createFormant(bands = uBands, mix = 1.0, sampleRate = sr)))
 
         f1 shouldBeGreaterThan (valley * 8.0)    // strong F1 (measured ~14×)
         f2 shouldBeGreaterThan (valley * 2.5)    // present F2 (measured ~3.9×)
@@ -61,8 +61,8 @@ class FormantBlendSpec : StringSpec({
     "createFormant - a following body() does not erase the vowel" {
         val chain = {
             listOf(
-                LowPassHighPassFilters.createFormant(uBands, 1.0, sr),
-                LowPassHighPassFilters.createBody(woodModes, 0.5, sr),
+                LowPassHighPassFilters.createFormant(bands = uBands, mix = 1.0, sampleRate = sr),
+                LowPassHighPassFilters.createBody(bands = woodModes, mix = 0.5, sampleRate = sr),
             )
         }
         val f1 = gainAt(325.0, chain())

@@ -88,7 +88,7 @@ class ZeroLengthWindowSpec : StringSpec({
 
     "with an INTEGRAL start, a zero-length window only ever appears as the LAST window" {
         for (endFrame in listOf(400.5, 437.25, 499.9, 500.75, 623.0001)) {
-            val windows = renderAll(0.0, endFrame)
+            val windows = renderAll(startFrame = 0.0, endFrame = endFrame)
             windows.forEachIndexed { i, (_, len) ->
                 if (len == 0) {
                     (i == windows.lastIndex) shouldBe true
@@ -100,7 +100,7 @@ class ZeroLengthWindowSpec : StringSpec({
     "with a FRACTIONAL start the property FAILS — why the flooring above is load-bearing" {
         // startFrame 399.5: the first block [300,400) renders a zero-length window, then rendering
         // continues — a zero-length FIRST block. Every lazy note-on init would latch there.
-        val windows = renderAll(399.5, 475.0)
+        val windows = renderAll(startFrame = 399.5, endFrame = 475.0)
         val zeroAt = windows.indexOfFirst { it.second == 0 }
         (zeroAt >= 0 && zeroAt < windows.lastIndex) shouldBe true
     }

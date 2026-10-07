@@ -151,7 +151,7 @@ class KatalystEqEffectSpec : StringSpec({
             }
 
             chain.process(ctx)
-            ctx.mixBuffer.left.copyInto(out, base, 0, blockFrames)
+            ctx.mixBuffer.left.copyInto(destination = out, destinationOffset = base, startIndex = 0, endIndex = blockFrames)
         }
 
         return out
@@ -183,7 +183,7 @@ class KatalystEqEffectSpec : StringSpec({
             gateEndFrame = data.size,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
 
@@ -192,7 +192,7 @@ class KatalystEqEffectSpec : StringSpec({
 
         for (b in 0 until data.size / blockFrames) {
             eq.generate(buffer, 220.0, igniteCtx)
-            buffer.copyInto(out, b * blockFrames, 0, blockFrames)
+            buffer.copyInto(destination = out, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
             igniteCtx.voiceElapsedFrames += blockFrames
         }
 
@@ -246,7 +246,7 @@ class KatalystEqEffectSpec : StringSpec({
             }
 
             cylinders.processAndMix(fusion, renderCtx.blockStart)
-            fusion.left.copyInto(out, b * blockFrames, 0, blockFrames)
+            fusion.left.copyInto(destination = out, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
         }
 
         return out
@@ -285,14 +285,14 @@ class KatalystEqEffectSpec : StringSpec({
 
         withClue("the band is doing something: the EQ'd render is not the dry one") {
             rms(onOrbit) shouldBeGreaterThan rms(data) * 0.5
-            maxAbsDiff(onOrbit, DoubleArray(onOrbit.size)) shouldBeGreaterThan 0.1
+            maxAbsDiff(a = onOrbit, b = DoubleArray(onOrbit.size)) shouldBeGreaterThan 0.1
         }
 
         // NOT bit-identical, and the reason is not the EQ: the voice path filters the mono signal
         // BEFORE the voice's gain and pan multiply it, the bus path filters the product, and IEEE
         // multiplication does not commute with the recurrence bit for bit. Superposition holds to
         // the last few bits, which is what "moves losslessly" means in floating point.
-        maxAbsDiff(onVoice, onOrbit) shouldBeLessThan 1e-12
+        maxAbsDiff(a = onVoice, b = onOrbit) shouldBeLessThan 1e-12
     }
 
     "TWO voices: the orbit's EQ is the EQ of the sum, which is the sum of the per-voice EQs" {
@@ -325,7 +325,7 @@ class KatalystEqEffectSpec : StringSpec({
         // Linearity is the whole license for moving the filter: two voices, one filter, and the
         // difference is float noise. A nonlinear stage on a bus would fail this row by design,
         // which is why the motivation section forbids moving one.
-        maxAbsDiff(perVoice, onBus) shouldBeLessThan 1e-12
+        maxAbsDiff(a = perVoice, b = onBus) shouldBeLessThan 1e-12
     }
 
     // ── Every section kind, against the per-voice adapter ────────────────────────────────────────
@@ -356,10 +356,10 @@ class KatalystEqEffectSpec : StringSpec({
 
             val data = noise(blocks * blockFrames)
             val onOrbit = throughOrbit(chainOf(KatalystStageDsl.Eq(sections = listOf(section))), data)
-            val onVoice = throughVoiceAdapter(section, values, data)
+            val onVoice = throughVoiceAdapter(section = section, values = values, data = data)
 
             withClue("the section is audible at all: it changed the probe") {
-                maxAbsDiff(onOrbit, data) shouldBeGreaterThan 1e-3
+                maxAbsDiff(a = onOrbit, b = data) shouldBeGreaterThan 1e-3
             }
 
             // Bit-identical here, unlike the two rows above: the same core gets the same input and
@@ -408,7 +408,7 @@ class KatalystEqEffectSpec : StringSpec({
             }
 
             chain.process(ctx)
-            ctx.mixBuffer.left.copyInto(out, base, 0, blockFrames)
+            ctx.mixBuffer.left.copyInto(destination = out, destinationOffset = base, startIndex = 0, endIndex = blockFrames)
         }
 
         val settled = out.copyOfRange((changeBlock - 4) * blockFrames, changeBlock * blockFrames)
@@ -457,7 +457,7 @@ class KatalystEqEffectSpec : StringSpec({
             }
 
             chain.process(ctx)
-            ctx.mixBuffer.left.copyInto(out, base, 0, blockFrames)
+            ctx.mixBuffer.left.copyInto(destination = out, destinationOffset = base, startIndex = 0, endIndex = blockFrames)
         }
 
         // The fade (17.2 blocks) started at block 12, so it has landed from block 30 on.
@@ -713,13 +713,13 @@ class KatalystEqEffectSpec : StringSpec({
 
         fun reference(db: Double, fromBlock: Int): DoubleArray {
             val core = EqCore(1)
-            core.configureSection(0, EqCore.BELL, 300.0, 4.0, db, 0.0, sr)
+            core.configureSection(index = 0, type = EqCore.BELL, freq = 300.0, q = 4.0, db = db, gain = 0.0, sampleRate = sr)
             val out = DoubleArray(input.size)
             val buf = DoubleArray(blockFrames)
 
             for (b in fromBlock until blocks) {
-                input.copyInto(buf, 0, b * blockFrames, b * blockFrames + blockFrames)
-                core.process(buf, 0, blockFrames)
+                input.copyInto(destination = buf, destinationOffset = 0, startIndex = b * blockFrames, endIndex = b * blockFrames + blockFrames)
+                core.process(buffer = buf, offset = 0, length = blockFrames)
                 buf.copyInto(out, b * blockFrames)
             }
 

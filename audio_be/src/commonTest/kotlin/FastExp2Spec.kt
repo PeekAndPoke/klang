@@ -122,7 +122,7 @@ class FastExp2Spec : StringSpec({
             val offset = if (b % 2 == 0) 0 else 16
 
             buf.fill(-1.0)
-            ctx.updateOffsetAndLength(offset, blockFrames - offset)
+            ctx.updateOffsetAndLength(offset = offset, length = blockFrames - offset)
             ctx.voiceElapsedFrames = b * blockFrames + offset
             mod.generate(buf, 440.0, ctx)
 
@@ -183,7 +183,7 @@ class FastExp2Spec : StringSpec({
                 val offset = if (b % 2 == 0) 0 else 16
 
                 ctx.blockStart = (b * blockFrames).toDouble()
-                ctx.updateOffsetAndLength(offset, blockFrames - offset)
+                ctx.updateOffsetAndLength(offset = offset, length = blockFrames - offset)
                 ctx.freqModBufferWritten = multiplyIn
                 ctx.freqModBuffer.fill(2.0)
                 renderer.render(ctx)

@@ -189,13 +189,13 @@ class CylinderShelfSpec : StringSpec({
 
     "the shelf holds at most maxIdle cylinders and refuses a double return" {
         val rings = SizedBuffers.forRings(sampleRate)
-        val units = CylinderUnits(blockFrames, sampleRate, rings, ReverbUnits(sampleRate), maxIdle = 2)
+        val units = CylinderUnits(blockFrames = blockFrames, sampleRate = sampleRate, rings = rings, reverbs = ReverbUnits(sampleRate), maxIdle = 2)
         // The renting engine's chain registry; this spec is about the shelf, so one empty
         // registry serves every rent.
         val katalysts = KatalystRegistry()
-        val a = units.rent(0, 10, katalysts)
-        val b = units.rent(1, 10, katalysts)
-        val c = units.rent(2, 10, katalysts)
+        val a = units.rent(id = 0, silentBlocksBeforeTailCheck = 10, katalysts = katalysts)
+        val b = units.rent(id = 1, silentBlocksBeforeTailCheck = 10, katalysts = katalysts)
+        val c = units.rent(id = 2, silentBlocksBeforeTailCheck = 10, katalysts = katalysts)
         units.allocations shouldBe 3
 
         units.giveBack(a)
@@ -208,8 +208,8 @@ class CylinderShelfSpec : StringSpec({
         units.idleCount shouldBe 2
         units.dropped shouldBe 1
 
-        units.rent(7, 10, katalysts) shouldBeSameInstanceAs b
-        units.rent(8, 10, katalysts).let { it shouldBeSameInstanceAs a; it.id shouldBe 8 }
+        units.rent(id = 7, silentBlocksBeforeTailCheck = 10, katalysts = katalysts) shouldBeSameInstanceAs b
+        units.rent(id = 8, silentBlocksBeforeTailCheck = 10, katalysts = katalysts).let { it shouldBeSameInstanceAs a; it.id shouldBe 8 }
         units.hits shouldBe 2
     }
 

@@ -53,7 +53,7 @@ class MidBlockOnsetControlRateSpec : StringSpec({
         sampleRate = sampleRate,
         limits = VoiceLimits(startFrame = startFrame, gateEndFrame = 100_000.0, endFrame = 100_000.0),
     ).apply {
-        updateOffsetAndLength(offset, length)
+        updateOffsetAndLength(offset = offset, length = length)
         blockStart = 0.0
     }
 

@@ -35,7 +35,7 @@ class KatalystCompressorStateIdentitySpec : StringSpec({
     val settings = Voice.Compressor(thresholdDb = -20.0, ratio = 4.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = 0.1)
 
     "every reachable cell of the table points at the three states created with the effect" {
-        val fx = KatalystCompressorEffect(sampleRate, n)
+        val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = n)
         val ctx = KatalystContext(blockFrames = n, mixBuffer = StereoBuffer(n))
 
         // An IDENTITY collection, deliberately: a `Set` compares with `equals`, so a state written

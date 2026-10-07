@@ -28,7 +28,7 @@ class DuckingSpec : StringSpec({
         // Create sidechain signal (loud trigger)
         val sidechain = AudioBuffer(100) { 0.8 }
 
-        ducking.process(input, sidechain, 100)
+        ducking.process(input = input, sidechain = sidechain, blockSize = 100)
 
         // Input should be reduced significantly
         val avgLevel = input.map { abs(it) }.average()
@@ -45,12 +45,12 @@ class DuckingSpec : StringSpec({
         // Process with active sidechain
         val input1 = AudioBuffer(100) { 1.0 }
         val sidechain1 = AudioBuffer(100) { 1.0 }
-        ducking.process(input1, sidechain1, 100)
+        ducking.process(input = input1, sidechain = sidechain1, blockSize = 100)
 
         // Process with silent sidechain (should return to normal)
         val input2 = AudioBuffer(1000) { 1.0 }
         val sidechain2 = AudioBuffer(1000) { 0.0 }
-        ducking.process(input2, sidechain2, 1000)
+        ducking.process(input = input2, sidechain = sidechain2, blockSize = 1000)
 
         // Should return close to full volume
         val endLevel = input2.takeLast(100).map { abs(it) }.average()
@@ -65,8 +65,8 @@ class DuckingSpec : StringSpec({
         val duckingLight = Ducking(sampleRate, 0.01, depth = 0.3)
         val duckingHeavy = Ducking(sampleRate, 0.01, depth = 0.9)
 
-        duckingLight.process(input1, sidechain, 100)
-        duckingHeavy.process(input2, sidechain, 100)
+        duckingLight.process(input = input1, sidechain = sidechain, blockSize = 100)
+        duckingHeavy.process(input = input2, sidechain = sidechain, blockSize = 100)
 
         val avgLight = input1.map { abs(it) }.average()
         val avgHeavy = input2.map { abs(it) }.average()
@@ -76,12 +76,12 @@ class DuckingSpec : StringSpec({
     }
 
     "Reset clears internal state" {
-        val ducking = Ducking(sampleRate, 0.01, 1.0)
+        val ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.01, depth = 1.0)
 
         // Duck the signal
         val input = AudioBuffer(100) { 1.0 }
         val sidechain = AudioBuffer(100) { 1.0 }
-        ducking.process(input, sidechain, 100)
+        ducking.process(input = input, sidechain = sidechain, blockSize = 100)
 
         // Reset
         ducking.reset()
@@ -89,7 +89,7 @@ class DuckingSpec : StringSpec({
         // Should process at full volume immediately
         val input2 = AudioBuffer(10) { 1.0 }
         val sidechain2 = AudioBuffer(10) { 0.0 }
-        ducking.process(input2, sidechain2, 10)
+        ducking.process(input = input2, sidechain = sidechain2, blockSize = 10)
 
         input2[0] shouldBe (1.0 plusOrMinus 0.01)
     }
@@ -104,7 +104,7 @@ class DuckingSpec : StringSpec({
         val input = AudioBuffer(100) { 1.0 }
         val sidechain = AudioBuffer(100) { 1.0 }
 
-        ducking.process(input, sidechain, 100)
+        ducking.process(input = input, sidechain = sidechain, blockSize = 100)
 
         // Should remain at full volume
         val avgLevel = input.map { abs(it) }.average()
@@ -112,14 +112,14 @@ class DuckingSpec : StringSpec({
     }
 
     "processStereo ducks both channels equally (linked stereo)" {
-        val ducking = Ducking(sampleRate, 0.01, 0.8)
+        val ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.01, depth = 0.8)
 
         val inputLeft = AudioBuffer(100) { 1.0 }
         val inputRight = AudioBuffer(100) { 1.0 }
         val sidechainLeft = AudioBuffer(100) { 0.8 }
         val sidechainRight = AudioBuffer(100) { 0.8 }
 
-        ducking.processStereo(inputLeft, inputRight, sidechainLeft, sidechainRight, 100)
+        ducking.processStereo(inputL = inputLeft, inputR = inputRight, sidechainL = sidechainLeft, sidechainR = sidechainRight, blockSize = 100)
 
         val avgLeft = inputLeft.map { abs(it) }.average()
         val avgRight = inputRight.map { abs(it) }.average()
@@ -133,7 +133,7 @@ class DuckingSpec : StringSpec({
     }
 
     "processStereo preserves stereo image with asymmetric sidechain" {
-        val ducking = Ducking(sampleRate, 0.01, 0.8)
+        val ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.01, depth = 0.8)
 
         val inputLeft = AudioBuffer(100) { 1.0 }
         val inputRight = AudioBuffer(100) { 1.0 }
@@ -141,7 +141,7 @@ class DuckingSpec : StringSpec({
         val sidechainLeft = AudioBuffer(100) { 0.9 }
         val sidechainRight = AudioBuffer(100) { 0.1 }
 
-        ducking.processStereo(inputLeft, inputRight, sidechainLeft, sidechainRight, 100)
+        ducking.processStereo(inputL = inputLeft, inputR = inputRight, sidechainL = sidechainLeft, sidechainR = sidechainRight, blockSize = 100)
 
         val avgLeft = inputLeft.map { abs(it) }.average()
         val avgRight = inputRight.map { abs(it) }.average()
@@ -159,15 +159,15 @@ class DuckingSpec : StringSpec({
         val active1 = AudioBuffer(100) { 1.0 }
         val active2 = AudioBuffer(100) { 1.0 }
         val sidechainActive = AudioBuffer(100) { 1.0 }
-        duckingFast.process(active1, sidechainActive, 100)
-        duckingSlow.process(active2, sidechainActive, 100)
+        duckingFast.process(input = active1, sidechain = sidechainActive, blockSize = 100)
+        duckingSlow.process(input = active2, sidechain = sidechainActive, blockSize = 100)
 
         // Phase 2: Release with silent sidechain
         val recover1 = AudioBuffer(400) { 1.0 }
         val recover2 = AudioBuffer(400) { 1.0 }
         val sidechainSilent = AudioBuffer(400) { 0.0 }
-        duckingFast.process(recover1, sidechainSilent, 400)
-        duckingSlow.process(recover2, sidechainSilent, 400)
+        duckingFast.process(input = recover1, sidechain = sidechainSilent, blockSize = 400)
+        duckingSlow.process(input = recover2, sidechain = sidechainSilent, blockSize = 400)
 
         // Fast should recover more by sample 50-100 of the recovery phase
         val fastLevel = recover1.sliceArray(50 until 100).map { abs(it) }.average()

@@ -1128,7 +1128,7 @@ class MasterBusTest : StringSpec({
 
         val swapped = rig()
         val control = rig()
-        val law = CapLaw(sampleRate, blockFrames)
+        val law = CapLaw(sampleRate = sampleRate, blockFrames = blockFrames)
         val releaseAt = law.releaseStart
         val releaseBlocks = law.releaseBlocks
         val swap = swapped.bus.chainSwap
@@ -1146,7 +1146,7 @@ class MasterBusTest : StringSpec({
             val want = control.block(0.0)
 
             for (i in 0 until blockFrames) {
-                val weight = law.weight(b, i)
+                val weight = law.weight(b = b, i = i)
 
                 if (got[i] != want[i] * weight) {
                     withClue("block $b sample $i (release starts at block $releaseAt): got ${got[i]}, want ${want[i]} x $weight") {

@@ -149,7 +149,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
                 name = "tremsine",
                 // The envelope is the instrument's own (a bare tree since phase 3 step 9 has no voice envelope): its
                 // 1 s release keeps the voice in its release through the tremolo's off-half.
-                dsl = IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0, shape = "square").adsr(0.001, 0.01, 1.0, 1.0),
+                dsl = IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0, shape = "square").adsr(attackSec = 0.001, decaySec = 0.01, sustainLevel = 1.0, releaseSec = 1.0),
             )
         )
     }

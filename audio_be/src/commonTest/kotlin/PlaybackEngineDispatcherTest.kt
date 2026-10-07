@@ -67,7 +67,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
 
         d.handle(
             KlangCommLink.Cmd.Sample.Complete(
-                req = req, note = null, pitchHz = 440.0, sample = TestSamples.silence(64, sampleRate),
+                req = req, note = null, pitchHz = 440.0, sample = TestSamples.silence(size = 64, sampleRate = sampleRate),
             )
         )
 

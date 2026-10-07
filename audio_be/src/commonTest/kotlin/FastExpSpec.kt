@@ -73,14 +73,14 @@ class FastExpSpec : StringSpec({
         for (k in listOf(0.5, 3.0, 7.0, 8.0)) {
             val norm = adsrExpNorm(k)
 
-            withClue("k = $k: g(0)") { adsrExpShape(0.0, k, norm) shouldBe 0.0 }
-            withClue("k = $k: g(1)") { abs(adsrExpShape(1.0, k, norm) - 1.0) shouldBeLessThan 3e-16 }
+            withClue("k = $k: g(0)") { adsrExpShape(x = 0.0, k = k, norm = norm) shouldBe 0.0 }
+            withClue("k = $k: g(1)") { abs(adsrExpShape(x = 1.0, k = k, norm = norm) - 1.0) shouldBeLessThan 3e-16 }
 
             for (i in 1 until 1000) {
                 val x = i / 1000.0
                 val expected = (exp(k * x) - 1.0) / (exp(k) - 1.0)
 
-                withClue("k = $k, x = $x") { abs(adsrExpShape(x, k, norm) - expected) shouldBeLessThan 1e-9 }
+                withClue("k = $k, x = $x") { abs(adsrExpShape(x = x, k = k, norm = norm) - expected) shouldBeLessThan 1e-9 }
             }
         }
     }

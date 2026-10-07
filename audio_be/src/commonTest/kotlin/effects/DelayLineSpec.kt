@@ -42,7 +42,7 @@ class DelayLineSpec : StringSpec({
         for (block in 0 until totalBlocks) {
             if (block > 0) send.clear()
             output.clear()
-            delay.process(send, output, blockSize)
+            delay.process(input = send, output = output, length = blockSize)
 
             for (i in 0 until blockSize) {
                 if (!foundLeft && abs(output.left[i]) > 0.5) {
@@ -84,7 +84,7 @@ class DelayLineSpec : StringSpec({
         for (block in 0 until totalBlocks) {
             if (block > 0) send.clear()
             output.clear()
-            delay.process(send, output, blockSize)
+            delay.process(input = send, output = output, length = blockSize)
 
             for (i in 0 until blockSize) {
                 val sample = abs(output.left[i])
@@ -131,7 +131,7 @@ class DelayLineSpec : StringSpec({
         for (block in 0 until totalBlocks) {
             if (block > 0) send.clear()
             output.clear()
-            delay.process(send, output, blockSize)
+            delay.process(input = send, output = output, length = blockSize)
 
             for (i in 0 until blockSize) {
                 if (abs(output.left[i]) > 0.01) {
@@ -164,7 +164,7 @@ class DelayLineSpec : StringSpec({
         for (block in 0 until 200) {
             if (block > 0) send.clear()
             output.clear()
-            delay.process(send, output, blockSize)
+            delay.process(input = send, output = output, length = blockSize)
 
             // Check that no output sample exceeds the safety limit of 2.0
             for (i in 0 until blockSize) {
@@ -185,7 +185,7 @@ class DelayLineSpec : StringSpec({
         send.left[0] = 1.0
         send.right[0] = 1.0
 
-        delay.process(send, output, blockSize)
+        delay.process(input = send, output = output, length = blockSize)
 
         delay.hasTail() shouldBe true
     }
@@ -214,7 +214,7 @@ class DelayLineSpec : StringSpec({
         repeat(10) { block ->
             if (block > 0) send.clear()
             output.clear()
-            delay.process(send, output, blockSize)
+            delay.process(input = send, output = output, length = blockSize)
         }
 
         // Verify some output was produced
@@ -226,7 +226,7 @@ class DelayLineSpec : StringSpec({
         val freshSend = StereoBuffer(blockSize)
         freshSend.left[0] = 1.0
         val freshOutput = StereoBuffer(blockSize)
-        delay.process(freshSend, freshOutput, blockSize)
+        delay.process(input = freshSend, output = freshOutput, length = blockSize)
 
         for (i in 0 until blockSize) {
             if (abs(freshOutput.left[i]) > 0.001) {
@@ -252,7 +252,7 @@ class DelayLineSpec : StringSpec({
         repeat(5) { block ->
             if (block > 0) send.clear()
             output.clear()
-            delay.process(send, output, blockSize)
+            delay.process(input = send, output = output, length = blockSize)
         }
 
         // Change delay time dramatically
@@ -261,7 +261,7 @@ class DelayLineSpec : StringSpec({
         repeat(5) {
             send.clear()
             output.clear()
-            delay.process(send, output, blockSize)
+            delay.process(input = send, output = output, length = blockSize)
 
             // Verify no NaN or Inf values
             for (i in 0 until blockSize) {
@@ -278,7 +278,7 @@ class DelayLineSpec : StringSpec({
         repeat(5) {
             send.clear()
             output.clear()
-            delay.process(send, output, blockSize)
+            delay.process(input = send, output = output, length = blockSize)
 
             for (i in 0 until blockSize) {
                 (output.left[i].isNaN()) shouldBe false
@@ -335,11 +335,11 @@ class DelayLineSpec : StringSpec({
         // whole-ring scan paid the drain for whatever was loud up to bufferSize samples ago).
         val send1 = StereoBuffer(512)
         send1.left[2] = 0.5
-        dl.process(send1, StereoBuffer(512), 512)
+        dl.process(input = send1, output = StereoBuffer(512), length = 512)
 
         val send2 = StereoBuffer(488)
         send2.right[487] = -0.01
-        dl.process(send2, StereoBuffer(488), 488)
+        dl.process(input = send2, output = StereoBuffer(488), length = 488)
 
         dl.tapWindowPeakAbs() shouldBe 0.01
 
@@ -361,18 +361,18 @@ class DelayLineSpec : StringSpec({
         // One loud sample at ring position 50 (fb = 0, so every later write is an exact zero).
         val send = StereoBuffer(100)
         send.left[50] = 0.4
-        dl.process(send, StereoBuffer(100), 100)
+        dl.process(input = send, output = StereoBuffer(100), length = 100)
 
         // Advance the head until the loud sample sits at distance delayInt + 1 = 442: seen.
-        dl.process(StereoBuffer(392), StereoBuffer(392), 392)
+        dl.process(input = StereoBuffer(392), output = StereoBuffer(392), length = 392)
         dl.tapWindowPeakAbs() shouldBe 0.4
 
         // Distance delayInt + 2 = 443: the slack sample, still seen.
-        dl.process(StereoBuffer(1), StereoBuffer(1), 1)
+        dl.process(input = StereoBuffer(1), output = StereoBuffer(1), length = 1)
         dl.tapWindowPeakAbs() shouldBe 0.4
 
         // Distance delayInt + 3 = 444: out of reach, gone.
-        dl.process(StereoBuffer(1), StereoBuffer(1), 1)
+        dl.process(input = StereoBuffer(1), output = StereoBuffer(1), length = 1)
         dl.tapWindowPeakAbs() shouldBe 0.0
     }
 
@@ -386,7 +386,7 @@ class DelayLineSpec : StringSpec({
         send.right.fill(0.5)
         val out = StereoBuffer(25)
 
-        dl.process(send, out, 25)
+        dl.process(input = send, output = out, length = 25)
 
         out.left.all { it.isFinite() } shouldBe true
         out.right.all { it.isFinite() } shouldBe true
@@ -405,7 +405,7 @@ class DelayLineSpec : StringSpec({
         val out = StereoBuffer(blockSize)
         poison.left[0] = Double.NaN
         poison.right[0] = Double.NaN
-        delay.process(poison, out, blockSize)
+        delay.process(input = poison, output = out, length = blockSize)
 
         // Now feed clean audio and require real echoes back out.
         var heard = false
@@ -416,7 +416,7 @@ class DelayLineSpec : StringSpec({
                 send.left[i] = 0.5
                 send.right[i] = 0.5
             }
-            delay.process(send, fresh, blockSize)
+            delay.process(input = send, output = fresh, length = blockSize)
 
             fresh.left.all { it.isFinite() } shouldBe true
             fresh.right.all { it.isFinite() } shouldBe true
@@ -453,7 +453,7 @@ class DelayLineSpec : StringSpec({
 
     /** One block of [l] fed block [block]'s input, into a fresh output. */
     fun run(l: DelayLine, block: Int): StereoBuffer =
-        StereoBuffer(xfBlock).also { l.process(xfInput(block), it, xfBlock) }
+        StereoBuffer(xfBlock).also { l.process(input = xfInput(block), output = it, length = xfBlock) }
 
     "a time change crossfades from the old tap to the new one, per sample, and then IS the new tap" {
         val underTest = line(0.01)
@@ -615,7 +615,7 @@ class DelayLineSpec : StringSpec({
             }
 
             output.clear()
-            line.process(input, output, n)
+            line.process(input = input, output = output, length = n)
 
             for (i in 0 until n) {
                 val t = b * n + i

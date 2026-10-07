@@ -78,7 +78,7 @@ class OutputClipSpec : StringSpec({
         doubleArrayOf(0.5, 1.5, -0.5, 1e-6, 0.75).copyInto(mix.left)
         doubleArrayOf(-1.5, -0.5, 1.5, -1e-6, -0.75).copyInto(mix.right)
 
-        clipOutput(mix, frames, out)
+        clipOutput(mix = mix, frames = frames, out = out)
 
         out.left.toList() shouldBe listOf(0.5, 1.0, -0.5, 1e-6, 0.25)
         out.right.toList() shouldBe listOf(-1.0, -0.5, 1.0, -1e-6, 0.25)
@@ -106,7 +106,7 @@ class OutputClipSpec : StringSpec({
                 mix.left[i] = 1e-5 * sin(2.0 * PI * 440.0 * t)
             }
 
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
             peak = maxOf(peak, out.peak())
         }
 

@@ -77,9 +77,9 @@ class SampleInstrumentSpec : StringSpec({
         while (pos < size) {
             val length = minOf(blockFrames, size - pos)
 
-            ctx.updateOffsetAndLength(0, length)
+            ctx.updateOffsetAndLength(offset = 0, length = length)
             source.generate(buffer, 220.0, ctx)
-            buffer.copyInto(out, pos, 0, length)
+            buffer.copyInto(destination = out, destinationOffset = pos, startIndex = 0, endIndex = length)
             pos += length
         }
 
@@ -125,7 +125,7 @@ class SampleInstrumentSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -148,10 +148,10 @@ class SampleInstrumentSpec : StringSpec({
         Triple("crush", base, DoorFields(crush = 4.0)),
         Triple("coarse", base, DoorFields(coarse = 3.0)),
         Triple("distort", base, DoorFields(distort = 0.6, distortShape = "tube")),
-        Triple("highpass", base, DoorFields(filters = listOf(DoorFilter.HighPass(900.0, 1.2)))),
-        Triple("bandpass", base, DoorFields(filters = listOf(DoorFilter.BandPass(300.0, 2.0)))),
-        Triple("notch", base, DoorFields(filters = listOf(DoorFilter.Notch(220.0, 1.0)))),
-        Triple("lowpass with its envelope", base, DoorFields(filters = listOf(DoorFilter.LowPass(150.0, 1.5, envelope = env)))),
+        Triple("highpass", base, DoorFields(filters = listOf(DoorFilter.HighPass(freq = 900.0, q = 1.2)))),
+        Triple("bandpass", base, DoorFields(filters = listOf(DoorFilter.BandPass(freq = 300.0, q = 2.0)))),
+        Triple("notch", base, DoorFields(filters = listOf(DoorFilter.Notch(freq = 220.0, q = 1.0)))),
+        Triple("lowpass with its envelope", base, DoorFields(filters = listOf(DoorFilter.LowPass(freq = 150.0, q = 1.5, envelope = env)))),
         Triple("tremolo", base, DoorFields(tremoloDepth = 0.7, tremoloRate = 6.0, tremoloShape = "square")),
         Triple("adsr", base, DoorFields(adsr = DoorAdsr(attack = 0.03, decay = 0.05, sustain = 0.4, release = 0.1))),
         Triple("adsrOff (the teardown fade)", base, DoorFields(adsr = DoorAdsr(on = false))),
@@ -166,7 +166,7 @@ class SampleInstrumentSpec : StringSpec({
 
         "[$sampleRate Hz] the untouched sample voice is the untouched built-in, bit for bit" {
             withClue("not silent") { plainSample.any { it != 0.0 } shouldBe true }
-            withClue("first mismatching frame") { firstMismatch(plainSample, plainBuiltIn) shouldBe -1 }
+            withClue("first mismatching frame") { firstMismatch(a = plainSample, b = plainBuiltIn) shouldBe -1 }
         }
 
         for ((title, data, doors) in rows) {
@@ -174,8 +174,8 @@ class SampleInstrumentSpec : StringSpec({
                 val (_, builtIn) = render(data.copy(sound = "sine"), sampleRate, pcm, doors = doors)
                 val (_, sample) = render(data.copy(sound = "probe"), sampleRate, pcm, doors = doors)
 
-                withClue("engaged: the setting changes the sound") { firstMismatch(sample, plainSample) shouldNotBe -1 }
-                withClue("first mismatching frame") { firstMismatch(sample, builtIn) shouldBe -1 }
+                withClue("engaged: the setting changes the sound") { firstMismatch(a = sample, b = plainSample) shouldNotBe -1 }
+                withClue("first mismatching frame") { firstMismatch(a = sample, b = builtIn) shouldBe -1 }
             }
         }
 
@@ -192,8 +192,8 @@ class SampleInstrumentSpec : StringSpec({
             val (voice, sample) = render(base.copy(sound = "probe"), sampleRate, metaPcm)
             val (_, builtIn) = render(base.copy(sound = "sine"), sampleRate, pcm, doors = DoorFields(adsr = metaAsDoors))
 
-            withClue("engaged: the meta envelope changes the sound") { firstMismatch(sample, plainSample) shouldNotBe -1 }
-            withClue("first mismatching frame") { firstMismatch(sample, builtIn) shouldBe -1 }
+            withClue("engaged: the meta envelope changes the sound") { firstMismatch(a = sample, b = plainSample) shouldNotBe -1 }
+            withClue("first mismatching frame") { firstMismatch(a = sample, b = builtIn) shouldBe -1 }
             withClue("the voice lives its gate plus the meta release") {
                 voice.endFrame shouldBe gateEnd(sampleRate, pcm) + 0.05 * sampleRate
             }
@@ -205,7 +205,7 @@ class SampleInstrumentSpec : StringSpec({
             val merged = DoorAdsr(attack = 0.02, decay = 0.0, sustain = 1.0, release = 0.12)
             val (_, builtIn) = render(base.copy(sound = "sine"), sampleRate, pcm, doors = DoorFields(adsr = merged))
 
-            withClue("first mismatching frame") { firstMismatch(sample, builtIn) shouldBe -1 }
+            withClue("first mismatching frame") { firstMismatch(a = sample, b = builtIn) shouldBe -1 }
             withClue("the pattern's release sets the lifetime") {
                 voice.endFrame shouldBe gateEnd(sampleRate, pcm) + 0.12 * sampleRate
             }

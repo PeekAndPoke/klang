@@ -47,7 +47,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val buf = sine(freq = 100.0, length = blockFrames)
         val inputRms = rms(buf)
 
-        filter.process(buf, 0, buf.size)
+        filter.process(buffer = buf, offset = 0, length = buf.size)
         val outputRms = rms(buf)
 
         outputRms shouldBeLessThan (inputRms * 0.15)
@@ -58,7 +58,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val buf = sine(freq = 15000.0, length = blockFrames)
         val inputRms = rms(buf)
 
-        filter.process(buf, 0, buf.size)
+        filter.process(buffer = buf, offset = 0, length = buf.size)
         val outputRms = rms(buf)
 
         outputRms shouldBeLessThan (inputRms * 0.15)
@@ -69,17 +69,17 @@ class LowPassHighPassFiltersSpec : StringSpec({
 
         // Center at 1 kHz - 1 kHz signal passes well
         val buf1 = sine(freq = 1000.0, length = blockFrames)
-        filter.process(buf1, 0, buf1.size)
+        filter.process(buffer = buf1, offset = 0, length = buf1.size)
         val rmsCenter = rms(buf1)
 
         // Move center far away from 1 kHz
-        filter.sweepCutoff(15000.0, 15000.0, blockFrames)
+        filter.sweepCutoff(startHz = 15000.0, endHz = 15000.0, frames = blockFrames)
         repeat(3) {
             val settle = sine(freq = 1000.0, length = blockFrames)
-            filter.process(settle, 0, settle.size)
+            filter.process(buffer = settle, offset = 0, length = settle.size)
         }
         val buf2 = sine(freq = 1000.0, length = blockFrames)
-        filter.process(buf2, 0, buf2.size)
+        filter.process(buffer = buf2, offset = 0, length = buf2.size)
         val rmsOffCenter = rms(buf2)
 
         rmsOffCenter shouldBeLessThan (rmsCenter * 0.5)
@@ -89,7 +89,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
         for (q in listOf(0.1, 50.0)) {
             val filter = LowPassHighPassFilters.SvfBPF(cutoffHz = 1000.0, q = q, sampleRate = sampleRate)
             val buf = sine(freq = 1000.0, length = blockFrames)
-            filter.process(buf, 0, buf.size)
+            filter.process(buffer = buf, offset = 0, length = buf.size)
             buf.none { it.isNaN() || it.isInfinite() } shouldBe true
         }
     }
@@ -97,7 +97,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
     "SvfBPF - cutoff at 5 Hz edge case: a 1 kHz sine is heavily attenuated" {
         val filter = LowPassHighPassFilters.SvfBPF(cutoffHz = 5.0, q = 1.0, sampleRate = sampleRate)
         val buf = sine(freq = 1000.0, length = blockFrames)
-        filter.process(buf, 0, buf.size)
+        filter.process(buffer = buf, offset = 0, length = buf.size)
         rms(buf) shouldBeLessThan 0.01
     }
 
@@ -105,11 +105,11 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val nyquist = sampleRate / 2.0
         val src = sine(freq = 1000.0, length = blockFrames)
         val clamped = AudioBuffer(blockFrames) { src[it] }
-        LowPassHighPassFilters.SvfBPF(cutoffHz = nyquist - 1.0, q = 1.0, sampleRate = sampleRate).process(clamped, 0, blockFrames)
+        LowPassHighPassFilters.SvfBPF(cutoffHz = nyquist - 1.0, q = 1.0, sampleRate = sampleRate).process(buffer = clamped, offset = 0, length = blockFrames)
 
         for (cutoff in listOf(nyquist, sampleRate, 1e9)) {
             val buf = AudioBuffer(blockFrames) { src[it] }
-            LowPassHighPassFilters.SvfBPF(cutoffHz = cutoff, q = 1.0, sampleRate = sampleRate).process(buf, 0, blockFrames)
+            LowPassHighPassFilters.SvfBPF(cutoffHz = cutoff, q = 1.0, sampleRate = sampleRate).process(buffer = buf, offset = 0, length = blockFrames)
             buf.none { it.isNaN() || it.isInfinite() } shouldBe true
             (0 until blockFrames).all { buf[it].toRawBits() == clamped[it].toRawBits() } shouldBe true
         }
@@ -119,12 +119,12 @@ class LowPassHighPassFiltersSpec : StringSpec({
         // `bilinearK` falls back to 1000 Hz for a non-finite cutoff: a NaN must not poison the IIR state.
         val filter = LowPassHighPassFilters.SvfBPF(cutoffHz = Double.NaN, q = 1.0, sampleRate = sampleRate)
         val buf = sine(freq = 440.0, length = blockFrames)
-        filter.process(buf, 0, buf.size)
+        filter.process(buffer = buf, offset = 0, length = buf.size)
         buf.all { it.isFinite() } shouldBe true
 
-        filter.sweepCutoff(Double.NaN, Double.NaN, blockFrames)
+        filter.sweepCutoff(startHz = Double.NaN, endHz = Double.NaN, frames = blockFrames)
         val buf2 = sine(freq = 440.0, length = blockFrames)
-        filter.process(buf2, 0, buf2.size)
+        filter.process(buffer = buf2, offset = 0, length = buf2.size)
         buf2.all { it.isFinite() } shouldBe true
     }
 
@@ -134,15 +134,15 @@ class LowPassHighPassFiltersSpec : StringSpec({
         // first samples) and that a static filter steps nothing across a long block.
         val cutoff = 800.0
         val q = 1.5
-        val filter = LowPassHighPassFilters.SvfBPF(cutoff, q, sampleRate)
+        val filter = LowPassHighPassFilters.SvfBPF(cutoffHz = cutoff, q = q, sampleRate = sampleRate)
         val coefs = SvfCoeffs()
-        computeSvfCoeffs(cutoff, q, sampleRate, coefs)
+        computeSvfCoeffs(cutoffHz = cutoff, q = q, sampleRate = sampleRate, out = coefs)
         var ic1eq = 0.0
         var ic2eq = 0.0
 
         val out = sine(freq = 440.0, length = blockFrames)
         val ref = AudioBuffer(blockFrames) { out[it] }
-        filter.process(out, 0, blockFrames)
+        filter.process(buffer = out, offset = 0, length = blockFrames)
 
         for (i in 0 until blockFrames) {
             val v0 = ref[i]
@@ -168,8 +168,8 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val a = sine(freq = 1000.0, length = 1024, amplitude = 0.5)
         val b = AudioBuffer(1024) { i -> a[i] }
 
-        unset.process(a, 0, a.size)
-        unity.process(b, 0, b.size)
+        unset.process(buffer = a, offset = 0, length = a.size)
+        unity.process(buffer = b, offset = 0, length = b.size)
 
         for (i in 0 until 1024) {
             b[i] shouldBe a[i]
@@ -184,8 +184,8 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val a = sine(freq = 1050.0, length = blockFrames, amplitude = 0.5)
         val b = AudioBuffer(blockFrames) { i -> a[i] }
 
-        nominal.process(a, 0, a.size)
-        shifted.process(b, 0, b.size)
+        nominal.process(buffer = a, offset = 0, length = a.size)
+        shifted.process(buffer = b, offset = 0, length = b.size)
 
         rms(b) shouldBeGreaterThan (rms(a) * 1.2)
     }

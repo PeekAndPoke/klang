@@ -65,7 +65,7 @@ class KatalystDelayGlideSpec : StringSpec({
         val refOut = StereoBuffer(blockFrames)
 
         for (i in 0 until blockFrames) {
-            val x = input(block, i)
+            val x = input(block = block, i = i)
 
             c.mixBuffer.left[i] = x
             c.mixBuffer.right[i] = x
@@ -76,7 +76,7 @@ class KatalystDelayGlideSpec : StringSpec({
         }
 
         effect.process(c)
-        reference.process(refIn, refOut, blockFrames)
+        reference.process(input = refIn, output = refOut, length = blockFrames)
 
         var worst = 0.0
 
@@ -132,12 +132,12 @@ class KatalystDelayGlideSpec : StringSpec({
             val j = StereoBuffer(blockFrames)
 
             for (i in 0 until blockFrames) {
-                inBuf.left[i] = input(b, i)
-                inBuf.right[i] = input(b, i)
+                inBuf.left[i] = input(block = b, i = i)
+                inBuf.right[i] = input(block = b, i = i)
             }
 
-            glideRef.process(inBuf, g, blockFrames)
-            jumpRef.process(inBuf, j, blockFrames)
+            glideRef.process(input = inBuf, output = g, length = blockFrames)
+            jumpRef.process(input = inBuf, output = j, length = blockFrames)
 
             for (i in 0 until blockFrames) {
                 gap = maxOf(gap, abs(g.left[i] - j.left[i]))
@@ -263,8 +263,8 @@ class KatalystDelayGlideSpec : StringSpec({
 
         for (b in 0 until 3) {
             for (i in 0 until blockFrames) {
-                c.mixBuffer.left[i] = input(b, i)
-                c.mixBuffer.right[i] = input(b, i)
+                c.mixBuffer.left[i] = input(block = b, i = i)
+                c.mixBuffer.right[i] = input(block = b, i = i)
             }
 
             fx.process(c)
@@ -274,8 +274,8 @@ class KatalystDelayGlideSpec : StringSpec({
             fx.configure(time = 0.02, feedback = 0.9, cap = 1.0, wet = 0.9)
 
             for (i in 0 until blockFrames) {
-                c.mixBuffer.left[i] = input(3 + b, i)
-                c.mixBuffer.right[i] = input(3 + b, i)
+                c.mixBuffer.left[i] = input(block = 3 + b, i = i)
+                c.mixBuffer.right[i] = input(block = 3 + b, i = i)
             }
 
             fx.process(c)
@@ -312,7 +312,7 @@ class KatalystDelayGlideSpec : StringSpec({
             fx.configure(time = 1.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
             for (i in 0 until blockFrames) {
-                val x = if (b < loudBlocks) input(b, i) else 0.0
+                val x = if (b < loudBlocks) input(block = b, i = i) else 0.0
 
                 c.mixBuffer.left[i] = x
                 c.mixBuffer.right[i] = x

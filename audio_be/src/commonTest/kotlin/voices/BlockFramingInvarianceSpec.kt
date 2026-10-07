@@ -208,7 +208,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         while (pos < total) {
             val n = minOf(lengths[li % lengths.size], total - pos)
             li++
-            ctx.updateOffsetAndLength(0, n)
+            ctx.updateOffsetAndLength(offset = 0, length = n)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, freqHz, ctx)
             for (i in 0 until n) out[pos + i] = tmp[i]
@@ -269,7 +269,7 @@ class BlockFramingInvarianceSpec : StringSpec({
             check(peak(ref) > 1e-3) { "$name reference is silent — vacuous comparison" }
             for (start in listOf(1, 37, 76, 127)) {
                 withClue("$name, startFrame=$start") {
-                    maxDiff(renderVoice(dsl, start, 128), ref) shouldBe 0.0
+                    maxDiff(a = renderVoice(dsl = dsl, startFrame = start, blockFrames = 128), b = ref) shouldBe 0.0
                 }
             }
         }
@@ -278,7 +278,7 @@ class BlockFramingInvarianceSpec : StringSpec({
             val ref = renderVoice(dsl, startFrame = 0, blockFrames = 128)
             for (bf in listOf(64, 37)) {
                 withClue("$name, blockFrames=$bf") {
-                    maxDiff(renderVoice(dsl, 0, bf), ref) shouldBe 0.0
+                    maxDiff(a = renderVoice(dsl = dsl, startFrame = 0, blockFrames = bf), b = ref) shouldBe 0.0
                 }
             }
         }
@@ -331,7 +331,7 @@ class BlockFramingInvarianceSpec : StringSpec({
             check(peak(ref) > 1e-3) { "$name reference is silent — vacuous comparison" }
             for (start in listOf(1, 37, 76, 127)) {
                 withClue("$name, startFrame=$start") {
-                    maxDiff(renderVoice(IgnitorDsl.Sine(), start, 128, dataMod = mod), ref) shouldBe 0.0
+                    maxDiff(a = renderVoice(dsl = IgnitorDsl.Sine(), startFrame = start, blockFrames = 128, dataMod = mod), b = ref) shouldBe 0.0
                 }
             }
         }
@@ -340,7 +340,7 @@ class BlockFramingInvarianceSpec : StringSpec({
             val ref = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = mod)
             for (bf in listOf(64, 37)) {
                 withClue("$name, blockFrames=$bf") {
-                    maxDiff(renderVoice(IgnitorDsl.Sine(), 0, bf, dataMod = mod), ref) shouldBe 0.0
+                    maxDiff(a = renderVoice(dsl = IgnitorDsl.Sine(), startFrame = 0, blockFrames = bf, dataMod = mod), b = ref) shouldBe 0.0
                 }
             }
         }
@@ -352,13 +352,13 @@ class BlockFramingInvarianceSpec : StringSpec({
 
         for (start in listOf(1, 37, 76, 127)) {
             withClue("accelerate, startFrame=$start") {
-                (maxDiff(renderVoice(IgnitorDsl.Sine(), start, 128, dataMod = accelerateData), ref) < floatNoiseBound) shouldBe true
+                (maxDiff(a = renderVoice(dsl = IgnitorDsl.Sine(), startFrame = start, blockFrames = 128, dataMod = accelerateData), b = ref) < floatNoiseBound) shouldBe true
             }
         }
 
         for (bf in listOf(64, 37)) {
             withClue("accelerate, blockFrames=$bf") {
-                (maxDiff(renderVoice(IgnitorDsl.Sine(), 0, bf, dataMod = accelerateData), ref) < floatNoiseBound) shouldBe true
+                (maxDiff(a = renderVoice(dsl = IgnitorDsl.Sine(), startFrame = 0, blockFrames = bf, dataMod = accelerateData), b = ref) < floatNoiseBound) shouldBe true
             }
         }
     }
@@ -369,7 +369,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         // Without this, every row above would pass on three identical unmodulated renders.
         (stripNodes + ("strip accelerate" to accelerateData)).forEach { (name, mod) ->
             val modulated = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = mod)
-            withClue(name) { (maxDiff(modulated, bare) > 1e-6) shouldBe true }
+            withClue(name) { (maxDiff(a = modulated, b = bare) > 1e-6) shouldBe true }
         }
     }
 
@@ -380,7 +380,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         check(peak(ref) > 1e-3) { "sample reference is silent — vacuous comparison" }
         for (start in listOf(1, 37, 76, 127)) {
             withClue("sample, startFrame=$start") {
-                maxDiff(renderSampleVoice(start, 128), ref) shouldBe 0.0
+                maxDiff(a = renderSampleVoice(startFrame = start, blockFrames = 128), b = ref) shouldBe 0.0
             }
         }
     }
@@ -389,7 +389,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         val ref = renderSampleVoice(startFrame = 0, blockFrames = 128)
         for (bf in listOf(64, 37)) {
             withClue("sample, blockFrames=$bf") {
-                maxDiff(renderSampleVoice(0, bf), ref) shouldBe 0.0
+                maxDiff(a = renderSampleVoice(startFrame = 0, blockFrames = bf), b = ref) shouldBe 0.0
             }
         }
     }
@@ -402,7 +402,7 @@ class BlockFramingInvarianceSpec : StringSpec({
             val ref = renderRagged(listOf(128)) { dsl.toExciter(random = Random(7)) }
             check(peak(ref) > 1e-3) { "$name ragged reference is silent" }
             val ragged = renderRagged(listOf(37, 128, 64, 91, 13, 111)) { dsl.toExciter(random = Random(7)) }
-            withClue(name) { maxDiff(ragged, ref) shouldBe 0.0 }
+            withClue(name) { maxDiff(a = ragged, b = ref) shouldBe 0.0 }
         }
     }
 
@@ -416,7 +416,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         // early window stays dark. lengths=[1] makes every chord one sample long: the analytic
         // reference.
         val env = FilterEnvDef(depth = 60.0, attackSec = 0.0005, decaySec = 0.05, sustainLevel = 0.0, releaseSec = 0.05)
-        fun chain(): Ignitor = IgnitorDsl.Sine().toExciter().lowpass(150.0, 0.707, env = env)
+        fun chain(): Ignitor = IgnitorDsl.Sine().toExciter().lowpass(cutoffHz = 150.0, q = 0.707, env = env)
 
         fun rmsEarly(x: DoubleArray): Double {
             var acc = 0.0

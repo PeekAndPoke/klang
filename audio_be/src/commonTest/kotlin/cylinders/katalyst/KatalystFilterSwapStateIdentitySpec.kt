@@ -71,11 +71,11 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
         swap.currentState shouldBeSameInstanceAs off
 
         // Off -> Engaged while fresh: installed at once. Engaged + set while fresh: replaced, a self-edge.
-        swap.set(gain(1.0), gain(1.0))
+        swap.set(left = gain(1.0), right = gain(1.0))
         val engaged = swap.currentState
         see(engaged)
         engaged shouldNotBeSameInstanceAs off
-        swap.set(gain(0.75), gain(0.75))
+        swap.set(left = gain(0.75), right = gain(0.75))
         swap.currentState shouldBeSameInstanceAs engaged
 
         // Engaged + clear while fresh: Off at once.
@@ -89,7 +89,7 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
         // Off -> Crossfading: a set fades in from dry.
         val first = gain(1.0)
 
-        swap.set(first, gain(1.0))
+        swap.set(left = first, right = gain(1.0))
 
         val crossfading = swap.currentState
 
@@ -103,7 +103,7 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
         // the target: self-edges, every one of them.
         swap.process(mix, n)
         swap.currentState shouldBeSameInstanceAs crossfading
-        swap.set(gain(0.5), gain(0.5))
+        swap.set(left = gain(0.5), right = gain(0.5))
         swap.currentState shouldBeSameInstanceAs crossfading
         swap.clear()
         swap.currentState shouldBeSameInstanceAs crossfading
@@ -125,7 +125,7 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
 
         // Engaged -> Crossfading by set; the RETURN to the pair that is now fading out is a
         // self-edge too, and then that turned-around fade lands back in Engaged.
-        swap.set(gain(0.25), gain(0.25))
+        swap.set(left = gain(0.25), right = gain(0.25))
         swap.currentState shouldBeSameInstanceAs crossfading
         swap.resume(first) shouldBe true
         swap.currentState shouldBeSameInstanceAs crossfading
@@ -141,13 +141,13 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
         }
 
         // Crossfading -> Off and Engaged -> Off by reset.
-        swap.set(gain(1.0), gain(1.0))
+        swap.set(left = gain(1.0), right = gain(1.0))
         swap.currentState shouldBeSameInstanceAs crossfading
         swap.reset()
         withClue("reset mid-fade lands in the ONE Off instance") {
             swap.currentState shouldBeSameInstanceAs off
         }
-        swap.set(gain(1.0), gain(1.0))
+        swap.set(left = gain(1.0), right = gain(1.0))
         swap.currentState shouldBeSameInstanceAs engaged
         swap.reset()
         swap.currentState shouldBeSameInstanceAs off

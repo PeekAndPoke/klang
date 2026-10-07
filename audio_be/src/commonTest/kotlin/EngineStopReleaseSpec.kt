@@ -164,7 +164,7 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(masterEvent("runaway"), blip())))
         }
 
-        releasedAgainstControl(a, b)
+        releasedAgainstControl(a = a, b = b)
 
         withClue("the control, never stopped, is never released: its drone is the authored sound") {
             b.engine.isReleasing shouldBe false
@@ -185,7 +185,7 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(blip(params))))
         }
 
-        releasedAgainstControl(a, b)
+        releasedAgainstControl(a = a, b = b)
 
         withClue("the control's orbit still rings: it was the release that ended the stopped one") {
             b.engine.cylinders.anyActive() shouldBe true
@@ -208,7 +208,7 @@ class EngineStopReleaseSpec : StringSpec({
             )
         }
 
-        releasedAgainstControl(a, b)
+        releasedAgainstControl(a = a, b = b)
 
         withClue("the control's orbit still rings on the drain: it was the release that ended the stopped one") {
             b.engine.cylinders.anyActive() shouldBe true
@@ -545,7 +545,7 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(blip(params))))
         }
 
-        val idleAt = ringsOutAgainstControl(a, b, stopAt = 100, bound = 30000)
+        val idleAt = ringsOutAgainstControl(a = a, b = b, stopAt = 100, bound = 30000)
 
         withClue("idle, and only after the hold: the tail was still ringing when the hold ended") {
             idleAt shouldBeGreaterThan 100 + holdBlocks
@@ -566,7 +566,7 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(masterEvent("echo"), blip())))
         }
 
-        val idleAt = ringsOutAgainstControl(a, b, stopAt = 100, bound = 30000)
+        val idleAt = ringsOutAgainstControl(a = a, b = b, stopAt = 100, bound = 30000)
 
         withClue("idle, and only after the hold: the tail was still ringing when the hold ended") {
             idleAt shouldBeGreaterThan 100 + holdBlocks

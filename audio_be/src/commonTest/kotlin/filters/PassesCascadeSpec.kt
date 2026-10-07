@@ -41,7 +41,7 @@ class PassesCascadeSpec : StringSpec({
             gateEndFrame = frames,
             scratchBuffers = ScratchBuffers(blockFrames = block),
         )
-        ctx.updateOffsetAndLength(0, block)
+        ctx.updateOffsetAndLength(offset = 0, length = block)
         val buf = AudioBuffer(block)
         var sum = 0.0
         var n = 0
@@ -61,10 +61,10 @@ class PassesCascadeSpec : StringSpec({
     }
 
     fun rmsIgnitorLp(passes: Int, freq: Double): Double =
-        rmsIgnitor(IgnitorDsl.Sine().lowpass(1000.0, 0.707, passes = passes), freq)
+        rmsIgnitor(IgnitorDsl.Sine().lowpass(freq = 1000.0, q = 0.707, passes = passes), freq)
 
     fun rmsIgnitorHp(passes: Int, freq: Double): Double =
-        rmsIgnitor(IgnitorDsl.Sine().highpass(1000.0, 0.707, passes = passes), freq)
+        rmsIgnitor(IgnitorDsl.Sine().highpass(freq = 1000.0, q = 0.707, passes = passes), freq)
 
     "the q ladder: passes = 1 is the user q VERBATIM; passes = 2 is the 4th-order Butterworth pair" {
         butterworthQLadder(1, 1.2).toList() shouldBe listOf(1.2)

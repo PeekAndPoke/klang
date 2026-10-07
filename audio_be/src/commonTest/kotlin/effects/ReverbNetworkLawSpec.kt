@@ -115,20 +115,20 @@ class ReverbNetworkLawSpec : StringSpec({
                 var at = 0
 
                 while (at < frames) {
-                    inL.copyInto(inBuf.left, 0, at, at + block)
-                    inR.copyInto(inBuf.right, 0, at, at + block)
+                    inL.copyInto(destination = inBuf.left, destinationOffset = 0, startIndex = at, endIndex = at + block)
+                    inR.copyInto(destination = inBuf.right, destinationOffset = 0, startIndex = at, endIndex = at + block)
                     outBuf.left.fill(dry)
                     outBuf.right.fill(dry)
 
-                    reverb.process(inBuf, outBuf, block)
+                    reverb.process(input = inBuf, output = outBuf, length = block)
 
                     outBuf.left.copyInto(outL, at)
                     outBuf.right.copyInto(outR, at)
                     at += block
                 }
 
-                val refL = freeverb(feed(inL, inR, crossFeed), sampleRate, size, lowpass, right = false).map { dry + it }
-                val refR = freeverb(feed(inR, inL, crossFeed), sampleRate, size, lowpass, right = true).map { dry + it }
+                val refL = freeverb(feed(own = inL, other = inR, share = crossFeed), sampleRate, size, lowpass, right = false).map { dry + it }
+                val refR = freeverb(feed(own = inR, other = inL, share = crossFeed), sampleRate, size, lowpass, right = true).map { dry + it }
 
                 withClue("dry $dry, $sampleRate Hz, size $size, lowpass $lowpass: the tail is there (a late sample is wet)") {
                     outL[frames - 1] shouldNotBe dry
@@ -164,12 +164,12 @@ class ReverbNetworkLawSpec : StringSpec({
         var at = 0
 
         while (at < frames) {
-            input.copyInto(inBuf.left, 0, at, at + block)
-            input.copyInto(inBuf.right, 0, at, at + block)
+            input.copyInto(destination = inBuf.left, destinationOffset = 0, startIndex = at, endIndex = at + block)
+            input.copyInto(destination = inBuf.right, destinationOffset = 0, startIndex = at, endIndex = at + block)
             outBuf.left.fill(0.0)
             outBuf.right.fill(0.0)
 
-            reverb.process(inBuf, outBuf, block)
+            reverb.process(input = inBuf, output = outBuf, length = block)
 
             outBuf.left.copyInto(outL, at)
             outBuf.right.copyInto(outR, at)

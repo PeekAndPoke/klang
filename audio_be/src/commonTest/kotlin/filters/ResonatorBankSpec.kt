@@ -42,7 +42,7 @@ class ResonatorBankSpec : StringSpec({
         val buf = signal.copyOf()
 
         for (b in 0 until blocks) {
-            filter.process(buf, b * frames, frames)
+            filter.process(buffer = buf, offset = b * frames, length = frames)
         }
 
         return buf
@@ -51,7 +51,7 @@ class ResonatorBankSpec : StringSpec({
     "a one-band bank is the bare SvfBPF times the band's gain, bit for bit" {
         val signal = input()
         val bank = ResonatorBank(listOf(ResonatorBank.Band(freq = 700.0, q = 8.0, gain = 1.7)), sampleRate)
-        val bare = run(LowPassHighPassFilters.SvfBPF(700.0, 8.0, sampleRate), signal)
+        val bare = run(LowPassHighPassFilters.SvfBPF(cutoffHz = 700.0, q = 8.0, sampleRate = sampleRate), signal)
 
         val actual = run(bank, signal)
         val expected = AudioBuffer(bare.size) { 0.0 + bare[it] * 1.7 }
@@ -71,9 +71,9 @@ class ResonatorBankSpec : StringSpec({
             ),
             sampleRate,
         )
-        val a = run(LowPassHighPassFilters.SvfBPF(300.0, 12.0, sampleRate), signal)
-        val b = run(LowPassHighPassFilters.SvfBPF(1900.0, 60.0, sampleRate), signal)
-        val c = run(LowPassHighPassFilters.SvfBPF(5200.0, 4.0, sampleRate), signal)
+        val a = run(LowPassHighPassFilters.SvfBPF(cutoffHz = 300.0, q = 12.0, sampleRate = sampleRate), signal)
+        val b = run(LowPassHighPassFilters.SvfBPF(cutoffHz = 1900.0, q = 60.0, sampleRate = sampleRate), signal)
+        val c = run(LowPassHighPassFilters.SvfBPF(cutoffHz = 5200.0, q = 4.0, sampleRate = sampleRate), signal)
 
         val actual = run(bank, signal)
         val expected = AudioBuffer(signal.size) { ((0.0 + a[it] * 900.0) + b[it] * 0.35) + c[it] * 0.0007 }
@@ -93,11 +93,11 @@ class ResonatorBankSpec : StringSpec({
         plain.freq shouldBe 230.0
         plain.q shouldBe 10.0
 
-        LowPassHighPassFilters.bodyBand(FilterDef.Body.Mode(230.0, Double.NaN, 10.0)).gain shouldBe 1.0
-        LowPassHighPassFilters.bodyBand(FilterDef.Body.Mode(230.0, Double.NEGATIVE_INFINITY, 10.0)).gain shouldBe 1.0
+        LowPassHighPassFilters.bodyBand(FilterDef.Body.Mode(freq = 230.0, db = Double.NaN, q = 10.0)).gain shouldBe 1.0
+        LowPassHighPassFilters.bodyBand(FilterDef.Body.Mode(freq = 230.0, db = Double.NEGATIVE_INFINITY, q = 10.0)).gain shouldBe 1.0
 
         // The SVF clamps q itself; the body folds nothing, so an out-of-range q reaches it unchanged.
-        LowPassHighPassFilters.bodyBand(FilterDef.Body.Mode(230.0, 0.0, 500.0)).q shouldBe 500.0
+        LowPassHighPassFilters.bodyBand(FilterDef.Body.Mode(freq = 230.0, db = 0.0, q = 500.0)).q shouldBe 500.0
     }
 
     "the vowel rule: the dB factor times the clamped q times 0.05, in that order; the SVF gets the raw q" {
@@ -112,15 +112,15 @@ class ResonatorBankSpec : StringSpec({
 
         // The fold uses the SVF's own clamp, [0.1, 200], and its own fallback for a non-finite q,
         // while the band hands the SVF the raw value.
-        val high = LowPassHighPassFilters.vowelBand(FilterDef.Formant.Band(730.0, 0.0, 500.0))
+        val high = LowPassHighPassFilters.vowelBand(FilterDef.Formant.Band(freq = 730.0, db = 0.0, q = 500.0))
         high.gain shouldBe 1.0 * 200.0 * 0.05
         high.q shouldBe 500.0
 
-        LowPassHighPassFilters.vowelBand(FilterDef.Formant.Band(730.0, 0.0, 0.01)).gain shouldBe 1.0 * 0.1 * 0.05
-        LowPassHighPassFilters.vowelBand(FilterDef.Formant.Band(730.0, 0.0, Double.NaN)).gain shouldBe
+        LowPassHighPassFilters.vowelBand(FilterDef.Formant.Band(freq = 730.0, db = 0.0, q = 0.01)).gain shouldBe 1.0 * 0.1 * 0.05
+        LowPassHighPassFilters.vowelBand(FilterDef.Formant.Band(freq = 730.0, db = 0.0, q = Double.NaN)).gain shouldBe
             1.0 * 0.7071067811865475 * 0.05
 
         // A non-finite dB is 0 dB.
-        LowPassHighPassFilters.vowelBand(FilterDef.Formant.Band(730.0, Double.NaN, 80.0)).gain shouldBe 1.0 * 80.0 * 0.05
+        LowPassHighPassFilters.vowelBand(FilterDef.Formant.Band(freq = 730.0, db = Double.NaN, q = 80.0)).gain shouldBe 1.0 * 80.0 * 0.05
     }
 })

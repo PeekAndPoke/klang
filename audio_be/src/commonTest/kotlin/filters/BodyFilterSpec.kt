@@ -27,24 +27,24 @@ class BodyFilterSpec : StringSpec({
         return sqrt(buf.fold(0.0) { acc, v -> acc + v * v } / buf.size)
     }
 
-    fun mode(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq, db, q)
+    fun mode(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq = freq, db = db, q = q)
 
     // The wet-only body bank, built the way `createBody` builds it before the mix wrapper.
     fun bodyBank(modes: List<FilterDef.Body.Mode>) = ResonatorBank(modes.map(LowPassHighPassFilters::bodyBand), sampleRate)
 
     fun woodModes() = listOf(
-        mode(110.0, 2.0, 12.0),
-        mode(230.0, 1.0, 10.0),
-        mode(430.0, 0.0, 9.0),
-        mode(820.0, -2.0, 7.0),
-        mode(1500.0, -4.0, 5.0),
+        mode(freq = 110.0, db = 2.0, q = 12.0),
+        mode(freq = 230.0, db = 1.0, q = 10.0),
+        mode(freq = 430.0, db = 0.0, q = 9.0),
+        mode(freq = 820.0, db = -2.0, q = 7.0),
+        mode(freq = 1500.0, db = -4.0, q = 5.0),
     )
 
     // High-Q → long ring, for the tail-stability test.
     fun glassModes() = listOf(
-        mode(1050.0, 0.0, 50.0),
-        mode(2100.0, -3.0, 60.0),
-        mode(3300.0, -6.0, 45.0),
+        mode(freq = 1050.0, db = 0.0, q = 50.0),
+        mode(freq = 2100.0, db = -3.0, q = 60.0),
+        mode(freq = 3300.0, db = -6.0, q = 45.0),
     )
 
     // The body bank is WET-ONLY (same API as lpf/formant). The dry/wet blend lives in
@@ -57,7 +57,7 @@ class BodyFilterSpec : StringSpec({
         val offBand = sine(12000.0, blockFrames) // far above every wood mode
         val inOff = rms(offBand)
 
-        bodyBank(woodModes()).process(offBand, 0, offBand.size)
+        bodyBank(woodModes()).process(buffer = offBand, offset = 0, length = offBand.size)
 
         // Wet-only: nothing near 12 kHz → near silence. The dry is re-added by the mix wrapper.
         rms(offBand) shouldBeLessThan (inOff * 0.2)
@@ -67,13 +67,13 @@ class BodyFilterSpec : StringSpec({
         val filter = bodyBank(glassModes())
 
         val first = AudioBuffer(blockFrames) { if (it == 0) 1.0 else 0.0 }
-        filter.process(first, 0, first.size)
+        filter.process(buffer = first, offset = 0, length = first.size)
         rms(first).isFinite() shouldBe true
 
         var lastRms = 0.0
         repeat(200) {
             val silent = AudioBuffer(blockFrames) { 0.0 }
-            filter.process(silent, 0, silent.size)
+            filter.process(buffer = silent, offset = 0, length = silent.size)
             lastRms = rms(silent)
             lastRms.isFinite() shouldBe true
             lastRms shouldBeLessThan 10.0  // bounded — never blows up
@@ -88,7 +88,7 @@ class BodyFilterSpec : StringSpec({
         )
         val buf = sine(500.0, blockFrames)
 
-        bodyBank(bands).process(buf, 0, buf.size)
+        bodyBank(bands).process(buffer = buf, offset = 0, length = buf.size)
 
         buf.all { it.isFinite() } shouldBe true
     }

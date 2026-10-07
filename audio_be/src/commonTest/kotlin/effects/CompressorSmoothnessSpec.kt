@@ -44,7 +44,7 @@ class CompressorSmoothnessSpec : StringSpec({
         )
 
         val buffer = AudioBuffer(4000) { level }    // long enough to fully settle the follower
-        compressor.process(buffer, 0, 4000)
+        compressor.process(buffer = buffer, offset = 0, length = 4000)
 
         val settledGain = buffer[3999] / level
         settledGain shouldBeLessThan 1.0            // not snapped open (old code returned exactly 1.0 here)
@@ -63,7 +63,7 @@ class CompressorSmoothnessSpec : StringSpec({
 
         val level = 2.0                             // +6 dBFS — well over the -1 dB ceiling
         val buffer = AudioBuffer(8000) { level }
-        limiter.process(buffer, 0, 8000)
+        limiter.process(buffer = buffer, offset = 0, length = 8000)
 
         val settled = abs(buffer[7999])
         settled shouldBeLessThan 1.0                // never clips to full scale
@@ -82,7 +82,7 @@ class CompressorSmoothnessSpec : StringSpec({
 
         val level = 2.0
         val buffer = AudioBuffer(2000) { level }    // cold start: envelope at SILENCE_DB
-        limiter.process(buffer, 0, 2000)
+        limiter.process(buffer = buffer, offset = 0, length = 2000)
 
         // From a cold start the error is huge, so the blend uses full attackCoeff — the gain must be
         // below full scale well within 10 ms (441 frames @ 44.1k). The blend only softens the final

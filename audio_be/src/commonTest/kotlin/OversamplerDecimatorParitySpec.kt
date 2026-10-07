@@ -110,7 +110,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
 
         for ((offset, length) in windows) {
             ctx.voiceElapsedFrames = at
-            ctx.updateOffsetAndLength(offset, length)
+            ctx.updateOffsetAndLength(offset = offset, length = length)
             node.generate(buffer, 220.0, ctx)
 
             for (i in 0 until length) {
@@ -150,7 +150,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
                 }
             }
 
-            dc.process(work, offset, length)
+            dc.process(buffer = work, offset = offset, length = length)
 
             for (i in 0 until length) {
                 out[at + i] = if (drive == null) ShapingFuncs.softCap(work[offset + i]) else work[offset + i]
@@ -175,7 +175,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
             for (shape in DistortionShape.entries) {
                 val node = ArrayIgnitor(source).shape(shape, stages)
 
-                sameBits(renderNode(node), oracle(stages, shape, drive = null), "$shape")
+                sameBits(actual = renderNode(node), expected = oracle(stages, shape, drive = null), clue = "$shape")
             }
         }
 
@@ -185,7 +185,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
                 for ((amount, drive) in listOf(0.6 to DistortionCore.drive(0.6), -0.2 to 1.0)) {
                     val node = ArrayIgnitor(source).fusedDistort(ConstantIgnitor(amount), shape, stages)
 
-                    sameBits(renderNode(node), oracle(stages, shape, drive), "$shape at $amount")
+                    sameBits(actual = renderNode(node), expected = oracle(stages, shape, drive), clue = "$shape at $amount")
                 }
             }
         }
@@ -214,7 +214,7 @@ private class RingOversampler(stages: Int) {
         val oversampledLen = length * factor
 
         scratchBuffers.oversample(factor).use { work ->
-            upsample(buffer, offset, length, work)
+            upsample(buffer = buffer, offset = offset, length = length, work = work)
             transformBlock(work, oversampledLen)
 
             var currentLen = oversampledLen
@@ -223,7 +223,7 @@ private class RingOversampler(stages: Int) {
                 currentLen = decimate2x(decimators[stage], work, currentLen)
             }
 
-            work.copyInto(buffer, offset, 0, length)
+            work.copyInto(destination = buffer, destinationOffset = offset, startIndex = 0, endIndex = length)
         }
     }
 

@@ -581,7 +581,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // author's number, so `0.5 * 2` picks the first material; an oscillator has no bus value,
         // so it takes the knob's fallback, which is unset, which is the stage off.
         val folded = declared(
-            KatalystStageDsl.Body(material = IgnitorDsl.Times(c(0.5), c(2.0)), wet = c(0.3))
+            KatalystStageDsl.Body(material = IgnitorDsl.Times(left = c(0.5), right = c(2.0)), wet = c(0.3))
         )
 
         folded.body.shouldNotBeNull().isEngaged shouldBe true
@@ -713,7 +713,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "a foldable arithmetic node is read at control rate, not refused" {
         val chain = declared(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Times(c(0.1), c(3.0)))
+            KatalystStageDsl.Delay(time = IgnitorDsl.Times(left = c(0.1), right = c(3.0)))
         )
 
         // 0.1 * 3 is 0.30000000000000004 in binary floating point; the row pins the FOLD, so the
@@ -754,7 +754,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // first version of the resolver got wrong: `Times` scrubs a non-finite probe to 0.0
         // through `safeOut`, so a NaN-based discriminator read it as a legitimate zero.
         val chain = declared(
-            KatalystStageDsl.Delay(time = c(0.25), feedback = IgnitorDsl.Times(IgnitorDsl.Freq, c(2.0)))
+            KatalystStageDsl.Delay(time = c(0.25), feedback = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = c(2.0)))
         )
 
         chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().feedback shouldBe DELAY_FEEDBACK
@@ -766,7 +766,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // number means off, and the resolver may not second-guess it: the same rule keeps
         // `phaser(rate = 0)` meaning a standing sweep.
         val chain = declared(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Div(c(1.0), c(0.0)))
+            KatalystStageDsl.Delay(time = IgnitorDsl.Div(left = c(1.0), right = c(0.0)))
         )
 
         chain.delay.shouldNotBeNull().delayLine.shouldBeNull()

@@ -97,8 +97,8 @@ class KatalystBodyEffectSpec : StringSpec({
     }
 
     "a live material change does not step the output (declick crossfade)" {
-        val bodyA = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(120.0, 9.0, 12.0)), mix = 1.0)
-        val bodyB = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(320.0, 9.0, 12.0)), mix = 1.0)
+        val bodyA = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(freq = 120.0, db = 9.0, q = 12.0)), mix = 1.0)
+        val bodyB = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(freq = 320.0, db = 9.0, q = 12.0)), mix = 1.0)
         val fx = KatalystBodyEffect(sampleRate)
         val freq = 110.0 // near bodyA's mode → a strong ring to swap out of
 
@@ -327,9 +327,9 @@ class KatalystBodyEffectSpec : StringSpec({
     val landBlocks = fadeBlocks + 1
 
     fun script(fx: KatalystBodyEffect, blocks: Int): SwapHostScript =
-        SwapHostScript(n, fadeLen, drySine(300.0, blocks)) { fx.process(it) }
+        SwapHostScript(n = n, fadeLen = fadeLen, input = drySine(300.0, blocks)) { fx.process(it) }
 
-    fun ref(def: FilterDef.Body) = LowPassHighPassFilters.createBody(def.bands, def.mix, sampleRate, def.floor)
+    fun ref(def: FilterDef.Body) = LowPassHighPassFilters.createBody(bands = def.bands, mix = def.mix, sampleRate = sampleRate, floor = def.floor)
 
     "off fades the bank to dry and releases it; the SAME body after that fade-out installs afresh" {
         // Question 2 of the plan: the config cache survives the fade-out, and an unchanged def with
@@ -576,7 +576,7 @@ class KatalystBodyEffectSpec : StringSpec({
         val (fx, nextRun) = lifeThenCut()
         val fresh = ref(glassy)
         val next = nextRun.inputBlock(nextRun.block)
-        fresh.process(next, 0, n)
+        fresh.process(buffer = next, offset = 0, length = n)
         fx.configure(glassy)
         val got = nextRun.raw()
 

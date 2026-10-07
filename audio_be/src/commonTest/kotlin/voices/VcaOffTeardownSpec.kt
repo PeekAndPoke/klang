@@ -95,9 +95,9 @@ class VcaOffTeardownSpec : StringSpec({
         var pos = 0
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
-            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(offset = 0, length = n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
-            ctx.updateOffsetAndLength(0, n); ctx.blockStart = pos.toDouble()
+            ctx.updateOffsetAndLength(offset = 0, length = n); ctx.blockStart = pos.toDouble()
             renderer.render(ctx)
             for (i in 0 until n) out[pos + i] = block[i]
             pos += n
@@ -128,10 +128,10 @@ class VcaOffTeardownSpec : StringSpec({
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
-            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(offset = 0, length = n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
 
-            ctx.updateOffsetAndLength(0, n); ctx.blockStart = pos.toDouble()
+            ctx.updateOffsetAndLength(offset = 0, length = n); ctx.blockStart = pos.toDouble()
             renderer.render(ctx)
 
             for (i in 0 until n) out[pos + i] = block[i]
@@ -154,7 +154,7 @@ class VcaOffTeardownSpec : StringSpec({
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
-            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(offset = 0, length = n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
             for (i in 0 until n) out[pos + i] = block[i]
             pos += n
@@ -282,7 +282,7 @@ class VcaOffTeardownSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, b * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }

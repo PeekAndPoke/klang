@@ -85,7 +85,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -98,7 +98,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
 
     val rows = listOf(
         Row("untouched", null),
-        Row("analog 2, lpf 1200: one filter", mapOf("analog" to 2.0), DoorFields(filters = listOf(DoorFilter.LowPass(1200.0, 0.707)))),
+        Row("analog 2, lpf 1200: one filter", mapOf("analog" to 2.0), DoorFields(filters = listOf(DoorFilter.LowPass(freq = 1200.0, q = 0.707)))),
     )
 
     val untouched = mutableMapOf<String, DoubleArray>()

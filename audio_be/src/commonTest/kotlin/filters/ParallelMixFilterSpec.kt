@@ -38,18 +38,18 @@ class ParallelMixFilterSpec : StringSpec({
 
     // db=0 on the 430 mode → wet ≈ unity there, so the on-mode boost is clean to assert.
     fun woodModes() = listOf(
-        FilterDef.Body.Mode(110.0, 2.0, 12.0),
-        FilterDef.Body.Mode(230.0, 1.0, 10.0),
-        FilterDef.Body.Mode(430.0, 0.0, 9.0),
-        FilterDef.Body.Mode(820.0, -2.0, 7.0),
-        FilterDef.Body.Mode(1500.0, -4.0, 5.0),
+        FilterDef.Body.Mode(freq = 110.0, db = 2.0, q = 12.0),
+        FilterDef.Body.Mode(freq = 230.0, db = 1.0, q = 10.0),
+        FilterDef.Body.Mode(freq = 430.0, db = 0.0, q = 9.0),
+        FilterDef.Body.Mode(freq = 820.0, db = -2.0, q = 7.0),
+        FilterDef.Body.Mode(freq = 1500.0, db = -4.0, q = 5.0),
     )
 
     "ParallelMixFilter - amount=0 is a bit-identical dry bypass" {
         val buf = sine(440.0, blockFrames)
         val original = AudioBuffer(blockFrames) { buf[it] }
 
-        ParallelMixFilter(doubler, amount = 0.0, floor = 0.6).process(buf, 0, buf.size)
+        ParallelMixFilter(doubler, amount = 0.0, floor = 0.6).process(buffer = buf, offset = 0, length = buf.size)
 
         for (i in 0 until blockFrames) buf[i] shouldBe original[i]
     }
@@ -63,7 +63,7 @@ class ParallelMixFilterSpec : StringSpec({
 
         // C4 shared law, p = 2: dryCoeff = max(0.6, cos^2(0.25*pi)) = max(0.6, 0.5) = 0.6,
         // wetCoeff = sin^2(0.25*pi) = 0.5. wet = 2*dry -> out = 0.6*dry + 0.5*(2*dry).
-        ParallelMixFilter(doubler, amount = 0.5, floor = 0.6).process(buf, 0, buf.size)
+        ParallelMixFilter(doubler, amount = 0.5, floor = 0.6).process(buffer = buf, offset = 0, length = buf.size)
 
         for (i in 0 until blockFrames) {
             buf[i] shouldBe (dry[i] * 0.6 + (2.0 * dry[i]) * 0.5 plusOrMinus 1e-12)
@@ -78,9 +78,9 @@ class ParallelMixFilterSpec : StringSpec({
 
         val floor = 0.6
         ParallelMixFilter(ResonatorBank(woodModes().map(LowPassHighPassFilters::bodyBand), sampleRate), amount = 1.0, floor = floor)
-            .process(onBand, 0, onBand.size)
+            .process(buffer = onBand, offset = 0, length = onBand.size)
         ParallelMixFilter(ResonatorBank(woodModes().map(LowPassHighPassFilters::bodyBand), sampleRate), amount = 1.0, floor = floor)
-            .process(offBand, 0, offBand.size)
+            .process(buffer = offBand, offset = 0, length = offBand.size)
 
         // On-mode: floor·dry + resonance → boosted above the input.
         rms(onBand) shouldBeGreaterThan (inOn * 1.2)

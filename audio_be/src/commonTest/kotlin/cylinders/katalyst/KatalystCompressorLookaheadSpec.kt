@@ -102,11 +102,11 @@ class KatalystCompressorLookaheadSpec : StringSpec({
             }
 
             process(ctx)
-            ctx.mixBuffer.left.copyInto(l, b * blockFrames, 0, blockFrames)
-            ctx.mixBuffer.right.copyInto(r, b * blockFrames, 0, blockFrames)
+            ctx.mixBuffer.left.copyInto(destination = l, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
+            ctx.mixBuffer.right.copyInto(destination = r, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
         }
 
-        return Take(l, r)
+        return Take(l = l, r = r)
     }
 
     val settings = Voice.Compressor(
@@ -130,7 +130,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
 
     /** The bare compressor over [blocks] blocks of the input, in the effect's block grid. */
     fun bareRun(c: Compressor, blocks: Int): Take = run(blocks, process = { ctx ->
-        c.process(ctx.mixBuffer.left, ctx.mixBuffer.right, ctx.blockFrames)
+        c.process(left = ctx.mixBuffer.left, right = ctx.mixBuffer.right, blockSize = ctx.blockFrames)
     })
 
     fun weight(from: Double, to: Double, j: Int): Double =
@@ -139,7 +139,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
     // ── The latency, and that it is the stage's in every state ─────────────────────────────────
 
     "without a lookahead nothing changes: no latency, no tail" {
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
 
         effect.latencyFrames shouldBe 0
         effect.configure(settings)
@@ -190,7 +190,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
                 }
 
                 built.process(ctx)
-                ctx.mixBuffer.left.copyInto(out, b * blockFrames, 0, blockFrames)
+                ctx.mixBuffer.left.copyInto(destination = out, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
             }
 
             return out
@@ -201,7 +201,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
     }
 
     "switched off, a lookahead stage is still a pure delay: the latency is the stage's" {
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames, lookaheadSeconds = lookahead)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames, lookaheadSeconds = lookahead)
 
         effect.configure(null)
 
@@ -219,7 +219,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         // ON from the first block (fresh: at once), OFF at block 10: the fade runs from the
         // compressed mix to the delayed dry over the decided law, and after it the stage is a pure
         // delay. A fade against the undelayed input, or a ring zeroed on entering Off, breaks it.
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames, lookaheadSeconds = lookahead)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames, lookaheadSeconds = lookahead)
         val switchBlock = 10
         val blocks = switchBlock + fadeLen / blockFrames + 6
         val out = run(blocks, process = { effect.process(it) }) { b ->
@@ -235,7 +235,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         val s = switchBlock * blockFrames
 
         for (k in out.l.indices) {
-            val w = if (k < s) 1.0 else weight(1.0, 0.0, k - s)
+            val w = if (k < s) 1.0 else weight(from = 1.0, to = 0.0, j = k - s)
             val dl = left(k - delay)
             val dr = right(k - delay)
 
@@ -253,7 +253,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         // ring. So the oracle is a FRESH bare compressor at the new knobs, fed the input from D
         // samples before the switch: from the switch on, its output is what the effect compresses
         // with, and the ceiling argument holds from the new life's first sample.
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames, lookaheadSeconds = lookahead)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames, lookaheadSeconds = lookahead)
         val switchBlock = 8
         val blocks = switchBlock + fadeLen / blockFrames + 6
 
@@ -282,14 +282,14 @@ class KatalystCompressorLookaheadSpec : StringSpec({
                 br[i] = right(m + i)
             }
 
-            oracle.process(bl, br, len)
-            bl.copyInto(compL, m, 0, len)
-            br.copyInto(compR, m, 0, len)
+            oracle.process(left = bl, right = br, blockSize = len)
+            bl.copyInto(destination = compL, destinationOffset = m, startIndex = 0, endIndex = len)
+            br.copyInto(destination = compR, destinationOffset = m, startIndex = 0, endIndex = len)
             m += len
         }
 
         for (k in out.l.indices) {
-            val w = if (k < s) 0.0 else weight(0.0, 1.0, k - s)
+            val w = if (k < s) 0.0 else weight(from = 0.0, to = 1.0, j = k - s)
             val dl = left(k - delay)
             val dr = right(k - delay)
 
@@ -304,7 +304,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         // Driven hard into reduction first (the input times 4), so the ring, the hold deque, the
         // release gains and the boxes all hold a record; after reset() the next block must be what
         // a new effect makes of it, which is only true if the instance itself was reset.
-        val used = KatalystCompressorEffect(sampleRate, blockFrames, lookaheadSeconds = lookahead)
+        val used = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames, lookaheadSeconds = lookahead)
 
         used.configure(settings)
         run(12, process = { ctx ->
@@ -317,7 +317,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         })
         used.reset()
 
-        val fresh = KatalystCompressorEffect(sampleRate, blockFrames, lookaheadSeconds = lookahead)
+        val fresh = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames, lookaheadSeconds = lookahead)
 
         val a = run(4, process = { used.process(it) }) { b ->
             if (b == 0) {
@@ -341,7 +341,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
     // ── The tail ────────────────────────────────────────────────────────────────────────────────
 
     "the ring is a tail until it has played out, and a reset empties it" {
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames, lookaheadSeconds = lookahead)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames, lookaheadSeconds = lookahead)
         val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
 
         effect.configure(settings)
@@ -449,7 +449,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         val d = (Compressor.MAX_LOOKAHEAD_SECONDS * 44100).toInt()
 
         listOf("dry to late" to (dry to late50), "late to dry" to (late50 to dry)).forEach { (name, pair) ->
-            val (rig, out, _) = swapRun(pair.first, pair.second, level, warm, after = 60)
+            val (rig, out, _) = swapRun(from = pair.first, to = pair.second, level = level, warm = warm, after = 60)
 
             rig.swap.settled shouldBe true
 
@@ -510,11 +510,11 @@ class KatalystCompressorLookaheadSpec : StringSpec({
             val (from, to, lat) = case
             val (dL, dA) = lat
             val m = maxOf(dL, dA)
-            val (rig, outL, outR) = swapRun(from, to, level, warm, after = 60)
+            val (rig, outL, outR) = swapRun(from = from, to = to, level = level, warm = warm, after = 60)
             val s = warm * rig.blockFrames
 
             for (k in dL until outL.size) {
-                val t = if (k < s) 0.0 else ramp(k - s - m, rampFrames)
+                val t = if (k < s) 0.0 else ramp(d = k - s - m, rampFrames = rampFrames)
                 val expectL = (1.0 - t) * rigInput(rig, level, k - dL) + t * rigInput(rig, level, k - dA)
                 val expectR = (1.0 - t) * rigInputRight(rig, level, k - dL) + t * rigInputRight(rig, level, k - dA)
 
@@ -584,14 +584,14 @@ class KatalystCompressorLookaheadSpec : StringSpec({
                 for (i in 0 until bf) {
                     val k = b * bf + i
                     val lv = if (b < stopBlock) level else 0.0
-                    val u = if (k < s) 1.0 else 1.0 - ramp(k - s, rampFrames)
+                    val u = if (k < s) 1.0 else 1.0 - ramp(d = k - s, rampFrames = rampFrames)
 
                     ctx.mixBuffer.left[i] = lv * sin(2.0 * PI * 220.0 * k / rig.sampleRate) * u
                     ctx.mixBuffer.right[i] = lv * sin(2.0 * PI * 223.0 * k / rig.sampleRate) * u
                 }
 
                 twin.process(ctx)
-                ctx.mixBuffer.left.copyInto(twinOut, b * bf, 0, bf)
+                ctx.mixBuffer.left.copyInto(destination = twinOut, destinationOffset = b * bf, startIndex = 0, endIndex = bf)
             }
 
             for (k in stopBlock * bf until (retiredAfter + 1) * bf) {
@@ -624,7 +624,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
             "50 ms to 5 ms" to (late50 to late5),
             "5 ms to 50 ms" to (late5 to late50),
         ).forEach { (name, pair) ->
-            val (rig, _, out) = swapRun(pair.first, pair.second, level, warm, after = 60)
+            val (rig, _, out) = swapRun(from = pair.first, to = pair.second, level = level, warm = warm, after = 60)
             val from = warm * rig.blockFrames - window
 
             var start = from
@@ -690,7 +690,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         withClue("the duck is in force before the swap") { g shouldBeLessThan 0.9 }
 
         for (k in s until a.size) {
-            val t = ramp(k - s - d, rampFrames)
+            val t = ramp(d = k - s - d, rampFrames = rampFrames)
 
             withClue("sample $k (swap at $s), weight $t") {
                 a[k] shouldBe ((b[k] * (g * (1.0 - t) + t)) plusOrMinus 1e-12)
@@ -736,7 +736,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         withClue("the duck is in force after the swap") { g shouldBeLessThan 0.9 }
 
         for (k in s until a.size) {
-            val t = ramp(k - s - d, rampFrames)
+            val t = ramp(d = k - s - d, rampFrames = rampFrames)
 
             withClue("sample $k (swap at $s), weight $t") {
                 a[k] shouldBe ((b[k] * ((1.0 - t) + t * g)) plusOrMinus 1e-12)
@@ -842,7 +842,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
             }
 
             val a = run(40, process = { loud(it); built.applyParams(null); built.process(it) })
-            val b = run(40, process = { loud(it); constructed.process(it.mixBuffer.left, it.mixBuffer.right, it.blockFrames) })
+            val b = run(40, process = { loud(it); constructed.process(left = it.mixBuffer.left, right = it.mixBuffer.right, blockSize = it.blockFrames) })
 
             for (k in a.l.indices) {
                 withClue("lookahead $seconds, sample $k") {

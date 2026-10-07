@@ -103,7 +103,7 @@ class TreeVoiceSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -111,7 +111,7 @@ class TreeVoiceSpec : StringSpec({
         return out
     }
 
-    val lpf = DoorFields(filters = listOf(DoorFilter.LowPass(300.0, 0.707)))
+    val lpf = DoorFields(filters = listOf(DoorFilter.LowPass(freq = 300.0, q = 0.707)))
     val base = VoiceData.empty.copy(freqHz = 220.0)
 
     "a SAMPLE voice runs the sample instrument: its lowpass and its envelope apply (as slots)" {

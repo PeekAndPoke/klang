@@ -106,7 +106,7 @@ class KatalystDuckEffectSpec : StringSpec({
             r[0] = 1.0
             sl[0] = side[i]
             sr[0] = side[i]
-            d.processStereo(l, r, sl, sr, 1)
+            d.processStereo(inputL = l, inputR = r, sidechainL = sl, sidechainR = sr, blockSize = 1)
             out[i] = l[0]
         }
 
@@ -142,7 +142,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val src = mix(blocks)
         val side = trigger(blocks)
 
-        val got = run(src, side) { settings(orbit = 2, depth = 0.8) }
+        val got = run(src = src, side = side) { settings(orbit = 2, depth = 0.8) }
 
         val bare = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 0.8)
         val want = DoubleArray(src.size)
@@ -159,7 +159,7 @@ class KatalystDuckEffectSpec : StringSpec({
                 sr[i] = side[k * frames + i]
             }
 
-            bare.processStereo(l, r, sl, sr, frames)
+            bare.processStereo(inputL = l, inputR = r, sidechainL = sl, sidechainR = sr, blockSize = frames)
 
             for (i in 0 until frames) {
                 want[k * frames + i] = l[i]
@@ -180,10 +180,10 @@ class KatalystDuckEffectSpec : StringSpec({
         val change = 6
         val fx = stage()
 
-        val got = run(src, side, fx = fx) { k -> if (k < change) settings(orbit = 2, depth = 0.8) else null }
+        val got = run(src = src, side = side, fx = fx) { k -> if (k < change) settings(orbit = 2, depth = 0.8) else null }
 
         val g = reduction(side, depth = 0.8)
-        val w = line(1.0, 0.0, glideBlocks)
+        val w = line(from = 1.0, to = 0.0, blocks = glideBlocks)
 
         for (b in 0 until glideBlocks) {
             val k = change + b
@@ -191,7 +191,7 @@ class KatalystDuckEffectSpec : StringSpec({
 
             for (i in 0 until frames) {
                 val at = k * frames + i
-                val want = src[at] * (1.0 + rampedAt(begin, w[b], i) * (g[at] - 1.0))
+                val want = src[at] * (1.0 + rampedAt(begin = begin, end = w[b], i = i) * (g[at] - 1.0))
 
                 // Bit for bit: the law is one expression, and the ramp is written from the block's
                 // END, so a start-based ramp that lands a rounding off goes red here.
@@ -230,7 +230,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val change = 6
         val fx = stage()
 
-        val got = run(src, side, fx = fx) { k -> if (k < change) settings(orbit = 2, depth = 0.8) else null }
+        val got = run(src = src, side = side, fx = fx) { k -> if (k < change) settings(orbit = 2, depth = 0.8) else null }
 
         var previous = 0.0
 
@@ -277,9 +277,9 @@ class KatalystDuckEffectSpec : StringSpec({
             later.weight shouldBe 0.0
         }
 
-        val got = run(src, side) { k -> if (k < 2) null else settings(orbit = 2, depth = 0.8) }
+        val got = run(src = src, side = side) { k -> if (k < 2) null else settings(orbit = 2, depth = 0.8) }
         val g = reduction(side, depth = 0.8, from = 2 * frames)
-        val w = line(0.0, 1.0, glideBlocks)
+        val w = line(from = 0.0, to = 1.0, blocks = glideBlocks)
 
         for (b in 0 until (blocks - 2)) {
             val k = 2 + b
@@ -287,7 +287,7 @@ class KatalystDuckEffectSpec : StringSpec({
 
             for (i in 0 until frames) {
                 val at = k * frames + i
-                val want = src[at] * (1.0 + rampedAt(begin, w[b], i) * (g[at] - 1.0))
+                val want = src[at] * (1.0 + rampedAt(begin = begin, end = w[b], i = i) * (g[at] - 1.0))
 
                 withClue("fade-in block $b sample $i") {
                     got[at].toRawBits() shouldBe want.toRawBits()
@@ -338,7 +338,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val side = trigger(blocks)
         val change = 4
 
-        val got = run(src, side) { k ->
+        val got = run(src = src, side = side) { k ->
             if (k < change) settings(orbit = 2, depth = 0.2) else settings(orbit = 2, depth = 1.0)
         }
 
@@ -349,7 +349,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val r = AudioBuffer(1)
         val sl = AudioBuffer(1)
         val sr = AudioBuffer(1)
-        val d = line(0.2, 1.0, glideBlocks)
+        val d = line(from = 0.2, to = 1.0, blocks = glideBlocks)
 
         for (k in 0 until blocks) {
             for (i in 0 until frames) {
@@ -359,14 +359,14 @@ class KatalystDuckEffectSpec : StringSpec({
                 bare.depth = when {
                     b < 0 -> 0.2
                     b >= glideBlocks -> 1.0
-                    else -> rampedAt(if (b == 0) 0.2 else d[b - 1], d[b], i)
+                    else -> rampedAt(begin = if (b == 0) 0.2 else d[b - 1], end = d[b], i = i)
                 }
 
                 l[0] = src[at]
                 r[0] = src[at]
                 sl[0] = side[at]
                 sr[0] = side[at]
-                bare.processStereo(l, r, sl, sr, 1)
+                bare.processStereo(inputL = l, inputR = r, sidechainL = sl, sidechainR = sr, blockSize = 1)
                 want[at] = l[0]
             }
         }
@@ -395,10 +395,10 @@ class KatalystDuckEffectSpec : StringSpec({
         val change = 6
         val fx = stage()
 
-        val moved = run(src, side, fx = fx) { k ->
+        val moved = run(src = src, side = side, fx = fx) { k ->
             if (k < change) settings(orbit = 2, depth = 0.8) else settings(orbit = 5, depth = 0.8)
         }
-        val held = run(src, side) { settings(orbit = 2, depth = 0.8) }
+        val held = run(src = src, side = side) { settings(orbit = 2, depth = 0.8) }
 
         fx.duckCylinderId shouldBe 5
 

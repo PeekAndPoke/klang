@@ -86,7 +86,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
             for (block in 0 until blocks) {
                 mix.clear()
                 engine.renderInto(mix, clock.cursorFrame)
-                mix.left.copyInto(out, block * blockFrames, 0, blockFrames)
+                mix.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
                 clock.cursorFrame += blockFrames
             }
 
@@ -438,65 +438,65 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         val (rig, reference) = bedRigs()
         rig.press(liveId = 1)
 
-        withClue("ducked while held") { bedRatio(rig, reference, rampBlocks) shouldBe (0.05 plusOrMinus 1e-12) }
+        withClue("ducked while held") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks) shouldBe (0.05 plusOrMinus 1e-12) }
 
         rig.release(liveId = 1)
 
         withClue("back to full level after the note-off") {
-            bedRatio(rig, reference, rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12)
+            bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12)
         }
     }
 
     "solo: legato on a realtime solo: key 1's tail ending does not end the solo while key 2 is held" {
         val (rig, reference) = bedRigs()
         rig.press(liveId = 1)
-        bedRatio(rig, reference, rampBlocks)
+        bedRatio(rig = rig, reference = reference, blocks = rampBlocks)
 
         // Key 2 goes down while key 1 rings out; key 1's tail ends and leaves the list with key 2 held.
         rig.release(liveId = 1)
         rig.press(liveId = 2)
 
         withClue("still ducked while key 2 is held") {
-            bedRatio(rig, reference, rampBlocks + 10) shouldBe (0.05 plusOrMinus 1e-12)
+            bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (0.05 plusOrMinus 1e-12)
         }
 
         rig.release(liveId = 2)
 
-        withClue("ended after the last note-off") { bedRatio(rig, reference, rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
+        withClue("ended after the last note-off") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
     }
 
     "solo: a mono (cut) realtime solo: key 2 cutting key 1 keeps the solo while key 2 is held" {
         val (rig, reference) = bedRigs()
         rig.press(liveId = 1, cut = 1)
-        bedRatio(rig, reference, rampBlocks)
+        bedRatio(rig = rig, reference = reference, blocks = rampBlocks)
 
         // No note-off for key 1: key 2 in the same cut group fades it out (4 ms) and it leaves the list.
         rig.press(liveId = 2, cut = 1)
 
         withClue("still ducked while key 2 is held") {
-            bedRatio(rig, reference, rampBlocks + 10) shouldBe (0.05 plusOrMinus 1e-12)
+            bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (0.05 plusOrMinus 1e-12)
         }
 
         rig.release(liveId = 2)
 
-        withClue("ended after the last note-off") { bedRatio(rig, reference, rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
+        withClue("ended after the last note-off") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
     }
 
     "solo: two held realtime keys of one source: releasing one keeps the solo, releasing both ends it" {
         val (rig, reference) = bedRigs()
         rig.press(liveId = 1)
         rig.press(liveId = 2)
-        bedRatio(rig, reference, rampBlocks)
+        bedRatio(rig = rig, reference = reference, blocks = rampBlocks)
 
         rig.release(liveId = 1)
 
         withClue("still ducked while key 2 is held") {
-            bedRatio(rig, reference, rampBlocks + 10) shouldBe (0.05 plusOrMinus 1e-12)
+            bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (0.05 plusOrMinus 1e-12)
         }
 
         rig.release(liveId = 2)
 
-        withClue("ended after the last note-off") { bedRatio(rig, reference, rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
+        withClue("ended after the last note-off") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
     }
 
     "solo: a held realtime note that made no voice (its sample is not loaded) solos nothing" {
@@ -504,7 +504,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         rig.press(liveId = 1, solo = 1.0, sound = "no-such-sample")
 
         withClue("no voice was made") { rig.activeCount shouldBe 1 }
-        withClue("the bed is not ducked") { bedRatio(rig, reference, rampBlocks) shouldBe 1.0 }
+        withClue("the bed is not ducked") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks) shouldBe 1.0 }
     }
 
     "solo: a HELD realtime voice that leaves without a note-off (cut by another source) ends its solo" {
@@ -513,11 +513,11 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         val (rig, reference) = bedRigs()
         rig.press(liveId = 1, cut = 1)
 
-        withClue("ducked while held") { bedRatio(rig, reference, rampBlocks) shouldBe (0.05 plusOrMinus 1e-12) }
+        withClue("ducked while held") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks) shouldBe (0.05 plusOrMinus 1e-12) }
 
         rig.schedule(rig.nowSec(), tone(sourceId = "hat", pan = 0.0, cut = 1).copy(gain = 0.0))
 
-        withClue("back to full level after the cut") { bedRatio(rig, reference, rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
+        withClue("back to full level after the cut") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
     }
 
     "solo: a voice entering or leaving protection ramps over one block, never a step (no click)" {
@@ -549,14 +549,14 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
             return max
         }
 
-        val slope = maxStep(unsoloed, 1.0, 1.1)
+        val slope = maxStep(samples = unsoloed, fromSec = 1.0, toSec = 1.1)
 
         withClue("the reference sine has a slope") { slope shouldBeGreaterThan 1e-3 }
-        withClue("muted before 2 s") { maxStep(soloed, 1.8, 1.95) shouldBe 0.0 }
-        withClue("solo start at 2.0 s") { maxStep(soloed, 1.95, 2.05) shouldBeLessThan slope * 1.2 }
-        withClue("heard between, at full level") { maxStep(soloed, 3.0, 3.1) shouldBe (maxStep(unsoloed, 3.0, 3.1) plusOrMinus 1e-12) }
-        withClue("protection end at 5.0 s") { maxStep(soloed, 4.95, 5.05) shouldBeLessThan slope * 1.2 }
-        withClue("muted after") { maxStep(soloed, 5.05, 5.09) shouldBe 0.0 }
+        withClue("muted before 2 s") { maxStep(samples = soloed, fromSec = 1.8, toSec = 1.95) shouldBe 0.0 }
+        withClue("solo start at 2.0 s") { maxStep(samples = soloed, fromSec = 1.95, toSec = 2.05) shouldBeLessThan slope * 1.2 }
+        withClue("heard between, at full level") { maxStep(samples = soloed, fromSec = 3.0, toSec = 3.1) shouldBe (maxStep(samples = unsoloed, fromSec = 3.0, toSec = 3.1) plusOrMinus 1e-12) }
+        withClue("protection end at 5.0 s") { maxStep(samples = soloed, fromSec = 4.95, toSec = 5.05) shouldBeLessThan slope * 1.2 }
+        withClue("muted after") { maxStep(samples = soloed, fromSec = 5.05, toSec = 5.09) shouldBe 0.0 }
     }
 
     "solo: a voice that starts while the others are muted is silent from its first sample (no ramp in from 1.0)" {

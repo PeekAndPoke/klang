@@ -89,7 +89,7 @@ class FastSinSpec : StringSpec({
         var worst = 0.0
 
         for (b in 0 until 32) {
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             sine.generate(buf, freq, ctx)
 
             for (i in 0 until blockFrames) {

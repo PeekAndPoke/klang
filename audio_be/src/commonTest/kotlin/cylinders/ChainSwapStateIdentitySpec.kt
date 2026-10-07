@@ -219,7 +219,7 @@ class ChainSwapStateIdentitySpec : StringSpec({
         }
 
         // Releasing -> Idle: the release fell under its floor, [CapLaw.releaseBlocks] after it began.
-        val releaseBlocks = CapLaw(rig.sampleRate, rig.blockFrames).releaseBlocks
+        val releaseBlocks = CapLaw(sampleRate = rig.sampleRate, blockFrames = rig.blockFrames).releaseBlocks
         var guard = 0
         while (!swap.settled && guard < releaseBlocks) {
             rig.block(level = 0.0, sidechainLevel = 0.5)

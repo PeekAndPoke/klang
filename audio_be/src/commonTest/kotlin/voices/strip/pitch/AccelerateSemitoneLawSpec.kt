@@ -41,7 +41,7 @@ class AccelerateSemitoneLawSpec : StringSpec({
             sampleRate = 48000,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = frames.toDouble(), endFrame = frames.toDouble()),
         )
-        ctx.updateOffsetAndLength(0, frames)
+        ctx.updateOffsetAndLength(offset = 0, length = frames)
         ctx.blockStart = 0.0
         renderer.render(ctx)
 

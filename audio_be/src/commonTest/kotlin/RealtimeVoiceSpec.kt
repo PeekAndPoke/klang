@@ -372,7 +372,7 @@ class RealtimeVoiceSpec : StringSpec({
         // full-amplitude cut mid-waveform. Bare sine (NO ignitor envelope), vca off: only the
         // teardown fade shapes the death.
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.RegisterIgnitor("rt", "baresine", IgnitorDsl.Sine()))
+        d.handle(KlangCommLink.Cmd.RegisterIgnitor(playbackId = "rt", name = "baresine", dsl = IgnitorDsl.Sine()))
         val bare = VoiceData.empty.copy(
             sound = "baresine",
             freqHz = 440.0,
@@ -548,7 +548,7 @@ class RealtimeVoiceSpec : StringSpec({
         sampleRate = sampleRate,
         limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = 1_000_000.0),
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         blockStart = 0.0
     }
 
@@ -577,8 +577,8 @@ class RealtimeVoiceSpec : StringSpec({
         val d = newDispatcher()
         d.handle(
             KlangCommLink.Cmd.RegisterIgnitor(
-                "rt", "heldorgan",
-                IgnitorDsl.Adsr(
+                playbackId = "rt", name = "heldorgan",
+                dsl = IgnitorDsl.Adsr(
                     inner = IgnitorDsl.Sine(),
                     attackSec = IgnitorDsl.Constant(0.001),
                     decaySec = IgnitorDsl.Constant(0.01),

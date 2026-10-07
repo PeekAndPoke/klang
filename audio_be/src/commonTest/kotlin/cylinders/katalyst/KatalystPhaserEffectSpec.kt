@@ -204,8 +204,8 @@ class KatalystPhaserEffectSpec : StringSpec({
         val wetFrom = sinPow2(before.wet)
         val wetTo = sinPow2(after.wet)
 
-        val dryLine = line(dryFrom, dryTo, glideBlocks)
-        val wetLine = line(wetFrom, wetTo, glideBlocks)
+        val dryLine = line(from = dryFrom, to = dryTo, blocks = glideBlocks)
+        val wetLine = line(from = wetFrom, to = wetTo, blocks = glideBlocks)
 
         for (g in 0 until glideBlocks) {
             val k = change + g
@@ -214,7 +214,7 @@ class KatalystPhaserEffectSpec : StringSpec({
 
             for (i in 0 until frames) {
                 val at = k * frames + i
-                val want = src[at] * rampedAt(dryBegin, dryLine[g], i) + wetOnly[at] * rampedAt(wetBegin, wetLine[g], i)
+                val want = src[at] * rampedAt(begin = dryBegin, end = dryLine[g], i = i) + wetOnly[at] * rampedAt(begin = wetBegin, end = wetLine[g], i = i)
 
                 withClue("glide block $g sample $i") {
                     abs(got[at] - want) shouldBeLessThanOrEqual 1e-12
@@ -257,8 +257,8 @@ class KatalystPhaserEffectSpec : StringSpec({
             abs(dryTo - dryFrom) shouldBeGreaterThan 0.5
         }
 
-        val dryLine = line(dryFrom, dryTo, glideBlocks)
-        val wetLine = line(sinPow2(before.wet), sinPow2(after.wet), glideBlocks)
+        val dryLine = line(from = dryFrom, to = dryTo, blocks = glideBlocks)
+        val wetLine = line(from = sinPow2(before.wet), to = sinPow2(after.wet), blocks = glideBlocks)
 
         for (g in 0 until glideBlocks) {
             val k = change + g
@@ -267,7 +267,7 @@ class KatalystPhaserEffectSpec : StringSpec({
 
             for (i in 0 until frames) {
                 val at = k * frames + i
-                val want = src[at] * rampedAt(dryBegin, dryLine[g], i) + wetOnly[at] * rampedAt(wetBegin, wetLine[g], i)
+                val want = src[at] * rampedAt(begin = dryBegin, end = dryLine[g], i = i) + wetOnly[at] * rampedAt(begin = wetBegin, end = wetLine[g], i = i)
 
                 withClue("glide block $g sample $i") {
                     abs(got[at] - want) shouldBeLessThanOrEqual 1e-12
@@ -297,7 +297,7 @@ class KatalystPhaserEffectSpec : StringSpec({
             abs(dryTo - dryFrom) shouldBeGreaterThan 0.4
         }
 
-        val dryLine = line(dryFrom, dryTo, glideBlocks)
+        val dryLine = line(from = dryFrom, to = dryTo, blocks = glideBlocks)
 
         for (g in 0 until glideBlocks) {
             val k = change + g
@@ -305,7 +305,7 @@ class KatalystPhaserEffectSpec : StringSpec({
 
             for (i in 0 until frames) {
                 val at = k * frames + i
-                val want = src[at] * rampedAt(dryBegin, dryLine[g], i) + wetOnly[at] * wetC
+                val want = src[at] * rampedAt(begin = dryBegin, end = dryLine[g], i = i) + wetOnly[at] * wetC
 
                 withClue("glide block $g sample $i") {
                     abs(got[at] - want) shouldBeLessThanOrEqual 1e-12
@@ -459,8 +459,8 @@ class KatalystPhaserEffectSpec : StringSpec({
         fx.center shouldBe 400.0
         fx.sweep shouldBe 800.0
 
-        val centerLine = line(400.0, 6000.0, glideBlocks)
-        val sweepLine = line(800.0, 200.0, glideBlocks)
+        val centerLine = line(from = 400.0, to = 6000.0, blocks = glideBlocks)
+        val sweepLine = line(from = 800.0, to = 200.0, blocks = glideBlocks)
 
         for (g in 0 until glideBlocks) {
             fx.configure(depth = 0.8, rate = 1.7, center = 6000.0, sweep = 200.0, floor = 1.0)

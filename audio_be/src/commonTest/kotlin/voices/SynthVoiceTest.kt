@@ -171,7 +171,7 @@ class SynthVoiceTest : StringSpec({
             fm = Voice.Fm(
                 ratio = 2.0,
                 depth = 100.0,
-                envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)
+                envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)
             ),
             envelope = Voice.Envelope(
                 attackFrames = 100.0,

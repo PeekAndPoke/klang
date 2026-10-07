@@ -55,10 +55,10 @@ class AuthoredClassicSpec : StringSpec({
     val onsetFrame = 37
 
     /** An instrument with its own envelope and a release tail (0.5 s) ten times the voice envelope's 0.05. */
-    val longTail: IgnitorDsl = IgnitorDsl.Sine().adsr(0.005, 0.1, 0.8, 0.5)
+    val longTail: IgnitorDsl = IgnitorDsl.Sine().adsr(attackSec = 0.005, decaySec = 0.1, sustainLevel = 0.8, releaseSec = 0.5)
 
     /** An instrument whose own tail (0.02 s) is inside the voice envelope's release: nothing is stretched. */
-    val shortTail: IgnitorDsl = IgnitorDsl.Saw().adsr(0.005, 0.1, 0.8, 0.02)
+    val shortTail: IgnitorDsl = IgnitorDsl.Saw().adsr(attackSec = 0.005, decaySec = 0.1, sustainLevel = 0.8, releaseSec = 0.02)
 
     /**
      * No envelope of its own and a level at its root: under `adsrOff` it sounds until the voice ends, so the
@@ -122,7 +122,7 @@ class AuthoredClassicSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -145,9 +145,9 @@ class AuthoredClassicSpec : StringSpec({
         val from = gateFrame + (0.1 * sampleRate).toInt()
         val until = gateFrame + (0.3 * sampleRate).toInt()
 
-        withClue("the voice sounds up to the gate") { maxAbs(classic.out, gateFrame - 600, gateFrame) shouldBeGreaterThan 0.05 }
+        withClue("the voice sounds up to the gate") { maxAbs(a = classic.out, from = gateFrame - 600, until = gateFrame) shouldBeGreaterThan 0.05 }
         withClue("silent 0.1 to 0.3 s after the gate: its release is its own slot, the tail is cut") {
-            maxAbs(classic.out, from, until) shouldBeLessThan 1e-9
+            maxAbs(a = classic.out, from = from, until = until) shouldBeLessThan 1e-9
         }
         withClue("...but the voice LIVES as long as the tree's 0.5 s tail") {
             classic.endFrame shouldBe (gateFrame + 0.5 * sampleRate plusOrMinus 1.0)
@@ -159,15 +159,15 @@ class AuthoredClassicSpec : StringSpec({
         val from = gateFrame + (0.1 * sampleRate).toInt()
         val until = gateFrame + (0.3 * sampleRate).toInt()
 
-        withClue("the tail sounds 0.1 to 0.3 s after the gate") { maxAbs(classic.out, from, until) shouldBeGreaterThan 0.05 }
+        withClue("the tail sounds 0.1 to 0.3 s after the gate") { maxAbs(a = classic.out, from = from, until = until) shouldBeGreaterThan 0.05 }
         withClue("and the lifetime is the tail's") { classic.endFrame shouldBe (gateFrame + 0.5 * sampleRate plusOrMinus 1.0) }
     }
 
     "the doors reach an authored classic() tree: filters, filter envelope, crush, tremolo and envelope" {
         val doors = DoorFields(
             filters = listOf(
-                DoorFilter.HighPass(150.0, 0.707),
-                DoorFilter.LowPass(2400.0, 1.5, envelope = DoorFilterEnv(depth = 12.0, decay = 0.2)),
+                DoorFilter.HighPass(freq = 150.0, q = 0.707),
+                DoorFilter.LowPass(freq = 2400.0, q = 1.5, envelope = DoorFilterEnv(depth = 12.0, decay = 0.2)),
             ),
             crush = 6.0,
             tremoloDepth = 0.4,
@@ -177,7 +177,7 @@ class AuthoredClassicSpec : StringSpec({
         val classic = render(base.copy(sound = "shortclassic"), doors)
 
         withClue("engaged: the doors change the voice") {
-            firstMismatch(render(base.copy(sound = "shortclassic")).out, classic.out) shouldNotBe -1
+            firstMismatch(a = render(base.copy(sound = "shortclassic")).out, b = classic.out) shouldNotBe -1
         }
     }
 
@@ -188,11 +188,11 @@ class AuthoredClassicSpec : StringSpec({
         withClue("the fade is inside the render: the voice sounds just before its end and is an exact zero at its last frame") {
             val last = classic.endFrame.toInt() - 1
 
-            maxAbs(classic.out, last - 600, last - 300) shouldBeGreaterThan 0.1
+            maxAbs(a = classic.out, from = last - 600, until = last - 300) shouldBeGreaterThan 0.1
             classic.out[last] shouldBe 0.0
         }
         withClue("engaged: adsrOff changes the voice") {
-            firstMismatch(render(base.copy(sound = "levelclassic")).out, classic.out) shouldNotBe -1
+            firstMismatch(a = render(base.copy(sound = "levelclassic")).out, b = classic.out) shouldNotBe -1
         }
     }
 
@@ -204,7 +204,7 @@ class AuthoredClassicSpec : StringSpec({
         val last = classic.endFrame.toInt() - 1
 
         withClue("the voice sounds just before its end, inside its own release") {
-            maxAbs(classic.out, last - 600, last - 300) shouldBeGreaterThan 0.1
+            maxAbs(a = classic.out, from = last - 600, until = last - 300) shouldBeGreaterThan 0.1
         }
         withClue("and ends on an exact zero: the fade ran") { classic.out[last] shouldBe 0.0 }
     }
@@ -213,7 +213,7 @@ class AuthoredClassicSpec : StringSpec({
         val plain = render(base.copy(sound = "shortclassic"))
         val pushed = render(base.copy(sound = "shortclassic", ignitorParams = mapOf("pregain" to 2.0)))
 
-        withClue("classic(), first mismatch") { firstMismatch(plain.out, pushed.out) shouldBe -1 }
-        withClue("the harness hears the voice") { maxAbs(plain.out, onsetFrame, gateFrame) shouldBeGreaterThan 0.1 }
+        withClue("classic(), first mismatch") { firstMismatch(a = plain.out, b = pushed.out) shouldBe -1 }
+        withClue("the harness hears the voice") { maxAbs(a = plain.out, from = onsetFrame, until = gateFrame) shouldBeGreaterThan 0.1 }
     }
 })

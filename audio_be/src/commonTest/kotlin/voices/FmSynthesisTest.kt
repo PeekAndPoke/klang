@@ -63,16 +63,16 @@ class FmSynthesisTest : StringSpec({
             return ctx.voiceBuffer
         }
 
-        val env = Voice.Envelope(0.0, 0.0, 1.0, 0.0)
+        val env = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)
         val none = render(null)
         val zeroDepth = render(Voice.Fm(ratio = 2.0, depth = 0.0, envelope = env))
         val realDepth = render(Voice.Fm(ratio = 2.0, depth = 100.0, envelope = env))
         val negativeDepth = render(Voice.Fm(ratio = 2.0, depth = -100.0, envelope = env))
 
-        diffRms(zeroDepth, none) shouldBeLessThan 1e-6
-        diffRms(realDepth, none) shouldBeGreaterThan 1e-3
+        diffRms(a = zeroDepth, b = none) shouldBeLessThan 1e-6
+        diffRms(a = realDepth, b = none) shouldBeGreaterThan 1e-3
         // A negative depth is a raw value like any other: the pitch pipeline builds the modulator for any depth but 0.
-        diffRms(negativeDepth, none) shouldBeGreaterThan 1e-3
+        diffRms(a = negativeDepth, b = none) shouldBeGreaterThan 1e-3
         // and the carrier is actually sounding, so the comparisons are not all-silence
         rms(none) shouldBeGreaterThan 0.0
     }
@@ -88,7 +88,7 @@ class FmSynthesisTest : StringSpec({
         val frames = 100
         val sampleRate = 44100
 
-        val fm = Voice.Fm(ratio = ratio, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
+        val fm = Voice.Fm(ratio = ratio, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0))
         val voice = createSynthVoice(freqHz = freqHz, fm = fm, sampleRate = sampleRate)
 
         fm.modPhase shouldBe 0.0

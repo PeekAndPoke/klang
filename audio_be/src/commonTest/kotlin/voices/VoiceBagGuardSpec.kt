@@ -158,7 +158,7 @@ class VoiceBagGuardSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -213,7 +213,7 @@ class VoiceBagGuardSpec : StringSpec({
             poisoned.toList() shouldNotBe reallyAtOneKilohertz.toList()
         }
 
-        assertSameBits("NaN analog against unset", unset, poisoned)
+        assertSameBits(clue = "NaN analog against unset", expected = unset, actual = poisoned)
     }
 
     "a NaN analog on an exciter that draws from the voice rng reads as unset too" {
@@ -229,7 +229,7 @@ class VoiceBagGuardSpec : StringSpec({
             peakOf(unset) shouldBeGreaterThan 0.01
         }
 
-        assertSameBits("NaN analog against unset, supersaw", unset, poisoned)
+        assertSameBits(clue = "NaN analog against unset, supersaw", expected = unset, actual = poisoned)
     }
 
     "a +Infinity analog reads as unset" {
@@ -244,20 +244,20 @@ class VoiceBagGuardSpec : StringSpec({
             poisoned.all { it.isFinite() } shouldBe true
         }
 
-        assertSameBits("+Infinity analog against unset", unset, poisoned)
+        assertSameBits(clue = "+Infinity analog against unset", expected = unset, actual = poisoned)
     }
 
     "a -Infinity analog reads as unset" {
         val unset = renderVoice(throughLowpass(null))
         val poisoned = renderVoice(throughLowpass(Double.NEGATIVE_INFINITY))
 
-        assertSameBits("-Infinity analog against unset", unset, poisoned)
+        assertSameBits(clue = "-Infinity analog against unset", expected = unset, actual = poisoned)
     }
 
     "an explicit analog of 0 renders what an unset analog renders" {
         val unset = renderVoice(throughLowpass(null))
 
-        assertSameBits("analog 0 against unset", unset, renderVoice(throughLowpass(0.0)))
+        assertSameBits(clue = "analog 0 against unset", expected = unset, actual = renderVoice(throughLowpass(0.0)))
     }
 
     "the BUILT-IN twin: a non-finite analog reads as unset in classic()'s filters too (the Param leaf)" {
@@ -270,7 +270,7 @@ class VoiceBagGuardSpec : StringSpec({
         }
 
         for (poison in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
-            assertSameBits("$poison analog against unset, built-in saw", unset, renderVoice(throughLowpass(poison, sound = "saw")))
+            assertSameBits(clue = "$poison analog against unset, built-in saw", expected = unset, actual = renderVoice(throughLowpass(poison, sound = "saw")))
         }
 
         withClue("engagement: a finite analog does change the built-in") {
@@ -326,13 +326,13 @@ class VoiceBagGuardSpec : StringSpec({
             peakOf(poisoned) shouldBeGreaterThan 0.01
         }
 
-        assertSameBits("+Infinity analog against unset, sample voice", unset, poisoned)
+        assertSameBits(clue = "+Infinity analog against unset, sample voice", expected = unset, actual = poisoned)
     }
 
     "a NaN analog reads as unset on a sample voice, as it always did" {
         // `AnalogDrift` tests `analog > 0.0`, which a NaN fails, so this read was already NaN-safe
         // and this row states the rule rather than closing a defect.
-        assertSameBits("NaN analog against unset, sample voice", renderSample(null), renderSample(Double.NaN))
+        assertSameBits(clue = "NaN analog against unset, sample voice", expected = renderSample(null), actual = renderSample(Double.NaN))
     }
 
     // ── `onepole`, classic()'s first stage on the built-in `saw` ─────────────────────────────
@@ -361,11 +361,11 @@ class VoiceBagGuardSpec : StringSpec({
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(frames)
 
-        ctx.updateOffsetAndLength(0, blockFrames)
+        ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
 
         repeat(blocks) { block ->
             chain.generate(buf, 220.0, ctx)
-            buf.copyInto(out, block * blockFrames, 0, blockFrames)
+            buf.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             ctx.voiceElapsedFrames += blockFrames
         }
 
@@ -393,18 +393,18 @@ class VoiceBagGuardSpec : StringSpec({
             poisoned.toList() shouldNotBe renderExciter(1000.0).toList()
         }
 
-        assertSameBits("+Infinity onepole against unset", unset, poisoned)
+        assertSameBits(clue = "+Infinity onepole against unset", expected = unset, actual = poisoned)
     }
 
     "a NaN onepole reads as unset" {
-        assertSameBits("NaN onepole against unset", renderExciter(null), renderExciter(Double.NaN))
+        assertSameBits(clue = "NaN onepole against unset", expected = renderExciter(null), actual = renderExciter(Double.NaN))
     }
 
     "a -Infinity onepole reads as unset" {
         assertSameBits(
-            "-Infinity onepole against unset",
-            renderExciter(null),
-            renderExciter(Double.NEGATIVE_INFINITY),
+            clue = "-Infinity onepole against unset",
+            expected = renderExciter(null),
+            actual = renderExciter(Double.NEGATIVE_INFINITY),
         )
     }
 })

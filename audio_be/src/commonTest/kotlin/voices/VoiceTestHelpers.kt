@@ -66,7 +66,7 @@ object VoiceTestHelpers {
         signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
+        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         pitchEnvelope: Voice.PitchEnvelope? = null,
 
         // Dynamics
@@ -165,7 +165,7 @@ object VoiceTestHelpers {
         signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
+        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
@@ -198,7 +198,7 @@ object VoiceTestHelpers {
         stopFrame: Double = Double.MAX_VALUE,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
+        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,

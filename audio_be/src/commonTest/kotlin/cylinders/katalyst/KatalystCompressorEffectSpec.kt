@@ -94,11 +94,11 @@ class KatalystCompressorEffectSpec : StringSpec({
             }
 
             effect.process(ctx)
-            ctx.mixBuffer.left.copyInto(l, b * blockFrames, 0, blockFrames)
-            ctx.mixBuffer.right.copyInto(r, b * blockFrames, 0, blockFrames)
+            ctx.mixBuffer.left.copyInto(destination = l, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
+            ctx.mixBuffer.right.copyInto(destination = r, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
         }
 
-        return Take(l, r)
+        return Take(l = l, r = r)
     }
 
     /**
@@ -118,9 +118,9 @@ class KatalystCompressorEffectSpec : StringSpec({
                 br[i] = right(k + i)
             }
 
-            c.process(bl, br, len)
-            bl.copyInto(l, k, 0, len)
-            br.copyInto(r, k, 0, len)
+            c.process(left = bl, right = br, blockSize = len)
+            bl.copyInto(destination = l, destinationOffset = k, startIndex = 0, endIndex = len)
+            br.copyInto(destination = r, destinationOffset = k, startIndex = 0, endIndex = len)
             k += len
         }
     }
@@ -154,7 +154,7 @@ class KatalystCompressorEffectSpec : StringSpec({
     // ── What it does to the mix ─────────────────────────────────────────────────────────────────
 
     "does nothing when no compressor is configured" {
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val ctx = createCtx()
 
         ctx.mixBuffer.left.fill(0.5)
@@ -167,7 +167,7 @@ class KatalystCompressorEffectSpec : StringSpec({
     }
 
     "compressor can be switched off before anything sounded, at once" {
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         effect.configure(settings())
 
         effect.configure(null)
@@ -185,14 +185,14 @@ class KatalystCompressorEffectSpec : StringSpec({
     "the first initialisation is instant: a compressor set before the first block runs at full weight" {
         val s = settings()
         val blocks = 40
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val out = run(effect, blocks) { effect.configure(s) }
 
-        val comp = Take(DoubleArray(blocks * blockFrames), DoubleArray(blocks * blockFrames))
-        bareRun(bare(s), 0, blocks * blockFrames, comp.l, comp.r)
+        val comp = Take(l = DoubleArray(blocks * blockFrames), r = DoubleArray(blocks * blockFrames))
+        bareRun(c = bare(s), from = 0, to = blocks * blockFrames, l = comp.l, r = comp.r)
 
-        shouldBeBits(out.l, comp.l, 0, blocks * blockFrames, "left")
-        shouldBeBits(out.r, comp.r, 0, blocks * blockFrames, "right")
+        shouldBeBits(actual = out.l, expected = comp.l, from = 0, to = blocks * blockFrames, what = "left")
+        shouldBeBits(actual = out.r, expected = comp.r, from = 0, to = blocks * blockFrames, what = "right")
     }
 
     "switching OFF glides the gain reduction to 0 dB over the glide time, then releases the instance" {
@@ -201,7 +201,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         val switch = offAt * blockFrames
         val landingBlock = (switch + fadeLen) / blockFrames
         val blocks = landingBlock + 5
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         var instance: Compressor? = null
 
         val out = run(effect, blocks) { b ->
@@ -223,11 +223,11 @@ class KatalystCompressorEffectSpec : StringSpec({
         }
 
         val total = blocks * blockFrames
-        val comp = Take(DoubleArray(total), DoubleArray(total))
-        bareRun(bare(s), 0, total, comp.l, comp.r)
+        val comp = Take(l = DoubleArray(total), r = DoubleArray(total))
+        bareRun(c = bare(s), from = 0, to = total, l = comp.l, r = comp.r)
 
-        shouldBeBits(out.l, comp.l, 0, switch, "before the switch, full weight")
-        shouldFollowLaw(out, comp, switch, switch + fadeLen) { k -> weight(1.0, 0.0, k - switch) }
+        shouldBeBits(actual = out.l, expected = comp.l, from = 0, to = switch, what = "before the switch, full weight")
+        shouldFollowLaw(out = out, comp = comp, from = switch, to = switch + fadeLen) { k -> weight(from = 1.0, to = 0.0, j = k - switch) }
 
         withClue("from the landing on, the output IS the dry mix (0 dB, bit for bit)") {
             for (k in switch + fadeLen until total) {
@@ -243,13 +243,13 @@ class KatalystCompressorEffectSpec : StringSpec({
         val switch = onAt * blockFrames
         val blocks = onAt + fadeLen / blockFrames + 10
         val total = blocks * blockFrames
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
 
         val out = run(effect, blocks) { b -> effect.configure(if (b < onAt) null else s) }
 
         // A FRESH instance at the switch: its envelope starts from rest there.
-        val comp = Take(DoubleArray(total), DoubleArray(total))
-        bareRun(bare(s), switch, total, comp.l, comp.r)
+        val comp = Take(l = DoubleArray(total), r = DoubleArray(total))
+        bareRun(c = bare(s), from = switch, to = total, l = comp.l, r = comp.r)
 
         withClue("dry before the switch") {
             for (k in 0 until switch) {
@@ -257,8 +257,8 @@ class KatalystCompressorEffectSpec : StringSpec({
             }
         }
 
-        shouldFollowLaw(out, comp, switch, switch + fadeLen) { k -> weight(0.0, 1.0, k - switch) }
-        shouldBeBits(out.l, comp.l, switch + fadeLen, total, "after the fade-in, full weight")
+        shouldFollowLaw(out = out, comp = comp, from = switch, to = switch + fadeLen) { k -> weight(from = 0.0, to = 1.0, j = k - switch) }
+        shouldBeBits(actual = out.l, expected = comp.l, from = switch + fadeLen, to = total, what = "after the fade-in, full weight")
     }
 
     "a life that ended by a fade starts the next one at rest, on its own knobs, like a new compressor" {
@@ -269,7 +269,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         val switch = onAt * blockFrames
         val blocks = onAt + fadeLen / blockFrames + 10
         val total = blocks * blockFrames
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
 
         val out = run(effect, blocks) { b ->
             effect.configure(
@@ -282,12 +282,12 @@ class KatalystCompressorEffectSpec : StringSpec({
         }
 
         // A FRESHLY BUILT compressor at the switch: the one instance, reset and rewritten, must be it.
-        val comp = Take(DoubleArray(total), DoubleArray(total))
-        bareRun(bare(next), switch, total, comp.l, comp.r)
+        val comp = Take(l = DoubleArray(total), r = DoubleArray(total))
+        bareRun(c = bare(next), from = switch, to = total, l = comp.l, r = comp.r)
 
-        shouldFollowLaw(out, comp, switch, switch + fadeLen) { k -> weight(0.0, 1.0, k - switch) }
-        shouldBeBits(out.l, comp.l, switch + fadeLen, total, "after the fade-in, full weight")
-        shouldBeBits(out.r, comp.r, switch + fadeLen, total, "after the fade-in, full weight (right)")
+        shouldFollowLaw(out = out, comp = comp, from = switch, to = switch + fadeLen) { k -> weight(from = 0.0, to = 1.0, j = k - switch) }
+        shouldBeBits(actual = out.l, expected = comp.l, from = switch + fadeLen, to = total, what = "after the fade-in, full weight")
+        shouldBeBits(actual = out.r, expected = comp.r, from = switch + fadeLen, to = total, what = "after the fade-in, full weight (right)")
     }
 
     "an owner that returns while the compressor fades out turns the fade around: same instance, continuous" {
@@ -298,7 +298,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         val back = (offAt + gap) * blockFrames
         val blocks = offAt + gap + fadeLen / blockFrames + 10
         val total = blocks * blockFrames
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         var instance: Compressor? = null
 
         val out = run(effect, blocks) { b ->
@@ -314,14 +314,14 @@ class KatalystCompressorEffectSpec : StringSpec({
         }
 
         // The SAME envelope throughout: one bare compressor over the whole take.
-        val comp = Take(DoubleArray(total), DoubleArray(total))
-        bareRun(bare(s), 0, total, comp.l, comp.r)
+        val comp = Take(l = DoubleArray(total), r = DoubleArray(total))
+        bareRun(c = bare(s), from = 0, to = total, l = comp.l, r = comp.r)
 
-        val turn = weight(1.0, 0.0, back - switch)
+        val turn = weight(from = 1.0, to = 0.0, j = back - switch)
 
-        shouldFollowLaw(out, comp, switch, back) { k -> weight(1.0, 0.0, k - switch) }
-        shouldFollowLaw(out, comp, back, back + fadeLen) { k -> weight(turn, 1.0, k - back) }
-        shouldBeBits(out.l, comp.l, back + fadeLen, total, "after the turned-around fade, full weight")
+        shouldFollowLaw(out = out, comp = comp, from = switch, to = back) { k -> weight(from = 1.0, to = 0.0, j = k - switch) }
+        shouldFollowLaw(out = out, comp = comp, from = back, to = back + fadeLen) { k -> weight(from = turn, to = 1.0, j = k - back) }
+        shouldBeBits(actual = out.l, expected = comp.l, from = back + fadeLen, to = total, what = "after the turned-around fade, full weight")
     }
 
     "an OFF that arrives while the compressor fades in turns that fade around too, and then releases" {
@@ -332,19 +332,19 @@ class KatalystCompressorEffectSpec : StringSpec({
         val back = (onAt + gap) * blockFrames
         val blocks = onAt + gap + fadeLen / blockFrames + 5
         val total = blocks * blockFrames
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
 
         val out = run(effect, blocks) { b -> effect.configure(if (b in onAt until onAt + gap) s else null) }
 
         effect.compressor.shouldBeNull()
 
-        val comp = Take(DoubleArray(total), DoubleArray(total))
-        bareRun(bare(s), switch, total, comp.l, comp.r)
+        val comp = Take(l = DoubleArray(total), r = DoubleArray(total))
+        bareRun(c = bare(s), from = switch, to = total, l = comp.l, r = comp.r)
 
-        val turn = weight(0.0, 1.0, back - switch)
+        val turn = weight(from = 0.0, to = 1.0, j = back - switch)
 
-        shouldFollowLaw(out, comp, switch, back) { k -> weight(0.0, 1.0, k - switch) }
-        shouldFollowLaw(out, comp, back, back + fadeLen) { k -> weight(turn, 0.0, k - back) }
+        shouldFollowLaw(out = out, comp = comp, from = switch, to = back) { k -> weight(from = 0.0, to = 1.0, j = k - switch) }
+        shouldFollowLaw(out = out, comp = comp, from = back, to = back + fadeLen) { k -> weight(from = turn, to = 0.0, j = k - back) }
 
         withClue("dry once the fade has landed") {
             for (k in back + fadeLen until total) {
@@ -360,7 +360,7 @@ class KatalystCompressorEffectSpec : StringSpec({
             val offAt = 20
             val cutAt = offAt + 4
             val blocks = cutAt + 30
-            val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+            val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
 
             val out = run(effect, blocks) { b ->
                 when {
@@ -391,11 +391,11 @@ class KatalystCompressorEffectSpec : StringSpec({
             // and then a fade-in or a stale glide would render identically and pass unseen.
             val start = cutAt * blockFrames
             val total = blocks * blockFrames
-            val comp = Take(DoubleArray(total), DoubleArray(total))
-            bareRun(bare(next), start, total, comp.l, comp.r)
+            val comp = Take(l = DoubleArray(total), r = DoubleArray(total))
+            bareRun(c = bare(next), from = start, to = total, l = comp.l, r = comp.r)
 
-            shouldBeBits(out.l, comp.l, start, total, "$cut, then a new life")
-            shouldBeBits(out.r, comp.r, start, total, "$cut, then a new life (right)")
+            shouldBeBits(actual = out.l, expected = comp.l, from = start, to = total, what = "$cut, then a new life")
+            shouldBeBits(actual = out.r, expected = comp.r, from = start, to = total, what = "$cut, then a new life (right)")
         }
     }
 
@@ -410,7 +410,7 @@ class KatalystCompressorEffectSpec : StringSpec({
     fun knobReference(a: Voice.Compressor, z: Voice.Compressor, change: Int, total: Int): Take {
         val glide = glideBlocks * blockFrames
         val c = bare(a)
-        val ref = Take(DoubleArray(total), DoubleArray(total))
+        val ref = Take(l = DoubleArray(total), r = DoubleArray(total))
         val one = AudioBuffer(1)
         val two = AudioBuffer(1)
 
@@ -432,7 +432,7 @@ class KatalystCompressorEffectSpec : StringSpec({
 
             one[0] = left(k)
             two[0] = right(k)
-            c.process(one, two, 1)
+            c.process(left = one, right = two, blockSize = 1)
             ref.l[k] = one[0]
             ref.r[k] = two[0]
         }
@@ -445,10 +445,10 @@ class KatalystCompressorEffectSpec : StringSpec({
         val change = changeAt * blockFrames
         val blocks = changeAt + glideBlocks + 10
         val total = blocks * blockFrames
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
 
         val out = run(effect, blocks) { b -> effect.configure(if (b < changeAt) a else z) }
-        val ref = knobReference(a, z, change, total)
+        val ref = knobReference(a = a, z = z, change = change, total = total)
 
         for (k in 0 until total) {
             withClue("sample $k (the change at $change, the glide ${glideBlocks * blockFrames} samples)") {
@@ -480,7 +480,7 @@ class KatalystCompressorEffectSpec : StringSpec({
 
     "an unchanged owner writes nothing into the instance: the knobs are written when the settings change" {
         val s = settings(thresholdDb = -20.0)
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val ctx = createCtx()
 
         effect.configure(s)

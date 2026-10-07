@@ -56,7 +56,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
 
         repeat(blocks) { b ->
             ctx.blockStart = (b * blockFrames).toDouble()
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             ctx.freqModBufferWritten = multiplyIn
             ctx.freqModBuffer.fill(1.0)
             render(ctx)
@@ -108,7 +108,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
         // The envelope decays from 1 to a sustain of 0.4 over the first 40 blocks, so the row also pins that the
         // envelope's level, read at each block's start, scales the depth (the FM envelope rows of
         // `FmSynthesisTest`, which only asked "more or less than", moved here as this exact oracle, 2026-09-27).
-        val fm = Voice.Fm(ratio = 2.0, depth = 200.0, envelope = Voice.Envelope(0.0, 40.0 * blockFrames, 0.4, 0.0))
+        val fm = Voice.Fm(ratio = 2.0, depth = 200.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 40.0 * blockFrames, sustainLevel = 0.4, releaseFrames = 0.0))
         val renderer = FmRenderer(fm, freqHz, sampleRate)
         val blocks = 200
         val out = renderStrip(blocks) { renderer.render(it) }
@@ -117,7 +117,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
         var worst = 0.0
 
         repeat(blocks) { b ->
-            val level = calculateControlRateEnvelope(fm.envelope, (b * blockFrames).toDouble(), 0.0, 500_000.0, EnvelopeCore())
+            val level = calculateControlRateEnvelope(env = fm.envelope, blockStart = (b * blockFrames).toDouble(), startFrame = 0.0, gateEndFrame = 500_000.0, core = EnvelopeCore())
 
             for (i in 0 until blockFrames) {
                 val expected = 1.0 + sin(phase) * fm.depth * level / freqHz
@@ -132,12 +132,12 @@ class ModulatorPhaseWrapSpec : StringSpec({
 
     "an FM modulator past the sample rate stays a bounded multiplier, in either sign" {
         for (ratio in listOf(200.0, -200.0)) {
-            val fm = Voice.Fm(ratio = ratio, depth = 200.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
+            val fm = Voice.Fm(ratio = ratio, depth = 200.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0))
             val renderer = FmRenderer(fm, freqHz, sampleRate)
             val out = renderStrip(100) { renderer.render(it) }
             val swing = fm.depth / freqHz
 
-            assertModulatesWithin(out, 1.0 - swing - 1e-9, 1.0 + swing + 1e-9, spans = false, clue = "fm ratio $ratio")
+            assertModulatesWithin(out = out, lo = 1.0 - swing - 1e-9, hi = 1.0 + swing + 1e-9, spans = false, clue = "fm ratio $ratio")
         }
     }
 
@@ -153,7 +153,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
                 val bound = 2.0.pow(vibrato.semitones / 12.0)
 
                 assertModulatesWithin(
-                    out, 1.0 / bound - 1e-9, bound + 1e-9, spans = rate == -5.0,
+                    out = out, lo = 1.0 / bound - 1e-9, hi = bound + 1e-9, spans = rate == -5.0,
                     clue = "strip vibrato rate $rate, multiplyIn $multiplyIn",
                 )
             }
@@ -172,7 +172,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
             val out = DoubleArray(blocks * blockFrames)
 
             repeat(blocks) { b ->
-                ctx.updateOffsetAndLength(0, blockFrames)
+                ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
                 ctx.voiceElapsedFrames = b * blockFrames
                 mod.generate(buf, freqHz, ctx)
 
@@ -183,7 +183,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
 
             val bound = 2.0.pow(1.0 / 12.0)
 
-            assertModulatesWithin(out, 1.0 / bound - 1e-9, bound + 1e-9, spans = rate == -5.0, clue = "vibrato ignitor rate $rate")
+            assertModulatesWithin(out = out, lo = 1.0 / bound - 1e-9, hi = bound + 1e-9, spans = rate == -5.0, clue = "vibrato ignitor rate $rate")
         }
     }
 })
