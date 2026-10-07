@@ -242,8 +242,10 @@ class SampleInstrumentSpec : StringSpec({
         val (plain, _) = render(base.copy(sound = "probe"), sampleRate, pcm, doors = long)
         val (tremolo, _) = render(base.copy(sound = "probe", ignitorParams = mapOf(depthSlot to 0.8)), sampleRate, pcm, doors = long)
 
-        withClue("engaged: the silent release culls a voice without the tremolo") { plain.culled shouldBe true }
-        withClue("the tree's tremolo marks the voice never-cull") { tremolo.culled shouldBe false }
+        // The states, not `culled` alone: `culled` is false again once a voice is Done, so a render that ran past
+        // the end would pass the tremolo row for the wrong reason. Both voices are still in their release here.
+        withClue("engaged: the silent release culls a voice without the tremolo") { plain.state shouldBe Voice.State.Zombie }
+        withClue("the tree's tremolo marks the voice never-cull") { tremolo.state shouldBe Voice.State.Releasing }
     }
 
     "a non-finite envelope slot reads as unset: the sample's meta envelope fills it" {

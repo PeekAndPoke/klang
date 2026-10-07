@@ -1,6 +1,6 @@
 # A voice's lifecycle is one state machine inside the voice
 
-Status: **planned 2026-10-07 (maintainer).** Not started. Step 0 is a separate measurement.
+Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07.
 
 ## Why (maintainer, 2026-10-07)
 
@@ -19,7 +19,10 @@ Rules for the work:
 - **Bit-identity is the proof.** Every step that is not meant to change the sound renders the 18-song corpus
   bit-identical to the step before, and the `audio_be` suites stay green.
 
-## Where the lifecycle lives today (inventory, 2026-10-07)
+## Where the lifecycle lived before step 1 (inventory, 2026-10-07)
+
+A snapshot of `main` at the start (line numbers of that tree). Each step changes it: read the code, not these line
+numbers, and see each step's "What was done" for what moved. Step 1 replaced the `culled` field by the state.
 
 On the `Voice` (`audio_be/.../voices/Voice.kt`):
 
@@ -69,11 +72,17 @@ Pending ──onset──▶ Sounding ──gate end / note-off──▶ Releasi
                                                          │
                                           silent for the cull window
                                                          ▼
-                                                      Zombie ──endFrame──▶ Done
+                                                      Zombie ──endFrame / cut / takeover──▶ Done
+
+Any state ──endFrame reached (a release of 0, a negative release), or a hard kill──▶ Done
+Pending ──cut / takeover──▶ Done (it has not sounded; promotion runs one block ahead, so a cut can reach it)
 ```
 
-- `Zombie`, `Fading` and `Done` are terminal: nothing leads back. A cut or takeover reaching a `Zombie` is a
-  no-op, culling does not run in `Fading`, and a note-off in `Fading` or `Zombie` is ignored.
+- `Zombie`, `Fading` and `Done` are terminal: nothing leads back to a sounding state. A cut, takeover or hard kill
+  on a silent voice (`Pending`, `Zombie`) needs no fade and sends it straight to `Done`: that keeps today's orbit
+  hand-over (today's cut removes zombies too, so the cutting voice takes the orbit after one block; a zombie that
+  ignored the cut would keep refusing the new voice's bus settings for its whole remaining release, round-1
+  review of step 1). Culling does not run in `Fading`, and a note-off in `Fading` or `Zombie` is ignored.
 - `render` dispatches on the state: `Pending` returns early, `Sounding` / `Releasing` run the pipeline, `Fading`
   runs it with the fade ramp, and `Zombie` only renews the lease.
 - Culling measures where it measures today: until the voice has been heard, and in `Releasing`. Never in
@@ -105,13 +114,35 @@ before and after.
    `tmp/kokon-end/`.
 1. **The state, read-only.** Add the state and derive it from today's fields; `render` dispatches on it.
    Bit-identical.
+
+   **What was done (2026-10-07).** `Voice.State`, a plain enum (`Pending`, `Sounding`, `Releasing`, `Zombie`,
+   `Done`; a closed param-less set, no allocation per block), held in `Voice.state`. `render` calls `advance`
+   (the time-driven transitions at the block's start: `Done` from the first block that starts at or after
+   `endFrame`, from any state; `Pending` to `Sounding` on the first block that ends after `startFrame`; `Sounding`
+   to `Releasing` on the first block that starts at or after `gateEndFrame`, in the same call when the first
+   rendered block already lies past the gate) and then dispatches with an exhaustive `when`. `renderStages` runs
+   the pipeline for `Sounding` and `Releasing` and moves a `Releasing` voice to `Zombie` at the block's end, the
+   culling decision unchanged: measure while `!heard` or `Releasing`, count only in `Releasing`. The `culled`
+   field is gone: `Voice.culled` reads `state == Zombie`, so it is false again once the zombie is `Done` (the
+   scheduler's culled count reads it around one `render`, which is unaffected; `VoiceCullingSpec` now records the
+   cull while it renders). `releaseGate` returns at once on a `Zombie` or `Done` voice: through the scheduler
+   that is equivalent (a zombie's gate lies before the cursor the scheduler releases at, so the natural-gate
+   check returned; a `Done` voice has left the active list); only a direct call with an earlier frame differs.
+   Not equivalent only off the engine's path: a voice rendered at a block EARLIER than one it already rendered
+   (time going backwards) keeps its later state; the scheduler's cursor only moves forward. Proof:
+   `VoiceLifecycleSpec` (9 rows, 18 mutations all red), the `audio_be` JVM and browser suites, `:klang:jvmTest`,
+   root `:jvmTest`; a JVM micro-benchmark (old and new interleaved) put the per-call cost of a sounding,
+   a zombie and a pending block inside the run-to-run spread. The corpus render is the coordinator's.
+   Report: `tmp/reviews/vl-step1-report.md`.
 2. **One writer for the time limits.** The state machine owns gate end, end frame and (later) fade start, and the
    contexts read them from the voice instead of keeping copies (or, if a hot path needs a copy, one place pushes
    it). Remove the redundant fields. Bit-identical.
 3. **Events from outside.** Note-off and hard kill become events on the voice; every voice ends in `Done`; the
    scheduler removes only done voices. Decide whether `held` / `liveId` move onto the voice or stay as the
    scheduler's provenance. Bit-identical.
-4. **Cut becomes `Fading`** with the house teardown fade (4 ms) instead of `iterator.remove()`. A sound change by
+4. **Cut becomes `Fading`** with the house teardown fade length (4 ms) instead of `iterator.remove()`. The voice
+   applies the ramp itself, from a fade-start FRAME (a cut lands mid-block): it cannot rely on
+   `TeardownFadeRenderer`, which `VoiceFactory.treeStages` leaves out when the tree ends in its own envelope. A sound change by
    design (no click), but no song uses cut, so the corpus stays bit-identical; `VoiceSchedulerSoloCutSpec`'s rows
    change on purpose. The open questions of `future/cut-group-semantics.md` (`cut(0)`, the reach of a group) are
    answered by the maintainer before this step or with it.

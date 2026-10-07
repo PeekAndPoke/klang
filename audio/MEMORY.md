@@ -27,6 +27,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `VOICE_ADSR_RELEASE_SEC` when the tree has no static answer). `TeardownFadeRenderer` runs unless the root is a
   built amplitude envelope with a static release (`BuiltIgnitor.endsInEnvelope`). A silent release is culled and
   stays a zombie until its end. All three: `audio/ref/voice-synthesis.md`.
+- **Voice lifecycle** = the state machine `Voice.State` (Pending, Sounding, Releasing, Zombie, Done; Zombie and
+  Done terminal), advanced per block in `Voice.render`, which dispatches on it (the `Voice` KDoc). `Voice.culled`
+  reads the Zombie state, so it is false again once the zombie is Done. Plan and steps:
+  `docs/tasks/voice-lifecycle-state-machine.md` (step 1 done).
 - **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `SendRenderer`); a frontend's
   `velocity` is multiplied into `gain` before the wire. The orbit is the routing.
 - **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
@@ -189,6 +193,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-07 The voice's lifecycle is a state machine inside `Voice` (step 1, read-only, no sound change by design):
+  `docs/tasks/voice-lifecycle-state-machine.md`
 - 2026-10-07 The engine's output is floating point: the master clips into a `StereoBuffer`, the browser hears the
   floats, the 16-bit step lives only at the JVM/WAV edge (`docs/tasks-archive/2026-10/20261007-float-output.md`)
 - 2026-10-07 One pitch mod over several pitched sources at one pitch advances once per block; Sakura's `shaku` and Irish Lament's

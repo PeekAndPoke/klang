@@ -54,13 +54,18 @@ class VoiceCullingSpec : StringSpec({
         sampleRate = sampleRate, blockFrames = blockFrames, envelope = envelope, cull = cull,
     )
 
+    /** How a voice ended: the frame (see [cullFrame]) and whether it was culled on the way. */
+    data class Ending(val frame: Double, val culled: Boolean)
+
     /**
      * Renders block after block until the voice reports itself finished. Returns the start frame of
      * the block on which it turned into a zombie ([Voice.culled]), or the frame it expired on when it
-     * never did; [Voice.culled] tells the two apart. Also asserts the zombie contract: a culled voice
-     * stays alive (render returns true) until its scheduled end, and the voice never expires early.
+     * never did; [Ending.culled] tells the two apart. It is recorded while rendering, because
+     * [Voice.culled] reads the zombie state and is false again once the zombie is done. Also asserts
+     * the zombie contract: a culled voice stays alive (render returns true) until its scheduled end,
+     * and the voice never expires early.
      */
-    fun cullFrame(voice: Voice, blockFrames: Int = 128, end: Double = endFrame): Double {
+    fun cullFrame(voice: Voice, blockFrames: Int = 128, end: Double = endFrame): Ending {
         val ctx = createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
         var start = 0.0
         var culledAt = -1.0
@@ -72,7 +77,7 @@ class VoiceCullingSpec : StringSpec({
             if (!alive) {
                 withClue("a voice expires at its scheduled end, culled or not") { start shouldBeGreaterThanOrEqualTo end }
 
-                return if (culledAt >= 0.0) culledAt else start
+                return Ending(frame = if (culledAt >= 0.0) culledAt else start, culled = culledAt >= 0.0)
             }
 
             if (voice.culled && culledAt < 0.0) {
@@ -87,9 +92,9 @@ class VoiceCullingSpec : StringSpec({
 
     "a silent release is culled once the default window has elapsed, never inside the gate" {
         val v = voice(percussive(releaseFrames), cull = null)
-        val death = cullFrame(v)
+        val (death, culled) = cullFrame(v)
 
-        withClue("culled") { v.culled shouldBe true }
+        withClue("culled") { culled shouldBe true }
         // Silent from 10 ms on, but the gate lasts 100 ms: the window only starts counting there.
         // The voice ends ON the block that completes the window, so its start is up to one block early.
         withClue("never inside the gate") { death shouldBeGreaterThanOrEqualTo gateEndFrame + defaultWindowFrames - 128 }
@@ -97,14 +102,14 @@ class VoiceCullingSpec : StringSpec({
     }
 
     "cull(seconds) sets the window" {
-        val death = cullFrame(voice(percussive(releaseFrames), cull = 0.2))
+        val death = cullFrame(voice(percussive(releaseFrames), cull = 0.2)).frame
 
         death shouldBeGreaterThanOrEqualTo gateEndFrame + 0.2 * sampleRate - 128
         death shouldBeLessThanOrEqualTo gateEndFrame + 0.2 * sampleRate + 128
     }
 
     "cull(0) ends the voice on the first silent block of the release" {
-        val death = cullFrame(voice(percussive(releaseFrames), cull = 0.0))
+        val death = cullFrame(voice(percussive(releaseFrames), cull = 0.0)).frame
 
         death shouldBeGreaterThanOrEqualTo gateEndFrame
         death shouldBeLessThanOrEqualTo gateEndFrame + 2 * 128
@@ -112,14 +117,14 @@ class VoiceCullingSpec : StringSpec({
 
     "noCull (a negative window) renders the whole scheduled tail" {
         val v = voice(percussive(releaseFrames), cull = VOICE_CULL_NEVER)
-        val death = cullFrame(v)
+        val (death, culled) = cullFrame(v)
 
-        withClue("expired, not culled") { v.culled shouldBe false }
+        withClue("expired, not culled") { culled shouldBe false }
         death shouldBeGreaterThanOrEqualTo endFrame
     }
 
     "a NaN window falls back to the default" {
-        val death = cullFrame(voice(percussive(releaseFrames), cull = Double.NaN))
+        val death = cullFrame(voice(percussive(releaseFrames), cull = Double.NaN)).frame
 
         death shouldBeGreaterThanOrEqualTo gateEndFrame + defaultWindowFrames - 128
         death shouldBeLessThanOrEqualTo gateEndFrame + defaultWindowFrames + 128
@@ -130,9 +135,9 @@ class VoiceCullingSpec : StringSpec({
         // before the scheduled end.
         val shortRelease = 2400.0
         val v = voice(held(shortRelease), cull = null, end = gateEndFrame + shortRelease)
-        val death = cullFrame(v, end = gateEndFrame + shortRelease)
+        val (death, culled) = cullFrame(v, end = gateEndFrame + shortRelease)
 
-        withClue("expired, not culled") { v.culled shouldBe false }
+        withClue("expired, not culled") { culled shouldBe false }
         death shouldBeGreaterThanOrEqualTo gateEndFrame + shortRelease
     }
 
@@ -141,15 +146,15 @@ class VoiceCullingSpec : StringSpec({
         // peak is measured before the multiplier, so un-soloing later still finds it playing.
         val v = voice(held(releaseFrames), cull = null)
         v.setGainMultiplier(0.0)
-        val death = cullFrame(v)
+        val (death, culled) = cullFrame(v)
 
-        withClue("expired, not culled") { v.culled shouldBe false }
+        withClue("expired, not culled") { culled shouldBe false }
         death shouldBeGreaterThanOrEqualTo endFrame
     }
 
     "the window has the same length at any block size: the cut lands within one block of the same frame" {
-        val death128 = cullFrame(voice(percussive(releaseFrames), cull = null, blockFrames = 128), blockFrames = 128)
-        val death64 = cullFrame(voice(percussive(releaseFrames), cull = null, blockFrames = 64), blockFrames = 64)
+        val death128 = cullFrame(voice(percussive(releaseFrames), cull = null, blockFrames = 128), blockFrames = 128).frame
+        val death64 = cullFrame(voice(percussive(releaseFrames), cull = null, blockFrames = 64), blockFrames = 64).frame
 
         // The window is counted in frames, so the two can only differ by the block granularity.
         abs(death128 - death64) shouldBeLessThanOrEqualTo 128.0
@@ -161,9 +166,9 @@ class VoiceCullingSpec : StringSpec({
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
             gain = -1.0,
         )
-        val death = cullFrame(v)
+        val (death, culled) = cullFrame(v)
 
-        withClue("expired, not culled") { v.culled shouldBe false }
+        withClue("expired, not culled") { culled shouldBe false }
         death shouldBeGreaterThanOrEqualTo endFrame
     }
 
@@ -187,9 +192,9 @@ class VoiceCullingSpec : StringSpec({
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
             signal = burst,
         )
-        val death = cullFrame(v)
+        val (death, culled) = cullFrame(v)
 
-        withClue("culled, after the burst") { v.culled shouldBe true }
+        withClue("culled, after the burst") { culled shouldBe true }
         death shouldBeGreaterThanOrEqualTo burstEnd + defaultWindowFrames - 128
         death shouldBeLessThanOrEqualTo burstEnd + defaultWindowFrames + 128
     }
@@ -233,9 +238,9 @@ class VoiceCullingSpec : StringSpec({
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
             signal = late,
         )
-        val death = cullFrame(v)
+        val (death, culled) = cullFrame(v)
 
-        withClue("audible from its late onset to its scheduled end: expired, not culled") { v.culled shouldBe false }
+        withClue("audible from its late onset to its scheduled end: expired, not culled") { culled shouldBe false }
         death shouldBeGreaterThanOrEqualTo endFrame
     }
 
@@ -281,9 +286,9 @@ class VoiceCullingSpec : StringSpec({
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
             gain = 0.0,
         )
-        val death = cullFrame(v)
+        val (death, culled) = cullFrame(v)
 
-        withClue("culled") { v.culled shouldBe true }
+        withClue("culled") { culled shouldBe true }
         death shouldBeLessThanOrEqualTo gateEndFrame + defaultWindowFrames + 128
     }
 })
