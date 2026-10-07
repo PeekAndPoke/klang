@@ -58,7 +58,6 @@ class PregainSlotRenderSpec : StringSpec({
         sampleRate = 44100,
         voiceDurationFrames = blockFrames * blocks,
         gateEndFrame = blockFrames * blocks,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
         updateOffsetAndLength(0, blockFrames)

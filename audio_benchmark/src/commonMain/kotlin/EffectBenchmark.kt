@@ -213,7 +213,6 @@ class EffectBenchmark(
                 sampleRate = sr,
                 voiceDurationFrames = Int.MAX_VALUE / 2,
                 gateEndFrame = Int.MAX_VALUE / 2,
-                releaseFrames = sr / 10,
                 scratchBuffers = scratch,
                 voiceElapsedFrames = 0,
             ).apply {
@@ -403,7 +402,6 @@ class EffectBenchmark(
                     sampleRate = sr,
                     voiceDurationFrames = Int.MAX_VALUE / 2,
                     gateEndFrame = Int.MAX_VALUE / 2,
-                    releaseFrames = sr / 10,
                     scratchBuffers = ScratchBuffers(bf),
                     voiceElapsedFrames = 0,
                 ).apply {

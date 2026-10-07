@@ -9,10 +9,15 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.Voice.State
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
+import kotlin.math.abs
 
 /**
  * The voice's lifecycle state machine (`Voice.state`, step 1 of `docs/tasks/voice-lifecycle-state-machine.md`):
@@ -232,5 +237,97 @@ class VoiceLifecycleSpec : StringSpec({
         block(w, 256.0)
         w.state shouldBe State.Releasing
         withClue("still rendering") { ctx.voiceBuffer[0] shouldNotBe sentinel }
+    }
+
+    "a realtime note-off reaches every gate consumer through the voice's limits: it renders what a voice scheduled with that gate renders" {
+        // Every gate consumer at once (step 2, "amendment A1"): the ignitor door's own envelope (it reads the
+        // voice-relative gate the ignite stage derives per block), the pitch envelope and the FM envelope (they read
+        // the limits through the block context), the state (Releasing) and the end (the render window). The source
+        // echoes the pitch modulation (the product of the pitch envelope and the FM multiplier), and the tree's own
+        // linear envelope scales it, so the output carries all three gate readers.
+        // The voice-relative gate the ignitors saw on the last generate call (both voices share the echo; the
+        // released voice renders second, so after its render this is its value).
+        var seenGate = -1
+
+        val echo = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                seenGate = ctx.gateEndFrame
+
+                val mod = ctx.phaseMod
+
+                for (i in ctx.offset until ctx.windowEnd) {
+                    buffer[i] = if (mod == null) 1.0 else mod[i]
+                }
+            }
+        }
+        val lin = AdsrCurve.Linear
+        val span = 2048.0
+        val gate = 1024.0
+
+        fun withGate(scheduledGate: Double): Voice = createVoice(
+            startFrame = 0.0, gateEndFrame = scheduledGate, endFrame = scheduledGate + span,
+            sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER, signal = echo,
+            envelope = Voice.Envelope(0.0, 0.0, 1.0, span, lin, lin, lin),
+            pitchEnvelope = Voice.PitchEnvelope(semitones = 12.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 1024.0, lin, lin, lin)),
+            // A fresh FM per voice: the modulator phase lives on it.
+            fm = Voice.Fm(ratio = 1.0, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
+        )
+
+        val reference = withGate(gate)
+        val released = withGate(1_000_000.0)
+        val refCtx = createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
+        val relCtx = createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
+        var start = 0.0
+        var heldPeak = 0.0
+        var midReleasePeak = 0.0
+
+        while (start < gate + span + 2 * blockFrames) {
+            if (start == gate) {
+                // The scheduler releases at its cursor, the first frame of the next block.
+                released.releaseGate(gate)
+            }
+
+            refCtx.blockStart = start
+            relCtx.blockStart = start
+            refCtx.voiceBuffer.fill(0.0)
+            relCtx.voiceBuffer.fill(0.0)
+
+            val refAlive = reference.render(refCtx)
+            val relAlive = released.render(relCtx)
+
+            // The derived gate itself, as literals: both voices derive it the same way, so the comparison below
+            // alone could not see a wrong derivation.
+            if (start == 0.0) {
+                withClue("the held gate, voice-relative") { seenGate shouldBe 1_000_000 }
+            }
+
+            if (start == gate) {
+                withClue("the moved gate, voice-relative") { seenGate shouldBe 1024 }
+            }
+
+            withClue("block $start: alive alike") { relAlive shouldBe refAlive }
+            withClue("block $start: same state") { released.state shouldBe reference.state }
+
+            for (i in 0 until blockFrames) {
+                withClue("frame ${start + i}") { relCtx.voiceBuffer[i].toRawBits() shouldBe refCtx.voiceBuffer[i].toRawBits() }
+            }
+
+            val peak = refCtx.voiceBuffer.maxOf { abs(it) }
+
+            if (start < gate) {
+                heldPeak = maxOf(heldPeak, peak)
+            }
+
+            if (start == gate + span / 2) {
+                midReleasePeak = peak
+            }
+
+            start += blockFrames
+        }
+
+        withClue("the reference really releases (or the comparison proves nothing)") {
+            (midReleasePeak < heldPeak * 0.6) shouldBe true
+        }
+        withClue("and ends at gate + span") { released.state shouldBe State.Done }
     }
 })

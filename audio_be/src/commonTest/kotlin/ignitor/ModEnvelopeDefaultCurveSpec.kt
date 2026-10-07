@@ -79,7 +79,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
     fun renderRuntime(ig: Ignitor, freqHz: Double): DoubleArray {
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
-            releaseFrames = total - gate, scratchBuffers = ScratchBuffers(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = DoubleArray(total)
         val tmp = AudioBuffer(blockFrames)

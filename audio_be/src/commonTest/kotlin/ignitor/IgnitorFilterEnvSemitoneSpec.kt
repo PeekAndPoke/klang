@@ -32,7 +32,6 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         sampleRate = sr,
         voiceDurationFrames = blocks * blockFrames * 2,
         gateEndFrame = blocks * blockFrames * 2,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
     )

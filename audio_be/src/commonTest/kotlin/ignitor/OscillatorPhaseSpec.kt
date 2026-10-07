@@ -92,7 +92,6 @@ class OscillatorPhaseSpec : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = Random(seed),
         phaseMod = phaseMod,

@@ -26,12 +26,17 @@ class IgniteRenderer(
     private val signal: Ignitor,
     private val signalCtx: IgniteContext,
     private val freqHz: Double,
-        // Absolute backend frame — Double, see RenderClock.cursorFrame.
-    private val startFrame: Double,
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
+        // The voice's limits, read per block (absolute frames, Double, see RenderClock.cursorFrame).
+        val startFrame = ctx.limits.startFrame
+
         signalCtx.updateOffsetAndLength(ctx.offset, ctx.length)
+        // The voice-relative gate the ignitors read, derived here and only here from the one home, so a
+        // realtime note-off (it moves `VoiceLimits.gateEndFrame`) reaches every ignitor envelope at the
+        // next block ("amendment A1").
+        signalCtx.gateEndFrame = (ctx.limits.gateEndFrame - startFrame).toInt()
         // + ctx.offset: voiceElapsedFrames is the elapsed count AT buffer index ctx.offset, which is
         // where every consumer starts counting (AdsrIgnitor seeds absPos from it and loops from
         // ctx.offset; IgnitorFilters adds sampleOffsetWithinBlock; PitchModFactories uses i - offset).

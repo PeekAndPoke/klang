@@ -81,7 +81,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
     }
 
     fun ctx(sr: Int, gateEnd: Int) = IgniteContext(
-        sampleRate = sr, voiceDurationFrames = gateEnd + 10 * blockFrames, gateEndFrame = gateEnd, releaseFrames = 0,
+        sampleRate = sr, voiceDurationFrames = gateEnd + 10 * blockFrames, gateEndFrame = gateEnd,
         scratchBuffers = ScratchBuffers(blockFrames),
     )
 
@@ -243,7 +243,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
         val rng = Random(7)
         val ignitor = dsl.buildExciter(soundIndex = 0, random = rng, freqHz = 220.0).ignitor
         val c = IgniteContext(
-            sampleRate = sr, voiceDurationFrames = gateEnd + 10 * blockFrames, gateEndFrame = gateEnd, releaseFrames = 0,
+            sampleRate = sr, voiceDurationFrames = gateEnd + 10 * blockFrames, gateEndFrame = gateEnd,
             scratchBuffers = ScratchBuffers(blockFrames), random = rng,
         )
         val out = DoubleArray(blocks * blockFrames)

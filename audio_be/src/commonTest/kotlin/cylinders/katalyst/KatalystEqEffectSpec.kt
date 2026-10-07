@@ -181,7 +181,6 @@ class KatalystEqEffectSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = data.size,
             gateEndFrame = data.size,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             updateOffsetAndLength(0, blockFrames)

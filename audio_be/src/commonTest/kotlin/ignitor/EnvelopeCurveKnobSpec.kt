@@ -43,7 +43,6 @@ class EnvelopeCurveKnobSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = frames,
             gateEndFrame = gateEnd,
-            releaseFrames = frames - gateEnd,
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(3),
         ).apply {

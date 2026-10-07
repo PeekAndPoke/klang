@@ -52,7 +52,6 @@ class TremoloCompositionSpec : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = frames,
         gateEndFrame = frames,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = Random(7),
     )

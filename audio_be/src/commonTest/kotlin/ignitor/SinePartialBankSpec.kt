@@ -41,7 +41,6 @@ class SinePartialBankSpec : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(frames),
         random = random,
     ).apply {

@@ -402,13 +402,11 @@ class VoiceFactory(
         treeStages: List<BlockRenderer>,
     ): Voice {
         val endFrame = gateEndFrame + releaseSec * sampleRate
-        val releaseFrames = (releaseSec * sampleRate).toInt()
 
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
-            releaseFrames = releaseFrames,
             scratchBuffers = scratchBuffers,
             random = voiceRandom,
         )
@@ -426,7 +424,6 @@ class VoiceFactory(
             signal = signal,
             signalCtx = signalCtx,
             freqHz = freqHz,
-            startFrame = startFrame,
         ) + treeStages
 
         val blockCtx = BlockContext(
@@ -434,20 +431,13 @@ class VoiceFactory(
             freqModBuffer = freqModBuffer,
             scratchBuffers = scratchBuffers,
             sampleRate = sampleRate,
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
-            freqHz = freqHz,
-            signal = signal,
-            signalCtx = signalCtx,
+            // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.
+            limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
             cylinders = cylinders,
         )
 
         return Voice(
             cylinderId = cylinder,
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
             gain = gain,
             pan = data.pan ?: 0.5,
             // By reference, never a copy: the map is immutable on the wire and only the orbit's

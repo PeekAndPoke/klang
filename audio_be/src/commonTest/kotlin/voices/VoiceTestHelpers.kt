@@ -89,13 +89,11 @@ object VoiceTestHelpers {
     ): Voice {
         // Voice-RELATIVE duration — Int, mirrors VoiceFactory. (Absolute frames are Double.)
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-        val releaseFrames = (endFrame - gateEndFrame).toInt()
 
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
-            releaseFrames = releaseFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 
@@ -129,7 +127,6 @@ object VoiceTestHelpers {
             signal = instrument,
             signalCtx = signalCtx,
             freqHz = freqHz,
-            startFrame = startFrame,
         )
 
         val blockCtx = BlockContext(
@@ -137,19 +134,11 @@ object VoiceTestHelpers {
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
-            freqHz = freqHz,
-            signal = instrument,
-            signalCtx = signalCtx,
+            limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
         return Voice(
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
             cylinderId = cylinderId,
             gain = gain,
             pan = pan,

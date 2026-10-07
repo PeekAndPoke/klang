@@ -36,7 +36,7 @@ class AnalogDriftRampSpec : StringSpec({
     val freqHz = 220.0
 
     fun ctx(seed: Int): IgniteContext = IgniteContext(
-        sampleRate = sampleRate, voiceDurationFrames = sampleRate * 10, gateEndFrame = sampleRate * 10, releaseFrames = 0,
+        sampleRate = sampleRate, voiceDurationFrames = sampleRate * 10, gateEndFrame = sampleRate * 10,
         scratchBuffers = ScratchBuffers(blockFrames), random = Random(seed),
     )
 

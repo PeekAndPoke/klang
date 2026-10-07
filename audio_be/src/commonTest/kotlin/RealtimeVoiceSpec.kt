@@ -7,13 +7,13 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.voices.DoorAdsr
 import io.peekandpoke.klang.audio_be.voices.DoorFields
+import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -368,8 +368,8 @@ class RealtimeVoiceSpec : StringSpec({
     }
 
     "a bare tree (no classic()): the teardown fade follows a realtime note-off (no full-amplitude step)" {
-        // Guards the blockCtx.endFrame mirror in releaseGate: without it, renderGate's fade
-        // window stays at the held horizon while the voice still dies at the moved end — a
+        // Guards that the teardown fade reads the voice's moved end (VoiceLimits.endFrame): a copy
+        // left at the held horizon keeps the fade window there while the voice dies at the moved end, a
         // full-amplitude cut mid-waveform. Bare sine (NO ignitor envelope), vca off: only the
         // teardown fade shapes the death.
         val d = newDispatcher()
@@ -383,7 +383,10 @@ class RealtimeVoiceSpec : StringSpec({
         renderBlocks(d, 4.0 * blockFrames, 10)
 
         stop(d, liveId = 1)
-        val tail = renderBlocks(d, 14.0 * blockFrames, 12)
+        // 30 blocks reach past the death: the bare tree's tail is VOICE_ADSR_RELEASE_SEC (0.05 s, 2205 frames) past
+        // the note-off, plus the master's 220-frame lookahead. The row rendered 12 blocks (1536 frames) until
+        // 2026-10-07 and never saw the death it is about (a fade stuck at the held horizon stayed green).
+        val tail = renderBlocks(d, 14.0 * blockFrames, 30)
         // Max adjacent-sample step across the death region (left channel): a 440 Hz sine moves
         // ~6% of amplitude per sample and the fade adds ~0.6%; a missing fade is a step of the
         // FULL amplitude in one sample.
@@ -536,26 +539,15 @@ class RealtimeVoiceSpec : StringSpec({
 
     //  MOVED-GATE STRIP UNITS //////////////////////////////////////////////////////////////////////////////////
 
-    // Minimal BlockContext for the two rows below: the strip's gate must be read from the ctx
-    // PER RENDER CALL — a re-baked constructor copy is the regression class BlockContext's
+    // Minimal BlockContext for the two rows below: the strip's gate must be read from the ctx's
+    // limits PER RENDER CALL: a re-baked constructor copy is the regression class BlockContext's
     // KDoc warns about, and these rows are what kill it.
     fun stripCtx(gateEndFrame: Double): BlockContext = BlockContext(
         audioBuffer = AudioBuffer(blockFrames),
         freqModBuffer = DoubleArray(blockFrames),
         scratchBuffers = ScratchBuffers(blockFrames),
         sampleRate = sampleRate,
-        startFrame = 0.0,
-        endFrame = 1_000_000.0,
-        gateEndFrame = gateEndFrame,
-        freqHz = 440.0,
-        signal = Ignitors.silence(),
-        signalCtx = IgniteContext(
-            sampleRate = sampleRate,
-            voiceDurationFrames = 1_000_000,
-            gateEndFrame = 1_000_000,
-            releaseFrames = 0,
-            scratchBuffers = ScratchBuffers(blockFrames),
-        ),
+        limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = 1_000_000.0),
         cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
     ).apply {
         updateOffsetAndLength(0, blockFrames)
@@ -568,13 +560,13 @@ class RealtimeVoiceSpec : StringSpec({
             depth = 50.0,
             envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0),
         )
-        val renderer = FmRenderer(fm = fm, freqHz = 440.0, sampleRate = sampleRate, startFrame = 0.0)
+        val renderer = FmRenderer(fm = fm, freqHz = 440.0, sampleRate = sampleRate)
         val ctx = stripCtx(gateEndFrame = 100_000.0)
 
         renderer.render(ctx)
         ctx.freqModBuffer.any { it != 1.0 }.shouldBeTrue() // sustain: fm depth modulates pitch
 
-        ctx.gateEndFrame = 64.0 // inside the first block, after the onset (a gate AT the onset has its own rule)
+        ctx.limits.gateEndFrame = 64.0 // inside the first block, after the onset (a gate AT the onset has its own rule)
         ctx.blockStart = blockFrames.toDouble()
         ctx.freqModBufferWritten = false
         renderer.render(ctx)
@@ -582,8 +574,8 @@ class RealtimeVoiceSpec : StringSpec({
     }
 
     "a bare tree with its own envelope: note-off ramps that envelope down, not sustain-then-cliff (amendment A1)" {
-        // MUTATION CHECK (manual): revert the signalCtx update in Voice.releaseGate — the mid-tail
-        // assertion goes red (the ignitor keeps sustaining until the teardown fade at the end).
+        // MUTATION CHECK: drop the per-block gate derivation in IgniteRenderer (the ignitors keep the
+        // held gate) and the mid-tail assertion goes red (the ignitor sustains until the teardown fade).
         val d = newDispatcher()
         d.handle(
             KlangCommLink.Cmd.RegisterIgnitor(

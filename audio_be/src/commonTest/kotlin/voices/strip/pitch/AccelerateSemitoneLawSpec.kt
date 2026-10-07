@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 
 /**
@@ -29,8 +30,7 @@ class AccelerateSemitoneLawSpec : StringSpec({
         val frames = 1024
         val renderer = AccelerateRenderer(
             accelerate = Voice.Accelerate(semitones = 24.0),
-            startFrame = 0.0,
-            endFrame = frames.toDouble(),
+            totalFrames = frames.toDouble(),
         )
         val noOp = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = Unit
@@ -40,18 +40,7 @@ class AccelerateSemitoneLawSpec : StringSpec({
             freqModBuffer = DoubleArray(frames),
             scratchBuffers = ScratchBuffers(frames),
             sampleRate = 48000,
-            startFrame = 0.0,
-            endFrame = frames.toDouble(),
-            gateEndFrame = frames.toDouble(),
-            freqHz = 220.0,
-            signal = noOp,
-            signalCtx = IgniteContext(
-                sampleRate = 48000,
-                voiceDurationFrames = frames,
-                gateEndFrame = frames,
-                releaseFrames = 0,
-                scratchBuffers = ScratchBuffers(frames),
-            ),
+            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = frames.toDouble(), endFrame = frames.toDouble()),
             cylinders = Cylinders(blockFrames = frames, sampleRate = 48000),
         )
         ctx.updateOffsetAndLength(0, frames)

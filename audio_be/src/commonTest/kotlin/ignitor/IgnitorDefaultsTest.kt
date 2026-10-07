@@ -40,7 +40,6 @@ class IgnitorDefaultsTest : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
-            releaseFrames = 4410,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             updateOffsetAndLength(0, blockFrames)

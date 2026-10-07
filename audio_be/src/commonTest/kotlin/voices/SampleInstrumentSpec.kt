@@ -68,7 +68,6 @@ class SampleInstrumentSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = size,
             gateEndFrame = size,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(1),
         )

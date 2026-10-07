@@ -43,15 +43,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
         freqModBuffer = DoubleArray(blockFrames),
         scratchBuffers = ScratchBuffers(blockFrames),
         sampleRate = sampleRate,
-        startFrame = 0.0,
-        endFrame = 1_000_000.0,
-        gateEndFrame = 500_000.0,
-        freqHz = freqHz,
-        signal = Ignitors.silence(),
-        signalCtx = IgniteContext(
-            sampleRate = sampleRate, voiceDurationFrames = 500_000, gateEndFrame = 500_000, releaseFrames = 100,
-            scratchBuffers = ScratchBuffers(blockFrames),
-        ),
+        limits = VoiceLimits(startFrame = 0.0, gateEndFrame = 500_000.0, endFrame = 1_000_000.0),
         cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
     )
 
@@ -119,7 +111,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
         // envelope's level, read at each block's start, scales the depth (the FM envelope rows of
         // `FmSynthesisTest`, which only asked "more or less than", moved here as this exact oracle, 2026-09-27).
         val fm = Voice.Fm(ratio = 2.0, depth = 200.0, envelope = Voice.Envelope(0.0, 40.0 * blockFrames, 0.4, 0.0))
-        val renderer = FmRenderer(fm, freqHz, sampleRate, startFrame = 0.0)
+        val renderer = FmRenderer(fm, freqHz, sampleRate)
         val blocks = 200
         val out = renderStrip(blocks) { renderer.render(it) }
         val modInc = TWO_PI * freqHz * fm.ratio / sampleRate
@@ -143,7 +135,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
     "an FM modulator past the sample rate stays a bounded multiplier, in either sign" {
         for (ratio in listOf(200.0, -200.0)) {
             val fm = Voice.Fm(ratio = ratio, depth = 200.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
-            val renderer = FmRenderer(fm, freqHz, sampleRate, startFrame = 0.0)
+            val renderer = FmRenderer(fm, freqHz, sampleRate)
             val out = renderStrip(100) { renderer.render(it) }
             val swing = fm.depth / freqHz
 
@@ -174,7 +166,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
         for (rate in listOf(-5.0, 2.37 * sampleRate, -2.37 * sampleRate)) {
             val mod = vibratoModIgnitor(rate = rate, semitones = 1.0)
             val ctx = IgniteContext(
-                sampleRate = sampleRate, voiceDurationFrames = 500_000, gateEndFrame = 500_000, releaseFrames = 0,
+                sampleRate = sampleRate, voiceDurationFrames = 500_000, gateEndFrame = 500_000,
                 scratchBuffers = ScratchBuffers(blockFrames),
             )
             val buf = AudioBuffer(blockFrames)

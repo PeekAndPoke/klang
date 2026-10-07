@@ -51,7 +51,6 @@ class ModulationClockSpec : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = blockFrames * 64,
         gateEndFrame = blockFrames * 64,
-        releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = Random(7),
     )

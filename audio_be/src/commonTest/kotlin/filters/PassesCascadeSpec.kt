@@ -39,7 +39,6 @@ class PassesCascadeSpec : StringSpec({
             sampleRate = sr.toInt(),
             voiceDurationFrames = frames,
             gateEndFrame = frames,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames = block),
         )
         ctx.updateOffsetAndLength(0, block)

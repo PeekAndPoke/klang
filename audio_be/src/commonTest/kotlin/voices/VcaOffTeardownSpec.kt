@@ -82,7 +82,7 @@ class VcaOffTeardownSpec : StringSpec({
         val signal: Ignitor = dsl.toExciter()
         val signalCtx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
-            releaseFrames = rel,  scratchBuffers = ScratchBuffers(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = AudioBuffer(total)
         val block = AudioBuffer(blockFrames)
@@ -90,8 +90,7 @@ class VcaOffTeardownSpec : StringSpec({
         val ctx = BlockContext(
             audioBuffer = block, freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames), sampleRate = sampleRate,
-            startFrame = 0.0, endFrame = endFrame, gateEndFrame = gate.toDouble(), freqHz = freqHz,
-            signal = Ignitors.silence(), signalCtx = signalCtx,
+            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = endFrame),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
         var pos = 0
@@ -114,7 +113,6 @@ class VcaOffTeardownSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
-            releaseFrames = releaseFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = AudioBuffer(totalFrames)
@@ -125,12 +123,7 @@ class VcaOffTeardownSpec : StringSpec({
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
-            startFrame = 0.0,
-            endFrame = totalFrames.toDouble(),
-            gateEndFrame = gateFrames.toDouble(),
-            freqHz = freqHz,
-            signal = Ignitors.silence(),
-            signalCtx = signalCtx,
+            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateFrames.toDouble(), endFrame = totalFrames.toDouble()),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
@@ -156,7 +149,6 @@ class VcaOffTeardownSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
-            releaseFrames = releaseFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = AudioBuffer(totalFrames)

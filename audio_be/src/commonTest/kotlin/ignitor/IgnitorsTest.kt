@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_CHAOS_MAX
+import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -46,7 +47,6 @@ class ExcitersTest : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
-            releaseFrames = 4410,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             updateOffsetAndLength(0, blockFrames)
@@ -1199,18 +1199,7 @@ class ExcitersTest : StringSpec({
             freqModBuffer = DoubleArray(defaultBlockFrames),
             scratchBuffers = ScratchBuffers(defaultBlockFrames),
             sampleRate = sampleRate,
-            startFrame = 0.0,
-            endFrame = defaultBlockFrames.toDouble(),
-            gateEndFrame = defaultBlockFrames.toDouble(),
-            freqHz = 440.0,
-            signal = signal,
-            signalCtx = IgniteContext(
-                sampleRate = sampleRate,
-                voiceDurationFrames = defaultBlockFrames,
-                gateEndFrame = defaultBlockFrames,
-                releaseFrames = 0,
-                scratchBuffers = ScratchBuffers(defaultBlockFrames),
-            ),
+            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = defaultBlockFrames.toDouble(), endFrame = defaultBlockFrames.toDouble()),
             cylinders = Cylinders(
                 blockFrames = defaultBlockFrames, sampleRate = sampleRate,
             ),
@@ -1219,9 +1208,13 @@ class ExcitersTest : StringSpec({
         }
         val renderer = io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer(
             signal = signal,
-            signalCtx = ctx.signalCtx,
+            signalCtx = IgniteContext(
+                sampleRate = sampleRate,
+                voiceDurationFrames = defaultBlockFrames,
+                gateEndFrame = defaultBlockFrames,
+                scratchBuffers = ScratchBuffers(defaultBlockFrames),
+            ),
             freqHz = 440.0,
-            startFrame = 0.0,
         )
         renderer.render(ctx)
         ctx.audioBuffer.peakAmplitude() shouldBeLessThan 1.05

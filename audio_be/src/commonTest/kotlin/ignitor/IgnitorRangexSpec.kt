@@ -52,7 +52,6 @@ class IgnitorRangexSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = blockFrames * 4,
             gateEndFrame = blockFrames * 4,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(7),
         ).apply {

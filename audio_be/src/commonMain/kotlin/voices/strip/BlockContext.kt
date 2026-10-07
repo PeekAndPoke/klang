@@ -7,10 +7,9 @@ package io.peekandpoke.klang.audio_be.voices.strip
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
-import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 
 /**
  * Shared context for all [BlockRenderer] stages in the voice pipeline.
@@ -45,33 +44,11 @@ class BlockContext(
 
     /** Audio sample rate in Hz */
     val sampleRate: Int,
-    // These three are ABSOLUTE backend frames, so Double — see RenderClock.cursorFrame.
-    // (Contrast IgniteContext.gateEndFrame, which is voice-RELATIVE and stays Int.)
-    /** Voice start frame (absolute) */
-    val startFrame: Double,
     /**
-     * Voice end frame including release (absolute).
-     * `var`: a realtime note-off ([Voice.releaseGate]) moves it together with [gateEndFrame].
-     * THE single source of truth — renderers must read it per render call, never bake copies.
+     * The voice's onset, gate end and end ([VoiceLimits], absolute frames), by REFERENCE: the voice's own
+     * instance, which a realtime note-off moves. Stages read it on every render call and never keep a copy.
      */
-    var endFrame: Double,
-    /**
-     * Frame when gate ends / release begins (absolute).
-     * `var`: a realtime note-off ([Voice.releaseGate]) moves the gate earlier. Single source of
-     * truth for the voice's stages, see [endFrame].
-     */
-    var gateEndFrame: Double,
-    /** Base frequency in Hz */
-    val freqHz: Double,
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Ignite stage
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /** Ignitor for waveform generation */
-    val signal: Ignitor,
-    /** Per-voice IgniteContext (mutable per block) */
-    val signalCtx: IgniteContext,
+    val limits: VoiceLimits,
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Routing
@@ -100,7 +77,7 @@ class BlockContext(
      * it saves — a wrong render window is the block-framing bug class
      * (`docs/plans/block-framing-invariance.md`), and a hand-maintained copy would invite it back.
      *
-     * The ignitor side does the same — see [IgniteContext.windowEnd].
+     * The ignitor side does the same, see `IgniteContext.windowEnd`.
      */
     var windowEnd: Int = 0
         private set

@@ -28,16 +28,18 @@ class IgniteContext(
      * (docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
      */
     val voiceDurationFrames: Int,
-    // ── Moved by Voice.releaseGate on a realtime note-off — do NOT bake copies ─
+    // ── Per-block input inside a voice (see the KDoc) ──────────────────────────
     /**
-     * Frame (relative to voice start) when gate ends and release begins.
-     * `var`: a realtime note-off ([io.peekandpoke.klang.audio_be.voices.Voice.releaseGate])
-     * moves the gate earlier.
+     * Frame (relative to voice start) when gate ends and release begins. Ignitors read it per block,
+     * never keep a copy.
+     *
+     * Inside a voice this is NOT a second home of the gate: the ignite stage (`IgniteRenderer`) derives it
+     * from the voice's limits (`VoiceLimits`, the one home) before every `generate` call, so a realtime
+     * note-off reaches the ignitors on the next block and nothing else writes it. The constructor value
+     * only serves a context used without a voice (specs, benchmarks), which sets it here or by hand.
      */
     var gateEndFrame: Int,
     // ── Static per voice (set at creation, never changes) ──────────────────────
-    /** Release duration in frames */
-    val releaseFrames: Int,
     /** Shared scratch buffer pool for binary composition operators */
     val scratchBuffers: ScratchBuffers,
     /**

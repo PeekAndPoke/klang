@@ -32,7 +32,7 @@ class AffineIgnitorSpec : StringSpec({
     val SENTINEL = -12345.0
 
     fun ctx(seed: Int): IgniteContext = IgniteContext(
-        sampleRate = sr, voiceDurationFrames = sr, gateEndFrame = sr, releaseFrames = 0,
+        sampleRate = sr, voiceDurationFrames = sr, gateEndFrame = sr,
         scratchBuffers = ScratchBuffers(blockFrames), random = Random(seed),
     )
 

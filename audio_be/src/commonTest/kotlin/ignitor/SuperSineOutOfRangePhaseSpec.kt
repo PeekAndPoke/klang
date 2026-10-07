@@ -35,7 +35,7 @@ class SuperSineOutOfRangePhaseSpec : StringSpec({
 
     fun render(sig: Ignitor, freqHz: Double, blocks: Int = 8, seed: Int = 7): DoubleArray {
         val c = IgniteContext(
-            sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate, releaseFrames = 0,
+            sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames), random = Random(seed),
         )
         val out = DoubleArray(blocks * blockFrames)

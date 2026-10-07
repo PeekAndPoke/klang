@@ -357,7 +357,6 @@ class VoiceBagGuardSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = frames * 2,
             gateEndFrame = frames * 2,
-            releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
             voiceElapsedFrames = 0,
         )

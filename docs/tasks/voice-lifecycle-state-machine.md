@@ -1,6 +1,6 @@
 # A voice's lifecycle is one state machine inside the voice
 
-Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07.
+Status: **in progress.** Planned 2026-10-07 (maintainer); steps 0 and 1 done 2026-10-07, step 2 done 2026-10-07 (awaiting review).
 
 ## Why (maintainer, 2026-10-07)
 
@@ -137,15 +137,47 @@ before and after.
 2. **One writer for the time limits.** The state machine owns gate end, end frame and (later) fade start, and the
    contexts read them from the voice instead of keeping copies (or, if a hot path needs a copy, one place pushes
    it). Remove the redundant fields. Bit-identical.
+
+   **What was done (2026-10-07).** One home: `VoiceLimits` (`voices/VoiceLimits.kt`: `startFrame`, `gateEndFrame`,
+   `endFrame`; the fade start joins it in step 4). The factory builds one instance into the `BlockContext`
+   (`BlockContext.limits`, by reference); the `Voice` takes it from there, reads it through `startFrame` /
+   `endFrame` getters and is its only production writer (`releaseGate`: two writes, nothing else). Gone:
+   `BlockContext.startFrame`, `.endFrame`, `.gateEndFrame`, `BlockContext.signalCtx` (it existed only for the A1
+   write), `BlockContext.signal` and `.freqHz` (read by nothing), `IgniteContext.releaseFrames` (read by nothing,
+   and wrong after a note-off on a negative release), the `Voice` constructor's three frame parameters, and the
+   `startFrame` parameters of `IgniteRenderer`, `FmRenderer`, `PitchEnvelopeRenderer` and `AccelerateRenderer`
+   (they read the onset from the limits, so onset and gate cannot disagree). Readers: `TeardownFadeRenderer` (end,
+   onset), `PitchEnvelopeRenderer`, `FmRenderer` (onset, gate), `AccelerateRenderer` (onset), the voice itself. `IgniteContext.gateEndFrame` (voice-relative `Int`, read by `AdsrIgnitor`, the filter envelopes and the
+   Ignitor pitch envelope) stays a field, as a per-block INPUT like `voiceElapsedFrames`: the ignite stage derives
+   it from the limits before every `generate` (one subtraction per block), nothing else writes it inside a voice,
+   and a context used without a voice (about 96 constructions outside production: specs and benchmarks) keeps
+   setting it at construction. No copy was kept for speed: the interleaved JVM benchmark shows no cost. Baked on
+   purpose, because a note-off must not move it: the `accelerate` glide span (`AccelerateRenderer.totalFrames`, the
+   scheduled end minus the onset) and `IgniteContext.voiceDurationFrames`; neither is a limit. Proof: `VoiceLifecycleSpec` gained a row where a note-off renders bit for bit what a voice scheduled
+   with that gate renders, through the tree's own envelope, the pitch envelope, FM, the state and the end; six
+   mutations (no per-block gate derivation, pitch envelope or FM keeping the first gate, `releaseGate` not moving
+   the gate or the end, the teardown fade reading a held-horizon end) all red, plus the derived gate off by one,
+   caught by two literal assertions on the gate the ignitors see. The last one first survived:
+   `RealtimeVoiceSpec`'s teardown-fade note-off row rendered 12 blocks and never reached the death it is about; it
+   renders 30 now. Report: `tmp/reviews/vl-step2-report.md`.
 3. **Events from outside.** Note-off and hard kill become events on the voice; every voice ends in `Done`; the
    scheduler removes only done voices. Decide whether `held` / `liveId` move onto the voice or stay as the
    scheduler's provenance. Bit-identical.
+
+   **Forward note F2 (step 2 review, 2026-10-07).** The single writer of `VoiceLimits` is a convention, not a
+   compiler guarantee: its setters are `internal`, so anything in `audio_be` could write them. Every event, the
+   cut included, writes through a `Voice` method, never from the scheduler.
 4. **Cut becomes `Fading`** with the house teardown fade length (4 ms) instead of `iterator.remove()`. The voice
    applies the ramp itself, from a fade-start FRAME (a cut lands mid-block): it cannot rely on
    `TeardownFadeRenderer`, which `VoiceFactory.treeStages` leaves out when the tree ends in its own envelope. A sound change by
    design (no click), but no song uses cut, so the corpus stays bit-identical; `VoiceSchedulerSoloCutSpec`'s rows
    change on purpose. The open questions of `future/cut-group-semantics.md` (`cut(0)`, the reach of a group) are
    answered by the maintainer before this step or with it.
+
+   **Forward note F1 (step 2 review, 2026-10-07).** A `Fading` voice must not end by moving `limits.endFrame`:
+   `TeardownFadeRenderer` reads that field, so a voice without its own envelope would get two fades multiplied, and
+   a young voice would get the shortened midpoint window. Use a separate fade-start frame and fade end, or skip
+   the teardown stage while `Fading`.
 5. **The lease per state (maintainer decision, by ear).** Which states hold the orbit lease. Today a zombie holds
    it until `endFrame`; restricting it changes which voice owns a shared orbit (the culling design avoided that on
    purpose, measured on Der Schmetterling 2026-09-15). Corpus render plus listening.

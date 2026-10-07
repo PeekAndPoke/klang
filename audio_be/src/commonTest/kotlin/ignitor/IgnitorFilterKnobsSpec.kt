@@ -59,7 +59,6 @@ class IgnitorFilterKnobsSpec : StringSpec({
         sampleRate = sampleRate,
         voiceDurationFrames = blockFrames * blocks / 2,
         gateEndFrame = blockFrames * blocks / 2,
-        releaseFrames = blockFrames,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = rng,
     ).apply {

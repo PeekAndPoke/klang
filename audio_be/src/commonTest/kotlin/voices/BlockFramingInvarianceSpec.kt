@@ -205,7 +205,6 @@ class BlockFramingInvarianceSpec : StringSpec({
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
-            releaseFrames = relFrames,
             scratchBuffers = ScratchBuffers(256),
         )
         val out = DoubleArray(total)

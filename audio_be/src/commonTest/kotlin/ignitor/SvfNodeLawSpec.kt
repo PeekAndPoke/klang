@@ -272,7 +272,7 @@ class SvfNodeLawSpec : StringSpec({
             val ig = ArrayIgnitor(input).svf(mode, ParamIgnitor("f", base), ParamIgnitor("q", q), env, ParamIgnitor("analog", analogKnob))
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = 10 * total, gateEndFrame = 10 * total,
-                releaseFrames = 0, scratchBuffers = ScratchBuffers(block),
+                scratchBuffers = ScratchBuffers(block),
             )
             val out = DoubleArray(total)
             val buffer = AudioBuffer(block)

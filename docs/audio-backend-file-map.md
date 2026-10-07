@@ -54,6 +54,7 @@ Cmd → PlaybackEngineDispatcher.handle
 - `voices/VoiceFactory.kt` **[changed]**: builds a `Voice` (the instrument's Ignitor tree, the pitch stage, the
   stages after the tree) from `VoiceData`.
 - `voices/Voice.kt` — running voice + `RenderContext` (per-engine scratch + cylinders) + per-block render.
+- `voices/VoiceLimits.kt`: a voice's onset, gate end and end, their one home (the voice writes, the stages read).
 - `voices/PlaybackCtx.kt` — per-pid context inside a scheduler (epoch + ignitor fork).
 - `voices/strip/BlockContext.kt`, `BlockRenderer.kt`, `EnvelopeCalc.kt`: the per-block stage framework (the
   package keeps its name; the filter/VCA strip retired in phase 3 step 9, 2026-09-27).

@@ -79,7 +79,7 @@ class FastSinSpec : StringSpec({
         val blockFrames = 128
         val freq = 439.7
         val ctx = IgniteContext(
-            sampleRate = sampleRate, voiceDurationFrames = 48000, gateEndFrame = 48000, releaseFrames = 0,
+            sampleRate = sampleRate, voiceDurationFrames = 48000, gateEndFrame = 48000,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val sine = Ignitors.sine()
