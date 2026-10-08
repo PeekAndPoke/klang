@@ -59,7 +59,7 @@ class CatalogueIndexSpec : StringSpec({
         val wood = BodyMaterials.modesAt(1.0).shouldNotBeNull()
 
         wood.size shouldBe 8
-        wood.first() shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
+        wood.first() shouldBe BodyMaterials.Mode(freq = 100.0, db = 3.0, q = 12.0)
 
         // ...and the neighbour is a DIFFERENT material, so the row cannot pass on a table where
         // every index answers the same list.
@@ -138,7 +138,7 @@ class CatalogueIndexSpec : StringSpec({
         val bassA = VowelBands.bandsAt(1.0).shouldNotBeNull()
 
         bassA.size shouldBe 5
-        bassA.first() shouldBe FilterDef.Formant.Band(freq = 600.0, db = 0.0, q = 60.0)
+        bassA.first() shouldBe VowelBands.Band(freq = 600.0, db = 0.0, q = 60.0)
 
         // The soprano `a` is a different bank at a different index, so nothing collapsed.
         VowelBands.bandsFor("soprano:a").shouldNotBeNull().first().freq shouldBe 800.0

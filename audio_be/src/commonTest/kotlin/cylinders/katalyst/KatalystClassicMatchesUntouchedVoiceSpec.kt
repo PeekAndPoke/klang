@@ -14,7 +14,6 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -41,14 +40,15 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *    as this KDoc said they would. Their untouched defaults stay pinned by
  *    `KatalystDefaultsSyncSpec` (audio_bridge), the gate facts by the phaser's off row here and by
  *    `KatalystSlotResolverSpec`.
- *  - what a chain INSTALLS from a slot state, against the `FilterDef` a body or vowel call puts on
- *    the wire. That half is about the engine's non-finite rule (an unset `body.wet` plays at
- *    BODY_WET) and outlives the fields. **The wire value is HAND-BUILT in those rows**, not taken
- *    from `SprudelVoiceData.toVoiceData` (this module does not depend on `sprudel`), so the
- *    `BODY_WET` / `VOWEL_WET` literal in them IS the assertion; the catalogue supplies the bands
- *    and the class the floor's null. What the DOOR writes, and therefore that the hand-built value
- *    is the one a song produces, is sprudel's `LangKatalystParamSpec`; what the two render to is
- *    `KatalystDoorFillRenderSpec`.
+ *  - what a chain INSTALLS from a slot state, against the bank, mix and floor a body or vowel
+ *    call stands for. That half is about the engine's non-finite rule (an unset `body.wet` plays
+ *    at BODY_WET) and outlives the fields. **The expected value is HAND-BUILT in those rows**, not
+ *    taken from `SprudelVoiceData.toVoiceData` (this module does not depend on `sprudel`), so the
+ *    `BODY_WET` / `VOWEL_WET` literal in them IS the assertion; the catalogue supplies the bands.
+ *    (Until engine tidy-up step 12 (c) the expected value was the bridge's band carrier,
+ *    `FilterDef.Body` / `FilterDef.Formant`, retired then.) What the DOOR writes, and therefore that
+ *    the hand-built value is the one a song produces, is sprudel's `LangKatalystParamSpec`; what
+ *    the two render to is `KatalystDoorFillRenderSpec`.
  *
  * Why it has to be here and not in `audio_bridge`: over there the only available comparison is
  * against hand-typed numbers, and hand-typed numbers are exactly what drifts. This spec never names
@@ -114,7 +114,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
         // The bug round 1 of step 5a-2 found, and the row that would have caught it. This is the
         // RAW `katp` shape: only the index is written, so the amount is whatever an unset
         // `body.wet` slot resolves to. With the old 0.0 default that was a fully dry mix,
-        // bit-identically silent, where the wire's own `FilterDef` plays the bank at BODY_WET. The
+        // bit-identically silent, where a material-only call plays the bank at BODY_WET. The
         // sprudel door fills the amount itself since step 5a-3, which is why this row writes the
         // slot by hand: it guards the ENGINE's non-finite rule, the door's fill is
         // `LangKatalystParamSpec`'s subject.
@@ -124,24 +124,21 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
             it.applyParams(mapOf("body.material" to BodyMaterials.indexOf("wood")))
         }
 
-        // `fromWire` is the `FilterDef.Body` a material-only call puts on the wire, HAND-BUILT
-        // here with the constant written out (this module cannot call the sprudel door), so the
-        // `BODY_WET` literal is what this row asserts; the catalogue supplies the bands and the
-        // class its null floor. The chain's installed bank has to match it although nothing wrote
-        // `body.wet`.
-        val fromWire = FilterDef.Body(bands = bands, mix = BODY_WET)
+        // The expected bank and mix are what a material-only call stands for, HAND-BUILT here with
+        // the constant written out (this module cannot call the sprudel door), so the `BODY_WET`
+        // literal is what this row asserts; the catalogue supplies the bands. The chain's installed
+        // bank has to match it although nothing wrote `body.wet`.
         val installed = chain.body.shouldNotBeNull()
 
         withClue("the stage engages") { installed.isEngaged shouldBe true }
-        withClue("the same modes") { installed.installedTable.bandList() shouldBe bodyBandList(fromWire.bands) }
+        withClue("the same modes") { installed.installedTable.bandList() shouldBe bodyBandList(bands) }
 
         // The discriminator: NOT dry. A chain that resolved its unset amount to 0.0 would install
         // the right bank at no mix at all, which is silence dressed as a body.
         withClue("the mix is audible, not the dry 0.0 a SET slot would install") {
             (installed.installedMix > 0.0) shouldBe true
         }
-        withClue("...and it is the amount the wire carries") { installed.installedMix shouldBe fromWire.mix }
-        installed.installedMix shouldBe BODY_WET
+        withClue("...and it is the engine's own wet") { installed.installedMix shouldBe BODY_WET }
     }
 
     "a VOWEL-ONLY call reaches the classic chain at the engine's own wet too" {
@@ -152,47 +149,41 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
             it.applyParams(mapOf("vowel.vowel" to VowelBands.indexOf("a")))
         }
 
-        val fromWire = FilterDef.Formant(bands = bands, mix = VOWEL_WET)
         val installed = chain.vowel.shouldNotBeNull()
 
         installed.isEngaged shouldBe true
-        installed.installedTable.bandList() shouldBe vowelBandList(fromWire.bands)
+        installed.installedTable.bandList() shouldBe vowelBandList(bands)
 
         withClue("the mix is audible, not dry") { (installed.installedMix > 0.0) shouldBe true }
-        installed.installedMix shouldBe fromWire.mix
         installed.installedMix shouldBe VOWEL_WET
     }
 
-    "the classic chain installs the same bank the wire carries for a body call, slot for slot" {
+    "the classic chain installs the same bank a body call names, slot for slot" {
         // The equivalence the step-5a-2 index slot exists for: `body(material = "wood", wet = 0.3)` must
-        // reach the orbit's resonator through the INDEX slot with the bank and the mix the wire
-        // carries for the same call. The oracle is that wire value, the real `FilterDef` over the
-        // catalogue's own modes; nothing here types a mode. The name-to-index half of the trip is
-        // `CatalogueIndexSpec`'s, and what the sprudel door writes is `LangKatalystParamSpec`'s.
+        // reach the orbit's resonator through the INDEX slot with the bank and the mix the call
+        // names. The oracle is the catalogue's own modes and the call's mix; nothing here types a
+        // mode. The name-to-index half of the trip is `CatalogueIndexSpec`'s, and what the sprudel
+        // door writes is `LangKatalystParamSpec`'s.
         val bands = BodyMaterials.modesFor("wood").shouldNotBeNull()
 
         val chain = classicChain().also {
             it.applyParams(mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 0.3))
         }
 
-        val fromWire = FilterDef.Body(bands = bands, mix = 0.3)
         val installed = chain.body.shouldNotBeNull()
 
         withClue("the chain engages its body from the slots alone") { installed.isEngaged shouldBe true }
-        withClue("the SAME modes the wire carries, not just some bank") {
-            installed.installedTable.bandList() shouldBe bodyBandList(fromWire.bands)
+        withClue("the SAME modes the catalogue holds, not just some bank") {
+            installed.installedTable.bandList() shouldBe bodyBandList(bands)
         }
-        withClue("...and the same mix") { installed.installedMix shouldBe fromWire.mix }
+        withClue("...and the same mix") { installed.installedMix shouldBe 0.3 }
 
-        // The one formal difference, and why it is not audible: the wire leaves `floor` null,
-        // which the engine reads as BODY_FLOOR (`LowPassHighPassFilters.createBody`, and the stage
-        // for an unset floor), and the slot path writes that same number out. Two spellings of one
-        // value, so the filter is identical.
-        fromWire.floor shouldBe null
+        // The call names no floor: the classic chain's `body.floor` slot carries its knob default, BODY_FLOOR
+        // (`KatalystDslSlots`), and the writer hands that finite number to the stage.
         installed.installedFloor shouldBe BODY_FLOOR
     }
 
-    "the classic chain installs the same formant bank the wire carries for a vowel call" {
+    "the classic chain installs the same formant bank a vowel call names" {
         // The twin of the body row, on the other index slot. Written out rather than folded in:
         // the two stages read two catalogues, and a `vowel.vowel` wired to the body's catalogue
         // (or to no catalogue at all) would pass a body-only spec. The register is `bass`, not the
@@ -203,16 +194,14 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
             it.applyParams(mapOf("vowel.vowel" to VowelBands.indexOf("bass:a"), "vowel.wet" to 0.6))
         }
 
-        val fromWire = FilterDef.Formant(bands = bands, mix = 0.6)
         val installed = chain.vowel.shouldNotBeNull()
 
         withClue("the chain engages its vowel from the slots alone") { installed.isEngaged shouldBe true }
         withClue("the SAME bands, the bass register and not the soprano default") {
-            installed.installedTable.bandList() shouldBe vowelBandList(fromWire.bands)
+            installed.installedTable.bandList() shouldBe vowelBandList(bands)
         }
-        withClue("...and the same mix") { installed.installedMix shouldBe fromWire.mix }
+        withClue("...and the same mix") { installed.installedMix shouldBe 0.6 }
 
-        fromWire.floor shouldBe null
         installed.installedFloor shouldBe VOWEL_FLOOR
     }
 

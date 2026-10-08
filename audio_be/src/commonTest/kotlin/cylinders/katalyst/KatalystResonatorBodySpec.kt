@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
@@ -44,13 +44,13 @@ class KatalystResonatorBodySpec : StringSpec({
         return ctx to mix
     }
 
-    val woodish = FilterDef.Body(
-        bands = listOf(FilterDef.Body.Mode(freq = 300.0, db = 6.0, q = 8.0)),
+    val woodish = SpecBody(
+        bands = listOf(BodyMaterials.Mode(freq = 300.0, db = 6.0, q = 8.0)),
         mix = 1.0,
     )
 
-    val glassy = FilterDef.Body(
-        bands = listOf(FilterDef.Body.Mode(freq = 520.0, db = 9.0, q = 12.0)),
+    val glassy = SpecBody(
+        bands = listOf(BodyMaterials.Mode(freq = 520.0, db = 9.0, q = 12.0)),
         mix = 0.8,
     )
 
@@ -100,8 +100,8 @@ class KatalystResonatorBodySpec : StringSpec({
     }
 
     "a live material change does not step the output (declick crossfade)" {
-        val bodyA = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(freq = 120.0, db = 9.0, q = 12.0)), mix = 1.0)
-        val bodyB = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(freq = 320.0, db = 9.0, q = 12.0)), mix = 1.0)
+        val bodyA = SpecBody(bands = listOf(BodyMaterials.Mode(freq = 120.0, db = 9.0, q = 12.0)), mix = 1.0)
+        val bodyB = SpecBody(bands = listOf(BodyMaterials.Mode(freq = 320.0, db = 9.0, q = 12.0)), mix = 1.0)
         val fx = bodyStage(sampleRate)
         val freq = 110.0 // near bodyA's mode → a strong ring to swap out of
 
@@ -152,7 +152,7 @@ class KatalystResonatorBodySpec : StringSpec({
      * re-offered the SAME def before every block, which is what the cylinder does for the orbit's
      * owner voice on every block it is alive.
      */
-    fun renderSine(def: FilterDef.Body, freq: Double, everyBlock: Boolean, blocks: Int): DoubleArray {
+    fun renderSine(def: SpecBody, freq: Double, everyBlock: Boolean, blocks: Int): DoubleArray {
         val fx = bodyStage(sampleRate)
         val out = DoubleArray(blocks * n)
 
@@ -291,7 +291,7 @@ class KatalystResonatorBodySpec : StringSpec({
         // entry, and the stage leans on that identity to short-circuit an unchanged block. So the
         // def a reused orbit re-offers after a reset is literally the object that was installed
         // before, and the stage still has to install it rather than believe it is already there.
-        val same = FilterDef.Body(bands = woodish.bands, mix = 0.3)
+        val same = SpecBody(bands = woodish.bands, mix = 0.3)
 
         fx.configureBody(same)
         fx.installedMix shouldBe 0.3
@@ -331,7 +331,7 @@ class KatalystResonatorBodySpec : StringSpec({
     fun script(fx: KatalystResonatorEffect, blocks: Int): SwapHostScript =
         SwapHostScript(n = n, fadeLen = fadeLen, input = drySine(300.0, blocks)) { fx.process(it) }
 
-    fun ref(def: FilterDef.Body) = LowPassHighPassFilters.createBody(bands = def.bands, mix = def.mix, sampleRate = sampleRate, floor = def.floor)
+    fun ref(def: SpecBody) = LowPassHighPassFilters.createBody(bands = def.bands, mix = def.mix, sampleRate = sampleRate, floor = def.floor)
 
     "off fades the bank to dry and releases it; the SAME body after that fade-out installs afresh" {
         // Question 2 of the plan: the config cache survives the fade-out, and an unchanged def with
@@ -602,7 +602,7 @@ class KatalystResonatorBodySpec : StringSpec({
         s.law.set(a)
         repeat(6) { fx.configureBody(woodish); s.step("wood") }
 
-        val sameWet = FilterDef.Body(bands = glassy.bands, mix = woodish.mix)
+        val sameWet = SpecBody(bands = glassy.bands, mix = woodish.mix)
         val b = s.reference(ref(sameWet))
 
         fx.configureBody(sameWet)

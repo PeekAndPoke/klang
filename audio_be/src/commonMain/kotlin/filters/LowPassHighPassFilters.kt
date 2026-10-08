@@ -9,7 +9,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_be.utils.safeOut
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
@@ -354,7 +355,7 @@ object LowPassHighPassFilters {
      * engine's shared tables into banks of its own instead. A null [floor] is [VOWEL_FLOOR].
      */
     fun createFormant(
-        bands: List<FilterDef.Formant.Band>,
+        bands: List<VowelBands.Band>,
         mix: Double,
         sampleRate: Double,
         floor: Double? = null,
@@ -362,7 +363,7 @@ object LowPassHighPassFilters {
 
     /** The whole body stage on one channel, in one call; the twin of [createFormant]. A null [floor] is [BODY_FLOOR]. */
     fun createBody(
-        bands: List<FilterDef.Body.Mode>,
+        bands: List<BodyMaterials.Mode>,
         mix: Double,
         sampleRate: Double,
         floor: Double? = null,
@@ -377,7 +378,7 @@ object LowPassHighPassFilters {
      * mode's q. `freq` and `q` go to the bank raw (it guards them). The one copy of the rule
      * ([ResonatorTable.ofBody] calls it).
      */
-    internal fun bodyGain(mode: FilterDef.Body.Mode): Double {
+    internal fun bodyGain(mode: BodyMaterials.Mode): Double {
         // NaN-guard: a non-finite dB is 0 dB, unity gain.
         val safeDb = mode.db.finiteOrZero()
 
@@ -396,7 +397,7 @@ object LowPassHighPassFilters {
      * arithmetic the tables were heard with: `(dB factor * q) * tame`. The one copy of the rule
      * ([ResonatorTable.ofVowel] calls it).
      */
-    internal fun vowelGain(band: FilterDef.Formant.Band): Double {
+    internal fun vowelGain(band: VowelBands.Band): Double {
         // NaN-guards: a non-finite dB is 0 dB; a non-finite q folds the SVF's own fallback, and
         // it must be THAT clamp, or the k * q cancellation the fold rests on is not exact.
         val safeDb = band.db.finiteOrZero()

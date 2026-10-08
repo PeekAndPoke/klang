@@ -9,7 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -27,11 +27,11 @@ class BodyFilterSpec : StringSpec({
         return sqrt(buf.fold(0.0) { acc, v -> acc + v * v } / buf.size)
     }
 
-    fun mode(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq = freq, db = db, q = q)
+    fun mode(freq: Double, db: Double, q: Double) = BodyMaterials.Mode(freq = freq, db = db, q = q)
 
     // The body bank WET-ONLY: full mix, no floor, so the dry coefficient is cos(pi/2)^2, about 4e-33, and the output
     // is the resonance (the blend lives in the bank since engine tidy-up step 12 (a)).
-    fun bodyBank(modes: List<FilterDef.Body.Mode>) = ResonatorBank(capacity = modes.size, sampleRate = sampleRate, blockFrames = blockFrames)
+    fun bodyBank(modes: List<BodyMaterials.Mode>) = ResonatorBank(capacity = modes.size, sampleRate = sampleRate, blockFrames = blockFrames)
         .also { it.install(ResonatorConfig(table = ResonatorTable.ofBody(modes), mix = 1.0, floor = 0.0)) }
 
     fun woodModes() = listOf(

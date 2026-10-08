@@ -28,7 +28,8 @@ import io.peekandpoke.klang.audio_be.ignitor.notch
 import io.peekandpoke.klang.audio_be.ignitor.onePoleHighpass
 import io.peekandpoke.klang.audio_be.ignitor.onePoleLowpass
 import io.peekandpoke.klang.audio_be.ignitor.plus
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
 import kotlin.math.sin
@@ -250,21 +251,21 @@ class EffectBenchmark(
         // Representative resonator tables (the `wood` body + a soprano-ish `a` vowel) — mode/band
         // COUNT and Q range drive the cost, so exact values are not important for the benchmark.
         private val BODY_WOOD_MODES = listOf(
-            FilterDef.Body.Mode(100.0, 3.0, 12.0),
-            FilterDef.Body.Mode(200.0, 2.0, 11.0),
-            FilterDef.Body.Mode(300.0, 1.0, 10.0),
-            FilterDef.Body.Mode(430.0, 0.0, 9.0),
-            FilterDef.Body.Mode(650.0, -1.0, 8.0),
-            FilterDef.Body.Mode(900.0, -2.0, 7.0),
-            FilterDef.Body.Mode(1300.0, -4.0, 6.0),
-            FilterDef.Body.Mode(1900.0, -6.0, 5.0),
+            BodyMaterials.Mode(100.0, 3.0, 12.0),
+            BodyMaterials.Mode(200.0, 2.0, 11.0),
+            BodyMaterials.Mode(300.0, 1.0, 10.0),
+            BodyMaterials.Mode(430.0, 0.0, 9.0),
+            BodyMaterials.Mode(650.0, -1.0, 8.0),
+            BodyMaterials.Mode(900.0, -2.0, 7.0),
+            BodyMaterials.Mode(1300.0, -4.0, 6.0),
+            BodyMaterials.Mode(1900.0, -6.0, 5.0),
         )
         private val VOWEL_A_BANDS = listOf(
-            FilterDef.Formant.Band(600.0, 0.0, 60.0),
-            FilterDef.Formant.Band(1040.0, -7.0, 70.0),
-            FilterDef.Formant.Band(2250.0, -9.0, 110.0),
-            FilterDef.Formant.Band(2450.0, -9.0, 120.0),
-            FilterDef.Formant.Band(2750.0, -20.0, 130.0),
+            VowelBands.Band(600.0, 0.0, 60.0),
+            VowelBands.Band(1040.0, -7.0, 70.0),
+            VowelBands.Band(2250.0, -9.0, 110.0),
+            VowelBands.Band(2450.0, -9.0, 120.0),
+            VowelBands.Band(2750.0, -20.0, 130.0),
         )
 
         fun defaultCases(): List<Case> = listOf(
@@ -278,7 +279,7 @@ class EffectBenchmark(
             // below).
             monoFilterCase("Resonator (1 band, 1k, q=1, mix1)") { sr ->
                 LowPassHighPassFilters.createBody(
-                    bands = listOf(FilterDef.Body.Mode(freq = 1000.0, db = 0.0, q = 1.0)),
+                    bands = listOf(BodyMaterials.Mode(freq = 1000.0, db = 0.0, q = 1.0)),
                     mix = 1.0,
                     sampleRate = sr,
                 )

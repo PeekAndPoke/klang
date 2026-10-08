@@ -131,18 +131,23 @@ sample instrument fills the `adsr.*` slots the pattern left unset from it (`with
 audio_be). A voice's own envelope travels as `classic()`'s `adsr.*` slots; their defaults are the
 `VOICE_ADSR_*` constants (`audio_bridge/.../constants/EnvelopeDefaults.kt`).
 
-## FilterDef
+## The body and vowel rows
 
 ```kotlin
-sealed class FilterDef {
-    // The resonators' band rows. Since engine tidy-up step 12 (a) the engine reads only the ROWS (Band, Mode);
-    // the carriers (rows plus mix and floor) are left to the specs, and step 12 (c) retires this file.
-    data class Formant(val bands: List<Band>, val mix: Double, val floor: Double? = null)  // vowel()
-    data class Body(val bands: List<Mode>,   val mix: Double, val floor: Double? = null)   // body()
-    // Band / Mode are both (freq, db, q).
+object BodyMaterials {
+    data class Mode(val freq: Double, val db: Double, val q: Double)  // unity-peak: db IS the peak
+    // ...the material tables, names, indexOf, slotIndexAt, modesAt, modesFor
+}
+
+object VowelBands {
+    data class Band(val freq: Double, val db: Double, val q: Double)  // legacy Q-peak: the peak is Q * 10^(db/20)
+    // ...the register-by-vowel tables, names, indexOf, slotIndexAt, bandsAt, bandsFor
 }
 ```
 
+- The rows live with the catalogue that owns them. The bridge's band carriers (`FilterDef.Formant` / `Body`, rows
+  plus mix and floor) are retired since engine tidy-up step 12 (c); the stage is offered a `ResonatorConfig`
+  (table, mix, floor) in audio_be.
 - Not a wire type: the orbit builds its resonators from its slots. The `body.material` / `vowel.vowel` INDEX
   slot picks a `ResonatorTable` (`ResonatorTables.at`, through `BodyMaterials.slotIndexAt` / `VowelBands.slotIndexAt`;
   one table per index, built once from the rows, equal rows sharing one instance) in `KatalystResonatorWriter`; an

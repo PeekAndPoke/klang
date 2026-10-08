@@ -5,7 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.filters
 
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.VowelBands
 
 /**
  * The bands a [ResonatorBank] is installed from, kind-neutral: per band a centre frequency in Hz, the SVF's q (a pure
@@ -28,14 +29,14 @@ class ResonatorTable private constructor(
 
     companion object {
         /** A body material's modes as a table: the gain is [LowPassHighPassFilters.bodyGain] per mode. */
-        fun ofBody(modes: List<FilterDef.Body.Mode>): ResonatorTable = ResonatorTable(
+        fun ofBody(modes: List<BodyMaterials.Mode>): ResonatorTable = ResonatorTable(
             freq = DoubleArray(modes.size) { modes[it].freq },
             q = DoubleArray(modes.size) { modes[it].q },
             gain = DoubleArray(modes.size) { LowPassHighPassFilters.bodyGain(modes[it]) },
         )
 
         /** A vowel's formant bands as a table: the gain is [LowPassHighPassFilters.vowelGain] per band. */
-        fun ofVowel(bands: List<FilterDef.Formant.Band>): ResonatorTable = ResonatorTable(
+        fun ofVowel(bands: List<VowelBands.Band>): ResonatorTable = ResonatorTable(
             freq = DoubleArray(bands.size) { bands[it].freq },
             q = DoubleArray(bands.size) { bands[it].q },
             gain = DoubleArray(bands.size) { LowPassHighPassFilters.vowelGain(bands[it]) },

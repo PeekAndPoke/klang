@@ -132,7 +132,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   control events: each one whose gate is open records its source until the block's end, so a realtime solo follows the
   held gates.
 - **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
-  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0), both in `audio_bridge/FilterDef.kt`, read by the runtime and the census.
+  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0), both in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -246,7 +246,8 @@ One line per step, newest first. A link to the archived task record where one ex
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
 - 2026-10-08 One fade law for the bank swap and the compressor (`utils/linear_crossfade.kt`); body and vowel are one
-  stage class with two kinds on a pooled bank, no allocation per change: `docs/tasks/engine-tidy-up.md` step 12
+  stage class with two kinds on a pooled bank, no allocation per change; the band rows live with their catalogues
+  (`BodyMaterials.Mode`, `VowelBands.Band`) and `FilterDef` is retired: `docs/tasks/engine-tidy-up.md` step 12
 - 2026-10-08 First-block and voice-count allocations moved to the build (drift lanes, phaser, memo, partial banks,
   stacks, strings, the phase pool's parse and key): `docs/tasks/engine-tidy-up.md` step 10
 - 2026-10-08 An engine's end of life is one `PlaybackEngine.Phase`; the dispatcher's `draining` set and `detached`

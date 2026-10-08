@@ -9,7 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
@@ -53,7 +53,7 @@ class FilterNormalizationSpec : StringSpec({
     fun svfBpfPeak(q: Double, freq: Double = 1000.0): Double {
         val f = ResonatorBank(capacity = 1, sampleRate = sr, blockFrames = blockFrames)
 
-        val band = ResonatorTable.ofBody(listOf(FilterDef.Body.Mode(freq = freq, db = 0.0, q = q)))
+        val band = ResonatorTable.ofBody(listOf(BodyMaterials.Mode(freq = freq, db = 0.0, q = q)))
 
         f.install(ResonatorConfig(table = band, mix = 1.0, floor = 0.0))
 

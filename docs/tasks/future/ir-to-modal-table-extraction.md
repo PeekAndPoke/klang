@@ -20,11 +20,11 @@ hand-authored tables:
   2026-07-04 ~15 materials — woods `wood`/`cedar`/`spruce`/`mahogany`/`rosewood`/`maple`/`oak`, `violin`,
   `tube`/`glass`/`membrane`, metals `brass`/`steel`/`bell`, + `none`), each ~8 `m(freq, db, q)` modes. (Extracted
   from the old private `SprudelVoiceData.resolveBodyModes`.)
-- `audio_be/src/commonMain/kotlin/filters/BodyFilter.kt` — the parallel SVF-BPF bank; divides each band by `Q`
-  so `db` is the *actual* peak emphasis (independent of sharpness).
-- `audio_bridge/src/commonMain/kotlin/FilterDef.kt`: `FilterDef.Body` / `Body.Mode` (+ nullable
-  `floor`, set by the `body(floor = ...)` DSL). Not a wire type since phase 3 step 9 (2026-09-27): the orbit
-  builds it from the `body.*` slots.
+- `audio_be/src/commonMain/kotlin/filters/ResonatorBank.kt`, the parallel SVF bandpass bank (installed from a
+  `ResonatorTable`); the bandpass is unity-peak, so `db` is the *actual* peak emphasis (independent of sharpness).
+- `BodyMaterials.Mode` (in `audio_bridge/src/commonMain/kotlin/BodyMaterials.kt`), the row type: `(freq, db, q)`.
+  The floor is a slot (`body.floor`, set by the `body(floor = ...)` DSL); the orbit builds its bank from the
+  `body.*` slots.
 
 These tables are authored by ear — caricatures anchored on a few real acoustic "tells" (see the credited
 sources), the rest sparse fill. This task is about **deriving** them from real recordings instead.
@@ -114,4 +114,4 @@ the extractor should land near them for a comparable recording.
 ## Related
 
 - Memory: `project_body_resonator` (the `body()`/`body(wet = ...)`/`vowel()` POC), `feedback_raw_motor`.
-- Code: `BodyMaterials` (the tables), `ResonatorTables` and `ResonatorBank` (audio_be), `FilterDef.Body`.
+- Code: `BodyMaterials` (the tables), `ResonatorTables` and `ResonatorBank` (audio_be), `BodyMaterials.Mode`.

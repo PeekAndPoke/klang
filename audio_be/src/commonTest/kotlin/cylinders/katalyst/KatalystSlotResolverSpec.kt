@@ -17,7 +17,6 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -670,9 +669,10 @@ class KatalystSlotResolverSpec : StringSpec({
         // parity cannot live in one file.
         //
         // The ONE difference between the paths was the floor FILL: a voice left `floor = null`,
-        // which [FilterDef.Body] documents as "engine default", while a declared stage writes that
-        // same default out as a number. Same filter, two spellings of one value (and since engine
-        // tidy-up step 12 (a) one key in the stage, which takes a number).
+        // which the bridge's band carrier (`FilterDef.Body`, retired in engine tidy-up step 12 (c))
+        // documented as "engine default", while a declared stage writes that same default out as a
+        // number. Same filter, two spellings of one value (and since engine tidy-up step 12 (a) one
+        // key in the stage, which takes a number).
         val chain = declared(
             KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("wood")), wet = c(0.3), floor = c(BODY_FLOOR)),
             KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("a")), wet = c(0.3), floor = c(VOWEL_FLOOR)),
@@ -682,7 +682,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
         body.installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
         body.installedTable.bandList().shouldNotBeNull().first() shouldBe
-            bodyBandList(listOf(FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0))).shouldNotBeNull().first()
+            bodyBandList(listOf(BodyMaterials.Mode(freq = 100.0, db = 3.0, q = 12.0))).shouldNotBeNull().first()
         body.installedTable.shouldNotBeNull().count shouldBe 8
         body.installedMix shouldBe 0.3
         body.installedFloor shouldBe BODY_FLOOR
@@ -692,7 +692,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // A bare vowel name is the soprano register, the voice path's rule as well.
         vowel.installedTable.bandList() shouldBe vowelBandList(VowelBands.bandsFor("soprano:a"))
         vowel.installedTable.bandList().shouldNotBeNull().first() shouldBe
-            vowelBandList(listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0))).shouldNotBeNull().first()
+            vowelBandList(listOf(VowelBands.Band(freq = 800.0, db = 0.0, q = 80.0))).shouldNotBeNull().first()
         vowel.installedTable.shouldNotBeNull().count shouldBe 5
         vowel.installedMix shouldBe 0.3
         vowel.installedFloor shouldBe VOWEL_FLOOR

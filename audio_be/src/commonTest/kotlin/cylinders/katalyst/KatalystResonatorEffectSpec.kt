@@ -17,7 +17,6 @@ import io.peekandpoke.klang.audio_be.filters.ResonatorConfig
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -249,7 +248,7 @@ class KatalystResonatorEffectSpec : StringSpec({
     "a table with more bands than the pool holds renders as a bank built new for it, bit for bit" {
         // A direct caller only (the engine's tables fit the capacity, `ResonatorTablesSpec`): the pooled bank grows
         // once and is then exactly the fresh one.
-        val big = SpecResonatorTables.body((0 until 12).map { FilterDef.Body.Mode(freq = 140.0 * (it + 1), db = -it.toDouble(), q = 6.0 + it) })
+        val big = SpecResonatorTables.body((0 until 12).map { BodyMaterials.Mode(freq = 140.0 * (it + 1), db = -it.toDouble(), q = 6.0 + it) })
         val fx = KatalystResonatorEffect(kind = ResonatorKind.BODY, sampleRate = sampleRate.toDouble(), blockFrames = blockFrames)
 
         // The pool exists at the catalogue's capacity first, and has rung.

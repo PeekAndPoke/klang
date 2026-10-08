@@ -13,7 +13,7 @@ import kotlin.random.Random
 
 /**
  * Reads the knobs of a Katalyst chain: one [IgnitorDsl] slot node in, one `Double` out. The
- * composite values a stage wants instead of a number (the body and vowel `FilterDef`s, the
+ * composite values a stage wants instead of a number (the body and vowel `ResonatorConfig`s, the
  * [CompressorSettings], the [DuckSettings]) are built by that stage's writer
  * (`KatalystSlotWriters.kt`), each the one caller of its rule.
  *

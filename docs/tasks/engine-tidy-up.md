@@ -812,6 +812,33 @@ and banks: `vowel("a").body(material = "wood")` runs both, and the golden below 
   `cutoffOffsetMul` rows went with the sweep); the order rows compare a stage name with its kind. `EffectBenchmark`'s
   `SvfBPF` case is a one-band bank.
 
+### (c) The `FilterDef` carriers retired (A2.3): done 2026-10-08
+
+After (a) the engine read only the ROWS of `FilterDef.Body` / `FilterDef.Formant`; the carriers (rows, mix, floor)
+were left to the specs. The rows now live with the catalogues that own them, `BodyMaterials.Mode` and
+`VowelBands.Band` ("Vowel", not "Formant", so B3.6 is not pre-empted), with their gain-convention KDoc. The resource
+bounds that shared the file (`FILTER_MAX_PASSES`, both `coercePasses`, `UNISON_MAX_VOICES`, `coerceUnisonVoices`)
+moved to `audio_bridge/.../_resource_bounds.kt` in the same package, so no import changed (`Ignitors.kt` included).
+`FilterDef.kt` is deleted and `FilterDef` is in `docs/retired-names.md`.
+
+- **The specs' carrier:** `SpecBody` / `SpecVowel` (rows, mix, nullable floor) in `_resonator_spec_helpers.kt`,
+  test-only, beside `SpecResonatorTables`; the body and vowel stage specs read as before.
+  `KatalystClassicMatchesUntouchedVoiceSpec` compared the chain against a hand-built `FilterDef` "the wire carries"
+  (the wire stopped carrying it in phase 3 step 9); its four rows now compare against the catalogue's rows and the
+  literal mix and floor, the same assertions without the carrier.
+- **Docs:** `audio/CLAUDE.md`, `audio/ref/data-model.md` (the section is "The body and vowel rows"),
+  `audio/MEMORY.md`, `ir-to-modal-table-extraction.md` (its stale `BodyFilter.kt` line too), the named-args task's
+  helper bodies, the `scaledBy` KDoc, `KatalystSlots` / `KatalystChain` KDoc (the composite is a `ResonatorConfig`),
+  the `BusEffectDefaults` header. Historic records keep their words; sprudel's KDoc sentences that say what the
+  `filters` field once carried stay, as history.
+- **Proof:** no behaviour change, bit-identical. Compiled: `audio_bridge`, `audio_be`, `klangscript-libs`,
+  `sprudel`, `audio_benchmark`, `audio_fe`, `audio_jsworklet`, `klangui`, `klang-notebook` and the root module, JVM
+  and JS. `:audio_bridge:jvmTest` (146), `:audio_be:jvmTest` (2,396), `:sprudel:jvmTest` (3,471),
+  `:audio_be:jsBrowserTest` (2,292) and the root `KatalystDoorFillRenderSpec`, `KatalystBodyNonFiniteWetSpec`,
+  `DslDocExamplesSpec` green. The corpus (label `ep1-t12c`): the 16 rows identical to `corpus-ep1-before.txt`, Der
+  Schmetterling from HEAD's text `94dfc72ae5637e91`, Kokon `2f8d88cd2458fce2`. The wire is untouched: the generated
+  codec names none of the moved types, so `WIRE_SCHEMA_HASH` cannot move.
+
 ### Found during tidy-up step 12
 
 - **A param map change allocates on V8 in the chain's re-resolve** (about 94 bytes per new map instance, the
@@ -877,7 +904,7 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   KlangScript doors through `IgnitorDslLike`, and the runtime `Ignitor` extensions), and fills the gaps it finds.
   The test-only seams (`*ForTest`, `currentState`, `installed*`) are a separate question and stay with A2.1.
 - **The unison cap (maintainer, 2026-10-08): 256, not 64.** `UNISON_MAX_VOICES` becomes 256 (`FilterDef.kt`, later
-  `resource_bounds.kt` with step 12 (c)). Done 2026-10-08, after step 11 was committed. Cost to keep in mind: a superpluck string carries a 2,500-sample delay line, so 256
+  `_resource_bounds.kt` with step 12 (c)). Done 2026-10-08, after step 11 was committed. Cost to keep in mind: a superpluck string carries a 2,500-sample delay line, so 256
   strings build about 5 MB per note on the audio thread (64 built about 1.3 MB). No song comes near it (the largest
   count is 32).
 - **Step 12 (a), body and vowel as one implementation (maintainer, 2026-10-08): agreed** ("I agree to unify the

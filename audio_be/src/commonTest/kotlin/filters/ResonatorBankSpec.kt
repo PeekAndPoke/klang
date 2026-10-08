@@ -12,7 +12,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.utils.flushState
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.log10
@@ -136,7 +137,7 @@ class ResonatorBankSpec : StringSpec({
     }
 
     fun table(rows: List<Triple<Double, Double, Double>>): ResonatorTable =
-        ResonatorTable.ofBody(rows.map { FilterDef.Body.Mode(freq = it.first, db = 20.0 * log10(it.third), q = it.second) })
+        ResonatorTable.ofBody(rows.map { BodyMaterials.Mode(freq = it.first, db = 20.0 * log10(it.third), q = it.second) })
 
     /** Bands whose gains are far apart, so the order of the sum is observable, and one with a hostile q and freq. */
     val rows = listOf(
@@ -259,21 +260,21 @@ class ResonatorBankSpec : StringSpec({
     }
 
     "the body rule: the gain is the plain dB factor, a non-finite dB is 0 dB, freq and q pass raw" {
-        val plain = ResonatorTable.ofBody(listOf(FilterDef.Body.Mode(freq = 230.0, db = -3.0, q = 10.0)))
+        val plain = ResonatorTable.ofBody(listOf(BodyMaterials.Mode(freq = 230.0, db = -3.0, q = 10.0)))
 
         plain.gain[0] shouldBe 10.0.pow(-3.0 / 20.0)
         plain.freq[0] shouldBe 230.0
         plain.q[0] shouldBe 10.0
 
-        ResonatorTable.ofBody(listOf(FilterDef.Body.Mode(freq = 230.0, db = Double.NaN, q = 10.0))).gain[0] shouldBe 1.0
-        ResonatorTable.ofBody(listOf(FilterDef.Body.Mode(freq = 230.0, db = Double.NEGATIVE_INFINITY, q = 10.0))).gain[0] shouldBe 1.0
+        ResonatorTable.ofBody(listOf(BodyMaterials.Mode(freq = 230.0, db = Double.NaN, q = 10.0))).gain[0] shouldBe 1.0
+        ResonatorTable.ofBody(listOf(BodyMaterials.Mode(freq = 230.0, db = Double.NEGATIVE_INFINITY, q = 10.0))).gain[0] shouldBe 1.0
 
         // The SVF clamps q itself; the body folds nothing, so an out-of-range q reaches it unchanged.
-        ResonatorTable.ofBody(listOf(FilterDef.Body.Mode(freq = 230.0, db = 0.0, q = 500.0))).q[0] shouldBe 500.0
+        ResonatorTable.ofBody(listOf(BodyMaterials.Mode(freq = 230.0, db = 0.0, q = 500.0))).q[0] shouldBe 500.0
     }
 
     "the vowel rule: the dB factor times the clamped q times 0.05, in that order; the SVF gets the raw q" {
-        fun vowel(freq: Double, db: Double, q: Double) = ResonatorTable.ofVowel(listOf(FilterDef.Formant.Band(freq = freq, db = db, q = q)))
+        fun vowel(freq: Double, db: Double, q: Double) = ResonatorTable.ofVowel(listOf(VowelBands.Band(freq = freq, db = db, q = q)))
 
         // (-3 dB, q 110) is a pair where the three associations of the product are three different
         // doubles, so a regrouped fold is a different number here, not just a different spelling.
@@ -340,11 +341,11 @@ class ResonatorBankSpec : StringSpec({
         val sr = 44100.0
         val frames = 4096
         val modes = listOf(
-            FilterDef.Body.Mode(freq = 110.0, db = 2.0, q = 12.0),
-            FilterDef.Body.Mode(freq = 230.0, db = 1.0, q = 10.0),
-            FilterDef.Body.Mode(freq = 430.0, db = 0.0, q = 9.0),
-            FilterDef.Body.Mode(freq = 820.0, db = -2.0, q = 7.0),
-            FilterDef.Body.Mode(freq = 1500.0, db = -4.0, q = 5.0),
+            BodyMaterials.Mode(freq = 110.0, db = 2.0, q = 12.0),
+            BodyMaterials.Mode(freq = 230.0, db = 1.0, q = 10.0),
+            BodyMaterials.Mode(freq = 430.0, db = 0.0, q = 9.0),
+            BodyMaterials.Mode(freq = 820.0, db = -2.0, q = 7.0),
+            BodyMaterials.Mode(freq = 1500.0, db = -4.0, q = 5.0),
         )
 
         fun rms(buf: AudioBuffer): Double = sqrt(buf.fold(0.0) { acc, v -> acc + v * v } / buf.size)

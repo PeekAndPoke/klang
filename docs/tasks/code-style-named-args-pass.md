@@ -45,7 +45,7 @@ run past 120 characters, a formatting matter).
   are named.
 - The two literal data tables, `VowelBands.b(freq, db, q)` (180 rows) and `BodyMaterials.m(freq, db, q)` (120 rows):
   the column order is the private helper declared just above each table, and naming every cell would triple each
-  row. The helpers' own bodies (`FilterDef.Formant.Band(...)`, `FilterDef.Body.Mode(...)`) are named. **For the
+  row. The helpers' own bodies (`VowelBands.Band(...)`, `BodyMaterials.Mode(...)`; `FilterDef.Formant.Band` / `FilterDef.Body.Mode` until engine tidy-up step 12 (c)) are named. **For the
   maintainer:** if §24 has no table exception, naming the 300 rows is one more mechanical run.
 
 **Cannot be named:** calls of a function-typed value (`Function2`..`Function7.invoke`, 22 calls in tests) and two

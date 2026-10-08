@@ -372,8 +372,7 @@ fun Ignitor.svf(
  * A [ParamIgnitor] that engine code constructs directly (the `Double` overloads of [svf] and its
  * wrappers) would be a third, but no production caller does that today: `scaledBy` has exactly two
  * callers, both in `IgnitorDslRuntime`'s passes cascade and both fed `q.noMod()`. A voice's filter q
- * reaches the tree as a slot (`classic()`), never as a `FilterDef`; the ignitor package does not
- * reference `FilterDef`.
+ * reaches the tree only as a slot (`classic()`).
  */
 internal fun Ignitor.scaledBy(factor: Double): Ignitor = when {
     factor == 1.0 -> this

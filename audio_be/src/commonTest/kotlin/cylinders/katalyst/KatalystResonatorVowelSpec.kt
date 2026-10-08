@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
@@ -44,13 +44,13 @@ class KatalystResonatorVowelSpec : StringSpec({
         return ctx to mix
     }
 
-    val vowelish = FilterDef.Formant(
-        bands = listOf(FilterDef.Formant.Band(freq = 700.0, db = 0.0, q = 10.0)),
+    val vowelish = SpecVowel(
+        bands = listOf(VowelBands.Band(freq = 700.0, db = 0.0, q = 10.0)),
         mix = 1.0,
     )
 
-    val ohish = FilterDef.Formant(
-        bands = listOf(FilterDef.Formant.Band(freq = 450.0, db = 0.0, q = 8.0)),
+    val ohish = SpecVowel(
+        bands = listOf(VowelBands.Band(freq = 450.0, db = 0.0, q = 8.0)),
         mix = 0.8,
     )
 
@@ -106,7 +106,7 @@ class KatalystResonatorVowelSpec : StringSpec({
      * re-offered the SAME def before every block, which is what the cylinder does for the owner
      * voice on every block it is alive.
      */
-    fun renderSine(def: FilterDef.Formant, freq: Double, everyBlock: Boolean, blocks: Int): DoubleArray {
+    fun renderSine(def: SpecVowel, freq: Double, everyBlock: Boolean, blocks: Int): DoubleArray {
         val fx = vowelStage(sampleRate)
         val out = DoubleArray(blocks * n)
 
@@ -223,7 +223,7 @@ class KatalystResonatorVowelSpec : StringSpec({
         // The IDENTICAL def: `VowelBands` hands out one shared band list per entry, and the stage
         // leans on that identity to short-circuit an unchanged block, so a reused orbit re-offers
         // the very object that was installed before and must still get a bank.
-        val same = FilterDef.Formant(bands = vowelish.bands, mix = 0.3)
+        val same = SpecVowel(bands = vowelish.bands, mix = 0.3)
 
         fx.configureVowel(same)
         fx.installedMix shouldBe 0.3
@@ -262,7 +262,7 @@ class KatalystResonatorVowelSpec : StringSpec({
     fun script(fx: KatalystResonatorEffect, blocks: Int): SwapHostScript =
         SwapHostScript(n = n, fadeLen = fadeLen, input = drySine(700.0, blocks)) { fx.process(it) }
 
-    fun ref(def: FilterDef.Formant) = LowPassHighPassFilters.createFormant(bands = def.bands, mix = def.mix, sampleRate = sampleRate, floor = def.floor)
+    fun ref(def: SpecVowel) = LowPassHighPassFilters.createFormant(bands = def.bands, mix = def.mix, sampleRate = sampleRate, floor = def.floor)
 
     "off fades the bank to dry and releases it; the SAME vowel after that fade-out installs afresh" {
         // Question 2 of the plan: the config cache survives the fade-out, and an unchanged def with
@@ -564,7 +564,7 @@ class KatalystResonatorVowelSpec : StringSpec({
         s.law.set(a)
         repeat(6) { fx.configureVowel(vowelish); s.step("a vowel") }
 
-        val sameWet = FilterDef.Formant(bands = ohish.bands, mix = vowelish.mix)
+        val sameWet = SpecVowel(bands = ohish.bands, mix = vowelish.mix)
         val b = s.reference(ref(sameWet))
 
         fx.configureVowel(sameWet)

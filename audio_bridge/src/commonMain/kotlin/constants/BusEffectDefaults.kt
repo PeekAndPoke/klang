@@ -25,7 +25,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 //   writers in `KatalystSlotWriters.kt`, or the stage's own `configure` where it
 //   compares what it is handed). That is the NaN rule, not a second fill;
 // - the shared DSP's own defaults (`DelayLine`, `Reverb`, `Phaser`,
-//   `LowPassHighPassFilters`, `FilterDef`).
+//   `LowPassHighPassFilters`, `KatalystResonatorEffect`).
 // The values are the ones the engine used before they had a name; naming them
 // retuned nothing (Katalyst DSL step 1, 2026-09-17; the delay and reverb pair,
 // `docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`, lived

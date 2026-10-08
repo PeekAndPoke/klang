@@ -9,7 +9,7 @@ package io.peekandpoke.klang.audio_bridge
 /**
  * Body-resonator material catalogue: the fixed modal resonances behind `body(material = "<material>")`.
  *
- * A material is *pure data*: a list of [FilterDef.Body.Mode] `(freq Hz, db, Q)` triples. The audio
+ * A material is *pure data*: a list of [Mode] `(freq Hz, db, Q)` triples. The audio
  * backend (`ResonatorBank`) plays them as a parallel SVF-bandpass bank mixed over the dry source.
  * After the bank's `1/Q` normalization, `db` is the mode's *actual* peak emphasis in dB, a few dB,
  * not 20+. Modes are dense so the bank covers the spectrum (overlapping skirts keep the inter-mode
@@ -34,7 +34,21 @@ package io.peekandpoke.klang.audio_bridge
  */
 object BodyMaterials {
 
-    private fun m(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq = freq, db = db, q = q)
+    /**
+     * One body mode: a single SVF bandpass tuned to a resonance of the body.
+     *
+     * **Gain semantic (unity-peak):** UNLIKE [VowelBands.Band], the peak gain at `freq` is `10^(db/20)`: the engine's
+     * body bank always normalised the Q peak away (pre-C2 via an explicit 1/Q, since C2 natively via the unity-peak
+     * SVF), so `db` IS the peak. Material tables conventionally set the lowest mode to `db = 0` and use negative dB
+     * for upper modes.
+     */
+    data class Mode(
+        val freq: Double,
+        val db: Double,
+        val q: Double,
+    )
+
+    private fun m(freq: Double, db: Double, q: Double) = Mode(freq = freq, db = db, q = q)
 
     /**
      * All selectable names (`none` = off), grouped by family in display order.
@@ -93,7 +107,7 @@ object BodyMaterials {
      * backend does not compare these lists: it builds one table per index once (`ResonatorTables`,
      * which shares one table between indices whose lists are equal) and compares those by reference.
      */
-    private val modesByIndex: List<List<FilterDef.Body.Mode>?> = names.map { modesOf(it) }
+    private val modesByIndex: List<List<Mode>?> = names.map { modesOf(it) }
 
     /**
      * The INDEX of a material name, for a `body.material` slot: the position in [names], or 0.0
@@ -115,7 +129,7 @@ object BodyMaterials {
      * the even index, which is what `kotlin.math.round` does on both platforms: 0.5 is `none` and
      * 1.5 is index 2, never index 1.
      */
-    fun modesAt(index: Double): List<FilterDef.Body.Mode>? = modesByIndex[slotIndexAt(index)]
+    fun modesAt(index: Double): List<Mode>? = modesByIndex[slotIndexAt(index)]
 
     /**
      * The position in [names] a slot value names, 0 (`none`) when it names none: the one index rule of [modesAt],
@@ -133,14 +147,14 @@ object BodyMaterials {
      *
      * Goes through the index, so the name path and the slot path cannot answer differently.
      */
-    fun modesFor(material: String): List<FilterDef.Body.Mode>? = modesAt(indexOf(material))
+    fun modesFor(material: String): List<Mode>? = modesAt(indexOf(material))
 
     /**
      * The mode table itself, by name. Private and index-free: it is what fills [modesByIndex], so
      * it may not ask [modesAt] anything, and its only caller is [modesByIndex]'s builder, which
      * walks [names], so it needs no case folding of its own ([indexOf] owns that rule).
      */
-    private fun modesOf(material: String): List<FilterDef.Body.Mode>? = when (material) {
+    private fun modesOf(material: String): List<Mode>? = when (material) {
         // Warm resonant box (guitar/marimba-ish body).
         "wood" -> listOf(
             m(100.0, 3.0, 12.0),

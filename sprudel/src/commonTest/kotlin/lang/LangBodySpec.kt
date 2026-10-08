@@ -9,7 +9,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
@@ -72,7 +71,7 @@ class LangBodySpec : StringSpec({
         val slots = slots(note("c3").body(material = "wood", wet = 0.3))
 
         modes(slots) shouldBe BodyMaterials.modesFor("wood")
-        modes(slots)?.get(0) shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
+        modes(slots)?.get(0) shouldBe BodyMaterials.Mode(freq = 100.0, db = 3.0, q = 12.0)
         slots["body.wet"] shouldBe 0.3
         slots["body.floor"] shouldBe BODY_FLOOR
     }

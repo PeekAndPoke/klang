@@ -8,7 +8,8 @@ package io.peekandpoke.klang.audio_be.filters
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -29,17 +30,17 @@ class FormantBlendSpec : StringSpec({
 
     // Soprano "u": F1 325, F2 700, then steep rolloff.
     val uBands = listOf(
-        FilterDef.Formant.Band(freq = 325.0, db = 0.0, q = 80.0),
-        FilterDef.Formant.Band(freq = 700.0, db = -16.0, q = 90.0),
-        FilterDef.Formant.Band(freq = 2700.0, db = -35.0, q = 120.0),
-        FilterDef.Formant.Band(freq = 3800.0, db = -40.0, q = 130.0),
-        FilterDef.Formant.Band(freq = 4950.0, db = -60.0, q = 140.0),
+        VowelBands.Band(freq = 325.0, db = 0.0, q = 80.0),
+        VowelBands.Band(freq = 700.0, db = -16.0, q = 90.0),
+        VowelBands.Band(freq = 2700.0, db = -35.0, q = 120.0),
+        VowelBands.Band(freq = 3800.0, db = -40.0, q = 130.0),
+        VowelBands.Band(freq = 4950.0, db = -60.0, q = 140.0),
     )
     val woodModes = listOf(
-        FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0), FilterDef.Body.Mode(freq = 200.0, db = 2.0, q = 11.0),
-        FilterDef.Body.Mode(freq = 300.0, db = 1.0, q = 10.0), FilterDef.Body.Mode(freq = 430.0, db = 0.0, q = 9.0),
-        FilterDef.Body.Mode(freq = 650.0, db = -1.0, q = 8.0), FilterDef.Body.Mode(freq = 900.0, db = -2.0, q = 7.0),
-        FilterDef.Body.Mode(freq = 1300.0, db = -4.0, q = 6.0), FilterDef.Body.Mode(freq = 1900.0, db = -6.0, q = 5.0),
+        BodyMaterials.Mode(freq = 100.0, db = 3.0, q = 12.0), BodyMaterials.Mode(freq = 200.0, db = 2.0, q = 11.0),
+        BodyMaterials.Mode(freq = 300.0, db = 1.0, q = 10.0), BodyMaterials.Mode(freq = 430.0, db = 0.0, q = 9.0),
+        BodyMaterials.Mode(freq = 650.0, db = -1.0, q = 8.0), BodyMaterials.Mode(freq = 900.0, db = -2.0, q = 7.0),
+        BodyMaterials.Mode(freq = 1300.0, db = -4.0, q = 6.0), BodyMaterials.Mode(freq = 1900.0, db = -6.0, q = 5.0),
     )
 
     fun gainAt(freq: Double, filters: List<AudioFilter>): Double {

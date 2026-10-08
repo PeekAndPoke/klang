@@ -17,7 +17,6 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
 import kotlin.math.abs
