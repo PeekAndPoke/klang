@@ -20,6 +20,12 @@ import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WarmupVocabulary
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.body
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.compressor
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.phaser
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.vowel
 import io.peekandpoke.klang.audio_be.interleavedCopy
 import io.peekandpoke.klang.audio_be.peak
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry

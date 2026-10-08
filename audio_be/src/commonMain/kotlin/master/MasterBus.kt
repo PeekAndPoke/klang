@@ -224,9 +224,7 @@ class MasterBus(
     fun sustainsItself(): Boolean = current.sustainsItself()
 
     /** True when a chain in play declares a reverb/delay at all: cheap, no buffer scan. */
-    private fun hasTailUnits(): Boolean = current.declaresTail() || swap.leaving?.declaresTail() == true
-
-    private fun KatalystChain.declaresTail(): Boolean = reverb != null || delay != null
+    private fun hasTailUnits(): Boolean = current.declaresTail || swap.leaving?.declaresTail == true
 
     /** Number of built chains held by this bus — for tests asserting the cache stays bounded. */
     internal val cachedChainCount: Int get() = chains.size

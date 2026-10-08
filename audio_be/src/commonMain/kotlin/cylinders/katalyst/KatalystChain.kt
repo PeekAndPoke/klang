@@ -111,32 +111,19 @@ class KatalystChain internal constructor(
         private set
 
     // ════════════════════════════════════════════════════════════════════════════
-    // Typed accessors
+    // Chain properties, computed once at build
     // ════════════════════════════════════════════════════════════════════════════
 
-    // The seven classic EFFECTS by name (the fader has no accessor: nothing asks a chain for its
-    // gain stage), for the hosts and the specs that ask about ONE of them
-    // (the warehouse specs about the rented ring and network, the diagnostics about denied rents).
-    // Null when the chain declares no such stage: "the cylinder's delay" is a property of the
-    // chain, not of the cylinder, which is exactly what this step makes true. A chain that
-    // declares a kind twice reports the LAST one here, the same rule the duck follows, while BOTH
-    // run and both are covered by the lifecycle (which goes through [stages], not through these).
+    // No typed accessor for a serial stage is left on the chain (the duck, which runs outside [pipeline], keeps its
+    // own): production walks [pipeline] and asks the questions below, which test stages by kind once at build. The
+    // specs that ask about ONE stage (the warehouse specs about the rented ring and network, the resonator specs about
+    // a body and a vowel) find it through their own helpers (`_katalyst_test_helpers.kt`, engine tidy-up step 13).
 
-    // Body and vowel are one class with two kinds (engine tidy-up step 12 (a)), so these two find their stage by kind.
-
-    val body: KatalystResonatorEffect? =
-        serial.filterIsInstance<KatalystResonatorEffect>().lastOrNull { it.kind == ResonatorKind.BODY }
-
-    val vowel: KatalystResonatorEffect? =
-        serial.filterIsInstance<KatalystResonatorEffect>().lastOrNull { it.kind == ResonatorKind.VOWEL }
-
-    val delay: KatalystDelayEffect? = serial.filterIsInstance<KatalystDelayEffect>().lastOrNull()
-
-    val reverb: KatalystReverbEffect? = serial.filterIsInstance<KatalystReverbEffect>().lastOrNull()
-
-    val phaser: KatalystPhaserEffect? = serial.filterIsInstance<KatalystPhaserEffect>().lastOrNull()
-
-    val compressor: KatalystCompressorEffect? = serial.filterIsInstance<KatalystCompressorEffect>().lastOrNull()
+    /**
+     * True when this chain declares a reverb or a delay, the two stages that ring on after their input stops: the
+     * master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan.
+     */
+    val declaresTail: Boolean = serial.any { it is KatalystReverbEffect || it is KatalystDelayEffect }
 
     /**
      * Frames this chain delays the orbit by: the sum of its compressor stages' lookaheads (phase 3
@@ -144,7 +131,7 @@ class KatalystChain internal constructor(
      * lookahead. A chain swap delays its ramps by the later of the two chains' latencies
      * (`ChainSwap.begin`).
      */
-    val latencyFrames: Int = serial.filterIsInstance<KatalystCompressorEffect>().sumOf { it.latencyFrames }
+    val latencyFrames: Int = serial.sumOf { (it as? KatalystCompressorEffect)?.latencyFrames ?: 0 }
 
     /** Rents the warehouse refused any stage of this chain, for the diagnostics feedback. */
     val deniedRents: Int

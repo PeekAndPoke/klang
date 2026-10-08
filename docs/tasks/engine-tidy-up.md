@@ -871,6 +871,34 @@ moved to `audio_bridge/.../_resource_bounds.kt` in the same package, so no impor
   cylinder. Before the step a shelved cylinder held no resonator memory (a released bank was dropped); now it holds
   the pool. Dropping the pool in `retire()` would cost one 7 KB build at the next life's first install.
 
+## Step 13, the stage accessors to a test helper and a plain number at every constant door (A2.1, D10)
+
+Report: `tmp/reviews/tidy-step13-report.md` (with the door table for (b)).
+
+### (a) The chain's stage accessors move to a test helper (A2.1)
+
+- **Production read a serial stage's typed accessor in one place only:** `MasterBus` asked a chain for its `reverb`
+  and `delay` to know whether a tail is possible at all. That is now a chain property, `KatalystChain.declaresTail`,
+  computed once at build with one walk of the stage array (no list). Chosen over keeping the two accessors because
+  the master needs the yes or no, not the stages, and a property of the chain belongs on the chain (the audit's A2.6
+  remark); main code then keeps no typed accessor for a serial stage (the duck, which runs outside the pipeline, keeps
+  its own, and `declaresTail` and `sustainsItself` still test kinds). `latencyFrames` sums with the same walk instead
+  of a filtered list.
+- **The six typed accessors on `KatalystChain` and the seven on `Cylinder` are gone from main code.** The specs read
+  the same names from `audio_be/src/commonTest/kotlin/cylinders/katalyst/_katalyst_test_helpers.kt`: extension
+  properties of the same name and type over `KatalystChain.pipeline` (the last of each kind; body and vowel by
+  kind), and over the chain in service for a `Cylinder`, through one new test seam, `Cylinder.currentChain`. Same
+  names, so no read changed its words: 14 spec files gained imports, the about 280 reads are untouched, and
+  `KatalystResonatorEffectSpec`'s "each accessor finds its own kind" row now pins the helper.
+- **Allocation:** a classic chain build on the JVM, 24,240 bytes at HEAD, 23,752 after (488 bytes, the seven lists).
+- **Row:** `KatalystChainBuilderSpec`, "a chain declares a tail exactly when it declares a reverb or a delay", with
+  negatives for a gain, a compressor, a phaser and every other classic stage; red under each mutant (the check
+  without the delay, without the reverb, with a phaser counting as a tail).
+- **Proof:** `:audio_be:jvmTest` 2,400 and `:audio_be:jsBrowserTest` 2,296 green (the browser disconnected before any
+  test four times first; HEAD and this tree each ran one spec green next, so it is the environment); the corpus, label
+  `ep1-t13a`: the 16 other rows identical to `corpus-ep1-before.txt`, Der Schmetterling from HEAD's text identical,
+  Kokon from `kokon-head.ks` identical to `corpus-ep1-before-kokon.txt`.
+
 ## The V8 allocation pass
 
 Scope: `tmp/reviews/v8-allocation-pass-scope.md` (its "Coordinator decisions" first). Report, with every table:

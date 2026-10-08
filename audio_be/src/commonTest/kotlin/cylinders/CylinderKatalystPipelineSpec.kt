@@ -12,6 +12,12 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystResonatorEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.ResonatorKind
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.body
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.compressor
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.phaser
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.pipeline
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS

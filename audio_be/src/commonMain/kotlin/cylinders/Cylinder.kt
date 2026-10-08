@@ -189,16 +189,12 @@ class Cylinder(
     /** Test seam: the swap itself, for the specs that inspect its states and references. */
     internal val chainSwap: ChainSwap get() = swap
 
-    // The chain's stages by name. Null when the chain declares no such stage, which
-    // `KatalystDsl.classic` never does, so every one of them is present on every cylinder that
-    // was handed no declaration. These are the CURRENT chain's instances, not the cylinder's: a
-    // cylinder no longer knows what a body or a reverb IS, which is the whole point of the step.
-
-    val body get() = chain.body
-
-    val vowel get() = chain.vowel
-
-    val delay get() = chain.delay
+    /**
+     * Test seam: the chain in service. A cylinder no longer knows what a body or a reverb IS, so it names no stage;
+     * the specs that ask about one find it on this chain through their own helpers (`_katalyst_test_helpers.kt`,
+     * engine tidy-up step 13).
+     */
+    internal val currentChain: KatalystChain get() = chain
 
     /**
      * True while this orbit rings with a tail that can never end on its own, in the chain in
@@ -209,12 +205,6 @@ class Cylinder(
      */
     fun sustainsItself(): Boolean =
         isActive && (chain.sustainsItself() || (!swap.isReleasing && swap.leaving?.sustainsItself() == true))
-
-    val reverb get() = chain.reverb
-
-    val phaser get() = chain.phaser
-
-    val compressor get() = chain.compressor
 
     /**
      * The duck that governs this orbit's mix, and the one `Cylinders` resolves the sidechain orbit
@@ -227,14 +217,6 @@ class Cylinder(
      * `duckCylinderId` of null is exactly how `Cylinders` skips the pass for such a stage.
      */
     val duck get() = swap.duckingOut ?: chain.duck
-
-    /**
-     * The bus effect pipeline, in the order this orbit's chain declares its stages.
-     *
-     * The duck is NOT in this pipeline; it is applied separately by [Cylinders] after all orbits
-     * are processed, because it needs cross-orbit access to the sidechain source.
-     */
-    val pipeline get() = chain.pipeline
 
     /**
      * Rents the warehouse refused this orbit, for the diagnostics feedback: the current chain's
