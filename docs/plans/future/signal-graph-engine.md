@@ -302,6 +302,51 @@ machine. This is a very rough sketch but it might work."
    (`s("bd sd")`). Both can hold: a track may declare its instrument, and a note's `sound()` overrides it unless the
    track forbids that. To decide.
 
+### 6.7 How we get there: a prototype first, outside the codebase (maintainer, 2026-10-08)
+
+> "Before we do any implementation here in the codebase we need to build a prototype, with graphical display of the
+> motor to visually check. Then we construct events and send them into the motor, to see which errors they produce and
+> how they are routed. Basically a 'debugger' of sorts. I want to keep this out of the main codebase, so we can test the
+> design in quick iterations, where the code quality does not matter."
+
+**The rule:** no Motor code in the repository until the design has been played with in the prototype. The prototype is
+throwaway, and its job is to find out whether the design holds. What survives goes into this plan, not code.
+
+**What it shows**, as the coordinator sketched it on 2026-10-08:
+- **A Motor drawn as a graph:**
+  - tracks, each an instrument, its per-note stage and its Katalyst stages;
+  - groups, returns and the master;
+  - sends with their levels, and sidechain references (section 5) as dashed edges;
+  - stages that nothing writes, drawn as skipped.
+- **An event console:** write events in a sprudel-like mini syntax (`note("a").track("bass").lpf(800)
+  .compressor(threshold = -20)`, a note-free `set("bass.glue.threshold", ...)`) and send them in.
+- **The resolution trace, per event:**
+  - the note's path through the graph, highlighted;
+  - every door resolved to its stage, per-note or automation (6.6 item 3);
+  - the errors: no such track, no such stage on the path, an ambiguous stage with its candidates.
+- **An automation timeline per knob:** the timed writes, which writer won where two collide, and the ramps.
+- **Example Motors to test the design against:**
+  - the default sprudel layout, which must route every door exactly as today;
+  - a Kokon-style band: guitar strings into one amp group, a shared hall return;
+  - a deep-house setup: the kick referenced by the bass's duck, pads into hall and delay returns, a master with glue,
+    clipper and limiter.
+
+**Where it lives:** outside the repository, a single-page prototype (HTML and JavaScript). It is published privately as
+an artifact so it can be opened on any device, and its source is kept in a folder next to the repo, not in it.
+
+### 6.8 Continuous automation: tweens (maintainer, 2026-10-08)
+
+> "Advanced topic would be how to send continuous automation for e.g. a filter instead of doing it per event ...
+> something like 'tween the lpf freq from 100 to 10000 Hz over 10 s along this curve' ... but this can be built
+> regardless of the stuff above, it should only add more sophistication, not new functionality."
+
+**A tween is one automation write with a duration and a curve:** a start value, a target, the seconds, and a curve
+index from a catalogue (linear, exponential, the s-curve; the envelope's `AdsrCurves` are a natural start). It crosses
+the wire as seconds (stone rule). The engine moves the knob along it per block, or per sample where the knob takes a
+signal, the KnobGlide machinery with a duration and a shape. A plain write is a tween of zero seconds, so tweens refine
+the automation of 6.6 and add nothing beside it. The frontend turns a cycle-based pattern (`saw.slow(8)`) into tweens,
+and the backend never learns cycles.
+
 ## Links
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).
