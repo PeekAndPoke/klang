@@ -565,17 +565,24 @@ are gone.
 - **Performance (review round 1, reviewer B).** The first shape, `render` as one shared method, allocated per block
   on V8 and ran 28 to 37 percent slower with vibrato or drift; on the JVM it ran up to 20 percent slower once plain and
   vibrato notes shared one profile. Measured causes and fixes, all in `render` (its KDoc keeps the reasons):
-  - V8 types the arguments of a function it does not inline as "any". A loop variable that starts from one (the
-    delay, the drift ramp) stays tagged and boxes a heap number every sample (the optimized code shows the
-    allocation after `m += dm` and after `dl / m`). Each double argument now passes through `* 1.0` before the loop,
-    which V8 types as a number. This also removes the boxing the superpluck had before the step (its drift ramp
-    started from a call result): 424 to 634 scavenges per run before, 7 to 13 now.
-  - On the JVM the shared method and the constant modulus `% 2500` cost the rest (the write position is a
-    loop-carried modulo); `render` is `inline` again, each node keeping its own compiled loop as before, and wraps by
-    the line's length read at run time.
-  - The state sits in locals during the loop.
+  - On V8 a double that comes from a call result, a field or an argument of a function V8 does not inline, and
+    seeds a loop-carried variable (the delay, the drift ramp), stays tagged and boxes a heap number every sample
+    (the optimized code shows the allocation after `m += dm` and after `dl / m`). Each double value now passes
+    through `* 1.0` before the loop, which V8 types as a number. This also removes the boxing the superpluck had
+    before the step (its drift ramp started from a call result): 424 to 634 scavenges per run before, 7 to 13 now.
+    Review round 2 confirmed the `* 1.0` is load-bearing in the inline shape too (without it: 633 scavenges, 40 to
+    76 percent more time) and that computing the seed in the same function is no remedy. No test can pin it (the
+    sound is bit-identical either way); the KDoc and the V8 rule in `audio/ref/performance.md` are the guard.
+  - `render` is `inline` again, each node keeping its own compiled loop as before. Round 2 measured that this pays
+    on V8 (as one shared method 3 to 18 percent slower, 9 to 18 on five of six Karplus rows), and is neutral on the
+    JVM.
+  - The JVM's own cost was the constant modulus `% 2500` (the write position is a loop-carried modulo): the wrap is
+    by the line's length read at run time.
+  - The state sits in locals during the loop (9 to 16 percent faster on V8 than the fields), the measured exception
+    to the performance rules' "no snapshot into locals", named there.
   - Result, V8 (one case per process, against HEAD and a HEAD-against-HEAD control): no allocation, 0.54 to 0.91 of
-    HEAD's time. JVM: within the control's noise, isolated and under mixed profiles. Tables in
+    HEAD's time on a bundle of the probe alone, 0.61 to 0.80 on the full test bundle reviewer B measured on. JVM:
+    within the control's noise, isolated and under mixed profiles. Tables in
     `tmp/reviews/tidy-step11-report.md`, "Round 1 fixes".
 - **Rows:** `KarplusStringSpec` (commonTest): the burst draws exactly `burstLen` values in index order with zeros
   around it and the line past the delay untouched (six geometries worked out by hand, pick positions outside 0 to 1
@@ -588,6 +595,13 @@ are gone.
   and `BuiltInVoiceMatrixSpec`. Re-run on the round-1 shape: the drift ramp stepped before the divide, the brightness
   state not written back after the loop, and the read index wrapped by a wrong length, each red on
   `BuiltInVoiceMatrixSpec` (the write-back also on `BlockFramingInvarianceSpec`).
+- **Review round 2: the stiffness allpass, a gap older than the step.** No spec rendered `stiffness > 0` through an
+  output check, so dropping the allpass state's write-back (`apPrevOut` or `apPrevIn`) left the suite green, and so
+  would have a broken allpass law in HEAD. Two rows now: `BlockFramingInvarianceSpec` I2 renders a stiff pluck and a
+  stiff superpluck through ragged blocks, and `BuiltInVoiceMatrixSpec` pins `pluck` and `superpluck` at stiffness 0.5
+  by their raw bits, pins captured from the code before step 11 (`fb24e509`). Mutation-checked in one lock call:
+  each write-back dropped goes red on both specs, the allpass sign flipped on the matrix row. Proof again: the goldens
+  (`cmp`), both suites, the corpus (label `ep1-t11c3`, Der Schmetterling from HEAD's text) bit-identical.
 
 ### (c) The unison stacks (B4.9): done 2026-10-08
 
@@ -602,21 +616,25 @@ the sealed `StackShape` the coordinator's brief offered would type them per kind
 precedent for six doubles, so the enum stays.
 
 - **The voice loop:** per voice, in index order, a `when (kind)` calls one of four private loops: `trapezoidLoop`,
-  `trapezoidLoopPhased`, `sineLoop`, `sineLoopPhased`. Each loop runs its own drift prologue (`advanceLane(n)` right
-  before voice n renders; in the phased path after `phaseIn.render(offsets)`, as before), then `m`, `dm` and
-  `safeWrap`, then its samples. Plain and phased stay separate loops, every per-sample expression copied verbatim.
+  `trapezoidLoopPhased`, `sineLoop`, `sineLoopPhased`. Each loop is the old subclass method's body, in its order:
+  the voice's fields and `safeWrap`, then its own drift prologue (`advanceLane(n)` right before voice n renders; in
+  the phased path after `phaseIn.render(offsets)`, as before), then its samples. Plain and phased stay separate
+  loops, every per-sample expression copied verbatim.
   `configureShape` is a `when`: the saw's flyback with its NaN guard, the pulse's shape, nothing for the sine.
 - **Performance (review round 1, reviewer B).** The first shape ran the prologue once, in a shared `renderVoice`, and
   handed the ramp to the loops as arguments. V8 inlined the plain loops but not the phased ones, so there the
   arguments arrived untyped (see the V8 rule in `audio/ref/performance.md`), and the phased stacks ran 20 to 29
   percent slower; supersine plain was about 5 percent slower on both platforms. With the prologue back inside each
-  loop, as before the step, every stack row is within the control's noise on V8 and the JVM. `inline` loops were
-  not the fix: they allocated on V8 (reviewer B). Tables in `tmp/reviews/tidy-step11-report.md`, "Round 1 fixes".
-- **Method sizes (JVM):** `generate` 1,037 bytes (1,036 before), `renderVoice` 243, the loops 413, 488, 398 and 473
-  (the virtual `renderVoice` and `renderVoicePhased` were 512 and 594 for the trapezoid, 497 and 579 for the sine:
-  each carried the drift prologue). No loop has a `new`, a call through a function value or a box; the dispatch is
-  once per voice and block. In the compiled JS the loops are module functions called directly, where they were
-  methods on three classes.
+  loop, as before the step, the phased rows came back; supersine plain did too only once each loop also read its
+  fields in the old order again (the fields and `safeWrap` before the prologue: on the full test bundle the
+  prologue-first order measured 9 to 11 percent slower on V8, three rounds). Now every stack row is within the
+  control's noise on V8 (trimmed and full bundle) and on the JVM (isolated and mixed). `inline` loops were not the
+  fix: they allocated on V8 (reviewer B). Tables in `tmp/reviews/tidy-step11-report.md`, "Round 1 fixes".
+- **Method sizes (JVM):** `generate` 1,209 bytes (1,036 before; it now holds the two per-voice `when`s), the loops
+  499, 574, 484 and 559 (the virtual `renderVoice` and `renderVoicePhased` were 512 and 594 for the trapezoid, 497 and
+  579 for the sine; each carries the drift prologue, as they did). No loop has a `new`, a call through a function
+  value or a box; the dispatch is once per voice and block. In the compiled JS the loops are module functions called
+  directly, where they were methods on three classes.
 - **Proof:** a raw-bits golden captured from the code before the change (scratch, not committed; 157 cases, 30 MB):
   every kind plain, at one voice, with a constant and with a moving phase (with and without drift, spreads 0.4 and
   1), under a vibrato (also with drift and a moving phase), with drift at spreads 0.4, 0 and 1, voice counts that walk
@@ -624,16 +642,24 @@ precedent for six doubles, so the enum stays.
   (pooled, pooled with drift, pooled and stateless with a walking count), |dt| at or above 1 (60 kHz, -60 kHz, 47 kHz
   with drift, 60 kHz with a moving phase, a spread typed in cents), a NaN frequency (plain, with drift and a moving
   phase, under a vibrato), a spread signal, ragged windows with a sentinel, the white noise after each source.
-  Bit-identical (`cmp`), the Karplus golden too. The 18-song corpus and Kokon bit-identical (label `ep1-t11c`).
-  `:audio_be:jvmTest` (2,382) and `:audio_be:jsBrowserTest` (2,281) green.
+  Bit-identical (`cmp`), the Karplus golden too. The 18-song corpus and Kokon bit-identical (label `ep1-t11c`), and
+  again after review round 1 (label `ep1-t11c2`; Der Schmetterling from HEAD's text, as for (b)).
+  `:audio_be:jvmTest` (2,384 with (b)'s round-2 row) and `:audio_be:jsBrowserTest` (2,282) green.
 - **Row:** `UnisonStackShapeSpec` (commonTest): at a NaN frequency each kind holds its shape at phase 0, the same
   double on every sample: the saw -1 and the ramp +1 through the flyback's NaN guard, the square +1 and the triangle -1
   because a NaN flank floor drops out (`coerceAtLeast(NaN)` keeps the flank, so the pulse needs no guard), the sine 0.
-  The phased path was already pinned bit for bit by `OscillatorPhaseSpec`.
+  The phased path was already pinned bit for bit by `OscillatorPhaseSpec`. A second row (review round 1) closes a gap
+  older than the step: at ±60 kHz (an increment of 1.25 cycles per sample) a moving phase that is 0 everywhere renders
+  the plain stack bit for bit, every kind, so the phased loops' safe wrap is pinned.
 - **Mutation-checked:** `advanceLane` moved after the voice render: red on `BuiltInVoiceMatrixSpec` and
   `SuperStackDriftSpreadSpec`. The saw's NaN guard dropped: red on `ExcitersTest` and the new row. A NaN guard on the
   pulse's floor with a wrong fallback (1.0): red only on the new row. The sine's phased path routed to the plain loop,
-  and the moving phase not handed to the voices: red on `OscillatorPhaseSpec`.
+  and the moving phase not handed to the voices: red on `OscillatorPhaseSpec`. Re-run on the round-1 shape:
+  `advanceLane` after the render in `trapezoidLoop` (red on `BuiltInVoiceMatrixSpec`, `OscillatorPhaseSpec` and
+  `SuperStackDriftSpreadSpec`) and in `sineLoopPhased` (red on `OscillatorPhaseSpec`), both phased paths routed to the
+  plain loops (red on `OscillatorPhaseSpec`), the saw guard again (red as before). The phased loops' safe wrap without
+  its `|dt| >= 1` term survived every committed spec before the new row (the same line in HEAD did too); now red on
+  it, in the trapezoid and the sine loop alike.
 
 ## Decisions for the maintainer
 
@@ -661,6 +687,27 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   need to understand this data model and the contract ... I would not bend our implementation on this side just
   because another backend has things to solve to use the inputs. The duty is on the other side, not here."
   A general rule for the port: the Kotlin engine defines the contract; a second backend adapts to it.
+- **D10, the number overloads (maintainer, 2026-10-08): KEPT in main code.** "Keep the Double in the main code; this
+  is also handy for the user and should be possible everywhere a constant value is accepted, otherwise the instrument
+  authoring code becomes very verbose." So step 13 does not move them. It checks the other way round: wherever a door
+  takes an Ignitor for a value that may be constant, a plain number works too (the Kotlin `IgnitorDsl` doors, the
+  KlangScript doors through `IgnitorDslLike`, and the runtime `Ignitor` extensions), and fills the gaps it finds.
+  The test-only seams (`*ForTest`, `currentState`, `installed*`) are a separate question and stay with A2.1.
+- **The unison cap (maintainer, 2026-10-08): 256, not 64.** `UNISON_MAX_VOICES` becomes 256 (`FilterDef.kt`, later
+  `resource_bounds.kt` with step 12 (c)). Queued right after step 11 is committed, so the step 11 goldens are not
+  moved under their worker. Cost to keep in mind: a superpluck string carries a 2,500-sample delay line, so 256
+  strings build about 5 MB per note on the audio thread (64 built about 1.3 MB). No song comes near it (the largest
+  count is 32).
+- **Step 12 (a), body and vowel as one implementation (maintainer, 2026-10-08): agreed** ("I agree to unify the
+  implementation"), retiring the "intentional un-deduped twins" review guardrail in the same commit. The maintainer
+  asked whether an "a" sung through "wood" stays possible: yes, the chain keeps a body stage AND a vowel stage, two
+  instances of the one class with their own slots and banks (`vowel("a").body(material = "wood")` runs both). The
+  step's before-golden covers a vowel and a body on the same chain.
+- **Step 11 won't-dos, confirmed (maintainer, 2026-10-08):** the 20 `IgnitorDsl` arithmetic wire types stay ("it
+  would build a second-level discriminator, and I do not see the use for this"). `Param` and `Constant` stay separate
+  on every level: the params are collected and exposed (useful for UI work later), and authors often want constants
+  that are not exposed to the user. The one runtime place that treats them differently (`scaledBy`, the `passes`
+  q ladder) only keeps the fused and the chained `passes` doors bit-identical for a non-finite q.
 
 
 ## Found during voice lifecycle step 5
@@ -749,6 +796,11 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
 
 
 ## Found during tidy-up step 11
+
+- **The stacks' analog drift allocates on V8, before and after step 11 alike** (step 11 (b) and (c), review round 1,
+  reviewer B): supersaw-7 with drift 92 and supersaw-16 with drift 210 scavenges per 105,000 blocks; the JVM 0 bytes
+  per block. Probably the class of the Karplus fix (a drift ramp seeded from a call result stays tagged on V8, step
+  11 (b) and `audio/ref/performance.md`). Its own probe and fix, behaviour-neutral.
 
 - **The Shape path allocates on V8, before and after this step alike** (review round 1, reviewer B): about 4 KB per
   block at stage 0 in the development JS build (52 scavenges per 105,000 blocks), 835 scavenges per 105,000 blocks at
