@@ -398,3 +398,10 @@ long gate keeps its source soloed until its gate ends, also after a live edit re
 - Not added: a `KlangPatternScheduler` row for "control events are not phantom voices": the filter is the existing
   `control != true` line that already serves `master(...)`, unchanged here.
 
+
+## Confirmed (maintainer, 2026-10-08)
+
+The defaults kept by the fix are confirmed ("good like this"): the ramps (1.5 s in and out, 2 s hold), the cylinder
+tails under `solo(1.0)` decaying naturally, the strongest solo wins, one solo id per call site, the latest amount and
+the later end for a source that solos again, and protection ending 2 s after the source's last solo event. The ramp
+times and the protection of a long release tail stay open as later questions (`_maintainer-questions.md`).

@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 10 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build); step 11 in progress (the twins: (a) the shaper core and (d1) the runtime arithmetic done; (b) and (c) next), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 11 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build; 11 the twins: the shaper core, the runtime arithmetic, the Karplus string core and the unison stacks), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -34,7 +34,8 @@ a unison count is capped (`coerceUnisonVoices`, `UNISON_MAX_VOICES = 64` beside 
 the largest authored count is 32, so every builtin sound is unchanged; guard `UnisonVoiceCapSpec`); the script
 shimmer door raises its typed error (`KlangScriptTypeError`) for a pitch that is not a number, as on `wet`, `feedback`
 and `tone`, instead of a cast error. Decided by the coordinator by default, for
-the maintainer to confirm: the cap value 64. Report: `tmp/reviews/variants-empty-report.md`.
+the maintainer to confirm: the cap value 64. Confirmed by the maintainer (2026-10-08): an empty `variants()` on a Katalyst bus
+knob reads 0.0, not the knob's default: "empty variants produce silence, so the current solution is correct". Report: `tmp/reviews/variants-empty-report.md`.
 
 `Ignitor.variants()` with no children reaches `require(children.isNotEmpty())` in `IgnitorDslRuntime.kt` (the
 `Variants.pick` helper) on the audio thread at note-on; nothing catches there. The KlangScript door accepts zero
@@ -438,10 +439,10 @@ others change allocation only.
   voice that is new or back). The phaser's bind is pinned by `PhaserCoreLawSpec`'s node row (48 kHz against the
   44.1 kHz placeholder), the memo's growth guard by `MemoizingIgnitorSpec`'s sub-block row.
 
-## Step 11, collapse the twins (B2.2, B4.8, B2.15): in progress
+## Step 11, collapse the twins (B2.2, B4.8, B2.15, B2.12, B4.9): done 2026-10-08
 
 Scope: `tmp/reviews/tidy-step11-scope.md` (items (a), (b), (c) and (d1) to do, in the order (a), (d1), (b), (c), one
-commit each; (d2) to (d4) won't-do, logged in `_maintainer-questions.md`). Report for (a) and (d1):
+commit each; (d2) to (d4) won't-do, logged in `_maintainer-questions.md`). Report for every item:
 `tmp/reviews/tidy-step11-report.md`. (a) and (d1) reviewed in two rounds (`tmp/reviews/tidy11-r1-A.md`,
 `tidy11-r1-B.md`, `tidy11-r2.md`): round 1 moved (d1) to the scope's fallback, round 2 clean.
 
@@ -528,6 +529,111 @@ it on both paths: its `generate` through the one shared inline ladder (`binaryLa
   with each other, as the scope said); the ladder's left-constant arm swapped; Div's infinity no longer dead; `safeOut`
   on Plus; Div's right arm without its divisor guard. Every one red. The binary scalars routed through one shared
   non-inline method allocated 960,000 bytes per 2,000 blocks in the fresh-JVM probe.
+
+### (b) The Karplus string core (B2.12): done 2026-10-08
+
+`KarplusStrongIgnitor` (the `pluck` node) and `SuperKarplusStrongIgnitor` (`superpluck`) each carried the whole string:
+the burst, the delay line, the fractional read, the brightness one-pole, the stiffness allpass, the write-back, each
+under a `@Suppress("DuplicatedCode")`. The string is now one plain class, `KarplusString` (`ignitor/KarplusString.kt`):
+the delay line, `writePos`, `excited`, `lpState`, `apPrevIn` and `apPrevOut`; `excite(baseDelay, pickPos, rng)`; and
+`render(...)`, an `inline` function called with named arguments, which writes `sample * gain` or adds it to the
+buffer. The pluck holds one
+string and renders it at `gain = 1.0` without accumulation (`x * 1.0` is exact); the superpluck holds one per voice,
+at its voice gain, the first string writing and the others adding. Its companion holds the line's length
+(`MAX_DELAY`, 2500), the base delay law and the three coefficient laws (`lpAlphaOf`, `hasStiffnessOf`, `apCoeffOf`;
+three functions, because one could hand back three values only through an allocation or a holder). Both suppressions
+are gone.
+
+- **Kept in the node shells, verbatim:** the param reads (order, count and cadence: the pluck reads its pick position
+  once, at the pluck, and `analog` once, in `seedAnalogDrift`; the superpluck returns at no voices before any other
+  read and reads every knob every block), the drift (one `AnalogDrift`, or `DriftLanes` with `ensureLanes(n + 1)`
+  before that string's burst and `advanceLane(n)` after it), the unison detune of the base delay, and who sets
+  `excited`. A string that comes back after a shrink is plucked again and keeps its filter state: `excite` writes the
+  burst and `writePos` only.
+- **Not done, as the scope said:** the pluck as a superpluck with one voice (its reads and its drift differ).
+- **Proof:** a raw-bits golden captured from the code before the change (scratch, not committed; 67 cases, 12 MB):
+  both nodes at stiffness 0 and 0.5, pick positions 0, 0.3 and 1, analog 0 and 2 (spread 0.4), with and without a
+  vibrato, voice counts that walk (a signal through 1 to 7, and 3, 1, 4), a NaN and a 15 Hz frequency, a brightness and
+  a decay signal, ragged windows (mid-block starts, 1-frame and 0-frame windows) with a sentinel outside the window, a
+  white noise drawn from the same stream after each source, all built through the DSL runtime build. Bit-identical
+  (`cmp`), and the stacks' golden untouched. The 18-song corpus and Kokon bit-identical (label `ep1-t11b`).
+  `:audio_be:jvmTest` (2,381) and `:audio_be:jsBrowserTest` (2,280) green. After review round 1 the same goldens and
+  the corpus again (label `ep1-t11b2`; the built-in Der Schmetterling row moved with the maintainer's uncommitted edit
+  of the song, so that song was rendered from HEAD's text as well, bit-identical). On the JVM, with `render` inlined,
+  the pluck's `generate` is 782 bytes (777 before), the superpluck's 1,209 (1,232 before); no loop has a `new`, a call
+  through a function value or a box.
+- **Performance (review round 1, reviewer B).** The first shape, `render` as one shared method, allocated per block
+  on V8 and ran 28 to 37 percent slower with vibrato or drift; on the JVM it ran up to 20 percent slower once plain and
+  vibrato notes shared one profile. Measured causes and fixes, all in `render` (its KDoc keeps the reasons):
+  - V8 types the arguments of a function it does not inline as "any". A loop variable that starts from one (the
+    delay, the drift ramp) stays tagged and boxes a heap number every sample (the optimized code shows the
+    allocation after `m += dm` and after `dl / m`). Each double argument now passes through `* 1.0` before the loop,
+    which V8 types as a number. This also removes the boxing the superpluck had before the step (its drift ramp
+    started from a call result): 424 to 634 scavenges per run before, 7 to 13 now.
+  - On the JVM the shared method and the constant modulus `% 2500` cost the rest (the write position is a
+    loop-carried modulo); `render` is `inline` again, each node keeping its own compiled loop as before, and wraps by
+    the line's length read at run time.
+  - The state sits in locals during the loop.
+  - Result, V8 (one case per process, against HEAD and a HEAD-against-HEAD control): no allocation, 0.54 to 0.91 of
+    HEAD's time. JVM: within the control's noise, isolated and under mixed profiles. Tables in
+    `tmp/reviews/tidy-step11-report.md`, "Round 1 fixes".
+- **Rows:** `KarplusStringSpec` (commonTest): the burst draws exactly `burstLen` values in index order with zeros
+  around it and the line past the delay untouched (six geometries worked out by hand, pick positions outside 0 to 1
+  included); `excite` keeps `lpState` and the allpass state, and leaves a set `excited` flag set; gain 1 without
+  accumulation writes the raw sample bit for bit, and accumulation adds `sample * gain`.
+- **Mutation-checked:** `excite` resetting `lpState` goes red only on the new row: before this step no spec
+  pinned the filter state a re-plucked superpluck string carries over (the scratch golden saw it in all 8 cases whose
+  voice count walks). `ensureLanes` moved after the burst draw goes red on `BuiltInVoiceMatrixSpec`. A burst one
+  sample longer, the filtered value written instead of the raw sample, the accumulation dropped: red on the new rows
+  and `BuiltInVoiceMatrixSpec`. Re-run on the round-1 shape: the drift ramp stepped before the divide, the brightness
+  state not written back after the loop, and the read index wrapped by a wrong length, each red on
+  `BuiltInVoiceMatrixSpec` (the write-back also on `BlockFramingInvarianceSpec`).
+
+### (c) The unison stacks (B4.9): done 2026-10-08
+
+Five unison oscillators (`supersaw`, `superramp`, `supersquare`, `supertri`, `supersine`) ran on an abstract engine
+(`DetunedStackIgnitor`) with a trapezoid layer (`TrapezoidStackIgnitor`), two classes that only configured the shape
+(`SawStackIgnitor`, `PulseStackIgnitor`) and the sine (`SineStackIgnitor`), whose plain and phased loops were the
+trapezoid's with another sample expression. They are one node now, `UnisonStackIgnitor(kind: StackKind, ...)` with
+`private enum class StackKind { SAW, PULSE, SINE }`, after the `WaveIgnitor` precedent in the same file. The five
+factories keep their signatures and pass named arguments. The shape knobs are constructor fields read only by their
+kind (`resetSamples` and `shapeMax` by SAW, `duty`, the flanks and `flankSamples` by PULSE), as `WaveIgnitor` has it;
+the sealed `StackShape` the coordinator's brief offered would type them per kind, but it is a second idiom beside the
+precedent for six doubles, so the enum stays.
+
+- **The voice loop:** per voice, in index order, a `when (kind)` calls one of four private loops: `trapezoidLoop`,
+  `trapezoidLoopPhased`, `sineLoop`, `sineLoopPhased`. Each loop runs its own drift prologue (`advanceLane(n)` right
+  before voice n renders; in the phased path after `phaseIn.render(offsets)`, as before), then `m`, `dm` and
+  `safeWrap`, then its samples. Plain and phased stay separate loops, every per-sample expression copied verbatim.
+  `configureShape` is a `when`: the saw's flyback with its NaN guard, the pulse's shape, nothing for the sine.
+- **Performance (review round 1, reviewer B).** The first shape ran the prologue once, in a shared `renderVoice`, and
+  handed the ramp to the loops as arguments. V8 inlined the plain loops but not the phased ones, so there the
+  arguments arrived untyped (see the V8 rule in `audio/ref/performance.md`), and the phased stacks ran 20 to 29
+  percent slower; supersine plain was about 5 percent slower on both platforms. With the prologue back inside each
+  loop, as before the step, every stack row is within the control's noise on V8 and the JVM. `inline` loops were
+  not the fix: they allocated on V8 (reviewer B). Tables in `tmp/reviews/tidy-step11-report.md`, "Round 1 fixes".
+- **Method sizes (JVM):** `generate` 1,037 bytes (1,036 before), `renderVoice` 243, the loops 413, 488, 398 and 473
+  (the virtual `renderVoice` and `renderVoicePhased` were 512 and 594 for the trapezoid, 497 and 579 for the sine:
+  each carried the drift prologue). No loop has a `new`, a call through a function value or a box; the dispatch is
+  once per voice and block. In the compiled JS the loops are module functions called directly, where they were
+  methods on three classes.
+- **Proof:** a raw-bits golden captured from the code before the change (scratch, not committed; 157 cases, 30 MB):
+  every kind plain, at one voice, with a constant and with a moving phase (with and without drift, spreads 0.4 and
+  1), under a vibrato (also with drift and a moving phase), with drift at spreads 0.4, 0 and 1, voice counts that walk
+  (a signal through 1 to 7, with the drift, the pool and a moving phase; and 3, 1, 4 built directly), the pool on
+  (pooled, pooled with drift, pooled and stateless with a walking count), |dt| at or above 1 (60 kHz, -60 kHz, 47 kHz
+  with drift, 60 kHz with a moving phase, a spread typed in cents), a NaN frequency (plain, with drift and a moving
+  phase, under a vibrato), a spread signal, ragged windows with a sentinel, the white noise after each source.
+  Bit-identical (`cmp`), the Karplus golden too. The 18-song corpus and Kokon bit-identical (label `ep1-t11c`).
+  `:audio_be:jvmTest` (2,382) and `:audio_be:jsBrowserTest` (2,281) green.
+- **Row:** `UnisonStackShapeSpec` (commonTest): at a NaN frequency each kind holds its shape at phase 0, the same
+  double on every sample: the saw -1 and the ramp +1 through the flyback's NaN guard, the square +1 and the triangle -1
+  because a NaN flank floor drops out (`coerceAtLeast(NaN)` keeps the flank, so the pulse needs no guard), the sine 0.
+  The phased path was already pinned bit for bit by `OscillatorPhaseSpec`.
+- **Mutation-checked:** `advanceLane` moved after the voice render: red on `BuiltInVoiceMatrixSpec` and
+  `SuperStackDriftSpreadSpec`. The saw's NaN guard dropped: red on `ExcitersTest` and the new row. A NaN guard on the
+  pulse's floor with a wrong fallback (1.0): red only on the new row. The sine's phased path routed to the plain loop,
+  and the moving phase not handed to the voices: red on `OscillatorPhaseSpec`.
 
 ## Decisions for the maintainer
 
