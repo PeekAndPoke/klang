@@ -12,43 +12,7 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
 
 # Part 1: Blocking (work waits on the answer)
 
-## Q22. `analog`: one name, two scales. What would unifying take?
-
-Source: [`classic-slot-names-check.md`](classic-slot-names-check.md), decision 9. Blocks nothing yet; the rest of the
-name check goes ahead.
-
-**What `analog` does today, per unit.** One slot, written by sprudel's `analog(...)` or by `Ign.slot.analog`, read by
-two kinds of component:
-- **an oscillator:** pitch drift of about plus or minus `analog` cents (a fast jitter and a slow wander), so 1 unit is
-  1 cent of drift; "1 to 8 is usual";
-- **a `classic()` filter** (lowpass and highpass): a 0 to 10 "character", three tells per unit: state-dependent
-  saturation (`analog x FILTER_DRIVE_PER_ANALOG`), a fixed cutoff tolerance drawn per voice (about 0.35 cents per
-  unit), and a slow cutoff drift lane.
-
-So the NUMBERS already live in the same range (0 to about 10). What differs is what a unit means: cents on one,
-an abstract amount on the other.
-
-```
-note("c3").s("saw").lpf(800).analog(4)
-// oscillator: drifts about +/- 4 cents
-// filter:     saturates at character 4, its cutoff sits about +/- 1.4 cents off and wanders slowly
-```
-
-**Three ways to unify:**
-
-- **(a) One unitless scale, documented** (recommended). `analog` is "how analog": 0 is ideal, 1 to 8 usual, 10 strong.
-  Each component writes down its tells per unit: the oscillator 1 cent of drift per unit (unchanged), the filter its
-  saturation, tolerance and wander. Nothing changes in sound (bit-identical); the example above stays as it is; only
-  the KDoc and the docs say "an amount", not "cents". This is the caricature model's own shape: one knob, a few real
-  tells per component.
-- **(b) Cents everywhere a pitch moves.** The filter's cutoff tolerance and wander become plus or minus `analog`
-  cents too (about 3 times today's wander). The saturation has no cent unit, so it stays an amount, and the scale is
-  still not one unit. A sound change for every song that sets `analog` (10 song and 8 frozen uses of
-  `Ign.slot.analog`, plus the sprudel calls): listening pairs needed.
-- **(c) Two knobs.** `analog` stays the oscillator drift in cents; the filters get their own knob (for example
-  `lpf.analog`, per filter, in `classic()`). The example becomes `.analog(4).lpf(800, analog = 4)`: more to write, and
-  sprudel's `analog(4)` no longer reaches the filter. Bit-identical only if every current `analog` writer also
-  writes the filter knobs.
+Nothing open (Q21 and Q22 answered 2026-10-08).
 
 ---
 

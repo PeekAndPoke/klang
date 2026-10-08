@@ -1,7 +1,7 @@
 # The `classic()` slot names: one name per concept
 
 Status: **decided (maintainer, 2026-10-08, Q21), pulled ahead: it runs after the engine tidy-up and BEFORE pitch
-pipeline step 1** ([`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)). Only `analog` is still open (Q22).
+pipeline step 1** ([`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)). All decided (Q21, Q22).
 
 ## What it is
 
@@ -52,7 +52,12 @@ Pulled ahead of the pitch pipeline, so no slot is renamed twice.
    - brown noise's `depth` (a per-sample white leak) becomes **`leak`**.
 8. **The Katalyst keeps the namespacing,** `<sprudel door>.<Katalyst door knob>`: all 27 slots already fit, so no
    renames; `vowel.vowel` and `gain.gain` stay.
-9. **`analog`, one name and two scales:** open, the maintainer asked what unifying would take (Q22).
+9. **`analog` is one unitless CHARACTER scale** (maintainer, 2026-10-08, Q22, option (a)): "we cannot fully go for
+   cents, because there are multipliers involved that are currently not in the users' hands, and they might become
+   user knobs, so here it is more about character, not so much about the exact cents." 0 is ideal, 1 to 8 usual, 10
+   strong; each component documents its tells per unit (the oscillator about 1 cent of drift per unit; the filter
+   its saturation, its cutoff tolerance and its wander). Bit-identical: only the KDoc and the docs change (sprudel's
+   `analog` KDoc says "Peak drift in cents" today).
 10. **The one-knob slots stay flat:** `onepole`, `pregain`, the sample slots `begin`, `end`, `speed`, `loop`.
 
 ## The work, in order
@@ -67,5 +72,7 @@ Pulled ahead of the pitch pipeline, so no slot is renamed twice.
    `color`, `declick`, `leak`, `octaves`, `persistence`, `tail`; a two-door gap), the stale
    `KlangScriptIgnitorSlots` KDoc, the three comments that still say "named after sprudel's readers". The Lexikon's
    Crush and Phaser entries are fixed (`66781690`).
+4. **`analog` as a character (decision 9):** the KDoc of every `analog` door and of `AnalogDrift`, the filter
+   humanization and the docs say "character amount" with the tells per unit, not "cents".
 
 Before the pitch pipeline's step 1, so its new slots are born with the final words (`penv.attack`, `fm.attack`).

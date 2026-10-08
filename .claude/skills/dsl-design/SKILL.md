@@ -222,14 +222,16 @@ the bug.
 
 ---
 
-**Units in names (maintainer, 2026-10-08):** time is always in seconds, pitch is always in semitones (where it can
+**Units in names (maintainer, 2026-10-08, provisional: question it when it makes an outcome messier):** time is always in seconds, pitch is always in semitones (where it can
 be), and the unit lives in the KDoc, never in the name: `attack`, not `attackSec`; `declick`, not `declickSeconds`;
 `threshold`, not `thresholdDb`. A name says what the value IS when the bare word would hide it: `crush.bits`,
 `coarse.factor`, `penv.semitones`. The filter `env` stays `env` and is documented in semitones. One word keeps one
 meaning: `depth` is how far a modulation swings, in the stage's unit (tremolo and duck 0 to 1, FM in Hz); `amount`
-is the distort drive only.
+is the distort drive only. A name may also stand for a CHARACTER rather than a unit, when the component maps it
+through multipliers of its own: `analog` is "how analog", 0 ideal, 1 to 8 usual, 10 strong, and each component
+documents its tells per unit (Q22).
 
-**Slot names (maintainer, 2026-10-08, decision D4 and Q21):** a slot is `<door>.<param>`; the namespace is the sprudel
+**Slot names (maintainer, 2026-10-08, decision D4 and Q21, provisional):** a slot is `<door>.<param>`; the namespace is the sprudel
 door's name (`lpf`, `penv`); the param part is the engine door's word (the Ignitor's, or the Katalyst's for a bus
 stage), after a check that it is the better word, and the sprudel door's parameter takes the same word. A one-knob
 door stays flat (`onepole`, `accelerate`, `pregain`, the sample slots). The table: `docs/tasks/classic-slot-names-check.md`.
