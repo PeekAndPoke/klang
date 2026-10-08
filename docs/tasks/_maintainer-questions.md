@@ -26,6 +26,24 @@ Nothing open (Q6 to Q11 answered 2026-10-08).
 
 # Part 3: For later (not blocking anything now)
 
+## Q25. Sprudel's `analog(amount)`: the word `amount` again
+
+Source: the slot-rename map (`tmp/reviews/slot-rename-map.md`, Q-D). Not blocking.
+
+Q21 decided that after the renames `amount` means only the distort drive (`distort(amount = ...)`). Sprudel's
+`analog` door still names its one parameter `amount`:
+
+```
+note("c3").s("saw").analog(amount = 4)   // today
+note("c3").s("saw").analog(4)            // positional, unchanged either way
+```
+
+`analog` is now a character scale (Q22). Options: keep `amount` (it is a one-knob door, where the name is rarely
+written), or rename the parameter, for example `analog(character = 4)`. Recommendation: rename to `character`, with the
+other renames, for one meaning per word. Say if you prefer to keep it. (`penv(amount)` is renamed by the pitch pipeline
+to `penv(semitones)`, already decided.)
+
+
 ## Q23. `variants` with plain numbers?
 
 Source: [`engine-tidy-up.md`](engine-tidy-up.md) step 13, your D10 rule ("a plain number everywhere a constant value
