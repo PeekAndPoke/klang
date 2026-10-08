@@ -182,7 +182,16 @@ internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
 
         // NaN-guard on a value the author can write: a non-finite slot was never set, so it is not
         // a write either.
-        written = fromState != null && fromState.isFinite()
-        value = fromState ?: authored
+        // Two branches and not `fromState ?: authored`: on V8 that merge of the map's tagged value with the double
+        // field boxed an absent knob's non-integral default. Measured on the classic chain: about 180 of the about
+        // 1,310 bytes a new param map cost, on both bundles, pinned to one core and not (the V8 rule in
+        // `audio/ref/performance.md`, V8 allocation pass).
+        if (fromState != null) {
+            written = fromState.isFinite()
+            value = fromState
+        } else {
+            written = false
+            value = authored
+        }
     }
 }
