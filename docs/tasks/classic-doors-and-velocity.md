@@ -1,6 +1,6 @@
 # The doors of an instrument, and velocity as touch
 
-Status: **design question, open. Not started.** Raised by the maintainer 2026-10-08, out of the production research
+Status: **design question, open. Not started. Direction since 2026-10-08: a stage after the instrument (§7).** Raised by the maintainer 2026-10-08, out of the production research
 ([`../plans/aaa-production-tricks.md`](../plans/aaa-production-tricks.md), gap G6). To be designed after the engine
 tidy-up. If it changes what scripts write, it is a shape change and lands before the tutorials (the V1 sorting rule,
 [`_v1-scope.md`](_v1-scope.md)).
@@ -91,7 +91,71 @@ and a replaced word is removed (`docs/retired-names.md`). It is used 11 times in
   `builtInVoice(Sample)`, which is `Sample.pregain().classic()`. The KDoc is wrong; fix it with this task, or earlier
   if `pregain` stays.
 
-## 7. Where it is recorded
+## 7. The maintainer's direction: a stage after the instrument (2026-10-08)
+
+> "It somehow feels as if `.classic()` on the ignitor is the wrong spot. ... So maybe something like a post-ignitor
+> stage, which defaults to 'classic' but can be overwritten ... The instrument produces only the sound, think of a
+> guitar which does guitar stuff. Filter and effects sit after the instrument, not inside it. ... I think we have
+> discovered the inherent design flaws of strudel / tidal by rebuilding it and now thinking about how to untangle the
+> situation."
+
+**The diagnosis.** In Strudel a sound is a sample name and every effect is a field on the note, so the field set
+became the architecture. The voice-side symptom is the doors baked into every voice. The bus-side symptom is bus
+effects set per note, which forces "the newest sounding voice owns the orbit's settings". The 2026-09 redesign
+([`../plans/signal-flow-redesign.md`](../plans/signal-flow-redesign.md) §2) settled WHERE the DSP runs: per note when
+it needs the note (pitch, onset, its own signal alone), on the bus when it works on a sum. That rule stands. What it
+left tangled is WHO authors what: `classic()` makes the instrument's author append the pattern's doors to their own
+sound.
+
+**The model:**
+
+```
+pitch doors -> instrument -> [post-instrument stage] -> channel -> bus (Katalyst) -> master
+(wrap it)      the sound      per note, the doors;       gain, pan    shared
+                              default: classic
+```
+
+- **The instrument** only makes the sound: the guitar does guitar things. It exposes its own knobs (Kokon's bass:
+  `sub`, `harmonics`) and may read velocity as touch. It never calls `classic()`.
+- **The post-instrument stage** runs per note, so several instruments on one orbit is no conflict (a default bus
+  chain per note would be, as the maintainer noted). It defaults to `classic`: the doors, with velocity in its amp.
+  A pattern can replace it with another chain, or with none for an instrument that is already a complete patch with
+  its own filter and envelope. Double placement becomes a choice, never an accident.
+- **The pitch doors are the exception.** Vibrato, the pitch envelope, fm and accelerate must reach the oscillators
+  inside the instrument, so they wrap it, not follow it. This ties in with
+  [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md).
+
+**Why it is not the retired Pipeline DSL** (`docs/retired-names.md`, 2026-09-27). That was a second DSL with its own
+renderers and 30 `VoiceData` fields. The post-instrument stage is an Ignitor tree written as a function `x => x...`,
+like Kokon's rigs. The frontend composes `post(instrument)` and the engine receives one tree, as today. It is part 1 of
+[`../plans/future/signal-graph-engine.md`](../plans/future/signal-graph-engine.md) (".sprudel() attached
+automatically"), made replaceable. It may need no engine change at all; check the registry and the build cache for the
+cost of one tree per (instrument, stage) pair.
+
+**What it gives the guitar.** A real guitar's amp is fed by the SUM of its strings, which is why a power chord
+growls (intermodulation). Der Schmetterling's guitar distorts per note, cleaner than real. With this split, the amp
+can sit per note (synth-like), or on the bus with a `saturate` stage (research K1, the real guitar).
+
+**A name**, at the level of Ignitor and Katalyst, the maintainer's call:
+- `Piston`, in the engine's own family: the ignitor sparks, each note's piston does the work, the pistons sum in the
+  cylinder, and the Katalyst treats the exhaust.
+- `Articulation`, plain language for what the player does to each note.
+
+The coordinator leans `Piston`: musicians have no common word for this stage, and Ignitor and Katalyst are house
+names at the same level.
+
+**Open for the design round:**
+1. Who picks the stage: the pattern, the instrument's registration (a complete patch declares "none"), or both, with
+   the pattern overriding?
+2. Velocity sensitivity of the default amp: a knob on the stage (as synths have), so an instrument that uses velocity
+   for touch is not also scaled by it twice, unless the author wants "louder and dirtier".
+3. The `endsInClassic()` tag, the editor's slot diagnostics, and the auto-attach: they read "does this tree carry the
+   doors". In the new model they read "which stage is attached".
+4. The migration: every authored instrument that ends in `.classic()` today (the built-in songs) drops the call, and
+   the stage is attached instead; byte identity is the acceptance.
+5. `pregain` (§5) falls out of this: touch is velocity, read by the instrument.
+
+## 8. Where it is recorded
 
 - The research, gap G6: [`../plans/aaa-production-tricks.md`](../plans/aaa-production-tricks.md) §3 and §11.
 - The decision this would revise: [`../plans/signal-flow-redesign.md`](../plans/signal-flow-redesign.md) §6
