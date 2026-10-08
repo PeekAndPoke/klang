@@ -19,6 +19,12 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
   semantics); recommendation: accept now, a small "bend the whole operator" item later for the ear. D3: FM moves onto
   the node's law (per-sample envelope instead of block-held, closing ledger E11), proven by listening pairs, and sprudel's
   `fm` gets a `release`; recommendation: yes to both.
+- **Engine tidy-up step 13, D10: the test-only overloads in main code** ([`engine-tidy-up.md`](engine-tidy-up.md),
+  audit E). About 84 `Double` overloads of the Ignitor extensions (`IgnitorFilters.kt`, `IgnitorEffects.kt`,
+  `IgnitorEnvelopes.kt`, `Ignitor.kt`) and seams (`*ForTest`, `currentState`, `installed*`, ...) exist only for specs.
+  Keep them as a test convenience, or move the overloads to test sources so main carries one spelling per node?
+  Recommendation: move them (the port then sees one door per node). Blocks only the overloads half of step 13; its
+  other half (the chain's stage accessors to a test helper) goes ahead.
 
 ## Decided by default, please confirm (work went ahead with the conservative choice)
 
@@ -49,6 +55,16 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
     chained `passes` doors stay bit-identical).
   
   Say if you want either one anyway.
+
+- **Tidy step 12, body and vowel become one effect** ([`engine-tidy-up.md`](engine-tidy-up.md), scope
+  `tmp/reviews/tidy-step12-scope.md`). The audit's step 12 asks for "the parking written once", so the two twins become
+  one `KatalystResonatorEffect` with a kind, on kind-neutral tables and a reusable pair of banks (no allocation per
+  material or vowel change). This retires the review guardrail "`KatalystBodyEffect` / `KatalystFormantEffect` are
+  intentional un-deduped twins" (its reasons, no shared supertype for the band kinds, are what the change removes).
+  The 2026-09-20 rule "a bank never retunes" stays: a SOUNDING bank never changes; only a bank nobody hears is
+  reconfigured, from zero, which is bit-identical to building it new. The pool is built at the stage's first install,
+  so a `classic` chain that never uses body or vowel holds nothing extra. Proven bit-identical. Say if you want the
+  twins kept.
 
 ## For later (not blocking anything now)
 
