@@ -52,7 +52,8 @@ class SampleIgnitor(
             // Analog drift path: wow & flutter on playback rate, one lane step per block, ramped
             drift.beginBlock()
 
-            var m = drift.blockStart
+            // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+            var m = drift.blockStart * 1.0
             val dm = rampStep(from = m, to = drift.blockEnd, frames = ctx.length)
 
             for (i in 0 until ctx.length) {

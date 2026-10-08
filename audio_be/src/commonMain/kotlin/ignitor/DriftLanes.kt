@@ -72,8 +72,10 @@ import kotlin.random.Random
  * mono oscillators do with an inactive [AnalogDrift].
  *
  * **How a hot loop uses it.** [prepareBlock] once per block, then per voice [advanceLane], and
- * the ramp `m = startOf(lane)`, `dm = rampStep(from = m, to = endOf(lane), frames = length)` hoisted before its sample
- * loop, which pays one add per sample. Nothing is read off the container per sample: on
+ * the ramp `m = startOf(lane) * 1.0`, `dm = rampStep(from = m, to = endOf(lane), frames = length)` hoisted before its
+ * sample loop, which pays one add per sample. The seed passes `* 1.0` (exact): on V8 a call result that seeds a
+ * loop-carried variable stays tagged, and every `m += dm` can allocate a heap number (the V8 rule in
+ * `audio/ref/performance.md`). Nothing is read off the container per sample: on
  * Kotlin/JS that cost a drifting 8-voice supersaw about 16 percent (Node, 2026-09-10), and the
  * per-sample lane steps it replaced cost the Schmetterling guitars 19 percent (2026-09-15).
  */

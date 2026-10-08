@@ -45,10 +45,12 @@ import kotlin.random.Random
  * [blockEnd] across the block's samples:
  * ```
  * drift.beginBlock()
- * var m = drift.blockStart
+ * var m = drift.blockStart * 1.0
  * val dm = rampStep(from = m, to = drift.blockEnd, frames = length)
  * for (...) { phase += inc * m; m += dm }
  * ```
+ * The seed passes `* 1.0` (exact): on V8 a double from a field or a call that seeds a loop-carried variable stays
+ * tagged, and every `m += dm` can allocate a heap number, one per sample (the V8 rule in `audio/ref/performance.md`).
  * [nextMultiplier] is the raw step; the filter drift (`FilterHumanization`) holds one per block
  * without a ramp.
  *

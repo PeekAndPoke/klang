@@ -188,7 +188,8 @@ object Ignitors {
             if (d.active) {
                 d.beginBlock()
 
-                var m = d.blockStart
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                var m = d.blockStart * 1.0
                 val dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
 
                 if (phaseMod == null) {
@@ -243,7 +244,8 @@ object Ignitors {
 
                 if (d.active) {
                     d.beginBlock()
-                    m = d.blockStart
+                    // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                    m = d.blockStart * 1.0
                     dm = rampStep(from = m, to = d.blockEnd, frames = end - off)
                 }
 
@@ -451,14 +453,18 @@ object Ignitors {
             phaseIn: Double, d: Double, g: Double,
             pm: DoubleArray?, drift: DriftLanes?, lane: Int,
         ): Double {
-            var ph = phaseIn
+            // `* 1.0`: an argument that seeds a loop-carried phase must pass an arithmetic op on V8, or every sample
+            // boxes it: about 10 KB per block for a five-partial bank with drift, on both bundles, pinned to one core
+            // and not (audio/ref/performance.md, V8 allocation pass).
+            var ph = phaseIn * 1.0
             // The drift ramp for this partial and block: one add per sample (DriftLanes KDoc).
             var m = 1.0
             var dm = 0.0
 
             if (drift != null) {
                 drift.advanceLane(lane)
-                m = drift.startOf(lane)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(lane) * 1.0
                 dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
             }
 
@@ -488,13 +494,17 @@ object Ignitors {
             phaseIn: Double, d: Double, g: Double,
             pm: DoubleArray?, drift: DriftLanes?, lane: Int, offsets: AudioBuffer,
         ): Double {
-            var ph = phaseIn
+            // `* 1.0`: an argument that seeds a loop-carried phase must pass an arithmetic op on V8, or every sample
+            // boxes it: about 10 KB per block for a five-partial bank with drift, on both bundles, pinned to one core
+            // and not (audio/ref/performance.md, V8 allocation pass).
+            var ph = phaseIn * 1.0
             var m = 1.0
             var dm = 0.0
 
             if (drift != null) {
                 drift.advanceLane(lane)
-                m = drift.startOf(lane)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(lane) * 1.0
                 dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
             }
 
@@ -811,7 +821,8 @@ object Ignitors {
 
                     if (drift != null) {
                         drift.beginBlock()
-                        m = drift.blockStart
+                        // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                        m = drift.blockStart * 1.0
                         dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
                     }
 
@@ -854,7 +865,8 @@ object Ignitors {
 
             if (drift != null) {
                 drift.beginBlock()
-                m = drift.blockStart
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.blockStart * 1.0
                 dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
@@ -901,7 +913,8 @@ object Ignitors {
 
                 if (drift != null) {
                     drift.beginBlock()
-                    m = drift.blockStart
+                    // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                    m = drift.blockStart * 1.0
                     dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
                 }
 
@@ -1116,7 +1129,8 @@ object Ignitors {
             if (d.active) {
                 d.beginBlock()
 
-                var m = d.blockStart
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                var m = d.blockStart * 1.0
                 val dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
 
                 if (phaseMod == null) {
@@ -1210,7 +1224,8 @@ object Ignitors {
 
                 if (d.active) {
                     d.beginBlock()
-                    m = d.blockStart
+                    // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                    m = d.blockStart * 1.0
                     dm = rampStep(from = m, to = d.blockEnd, frames = end - off)
                 }
 
@@ -1560,7 +1575,11 @@ object Ignitors {
      * SINE, each in a plain and a phased loop of its own (one small loop per method, which the JIT compiles whole).
      * Each loop runs its own drift prologue. One shared prologue that handed the ramp to the loops as arguments was
      * measured 20 to 25 percent slower on V8 for the phased loops (tidy-up step 11, review round 1): V8 did not inline
-     * them, so the arguments arrived untyped.
+     * them, so the arguments arrived untyped. The ramp's start passes `* 1.0` (the V8 rule in `audio/ref/performance.md`:
+     * a seed from a call result stays tagged and every `m += dm` can allocate a heap number, one per sample per voice
+     * with drift: seen under a mixed profile, every oscillator warmed in one process, in 2 of 3 processes on the
+     * development bundle and none after; on the production bundle in 2 of 3 in one sample and 0 of 3 in another; V8
+     * allocation pass).
      * The shape knobs are read only by their kind: [resetSamples] and [shapeMax] by SAW, [duty], [riseFlank],
      * [fallFlank] and [flankSamples] by PULSE; SINE reads none. Voice count is read lazily from the [voices] param;
      * detune + shape are cached, recomputed only when freq / voice count / spread change.
@@ -1853,7 +1872,8 @@ object Ignitors {
 
             if (drift != null) {
                 drift.advanceLane(n)
-                m = drift.startOf(n)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(n) * 1.0
                 dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
             }
 
@@ -1902,7 +1922,8 @@ object Ignitors {
 
             if (drift != null) {
                 drift.advanceLane(n)
-                m = drift.startOf(n)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(n) * 1.0
                 dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
             }
 
@@ -1947,7 +1968,8 @@ object Ignitors {
 
             if (drift != null) {
                 drift.advanceLane(n)
-                m = drift.startOf(n)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(n) * 1.0
                 dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
             }
 
@@ -1986,7 +2008,8 @@ object Ignitors {
 
             if (drift != null) {
                 drift.advanceLane(n)
-                m = drift.startOf(n)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(n) * 1.0
                 dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
             }
 
