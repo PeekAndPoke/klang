@@ -95,18 +95,30 @@ internal class KatalystDelayWriter(
     private val cap: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var gatedTime: Double = gate()
+    /** This writer's own config, rewritten at [resolve] and handed over by reference ([DelayConfig] says why). */
+    private val config = DelayConfig()
+
+    init {
+        fill()
+    }
 
     override fun resolve(params: Map<String, Double>?) {
         wet.resolve(params)
         time.resolve(params)
         feedback.resolve(params)
         cap.resolve(params)
-        gatedTime = gate()
+        fill()
     }
 
     override fun apply() {
-        fx.configure(time = gatedTime, feedback = feedback.value, cap = cap.value, wet = wet.value)
+        fx.configure(config)
+    }
+
+    private fun fill() {
+        config.time = gate()
+        config.feedback = feedback.value
+        config.cap = cap.value
+        config.wet = wet.value
     }
 
     private fun gate(): Double = if (stageAskedFor(wet)) time.value else SLOT_UNSET
@@ -124,24 +136,30 @@ internal class KatalystReverbWriter(
     private val lowpass: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var gatedSize: Double = gate()
+    /** This writer's own config, rewritten at [resolve] and handed over by reference ([ReverbConfig] says why). */
+    private val config = ReverbConfig()
 
-    /**
-     * The lowpass slot, RAW: a non-finite one is unset, which [KatalystReverbEffect.configure] turns
-     * into the engine's own fixed damping. Boxed here, once per resolve, and not in [apply].
-     */
-    private var damping: Double? = lowpass.value
+    init {
+        fill()
+    }
 
     override fun resolve(params: Map<String, Double>?) {
         wet.resolve(params)
         size.resolve(params)
         lowpass.resolve(params)
-        gatedSize = gate()
-        damping = lowpass.value
+        fill()
     }
 
     override fun apply() {
-        fx.configure(size = gatedSize, lowpass = damping, wet = wet.value)
+        fx.configure(config)
+    }
+
+    private fun fill() {
+        config.size = gate()
+        // The lowpass slot, RAW: a non-finite one is unset, which [KatalystReverbEffect.configure] turns into the
+        // engine's own fixed damping. Boxed here, once per resolve, and not in [apply].
+        config.lowpass = lowpass.value
+        config.wet = wet.value
     }
 
     private fun gate(): Double =
@@ -172,8 +190,12 @@ internal class KatalystPhaserWriter(
     private val floor: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var depth: Double = guardedDepth()
-    private var dryFloor: Double = guardedFloor()
+    /** This writer's own config, rewritten at [resolve] and handed over by reference ([PhaserConfig] says why). */
+    private val config = PhaserConfig()
+
+    init {
+        fill()
+    }
 
     override fun resolve(params: Map<String, Double>?) {
         wet.resolve(params)
@@ -181,18 +203,19 @@ internal class KatalystPhaserWriter(
         center.resolve(params)
         sweep.resolve(params)
         floor.resolve(params)
-        depth = guardedDepth()
-        dryFloor = guardedFloor()
+        fill()
     }
 
     override fun apply() {
-        fx.configure(
-            depth = depth,
-            rate = rate.value,
-            center = center.value,
-            sweep = sweep.value,
-            floor = dryFloor,
-        )
+        fx.configure(config)
+    }
+
+    private fun fill() {
+        config.depth = guardedDepth()
+        config.rate = rate.value
+        config.center = center.value
+        config.sweep = sweep.value
+        config.floor = guardedFloor()
     }
 
     // NaN-guards on values the author can write: an unset slot is OFF for the amount and the

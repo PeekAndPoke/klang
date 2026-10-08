@@ -494,15 +494,37 @@ class KatalystDelayEffect(
      */
     internal val currentState: Any get() = state
 
+    /** The holder the four-number [configure] door fills, this stage's own instance ([DelayConfig] says why). */
+    private val door = DelayConfig()
+
+    /**
+     * The door for a direct caller (the specs): fills this stage's own [DelayConfig] and configures from it, so the
+     * rules below are written once, in the holder overload.
+     */
+    fun configure(time: Double, feedback: Double, cap: Double, wet: Double) {
+        val c = door
+
+        c.time = time
+        c.feedback = feedback
+        c.cap = cap
+        c.wet = wet
+        configure(c)
+    }
+
     /**
      * Applies the orbit owner's delay settings. Called by `KatalystChain.applyParams` on every
      * block an owner is committed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
      *
-     * [wet] is how much of the orbit mix feeds the line. Raw: no clamp, a negative wet feeds the
-     * line inverted, above 1 hotter than the mix.
+     * [DelayConfig.wet] is how much of the orbit mix feeds the line. Raw: no clamp, a negative wet feeds the
+     * line inverted, above 1 hotter than the mix. The stage reads [config] and keeps no reference to it.
      */
-    fun configure(time: Double, feedback: Double, cap: Double, wet: Double) {
+    fun configure(config: DelayConfig) {
+        val time = config.time
+        val feedback = config.feedback
+        val cap = config.cap
+        val wet = config.wet
+
         // Non-finite reads as OFF (time) or as the shared default (feedback, cap, wet), never as the
         // previous owner's value: DelayLine's setters DROP non-finite writes, so passing one through
         // would leave whatever the last owner set. The slot writer never hands a non-finite wet to a
@@ -632,4 +654,22 @@ class KatalystDelayEffect(
          */
         const val MIN_ACTIVE_DELAY_SECONDS = 0.01
     }
+}
+
+/**
+ * What a delay stage is configured with on every block an owner is committed ([KatalystDelayEffect.configure]): the
+ * [time] in seconds (non-finite or below `MIN_ACTIVE_DELAY_SECONDS` is OFF), the [feedback], the [cap] and the [wet].
+ *
+ * **Mutable and reused, on purpose** (V8 allocation pass, 2026-10-08). The writer configures the stage on every block,
+ * and on V8 a non-integral double handed to a function that is not inlined travels as a heap number, one allocation
+ * per value per call (the rule in `audio/ref/performance.md`; `ResonatorConfig` is the precedent). So the numbers stay
+ * in the fields of one holder, and the call hands over the reference. Each holder owns its instance: the slot writer
+ * one (filled when it is built and at every resolve), the stage one for its four-number door; the stage reads the
+ * values and keeps no reference.
+ */
+class DelayConfig {
+    var time: Double = Double.NaN
+    var feedback: Double = Double.NaN
+    var cap: Double = Double.NaN
+    var wet: Double = Double.NaN
 }

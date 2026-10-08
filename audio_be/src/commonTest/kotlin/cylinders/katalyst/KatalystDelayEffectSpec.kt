@@ -792,4 +792,17 @@ class KatalystDelayEffectSpec : StringSpec({
         // The frozen ceiling resumes where it stood: the fall moves by exactly the 31 drained blocks.
         fallsAt(toggle = true) shouldBe 2507
     }
+
+    "the four-number door hands time, feedback and cap to the line" {
+        // The door fills the stage's own `DelayConfig` (V8 allocation pass); every spec that configures through it
+        // relies on each knob arriving, a non-default cap included.
+        val dl = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate)
+        val effect = KatalystDelayEffect(delayLine = dl, blockFrames = blockFrames)
+
+        effect.configure(time = 0.3, feedback = 0.6, cap = 2.0, wet = 1.0)
+
+        dl.time shouldBe 0.3
+        dl.feedback shouldBe 0.6
+        dl.cap shouldBe 2.0
+    }
 })

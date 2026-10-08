@@ -31,9 +31,15 @@ import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
@@ -405,6 +411,75 @@ class KatalystSlotResolverSpec : StringSpec({
         phaser.sweep shouldBe PHASER_SWEEP_HZ
         phaser.floor shouldBe 0.2
         phaser.feedback shouldBe 0.5
+    }
+
+    // ── The writers' holders ─────────────────────────────────────────────────────────────────────
+
+    "a writer applied before its first resolve writes the authored values: its holder is filled when it is built" {
+        // The resonator, delay, reverb and phaser writers hand their stage a holder (`ResonatorConfig`, `DelayConfig`,
+        // `ReverbConfig`, `PhaserConfig`; V8 allocation pass) that they fill at resolve AND when they are built. The
+        // chain resolves before it applies, so no engine path applies first today; this row keeps the second half, so
+        // a path that does never meets an empty holder (no table, all NaN: every stage off).
+        val body = KatalystResonatorEffect(kind = ResonatorKind.BODY, sampleRate = sampleRate.toDouble(), blockFrames = blockFrames)
+        val wood = BodyMaterials.indexOf("wood")
+
+        KatalystResonatorWriter(
+            fx = body,
+            index = KatalystKnob(c(wood), SLOT_UNSET),
+            wet = KatalystKnob(c(0.6), BODY_WET),
+            floor = KatalystKnob(c(0.3), BODY_FLOOR),
+        ).apply()
+
+        body.installedTable shouldBeSameInstanceAs ResonatorTables.at(kind = ResonatorKind.BODY, slotValue = wood).shouldNotBeNull()
+        body.installedMix shouldBe 0.6
+        body.installedFloor shouldBe 0.3
+
+        val delay = KatalystDelayEffect(rings = SizedBuffers.forRings(sampleRate), sampleRate = sampleRate, blockFrames = blockFrames)
+
+        KatalystDelayWriter(
+            fx = delay,
+            wet = KatalystKnob(c(0.3), DELAY_WET),
+            time = KatalystKnob(c(0.25), DELAY_TIME_SECONDS),
+            feedback = KatalystKnob(c(0.4), DELAY_FEEDBACK),
+            cap = KatalystKnob(c(0.9), DELAY_CAP),
+        ).apply()
+
+        val line = delay.delayLine.shouldNotBeNull()
+
+        line.time shouldBe 0.25
+        line.feedback shouldBe 0.4
+        line.cap shouldBe 0.9
+
+        val reverb = KatalystReverbEffect(units = ReverbUnits(sampleRate), blockFrames = blockFrames)
+
+        KatalystReverbWriter(
+            fx = reverb,
+            wet = KatalystKnob(c(0.3), REVERB_WET),
+            size = KatalystKnob(c(6.0), REVERB_SIZE),
+            lowpass = KatalystKnob(c(3000.0), SLOT_UNSET),
+        ).apply()
+
+        val unit = reverb.reverb.shouldNotBeNull()
+
+        unit.size shouldBe Reverb.normalizeSize(6.0)
+        unit.lowpass shouldBe 3000.0
+
+        val phaser = KatalystPhaserEffect(phaser = Phaser(sampleRate), sampleRate = sampleRate, blockFrames = blockFrames)
+
+        KatalystPhaserWriter(
+            fx = phaser,
+            wet = KatalystKnob(c(0.5), PHASER_WET),
+            rate = KatalystKnob(c(3.0), PHASER_RATE_HZ),
+            center = KatalystKnob(c(700.0), PHASER_CENTER_HZ),
+            sweep = KatalystKnob(c(400.0), PHASER_SWEEP_HZ),
+            floor = KatalystKnob(c(0.2), PHASER_FLOOR),
+        ).apply()
+
+        phaser.phaser.depth shouldBe 0.5
+        phaser.phaser.rate shouldBe 3.0
+        phaser.phaser.floor shouldBe 0.2
+        phaser.center shouldBe 700.0
+        phaser.sweep shouldBe 400.0
     }
 
     // ── Compressor ───────────────────────────────────────────────────────────────────────────────
