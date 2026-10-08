@@ -12,7 +12,76 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
 
 # Part 1: Blocking (work waits on the answer)
 
-Nothing open (Q1 to Q5 and Q9a answered 2026-10-08).
+## Q21. The `classic()` slot names, pulled ahead (your rule from Q9a, applied to every slot)
+
+Source: [`classic-slot-names-check.md`](classic-slot-names-check.md); the full table is `tmp/reviews/classic-slot-naming-table.md`.
+Blocks only the renames themselves; the pitch pipeline goes ahead with its decided names.
+
+**The short version.** Of the 60 slots `classic()` places, 40 already carry one word on the slot, the Ignitor door and
+the sprudel door. The 27 Katalyst bus slots are all aligned. No song, tutorial or Lexikon page writes a `classic()`
+slot as a string, so most of this costs code, not music. Ten small decisions, each with a recommendation:
+
+**1. The envelope words on the Ignitor side.** The slots and sprudel say `attack, decay, sustain, release`; the
+Ignitor doors and nodes say `attackSec, decaySec, sustainLevel, releaseSec`. This is the one real split (20 classic
+slots, and 8 of the new pitch slots).
+
+```
+Ign.saw().adsr(attackSec = 0.01, decaySec = 0.3, sustainLevel = 0.5, releaseSec = 0.2)   // today
+Ign.saw().adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.2)                 // proposed
+Ign.saw().adsr(0.01, 0.3, 0.5, 0.2)                                                      // unchanged
+```
+
+Recommendation: rename the Ignitor side (also inside the filter, pitch and FM builders, the node fields and the wire).
+The Katalyst compressor already says `attack`/`release` in seconds, and the limiter's `thresholdDb` became
+`threshold` the same way ("the unit lives in the KDoc"). No song changes; about 300 lines of main code and 600 of tests.
+
+**2. `amount` on crush and coarse.** The value of `crush` IS the bit depth (fewer bits, harsher), and `coarse`'s is a
+sample-hold factor. `amount` hides both.
+
+```
+.crush(amount = 6)    becomes   .crush(bits = 6)
+.coarse(amount = 2)   becomes   .coarse(factor = 2)
+.crush(6)             unchanged
+```
+
+Recommendation: yes (unit-honest, like `penv.semitones`). Afterwards `amount` means only the distort drive. Cost: 6
+calls in 4 songs, 2 in `FrozenSongs.kt`, 9 places in the whitepaper, 5 lines in the skill refs. For coarse, the
+alternatives are `divisor` or `hold`.
+
+**3. `distort.amount`: keep.** `drive` would collide with the Ignitor's own `drive` stage and the songs' own
+`Ign.param("drive")`. Recommendation: keep.
+
+**4. The filter `env`: keep.** Example: `lpf(freq = 300, env = 24)`. `env` is the Ignitor knob's name, it has one
+meaning once `fm.env` is gone, and `lpf.semitones` would read like a filter tuning. A rename would touch 23 song, 9
+tutorial and 10 doc call sites. Recommendation: keep.
+
+**5. `tremolo.depth`: keep, and write down what "depth" means:** how far a modulation swings, in the stage's unit
+(tremolo and duck 0 to 1, FM in Hz). Recommendation: keep.
+
+**6. `declickSeconds` becomes `declick`, flat.** Example: `ignp("declickSeconds", 0.002)` becomes
+`ignp("declick", 0.002)`. No user call sites. Recommendation: yes, together with 1.
+
+**7. Two source slots that mean something else, as a later follow-up.** The pluck's `decay` is a loop feedback
+coefficient (0.9 to 0.999), not seconds, and brown noise's `depth` is a per-sample leak. Proposed later: `feedback`
+and `leak`. Example of the hazard: a song that declares its own `Ign.param("decay")` for an envelope and also uses a
+default `Ign.pluck()` would feed its envelope value into the string's feedback. No song does this today.
+Recommendation: a filed follow-up, not this pass.
+
+**8. The Katalyst under the same rule.** One sentence for both: `<sprudel door>.<engine door knob>`. All 27 already
+fit, so no renames. `vowel.vowel` and `gain.gain` stay (a name knob is named after its stage).
+Recommendation: yes, record it.
+
+**9. `analog`: one name, two scales.** On an oscillator it is drift in cents; on `classic()`'s filters it is a 0 to 10
+character. Example: `analog(4)` is mild drift but heavy filter character. Recommendation: keep one name and record the
+asymmetry with its reason (the old strip did the same). The alternative is two names.
+
+**10. The one-knob slots stay flat:** `onepole`, `pregain`, and the sample slots `begin`, `end`, `speed`, `loop`.
+Recommendation: yes.
+
+**Found while checking (the coordinator fixes these without waiting):** the Lexikon's Crush entry is backwards ("higher
+= fewer bits"; the value is the bit depth); the Lexikon's Phaser entry names a `depth` knob that is `wet`; the
+KlangScript `Ignitor.slot` lacks 8 slots the Kotlin side has (a two-door gap); a stale KDoc in
+`KlangScriptIgnitorSlots`; three comments still say "named after sprudel's readers".
 
 ---
 
