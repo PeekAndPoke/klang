@@ -661,6 +661,49 @@ precedent for six doubles, so the enum stays.
   its `|dt| >= 1` term survived every committed spec before the new row (the same line in HEAD did too); now red on
   it, in the trapezoid and the sine loop alike.
 
+## Step 12, the Katalyst twins (B2.8, B2.10, B4.11)
+
+Scope: `tmp/reviews/tidy-step12-scope.md` (items (b), then (a), then (c); its "Coordinator decisions" at the top).
+Report: `tmp/reviews/tidy-step12-report.md`.
+
+### (b) One fade law for the bank swap and the compressor (B2.8): done 2026-10-08
+
+`KatalystFilterSwap.Crossfading` (the bank fade under body, vowel and the orbit EQ, 20 ms) and
+`KatalystCompressorEffect.Fading` (the compressor's switch, 50 ms) each wrote the same linear law in their own loop,
+one-ended in the swap (`w = w0 * (r * inv)`, `mix += w * (entry - mix)`) and two-ended in the compressor
+(`w = to + (from - to) * (r * inv)`, `mix = dry + w * (mix - dry)`). The law is written once now, in
+`utils/linear_crossfade.kt`: `linearFadeWeight(weightFrom, weightTo, remaining, invLength)` and the mono
+`crossfadeLinear(target, base, other, count, ...)`, both `inline`, no lambda, which reads `base[i]` and `other[i]`
+before it writes `target[i]`. The swap calls it per channel with `base = target = mix`, `other` the outgoing entry and
+`weightTo = 0.0`; the compressor with `base` the dry mix and `other = target = mix`. The turned-around weights
+(`Crossfading.targetWeight`, `Fading.weightNow`) are the same law and call `linearFadeWeight`. The landing, the
+turnaround and the state code stay where they were. The KDoc names the chain swap's `Crossfade` (input ramped down,
+output ramped up) and the duck's glide (the reduction scaled, weights from the block's end) as laws that are not
+twins of this one.
+
+- **Why bit-identical:** with `weightTo = 0.0` the shared weight is `0.0 + (w0 - 0.0) * x`, the same double as
+  `w0 * x` for every `w0` but -0.0 (and a NaN's payload); the swap's `w0` is 1.0 or a target weight in `[0, 1]`, +0.0
+  at worst. `mix[k] += e` is `mix[k] = mix[k] + e`.
+- **Proof:** a raw-bits golden captured from the code before the change (scratch, not committed; 2,532 lines): the
+  swap driven with two stateful stub filters per pair through every cell of its table (set, resume, clear and reset
+  in Off, Engaged and Crossfading, fresh and not, the refusals, both turnarounds, both landings), in whole blocks and
+  in ragged ones (37, 200, 1 and 64 frames, so the scratch grows); the compressor without and with a lookahead
+  (5 ms) through the fresh snap, a fade out, both turnarounds, the landing, ON from Off, a knob glide mid-fade and
+  while engaged, OFF while gliding, a reset mid-fade; both at 44.1 and 48 kHz on noise, sines and a hostile source
+  (NaN, both infinities, ±1e300, a denormal, -0.0). Identical (`cmp`); the off-by-one mutant below changed 1,302 of
+  its lines. The 18-song corpus and Kokon bit-identical (label `ep1-t12b`; Der Schmetterling from HEAD's text).
+  `:audio_be:jvmTest` (2,390) and `:audio_be:jsBrowserTest` (2,288) green.
+- **Row:** `LinearCrossfadeSpec` (commonTest): the blend and the weight against the law written in the spec, raw
+  bits, on a hostile source and six fades (both directions, mid-fade windows, a 49-sample fade); both aliasing forms
+  against separate arrays; the first weight is `weightFrom` exactly at the engine's four fade lengths (882, 960,
+  2205, 2400) and the landing `weightTo` exactly, while at 49 samples the first weight is one ulp short (the law, not
+  the end); the window is `count` samples with a sentinel after it; `weightTo = 0` equals `w0 * (r * inv)` over a
+  sweep of `w0`, -0.0 being the one double where they part; NaN, the infinities and -0.0 through the blend and the
+  weight.
+- **Mutation-checked:** the blend reassociated as `(1 - w) * base + w * other` (2 rows red), the weight as
+  `from - (from - to) * ...` (5 red), `remaining` off by one (3 red), the target written before `other` is read (red
+  on the aliasing row).
+
 ## Decisions for the maintainer
 
 Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that change the most:

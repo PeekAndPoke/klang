@@ -10,6 +10,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.audio_be.utils.crossfadeLinear
+import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 
 /**
@@ -355,16 +357,31 @@ class KatalystFilterSwap(
                 srcR = dR
             }
 
-            // out = target + w * (entry - target), which is (1 - w) * target + w * entry.
+            // out = target + w * (entry - target), which is (1 - w) * target + w * entry. The weight counts
+            // DOWN to the landing (`weightTo` 0), so it is exactly 0 there, never a rounding. The one law
+            // of the compressor's switch fade too (`utils/linear_crossfade.kt`).
             val end = if (n < len - p0) n else len - p0
 
-            // The weight counts DOWN to the landing, so it is exactly 0 there, never a rounding.
-            for (k in 0 until end) {
-                val w = w0 * ((len - p0 - k) * inv)
-
-                mixL[k] += w * (srcL[k] - mixL[k])
-                mixR[k] += w * (srcR[k] - mixR[k])
-            }
+            crossfadeLinear(
+                target = mixL,
+                base = mixL,
+                other = srcL,
+                count = end,
+                weightFrom = w0,
+                weightTo = 0.0,
+                remaining = len - p0,
+                invLength = inv,
+            )
+            crossfadeLinear(
+                target = mixR,
+                base = mixR,
+                other = srcR,
+                count = end,
+                weightFrom = w0,
+                weightTo = 0.0,
+                remaining = len - p0,
+                invLength = inv,
+            )
 
             outPos = p0 + n
 
@@ -381,7 +398,8 @@ class KatalystFilterSwap(
         }
 
         /** The target's weight at the next sample to be processed: the complement of the entry's. */
-        private fun targetWeight(): Double = 1.0 - outFrom * ((fadeLen - outPos) * invFadeLen)
+        private fun targetWeight(): Double =
+            1.0 - linearFadeWeight(weightFrom = outFrom, weightTo = 0.0, remaining = fadeLen - outPos, invLength = invFadeLen)
     }
 
     private val off = Off()

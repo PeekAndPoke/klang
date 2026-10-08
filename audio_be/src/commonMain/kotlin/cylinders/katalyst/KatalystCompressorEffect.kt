@@ -10,6 +10,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.audio_be.utils.crossfadeLinear
+import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.min
@@ -325,7 +327,8 @@ class KatalystCompressorEffect(
         }
 
         /** The weight the next sample would carry: where a turned-around fade starts. */
-        private fun weightNow(): Double = to + (from - to) * ((fadeLen - pos) * invFadeLen)
+        private fun weightNow(): Double =
+            linearFadeWeight(weightFrom = from, weightTo = to, remaining = fadeLen - pos, invLength = invFadeLen)
 
         override fun switchOn() {
             if (to == 0.0) {
@@ -369,12 +372,28 @@ class KatalystCompressorEffect(
 
             val end = min(n, len - p0)
 
-            for (i in 0 until end) {
-                val w = t + (f - t) * ((len - p0 - i) * inv)
-
-                mixL[i] = dL[i] + w * (mixL[i] - dL[i])
-                mixR[i] = dR[i] + w * (mixR[i] - dR[i])
-            }
+            // out = dry + w * (compressed - dry), the one law of the FilterSwap's bank fade too
+            // (`utils/linear_crossfade.kt`).
+            crossfadeLinear(
+                target = mixL,
+                base = dL,
+                other = mixL,
+                count = end,
+                weightFrom = f,
+                weightTo = t,
+                remaining = len - p0,
+                invLength = inv,
+            )
+            crossfadeLinear(
+                target = mixR,
+                base = dR,
+                other = mixR,
+                count = end,
+                weightFrom = f,
+                weightTo = t,
+                remaining = len - p0,
+                invLength = inv,
+            )
 
             if (p0 + n < len) {
                 pos = p0 + n
