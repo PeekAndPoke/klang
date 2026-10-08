@@ -6,17 +6,9 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.utils.fastExp
 import io.peekandpoke.klang.audio_be.utils.safeDiv
 import io.peekandpoke.klang.audio_be.utils.safeOut
 import io.peekandpoke.klang.common.math.semitones
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.ln
-import kotlin.math.pow
-import kotlin.math.round
-import kotlin.math.sqrt
-import kotlin.math.tanh
 
 /**
  * Core signal generator interface.
@@ -109,41 +101,19 @@ interface Ignitor {
 // All combinators implement `Ignitor` as dedicated `private class` types, not SAM
 // lambdas. See `audio/ref/performance.md` for the rationale (Rule 1).
 //
-// CONSTANT-FOLD POLICY: binary ops (and the const-heavy ternary slots — Clamp/Range bounds,
-// Lerp t) carry fold branches in `generate()`. UNARY ops (Abs, Sqrt, …; `neg()` is a multiply
-// by -1 since 2026-09-15, so it is not one) deliberately do
-// NOT: they override `controlRateValueOrNull`/`isBlockConstant`, so a constant unary subtree
-// folds AT ITS PARENT, which never calls the unary's `generate` at all — an internal
-// fill-branch would be near-dead code that still costs a parity case, a liveness probe and a
-// mutation check each. Residual cost: in the few non-folding parent slots (Lerp a/b under a
-// varying t, Select branches) a constant unary pays one redundant in-place loop per block —
-// accepted (no scratch, no alloc).
-
-/**
- * Adds block-constant [k] onto the `[offset, offset+length)` window of [buffer] in place.
- * Fold arm of [plus] — bit-identical to the scratch loop (`tmp[i] == k`); bare add, no clamp
- * (Plus is a naturally bounded op, see the safety table below).
- */
-private fun addConstInPlace(buffer: AudioBuffer, ctx: IgniteContext, k: Double) {
-    val end = ctx.windowEnd
-    for (i in ctx.offset until end) {
-        buffer[i] = buffer[i] + k
-    }
-}
-
-/**
- * Multiplies the `[offset, offset+length)` window of [buffer] by block-constant [k] in place,
- * with the [safeOut] output clamp. Fold arm of [times] AND the [MulConstIgnitor] body — one
- * shared loop keeps `.mul(2.0)` and the Times folds bit-consistent by construction.
- * (The op is NOT a lambda parameter on purpose: an indirect call per sample is exactly what
- * `audio/ref/performance.md` bans — one concrete helper per op.)
- */
-private fun mulConstInPlace(buffer: AudioBuffer, ctx: IgniteContext, k: Double) {
-    val end = ctx.windowEnd
-    for (i in ctx.offset until end) {
-        buffer[i] = safeOut(buffer[i] * k)
-    }
-}
+// The pointwise binary and unary ops (Plus to Mod, Abs to Sq) write no law of their own: each
+// law is one inline function in `_arithmetic_laws.kt` (engine tidy-up step 11), which every node
+// calls on both its paths, through the shared inline `binaryLadder` or `unaryMap` when it
+// renders. One class per op on purpose, so each scalar path stays a small method the JIT inlines.
+//
+// CONSTANT-FOLD POLICY: binary ops (and the const-heavy ternary slots, Clamp/Range bounds and
+// Lerp t) carry fold branches in `generate()` (the ladder). UNARY ops (`neg()` is a multiply by
+// -1 since 2026-09-15, so it is not one) deliberately do NOT: they override
+// `controlRateValueOrNull`/`isBlockConstant`, so a constant unary subtree folds AT ITS PARENT,
+// which never calls the unary's `generate` at all. An internal fill branch would be near-dead
+// code that still costs a parity case, a liveness probe and a mutation check each. Residual
+// cost: in the few non-folding parent slots (Lerp a/b under a varying t, Select branches) a
+// constant unary pays one redundant in-place loop per block, accepted (no scratch, no alloc).
 
 /**
  * Mix two signals additively per-sample. A block-constant operand folds as a scalar (no scratch
@@ -152,74 +122,32 @@ private fun mulConstInPlace(buffer: AudioBuffer, ctx: IgniteContext, k: Double) 
 operator fun Ignitor.plus(other: Ignitor): Ignitor = PlusIgnitor(a = this, b = other)
 
 private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
-    // Structural — computed once so the non-folding hot path pays no per-block subtree walk.
+    // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
     private val bConst = b.isBlockConstant
 
     override val isBlockConstant: Boolean = aConst && bConst
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // Constant-fold: a block-constant operand needs no scratch render. Bit-identical to the
-        // scratch path — `v + k` operates on the same IEEE operands the scratch loop would read
-        // (`tmp[i] == k` for a block-constant operand), and for non-NaN operands IEEE `+` is
-        // bitwise commutative (incl. signed zeros), so folding the LEFT operand onto a
-        // right-rendered buffer is equally exact (NaN operands are scrubbed downstream either
-        // way). Block-constant implies stateless, so skipping the render advances no state.
-        // A null scalar despite a true flag is a contract breach: fall through to the scratch
-        // path below, which is correct for every operand — degrade, never throw on the render
-        // thread (an exception here kills the whole worklet processor, not one voice).
-        if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (ka != null && kb != null) {
-                // Both constant: one add, one fill — bit-identical to the per-sample paths,
-                // which compute the same op on the same operands at every index.
-                // DELIBERATELY no safeOut (unlike the Times fill): Plus's per-op contract is
-                // clamp-free (safety table below), and clamping ONLY here would break
-                // bit-identity with the scratch loop — 1e15 + 1e15 is 2e15 bare but 1e15
-                // clamped. Clamp Plus everywhere or nowhere; the contract says nowhere.
-                buffer.fill(ka + kb, ctx.offset, ctx.windowEnd)
-
-                return
-            }
-        }
-
-        if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (kb != null) {
-                a.generate(buffer, freqHz, ctx)
-                addConstInPlace(buffer, ctx, kb)
-
-                return
-            }
-        }
-
-        if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            if (ka != null) {
-                b.generate(buffer, freqHz, ctx)
-                addConstInPlace(buffer, ctx, ka)
-
-                return
-            }
-        }
-
-        a.generate(buffer, freqHz, ctx)
-
-        ctx.scratchBuffers.use { tmp ->
-            b.generate(tmp, freqHz, ctx)
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                buffer[i] = buffer[i] + tmp[i]
-            }
-        }
-    }
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = binaryLadder(
+        a = a,
+        b = b,
+        aConst = aConst,
+        bConst = bConst,
+        buffer = buffer,
+        freqHz = freqHz,
+        ctx = ctx,
+        deadOnRight = { false },
+        deadOnLeft = { false },
+        prepareRight = { k -> k },
+        lawRight = { x, k -> plusLaw(a = x, b = k) },
+        law = { x, y -> plusLaw(a = x, b = y) },
+    )
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return x + y
+        return plusLaw(a = x, b = y)
     }
 }
 
@@ -236,78 +164,33 @@ operator fun Ignitor.times(other: Ignitor): Ignitor = TimesIgnitor(a = this, b =
 // (a `passes` cascade stage's staggered q) instead of demoting the whole section to
 // per-block reconfigure.
 internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : Ignitor {
+    // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
     private val bConst = b.isBlockConstant
 
     override val isBlockConstant: Boolean = aConst && bConst
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // Constant-fold — same contract and breach policy as PlusIgnitor above: `safeOut(v * k)`
-        // is bit-identical to `safeOut(v * tmp[i])` with `tmp[i] == k`, IEEE `*` is bitwise
-        // commutative for non-NaN operands, and a block-constant operand is stateless.
-        if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (ka != null && kb != null) {
-                // Both constant: one multiply, one safeOut, one fill — bit-identical to the
-                // per-sample paths, which compute the same op on the same operands per index.
-                buffer.fill(safeOut(ka * kb), ctx.offset, ctx.windowEnd)
-
-                return
-            }
-        }
-
-        // A block-constant factor of exactly zero is a dead branch (maintainer, 2026-09-15): the
-        // signal side renders nothing, the block is zero. What that costs is the sign of those
-        // zeros and the signal side's state (a noise node draws nothing from the voice's stream).
-        if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (kb != null) {
-                if (kb == 0.0) {
-                    buffer.fill(0.0, ctx.offset, ctx.windowEnd)
-
-                    return
-                }
-
-                a.generate(buffer, freqHz, ctx)
-                mulConstInPlace(buffer, ctx, kb)
-
-                return
-            }
-        }
-
-        if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            if (ka != null) {
-                if (ka == 0.0) {
-                    buffer.fill(0.0, ctx.offset, ctx.windowEnd)
-
-                    return
-                }
-
-                b.generate(buffer, freqHz, ctx)
-                mulConstInPlace(buffer, ctx, ka)
-
-                return
-            }
-        }
-
-        a.generate(buffer, freqHz, ctx)
-
-        ctx.scratchBuffers.use { tmp ->
-            b.generate(tmp, freqHz, ctx)
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                buffer[i] = safeOut(buffer[i] * tmp[i])
-            }
-        }
-    }
+    // A block-constant factor of exactly zero on either side is a dead branch (maintainer, 2026-09-15).
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = binaryLadder(
+        a = a,
+        b = b,
+        aConst = aConst,
+        bConst = bConst,
+        buffer = buffer,
+        freqHz = freqHz,
+        ctx = ctx,
+        deadOnRight = { k -> k == 0.0 },
+        deadOnLeft = { k -> k == 0.0 },
+        prepareRight = { k -> k },
+        lawRight = { x, k -> timesLaw(a = x, b = k) },
+        law = { x, y -> timesLaw(a = x, b = y) },
+    )
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return safeOut(x * y)
+        return timesLaw(a = x, b = y)
     }
 }
 
@@ -434,15 +317,22 @@ fun Ignitor.mul(factor: Double): Ignitor {
 private class MulConstIgnitor(private val upstream: Ignitor, private val factor: Double) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    // The Times law (`timesLaw`) on both paths, so `.mul(2.0)` and a Times fold agree by construction.
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)
-        mulConstInPlace(buffer, ctx, factor)
+
+        val end = ctx.windowEnd
+        val k = factor
+
+        for (i in ctx.offset until end) {
+            buffer[i] = timesLaw(a = buffer[i], b = k)
+        }
     }
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return safeOut(x * factor)
+        return timesLaw(a = x, b = factor)
     }
 }
 
@@ -457,84 +347,36 @@ private class MulConstIgnitor(private val upstream: Ignitor, private val factor:
 fun Ignitor.div(divisor: Ignitor): Ignitor = DivIgnitor(a = this, b = divisor)
 
 private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
+    // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
     private val bConst = b.isBlockConstant
 
     override val isBlockConstant: Boolean = aConst && bConst
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // Constant-fold ladder — same contract and breach policy as PlusIgnitor. Div keeps TRUE
-        // division (never reciprocal-multiply: different rounding) and the per-op guards exactly:
-        // safeDiv on the divisor (hoisted once when the divisor is the constant side), safeOut
-        // on the output. A divisor of exactly zero yields zero (maintainer, 2026-09-15): a
-        // block-constant zero is a dead branch and renders nothing upstream, a zero sample in a
-        // divisor signal zeroes that sample. Tiny non-zero divisors keep the SAFE_MIN clamp. A
-        // block-constant INFINITE divisor is the same dead branch: its quotient is a zero, and
-        // the optimizer's reciprocal (1 / k, a zero multiplier) renders nothing upstream either.
-        if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (ka != null && kb != null) {
-                buffer.fill(divide(a = ka, b = kb), ctx.offset, ctx.windowEnd)
-
-                return
-            }
-        }
-
-        if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (kb != null) {
-                if (kb == 0.0 || kb.isInfinite()) {
-                    buffer.fill(0.0, ctx.offset, ctx.windowEnd)
-
-                    return
-                }
-
-                val d = safeDiv(kb)
-                a.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    buffer[i] = safeOut(buffer[i] / d)
-                }
-
-                return
-            }
-        }
-
-        if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            if (ka != null) {
-                b.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    buffer[i] = divide(a = ka, b = buffer[i])
-                }
-
-                return
-            }
-        }
-
-        a.generate(buffer, freqHz, ctx)
-
-        ctx.scratchBuffers.use { tmp ->
-            b.generate(tmp, freqHz, ctx)
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                buffer[i] = divide(a = buffer[i], b = tmp[i])
-            }
-        }
-    }
+    // A block-constant divisor of exactly zero or an infinity is a dead branch (maintainer, 2026-09-15): its quotient
+    // is a zero, and the optimizer's reciprocal of it is a zero multiplier. Any other constant divisor is guarded once
+    // per block. A constant zero on the LEFT is not dead.
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = binaryLadder(
+        a = a,
+        b = b,
+        aConst = aConst,
+        bConst = bConst,
+        buffer = buffer,
+        freqHz = freqHz,
+        ctx = ctx,
+        deadOnRight = { k -> k == 0.0 || k.isInfinite() },
+        deadOnLeft = { false },
+        prepareRight = { k -> divisorOf(k) },
+        lawRight = { x, d -> divQuotient(a = x, d = d) },
+        law = { x, y -> divLaw(a = x, b = y) },
+    )
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return divide(a = x, b = y)
+        return divLaw(a = x, b = y)
     }
-
-    /** The guarded quotient: zero for a zero divisor, else `safeOut(a / safeDiv(b))`. */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun divide(a: Double, b: Double): Double = if (b == 0.0) 0.0 else safeOut(a / safeDiv(b))
 }
 
 /**
@@ -556,66 +398,32 @@ fun Ignitor.div(divisor: Double): Ignitor {
 fun Ignitor.minus(other: Ignitor): Ignitor = MinusIgnitor(a = this, b = other)
 
 private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
+    // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
     private val bConst = b.isBlockConstant
 
     override val isBlockConstant: Boolean = aConst && bConst
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // Constant-fold ladder — same contract and breach policy as PlusIgnitor. Minus is
-        // NON-commutative: each arm keeps its side of the subtraction. Bare op (safety table).
-        if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (ka != null && kb != null) {
-                buffer.fill(ka - kb, ctx.offset, ctx.windowEnd)
-
-                return
-            }
-        }
-
-        if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (kb != null) {
-                a.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    buffer[i] = buffer[i] - kb
-                }
-
-                return
-            }
-        }
-
-        if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            if (ka != null) {
-                b.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    buffer[i] = ka - buffer[i]
-                }
-
-                return
-            }
-        }
-
-        a.generate(buffer, freqHz, ctx)
-
-        ctx.scratchBuffers.use { tmp ->
-            b.generate(tmp, freqHz, ctx)
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                buffer[i] = buffer[i] - tmp[i]
-            }
-        }
-    }
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = binaryLadder(
+        a = a,
+        b = b,
+        aConst = aConst,
+        bConst = bConst,
+        buffer = buffer,
+        freqHz = freqHz,
+        ctx = ctx,
+        deadOnRight = { false },
+        deadOnLeft = { false },
+        prepareRight = { k -> k },
+        lawRight = { x, k -> minusLaw(a = x, b = k) },
+        law = { x, y -> minusLaw(a = x, b = y) },
+    )
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return x - y
+        return minusLaw(a = x, b = y)
     }
 }
 
@@ -631,19 +439,13 @@ fun Ignitor.abs(): Ignitor = AbsIgnitor(this)
 private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.windowEnd
-        for (i in ctx.offset until end) {
-            val v = buffer[i]
-            buffer[i] = if (v < 0.0) -v else v
-        }
-    }
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> absLaw(v) }
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return if (v < 0.0) -v else v
+        return absLaw(v)
     }
 }
 
@@ -656,75 +458,32 @@ private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
 fun Ignitor.pow(exp: Ignitor): Ignitor = PowIgnitor(base = this, exp = exp)
 
 private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : Ignitor {
+    // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val baseConst = base.isBlockConstant
     private val expConst = exp.isBlockConstant
 
     override val isBlockConstant: Boolean = baseConst && expConst
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // Constant-fold ladder — same contract and breach policy as PlusIgnitor. NON-commutative:
-        // each arm keeps base/exp in their roles, signed-magnitude expr and safeOut verbatim.
-        if (baseConst && expConst) {
-            val kb = base.controlRateValueOrNull(freqHz)
-            val ke = exp.controlRateValueOrNull(freqHz)
-            if (kb != null && ke != null) {
-                val raw = if (kb >= 0.0) kb.pow(ke) else -((-kb).pow(ke))
-                buffer.fill(safeOut(raw), ctx.offset, ctx.windowEnd)
-
-                return
-            }
-        }
-
-        if (expConst) {
-            val ke = exp.controlRateValueOrNull(freqHz)
-            if (ke != null) {
-                base.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    val b = buffer[i]
-                    val raw = if (b >= 0.0) b.pow(ke) else -((-b).pow(ke))
-                    buffer[i] = safeOut(raw)
-                }
-
-                return
-            }
-        }
-
-        if (baseConst) {
-            val kb = base.controlRateValueOrNull(freqHz)
-            if (kb != null) {
-                exp.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    val e = buffer[i]
-                    val raw = if (kb >= 0.0) kb.pow(e) else -((-kb).pow(e))
-                    buffer[i] = safeOut(raw)
-                }
-
-                return
-            }
-        }
-
-        base.generate(buffer, freqHz, ctx)
-
-        ctx.scratchBuffers.use { tmp ->
-            exp.generate(tmp, freqHz, ctx)
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                val b = buffer[i]
-                val e = tmp[i]
-                val raw = if (b >= 0.0) b.pow(e) else -((-b).pow(e))
-                buffer[i] = safeOut(raw)
-            }
-        }
-    }
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = binaryLadder(
+        a = base,
+        b = exp,
+        aConst = baseConst,
+        bConst = expConst,
+        buffer = buffer,
+        freqHz = freqHz,
+        ctx = ctx,
+        deadOnRight = { false },
+        deadOnLeft = { false },
+        prepareRight = { k -> k },
+        lawRight = { x, k -> powLaw(a = x, b = k) },
+        law = { x, y -> powLaw(a = x, b = y) },
+    )
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val b = base.controlRateValueOrNull(freqHz) ?: return null
-        val e = exp.controlRateValueOrNull(freqHz) ?: return null
-        val raw = if (b >= 0.0) b.pow(e) else -((-b).pow(e))
+        val x = base.controlRateValueOrNull(freqHz) ?: return null
+        val y = exp.controlRateValueOrNull(freqHz) ?: return null
 
-        return safeOut(raw)
+        return powLaw(a = x, b = y)
     }
 }
 
@@ -732,70 +491,32 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
 fun Ignitor.min(other: Ignitor): Ignitor = MinIgnitor(a = this, b = other)
 
 private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
+    // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
     private val bConst = b.isBlockConstant
 
     override val isBlockConstant: Boolean = aConst && bConst
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // Constant-fold ladder — same contract and breach policy as PlusIgnitor. Min is NOT
-        // value-commutative under NaN (`if (x < y) x else y` returns y when x is NaN), so both
-        // arms keep `a` as the FIRST comparison operand exactly like the scratch loop.
-        if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (ka != null && kb != null) {
-                buffer.fill(if (ka < kb) ka else kb, ctx.offset, ctx.windowEnd)
-
-                return
-            }
-        }
-
-        if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (kb != null) {
-                a.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    val x = buffer[i]
-                    buffer[i] = if (x < kb) x else kb
-                }
-
-                return
-            }
-        }
-
-        if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            if (ka != null) {
-                b.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    val y = buffer[i]
-                    buffer[i] = if (ka < y) ka else y
-                }
-
-                return
-            }
-        }
-
-        a.generate(buffer, freqHz, ctx)
-        ctx.scratchBuffers.use { tmp ->
-            b.generate(tmp, freqHz, ctx)
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                val x = buffer[i]
-                val y = tmp[i]
-                buffer[i] = if (x < y) x else y
-            }
-        }
-    }
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = binaryLadder(
+        a = a,
+        b = b,
+        aConst = aConst,
+        bConst = bConst,
+        buffer = buffer,
+        freqHz = freqHz,
+        ctx = ctx,
+        deadOnRight = { false },
+        deadOnLeft = { false },
+        prepareRight = { k -> k },
+        lawRight = { x, k -> minLaw(a = x, b = k) },
+        law = { x, y -> minLaw(a = x, b = y) },
+    )
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return if (x < y) x else y
+        return minLaw(a = x, b = y)
     }
 }
 
@@ -803,68 +524,32 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
 fun Ignitor.max(other: Ignitor): Ignitor = MaxIgnitor(a = this, b = other)
 
 private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
+    // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
     private val bConst = b.isBlockConstant
 
     override val isBlockConstant: Boolean = aConst && bConst
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // See MinIgnitor — same ladder, same NaN-ordering care, with `>`.
-        if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (ka != null && kb != null) {
-                buffer.fill(if (ka > kb) ka else kb, ctx.offset, ctx.windowEnd)
-
-                return
-            }
-        }
-
-        if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz)
-            if (kb != null) {
-                a.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    val x = buffer[i]
-                    buffer[i] = if (x > kb) x else kb
-                }
-
-                return
-            }
-        }
-
-        if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            if (ka != null) {
-                b.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    val y = buffer[i]
-                    buffer[i] = if (ka > y) ka else y
-                }
-
-                return
-            }
-        }
-
-        a.generate(buffer, freqHz, ctx)
-        ctx.scratchBuffers.use { tmp ->
-            b.generate(tmp, freqHz, ctx)
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                val x = buffer[i]
-                val y = tmp[i]
-                buffer[i] = if (x > y) x else y
-            }
-        }
-    }
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = binaryLadder(
+        a = a,
+        b = b,
+        aConst = aConst,
+        bConst = bConst,
+        buffer = buffer,
+        freqHz = freqHz,
+        ctx = ctx,
+        deadOnRight = { false },
+        deadOnLeft = { false },
+        prepareRight = { k -> k },
+        lawRight = { x, k -> maxLaw(a = x, b = k) },
+        law = { x, y -> maxLaw(a = x, b = y) },
+    )
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return if (x > y) x else y
+        return maxLaw(a = x, b = y)
     }
 }
 
@@ -941,18 +626,13 @@ fun Ignitor.exp(): Ignitor = ExpIgnitor(this)
 private class ExpIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.windowEnd
-        for (i in ctx.offset until end) {
-            buffer[i] = safeOut(fastExp(buffer[i]))
-        }
-    }
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> expLaw(v) }
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return safeOut(fastExp(v))
+        return expLaw(v)
     }
 }
 
@@ -967,27 +647,13 @@ fun Ignitor.log(): Ignitor = LogIgnitor(this)
 private class LogIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.windowEnd
-        for (i in ctx.offset until end) {
-            val v = buffer[i]
-            buffer[i] = when {
-                v > 0.0 -> ln(v)
-                v < 0.0 -> -ln((-v))
-                else -> 0.0
-            }
-        }
-    }
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> logLaw(v) }
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return when {
-            v > 0.0 -> ln(v)
-            v < 0.0 -> -ln((-v))
-            else -> 0.0
-        }
+        return logLaw(v)
     }
 }
 
@@ -997,19 +663,13 @@ fun Ignitor.sqrt(): Ignitor = SqrtIgnitor(this)
 private class SqrtIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> sqrtLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return if (v >= 0.0) sqrt(v) else -sqrt((-v))
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.windowEnd
-        for (i in ctx.offset until end) {
-            val v = buffer[i]
-            buffer[i] = if (v >= 0.0) sqrt(v) else -sqrt((-v))
-        }
+        return sqrtLaw(v)
     }
 }
 
@@ -1019,27 +679,13 @@ fun Ignitor.sign(): Ignitor = SignIgnitor(this)
 private class SignIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> signLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return when {
-            v > 0.0 -> 1.0
-            v < 0.0 -> -1.0
-            else -> 0.0
-        }
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.windowEnd
-        for (i in ctx.offset until end) {
-            val v = buffer[i]
-            buffer[i] = when {
-                v > 0.0 -> 1.0
-                v < 0.0 -> -1.0
-                else -> 0.0
-            }
-        }
+        return signLaw(v)
     }
 }
 
@@ -1049,18 +695,13 @@ fun Ignitor.tanh(): Ignitor = TanhIgnitor(this)
 private class TanhIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> tanhLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return tanh(v)
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.windowEnd
-        for (i in ctx.offset until end) {
-            buffer[i] = tanh(buffer[i])
-        }
+        return tanhLaw(v)
     }
 }
 
@@ -1230,20 +871,13 @@ fun Ignitor.floor(): Ignitor = FloorIgnitor(this)
 private class FloorIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> floorLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return floor(v)
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.windowEnd
-
-        upstream.generate(buffer, freqHz, ctx)
-
-        for (i in ctx.offset until end) {
-            buffer[i] = floor(buffer[i])
-        }
+        return floorLaw(v)
     }
 }
 
@@ -1253,20 +887,13 @@ fun Ignitor.ceil(): Ignitor = CeilIgnitor(this)
 private class CeilIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> ceilLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return ceil(v)
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.windowEnd
-
-        upstream.generate(buffer, freqHz, ctx)
-
-        for (i in ctx.offset until end) {
-            buffer[i] = ceil(buffer[i])
-        }
+        return ceilLaw(v)
     }
 }
 
@@ -1276,20 +903,13 @@ fun Ignitor.round(): Ignitor = RoundIgnitor(this)
 private class RoundIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> roundLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return round(v)
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.windowEnd
-
-        upstream.generate(buffer, freqHz, ctx)
-
-        for (i in ctx.offset until end) {
-            buffer[i] = round(buffer[i])
-        }
+        return roundLaw(v)
     }
 }
 
@@ -1299,21 +919,13 @@ fun Ignitor.frac(): Ignitor = FracIgnitor(this)
 private class FracIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> fracLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return (v - floor(v))
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.windowEnd
-
-        upstream.generate(buffer, freqHz, ctx)
-
-        for (i in ctx.offset until end) {
-            val v = buffer[i]
-            buffer[i] = (v - floor(v))
-        }
+        return fracLaw(v)
     }
 }
 
@@ -1326,77 +938,33 @@ private class FracIgnitor(private val upstream: Ignitor) : Ignitor {
 fun Ignitor.mod(other: Ignitor): Ignitor = ModIgnitor(a = this, b = other)
 
 private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
+    // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
     private val bConst = b.isBlockConstant
 
     override val isBlockConstant: Boolean = aConst && bConst
 
+    // A constant divisor is guarded once per block.
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = binaryLadder(
+        a = a,
+        b = b,
+        aConst = aConst,
+        bConst = bConst,
+        buffer = buffer,
+        freqHz = freqHz,
+        ctx = ctx,
+        deadOnRight = { false },
+        deadOnLeft = { false },
+        prepareRight = { k -> divisorOf(k) },
+        lawRight = { x, d -> modRemainder(a = x, d = d) },
+        law = { x, y -> modLaw(a = x, b = y) },
+    )
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return x % safeDiv(y)
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // Constant-fold ladder — same contract and breach policy as PlusIgnitor. Mod is
-        // NON-commutative; safeDiv on the divisor, NO safeOut (matches the scratch loop:
-        // rem's magnitude is bounded by the divisor's).
-        if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-            val kb = b.controlRateValueOrNull(freqHz)
-
-            if (ka != null && kb != null) {
-                buffer.fill(ka % safeDiv(kb), ctx.offset, ctx.windowEnd)
-
-                return
-            }
-        }
-
-        if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz)
-
-            if (kb != null) {
-                val d = safeDiv(kb)
-                val end = ctx.windowEnd
-
-                a.generate(buffer, freqHz, ctx)
-
-                for (i in ctx.offset until end) {
-                    buffer[i] = buffer[i] % d
-                }
-
-                return
-            }
-        }
-
-        if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz)
-
-            if (ka != null) {
-                val end = ctx.windowEnd
-
-                b.generate(buffer, freqHz, ctx)
-
-                for (i in ctx.offset until end) {
-                    buffer[i] = ka % safeDiv(buffer[i])
-                }
-
-                return
-            }
-        }
-
-        a.generate(buffer, freqHz, ctx)
-
-        ctx.scratchBuffers.use { tmp ->
-            val end = ctx.windowEnd
-
-            b.generate(tmp, freqHz, ctx)
-
-            for (i in ctx.offset until end) {
-                buffer[i] = buffer[i] % safeDiv(tmp[i])
-            }
-        }
+        return modLaw(a = x, b = y)
     }
 }
 
@@ -1411,20 +979,13 @@ fun Ignitor.recip(): Ignitor = RecipIgnitor(this)
 private class RecipIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> recipLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return safeOut(1.0 / safeDiv(v))
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.windowEnd
-
-        upstream.generate(buffer, freqHz, ctx)
-
-        for (i in ctx.offset until end) {
-            buffer[i] = safeOut(1.0 / safeDiv(buffer[i]))
-        }
+        return recipLaw(v)
     }
 }
 
@@ -1434,21 +995,13 @@ fun Ignitor.sq(): Ignitor = SqIgnitor(this)
 private class SqIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
+        unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> sqLaw(v) }
+
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return safeOut(v * v)
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.windowEnd
-
-        upstream.generate(buffer, freqHz, ctx)
-
-        for (i in ctx.offset until end) {
-            val v = buffer[i]
-            buffer[i] = safeOut(v * v)
-        }
+        return sqLaw(v)
     }
 }
 
@@ -1470,7 +1023,7 @@ private class SelectIgnitor(
         cond.isBlockConstant && whenTrue.isBlockConstant && whenFalse.isBlockConstant
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
-        // Resolve ALL THREE children before returning (the MinIgnitor pattern) — generate
+        // Resolve ALL THREE children before returning (the MinIgnitor pattern): generate
         // renders both branches unconditionally so their state advances; a short-circuit on
         // the condition would let an untaken stateful branch fall behind the render path.
         val c = cond.controlRateValueOrNull(freqHz) ?: return null

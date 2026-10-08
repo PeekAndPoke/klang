@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 10 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build); step 11 in progress (the twins: (a) the shaper core done), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 10 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build); step 11 in progress (the twins: (a) the shaper core and (d1) the runtime arithmetic done; (b) and (c) next), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -442,7 +442,8 @@ others change allocation only.
 
 Scope: `tmp/reviews/tidy-step11-scope.md` (items (a), (b), (c) and (d1) to do, in the order (a), (d1), (b), (c), one
 commit each; (d2) to (d4) won't-do, logged in `_maintainer-questions.md`). Report for (a) and (d1):
-`tmp/reviews/tidy-step11-report.md`.
+`tmp/reviews/tidy-step11-report.md`. (a) and (d1) reviewed in two rounds (`tmp/reviews/tidy11-r1-A.md`,
+`tidy11-r1-B.md`, `tidy11-r2.md`): round 1 moved (d1) to the scope's fallback, round 2 clean.
 
 ### (a) The shaper core (B2.2): done 2026-10-08
 
@@ -463,6 +464,70 @@ blocker notes, `DEFAULT_DC_BLOCK_COEFF`) and `oversampling-regions.md`'s invento
   goes red on the new fused row (and `StripLawCoresSpec`), dropping it on the oversampled path goes red on the existing
   oversampled rows, a soft cap inside the core goes red on every node row, and dropping the plain path's NaN guard goes
   red only on the two new rows.
+
+### (d1) The runtime arithmetic (B4.8, B2.15): done 2026-10-08
+
+The 8 binary and 12 unary arithmetic nodes of `Ignitor.kt` (`PlusIgnitor`, `MinusIgnitor`, `TimesIgnitor`,
+`DivIgnitor`, `PowIgnitor`, `MinIgnitor`, `MaxIgnitor`, `ModIgnitor`; `AbsIgnitor` to `SqIgnitor`) keep one class
+each, but none writes a law of its own any more. Each law is one inline function in `ignitor/_arithmetic_laws.kt`
+(`plusLaw` to `maxLaw`, `signedPow` once where it was written five times; `absLaw` to `sqLaw`), and every node calls
+it on both paths: its `generate` through the one shared inline ladder (`binaryLadder`) or `unaryMap`, its
+`controlRateValueOrNull` directly. Runtime `audio_be` only; the doors, the wire and every other module are unchanged.
+
+- **Why one class per op (the scope's fallback, chosen in review round 1).** The first shape collapsed the 20 classes
+  into one `BinaryIgnitor(op, a, b)` and one `UnaryIgnitor(op, upstream)`. It was bit-identical, but its scalar path
+  was one shared, recursive method (`controlRateValueOrNull` through a 559-byte `binaryLaw`) that neither HotSpot
+  ("hot method too big", "recursive inlining is too deep") nor V8 inlines through. A block-constant subtree then
+  boxed its scalars: the optimizer's shape for `x.div(param)`, `x.affine(mul = 1.div(param))`, took 960 bytes per
+  block on the JVM for 20 nodes where it took 0, nested scalars doubled their JVM time, and V8 scavenged in large
+  graphs (reviewer B, `tmp/reviews/tidy11-r1-B.md`, MINOR 2). With a class per op every scalar is a small method of
+  its own again, as before the step.
+- **The ladder.** `binaryLadder` holds the four arms (both constant, right constant, left constant, scratch) and takes
+  everything op-specific as inline lambdas: `law`; the dead branches `deadOnRight` and `deadOnLeft` (Times 0 on either
+  side, Div 0 or an infinity on the right, nothing else); and, for the right-constant arm, `prepareRight` and
+  `lawRight`. Div and Mod split their law into a divisor half (`divisorOf`, the `safeDiv`) and a quotient half
+  (`divQuotient`, `modRemainder`), so a constant divisor is guarded once per block, as before the step, while each law
+  is still written once (`divLaw` and `modLaw` compose the halves). Without the split, V8 paid the guard per sample:
+  +64 % per Div node, +17 % per Mod node (reviewer B, MINOR 1). In the compiled JS and on the JVM each node's loops
+  run their law inline, with no lambda object, no indirect call and no box.
+- **Kept verbatim:** the clamps (Plus and Minus bare; Times, Div, Pow, Recip, Sq and Exp `safeOut`; Mod `safeDiv`
+  without `safeOut`), Min and Max with `a` first under NaN, the unary edges (Abs keeps -0.0; Log and Sign map NaN and
+  both zeros to 0; Sqrt keeps NaN; Round ties to even), the breach policy (a null scalar despite the flag falls
+  through to the next arm), the class names and visibilities (`TimesIgnitor` stays `internal` for `EqIgnitor`).
+- **Changed, and proven neutral:** the left-constant arm of Plus and Times runs `law(ka, y)` (it computed `y + ka`
+  and `safeOut(y * ka)`); every node reads the window end after its child render (Floor, Ceil, Round, Frac, Recip, Sq
+  and Mod read it before; no Ignitor moves the window).
+- **Around it:** `MulConstIgnitor` (the scalar `mul(k)` door) runs `timesLaw` on both paths, so it and the Times node
+  still agree by construction; the shared `mulConstInPlace` loop and `addConstInPlace` are gone, and the
+  `ConstantFoldParitySpec` comments that named them name the laws.
+- **Proof:** a raw-bits golden captured from the code before the change (`ZzScratchArithmeticGoldenSpec`, scratch, not
+  committed): every op on every arm, contract breaches and nested constants, the unary ops on constants, signals and
+  breaches, eight ragged windows with a sentinel outside the window, the scalar path, `isBlockConstant`, and how far
+  each source rendered (what a dead branch skipped), over 30 hostile operands (NaN, both zeros, both infinities,
+  ±1e308, ±SAFE_MAX, denormals, negative bases, the round ties). 19,625,952 bytes, bit-identical for the first shape
+  and again for this one (`cmp`). The 18-song corpus and Kokon bit-identical (labels `ep1-t11d` and `ep1-t11d2`).
+  `:audio_be:jvmTest` (2,378) and `:audio_be:jsBrowserTest` (2,277) green.
+- **The NaN payload:** a second golden with two more NaNs (negative, and a payload of `0x123`) shows that a payload
+  is no stable observable on the JVM: its Plus both-constant cell differed where the old and the new code compute the
+  same `x + y` (the JIT decides which NaN survives), and its Round cell changed between two runs of the same code.
+  The left-constant arm, the one whose operand order changed, did not differ. Nothing in the engine reads a payload,
+  and the corpus is identical, so the uniform `law(ka, y)` stays.
+- **Rows:**
+  - `ArithmeticLawSpec` (commonTest, both platforms): every binary law on every arm and the scalar path, every unary
+    law on both paths, each against an oracle written in the spec with literal clamp constants; the edges as literal
+    values; the dead branches fill +0.0 by its bits where the law would give -0.0 and render nothing; Div's constant 0
+    on the LEFT is not dead (the divisor renders, `0 / -2` is -0.0).
+- **The scalar path's allocation, measured, no row.** 20 nested `x.affine(mul = 1.div(param))` (the optimizer's
+  shape for `x.div(param)`) take 0 bytes per block once warm in a fresh JVM, as before the step; the first shape (one
+  shared recursive scalar method) took 960 bytes per block. Not kept as a row: inside the test JVM the other specs
+  leave these call sites megamorphic and the code before the step allocates the same there, so only a child JVM can
+  see it, and a row that pins what HotSpot inlines is fragile across JDKs (coordinator, round 1). Numbers in
+  `tmp/reviews/tidy-step11-report.md`.
+- **Mutation-checked** (on this shape): Min's operands swapped in its `law` (red on `ArithmeticLawSpec` and
+  `ConstantFoldParitySpec`) and on its scalar only (red only on `ArithmeticLawSpec`: the parity specs compare paths
+  with each other, as the scope said); the ladder's left-constant arm swapped; Div's infinity no longer dead; `safeOut`
+  on Plus; Div's right arm without its divisor guard. Every one red. The binary scalars routed through one shared
+  non-inline method allocated 960,000 bytes per 2,000 blocks in the fresh-JVM probe.
 
 ## Decisions for the maintainer
 
@@ -576,3 +641,10 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
 - **The active list's order still reaches the phase pool takes** (lifecycle step 5's finding above): unchanged by this
   step, which kept every draw at the first block.
 
+
+## Found during tidy-up step 11
+
+- **The Shape path allocates on V8, before and after this step alike** (review round 1, reviewer B): about 4 KB per
+  block at stage 0 in the development JS build (52 scavenges per 105,000 blocks), 835 scavenges per 105,000 blocks at
+  stage 4. Old and new code allocate the same, so step 11 did not cause it. It needs its own probe on the production
+  bundle before anything is changed (`tmp/reviews/tidy11-r1-B.md`, "Outside this change").

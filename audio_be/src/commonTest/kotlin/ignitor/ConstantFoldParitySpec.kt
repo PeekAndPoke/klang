@@ -144,8 +144,8 @@ class ConstantFoldParitySpec : StringSpec({
         assertBitParity(folded = folded, reference = reference)
 
         // The clamp must actually engage: a 220 Hz block contains both polarities driven
-        // beyond ±SAFE_MAX. (Since the helper extraction, both single-const arms share ONE
-        // mulConstInPlace safeOut — this case and the LEFT variant below independently anchor
+        // beyond ±SAFE_MAX. (Both single-const arms run the ONE Times law, `timesLaw`, through
+        // the shared `binaryLadder`: this case and the LEFT variant below independently anchor
         // WHICH operand renders into the buffer, not two separate clamps.)
         val buf = AudioBuffer(blockFrames)
         (Ignitors.sine() * ParamIgnitor("g", 1e20)).generate(buf, 220.0, ctx())
@@ -158,8 +158,8 @@ class ConstantFoldParitySpec : StringSpec({
         val reference = OpaqueIgnitor(ParamIgnitor("g", 1e20)) * Ignitors.sine()
         assertBitParity(folded = folded, reference = reference)
 
-        // (Shares mulConstInPlace's safeOut with the RIGHT variant above — kept because it
-        // anchors the a-fold's operand routing, which the b-fold case cannot see.)
+        // (Shares `timesLaw`'s safeOut with the RIGHT variant above, kept because it anchors
+        // the a-fold's operand routing, which the b-fold case cannot see.)
         val buf = AudioBuffer(blockFrames)
         (ParamIgnitor("g", 1e20) * Ignitors.sine()).generate(buf, 220.0, ctx())
         (0 until blockFrames).any { buf[it] == SAFE_MAX }.shouldBeTrue()
@@ -218,7 +218,7 @@ class ConstantFoldParitySpec : StringSpec({
 
     "plus: stays BARE above SAFE_MAX — a spurious clamp would show here" {
         // Pins the deliberate Plus/Times asymmetry (per-op safety table): sums may exceed
-        // SAFE_MAX; adding safeOut to the fill or to addConstInPlace goes red here.
+        // SAFE_MAX; adding safeOut to `plusLaw` (the fill and both constant arms) goes red here.
         val bufFill = AudioBuffer(blockFrames)
         (ConstantIgnitor(1e15) + ParamIgnitor("dc", 1e15)).generate(bufFill, 220.0, ctx())
         for (i in 0 until blockFrames) {
