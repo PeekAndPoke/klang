@@ -30,7 +30,7 @@ safe whatever frontend sends it; the doors keep accepting zero children. Reprodu
 empty array per block; it now spawns no grains (`ShimmerSchedulerSpec`). Review round 1 added, in the same change:
 the shimmer's two wrap loops hung the audio thread on a huge or infinite rate (`[0, 7, 1200]` is `2^100`) and a NaN
 pitch poisoned the voice, so the loops are a floor-mod and a non-finite rate reads as 1.0 (finite rates unclamped);
-a unison count is capped (`coerceUnisonVoices`, `UNISON_MAX_VOICES = 64` beside `coercePasses`, non-finite is 0;
+a unison count is capped (`coerceUnisonVoices`, `UNISON_MAX_VOICES = 64` beside `coercePasses`, 256 since 2026-10-08, non-finite is 0;
 the largest authored count is 32, so every builtin sound is unchanged; guard `UnisonVoiceCapSpec`); the script
 shimmer door raises its typed error (`KlangScriptTypeError`) for a pitch that is not a number, as on `wet`, `feedback`
 and `tone`, instead of a cast error. Decided by the coordinator by default, for
@@ -694,8 +694,7 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   KlangScript doors through `IgnitorDslLike`, and the runtime `Ignitor` extensions), and fills the gaps it finds.
   The test-only seams (`*ForTest`, `currentState`, `installed*`) are a separate question and stay with A2.1.
 - **The unison cap (maintainer, 2026-10-08): 256, not 64.** `UNISON_MAX_VOICES` becomes 256 (`FilterDef.kt`, later
-  `resource_bounds.kt` with step 12 (c)). Queued right after step 11 is committed, so the step 11 goldens are not
-  moved under their worker. Cost to keep in mind: a superpluck string carries a 2,500-sample delay line, so 256
+  `resource_bounds.kt` with step 12 (c)). Done 2026-10-08, after step 11 was committed. Cost to keep in mind: a superpluck string carries a 2,500-sample delay line, so 256
   strings build about 5 MB per note on the audio thread (64 built about 1.3 MB). No song comes near it (the largest
   count is 32).
 - **Step 12 (a), body and vowel as one implementation (maintainer, 2026-10-08): agreed** ("I agree to unify the

@@ -126,7 +126,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   control events: each one whose gate is open records its source until the block's end, so a realtime solo follows the
   held gates.
 - **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
-  `UNISON_MAX_VOICES` = 64, non-finite is 0), both in `audio_bridge/FilterDef.kt`, read by the runtime and the census.
+  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0), both in `audio_bridge/FilterDef.kt`, read by the runtime and the census.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -259,6 +259,7 @@ One line per step, newest first. A link to the archived task record where one ex
 - 2026-10-07 Solo is engine state per source: the rest fillers are control-only events, `SoloTracker` records from any
   event before the control drop and the late guard, the others play at `1 - amount`; `ActiveVoice.soloAmount` gone,
   audit B4.2 closed: `docs/tasks/bugfix-solo-rests-and-amount.md`
+- 2026-10-08 The unison cap is 256 (maintainer; it was 64): `docs/tasks/engine-tidy-up.md` (Decided)
 - 2026-10-07 An empty `Ignitor.variants()` is silence, no longer a `require` at note-on; the shimmer survives an empty,
   a huge or a non-finite pitch (no index error, no hang); a unison count is capped at `UNISON_MAX_VOICES` (64):
   `docs/tasks/engine-tidy-up.md` ("First, a bug")

@@ -145,10 +145,12 @@ fun coercePasses(passes: Double): Int {
 /**
  * Upper bound for a unison stack's voice count (the super oscillators and the super pluck). Like [FILTER_MAX_PASSES]
  * it bounds a RESOURCE count, not a tone: the count sizes arrays at note-on on the render thread, so a live-typed
- * `voices(1e9)` would allocate a billion voice states there. 64 keeps every authored sound as it was (the largest
- * authored count is 32). It also keeps `PhasePool`'s `tries * voices` (tries at most 64) far from an `Int` overflow.
+ * `voices(1e9)` would allocate a billion voice states there. 256 (maintainer, 2026-10-08; 64 before) keeps every
+ * authored sound as it was (the largest authored count is 32) and leaves room for wide stacks. The cost at the top: a
+ * super pluck string carries a 2,500-sample delay line, so 256 strings build about 5 MB per note on the render thread.
+ * It also keeps `PhasePool`'s `tries * voices` (tries at most 64, so at most 16,384) far from an `Int` overflow.
  */
-const val UNISON_MAX_VOICES = 64
+const val UNISON_MAX_VOICES = 256
 
 /**
  * The ONE place a unison voice count is coerced: the engine's two runtime reads (super oscillators, super pluck) and
