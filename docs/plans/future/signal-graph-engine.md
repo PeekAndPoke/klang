@@ -334,6 +334,26 @@ throwaway, and its job is to find out whether the design holds. What survives go
 **Where it lives:** outside the repository, a single-page prototype (HTML and JavaScript). It is published privately as
 an artifact so it can be opened on any device, and its source is kept in a folder next to the repo, not in it.
 
+**Built: Motor Lab v0, 2026-10-08.**
+- **Source:** `/opt/dev/peekandpoke/klang-labs/motor/`, with its own local git and no remote. `node test.js` checks the
+  routing rules.
+- **Published privately:** https://claude.ai/artifact/DR6VcnEd7kaikuMTDLuAuU
+- **What it holds:**
+  - the maintainer's first layout, 8 tracks "0" to "7" with the classic chain, all into the master, and a number
+    becoming a string (`orbit(0)` is `track("0")`);
+  - a sketch band with groups, returns and a wired duck;
+  - every sprudel door mapped to its slot keys (`doors.js`, read from the repo the same day).
+
+**Findings so far:**
+1. **Stage names can repeat across the nodes of one path:** `glue` on the drums group and on the master. "Pick a
+   stage by name" is then still ambiguous, so a name may be qualified with its node (`"drums.glue"`).
+2. **A track with the full classic chain carries its own bus effects.** In a band layout, `.reverb()` on such a
+   track lands on the track's own reverb, never on a shared hall. The lab therefore has `classicNote()`: the per-note
+   doors without the classic bus chain. Which of the two the default Motor's tracks use decides what `.reverb()`
+   means.
+3. **The duck is the only door whose value is wiring:** `duck(orbit = n)` picks its sidechain source per note. The lab
+   shows it as a warning in the default Motor (legacy) and refuses it where the Motor wires the duck.
+
 ### 6.8 Continuous automation: tweens (maintainer, 2026-10-08)
 
 > "Advanced topic would be how to send continuous automation for e.g. a filter instead of doing it per event ...
