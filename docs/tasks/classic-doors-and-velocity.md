@@ -155,7 +155,17 @@ names at the same level.
    the stage is attached instead; byte identity is the acceptance.
 5. `pregain` (§5) falls out of this: touch is velocity, read by the instrument.
 
-## 8. Where it is recorded
+## 8. One level higher (maintainer, 2026-10-08): this question belongs to the machine
+
+> "Fiddling around with `.classic()` at the current layer will not help, we will run into the same issue again and
+> again."
+
+The per-note stage after the instrument is one node kind of a machine declared OUTSIDE the patterns, next to buses,
+groups, sends and the master: [`../plans/future/signal-graph-engine.md`](../plans/future/signal-graph-engine.md) §6.
+This task is no longer designed on its own. Its sections 1 to 7 are input to that design round, and its small items
+(the wrong `pregain` KDoc of §6) can still be fixed any time.
+
+## 9. Where it is recorded
 
 - The research, gap G6: [`../plans/aaa-production-tricks.md`](../plans/aaa-production-tricks.md) §3 and §11.
 - The decision this would revise: [`../plans/signal-flow-redesign.md`](../plans/signal-flow-redesign.md) §6
