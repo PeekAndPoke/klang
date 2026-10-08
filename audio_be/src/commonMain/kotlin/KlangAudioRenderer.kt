@@ -23,7 +23,7 @@ class KlangAudioRenderer private constructor(
     private val context: AudioBackendContext,
     private val clock: BackendClock,
 ) {
-    private val engine = PlaybackEngine.create(context)
+    private val engine = PlaybackEngine.create(context = context, playbackId = ENGINE_PLAYBACK_ID)
     private val mix = StereoBuffer(context.blockFrames)
     private val master = MasterStage(sampleRate = context.sampleRate, blockFrames = context.blockFrames)
 
@@ -75,6 +75,12 @@ class KlangAudioRenderer private constructor(
     internal val clockForTest: RenderClock get() = clock
 
     companion object {
+        /**
+         * The id the one engine is filed under. Nothing reads it here (there is no dispatcher); the voices a
+         * caller schedules name their own playback, and the scheduler's context takes that id.
+         */
+        private const val ENGINE_PLAYBACK_ID: String = "offline"
+
         fun create(
             sampleRate: Int,
             blockFrames: Int,

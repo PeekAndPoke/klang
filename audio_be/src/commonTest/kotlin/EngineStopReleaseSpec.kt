@@ -115,7 +115,7 @@ class EngineStopReleaseSpec : StringSpec({
                 lastVoiceBlock = blk
             }
 
-            if (releaseAt < 0 && a.engine.isReleasing) {
+            if (releaseAt < 0 && a.engine.releaseStarted) {
                 releaseAt = blk
             }
 
@@ -167,7 +167,7 @@ class EngineStopReleaseSpec : StringSpec({
         releasedAgainstControl(a = a, b = b)
 
         withClue("the control, never stopped, is never released: its drone is the authored sound") {
-            b.engine.isReleasing shouldBe false
+            b.engine.releaseStarted shouldBe false
             b.engine.isIdle() shouldBe false
         }
     }
@@ -278,7 +278,7 @@ class EngineStopReleaseSpec : StringSpec({
             }
 
             withClue("block $blk: nothing endless is left, so the engine is never released") {
-                a.engine.isReleasing shouldBe false
+                a.engine.releaseStarted shouldBe false
             }
 
             if (a.engine.isIdle()) {
@@ -334,7 +334,7 @@ class EngineStopReleaseSpec : StringSpec({
                 got.contentEquals(want) shouldBe true
             }
 
-            a.engine.isReleasing shouldBe false
+            a.engine.releaseStarted shouldBe false
 
             if (settledAt < 0 && blk > 700 && a.engine.masterBusForTest.isSettled) {
                 settledAt = blk
@@ -390,7 +390,7 @@ class EngineStopReleaseSpec : StringSpec({
         withClue("disposed, long before any hold, and never released") {
             disposedAt shouldBeGreaterThan 0
             disposedAt shouldBeLessThan holdBlocks
-            engine.isReleasing shouldBe false
+            engine.releaseStarted shouldBe false
         }
 
         withClue("in the block before, it still had sound of its own: no extra hold") {
@@ -450,13 +450,13 @@ class EngineStopReleaseSpec : StringSpec({
 
         val stopped = a.d.engine("song").shouldNotBeNull()
 
-        while (!stopped.isReleasing && blk < 100 + holdBlocks + 10) {
+        while (!stopped.releaseStarted && blk < 100 + holdBlocks + 10) {
             a.render(blk)
             c.render(blk)
             blk++
         }
 
-        stopped.isReleasing shouldBe true
+        stopped.releaseStarted shouldBe true
 
         val later = 1000.0
         a.d.handle(
@@ -524,7 +524,7 @@ class EngineStopReleaseSpec : StringSpec({
             }
 
             withClue("block $blk: a finite tail is never released") {
-                a.engine.isReleasing shouldBe false
+                a.engine.releaseStarted shouldBe false
             }
 
             if (a.engine.isIdle()) {

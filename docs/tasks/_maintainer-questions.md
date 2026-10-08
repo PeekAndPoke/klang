@@ -68,5 +68,9 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
   (`VowelBands.b`, 180 rows; `BodyMaterials.m`, 120 rows) stay positional, because their column order is the helper
   declared right above each table and naming every cell would triple each row. Add a "data table" exception to §24, or
   name them too (one more script run)?
+- **Engine disposal order** (tidy-up step 9): when several engines go idle in the same block, the order they are
+  disposed in decides which units land on top of the warehouse's last-in-first-out shelves, so which reverb or delay
+  ring a later rent gets. Step 9 keeps today's order (one extra list in the dispatcher). Disposing in render order
+  would be simpler but changes which ring a later rent gets (not bit-identical). Keep, or simplify?
 - **Frozen songs** ([`song-orbit-ownership-review.md`](song-orbit-ownership-review.md)): fix their shared-orbit
   conflicts, or keep them as snapshots of the old sound?

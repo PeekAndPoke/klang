@@ -127,7 +127,8 @@ class Voice(
     private val gateEndFrame: Double get() = limits.gateEndFrame
 
     // The stages before the send: Pitch → Ignite → (teardown fade). A cut's fade runs between them and the send.
-    private val stages: List<BlockRenderer> = pipeline
+    // An array with an index loop: a `List` loop makes an iterator per voice per block on Kotlin/JS.
+    private val stages: Array<BlockRenderer> = pipeline.toTypedArray()
 
     // The last stage: the send into the orbit.
     private val send: BlockRenderer = SendRenderer(voice = this)
@@ -415,8 +416,8 @@ class Voice(
 
         // ── Pitch → Ignite → (teardown fade) → Send ───────────────────────────────
 
-        for (renderer in stages) {
-            renderer.render(blockCtx)
+        for (i in 0 until stages.size) {
+            stages[i].render(blockCtx)
         }
 
         if (isFading) {

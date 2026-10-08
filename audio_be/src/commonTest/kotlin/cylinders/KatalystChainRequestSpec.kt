@@ -164,7 +164,7 @@ class KatalystChainRequestSpec : StringSpec({
 
         render(d, blocks = 4, from = 344)
 
-        d.engine("song")?.scheduler?.droppedVoiceCount("song") shouldBe 1
+        d.engine("song")?.scheduler?.droppedVoiceCount() shouldBe 1
         cylinder(d, 2).shouldNotBeNull().runsClassic() shouldBe false
     }
 })

@@ -167,7 +167,7 @@ the multiplier is an input, not lifecycle, per the lifecycle doc's inventory).
 
 Read from the code; each point gets a test below.
 
-- **The ramp.** `ValueRamp` ends on the exact target (`current = targetValue` at `progress >= 1`), so after 1.5 s of
+- **The ramp.** `ValueRamp` (since tidy-up step 7 `SoloRamp`, the same law) ends on the exact target (`current = targetValue` at `progress >= 1`), so after 1.5 s of
   `Ease.InOut.cubic` the multiplier is exactly 0.0 and every background voice adds `signal * 0.0` to its orbit. No
   denormal risk: the values on the way down stay far above the subnormal range. Unchanged class: a voice that has
   already blown up (Inf or NaN) still puts NaN into the mix (`Inf * 0`), as it does at 0.05 today.

@@ -11,7 +11,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 ## The signal flow and its owners
 
 - **Per playback.** `PlaybackEngineDispatcher` routes every `Cmd` by `playbackId` to its own `PlaybackEngine`
-  (scheduler, orbits, registry forks, `MasterBus`); the engines' outputs sum into the house stage. File map:
+  (scheduler, orbits, registry forks, `MasterBus`); the engines' outputs sum into the house stage. A
+  `VoiceScheduler` serves its engine's one playback: one `PlaybackCtx`, made by the first voice, dropped by
+  `cleanup`, nothing filtered by id. File map:
   `docs/audio-backend-file-map.md`; data flow and isolation: `audio/ref/architecture.md`.
 - **Instrument = the voice's Ignitor tree** (phase 3, done 2026-09-28). `Voice` runs Pitch, Ignite, (teardown
   fade), Send. Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
@@ -78,7 +80,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
   at most `MAX_DRAIN_SECONDS` 20 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
   under -90 dB. **A stopped playback is never hard-cut**; only an endless tail triggers the release, 20 s after the
-  last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`.
+  last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
+  `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
+  dispatcher keeps only the render order and the disposal order, both exact.
 - **Knob glide** `KNOB_GLIDE_SECONDS` 0.05 in whole blocks (17 at 44.1 kHz, 19 at 48 kHz); **bank crossfade**
   `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. Which knob glides how:
   `audio/ref/katalyst.md`.
@@ -142,6 +146,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 - **A per-block copy is `copyRangeInto`** (`audio_be/.../utils/buffer_copy.kt`), never `copyInto`, whose JS form makes a
   `subarray` view per call. The domain-free helpers (fast math, numeric guards, phase wraps, fades) live in `utils/`.
+- **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
+  which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
+  summation order, so changing it changes bits.
 - **The SVF**: bandpass, notch and the resonators are linear. Lowpass and highpass at `analog > 0` take a
   state-dependent DAMPING path (a diode-pair term grows `k` with the state; `IgnitorFilters.kt`, `Ignitor.svf`).
   Never saturate by capping the feedback signal with tanh: two such attempts went unstable and were reverted
@@ -220,6 +227,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-08 An engine's end of life is one `PlaybackEngine.Phase`; the dispatcher's `draining` set and `detached`
+  list are gone; `renderInto` is one path: `docs/tasks/engine-tidy-up.md` step 9
+- 2026-10-08 One playback per scheduler: one `PlaybackCtx`, no `playbackId` filters or parameters
+  (`startRealtimeVoice` keeps its id, the context may be made from it): `docs/tasks/engine-tidy-up.md` step 8
+- 2026-10-08 Per-block walks are index loops (`Voice` stages, `Cylinders` in rent order with an id array, the
+  scheduler, the dispatcher); the diagnostics closure is gone; the solo ramp is `SoloRamp` on an inlined
+  `easeInOutCubic`, `ValueRamp` deleted: `docs/tasks/engine-tidy-up.md` step 7
 - 2026-10-08 The audio helpers live in `utils/` (`DspUtil.kt` split by content; `finiteOrZero`, `fadeToZero`,
   `timeConstantCoeff`, `wrapPhaseFastOrSafe`, `rampStep`, and `copyRangeInto` for every per-block copy, no `copyInto` view
   on JS); the stereo add is the member `StereoBuffer.addFrom`: `docs/tasks/engine-tidy-up.md` step 6

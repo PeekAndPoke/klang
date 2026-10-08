@@ -324,7 +324,7 @@ class CylinderShelfSpec : StringSpec({
         repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
 
         val engine = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull()
-        engine.scheduler.droppedVoiceCount(WarmupRunner.WARMUP_PLAYBACK_ID) shouldBe 0
+        engine.scheduler.droppedVoiceCount() shouldBe 0
         WarmupVocabulary.sounds.forEach { (name, _) -> engine.scheduler.containsIgnitor(name) shouldBe true }
         engine.scheduler.getActiveVoiceCount() shouldBe WarmupRunner.WARMUP_ORBITS
     }
@@ -359,6 +359,6 @@ class CylinderShelfSpec : StringSpec({
             c.delay!!.delayLine.shouldNotBeNull()
             c.reverb!!.reverb.shouldNotBeNull()
         }
-        engine.scheduler.droppedVoiceCount(WarmupRunner.WARMUP_PLAYBACK_ID) shouldBe 0
+        engine.scheduler.droppedVoiceCount() shouldBe 0
     }
 })

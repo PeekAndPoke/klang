@@ -399,8 +399,8 @@ class RealtimeVoiceSpec : StringSpec({
     }
 
     "playbacks are isolated end-to-end: a note-off cannot cross engines" {
-        // At dispatcher level each playback gets its OWN engine, so this pins the end-to-end
-        // isolation property; the scheduler-level playbackId match is pinned separately below.
+        // At dispatcher level each playback gets its OWN engine (and so its own scheduler), so this pins the
+        // end-to-end isolation property; within one scheduler the note-off matches by liveId (the row below).
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         d.handle(KlangCommLink.Cmd.StartRealtimeVoice("rtA", RealtimeVoice(liveId = 1, data = sustained, gateDurSec = null)))
@@ -415,10 +415,9 @@ class RealtimeVoiceSpec : StringSpec({
         renderBlocks(d, 14.0 * blockFrames, 40).takeLast(30).all { hasAudio(it) }.shouldBeTrue()
     }
 
-    "stopRealtimeVoice releases only the addressed playback within ONE scheduler" {
-        // The dispatcher isolates playbacks in separate engines today, so this pins the
-        // scheduler-level defense-in-depth directly: one scheduler CAN host two playbacks (the
-        // API takes a playbackId per call) and liveIds restart at 1 per FE playback.
+    "stopRealtimeVoice releases only the voices carrying its liveId within the playback's scheduler" {
+        // A scheduler serves one playback (tidy-up step 8): the playbacks are kept apart by their engines (the row
+        // above), and within one scheduler a note-off is told apart by its liveId alone.
         val clock = BackendClock(sampleRate)
         val context = AudioBackendContext.create(
             sampleRate = sampleRate,
@@ -427,7 +426,7 @@ class RealtimeVoiceSpec : StringSpec({
             clock = clock,
             phasePoolSeed = 1,
         )
-        val engine = PlaybackEngine.create(context)
+        val engine = PlaybackEngine.create(context = context, playbackId = "rt")
         val mix = StereoBuffer(blockFrames)
 
         fun renderDirect(n: Int) {
@@ -439,15 +438,15 @@ class RealtimeVoiceSpec : StringSpec({
         }
 
         renderDirect(4)
-        engine.scheduler.startRealtimeVoice("rtA", RealtimeVoice(liveId = 1, data = sustained, gateDurSec = null))
+        engine.scheduler.startRealtimeVoice("rt", RealtimeVoice(liveId = 1, data = sustained, gateDurSec = null))
         engine.scheduler.startRealtimeVoice(
-            "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0), gateDurSec = null),
+            "rt", RealtimeVoice(liveId = 2, data = sustained.copy(freqHz = 660.0), gateDurSec = null),
         )
         renderDirect(4)
         engine.scheduler.getActiveVoiceCount() shouldBe 2
 
-        engine.scheduler.stopRealtimeVoice("rtA", liveId = 1)
-        // release 0.01 s ~= 4 blocks; render far past it — only rtA's voice may die
+        engine.scheduler.stopRealtimeVoice(liveId = 1)
+        // release 0.01 s ~= 4 blocks; render far past it: only liveId 1's voice may die
         renderDirect(20)
         engine.scheduler.getActiveVoiceCount() shouldBe 1
     }

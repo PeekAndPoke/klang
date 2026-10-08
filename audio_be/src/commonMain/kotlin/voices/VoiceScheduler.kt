@@ -20,10 +20,19 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangMinHeap
-import io.peekandpoke.klang.common.math.ValueRamp
-import io.peekandpoke.ultra.maths.Ease
 import kotlin.random.Random
 
+/**
+ * The voice scheduler of ONE playback: its engine's scheduled heap, active voices, solo state and the context its
+ * voices are built with ([PlaybackCtx]). Each `PlaybackEngine` owns one, and the
+ * dispatcher routes every command by `playbackId` to its engine, so every voice a scheduler is handed belongs to the
+ * one playback (the offline renderer has one engine, and its caller one playback id). Nothing here filters by
+ * `playbackId` (audit item B3.3, tidy-up step 8).
+ *
+ * The playback's context is created with its first voice ([ensureEpoch], [startRealtimeVoice]), from that voice's
+ * `playbackId`, which seeds the voices' random streams; [cleanup] drops it, and the next voice, a resume of the
+ * stopped playback, creates a fresh one with a fresh epoch.
+ */
 class VoiceScheduler(
     val options: Options,
 ) {
@@ -94,10 +103,9 @@ class VoiceScheduler(
         data class Realtime(val liveId: Int, val held: Boolean, val solo: Double?) : VoiceOrigin
     }
 
-    // Wrapper to track playbackId and the source id (what solo protects) alongside Voice
+    // Wrapper to track the source id (what solo protects) and the origin alongside Voice
     private data class ActiveVoice(
         val voice: Voice,
-        val playbackId: String,
         val sourceId: String?,
         val origin: VoiceOrigin,
     )
@@ -106,7 +114,7 @@ class VoiceScheduler(
     private val active = ArrayList<ActiveVoice>(64)
 
     // Smooth gain transition for solo/mute: the level of every voice whose source is not soloed
-    private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = SOLO_RAMP_SEC, ease = Ease.InOut.cubic)
+    private val soloMuteRamp = SoloRamp(initialValue = 1.0, durationSec = SOLO_RAMP_SEC)
 
     // Who is soloed, at which amount, until when (per playback: this scheduler is the playback's)
     private val soloTracker = SoloTracker(
@@ -114,8 +122,9 @@ class VoiceScheduler(
         graceSec = SOLO_GRACE_BLOCKS * context.blockFrames / context.sampleRateDouble,
     )
 
-    // Map playbackId -> per-playback context (registry, epoch, ...)
-    private val playbackContexts = mutableMapOf<String, PlaybackCtx>()
+    // The playback's context (registry, epoch, random streams, ...): null until its first voice, and again after
+    // [cleanup] until the next one.
+    private var playback: PlaybackCtx? = null
 
     // Scratch buffers — pre-allocated to avoid per-block heap allocation on the audio thread
     private val voiceBuffer = AudioBuffer(context.blockFrames)
@@ -174,8 +183,8 @@ class VoiceScheduler(
     fun renderingVoiceData(): List<VoiceData> {
         val out = ArrayList<VoiceData>(active.size)
 
-        for (activeVoice in active) {
-            val origin = activeVoice.origin
+        for (i in 0 until active.size) {
+            val origin = active[i].origin
 
             if (origin is VoiceOrigin.Timeline) {
                 out.add(origin.source.data)
@@ -186,55 +195,50 @@ class VoiceScheduler(
     }
 
     /**
-     * Voices dropped at admission for [playbackId] because their start had already been rendered
-     * past (block-framing B2). Zero on a healthy link; a rising count is the only visible trace of
-     * a frontend stall now that late voices are dropped rather than smeared.
+     * Voices of the playback dropped at admission because their start had already been rendered
+     * past (block-framing B2), counted since its context was created (0 without one). Zero on a healthy
+     * link; a rising count is the only visible trace of a frontend stall now that late voices are
+     * dropped rather than smeared. Read by the stats feed.
      */
-    fun droppedVoiceCount(playbackId: String): Int = playbackContexts[playbackId]?.droppedVoices ?: 0
-
-    /** Voices dropped at admission across every playback this scheduler still knows. For the stats feed. */
-    fun droppedVoicesTotal(): Int {
-        var total = 0
-        for (ctx in playbackContexts.values) {
-            total += ctx.droppedVoices
-        }
-        return total
-    }
+    fun droppedVoiceCount(): Int = playback?.droppedVoices ?: 0
 
     /** Register a custom oscillator for THIS playback — lands on the per-engine fork, not the shared parent. */
     fun registerIgnitor(name: String, dsl: IgnitorDsl) = ignitorFork.register(name, dsl)
 
     internal fun containsIgnitor(name: String): Boolean = ignitorFork.contains(name)
 
-    fun cleanup(playbackId: String) {
+    /**
+     * The playback stops: its held realtime voices are released, its context and its scheduled voices are dropped,
+     * and the voices already playing ring out.
+     */
+    fun cleanup() {
         // HELD realtime voices would otherwise ring at full sustain to the held-gate horizon —
         // hours — and keep the engine un-drainable forever. Release them into their tails.
         // Fixed-gate realtime voices and timeline voices keep their natural ring-out, as before.
-        for (activeVoice in active) {
+        for (i in 0 until active.size) {
+            val activeVoice = active[i]
             val origin = activeVoice.origin
 
-            if (activeVoice.playbackId == playbackId && origin is VoiceOrigin.Realtime && origin.held) {
+            if (origin is VoiceOrigin.Realtime && origin.held) {
                 releaseRealtimeVoice(activeVoice)
             }
         }
 
-        playbackContexts.remove(playbackId)
-        clearScheduled(playbackId)
+        playback = null
+        clearScheduled()
     }
 
     /**
-     * Hard-removes every trace of [playbackId]: scheduled, pending-sample, active, context.
+     * Hard-removes every trace of the playback: scheduled, active, context.
      * Unlike [cleanup] this does not let currently-playing voices ring out — use it when the
      * caller needs a clean slate (e.g. the end of the warmup handshake).
      */
-    fun cleanupHard(playbackId: String) {
-        cleanup(playbackId)
+    fun cleanupHard() {
+        cleanup()
 
         // The hard kill is an event on the voice; the removal takes only what is Done.
-        for (activeVoice in active) {
-            if (activeVoice.playbackId == playbackId) {
-                activeVoice.voice.kill()
-            }
+        for (i in 0 until active.size) {
+            active[i].voice.kill()
         }
 
         removeDoneVoices()
@@ -252,22 +256,20 @@ class VoiceScheduler(
         active.retainInOrder { it.voice.state !is Voice.State.Done }
     }
 
-    fun clearScheduled(playbackId: String) {
-        scheduled.removeWhen { it.playbackId == playbackId }
+    /** Drops every voice not yet promoted. */
+    fun clearScheduled() {
+        scheduled.clear()
     }
 
-    fun replaceVoices(playbackId: String, voices: List<ScheduledVoice>, afterTimeSec: Double? = null) {
+    fun replaceVoices(voices: List<ScheduledVoice>, afterTimeSec: Double? = null) {
         if (afterTimeSec != null) {
-            val epoch = playbackContexts[playbackId]?.epoch
+            val epoch = playback?.epoch
             if (epoch != null) {
                 val cutoffSec = epoch + afterTimeSec
-                scheduled.removeWhen { voice ->
-                    voice.playbackId == playbackId &&
-                            (playbackContexts[voice.playbackId]?.epoch?.let { it + voice.startTime } ?: 0.0) >= cutoffSec
-                }
+                scheduled.removeWhen { voice -> epoch + voice.startTime >= cutoffSec }
             }
         } else {
-            clearScheduled(playbackId)
+            clearScheduled()
         }
 
         scheduleVoices(dedupAgainstActive(voices))
@@ -313,7 +315,8 @@ class VoiceScheduler(
      * Starts a [RealtimeVoice] immediately — promoted straight to active, never entering the
      * scheduled heap or the epoch machinery. The backend stamps "now" as the start time; a null
      * gate duration means "held" (released by a later stop command; until then the gate ends at
-     * a far-but-finite horizon, see [REALTIME_HELD_GATE_SEC]).
+     * a far-but-finite horizon, see [REALTIME_HELD_GATE_SEC]). [playbackId] is the playback's id (a realtime voice
+     * carries none of its own): the context is made from it when this is the playback's first voice.
      */
     fun startRealtimeVoice(playbackId: String, voice: RealtimeVoice) {
         // Invariant: control-only events never reach voice creation (same rule as the timeline path).
@@ -346,16 +349,17 @@ class VoiceScheduler(
     }
 
     /**
-     * Releases the gate of EVERY active realtime voice of [playbackId] carrying [liveId] (not
+     * Releases the gate of EVERY active realtime voice carrying [liveId] (not
      * just the first — future layered instruments may start several voices per key). The voice
      * enters its ADSR release from the current level and dies right after the tail. Unknown
      * liveId is a no-op.
      */
-    fun stopRealtimeVoice(playbackId: String, liveId: Int) {
-        for (activeVoice in active) {
+    fun stopRealtimeVoice(liveId: Int) {
+        for (i in 0 until active.size) {
+            val activeVoice = active[i]
             val origin = activeVoice.origin
 
-            if (activeVoice.playbackId == playbackId && origin is VoiceOrigin.Realtime && origin.liveId == liveId) {
+            if (origin is VoiceOrigin.Realtime && origin.liveId == liveId) {
                 releaseRealtimeVoice(activeVoice)
             }
         }
@@ -398,7 +402,9 @@ class VoiceScheduler(
      */
     fun scheduleVoices(voices: List<ScheduledVoice>) {
         if (voices.isEmpty()) return
-        for (voice in voices) {
+        for (i in 0 until voices.size) {
+            val voice = voices[i]
+
             ensureEpoch(voice)
             scheduled.push(voice)
             prefetchSampleSound(voice)
@@ -454,25 +460,23 @@ class VoiceScheduler(
     // ═════════════════════════════════════════════════════════════════════════════
 
     private fun ensureEpoch(voice: ScheduledVoice) {
-        val pid = voice.playbackId
-
-        if (pid !in playbackContexts) {
+        if (playback == null) {
             // Read the SHARED clock so the epoch snaps to "now" and the first voice is not judged in
             // the past. "Now" is the NEXT block to be rendered (RenderClock.cursorFrame) — which is
             // what makes this safe under no-late-voices: before B1 the clock lagged one block and
             // every playback's first note was exactly one block late.
             val nowSec = context.clock.nowSec()
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
-            playbackContexts[pid] = createPlaybackCtx(pid, nowSec, epoch = voice.playbackStartTime + latency)
+            playback = createPlaybackCtx(pid = voice.playbackId, nowSec = nowSec, epoch = voice.playbackStartTime + latency)
         }
     }
 
     /**
      * PlaybackCtx for a realtime playback — there is no FE timeline to anchor against, so the
-     * epoch is simply "now". Idempotent per playbackId (mirror of [ensureEpoch]).
+     * epoch is simply "now". Idempotent (mirror of [ensureEpoch]): a context the timeline made is kept.
      */
     private fun ensureRealtimeCtx(playbackId: String, nowSec: Double): PlaybackCtx =
-        playbackContexts.getOrPut(playbackId) { createPlaybackCtx(playbackId, nowSec, epoch = nowSec) }
+        playback ?: createPlaybackCtx(pid = playbackId, nowSec = nowSec, epoch = nowSec).also { playback = it }
 
     private fun createPlaybackCtx(pid: String, nowSec: Double, epoch: Double): PlaybackCtx = PlaybackCtx(
         playbackId = pid,
@@ -509,7 +513,7 @@ class VoiceScheduler(
         while (true) {
             val head = scheduled.peek() ?: break
 
-            val pCtx = playbackContexts[head.playbackId]
+            val pCtx = playback
             if (pCtx == null) {
                 scheduled.pop()
                 continue
@@ -585,9 +589,11 @@ class VoiceScheduler(
         if (cut != null) {
             val fadeStartFrame = voiceFactory.onsetFrame(absoluteVoice, context.clock.startTimeSec)
 
-            for (activeVoice in active) {
-                if (activeVoice.voice.cut == cut) {
-                    activeVoice.voice.cutOff(fadeStartFrame)
+            for (i in 0 until active.size) {
+                val voice = active[i].voice
+
+                if (voice.cut == cut) {
+                    voice.cutOff(fadeStartFrame)
                 }
             }
 
@@ -603,7 +609,6 @@ class VoiceScheduler(
             active.add(
                 ActiveVoice(
                     voice = voice,
-                    playbackId = absoluteVoice.playbackId,
                     sourceId = absoluteVoice.data.sourceId,
                     origin = origin,
                 )
@@ -620,7 +625,8 @@ class VoiceScheduler(
     private fun recordRealtimeSolo(cursorFrame: Double, blockEnd: Double) {
         val untilSec = context.clock.secAt(blockEnd)
 
-        for (activeVoice in active) {
+        for (i in 0 until active.size) {
+            val activeVoice = active[i]
             val origin = activeVoice.origin
             val sourceId = activeVoice.sourceId
 

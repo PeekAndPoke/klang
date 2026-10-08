@@ -44,7 +44,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
     val blockFrames = AudioBackendContext.RENDER_QUANTUM_FRAMES
     val blockDurationSec = blockFrames.toDouble() / sampleRate
 
-    // VoiceScheduler.soloMuteRamp is ValueRamp(1.0, duration = SOLO_RAMP_SEC = 1.5, Ease.InOut.cubic), stepped
+    // VoiceScheduler.soloMuteRamp is SoloRamp(1.0, durationSec = SOLO_RAMP_SEC = 1.5), on the in-out cubic, stepped
     // once per block, so a completed transition takes ceil(1.5 / blockDuration) blocks.
     val rampBlocks = (1.5 / blockDurationSec).toInt() + 2
 
@@ -59,7 +59,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
             // may vary per run. Live (null) deals a fresh phase-pool stream per playback.
             phasePoolSeed = 1,
         )
-        val engine = PlaybackEngine.create(context)
+        val engine = PlaybackEngine.create(context = context, playbackId = "song")
         private val mix = StereoBuffer(blockFrames)
 
         val activeCount: Int get() = engine.scheduler.getActiveVoiceCount()
@@ -181,7 +181,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         val unsoloed = backgroundAfter(blocks = 2, solo = null)
         val ducked = backgroundAfter(blocks = 2, solo = 1.0)
 
-        // Ease.InOut.cubic at progress ~0.0018 is ~2e-8 of the way down. Anything that replaces the
+        // The in-out cubic at progress ~0.0018 is ~2e-8 of the way down. Anything that replaces the
         // ramp with its target lands at 0.0 here and this row goes red.
         ducked shouldBeGreaterThan unsoloed * 0.9
     }
@@ -200,7 +200,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
     }
 
     "solo: solo(1.0) is exact silence for the others after the ramp, not an attenuation" {
-        // The ramp ends ON its target (ValueRamp), so the bed's multiplier is exactly 0.0. The old
+        // The ramp ends ON its target (SoloRamp), so the bed's multiplier is exactly 0.0. The old
         // `1 - amount * 0.95` left it at 0.05 (-26 dB).
         backgroundAfter(blocks = rampBlocks, solo = 1.0) shouldBe 0.0
     }
@@ -416,7 +416,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         )
     }
 
-    fun Rig.release(liveId: Int) = engine.scheduler.stopRealtimeVoice(playbackId = "song", liveId = liveId)
+    fun Rig.release(liveId: Int) = engine.scheduler.stopRealtimeVoice(liveId = liveId)
 
     /** The bed (hard right) in [rig] against the same bed alone in [reference], after [blocks] more blocks. */
     fun bedRatio(rig: Rig, reference: Rig, blocks: Int): Double =
@@ -445,6 +445,18 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         withClue("back to full level after the note-off") {
             bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12)
         }
+    }
+
+    "solo: a held realtime solo ducks the bed wherever it stands in the active list, first included" {
+        // The key goes down before the bed starts, so it is the first voice in the list.
+        val rig = Rig()
+        val reference = Rig()
+
+        rig.press(liveId = 1)
+        rig.schedule(0.01, tone(sourceId = "bed", pan = 1.0))
+        reference.schedule(0.01, tone(sourceId = "bed", pan = 1.0))
+
+        bedRatio(rig = rig, reference = reference, blocks = rampBlocks) shouldBe (0.05 plusOrMinus 1e-12)
     }
 
     "solo: legato on a realtime solo: key 1's tail ending does not end the solo while key 2 is held" {
@@ -680,7 +692,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         rig.schedule(Double.NaN, tone(sourceId = "hat2", pan = 0.0, cut = 1))
         val out = rig.renderLeft(4)
 
-        withClue("dropped like a late voice") { rig.engine.scheduler.droppedVoiceCount("song") shouldBe 1 }
+        withClue("dropped like a late voice") { rig.engine.scheduler.droppedVoiceCount() shouldBe 1 }
         withClue("the sounding voice was not cut") { rig.activeCount shouldBe 1 }
         withClue("and keeps sounding, finite") { (out.all { it.isFinite() } && out.takeLast(64).maxOf { abs(it) } > 0.1) shouldBe true }
     }

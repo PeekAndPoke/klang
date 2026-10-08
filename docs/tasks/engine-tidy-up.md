@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 6 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 9 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -275,6 +275,98 @@ port can take on its own.
   `arrayCopy` or new object in the converted loops; the suites in the report. Bit-identity: the corpus render is
   the coordinator's.
 
+## Step 7, the per-block iterators, the diagnostics closure, the solo ramp (B4.3, B4.4, B4.17): done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+
+Behaviour-neutral. Report: `tmp/reviews/tidy-steps7-9-report.md`. The `VoiceFactory` items (B1.5 to B1.7) and the
+solo tracker's allocation (B4.2) were done before this step.
+
+- **Iterators (B4.3).** Every per-block walk named by the audit is an index loop now, and so are the scheduler's
+  other walks over its active list (cleanup, hard kill, note-off, the cut, the realtime solo, the batch schedule):
+  - `Voice`: the stages before the send are an `Array`, built once per voice.
+  - `Cylinders`: the map is gone. The rented cylinders sit in a list in RENT order, which is the mix's summation
+    order and the round-robin cleanup's (a cylinder is only appended; `releaseAll` clears all at once), and an array
+    finds one by its folded id. The fold keeps a negative orbit's sign (`-3 % 255` is `-3`), so the array spans
+    `-(max - 1)` to `max - 1`. The duck still finds its sidechain by the RAW id: an id outside that range finds
+    nothing, as the map never held it. `cylinders` is a `List`; `cylindersIds` (specs only) builds its set on read.
+  - `PlaybackEngineDispatcher`: the engines render from a list kept in step with the map, in the map's order.
+- **The diagnostics closure (B4.4).** The local `fun count` is a private method summing into three fields; the
+  message's own list of cylinder states stays (it crosses to the frontend). Every 20 ms, not per block.
+- **The solo ramp (B4.17).** `easeInOutCubic` (`utils/ease_in_out_cubic.kt`) is the library's `Ease.InOut.cubic`,
+  the same expression bit for bit (its factor `2^(3 - 1)` is the literal 4); `SoloRamp` (`voices/`) is the old
+  `ValueRamp` law with the curve inlined, no call through an interface on the render path. The `common` module's
+  `ValueRamp` had no other caller anywhere and is deleted.
+- **Proof.** In the compiled `klang-engine-audio_be.js` (test build) none of the converted functions creates an
+  iterator or a closure. New rows, each mutation-checked: `CylindersOrderSpec` (the mix and cleanup order, the
+  fold and its sign, the duck's raw id at both ends of the range, `releaseAll`'s return order),
+  `EaseInOutCubicSpec` (bit parity with the library), `SoloRampSpec` (the law, against the library curve),
+  `PlaybackEngineDispatcherOrderSpec` (render order read through the warehouse shelf, exact diagnostics with a
+  detached engine, a disposed engine leaving the render set) and a realtime-solo row in
+  `VoiceSchedulerSoloCutSpec` with the soloed key first in the list. Mutants of the converted scheduler and voice
+  loops went red on existing rows.
+
+## Step 8, one playback per scheduler (B3.3): done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+
+Behaviour-neutral for everything production builds. Report: `tmp/reviews/tidy-steps7-9-report.md`.
+
+- **The scheduler serves one playback.** `playbackContexts` is one nullable `playback`; `ActiveVoice.playbackId` is
+  gone; `cleanup`, `cleanupHard`, `clearScheduled`, `replaceVoices`, `stopRealtimeVoice` and `droppedVoiceCount`
+  take no id, and `droppedVoicesTotal` folded into `droppedVoiceCount`. The class KDoc states the contract: the
+  dispatcher routes every command by id to its engine, the offline renderer has one engine and its caller one id.
+- **Kept exactly:** the context is made by the playback's first voice, timeline or realtime, from THAT voice's
+  `playbackId` (it seeds the voices' random streams, `PlaybackCtx.coreRandom`, and the phase pools), and is kept
+  for every later voice; `cleanup` drops it, so a resume makes a fresh one with a fresh epoch and a fresh dropped
+  count. `startRealtimeVoice` keeps its id parameter: a realtime voice carries none, and the context may be made from
+  it. `clearScheduled` is `scheduled.clear()` (every entry matched the old filter); the replace cutoff reads the one
+  epoch. The callers (`PlaybackEngineDispatcher`, eleven spec sites) pass no id; the worklet and the JVM backend
+  reach the scheduler only through the dispatcher, the offline renderer only through `scheduleVoice` and
+  `addSample`, which did not change.
+- **The specs that hosted several playbacks on one scheduler,** adapted to one playback, keeping what they pin:
+  `VoiceSchedulerRemovalSpec`'s hard-kill row now kills every voice and checks they leave before the next block;
+  the between-blocks sweep with survivors, which that row was there to see, has its own row through a cut that finds
+  a voice not yet rendered (`Done` at once, swept in place). `RealtimeVoiceSpec`'s one-scheduler note-off row
+  matches by `liveId` within the playback.
+- **New rows,** each mutation-checked: `VoiceSchedulerPlaybackSpec` (the context and its epoch across timeline and
+  realtime voices, `cleanup` and a resume, `clearScheduled`, the replace cutoff on an epoch that is not 0). The
+  dispatcher's `ClearScheduled` row could not fail (it rendered one block of a voice 10 s ahead); it now renders past
+  the start, with a positive control.
+
+## Step 9, the engine's end of life as one phase, one render path (C3.1, A2.11): done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+
+Behaviour-neutral, the dispatcher's disposal order included. Report: `tmp/reviews/tidy-steps7-9-report.md`.
+
+- **One phase.** `PlaybackEngine.Phase` is a sealed class of five data objects, `Playing`, `Stopped`, `Releasing`,
+  `Released`, `Disposed` (the state-shape rule of 2026-10-07: no state carries data of its own), read through
+  exhaustive `when`s. It replaces `stopped`, `isReleasing` and `released`; the class KDoc carries the transition
+  table (states times `renderInto`, `stop`, `resume`, `dispose`), the hold and idleness. `Disposed` is new: the
+  table has an end, and a disposed engine answers idle, ignores a stop and a resume.
+- **Not in a phase, with the reason:** `quietBlocks` stays on the engine. The audit read it as Stopped-only data;
+  it is counted in every phase, `Playing` included, and a stop after a long silence holds only the rest of the 20 s.
+  Moving it into `Stopped` would change that. The `TailRelease` is a resource created with the engine.
+- **The dispatcher keeps no lifecycle.** The `draining` set and the `detached` list are gone. It asks the phase
+  whether a playback scheduled again resumes (`Stopped`) or is detached (`Releasing`, `Released`), and whether a
+  stopped engine may go (`isIdle`). What it still keeps are the two ORDERS the output depends on: `rendering`, the
+  render (summation) order, attached engines in creation order then detached ones in detach order; and `ending`,
+  the disposal order, detached engines newest first, then stopped ones in stop order, exactly the old sweep's
+  order. Disposal returns units to the warehouse's last-in, first-out shelves, and which unit a later rent gets
+  (a clean or a dirty ring, of which size) depends on that order, so it is kept, not simplified to render order.
+  To remove a disposed engine from the map the sweep needs its id, so `PlaybackEngine` carries its `playbackId`
+  (`KlangAudioRenderer`'s one engine: `ENGINE_PLAYBACK_ID`, read by nothing offline; the scheduler's context still
+  takes its id from the voices). A stop for an unknown id no longer parks the id in a set for one block (it was a
+  no-op there).
+- **One render path (A2.11).** `renderInto` has one flow: straight into the shared mix while neither a master nor a
+  release is in play (the orbits sum into the target, the order the audit warned must stay), otherwise through the
+  engine's bus, the master on it when active, joined whole or under the release. `markMasterBusRendered` and
+  `renderReleased` are folded in; the master's "has rendered" is still told at the end of the call. `isActive` is
+  read once, before the orbits render, which cannot change it.
+- **Rows** (`PlaybackEnginePhaseSpec`, each mutation-checked): stop and a second stop, resume, a playing engine
+  never released, the endless tail through Stopped, Releasing and Released to Disposed (block by block), finite
+  tails ringing out, the quiet stop, the detach (a stop and a resume while releasing change nothing), `cleanupHard`,
+  `Disposed` as the end, the disposal order of stopped engines and of detached ones (read through the warehouse
+  shelf), and the straight sum into the shared mix (bit for bit, with a positive control that a bus would differ).
+  `PlaybackEngineDispatcherOrderSpec`'s detach row now has a second attached engine created before the detach, which
+  pins where a fresh engine renders. The release specs ask `releaseStarted` (a test helper over the phase) where they
+  asked `isReleasing`.
+
 ## Decisions for the maintainer
 
 Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that change the most:
@@ -355,3 +447,11 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   - `ignitor/Ignitors.kt:351-354` (`copyOf`): `Bank.resize` growth, which allocates anyway (audit B4.5).
   - `cylinders/katalyst/KatalystChain.kt:91` (`copyOf`): chain build. `SampleStore.kt:172`: a sample upload
     message.
+
+## Found during tidy-up steps 7 to 9
+
+- **`Cmd.ReplaceVoices` on a stopped engine** schedules its voices without resuming the engine (review round 1, older
+  than steps 7 to 9, behaviour unchanged by them). Decide whether a replace means "resume" or is ignored after a stop.
+- **`Voice` copies its stage list into an `Array`** once per voice start (`pipeline.toTypedArray()`), one small
+  allocation on the audio thread per note, not per block. Left as is: the voice build allocates its states and
+  context anyway; folding it into the builder churns every test rig. Revisit with step 10 (allocations to build time).

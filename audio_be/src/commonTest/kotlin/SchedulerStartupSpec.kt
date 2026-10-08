@@ -101,7 +101,7 @@ class SchedulerStartupSpec : StringSpec({
         // not dropped by B2. Under the old convention the epoch was block 0 — already rendered.
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
         scheduler.getActiveVoiceCount() shouldBe 1
-        scheduler.droppedVoiceCount(pid) shouldBe 0
+        scheduler.droppedVoiceCount() shouldBe 0
 
         // Acoustic half. The dispatcher path includes MasterStage, whose limiter lookahead delays
         // the output by ~220 frames, so the onset lands in block 2, not block 1 (that is why
@@ -137,7 +137,7 @@ class SchedulerStartupSpec : StringSpec({
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = firstVoice(startTime = lateSec)))
 
         scheduler.getActiveVoiceCount() shouldBe before
-        scheduler.droppedVoiceCount(pid) shouldBe 1
+        scheduler.droppedVoiceCount() shouldBe 1
     }
 
     "B2: the boundary is inclusive — a start exactly AT the next block is on time" {
@@ -152,7 +152,7 @@ class SchedulerStartupSpec : StringSpec({
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = firstVoice(startTime = d.clockForTest.cursorFrame / sampleRate)))
 
         withClue("admitted") { scheduler.getActiveVoiceCount() shouldBe before + 1 }
-        scheduler.droppedVoiceCount(pid) shouldBe 0
+        scheduler.droppedVoiceCount() shouldBe 0
     }
 
     // NOT a row here: "late STATE still applies — a master swap on a dropped voice is not lost".

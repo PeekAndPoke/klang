@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.ints.shouldBeAtLeast
@@ -157,14 +158,31 @@ class PlaybackEngineDispatcherTest : StringSpec({
     }
 
     "ClearScheduled drops not-yet-played voices" {
-        val d = newDispatcher()
-        val out = StereoBuffer(blockFrames)
+        // A voice 10 ms ahead, rendered well past its start: it never sounds once cleared, and does without.
+        fun activeAfter(clear: Boolean): Int {
+            val d = newDispatcher()
+            val out = StereoBuffer(blockFrames)
 
-        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(futureVoice("song"))))
-        d.handle(KlangCommLink.Cmd.ClearScheduled(playbackId = "song"))
-        d.renderBlock(0.0, out)
+            d.handle(
+                KlangCommLink.Cmd.ScheduleVoices(
+                    playbackId = "song",
+                    voices = listOf(voice("song", startTime = 0.01, gateEndTime = 1.0)),
+                )
+            )
 
-        d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBe 0
+            if (clear) {
+                d.handle(KlangCommLink.Cmd.ClearScheduled(playbackId = "song"))
+            }
+
+            for (b in 0 until 20) {
+                d.renderBlock(b * blockFrames.toDouble(), out)
+            }
+
+            return d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount()
+        }
+
+        activeAfter(clear = true) shouldBe 0
+        withClue("positive control: not cleared, it plays") { activeAfter(clear = false) shouldBe 1 }
     }
 
     "Cleanup drains then disposes the engine once idle" {

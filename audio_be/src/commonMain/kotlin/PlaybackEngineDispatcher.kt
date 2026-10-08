@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.PlaybackEngine.Phase
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -18,21 +19,33 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * disposed once told to stop ([cleanup]) and fully drained. Both platform backends shrink to a thin
  * pump: drain commands → [renderBlock] → convert/output → forward feedback. See
  * `docs/tasks-archive/2026-09/20260904-per-playback-engine.md`.
+ *
+ * An engine's end of life is its own [PlaybackEngine.phase] (the transition table is in its KDoc): the dispatcher
+ * asks it whether a scheduled-again engine resumes (`Stopped`) or is detached (`Releasing`, `Released`), and whether
+ * a stopped one may be disposed ([PlaybackEngine.isIdle]). It keeps no lifecycle of its own, only the two orders the
+ * output depends on: the render order ([rendering]) and the disposal order ([ending]).
  */
 class PlaybackEngineDispatcher(
     private val context: AudioBackendContext,
     private val clock: BackendClock,
 ) {
-    // playbackId -> engine. LinkedHashMap for deterministic render/iteration order.
+    // playbackId -> the engine filed under it (attached). LinkedHashMap: deterministic order, the creation order.
     private val engines = LinkedHashMap<String, PlaybackEngine>()
 
-    // playbackIds told to stop (Cmd.Cleanup); disposed once their engine has fully drained.
-    private val draining = mutableSetOf<String>()
+    // Every engine that renders, in render order (the order they sum into the mix in, so it is kept exactly): the
+    // attached ones in [engines] order, then the DETACHED ones in the order they were detached. A detached engine
+    // was releasing when its playbackId was scheduled again: a release has no way back (it would step up), so the
+    // engine leaves [engines], finishes its release here, and the id gets a fresh engine. An index loop over a list
+    // allocates nothing per block; a map iterator does on Kotlin/JS.
+    private val rendering = ArrayList<PlaybackEngine>()
 
-    // Stopped engines whose release was running when their playbackId was scheduled again: a
-    // release has no way back (it would step up), so the engine is detached from its id, finishes
-    // its release here, and the id gets a fresh engine. Disposed like any drained engine.
-    private val detached = mutableListOf<PlaybackEngine>()
+    // The engines past `Playing` and not yet disposed, in the order the sweep ([disposeDrainedEngines]) disposes them
+    // when several go idle in one block: the detached ones newest first, then the stopped attached ones in the order
+    // they were stopped. Disposal returns their units to the warehouse's shelves, which later rents read in order, so
+    // this order is kept exactly. It has no reason of its own: it is the order the sweep had before tidy-up step 9,
+    // pinned so the step stays bit-identical; it may change only in a step that accepts new bits. Order only: what each engine is, its phase says. An engine joins at its stop
+    // ([cleanup]), moves to the front when detached, and leaves when resumed, disposed or hard-cleaned.
+    private val ending = ArrayList<PlaybackEngine>()
 
     private val mix = StereoBuffer(context.blockFrames)
     private val master = MasterStage(sampleRate = context.sampleRate, blockFrames = context.blockFrames)
@@ -41,6 +54,11 @@ class PlaybackEngineDispatcher(
     // still update when the engine map is empty (idle → zeros), and headroom times the WHOLE block.
     private var lastDiagnosticsTimeMs = 0.0
     private var avgHeadroom = 1.0
+
+    // The counts of one emission ([emitDiagnostics]), summed over the engines by [countDiagnostics].
+    private var diagnosticVoices = 0
+    private var diagnosticDroppedVoices = 0
+    private var diagnosticDeniedRents = 0
 
     val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
     val sampleStore: SampleStore get() = context.sampleStore
@@ -54,19 +72,41 @@ class PlaybackEngineDispatcher(
     }
 
     private fun engineFor(playbackId: String): PlaybackEngine {
-        // Re-scheduling to a draining playback cancels the pending disposal (e.g. resume after pause).
-        if (draining.remove(playbackId)) {
-            val stopped = engines[playbackId]
+        engines[playbackId]?.let { scheduledAgain(it) }
 
-            if (stopped != null && stopped.isReleasing) {
-                engines.remove(playbackId)
-                detached.add(stopped)
-            } else {
-                stopped?.resume()
-            }
+        return engines[playbackId] ?: createEngine(playbackId)
+    }
+
+    /**
+     * [engine]'s playback is scheduled again. A stopped one resumes, which cancels its pending disposal (e.g. a
+     * resume after a pause); a releasing one is detached, and the id gets a fresh engine ([engineFor]).
+     */
+    private fun scheduledAgain(engine: PlaybackEngine): Unit = when (engine.phase) {
+        Phase.Playing, Phase.Disposed -> Unit
+
+        Phase.Stopped -> {
+            engine.resume()
+            ending.remove(engine)
+            Unit
         }
 
-        return engines.getOrPut(playbackId) { PlaybackEngine.create(context) }
+        Phase.Releasing, Phase.Released -> {
+            engines.remove(engine.playbackId)
+            rendering.remove(engine)
+            rendering.add(engine)
+            ending.remove(engine)
+            ending.add(0, engine)
+        }
+    }
+
+    /** A fresh engine for [playbackId], rendering after the attached ones and before the detached ones. */
+    private fun createEngine(playbackId: String): PlaybackEngine {
+        val engine = PlaybackEngine.create(context = context, playbackId = playbackId)
+
+        rendering.add(engines.size, engine)
+        engines[playbackId] = engine
+
+        return engine
     }
 
     /**
@@ -85,7 +125,7 @@ class PlaybackEngineDispatcher(
 
         // Targets an EXISTING playback — a stop must never create (or revive) an engine.
         is KlangCommLink.Cmd.StopRealtimeVoice ->
-            engines[cmd.playbackId]?.scheduler?.stopRealtimeVoice(cmd.playbackId, cmd.liveId) ?: Unit
+            engines[cmd.playbackId]?.scheduler?.stopRealtimeVoice(cmd.liveId) ?: Unit
 
         is KlangCommLink.Cmd.ReplaceVoices ->
             replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
@@ -115,29 +155,35 @@ class PlaybackEngineDispatcher(
     private fun replaceVoices(playbackId: String, voices: List<ScheduledVoice>, afterTimeSec: Double?) {
         // Replace targets an EXISTING playback — never lazily create an engine here, so a
         // "replace with nothing" cannot materialize (and then leak) an empty engine.
-        engines[playbackId]?.scheduler?.replaceVoices(playbackId, voices, afterTimeSec)
+        engines[playbackId]?.scheduler?.replaceVoices(voices = voices, afterTimeSec = afterTimeSec)
     }
 
     /** Stop scheduling for a playback and let it ring out; disposed once drained (see [renderBlock]). */
     private fun cleanup(playbackId: String) {
-        engines[playbackId]?.let { engine ->
-            engine.scheduler.cleanup(playbackId)
-            engine.stop()
+        val engine = engines[playbackId] ?: return
+
+        engine.scheduler.cleanup()
+
+        // A first stop joins the disposal order at its end; a second one keeps the place of the first.
+        if (engine.phase == Phase.Playing) {
+            ending.add(engine)
         }
-        draining.add(playbackId)
+
+        engine.stop()
     }
 
     private fun clearScheduled(playbackId: String) {
-        engines[playbackId]?.scheduler?.clearScheduled(playbackId)
+        engines[playbackId]?.scheduler?.clearScheduled()
     }
 
     /** Immediate disposal (warmup teardown) — does not let voices ring out. */
     fun cleanupHard(playbackId: String) {
-        engines.remove(playbackId)?.let { engine ->
-            engine.scheduler.cleanupHard(playbackId)
-            engine.dispose()
-        }
-        draining.remove(playbackId)
+        val engine = engines.remove(playbackId) ?: return
+
+        rendering.remove(engine)
+        ending.remove(engine)
+        engine.scheduler.cleanupHard()
+        engine.dispose()
     }
 
     /**
@@ -166,12 +212,8 @@ class PlaybackEngineDispatcher(
         // processAndMix accumulates additively, so engines simply render into the same mix in turn.
         // (#11: with one engine this is a straight render into the final mix.) Per-engine master gain
         // in D6 will need a scratch buffer here for the ≥2 case.
-        for (engine in engines.values) {
-            engine.renderInto(mix, cursorFrame)
-        }
-
-        for (i in 0 until detached.size) {
-            detached[i].renderInto(mix, cursorFrame)
+        for (i in 0 until rendering.size) {
+            rendering[i].renderInto(mix, cursorFrame)
         }
 
         master.process(mix = mix, out = out)
@@ -198,29 +240,17 @@ class PlaybackEngineDispatcher(
         }
         lastDiagnosticsTimeMs = endMs
 
-        var voiceCount = 0
-        var droppedVoices = 0
-        var deniedRents = 0
-        val cylinderStates = mutableListOf<KlangCommLink.Feedback.Diagnostics.CylinderState>()
-        fun count(engine: PlaybackEngine) {
-            // The gauge is "voices rendering audio": every listed voice renders (a culled one has left).
-            voiceCount += engine.scheduler.getActiveVoiceCount()
-            droppedVoices += engine.scheduler.droppedVoicesTotal()
-            for (cylinder in engine.cylinders.cylinders) {
-                cylinderStates.add(
-                    KlangCommLink.Feedback.Diagnostics.CylinderState(id = cylinder.id, active = cylinder.isActive)
-                )
-                deniedRents += cylinder.deniedRents
-            }
-        }
+        // The message carries its own list of cylinder states (it crosses to the frontend), so that list is new per
+        // emission; the counts are fields, so the walk needs no closure.
+        val cylinderStates = ArrayList<KlangCommLink.Feedback.Diagnostics.CylinderState>()
 
-        for (engine in engines.values) {
-            count(engine)
-        }
+        diagnosticVoices = 0
+        diagnosticDroppedVoices = 0
+        diagnosticDeniedRents = 0
 
-        // A detached engine still renders its release, so it still counts.
-        for (i in 0 until detached.size) {
-            count(detached[i])
+        // Every engine that renders counts, a detached one still releasing included, in render order.
+        for (i in 0 until rendering.size) {
+            countDiagnostics(engine = rendering[i], cylinderStates = cylinderStates)
         }
 
         context.commLink.feedback.send(
@@ -228,37 +258,63 @@ class PlaybackEngineDispatcher(
                 playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID,
                 sampleRate = context.sampleRate,
                 renderHeadroom = avgHeadroom,
-                activeVoiceCount = voiceCount,
+                activeVoiceCount = diagnosticVoices,
                 cylinders = cylinderStates,
                 backendNowMs = endMs,
                 // The warehouse's own snapshot: rebuilt only when one of its parts changed.
-                warehouse = context.warehouse.stats(droppedVoices = droppedVoices, deniedRents = deniedRents),
+                warehouse = context.warehouse.stats(
+                    droppedVoices = diagnosticDroppedVoices,
+                    deniedRents = diagnosticDeniedRents,
+                ),
             )
         )
     }
 
-    /** Dispose engines that were told to stop and have now fully gone quiet. No auto-GC of live engines. */
+    /** Adds [engine]'s voices, dropped voices and denied rents to the diagnostic counts, and its cylinders' states. */
+    private fun countDiagnostics(
+        engine: PlaybackEngine,
+        cylinderStates: MutableList<KlangCommLink.Feedback.Diagnostics.CylinderState>,
+    ) {
+        // The gauge is "voices rendering audio": every listed voice renders (a culled one has left).
+        diagnosticVoices += engine.scheduler.getActiveVoiceCount()
+        diagnosticDroppedVoices += engine.scheduler.droppedVoiceCount()
+
+        val cylinders = engine.cylinders.cylinders
+
+        for (i in 0 until cylinders.size) {
+            val cylinder = cylinders[i]
+
+            cylinderStates.add(
+                KlangCommLink.Feedback.Diagnostics.CylinderState(id = cylinder.id, active = cylinder.isActive)
+            )
+            diagnosticDeniedRents += cylinder.deniedRents
+        }
+    }
+
+    /**
+     * Dispose engines that were told to stop and have now fully gone quiet, in the [ending] order. No auto-GC of
+     * live engines: a `Playing` engine is never among them.
+     */
     private fun disposeDrainedEngines() {
-        for (i in detached.size - 1 downTo 0) {
-            val engine = detached[i]
+        var i = 0
 
-            if (engine.isIdle()) {
-                detached.removeAt(i)
-                engine.dispose()
-            }
-        }
+        while (i < ending.size) {
+            val engine = ending[i]
 
-        if (draining.isEmpty()) {
-            return
-        }
-        val iter = draining.iterator()
-        while (iter.hasNext()) {
-            val playbackId = iter.next()
-            val engine = engines[playbackId]
-            if (engine == null || engine.isIdle()) {
-                engines.remove(playbackId)?.dispose()
-                iter.remove()
+            if (!engine.isIdle()) {
+                i++
+                continue
             }
+
+            ending.removeAt(i)
+            rendering.remove(engine)
+
+            // A detached engine's id may already belong to a fresh engine, which stays.
+            if (engines[engine.playbackId] === engine) {
+                engines.remove(engine.playbackId)
+            }
+
+            engine.dispose()
         }
     }
 
@@ -274,8 +330,14 @@ class PlaybackEngineDispatcher(
     // ── Test / diagnostics inspection ────────────────────────────────────────────
     internal val activePlaybackIds: Set<String> get() = engines.keys
 
-    /** Stopped engines detached from their id mid-release (see [detached]), still rendering. */
-    internal val detachedCountForTest: Int get() = detached.size
+    /** Stopped engines detached from their id mid-release (see [rendering]), still rendering. */
+    internal val detachedCountForTest: Int get() = rendering.size - engines.size
+
+    /** Every engine the next block renders, attached and detached: a disposed one must not stay among them. */
+    internal val renderedEngineCountForTest: Int get() = rendering.size
+
+    /** The engines waiting to be disposed, in the order the sweep disposes them (see [ending]). */
+    internal val endingForTest: List<PlaybackEngine> get() = ending
 
     /** The render clock, for specs that must observe the between-renders convention (block-framing B1). */
     internal val clockForTest: RenderClock get() = clock

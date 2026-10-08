@@ -57,7 +57,7 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
             // pools ever engage — pinning it here makes coreRandom the only pid carrier.
             phasePoolSeed = 1,
         )
-        val engine = PlaybackEngine.create(context)
+        val engine = PlaybackEngine.create(context = context, playbackId = pid)
         private val mix = StereoBuffer(blockFrames)
 
         fun schedule(startSec: Double, data: VoiceData) {

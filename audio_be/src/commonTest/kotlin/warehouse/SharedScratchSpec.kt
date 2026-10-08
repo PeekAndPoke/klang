@@ -54,7 +54,7 @@ class SharedScratchSpec : StringSpec({
     }
 
     fun renderPeak(context: AudioBackendContext, clock: BackendClock, pid: String, sound: String, blocks: Int): Double {
-        val engine = PlaybackEngine.create(context)
+        val engine = PlaybackEngine.create(context = context, playbackId = pid)
         engine.scheduler.registerIgnitor(sound, deepChain())
         engine.scheduler.scheduleVoice(
             ScheduledVoice(
@@ -78,8 +78,8 @@ class SharedScratchSpec : StringSpec({
 
     "every playback on a backend renders through the SAME scratch pool" {
         val (context, _) = context()
-        val a = PlaybackEngine.create(context)
-        val b = PlaybackEngine.create(context)
+        val a = PlaybackEngine.create(context = context, playbackId = "a")
+        val b = PlaybackEngine.create(context = context, playbackId = "b")
 
         // The pool each scheduler actually RENDERS with — not the context's field, which would be
         // the same object whatever the scheduler did privately. (The first cut of this row asked the
@@ -146,7 +146,7 @@ class SharedScratchSpec : StringSpec({
         val scratch = context.warehouse.scratch
         scratch.doubleCapacity shouldBe ResourceWarehouse.SCRATCH_DEPTH
 
-        val engine = PlaybackEngine.create(context)
+        val engine = PlaybackEngine.create(context = context, playbackId = "vib")
         engine.scheduler.scheduleVoice(
             ScheduledVoice(
                 playbackId = "vib", startTime = 0.0, gateEndTime = 1.0,
@@ -199,7 +199,7 @@ class SharedScratchSpec : StringSpec({
         val highWaterAfterFirst = scratch.highWater
         (highWaterAfterFirst >= 20) shouldBe true
 
-        val second = PlaybackEngine.create(context)
+        val second = PlaybackEngine.create(context = context, playbackId = "second")
         second.scheduler.scratchBuffersForTest shouldBeSameInstanceAs scratch
         renderPeak(context, clock, pid = "second", sound = "deepchain", blocks = 20)
 
