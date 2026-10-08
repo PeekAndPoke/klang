@@ -67,7 +67,10 @@ interface Ignitor {
      * block (the VALUE may still change between blocks, e.g. [FreqIgnitor] under detune). Purely
      * structural, so implementations compute it ONCE at construction — letting hot paths gate
      * their fold branches without paying a per-block subtree walk and a boxed `Double?` per query
-     * on the non-folding side (JVM boxes the nullable return; JS does not).
+     * on the non-folding side (the JVM boxes the nullable return; so does V8 when the call is not inlined and the
+     * value is non-integral, a heap number per query: measured through [blockStartValue] in the unison stacks on
+     * the development bundle under a mixed profile, about 18 bytes per block; V8 allocation pass,
+     * `audio/ref/performance.md`).
      * Must agree with [controlRateValueOrNull]'s nullability — the scalar-parity specs pin both.
      */
     val isBlockConstant: Boolean get() = false

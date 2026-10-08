@@ -871,6 +871,117 @@ moved to `audio_bridge/.../_resource_bounds.kt` in the same package, so no impor
   cylinder. Before the step a shelved cylinder held no resonator memory (a released bank was dropped); now it holds
   the pool. Dropping the pool in `retire()` would cost one 7 KB build at the next life's first install.
 
+## The V8 allocation pass
+
+Scope: `tmp/reviews/v8-allocation-pass-scope.md` (its "Coordinator decisions" first). Report, with every table:
+`tmp/reviews/v8-allocation-pass-report.md` (its "Round 1 fixes" for the series as landed). Reviews:
+`tmp/reviews/v8pass-r1-A.md`, `tmp/reviews/v8pass-r1-B.md`. The worklet runs on V8, where a steady per-block path
+allocated what the JVM does not. Measured on node 22.12, on the development test bundle AND the production one
+(`:audio_be:compileTestProductionExecutableKotlinJs`, the shape the worklet ships), in a chain probe and at engine
+level (one sustained note through `PlaybackEngine`), at a 1 MB semi-space, N = 300,000 blocks, with the process
+pinned to one core AND unpinned (review round 1: the two disagree for the stages). Exact refactors only, the sound
+bit-identical (proof below). The rules learned are in `audio/ref/performance.md`.
+
+- **Landed, in commit order** (one patch per family):
+  1. **The loop seeds** (by rule, the coordinator's decision): `* 1.0` on all 14 drift seeds (the four unison stack
+     loops, the sine's two loops, the partial bank's two, the wave oscillator's three, the impulse's two,
+     `SampleIgnitor`), the two drift recipes in the `AnalogDrift` and `DriftLanes` KDoc, and, measured, the partial
+     bank's phase, which `renderPartial` and `renderPartialPhased` seed from an argument. The partial bank with drift
+     took about 10.5 KB per block at HEAD (one heap number per sample per partial, `sine(harmonics = 4)`; without
+     drift 2.1 KB alone, 10.5 KB under a mixed profile), 304 bytes after (48 without drift), on both bundles, pinned
+     and unpinned, and runs 0.73 to 0.92 of its old time on V8. The stacks boxed one heap number per sample per
+     voice under a MIXED profile (every oscillator case warmed in one process): on the development bundle in 2 of 3
+     processes before and 0 of 3 after (review; 4 of 8 and 0 of 7 in the pass); on the production bundle in 2 of 3 in
+     one sample and 0 of 3 in another, so not reproduced there. A one-case run did not show it.
+  3. **The phaser's block hop:** `PhaserBlock`, the stage's own holder, filled per block and handed to
+     `Phaser.process`; the eight-argument `process` stays as the door and fills `Phaser`'s own.
+  4. **The writer-to-stage holders:** `DelayConfig`, `ReverbConfig` (`lowpass` stays `Double?`) and `PhaserConfig`,
+     each writer's own, filled when it is built and at every resolve; each double-argument `configure` stays as a door
+     that fills the stage's own holder, and the body lives only in the holder overload.
+  5. **The param resolve (S1):** `KatalystKnob.resolve` in two branches instead of `fromState ?: authored`; the heap
+     profiler attributed the bytes of a new map to it on both bundles.
+- **Result, bytes per block, HEAD then the pass.** Production pinned: the median of review round 2's runs (3 to 6
+  per arm, four pinned processes on separate physical cores), the range in brackets. Development pinned: one run per
+  arm, HEAD's control run in brackets. Unpinned: the median of three runs, the range in brackets.
+
+  | Row | prod, pinned | prod, unpinned | dev, pinned | dev, unpinned |
+  |---|---|---|---|---|
+  | engine, all three stages | 277 (277) to 197 (196 to 197) | 229 (182 to 229) to 149 (132 to 149) | 356 (356) to 276 | 356 (356 to 388) to 260 (228 to 276) |
+  | engine, delay | 81 (81 to 113) to 82 (34 to 98) | 112 (97 to 145) to 98 (98 to 114) | 129 (113) to 131 | 144 (112 to 177) to 131 (115 to 131) |
+  | engine, reverb | 21 (21) to 22 (22) | 21 (21 to 53) to 38 (22 to 55) | 147 (147) to 102 | 132 (52 to 164) to 103 (86 to 117) |
+  | engine, phaser | 176 (160 to 176) to 144 (144 to 192) | 112 (112 to 128) to 112 (48 to 112) | 128 (128) to 96 | 112 (96 to 128) to 112 (96 to 112) |
+  | engine, phaser with floor 0.5 | 240 (208 to 256) to 192 (160 to 192) | 176 (128 to 256) to 128 (128 to 144) | 176 (176) to 128 | 192 (160 to 192) to 144 (128 to 144) |
+  | `classic-remap16` (a new map every 16 blocks) | 82 (81 to 82) to 71 (70 to 71) | 82 (82) to 71 | 84 (81) to 71 | 82 (82) to 71 |
+  | `partials-drift` | 10,464 (10,464) to 304 | the same | the same | the same |
+
+  The drifting stacks run alone read the same before and after (0 or 16, one box per block from the constant read
+  below). The whole chain is better in both conditions on both bundles; the single stages move within the spread of
+  their own condition. The development delay at chain level (`delay-steady`) moves by up to one heap number either
+  way (97 to 131 unpinned in the pass; 96 to 98 unpinned and 96 to 114 pinned in review round 2), and not from the
+  holders: without them it reads the same (98 unpinned, 99 pinned), and at engine level they help the development
+  delay (130 without against 114 pinned, 146 against 131 unpinned). **What the stages still allocate** is the "pass"
+  column above: they are not clean (`audio/ref/performance.md`).
+- **Dropped after review round 1** (coordinator, by reviewer B's leave-one-out in both conditions): an inline
+  finiteness compare in place of Kotlin's `isFinite()` in the per-block guards (better pinned, worse unpinned on the
+  phaser and on all three stages together: 166 without against 213 with), and a Unit-returning glide step in place
+  of `KnobGlide.advance()` (within noise, a new method).
+- **Rejected:** `TailCeiling.fresh` `* 1.0` (scope fix 1): no gain, the windowed profile put 0.4 bytes per block on
+  `fresh` at HEAD, and on the final tree the delay reads 66 with it and 66 without (it moved other boxes on the stage
+  it was first measured on). The resonator's split remedy on the delay (worse). A "nothing changed" short-circuit was
+  not tried (coordinator, scope §2).
+- **The compressor toggle, split** (`classic-remap16`: two equal gain maps alternated every 16 blocks): a new map
+  costs about 1,310 bytes in the classic chain's re-resolve alone (C1), two equal compressor maps about 1,440 (the
+  settings and their `configure`, C2 and C3, about 130), the toggle about 850 (an empty map resolves cheaper). The
+  fade (C4) is not measurable. S1 takes about 180 bytes per new map off all three (toggle 54 to 43 bytes per block).
+  A `CompressorSettings` per switch stays, by design.
+- **Time:** within the control's noise on V8 (both bundles, old, old against old, new, 3 rounds, 28 cases) and on
+  the JVM (the rows at the edge rerun with 7 rounds, the 200 ns idle and gain chains with ten times the blocks:
+  1.015 and 1.005 against a control of 1.005); the partial bank faster on V8 (0.75 with drift, 0.91 to 0.92 without).
+  The JVM allocates nothing per block in steady state, old and new (the engine rows show a fixed 13 or 26 KB per
+  16,000-block run on both sides alike; the remap rows 1.5 to 5 bytes per block, the same old and new).
+- **Proof:** the probe's 71 sound rows (the t12rB chain set, its engine scenarios, every perf case, the oscillator
+  cases, the engine stage cases) and reviewer B's 35 (full voices through `PlaybackEngine`, hostile knob values,
+  per-note stage changes) bit-identical old against new on JS development, JS production and the JVM; the step 12
+  goldens (a: 2,064 lines, b: 2,532) and the step 11 stack golden (`r2`, both parts) identical; the corpus (label
+  `ep1-v8b`): the 16 other rows identical to `corpus-ep1-before.txt`, Der Schmetterling from HEAD's text
+  `94dfc72ae5637e91`, Kokon from `kokon-head.ks` `2f8d88cd2458fce2`. `:audio_be:jvmTest` (2,399) and
+  `:audio_be:jsBrowserTest` (2,295) green.
+- **Rows** (each mutation-checked, each red only on its own row under its mutant):
+  - `KatalystSlotResolverSpec`, "a writer applied before its first resolve writes the authored values": the
+    resonator, delay, reverb and phaser writers fill their holder when they are built. No engine path applies before
+    it resolves today, so dropping that fill was green on every spec before (the resonator's since step 12 (a),
+    review round 2).
+  - `KatalystDelayEffectSpec`, "the four-number door hands time, feedback and cap to the line": the door dropping
+    `cap` was green on every spec (reviewer A, NIT 4).
+  - `KatalystPhaserEffectSpec`, "the cores run each block at the breakpoint the glide holds for that block": a
+    centre or a sweep taken before the glide's advance lagged one block and was green on every spec, at HEAD too
+    (reviewer A, NIT 5).
+  Also red on existing specs: the delay writer filling feedback from the wet knob, the reverb writer dropping its
+  lowpass, the phaser stage reading its dry coefficient after the advance, the eight-argument door dropping `wetFrom`.
+
+### Found during the V8 allocation pass
+
+- **`ConstantIgnitor.controlRateValueOrNull` is a heap number per read on V8** when the call is not inlined and the
+  constant is non-integral (scope §4.5; logged, not this pass: it is an interface shape, `Double?`). Measured on the
+  development bundle under a mixed profile through `blockStartValue` in the unison stacks, about 18 bytes per block.
+  The `Ignitor.kt` KDoc that said "JS does not box" is corrected.
+- **The plain wave oscillators box one heap number per block** on the production bundle, pinned (`WaveIgnitor`
+  hands its non-integral `dt` to its loop methods), about 16 bytes per block per oscillator. The same argument class
+  as the stages; not converted.
+- **A drifting stack's ramp can box twice per voice per block after the fix** (221 to 515 bytes per block in some
+  production mixed-profile processes, and in some development ones): `DriftLanes.startOf` and `endOf` return a
+  double, and in those processes V8 did not inline `blendOf`. A holder for the ramp is the shape if it is wanted.
+- **The PWM loop boxes one heap number per sample on the development bundle** under a mixed profile (about 2 KB per
+  block, `pulze` with a duty signal): the per-sample `setPulseShape(duty = ...)` call. Not seen on the production
+  bundle in isolation.
+- **The superpluck allocates per block**, 450 to 700 bytes per block with 8 voices and drift, the pluck about 65, old
+  and new alike; not located.
+- **A new param map still costs about 1,130 bytes** on the classic chain after S1, which the profiler attributes to
+  `KatalystKnob.resolve` on both bundles; its code (two field stores) does not explain it.
+- **A noise voice allocates about 2 KB per block** at engine level (the probe's noise-plus-saw sound); not located.
+- **Kotlin's `isFinite()` is a stdlib call on Kotlin/JS**, and V8 left it out of the stages' budget; replacing it was
+  condition-dependent (above). Worth a second look only with a measurement that holds pinned and unpinned.
+
 ## Decisions for the maintainer
 
 Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that change the most:

@@ -242,6 +242,16 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   ran 424 to 633 scavenges per run and 40 to 76 percent slower (records: `docs/tasks/engine-tidy-up.md`, step 11
   (b)); the unison stacks' phased loops showed the same with arguments. No test can pin it, because the sound is
   bit-identical either way: the KDoc at the site is the guard. Check a new hot loop with `--trace-gc`.
+  Applied by rule to every drift seed (the four unison stack loops, the sine, the partial bank, the wave, impulse and
+  sample oscillators) and to the partial bank's phase, seeded from an argument (V8 allocation pass, 2026-10-08,
+  `docs/tasks/engine-tidy-up.md`). Before it a five-partial bank with drift took about 10.5 KB per block (one heap
+  number per sample per partial; 2.1 KB without drift when run alone, 10.5 KB under a mixed profile), 304 bytes
+  after, on both bundles, pinned to one core and not. The stacks show why a loop shape needs a MIXED profile: run
+  alone, a drifting stack boxed nothing per sample; with every oscillator case warmed in one process (the worklet's
+  situation) some processes boxed one heap number per sample per voice (14.4 KB per block on `supersine-7-drift`
+  and others). On the development bundle that is confirmed: 2 of 3 processes before and 0 of 3 after in review (4
+  of 8 and 0 of 7 in the pass). On the production bundle it was seen in 2 of 3 processes in one sample and in 0 of
+  3 in another, so it is not reproduced there; the seeds cost nothing and stay by rule.
 - **On V8, a non-integral double handed to a function that is not inlined is a heap number per call** (2026-10-08,
   engine tidy-up step 12 (a)). The calling convention is tagged, so a double argument or a double result of a call
   V8 does not inline is boxed; an integral value in Smi range (a mix of 1.0, a floor of 0) travels as a Smi and is
@@ -249,13 +259,43 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   about 40 bytes per block of a steady body. Its remedy is a holder the caller owns and fills at control rate
   (`ResonatorConfig`, like the EQ's `DoubleArray`), handed over by reference; and a method that Kotlin's `inline`
   makes large can leave V8 without the budget to inline its small callees (`ResonatorBank.install` boxed the wet/dry
-  law's doubles until its per-band and blend halves became methods of their own). The JVM boxes none of this. The
-  other writers that pass doubles per block are not converted: the delay, reverb and phaser allocate 79 to 118 bytes
-  per block in steady state on V8 (measured in the step 12 review, the same before and after the step), the gain and
-  the steady compressor 0; where they box is not located yet (`docs/tasks/engine-tidy-up.md`, step 12, "Found").
+  law's doubles until its per-band and blend halves became methods of their own). The JVM boxes none of this.
+  The delay, reverb and phaser were located in the V8 allocation pass (2026-10-08). Run with ten times V8's inlining
+  budgets (`--max-inlined-bytecode-size-cumulative=9200 --max-inlined-bytecode-size=4600`) the delay and the phaser
+  allocate nothing and the reverb about 5 bytes per block (5.2 on the production bundle, 3.9 on the development one),
+  so nearly every byte is a double crossing a call that V8 left out for lack of budget: the writer's `configure`
+  arguments, the phaser stage's six arguments to `Phaser.process`, `KnobGlide.advance`'s result, and inside
+  `configure` the setters, `KnobGlide.retarget` and Kotlin's `isFinite()` (a stdlib call on Kotlin/JS). The writers
+  now hand a holder (`DelayConfig`, `ReverbConfig`, `PhaserConfig`) and the phaser stage hands `Phaser.process` a
+  `PhaserBlock`. Measured and dropped: an inline finiteness compare in place of `isFinite()` (better pinned to one
+  core, worse unpinned on the phaser and on all three stages together), a Unit-returning glide step (within noise),
+  and the resonator's split remedy on the delay (worse). **The stages are not clean after the pass.** At engine level
+  (one note through `PlaybackEngine`), bytes per block on the production bundle: pinned (medians of 3 to 6 runs,
+  ranges in brackets), delay 82 (34 to 98; HEAD 81), reverb 22 (HEAD 21), phaser 144 (144 to 192; HEAD 176), with a
+  floor of 0.5 192 (160 to 192; HEAD 240), all three 197 (HEAD 277); unpinned (median of three), 98, 38, 112, 128,
+  149 (HEAD 229). On the development bundle (single runs pinned): pinned 131, 102, 96, 128, 276 (HEAD 356); unpinned
+  131, 103, 112, 144, 260 (HEAD 356). Four cautions for this class of box:
+  - **Measure pinned AND unpinned.** `taskset` to one core puts V8's concurrent compiler on the core of the measured
+    code, which changes the tier-up history and so which calls are left out. A single bundle varies by up to five
+    heap numbers per block between unpinned processes (and pinned ones vary too while the sibling threads are busy);
+    pinned on a quiet machine a run repeats exactly. A worklet's compile jobs run on other threads, so the unpinned
+    condition is at least as real. A fix counts only when it holds in both.
+  - Which call V8 inlines depends on the caller's whole compilation unit, so a change elsewhere moves these boxes. A
+    semantically inert change on the per-block path (a placebo) shifted single rows by up to two heap numbers per
+    block, pinned, on either bundle. Judge a fix against that band, at engine level, not stage by stage in a probe.
+  - Measure the production bundle (`:audio_be:compileTestProductionExecutableKotlinJs`): it reads fields directly
+    where the development bundle calls accessors, and it boxes in different places.
+  - Run long: right after a change the first few megabytes are tier-up, not steady state.
   Measure with `--trace-gc-nvp` (it reports the bytes allocated since the last collection) and
   `--max-semi-space-size=1`, so a collection falls every megabyte and a residue of a few bytes per block is counted;
-  at the default semi-space one run read 0 and the next 20.7 bytes per block for the same code.
+  at the default semi-space one run read 0 and the next 20.7 bytes per block for the same code. Locate with the
+  sampling heap profiler (`HeapProfiler.startSampling` with `includeObjectsCollectedByMinorGC`), started and stopped
+  around the measured window only: the warm-up runs in the interpreter, which boxes every double.
+- **On V8, `x ?: field` with a nullable map value and a double field boxes the field's value** (V8 allocation pass,
+  `KatalystKnob.resolve`): the merge is a tagged value, so an absent knob with a non-integral default became a heap
+  number. Two branches store the same values without it: about 180 of the about 1,310 bytes a new param map cost on
+  the classic chain, on both bundles, pinned and unpinned. The rest is still attributed to that function by the
+  profiler and is not explained.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per
