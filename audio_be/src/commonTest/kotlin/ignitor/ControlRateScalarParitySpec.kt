@@ -313,7 +313,7 @@ class ControlRateScalarParitySpec : StringSpec({
         // consumer 2 then misses the cache and re-renders the stateless inner, which must equal
         // a scratch-path render bit-for-bit.
         val probe = RenderCountProbe(FreqIgnitor * ParamIgnitor("track", 1.9))
-        val memo = MemoizingIgnitor(probe).apply { incConsumers() }
+        val memo = MemoizingIgnitor(probe).apply { incConsumers(blockFrames) }
         val c = ctx()
 
         val folded = AudioBuffer(blockFrames)

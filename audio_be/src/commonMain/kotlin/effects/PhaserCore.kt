@@ -16,8 +16,8 @@ import kotlin.math.tan
 /**
  * Single per-channel phaser kernel — `stages`-count first-order allpass cascade with
  * sine-LFO-modulated breakpoint and feedback. Used by both Phaser surfaces:
- *   - [Phaser]                                          — cylinder bus, 2× PhaserCore for stereo
- *   - `ignitor/IgnitorEffects.kt::PhaserIgnitor`        — Ignitor DSL, mono, lazy-init from `ctx.sampleRate`
+ *   - [Phaser]: cylinder bus, 2× PhaserCore for stereo
+ *   - `ignitor/IgnitorEffects.kt::PhaserIgnitor`: Ignitor DSL, mono, built with the voice, `ctx.sampleRate` bound at the first block
  *
  * **Topology** — bilinear 1st-order allpass per stage:
  *   - `α = (tan(π·f/fs) − 1) / (tan(π·f/fs) + 1)`
@@ -55,7 +55,9 @@ internal class PhaserCore(
     internal val stages: Int,
     sampleRate: Int,
 ) {
-    internal val inverseSampleRate: Double = 1.0 / sampleRate
+    /** `1 / sampleRate`; [bindSampleRate] moves it. */
+    internal var inverseSampleRate: Double = 1.0 / sampleRate
+        private set
     internal val z1 = DoubleArray(stages)
     internal var lastOutput: Double = 0.0
     internal var lfoPhase: Double = 0.0
@@ -187,6 +189,15 @@ internal class PhaserCore(
      */
     fun zeroPhase() {
         lfoPhase = 0.0
+    }
+
+    /**
+     * Sets the rate the kernel runs at, for a caller that builds the kernel before it knows the rate: the Ignitor
+     * phaser builds it with the voice and binds the context's rate at the first block (tidy-up step 10). Nothing
+     * else changes; the same rate gives the same `1 / sampleRate` bit for bit.
+     */
+    fun bindSampleRate(sampleRate: Int) {
+        inverseSampleRate = 1.0 / sampleRate
     }
 
     /** Clear allpass state and `lastOutput`. LFO phase is preserved for cross-note continuity. */

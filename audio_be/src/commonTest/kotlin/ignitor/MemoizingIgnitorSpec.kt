@@ -74,7 +74,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "multi-consumer: second call within same block uses cache (probe not re-run)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers() // simulate shared node (2 consumers)
+        memo.incConsumers(blockFrames) // simulate shared node (2 consumers)
         val ctx = createCtx()
         val out1 = AudioBuffer(blockFrames)
         val out2 = AudioBuffer(blockFrames)
@@ -90,7 +90,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "advancing voiceElapsedFrames invalidates cache" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers()
+        memo.incConsumers(blockFrames)
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames)
 
@@ -106,7 +106,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "changing freqHz invalidates cache (e.g. detune path)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers()
+        memo.incConsumers(blockFrames)
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames)
 
@@ -120,7 +120,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "changing offset invalidates cache (sub-block render)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers()
+        memo.incConsumers(blockFrames)
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames * 2)
 
@@ -136,8 +136,8 @@ class MemoizingIgnitorSpec : StringSpec({
     "three readers within same block trigger one generate call" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers() // 2
-        memo.incConsumers() // 3
+        memo.incConsumers(blockFrames) // 2
+        memo.incConsumers(blockFrames) // 3
         val ctx = createCtx()
         val a = AudioBuffer(blockFrames)
         val b = AudioBuffer(blockFrames)
@@ -159,7 +159,7 @@ class MemoizingIgnitorSpec : StringSpec({
         // got two keys and ran TWICE per block: double state advance, disjoint sample windows —
         // the E8 shape, family-wide. All reads now share the voice freqHz.
         val counter = CountingIgnitor()
-        val shared = MemoizingIgnitor(counter).also { it.incConsumers() }
+        val shared = MemoizingIgnitor(counter).also { it.incConsumers(blockFrames) }
         val sig = Ignitors.whiteNoise(kotlin.random.Random(1), color = shared) + shared
 
         val ctx = createCtx()

@@ -46,43 +46,33 @@ internal const val ANALOG_SIGMA_X: Double = 0.5773502691896257
 /** `1 / Int.MAX_VALUE` — maps a signed Int to ≈ [-1, 1]. */
 internal const val ANALOG_INT_INV: Double = 1.0 / 2147483647.0
 
+// ─────────────────────────────────────────────────────────────────────────────
+// The coefficient law, as pure functions: [AnalogDrift.seed] evaluates them into its own fields, so a lane carries
+// no holder object and its seed allocates nothing. `stepRate` is the rate the lane is stepped at (the block rate for
+// every oscillator lane since 2026-09-15).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A layer's one-pole coefficient: `1 / (tau * rate)`, for its time constant [tauSec] at [stepRate] steps per second. */
+internal fun analogDriftAlpha(tauSec: Double, stepRate: Int): Double = 1.0 / (tauSec * stepRate.toDouble())
+
+/** The slow layer's mean reversion, a fraction of its [alphaSlow]. */
+internal fun analogDriftBetaSlow(alphaSlow: Double): Double = alphaSlow * ANALOG_MEAN_REVERSION_RATIO
+
 /**
- * Computed analog-drift coefficients for the chosen [analog] amount and [stepRate], the rate the
- * lane is stepped at (the block rate for every oscillator lane since 2026-09-15). Holds α/β for
- * both layers, output scales, and the steady-state σ used by callers to seed initial state.
- *
- * [AnalogDrift] reads the fields once during its `init`, then stores the
- * values in its own fields for the hot loop. Keeping this class plain (no
- * inline) is fine — it's only touched at construction.
+ * Steady-state RMS of the fast smoother given uniform [-1, 1] white noise input (σ²_x = 1/3), the exact AR(1) form:
+ * y' = (1 - a) y + a x has σ²_y = a² / (1 - (1 - a)²) × σ²_x, which is a / (2 - a). The small-a approximation (a / 2)
+ * was within 0.01 % at a sample-rate step and 1.4 % off at the block rate, where the lanes step since 2026-09-15.
  */
-internal class AnalogDriftCoeffs(analog: Double, stepRate: Int) {
-    val alphaFast: Double
-    val alphaSlow: Double
-    val betaSlow: Double
-    val scaleFast: Double
-    val scaleSlow: Double
-    val sigmaYFast: Double
-    val sigmaYSlow: Double
+internal fun analogDriftSigmaFast(alphaFast: Double): Double =
+    sqrt(alphaFast * alphaFast / (1.0 - (1.0 - alphaFast) * (1.0 - alphaFast))) * ANALOG_SIGMA_X
 
-    init {
-        val rate = stepRate.toDouble()
-        alphaFast = 1.0 / (ANALOG_FAST_TAU_SEC * rate)
-        alphaSlow = 1.0 / (ANALOG_SLOW_TAU_SEC * rate)
-        betaSlow = alphaSlow * ANALOG_MEAN_REVERSION_RATIO
+/** The slow layer's steady-state RMS, the OU with `a + b` in the recurrence (see [analogDriftSigmaFast]). */
+internal fun analogDriftSigmaSlow(alphaSlow: Double, betaSlow: Double): Double =
+    sqrt(alphaSlow * alphaSlow / (1.0 - (1.0 - alphaSlow - betaSlow) * (1.0 - alphaSlow - betaSlow))) * ANALOG_SIGMA_X
 
-        // Steady-state RMS of each smoother given uniform [-1, 1] white noise input (σ²_x = 1/3),
-        // the exact AR(1) forms: y' = (1 - a) y + a x has σ²_y = a² / (1 - (1 - a)²) × σ²_x, which
-        // is a / (2 - a); the OU with a + b in the recurrence likewise. The small-a approximations
-        // (a / 2 and a² / (2 (a + b))) were within 0.01 % at a sample-rate step and 1.4 % off at
-        // the block rate, where the lanes step since 2026-09-15.
-        sigmaYFast = sqrt(alphaFast * alphaFast / (1.0 - (1.0 - alphaFast) * (1.0 - alphaFast))) * ANALOG_SIGMA_X
-        sigmaYSlow = sqrt(alphaSlow * alphaSlow / (1.0 - (1.0 - alphaSlow - betaSlow) * (1.0 - alphaSlow - betaSlow))) * ANALOG_SIGMA_X
-
-        // Scale = analog × target_cents × cent_to_mul / (3σ). 3σ ≈ peak amplitude.
-        scaleFast = analog * ANALOG_FAST_PEAK_CENTS * ANALOG_CENT_PER_MUL / (ANALOG_PEAK_SIGMAS * sigmaYFast)
-        scaleSlow = analog * ANALOG_SLOW_PEAK_CENTS * ANALOG_CENT_PER_MUL / (ANALOG_PEAK_SIGMAS * sigmaYSlow)
-    }
-}
+/** A layer's output scale: `analog × target_cents × cent_to_mul / (3σ)`, 3σ being about the peak amplitude. */
+internal fun analogDriftScale(analog: Double, peakCents: Double, sigma: Double): Double =
+    analog * peakCents * ANALOG_CENT_PER_MUL / (ANALOG_PEAK_SIGMAS * sigma)
 
 /**
  * The rate an [AnalogDrift] lane is stepped at when it advances once per block (2026-09-15, every

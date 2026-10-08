@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 9 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 10 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -59,7 +59,7 @@ Audit section D, unchanged, steps 1 to 20. Steps that touch `Voice`, `VoiceSched
 lifecycle step 5; the named-arguments pass (`code-style-named-args-pass.md`) goes before or after them, never in
 parallel. Bit-identity (the 18-song corpus) is the proof for every behaviour-neutral step.
 
-## Step 1, dead code: done 2026-10-07 (uncommitted, awaiting review and the corpus render)
+## Step 1, dead code: done 2026-10-07
 
 Each item re-verified against the working tree (not the audit's `4481ea25`) over every module, the tests, the
 docs, the stdlib registrations and the KSP output. Report: `tmp/reviews/tidy-step1-report.md`.
@@ -102,7 +102,7 @@ PolyBLEP", `CREDITS.MD` credits PolyBLEP, and `klang-music-writing/ref/ignitor-r
 step either. Three `IgnitorsTest` row names say "PolyBLEP" too, and so do the in-app Credits page (`CreditsPage.kt:337`) and the
 Zawtooth KDoc (`IgnitorDsl.kt:446`).
 
-## Step 2, the ShapeIgnitor closure (B4.1): done 2026-10-07 (uncommitted, awaiting review and the corpus render)
+## Step 2, the ShapeIgnitor closure (B4.1): done 2026-10-07
 
 `Oversampler.process(buffer, offset, length, scratch, transformBlock)` is gone. In its place are two halves:
 `upsample(source, offset, length, work): Int` and `decimate(work, target, offset, length)`. The caller holds
@@ -140,7 +140,7 @@ channel. The copy back into the caller's buffer is a plain loop now. It was `cop
   appears, promote the test helper `Oversampler.roundTrip` (`_oversampler_test_helpers.kt`) to the main source
   set as the one wrapper, `inline`.
 
-## Step 3, the RNG defaults (B4.14): done 2026-10-07 (uncommitted, awaiting review and the corpus render)
+## Step 3, the RNG defaults (B4.14): done 2026-10-07
 
 The 15 `random: Random = Random` / `rng: Random = Random` defaults are gone (the audit's "about 16"): `IgniteContext`,
 `buildExciter`, `toExciter`, `IgnitorBuildCache`, `IgnitorRegistry.createExciter`, `AnalogDrift`, `SampleIgnitor`, and
@@ -160,7 +160,7 @@ the eight unison and string factories in `Ignitors.kt`. A forgotten stream is no
   benchmark's two `IgniteContext`s take `Random(0)`.
 - **Bit-identity:** the production change is the knob build's stream, which no answer reads.
 
-## Step 4, the `KatalystSlots` helpers and the settings types (B2.11, A1.7): done 2026-10-07 (uncommitted, awaiting review and the corpus render)
+## Step 4, the `KatalystSlots` helpers and the settings types (B2.11, A1.7): done 2026-10-07
 
 - **Folded:** `bodyDef`, `vowelDef`, `compressorSettings`, `duckSettings` and `finiteOrNull` left `KatalystSlots`;
   each rule lives in its one caller, the writer (`KatalystSlotWriters.kt`). `Voice.Compressor.fromParams` and its
@@ -186,7 +186,7 @@ the eight unison and string factories in `Ignitors.kt`. A forgotten stream is no
   and one substitution, the duck attack) each went red on the intended row; the body guard mutant also turns
   root `KatalystBodyNonFiniteWetSpec` red, as its rewritten KDoc says.
 
-## Step 5, constants and names (A2.4, B3.9, B2.6): done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+## Step 5, constants and names (A2.4, B3.9, B2.6): done 2026-10-08
 
 - **`SendEffectDefaults.kt` is gone:** delay and reverb live in `BusEffectDefaults.kt`, whose header now names the
   readers that exist (the stage DSL and script slots, the sprudel doors and editor tools, `KatalystChainBuilder`,
@@ -204,7 +204,7 @@ the eight unison and string factories in `Ignitors.kt`. A forgotten stream is no
   `memory-history.md`, the audit, the blog) keep their words.
 - **Left:** the spec `VcaOffTeardownSpec` keeps its file name.
 
-## Step 6, small shared helpers, the per-block copies and the audio `utils/` home: done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+## Step 6, small shared helpers, the per-block copies and the audio `utils/` home: done 2026-10-08
 
 Behaviour-neutral. Report, with the file list of each reviewable commit (the moves, the helpers, the copy sites):
 `tmp/reviews/tidy-step6-report.md`. Every NEW helper below is `inline`, allocates nothing, and has a spec in
@@ -275,7 +275,7 @@ port can take on its own.
   `arrayCopy` or new object in the converted loops; the suites in the report. Bit-identity: the corpus render is
   the coordinator's.
 
-## Step 7, the per-block iterators, the diagnostics closure, the solo ramp (B4.3, B4.4, B4.17): done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+## Step 7, the per-block iterators, the diagnostics closure, the solo ramp (B4.3, B4.4, B4.17): done 2026-10-08
 
 Behaviour-neutral. Report: `tmp/reviews/tidy-steps7-9-report.md`. The `VoiceFactory` items (B1.5 to B1.7) and the
 solo tracker's allocation (B4.2) were done before this step.
@@ -304,7 +304,7 @@ solo tracker's allocation (B4.2) were done before this step.
   `VoiceSchedulerSoloCutSpec` with the soloed key first in the list. Mutants of the converted scheduler and voice
   loops went red on existing rows.
 
-## Step 8, one playback per scheduler (B3.3): done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+## Step 8, one playback per scheduler (B3.3): done 2026-10-08
 
 Behaviour-neutral for everything production builds. Report: `tmp/reviews/tidy-steps7-9-report.md`.
 
@@ -330,7 +330,7 @@ Behaviour-neutral for everything production builds. Report: `tmp/reviews/tidy-st
   dispatcher's `ClearScheduled` row could not fail (it rendered one block of a voice 10 s ahead); it now renders past
   the start, with a positive control.
 
-## Step 9, the engine's end of life as one phase, one render path (C3.1, A2.11): done 2026-10-08 (uncommitted, awaiting review and the corpus render)
+## Step 9, the engine's end of life as one phase, one render path (C3.1, A2.11): done 2026-10-08
 
 Behaviour-neutral, the dispatcher's disposal order included. Report: `tmp/reviews/tidy-steps7-9-report.md`.
 
@@ -366,6 +366,77 @@ Behaviour-neutral, the dispatcher's disposal order included. Report: `tmp/review
   `PlaybackEngineDispatcherOrderSpec`'s detach row now has a second attached engine created before the detach, which
   pins where a fresh engine renders. The release specs ask `releaseStarted` (a test helper over the phase) where they
   asked `isReleasing`.
+
+## Step 10, first-block and voice-count allocations to build time (B4.5, B4.6): done 2026-10-08
+
+Behaviour-neutral: every random draw stays where it was, at the voice's first block, in the same order. Report, with
+the per-family patches and the numbers: `tmp/reviews/tidy-step10-report.md`. Seven families, one patch each.
+Reviewed in two rounds (`tmp/reviews/tidy10-r1-A.md`, `tidy10-r1-B.md`, `tidy10-r2.md`; round 2 clean, its one
+minor a doc sentence, fixed). Round 2's nit, kept: of the six `countsAtBuild` arms only superpluck's has a row; the
+others change allocation only.
+
+- **The rule now:** a node allocates its storage when it is BUILT (the voice build, `VoiceFactory.makeVoice`), sized
+  from what the build can read: a block-constant param answers `controlRateValueOrNull` without a render context,
+  read at freq 0 (`Ignitors.sizingValueOrNull`, for sizing only; nothing reads it for sound). A COUNT is read there
+  only when the DSL build vouches that it does not read the note's frequency (`countsAtBuild`, from
+  `IgnitorBuildCache.usesMusicalFreq`, the memo's freq-key walk); a count that does grows at the first block, as
+  before (review round 1: `30 - 0.05 * freq` voices, read at freq 0, built 30 strings for a note that plays 8, 604 KB
+  against 162 KB). The factories default `countsAtBuild` to false. The first block still reads every param and draws
+  what it drew, and seeds or starts what the build made.
+- **1. Drift lanes.** `AnalogDrift` is built, then seeded: `seed(analog, stepRate, rng)` writes every field and
+  allocates nothing (the coefficient law is pure functions in `AnalogDriftCoeffs.kt`, no holder object); the
+  three-argument constructor is both at once (the sample playhead and the filter humanization, built where their inputs
+  are known). The sine, impulse and pluck build their lane with the node and seed it at the first block
+  (`Ignitors.seedAnalogDrift`), at every depth as before. The wave, the partial bank, the stacks and the superpluck
+  build drift storage only when `analog` may be above 0 at build (`mayDrift`: a signal, or a value above 0); the shared
+  lane only when `analogSpread` may drop below 1 (`mayShare`; the default 1 never reads it). A build that ruled drift
+  out and was wrong (a knob that reads the frequency) makes the lane or the container at the first block, as before
+  the step (`startDriftLanes`, the shared lane in `prepareBlock`). `DriftLanes(capacity, sharedLane)`:
+  `start(analog, stepRate, rng)` at the first block draws the shared seed, and `ensureLanes` seeds the lanes it raises
+  instead of building them (a retired lane is re-seeded, which leaves it exactly a fresh one).
+- **2. The phaser.** `PhaserIgnitor` builds its `PhaserCore` at `DEFAULT_BUILD_SAMPLE_RATE` and binds the context's
+  rate at the first block (`PhaserCore.bindSampleRate`), before the kernel first runs.
+- **3. The memo.** A memo that starts caching (`incConsumers(blockFrames)`, `cachePerBlock(blockFrames)`, both at
+  build) allocates its cache there, at the voice's block size; the render's growth guard stays for a larger buffer
+  (only a test rig hands one in).
+- **4. The partial banks.** Each bank's four arrays are built at the count the build can read (`partialCapacity`).
+- **5. The unison stacks.** The voice states, the base gain profile (`superSawVoiceGainsInto`, the allocating
+  `superSawVoiceGains` kept for the pool and the specs) and the stateless banded draw's best candidate are built at
+  the count the build can read (`unisonCapacity`). A shrink keeps the states; a voice that comes back re-uses its
+  state and draws its phase and jitter as a new voice does, in index order. No reset: every field the stack reads is
+  rewritten before the next render (review round 1 removed a `reset` that no render could observe).
+- **6. The superpluck.** The strings (a 2500-sample delay line each) are built at that count.
+- **7. The phase pool.** The `selection` string is parsed at build when the pool is on (never when it is off, as
+  before); `PhasePools.pool` fills one probe key in place instead of allocating a key per request, and inserts a copy.
+- **Still allocated at render, left on purpose:**
+  - a count signal the build cannot read, or a count that reads the note's frequency: its first rise past what the
+    build sized grows the arrays at that block (a count that changes within its maximum allocates nothing now; before,
+    every change made a new array);
+  - the shared drift lane's own `Random(sharedSeed)`, at the first block below spread 1 (about 40 bytes): its seed is
+    drawn at render, and a generator a seed can restart is decision D7;
+  - the phase pool's vocabulary while it grows (one entry per top-up, lazy by design so the first note stays inside
+    its block) and a pool's creation at the first note of its key: both playback-level, shared, not per voice.
+- **Cost moved, not removed.** The voice build runs on the audio thread, in the render callback that also renders the
+  voice's first block (`VoiceScheduler.process` to `promoteScheduled` to `VoiceFactory.makeVoice`), so the bytes move
+  from the first block to the build of the same callback. Where the build cannot rule a lane out (an `analog` signal)
+  it builds lanes that may stay unused. At `analog` 0 the stacks, the partial bank, superpluck and the wave build no drift
+  storage, and at spread 1 no shared lane (review round 1; the sine, impulse and pluck still build their one
+  `AnalogDrift` at every depth); what a note costs more there on the JVM, 32 to 64 bytes, is the box of the build's own reads of the knobs. JVM bytes per
+  note, build plus first block, in the report.
+- **Proof.** A golden render of 33 voice configurations (every family; drift on and off, spreads below 1, count
+  signals that walk, pooled and stateless banded phases, a white noise on the same stream after each source so a moved
+  draw shows), 4 notes each, mid-block onset: bit-identical to the baseline sources (6,449,505 bytes, `cmp`). Every
+  intermediate patch state compiles and passes `:audio_be:jvmTest`. In the compiled `klang-engine-audio_be.js` (test
+  build) no touched `generate` creates an object outside the growth branches. JVM, a voice of each family whose knobs
+  are signals (a block-constant knob's `Double?` is boxed by the JVM, see below): 0 bytes on the first block and on
+  the 64 after it, and 0 bytes over 31 blocks of count changes within the maximum.
+- **Rows** (each mutation-checked): `FirstBlockAllocationSpec` (jvmTest, a row per family, and one for what the build
+  must NOT build: drift at analog 0, the shared lane at spread 1, strings for a count that reads the frequency),
+  `AnalogDriftSeedSpec`, `DriftStorageFallbackSpec` (a build that guessed drift away renders and draws as one that
+  saw it), `DriftLanesSpec` (the capacity and the shared lane change nothing), `SeededVoiceRngSpec` (the oscillators draw
+  nothing at build), `SuperStackTransitionSpec` (grow, shrink, regrow: exactly one phase and one jitter draw per
+  voice that is new or back). The phaser's bind is pinned by `PhaserCoreLawSpec`'s node row (48 kHz against the
+  44.1 kHz placeholder), the memo's growth guard by `MemoizingIgnitorSpec`'s sub-block row.
 
 ## Decisions for the maintainer
 
@@ -453,5 +524,29 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
 - **`Cmd.ReplaceVoices` on a stopped engine** schedules its voices without resuming the engine (review round 1, older
   than steps 7 to 9, behaviour unchanged by them). Decide whether a replace means "resume" or is ignored after a stop.
 - **`Voice` copies its stage list into an `Array`** once per voice start (`pipeline.toTypedArray()`), one small
-  allocation on the audio thread per note, not per block. Left as is: the voice build allocates its states and
-  context anyway; folding it into the builder churns every test rig. Revisit with step 10 (allocations to build time).
+  allocation on the audio thread per note, not per block. Re-checked in step 10: it is part of the voice BUILD, not of
+  the render, so it stays (building the array in `VoiceFactory` saves one array of about four references per note
+  and churns the test rigs). The build itself runs on the audio thread (see step 10, "Cost moved"), and it allocates
+  the whole voice: every Ignitor node, the contexts, the pipeline lists, the bound `::getCompleteSample` reference per
+  promotion (`VoiceScheduler.promoteScheduled`). A full "no allocation after build" on the audio thread means no
+  allocation in the render callback at all: build voices outside it (on the JVM another thread; in the worklet the
+  port's message handler, the same thread between callbacks), or keep built voices in pools per sound and reset them
+  per note, which needs a reset contract on every Ignitor node and a replay of the build's draw order. L to XL;
+  worth deciding with the Zig port, where an arena per voice is the natural shape.
+
+## Found during tidy-up step 10
+
+- **The JVM boxes a `Double` per block-constant param read.** `Ignitor.controlRateValueOrNull` returns `Double?`;
+  `Ignitor.blockStartValue` (`readParam`) calls it every block for every control-rate knob, and the JVM allocates a
+  box (24 bytes) wherever the JIT does not inline it away: a voice built from constants measured 0 to 48 bytes per
+  block, varying from run to run, and its first block, which reads `analog` once more, one box more. Kotlin/JS does
+  not box there. Not changed: it is the interface's shape (the KDoc of `isBlockConstant` names the cost) and costs
+  nothing in the browser. A non-null `controlRateValue(freqHz): Double` beside `isBlockConstant` would remove it, if a
+  JVM backend ever needs a render without allocation.
+- **B4.5's orbit-side items were not in this step:** the scratch of `ResonatorBank` and `ParallelMixFilter` still
+  starts at size 0 and grows at their first `process`, `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
+  `ScratchBuffers.oversample` looks its sub-pool up in a map per block (its first use per factor allocates, once per
+  warehouse). All are per orbit or per backend, not per voice.
+- **The active list's order still reaches the phase pool takes** (lifecycle step 5's finding above): unchanged by this
+  step, which kept every draw at the first block.
+

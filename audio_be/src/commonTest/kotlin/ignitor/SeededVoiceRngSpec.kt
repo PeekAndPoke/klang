@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.random.Random
@@ -43,7 +44,7 @@ class SeededVoiceRngSpec : StringSpec({
     }
 
     // Every RNG consumer family live in one voice graph: WaveIgnitor drift (inline ctx
-    // site), SineIgnitor drift (the initAnalogDrift ctx site — a DIFFERENT construction
+    // site), SineIgnitor drift (the seedAnalogDrift ctx site, a DIFFERENT seeding
     // path), and noise (the cache channel). A severed channel ANYWHERE diverges the two
     // same-seeded renders.
     fun wildDsl(): IgnitorDsl = IgnitorDsl.Plus(
@@ -151,6 +152,42 @@ class SeededVoiceRngSpec : StringSpec({
         val b = renderSuper(3)
         for (i in 0 until blockFrames) {
             a[i].toRawBits() shouldBe b[i].toRawBits()
+        }
+    }
+
+    "the oscillators draw nothing at build: their drift, phases, jitter and plucks draw at the first block" {
+        // Tidy-up step 10 moved the drift lanes, the stack's voice states and the strings to the build, and left every
+        // DRAW where it was: at the voice's first block. Moving a draw to the build would hand every later consumer of
+        // the voice stream other numbers (a noise beside the oscillator, the next node's phases). So: after the build
+        // the stream is untouched, and the first block takes from it.
+        val c = { v: Double -> IgnitorDsl.Constant(v) }
+        val sources = listOf<Pair<String, () -> IgnitorDsl>>(
+            "sine" to { IgnitorDsl.Sine(analog = c(0.5)) },
+            "saw" to { IgnitorDsl.Saw(analog = c(0.5)) },
+            "impulse" to { IgnitorDsl.Impulse(analog = c(0.5)) },
+            "pluck" to { IgnitorDsl.Pluck(analog = c(0.5)) },
+            "sine partials" to { IgnitorDsl.Sine(analog = c(0.5), harmonics = c(3.0), analogSpread = c(0.5)) },
+            "supersaw" to { IgnitorDsl.SuperSaw(voices = c(5.0), analog = c(0.5), analogSpread = c(0.5)) },
+            "supersaw, stateless banded phases" to { IgnitorDsl.SuperSaw(voices = c(5.0), analog = c(0.5), phasePool = 1.0) },
+            "superpluck" to { IgnitorDsl.SuperPluck(voices = c(3.0), analog = c(0.5), analogSpread = c(0.5)) },
+        )
+
+        for ((name, mk) in sources) {
+            val built = Random(21)
+
+            mk().toExciter(random = built)
+
+            withClue("$name: the build drew from the voice stream") {
+                built.nextInt() shouldBe Random(21).nextInt()
+            }
+
+            val rendered = Random(21)
+
+            mk().toExciter(random = rendered).generate(AudioBuffer(blockFrames), 220.0, ctx(rendered))
+
+            withClue("$name: the first block drew nothing") {
+                rendered.nextInt() shouldNotBe Random(21).nextInt()
+            }
         }
     }
 })

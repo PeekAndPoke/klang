@@ -138,8 +138,11 @@ Before merging a new Ignitor / effect / filter:
    either stateless or a tiny convenience wrapper. Anything with `var`
    declared above it in the same fun is a Rule 1 violation.
 2. `grep -n "DoubleArray\|FloatArray\|IntArray\|Array(" path/to/file.kt` —
-   every match inside `generate()` / `process()` should be either a
-   resize-on-shape-change pattern or a guarded "first-call" allocation.
+   every match inside `generate()` / `process()` should be a
+   resize-on-shape-change pattern past what the node built. An Ignitor node
+   builds its storage in its constructor (the voice build) and seeds it at the
+   first block; a guarded "first-call" allocation is what engine tidy-up step 10
+   removed.
 3. Spec coverage — for class-form rewrites of an existing combinator,
    add or extend a parity test in `audio_be/src/commonTest/kotlin/...` so
    the new form is asserted equivalent to the old reference math (see
@@ -198,9 +201,11 @@ Before: each `super-X` factory returned a SAM lambda that allocated a
 
 After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIgnitor`):
 
-- Per-voice state (phase / dt / gain / shape / drift) lives in a persistent
-  `Array<WaveVoiceState>`, reused across blocks and **reallocated only** when the
-  voice count changes.
+- Per-voice state (phase / dt / gain / shape) lives in a persistent
+  `Array<WaveVoiceState>`, built with the node at the voice count the build can
+  read and reused across blocks and count changes (a voice back after a shrink
+  is rewritten whole before it renders); only a count signal, or a count that
+  reads the note's frequency, past that size grows it (engine tidy-up step 10). The drift lanes live beside it in one `DriftLanes`.
 - Detune + shape are recomputed only when freq / voice count / spread change
   (NaN cache keys), not every block. The hot path is a **voice-major** loop that
   hoists each voice's fields into locals (register residency); the per-voice

@@ -82,4 +82,41 @@ class SuperStackTransitionSpec : StringSpec({
         (steadyDraws == 0) shouldBe true                        // no transition, no draws at analog 0
         (transitionDraws in 1..(noteOnDraws / 3)) shouldBe true // ~one voice's worth, not a re-init
     }
+
+    "grow, shrink, regrow: exactly one phase and one jitter draw per voice that is new or back, none otherwise" {
+        // Tidy-up step 10 keeps the voices' states across a shrink and re-uses them when the voices come back, so
+        // this pins what the re-use must not change: a voice back after a shrink draws like a new one, and nothing
+        // else draws. `nextDouble()` is two `nextBits()` calls (the common `Random` default), so a voice costs 4.
+        val counts = intArrayOf(3, 6, 2, 5, 5)
+        val rng = CountingRandom(3)
+        val stepping = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                val v = counts[ctx.voiceElapsedFrames / blockFrames].toDouble()
+
+                for (i in ctx.offset until ctx.windowEnd) {
+                    buffer[i] = v
+                }
+            }
+        }
+        val ig = Ignitors.superSaw(freq = ConstantIgnitor(220.0), voices = stepping, analog = ConstantIgnitor(0.0), rng = rng, gainJitter = 0.9)
+        val ctx = IgniteContext(
+            sampleRate = sampleRate, voiceDurationFrames = 4096, gateEndFrame = 4096,
+            scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
+        )
+        val tmp = AudioBuffer(blockFrames)
+        val drawsPerBlock = IntArray(counts.size)
+
+        for (b in counts.indices) {
+            val before = rng.draws
+
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
+            ctx.voiceElapsedFrames = b * blockFrames
+            ig.generate(tmp, 220.0, ctx)
+            drawsPerBlock[b] = rng.draws - before
+        }
+
+        // 3 at note-on, 3 new (3 -> 6), none (6 -> 2), 3 back (2 -> 5), none (5 -> 5).
+        drawsPerBlock.toList() shouldBe listOf(12, 12, 0, 12, 0)
+    }
 })

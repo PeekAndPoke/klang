@@ -436,15 +436,21 @@ private class PhaserIgnitor(
     private val sweep: Ignitor,
     private val floor: Ignitor,
 ) : Ignitor {
-    // Lazy-init: PhaserCore needs sampleRate at construction, but we only see
-    // ctx.sampleRate on the first generate() call.
-    private var core: PhaserCore? = null
+    // Built with the node (tidy-up step 10: nothing allocates in generate). The rate it is built at is a placeholder:
+    // only `ctx.sampleRate` is the voice's, and it is bound at the first block, before the kernel is first used.
+    private val core = PhaserCore(stages = PhaserCore.DEFAULT_STAGES, sampleRate = DEFAULT_BUILD_SAMPLE_RATE)
+    private var rateBound = false
 
     // True while the cascade holds post-bypass state — cleared on bypass entry (ledger D5).
     private var stateDirty = false
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val phaser = core ?: PhaserCore(stages = PhaserCore.DEFAULT_STAGES, sampleRate = ctx.sampleRate).also { core = it }
+        val phaser = core
+
+        if (!rateBound) {
+            rateBound = true
+            phaser.bindSampleRate(ctx.sampleRate)
+        }
 
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)

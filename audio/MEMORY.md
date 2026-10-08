@@ -149,6 +149,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
   which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
   summation order, so changing it changes bits.
+- **A node builds its storage with the voice and draws at its first block** (tidy-up step 10): drift lanes
+  (`AnalogDrift()` then `seed`, `DriftLanes(capacity, sharedLane)` then `start`, only when `analog` may be above 0
+  and, for the shared lane, the spread below 1), a stack's voice states and scratch, the superpluck's strings, the
+  partial banks' arrays, the phaser kernel and a caching memo's buffer are allocated at build, sized from what the
+  build can read (a count only when it reads no `Freq`, `countsAtBuild`); the first block reads the depth and draws,
+  when and in the order it always did. Still allocated at render: a count signal's rise past that size, the shared drift lane's `Random` below
+  spread 1 (D7), the phase pool's vocabulary while it grows. Guards: `FirstBlockAllocationSpec`, `SeededVoiceRngSpec`.
 - **The SVF**: bandpass, notch and the resonators are linear. Lowpass and highpass at `analog > 0` take a
   state-dependent DAMPING path (a diode-pair term grows `k` with the state; `IgnitorFilters.kt`, `Ignitor.svf`).
   Never saturate by capping the feedback signal with tanh: two such attempts went unstable and were reverted
@@ -227,6 +234,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-08 First-block and voice-count allocations moved to the build (drift lanes, phaser, memo, partial banks,
+  stacks, strings, the phase pool's parse and key): `docs/tasks/engine-tidy-up.md` step 10
 - 2026-10-08 An engine's end of life is one `PlaybackEngine.Phase`; the dispatcher's `draining` set and `detached`
   list are gone; `renderInto` is one path: `docs/tasks/engine-tidy-up.md` step 9
 - 2026-10-08 One playback per scheduler: one `PlaybackCtx`, no `playbackId` filters or parameters

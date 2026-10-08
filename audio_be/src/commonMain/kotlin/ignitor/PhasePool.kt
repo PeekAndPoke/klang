@@ -124,22 +124,30 @@ class PhasePools(private val rng: Random) {
         const val MAX_POOLS = 64
     }
 
+    /**
+     * The map key. The fields are `var` for ONE instance, [probe], which every lookup fills in place so a lookup
+     * allocates nothing (tidy-up step 10); a key that goes INTO the map is always a [copy], never the probe, and is
+     * never written again.
+     */
     private data class Key(
-        val orbit: Int,
-        val voices: Int,
-        val sideAtten: Double,
-        val kMin: Double,
-        val kMax: Double,
-        val drawTries: Int,
-        val poolSize: Int,
-        val refreshEvery: Int,
-        val warmup: Int,
+        var orbit: Int,
+        var voices: Int,
+        var sideAtten: Double,
+        var kMin: Double,
+        var kMax: Double,
+        var drawTries: Int,
+        var poolSize: Int,
+        var refreshEvery: Int,
+        var warmup: Int,
     )
 
     private class Slot(val pool: PhasePool, var tick: Int)
 
     private val pools = mutableMapOf<Key, Slot>()
     private var useTick = 0
+
+    /** The lookup key, filled per request; see [Key]. */
+    private val probe = Key(orbit = 0, voices = 0, sideAtten = 0.0, kMin = 0.0, kMax = 0.0, drawTries = 0, poolSize = 0, refreshEvery = 0, warmup = 0)
 
     /** Number of live pools (diagnostics/specs). */
     val size: Int get() = pools.size
@@ -173,17 +181,17 @@ class PhasePools(private val rng: Random) {
         // Work-cap BEFORE the key: every warmup above the cap behaves identically, so it must
         // share one pool (the coerced-keys invariant) instead of burning cap slots per value.
         val seed = warmup.toInt().coerceIn(0, minOf(size, PhasePool.PREFIX_WORK_BUDGET / (tries * voices)))
-        val key = Key(
-            orbit = orbit,
-            voices = voices,
-            sideAtten = sideAtten,
-            kMin = lo,
-            kMax = hi,
-            drawTries = tries,
-            poolSize = size,
-            refreshEvery = refresh,
-            warmup = seed
-        )
+        val key = probe
+
+        key.orbit = orbit
+        key.voices = voices
+        key.sideAtten = sideAtten
+        key.kMin = lo
+        key.kMax = hi
+        key.drawTries = tries
+        key.poolSize = size
+        key.refreshEvery = refresh
+        key.warmup = seed
 
         useTick++
 
@@ -215,7 +223,7 @@ class PhasePools(private val rng: Random) {
             refreshEvery = refresh.toDouble(),
             warmup = seed.toDouble(),
             rng = rng,
-        ).also { pools[key] = Slot(pool = it, tick = useTick) }
+        ).also { pools[key.copy()] = Slot(pool = it, tick = useTick) }
     }
 }
 

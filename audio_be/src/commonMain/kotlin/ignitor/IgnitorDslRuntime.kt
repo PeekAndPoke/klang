@@ -76,7 +76,8 @@ fun IgnitorDsl.buildExciter(
 /**
  * The sample rate a build assumes when the caller does not say, a test/tool convenience. Only ONE
  * build-time consumer reads it: the drift lane of a filter with `humanize = true` derives its time
- * constants from it (`analogDriftStepRate`).
+ * constants from it (`analogDriftStepRate`). (The Ignitor phaser builds its kernel at this rate too, but only as a
+ * placeholder: it binds the context's rate at the first block, before the kernel runs.)
  *
  * Every path that RENDERS A VOICE passes the backend's own rate, through
  * `IgnitorRegistry.createExciter`. Two callers do NOT, and neither renders a voice: [toExciter],
@@ -188,7 +189,7 @@ internal class IgnitorBuildCache(
     fun onShared(i: Int) {
         val memo = values[i].ignitor as? MemoizingIgnitor ?: return
 
-        memo.incConsumers()
+        memo.incConsumers(blockFrames)
         resolveFreqKey(i, memo)
     }
 
@@ -240,6 +241,12 @@ internal class IgnitorBuildCache(
     fun usesMusicalFreq(node: IgnitorDsl): Boolean {
         if (node is IgnitorDsl.Freq) {
             return true
+        }
+
+        // The usual count and knob leaves read no frequency: answered before the memo, whose lists allocate on their
+        // first use per build (the counted sources ask about their counts at every build, tidy-up step 10).
+        if (node is IgnitorDsl.Constant || node is IgnitorDsl.Param) {
+            return false
         }
 
         if (node is IgnitorDsl.Detune) {
@@ -467,7 +474,7 @@ private fun IgnitorBuildCache.combineMods(existing: Ignitor?, newMod: Ignitor, n
         memo.markFreqInvariant()
     }
 
-    memo.cachePerBlock()
+    memo.cachePerBlock(blockFrames)
 
     return memo
 }
@@ -899,11 +906,11 @@ internal fun tremoloGain(rate: Ignitor, depth: Ignitor, lfoShapeIndex: Int, samp
  * `(-1, 0)`, which builds [tremoloGain] itself, the classic computation bit for bit.
  */
 internal fun tremoloGainInRange(
-    rate: Ignitor, depth: Ignitor, from: Ignitor, to: Ignitor, lfoShapeIndex: Int, sampleRate: Int,
+    rate: Ignitor, depth: Ignitor, from: Ignitor, to: Ignitor, lfoShapeIndex: Int, sampleRate: Int, blockFrames: Int,
 ): Ignitor {
     val max = depth.max(ConstantIgnitor(0.0))
     // Both bounds read the floored depth: a signal depth is floored once per block and shared (a memo of two readers).
-    val floored = if (max.isBlockConstant) max else MemoizingIgnitor(max).also { it.incConsumers() }
+    val floored = if (max.isBlockConstant) max else MemoizingIgnitor(max).also { it.incConsumers(blockFrames) }
     val one = ConstantIgnitor(1.0)
 
     return tremoloLfo(lfoShapeIndex = lfoShapeIndex, rate = rate, sampleRate = sampleRate).range(from = one + floored * from, to = one + floored * to)
@@ -1087,6 +1094,7 @@ private fun IgnitorDsl.buildRaw(
                     freq = freq.noMod(), analog = analog.noMod(), fundamental = fundamental.noMod(),
                     harmonics = harmonics.noMod(), harmonicsRolloff = harmonicsRolloff.noMod(), octaves = octaves.noMod(), octavesRolloff = octavesRolloff.noMod(),
                     suboctaves = suboctaves.noMod(), suboctavesRolloff = suboctavesRolloff.noMod(), analogSpread = analogSpread.noMod(), phase = phase.phaseInput(),
+                    countsAtBuild = !cache.usesMusicalFreq(harmonics) && !cache.usesMusicalFreq(octaves) && !cache.usesMusicalFreq(suboctaves),
                 ),
             )
         }
@@ -1138,6 +1146,7 @@ private fun IgnitorDsl.buildRaw(
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
 
@@ -1151,6 +1160,7 @@ private fun IgnitorDsl.buildRaw(
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
 
@@ -1164,6 +1174,7 @@ private fun IgnitorDsl.buildRaw(
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
 
@@ -1177,6 +1188,7 @@ private fun IgnitorDsl.buildRaw(
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
 
@@ -1190,6 +1202,7 @@ private fun IgnitorDsl.buildRaw(
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
 
@@ -1219,6 +1232,7 @@ private fun IgnitorDsl.buildRaw(
                 analog = analog.noMod(),
                 analogSpread = analogSpread.noMod(),
                 rng = cache.random,
+                countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
 
@@ -1651,6 +1665,7 @@ private fun IgnitorDsl.buildRaw(
                     to = rangeTo.noMod(),
                     lfoShapeIndex = lfoShapeIndex,
                     sampleRate = cache.sampleRate,
+                    blockFrames = cache.blockFrames,
                 )
             }
         }
