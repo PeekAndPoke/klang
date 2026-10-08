@@ -1,6 +1,10 @@
 # What makes a record sound expensive, and what Klang needs to play it
 
-Status: **research, 2026-10-08. Nothing here is decided.** Asked for by the maintainer after the bass "harmonics trick"
+Status: **research, 2026-10-08. Parked until the engine tidy-up is done** (maintainer, 2026-10-08: "let us wait until
+the current engine work / cleanup is done. I think it is a good point in time to think about the next steps in
+general"). Nothing is decided, except the way forward of section 10: songs first, a technique is built when a song asks
+for it. Section 11 is the checklist that keeps the big missing features possible while the engine changes. Asked for by
+the maintainer after the bass "harmonics trick"
 gave Kokon and Der Schmetterling their weight: "do an extensive research what other production tricks modern music
 production uses to make things sound AAA. Check how each of them would fit into our architecture. What can we build from
 already existing primitives and which new nodes in the ignitors or katalysts would we need to build."
@@ -489,6 +493,99 @@ candidate directly:
   - https://ccrma.stanford.edu/~jatin/Notebooks/adaa.html
   - https://www.vicanek.de/articles/AADistortion.pdf
   - https://faustlibraries.grame.fr/libs/aanl/
+
+## 10. The way forward: songs first (maintainer, 2026-10-08)
+
+> "Building the things just to have them built will not help. We need actual songs to try these things. And I like
+> Kokon and Schmetterling for now. They are a testament of what the engine is capable of doing after 9 months of
+> development."
+
+So the build order of section 6 is not a queue. It is the list a song draws from: **a technique is built when a song
+falls short without it**, and that song is its by-ear test. The maintainer's taste sets which songs: rock and EBM,
+something Depeche Mode-like, and good dance music, with Imany's "Don't Be So Shy" (Filatov & Karas remix) as the
+starting reference: "it has really nice sounds and a superb production. Everything is mixed pretty light-weight, but
+the sound is very full."
+
+### 10.1 Three songs, each the proving ground for its techniques
+
+| # | Song | Style | Proves |
+|---|---|---|---|
+| 1 | **Deep house, 120 BPM** | the "Shy" school (2015 deep house, close to what later became slap house) | K6 (the duck with a band), K2 (width, mono below), K3a (reverb pre-delay, feed filter, self-duck), K4 (filtered and ping-pong delays), I1 (shelves, air), K1 (the clipper on the master) |
+| 2 | **Synth-pop, around 1986 to 1990** | Depeche Mode, the *Music for the Masses* and *Violator* era | K7 (chorus and ensemble on pads), a gated reverb on a big snare (promotes M54 from won't), I5 (sampled-metal percussion as inharmonic partials), a sequenced bass with filter accents (now), K4 (ping-pong), K1 (tape), I6 (a hard-sync lead); the Schmetterling guitar can play a *Personal Jesus*-style riff |
+| 3 | **EBM** | Nitzer Ebb, DAF, Front 242 | a distorted 16th-note sequenced bass (multiband distortion, now), hard compression (K5), the transient core (I3, K8), short rooms with early reflections (K3b), dry vowel stabs (the orbit `vowel`, now) |
+
+Kokon and Der Schmetterling stay the rock test bench: parallel drum compression (K5 `wet`), room reflections, transients.
+
+What the taste says can WAIT: **G5, glide** (808 slides, trap, drill, acid) and **G1, stereo voices** (the wide trance
+supersaw) matter most in genres the maintainer does not lean towards. Depeche-style pads get their width from a bus
+chorus (K7). Both stay at the back of the queue until a song of ours asks for them.
+
+### 10.2 The reference: what we know, and what is a hypothesis
+
+- **Facts:** Imany is a French singer; Filatov & Karas, a Moscow duo, remixed her track in 2015 and it went to number
+  one in several European countries ([Wikipedia](https://en.wikipedia.org/wiki/Don%27t_Be_So_Shy)). A DJ promo archive
+  lists the remix at 120 BPM in G♯ minor
+  ([source](https://cs.uwaterloo.ca/~dtompkin/music/track/RHYTMR16_012/RHYTMR16_012-03.html)); that is software
+  analysis, so confirm the key by ear. No public breakdown of how it was produced was found.
+- **Hypotheses from the genre, for the maintainer's ear to confirm or reject.** The coordinator cannot listen to audio.
+  - **Few elements, each with its own band:** kick, clap, shaker or hats, one rolling bass, one hook instrument, the
+    voice. Fewer layers is what reads as "light".
+  - **The bass carries its weight in its mid harmonics, not its sub.** This is our trick.
+  - **Everything but the kick pumps**, and the pumping is groove and air at once.
+  - **The centre is mono, the sides are wide:** kick, bass and voice sit in the centre; the reverb and delay returns
+    are wide, filtered and ducked.
+  - **An airy top and a loud master that is not crushed:** a shelf, and a clipper before the limiter.
+  - **The mids are cleared for the voice.** Imany sings low, in the low mids.
+- **No vocals:** the hook is a voice and we have none. Our song needs a lead that takes the voice's place: a
+  vowel-coloured synth, or a warm pluck carrying the melody (`docs/tasks/future/phoneme-singing.md` is the far
+  future).
+
+### 10.3 How each song runs
+
+1. **A listening sheet.** The maintainer listens to the reference with a short list of questions:
+   - the sections;
+   - the elements, and which band each one owns;
+   - what pumps;
+   - what is wide;
+   - where the room is.
+
+   Claude brings the genre knowledge; the maintainer's ear is the measurement.
+2. **A first draft** of an original song in the style, written with what exists today, the recipes of section 7
+   included.
+3. **Listen for the gap.** Where it falls short of the reference names the next stage to build, not this list.
+4. **Build that one stage** (`/dsl-design`, `/review-loop`), with the song as its by-ear test; retune the song; repeat.
+
+**Copyright:** "similar" means the same tempo, sound palette, arrangement conventions and production techniques. It
+never means the reference's melody, hook, chord loop or lyrics. The song credits its inspiration the way Kokon credits
+Glass, Reich and Editors ("Inspired by: ...").
+
+**Where it starts:** song 1, with the listening sheet for the reference, once the engine tidy-up
+(`docs/tasks/engine-tidy-up.md`) is done. The task that holds the place is
+[`../tasks/future/next-songs-production-path.md`](../tasks/future/next-songs-production-path.md).
+
+## 11. Doors the engine must keep open
+
+> Maintainer, 2026-10-08: "It is important that the engine does not move into a direction that forbids some of the big
+> features we are missing. This is not very likely, as we are currently working on making everything modular, but you
+> never know."
+
+For each structural gap of section 3: where today's code holds the assumption, and what a change must not do so that
+the feature stays one change away. Read from the tree on 2026-10-08. A change that has to cross one of these lines is
+not forbidden; it is a reason to stop and ask the maintainer first.
+
+| Gap | Where the assumption lives today | Keep it that way |
+|---|---|---|
+| **G1, stereo voices** | A voice renders into one mono `AudioBuffer`; `SendRenderer` is the one place where mono becomes stereo (equal-power `pan`, `gain`). The cull and the teardown fade read the same one buffer | Keep the send as the single mono-to-stereo point. Add no per-voice stage after the send, and no new reader that relies on "a voice is one buffer" beyond those that exist, without a note here. Then a stereo voice is a change to the send, the cull and the fade, not to every node |
+| **G2, bus signals** | Every Katalyst knob is read through `KatalystKnob` (a slot or the authored value) and moved by `KnobGlide`. The knobs stay typed as `IgnitorDsl` expressions (maintainer, 2026-10-07). The master has a param path and is fed `applyParams(null)` | Keep `KatalystKnob` the one read point (no stage caching a raw number it read around it), and keep the knob type an `IgnitorDsl`. Then "a knob is a per-block control signal" is a change in one class, and "the master receives slots" a change in one call |
+| **G3, routing** | The orbits sum in `Cylinders.processAndMix`, in rent order, and the duck runs there as the one cross-orbit pass. A chain is a stereo-in, stereo-out unit with two hosts (`Cylinder`, `MasterBus`; `docs/tasks/future/one-chain-host.md`). A chain reports its latency (`KatalystChain.latencyFrames`); authored lookahead is uncompensated by choice | Keep the summation and the cross-orbit pass in one place, keep a chain host-free (stereo in, stereo out, its own tail and latency answers), and keep reporting latency: a routing graph with parallel paths needs it to compensate. This is the ground [`future/signal-graph-engine.md`](future/signal-graph-engine.md) builds on |
+| **G4, a delay line on the voice** | `DelayLine` lives in `effects/`, fractional, crossfading; the Karplus string has its own loop | Keep `DelayLine` free of Katalyst and orbit types, so a voice node can own one. A per-voice ring is sized and allocated at voice build (tidy-up step 10's rule), never at render |
+| **G5, glide between notes** | `Ignitor.generate` receives `freqHz` per block, so a pitch that moves during a voice's life is structurally fine. The pitch stage is moving into the tree (`docs/tasks/pitch-pipeline-into-the-tree.md`, V1); voice takeover is blocked on design (`docs/tasks/voice-takeover.md`) | Keep the note's pitch a per-block value end to end: do not bake the note frequency into a build-time constant on a path where a glide would need it to move. A memo keyed on freq (`MemoizingIgnitor.freqInvariant`) then recomputes per pitch, which is correct for a glide, only slower |
+| **G6, velocity in the tree** | Sprudel multiplies `velocity` into `gain` in the frontend, before the wire | Keep the fold in the frontend, where it is reversible: if the tree should ever see velocity, it is a slot in `ignitorParams`, with no wire change |
+| **4.0 (b), an Ignitor on the bus** | `IgniteContext` is voice-shaped (`voiceDurationFrames`, `gateEndFrame`, the voice rng) | A new node that needs only the sample rate, the block and its buffer (a filter, a shaper, a delay, a follower) should not reach into the voice-only fields. Then it can run on a bus buffer later. Envelopes and gates are voice concepts and may |
+
+Two more that are already laws and should stay so, because every candidate here leans on them: **a stage at its off
+value is not built** (so a new stage costs nothing in a song that does not use it; the Fairphone 4 is the budget), and
+**block size 128** (a tone parameter).
 
 What we built here, together: the bass that started this is the maintainer's ear and a sine bank Claude wrote; the
 map above is two research agents and one coordinator reading the engine the maintainer and Claude built.

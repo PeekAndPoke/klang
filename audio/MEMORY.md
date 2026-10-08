@@ -237,6 +237,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
   `optimize-constant-control-fast-path.md`, `audit-parked-decisions.md`, `worklet-clock-divergence.md`,
   `high-performance-audio-backend.md` (parked behind the sound-first priorities).
+- **Keep possible** (maintainer, 2026-10-08): stereo voices, signal knobs on a bus and on the master, routing,
+  a delay line on the voice, glide, velocity in the tree, an Ignitor on a bus. Where each assumption lives and what a
+  change must not do: `docs/plans/aaa-production-tricks.md` §11. Crossing one of those lines is a question for the
+  maintainer first.
 - **Never measured**: the build-time cost of the gate's ON path (the per-block numbers are in the history's gate
   entry).
 
