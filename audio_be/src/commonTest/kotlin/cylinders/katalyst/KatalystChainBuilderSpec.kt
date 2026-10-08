@@ -61,9 +61,9 @@ class KatalystChainBuilderSpec : StringSpec({
     "the classic chain builds the historical effects and the fader, in DSL order, the duck outside the list" {
         val chain = build(KatalystDsl.classic)
 
-        chain.pipeline.map { it::class.simpleName } shouldBe listOf(
-            "KatalystBodyEffect",
-            "KatalystFormantEffect",
+        chain.pipeline.map { it.stageName() } shouldBe listOf(
+            "KatalystResonatorEffect(BODY)",
+            "KatalystResonatorEffect(VOWEL)",
             "KatalystDelayEffect",
             "KatalystReverbEffect",
             "KatalystPhaserEffect",

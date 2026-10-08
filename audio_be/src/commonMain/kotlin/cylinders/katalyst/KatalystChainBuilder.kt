@@ -96,7 +96,11 @@ object KatalystChainBuilder {
                 // per-voice chain). In the classic chain they run first, so they color the dry
                 // mix before the time/dynamics effects.
                 is KatalystStageDsl.Body -> {
-                    val fx = KatalystBodyEffect(sampleRate.toDouble(), blockFrames)
+                    val fx = KatalystResonatorEffect(
+                        kind = ResonatorKind.BODY,
+                        sampleRate = sampleRate.toDouble(),
+                        blockFrames = blockFrames,
+                    )
                     pipeline.add(fx)
 
                     // The material is a slot like the rest, holding the INDEX of a name in
@@ -104,23 +108,29 @@ object KatalystChainBuilder {
                     // "never set", so a knob the bus cannot read leaves the stage off rather
                     // than picking a box nobody asked for.
                     writers.add(
-                        KatalystBodyWriter(
+                        KatalystResonatorWriter(
                             fx = fx,
-                            material = KatalystKnob(stage.material, SLOT_UNSET),
+                            index = KatalystKnob(stage.material, SLOT_UNSET),
                             wet = KatalystKnob(stage.wet, BODY_WET),
                             floor = KatalystKnob(stage.floor, BODY_FLOOR),
                         )
                     )
                 }
 
+                // The vowel is the same stage class with the other kind, and its own instance: a chain that declares
+                // both runs both (a vowel sung through a body).
                 is KatalystStageDsl.Vowel -> {
-                    val fx = KatalystFormantEffect(sampleRate.toDouble(), blockFrames)
+                    val fx = KatalystResonatorEffect(
+                        kind = ResonatorKind.VOWEL,
+                        sampleRate = sampleRate.toDouble(),
+                        blockFrames = blockFrames,
+                    )
                     pipeline.add(fx)
 
                     writers.add(
-                        KatalystVowelWriter(
+                        KatalystResonatorWriter(
                             fx = fx,
-                            vowel = KatalystKnob(stage.vowel, SLOT_UNSET),
+                            index = KatalystKnob(stage.vowel, SLOT_UNSET),
                             wet = KatalystKnob(stage.wet, VOWEL_WET),
                             floor = KatalystKnob(stage.floor, VOWEL_FLOOR),
                         )

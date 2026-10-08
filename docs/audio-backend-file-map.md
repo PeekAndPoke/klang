@@ -70,7 +70,8 @@ Cmd → PlaybackEngineDispatcher.handle
   its owner (the newest `Sounding` voice: `offer`, `commitOwner`), the check-in, the chain cache and the swap,
   `tryDeactivate` (tail check).
 - `cylinders/katalyst/`: `KatalystChain` + `KatalystChainBuilder` (the wire `KatalystDsl` to stages), one effect per
-  stage (`Eq`, `Gain`, `Delay`, `Reverb`, `Phaser`, `Compressor`, `Body`, `Formant` for the vowel, `Duck`),
+  stage (`Eq`, `Gain`, `Delay`, `Reverb`, `Phaser`, `Compressor`, `Resonator` for body and vowel (one class, two kinds; its
+  tables `ResonatorTables`), `Duck`),
   `KatalystFilterSwap` (the body and vowel bank crossfade), `KatalystSlots` + `KatalystSlotWriters` (`katp`),
   `KatalystRegistry` (one fork per playback, serving orbits and the output), `KatalystContext`.
 - `master/MasterBus.kt`: the same `KatalystChain` at the output position (phase 3 step 12); `master(Katalyst())`
@@ -86,8 +87,9 @@ Cmd → PlaybackEngineDispatcher.handle
 
 ## Filters
 
-- `filters/`: `AudioFilter`, `LowPassHighPassFilters` (`BaseSvf`/`SvfBPF`, one-pole, DcBlocker, `createFormant`/`createBody`),
-  `ResonatorBank`, `ParallelMixFilter`, `EqCore`, `WetDryMix`, `SvfCoeffSweep` (the per-block coefficient glide of `Ignitor.svf`, also `BaseSvf`'s constructor snap).
+- `filters/`: `AudioFilter`, `LowPassHighPassFilters` (the SVF coefficient helpers, DcBlocker, `createFormant`/`createBody`,
+  `bodyGain`/`vowelGain`), `ResonatorBank` with `ResonatorTable` and `ResonatorConfig`, `EqCore`, `WetDryMix`,
+  `SvfCoeffSweep` (the per-block coefficient glide of `Ignitor.svf`).
 
 ## Ignitors (oscillators / exciters)
 

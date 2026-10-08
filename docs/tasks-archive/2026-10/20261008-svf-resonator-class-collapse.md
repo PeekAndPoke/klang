@@ -1,8 +1,16 @@
 # Collapse `BaseSvf` and `SvfBPF` into one static-coefficient resonator class
 
-Status: **future, parked.** Found in the phase 3 step 9 (a2) review (2026-09-27); opened as its own file 2026-09-28
-when the phase 3 record was archived (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md`, section 9 row
-"9 follow-up").
+> **DONE 2026-10-08 by engine tidy-up step 12 (a)** (`../tasks/engine-tidy-up.md`, "Step 12"). Further than this
+> file asked: `BaseSvf`, `SvfBPF` and the parallel-mix wrapper are gone, and `ResonatorBank` is one mono bank that
+> holds every band's coefficients and state in flat arrays and runs the dry/wet blend itself. The coefficients come
+> from `computeSvfCoeffs` at install (bit-identical to the constructor path at zero sweep frames); no sweep fields,
+> no `g`, no `cutoffOffsetMul`. The sweep rows went with the sweep, the kernel and band rows moved to
+> `ResonatorBankSpec` (raw bits against the law written in the spec), `EffectBenchmark`'s `SvfBPF` case is a one-band
+> bank, and `SvfCoeffSweep`'s KDoc names its one host, `Ignitor.svf`.
+
+Status: **done** (was: future, parked). Found in the phase 3 step 9 (a2) review (2026-09-27); opened as its own file
+2026-09-28 when the phase 3 record was archived (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md`,
+section 9 row "9 follow-up").
 
 ## What it is
 

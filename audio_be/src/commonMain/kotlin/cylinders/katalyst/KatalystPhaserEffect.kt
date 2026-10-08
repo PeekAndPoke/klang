@@ -219,7 +219,7 @@ class KatalystPhaserEffect(
     /**
      * False: the cascade, the latch and the LFO phase are state, but the phaser is an INSERT, so
      * whatever it still carries is in `ctx.mixBuffer` by the time
-     * `Cylinder.isMixBufferSilent()` scans it. See [KatalystBodyEffect.hasTail].
+     * `Cylinder.isMixBufferSilent()` scans it. See [KatalystResonatorEffect.hasTail].
      */
     override fun hasTail(): Boolean = false
 

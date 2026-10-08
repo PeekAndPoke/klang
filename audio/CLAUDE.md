@@ -43,7 +43,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | `src/commonMain/kotlin/cylinders/Cylinders.kt`      | Effect bus manager                                                                                                  |
 | `src/commonMain/kotlin/cylinders/Cylinder.kt`       | Single effect bus (delay/reverb/phaser/…)                                                                           |
 | `src/commonMain/kotlin/cylinders/katalyst/`         | Orbit-level effects: body/vowel resonators, `KatalystFilterSwap` declick (ownership: `Cylinder.offer`)                |
-| `src/commonMain/kotlin/filters/`                    | SVF kernels (`BaseSvf`, `SvfBPF`), OnePoles, resonator bank (`ResonatorBank`/`ParallelMixFilter`)     |
+| `src/commonMain/kotlin/filters/`                    | SVF coefficient helpers, DcBlocker, the resonator bank (`ResonatorBank`, `ResonatorTable`), `EqCore`    |
 | `src/commonMain/kotlin/ignitor/Ignitors.kt`         | Oscillator + signal-gen factories (Ignitor DSL); samples via `ignitor/SampleIgnitor.kt`                             |
 | `src/jvmMain/kotlin/JvmAudioBackend.kt`             | JVM: javax.sound.sampled output                                                                                     |
 | `src/jsMain/kotlin/JsAudioBackend.kt`               | JS: Web Audio API AudioContext output                                                                               |

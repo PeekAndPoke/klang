@@ -42,8 +42,8 @@ mod-threading proof.
 ## 2. Parallel tap fusion
 
 > **Re-specified NON-PARITY by C2 (filter unification, 2026-08-24):** the bandpass family is
-> unity-peak now (EqCore RAW_TAP, the ignitor svf kernel and SvfBPF all scale the v1 tap by
-> the stored k), so R2's acceptance criterion is NO LONGER bit-parity with the legacy
+> unity-peak now (EqCore RAW_TAP, the ignitor svf kernel and the `ResonatorBank` bands, `SvfBPF` until
+> 2026-10-08, all scale the v1 tap by the stored k), so R2's acceptance criterion is NO LONGER bit-parity with the legacy
 > Plus/Times graph — both sides are normalised, and a fused tap must match the NORMALISED
 > unfused chain. The old coupled behaviour is not an oracle for anything any more.
 

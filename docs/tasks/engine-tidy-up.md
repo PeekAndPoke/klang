@@ -703,6 +703,146 @@ twins of this one.
 - **Mutation-checked:** the blend reassociated as `(1 - w) * base + w * other` (2 rows red), the weight as
   `from - (from - to) * ...` (5 red), `remaining` off by one (3 red), the target written before `other` is read (red
   on the aliasing row).
+- **Performance:** neutral. HEAD against HEAD plus (b), on the resonator change cases (where the fades run): JVM 0.98
+  to 1.00, V8 0.98 to 1.00, each against a HEAD-against-HEAD control of 0.98 to 1.00; V8 allocates the same bytes.
+  `Crossfading.process` grew from 655 to 806 bytes and `Fading.process` from 531 to 686 (two mono passes where one
+  fused loop was); both were above the JVM's inlining size before.
+
+### (a) Body and vowel as one implementation (B2.10, B4.11): done 2026-10-08
+
+The maintainer agreed (2026-10-08, "Decided" below). `KatalystBodyEffect` and `KatalystFormantEffect` were
+token-identical twins around one DSP; they are one class now, `KatalystResonatorEffect(kind: ResonatorKind, ...)` with
+`enum class ResonatorKind { BODY, VOWEL }` (the kind supplies the unset wet and floor, at control rate), and one writer,
+`KatalystResonatorWriter`. A chain still declares a body stage AND a vowel stage, two instances with their own slots
+and banks: `vowel("a").body(material = "wood")` runs both, and the golden below renders exactly that.
+`KatalystChain.body` / `.vowel` find their stage by kind.
+
+- **The DSP** (shape R of the scope). `ResonatorBank` is one MONO bank: per band `a1`, `a2`, `a3`, `k`, the gain and
+  the two integrators in flat arrays, the dry/wet blend (`WetDryMix`, p = 2) and a wet scratch sized at construction.
+  `install(config)` makes it a fresh bank on a table, a mix and a floor (every integrator zeroed); `process` keeps the
+  `amount <= 0` bypass first, runs each band in its own small method (`runBand`, state in locals, written back once)
+  and blends. `ParallelMixFilter`, `BaseSvf` and `SvfBPF` are gone (that closes
+  `svf-resonator-class-collapse.md`, archived as `../tasks-archive/2026-10/20261008-svf-resonator-class-collapse.md`);
+  `SvfCoeffSweep` stays for `Ignitor.svf`. `createBody` / `createFormant` stay as one-shot builders for the specs and
+  the benchmark, through `install`.
+- **The tables.** `ResonatorTable` holds one row list's `freq` and `q` (raw) and gains (`bodyGain` / `vowelGain`, the
+  rules unchanged). `ResonatorTables` builds one per catalogue index once, and indices whose rows are equal share ONE
+  instance, so the stage compares tables by reference and a switch among aliases (`bass:a`, `bass:ei`, `bass:au`;
+  `alto:*` and `countertenor:*`; an umlaut's two spellings) installs nothing, as the structural compare did. The
+  catalogues expose `slotIndexAt(index): Int` (`BodyMaterials`, `VowelBands`), which `modesAt` / `bandsAt` use too, on
+  the existing shared rule `catalogueIndexAt` with fallback 0 (the scope proposed a new copy of the rounding).
+- **The pool** (coordinator decision): two pairs, built at the stage's FIRST install (the classic chain declares both
+  stages and most voices use neither), the EQ's `freeBank` rule (here `freePair`): an install takes the pair the swap
+  does not hold.
+  One allocation per stage life. The rest of the lifecycle (the OFF arm, resume by identity, the parking, the landing
+  re-offer) is the twins' code; parking keeps a table reference and two numbers.
+- **`ResonatorBank`'s rule, reworded, not dropped:** a SOUNDING bank never retunes; only a bank nobody hears is
+  reconfigured, from zero, which is bit-identical to building it new. The maintainer's rejection of the 5c-10 morph
+  stays quoted.
+- **The guardrail** "`KatalystBodyEffect` / `KatalystFormantEffect` are intentional un-deduped twins" in
+  `.claude/skills/review-loop/audio-constraints.md` is retired in this change; one line says one class, two kinds.
+- **Changed for specs only:** a null floor and an explicit `BODY_FLOOR` / `VOWEL_FLOOR` are one config now (the stage
+  takes a number; the scope placed this in (c)), and a spec's two equal band lists are one table only through the
+  spec helper `SpecResonatorTables` (equal rows, one table, the engine's rule). Production never passed either.
+- **Performance, and what V8 taught.** The first shape passed the mix and the floor to `configure` as arguments every
+  block. Bit-identical and faster, but on V8 a non-integral double handed to a function it does not inline is a heap
+  number per call: about 40 bytes per block of a steady body, where the twins (one carrier object per change) took none. The
+  stage is offered a `ResonatorConfig` now (table, mix, floor; the writer owns one and fills it at resolve, the stage
+  keeps its own for what it installed and what it parked), and the bank installs from one. Then `install`, with the
+  coefficient math inlined by Kotlin, used up V8's inlining budget and boxed the wet/dry law's doubles, about 140 bytes
+  per change; split into `installBand` and `installBlend`, it boxes none. The rule is in `audio/ref/performance.md`.
+  Final numbers (one case per process, against HEAD plus (b), with an old-against-old control; tables in
+  `tmp/reviews/tidy-step12-report.md`):
+  - **V8:** 0.56 to 0.57 of the old time on every case (steady body, vowel, both; a change every 16 blocks; a change
+    every block), control 0.97 to 1.01. Scavenges per 42,000 blocks: 8 to 16 before on the change cases, 0 to 1 now,
+    the steady cases' level. Allocation per change, over 4.2 million blocks: about 18 KB (body) and 12.5 KB (vowel)
+    before, about 110 bytes now, all of it outside the stage: about 94 bytes in the chain's re-resolve of a new param
+    map (shared code; about 155 before) and the rest in the swap's fade, as at HEAD. The stage's install allocates
+    nothing.
+  - **JVM:** 0.82 to 0.93 isolated, 0.85 to 0.89 with every case warmed in one JVM, control 0.99 to 1.05. Bytes per
+    change: 13,000 (body) and 10,700 (vowel) before, 0 now (a constant 96 bytes per 16,000-block run, not per
+    change; the stage's own row measures 0).
+  - **Method sizes (JVM):** `runBand` 246 bytes, `ResonatorBank.process` 131, `install` 76, `installBand` 393,
+    `installBlend` 73; `KatalystResonatorEffect.configure` 330 (the body twin's 323). Before, per sample:
+    `SvfBPF.process` 284 per band, `ResonatorBank.process` 247, `ParallelMixFilter.process` 154, and an `AudioFilter`
+    call per band per block. Nothing in a per-sample loop allocates, boxes or calls through a function value.
+- **Proof:** a raw-bits golden at CHAIN level captured before the change (scratch, not committed; 2,064 lines): the
+  classic chain through on, a change, a change mid-fade (parked, then replaced), the alias switches `bass:a` to
+  `bass:ei` to `bass:au`, a vowel change and an OFF parked mid-fade and taken back, a body return mid fade-out, a
+  return mid fade-in, landings to Off and a reinstall after them, a reset mid-fade and the fresh snap after it, a
+  burst of a change every block on both stages, wet 0, below 0, above 1, NaN, -0.0; floor NaN, 0.05, -0.0 and 0; no
+  owner; and a chain declaring a constant vowel `a` and body `wood`, in both orders; at 44.1 and 48 kHz on noise, sines
+  and a hostile source (NaN, both infinities, ±1e300, a denormal, -0.0), with the stages' seams per block.
+  Identical (`cmp`) for the first shape and again for the final one; dropping the install's state zeroing changed 784
+  of its lines. The (b) golden identical too. The 18-song corpus and Kokon bit-identical (label `ep1-t12a`; Der
+  Schmetterling from HEAD's text). `:audio_be:jvmTest` (2,395), `:audio_be:jsBrowserTest` (2,291) and
+  `:audio_bridge:jvmTest` (146) green.
+- **Rows** (each mutation-checked):
+  1. `ResonatorBankSpec`: the bank against the law written in the spec, raw bits, on a hostile source in ragged blocks
+     at eight mix and floor cases (the bypass included); the band order is observable. Red under a reassociated tap,
+     a reassociated blend, a skipped bypass.
+  2. A reinstalled bank renders as one built new, raw bits. Red without the state zeroing (also on four rows each of
+     `KatalystResonatorBodySpec` and `KatalystResonatorVowelSpec`).
+  3. `KatalystResonatorEffectSpec`: installs alternate between the pairs while one sounds, a change mid-fade takes
+     none, a re-offer installs nothing, after a landing to Off the first pair again (the `lastInstalledPair` and
+     `installs` seams); the pool is built at the first install, not with the stage. Red when every install takes pair
+     0 (also six rows of `KatalystResonatorBodySpec`), and when the pool is built eagerly.
+  4. `KatalystResonatorAllocationSpec` (jvmTest, the `FirstBlockAllocationSpec` way): material and vowel changes every
+     few blocks, bursts, offs, over ten runs: the fewest bytes a later run took is 0. Red when `install` allocates. It
+     holds in the shared test JVM (it measures the stage directly, no megamorphic boxing on its path).
+  5. `ResonatorTablesSpec`: two indices share a table exactly when their rows are equal (and the vowel catalogue has
+     such pairs); every table's freq and q raw and its gains bit-exact against the rules written with literal
+     constants; the capacity is the largest row count (8 and 5); a slot value reads the catalogue's index rule. Red
+     without the sharing and under a regrouped vowel gain.
+  6. `KatalystResonatorEffectSpec`: a switch among names of one bank renders as no switch, raw bits, at chain level,
+     with a control that a real switch does change the output. Captured against the twins first (green there, and
+     red there with the compare made `===`); red now without the sharing.
+  7. A table larger than the pool's capacity renders as a bank built new for it, raw bits, on the bank and through
+     the stage. Red when the bank does not grow.
+  Also: `CatalogueIndexSpec` pins `slotIndexAt`; a writer that does not fill the mix goes red on
+  `KatalystSlotResolverSpec` and `KatalystClassicMatchesUntouchedVoiceSpec`; an offered parking slot not cleared first
+  goes red on the body spec's parking rows. Review round 1 added a row in `KatalystResonatorEffectSpec`: a chain that
+  declares the vowel before the body (and the other way round) runs both, and `chain.vowel` / `chain.body` each find
+  their own kind; red when the vowel accessor drops its kind filter (that mutant survived every spec before) and when
+  the body accessor takes the first resonator.
+- **Specs moved with the classes:** `KatalystBodyEffectSpec` and `KatalystFormantEffectSpec` are
+  `KatalystResonatorBodySpec` and `KatalystResonatorVowelSpec` (the assertions unchanged but for their spelling and
+  the null floor; the oracles stay at 1e-12, which is why rows 1 and 2 are raw bits); the `SvfBPF` rows of
+  `LowPassHighPassFiltersSpec` and the parallel-mix wrapper's spec moved into `ResonatorBankSpec` (the sweep and
+  `cutoffOffsetMul` rows went with the sweep); the order rows compare a stage name with its kind. `EffectBenchmark`'s
+  `SvfBPF` case is a one-band bank.
+
+### Found during tidy-up step 12
+
+- **A param map change allocates on V8 in the chain's re-resolve** (about 94 bytes per new map instance, the
+  resonator's table lookup excluded by experiment; about 155 before this step, when the writer also built a carrier).
+  It is `KatalystChain.resolveParams` and `KatalystKnob.resolve` for every slot writer, so a `.katp` burst pays it
+  per block. Not measured per stage; its own probe, behaviour-neutral.
+- **B4.5's orbit-side item for the resonators is closed:** the bank's wet scratch is sized at construction (it grew
+  at its first `process`), and the parallel-mix wrapper and its scratch are gone. The other B4.5 items stand.
+- **The delay, reverb and phaser allocate on V8 in steady state, before and after this step alike** (review round 1,
+  reviewer B, `tmp/reviews/tidy12-r1-B.md`, the classic chain with one stage set and nothing changing, V8 at
+  `--max-semi-space-size=1`): delay 99 to 118 bytes per block (5 to 6 scavenges per 420,000 blocks), reverb 79 (4),
+  phaser 99 (5); the gain (`gain.gain` 0.8) 0; the compressor 0 steady and 60 bytes per block when toggled every 16
+  blocks (about 960 bytes per switch). That is about 30 to 45 KB/s per orbit with a delay, reverb or phaser. Their
+  writers pass doubles to `configure` every block, the shape that cost the resonator stage 40 bytes per block (see
+  (a) and `audio/ref/performance.md`); the boxing site is not located yet. Its own probe, behaviour-neutral.
+- **Accepted (coordinator, round 1): the compressor's switch fade is 2 to 8 percent slower on the JVM** (reviewer B,
+  MINOR 1). `Fading.process` runs two mono `crossfadeLinear` passes where one fused stereo loop was. On the classic
+  chain with the compressor toggled every 16 blocks (fading nearly all the time): old 3,834 and new 4,000 ns/block
+  over 5 rounds (1.04), 3,830 and 4,138 over 8 (1.08, every new round above every old one); attributed, (b) alone
+  1.01 to 1.025 against a control of 0.99 to 1.00, the rest of the new tree's spread bimodal per process (about 3,900
+  or 4,150), which looks like a JIT decision. V8 0.99 to 1.01 against a 0.99 to 1.01 control; no fade at all, 1.00 on
+  both. At most about 300 ns per block for the 50 ms after a switch, on the JVM only. A stereo variant of the helper
+  is the shape if the JVM number is ever wanted back.
+- **Accepted (coordinator, round 1): a shelved cylinder keeps the resonator pool** (reviewer B, MINOR 2). `retire()`
+  is `reset()`, which keeps the pool, and the classic chain lives as long as its cylinder: about 7.3 KB for the body
+  and 6.4 KB for the vowel once both have been used, about 13.8 KB per cylinder, at most about 440 KB process-wide
+  across the warehouse shelf's 32 idle cylinders. A cached declared chain (`MAX_CACHED_CHAINS`, 8 per cylinder) gets
+  its own pools at its first install, freed when it is evicted or at `startNewLife`. It meets the cleanup rule: the
+  pool is the stage's own, built once per stage life, nothing grows per edit, and it goes with the chain or the
+  cylinder. Before the step a shelved cylinder held no resonator memory (a released bank was dropped); now it holds
+  the pool. Dropping the pool in `retire()` would cost one 7 KB build at the next life's first install.
 
 ## Decisions for the maintainer
 
@@ -830,7 +970,8 @@ Audit section E, D1 to D11, and the judgement calls C4.1 and C4.2. The ones that
   nothing in the browser. A non-null `controlRateValue(freqHz): Double` beside `isBlockConstant` would remove it, if a
   JVM backend ever needs a render without allocation.
 - **B4.5's orbit-side items were not in this step:** the scratch of `ResonatorBank` and `ParallelMixFilter` still
-  starts at size 0 and grows at their first `process`, `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
+  starts at size 0 and grows at their first `process` (closed by step 12: the bank's scratch is sized at
+  construction, the wrapper is gone), `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
   `ScratchBuffers.oversample` looks its sub-pool up in a map per block (its first use per factor allocates, once per
   warehouse). All are per orbit or per backend, not per voice.
 - **The active list's order still reaches the phase pool takes** (lifecycle step 5's finding above): unchanged by this

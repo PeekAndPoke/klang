@@ -147,7 +147,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // belt to that braces, not the mechanism.
         //
         // `body.wet` and `vowel.wet` joined them in round 1 of that step's review, for the
-        // compressor's reason and not the index's: `KatalystBodyEffect.configure` substitutes BODY_WET for
+        // compressor's reason and not the index's: `KatalystResonatorEffect.configure` substitutes BODY_WET for
         // an UNSET mix, and a 0.0 default is set, so a material-only `body(material = "wood")` ran the bank
         // fully dry on a declared chain. Safe here and nowhere else in this family, because these
         // two stages are gated on their NAME: no material, no stage, whatever the amount says.

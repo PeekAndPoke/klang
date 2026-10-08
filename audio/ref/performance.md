@@ -242,6 +242,20 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   ran 424 to 633 scavenges per run and 40 to 76 percent slower (records: `docs/tasks/engine-tidy-up.md`, step 11
   (b)); the unison stacks' phased loops showed the same with arguments. No test can pin it, because the sound is
   bit-identical either way: the KDoc at the site is the guard. Check a new hot loop with `--trace-gc`.
+- **On V8, a non-integral double handed to a function that is not inlined is a heap number per call** (2026-10-08,
+  engine tidy-up step 12 (a)). The calling convention is tagged, so a double argument or a double result of a call
+  V8 does not inline is boxed; an integral value in Smi range (a mix of 1.0, a floor of 0) travels as a Smi and is
+  not. Measured for the resonator stage: its first shape passed its mix and floor to `configure` every block and took
+  about 40 bytes per block of a steady body. Its remedy is a holder the caller owns and fills at control rate
+  (`ResonatorConfig`, like the EQ's `DoubleArray`), handed over by reference; and a method that Kotlin's `inline`
+  makes large can leave V8 without the budget to inline its small callees (`ResonatorBank.install` boxed the wet/dry
+  law's doubles until its per-band and blend halves became methods of their own). The JVM boxes none of this. The
+  other writers that pass doubles per block are not converted: the delay, reverb and phaser allocate 79 to 118 bytes
+  per block in steady state on V8 (measured in the step 12 review, the same before and after the step), the gain and
+  the steady compressor 0; where they box is not located yet (`docs/tasks/engine-tidy-up.md`, step 12, "Found").
+  Measure with `--trace-gc-nvp` (it reports the bytes allocated since the last collection) and
+  `--max-semi-space-size=1`, so a collection falls every megabyte and a residue of a few bytes per block is counted;
+  at the default semi-space one run read 0 and the next 20.7 bytes per block for the same code.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per

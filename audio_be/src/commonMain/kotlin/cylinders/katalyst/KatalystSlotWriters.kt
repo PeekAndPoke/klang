@@ -6,9 +6,7 @@
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_be.filters.ResonatorConfig
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
@@ -35,76 +33,52 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 // (body, vowel, the reverb's lowpass), never in both (audit B2.11, 2026-10-07).
 
 /**
- * Body: all three knobs are slots, the material as the INDEX of a name in the shared catalogue
- * (Katalyst step 5a-2). The index-to-bands lookup lives in [resolve] with the rest of the
- * composite, never in [apply]: `apply` writes a `FilterDef` that is already in hand.
+ * Body and vowel (engine tidy-up step 12 (a): one writer, as there is one stage class): all three knobs are slots, the
+ * material or the vowel as the INDEX of a name in its shared catalogue (Katalyst step 5a-2). The index-to-table lookup
+ * lives in [resolve], never in [apply]: `apply` hands over a config that is already in hand.
  *
- * The bands come from `BodyMaterials.modesAt(index)`. An unset slot (non-finite), an index of 0
- * (`none`) and an index out of range are the same answer, null, which is the stage off whatever
- * `wet` says: the rule `SprudelVoiceData.toVoiceData` follows for an unknown NAME on the voice
- * path; the name-to-index half is `BodyMaterials.indexOf`, and both doors call it.
+ * The table comes from [ResonatorTables.at] for the stage's kind, by the catalogue's own index rule
+ * (`BodyMaterials.slotIndexAt`, `VowelBands.slotIndexAt`). An unset slot (non-finite), an index of 0 (`none`) and an
+ * index out of range are the same answer, null, which is the stage off whatever `wet` says: the rule
+ * `SprudelVoiceData.toVoiceData` follows for an unknown NAME on the voice path; the name-to-index half is
+ * `BodyMaterials.indexOf` / `VowelBands.indexOf`, and both doors call it.
  *
- * `wet` and `floor` pass through RAW: a non-finite one is unset, and [KatalystBodyEffect.configure]
- * substitutes `BODY_WET` / `BODY_FLOOR` for it before its compare (a raw `katp` write is the only
- * way one arrives: the `body(...)` door fills its own companions, `/dsl-design` §4, checklist 11).
+ * `wet` and `floor` pass through RAW: a non-finite one is unset, and [KatalystResonatorEffect.configure] substitutes
+ * the kind's constant for it before its compare (a raw `katp` write is the only way one arrives: the `body(...)` and
+ * `vowel(...)` doors fill their own companions, `/dsl-design` §4, checklist 11).
  */
-internal class KatalystBodyWriter(
-    private val fx: KatalystBodyEffect,
-    private val material: KatalystKnob,
+internal class KatalystResonatorWriter(
+    private val fx: KatalystResonatorEffect,
+    /** The catalogue index: `body.material` or `vowel.vowel`. */
+    private val index: KatalystKnob,
     private val wet: KatalystKnob,
     private val floor: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var def: FilterDef.Body? = buildDef()
+    /** This writer's own config, rewritten at [resolve] and handed over by reference ([ResonatorConfig] says why). */
+    private val config = ResonatorConfig()
+
+    init {
+        fill()
+    }
 
     override fun resolve(params: Map<String, Double>?) {
-        material.resolve(params)
+        index.resolve(params)
         wet.resolve(params)
         floor.resolve(params)
-        def = buildDef()
+        fill()
     }
 
     override fun apply() {
-        // null (the chain names no material, or an index out of range) turns the resonator off, and
-        // the effect short-circuits an unchanged def, so this is free on an unchanged block.
-        fx.configure(def)
+        // A null table (the chain names no material or vowel, or an index out of range) turns the resonator off, and
+        // the effect short-circuits an unchanged config, so this is free on an unchanged block.
+        fx.configure(config)
     }
 
-    private fun buildDef(): FilterDef.Body? {
-        val bands = BodyMaterials.modesAt(material.value) ?: return null
-
-        return FilterDef.Body(bands = bands, mix = wet.value, floor = floor.value)
-    }
-}
-
-/**
- * Vowel: the twin of [KatalystBodyWriter], with the formant bank, `VowelBands.bandsAt` as the
- * lookup, and [KatalystFormantEffect.configure] substituting `VOWEL_WET` / `VOWEL_FLOOR`.
- */
-internal class KatalystVowelWriter(
-    private val fx: KatalystFormantEffect,
-    private val vowel: KatalystKnob,
-    private val wet: KatalystKnob,
-    private val floor: KatalystKnob,
-) : KatalystSlotWriter {
-
-    private var def: FilterDef.Formant? = buildDef()
-
-    override fun resolve(params: Map<String, Double>?) {
-        vowel.resolve(params)
-        wet.resolve(params)
-        floor.resolve(params)
-        def = buildDef()
-    }
-
-    override fun apply() {
-        fx.configure(def)
-    }
-
-    private fun buildDef(): FilterDef.Formant? {
-        val bands = VowelBands.bandsAt(vowel.value) ?: return null
-
-        return FilterDef.Formant(bands = bands, mix = wet.value, floor = floor.value)
+    private fun fill() {
+        config.table = ResonatorTables.at(kind = fx.kind, slotValue = index.value)
+        config.mix = wet.value
+        config.floor = floor.value
     }
 }
 

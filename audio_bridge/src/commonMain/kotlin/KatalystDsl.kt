@@ -157,12 +157,12 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *
          * **`body.wet` and `vowel.wet` follow the compressor, not the sends** (round 1 of step
          * 5a-2's review, 2026-09-18). They are [SLOT_UNSET] rather than 0.0, because 0.0 is a SET
-         * value: `KatalystBodyEffect.configure` substitutes [BODY_WET] for an unset mix exactly as
+         * value: `KatalystResonatorEffect.configure` substitutes [BODY_WET] for an unset mix exactly as
          * the compressor writer substitutes [COMPRESSOR_THRESHOLD_DB], and with a 0.0 default it never saw
          * "unset", so a material-only `body(material = "wood")` on a declared classic chain ran the bank at a
          * fully dry mix while the same call on an undeclared orbit played it at [BODY_WET]. Unset
          * is safe here and NOT on the sends, because these two stages are gated on their NAME:
-         * `KatalystBodyWriter` builds no def whenever the bands are null, so an orbit that names no material
+         * `KatalystResonatorWriter` resolves no table for an unnamed index, so an orbit that names no material
          * cannot be switched on by a wet, however large. The engine's substitution is what makes a
          * raw `katp("body.material", 1)` behave like the door, and it is the NaN rule for a raw
          * write, not a second fill.

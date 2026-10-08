@@ -82,7 +82,7 @@ class LangVowelComprehensiveSpec : StringSpec({
 
     "the voice path resolves through the shared VowelBands table (Katalyst step 3c parity)" {
         // The door half of the parity `KatalystSlotResolverSpec` holds the other half of: a
-        // declared Katalyst chain's `vowel` stage reads the SAME table through `KatalystVowelWriter`.
+        // declared Katalyst chain's `vowel` stage reads the SAME table through `KatalystResonatorWriter`.
         // `audio_be` does not depend on `sprudel`, so the landmark band is pinned on both sides.
         // The door fills the floor when a call names the vowel (Katalyst step 5a-3).
         val voiceData = note("c3").vowel(vowel = "a", wet = 0.3).queryArc(0.0, 1.0)[0].data.toVoiceData()

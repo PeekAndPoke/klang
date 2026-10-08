@@ -273,12 +273,19 @@ class EffectBenchmark(
             // source, so subtract "Ignitor sine (bare source baseline)" below for the filter alone.
             svfIgnitorCase("Ignitor onePoleLowpass (1k)") { Ignitors.sine().onePoleLowpass(1000.0) },
             svfIgnitorCase("Ignitor onePoleHighpass (1k)") { Ignitors.sine().onePoleHighpass(1000.0) },
-            // The class-form SVF left is the resonators' bandpass; the strip's lowpass, highpass and notch
-            // classes retired in phase 3 step 9 (the tree's SVF is the `Ignitor.svf` cases below).
-            monoFilterCase("SvfBPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfBPF(1000.0, 1.0, sr) },
+            // The class-form SVF bandpass (`SvfBPF`) folded into the resonator bank's band loop in engine tidy-up
+            // step 12 (a); its case is the bank with one band at full mix (the tree's SVF is the `Ignitor.svf` cases
+            // below).
+            monoFilterCase("Resonator (1 band, 1k, q=1, mix1)") { sr ->
+                LowPassHighPassFilters.createBody(
+                    bands = listOf(FilterDef.Body.Mode(freq = 1000.0, db = 0.0, q = 1.0)),
+                    mix = 1.0,
+                    sampleRate = sr,
+                )
+            },
 
-            // Resonators — orbit-level body/vowel banks: ParallelMixFilter over an N-band parallel
-            // SVF-BPF (ResonatorBank). This is what body()/vowel() run per orbit.
+            // Resonators: the orbit-level body/vowel stage on one channel, an N-band parallel SVF bandpass bank
+            // blended over the dry (ResonatorBank). This is what body()/vowel() run per orbit.
             monoFilterCase("Body (wood, 8-band, mix0.5)") { sr ->
                 LowPassHighPassFilters.createBody(BODY_WOOD_MODES, 0.5, sr)
             },

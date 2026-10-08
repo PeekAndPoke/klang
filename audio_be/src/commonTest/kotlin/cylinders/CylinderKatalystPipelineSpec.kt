@@ -10,8 +10,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBodyEffect
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFormantEffect
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystResonatorEffect
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.ResonatorKind
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
@@ -57,11 +57,13 @@ class OrbitBusPipelineSpec : StringSpec({
     "orbit runs exactly ONE body and ONE vowel pass regardless of voice count (per-orbit, not per-voice)" {
         val cylinder = createOrbit()
 
-        cylinder.pipeline.filterIsInstance<KatalystBodyEffect>().size shouldBe 1
-        cylinder.pipeline.filterIsInstance<KatalystFormantEffect>().size shouldBe 1
-        // body/vowel run first — before the time/dynamics effects.
-        (cylinder.pipeline[0] is KatalystBodyEffect) shouldBe true
-        (cylinder.pipeline[1] is KatalystFormantEffect) shouldBe true
+        val resonators = cylinder.pipeline.filterIsInstance<KatalystResonatorEffect>()
+
+        resonators.count { it.kind == ResonatorKind.BODY } shouldBe 1
+        resonators.count { it.kind == ResonatorKind.VOWEL } shouldBe 1
+        // body/vowel run first, before the time/dynamics effects.
+        (cylinder.pipeline[0] as? KatalystResonatorEffect)?.kind shouldBe ResonatorKind.BODY
+        (cylinder.pipeline[1] as? KatalystResonatorEffect)?.kind shouldBe ResonatorKind.VOWEL
     }
 
     "a body owner's settings hold while it owns; a later non-body owner turns the body off (hand-off)" {

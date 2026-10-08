@@ -133,7 +133,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
         val installed = chain.body.shouldNotBeNull()
 
         withClue("the stage engages") { installed.isEngaged shouldBe true }
-        withClue("the same modes") { installed.installedBands shouldBe fromWire.bands }
+        withClue("the same modes") { installed.installedTable.bandList() shouldBe bodyBandList(fromWire.bands) }
 
         // The discriminator: NOT dry. A chain that resolved its unset amount to 0.0 would install
         // the right bank at no mix at all, which is silence dressed as a body.
@@ -156,7 +156,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
         val installed = chain.vowel.shouldNotBeNull()
 
         installed.isEngaged shouldBe true
-        installed.installedBands shouldBe fromWire.bands
+        installed.installedTable.bandList() shouldBe vowelBandList(fromWire.bands)
 
         withClue("the mix is audible, not dry") { (installed.installedMix > 0.0) shouldBe true }
         installed.installedMix shouldBe fromWire.mix
@@ -180,20 +180,21 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
 
         withClue("the chain engages its body from the slots alone") { installed.isEngaged shouldBe true }
         withClue("the SAME modes the wire carries, not just some bank") {
-            installed.installedBands shouldBe fromWire.bands
+            installed.installedTable.bandList() shouldBe bodyBandList(fromWire.bands)
         }
         withClue("...and the same mix") { installed.installedMix shouldBe fromWire.mix }
 
         // The one formal difference, and why it is not audible: the wire leaves `floor` null,
-        // which `LowPassHighPassFilters.createBody` reads as BODY_FLOOR, and the slot path writes
-        // that same number out. Two spellings of one value, so the filter is identical.
+        // which the engine reads as BODY_FLOOR (`LowPassHighPassFilters.createBody`, and the stage
+        // for an unset floor), and the slot path writes that same number out. Two spellings of one
+        // value, so the filter is identical.
         fromWire.floor shouldBe null
         installed.installedFloor shouldBe BODY_FLOOR
     }
 
     "the classic chain installs the same formant bank the wire carries for a vowel call" {
         // The twin of the body row, on the other index slot. Written out rather than folded in:
-        // the two writers are separate classes, and a `vowel.vowel` wired to the body's catalogue
+        // the two stages read two catalogues, and a `vowel.vowel` wired to the body's catalogue
         // (or to no catalogue at all) would pass a body-only spec. The register is `bass`, not the
         // bare default, so a resolver that dropped the register would land on soprano and fail.
         val bands = VowelBands.bandsFor("bass:a").shouldNotBeNull()
@@ -207,7 +208,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
 
         withClue("the chain engages its vowel from the slots alone") { installed.isEngaged shouldBe true }
         withClue("the SAME bands, the bass register and not the soprano default") {
-            installed.installedBands shouldBe fromWire.bands
+            installed.installedTable.bandList() shouldBe vowelBandList(fromWire.bands)
         }
         withClue("...and the same mix") { installed.installedMix shouldBe fromWire.mix }
 

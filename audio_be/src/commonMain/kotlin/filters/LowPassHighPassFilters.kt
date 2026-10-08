@@ -30,9 +30,9 @@ import kotlin.math.tan
 //   • DcBlocker — degenerate raw-pole HPF (parameterized by raw IIR pole; cheaper)
 //
 // Second-order (TPT/Vadim Zavalishin SVF, "The Art of VA Filter Design", canonical Cytomic form):
-//   • BaseSvf + SvfBPF, the bandpass the orbit's resonators (`ResonatorBank`) run. The lowpass,
-//     highpass and notch subclasses were the voice strip's and retired with it (phase 3 step 9);
-//     the tree's SVF is `Ignitor.svf` in `ignitor/IgnitorFilters.kt`.
+//   • the bandpass of the orbit's resonators, run inside `ResonatorBank` since engine tidy-up step 12 (a); its
+//     class (`SvfBPF` on `BaseSvf`) and the strip's lowpass, highpass and notch subclasses are gone (the strip's in
+//     phase 3 step 9); the tree's SVF is `Ignitor.svf` in `ignitor/IgnitorFilters.kt`.
 //
 // **One-pole history (do not re-litigate):** written for the classes, it holds for the Ignitor nodes, which
 // run the same coefficients and topology.
@@ -82,7 +82,7 @@ import kotlin.math.tan
 //
 // **SVF history (review notes added 2026-04-29):**
 //
-// The TPT-SVF (`BaseSvf` + `SvfBPF`, plus the `Ignitor.svf` combinator in
+// The TPT-SVF (the `ResonatorBank` bands, plus the `Ignitor.svf` combinator in
 // `ignitor/IgnitorFilters.kt`) implements the canonical Vadim Zavalishin / Cytomic
 // trapezoidal-integrator SVF. Math verified against "The Art of VA Filter Design"
 // eq. 5.18 — trapezoidal integrators are unconditionally stable for any finite g, k.
@@ -100,11 +100,12 @@ import kotlin.math.tan
 //
 // **What was reviewed / decided (do not re-litigate):**
 // - Kept the specialized SVF subclasses rather than collapsing: JIT specialization
-//   wins over the 5-line dup, and an abstract `tap()` lambda would defeat inlining. (Only
-//   `SvfBPF` is left since phase 3 step 9; the decision stands for any tap added back.)
+//   wins over the 5-line dup, and an abstract `tap()` lambda would defeat inlining. (The
+//   last one, `SvfBPF`, folded into `ResonatorBank`'s band loop in engine tidy-up step 12 (a);
+//   the decision stands for any tap added back.)
 // - Kept the per-sample `when(mode)` in `Ignitor.svf` — hoisting it to 4 inner loops
 //   would re-duplicate the state-update math we just deduped via `computeSvfCoeffs`.
-// - `BaseSvf.q` stays construction-time immutable; `Ignitor.svf` supports audio-rate
+// - A resonator band's q is fixed while its bank sounds (`ResonatorBank`); `Ignitor.svf` supports audio-rate
 //   `q: Ignitor`. Different surfaces, intentional. The retired strip pipeline only modulated
 //   cutoff, never Q.
 // - BPF tap is UNITY-peak since C2 of the filter unification (`k·v1`): q is a pure
@@ -216,7 +217,7 @@ internal const val VOWEL_TAME: Double = 0.05
  * Bundled TPT-SVF coefficient set (`a1, a2, a3, k`, plus the exposed angle [g] and the bell
  * mix [m1]). Mutable holder, allocated once per filter instance (not per call) so the
  * compute helpers can write the whole bundle without returning a tuple. Consumers:
- * [SvfCoeffSweep] (for `BaseSvf` and `Ignitor.svf`), `Ignitor.svf`, and `EqCore`.
+ * [SvfCoeffSweep] (for `Ignitor.svf`), `Ignitor.svf`, `ResonatorBank` and `EqCore`.
  */
 internal class SvfCoeffs {
     var a1: Double = 0.0
@@ -246,8 +247,8 @@ internal class SvfCoeffs {
  * Computes the TPT-SVF coefficient bundle from `cutoffHz` and `q`. NaN/Inf-safe via
  * [bilinearK]; `q` is clamped to `[0.1, 200.0]` and falls back to `1/√2` (Butterworth)
  * if non-finite. Single source of truth for the SVF coefficient math — used by
- * `Ignitor.svf` (per-block recompute), [SvfCoeffSweep] (the swept path of `Ignitor.svf` and
- * `BaseSvf`, computed at block start and end), and `EqCore`.
+ * `Ignitor.svf` (per-block recompute), [SvfCoeffSweep] (the swept path of `Ignitor.svf`, computed
+ * at block start and end), `ResonatorBank` (at install) and `EqCore`.
  *
  * **Q clamp note (2026-04-29)**: widened from `[0.1, 50.0]` to `[0.1, 200.0]` for
  * formant synthesis. Vowel tables in `SprudelVoiceData` use Q=60-130 per band and
@@ -348,46 +349,33 @@ internal fun butterworthQLadder(passes: Int, userQ: Double): DoubleArray {
 object LowPassHighPassFilters {
 
     /**
-     * The whole vowel stage in one call: a [ResonatorBank] inside the dry/wet blend. The one way
-     * the stage is built, by [KatalystFormantEffect] and by the specs and `audio_benchmark` alike.
-     *
-     * The split into a bank and a wrapper that Katalyst 5c-10 needed (a morph held the bank) went
-     * with the morph in 5c-11: a bank never changes, so nobody keeps one.
+     * The whole vowel stage on one channel, in one call: a [ResonatorBank] installed from the bands. A one-shot
+     * builder for the specs and `audio_benchmark`; the orbit's stage (`KatalystResonatorEffect`) installs the
+     * engine's shared tables into banks of its own instead. A null [floor] is [VOWEL_FLOOR].
      */
     fun createFormant(
         bands: List<FilterDef.Formant.Band>,
         mix: Double,
         sampleRate: Double,
         floor: Double? = null,
-    ): AudioFilter = ParallelMixFilter(
-        inner = ResonatorBank(bands.map(::vowelBand), sampleRate),
-        amount = mix,
-        floor = floor ?: VOWEL_FLOOR,
-    )
+    ): AudioFilter = installed(table = ResonatorTable.ofVowel(bands), mix = mix, sampleRate = sampleRate, floor = floor ?: VOWEL_FLOOR)
 
-    /** The whole body stage in one call; the twin of [createFormant]. */
+    /** The whole body stage on one channel, in one call; the twin of [createFormant]. A null [floor] is [BODY_FLOOR]. */
     fun createBody(
         bands: List<FilterDef.Body.Mode>,
         mix: Double,
         sampleRate: Double,
         floor: Double? = null,
-    ): AudioFilter = ParallelMixFilter(
-        inner = ResonatorBank(bands.map(::bodyBand), sampleRate),
-        amount = mix,
-        floor = floor ?: BODY_FLOOR,
-    )
+    ): AudioFilter = installed(table = ResonatorTable.ofBody(bands), mix = mix, sampleRate = sampleRate, floor = floor ?: BODY_FLOOR)
+
+    private fun installed(table: ResonatorTable, mix: Double, sampleRate: Double, floor: Double): ResonatorBank =
+        ResonatorBank(capacity = table.count, sampleRate = sampleRate).also { it.install(ResonatorConfig(table = table, mix = mix, floor = floor)) }
 
     /**
-     * A body mode as a [ResonatorBank] band. The SVF bandpass is unity-peak at fc (C2 of the filter
-     * unification), so the gain is the plain `10^(db/20)` and `mode.db` IS the peak emphasis in dB,
-     * independent of the mode's q. `freq` and `q` go to the SVF raw (it guards them).
-     */
-    internal fun bodyBand(mode: FilterDef.Body.Mode): ResonatorBank.Band =
-        ResonatorBank.Band(freq = mode.freq, q = mode.q, gain = bodyGain(mode))
-
-    /**
-     * The body gain rule on its own: [bodyBand] is this plus the raw `freq`/`q`, and there is no
-     * second copy of the rule.
+     * The body gain rule: a body mode's LINEAR band gain. The SVF bandpass is unity-peak at fc (C2 of the filter
+     * unification), so the gain is the plain `10^(db/20)` and `mode.db` IS the peak emphasis in dB, independent of the
+     * mode's q. `freq` and `q` go to the bank raw (it guards them). The one copy of the rule
+     * ([ResonatorTable.ofBody] calls it).
      */
     internal fun bodyGain(mode: FilterDef.Body.Mode): Double {
         // NaN-guard: a non-finite dB is 0 dB, unity gain.
@@ -397,21 +385,17 @@ object LowPassHighPassFilters {
     }
 
     /**
-     * A vowel formant as a [ResonatorBank] band, with the **legacy Q-peak fold**: the vowel tables
-     * were tuned when the bandpass peaked at `Q` and `band.db` was gain on top of that; the SVF is
-     * unity-peak since C2, so the gain folds the peak back in, `10^(db/20) * clampedQ`. EXACT
-     * (the SVF scales by k = 1/clampedQ, and k * q = 1) as long as the fold uses the SAME clamp
-     * as `computeSvfCoeffs`, so `freq = 730, q = 10, db = 0` still peaks at +20 dB before
-     * [VOWEL_TAME]. The SVF gets the raw q. Flipping the tables to the absolute-peak convention is
-     * a deferred follow-up; do not "clean up" the fold without rewriting every table.
+     * The vowel gain rule, with the **legacy Q-peak fold**: the vowel tables were tuned when the bandpass peaked at
+     * `Q` and `band.db` was gain on top of that; the SVF is unity-peak since C2, so the gain folds the peak back in,
+     * `10^(db/20) * clampedQ`. EXACT (the SVF scales by k = 1/clampedQ, and k * q = 1) as long as the fold uses the
+     * SAME clamp as `computeSvfCoeffs`, so `freq = 730, q = 10, db = 0` still peaks at +20 dB before [VOWEL_TAME]. The
+     * bank gets the raw q. Flipping the tables to the absolute-peak convention is a deferred follow-up; do not "clean
+     * up" the fold without rewriting every table.
      *
-     * [VOWEL_TAME] then scales every band alike, so each vowel keeps its tuned balance. The
-     * operand order is the arithmetic the tables were heard with: `(dB factor * q) * tame`.
+     * [VOWEL_TAME] then scales every band alike, so each vowel keeps its tuned balance. The operand order is the
+     * arithmetic the tables were heard with: `(dB factor * q) * tame`. The one copy of the rule
+     * ([ResonatorTable.ofVowel] calls it).
      */
-    internal fun vowelBand(band: FilterDef.Formant.Band): ResonatorBank.Band =
-        ResonatorBank.Band(freq = band.freq, q = band.q, gain = vowelGain(band))
-
-    /** The vowel gain rule on its own, the twin of [bodyGain] and for its reason. */
     internal fun vowelGain(band: FilterDef.Formant.Band): Double {
         // NaN-guards: a non-finite dB is 0 dB; a non-finite q folds the SVF's own fallback, and
         // it must be THAT clamp, or the k * q cancellation the fold rests on is not exact.
@@ -482,132 +466,6 @@ object LowPassHighPassFilters {
         fun reset() {
             xPrev = 0.0
             y = 0.0
-        }
-    }
-
-    /**
-     * State Variable Filter base, TPT/Zavalishin canonical Cytomic form. A subclass
-     * specializes `process()` to select the output tap; the one left is [SvfBPF] (the orbit's
-     * resonators). The lowpass, highpass and notch taps were the voice strip's and retired with it
-     * in phase 3 step 9, together with the `AudioFilter.Tunable` interface this class implemented.
-     *
-     * [sweepCutoff] moves only the cutoff, which leaves `q` alone; audio-rate Q lives on `Ignitor.svf`'s side. NOTHING moves `q` after
-     * construction: the one control-rate mover, added for the resonator morph of Katalyst 5c-10,
-     * went with that morph in 5c-11, and `q` is a `val` again.
-     *
-     * Coefficient math is shared via [computeSvfCoeffs] (NaN/Inf-safe via [bilinearK]).
-     * The helper writes into a private scratch holder; we then mirror to direct fields
-     * so subclasses' inner loops touch fields, not getters (JIT specialization safety).
-     *
-     * **The cutoff sweep** (decision D3, the sampling): [sweepCutoff] snaps the coefficients to the
-     * block's start cutoff and hands the subclass's per-sample loop the steps of [SvfCoeffSweep], the
-     * interpolation the Ignitor filter node runs too: each coefficient takes its step AFTER every
-     * sample, for [sweepFrames] samples, and then holds. The voice strip's filter modulator called it once
-     * per block with the block's length, so the coefficients arrived at the block's end cutoff as the next
-     * block began; it retired with the strip (phase 3 step 9). Construction snaps to the constructor's
-     * cutoff and steps nothing.
-     *
-     * **Nonlinear character**: none on this side. The `analog`-gated saturated branch (a polynomial
-     * diode-pair approximation of the resonance feedback gain, see [diodePairResistanceApprox]) lives
-     * on the tree's `Ignitor.svf`; the strip's SvfLPF/SvfHPF that also had it retired in phase 3 step 9.
-     */
-    abstract class BaseSvf(
-        cutoffHz: Double,
-        /**
-         * Fixed for the whole life of the filter: [sweepCutoff] never touches it, and nothing else
-         * may. The setter that moved it, for [ResonatorBank]'s morph, went with the morph in
-         * Katalyst 5c-11; a band's Q is now decided when its bank is built.
-         */
-        private val q: Double,
-        private val sampleRate: Double,
-        private val cutoffOffsetMul: Double = 1.0,
-    ) : AudioFilter {
-        protected var ic1eq = 0.0
-        protected var ic2eq = 0.0
-        protected var a1: Double = 0.0
-        protected var a2: Double = 0.0
-        protected var a3: Double = 0.0
-        protected var k: Double = 0.0
-
-        /**
-         * Bilinear-prewarped angle `g = tan(π·fc/fs)`. Read by the saturated branches of
-         * the retired strip's SvfLPF/SvfHPF (the closed-form solve with state-dependent
-         * damping); [SvfBPF] only steps it with the rest of the set and reads a1/a2/a3/k.
-         * Kept so the one remaining loop stays byte-for-byte.
-         */
-        protected var g: Double = 0.0
-
-        // The sweep's per-sample steps; the subclass's loop adds them after each sample while
-        // sweepFrames > 0 and counts it down.
-        protected var a1Step: Double = 0.0
-        protected var a2Step: Double = 0.0
-        protected var a3Step: Double = 0.0
-        protected var kStep: Double = 0.0
-        protected var gStep: Double = 0.0
-        protected var sweepFrames: Int = 0
-
-        private val sweep = SvfCoeffSweep()
-
-        init {
-            sweepCutoff(startHz = cutoffHz, endHz = cutoffHz, frames = 0)
-        }
-
-        /**
-         * Starts a sweep: the coefficients snap to [startHz] and step linearly toward [endHz] over
-         * the next [frames] samples, then hold. Both ends get this filter's cutoff tolerance.
-         * Its one production caller is the constructor's snap (0 frames); the strip's per-block
-         * sweep that used the frames retired in phase 3 step 9.
-         */
-        fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
-            sweep.prepare(cutoffStartHz = startHz * cutoffOffsetMul, cutoffEndHz = endHz * cutoffOffsetMul, q = q, sampleRate = sampleRate, frames = frames)
-
-            val c = sweep.start
-
-            a1 = c.a1
-            a2 = c.a2
-            a3 = c.a3
-            k = c.k
-            g = c.g
-            a1Step = sweep.a1Step
-            a2Step = sweep.a2Step
-            a3Step = sweep.a3Step
-            kStep = sweep.kStep
-            gStep = sweep.gStep
-            sweepFrames = frames
-        }
-    }
-
-    class SvfBPF(
-        cutoffHz: Double,
-        q: Double,
-        sampleRate: Double,
-        cutoffOffsetMul: Double = 1.0,
-    ) : BaseSvf(cutoffHz = cutoffHz, q = q, sampleRate = sampleRate, cutoffOffsetMul = cutoffOffsetMul) {
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            val end = offset + length
-            var left = sweepFrames
-            for (i in offset until end) {
-                val v0 = buffer[i]
-                val v3 = v0 - ic2eq
-                val v1 = a1 * ic1eq + a2 * v3
-                val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushState()
-                ic2eq = (2.0 * v2 - ic2eq).flushState()
-                // C2 (filter unification): k * v1 normalises the peak at fc to unity, so q is
-                // a pure width control. k belongs to the swept coefficient set, but `q` never
-                // moves after construction (see [BaseSvf]) and k is a function of q alone, so
-                // `kStep` is structurally 0 on every path and this add is the shape of the loop,
-                // not a move. It was NOT 0 while the resonator morph could retune a band's q
-                // (Katalyst 5c-10, gone in 5c-11).
-                buffer[i] = k * v1
-
-                if (left > 0) {
-                    a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                    left--
-                }
-            }
-
-            sweepFrames = left
         }
     }
 }

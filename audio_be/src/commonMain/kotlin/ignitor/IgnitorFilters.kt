@@ -101,7 +101,7 @@ data class FilterEnvDef(
  * `null` is no humanization and renders bit-for-bit what this filter rendered without the
  * feature. See [FilterHumanization].
  *
- * Coefficient math is shared with `BaseSvf` via `computeSvfCoeffs`. NaN/Inf-safe
+ * Coefficient math is shared with `ResonatorBank` and `EqCore` via `computeSvfCoeffs`. NaN/Inf-safe
  * cutoff (via `bilinearK`); Q is clamped to `[0.1, 200.0]` with `isFinite` fallback.
  *
  * Mode dispatch is hoisted out of the per-sample loop into one specialized loop
@@ -289,7 +289,7 @@ private class SvfIgnitor(
 
                 SvfMode.BANDPASS -> {
                     // C2 (filter unification): k * v1 = unity peak at fc (k = 1/clampedQ) —
-                    // q is a pure width control, matching SvfBPF and the fused EqCore
+                    // q is a pure width control, matching the `ResonatorBank` bands and the fused EqCore
                     // BANDPASS arm bit-for-bit. Both env-path coefficient sets share one
                     // per-block q, so kStep is structurally 0: no mid-sweep mismatch.
                     for (i in ctx.offset until end) {

@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_bridge
 
-import kotlin.math.round
 
 /**
  * Vowel formant catalogue: the fixed formant banks behind `vowel(vowel = "<name>")`.
@@ -21,8 +20,8 @@ import kotlin.math.round
  * what lets a German lyric be sung rather than transliterated.
  *
  * Lives in `audio_bridge` (Katalyst step 3c, 2026-09-17) so that both readers of a vowel NAME reach
- * it: sprudel's `toVoiceData`, which resolves a voice's vowel, and the backend's `KatalystVowelWriter`,
- * which resolves a declared Katalyst chain's `vowel` stage.
+ * it: sprudel's `toVoiceData`, which resolves a voice's vowel, and the backend's `KatalystResonatorWriter`,
+ * which resolves a declared Katalyst chain's `vowel` stage (through `slotIndexAt`).
  *
  * **A vowel is also an INDEX** (Katalyst step 5a-2, 2026-09-18): [names] flattens the
  * register-by-vowel table into one closed, ordered list of canonical `"<register>:<vowel>"` names,
@@ -80,8 +79,9 @@ object VowelBands {
      * The bank of every name in [names], by index, built once from [bandsOf].
      *
      * As with the body table, [bandsFor] and [bandsAt] hand back the table's OWN list, the same
-     * instance every time, so a consumer deciding whether to rebuild a formant bank short-circuits
-     * on identity instead of walking five bands per note.
+     * instance every time. Two names of one bank (`bass:a` and `bass:ei`) are two lists with equal
+     * content; the backend's `ResonatorTables` gives them ONE table, so switching between them installs
+     * nothing.
      */
     private val bandsByIndex: List<List<FilterDef.Formant.Band>?> = names.map { name ->
         val parts = name.split(':')
@@ -104,20 +104,13 @@ object VowelBands {
      * 0 is off, and anything else rounds to the nearest index, a tie to the EVEN one (0.5 is
      * `none`, 1.5 is index 2), which is what `kotlin.math.round` does on both platforms.
      */
-    fun bandsAt(index: Double): List<FilterDef.Formant.Band>? {
-        // NaN-guard on a value the author can write: a non-finite index was never set.
-        if (!index.isFinite()) {
-            return null
-        }
+    fun bandsAt(index: Double): List<FilterDef.Formant.Band>? = bandsByIndex[slotIndexAt(index)]
 
-        val i = round(index).toInt()
-
-        if (i <= 0 || i >= names.size) {
-            return null
-        }
-
-        return bandsByIndex[i]
-    }
+    /**
+     * The position in [names] a slot value names, 0 (`none`) when it names none: the one index rule of [bandsAt],
+     * the twin of `BodyMaterials.slotIndexAt` and for its reader.
+     */
+    fun slotIndexAt(index: Double): Int = catalogueIndexAt(index = index, size = names.size, fallback = 0)
 
     /**
      * Resolves a vowel name to its formant bank. Returns null for an unknown voice register or an

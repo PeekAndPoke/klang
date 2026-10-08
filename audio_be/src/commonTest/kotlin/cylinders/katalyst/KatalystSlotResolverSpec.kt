@@ -579,9 +579,9 @@ class KatalystSlotResolverSpec : StringSpec({
         )
 
         chain.body.shouldNotBeNull().isEngaged shouldBe true
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
         chain.vowel.shouldNotBeNull().isEngaged shouldBe true
-        chain.vowel.shouldNotBeNull().installedBands shouldBe VowelBands.bandsFor("bass:a")
+        chain.vowel.shouldNotBeNull().installedTable.bandList() shouldBe vowelBandList(VowelBands.bandsFor("bass:a"))
 
         // A moved index re-resolves to the other box, and index 0 (`none`) switches it back off.
         chain.applyParams(
@@ -593,14 +593,14 @@ class KatalystSlotResolverSpec : StringSpec({
             )
         )
 
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("glass")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("glass"))
         chain.vowel.shouldNotBeNull().isEngaged shouldBe false
     }
 
-    "body and vowel: the def is rebuilt only when the param map INSTANCE changes" {
+    "body and vowel: the table is looked up only when the param map INSTANCE changes" {
         // The cost rule of the param state: `apply` runs every block and writes a def already in
         // hand, and only a new map instance costs a lookup. A writer that resolved in `apply`
-        // would do a catalogue lookup and allocate a FilterDef per block per orbit.
+        // would do a catalogue lookup per block per orbit.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Body(
@@ -618,19 +618,19 @@ class KatalystSlotResolverSpec : StringSpec({
 
         chain.applyParams(first)
         chain.resolveCount shouldBe 1
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
 
         // The SAME instance again does not re-resolve: the gate is identity, so a live owner
         // re-offering its map every block costs one reference compare and no lookup.
         chain.applyParams(first)
         chain.applyParams(first)
         chain.resolveCount shouldBe 1
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
 
         // A DIFFERENT map with a different index does, and lands on the other box.
         chain.applyParams(mapOf("body.material" to BodyMaterials.indexOf("bell"), "body.wet" to 0.3))
         chain.resolveCount shouldBe 2
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("bell")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("bell"))
     }
 
     "body and vowel: a signal-rate node on the index slot is coerced, never refused" {
@@ -642,8 +642,8 @@ class KatalystSlotResolverSpec : StringSpec({
         )
 
         folded.body.shouldNotBeNull().isEngaged shouldBe true
-        folded.body.shouldNotBeNull().installedBands shouldBe
-                BodyMaterials.modesFor(BodyMaterials.names[1])
+        folded.body.shouldNotBeNull().installedTable.bandList() shouldBe
+                bodyBandList(BodyMaterials.modesFor(BodyMaterials.names[1]))
 
         val oscillated = declared(
             KatalystStageDsl.Body(material = IgnitorDsl.Sine(), wet = c(0.3)),
@@ -669,9 +669,10 @@ class KatalystSlotResolverSpec : StringSpec({
         // same landmark modes. `audio_be` does not depend on `sprudel`, so the two halves of the
         // parity cannot live in one file.
         //
-        // The ONE difference between the paths is the floor FILL: a voice leaves `floor = null`,
+        // The ONE difference between the paths was the floor FILL: a voice left `floor = null`,
         // which [FilterDef.Body] documents as "engine default", while a declared stage writes that
-        // same default out as a number. Same filter, two spellings of one value.
+        // same default out as a number. Same filter, two spellings of one value (and since engine
+        // tidy-up step 12 (a) one key in the stage, which takes a number).
         val chain = declared(
             KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("wood")), wet = c(0.3), floor = c(BODY_FLOOR)),
             KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("a")), wet = c(0.3), floor = c(VOWEL_FLOOR)),
@@ -679,18 +680,20 @@ class KatalystSlotResolverSpec : StringSpec({
 
         val body = chain.body.shouldNotBeNull()
 
-        body.installedBands shouldBe BodyMaterials.modesFor("wood")
-        body.installedBands.shouldNotBeNull().first() shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
-        body.installedBands.shouldNotBeNull().size shouldBe 8
+        body.installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
+        body.installedTable.bandList().shouldNotBeNull().first() shouldBe
+            bodyBandList(listOf(FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0))).shouldNotBeNull().first()
+        body.installedTable.shouldNotBeNull().count shouldBe 8
         body.installedMix shouldBe 0.3
         body.installedFloor shouldBe BODY_FLOOR
 
         val vowel = chain.vowel.shouldNotBeNull()
 
         // A bare vowel name is the soprano register, the voice path's rule as well.
-        vowel.installedBands shouldBe VowelBands.bandsFor("soprano:a")
-        vowel.installedBands.shouldNotBeNull().first() shouldBe FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0)
-        vowel.installedBands.shouldNotBeNull().size shouldBe 5
+        vowel.installedTable.bandList() shouldBe vowelBandList(VowelBands.bandsFor("soprano:a"))
+        vowel.installedTable.bandList().shouldNotBeNull().first() shouldBe
+            vowelBandList(listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0))).shouldNotBeNull().first()
+        vowel.installedTable.shouldNotBeNull().count shouldBe 5
         vowel.installedMix shouldBe 0.3
         vowel.installedFloor shouldBe VOWEL_FLOOR
     }
@@ -726,13 +729,13 @@ class KatalystSlotResolverSpec : StringSpec({
 
         val body = chain.body.shouldNotBeNull()
 
-        body.installedBands shouldBe BodyMaterials.modesFor("wood")
+        body.installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
         body.installedMix shouldBe 0.3
         body.installedFloor shouldBe BODY_FLOOR
 
         val vowel = chain.vowel.shouldNotBeNull()
 
-        vowel.installedBands shouldBe VowelBands.bandsFor("soprano:a")
+        vowel.installedTable.bandList() shouldBe vowelBandList(VowelBands.bandsFor("soprano:a"))
         vowel.installedMix shouldBe 0.4
         vowel.installedFloor shouldBe VOWEL_FLOOR
 

@@ -122,9 +122,13 @@ class KatalystChain internal constructor(
     // declares a kind twice reports the LAST one here, the same rule the duck follows, while BOTH
     // run and both are covered by the lifecycle (which goes through [stages], not through these).
 
-    val body: KatalystBodyEffect? = serial.filterIsInstance<KatalystBodyEffect>().lastOrNull()
+    // Body and vowel are one class with two kinds (engine tidy-up step 12 (a)), so these two find their stage by kind.
 
-    val vowel: KatalystFormantEffect? = serial.filterIsInstance<KatalystFormantEffect>().lastOrNull()
+    val body: KatalystResonatorEffect? =
+        serial.filterIsInstance<KatalystResonatorEffect>().lastOrNull { it.kind == ResonatorKind.BODY }
+
+    val vowel: KatalystResonatorEffect? =
+        serial.filterIsInstance<KatalystResonatorEffect>().lastOrNull { it.kind == ResonatorKind.VOWEL }
 
     val delay: KatalystDelayEffect? = serial.filterIsInstance<KatalystDelayEffect>().lastOrNull()
 

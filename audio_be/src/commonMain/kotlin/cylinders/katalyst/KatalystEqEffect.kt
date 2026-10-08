@@ -39,12 +39,13 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
  * **TWO pre-built banks and one parking slot** (Katalyst step 5c-11, 2026-09-20). The swap carries
  * two banks and no more, so the arriving configuration takes the one the swap does not hold
  * ([KatalystFilterSwap.holds]), which is by definition not heard, and zeroes it before it is
- * reconfigured, which makes it exactly the fresh instance the body and the vowel build on every
- * change. A change that arrives while a fade runs is not given a bank at all: its SCALARS wait in
- * [parkedValues] until the fade lands, and a further change overwrites them (latest wins), so a
- * `.katp` burst costs one `install` and not one per event. The banks can be pre-built because an
- * EQ's section count and types are fixed by the DECLARATION (structure is declared once, the
- * signal-flow plan's rule 2), where a material decides how many bands a body has. That matters
+ * reconfigured, which makes it exactly a freshly built instance (the body and the vowel pool their
+ * banks the same way since engine tidy-up step 12 (a)). A change that arrives while a fade runs is
+ * not given a bank at all: its SCALARS wait in [parkedValues] until the fade lands, and a further
+ * change overwrites them (latest wins), so a `.katp` burst costs one `install` and not one per event.
+ * The banks can be pre-built because an EQ's section count and types are fixed by the DECLARATION
+ * (structure is declared once, the signal-flow plan's rule 2), where a material decides how many
+ * bands a body has. That matters
  * because a `.katp` on an EQ knob is a change per event: the cost of one is a `reset` plus one
  * coefficient computation per section per channel (a `tan` each) plus one fade time of one more
  * bank running, and it is bounded at one per BLOCK, because the orbit's param state is re-read
@@ -211,7 +212,7 @@ class KatalystEqEffect(
      * False, and NOT because this stage is stateless: the SVF integrators and the swap's
      * crossfade hold state. It is because all of it lands in `ctx.mixBuffer`, which
      * `Cylinder.isMixBufferSilent()` scans AFTER the chain has run, so the deactivation gate
-     * already sees this stage's residue without having to ask it. See [KatalystBodyEffect.hasTail].
+     * already sees this stage's residue without having to ask it. See [KatalystResonatorEffect.hasTail].
      */
     override fun hasTail(): Boolean = false
 
@@ -220,7 +221,7 @@ class KatalystEqEffect(
         reset()
     }
 
-    /** The block, then the parked curve if the fade landed inside it; see [KatalystBodyEffect.process]. */
+    /** The block, then the parked curve if the fade landed inside it; see [KatalystResonatorEffect.process]. */
     override fun process(ctx: KatalystContext) {
         swap.process(ctx.mixBuffer, ctx.blockFrames)
 

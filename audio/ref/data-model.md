@@ -135,20 +135,21 @@ audio_be). A voice's own envelope travels as `classic()`'s `adsr.*` slots; their
 
 ```kotlin
 sealed class FilterDef {
-    // Resonators: parallel modal BPF banks blended over the dry via ParallelMixFilter(mix, floor).
-    // Applied at the ORBIT level (KatalystFormantEffect / KatalystBodyEffect), never per voice.
+    // The resonators' band rows. Since engine tidy-up step 12 (a) the engine reads only the ROWS (Band, Mode);
+    // the carriers (rows plus mix and floor) are left to the specs, and step 12 (c) retires this file.
     data class Formant(val bands: List<Band>, val mix: Double, val floor: Double? = null)  // vowel()
     data class Body(val bands: List<Mode>,   val mix: Double, val floor: Double? = null)   // body()
-    // Band / Mode are both (freq, db, q). floor null → engine default (VOWEL_FLOOR / BODY_FLOOR).
+    // Band / Mode are both (freq, db, q).
 }
 ```
 
-- Not a wire type any more: the orbit builds these from its slots. The bands resolve from the
-  `body.material` / `vowel.vowel` INDEX slot through `BodyMaterials.modesAt` / `VowelBands.bandsAt`
-  (`KatalystBodyWriter` / `KatalystVowelWriter`; an unset `wet` / `floor` takes its constant in the
-  effect's `configure`); DSP = one `ResonatorBank` (band gain rules in `bodyBand` /
-  `vowelBand`) + `createBody`/`createFormant`; blend + declick-crossfade in `ParallelMixFilter` /
-  `KatalystFilterSwap`. See `ref/architecture.md` "Per-Playback Engine".
+- Not a wire type: the orbit builds its resonators from its slots. The `body.material` / `vowel.vowel` INDEX
+  slot picks a `ResonatorTable` (`ResonatorTables.at`, through `BodyMaterials.slotIndexAt` / `VowelBands.slotIndexAt`;
+  one table per index, built once from the rows, equal rows sharing one instance) in `KatalystResonatorWriter`; an
+  unset `wet` / `floor` takes its constant in `KatalystResonatorEffect.configure`. The DSP is one mono
+  `ResonatorBank` per channel (bands, band gain rules `bodyGain` / `vowelGain`, and the dry/wet blend); the
+  declick crossfade is `KatalystFilterSwap`. `createBody` / `createFormant` build a one-shot bank for the specs and
+  the benchmark. See `ref/architecture.md` "Per-Playback Engine".
 - The per-voice filters are `classic()`'s `lpf`/`hpf`/`bpf`/`notch` stages, each an `Ignitor.svf` node
   with its cutoff envelope, filled from the `<door>.<param>` slots.
 

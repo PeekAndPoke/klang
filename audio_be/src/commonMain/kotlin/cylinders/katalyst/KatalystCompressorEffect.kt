@@ -546,7 +546,7 @@ class KatalystCompressorEffect(
     /**
      * Without a lookahead, false: the envelope follower is state, but a compressor only ATTENUATES
      * what it is given and emits nothing from silence, so it can neither hold nor start a tail,
-     * fading or not. See [KatalystBodyEffect.hasTail] for the insert-vs-send rule a future stage has
+     * fading or not. See [KatalystResonatorEffect.hasTail] for the insert-vs-send rule a future stage has
      * to apply.
      *
      * With a lookahead, true while the ring may still hold audio above [SILENCE_FLOOR] (fewer

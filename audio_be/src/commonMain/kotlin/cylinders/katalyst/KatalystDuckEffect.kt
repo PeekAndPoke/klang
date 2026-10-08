@@ -361,7 +361,7 @@ class KatalystDuckEffect(
 
     /**
      * False: the duck's envelope is state, but like the compressor it only attenuates and emits
-     * nothing from silence. See [KatalystBodyEffect.hasTail].
+     * nothing from silence. See [KatalystResonatorEffect.hasTail].
      */
     override fun hasTail(): Boolean = false
 

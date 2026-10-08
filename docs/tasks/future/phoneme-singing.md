@@ -35,7 +35,7 @@ sweep (long) or a click (short), which is the open question in `future/transitio
 
 ## Key findings
 
-- **`vowel()` is orbit-level** (KatalystFormantEffect on the summed orbit mix, owner-voice
+- **`vowel()` is orbit-level** (the vowel kind of `KatalystResonatorEffect` on the summed orbit mix, owner-voice
   configured), so one singer per orbit: two vowel lines on one orbit fight over the mouth.
   Consonants passing through their orbit's vowel filter give free coarticulation.
 - **Binding needs continuous voicing (by ear).** Sequential phoneme slices sound disconnected,

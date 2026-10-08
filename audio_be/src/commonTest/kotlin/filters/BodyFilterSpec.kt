@@ -29,8 +29,10 @@ class BodyFilterSpec : StringSpec({
 
     fun mode(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq = freq, db = db, q = q)
 
-    // The wet-only body bank, built the way `createBody` builds it before the mix wrapper.
-    fun bodyBank(modes: List<FilterDef.Body.Mode>) = ResonatorBank(modes.map(LowPassHighPassFilters::bodyBand), sampleRate)
+    // The body bank WET-ONLY: full mix, no floor, so the dry coefficient is cos(pi/2)^2, about 4e-33, and the output
+    // is the resonance (the blend lives in the bank since engine tidy-up step 12 (a)).
+    fun bodyBank(modes: List<FilterDef.Body.Mode>) = ResonatorBank(capacity = modes.size, sampleRate = sampleRate, blockFrames = blockFrames)
+        .also { it.install(ResonatorConfig(table = ResonatorTable.ofBody(modes), mix = 1.0, floor = 0.0)) }
 
     fun woodModes() = listOf(
         mode(freq = 110.0, db = 2.0, q = 12.0),
@@ -47,11 +49,10 @@ class BodyFilterSpec : StringSpec({
         mode(freq = 3300.0, db = -6.0, q = 45.0),
     )
 
-    // The body bank is WET-ONLY (same API as lpf/formant). The dry/wet blend lives in
-    // ParallelMixFilter, see ParallelMixFilterSpec. The SVF bandpass is unity-peak (its own
-    // `k * v1` tap, since C2), so the body gain is the plain dB factor and `db` is the actual peak
-    // emphasis, independent of Q: `ResonatorBankSpec` pins the bank as the bare SvfBPF times the dB
-    // factor, `FilterNormalizationSpec` the SvfBPF's unity peak at any q.
+    // The rows below run the bank wet-only (see [bodyBank]); its blend is `ResonatorBankSpec`'s law row. The SVF
+    // bandpass is unity-peak (its own `k * v1` tap, since C2), so the body gain is the plain dB factor and `db` is the
+    // actual peak emphasis, independent of Q: `ResonatorBankSpec` pins the bank against the law written out and a
+    // band's unity peak at any q.
 
     "body bank - wet-only: rejects a tone far from every mode" {
         val offBand = sine(12000.0, blockFrames) // far above every wood mode
@@ -59,7 +60,7 @@ class BodyFilterSpec : StringSpec({
 
         bodyBank(woodModes()).process(buffer = offBand, offset = 0, length = offBand.size)
 
-        // Wet-only: nothing near 12 kHz → near silence. The dry is re-added by the mix wrapper.
+        // Wet-only: nothing near 12 kHz, near silence. A real stage's mix re-adds the dry.
         rms(offBand) shouldBeLessThan (inOff * 0.2)
     }
 

@@ -48,10 +48,10 @@ import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
  * bank: [set], [clear] and [resume] have nothing to hold it in, and a host that built a bank for a
  * change that a later one overtakes would allocate for a bank nobody hears. The hosts ask
  * [settled] first and offer the parked config again from their own `process` once a fade lands
- * (see [KatalystBodyEffect.configure]). That is what keeps this class at two banks and the orbit
+ * (see [KatalystResonatorEffect.configure]). That is what keeps this class at two banks and the orbit
  * EQ at two pre-built ones.
  *
- * Used by [KatalystBodyEffect], [KatalystFormantEffect] and [KatalystEqEffect], which share this
+ * Used by [KatalystResonatorEffect] (body and vowel) and [KatalystEqEffect], which share this
  * one path. The hosts own the pairs (the swap only references them) and keep the INTENT apart from
  * the sound: [active] is what the owner asked for as far as THIS class knows, [sounding] is whether
  * any pair is still heard. A host with a parked config knows one more thing than this class does,

@@ -84,7 +84,13 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
   dispatcher keeps only the render order and the disposal order, both exact.
 - **Knob glide** `KNOB_GLIDE_SECONDS` 0.05 in whole blocks (17 at 44.1 kHz, 19 at 48 kHz); **bank crossfade**
-  `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. Which knob glides how:
+  `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. The bank crossfade and the compressor's switch
+  fade run one linear law, `utils/linear_crossfade.kt` (the chain swap's `Crossfade` and the duck's glide are other
+  laws). Which knob glides how: `audio/ref/katalyst.md`.
+- **Body and vowel** are one stage class with two kinds (`KatalystResonatorEffect`, `ResonatorKind`); a chain runs
+  both stages as two instances. One table per catalogue index (`ResonatorTables`, equal rows share an instance, so a
+  switch among aliases installs nothing); a change installs into the pooled pair nobody hears (two pairs, built at
+  the stage's first install), from zero state: no allocation per change, and a sounding bank never retunes.
   `audio/ref/katalyst.md`.
 - **Authored lookahead** (Katalyst `compressor` / `limiter`): build-time, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` 0.05, uncompensated by the author's choice; the authored limiter defaults to
@@ -146,6 +152,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 - **A per-block copy is `copyRangeInto`** (`audio_be/.../utils/buffer_copy.kt`), never `copyInto`, whose JS form makes a
   `subarray` view per call. The domain-free helpers (fast math, numeric guards, phase wraps, fades) live in `utils/`.
+- **The resonator stage is handed its config in a holder, not as double arguments** (`ResonatorConfig`, tidy-up step
+  12 (a)): passing them made a steady body allocate about 40 bytes per block on V8, where a non-integral double
+  crossing a call V8 does not inline is a heap number. Measured for that stage only. The delay, reverb and phaser
+  writers still pass doubles per block and allocate 79 to 118 bytes per block on V8 in steady state, before and after
+  the step alike (the gain and the steady compressor 0): an open probe, `docs/tasks/engine-tidy-up.md` step 12.
+  `audio/ref/performance.md`.
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
   which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
   summation order, so changing it changes bits.
@@ -220,8 +232,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
 - **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
-- **Voice and instruments, future**: `svf-resonator-class-collapse.md`,
-  `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
+- **Voice and instruments, future**: `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
 - **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
   `optimize-constant-control-fast-path.md`, `audit-parked-decisions.md`, `worklet-clock-divergence.md`,
@@ -234,6 +245,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-08 One fade law for the bank swap and the compressor (`utils/linear_crossfade.kt`); body and vowel are one
+  stage class with two kinds on a pooled bank, no allocation per change: `docs/tasks/engine-tidy-up.md` step 12
 - 2026-10-08 First-block and voice-count allocations moved to the build (drift lanes, phaser, memo, partial banks,
   stacks, strings, the phase pool's parse and key): `docs/tasks/engine-tidy-up.md` step 10
 - 2026-10-08 An engine's end of life is one `PlaybackEngine.Phase`; the dispatcher's `draining` set and `detached`

@@ -425,7 +425,7 @@ class KatalystEqEffectSpec : StringSpec({
             rms(settled) / rms(after) shouldBeGreaterThan 3.0
         }
 
-        // The measure `KatalystBodyEffectSpec` uses for the same mechanism, widened to the whole
+        // The measure `KatalystResonatorBodySpec` uses for the same mechanism, widened to the whole
         // window: on a sine probe a per-sample step is phase-dependent, so the threshold is the
         // probe's OWN largest step, which the crossfade may not exceed by much. A bare swap steps
         // by the difference of the two rings, an order of magnitude more.

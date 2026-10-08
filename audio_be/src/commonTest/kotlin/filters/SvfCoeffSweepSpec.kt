@@ -17,9 +17,9 @@ import kotlin.math.tan
 
 /**
  * The shared interpolation of the engine's modulated SVFs ([SvfCoeffSweep]) and the shared endpoint
- * mapping ([filterEnvCutoff]), each against an oracle written here. Its hosts (the Ignitor filter node,
- * and `BaseSvf`, which since the voice strip retired only snaps through it at construction) call this
- * code, so a parity row between hosts cannot see a mistake inside it; these rows can.
+ * mapping ([filterEnvCutoff]), each against an oracle written here. Its host (the Ignitor filter node;
+ * the fixed `BaseSvf` that also snapped through it went in engine tidy-up step 12 (a)) calls this code,
+ * so a parity row between hosts could not see a mistake inside it; these rows can.
  */
 class SvfCoeffSweepSpec : StringSpec({
 

@@ -320,7 +320,7 @@ class KatalystFilterSwapSpec : StringSpec({
     "a change mid-fade is REFUSED: the fade in flight runs on, and only two banks ever sound" {
         // The 10-bank pool of 5c-6 let A, B and C smear under D. Since 5c-11 there are two banks
         // and no more: a change that arrives while a fade runs changes NOTHING here, and the host
-        // parks its config instead (`KatalystBodyEffectSpec`, the parking rows). The law refuses
+        // parks its config instead (`KatalystResonatorBodySpec`, the parking rows). The law refuses
         // it too, so the twin's per-sample comparison is what pins "nothing changed".
         val t = twin()
         val a = t.pair(1.0)
@@ -398,7 +398,7 @@ class KatalystFilterSwapSpec : StringSpec({
 
     "a clear mid-change is refused too, and an on during a fade-out still needs the fade to land" {
         // `clear` is a change like any other: while an entry fades it cannot start, because dry
-        // would be a third thing sounding. The host parks the off (`KatalystBodyEffectSpec`).
+        // would be a third thing sounding. The host parks the off (`KatalystResonatorBodySpec`).
         val t = twin()
         val a = t.pair(1.0)
         val b = t.pair(0.5)

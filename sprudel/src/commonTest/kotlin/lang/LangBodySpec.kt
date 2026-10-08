@@ -48,7 +48,7 @@ class LangBodySpec : StringSpec({
     }
 
     "body params survive the grouped merge (material + wet + floor)" {
-        // The wire carries the raw value; the [0, 1] coercion is the ENGINE's (ParallelMixFilter, C4).
+        // The wire carries the raw value; the [0, 1] coercion is the ENGINE's (ResonatorBank, C4).
         val events = note("c3").body(material = "brass", wet = 0.8, floor = 0.15).queryArc(0.0, 1.0)
         val slots = events[0].data.toVoiceData().katalystParams ?: emptyMap()
 
@@ -67,7 +67,7 @@ class LangBodySpec : StringSpec({
 
     "the door resolves through the shared BodyMaterials table (Katalyst step 3c parity)" {
         // The door half of the parity `KatalystSlotResolverSpec` holds the other half of: a declared Katalyst
-        // chain's `body` stage reads the SAME table through `KatalystBodyWriter`. `audio_be` does not depend on
+        // chain's `body` stage reads the SAME table through `KatalystResonatorWriter`. `audio_be` does not depend on
         // `sprudel`, so the landmark mode is pinned on both sides.
         val slots = slots(note("c3").body(material = "wood", wet = 0.3))
 
