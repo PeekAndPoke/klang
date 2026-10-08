@@ -124,6 +124,9 @@ interface Ignitor {
  */
 operator fun Ignitor.plus(other: Ignitor): Ignitor = PlusIgnitor(a = this, b = other)
 
+/** [plus] with a constant [other]: plain sugar for `ConstantIgnitor(other)`, the same node and the same sound. */
+operator fun Ignitor.plus(other: Double): Ignitor = plus(ConstantIgnitor(other))
+
 private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
@@ -162,6 +165,9 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
  * See `audio/ref/numerical-safety.md` for the safety contract.
  */
 operator fun Ignitor.times(other: Ignitor): Ignitor = TimesIgnitor(a = this, b = other)
+
+/** [times] with a constant [other]: sugar for `ConstantIgnitor(other)`, not the constant node `mul(Double)` builds. */
+operator fun Ignitor.times(other: Double): Ignitor = times(ConstantIgnitor(other))
 
 // `internal` with exposed operands so EqIgnitor can see through a scaled voice-constant
 // (a `passes` cascade stage's staggered q) instead of demoting the whole section to
@@ -400,6 +406,9 @@ fun Ignitor.div(divisor: Double): Ignitor {
 /** Subtract another signal from this one (per-sample). Uses a scratch buffer for the second signal. */
 fun Ignitor.minus(other: Ignitor): Ignitor = MinusIgnitor(a = this, b = other)
 
+/** [minus] with a constant [other]: plain sugar for `ConstantIgnitor(other)`. */
+fun Ignitor.minus(other: Double): Ignitor = minus(ConstantIgnitor(other))
+
 private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
@@ -460,6 +469,9 @@ private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
  */
 fun Ignitor.pow(exp: Ignitor): Ignitor = PowIgnitor(base = this, exp = exp)
 
+/** [pow] with a constant [exp]: plain sugar for `ConstantIgnitor(exp)`. */
+fun Ignitor.pow(exp: Double): Ignitor = pow(ConstantIgnitor(exp))
+
 private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : Ignitor {
     // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val baseConst = base.isBlockConstant
@@ -492,6 +504,12 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
 
 /** Per-sample minimum of this signal and [other]. Uses a scratch buffer for [other]. */
 fun Ignitor.min(other: Ignitor): Ignitor = MinIgnitor(a = this, b = other)
+
+/**
+ * [min] with a constant [other]: the mathematical minimum, like [min] with a signal (this runtime primitive is not a
+ * clamp door). Plain sugar for `ConstantIgnitor(other)`.
+ */
+fun Ignitor.min(other: Double): Ignitor = min(ConstantIgnitor(other))
 
 private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
@@ -526,6 +544,12 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
 /** Per-sample maximum of this signal and [other]. Uses a scratch buffer for [other]. */
 fun Ignitor.max(other: Ignitor): Ignitor = MaxIgnitor(a = this, b = other)
 
+/**
+ * [max] with a constant [other]: the mathematical maximum, like [max] with a signal (this runtime primitive is not a
+ * clamp door). Plain sugar for `ConstantIgnitor(other)`.
+ */
+fun Ignitor.max(other: Double): Ignitor = max(ConstantIgnitor(other))
+
 private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
@@ -558,6 +582,9 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
 
 /** Bound this signal to `[lo, hi]` per sample. Uses two scratch buffers. */
 fun Ignitor.clamp(lo: Ignitor, hi: Ignitor): Ignitor = ClampIgnitor(upstream = this, lo = lo, hi = hi)
+
+/** [clamp] with constant bounds: plain sugar for a `ConstantIgnitor` each. */
+fun Ignitor.clamp(lo: Double, hi: Double): Ignitor = clamp(lo = ConstantIgnitor(lo), hi = ConstantIgnitor(hi))
 
 private class ClampIgnitor(
     private val upstream: Ignitor,
@@ -717,6 +744,12 @@ private class TanhIgnitor(private val upstream: Ignitor) : Ignitor {
  */
 fun Ignitor.lerp(other: Ignitor, t: Ignitor): Ignitor = LerpIgnitor(from = this, to = other, weight = t)
 
+/** [lerp] toward a signal at a constant weight [t]: plain sugar for `ConstantIgnitor(t)`. */
+fun Ignitor.lerp(other: Ignitor, t: Double): Ignitor = lerp(other = other, t = ConstantIgnitor(t))
+
+/** [lerp] toward a constant at a constant weight: plain sugar for a `ConstantIgnitor` each. */
+fun Ignitor.lerp(other: Double, t: Double): Ignitor = lerp(other = ConstantIgnitor(other), t = ConstantIgnitor(t))
+
 /**
  * @param from The signal heard at `weight = 0` — `IgnitorDsl.Lerp.left`, the chain the DSL call
  *   hangs off (`x.lerp(y, t)` puts `x` here). Rendered straight into the output buffer.
@@ -800,6 +833,9 @@ private class LerpIgnitor(
 
 /** Maps `[-1, 1]` → `[from, to]` per sample: `from + (x + 1)·0.5·(to − from)`. */
 fun Ignitor.range(from: Ignitor, to: Ignitor): Ignitor = RangeIgnitor(upstream = this, from = from, to = to)
+
+/** [range] with constant ends: plain sugar for a `ConstantIgnitor` each. */
+fun Ignitor.range(from: Double, to: Double): Ignitor = range(from = ConstantIgnitor(from), to = ConstantIgnitor(to))
 
 private class RangeIgnitor(
     private val upstream: Ignitor,
@@ -940,6 +976,9 @@ private class FracIgnitor(private val upstream: Ignitor) : Ignitor {
  */
 fun Ignitor.mod(other: Ignitor): Ignitor = ModIgnitor(a = this, b = other)
 
+/** [mod] with a constant [other]: plain sugar for `ConstantIgnitor(other)`. */
+fun Ignitor.mod(other: Double): Ignitor = mod(ConstantIgnitor(other))
+
 private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
     // Structural, computed once, so the non-folding hot path pays no per-block subtree walk.
     private val aConst = a.isBlockConstant
@@ -1016,6 +1055,10 @@ private class SqIgnitor(private val upstream: Ignitor) : Ignitor {
  */
 fun Ignitor.select(whenTrue: Ignitor, whenFalse: Ignitor): Ignitor =
     SelectIgnitor(cond = this, whenTrue = whenTrue, whenFalse = whenFalse)
+
+/** [select] between two constants: plain sugar for a `ConstantIgnitor` each. */
+fun Ignitor.select(whenTrue: Double, whenFalse: Double): Ignitor =
+    select(whenTrue = ConstantIgnitor(whenTrue), whenFalse = ConstantIgnitor(whenFalse))
 
 private class SelectIgnitor(
     private val cond: Ignitor,
@@ -1108,6 +1151,9 @@ fun Ignitor.withGain(gain: Ignitor): Ignitor {
 
     return this * gain
 }
+
+/** [withGain] with a constant [gain]: sugar for `ConstantIgnitor(gain)`; a gain of 1.0 short-circuits as there. */
+fun Ignitor.withGain(gain: Double): Ignitor = withGain(ConstantIgnitor(gain))
 
 /** Shift frequency up one octave. */
 fun Ignitor.octaveUp(): Ignitor = detune(12.0)

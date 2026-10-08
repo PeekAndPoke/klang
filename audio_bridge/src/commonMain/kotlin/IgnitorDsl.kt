@@ -2268,11 +2268,20 @@ sealed interface IgnitorDsl {
 /** Adds two ignitor signals together (sample-by-sample sum). */
 operator fun IgnitorDsl.plus(other: IgnitorDsl) = IgnitorDsl.Plus(left = this, right = other)
 
+/** [plus] with a constant [other], the script door's `x.plus(0.5)`: delegates with `IgnitorDsl.Constant(other)`. */
+operator fun IgnitorDsl.plus(other: Double) = plus(IgnitorDsl.Constant(other))
+
 /** Multiplies two ignitor signals together (ring modulation). */
 operator fun IgnitorDsl.times(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
 
+/** [times] with a constant [other], the script door's `x.times(0.5)`: delegates with `IgnitorDsl.Constant(other)`. */
+operator fun IgnitorDsl.times(other: Double) = times(IgnitorDsl.Constant(other))
+
 /** Scales this signal by a modulatable [other] factor. Alias for [times]. */
 fun IgnitorDsl.mul(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
+
+/** [mul] with a constant [other], the script door's `x.mul(0.5)`: delegates with `IgnitorDsl.Constant(other)`. */
+fun IgnitorDsl.mul(other: Double) = mul(IgnitorDsl.Constant(other))
 
 /**
  * Places the `pregain` slot here: how hard the pattern plays INTO whatever follows.
@@ -2290,8 +2299,14 @@ fun IgnitorDsl.pregain() = mul(IgnitorDsl.Slots.pregain)
 /** Divides this signal by a modulatable [other] divisor. */
 fun IgnitorDsl.div(other: IgnitorDsl) = IgnitorDsl.Div(left = this, right = other)
 
+/** [div] with a constant [other], the script door's `x.div(2)`: delegates with `IgnitorDsl.Constant(other)`. */
+fun IgnitorDsl.div(other: Double) = div(IgnitorDsl.Constant(other))
+
 /** Subtracts [other] from this signal sample-by-sample. */
 fun IgnitorDsl.minus(other: IgnitorDsl) = IgnitorDsl.Minus(left = this, right = other)
+
+/** [minus] with a constant [other], the script door's `x.minus(0.5)`: delegates with `IgnitorDsl.Constant(other)`. */
+fun IgnitorDsl.minus(other: Double) = minus(IgnitorDsl.Constant(other))
 
 /** Negates this signal (flips polarity). */
 fun IgnitorDsl.neg() = IgnitorDsl.Neg(inner = this)
@@ -2302,6 +2317,9 @@ fun IgnitorDsl.abs() = IgnitorDsl.Abs(inner = this)
 /** Raises this signal to the power of [exp]. Signed-magnitude (no NaN for negative bases). */
 fun IgnitorDsl.pow(exp: IgnitorDsl) = IgnitorDsl.Pow(base = this, exp = exp)
 
+/** [pow] with a constant [exp], the script door's `x.pow(2)`: delegates with `IgnitorDsl.Constant(exp)`. */
+fun IgnitorDsl.pow(exp: Double) = pow(IgnitorDsl.Constant(exp))
+
 /**
  * Enforces a minimum allowed value per sample: this signal, but at least [other].
  *
@@ -2311,6 +2329,12 @@ fun IgnitorDsl.pow(exp: IgnitorDsl) = IgnitorDsl.Pow(base = this, exp = exp)
 fun IgnitorDsl.min(other: IgnitorDsl) = IgnitorDsl.Max(left = this, right = other)
 
 /**
+ * [min] with a constant [other], the script door's `x.min(0)`: this signal, but at least [other]. Delegates to the
+ * door with `IgnitorDsl.Constant(other)`, so it builds the door's [IgnitorDsl.Max]; never build the node here.
+ */
+fun IgnitorDsl.min(other: Double) = min(IgnitorDsl.Constant(other))
+
+/**
  * Enforces a maximum allowed value per sample: this signal, but at most [other].
  *
  * The node crossing is deliberate: a cap is the per-sample *minimum* of the two signals,
@@ -2318,8 +2342,17 @@ fun IgnitorDsl.min(other: IgnitorDsl) = IgnitorDsl.Max(left = this, right = othe
  */
 fun IgnitorDsl.max(other: IgnitorDsl) = IgnitorDsl.Min(left = this, right = other)
 
+/**
+ * [max] with a constant [other], the script door's `x.max(1)`: this signal, but at most [other]. Delegates to the
+ * door with `IgnitorDsl.Constant(other)`, so it builds the door's [IgnitorDsl.Min]; never build the node here.
+ */
+fun IgnitorDsl.max(other: Double) = max(IgnitorDsl.Constant(other))
+
 /** Bounds this signal to the range `[lo, hi]` per sample. */
 fun IgnitorDsl.clamp(lo: IgnitorDsl, hi: IgnitorDsl) = IgnitorDsl.Clamp(inner = this, lo = lo, hi = hi)
+
+/** [clamp] with constant bounds, the script door's `x.clamp(-0.5, 0.5)`: a `Constant` for each. */
+fun IgnitorDsl.clamp(lo: Double, hi: Double) = clamp(lo = IgnitorDsl.Constant(lo), hi = IgnitorDsl.Constant(hi))
 
 /** `e^x` per sample. */
 fun IgnitorDsl.exp() = IgnitorDsl.Exp(inner = this)
@@ -2339,8 +2372,17 @@ fun IgnitorDsl.tanh() = IgnitorDsl.Tanh(inner = this)
 /** Linear interpolation: `this·(1−t) + other·t`. */
 fun IgnitorDsl.lerp(other: IgnitorDsl, t: IgnitorDsl) = IgnitorDsl.Lerp(left = this, right = other, t = t)
 
+/** [lerp] toward a signal at a constant weight [t], the script door's `x.lerp(y, 0.3)`: delegates with a `Constant`. */
+fun IgnitorDsl.lerp(other: IgnitorDsl, t: Double) = lerp(other = other, t = IgnitorDsl.Constant(t))
+
+/** [lerp] toward a constant at a constant weight, the script door's `x.lerp(0, 0.3)`: a `Constant` for each. */
+fun IgnitorDsl.lerp(other: Double, t: Double) = lerp(other = IgnitorDsl.Constant(other), t = IgnitorDsl.Constant(t))
+
 /** Maps this signal from `[-1, 1]` to `[from, to]` per sample; where the swing sits: the script door `range`. */
 fun IgnitorDsl.range(from: IgnitorDsl, to: IgnitorDsl) = IgnitorDsl.Range(inner = this, from = from, to = to)
+
+/** [range] with constant ends, the script door's `x.range(200, 800)`: a `Constant` for each. */
+fun IgnitorDsl.range(from: Double, to: Double) = range(from = IgnitorDsl.Constant(from), to = IgnitorDsl.Constant(to))
 
 /**
  * The exponential twin of [range]: maps this signal from `[-1, 1]` to `[from, to]` so that equal steps of the signal
@@ -2362,6 +2404,10 @@ fun IgnitorDsl.rangex(from: IgnitorDsl, to: IgnitorDsl): IgnitorDsl {
     return IgnitorDsl.Exp(inner = IgnitorDsl.Range(inner = this, from = logFrom, to = logTo))
 }
 
+/** [rangex] with constant ends, the script door's `x.rangex(200, 3200)`: a `Constant` for each. */
+fun IgnitorDsl.rangex(from: Double, to: Double): IgnitorDsl =
+    rangex(from = IgnitorDsl.Constant(from), to = IgnitorDsl.Constant(to))
+
 /** Per-sample floor. */
 fun IgnitorDsl.floor() = IgnitorDsl.Floor(inner = this)
 
@@ -2377,6 +2423,9 @@ fun IgnitorDsl.frac() = IgnitorDsl.Frac(inner = this)
 /** Per-sample modulo. Zero divisors substituted with `1e-30` to avoid `NaN`. */
 fun IgnitorDsl.mod(other: IgnitorDsl) = IgnitorDsl.Mod(left = this, right = other)
 
+/** [mod] with a constant [other], the script door's `x.mod(1)`: delegates with `IgnitorDsl.Constant(other)`. */
+fun IgnitorDsl.mod(other: Double) = mod(IgnitorDsl.Constant(other))
+
 /** Per-sample reciprocal: `1 / x`. Zero inputs substituted with `1e-30` to avoid `NaN`. */
 fun IgnitorDsl.recip() = IgnitorDsl.Recip(inner = this)
 
@@ -2386,6 +2435,10 @@ fun IgnitorDsl.sq() = IgnitorDsl.Sq(inner = this)
 /** Per-sample conditional: when this signal `> 0` use [whenTrue], else [whenFalse]. */
 fun IgnitorDsl.select(whenTrue: IgnitorDsl, whenFalse: IgnitorDsl) =
     IgnitorDsl.Select(cond = this, whenTrue = whenTrue, whenFalse = whenFalse)
+
+/** [select] between two constants, the script door's `x.select(1, 0)`: a `Constant` for each. */
+fun IgnitorDsl.select(whenTrue: Double, whenFalse: Double) =
+    select(whenTrue = IgnitorDsl.Constant(whenTrue), whenFalse = IgnitorDsl.Constant(whenFalse))
 
 // Composition
 

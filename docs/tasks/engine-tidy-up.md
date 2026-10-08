@@ -899,6 +899,52 @@ Report: `tmp/reviews/tidy-step13-report.md` (with the door table for (b)).
   `ep1-t13a`: the 16 other rows identical to `corpus-ep1-before.txt`, Der Schmetterling from HEAD's text identical,
   Kokon from `kokon-head.ks` identical to `corpus-ep1-before-kokon.txt`.
 
+### (b) A plain number wherever a constant is accepted (D10)
+
+The table first: every door on the three surfaces that takes an Ignitor for a value that may be constant, 247 in
+all, door by door in the report. 54 were gaps, past the step's limit of about 20, so the worker stopped there; the
+coordinator decided what to fill (2026-10-09).
+
+- **The Kotlin `IgnitorDsl` arithmetic, 14 doors: filled.** The `plus` and `times` operators, `mul`, `div`, `minus`,
+  `pow`, `min`, `max`, `clamp`, `lerp`, `range`, `rangex`, `mod` and `select` (`audio_bridge`, `IgnitorDsl.kt`) have
+  the house pattern of the filters and `onepole`: a `Double` overload that wraps `IgnitorDsl.Constant` and delegates
+  to the `IgnitorDsl` door, with the script door's parameter names. The two-value doors take two numbers; `lerp` also
+  takes the mixed form `lerp(other: IgnitorDsl, t: Double)`, a signal at a constant weight. `min` and `max` delegate
+  to their doors, so they build the crossed node (`x.max(1.0)` is `Min`), the `CLAUDE.md` guardrail.
+- **The runtime arithmetic, 12 doors: filled as plain sugar.** `plus`, `times`, `minus`, `pow`, `min`, `max`, `clamp`,
+  `lerp` (both forms), `range`, `mod`, `select` and `withGain` (`audio_be`, `ignitor/Ignitor.kt`) take a `Double` that
+  wraps `ConstantIgnitor` and delegates to the `Ignitor` door: no new node. The dedicated constant nodes of `mul`,
+  `div` and `detune` stay as they are, so `x * 2.0` and `x.mul(2.0)` build different nodes.
+- **Kept `Ignitor`-only: the 27 runtime factories** (the 25 oscillators of `Ignitors`, `pitchEnvelopeModIgnitor`,
+  `fmModIgnitor`). The oscillators default every value parameter, so a `Double` twin cannot carry the same defaults
+  (a bare `Ignitors.sine()` would be ambiguous), and an author's door for a source is the DSL, which takes numbers.
+  The two pitch factories have required parameters, so a twin would be unambiguous; they stay because only
+  `IgnitorDslRuntime` and the specs call them.
+- **The limit of the Kotlin `audio_bridge` overloads:** a call takes either all numbers or all signals. A mixed call
+  (`lowpass(lfo, q = 4.0)`, `clamp(0.0, env)`, `lerp(0.0, env)`) spells `IgnitorDsl.Constant(...)`, and a number on
+  the left (`2.0 * lfo`) works on neither door. A Kotlin caller mixes through the `klangscript-libs` Kotlin door
+  (`KlangScriptIgnitorExtensions`), which takes either at every position. The coordinator carries this to the
+  maintainer with Q24.
+- **Open, asked (the coordinator logs them for the maintainer):** `Ignitor.variants` with number children (a value
+  selector, `lowpass(Ign.variants(400, 1200))`, which the engine plays, against `StrictArgumentConversionSpec`'s
+  pinned type error for `Ignitor.variants(1, Ign.sine())`); and the eleven Kotlin `IgnitorDsl` doors that take only a
+  `Double` where the script door also takes a signal (`detune`, `drive`, `distort`, `crush`, `coarse`, `phaser`,
+  `tremolo`, `shimmer`, `vibrato`, `accelerate`, `fm`).
+- **Left alone:** `audio_benchmark`'s `IgnitorBenchmark` writes its sources as wire data classes
+  (`IgnitorDsl.Sine(harmonics = IgnitorDsl.Constant(7.0))`), the verbose spelling D10 is about (the `eqdemo` sound in
+  `IgnitorDefaults.kt` does the same in main code); the door with numbers is `KlangScriptIgnitor.sine(...)`.
+- **Rows:** `KlangScriptIgnitorArithmeticDoorParitySpec` (14 rows, one per door, the script's aliases included: the
+  script form, the Kotlin `Double` form and the named node are equal); `IgnitorConstantSugarSpec` (12 rows: the sugar
+  renders bit for bit as the explicit `ConstantIgnitor` form). Mutation-checked, each in one lock call: every Kotlin
+  overload off by a value, 14 of 14 red; `mul(Double)` delegating to `div`, only `mul` red; `min(Double)` delegating
+  to `max`, only `min` red; `max(Double)` building the `Max` node itself, only `max` red; every runtime overload off
+  by a value, 12 of 12 red; runtime `plus(Double)` delegating to `minus`, only `plus` red; runtime `min(Double)`
+  delegating to `max`, only `min` red.
+- **Proof:** `:audio_bridge:jvmTest` 146, `:audio_be:jvmTest` 2,412, `:klangscript-libs:jvmTest` 821 and
+  `:audio_be:jsBrowserTest` 2,308 green; the corpus, label `ep1-t13b`: the 16 other rows identical to
+  `corpus-ep1-before.txt`, Der Schmetterling from HEAD's text identical, Kokon from `kokon-head.ks` identical to
+  `corpus-ep1-before-kokon.txt`. Additions only.
+
 ## The V8 allocation pass
 
 Scope: `tmp/reviews/v8-allocation-pass-scope.md` (its "Coordinator decisions" first). Report, with every table:
