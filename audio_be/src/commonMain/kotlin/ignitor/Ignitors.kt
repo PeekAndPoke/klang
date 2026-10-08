@@ -730,7 +730,7 @@ object Ignitors {
 
             val dt = actualFreq / ctx.sampleRateD
             val pm = ctx.phaseMod
-            // Same hoist as the wave-engine stacks (see TrapezoidStackIgnitor.renderVoice): the
+            // Same hoist as the unison stacks (see UnisonStackIgnitor.trapezoidLoop): the
             // one-subtract wrap holds only while |inc| < 1. Past that a positive dt parks the
             // trapezoid on its low plateau and a negative one rides the rise ramp without bound.
             val safeWrap = pm != null || voice.drift != null || !(abs(dt) < 1.0)
@@ -1476,7 +1476,7 @@ object Ignitors {
 
     /**
      * Supersaw: a detuned stack of the analog-flyback saw shape (mono). Voice count is read lazily
-     * from the [voices] Ignitor param on the first block. See [SawStackIgnitor].
+     * from the [voices] Ignitor param on the first block. See [UnisonStackIgnitor].
      */
     fun superSawRaw(
         freq: Ignitor = FreqIgnitor,
@@ -1502,7 +1502,8 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
-    ): Ignitor = SawStackIgnitor(
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.SAW,
         freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
@@ -1544,19 +1545,28 @@ object Ignitors {
         phasePools = phasePools, orbit = orbit, phase = phase, countsAtBuild = countsAtBuild,
     )
 
+    /** The voice shape of a [UnisonStackIgnitor]: the analog-flyback saw, the [waveTrapezoid] pulse, or a pure sine. */
+    private enum class StackKind { SAW, PULSE, SINE }
+
     /**
-     * Shared engine for every unison oscillator: a stack of detuned voices summed to mono with the
-     * super-saw character — center-dominant [sideAtten] gains, per-voice amplitude [gainJitter],
-     * per-voice drift lanes ([DriftLanes] blended by [analogSpread]), even [detune] spacing (shaped
-     * by [spreadPower]) with the
-     * **gain-weighted mean detune removed** so the pitch centroid sits exactly on the note. [polarity]
-     * flips the waveform and is baked into the voice gains (no per-sample sign flip).
+     * The one engine behind every unison oscillator (supersaw, superramp, supersquare, supertri, supersine): a stack of
+     * detuned voices summed to mono with the super-saw character: center-dominant [sideAtten] gains, per-voice
+     * amplitude [gainJitter], per-voice drift lanes ([DriftLanes] blended by [analogSpread]), even [detune] spacing
+     * (shaped by [spreadPower]) with the **gain-weighted mean detune removed** so the pitch centroid sits exactly on the
+     * note. [polarity] flips the waveform and is baked into the voice gains (no per-sample sign flip).
      *
-     * Subclasses supply only the per-voice shape — [configureShape] (control-rate, from the detuned
-     * increment) and [renderVoice] (the per-sample inner loop). Voice count is read lazily from the
-     * [voices] param; detune + shape are cached, recomputed only when freq / voice count / spread change.
+     * [kind] picks the voice shape, like [WaveIgnitor]'s [WaveKind]: [configureShape] sets it per voice (control rate,
+     * from the detuned increment), and the voice loop renders it, the [waveTrapezoid] for SAW and PULSE, a sine for
+     * SINE, each in a plain and a phased loop of its own (one small loop per method, which the JIT compiles whole).
+     * Each loop runs its own drift prologue. One shared prologue that handed the ramp to the loops as arguments was
+     * measured 20 to 25 percent slower on V8 for the phased loops (tidy-up step 11, review round 1): V8 did not inline
+     * them, so the arguments arrived untyped.
+     * The shape knobs are read only by their kind: [resetSamples] and [shapeMax] by SAW, [duty], [riseFlank],
+     * [fallFlank] and [flankSamples] by PULSE; SINE reads none. Voice count is read lazily from the [voices] param;
+     * detune + shape are cached, recomputed only when freq / voice count / spread change.
      */
-    private abstract class DetunedStackIgnitor(
+    private class UnisonStackIgnitor(
+        private val kind: StackKind,
         private val freq: Ignitor,
         private val voices: Ignitor,
         private val detune: Ignitor,
@@ -1580,6 +1590,12 @@ object Ignitors {
         private val orbit: Int,
         private val phaseIn: PhaseOffset?,
         countsAtBuild: Boolean,
+        private val resetSamples: Double = 0.0,
+        private val shapeMax: Double = 0.0,
+        private val duty: Double = 0.0,
+        private val riseFlank: Double = 0.0,
+        private val fallFlank: Double = 0.0,
+        private val flankSamples: Double = 0.0,
     ) : Ignitor {
         /** `selection` parsed at build (`"name[:width[:outliers]]"`, see [parsePhasePoolSelection]) when the pool is
          *  on; voices with the pool OFF (the default) never pay the parse, and the render never touches the string. */
@@ -1613,25 +1629,7 @@ object Ignitors {
         private var lastFreq: Double = Double.NaN
         private var lastSpread: Double = Double.NaN
 
-        /** Set the per-voice shape from its detuned per-sample increment [dt] (control rate). */
-        protected abstract fun configureShape(vs: WaveVoiceState, dt: Double)
-
-        /** Render voice [n]'s block: write the buffer when [first], else accumulate onto it. */
-        protected abstract fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?,
-        )
-
-        /**
-         * [renderVoice] for a moving `phase` signal: reads the voice's shape at `phase + offsets[i]` and advances the
-         * phase exactly as [renderVoice] does. Every voice reads the same [offsets], so the stack moves as one.
-         */
-        protected abstract fun renderVoicePhased(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
-        )
-
-        final override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
             val newV = coerceUnisonVoices(readParam(voices, actualFreq, ctx))
@@ -1783,7 +1781,10 @@ object Ignitors {
                         phaseIn.render(offsets, actualFreq, ctx)
 
                         for (n in 0 until v) {
-                            renderVoicePhased(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes, offsets = offsets)
+                            when (kind) {
+                                StackKind.SAW, StackKind.PULSE -> trapezoidLoopPhased(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes, offsets = offsets)
+                                StackKind.SINE -> sineLoopPhased(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes, offsets = offsets)
+                            }
                         }
                     }
 
@@ -1792,8 +1793,226 @@ object Ignitors {
             }
 
             for (n in 0 until v) {
-                renderVoice(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes)
+                when (kind) {
+                    StackKind.SAW, StackKind.PULSE -> trapezoidLoop(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes)
+                    StackKind.SINE -> sineLoop(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes)
+                }
             }
+        }
+
+        /** Set the per-voice shape from its detuned per-sample increment [dt] (control rate). */
+        private fun configureShape(vs: WaveVoiceState, dt: Double) {
+            when (kind) {
+                StackKind.SAW -> {
+                    val rf = (resetSamples * dt).coerceAtMost(shapeMax)
+
+                    // NaN-guard: a NaN frequency made the flyback NaN and every sample NaN (the trapezoid's fall
+                    // branch). The phase is scrubbed to 0 by the wrap meanwhile, so any finite shape holds -1: a voice at a NaN
+                    // frequency now carries a held -1 (DC through its envelope) where it used to be NaN, scrubbed to silence.
+                    vs.setSawShape(if (rf != rf) shapeMax else rf)
+                }
+
+                // No NaN guard here, none needed: a NaN frequency gives a NaN flank floor, and `coerceAtLeast(NaN)`
+                // keeps the flank, so the floor drops out and the voice holds its floor-free shape (`UnisonStackShapeSpec`).
+                StackKind.PULSE -> vs.setPulseShape(duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, floor = flankSamples * dt)
+
+                // The sine carries no shape.
+                StackKind.SINE -> Unit
+            }
+        }
+
+        /**
+         * Renders voice [n]'s [waveTrapezoid] block: writes the buffer when [first], else accumulates onto it. The drift
+         * prologue advances lane [n] right before voice [n] renders, voice by voice in index order. The order inside
+         * (the voice's fields and `safeWrap`, then the prologue, then the samples) is the one the loops had before step
+         * 11; the other order measured 9 to 11 percent slower on V8 for the sine (review round 1).
+         */
+        private fun trapezoidLoop(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
+            // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
+            // uncoerced), gives |dt| >= 1, and a drifting voice can hold a near-1 dt over the edge for
+            // seconds (the slow drift layer is a 10 s walk). Then the phase escapes: the trapezoid parks on
+            // its low plateau (positive dt) or rides the rise ramp without bound (negative dt), the
+            // polynomial sine diverges (1.8e34 measured in review). Hoisted: dt is block-constant. NaN
+            // and infinite dt take the safe branch, which wraps them to 0.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            val riseEnd = vs.riseEnd
+            val highEnd = vs.highEnd
+            val fallEnd = vs.fallEnd
+            val riseSlope = vs.riseSlope
+            val fallSlope = vs.fallSlope
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                m = drift.startOf(n)
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+            }
+
+            for (i in off until end) {
+                val s = waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                // No phaseMod, no drift and |dt| < 1 ⇒ |inc| < 1 ⇒ one conditional subtract or add;
+                // otherwise the safe wrap (see safeWrap above).
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
+            }
+
+            vs.phase = phase
+        }
+
+        /**
+         * [trapezoidLoop] for a moving `phase` signal: reads the shape at `phase + offsets[i]` and advances `phase` alike.
+         * Every voice reads the same [offsets] (rendered before the first lane advances), so the stack moves as one.
+         */
+        private fun trapezoidLoopPhased(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            // The safe wrap as in trapezoidLoop.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            val riseEnd = vs.riseEnd
+            val highEnd = vs.highEnd
+            val fallEnd = vs.fallEnd
+            val riseSlope = vs.riseSlope
+            val fallSlope = vs.fallSlope
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                m = drift.startOf(n)
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+            }
+
+            for (i in off until end) {
+                var p = phase + offsets[i].wrapToUnitCycle()
+
+                if (p >= 1.0) {
+                    p -= 1.0
+                }
+
+                val s = waveTrapezoid(p = p, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
+            }
+
+            vs.phase = phase
+        }
+
+        /** Renders voice [n]'s sine block, as [trapezoidLoop] renders the trapezoid. */
+        private fun sineLoop(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            // The safe wrap as in trapezoidLoop.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                m = drift.startOf(n)
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+            }
+
+            for (i in off until end) {
+                val s = fastSin(phase * TWO_PI) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
+            }
+
+            vs.phase = phase
+        }
+
+        /** [sineLoop] for a moving `phase` signal: reads the sine at `phase + offsets[i]`, advances `phase` alike. */
+        private fun sineLoopPhased(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            // The safe wrap as in trapezoidLoop.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                m = drift.startOf(n)
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+            }
+
+            for (i in off until end) {
+                var p = phase + offsets[i].wrapToUnitCycle()
+
+                if (p >= 1.0) {
+                    p -= 1.0
+                }
+
+                val s = fastSin(p * TWO_PI) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
+            }
+
+            vs.phase = phase
         }
 
         /**
@@ -1937,275 +2156,8 @@ object Ignitors {
         }
     }
 
-    /** A [DetunedStackIgnitor] whose voices render the piecewise-linear [waveTrapezoid] shape. */
-    private abstract class TrapezoidStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
-        phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?, countsAtBuild: Boolean,
-    ) : DetunedStackIgnitor(
-        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
-        polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
-        centerJitterScale = centerJitterScale,
-        phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn, countsAtBuild = countsAtBuild,
-    ) {
-        final override fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?,
-        ) {
-            var phase = vs.phase
-            val dt = vs.dt
-            // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
-            // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
-            // uncoerced), gives |dt| >= 1, and a drifting voice can hold a near-1 dt over the edge for
-            // seconds (the slow drift layer is a 10 s walk). Then the phase escapes: the trapezoid parks on
-            // its low plateau (positive dt) or rides the rise ramp without bound (negative dt), the
-            // polynomial sine diverges (1.8e34 measured in review). Hoisted: dt is block-constant. NaN
-            // and infinite dt take the safe branch, which wraps them to 0.
-            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
-            val gain = vs.gain
-            val riseEnd = vs.riseEnd
-            val highEnd = vs.highEnd
-            val fallEnd = vs.fallEnd
-            val riseSlope = vs.riseSlope
-            val fallSlope = vs.fallSlope
-            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
-            var m = 1.0
-            var dm = 0.0
-
-            if (drift != null) {
-                drift.advanceLane(n)
-                m = drift.startOf(n)
-                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
-            }
-
-            for (i in off until end) {
-                val s = waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
-                var inc = dt * m
-
-                if (pm != null) {
-                    inc *= pm[i]
-                }
-
-                m += dm
-                phase += inc
-                // No phaseMod, no drift and |dt| < 1 ⇒ |inc| < 1 ⇒ one conditional subtract or add;
-                // otherwise the safe wrap (see safeWrap above).
-                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
-            }
-
-            vs.phase = phase
-        }
-
-        final override fun renderVoicePhased(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
-        ) {
-            var phase = vs.phase
-            val dt = vs.dt
-            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
-            val gain = vs.gain
-            val riseEnd = vs.riseEnd
-            val highEnd = vs.highEnd
-            val fallEnd = vs.fallEnd
-            val riseSlope = vs.riseSlope
-            val fallSlope = vs.fallSlope
-            var m = 1.0
-            var dm = 0.0
-
-            if (drift != null) {
-                drift.advanceLane(n)
-                m = drift.startOf(n)
-                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
-            }
-
-            for (i in off until end) {
-                var p = phase + offsets[i].wrapToUnitCycle()
-
-                if (p >= 1.0) {
-                    p -= 1.0
-                }
-
-                val s = waveTrapezoid(p = p, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
-                var inc = dt * m
-
-                if (pm != null) {
-                    inc *= pm[i]
-                }
-
-                m += dm
-                phase += inc
-                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
-            }
-
-            vs.phase = phase
-        }
-    }
-
-    /** Unison saw / ramp ([polarity] ±1): the analog-flyback saw shape per voice. */
-    private class SawStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
-        phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?, countsAtBuild: Boolean,
-        private val resetSamples: Double, private val shapeMax: Double,
-    ) : TrapezoidStackIgnitor(
-        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
-        polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
-        centerJitterScale = centerJitterScale,
-        phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn, countsAtBuild = countsAtBuild,
-    ) {
-        override fun configureShape(vs: WaveVoiceState, dt: Double) {
-            val rf = (resetSamples * dt).coerceAtMost(shapeMax)
-
-            // NaN-guard: a NaN frequency made the flyback NaN and every sample NaN (the trapezoid's fall
-            // branch). The phase is scrubbed to 0 by the wrap meanwhile, so any finite shape holds -1: a voice at a NaN
-            // frequency now carries a held -1 (DC through its envelope) where it used to be NaN, scrubbed to silence.
-            vs.setSawShape(if (rf != rf) shapeMax else rf)
-        }
-    }
-
-    /** Unison pulse / square / triangle: the [waveTrapezoid] pulse shape per voice ([duty] + flanks). */
-    private class PulseStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
-        phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?, countsAtBuild: Boolean,
-        private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
-        private val flankSamples: Double,
-    ) : TrapezoidStackIgnitor(
-        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
-        polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
-        centerJitterScale = centerJitterScale,
-        phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn, countsAtBuild = countsAtBuild,
-    ) {
-        override fun configureShape(vs: WaveVoiceState, dt: Double) {
-            vs.setPulseShape(duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, floor = flankSamples * dt)
-        }
-    }
-
-    /** Unison sine: a pure sine per voice (no shape config; inherently band-limited). */
-    private class SineStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
-        sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
-        phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?, countsAtBuild: Boolean,
-    ) : DetunedStackIgnitor(
-        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
-        polarity = 1.0, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
-        centerJitterScale = centerJitterScale,
-        phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn, countsAtBuild = countsAtBuild,
-    ) {
-        override fun configureShape(vs: WaveVoiceState, dt: Double) { /* sine carries no shape */
-        }
-
-        override fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?,
-        ) {
-            var phase = vs.phase
-            val dt = vs.dt
-            // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
-            // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
-            // uncoerced), gives |dt| >= 1, and a drifting voice can hold a near-1 dt over the edge for
-            // seconds (the slow drift layer is a 10 s walk). Then the phase escapes: the trapezoid parks on
-            // its low plateau (positive dt) or rides the rise ramp without bound (negative dt), the
-            // polynomial sine diverges (1.8e34 measured in review). Hoisted: dt is block-constant. NaN
-            // and infinite dt take the safe branch, which wraps them to 0.
-            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
-            val gain = vs.gain
-            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
-            var m = 1.0
-            var dm = 0.0
-
-            if (drift != null) {
-                drift.advanceLane(n)
-                m = drift.startOf(n)
-                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
-            }
-
-            for (i in off until end) {
-                val s = fastSin(phase * TWO_PI) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
-                var inc = dt * m
-
-                if (pm != null) {
-                    inc *= pm[i]
-                }
-
-                m += dm
-                phase += inc
-                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
-            }
-
-            vs.phase = phase
-        }
-
-        override fun renderVoicePhased(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
-        ) {
-            var phase = vs.phase
-            val dt = vs.dt
-            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
-            val gain = vs.gain
-            var m = 1.0
-            var dm = 0.0
-
-            if (drift != null) {
-                drift.advanceLane(n)
-                m = drift.startOf(n)
-                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
-            }
-
-            for (i in off until end) {
-                var p = phase + offsets[i].wrapToUnitCycle()
-
-                if (p >= 1.0) {
-                    p -= 1.0
-                }
-
-                val s = fastSin(p * TWO_PI) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
-                var inc = dt * m
-
-                if (pm != null) {
-                    inc *= pm[i]
-                }
-
-                m += dm
-                phase += inc
-                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
-            }
-
-            vs.phase = phase
-        }
-    }
-
     /**
-     * Supersine: a detuned stack of pure sines (mono) on the shared [SineStackIgnitor] / super-saw
+     * Supersine: a detuned stack of pure sines (mono) on the shared [UnisonStackIgnitor] / super-saw
      * unison engine (center-dominant gains, per-voice drift, centroid-anchored detune; its own
      * `SUPERSINE_*` knobs, seeded to the super-saw values). Inherently band-limited, no anti-aliasing
      * needed. Voice count is read lazily from the [voices] Ignitor param on the first block.
@@ -2233,8 +2185,10 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
-    ): Ignitor = SineStackIgnitor(
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.SINE,
         freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
+        polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -2244,7 +2198,7 @@ object Ignitors {
 
     /**
      * Supersquare: a detuned stack of the finite-slope pulse shape (duty 0.5, mono) on the shared
-     * [PulseStackIgnitor] / super-saw unison engine (center-dominant gains, per-voice drift,
+     * [UnisonStackIgnitor] / super-saw unison engine (center-dominant gains, per-voice drift,
      * centroid-anchored detune; its own `SUPERSQUARE_*` knobs, seeded to the super-saw values). Edges
      * are finite-slope flanks (no PolyBLEP), like the mono square. Voice count is read lazily from the
      * [voices] Ignitor param on the first block.
@@ -2272,7 +2226,8 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
-    ): Ignitor = PulseStackIgnitor(
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.PULSE,
         freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
@@ -2284,7 +2239,7 @@ object Ignitors {
     )
 
     /**
-     * Supertri: a detuned stack of triangles (mono) on the shared [PulseStackIgnitor] / super-saw
+     * Supertri: a detuned stack of triangles (mono) on the shared [UnisonStackIgnitor] / super-saw
      * unison engine — the pulse shape with fully-open flanks (1.0/1.0, duty 0.5); its own `SUPERTRI_*`
      * knobs, seeded to the super-saw values. Piecewise linear, inherently band-limited. Voice count is
      * read lazily from the [voices] Ignitor param on the first block.
@@ -2312,7 +2267,8 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
-    ): Ignitor = PulseStackIgnitor(
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.PULSE,
         freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
@@ -2325,7 +2281,7 @@ object Ignitors {
 
     /**
      * Superramp: a detuned stack of the analog saw shape, **negated** (the mirror of [superSaw]).
-     * Shares [SawStackIgnitor] with `polarity = −1`, the `RAMP_*` shape and its own
+     * Shares [UnisonStackIgnitor] (the SAW kind) with `polarity = −1`, the `RAMP_*` shape and its own
      * `SUPERRAMP_*` unison knobs (seeded to the super-saw values; change them to diverge). Voice
      * count is read lazily from the [voices] Ignitor param on the first block.
      */
@@ -2352,7 +2308,8 @@ object Ignitors {
         orbit: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
-    ): Ignitor = SawStackIgnitor(
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.SAW,
         freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = -1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,

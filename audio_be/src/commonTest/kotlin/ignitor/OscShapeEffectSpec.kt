@@ -24,7 +24,7 @@ private val testRandom = Random(0x5EED)
  * These oscillators render deterministically (no rng) once `analog` is pinned to a constant, so a plain
  * "default block != perturbed block" comparison isolates the knob's effect. The unison `Super*` character
  * knobs (`spreadPower`/`sideAtten`/`gainJitter`/`centerJitterScale`) can't be isolated this way — the engine
- * draws per-voice random gains/phases — so their audible effect is guarded on the shared `DetunedStackIgnitor`
+ * draws per-voice random gains/phases, so their audible effect is guarded on the shared `UnisonStackIgnitor`
  * by `AnalogSawSpec`, and their DSL binding by the `KlangScriptSuperOscSpec` dual-language spec.
  * The phase-pool knobs (`phasePool`/`drawTries`/`kMin`/`kMax`) DO get an end-to-end DSL→engine
  * guard — statistically — in `PhasePoolDslSeamSpec`.

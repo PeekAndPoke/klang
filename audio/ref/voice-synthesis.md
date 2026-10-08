@@ -111,7 +111,7 @@ registered in `ignitor/IgnitorDefaults.kt` / `IgnitorRegistry.kt`. (There is no 
 | Sine             | `sine`                                                      | Pure sinusoid (inherently band-limited)                                                                                                                         |
 | Trapezoid shapes | `saw` `ramp` `square` `pulze` `tri`                         | ONE `waveTrapezoid` / `WaveVoiceState` engine (`WaveIgnitor`); finite-slope edges, no PolyBLEP, softens with pitch. `pulze` duty is audio-rate (PWM)            |
 | Raw shapes       | `zaw`/`zawtooth` `zamp`                                     | `flankSamples = 0` → instant / aliased edges                                                                                                                    |
-| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `DetunedStackIgnitor` — detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` ignitorParams |
+| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `UnisonStackIgnitor` (a `StackKind` per shape): detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` ignitorParams |
 | Noise            | `noise` `pink` `dust` …                                     | White / pink / impulse noise                                                                                                                                    |
 
 Per-oscillator character constants live in `ignitor/OscillatorTuning.kt`

@@ -205,7 +205,8 @@ Before: each `super-X` factory returned a SAM lambda that allocated a
 **fresh `DoubleArray(v)`** every block to hold per-voice detune ratios — at
 ~344 blocks/sec × multiple super-* voices, real GC pressure.
 
-After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIgnitor`):
+After (`audio_be/.../ignitor/Ignitors.kt`, all five now one `UnisonStackIgnitor` with a `StackKind`, engine
+tidy-up step 11):
 
 - Per-voice state (phase / dt / gain / shape) lives in a persistent
   `Array<WaveVoiceState>`, built with the node at the voice count the build can
@@ -214,8 +215,12 @@ After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIg
   reads the note's frequency, past that size grows it (engine tidy-up step 10). The drift lanes live beside it in one `DriftLanes`.
 - Detune + shape are recomputed only when freq / voice count / spread change
   (NaN cache keys), not every block. The hot path is a **voice-major** loop that
-  hoists each voice's fields into locals (register residency); the per-voice
-  render is a `final override` so the shape loop stays monomorphic.
+  hoists each voice's fields into locals (register residency). Per voice, a
+  `when (kind)` calls one small private loop per shape and path (trapezoid or
+  sine, plain or phased), each call direct, so every loop stays monomorphic. Each
+  loop runs its own drift prologue: with one shared prologue handing the ramp in
+  as arguments, V8 left the phased loops un-inlined with untyped arguments, and
+  they ran 20 to 25 percent slower (step 11, review round 1).
 
 ## Rules learned by measurement (2026-09)
 
