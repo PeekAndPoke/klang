@@ -20,7 +20,7 @@ private val testRandom = Random(0x5EED)
  * Guards ledger O1: `superpluck` must read its `voices` param via `readParam`, never by rendering
  * into scratch and indexing. The raw read returned stale cross-voice pool residue on a zero-length
  * terminal window (`generate` writes nothing there), and that value sized
- * `Array(newV) { StringState(AudioBuffer(2500)) }` — a control-rate residue meant an unbounded
+ * `Array(newV) { KarplusString() }` (a 2500-sample delay line each); a control-rate residue meant an unbounded
  * synchronous allocation on the render thread.
  */
 class SuperPluckParamReadSpec : StringSpec({

@@ -70,6 +70,12 @@ optimization for monomorphic class fields and keep the code obviously
 correct. The big win is going from ObjectRef → class field, not from class
 field → register.
 
+One measured exception: `KarplusString.render` keeps the string's state in
+locals and writes it back after the loop (9 to 16 percent faster on V8 there,
+engine tidy-up step 11). It has one exit, and its write-backs are pinned by
+`BlockFramingInvarianceSpec` (I2) and `BuiltInVoiceMatrixSpec`; its KDoc says
+why. An exception needs its own measurement and its own guard.
+
 ### Rule 2 — No allocation inside `process()` / `generate()`
 
 **Why:** the audio thread runs every ~2–6 ms. Every `DoubleArray(n) { … }`,
@@ -222,6 +228,15 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   through an inline method inside the loop is free on the JVM and cost a drifting supersaw 16 percent on V8
   (`DriftLanes`: `ownLane(n)`, `sharedWalk()`, the weights as locals, one inline `driftStep`). `copyInto` allocates
   a typed-array view per call on JS: in a hot path use `copyRangeInto` (`utils/buffer_copy.kt`), a plain loop.
+- **On V8, a double that seeds a loop-carried variable must pass through an arithmetic operation first** (2026-10,
+  engine tidy-up step 11, review rounds 1 and 2). A double that comes from a call result, a field or an argument of
+  a function V8 does not inline (a delay, a drift ramp's start) and seeds a variable the loop updates stays a
+  tagged value, and every update allocates a heap number: one 16-byte box per sample. Computing it in the same
+  function is not enough (a value from `lanes.startOf(n)` boxed so). The remedy is `* 1.0` once before the loop
+  (exact for every value but a NaN's payload). Measured on the Karplus string: without it the superpluck with drift
+  ran 424 to 633 scavenges per run and 40 to 76 percent slower (records: `docs/tasks/engine-tidy-up.md`, step 11
+  (b)); the unison stacks' phased loops showed the same with arguments. No test can pin it, because the sound is
+  bit-identical either way: the KDoc at the site is the guard. Check a new hot loop with `--trace-gc`.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per

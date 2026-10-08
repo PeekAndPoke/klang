@@ -28,7 +28,7 @@ note through their own physics, with **no `Adsr` node anywhere in the tree**
 (`audio_be/ignitor/Ignitors.kt:59`), and it is applied inside the Karplus-Strong feedback loop as
 
 ```kotlin
-delayLine[writePos] = (filtered * decayVal)      // Ignitors.kt, KarplusStrongIgnitor
+line[wp] = (filtered * decayGain)      // KarplusString.kt, render (both pluck nodes); decayGain is the decay
 ```
 
 — once per **delay-line pass**, i.e. once per period of the note. Amplitude after `t` seconds is
@@ -100,7 +100,8 @@ Not an interface — a policy. In rough dependency order:
   — the build-accumulator design, the six-case ownership table, `.adsrOff()` semantics, the fade guard.
 - Code: `audio_bridge/IgnitorDsl.kt:643` (`Pluck` node), `audio_be/ignitor/Ignitors.kt:59`
   (`decayDefault`), `Ignitors.kt:1176+` (`karplusStrong` / `KarplusStrongIgnitor`), `Ignitors.kt:1282+`
-  (`superKarplusStrong`).
+  (`superKarplusStrong`), `audio_be/ignitor/KarplusString.kt` (the string both nodes share; `render` holds the
+  feedback write-back with the decay).
 - Prior art in this repo for "express time relative to the note rather than in absolute units": the
   harmonic-relative string filter and the period-scaled minimum release, both in the parent task.
   The latter is now carried forward on its own in `docs/tasks/future/envelope-shape-followups.md`.

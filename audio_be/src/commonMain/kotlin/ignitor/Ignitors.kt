@@ -2365,9 +2365,8 @@ object Ignitors {
 
     /**
      * Karplus-Strong plucked string synthesis via noise-burst-excited delay line with filtered feedback.
-     * Extended with pick position modeling and allpass stiffness filtering.
+     * Extended with pick position modeling and allpass stiffness filtering. One [KarplusString].
      */
-    @Suppress("DuplicatedCode")
     fun karplusStrong(
         freq: Ignitor = FreqIgnitor,
         decay: Ignitor = decayDefault,
@@ -2387,23 +2386,11 @@ object Ignitors {
         private val analog: Ignitor,
         private val rng: Random,
     ) : Ignitor {
-        // Max delay line: supports down to ~20 Hz at 48kHz (2400 samples)
-        private val maxDelay = 2500
-        private val delayLine = AudioBuffer(maxDelay)
-        private var writePos: Int = 0
-        private var excited: Boolean = false
+        private val string = KarplusString()
 
         /** Built with the node, seeded at the first block (see [seedAnalogDrift]). */
         private val drift = AnalogDrift()
         private var driftSeeded: Boolean = false
-
-        // One-pole lowpass state for brightness filtering
-        private var lpState: Double = 0.0
-
-        // Allpass state for stiffness
-        private var apPrevIn: Double = 0.0
-        private var apPrevOut: Double = 0.0
-
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
@@ -2417,35 +2404,13 @@ object Ignitors {
             val decayVal = readParam(decay, actualFreq, ctx)
             val brightnessVal = readParam(brightness, actualFreq, ctx)
             val stiffnessVal = readParam(stiffness, actualFreq, ctx)
-
-            val lpAlpha = brightnessVal.coerceIn(0.01, 1.0)
-            val hasStiffness = stiffnessVal > 0.0
-            val apCoeff = stiffnessVal.coerceIn(0.0, 0.99) * 0.5
-
-            val sr = ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
             val end = ctx.windowEnd
+            val baseDelay = KarplusString.baseDelayOf(sampleRate = ctx.sampleRateD, freqHz = actualFreq)
 
-            val baseDelay = (sr / actualFreq).coerceIn(2.0, (maxDelay - 1.0))
-
-            if (!excited) {
-                excited = true
-
-                val pickPosVal = readParam(pickPosition, actualFreq, ctx)
-                val delayLen = baseDelay.toInt()
-                val pp = pickPosVal.coerceIn(0.0, 1.0)
-                val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
-                val burstStart = ((delayLen - burstLen) * pp).toInt()
-
-                for (j in 0 until delayLen) {
-                    delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                        (rng.nextDouble() * 2.0 - 1.0)
-                    } else {
-                        0.0
-                    }
-                }
-
-                writePos = delayLen % maxDelay
+            // The pick position is read once, at the pluck.
+            if (!string.excited) {
+                string.excited = true
+                string.excite(baseDelay = baseDelay, pickPos = readParam(pickPosition, actualFreq, ctx), rng = rng)
             }
 
             var m = 1.0
@@ -2458,43 +2423,12 @@ object Ignitors {
                 dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
             }
 
-            for (i in ctx.offset until end) {
-                var dl = baseDelay
-
-                if (phaseMod != null) {
-                    dl /= phaseMod[i]
-                }
-
-                if (hasDrift) {
-                    dl /= m
-                    m += dm
-                }
-
-                dl = dl.coerceIn(2.0, (maxDelay - 1.0))
-
-                val readPosF = writePos - dl
-                val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
-                val readIdx = readPosWrapped.toInt() % maxDelay
-                val frac = readPosWrapped - readPosWrapped.toInt()
-                val nextIdx = (readIdx + 1) % maxDelay
-                val sample = delayLine[readIdx] + (delayLine[nextIdx] - delayLine[readIdx]) * frac
-
-                lpState = (lpState + lpAlpha * (sample - lpState)).flushState()
-
-                var filtered = lpState
-
-                if (hasStiffness) {
-                    val apOut = apCoeff * (filtered - apPrevOut) + apPrevIn
-
-                    apPrevIn = filtered.flushState()
-                    apPrevOut = apOut.flushState()
-                    filtered = apOut
-                }
-
-                delayLine[writePos] = (filtered * decayVal)
-                buffer[i] = sample
-                writePos = (writePos + 1) % maxDelay
-            }
+            string.render(
+                buffer = buffer, from = ctx.offset, to = end, baseDelay = baseDelay, phaseMod = ctx.phaseMod,
+                hasDrift = hasDrift, driftStart = m, driftStep = dm,
+                lpAlpha = KarplusString.lpAlphaOf(brightnessVal), hasStiffness = KarplusString.hasStiffnessOf(stiffnessVal),
+                apCoeff = KarplusString.apCoeffOf(stiffnessVal), decay = decayVal, gain = 1.0, accumulate = false,
+            )
         }
     }
 
@@ -2502,9 +2436,8 @@ object Ignitors {
      * Super Karplus-Strong: multiple detuned plucked strings summed together.
      * Each string has independent noise excitation and its own drift lane, creating rich evolving
      * shimmer; [analogSpread] blends those lanes towards one shared walk for the whole instrument.
-     * Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Voice count is read lazily from the [voices] Ignitor param on the first block. One [KarplusString] per voice.
      */
-    @Suppress("DuplicatedCode")
     fun superKarplusStrong(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
@@ -2535,17 +2468,6 @@ object Ignitors {
         private val rng: Random,
         countsAtBuild: Boolean,
     ) : Ignitor {
-        private val maxDelay = 2500
-
-        private class StringState(
-            val delayLine: AudioBuffer,
-            var writePos: Int = 0,
-            var excited: Boolean = false,
-            var lpState: Double = 0.0,
-            var apPrevIn: Double = 0.0,
-            var apPrevOut: Double = 0.0,
-        )
-
         private var v: Int = 0
         private var voiceGain: Double = 0.0
 
@@ -2554,7 +2476,7 @@ object Ignitors {
          * ([unisonCapacity]); only a count past them grows the array, at render (a `voices` signal the build could
          * not read). A shrink keeps them all.
          */
-        private var strings: Array<StringState> = Array(unisonCapacity(voices = voices, countsAtBuild = countsAtBuild)) { StringState(AudioBuffer(maxDelay)) }
+        private var strings: Array<KarplusString> = Array(unisonCapacity(voices = voices, countsAtBuild = countsAtBuild)) { KarplusString() }
 
         /**
          * One lane per string plus the shared walk, built with the node when `analog` may be above 0 (see
@@ -2588,7 +2510,7 @@ object Ignitors {
                 if (v > strings.size) {
                     val old = strings
 
-                    strings = Array(v) { i -> if (i < old.size) old[i] else StringState(AudioBuffer(maxDelay)) }
+                    strings = Array(v) { i -> if (i < old.size) old[i] else KarplusString() }
                 }
 
                 // A regrown string RE-PLUCKS (the DECIDED note above), so it gets a fresh lane
@@ -2612,9 +2534,9 @@ object Ignitors {
             val brightnessVal = readParam(brightness, actualFreq, ctx)
             val stiffnessVal = readParam(stiffness, actualFreq, ctx)
 
-            val lpAlpha = brightnessVal.coerceIn(0.01, 1.0)
-            val hasStiffness = stiffnessVal > 0.0
-            val apCoeff = stiffnessVal.coerceIn(0.0, 0.99) * 0.5
+            val lpAlpha = KarplusString.lpAlphaOf(brightnessVal)
+            val hasStiffness = KarplusString.hasStiffnessOf(stiffnessVal)
+            val apCoeff = KarplusString.apCoeffOf(stiffnessVal)
 
             val sr = ctx.sampleRateD
             val phaseMod = ctx.phaseMod
@@ -2655,29 +2577,14 @@ object Ignitors {
 
                 val detuneSemitones = getUnisonDetune(unison = v, detune = spread, voiceIndex = n)
                 val detunedFreq = actualFreq * detuneSemitones.semitones()
-                val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1.0))
+                val baseDelay = KarplusString.baseDelayOf(sampleRate = sr, freqHz = detunedFreq)
 
-                // Excite each string independently
+                // Excite each string independently; a string that comes back keeps its filter state.
                 if (!s.excited) {
                     s.excited = true
-
-                    val delayLen = baseDelay.toInt()
-                    val pp = pickPosVal.coerceIn(0.0, 1.0)
-                    val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
-                    val burstStart = ((delayLen - burstLen) * pp).toInt()
-
-                    for (j in 0 until delayLen) {
-                        s.delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                            (rng.nextDouble() * 2.0 - 1.0)
-                        } else {
-                            0.0
-                        }
-                    }
-
-                    s.writePos = delayLen % maxDelay
+                    s.excite(baseDelay = baseDelay, pickPos = pickPosVal, rng = rng)
                 }
 
-                val isFirst = n == 0
                 // Hoisted once per string: everything the blend reads is constant for the block.
                 var m = 1.0
                 var dm = 0.0
@@ -2688,58 +2595,13 @@ object Ignitors {
                     dm = rampStep(from = m, to = lanes.endOf(n), frames = end - ctx.offset)
                 }
 
-                for (i in ctx.offset until end) {
-                    // Effective delay with detune, phaseMod, and per-voice drift
-                    var dl = baseDelay
-
-                    if (phaseMod != null) {
-                        dl /= phaseMod[i]
-                    }
-
-                    if (lanes != null) {
-                        dl /= m
-                        m += dm
-                    }
-
-                    dl = dl.coerceIn(2.0, (maxDelay - 1.0))
-
-                    // Read with linear interpolation
-                    val readPosF = s.writePos - dl
-                    val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
-                    val readIdx = readPosWrapped.toInt() % maxDelay
-                    val frac = readPosWrapped - readPosWrapped.toInt()
-                    val nextIdx = (readIdx + 1) % maxDelay
-                    val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac
-
-                    // One-pole lowpass (brightness)
-                    s.lpState = s.lpState + lpAlpha * (sample - s.lpState)
-                    s.lpState = s.lpState.flushState()
-
-                    var filtered = s.lpState
-
-                    // Allpass stiffness
-                    if (hasStiffness) {
-                        val apOut = apCoeff * (filtered - s.apPrevOut) + s.apPrevIn
-
-                        s.apPrevIn = filtered.flushState()
-                        s.apPrevOut = apOut.flushState()
-                        filtered = apOut
-                    }
-
-                    // Write back with decay
-                    s.delayLine[s.writePos] = (filtered * decayVal)
-
-                    // Sum to output
-                    val out = (sample * voiceGain)
-
-                    if (isFirst) {
-                        buffer[i] = out
-                    } else {
-                        buffer[i] = buffer[i] + out
-                    }
-
-                    s.writePos = (s.writePos + 1) % maxDelay
-                }
+                // The first string writes the buffer, the others add to it.
+                s.render(
+                    buffer = buffer, from = ctx.offset, to = end, baseDelay = baseDelay, phaseMod = phaseMod,
+                    hasDrift = lanes != null, driftStart = m, driftStep = dm,
+                    lpAlpha = lpAlpha, hasStiffness = hasStiffness, apCoeff = apCoeff, decay = decayVal,
+                    gain = voiceGain, accumulate = n != 0,
+                )
             }
         }
     }

@@ -402,6 +402,9 @@ class BlockFramingInvarianceSpec : StringSpec({
     "I2 ragged: pluck and noise survive a ragged block sequence bit-identically" {
         for ((name, dsl) in listOf(
             "pluck" to IgnitorDsl.Pluck(),
+            // With stiffness the allpass runs: its state must carry across the ragged blocks too.
+            "stiff pluck" to IgnitorDsl.Pluck(stiffness = IgnitorDsl.Constant(0.5)),
+            "stiff superpluck" to IgnitorDsl.SuperPluck(voices = IgnitorDsl.Constant(3.0), stiffness = IgnitorDsl.Constant(0.5)),
             "white noise" to IgnitorDsl.WhiteNoise(),
         )) {
             val ref = renderRagged(listOf(128)) { dsl.toExciter(random = Random(7)) }
