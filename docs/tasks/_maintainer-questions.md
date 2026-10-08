@@ -38,6 +38,17 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
 - **Pitch pipeline, D4, D5, D7** (§8): slot names follow sprudel's readers (`fm.h`, `fm.env`, `vibrato.depth`; the
   asymmetry with the node's `ratio` / `depth` / `semitones` recorded); each door's wire fields are cut in its own step
   (not all at the end, the one deviation from the task text); `voices/strip/` dissolves into `voices/` at the end.
+- **Tidy step 11, the arithmetic and leaf twins** ([`engine-tidy-up.md`](engine-tidy-up.md)). Only the runtime
+  `Ignitor` classes are collapsed: 20 arithmetic node classes become one binary and one unary node, with each law
+  written once. The wire is untouched. Kept as won't-do:
+  - the matching collapse of the 20 `IgnitorDsl` arithmetic wire types into `Unary(op)` / `Binary(op)`: it would
+    change every JSON tag and the schema hash, touch every walker and cross the min/max guardrail, and a Zig port
+    gains nothing from it that the runtime collapse does not give;
+  - merging `Param` and `Constant`, both at runtime and on the wire: they are different concepts, and the runtime
+    `scaledBy` treats them differently on purpose (a Param goes through the clamped multiply, so the fused and
+    chained `passes` doors stay bit-identical).
+  
+  Say if you want either one anyway.
 
 ## For later (not blocking anything now)
 
