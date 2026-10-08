@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Phaser
+import io.peekandpoke.klang.audio_be.effects.PhaserBlock
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
@@ -112,6 +113,9 @@ class KatalystPhaserEffect(
      */
     private var fresh: Boolean = true
 
+    /** The block's knob values, filled per block in [process] and handed over by reference ([PhaserBlock] says why). */
+    private val block = PhaserBlock()
+
     init {
         // Unset is identity: the dry mix, which is what the depth gate's off target is too.
         dryGlide.retarget(1.0)
@@ -183,21 +187,15 @@ class KatalystPhaserEffect(
     override fun process(ctx: KatalystContext) {
         fresh = false
 
-        val dryFrom = dryGlide.value
-        val dryTo = dryGlide.advance()
-        val wetFrom = wetGlide.value
-        val wetTo = wetGlide.advance()
+        val b = block
 
-        phaser.process(
-            buffer = ctx.mixBuffer,
-            frames = ctx.blockFrames,
-            centerTo = centerGlide.advance(),
-            sweepTo = sweepGlide.advance(),
-            dryFrom = dryFrom,
-            dryTo = dryTo,
-            wetFrom = wetFrom,
-            wetTo = wetTo,
-        )
+        b.dryFrom = dryGlide.value
+        b.dryTo = dryGlide.advance()
+        b.wetFrom = wetGlide.value
+        b.wetTo = wetGlide.advance()
+        b.centerTo = centerGlide.advance()
+        b.sweepTo = sweepGlide.advance()
+        phaser.process(buffer = ctx.mixBuffer, frames = ctx.blockFrames, block = b)
     }
 
     /** Cascade + latch + LFO phase + kernel params + every glide: the full clean slate, rate included. */

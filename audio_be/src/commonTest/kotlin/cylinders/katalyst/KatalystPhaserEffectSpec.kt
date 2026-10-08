@@ -479,6 +479,26 @@ class KatalystPhaserEffectSpec : StringSpec({
         fx.sweep shouldBe 200.0
     }
 
+    "the cores run each block at the breakpoint the glide holds for that block" {
+        // The stage advances each glide and hands the result to `Phaser.process` (through its `PhaserBlock`); a
+        // breakpoint taken before the advance would lag the glide by one block.
+        val fx = stage()
+        val ctx = KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
+
+        fx.configure(depth = 0.8, rate = 1.7, center = 400.0, sweep = 800.0, floor = 1.0)
+        fx.process(ctx)
+
+        for (g in 0 until glideBlocks + 2) {
+            fx.configure(depth = 0.8, rate = 1.7, center = 6000.0, sweep = 200.0, floor = 1.0)
+            fx.process(ctx)
+
+            withClue("block $g") {
+                fx.phaser.center shouldBe fx.center
+                fx.phaser.sweep shouldBe fx.sweep
+            }
+        }
+    }
+
     "rate does not glide: it takes effect at once, and the LFO phase carries on" {
         val blocks = 8
         val src = source(blocks)

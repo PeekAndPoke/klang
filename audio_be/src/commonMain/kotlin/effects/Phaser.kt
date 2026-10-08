@@ -46,6 +46,12 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  */
 class Phaser(sampleRate: Int) {
 
+    /**
+     * The eight-argument [process] door's own holder: the door fills it and hands it to the holder overload, so the
+     * law is written once (see [PhaserBlock]).
+     */
+    private val doorBlock = PhaserBlock()
+
     companion object {
         /**
          * Below this the bus phaser is a bypass: the historical katalyst `< 0.01` gate, and still
@@ -222,6 +228,29 @@ class Phaser(sampleRate: Int) {
         wetFrom: Double,
         wetTo: Double,
     ) {
+        val block = doorBlock
+
+        block.centerTo = centerTo
+        block.sweepTo = sweepTo
+        block.dryFrom = dryFrom
+        block.dryTo = dryTo
+        block.wetFrom = wetFrom
+        block.wetTo = wetTo
+        process(buffer = buffer, frames = frames, block = block)
+    }
+
+    /**
+     * One block of [buffer], in place, with the block's knob values in [block] (see the eight-argument [process] for
+     * what each one means). The orbit stage owns its [PhaserBlock] and fills it per block; this overload reads the
+     * values and keeps no reference to the holder.
+     */
+    fun process(buffer: StereoBuffer, frames: Int, block: PhaserBlock) {
+        val centerTo = block.centerTo
+        val sweepTo = block.sweepTo
+        val dryFrom = block.dryFrom
+        val dryTo = block.dryTo
+        val wetFrom = block.wetFrom
+        val wetTo = block.wetTo
         val identity = dryFrom == 1.0 && dryTo == 1.0 && wetFrom == 0.0 && wetTo == 0.0
 
         // Fast path for orbits that never had a phaser: at rate 0 the phase cannot move, alpha is
@@ -297,4 +326,26 @@ class Phaser(sampleRate: Int) {
             right[i] = dryR * dryC + wetR * wetC
         }
     }
+}
+
+/**
+ * One block's knob values for [Phaser.process]: the breakpoint the block ends at ([centerTo], [sweepTo]) and the C4
+ * law's two coefficients at its start and its end ([dryFrom] to [dryTo], [wetFrom] to [wetTo]).
+ *
+ * **Mutable and reused, on purpose** (V8 allocation pass, 2026-10-08). `Phaser.process` is far too big for V8 to
+ * inline, and on V8 a non-integral double handed to a function that is not inlined travels as a heap number, one
+ * allocation per value per call. Passed as six arguments, the hop cost the orbit phaser one to three heap numbers per
+ * block more than the holder does, on the production bundle with the process pinned to one core and without (engine
+ * level; at the edge of the spread an inert change produces, see `audio/ref/performance.md`). So the numbers stay in
+ * the fields of one holder, and the call hands over the reference (the rule in `audio/ref/performance.md`; the
+ * resonator's `ResonatorConfig` is the precedent). Each holder owns its instance: the orbit stage one, the
+ * eight-argument door [Phaser]'s own; [Phaser.process] keeps no reference to it.
+ */
+class PhaserBlock {
+    var centerTo: Double = PHASER_CENTER_HZ
+    var sweepTo: Double = PHASER_SWEEP_HZ
+    var dryFrom: Double = 1.0
+    var dryTo: Double = 1.0
+    var wetFrom: Double = 0.0
+    var wetTo: Double = 0.0
 }
