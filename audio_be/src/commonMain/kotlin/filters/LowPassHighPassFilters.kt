@@ -59,12 +59,14 @@ import kotlin.math.tan
 // by the raw IIR pole `a` instead of cutoffHz (kept this way for back-compat with
 // the public `Ignitor.dcBlock(coefficient)` API). Replaced 9 open-coded inline copies
 // of the same recurrence in `IgnitorEffects.distort()`, `Ignitor.shape()`, and
-// the voice strip's distort (now `DistortionCore`) with a single source of truth.
+// the voice strip's distort with a single source of truth. Since engine tidy-up step 11
+// the shaper's one `DcBlocker` lives in `DistortionCore`, shared by the `Shape` node and
+// the fused `Distort` node.
 //
 // **2× edge transient**: rail-to-rail input produces a ~2× peak transient through
 // the raw-pole topology (railed input − railed previous + nearly-railed feedback).
-// `Ignitor.distort()` and `Ignitor.shape()` pair `DcBlocker` with `ShapingFuncs.softCap()`
-// downstream to bound output to ±1. The master-out DcBlocker in `KlangAudioRenderer`
+// The `Shape` node (`Ignitor.distort()` and `Ignitor.shape()`) follows `DistortionCore`
+// with `ShapingFuncs.softCap()` to bound output to ±1; the fused `Distort` node does not. The master-out DcBlocker in `KlangAudioRenderer`
 // runs on post-limiter samples (already ±1-bounded), so no softCap needed there.
 //
 // **NaN/Inf guard**: `Double.coerceIn` returns NaN if input is NaN, which would give the
@@ -190,8 +192,8 @@ internal const val SAT_STATE_SCALE: Double = 0.0876
 
 /**
  * Default raw IIR pole for [LowPassHighPassFilters.DcBlocker]. `≈ 35 Hz @ 44.1k, 38 Hz @ 48k`.
- * Used by `Ignitor.distort()` and `Ignitor.shape()` to suppress DC accumulation from
- * asymmetric waveshapers. Matches the historic `0.995` literal that lived inline.
+ * Used by `DistortionCore` (under `Ignitor.distort()`, `Ignitor.shape()` and the fused `Distort` node) to
+ * suppress DC accumulation from asymmetric waveshapers. Matches the historic `0.995` literal that lived inline.
  */
 internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 

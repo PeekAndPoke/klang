@@ -11,10 +11,17 @@ import io.peekandpoke.klang.audio_be.utils.nanGuard
 import kotlin.math.pow
 
 /**
- * THE voice strip's distort law (phase 3 step 4, decision D2 option A, 2026-09-25), hosted by the
- * Ignitor's fused `Distort` node (the one `classic()` builds), which adapts only its block contract. It
- * was one copy for two hosts until the strip's `DistortionRenderer` retired with the strip (phase 3
- * step 9); `StripLawCoresSpec` pins the law against an oracle written in the test.
+ * The one shaper core of the engine: drive, shape and DC blocker, with the oversampler around the shaping. Two nodes
+ * host it and adapt only their block contract (engine tidy-up step 11, audit B2.2, 2026-10-08):
+ *  - the fused `Distort` node (`FusedDistortIgnitor`, the distort stage `classic()` builds) drives with the amount's
+ *    gain, and its output is the core's output: the voice strip's law (phase 3 step 4, decision D2 option A,
+ *    2026-09-25), with no soft cap;
+ *  - the `Shape` node (`ShapeIgnitor`, the Ignitor `shape` and `distort` doors) drives at 1.0, since its gain comes
+ *    from an upstream `Drive` node, and bounds the core's output with its own soft cap (`ShapingFuncs.softCap`).
+ *    `x * 1.0` is exact for every value, so the shared core is that node's law bit for bit.
+ *
+ * `StripLawCoresSpec` pins the law against an oracle written in the test; `OversamplerDecimatorParitySpec` pins both
+ * nodes bit for bit, oversampled and at stage 0.
  *
  * The law, per block:
  *  1. every sample is DRIVEN and SHAPED in one expression, `shape(x * drive)`, and NaN-guarded. With
@@ -23,13 +30,13 @@ import kotlin.math.pow
  *     bits: linear interpolation does not round the same way);
  *  2. the DC blocker, on every shape, not only the asymmetric ones: at extreme drive any input
  *     asymmetry rail-locks a symmetric shaper toward +-1 and leaves a DC bias;
- *  3. NO soft cap. The strip had its own downstream bounding stages, and `classic()` rebuilds the
- *     strip. The Ignitor `distort`/`shape` doors are a DIFFERENT law on purpose (D2 kept both): they
- *     build `Shape(Drive(...))`, drive at the base rate and cap their output. Whether the cap belongs
- *     here too is `docs/tasks/oversampling-regions.md`'s question, not this class's.
+ *  3. NO soft cap here. The soft cap belongs to the `Shape` node. The two nodes are different laws on
+ *     purpose (D2 kept both): the doors build `Shape(Drive(...))`, drive at the base rate and cap their
+ *     output; `classic()` rebuilds the strip, which had its own downstream bounding stages. Whether the
+ *     fused node should cap too is `docs/tasks/oversampling-regions.md`'s question, not this class's.
  *
- * The bypass (an amount at or below 0) belongs to the host, not here: the fused node is not built for a leaf amount at or below 0 and runs at unity drive for a
- * modulated one.
+ * The bypass belongs to the host, not here: the fused node is not built for a leaf amount at or below 0 and runs at
+ * unity drive for a modulated one; the `Shape` node never bypasses.
  *
  * @param shape the waveshaper, resolved by the host (a name through `parseDistortionShape`, an index
  *   knob through `distortionShapeAt`).

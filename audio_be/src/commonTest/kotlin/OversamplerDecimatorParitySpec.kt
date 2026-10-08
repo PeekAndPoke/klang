@@ -36,11 +36,13 @@ private val testRandom = Random(0x5EED)
  * Samples are compared with `Double.equals`, which keeps `-0.0` and `0.0` apart where `==` would
  * not: the claim is the same bits, not the same value.
  *
- * The last rows pin the two production callers of the oversampler, the `Shape` node (`ShapeIgnitor`) and the
- * fused `Distort` node (`DistortionCore`), through their nodes against the same ring oracle (engine tidy-up step 2,
- * audit B4.1: the callers run their shaping loop between `Oversampler.upsample` and `Oversampler.decimate`). The
+ * The next rows pin the two production nodes over the oversampler, the `Shape` node (`ShapeIgnitor`) and the
+ * fused `Distort` node (`FusedDistortIgnitor`), through their nodes against the same ring oracle (engine tidy-up step 2,
+ * audit B4.1: the shaping loop runs between `Oversampler.upsample` and `Oversampler.decimate`). Both nodes render
+ * through one `DistortionCore` since step 11 (audit B2.2), the `Shape` node at drive 1.0 with its own soft cap. The
  * windows are ragged inside a 128-frame block, as a voice sees them (a note starting mid-block, an empty window),
- * and the source carries NaN samples, so the callers' offsets, loop bounds and NaN guards are part of the pin.
+ * and the source carries NaN samples, so the offsets, loop bounds and NaN guards are part of the pin. The last rows
+ * pin stage 0, the plain path, on a hostile source (NaN, both infinities, 1e300, a denormal, -0.0).
  */
 class OversamplerDecimatorParitySpec : StringSpec({
 
@@ -194,6 +196,98 @@ class OversamplerDecimatorParitySpec : StringSpec({
 
                     sameBits(actual = renderNode(node), expected = oracle(stages, shape, drive), clue = "$shape at $amount")
                 }
+            }
+        }
+    }
+
+    // ── Stage 0, the plain path, on a hostile source (engine tidy-up step 11, audit B2.2) ─────────────
+
+    /** The source above with a hostile sample every few frames: NaN, both infinities, 1e300, a denormal, -0.0. */
+    val hostileValues = doubleArrayOf(
+        Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, 1e300, -1e300, 4.9e-324, -0.0,
+    )
+    val hostile = DoubleArray(total) { i -> if (i % 5 == 2) hostileValues[(i / 5) % hostileValues.size] else source[i] }
+
+    /** [node] over the hostile source, one window per `generate`, as [renderNode] does for the clean one. */
+    fun renderHostile(build: (Ignitor) -> Ignitor): DoubleArray {
+        val ctx = IgniteContext(
+            sampleRate = 48000,
+            voiceDurationFrames = total,
+            gateEndFrame = total,
+            scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
+        )
+        val node = build(ArrayIgnitor(hostile))
+        val buffer = AudioBuffer(blockFrames)
+        val out = DoubleArray(total)
+        var at = 0
+
+        for ((offset, length) in windows) {
+            ctx.voiceElapsedFrames = at
+            ctx.updateOffsetAndLength(offset = offset, length = length)
+            node.generate(buffer, 220.0, ctx)
+
+            for (i in 0 until length) {
+                out[at + i] = buffer[offset + i]
+            }
+
+            at += length
+        }
+
+        return out
+    }
+
+    /**
+     * The stage-0 law written out: the shape of `x * drive`, NaN-guarded, the DC blocker, then the soft cap for the
+     * `Shape` node ([drive] null, no multiply at all) and no cap for the fused `Distort` node.
+     */
+    fun plainOracle(shape: DistortionShape, drive: Double?): DoubleArray {
+        val dc = LowPassHighPassFilters.DcBlocker()
+        val work = AudioBuffer(blockFrames)
+        val out = DoubleArray(total)
+        var at = 0
+
+        for ((offset, length) in windows) {
+            for (i in 0 until length) {
+                val x = hostile[at + i]
+
+                work[offset + i] = if (drive == null) {
+                    applyDistortionShape(shape, x).nanGuard()
+                } else {
+                    applyDistortionShape(shape, x * drive).nanGuard()
+                }
+            }
+
+            dc.process(buffer = work, offset = offset, length = length)
+
+            for (i in 0 until length) {
+                out[at + i] = if (drive == null) ShapingFuncs.softCap(work[offset + i]) else work[offset + i]
+            }
+
+            at += length
+        }
+
+        return out
+    }
+
+    "stage 0: the Shape node renders every shape on a hostile source bit for bit as the plain law" {
+        for (shape in DistortionShape.entries) {
+            sameBits(
+                actual = renderHostile { it.shape(shape, 0) },
+                expected = plainOracle(shape, drive = null),
+                clue = "$shape",
+            )
+        }
+    }
+
+    "stage 0: the fused Distort node renders every shape on a hostile source bit for bit as the plain law" {
+        for (shape in DistortionShape.entries) {
+            for ((amount, drive) in listOf(0.6 to DistortionCore.drive(0.6), -0.2 to 1.0)) {
+                sameBits(
+                    actual = renderHostile { it.fusedDistort(ConstantIgnitor(amount), shape, 0) },
+                    expected = plainOracle(shape, drive),
+                    clue = "$shape at $amount",
+                )
             }
         }
     }

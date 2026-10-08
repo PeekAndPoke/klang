@@ -13,8 +13,8 @@ fully complete** (maintainer, 2026-09-23). Not started.
 >   have no oversampler and place no such slot, so `crush(oversample = ...)` and `coarse(oversample = ...)` do
 >   nothing today, on every voice. The value travels so it is not lost before this task decides (section 9,
 >   point 2).
-> - The oversamplers left in the engine: `DistortionCore` (the fused `Distort` node) and `ShapeIgnitor` (the
->   Ignitor `shape` and `distort` doors).
+> - The oversampler left in the engine: `DistortionCore`, shared by the fused `Distort` node and the `Shape` node
+>   (the Ignitor `shape` and `distort` doors) since engine tidy-up step 11 (2026-10-08).
 
 Rewritten 2026-09-23 from the future draft of 2026-07-04 (`future/pipeline-oversampling-regions.md`,
 kept in git history). That draft was written for the Pipeline DSL, which phase 3 retires, and used an

@@ -9,9 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.CrushCore
 import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
-import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.ShapingFuncs
-import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
@@ -154,45 +152,26 @@ fun Ignitor.shape(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
 internal fun Ignitor.shape(shape: DistortionShape, oversampleStages: Int): Ignitor =
     ShapeIgnitor(this, shape, oversampleStages)
 
+/**
+ * The `Shape` node: the shaper and the DC blocker are [DistortionCore] at drive 1.0 (the gain comes from an upstream
+ * `Drive` node), and the soft cap after them is this node's own (engine tidy-up step 11, audit B2.2). `x * 1.0` is
+ * exact for every value (-0.0, the infinities and the denormals included; a NaN stays a NaN, which the core's guard
+ * writes as 0), so the shared core renders this node's law bit for bit.
+ */
 private class ShapeIgnitor(
     private val upstream: Ignitor,
-    private val shape: DistortionShape,
+    shape: DistortionShape,
     oversampleStages: Int,
 ) : Ignitor {
-    private val oversampler: Oversampler? =
-        if (oversampleStages > 0) Oversampler(oversampleStages) else null
-
-    // DC blocker pre-softCap. See `Ignitor.distort` for the rationale.
-    private val dcBlocker = LowPassHighPassFilters.DcBlocker()
+    private val core = DistortionCore(shape = shape, oversampleStages = oversampleStages)
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
+            core.process(buffer = work, offset = ctx.offset, length = ctx.length, drive = 1.0, scratchBuffers = ctx.scratchBuffers)
+
             val end = ctx.windowEnd
-            val s = shape
-            val os = oversampler
-
-            if (os != null) {
-                // The round trip in two halves with the loop between them, inline: no closure per block
-                // (engine tidy-up step 2, audit B4.1).
-                ctx.scratchBuffers.oversample(os.factor).use { w ->
-                    val count = os.upsample(source = work, offset = ctx.offset, length = ctx.length, work = w)
-
-                    // NaN-guard fused into the per-sample loop: see the Oversampler.upsample KDoc.
-                    for (i in 0 until count) {
-                        w[i] = applyDistortionShape(s, w[i]).nanGuard()
-                    }
-
-                    os.decimate(work = w, target = work, offset = ctx.offset, length = ctx.length)
-                }
-            } else {
-                for (i in ctx.offset until end) {
-                    work[i] = applyDistortionShape(s, work[i]).nanGuard()
-                }
-            }
-
-            dcBlocker.process(buffer = work, offset = ctx.offset, length = ctx.length)
 
             for (i in ctx.offset until end) {
                 buffer[i] = ShapingFuncs.softCap(work[i])

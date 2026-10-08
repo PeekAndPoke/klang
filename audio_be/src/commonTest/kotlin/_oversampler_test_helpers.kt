@@ -8,7 +8,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 
 /**
- * TEST ONLY. One oversampled round trip as the production callers (`ShapeIgnitor`, `DistortionCore`) write it:
+ * TEST ONLY. One oversampled round trip as the production caller (`DistortionCore`, under both shaper nodes) writes it:
  * lease the work buffer from [scratch], [Oversampler.upsample], [shape] `work[0 until count]` in place,
  * [Oversampler.decimate] back into `buffer[offset, offset + length)`. Inline, so a spec's lambda is no object either.
  */

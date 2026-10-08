@@ -1,6 +1,6 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 10 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 10 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build); step 11 in progress (the twins: (a) the shaper core done), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -437,6 +437,32 @@ others change allocation only.
   nothing at build), `SuperStackTransitionSpec` (grow, shrink, regrow: exactly one phase and one jitter draw per
   voice that is new or back). The phaser's bind is pinned by `PhaserCoreLawSpec`'s node row (48 kHz against the
   44.1 kHz placeholder), the memo's growth guard by `MemoizingIgnitorSpec`'s sub-block row.
+
+## Step 11, collapse the twins (B2.2, B4.8, B2.15): in progress
+
+Scope: `tmp/reviews/tidy-step11-scope.md` (items (a), (b), (c) and (d1) to do, in the order (a), (d1), (b), (c), one
+commit each; (d2) to (d4) won't-do, logged in `_maintainer-questions.md`). Report for (a) and (d1):
+`tmp/reviews/tidy-step11-report.md`.
+
+### (a) The shaper core (B2.2): done 2026-10-08
+
+`ShapeIgnitor` (the `Shape` node, under the Ignitor `shape` and `distort` doors) was a twin of `DistortionCore` (the
+fused `Distort` node): the same oversampler, the same NaN guard, the same DC blocker, the same order. It now holds a
+`DistortionCore` and calls it at drive 1.0 (its gain comes from an upstream `Drive` node), then runs its own soft cap.
+`x * 1.0` is exact for every value (-0.0, the infinities and the denormals included; a NaN is zeroed by the guard
+either way), so the node renders as before, bit for bit. The soft cap stays the `Shape` node's: the two nodes are
+different laws on purpose (decision D2). The `DistortionCore` KDoc now describes one core with two hosts; the comments
+that named the `Shape` node's own loop (`ResourceWarehouse.WARM_OVERSAMPLE_FACTORS`, `LowPassHighPassFilters`' DC
+blocker notes, `DEFAULT_DC_BLOCK_COEFF`) and `oversampling-regions.md`'s inventory name the shared core.
+
+- **Proof:** the 18-song corpus and Kokon render bit-identical to `corpus-ep1-before` (label `ep1-t11a`).
+  `:audio_be:jvmTest` and `:audio_be:jsBrowserTest` green.
+- **Rows:** `OversamplerDecimatorParitySpec` gains the stage-0 gap the scope found: both nodes, every shape, the
+  ragged windows, on a hostile source (NaN, both infinities, 1e300, a denormal, -0.0), bit for bit against the plain
+  law written in the spec (the fused node at a drive and at unity). Mutation-checked: dropping `* d` on the plain path
+  goes red on the new fused row (and `StripLawCoresSpec`), dropping it on the oversampled path goes red on the existing
+  oversampled rows, a soft cap inside the core goes red on every node row, and dropping the plain path's NaN guard goes
+  red only on the two new rows.
 
 ## Decisions for the maintainer
 
