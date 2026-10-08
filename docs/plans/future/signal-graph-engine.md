@@ -245,6 +245,63 @@ convention welded into the engine; this plan puts the general graph back under i
    tutorials (`docs/tasks/_v1-scope.md`).
 5. **Section 3's inventory** is still the first step, now with a target in view.
 
+### 6.6 The name, and the bridge from a pattern into the Motor (maintainer, 2026-10-08)
+
+**The name is `Motor`** (maintainer: "Motor would be a nice name here"). The author assembles their own Motor from
+Ignitors, Cylinders and Katalysts, and the Klangmotor runs it. The user can build any layout. The defaults are lanes,
+each starting with an instrument, routed through its effects to the master, so that every sprudel door finds its
+stage. "The layout becomes essentially fixed. Unused stages are basically skipped." That second sentence is the
+gate law already in force: a stage at its off value is not built.
+
+**The maintainer's sketch: the bridge on the language level.**
+
+```javascript
+note("a").compressor(...)                                     // an error: no bus defined
+note("a").bus("abc").compressor(...)                          // an error if "abc" has no compressor stage, or it works
+note("a").bus("abc").compressor("c1", ...).compressor("c2", ...)  // two compressors on "abc": they need names
+```
+
+"Also `.bus()` is probably not the correct naming here. This is more like an injection / input point into the
+machine. This is a very rough sketch but it might work."
+
+**The coordinator's refinements (2026-10-08, for the design round):**
+
+1. **Resolve a door along the note's path.** `.compressor(...)` looks along the path from the note's entry point
+   through its groups to the master. It errors in three cases:
+   - none is found: "track 'abc' reaches no compressor";
+   - exactly one is found: that stage;
+   - several are found: an error that lists their names, so the author picks one.
+
+   The default Motor has one of each classic stage per lane, so every sprudel door resolves and every song today
+   plays unchanged.
+2. **Names are part of the Motor, not of the call.** A stage is named where it is declared (default: its kind), and a
+   call picks one by name. The candidates are a `name` argument (`compressor(threshold = -20, name = "glue")`), a
+   full address (`set("abc.glue.threshold", -20)`), or both. KlangScript forbids mixing positional and named
+   arguments in one call, which argues against a positional name first.
+3. **Two time meanings, decided by where the stage sits.**
+   - A door on the PER-NOTE stage (`lpf`, `adsr`, `distort`) is the note's own value, as today.
+   - A door on a SHARED stage (a lane's, a group's or the master's Katalyst) is AUTOMATION: a timed write that holds
+     until the next one, like a MIDI CC.
+
+   Continuous pattern signals arrive as ramps (a target and seconds; the knob glide already moves a knob to a
+   target). The later write in time wins, and equal times go by stack order. This replaces the newest-voice
+   ownership of a bus.
+4. **Automation without notes:** a lane of knob values with no note attached (`"<-20 -12>".set("abc.glue.threshold")`,
+   spelling open). The note-attached door is sugar for a write at the note's onset.
+5. **Errors in the frontend, at evaluation.** Sprudel holds the Motor value, so the editor can underline
+   `compressor` on a track that reaches none. This closes the item left open on 2026-09-18 (signal-flow plan §6):
+   "a construction that makes 'this instrument does not listen to that door' impossible to write by accident".
+6. **The entry point's word.**
+   - `track` is the common language (Ableton: MIDI and audio tracks, group tracks, return tracks, the master, sends),
+     so the Motor would declare tracks, groups, returns and the master, and a pattern would write
+     `note("a").track("bass")`. `to`, `track` and `input` are all free in sprudel today (grep, 2026-10-08).
+   - It needs one decision: "cylinder is the word, orbit a sprudel alias" (maintainer, 2026-10-07). Is the user's
+     word `track`, with Cylinder the engine's word for what runs it, or `cylinder` everywhere? `orbit(n)` stays
+     sprudel's alias for the default Motor's numbered lanes.
+7. **Instrument per track or per note.** A DAW track has one instrument; sprudel picks one per note
+   (`s("bd sd")`). Both can hold: a track may declare its instrument, and a note's `sound()` overrides it unless the
+   track forbids that. To decide.
+
 ## Links
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).
