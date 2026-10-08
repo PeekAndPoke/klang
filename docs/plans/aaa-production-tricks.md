@@ -162,8 +162,11 @@ of [`../tasks/future/flanger-chorus.md`](../tasks/future/flanger-chorus.md).
   decision; this research adds weight to it, since trap, drill and acid all live on slides.
 - **G6. The voice tree cannot see velocity.** A frontend's `velocity` is multiplied into `gain` before the wire, so
   "louder is brighter" (S40, S72, S23) needs the author to write the same number twice, as velocity and as an
-  `ignp` slot. Real instruments, and every AAA sample library, map velocity to timbre. Whether the tree should see
-  velocity is a parameter-parity question (one word per concept), so it is listed under section 8, not proposed.
+  `ignp` slot. Real instruments, and every AAA sample library, map velocity to timbre. Corrected 2026-10-08: the
+  per-note touch channel DOES exist, under another name. `pregain` is a slot the instrument reads (Kokon:
+  `saw.mul(Ign.slot.pregain)`), and it can be read anywhere, not only as a level. What is missing is the common word
+  (velocity means touch everywhere else), and a way to place it inside an authored instrument while `classic()` still
+  exposes the other doors. That design question is [`../tasks/classic-doors-and-velocity.md`](../tasks/classic-doors-and-velocity.md).
 
 ## 4. New nodes and stages, as candidates
 
