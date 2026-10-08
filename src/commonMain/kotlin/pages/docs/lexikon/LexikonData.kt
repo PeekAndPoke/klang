@@ -127,9 +127,9 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         term = "Crush",
         category = LexikonCategory.Degrading,
         tags = setOf(LexikonTag.Effect),
-        summary = "Reduces bit depth — fewer amplitude steps means a grittier, more stepped sound.",
-        detail = "Like hearing audio through a cheap walkie-talkie. Higher crush values = fewer bits = " +
-                "more extreme quantization. Adds harsh harmonics and a characteristic \"crunchy\" texture.",
+        summary = "Reduces bit depth: fewer amplitude steps means a grittier, more stepped sound.",
+        detail = "Like hearing audio through a cheap walkie-talkie. The crush value is the bit depth: lower values " +
+                "mean fewer bits and more extreme quantization. Adds harsh harmonics and a characteristic \"crunchy\" texture.",
         conventional = "Bit-crush, bit-depth reduction",
         trivia = LexikonTrivia(
             text = "Bit-crushing was originally an unintentional artifact of early low-resolution samplers. " +
@@ -343,7 +343,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Effect),
         summary = "Spectral animation — sweeping notches move through the frequency spectrum.",
         detail = "Creates a \"whooshing\" or \"jet engine\" quality by sweeping a series of notch filters " +
-                "up and down the spectrum. Rate, depth, center, and sweep control the motion. " +
+                "up and down the spectrum. Rate, wet, center, and sweep control the motion. " +
                 "Can be applied per-voice or per-cylinder.",
         conventional = "Phaser, phase shifting",
         trivia = LexikonTrivia(
