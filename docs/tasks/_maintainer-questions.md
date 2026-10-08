@@ -20,64 +20,7 @@ Nothing open (Q1 to Q5 and Q9a answered 2026-10-08).
 
 Work went ahead with the conservative choice. A "no" here means a small follow-up change.
 
-## Q6. Unison voice cap: 64
-
-Done in the empty-variants fix.
-
-**Why.** `voices(1e9)` or an infinite signal allocated without bound on the audio thread at note-on.
-
-**Example.**
-
-```
-Ign.supersaw(x => x.voices(1000))   // plays 64 voices
-Ign.supersaw(x => x.voices(32))     // unchanged (the largest count in any song, TetrisRemix)
-```
-
-A non-finite count reads as 0, which is silence. `/code-style` §21 allows clamping a count. Every built-in sound is
-byte-identical.
-
-## Q10. Tidy step 11: the arithmetic types on the wire and `Param` / `Constant` stay separate
-
-Source: [`engine-tidy-up.md`](engine-tidy-up.md) step 11.
-
-**What was done.** Inside the engine, each of the 20 arithmetic laws (plus, times, div, abs, ...) is now written once,
-and all nodes share one helper. The wire and the doors are untouched.
-
-**Kept as won't-do:**
-- **Collapsing the 20 wire types into `Unary(op)` / `Binary(op)`.** Example: the JSON `{"type":"plus","left":…}`
-  would become `{"type":"binary","op":"plus","left":…}`. That changes every JSON tag and the schema hash, touches
-  every walker and crosses the min/max guardrail, and a Zig port gains nothing from it.
-- **Merging `Param` and `Constant`.** Example: `Ign.param("cutoff", 800)` can be overridden per event and is listed in
-  the editor's parameter list; `Ign.constant(800)` is a plain number. The engine also treats them differently on
-  purpose in one place (filter `passes`), so the fused and chained doors stay bit-identical.
-
-Say if you want either one anyway.
-
-## Q11. Tidy step 12: body and vowel become one effect
-
-Source: [`engine-tidy-up.md`](engine-tidy-up.md), scope `tmp/reviews/tidy-step12-scope.md`. Not started yet; it starts
-after step 11 is committed.
-
-**What changes.** `KatalystBodyEffect` and `KatalystFormantEffect` are token-identical twins today. They become one
-effect with a kind (body or vowel), reading the same catalogue tables. Two filter banks are reused instead of building
-new ones on every change.
-
-**Example.**
-
-```
-note("c3*8").body(material = "<wood glass>")   // every switch today builds 2 new filter banks (about 100 objects);
-                                               // after: it reconfigures the bank nobody is hearing. The sound is identical.
-```
-
-**What this touches:**
-- **Your review guardrail** "body / formant are intentional un-deduped twins: change one, mirror the other" is retired.
-  Its reasons (the band kinds share no type) are what the change removes.
-- **Your 2026-09-20 rule "a bank never retunes" stays.** A sounding bank never changes. Only a bank nobody hears is
-  reset, from zero, which is bit-identical to building it new.
-- **Memory:** the two banks are built at the stage's first use, so a `classic` chain that never uses body or vowel
-  holds nothing extra.
-
-Say if you want the twins kept.
+Nothing open (Q6 to Q11 answered 2026-10-08).
 
 ---
 
