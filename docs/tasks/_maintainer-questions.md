@@ -46,20 +46,32 @@ The engine already plays such a tree. Recommendation: yes, numbers become `Const
 conversion, now with one more accepted type); the spec row changes from "type error" to "a number child is a
 constant". Say no if the 2026-10-06 rule was meant to keep `variants` Ignitor-only.
 
-## Q24. Eleven Kotlin doors take only a number where the script door also takes a signal
+## Q24. A third Kotlin spelling of the Ignitor doors: keep it as engine shorthand, or grow it?
 
-Source: the step 13 table. Not blocking. The other direction of D10's parity: on the Kotlin `IgnitorDsl` side,
-`detune`, `drive`, `distort`, `crush`, `coarse`, `phaser`, `tremolo`, `shimmer`, `vibrato`, `accelerate` and `fm`
-accept only a `Double`, while their KlangScript twins also accept an Ignitor expression (a modulated value).
+Source: the step 13 table and its review (reviewer B corrected the first version of this question). Not blocking.
 
+**What exists.** Two Kotlin surfaces build the same `IgnitorDsl` trees:
+- the **Kotlin door** in `klangscript-libs` (`KlangScriptIgnitorExtensions`, the twin of the KlangScript door by
+  `/dsl-design` §3): every value is `IgnitorDslLike`, so a number, a signal, or a mix of both fits anywhere;
+- the **`audio_bridge` extensions** (`fun IgnitorDsl.vibrato(rate: Double, semitones: Double)` and friends), used by
+  engine code, `classic()`, the defaults and specs. They have limits the doors do not:
+  - eleven of them take only numbers (`detune`, `drive`, `distort`, `crush`, `coarse`, `phaser`, `tremolo`,
+    `shimmer`, `vibrato`, `accelerate`, `fm`), so a modulated vibrato rate does not fit;
+  - the arithmetic ones (step 13) and the filters take all numbers or all signals, not a mix:
+    `lowpass(lfo, q = 4.0)` or `clamp(0.0, env)` need `IgnitorDsl.Constant(...)` spelled out;
+  - `phaser` and `shimmer` have no `floor`, which the script builders have.
+
+```kotlin
+// klangscript-libs Kotlin door: works
+KlangScriptIgnitor.vibrato(self = osc, rate = perlin, semitones = 0.3)
+// audio_bridge extension: only numbers
+osc.vibrato(rate = 5.0, semitones = 0.3)
 ```
-// KlangScript today:  Ign.saw().vibrato(Ign.perlin(0.5).range(4, 7), 0.3)   // a wandering vibrato rate: works
-// Kotlin today:       IgnitorDsl.saw().vibrato(rate = ..., ...)                // only a number fits
-```
 
-Only engine-side Kotlin code and specs write the Kotlin doors (songs are KlangScript), so nobody is blocked.
-Recommendation: give each an `IgnitorDsl` form beside the `Double` one ("two doors, one DSL"), as its own small step
-after the release.
+**The question.** Growing the `audio_bridge` extensions to full parity would make them a third complete spelling of
+every door (one word per concept says no). **Recommendation: keep them as engine-internal shorthand, record their
+limits in their file header, and point authors (Kotlin included) at the `klangscript-libs` door.** The alternative is
+to align them fully. No song is affected either way (songs are KlangScript).
 
 ## Q12. Solo ramp times
 
