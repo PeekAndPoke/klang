@@ -26,6 +26,41 @@ Nothing open (Q6 to Q11 answered 2026-10-08).
 
 # Part 3: For later (not blocking anything now)
 
+## Q23. `variants` with plain numbers?
+
+Source: [`engine-tidy-up.md`](engine-tidy-up.md) step 13, your D10 rule ("a plain number everywhere a constant value
+is accepted"). Not blocking.
+
+**Today.** `Ign.variants(...)` takes only Ignitor children. Your strict-argument decision of 2026-10-06 made
+`Ignitor.variants(1, Ign.sine())` a type error on every platform (`StrictArgumentConversionSpec`), where before it
+silently built a broken tree.
+
+**What D10 would allow.** Numbers as children, converted to constants at the door, as every other door does:
+
+```
+Ign.saw().lowpass(Ign.variants(400, 1200, 3000))   // :n picks the cutoff per note
+Ign.variants(1, Ign.sine())                        // a constant 1 or a sine, picked per note
+```
+
+The engine already plays such a tree. Recommendation: yes, numbers become `Constant` at the door (the same strict
+conversion, now with one more accepted type); the spec row changes from "type error" to "a number child is a
+constant". Say no if the 2026-10-06 rule was meant to keep `variants` Ignitor-only.
+
+## Q24. Eleven Kotlin doors take only a number where the script door also takes a signal
+
+Source: the step 13 table. Not blocking. The other direction of D10's parity: on the Kotlin `IgnitorDsl` side,
+`detune`, `drive`, `distort`, `crush`, `coarse`, `phaser`, `tremolo`, `shimmer`, `vibrato`, `accelerate` and `fm`
+accept only a `Double`, while their KlangScript twins also accept an Ignitor expression (a modulated value).
+
+```
+// KlangScript today:  Ign.saw().vibrato(Ign.perlin(0.5).range(4, 7), 0.3)   // a wandering vibrato rate: works
+// Kotlin today:       IgnitorDsl.saw().vibrato(rate = ..., ...)                // only a number fits
+```
+
+Only engine-side Kotlin code and specs write the Kotlin doors (songs are KlangScript), so nobody is blocked.
+Recommendation: give each an `IgnitorDsl` form beside the `Double` one ("two doors, one DSL"), as its own small step
+after the release.
+
 ## Q12. Solo ramp times
 
 **Today:** 1.5 s in and out (a cubic swell) with a 2 s hold.
