@@ -841,15 +841,6 @@ per block, N fms are N + 1 oscillator renders.
   only the bent child along signal edges, and its task names MINOR 1's condition as part of the shape. Texts and spec
   rows only, no render path changed, so no corpus run.
 
-#### Queued beside the pipeline: `variants` accepts plain numbers (Q23)
-
-The maintainer, 2026-10-09: "yes make numbers constants". `Ign.variants(400, 1200, 3000)` and
-`Ign.variants(1, Ign.sine())` become valid: a number child is converted to a `Constant` at the door, the same strict
-conversion with one more accepted type (D10's rule: a plain number wherever a constant value is accepted). Both doors
-(KlangScript and Kotlin), a door-parity row; `StrictArgumentConversionSpec`'s "type error" row becomes "a number child
-is a constant"; anything else that is neither a number nor an Ignitor stays a type error. Done between two pipeline
-steps, with the `analog(character)` rename.
-
 #### Queued beside the pipeline: the PolyBLEP texts (Q16)
 
 The maintainer, 2026-10-09: "keep PolyBLEP in the credits, as once we used it. Clean up the other references where

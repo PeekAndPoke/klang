@@ -274,6 +274,9 @@ seq("0 1 2:1 3:1").scale("c4:major").sound(guitar).adsrOff().gain(0.3)
   the dispatch first, then attach shared post-processing.
 - Nested `Ignitor.variants(...)` all dispatch on the *same* `soundIndex` —
   letting one index drive correlated changes deep in the tree.
+- A child may be a plain number, a constant: `Ignitor.sine(Ignitor.variants(400, 1200))`
+  plays 400 Hz on `a` and 1200 Hz on `a:1`. Anything else (a string, a lambda) is a
+  script error at the call.
 
 ---
 
