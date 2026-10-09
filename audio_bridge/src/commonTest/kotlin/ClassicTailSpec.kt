@@ -98,8 +98,8 @@ class ClassicTailSpec : StringSpec({
         val modExp = AdsrCurves.indexOf(AdsrCurve.Exponential)
         val expected: List<Pair<String, Double>> = listOf(
             "onepole" to 0.0,
-            "crush.amount" to 0.0,
-            "coarse.amount" to 0.0,
+            "crush.bits" to 0.0,
+            "coarse.factor" to 0.0,
             "distort.amount" to 0.0,
             "distort.shape" to DistortionShapes.SOFT_INDEX.toDouble(),
             "distort.oversample" to 0.0,

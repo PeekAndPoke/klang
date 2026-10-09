@@ -84,12 +84,21 @@ class BandFilterSlots internal constructor(door: String) {
 }
 
 /**
- * The one slot of a crush or a coarse stage (`Slots.crush`, `Slots.coarse`), mirroring sprudel's
- * `crush.amount` / `coarse.amount`. Default 0.0, the strip's untouched amount, which the gate reads
- * as off. Sprudel's `oversample` of these two has no slot: it moved to `oversampling-regions.md`.
+ * The one slot of the crush stage (`Slots.crush`), mirroring sprudel's `crush.bits`: the bit depth.
+ * Default 0.0, the strip's untouched value, which the gate reads as off (below 1). Sprudel's
+ * `oversample` of this stage has no slot: it moved to `oversampling-regions.md`.
  */
-class AmountSlots internal constructor(door: String) {
-    val amount: IgnitorDsl = slot(door = door, param = "amount", default = 0.0)
+class CrushSlots internal constructor() {
+    val bits: IgnitorDsl = slot(door = "crush", param = "bits", default = 0.0)
+}
+
+/**
+ * The one slot of the coarse stage (`Slots.coarse`), mirroring sprudel's `coarse.factor`: the
+ * sample-hold factor. Default 0.0, the strip's untouched value, which the gate reads as off (1 or
+ * less). Sprudel's `oversample` of this stage has no slot: it moved to `oversampling-regions.md`.
+ */
+class CoarseSlots internal constructor() {
+    val factor: IgnitorDsl = slot(door = "coarse", param = "factor", default = 0.0)
 }
 
 /**
@@ -251,8 +260,8 @@ fun IgnitorDsl.classic(): IgnitorDsl {
     val s = IgnitorDsl.Slots
 
     val onepoled = IgnitorDsl.OnePoleLowpass(inner = this, freq = s.onepole)
-    val crushed = IgnitorDsl.Crush(inner = onepoled, amount = s.crush.amount)
-    val coarsened = IgnitorDsl.Coarse(inner = crushed, amount = s.coarse.amount)
+    val crushed = IgnitorDsl.Crush(inner = onepoled, bits = s.crush.bits)
+    val coarsened = IgnitorDsl.Coarse(inner = crushed, factor = s.coarse.factor)
     val distorted = IgnitorDsl.Distort(
         inner = coarsened,
         amount = s.distort.amount,

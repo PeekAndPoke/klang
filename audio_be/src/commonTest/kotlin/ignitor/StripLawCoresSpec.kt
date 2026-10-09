@@ -36,7 +36,7 @@ private val testRandom = Random(0x5EED)
  * move together. Only a copy of the law that lives outside the core can see it. Each oracle below is the law as the step-4
  * brief states it, written the plain way:
  *
- *  - crush: `floor(x * hl) / hl`, clamped to `[-1, 1]`, a NaN out as 0, `hl = 2^amount / 2`;
+ *  - crush: `floor(x * hl) / hl`, clamped to `[-1, 1]`, a NaN out as 0, `hl = 2^bits / 2`;
  *  - distort: `shape(x * 10^(1.2 * amount))` with the drive INSIDE the oversampler, NaN out as 0, then
  *    the DC blocker, and no soft cap; the node runs a MODULATED amount at or below 0 at unity drive,
  *    contiguously (ledger W5's hazard designed out).
@@ -111,8 +111,8 @@ class StripLawCoresSpec : StringSpec({
     fun oracleRound(x: Double, hl: Double): Double = clampNan(round(x * hl) / hl)
 
     /** The crush law over blocks (the node has no oversampler). */
-    fun oracleCrush(input: DoubleArray, amount: Double): DoubleArray {
-        val hl = 2.0.pow(amount) / 2.0
+    fun oracleCrush(input: DoubleArray, bits: Double): DoubleArray {
+        val hl = 2.0.pow(bits) / 2.0
 
         return DoubleArray(input.size) { oracleFloor(x = input[it], hl = hl) }
     }
@@ -168,15 +168,15 @@ class StripLawCoresSpec : StringSpec({
         val blocks = 4
         val input = sine(blocks = blocks, amplitude = 0.95, hz = 440.0)
 
-        for (amount in listOf(1.0, 2.5, 4.0, 8.0)) {
-            val hl = 2.0.pow(amount) / 2.0
-            val expected = oracleCrush(input, amount)
+        for (bits in listOf(1.0, 2.5, 4.0, 8.0)) {
+            val hl = 2.0.pow(bits) / 2.0
+            val expected = oracleCrush(input, bits)
 
-            withClue("amount $amount: not vacuous, floor and round disagree on this input") {
+            withClue("bits $bits: not vacuous, floor and round disagree on this input") {
                 expected.bits() shouldNotBe input.map { oracleRound(x = it, hl = hl) }.toDoubleArray().bits()
             }
-            withClue("amount $amount: the Ignitor node") {
-                renderNode(ArraySource(input).crush(ConstantIgnitor(amount)), blocks).bits() shouldBe expected.bits()
+            withClue("bits $bits: the Ignitor node") {
+                renderNode(ArraySource(input).crush(ConstantIgnitor(bits)), blocks).bits() shouldBe expected.bits()
             }
         }
     }

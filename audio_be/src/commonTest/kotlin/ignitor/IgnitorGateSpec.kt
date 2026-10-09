@@ -190,7 +190,7 @@ class IgnitorGateSpec : StringSpec({
 
     "coarse: at or below 1.0 is not built, above it is" {
         stageRow("coarse", listOf(1.0, 0.0, -4.0, SLOT_UNSET), on = 4.0) {
-            IgnitorDsl.Coarse(inner = saw, amount = it)
+            IgnitorDsl.Coarse(inner = saw, factor = it)
         }
     }
 
@@ -198,15 +198,15 @@ class IgnitorGateSpec : StringSpec({
         // Not 0: the renderer bypasses below two levels, and the Double door returns the inner
         // below 1.0. 1.0 itself is ON, one bit of the table that is easy to get wrong.
         stageRow("crush", listOf(0.999, 0.0, -4.0, SLOT_UNSET), on = 8.0) {
-            IgnitorDsl.Crush(inner = saw, amount = it)
+            IgnitorDsl.Crush(inner = saw, bits = it)
         }
 
         withClue("crush at exactly 1.0 is ON, and audibly so") {
-            // `CrushCore.halfLevels` engages at `amount >= 1.0`, so amount 1 is exactly TWO levels:
+            // `CrushCore.halfLevels` engages at `bits >= 1.0`, so 1 bit is exactly TWO levels:
             // the quantizer RUNS with `halfLevels = 1.0`, and under the floor law (D1, step 4) a saw
             // comes out a two-level pulse, -1 on its negative half and 0 on its positive half. The
             // boundary is `< 1.0`, not `<= 1.0`, and both halves say so.
-            val atOne = IgnitorDsl.Crush(inner = saw, amount = IgnitorDsl.Constant(1.0))
+            val atOne = IgnitorDsl.Crush(inner = saw, bits = IgnitorDsl.Constant(1.0))
 
             shapeOf(build(atOne)) shouldNotBe bareShape
             render(atOne).bits() shouldNotBe bare
@@ -983,8 +983,8 @@ class IgnitorGateSpec : StringSpec({
         val unsetSlot = IgnitorDsl.Param(name = "gateKnob", default = SLOT_UNSET)
 
         val trees = mapOf(
-            "crush" to IgnitorDsl.Crush(inner = saw, amount = unsetSlot),
-            "coarse" to IgnitorDsl.Coarse(inner = saw, amount = unsetSlot),
+            "crush" to IgnitorDsl.Crush(inner = saw, bits = unsetSlot),
+            "coarse" to IgnitorDsl.Coarse(inner = saw, factor = unsetSlot),
             "distort" to IgnitorDsl.Distort(inner = saw, amount = unsetSlot),
             "drive" to IgnitorDsl.Drive(inner = saw, amount = unsetSlot),
             "tremolo" to IgnitorDsl.Tremolo(inner = saw, rate = IgnitorDsl.Constant(5.0), depth = unsetSlot),
@@ -1033,12 +1033,12 @@ class IgnitorGateSpec : StringSpec({
     }
 
     "a knob that is NOT a build-time constant is never gated, even at its off value" {
-        // An LFO on the amount can move within the note, so no single build-time answer is right.
+        // An LFO on the factor can move within the note, so no single build-time answer is right.
         // `Constant(4).mul(Constant(0))` is an expression, not a leaf: it resolves to 0, which is
         // coarse's off value, and the stage is built all the same.
         val expression = IgnitorDsl.Constant(4.0).mul(IgnitorDsl.Constant(0.0))
 
-        shapeOf(build(IgnitorDsl.Coarse(inner = saw, amount = expression))) shouldNotBe bareShape
+        shapeOf(build(IgnitorDsl.Coarse(inner = saw, factor = expression))) shouldNotBe bareShape
     }
 
     // ── The rng stream ───────────────────────────────────────────────────────────────────────
@@ -1055,7 +1055,7 @@ class IgnitorGateSpec : StringSpec({
         val crackle = IgnitorDsl.Crackle()
         val drawingKnob = IgnitorDsl.PerlinNoise().abs().neg()
 
-        render(IgnitorDsl.Coarse(inner = crackle, amount = drawingKnob)).bits() shouldBe
+        render(IgnitorDsl.Coarse(inner = crackle, factor = drawingKnob)).bits() shouldBe
                 render(crackle).bits()
     }
 
@@ -1068,7 +1068,7 @@ class IgnitorGateSpec : StringSpec({
         // constant for a cache's whole lifetime and no key change is needed. This row is the
         // tripwire under that: a cache that ever spanned two voices would hand the written voice
         // the unwritten voice's graph, and the two shapes below would become one.
-        val instrument = IgnitorDsl.Coarse(inner = saw, amount = IgnitorDsl.Param("coarse", 0.0))
+        val instrument = IgnitorDsl.Coarse(inner = saw, factor = IgnitorDsl.Param("coarse", 0.0))
 
         val unwritten = build(instrument, emptyMap())
         val written = build(instrument, mapOf("coarse" to 4.0))

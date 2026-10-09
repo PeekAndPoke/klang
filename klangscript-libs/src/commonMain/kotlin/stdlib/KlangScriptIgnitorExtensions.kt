@@ -458,15 +458,15 @@ object KlangScriptIgnitorExtensions {
             oversample = oversample.toIgnitorDsl(),
         )
 
-    /** Applies bit-depth reduction (bitcrusher). */
+    /** Applies bit-depth reduction (bitcrusher): [bits] is the bit depth, `2^bits` levels; below 1 it passes through. */
     @KlangScript.Method
-    fun crush(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Crush(inner = self, amount = amount.toIgnitorDsl())
+    fun crush(self: IgnitorDsl, bits: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Crush(inner = self, bits = bits.toIgnitorDsl())
 
-    /** Applies sample-rate reduction. */
+    /** Applies sample-rate reduction: [factor] is the sample-hold factor; at 1 or less nothing is held. */
     @KlangScript.Method
-    fun coarse(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Coarse(inner = self, amount = amount.toIgnitorDsl())
+    fun coarse(self: IgnitorDsl, factor: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Coarse(inner = self, factor = factor.toIgnitorDsl())
 
     /**
      * Applies a multi-stage phaser effect. [wet] comes FIRST, as on every door that has one, and

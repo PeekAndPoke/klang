@@ -50,7 +50,7 @@ class ClassicVoiceContractSpec : StringSpec({
             "[$rate Hz] [pregain] a built-in's pregain sits IN FRONT of its nonlinear stages: distort and crush see the doubled source" {
                 for ((label, bag) in listOf(
                     "distort 0.5" to mapOf("distort.amount" to 0.5),
-                    "crush 5 with onepole 900" to mapOf("crush.amount" to 5.0, "onepole" to 900.0),
+                    "crush 5 with onepole 900" to mapOf("crush.bits" to 5.0, "onepole" to 900.0),
                 )) {
                     val builtIn = classic(bag + ("pregain" to 2.0), rate)
                     val oracle = classic(bag, rate, sound = "saw2x")

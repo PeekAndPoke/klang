@@ -163,7 +163,7 @@ private fun applyDistortShape(source: SprudelPattern, args: List<SprudelDslArg<A
     }
 }
 
-// -- crush, the amount slot ------------------------------------------------------------------------------------------
+// -- crush, the bits slot --------------------------------------------------------------------------------------------
 
 private val crushMutation = voiceSetter { crush = it?.asDoubleOrNull() ?: crush }
 
@@ -183,29 +183,29 @@ private fun applyCrush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * character, higher values tame it.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`crush(oversample = mul(2))`), and the numeric slots read back as `crush.amount`, `crush.oversample`.
- * With no argument at all, the pattern's own values are reinterpreted as `amount`.
+ * a mapper (`crush(oversample = mul(2))`), and the numeric slots read back as `crush.bits`, `crush.oversample`.
+ * With no argument at all, the pattern's own values are reinterpreted as `bits`.
  *
  * ```KlangScript(Playable)
- * s("bd*4").crush(8).crush(amount = mul("1 0.5 1 0.5"))                  // every second hit coarser
+ * s("bd*4").crush(8).crush(bits = mul("1 0.5 1 0.5"))                  // every second hit coarser
  * ```
  *
  * ```KlangScript(Playable)
- * s("hh*4").crush("4 12").lpf(crush.amount.mul(500))                      // fewer bits, darker
+ * s("hh*4").crush("4 12").lpf(crush.bits.mul(500))                      // fewer bits, darker
  * ```
  *
- * @param amount Bit depth. Fewer bits are harsher, typically 1 to 16.
+ * @param bits Bit depth. Fewer bits are harsher, typically 1 to 16.
  * @param oversample Oversampling factor: 1, 2, 4 or 8.
  *
  * @scope voice
  * @category effects
- * @tags crush, amount, oversample
+ * @tags crush, bits, oversample
  */
 @KlangScript.Function
-fun SprudelPattern.crush(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
-    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
-    var p = if (amount != null || !(oversample != null)) {
-        applyCrush(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.crush(bits: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch bits: reinterpret runs only on a fully bare call.
+    var p = if (bits != null || !(oversample != null)) {
+        applyCrush(this, listOfNotNull(bits).asSprudelDslArgs(callInfo))
     } else {
         this
     }
@@ -215,17 +215,17 @@ fun SprudelPattern.crush(amount: PatternLike? = null, oversample: PatternLike? =
 
 /** Parses this string as a pattern, then applies [crush]. */
 @KlangScript.Function
-fun String.crush(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).crush(amount, oversample, callInfo)
+fun String.crush(bits: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).crush(bits, oversample, callInfo)
 
 /** Chains a [crush] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.crush(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.crush(amount, oversample, callInfo) }
+fun PatternMapperFn.crush(bits: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.crush(bits, oversample, callInfo) }
 
 /**
  * The `crush` object: `crush(...)` sets the slots, and each numeric slot reads back as a child,
- * `crush.amount`, `crush.oversample`.
+ * `crush.bits`, `crush.oversample`.
  *
  * @scope voice
  * @category effects
@@ -235,9 +235,9 @@ fun PatternMapperFn.crush(amount: PatternLike? = null, oversample: PatternLike? 
 @KlangScript.Object("crush")
 object crush {
 
-    /** The amount slot of each event, as a value other setters can read. */
+    /** The bits slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val amount: FieldAccessor = FieldAccessor { it.crush }
+    val bits: FieldAccessor = FieldAccessor { it.crush }
 
     /** The oversample slot of each event, as a value other setters can read. */
     @KlangScript.Property
@@ -246,12 +246,12 @@ object crush {
     /**
      * The setter, see [SprudelPattern.crush].
      *
-     * @param amount Bit depth. Fewer bits are harsher, typically 1 to 16.
+     * @param bits Bit depth. Fewer bits are harsher, typically 1 to 16.
      * @param oversample Oversampling factor: 1, 2, 4 or 8.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.crush(amount, oversample, callInfo) }
+    operator fun invoke(bits: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.crush(bits, oversample, callInfo) }
 }
 
 // -- crush.oversample ------------------------------------------------------------------------------------------------
@@ -266,7 +266,7 @@ private fun applyCrushOversample(source: SprudelPattern, args: List<SprudelDslAr
     return source._liftOrReinterpretNumericalField(args, crushOversampleMutation)
 }
 
-// -- coarse, the amount slot -----------------------------------------------------------------------------------------
+// -- coarse, the factor slot -----------------------------------------------------------------------------------------
 
 private val coarseMutation = voiceSetter { coarse = it?.asDoubleOrNull() ?: coarse }
 
@@ -286,29 +286,29 @@ private fun applyCoarse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * `oversample` of 1 keeps the raw aliased character, higher values tame it.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`coarse(oversample = mul(2))`), and the numeric slots read back as `coarse.amount`, `coarse.oversample`.
- * With no argument at all, the pattern's own values are reinterpreted as `amount`.
+ * a mapper (`coarse(oversample = mul(2))`), and the numeric slots read back as `coarse.factor`, `coarse.oversample`.
+ * With no argument at all, the pattern's own values are reinterpreted as `factor`.
  *
  * ```KlangScript(Playable)
- * s("hh*8").coarse(4).coarse(amount = mul(perlin.seg(8).range(1, 3)))   // a decimator that wanders
+ * s("hh*8").coarse(4).coarse(factor = mul(perlin.seg(8).range(1, 3)))   // a decimator that wanders
  * ```
  *
  * ```KlangScript(Playable)
- * s("hh*4").coarse("2 8").lpf(coarse.amount.mul(1000))                    // coarser, but brighter
+ * s("hh*4").coarse("2 8").lpf(coarse.factor.mul(1000))                    // coarser, but brighter
  * ```
  *
- * @param amount Sample rate divisor, 1 is off, higher is coarser.
+ * @param factor Sample rate divisor, 1 is off, higher is coarser.
  * @param oversample Oversampling factor: 1, 2, 4 or 8.
  *
  * @scope voice
  * @category effects
- * @tags coarse, amount, oversample
+ * @tags coarse, factor, oversample
  */
 @KlangScript.Function
-fun SprudelPattern.coarse(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
-    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
-    var p = if (amount != null || !(oversample != null)) {
-        applyCoarse(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.coarse(factor: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch factor: reinterpret runs only on a fully bare call.
+    var p = if (factor != null || !(oversample != null)) {
+        applyCoarse(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
     } else {
         this
     }
@@ -318,17 +318,17 @@ fun SprudelPattern.coarse(amount: PatternLike? = null, oversample: PatternLike? 
 
 /** Parses this string as a pattern, then applies [coarse]. */
 @KlangScript.Function
-fun String.coarse(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).coarse(amount, oversample, callInfo)
+fun String.coarse(factor: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).coarse(factor, oversample, callInfo)
 
 /** Chains a [coarse] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.coarse(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.coarse(amount, oversample, callInfo) }
+fun PatternMapperFn.coarse(factor: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.coarse(factor, oversample, callInfo) }
 
 /**
  * The `coarse` object: `coarse(...)` sets the slots, and each numeric slot reads back as a child,
- * `coarse.amount`, `coarse.oversample`.
+ * `coarse.factor`, `coarse.oversample`.
  *
  * @scope voice
  * @category effects
@@ -338,9 +338,9 @@ fun PatternMapperFn.coarse(amount: PatternLike? = null, oversample: PatternLike?
 @KlangScript.Object("coarse")
 object coarse {
 
-    /** The amount slot of each event, as a value other setters can read. */
+    /** The factor slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val amount: FieldAccessor = FieldAccessor { it.coarse }
+    val factor: FieldAccessor = FieldAccessor { it.coarse }
 
     /** The oversample slot of each event, as a value other setters can read. */
     @KlangScript.Property
@@ -349,12 +349,12 @@ object coarse {
     /**
      * The setter, see [SprudelPattern.coarse].
      *
-     * @param amount Sample rate divisor, 1 is off, higher is coarser.
+     * @param factor Sample rate divisor, 1 is off, higher is coarser.
      * @param oversample Oversampling factor: 1, 2, 4 or 8.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.coarse(amount, oversample, callInfo) }
+    operator fun invoke(factor: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.coarse(factor, oversample, callInfo) }
 }
 
 // -- coarse.oversample -----------------------------------------------------------------------------------------------

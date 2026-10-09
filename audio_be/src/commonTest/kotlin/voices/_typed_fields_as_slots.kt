@@ -105,8 +105,8 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
         putCurve(c.release, env.releaseCurve)
     }
 
-    put(s.crush.amount, doors.crush)
-    put(s.coarse.amount, doors.coarse)
+    put(s.crush.bits, doors.crush)
+    put(s.coarse.factor, doors.coarse)
     put(s.distort.amount, doors.distort)
     put(s.distort.shape, doors.distortShape?.let { DistortionShapes.indexOf(it) })
     put(s.distort.oversample, doors.distortOversample?.toDouble())

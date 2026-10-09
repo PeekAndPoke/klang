@@ -107,7 +107,7 @@ class ExciterCombinatorsSpec : StringSpec({
     // Effects: crush
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "crush(amount) - output is quantized (fewer unique values than input)" {
+    "crush(bits) - output is quantized (fewer unique values than input)" {
         val dry = generate(Ignitors.sine())
         val wet = generate(Ignitors.sine().crush(3.0))
 
@@ -122,7 +122,7 @@ class ExciterCombinatorsSpec : StringSpec({
     // Effects: coarse
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "coarse(amount) - output has sample-and-hold staircase pattern" {
+    "coarse(factor) - output has sample-and-hold staircase pattern" {
         val wet = generate(Ignitors.sine().coarse(10.0))
 
         // In a sample-and-hold signal, consecutive samples are often identical

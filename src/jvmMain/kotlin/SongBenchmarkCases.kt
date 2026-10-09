@@ -116,7 +116,7 @@ object SongBenchmarkCases {
                     """.lpf(attack = 0.005, decay = 1.1, sustain = 0.0, release = 0.015).hpf("<550!16 360!16 550!16 800!16>").lpf(freq = "3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4), env = 8.1, q = 2.0)""",
             "2 +distortx2 (1:tube:4 + 0.80)+clip" to
                     """.distort(1, "tube", 4).distort(0.80).clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2))""",
-            "3 +coarse(2,os4)" to """.coarse(amount = 2, oversample = 4)""",
+            "3 +coarse(2,os4)" to """.coarse(factor = 2, oversample = 4)""",
             "4 +superimpose#1 (pan copy)" to """.pan(0.15).superimpose(pan(0.85))""",
             "5 +superimpose#2 (hpf/lpf air)" to """.superimpose(hpf(3800).lpf(6700).gain(0.75 * 0.03))""",
             // Rung 6, `.pipeline("pedal")`, went with the preset (2026-09-25); see the LEAD ladder.
@@ -317,7 +317,7 @@ object SongBenchmarkCases {
           .sound("supersaw").unison(voices = 7, spread = 0.09).gain(0.75 * 0.11).distort(1, "tube", 4).distort(0.85)
           .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpf(attack = 0.005, decay = 1.0, sustain = 0.0, release = 0.01)
           .hpf(120).lpf(freq = 3200, env = 8.1, q = 1.8)
-          .coarse(amount = 2, oversample = 4).pan(0.3).superimpose(
+          .coarse(factor = 2, oversample = 4).pan(0.3).superimpose(
             x => x.pan(0.7),
             x => x.gain(0.75 * 0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
                  .pan(0.2).superimpose(pan(0.8))
@@ -383,7 +383,7 @@ object SongBenchmarkCases {
     // Unison sweep on the FULL guitar-1 effect chain (osc-gen scales with unison; fixed effects don't).
     private val fullChainTail =
         """.lpf(attack = 0.005, decay = 1.1, sustain = 0.0, release = 0.015).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)""" +
-                """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(amount = 2, oversample = 4)""" +
+                """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(factor = 2, oversample = 4)""" +
                 """.pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).gain(0.75 * 0.03))""" +
                 """.body(material = "wood", wet = 0.3)"""
 

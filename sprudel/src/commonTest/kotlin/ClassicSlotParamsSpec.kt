@@ -106,8 +106,8 @@ class ClassicSlotParamsSpec : StringSpec({
     }
 
     "the crush and coarse oversample travel under keys nothing reads; the distort one under its classic() slot" {
-        slots(note("c").crush(4, 2)) shouldBe mapOf("crush.amount" to 4.0, "crush.oversample" to 2.0)
-        slots(note("c").coarse(3, 2)) shouldBe mapOf("coarse.amount" to 3.0, "coarse.oversample" to 2.0)
+        slots(note("c").crush(4, 2)) shouldBe mapOf("crush.bits" to 4.0, "crush.oversample" to 2.0)
+        slots(note("c").coarse(3, 2)) shouldBe mapOf("coarse.factor" to 3.0, "coarse.oversample" to 2.0)
         slots(note("c").distort(0.5, oversample = 4))["distort.oversample"] shouldBe 4.0
     }
 
@@ -141,8 +141,8 @@ class ClassicSlotParamsSpec : StringSpec({
             "notchCurves.attack" to 3.0, "notchCurves.decay" to 4.0, "notchCurves.release" to 5.0,
             "adsr.attack" to 0.051, "adsr.decay" to 0.052, "adsr.sustain" to 0.53, "adsr.release" to 0.054, "adsr.on" to 0.0,
             "adsrCurves.attack" to 4.0, "adsrCurves.decay" to 5.0, "adsrCurves.release" to 0.0,
-            "crush.amount" to 4.1, "crush.oversample" to 2.0,
-            "coarse.amount" to 3.1, "coarse.oversample" to 4.0,
+            "crush.bits" to 4.1, "crush.oversample" to 2.0,
+            "coarse.factor" to 3.1, "coarse.oversample" to 4.0,
             "distort.amount" to 0.31, "distort.shape" to 10.0, "distort.oversample" to 8.0,
             "tremolo.depth" to 0.61, "tremolo.rate" to 4.1, "tremolo.shape" to 2.0,
             "begin" to 0.11, "end" to 0.91, "speed" to 2.1, "loop" to 1.0,

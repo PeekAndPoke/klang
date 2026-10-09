@@ -63,12 +63,12 @@ class ClassicTailRenderSpec : StringSpec({
         withClue("engaged: the onepole changes the sound") { firstBitMismatch(a = renderVoiceWindows(envelopeAlone), b = expected) shouldNotBe -1 }
         withClue("in front of crush, not behind it: the other order is a different signal") {
             val behind = renderVoiceWindows(
-                IgnitorDsl.Crush(inner = saw, amount = IgnitorDsl.Constant(5.0)).onepole(900.0).adsr(
+                IgnitorDsl.Crush(inner = saw, bits = IgnitorDsl.Constant(5.0)).onepole(900.0).adsr(
                     attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC,
                     declick = ENV_DECLICK_SECONDS,
                 ),
             )
-            val inFront = renderVoiceWindows(tail, mapOf("onepole" to 900.0, "crush.amount" to 5.0))
+            val inFront = renderVoiceWindows(tail, mapOf("onepole" to 900.0, "crush.bits" to 5.0))
 
             firstBitMismatch(a = behind, b = inFront) shouldNotBe -1
         }

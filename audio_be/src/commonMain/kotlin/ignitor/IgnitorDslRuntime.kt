@@ -1600,26 +1600,26 @@ private fun IgnitorDsl.buildRaw(
         )
 
         // GATE ROW `crush`: BELOW 1.0, or unset, and NOT 0. `CrushIgnitor` itself bypasses below two
-        // levels (`CrushCore.halfLevels`, amount below 1), and `Ignitor.crush(Double)` returns the
+        // levels (`CrushCore.halfLevels`, bits below 1), and `Ignitor.crush(Double)` returns the
         // inner below 1.0, so the whole range (0, 1) is already an exact bypass at render time
         // and gating it is the fold of a bypass, not a change.
-        is IgnitorDsl.Crush -> if (amount.gatedOff(ignitorParams, cache) { it < 1.0 }) {
+        is IgnitorDsl.Crush -> if (bits.gatedOff(ignitorParams, cache) { it < 1.0 }) {
             inner.passThrough()
         } else {
-            inner.withMod().crush(amount.noMod())
+            inner.withMod().crush(bits.noMod())
         }
 
         // GATE ROW `coarse`: at or below 1.0, or unset. Both paths already agree on that value
         // (`Ignitor.coarse(Double)` returns the inner, and the strip added no stage).
-        // At or below 0 and at a non-finite amount the render already takes a bit-exact bypass, so
+        // At or below 0 and at a non-finite factor the render already takes a bit-exact bypass, so
         // there the gate folds a bypass. In (0, 1] the engaged loop takes every sample (ledger W3)
         // but latches it through `nanGuard()`, so a NON-FINITE UPSTREAM SAMPLE used to come out as
         // 0.0 and now passes through: a change, on a sample a gated-off stage's upstream has no
         // business producing, and one every later clamping stage still guards.
-        is IgnitorDsl.Coarse -> if (amount.gatedOff(ignitorParams, cache) { it <= 1.0 }) {
+        is IgnitorDsl.Coarse -> if (factor.gatedOff(ignitorParams, cache) { it <= 1.0 }) {
             inner.passThrough()
         } else {
-            inner.withMod().coarse(amount.noMod())
+            inner.withMod().coarse(factor.noMod())
         }
 
         // NOT gated: no per-voice phaser is reachable from a built-in tail (the strip's per-voice

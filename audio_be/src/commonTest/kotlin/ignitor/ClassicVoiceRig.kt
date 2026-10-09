@@ -168,11 +168,11 @@ object ClassicVoiceRig {
         ClassicRow("untouched: the envelope alone, at the voice envelope's defaults", emptyMap()),
 
         // ── crush (D1, floor, CrushCore) ──
-        ClassicRow("crush 4", mapOf("crush.amount" to 4.0)),
+        ClassicRow("crush 4", mapOf("crush.bits" to 4.0)),
 
         // ── coarse ──
-        ClassicRow("coarse 3", mapOf("coarse.amount" to 3.0)),
-        ClassicRow("coarse 7.5", mapOf("coarse.amount" to 7.5)),
+        ClassicRow("coarse 3", mapOf("coarse.factor" to 3.0)),
+        ClassicRow("coarse 7.5", mapOf("coarse.factor" to 7.5)),
 
         // ── distort (D2 option A, DistortionCore) ──
         *listOf(
@@ -264,7 +264,7 @@ object ClassicVoiceRig {
         ClassicRow("adsrOff with release 0.2: the fade over a longer tail", mapOf("adsr.on" to 0.0, "adsr.release" to 0.2)),
 
         // ── the onepole: `classic()`'s first stage, in front of every other ──
-        ClassicRow("onepole 900 with crush 5: in front of the quantizer", mapOf("onepole" to 900.0, "crush.amount" to 5.0)),
+        ClassicRow("onepole 900 with crush 5: in front of the quantizer", mapOf("onepole" to 900.0, "crush.bits" to 5.0)),
 
         // ── the voice's pitch pipeline under a filtered built-in: it stays on the voice ──
         ClassicRow(
@@ -277,10 +277,10 @@ object ClassicVoiceRig {
         ClassicRow(
             "coarse, hpf, lpf, tremolo and the envelope together",
             mapOf(
-                "coarse.amount" to 2.0, "hpf.freq" to 150.0, "lpf.freq" to 2500.0, "lpf.q" to 2.0,
+                "coarse.factor" to 2.0, "hpf.freq" to 150.0, "lpf.freq" to 2500.0, "lpf.q" to 2.0,
                 "tremolo.depth" to 0.4, "tremolo.rate" to 6.0, "adsr.attack" to 0.02, "adsr.sustain" to 0.6, "adsr.release" to 0.1,
             ),
         ),
-        ClassicRow("crush and distort in the chain", mapOf("crush.amount" to 5.0, "distort.amount" to 0.4, "lpf.freq" to 3000.0)),
+        ClassicRow("crush and distort in the chain", mapOf("crush.bits" to 5.0, "distort.amount" to 0.4, "lpf.freq" to 3000.0)),
     )
 }

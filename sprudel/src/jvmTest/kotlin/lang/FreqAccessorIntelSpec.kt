@@ -80,8 +80,8 @@ class FreqAccessorIntelSpec : StringSpec({
     "every effects compound is an object whose children are the slot accessors and whose call form is the setter" {
         mapOf(
             "distort" to listOf("amount", "oversample"),
-            "crush" to listOf("amount", "oversample"),
-            "coarse" to listOf("amount", "oversample"),
+            "crush" to listOf("bits", "oversample"),
+            "coarse" to listOf("factor", "oversample"),
             "reverb" to listOf("wet", "size", "lowpass"),
             "delay" to listOf("wet", "time", "feedback", "cap"),
             "phaser" to listOf("wet", "rate", "center", "sweep", "floor"),

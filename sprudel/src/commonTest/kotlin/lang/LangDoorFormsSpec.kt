@@ -210,10 +210,10 @@ class LangDoorFormsSpec : StringSpec({
             ctrl = "soft hard", expected = listOf("soft", "hard"), continuous = null),
         k("distort.oversample", "distort(oversample = %s)", { it.distortOversample }, { p, c -> p.distort(oversample = c) }, { s, c -> s.distort(oversample = c) }, { c -> distort(oversample = c) }, { m, c -> m.distort(oversample = c) },
             ctrl = "2 4", expected = listOf(2, 4), continuous = null),
-        k("crush.amount", "crush(%s)", { it.crush }, { p, c -> p.crush(c) }, { s, c -> s.crush(c) }, { c -> crush(c) }, { m, c -> m.crush(c) }, head = true),
+        k("crush.bits", "crush(%s)", { it.crush }, { p, c -> p.crush(c) }, { s, c -> s.crush(c) }, { c -> crush(c) }, { m, c -> m.crush(c) }, head = true),
         k("crush.oversample", "crush(oversample = %s)", { it.crushOversample }, { p, c -> p.crush(oversample = c) }, { s, c -> s.crush(oversample = c) }, { c -> crush(oversample = c) }, { m, c -> m.crush(oversample = c) },
             ctrl = "2 4", expected = listOf(2, 4), continuous = null),
-        k("coarse.amount", "coarse(%s)", { it.coarse }, { p, c -> p.coarse(c) }, { s, c -> s.coarse(c) }, { c -> coarse(c) }, { m, c -> m.coarse(c) }, head = true),
+        k("coarse.factor", "coarse(%s)", { it.coarse }, { p, c -> p.coarse(c) }, { s, c -> s.coarse(c) }, { c -> coarse(c) }, { m, c -> m.coarse(c) }, head = true),
         k("coarse.oversample", "coarse(oversample = %s)", { it.coarseOversample }, { p, c -> p.coarse(oversample = c) }, { s, c -> s.coarse(oversample = c) }, { c -> coarse(oversample = c) }, { m, c -> m.coarse(oversample = c) },
             ctrl = "2 4", expected = listOf(2, 4), continuous = null),
 

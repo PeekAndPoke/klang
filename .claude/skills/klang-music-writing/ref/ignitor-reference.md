@@ -415,8 +415,8 @@ their short names) and `declick(seconds)` rounds the gain's corners (0 = off, th
 | `.drive(amount)`                        | Pre-amplification: gain, no curve          |
 | `.shape(shape?, oversample?)`           | The waveshaper curve alone, no gain        |
 | `.distort(amount, shape?, oversample?)` | `.drive()` + `.shape()` in one node        |
-| `.crush(amount)`                        | Bit-depth reduction                        |
-| `.coarse(amount)`                       | Sample-rate reduction                      |
+| `.crush(bits)`                          | Bit-depth reduction                        |
+| `.coarse(factor)`                       | Sample-rate reduction                      |
 | `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
 | `.shimmer(wet?, feedback?, tone?, pitches?, x => x.floor(f))` | Granular pitch-shift cloud: wet 0.5, feedback 0.5, tone 4000, pitches `[0, 7, 12]`; dry floor on the builder |
 | `.tremolo(rate, depth, x => x.shape(name).range(from, to))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), which is the oscillator of that name; the square, sawtooth and ramp get a 16 ms soft edge. `range(from, to)` places the swing in the -1..1 language of `range`, the gain being `1 + depth * that`: default `range(-1, 0)`, the dip from 1 to `1 - depth`; `range(0, 1)` swells upward to `1 + depth`, `range(-1, 1)` both ways; raw, no clamp |
@@ -603,13 +603,13 @@ note("c3 e3 g3").sound(guitar).lpf(1800).adsr(release = 0.2)
 
 The slots it places are grouped per stage on `Ignitor.slot`, named after the sprudel
 readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
-same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.amount`, `Ignitor.slot.coarse.amount`,
+same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.bits`, `Ignitor.slot.coarse.factor`,
 `Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
 `Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`, and the filter envelope curves
 `Ignitor.slot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
 
 Want another order? Write your own tail from the same slots, as far as a door takes them:
-`Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).crush(Ignitor.slot.crush.amount).lowpass(Ignitor.slot.lpf.freq)`.
+`Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).crush(Ignitor.slot.crush.bits).lowpass(Ignitor.slot.lpf.freq)`.
 The doors take a slot for every filter's `freq`, `q`, `env` and envelope stages, for `crush`, `coarse`,
 the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.classic()` can place:
 - `lpf.passes` / `hpf.passes`: the filter builder's `passes(n)` takes a number, not a slot;

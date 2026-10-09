@@ -21,26 +21,26 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 // `@Object`, so it is reachable only through `Ignitor.slot` and adds no global name.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
-/** `Ignitor.slot.crush`: the crush stage's slot, `amount` (`crush.amount`). */
+/** `Ignitor.slot.crush`: the crush stage's slot, `bits` (`crush.bits`). */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorCrushSlots::class)
 object KlangScriptIgnitorCrushSlots {
     override fun toString(): String = "[Ignitor.slot.crush]"
 
-    /** Bit-crush amount, default 0 (off). Mirrors sprudel's `crush.amount`. */
+    /** Bit depth, default 0 (off; below 1 the stage passes through). Mirrors sprudel's `crush.bits`. */
     @KlangScript.Property
-    val amount: IgnitorDsl = IgnitorDsl.Slots.crush.amount
+    val bits: IgnitorDsl = IgnitorDsl.Slots.crush.bits
 }
 
-/** `Ignitor.slot.coarse`: the coarse stage's slot, `amount` (`coarse.amount`). */
+/** `Ignitor.slot.coarse`: the coarse stage's slot, `factor` (`coarse.factor`). */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorCoarseSlots::class)
 object KlangScriptIgnitorCoarseSlots {
     override fun toString(): String = "[Ignitor.slot.coarse]"
 
-    /** Sample-rate reduction amount, default 0 (off). Mirrors sprudel's `coarse.amount`. */
+    /** Sample-hold factor, default 0 (off; at 1 or less nothing is held). Mirrors sprudel's `coarse.factor`. */
     @KlangScript.Property
-    val amount: IgnitorDsl = IgnitorDsl.Slots.coarse.amount
+    val factor: IgnitorDsl = IgnitorDsl.Slots.coarse.factor
 }
 
 /** `Ignitor.slot.distort`: the distort stage's slots. */

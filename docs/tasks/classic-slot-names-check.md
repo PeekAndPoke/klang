@@ -115,3 +115,28 @@ Before the pitch pipeline's step 1, so its new slots are born with the final wor
   `DslDocExamplesSpec`, `LexikonSpec` green. `SongBenchmarkCasesCompileSpec`'s "every case compiles" row is green;
   its rig-anchor row is red on the maintainer's LIVE `DerSchmetterling.kt` (the anchor `.pitchEnvelope(0.5, x =` is
   in HEAD's text and not in the live file), not on this change.
+
+### Step 2a, `crush.bits` and `coarse.factor` (2026-10-09)
+
+- **What changed.** The shared `AmountSlots` split into `CrushSlots { bits }` and `CoarseSlots { factor }` (keys
+  `crush.bits`, `coarse.factor`); the nodes `Crush.bits` and `Coarse.factor`; the flat Kotlin doors `crush(bits)`,
+  `coarse(factor)`; the script doors and `Ignitor.slot.crush.bits` / `Ignitor.slot.coarse.factor`; the runtime
+  `Ignitor.crush(bits)` / `Ignitor.coarse(factor)`, their Ignitor fields and `CrushCore.halfLevels(bits)`; sprudel's
+  `crush(bits, oversample)` / `coarse(factor, oversample)`, the accessors `crush.bits` / `coarse.factor`, the
+  `@tags`, and `ClassicSlotKeys.crushBits` / `coarseFactor`. The songs (Seltsamere Dinge, A Synth Worth Lying For,
+  The Synthsale Piper's Last Rave, Die Kirschblüte), the frozen Stranger Things (and its header note),
+  `SongBenchmarkCases`, the whitepaper (the Sakura listing and its prose, `fig-arrangement`, `fig-classic-stages`),
+  the skill references and `audio/ref/off-values.md` say the new words. `distort.amount` is untouched.
+- **Found on the way.** Two test keys the map did not list: `FreqAccessorIntelSpec` (the accessor children of
+  `crush` and `coarse`) and `LangControlRestSpec` (the compound rows).
+- **Wire.** `WIRE_SCHEMA_HASH` `1502920473` to `380449250` (`Crush.bits`, `Coarse.factor`). JS codec specs green.
+- **Corpus, bit-identical, including every row whose text changed** (`corpus-ep1-sn2a.txt`): all 16 rows identical
+  (Seltsamere Dinge, A Synth Worth Lying For, The Synthsale Piper's Last Rave, Die Kirschblüte and frozen Stranger
+  Things among them); Der Schmetterling and Kokon from HEAD's text identical to their recorded hashes.
+- **Engagement controls.** `ClassicSlotKeys.crushBits` writing `"crush.amount"` while the slot says `crush.bits`:
+  Seltsamere Dinge, A Synth Worth Lying For and frozen Stranger Things moved, Greensleeves identical. The same for
+  `coarseFactor` writing `"coarse.amount"`: The Synthsale Piper's Last Rave, Die Kirschblüte, Seltsamere Dinge and
+  frozen Stranger Things moved; A Synth Worth Lying For (crush only) and Greensleeves identical. Restored, `cmp` clean.
+- **Suites.** As step 1, same counts, all green; `SongBenchmarkCasesCompileSpec`'s every-case row green (it compiles
+  the three `coarse(factor = 2, oversample = 4)` cases), its rig-anchor row still red on the live
+  `DerSchmetterling.kt` only.

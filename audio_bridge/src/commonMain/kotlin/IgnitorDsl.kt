@@ -253,11 +253,11 @@ sealed interface IgnitorDsl {
          */
         val onepole: IgnitorDsl = Param(name = "onepole", default = 0.0, description = "Mirrors sprudel's reader `onepole`")
 
-        /** The crush stage: `crush.amount`. */
-        val crush: AmountSlots = AmountSlots("crush")
+        /** The crush stage: `crush.bits`. */
+        val crush: CrushSlots = CrushSlots()
 
-        /** The coarse stage: `coarse.amount`. */
-        val coarse: AmountSlots = AmountSlots("coarse")
+        /** The coarse stage: `coarse.factor`. */
+        val coarse: CoarseSlots = CoarseSlots()
 
         /** The distort stage: `distort.amount`, `distort.shape`, `distort.oversample`. */
         val distort: DistortSlots = DistortSlots()
@@ -2017,18 +2017,19 @@ sealed interface IgnitorDsl {
 
     /**
      * Bit-crush effect. Reduces amplitude resolution to create quantization noise: the voice strip's
-     * asymmetric `floor` quantizer, `floor(x * 2^amount / 2) / (2^amount / 2)` clamped to `[-1, 1]`,
-     * with a DC offset of about `-0.5 / halfLevels` (-0.5 at amount 1), which moves with a modulated
-     * amount (phase 3 step 4, decision D1, 2026-09-25: FLOOR everywhere; it rounded before). Below an
-     * amount of 1.0 it passes through.
+     * asymmetric `floor` quantizer, `floor(x * 2^bits / 2) / (2^bits / 2)` clamped to `[-1, 1]`,
+     * with a DC offset of about `-0.5 / halfLevels` (-0.5 at 1 bit), which moves with modulated
+     * [bits] (phase 3 step 4, decision D1, 2026-09-25: FLOOR everywhere; it rounded before). Below
+     * 1 bit it passes through.
      */
     @WireName("crush")
     data class Crush(
         val inner: IgnitorDsl,
-        val amount: IgnitorDsl = Constant(8.0),
+        /** The bit depth: `2^bits` levels. Below 1.0 the stage passes through. */
+        val bits: IgnitorDsl = Constant(8.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); amount.collectParams(out)
+            inner.collectParams(out); bits.collectParams(out)
         }
     }
 
@@ -2036,10 +2037,11 @@ sealed interface IgnitorDsl {
     @WireName("coarse")
     data class Coarse(
         val inner: IgnitorDsl,
-        val amount: IgnitorDsl = Constant(4.0),
+        /** The sample-hold factor: each sample is held for [factor] samples. At 1.0 or less nothing is held. */
+        val factor: IgnitorDsl = Constant(4.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); amount.collectParams(out)
+            inner.collectParams(out); factor.collectParams(out)
         }
     }
 
@@ -3016,16 +3018,16 @@ fun IgnitorDsl.fm(
 fun IgnitorDsl.distort(amount: Double, shape: String = "soft", oversample: Int = 0) =
     IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)).shape(shape, oversample)
 
-/** Applies bit-crush quantization at the given bit [amount]. */
-fun IgnitorDsl.crush(amount: Double) = IgnitorDsl.Crush(
+/** Applies bit-crush quantization at the given bit depth, [bits]. */
+fun IgnitorDsl.crush(bits: Double) = IgnitorDsl.Crush(
     inner = this,
-    amount = IgnitorDsl.Constant(amount),
+    bits = IgnitorDsl.Constant(bits),
 )
 
-/** Applies sample-rate reduction by the given [amount] factor. */
-fun IgnitorDsl.coarse(amount: Double) = IgnitorDsl.Coarse(
+/** Applies sample-rate reduction by the given sample-hold [factor]. */
+fun IgnitorDsl.coarse(factor: Double) = IgnitorDsl.Coarse(
     inner = this,
-    amount = IgnitorDsl.Constant(amount),
+    factor = IgnitorDsl.Constant(factor),
 )
 
 /**

@@ -14,7 +14,7 @@ import kotlin.random.Random
 
 /**
  * Modulation class guards (block-framing ledger W1-W3): the coarse hold grid is note-anchored and
- * survives window boundaries and amount crossings; the tremolo LFO is a clock. W5's row (the fused
+ * survives window boundaries and factor crossings; the tremolo LFO is a clock. W5's row (the fused
  * Distort node renders the runtime `fusedDistort`, not the doors' Drive+Shape chain) is
  * `WaveshaperKnobsSpec`'s "the Distort node reads its shape and factor ..." row; W5's hazard is
  * `StripLawCoresSpec`'s continuity row.
@@ -87,10 +87,10 @@ class ModulationClockSpec : StringSpec({
     }
 
     "W1: the coarse hold grid is note-anchored — a window boundary on the grid does not re-anchor" {
-        // amount 4 (power of two): the old block-indexed bootstrap latch re-armed exactly at
-        // note-relative sample `amount`, so a window STARTING there re-anchored the grid for
+        // factor 4 (power of two): the old block-indexed bootstrap latch re-armed exactly at
+        // note-relative sample `factor`, so a window STARTING there re-anchored the grid for
         // the rest of the note. Segments [4, 124, 128...] put a window start on that sample.
-        fun coarse() = RampProbe().coarse(ParamIgnitor("amount", 4.0))
+        fun coarse() = RampProbe().coarse(ParamIgnitor("factor", 4.0))
 
         val contiguous = renderSegments(coarse(), List(8) { blockFrames })
         val split = renderSegments(coarse(), listOf(4, 124) + List(7) { blockFrames })
@@ -99,8 +99,8 @@ class ModulationClockSpec : StringSpec({
         maxDiff(a = contiguous, b = split) shouldBe 0.0
     }
 
-    "W1: the first hold is `amount` samples, like every other hold (the 2x bootstrap quirk is gone)" {
-        val out = renderSegments(RampProbe().coarse(ParamIgnitor("amount", 4.0)), listOf(blockFrames))
+    "W1: the first hold is `factor` samples, like every other hold (the 2x bootstrap quirk is gone)" {
+        val out = renderSegments(RampProbe().coarse(ParamIgnitor("factor", 4.0)), listOf(blockFrames))
         val input = renderSegments(RampProbe(), listOf(blockFrames))
 
         for (i in 0 until 32) {
@@ -108,15 +108,15 @@ class ModulationClockSpec : StringSpec({
         }
     }
 
-    "W3: an amount crossing through the passthrough range keeps the S&H clock contiguous" {
-        // amount 5, passthrough (0.5) for blocks 2-3, back to 5 at sample 512. The counter runs
+    "W3: a factor crossing through the passthrough range keeps the S&H clock contiguous" {
+        // factor 5, passthrough (0.5) for blocks 2-3, back to 5 at sample 512. The counter runs
         // through the passthrough region (every sample takes), so the resume grid anchors at
         // 512 exactly; the OLD frozen counter + stale lastValue resumed on the pre-gap grid and
         // replayed input[255] as a DC step.
-        val amount = ElapsedStep { elapsed ->
+        val factor = ElapsedStep { elapsed ->
             if (elapsed < 256 || elapsed >= 512) 5.0 else 0.5
         }
-        val out = renderSegments(RampProbe().coarse(amount), List(8) { blockFrames })
+        val out = renderSegments(RampProbe().coarse(factor), List(8) { blockFrames })
         val input = renderSegments(RampProbe(), List(8) { blockFrames })
 
         // The crossing is CONTIGUOUS, not snapped: sample 256 still carries the last grid
@@ -137,18 +137,18 @@ class ModulationClockSpec : StringSpec({
         }
     }
 
-    "W3/W4: a non-finite amount reads as passthrough and HEALS — no permanent DC latch" {
+    "W3/W4: a non-finite factor reads as passthrough and HEALS, no permanent DC latch" {
         // NaN first (caught by the !(amt > 0) NaN-guard), then +Inf (caught by the isInfinite
         // arm — without it, Inf engages with invAmt 0: one take, an eternal hold, a displaced
         // counter), then a finite heal.
-        val amount = ElapsedStep { elapsed ->
+        val factor = ElapsedStep { elapsed ->
             when {
                 elapsed < 128 -> Double.NaN
                 elapsed < 256 -> Double.POSITIVE_INFINITY
                 else -> 4.0
             }
         }
-        val out = renderSegments(RampProbe().coarse(amount), List(4) { blockFrames })
+        val out = renderSegments(RampProbe().coarse(factor), List(4) { blockFrames })
         val input = renderSegments(RampProbe(), List(4) { blockFrames })
 
         // During NaN and Inf: copy-through (the old code engaged, poisoned the counter and
@@ -166,7 +166,7 @@ class ModulationClockSpec : StringSpec({
     "W3 parity: a NaN INPUT sample does not latch into the held value" {
         // The strip door has always nanGuard()ed the captured sample; the ignitor door gained
         // it in the W-batch. One poisoned input sample must cost at most its own cell, held as
-        // the guard's 0.0 — never NaN for `amount` frames.
+        // the guard's 0.0, never NaN for `factor` frames.
         class NaNAtProbe(private val at: Int) : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 val end = ctx.windowEnd
@@ -177,7 +177,7 @@ class ModulationClockSpec : StringSpec({
             }
         }
 
-        val out = renderSegments(NaNAtProbe(at = 8).coarse(ParamIgnitor("amount", 4.0)), listOf(blockFrames))
+        val out = renderSegments(NaNAtProbe(at = 8).coarse(ParamIgnitor("factor", 4.0)), listOf(blockFrames))
 
         out.all { it == it } shouldBe true // no NaN anywhere in the output
     }

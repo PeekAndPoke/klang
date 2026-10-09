@@ -2316,7 +2316,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
     ,note(<span class="st">"c4  f3  c4  a3  e3  gs3 c4"</span>).sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.45).hpf(800)
     <span class="cm">// High fifth</span>
     ,note(<span class="st">"e4  a3  e4  c4  g3  b3  e4"</span>).sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.7).hpf(1000)
-  ).orbit(4).adsr(release = 1.5).coarse(amount = 2, oversample = 1).filterWhen(x =&gt; x &gt;= wait * 3).body(material = <span class="st">"tube"</span>, wet = 0.3) <span class="cm">// adsr(release = 1.5): classic() releases over this, not the pad's own 1.5 s tail; keep them equal</span>
+  ).orbit(4).adsr(release = 1.5).coarse(factor = 2, oversample = 1).filterWhen(x =&gt; x &gt;= wait * 3).body(material = <span class="st">"tube"</span>, wet = 0.3) <span class="cm">// adsr(release = 1.5): classic() releases over this, not the pad's own 1.5 s tail; keep them equal</span>
 
   <span class="cm">// Noise</span>
   , sound(<span class="st">"dust!2"</span>).gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)
@@ -2376,7 +2376,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 <li>
                     The six pad lines each carry a higher high-pass than the last, from 100 Hz up to 1000 Hz, so the
                     low end is left to the lower lines. <code>body(material = …)</code> puts a resonating wooden or
-                    tube body around an orbit (<a href="#s7">§7</a>), and <code>coarse(amount = 2, oversample = 1)</code> halves the
+                    tube body around an orbit (<a href="#s7">§7</a>), and <code>coarse(factor = 2, oversample = 1)</code> halves the
                     pad's sample rate, raw and aliased, for a touch of digital grit.
                 </li>
                 <li>

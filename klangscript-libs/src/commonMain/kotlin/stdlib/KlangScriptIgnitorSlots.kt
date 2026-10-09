@@ -112,11 +112,11 @@ object KlangScriptIgnitorSlots {
     @KlangScript.Property
     val onepole: IgnitorDsl = IgnitorDsl.Slots.onepole
 
-    /** The crush stage's slot: `Ignitor.slot.crush.amount`. */
+    /** The crush stage's slot: `Ignitor.slot.crush.bits`. */
     @KlangScript.Property
     val crush: KlangScriptIgnitorCrushSlots = KlangScriptIgnitorCrushSlots
 
-    /** The coarse stage's slot: `Ignitor.slot.coarse.amount`. */
+    /** The coarse stage's slot: `Ignitor.slot.coarse.factor`. */
     @KlangScript.Property
     val coarse: KlangScriptIgnitorCoarseSlots = KlangScriptIgnitorCoarseSlots
 

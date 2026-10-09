@@ -241,28 +241,28 @@ private class FusedDistortIgnitor(
  * The law is [CrushCore], the voice strip's crush law (phase 3
  * step 4, decision D1, 2026-09-25: FLOOR everywhere): an asymmetric `floor` quantizer,
  * `floor(x * halfLevels) / halfLevels`, clamped to `[-1, 1]`, with a DC offset of about
- * `-0.5 / halfLevels` (-0.5 at amount 1), which moves with a modulated amount: the classic crunch. A
+ * `-0.5 / halfLevels` (-0.5 at 1 bit), which moves with modulated bits: the classic crunch. A
  * NaN sample comes out as 0. Until step 4 this node rounded (a symmetric midtread quantizer),
- * up to one grid step (0.125 at amount 4) away from the strip.
+ * up to one grid step (0.125 at 4 bits) away from the strip.
  *
- * Amount is read once per block (control rate). **Bypasses when amount < 1.0**, and at a NaN amount:
+ * The bit depth is read once per block (control rate). **Bypasses below 1 bit**, and at a NaN depth:
  * fewer than 2 levels means the grid step exceeds the input range entirely.
  *
- * @param amount Bit depth. Below 1.0 = bypass. 1.0 = 2 levels (extreme lo-fi),
+ * @param bits Bit depth. Below 1.0 = bypass. 1.0 = 2 levels (extreme lo-fi),
  *   4.0 = 16 levels, 8.0 = 256 levels, 16.0 = 65536 levels (subtle).
- *   Internally: `levels = 2^amount`. Typical range: 2.0–8.0.
+ *   Internally: `levels = 2^bits`. Typical range: 2.0 to 8.0.
  */
-fun Ignitor.crush(amount: Ignitor): Ignitor = CrushIgnitor(upstream = this, amount = amount)
+fun Ignitor.crush(bits: Ignitor): Ignitor = CrushIgnitor(upstream = this, bits = bits)
 
 private class CrushIgnitor(
     private val upstream: Ignitor,
-    private val amount: Ignitor,
+    private val bits: Ignitor,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
-            val halfLevels = CrushCore.halfLevels(Ignitors.readParam(amount, freqHz, ctx))
+            val halfLevels = CrushCore.halfLevels(Ignitors.readParam(bits, freqHz, ctx))
             val end = ctx.windowEnd
 
             if (halfLevels == CrushCore.BYPASS) {
@@ -278,14 +278,14 @@ private class CrushIgnitor(
 }
 
 /**
- * Bit-depth reduction (convenience overload with fixed amount).
+ * Bit-depth reduction (convenience overload with a fixed depth).
  *
- * @param amount Bit depth. Below 1.0 = bypass. 4.0 = 16 levels (lo-fi),
+ * @param bits Bit depth. Below 1.0 = bypass. 4.0 = 16 levels (lo-fi),
  *   8.0 = 256 levels. Default: 0.0.
  */
-fun Ignitor.crush(amount: Double): Ignitor {
-    if (amount < 1.0) return this
-    return crush(ParamIgnitor("amount", amount))
+fun Ignitor.crush(bits: Double): Ignitor {
+    if (bits < 1.0) return this
+    return crush(ParamIgnitor("bits", bits))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -296,25 +296,25 @@ fun Ignitor.crush(amount: Double): Ignitor {
  * Sample-rate reducer (coarse). Holds a sample value for multiple frames. Processes per-sample.
  *
  * Creates aliased, metallic artifacts by reducing the effective sample rate.
- * Amount is read once per block (control rate). Amounts in (0, 1] are audibly inactive but the
+ * The factor is read once per block (control rate). Factors in (0, 1] are audibly inactive but the
  * hold clock keeps running (an exact take-every-sample copy — ledger W3: contiguity through a
- * modulated crossing); only `amount <= 0` and non-finite values take the true bypass arm, and
- * they HEAL when the amount returns. The first hold is `amount` samples (give or take one for
- * non-dyadic amounts — 1/amount accumulates in floats), like every later hold.
+ * modulated crossing); only `factor <= 0` and non-finite values take the true bypass arm, and
+ * they HEAL when the factor returns. The first hold is `factor` samples (give or take one for
+ * non-dyadic factors, as 1/factor accumulates in floats), like every later hold.
  *
- * @param amount Sample-hold factor. Values <= 1.0 are audibly inactive (see above).
+ * @param factor Sample-hold factor. Values <= 1.0 are audibly inactive (see above).
  *   2.0 = every 2nd sample held, 4.0 = every 4th (strong aliasing), 10.0+ = extreme lo-fi.
  *   Typical range: 2.0–8.0. Default: 0.0 (inactive).
  */
 private class CoarseIgnitor(
     private val upstream: Ignitor,
-    private val amount: Ignitor,
+    private val factor: Ignitor,
 ) : Ignitor {
     private var lastValue: Double = 0.0
 
     // Bootstrapped at 1.0 — "take a sample NOW", the oversampled strip path's shape (ledger
     // W1): the old 0.0 start + `idx == 0` block latch re-armed at note-relative sample
-    // `amount` for every power-of-two amount, so a block boundary landing there displaced the
+    // `factor` for every power-of-two factor, so a block boundary landing there displaced the
     // hold grid for the REST of the note (live in ATruthWorthLyingFor's coarse(2)); it also
     // made the first hold 2x long. Both die with this bootstrap, and every coarse path in the
     // engine now anchors its grid the same way.
@@ -324,15 +324,15 @@ private class CoarseIgnitor(
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
-            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val amt = Ignitors.readParam(factor, freqHz, ctx)
             val end = ctx.windowEnd
 
             // Ledger W3: the guard is load-bearing only for amt <= 0 (a negative increment
-            // would walk the counter down and hold forever) and for non-finite amounts (a NaN
+            // would walk the counter down and hold forever) and for non-finite factors (a NaN
             // would poison the counter and latch DC for the note's life, an Inf would hold
-            // forever — both now read as bypass and HEAL when the amount returns). For amt in
+            // forever; both now read as bypass and HEAL when the factor returns). For amt in
             // (0, 1] the engaged loop below already degenerates to an exact copy, so the S&H
-            // clock stays contiguous through the whole authorable range and a modulated amount
+            // clock stays contiguous through the whole authorable range and a modulated factor
             // crossing 1.0 no longer freezes the grid or replays a stale held sample.
             // NaN-guard: the !(x > 0) form is what catches NaN.
             if (!(amt > 0.0) || amt.isInfinite()) {
@@ -342,14 +342,14 @@ private class CoarseIgnitor(
                 return@use
             }
 
-            // coerceAtLeast(1.0): amounts in (0, 1] mean "take every sample" — without the
+            // coerceAtLeast(1.0): factors in (0, 1] mean "take every sample"; without the
             // floor the counter would grow unboundedly at increments > 1.
             val invAmt = 1.0 / amt.coerceAtLeast(1.0)
 
             for (i in ctx.offset until end) {
                 if (counter >= 1.0) {
                     // nanGuard mirrors the retired strip's coarse: a NaN input must not latch into the
-                    // held value for `amount` frames.
+                    // held value for `factor` frames.
                     lastValue = work[i].nanGuard()
                     counter -= 1.0
                 }
@@ -360,16 +360,16 @@ private class CoarseIgnitor(
     }
 }
 
-fun Ignitor.coarse(amount: Ignitor): Ignitor = CoarseIgnitor(upstream = this, amount = amount)
+fun Ignitor.coarse(factor: Ignitor): Ignitor = CoarseIgnitor(upstream = this, factor = factor)
 
 /**
- * Sample-rate reducer (convenience overload with fixed amount).
+ * Sample-rate reducer (convenience overload with a fixed factor).
  *
- * @param amount Sample-hold factor. Values <= 1.0 = inactive. 4.0 = strong aliasing. Default: 0.0.
+ * @param factor Sample-hold factor. Values <= 1.0 = inactive. 4.0 = strong aliasing. Default: 0.0.
  */
-fun Ignitor.coarse(amount: Double): Ignitor {
-    if (amount <= 1.0) return this
-    return coarse(ParamIgnitor("amount", amount))
+fun Ignitor.coarse(factor: Double): Ignitor {
+    if (factor <= 1.0) return this
+    return coarse(ParamIgnitor("factor", factor))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
