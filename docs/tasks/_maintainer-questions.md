@@ -49,19 +49,25 @@ every door (one word per concept says no). **Recommendation: keep them as engine
 limits in their file header, and point authors (Kotlin included) at the `klangscript-libs` door.** The alternative is
 to align them fully. No song is affected either way (songs are KlangScript).
 
-## Q13. Pitch pipeline, the composition block: one name left
+## Q13. The `progress()` signal (pitch plan §7f; not blocking, the composition block comes after the pipeline)
 
-D8 to D11 are answered (2026-10-09; recorded in [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)
-§8). One thing left from D11: accelerate leaves, built from a new note-progress primitive, a signal that rises from 0
-to 1 over the gate and then holds at 1.
+Decided so far (2026-10-09): public, 0 at the onset, 1.0 at the gate close, growing on past 1 so release-tail effects
+can be built; a foundation for tweens and general curves (one curve vocabulary with the `adsr` stages and the
+signal-graph tweens). Accelerate clamps it at 1 inside. Open:
+
+1. **After the gate: gate lengths, or seconds too?** In gate lengths, a 0.1 s note with a 2 s release reaches 21 at
+   its end, a 2 s note reaches 2: a tail effect runs 20 times faster on staccato notes. A seconds-based `sinceGate()`
+   (0 while the gate is open, then 0.5 after half a second ...) fits the units rule. Both?
+2. **Live MIDI notes:** a held key has no known gate length, so progress stays about 0 (the far horizon). At
+   note-off: (a) stay as decided in August (no tail effects on live notes), (b) jump to 1.0 and grow on (accelerate
+   would jump at the release), or (c) rely on `sinceGate()`, which starts counting at the real note-off for every
+   note.
+3. **How a curve is written** on a signal: `Ign.progress().curve("scurve")`, `.ease("scurve")`, or a curve argument
+   on `progress()` itself?
 
 ```
-Ign.saw().pitchModSemitones(Ign.constant(12).mul(Ign.progress()))   // what accelerate(12) becomes inside
-Ign.saw().lowpass(Ign.progress().range(300, 3000))                   // a filter that opens over the note
+Ign.saw().lowpass(Ign.progress().sub(1).clamp(0, 1).curve("scurve").range(4000, 600))   // the tail darkens, eased
 ```
-
-Is `progress()` a good name? Alternatives: `noteProgress()`, `gateRamp()`. And FM stays a node (the D1 reason); say if
-you see it differently.
 
 ## Q18. Named arguments in data tables
 

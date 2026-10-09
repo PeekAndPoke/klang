@@ -683,6 +683,19 @@ yet, which is the point):
 node; the corpus run confirms it); listening pairs for the bell under `vib`, for scenario 2's "inside the carrier"
 shape, and for sprudel `fm` plus `vib`.
 
+**Stopped for a decision (2026-10-09, worker; no code in the tree).** The matrix is written
+(`FmModulatorFollowsPitchSpec`, 43 rows; report `tmp/reviews/pp-step3b-report.md`). HEAD fails 37 rows. Candidate (b)
+fails 3: an outer mod that reads `Freq` (a vibrato rate on the note, an audio-rate `pitchMod`, an outer fm) keeps its
+memo's freq key, and the modulator asks for it at `f x ratio`. It then renders twice per block and breaks the
+CARRIER's own modulation too (measured: off by up to 0.054, 0.020 and 1.73 in the ratio, where HEAD reads 0.0). The
+proposal, a wrapper through which the modulator reads the outer mod at the carrier's frequency (pinned by the fm each
+block), passes all 43 rows and the whole `audio_be` jvmTest. It waits for the maintainer: the mechanism (a runtime
+handshake, the stone rule), and whether an fm over an fm's carrier counts as pitch modulation (two modulators on one
+carrier: "follows" is the rule as written and keeps step 4's `s("sgbell").fm(...)` as the strip plays it today;
+"parallel" is HEAD). Listening: `tmp/listening/pp-step3b/` (the bell under `vib`, the inside-the-carrier pair, the
+two-modulator pair). Patches: `3b-PROPOSAL-carrier-freq-mod.patch` and `3b-candidate-b-as-written.patch` in the
+session scratchpad's `patches-pp/`.
+
 #### Queued beside the pipeline: sprudel's `analog(amount)` becomes `analog(character)` (Q25)
 
 The maintainer, 2026-10-09: "yes rename to character". `amount` is the distort drive only (Q21), and `analog` is a
@@ -826,6 +839,19 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   primitive. The chain `adsr` is the AMPLITUDE host (the level floors at 0), the pitch law is raw; the product
   `amount * level` and the `/ 12` match today's bits, so the spike checks whether a negative sustain is the only
   difference, and whether the amplitude host's shortcuts keep `renderPitchEnvelopeRatios`' settled-block cost (D10).
+- **7f. `progress()` as a public signal, and curves on it** (maintainer, 2026-10-09; design open). The primitive under
+  the composed accelerate is offered to authors, and it does NOT stop at 1: 0 at the onset, 1.0 at the gate close,
+  growing on after it ("then one can build effects that only sound in the release tail"); accelerate clamps it at 1
+  internally for its hold. The maintainer: "it also opens the door to tweening-like functions or general curves,
+  other than adsr curves". A tween is a 0-to-1 ramp shaped by a curve, the same object as the signal-graph plan's
+  tween (`../plans/future/signal-graph-engine.md` 6.8: one automation write with a duration and a curve), so one
+  curve vocabulary should serve the `adsr` stages (`AdsrCurves`: linear, square, cube, scurve, invsquare,
+  exponential), `progress()` and later tweens. Open before it is designed (`_maintainer-questions.md` Q13):
+  - after the gate, does progress count in gate lengths (as asked) and/or is there a seconds-based `sinceGate()`
+    beside it (the provisional units rule);
+  - live MIDI notes: today a held note's base is a far horizon (progress about 0, never moving at note-off, decided
+    2026-08-29); release-tail effects need an answer there;
+  - how a curve is applied to a signal (`progress().curve("scurve")`, `.ease(...)`), on both doors.
 - **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and
   `pitchModSemitones`; FM keeps its node for D1). The original reasoning: Accelerate's law is a per-block seed with per-sample stepping and one
   reader; a `progress` primitive would be a node for one use. FM is already a composition (any modulator tree), and its
