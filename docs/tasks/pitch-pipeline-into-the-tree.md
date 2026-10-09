@@ -729,6 +729,13 @@ wire already; `src/jsMain/kotlin/comp/PlayerWarehouseStats.kt` shows only their 
 Add the two reverb counters beside them, with the same hover texts ("allocations that failed (out of memory)", and the
 dropped one's). UI only.
 
+**Step 3b, decided (maintainer, 2026-10-09):** build the general mechanism (v2, one `CarrierFreqMod` wrapper per fm,
+outer mod and detune scope; "better to have the general case first, maybe we find optimizations later"); an fm over
+another fm's carrier FOLLOWS; the one shape the engine cannot process (an fm above a forking `detune`) is an author
+rule ("define the FM on both x and x.detune() and sum both") with a build-time diagnostic as its own task
+(`fm-above-forking-detune-diagnostic.md`); `s("sgpad").fm(...)` in step 4 stays quiet and recorded, decided when it
+happens on a real song. The carrier-only vibrato shape waits for the maintainer's ear.
+
 **Step 3b, the maintainer's principle (2026-10-09):** "It would be good to find a general solution. If not possible we
 should report an error, when something is authored that the engine cannot process." So the FM rule must hold for
 every topology the DSL can express (fms in sequence, nested, summed, in parameters, shared nodes); a shape the engine
