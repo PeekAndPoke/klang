@@ -7,8 +7,9 @@ The verdict per module is below. The `audio_*` modules were part of the engine t
 step 6); their verdict is the last section here.
 
 **What is left:** the four helper merges under "Left for a decision" (each changes behaviour or is an extraction, not
-a move): Q15 in [`_maintainer-questions.md`](_maintainer-questions.md). The coordinator would do them as small
-reviewed steps unless the maintainer says otherwise.
+a move). **Approved (maintainer, 2026-10-09, Q15: "all ok")**: all four, as small reviewed steps, queued beside the
+pitch pipeline (non-audio modules, done between two pipeline steps so they never share a tree with a running
+worker).
 
 ## The rule
 

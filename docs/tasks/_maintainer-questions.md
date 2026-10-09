@@ -68,18 +68,6 @@ Source: §8. Step 2 of the pitch plan, recommendations as written there:
 - **D10 (pitch):** compose the pitch envelope through `adsr` only after a spike shows it matches.
 - **D11:** accelerate and FM stay nodes.
 
-## Q15. Helper merges that change behaviour
-
-Source: [`utils-home-pass.md`](utils-home-pass.md), "Left for a decision". Four small steps:
-- **`Environment.loadLibrary`'s own Levenshtein folded into `suggestNames`.** Example: the "did you mean ...?" text for
-  a misspelt library name changes wording to match the other suggestions.
-- **`MnRenderer.renderNumber` swapped for `formatAsIntOrDouble`.** Example: a number above `Int.MAX_VALUE` (2147483647)
-  is clamped when rendered today; after the swap it renders as written.
-- **One home in `common` for the four text-position helpers.**
-- **A small class for the tracked-timeouts code** shared by `MnEditorBase` and `NoteStaffEditor`.
-
-The coordinator would do all four as small reviewed steps unless you say otherwise.
-
 ## Q16. The oscillators do not use PolyBLEP
 
 Found in tidy-up step 1. `/code-style` §9, `CREDITS.MD` and `klang-music-writing/ref/ignitor-reference.md` say the
