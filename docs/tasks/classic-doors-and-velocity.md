@@ -124,7 +124,7 @@ pitch doors -> instrument -> [post-instrument stage] -> channel -> bus (Katalyst
   its own filter and envelope. Double placement becomes a choice, never an accident.
 - **The pitch doors are the exception.** Vibrato, the pitch envelope, fm and accelerate must reach the oscillators
   inside the instrument, so they wrap it, not follow it. This ties in with
-  [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md).
+  [`pitch-pipeline-into-the-tree.md`](in-progress/pitch-pipeline-into-the-tree.md).
 
 **Why it is not the retired Pipeline DSL** (`docs/retired-names.md`, 2026-09-27). That was a second DSL with its own
 renderers and 30 `VoiceData` fields. The post-instrument stage is an Ignitor tree written as a function `x => x...`,

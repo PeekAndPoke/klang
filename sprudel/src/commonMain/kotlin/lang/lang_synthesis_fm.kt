@@ -147,7 +147,7 @@ private fun applyFmSustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * With no argument at all, the pattern's own values are reinterpreted as `env`.
  *
  * The engine applies it in front of every instrument, `classic()` or not, from the voice's pitch strip, until FM
- * moves into `classic()` (`docs/tasks/pitch-pipeline-into-the-tree.md`).
+ * moves into `classic()` (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`).
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("sine").fm(200, 2)                                     // a bright, harmonic FM tone

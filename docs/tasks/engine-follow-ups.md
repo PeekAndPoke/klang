@@ -140,7 +140,7 @@ and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound c
 Each was checked against the code: none is done.
 
 21. **Step 15, planned work in its own order:** after the pitch pipeline
-    ([`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` and fold the
+    ([`pitch-pipeline-into-the-tree.md`](in-progress/pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` and fold the
     contexts (B3.1, B3.2; `SendRenderer` loses the "send" word with it, A2.5); then
     [`future/one-chain-host.md`](future/one-chain-host.md), extended by the two tail polls of one law (A2.10) and the
     host plumbing's package move (B3.8).

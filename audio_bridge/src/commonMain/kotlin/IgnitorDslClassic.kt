@@ -266,7 +266,7 @@ class SampleSlots internal constructor() {
  * this -> pitchEnvelope -> accelerate -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
  * ```
  *
- * The PITCH stages come first, directly on the instrument (pitch pipeline, `docs/tasks/pitch-pipeline-into-the-tree.md`
+ * The PITCH stages come first, directly on the instrument (pitch pipeline, `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`
  * section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not
  * change the sound, and the nesting decides the grouping of the ratio product, which is the retired pitch strip's
  * (vibrato outermost, then accelerate, then the pitch envelope, FM innermost, each placed at its final position by the

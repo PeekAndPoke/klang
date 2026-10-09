@@ -14,7 +14,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  * Pipeline: FM Synthesis (frequency modulation), the one stage left.
  *
  * Sprudel's pitch envelope (`penv`), vibrato (`vib`) and `accelerate` left this pipeline in pitch pipeline steps 1 to
- * 3: they are `classic()`'s pitch stages now (`docs/tasks/pitch-pipeline-into-the-tree.md`).
+ * 3: they are `classic()`'s pitch stages now (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`).
  *
  * Only active stages are included (e.g. FM is skipped if depth == 0).
  * Returns empty list if no pitch modulation is active.

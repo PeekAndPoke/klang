@@ -41,7 +41,7 @@ Ignitor stages in the classic subtractive order:
 this -> pitchEnvelope -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
 ```
 
-The pitch stages sit at the front, directly on the instrument (`docs/tasks/pitch-pipeline-into-the-tree.md`
+The pitch stages sit at the front, directly on the instrument (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`
 section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not change
 the sound, and their nesting is the retired pitch strip's grouping of the ratio product. Three pitch factors on one
 path can regroup it (one rounding, about -270 dB): while some doors still run on the strip, and for good where two

@@ -5,7 +5,7 @@ diagnostic of its kind.
 
 ## What it is
 
-Pitch pipeline step 3b made every fm topology follow the pitch exactly (`pitch-pipeline-into-the-tree.md`, step 3b),
+Pitch pipeline step 3b made every fm topology follow the pitch exactly (`in-progress/pitch-pipeline-into-the-tree.md`, step 3b),
 with one exception the engine cannot process: an fm (or any pitch mod keyed by frequency) above a `detune` that forks
 the note into two pitches:
 

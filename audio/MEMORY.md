@@ -28,7 +28,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `release` (the unit in the KDoc, not the name) and `declick`; the pluck's loop gain is `feedback`, brown noise's
   white leak is `leak`. The frame-domain core keeps `sustainLevel` (`EnvelopeCore.prepare`, `Voice.Envelope`)
   and the constants keep their `*_SEC` names. Old names: `docs/retired-names.md`.
-- **The pitch doors are moving into the tree** (`docs/tasks/pitch-pipeline-into-the-tree.md`): sprudel's pitch
+- **The pitch doors are moving into the tree** (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`): sprudel's pitch
   envelope, accelerate and vibrato are `classic()`'s `PitchEnvelope`, `Accelerate` and `Vibrato` stages, filled by
   the `penv.*` / `penvCurves.*` (step 1), flat `accelerate` (step 3) and `vibrato.*` (step 2) slots; FM still runs on
   the strip in `voices/strip/pitch/`, and a source reads `treeMods * stripFm`. An `fm` node in the instrument moves as
@@ -264,7 +264,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md` (all in
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
-- **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
+- **Voice and instruments, V1 high priority**: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
 - **Voice and instruments, future**: `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
 - **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
@@ -294,22 +294,22 @@ One line per step, newest first. A link to the archived task record where one ex
   (`CarrierFreqMod`, the modulator reads the outer mod at the carrier's frequency, once per block). A sound change for
   authored fm trees under a pitch node and for sprudel's pitch doors over an fm instrument (the strip moved the modulator too),
   and for two shared-modulator shapes that rendered one modulator at two pitches; the corpus identical; one author rule
-  (an fm above a forking detune): `docs/tasks/pitch-pipeline-into-the-tree.md` step 3b
+  (an fm above a forking detune): `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 3b
 - 2026-10-09 Pitch pipeline step 3: sprudel's `accelerate` is `classic()`'s accelerate stage (the flat `accelerate`
   slot), its wire field and the strip's `AccelerateRenderer` gone; the node holds its target from the gate on (D2):
   a sound change for an `accelerate` under a release tail on both doors (corpus: Kokon's `strike` only, a listening
   pair) and for a zero gate (`legato(0)`: the target from the first frame, Q27), every other corpus row and every
   non-accelerate matrix row identical, apart from the shapes the step record names (D1, D6, a non-finite amount now
   the bare voice where the strip froze the oscillator, the clamp from about 598 semitones, one temporary regrouping
-  with sprudel `fm`): `docs/tasks/pitch-pipeline-into-the-tree.md` step 3
+  with sprudel `fm`): `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 3
 - 2026-10-09 Pitch pipeline step 2: sprudel's `vib` is `classic()`'s vibrato stage (`vibrato.*` slots), its two wire
   fields and the strip's `VibratoRenderer` gone, bit-identical on the corpus and the door matrix apart from the
   shapes the step record names (D1, D6, regroupings up to about 7.3e-13, the raw edges: a depth past about 598
-  semitones, non-finite rates, a +Infinity depth): `docs/tasks/pitch-pipeline-into-the-tree.md` step 2
+  semitones, non-finite rates, a +Infinity depth): `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 2
 - 2026-10-09 Pitch pipeline step 1: sprudel's `penv` is `classic()`'s pitch envelope stage (`penv.*`, `penvCurves.*`
   slots), its eight wire fields and the strip's `PitchEnvelopeRenderer` gone, bit-identical on the door matrix and
   the corpus, apart from the accepted shapes (an fm modulator under `penv` until step 3b, three pitch factors
-  regrouped, bare instruments, D6): `docs/tasks/pitch-pipeline-into-the-tree.md` step 1
+  regrouped, bare instruments, D6): `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 1
 - 2026-10-09 v0.6.0: the engine tidy-up is done (steps 1 to 13: the twins written once, `FilterDef` retired, a plain
   number at every constant door; the V8 allocation pass), bit-identical on the corpus; the open items:
   `docs/tasks/engine-follow-ups.md`; the record: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`
@@ -340,7 +340,7 @@ One line per step, newest first. A link to the archived task record where one ex
 - 2026-10-07 The oversampler is two halves, `upsample` and `decimate`, with the caller's shaping loop between
   them inline (no closure per block, no `copyInto` view on JS): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 2
 - 2026-10-07 The gate covers the four pitch arms, a fold (a non-finite vibrato depth stays built, its default);
-  a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/pitch-pipeline-into-the-tree.md` step 0
+  a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 0
 - 2026-10-07 Solo is engine state per source: the rest fillers are control-only events, `SoloTracker` records from any
   event before the control drop and the late guard, the others play at `1 - amount`; `ActiveVoice.soloAmount` gone,
   audit B4.2 closed: `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`

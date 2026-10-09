@@ -21,7 +21,7 @@
 > | Step 12 decision (g), a request waits for the drain | open, by ear | `docs/tasks/by-ear/chain-swap-request-during-drain.md` (new) |
 > | Step 12 risk R0, the house `MasterStage` clip tested through a copy | CLOSED 2026-09-28 (the clip is `pcm16`/`interleavePcm16`, tested for real) | the step 12 plan, section "Risks" |
 > | The 9 follow-up, collapse `BaseSvf` and `SvfBPF` | parked | `docs/tasks/future/svf-resonator-class-collapse.md` (new) |
-> | The pitch pipeline into the tree (section 5), and the `voices/strip/` package name (step 9's decisions) | later | `docs/tasks/pitch-pipeline-into-the-tree.md` (new) |
+> | The pitch pipeline into the tree (section 5), and the `voices/strip/` package name (step 9's decisions) | later | `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` (new) |
 > | Sprudel's tremolo `sync` against the Ignitor's `rate` (section 3b) | a naming decision | `docs/tasks/future/tremolo-rate-naming-parity.md` (new) |
 > | FM envelope curves (section 3b, the `fm` row) | parked | `docs/tasks/future/envelope-shape-followups.md` section 4 |
 > | A per-curve bend, the retired `expK` (section 3b, envelopes) | later | `docs/tasks/future/envelope-shape-followups.md` section 5 (added) |
