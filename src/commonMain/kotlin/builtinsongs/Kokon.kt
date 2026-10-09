@@ -90,9 +90,9 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  6.0)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  4.0)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  8.0)         // roar:  low mids
-    .band(freq = 2700, q = 2.0, db =  3.5)         // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 2.0, db =  3.7)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2))          // the low end
@@ -131,15 +131,18 @@ let makeGuitar = (rig) => {
     .analog(pAnalog).analogSpread(0.3)
   )
 
-  let signal = saw.mul(Ign.slot.pregain)
+  let string = saw.mul(Ign.slot.pregain)
     // Simulate plucked string
-    .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
+    .pitchEnvelope(0.2, x => x.adsr(0.001, 0.08, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
-    // noise burst
-    .plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.03, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
 
+  // noise burst - the pick
+  let pick = Ign.whitenoise().adsr(0.0005, 0.004, 0.0, 0.05).highpass(2500).mul(0.3)
+
+  let signal = string.plus(pick)
+  
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
   // synthetic (2026-09-14)
@@ -289,7 +292,7 @@ export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
   .ignp("decay", 2.8).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4450)                                       // less fizz, the wall keeps its own
+  .lpf(4650)                                       // less fizz, the wall keeps its own
   .gain(0.42).pan(0.5)
   .orbit(6)
 
