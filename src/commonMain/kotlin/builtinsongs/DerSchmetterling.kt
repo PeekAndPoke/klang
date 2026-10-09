@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  6.0)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  4.0)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  8.0)         // roar:  low mids
     .band(freq = 2700, q = 2.0, db =  3.6)         // bark:  the upper-mid speaker peak
   )
@@ -179,10 +179,10 @@ let makeGuitar = (rig) => {
  
   let signal = saw.mul(Ign.slot.pregain)
     // Simulate plucked string
-    .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
+    .pitchEnvelope(0.3, x => x.adsr(0.030, 0.05, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.03, 0.0, 0.05).mul(1.5))
+    .plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.05, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
            
@@ -263,7 +263,7 @@ let marimba = (() => {
 
 export lead_shape = x => x.sound(marimba).adsrOff()
   .velocity(guitarDyna(0)).body(material = "steel", wet = 0.2)
-  .hpf(600, 0.7).lpf(6500, 1.2).notch(2700, 0.5)
+  .hpf(550, 0.7).lpf(6500, 1.2).notch(2700, 0.5)
   .pan(0.10).superimpose(pan(0.90)) // . solo()
   .clip(0.75)
 
@@ -374,7 +374,7 @@ export trommel_pat = `<[0 ~ 1 0  ~ ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 ~] [0 ~ -1 0  ~ ~ ~
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(300).lpf("2400".add(perlin(-100, 100)))
+  .hpf(400).lpf("2200".add(perlin(-100, 100)))
   .pan(0.35).superimpose(pan(0.65))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
