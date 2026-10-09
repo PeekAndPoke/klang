@@ -4,6 +4,32 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-10) The pitch moves into the tree ... v0.6.1
+
+- the pitch envelope, the vibrato and accelerate are classic() stages now ... three of the strip's four pitch arms are in the Ignitor tree, fm is next
+- accelerate glides to the gate and holds its target through the release ... a zero-length gate holds it from the first frame
+- an fm modulator follows the pitch: the ratio stays at exactly 1.5000 under every pitch door, where it wandered from 0.75 to 1.78 ... a pitch node means what it wraps
+- one word per knob, again: penv(semitones), vib(rate, semitones), pamt is gone, every analog door takes character ... positional calls are unchanged
+- variants takes plain numbers, Ign.variants(400, 1200) ... a null is a clear type error now
+- a soloed voice rings to its end, its release tail included
+- the four helper merges are done (one did-you-mean, one number format, one home for text positions, one timeout class), and the warehouse panel shows the reverb's failures and dropped networks
+- the Katalyst got a distort stage, for buses and the master ... clip, then limit: 2.3 dB more headroom at the same loudness, "the glueing effect is real" ... and now the hats and the kick distort too, a band split is in the plans
+- the engine follow-ups gone through with the maintainer: the phone runs Chrome, Kokon stumbles for a few seconds when the drums come in, then settles ... the rest goes one at a time
+- the corpus renders bit for bit the same, except Kokon's two landing strikes (at most 2.5 cents) ... that one we meant
+
+### (2026-10-09) Every twin written once ... v0.6.0
+
+- the engine tidy-up, steps 1 to 13: the shaper, the arithmetic laws, the Karplus string, the unison stacks and the fade law each written once ... body and vowel are one effect now
+- FilterDef is retired, first-block allocations moved to the voice build, the audio helpers live in one utils/ home
+- faster in the browser: the pluck and superpluck 5 to 48 % faster, body and vowel at about 0.6 of their old time
+- heard on a real phone: Kokon runs (almost) smooth on the FF4 again ... definitely better than before
+- the partial bank went from about 10 KB to about 300 bytes per block, the delay, reverb and phaser together a quarter to a third less ... not clean yet, the rest is written down
+- solo fixed: rests stay silent, solo(0.7) does something, solo() is 0.95 and solo(1.0) is silence
+- an empty variants() is silence, the shimmer cannot hang anymore, unison voices are capped at 256
+- one word per knob: attack, decay, sustain, release, declick, crush(bits), coarse(factor), the pluck's feedback, brown's leak ... 8 slots the script door lacked, analog is a character amount
+- the rules at work: 2,557 engine calls name the arguments that could be swapped, the helpers found one utils/ home ... new: units in the KDoc, and a new rule starts provisional
+- every step rendered the 18-song corpus bit for bit the same ... the sound changes are the ones we meant: solo, and Der Schmetterling and Kokon touched up by ear
+
 ### (2026-10-07) Every voice knows where it is in life ... v0.5.5
 
 - a voice is a small state machine now: pending, sounding, releasing, fading, done ... one table in the Voice KDoc, every cell pinned by a test

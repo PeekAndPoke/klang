@@ -149,12 +149,19 @@ The release-defining set, regardless of when they're sequenced:
       engine tidy-up step 12 (a), 2026-10-08 (`../tasks-archive/2026-10/20261008-svf-resonator-class-collapse.md`).
       **Promoted to V1, high priority, 2026-10-07:**
       [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md) (vibrato, accelerate, `penv`, `fm` still
-      outside the tree; `_v1-scope.md` Layer 2).
+      outside the tree; `_v1-scope.md` Layer 2). Steps 1 to 3b done 2026-10-09 (v0.6.1): only `fm` and the strip's
+      shell are left.
     - Existing homes: [`future/envelope-shape-followups.md`](future/envelope-shape-followups.md) sections 4 to 6 (FM
       curves, a per-curve bend, the in-block corner), [`future/one-chain-host.md`](future/one-chain-host.md),
       [`future/onepole-highpass-door.md`](future/onepole-highpass-door.md),
       [`oversampling-regions.md`](oversampling-regions.md) (the D7 stopgap, crush and coarse oversampling, the
       distort cap), [`future/stored-lambda-type-inference.md`](future/stored-lambda-type-inference.md).
+23. **Engine pass 1 follow-ups** (opened 2026-10-09 when the engine tidy-up was archived as
+    [`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md), v0.6.0):
+    [`engine-follow-ups.md`](engine-follow-ups.md). **NICE** for the behaviour-neutral items (the V8 residues on the
+    stages and oscillators, the JVM box per block-constant read, two weak specs); the audit's later shape and sound
+    steps (the duck's attack, the vowel word, "cylinder" as the one word, `legato` on the wire) and its open decisions
+    are the maintainer's call. The current engine order is in [`_v1-scope.md`](_v1-scope.md).
 
 ## Blocked / off-plan / parked
 

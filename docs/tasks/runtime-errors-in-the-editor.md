@@ -20,7 +20,7 @@ wiring in `KlangCodePlaybackCtrl`.
 
 Two design notes differ from the plan below, both because measurement said so: the API shipped as
 `collectingInto(list, block)` rather than `collecting(sink, block)`, and the ranking uses the NEW
-`osaDistance` rather than the existing `levenshtein` — plain Levenshtein scores a transposition
+`osaDistance` rather than the then-existing `levenshtein` (removed 2026-10-09): plain Levenshtein scores a transposition
 as 2 edits and could not suggest a door name for its transposed spelling at all.
 
 ## KNOWN GAP: query-time transforms are not captured yet
@@ -142,14 +142,15 @@ patterns rebuilt mid-playback, but it is not load-bearing and must not drive the
 
 ### Message quality: the "did you mean" exists, but not on this path
 
-The project already has it, and already has the helper: `Environment.loadLibrary`
-(`Environment.kt:277-287`) does a `levenshtein` nearest-match and appends
-`Did you mean "x" or "y"?`. It is used for LIBRARY and symbol lookup.
+The project already has it, and already has the helper. (Since 2026-10-09 `Environment.loadLibrary` ranks with the
+shipped `suggestNames` too, osaDistance with the threshold scaled to the name's length, and appends
+`Did you mean 'x' or 'y'?`; when this was written it did a `levenshtein` nearest-match of its own, used for LIBRARY
+lookup, and that helper is gone.)
 
 **The method-not-found path does not use it.** `Interpreter.kt:~1405` instead dumps every
 available method as a flat list, which for a `ControlPattern` is over 400 names and roughly 4 KB
-of console output with no ranking. The typo was a single adjacent transposition, so the
-existing `levenshtein` helper would have put the right door first and ended the session in seconds.
+of console output with no ranking. The typo was a single adjacent transposition, so a ranked
+suggestion would have put the right door first and ended the session in seconds.
 
 Fix: reuse the same helper in the method-not-found branch, lead with the suggestion, and keep
 (or truncate) the full list behind it.
@@ -181,7 +182,7 @@ the console remains unexplained and was not reproduced on the JVM.
    the click-to-jump works.
 3. **Message quality** (SHIPPED): rank suggestions in the method-not-found branch, and resolve
    the reported type through the registered supertype so anonymous patterns name themselves.
-   Ranking needed a NEW `osaDistance`, not the existing `levenshtein`: a transposition costs 2
+   Ranking needed a NEW `osaDistance`, not the then-existing `levenshtein`: a transposition costs 2
    there and could not be suggested at all. The method LIST was never broken (see the correction
    above); only the type name was.
 4. **Audit the remaining catch sites** and route the ones that can hide a user mistake.

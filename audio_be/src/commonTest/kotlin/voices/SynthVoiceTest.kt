@@ -69,9 +69,15 @@ class SynthVoiceTest : StringSpec({
             }
         }
 
+        // The strip's one door left (FM; the vibrato and accelerate are `classic()` stages since pitch pipeline
+        // steps 2 and 3).
         val voice = createSynthVoice(
             signal = trackingSignal,
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
+            fm = Voice.Fm(
+                ratio = 2.0,
+                depth = 100.0,
+                envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0),
+            ),
         )
 
         val ctx = createContext()
@@ -95,7 +101,6 @@ class SynthVoiceTest : StringSpec({
 
         val voice = createSynthVoice(
             signal = trackingSignal,
-            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         )
 
         val ctx = createContext()
@@ -162,12 +167,6 @@ class SynthVoiceTest : StringSpec({
         val voice = createSynthVoice(
             signal = TestIgnitors.constant,
             freqHz = 440.0,
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
-            accelerate = Voice.Accelerate(semitones = 1.0),
-            pitchEnvelope = Voice.PitchEnvelope(
-                semitones = 1.0,
-                envelope = Voice.Envelope(attackFrames = 50.0, decayFrames = 50.0, sustainLevel = 0.0, releaseFrames = 0.0),
-            ),
             fm = Voice.Fm(
                 ratio = 2.0,
                 depth = 100.0,
@@ -184,7 +183,7 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext()
         voice.render(ctx)
 
-        // Vibrato + accelerate + a pitch envelope + FM all drive the same phase accumulator, which
+        // FM drives the phase accumulator, which
         // is where a non-finite pitch would surface. A NaN here propagates into the cylinder and
         // kills the orbit silently, so "renders correctly" now means audible AND finite.
         ctx.voiceBuffer.any { it != 0.0 } shouldBe true

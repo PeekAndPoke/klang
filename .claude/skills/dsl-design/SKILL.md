@@ -199,9 +199,12 @@ the bug.
   curve cannot be written without naming the stage; on the flat Kotlin door a curve alone still leaves
   the filter untouched. The pitch envelope's builder
   has no depth to fill (the depth is its door input), so the rule has nothing to do there. Sprudel's
-  `penv(amount, attack, decay, sustain, release)` (phase 3 step 5b (c), 2026-09-25) is a voice-side door on
-  neither closed list: `amount` is its switch and a tail-only call never invents it; its unset stages read
-  the shared `PitchEnvelopeDefaults` on both hosts. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
+  `penv(semitones, attack, decay, sustain, release)` (phase 3 step 5b (c), 2026-09-25; `semitones` was `amount`
+  until pitch pipeline step 1, 2026-10-09) is a voice-side door on
+  neither closed list: `semitones` is its switch and a tail-only call never invents it; its unset stages read
+  the shared `PitchEnvelopeDefaults` (the `penv.*` slot defaults of `classic()`'s pitch envelope stage). Sprudel's
+  `vib(rate, semitones)` has the same shape (pitch pipeline step 2): `semitones` is its switch, and a rate-only call
+  (`vib(4)`) writes `vibrato.rate` and never invents the depth. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
   `lpfCurves`, ...) are setters only: a curve never switches its envelope on, and a bare call changes
   nothing. **It is adopted AT THE DOOR only, and a door fill does not survive
   SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the
@@ -234,7 +237,7 @@ documents its tells per unit (Q22).
 **Slot names (maintainer, 2026-10-08, decision D4 and Q21, provisional):** a slot is `<door>.<param>`; the namespace is the sprudel
 door's name (`lpf`, `penv`); the param part is the engine door's word (the Ignitor's, or the Katalyst's for a bus
 stage), after a check that it is the better word, and the sprudel door's parameter takes the same word. A one-knob
-door stays flat (`onepole`, `accelerate`, `pregain`, the sample slots). The table: `docs/tasks/classic-slot-names-check.md`.
+door stays flat (`onepole`, `accelerate`, `pregain`, the sample slots). The table: `docs/tasks-archive/2026-10/20261009-classic-slot-names-check.md`.
 
 ## 5. One word per concept, end to end
 

@@ -179,7 +179,7 @@ private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * perturbations to the oscillator's phase increment. For unison/super oscillators,
  * each voice drifts independently, creating lush analog-like chorusing.
  *
- * The amount is **how analog**, one unitless CHARACTER scale, not a unit: `0` is ideal (off, and costs
+ * The character is **how analog**, one unitless scale, not a unit: `0` is ideal (off, and costs
  * nothing), `1` to `8` is usual (the built-in songs live in that band), `10` is strong. Each part of the
  * instrument maps it through its own multipliers and has its own tells per unit: an oscillator drifts about
  * a cent of peak pitch per unit (`analog(8)` up to about eight either side of the note); in the built-in
@@ -198,15 +198,15 @@ private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * note("c3*4").s("sine").analog("<0 2 6>")   // cycle through drift amounts
  * ```
  *
- * @param amount How analog, a character scale: 0 is ideal, 1 to 8 usual, 10 strong (an oscillator drifts about a cent per unit).
+ * @param character How analog, a character scale: 0 is ideal, 1 to 8 usual, 10 strong (an oscillator drifts about a cent per unit).
  * @return A new pattern with analog drift applied.
  * @scope voice
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco
  */
 @KlangScript.Function
-fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyAnalog(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.analog(character: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyAnalog(this, listOfNotNull(character).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets how analog the sound is.
@@ -215,18 +215,18 @@ fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * "c3 e3".analog(4).s("supersaw").note()
  * ```
  *
- * @param amount How analog, a character scale: 0 is ideal, 1 to 8 usual, 10 strong (an oscillator drifts about a cent per unit).
+ * @param character How analog, a character scale: 0 is ideal, 1 to 8 usual, 10 strong (an oscillator drifts about a cent per unit).
  * @return A new pattern with analog drift applied.
  * @scope voice
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco
  */
 @KlangScript.Function
-fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).analog(amount, callInfo)
+fun String.analog(character: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).analog(character, callInfo)
 
 /**
- * How analog each event is (the `analog` character amount), as a value other setters can read.
+ * How analog each event is (the `analog` character), as a value other setters can read.
  *
  * Bare `analog` reads what the chain has set so far, so it comes after whatever set the field
  * (`analog(...)`). Call it, `analog(...)`, to set the field; a mapper argument applies to the field.
@@ -254,12 +254,12 @@ object analog : FieldAccessor({ it.ignitorParams?.get("analog") }) {
      * note("c3 e3").apply(analog(4))
      * ```
      *
-     * @param amount How analog, a character scale: `0` is ideal, `1` to `8` usual, `10` strong.
+     * @param character How analog, a character scale: `0` is ideal, `1` to `8` usual, `10` strong.
      * @return A [PatternMapperFn] that sets analog drift.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.analog(amount, callInfo) }
+    operator fun invoke(character: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.analog(character, callInfo) }
 }
 
 
@@ -270,11 +270,11 @@ object analog : FieldAccessor({ it.ignitorParams?.get("analog") }) {
  * note("c3 e3").apply(gain(0.8).analog(4))
  * ```
  *
- * @param amount How analog, a character scale: `0` is ideal, `1` to `8` usual, `10` strong.
+ * @param character How analog, a character scale: `0` is ideal, `1` to `8` usual, `10` strong.
  */
 @KlangScript.Function
-fun PatternMapperFn.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.analog(amount, callInfo) }
+fun PatternMapperFn.analog(character: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.analog(character, callInfo) }
 
 // -- duty() -----------------------------------------------------------------------------------------------------------
 

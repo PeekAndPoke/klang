@@ -10,6 +10,7 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 
 /**
  * `Ignitor` for KlangScript (short name `Ign`): builds IgnitorDsl signal graphs, the per-voice instrument.
@@ -472,16 +473,21 @@ object KlangScriptIgnitor {
      * `variants(...)` all dispatch on the same `soundIndex`, so a single switching
      * axis can drive correlated changes throughout the tree.
      *
+     * A child is a sound or a plain number; a number is a [IgnitorDsl.Constant], converted here at the door like
+     * every knob that takes a value, so `Ignitor.variants(400, 1200)` picks a value per note. Anything else is a
+     * script type error at the call.
+     *
      * ```
      * let combined = Ignitor.variants(Ignitor.sine(), Ignitor.saw()).classic()
      * note("a b c:1 d:1").sound(combined)   // a/b → sine, c:1/d:1 → saw
+     * note("a a:1").sound(Ignitor.sine(Ignitor.variants(400, 1200)))   // 400 Hz, then 1200 Hz
      * ```
      *
-     * @param children candidate ignitors, indexed from 0
+     * @param children candidate sounds or numbers, indexed from 0
      */
     @KlangScript.Method
-    fun variants(vararg children: IgnitorDsl): IgnitorDsl =
-        IgnitorDsl.Variants(children.toList())
+    fun variants(vararg children: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Variants(children.map { child -> variantsChild(child) })
 }
 
 /**
@@ -498,6 +504,15 @@ object KlangScriptIgnitor {
  */
 @KlangScript.Constant
 val Ign: KlangScriptIgnitor = KlangScriptIgnitor
+
+/**
+ * One child of [KlangScriptIgnitor.variants], converted as every value knob is ([toIgnitorDsl]). A script `null` (a
+ * `let` never assigned) reaches here as null although the parameter's type says otherwise, because the generated
+ * vararg registration passes nulls through; it is the same typed error as any other wrong child, never an internal one.
+ */
+private fun variantsChild(child: Any?): IgnitorDsl =
+    child?.toIgnitorDsl()
+        ?: throw KlangScriptTypeError("expected a sound or a number, got null", operation = "sound parameter")
 
 /** The door convention for `freq`: null means "the playing note's pitch" ([IgnitorDsl.Freq]). */
 private fun IgnitorDslLike?.orNoteFreq(): IgnitorDsl = this?.toIgnitorDsl() ?: IgnitorDsl.Freq

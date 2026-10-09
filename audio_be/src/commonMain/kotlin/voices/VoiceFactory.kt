@@ -23,11 +23,6 @@ import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
-import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
-import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
-import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
-import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
-import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -129,39 +124,6 @@ class VoiceFactory(
         // Routing
         val cylinder = data.cylinder ?: 0
 
-        // Pitch / Glissando
-        val accelerate = Voice.Accelerate(semitones = data.accelerate ?: 0.0)
-
-        // Vibrato (depth in semitones — VibratoRenderer converts to ET frequency ratio)
-        val vibratoDepthSemitones = data.vibratoMod ?: 0.0
-        val vibrato = Voice.Vibrato(
-            semitones = vibratoDepthSemitones,
-            rate = if (vibratoDepthSemitones > 0.0) data.vibrato ?: VIBRATO_RATE_HZ else 0.0,
-        )
-
-        // Pitch Envelope: the Ignitor pitch envelope's law and defaults (`PitchEnvelopeDefaults.kt`),
-        // curves on `MOD_ENV_CURVE` when unnamed (decision D3). The amount is the switch: 0 builds none.
-        // A non-finite amount or sustain reads as UNSET, like every other wire number (/dsl-design section 4);
-        // the stage times need no guard, `EnvelopeCore` makes a NaN or negative one a zero-length stage.
-        val pEnvAmount = data.pEnv?.takeIf { it.isFinite() } ?: 0.0 // NaN-guard: non-finite reads as unset
-        val pitchEnvelope = if (pEnvAmount != 0.0) {
-            Voice.PitchEnvelope(
-                semitones = pEnvAmount,
-                envelope = Voice.Envelope(
-                    attackFrames = (data.pAttack ?: PITCH_ENV_ATTACK_SEC) * sampleRate,
-                    decayFrames = (data.pDecay ?: PITCH_ENV_DECAY_SEC) * sampleRate,
-                    // NaN-guard: non-finite reads as unset
-                    sustainLevel = data.pSustain?.takeIf { it.isFinite() } ?: PITCH_ENV_SUSTAIN_LEVEL,
-                    releaseFrames = (data.pRelease ?: PITCH_ENV_RELEASE_SEC) * sampleRate,
-                    attackCurve = data.pAttackCurve ?: MOD_ENV_CURVE,
-                    decayCurve = data.pDecayCurve ?: MOD_ENV_CURVE,
-                    releaseCurve = data.pReleaseCurve ?: MOD_ENV_CURVE,
-                ),
-            )
-        } else {
-            null
-        }
-
         // Silence culling: the author's `cull(...)`; a tremolo inside the tree adds its own cull-never rule at the
         // build (`treeCull`).
         val cull = data.cull
@@ -214,7 +176,7 @@ class VoiceFactory(
 
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
-                    gain = gain, accelerate = accelerate, vibrato = vibrato, pitchEnvelope = pitchEnvelope,
+                    gain = gain,
                     fm = fm, signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
@@ -336,7 +298,7 @@ class VoiceFactory(
 
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
-                    gain = gain, accelerate = accelerate, vibrato = vibrato, pitchEnvelope = pitchEnvelope,
+                    gain = gain,
                     fm = fm, signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
@@ -392,9 +354,6 @@ class VoiceFactory(
         voiceDurationFrames: Int,
         cylinder: Int,
         gain: Double,
-        accelerate: Voice.Accelerate,
-        vibrato: Voice.Vibrato,
-        pitchEnvelope: Voice.PitchEnvelope?,
         fm: Voice.Fm?,
         signal: Ignitor,
         freqHz: Double,
@@ -418,14 +377,9 @@ class VoiceFactory(
         )
 
         val pipeline = buildPitchPipeline(
-            vibrato = vibrato,
-            accelerate = accelerate,
-            pitchEnvelope = pitchEnvelope,
             fm = fm,
             freqHz = freqHz,
             sampleRate = sampleRate,
-            startFrame = startFrame,
-            endFrame = endFrame,
         ) + IgniteRenderer(
             signal = signal,
             signalCtx = signalCtx,

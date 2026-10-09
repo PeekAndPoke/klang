@@ -20,10 +20,10 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * fixed-pitch resonances alone.
  *
  * Blocking at the READ rather than at the wrap is what makes this cover BOTH doors. The ignitor
- * door hands modulation down through [ModApplyingIgnitor], but sprudel's `.vibrato()`,
- * `.pitchEnvelope()` and `.accelerate()` write `ctx.phaseMod` once for the whole graph in
- * `IgniteRenderer`, with no [ModApplyingIgnitor] anywhere — nulling the context is the only thing
- * that stops both.
+ * door hands modulation down through [ModApplyingIgnitor], but sprudel's `fm` (the one pitch door
+ * still on the voice's strip; `penv`, `vib` and `accelerate` are `classic()` stages since pitch
+ * pipeline steps 1 to 3) writes `ctx.phaseMod` once for the whole graph in `IgniteRenderer`, with no
+ * [ModApplyingIgnitor] anywhere; nulling the context is the only thing that stops both.
  *
  * Cost is two field writes per `generate` call and nothing per sample; the shielded oscillator then
  * takes its own `phaseMod == null` fast loop, which is the cheaper of the two it already had.

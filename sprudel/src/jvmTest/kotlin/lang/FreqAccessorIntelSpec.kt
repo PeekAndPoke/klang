@@ -93,8 +93,8 @@ class FreqAccessorIntelSpec : StringSpec({
             "compressor" to listOf("threshold", "ratio", "knee", "attack", "release"),
             "unison" to listOf("voices", "spread", "pan"),
             "duck" to listOf("orbit", "depth", "attack"),
-            "vibrato" to listOf("rate", "depth"),
-            "penv" to listOf("amount", "attack", "decay", "sustain", "release"),
+            "vibrato" to listOf("rate", "semitones"),
+            "penv" to listOf("semitones", "attack", "decay", "sustain", "release"),
             "fm" to listOf("env", "h", "attack", "decay", "sustain")).forEach { (name, slots) ->
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
@@ -149,7 +149,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "the alias constants of the compound objects carry the object type" {
-        mapOf("lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "comp" to "compressor", "uni" to "unison", "vib" to "vibrato", "pamt" to "penv").forEach { (alias, canonical) ->
+        mapOf("lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "comp" to "compressor", "uni" to "unison", "vib" to "vibrato").forEach { (alias, canonical) ->
             withClue(alias) {
                 val symbol = registry.get(alias).shouldNotBeNull()
                 (symbol.category != "uncategorized") shouldBe true

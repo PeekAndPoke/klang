@@ -466,6 +466,10 @@ let wall = Ign.supersaw().highpass(Ign.freq())
 
 ## 9. Sources checked for the numbers that go into code first
 
+When a candidate lands, its sources go into `CREDITS.MD` and the in-app Credits page in the same change (the credits
+rule, `CLAUDE.md`, 2026-10-09): the velvet-noise papers for K2, the antiderivative anti-aliasing papers for K1's later
+CPU win, the Pultec EQP-1A for I1's low-end trick.
+
 The raw catalogues list their own sources. These four were checked by the coordinator because they shape a
 candidate directly:
 
@@ -563,7 +567,7 @@ never means the reference's melody, hook, chord loop or lyrics. The song credits
 Glass, Reich and Editors ("Inspired by: ...").
 
 **Where it starts:** song 1, with the listening sheet for the reference, once the engine tidy-up
-(`docs/tasks/engine-tidy-up.md`) is done. The task that holds the place is
+(`docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`) is done. The task that holds the place is
 [`../tasks/future/next-songs-production-path.md`](../tasks/future/next-songs-production-path.md).
 
 ## 11. Doors the engine must keep open

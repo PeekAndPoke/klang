@@ -150,7 +150,7 @@ class SharedScratchSpec : StringSpec({
         engine.scheduler.scheduleVoice(
             ScheduledVoice(
                 playbackId = "vib", startTime = 0.0, gateEndTime = 1.0,
-                data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, vibrato = 5.0, vibratoMod = 0.3),
+                data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, ignitorParams = mapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3)),
                 playbackStartTime = 0.0,
             )
         )

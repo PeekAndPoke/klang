@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.script.intel
 
+import io.peekandpoke.klang.common.strings.clampedLineOffset
+
 /**
  * Absolute document offsets for a single analyzer diagnostic.
  *
@@ -102,20 +104,6 @@ fun AnalyzerDiagnostic.toOffsets(doc: LinterDocument): DiagnosticOffsets? {
     }
 }
 
-/**
- * Absolute offset of the 1-based [column] on the 1-based [line], clamped to that line.
- *
- * The comparison is done on the column offset rather than on the sum, so a wild column value
- * cannot overflow the addition.
- */
-private fun offsetOf(doc: LinterDocument, line: Int, column: Int): Int {
-    val start = doc.lineStart(line)
-    val end = doc.lineEnd(line)
-    val offsetInLine = column - 1
-
-    return when {
-        offsetInLine <= 0 -> start
-        offsetInLine >= end - start -> end
-        else -> start + offsetInLine
-    }
-}
+/** Absolute offset of the 1-based [column] on the 1-based [line], clamped to that line ([clampedLineOffset]). */
+private fun offsetOf(doc: LinterDocument, line: Int, column: Int): Int =
+    clampedLineOffset(lineStart = doc.lineStart(line), lineEnd = doc.lineEnd(line), column = column)

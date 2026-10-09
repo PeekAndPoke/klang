@@ -86,7 +86,7 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 | Method                | Description                              |
 |-----------------------|------------------------------------------|
 | `Ignitor.sine(freq?)`     | Pure sine wave; its builder adds partial banks (below) |
-| `Ignitor.saw(freq?)`      | Sawtooth, anti-aliased (PolyBLEP)        |
+| `Ignitor.saw(freq?)`      | Sawtooth, soft analog flyback            |
 | `Ignitor.square(freq?)`   | Square wave, anti-aliased                |
 | `Ignitor.tri(freq?)`      | Triangle wave                            |
 | `Ignitor.ramp(freq?)`     | Reverse sawtooth                         |
@@ -274,6 +274,9 @@ seq("0 1 2:1 3:1").scale("c4:major").sound(guitar).adsrOff().gain(0.3)
   the dispatch first, then attach shared post-processing.
 - Nested `Ignitor.variants(...)` all dispatch on the *same* `soundIndex` —
   letting one index drive correlated changes deep in the tree.
+- A child may be a plain number, a constant: `Ignitor.sine(Ignitor.variants(400, 1200))`
+  plays 400 Hz on `a` and 1200 Hz on `a:1`. Anything else (a string, a lambda) is a
+  script error at the call.
 
 ---
 
@@ -450,6 +453,18 @@ The modulator is another `Ignitor` node. `ratio` sets the modulator frequency re
 modulation amount in Hz. Without the lambda the depth is constant; `x => x.adsr(0.001, 0.5, 0, 0.05)` is the decaying
 bell of the built-in `sgbell`.
 
+A pitch node means what it wraps (since 2026-10-09):
+
+- above the fm it moves the whole operator, the note's pitch, and the timbre stays put:
+  `Ignitor.sine().fm(Ignitor.sine(), 3.5, 400).vibrato(6, 0.5)`; so do sprudel's `vib`, `penv` and `accelerate` on an
+  fm instrument that ends in `.classic()`, and an outer `.fm(...)` (two fms in a row: the inner modulator follows the
+  outer one); a modulator with an absolute frequency (`Ignitor.sine(330)`) stays at it;
+- on the modulator it moves the modulator alone: `Ignitor.sine().fm(Ignitor.sine().vibrato(6, 0.5), 3.5, 400)`;
+- on the carrier it moves the carrier alone, so the ratio wobbles: `Ignitor.sine().vibrato(6, 0.5).fm(Ignitor.sine(), 3.5, 400)`.
+
+One fm serves one pitch: over a detuned stack (`(x + x.detune(7)).fm(m, ...)`) give each layer its own fm, inside its
+detune, and sum them: `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
+
 ### Pitch Modulation
 
 | Method                                              | Description                                |
@@ -458,7 +473,7 @@ bell of the built-in `sgbell`.
 | `.octaveUp()`                                       | +12 semitones                              |
 | `.octaveDown()`                                     | -12 semitones                              |
 | `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
-| `.accelerate(semitones)`                            | Exponential pitch ramp over the voice (12 = one octave) |
+| `.accelerate(semitones)`                            | Exponential pitch glide from the onset to the gate close, held through the release (12 = one octave) |
 | `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); the `adsr`'s own lambda shapes it with `curves` |
 
 `pitchEnvelope` is an ADSR on the pitch, the chain `adsr`'s pattern: up to `semitones` over the attack, down to the
@@ -581,8 +596,10 @@ Ignitor.sine(5)  // fixed 5 Hz (for LFO use)
 
 ### `.classic()`: the pattern's voice doors on your instrument
 
-`.classic()` wraps a sound in the classic synth voice: onepole, crush, coarse, distort, highpass, bandpass,
-notch, lowpass, tremolo and the amplitude envelope, in that order. Make it the LAST call: an instrument whose
+`.classic()` wraps a sound in the classic synth voice: the pitch envelope, the accelerate and the vibrato (on the source), onepole,
+crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that order. The
+pattern's `penv`, `accelerate` and `vib` reach only an instrument with `.classic()`; `fm` still reaches every
+instrument (it runs outside the tree until it moves into `classic()`). Make it the LAST call: an instrument whose
 tree ends in `.classic()` is a whole voice that ends on its own envelope. `adsrOff()` switches that envelope off, and
 the voice ends on the instrument's own envelope when its `.adsr(...)` (with a fixed release) is the last thing
 built before `.classic()`; anything built after it, a stage of the instrument's own or a filter or other stage the
@@ -605,7 +622,10 @@ The slots it places are grouped per stage on `Ignitor.slot`, named after the spr
 readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
 same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.bits`, `Ignitor.slot.coarse.factor`,
 `Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
-`Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`, and the filter envelope curves
+`Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`,
+the vibrato `Ignitor.slot.vibrato.rate|semitones` (`semitones` is the switch, unset = off), the pitch envelope
+`Ignitor.slot.penv.semitones|attack|decay|sustain|release` (`semitones` is the switch, unset = off)
+and its curves `Ignitor.slot.penvCurves.attack|decay|release`, and the filter envelope curves
 `Ignitor.slot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
 
 Want another order? Write your own tail from the same slots, as far as a door takes them:

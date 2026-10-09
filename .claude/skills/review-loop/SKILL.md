@@ -290,6 +290,10 @@ reader.
   the tree without the lock while reviewer A had `polarity = -1.0` mutated in, and its "new side" carried the mutant.
   Copy or `git archive` plus the uncommitted files inside one `console/with-build-lock.sh bash -c` call, and check the
   copy against `git diff HEAD` there.
+- **A refused action stays refused, in your scripts too** (2026-10-09). When the safety check refuses a command (an
+  `rm -rf`, a git write), check every script you already wrote for the same action before you run it again. Pitch
+  step 3b's audio reviewer had an `rm -rf` refused, then ran an older runner script that still held it; nothing
+  existed to delete, but a refused action went ahead. Clear output with `find ... -delete` on a named folder.
 - **Gradle: never run two builds concurrently** — corrupts the sprudel KSP cache; recover with
   `:sprudel:clean`.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards

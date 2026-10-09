@@ -25,10 +25,7 @@ import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
 import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.VoiceLimits
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
-import io.peekandpoke.klang.audio_be.voices.strip.pitch.PitchEnvelopeRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import kotlin.math.PI
 import kotlin.math.abs
@@ -45,8 +42,9 @@ private val testRandom = Random(0x5EED)
 /**
  * THE envelope law ([EnvelopeCore], phase 3 decision D3), pinned against ORACLES written out in this
  * file, on the core and then on every host that can show its level: the Ignitor chain `adsr`, the Ignitor FM
- * index envelope, the Ignitor pitch envelope, the voice's own pitch envelope and its control-rate (FM)
- * envelope. (The voice strip's VCA and filter envelope were hosts too until the strip retired, phase 3 step 9.)
+ * index envelope, the Ignitor pitch envelope (sprudel's `penv` too, through `classic()`) and the voice's
+ * control-rate (FM) envelope. (The voice strip's VCA and filter envelope were hosts too until the strip retired,
+ * phase 3 step 9, its pitch envelope until pitch pipeline step 1.)
  *
  * Why oracles and not a parity spec: the hosts share one core, so a mutation INSIDE it moves every host
  * together and a host-against-host comparison stays green (step 4's lesson, `StripLawCoresSpec`). Each
@@ -195,8 +193,11 @@ class EnvelopeLawSpec : StringSpec({
 
     // ── The hosts: each one carries the law, and maps the level onto its destination ─────────────
 
-    /** Renders [ig] for [total] frames in blocks, the gate at [gate]; the voice's own clock. */
-    fun renderNode(ig: Ignitor, total: Int, gate: Int, freqHz: Double = 100.0): DoubleArray {
+    /**
+     * Renders [ig] for [total] frames in blocks, the gate at [gate]; the voice's own clock. [moveGateTo] moves the
+     * gate after the first block, the way a realtime note-off does (`IgniteRenderer` derives `gateEndFrame` per block).
+     */
+    fun renderNode(ig: Ignitor, total: Int, gate: Int, freqHz: Double = 100.0, moveGateTo: Int? = null): DoubleArray {
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
             scratchBuffers = ScratchBuffers(blockFrames),
@@ -208,6 +209,10 @@ class EnvelopeLawSpec : StringSpec({
 
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
+
+            if (pos > 0 && moveGateTo != null) {
+                ctx.gateEndFrame = moveGateTo
+            }
 
             ctx.updateOffsetAndLength(offset = 0, length = n)
             ctx.voiceElapsedFrames = pos
@@ -304,85 +309,19 @@ class EnvelopeLawSpec : StringSpec({
         // a block that starts after the gate but inside the release still follows the release, frame by
         // frame: 300 frames from the gate at 20, frame 150 is 130 of 299 frames down
         level(renderNode(pitch(a = 0.0, d = 0.0, s = 1.0, r = 300.0), 200, gate = 20)[150]) shouldBe (1.0 - 130.0 / 299.0 plusOrMinus 1e-9)
-    }
 
-    /**
-     * Renders the voice's own pitch envelope ([PitchEnvelopeRenderer], sprudel's `penv`) for [total]
-     * frames in blocks, [semitones] deep, the gate at [gate]; the output is the frequency ratio it writes.
-     * [moveGateTo] moves the gate after the first block, the way a realtime note-off does.
-     */
-    fun renderStripPitch(
-        env: Voice.Envelope,
-        semitones: Double,
-        total: Int,
-        gate: Int,
-        moveGateTo: Int? = null,
-    ): DoubleArray {
-        val renderer = PitchEnvelopeRenderer(Voice.PitchEnvelope(semitones, env))
-        val ctx = BlockContext(
-            audioBuffer = AudioBuffer(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames),
-            scratchBuffers = ScratchBuffers(blockFrames),
-            sampleRate = sampleRate,
-            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = far.toDouble()),
-        )
-        val out = DoubleArray(total)
-        var pos = 0
-
-        while (pos < total) {
-            val n = minOf(blockFrames, total - pos)
-
-            if (pos > 0 && moveGateTo != null) {
-                ctx.limits.gateEndFrame = moveGateTo.toDouble()
-            }
-
-            ctx.blockStart = pos.toDouble()
-            ctx.updateOffsetAndLength(offset = 0, length = n)
-            ctx.freqModBufferWritten = false
-            renderer.render(ctx)
-
-            for (i in 0 until n) {
-                out[pos + i] = ctx.freqModBuffer[i]
-            }
-
-            pos += n
-        }
-
-        return out
-    }
-
-    "host: the strip pitch envelope (fractional attack, raw sustain, the release on floor(N), the gate read per block)" {
-        // The same oracle numbers as the Ignitor pitch envelope's row above: 12 semitones, so the level
-        // is log2 of the ratio.
-        val lin = AdsrCurve.Linear
-
-        fun level(ratio: Double): Double = ln(ratio) / ln(2.0)
-
-        level(renderStripPitch(Voice.Envelope(attackFrames = 240.5, decayFrames = 100.0, sustainLevel = 0.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 400, gate = far / 2)[240]) shouldBe
-            (240.0 / 240.5 plusOrMinus 1e-9)
-        level(renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 10.0, sustainLevel = 1.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 400, gate = far / 2)[300]) shouldBe
-            (1.5 plusOrMinus 1e-9)
-
-        // a 10.7-frame release is floor(10.7) = 10 frames: back on the note on its tenth frame
-        val released = renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 10.7, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 40, gate = 20)
-
-        released[28] shouldBe (2.0.pow(1.0 / 9.0) plusOrMinus 1e-9)
-        released[29] shouldBe 1.0
-
-        // a block that starts after the gate but inside the release still follows the release, frame by frame
-        level(renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 300.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 200, gate = 20)[150]) shouldBe
-            (1.0 - 130.0 / 299.0 plusOrMinus 1e-9)
-
-        // the gate is read on every block: a realtime note-off moved to frame 200 after the first block
-        // releases there (release 0: on the note from the gate frame), not at the scheduled far gate
-        val moved = renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 400, gate = far, moveGateTo = 200)
+        // the gate is read on every block: a realtime note-off moved to frame 200 after the first block releases
+        // there (release 0: on the note from the gate frame), not at the scheduled far gate. (These two rows were
+        // the voice strip's pitch envelope host's until it retired, pitch pipeline step 1: sprudel's `penv` is this
+        // node now.)
+        val moved = renderNode(pitch(a = 0.0, d = 0.0, s = 1.0, r = 0.0), 400, gate = far, moveGateTo = 200)
 
         moved[199] shouldBe 2.0
         moved[200] shouldBe 1.0
 
         // the gate on the LAST frame of a block (255, block 1 is 128..255): that block is not wholly in the
         // sustain, so the one-ratio shortcut must not take it; the gate frame is already on the note
-        val lastFrameGate = renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 384, gate = 255)
+        val lastFrameGate = renderNode(pitch(a = 0.0, d = 0.0, s = 1.0, r = 0.0), 384, gate = 255)
 
         lastFrameGate[254] shouldBe 2.0
         lastFrameGate[255] shouldBe 1.0
@@ -534,10 +473,13 @@ class EnvelopeLawSpec : StringSpec({
 
         silent.all { it == 0.0 } shouldBe true
 
-        // And on the strip pitch envelope: level 0 on every frame is the note itself, a ratio of exactly 1.0.
-        val onTheNote = renderStripPitch(
-            Voice.Envelope(attackFrames = 0.0, decayFrames = 100.0, sustainLevel = 1.0, releaseFrames = 200.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Square),
-            12.0,
+        // And on the pitch envelope: level 0 on every frame is the note itself, a ratio of exactly 1.0.
+        val onTheNote = renderNode(
+            pitchEnvelopeModIgnitor(
+                attack = ParamIgnitor("a", 0.0), decay = ParamIgnitor("d", sec(100.0)), release = ParamIgnitor("r", sec(200.0)),
+                semitones = ParamIgnitor("st", 12.0), sustain = ParamIgnitor("s", 1.0),
+                attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Square,
+            ),
             400,
             gate = -50,
         )
@@ -579,7 +521,6 @@ class EnvelopeLawSpec : StringSpec({
             },
             "FM index envelope" to { t -> renderNode(fm(t), 40, gate = 20).toList() },
             "pitch envelope" to { t -> renderNode(pitch(t), 40, gate = 20).toList() },
-            "strip pitch envelope" to { t -> renderStripPitch(Voice.Envelope(attackFrames = t, decayFrames = t, sustainLevel = 0.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 40, gate = 20).toList() },
             "filter envelope" to { t -> renderNode(filter(t), 400, gate = 200).toList() },
         )
 

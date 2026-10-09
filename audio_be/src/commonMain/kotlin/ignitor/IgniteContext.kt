@@ -23,8 +23,9 @@ class IgniteContext(
      * Total gate duration in frames (scheduled, before release).
      *
      * Deliberately NOT moved by [io.peekandpoke.klang.audio_be.voices.Voice.releaseGate]: it is
-     * the `accelerate` glide base, and retro-shrinking it would jump the glide progress and leap
-     * the pitch. On held realtime voices `accelerate` is inert by decision
+     * the `accelerate` glide base (the glide reaches its target at this gate and holds it through the
+     * release, decision D2, for both doors since pitch pipeline step 3), and retro-shrinking it would
+     * jump the glide progress and leap the pitch. On held realtime voices `accelerate` is inert by decision
      * (docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
      */
     val voiceDurationFrames: Int,

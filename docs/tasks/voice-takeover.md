@@ -256,8 +256,9 @@ compound param — is designed, or we just grow the debt.
   vocabulary for `adsrCurves` / `lpadsr`. Parameter parity for free.
 - Decided in the same place (`promoteScheduled`, where the victims are already identified) but flows the other way: pass
   `glideFromHz` into `VoiceFactory.makeVoice`.
-- New `GlideRenderer` as the first stage in `voices/strip/pitch/`, next to `VibratoRenderer` /
-  `AccelerateRenderer` / `PitchEnvelopeRenderer` / `FmRenderer`.
+- New `GlideRenderer` as the first stage in `voices/strip/pitch/`, next to `FmRenderer` (the strip's pitch envelope,
+  vibrato and accelerate moved into `classic()` in pitch pipeline steps 1 to 3, and FM follows in step 4, after which
+  the strip goes, `docs/tasks/pitch-pipeline-into-the-tree.md`; so a glide is likely a tree stage too).
 - **Which victim's pitch, when a chord is taken over by one note?** Caricature answer: nearest in pitch among the most
   recent onset taken over — a guitarist slides on *the same string*, i.e. to the nearest fret. One line, musically
   right.

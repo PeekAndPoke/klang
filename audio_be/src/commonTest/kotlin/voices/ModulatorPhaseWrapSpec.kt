@@ -19,7 +19,6 @@ import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.FmRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.pitch.VibratoRenderer
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sin
@@ -143,25 +142,6 @@ class ModulatorPhaseWrapSpec : StringSpec({
             val swing = fm.depth / freqHz
 
             assertModulatesWithin(out = out, lo = 1.0 - swing - 1e-9, hi = 1.0 + swing + 1e-9, spans = false, clue = "fm ratio $ratio")
-        }
-    }
-
-    "the strip vibrato stays within its depth for a negative rate and for a rate past the sample rate" {
-        // 4 s at -5 Hz: the old block-end wrap only ever subtracted, so a negative rate walked
-        // the phase to -125 rad, far outside the polynomial's fold.
-        for (rate in listOf(-5.0, 2.37 * sampleRate, -2.37 * sampleRate)) {
-            for (multiplyIn in listOf(false, true)) {
-                val vibrato = Voice.Vibrato(rate = rate, semitones = 1.0)
-                val renderer = VibratoRenderer(vibrato, sampleRate)
-                val blocks = if (rate == -5.0) 1500 else 100
-                val out = renderStrip(blocks, multiplyIn) { renderer.render(it) }
-                val bound = 2.0.pow(vibrato.semitones / 12.0)
-
-                assertModulatesWithin(
-                    out = out, lo = 1.0 / bound - 1e-9, hi = bound + 1e-9, spans = rate == -5.0,
-                    clue = "strip vibrato rate $rate, multiplyIn $multiplyIn",
-                )
-            }
         }
     }
 

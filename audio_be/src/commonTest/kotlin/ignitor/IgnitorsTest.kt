@@ -219,10 +219,10 @@ class ExcitersTest : StringSpec({
     // Sawtooth
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "sawtooth - amplitude close to gain (PolyBLEP softens peaks)" {
+    "sawtooth - amplitude close to gain (the finite flyback flank softens peaks)" {
         val g = 0.6
         val buf = generate(Ignitors.saw().withGain(gain(g)), freqHz = 440.0)
-        // PolyBLEP rounds the discontinuity, so peak may be slightly below gain
+        // the finite flyback flank rounds the reset, so the peak may sit slightly below gain
         buf.peakAmplitude() shouldBe (g plusOrMinus 0.05)
     }
 
@@ -259,13 +259,13 @@ class ExcitersTest : StringSpec({
     // Square
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "square - amplitude close to gain (PolyBLEP softens transitions)" {
+    "square - amplitude close to gain (the finite flanks soften transitions)" {
         val g = 0.5
         val buf = generate(Ignitors.square().withGain(gain(g)), freqHz = 440.0)
         buf.peakAmplitude() shouldBe (g plusOrMinus 0.05)
     }
 
-    "square - mostly two output levels (PolyBLEP softens transitions)" {
+    "square - mostly two output levels (the finite flanks soften transitions)" {
         val g = 0.5
         val buf = generate(Ignitors.square().withGain(gain(g)), freqHz = 440.0)
         // Most samples should be close to +gain or -gain
@@ -407,7 +407,7 @@ class ExcitersTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Zawtooth (naive sawtooth, no PolyBLEP)
+    // Zawtooth (naive sawtooth: an instant reset, no flyback flank)
     // ═════════════════════════════════════════════════════════════════════════════
 
     "zawtooth - amplitude matches gain" {

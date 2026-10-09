@@ -15,6 +15,9 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.ignitor.ModApplyingIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
 import io.peekandpoke.klang.audio_be.voices.Voice.State
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
@@ -587,11 +590,12 @@ class VoiceLifecycleSpec : StringSpec({
     }
 
     "a realtime note-off reaches every gate consumer through the voice's limits: it renders what a voice scheduled with that gate renders" {
-        // Every gate consumer at once (step 2, "amendment A1"): the ignitor door's own envelope (it reads the
-        // voice-relative gate the ignite stage derives per block), the pitch envelope and the FM envelope (they read
-        // the limits through the block context), the state (Releasing) and the end (the render window). The source
-        // echoes the pitch modulation (the product of the pitch envelope and the FM multiplier), and the tree's own
-        // linear envelope scales it, so the output carries all three gate readers.
+        // Every gate consumer at once (step 2, "amendment A1"): the ignitor door's own envelope and the tree's pitch
+        // envelope (sprudel's `penv` since pitch pipeline step 1; both read the voice-relative gate the ignite stage
+        // derives per block), the strip's FM envelope (it reads the limits through the block context), the state
+        // (Releasing) and the end (the render window). The source echoes the pitch modulation (the product of the
+        // pitch envelope and the FM multiplier), and the tree's own linear envelope scales it, so the output carries
+        // all three gate readers.
         // The voice-relative gate the ignitors saw on the last generate call (both voices share the echo; the
         // released voice renders second, so after its render this is its value).
         var seenGate = -1
@@ -611,11 +615,20 @@ class VoiceLifecycleSpec : StringSpec({
         val span = 2048.0
         val gate = 1024.0
 
+        // The pitch envelope in the tree, as `classic()` places it: a mod applied to the source. A fresh one per voice.
+        fun pitchEnveloped(): Ignitor = ModApplyingIgnitor(
+            inner = echo,
+            mod = pitchEnvelopeModIgnitor(
+                attack = ParamIgnitor("a", 0.0), decay = ParamIgnitor("d", 0.0), release = ParamIgnitor("r", 1024.0 / sampleRate),
+                semitones = ParamIgnitor("st", 12.0), sustain = ParamIgnitor("s", 1.0),
+                attackCurve = lin, decayCurve = lin, releaseCurve = lin,
+            ),
+        )
+
         fun withGate(scheduledGate: Double): Voice = createVoice(
             startFrame = 0.0, gateEndFrame = scheduledGate, endFrame = scheduledGate + span,
-            sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER, signal = echo,
+            sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER, signal = pitchEnveloped(),
             envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = span, attackCurve = lin, decayCurve = lin, releaseCurve = lin),
-            pitchEnvelope = Voice.PitchEnvelope(semitones = 12.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 1024.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin)),
             // A fresh FM per voice: the modulator phase lives on it.
             fm = Voice.Fm(ratio = 1.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)),
         )

@@ -14,8 +14,7 @@ import io.peekandpoke.klang.audio_be.voices.Voice
  *
  * The value is taken at the block's first rendered frame (the voice's onset on its first block) and
  * HELD for the block: the voice FM holds its depth flat (block-framing ledger E11, recorded and
- * deliberately not fixed piecemeal). The voice's pitch envelope prepares its envelope the same way
- * ([prepareControlRateEnvelope]).
+ * deliberately not fixed piecemeal).
  *
  * All arithmetic uses Int/Double, no Long boxing on Kotlin/JS.
  */
@@ -40,7 +39,7 @@ internal fun calculateControlRateEnvelope(
  */
 internal fun controlRatePos(blockStart: Double, startFrame: Double): Int = (maxOf(blockStart, startFrame) - startFrame).toInt()
 
-/** Prepares this [EnvelopeCore] for one block of a voice modulation envelope, FM or pitch ([env] counts frames). */
+/** Prepares this [EnvelopeCore] for one block of the voice's FM index envelope ([env] counts frames). */
 internal fun EnvelopeCore.prepareControlRateEnvelope(env: Voice.Envelope, startFrame: Double, gateEndFrame: Double) {
     prepare(
         attackFrames = env.attackFrames,

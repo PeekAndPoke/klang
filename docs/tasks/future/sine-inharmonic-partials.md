@@ -1,6 +1,6 @@
 # Inharmonic partials on the sine: one node for a cluster
 
-Status: **future, idea, not started.** Asked for by the maintainer 2026-09-30, after Der Schmetterling's
+Status: **designed (maintainer, 2026-10-09, Q26), queued after the pitch pipeline; not started.** Asked for by the maintainer 2026-09-30, after Der Schmetterling's
 snare got its thud as a cluster of 13 hand-rolled sines (commit `20d74bb8`): "the memory consumption would
 hurt on the Fairphone 4 again, so that partials config would be good ... we would also need to clarify
 what happens if this is in conjunction with harmonics."
@@ -92,6 +92,35 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
   oscillator at spread 0 and each partial on its own at 1; `docs/plans/sine-partial-banks.md` section 2).
 - **Decided 2026-10-02: it gets built**: the maintainer decided to build the partials knob on the sine in any case (in
   today's names it would be written `Ignitor.sine(x => x.partials())`). The allocation measurement still belongs in the record, as the before and after.
+
+## Decided (maintainer, 2026-10-09, Q26)
+
+- **a.** Together with the other banks, all of them play, summed (the banks' existing rule).
+- **b.** `fundamental` is unchanged: the sine's own ratio-1 partial; a pure cluster writes `fundamental(0)`.
+- **c.** No neighbouring arrays ("I really do not like this python style of having two arrays as neighbours"): a
+  builder where every partial is added on its own. **Decided shape** ("yes this looks like the better dsl surface"):
+  `partial(ratio, gain = 1.0, phase = 0.0)` per call on the sine builder, each call adds ONE partial, kept in the order
+  written; `ratio` required, `phase` a fraction of one cycle (the oscillators' `phase` unit); every knob takes a number
+  or a signal (D10's rule); a negative gain equals `phase = 0.5`; a resource cap of 256 partials (a song that adds more
+  plays the first 256); on the wire the `Sine` node carries a list of `Partial(ratio, gain, phase)`.
+
+  ```
+  Ign.sine(x => x.fundamental(0).partial(0.6571, 0.520).partial(0.8714, 0.652, phase = 0.5))
+  ```
+
+  The Kotlin door is the same function shape as every builder door, `(OscSineBuilder) -> OscSineBuilder`, with `it`
+  and a chain (the builders are immutable):
+
+  ```kotlin
+  KlangScriptIgnitor.sine(configure = {
+      it.fundamental(0.0)
+          .partial(ratio = 0.6571, gain = 0.52)
+          .partial(ratio = 0.8714, gain = 0.652, phase = 0.5)
+  })
+  ```
+- **d.** Optional start phases, per partial, in c's shape.
+- **e.** Drift as the other banks: `analog` drifts them, `analogSpread(0)` moves the cluster as one oscillator,
+  `analogSpread(1)` gives each partial its own lane ("rest of the design seems fine").
 
 ## Follow-ups
 

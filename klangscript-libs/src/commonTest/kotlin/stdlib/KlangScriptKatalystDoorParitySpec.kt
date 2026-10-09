@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystParam
@@ -200,6 +201,21 @@ private val doors: List<StageDoor> = listOf(
         },
         kotlin = { k, a -> k.duck(orbit = a["orbit"], depth = a["depth"], attack = a["attack"]) },
     ),
+    // The bus distort (2026-10-09): `amount` is its one slot-capable parameter; `shape` and `oversample` are fixed
+    // with the chain and have their own row below, like the compressor's lookahead.
+    StageDoor(
+        stage = "distort",
+        bare = KatalystStageDsl.Distort(),
+        params = listOf(DoorParam("amount", 0.15)),
+        set = { s, n, v ->
+            val d = s as KatalystStageDsl.Distort
+            when (n) {
+                "amount" -> d.copy(amount = v)
+                else -> unknown("distort", n)
+            }
+        },
+        kotlin = { k, a -> k.distort(amount = a["amount"]) },
+    ),
 )
 
 /** A name knob (an index slot): the door, its parameter, a known name, and its catalogue. */
@@ -326,7 +342,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     }
 
     "a bare stage from the script door is the bare data class, the eq and the gain included" {
-        ks("Katalyst(k => k.body().vowel().delay().reverb().phaser().compressor().duck().eq().gain())") shouldBe
+        ks("Katalyst(k => k.body().vowel().delay().reverb().phaser().compressor().duck().distort().eq().gain())") shouldBe
                 KatalystDsl.of(
                     KatalystStageDsl.Body(),
                     KatalystStageDsl.Vowel(),
@@ -335,6 +351,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                     KatalystStageDsl.Phaser(),
                     KatalystStageDsl.Compressor(),
                     KatalystStageDsl.Duck(),
+                    KatalystStageDsl.Distort(),
                     KatalystStageDsl.Eq(),
                     KatalystStageDsl.Gain(),
                 )
@@ -366,6 +383,26 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         ks("Katalyst(k => k.limiter(lookahead = 0.004))") shouldBe KatalystDsl.of(bareLimiter.copy(lookahead = 0.004))
         KlangScriptKatalyst.build { it.limiter(lookahead = 0.004) } shouldBe
                 KatalystDsl.of(bareLimiter.copy(lookahead = 0.004))
+    }
+
+    "distort's shape and oversample: a name and a factor fixed with the chain, positional and named, on both doors" {
+        // The voice's flat door, position for position: `distort(amount, shape, oversample)`. The shape arrives as a
+        // NAME and lands as its catalogue index, through the one shared `DistortionShapes.indexOf`.
+        val tube = DistortionShapes.indexOf("tube").toInt()
+        val expected = KatalystStageDsl.Distort(amount = c(0.3), shape = tube, oversample = 2)
+
+        tube shouldNotBe DistortionShapes.SOFT_INDEX
+
+        ks("Katalyst(k => k.distort(0.3, \"tube\", 2))") shouldBe KatalystDsl.of(expected)
+        ks("Katalyst(k => k.distort(amount = 0.3, shape = \"tube\", oversample = 2))") shouldBe KatalystDsl.of(expected)
+        KlangScriptKatalyst.build { it.distort(amount = 0.3, shape = "tube", oversample = 2) } shouldBe
+                KatalystDsl.of(expected)
+
+        // An unknown name is `soft`, the voice's rule, and the shape alone leaves the amount at the bare default.
+        ks("Katalyst(k => k.distort(shape = \"no-such-shape\"))") shouldBe KatalystDsl.of(KatalystStageDsl.Distort())
+        ks("Katalyst(k => k.distort(shape = \"hard\"))") shouldBe KatalystDsl.of(
+            KatalystStageDsl.Distort(shape = DistortionShapes.indexOf("hard").toInt())
+        )
     }
 
     "the eq and the gain keep their shapes" {

@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -198,6 +199,13 @@ internal const val SAT_STATE_SCALE: Double = 0.0876
  * suppress DC accumulation from asymmetric waveshapers. Matches the historic `0.995` literal that lived inline.
  */
 internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
+
+/**
+ * The house pole for [LowPassHighPassFilters.DcBlocker] on a whole MIX: `≈ 7 Hz @ 44.1k, 7.6 Hz @ 48k`, about
+ * 0.15 dB at 40 Hz where [DEFAULT_DC_BLOCK_COEFF] takes about 2.5 dB. `MasterStage`'s DC blockers and the Katalyst
+ * `distort` stage's cores (`KatalystDistortEffect`), which run on a bus and so on the low end of every voice on it.
+ */
+internal const val HOUSE_DC_BLOCK_COEFF: Double = 0.999
 
 // NOTE: `BODY_FLOOR` and `VOWEL_FLOOR` moved to `audio_bridge/constants/BusEffectDefaults.kt`
 // (Katalyst DSL step 1, 2026-09-17): the Katalyst `body`/`vowel` stage knobs need the same
@@ -468,5 +476,11 @@ object LowPassHighPassFilters {
             xPrev = 0.0
             y = 0.0
         }
+
+        /**
+         * True while the blocker's state can still put a sample above [floor] into a silent input: its last output
+         * (which decays by the pole per sample) or its last input (which the next sample subtracts).
+         */
+        fun holdsEnergy(floor: Double): Boolean = abs(y) > floor || abs(xPrev) > floor
     }
 }

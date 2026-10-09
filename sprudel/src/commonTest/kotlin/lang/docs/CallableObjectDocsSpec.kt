@@ -142,7 +142,7 @@ class CallableObjectDocsSpec : StringSpec({
         val page = KlangDocsRegistry().apply { registerAll(generatedSprudelDocs) }
         mapOf(
             "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "comp" to "compressor", "uni" to "unison",
-            "vib" to "vibrato", "pamt" to "penv", "vel" to "velocity", "o" to "orbit", "d" to "density", "clip" to "legato",
+            "vib" to "vibrato", "vel" to "velocity", "o" to "orbit", "d" to "density", "clip" to "legato",
         ).forEach { (alias, canonical) ->
             withClue(alias) {
                 page.callFormFor(page.get(alias).shouldNotBeNull()) shouldBe page.get(canonical).shouldNotBeNull().callForm.shouldNotBeNull()
@@ -159,6 +159,21 @@ class CallableObjectDocsSpec : StringSpec({
             }
         }
         sorted.parametersByName().single { it.name == "amount" }.description shouldBe "Pan position, 0 left to 1 right."
+    }
+
+    "analog names its parameter `character` in the docs model, on every door (Q25)" {
+        val symbol = registry.get("analog").shouldNotBeNull()
+        val callables = symbol.variants.filterIsInstance<KlangCallable>() + listOfNotNull(registry.callFormFor(symbol))
+
+        callables.mapNotNull { it.receiver?.simpleName }.toSet().let { receivers ->
+            listOf("SprudelPattern", "String", "Function1", "OscSineBuilder", "OscSuperSawBuilder", "FilterBuilder", "BandFilterBuilder")
+                .forEach { receivers shouldContain it }
+        }
+        registry.callFormFor(symbol).shouldNotBeNull()
+
+        callables.forEach { callable ->
+            withClue(callable.signature) { callable.params.map { it.name } shouldBe listOf("character") }
+        }
     }
 
     "a local named like a callable object is never the object: no false named-argument error" {

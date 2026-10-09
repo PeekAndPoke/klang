@@ -49,7 +49,7 @@ three differently factored sets of effects, is the outcome this task exists to p
   changes while a voice runs, so an instrument can expose it as a "quality" slot that a pattern sets per
   note. Changing it mid-note is ruled out, not deferred: every stateful node in the region holds state
   computed for the old rate, and the resampler's group delay differs per factor (4.0 input samples at
-  2x, 5.75 at 4x), which shifts the whole signal, a click. This replaces the draft's "structural,
+  2x, 5.5 at 4x; corrected 2026-10-09, `Oversampler.groupDelaySamples`), which shifts the whole signal, a click. This replaces the draft's "structural,
   compile-time only" and keeps its reason: the factor defines the timeline the region's signals are
   drawn on.
 - **Factor 1 builds no region.** Bit-identical and free; one more row in the off-value table

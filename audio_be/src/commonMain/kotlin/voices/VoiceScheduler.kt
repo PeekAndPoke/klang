@@ -103,11 +103,15 @@ class VoiceScheduler(
         data class Realtime(val liveId: Int, val held: Boolean, val solo: Double?) : VoiceOrigin
     }
 
-    // Wrapper to track the source id (what solo protects) and the origin alongside Voice
+    // Wrapper to track the source id (what solo protects) and the origin alongside Voice.
+    // [soloed]: the voice was started with a solo amount of its own (positive and finite) and a source id, so it is
+    // protected for its whole life, its release included (Q14, per voice since review: Q28); its source's window
+    // protects every voice of the source between events, the soloed ones and the others alike.
     private data class ActiveVoice(
         val voice: Voice,
         val sourceId: String?,
         val origin: VoiceOrigin,
+        val soloed: Boolean,
     )
 
     // State with active voices
@@ -390,7 +394,8 @@ class VoiceScheduler(
      * any session, small enough that every voice-relative Int frame count
      * (`voiceDurationFrames`, `IgniteContext.gateEndFrame`) stays well inside Int at ANY sample
      * rate — 36 000 s is fine at 48 kHz but overflows at 96 kHz. Sample rate is a platform
-     * variable, like block size.
+     * variable, like block size. It is also a held voice's `accelerate` glide base (the scheduled gate, which a
+     * note-off never moves), so a held voice's glide stays inert and never reaches the hold at the gate.
      */
     private fun heldGateHorizonSec(): Double =
         minOf(REALTIME_HELD_GATE_SEC, (Int.MAX_VALUE / 2).toDouble() / context.sampleRate)
@@ -425,8 +430,9 @@ class VoiceScheduler(
         // 2. Prepare Context
         ctx.blockStart = cursorFrame
 
-        // 2.5. Solo: the tracker (recorded at promotion, and here for the held realtime voices) says who is
-        // protected and what the others play at, `1 - amount` of the strongest live solo, reached on the ramp.
+        // 2.5. Solo: the tracker (recorded at promotion, and here for the held realtime voices) says which sources are
+        // protected (their window) and what the others play at, `1 - amount` of the strongest live solo, reached on the
+        // ramp. A voice soloed itself is protected on its own for its whole life ([ActiveVoice.soloed]).
         recordRealtimeSolo(cursorFrame = cursorFrame, blockEnd = blockEnd)
         soloTracker.advance(nowSec = context.clock.secAt(cursorFrame))
 
@@ -436,7 +442,7 @@ class VoiceScheduler(
         // 3. Render Loop. A voice that ends here (render returns false: `Done`) leaves the list in the same pass
         // ([retainInOrder], as [removeDoneVoices]): the survivors keep their order.
         active.retainInOrder { activeVoice ->
-            if (soloTracker.isProtected(activeVoice.sourceId)) {
+            if (activeVoice.soloed || soloTracker.isProtected(activeVoice.sourceId)) {
                 activeVoice.voice.setGainMultiplier(1.0)
             } else {
                 activeVoice.voice.setGainMultiplier(currentBackgroundGain)
@@ -606,11 +612,16 @@ class VoiceScheduler(
             playbackCtx = pCtx,
             getSample = ::getCompleteSample,
         )?.let { voice ->
+            val sourceId = absoluteVoice.data.sourceId
+            val ownSolo = absoluteVoice.data.solo
+
             active.add(
                 ActiveVoice(
                     voice = voice,
-                    sourceId = absoluteVoice.data.sourceId,
+                    sourceId = sourceId,
                     origin = origin,
+                    // NaN-guard: a NaN amount fails the compare and protects nothing, as the tracker refuses it
+                    soloed = sourceId != null && ownSolo != null && ownSolo > 0.0 && ownSolo.isFinite(),
                 )
             )
         }

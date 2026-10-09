@@ -7,11 +7,13 @@ package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.strings.lineStartOffset
 import io.peekandpoke.klang.sprudel.lang.editor.MnNodeOps
 import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
 import io.peekandpoke.klang.sprudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotationMnPattern
+import io.peekandpoke.klang.sprudel.utils.TrackedTimeouts
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
@@ -26,7 +28,6 @@ import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.ops.filter
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.document
-import kotlinx.browser.window
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.display
@@ -173,26 +174,15 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     /** Source ranges currently highlighted — used for the text input overlay and staff. */
     protected val highlightedRanges = mutableSetOf<IntRange>()
 
-    /** Pending highlight timers — each id removes itself when it fires; cleared wholesale on stop/update. */
-    private val highlightTimeouts = mutableSetOf<Int>()
+    /** Pending highlight timers: each one un-tracks itself when it fires; cleared wholesale on stop/update. */
+    private val highlightTimeouts = TrackedTimeouts()
 
     private fun cancelPendingHighlights() {
-        highlightTimeouts.forEach { window.clearTimeout(it) }
-        highlightTimeouts.clear()
+        highlightTimeouts.cancelAll()
         if (highlightedRanges.isNotEmpty()) {
             highlightedRanges.clear()
             triggerRedraw()
         }
-    }
-
-    /** Schedules [action] and tracks the timer id; the id un-tracks itself once fired. */
-    private fun scheduleTracked(delayMs: Int, action: () -> Unit) {
-        var id = 0
-        id = window.setTimeout({
-            highlightTimeouts.remove(id)
-            action()
-        }, delayMs)
-        highlightTimeouts.add(id)
     }
 
     private fun subscribeToHighlights() {
@@ -206,8 +196,8 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
             for (h in highlights) {
                 val startDelay = maxOf(1, (h.startTime * 1000.0 - now).toInt())
                 val endDelay = maxOf(1, (h.endTime * 1000.0 - now).toInt())
-                scheduleTracked(startDelay) { if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }
-                scheduleTracked(endDelay) { if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }
+                highlightTimeouts.schedule(startDelay) { if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }
+                highlightTimeouts.schedule(endDelay) { if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }
             }
         }
     }
@@ -400,24 +390,11 @@ private fun locationToSourceRange(loc: SourceLocation, base: SourceLocation, mnT
     } else {
         // Multi-line: find the character offset of the start of mnLine in the MN string,
         // then add the 1-based column offset.
-        val lineStartOffset = mnText.nthLineOffset(mnLine) ?: return null
+        val lineStartOffset = mnText.lineStartOffset(mnLine) ?: return null
         val from = lineStartOffset + loc.startColumn - 1
         val to = lineStartOffset + loc.endColumn - 2
         if (from >= 0 && to >= from && to < mnText.length) from..to else null
     }
-}
-
-/** Returns the 0-based character offset of the start of the [n]-th line (1-based). */
-private fun String.nthLineOffset(n: Int): Int? {
-    if (n == 1) return 0
-    var line = 1
-    for (i in indices) {
-        if (this[i] == '\n') {
-            line++
-            if (line == n) return i + 1
-        }
-    }
-    return null
 }
 
 // ── Note staff editor base ────────────────────────────────────────────────────

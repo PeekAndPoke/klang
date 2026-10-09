@@ -1,7 +1,18 @@
 # The `classic()` slot names: one name per concept
 
-Status: **decided (maintainer, 2026-10-08, Q21), pulled ahead: it runs after the engine tidy-up and BEFORE pitch
-pipeline step 1** ([`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)). All decided (Q21, Q22).
+> **DONE 2026-10-09** (branch `engine-pass-1`, merged as PR #85, v0.6.0): steps 1 to 4, every one bit-identical on
+> the 18-song corpus and Kokon.
+>
+> Key commits: the decisions `f2c1ba0c` (Q21) and `dcf649d5` (Q22); the Lexikon's Crush and Phaser `66781690`; step 1
+> `945c092b`; step 2a `27d833df`; step 2b `5e2b8be9`; step 3 `d72e119d`; step 4 `b72e605a`.
+>
+> **Where the open items went:** the weak pluck `ignitorParam` rows found in step 2b (`brightness`, `pickPosition`,
+> `stiffness` on one advancing seed) are in [`docs/tasks/engine-follow-ups.md`](../../tasks/engine-follow-ups.md);
+> sprudel's `analog(amount)` is Q25 in [`docs/tasks/_maintainer-questions.md`](../../tasks/_maintainer-questions.md).
+> The red rig-anchor row of `SongBenchmarkCasesCompileSpec` the steps mention was fixed by `662aa8db`.
+
+Status before archiving: **decided (maintainer, 2026-10-08, Q21), pulled ahead: it runs after the engine tidy-up and BEFORE pitch
+pipeline step 1** ([`pitch-pipeline-into-the-tree.md`](../../tasks/pitch-pipeline-into-the-tree.md)). All decided (Q21, Q22).
 
 ## What it is
 

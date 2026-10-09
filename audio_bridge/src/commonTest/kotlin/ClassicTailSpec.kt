@@ -14,8 +14,9 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 /**
  * `classic()`'s STRUCTURE and its SLOT VOCABULARY (phase 3 step 5), pinned where they are written.
  *
- * The order is the strip's (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 4) behind the pattern's onepole
- * (its first stage since step 10): onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
+ * The order: the pitch envelope on the source (pitch pipeline step 1), then the strip's
+ * (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 4) behind the pattern's onepole (the first
+ * amplitude stage since step 10): penv, accelerate, vibrato, onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
  * tremolo, adsr. The slot table below is the contract step 8 built
  * on (sprudel's `toVoiceData` writes exactly these keys, `classicSlotParams`), so a renamed key or a moved
  * default is a red row here before it is a silent door anywhere else. What the tail RENDERS is pinned in
@@ -43,15 +44,18 @@ class ClassicTailSpec : StringSpec({
                 is IgnitorDsl.Distort -> n.inner
                 is IgnitorDsl.Coarse -> n.inner
                 is IgnitorDsl.Crush -> n.inner
+                is IgnitorDsl.PitchEnvelope -> n.inner
+                is IgnitorDsl.Vibrato -> n.inner
+                is IgnitorDsl.Accelerate -> n.inner
                 is IgnitorDsl.OnePoleLowpass -> n.inner
                 else -> return@buildList
             }
         }
     }
 
-    "the order is the strip's behind the onepole: onepole, crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
+    "the order: the pitch stages on the source, then the strip's behind the onepole: penv, accelerate, vibrato, onepole, crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
         spine(tail).map { it::class.simpleName } shouldBe listOf(
-            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Saw",
+            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Vibrato", "Accelerate", "PitchEnvelope", "Saw",
         )
         spine(tail).last() shouldBe saw
     }
@@ -97,6 +101,21 @@ class ClassicTailSpec : StringSpec({
         // literal here: Exponential, the same index as the amplitude default today, a separate decision.
         val modExp = AdsrCurves.indexOf(AdsrCurve.Exponential)
         val expected: List<Pair<String, Double>> = listOf(
+            // The pitch envelope (pitch pipeline step 1): its switch defaults to 0.0 (off), its stages to the Ignitor
+            // node's defaults, its curves to the modulation envelopes' curve.
+            "penv.semitones" to 0.0,
+            "penv.attack" to 0.01,
+            "penv.decay" to 0.1,
+            "penv.sustain" to 0.0,
+            "penv.release" to 0.0,
+            "penvCurves.attack" to modExp,
+            "penvCurves.decay" to modExp,
+            "penvCurves.release" to modExp,
+            // Accelerate (pitch pipeline step 3): the switch, 0.0, off.
+            "accelerate" to 0.0,
+            // The vibrato (pitch pipeline step 2): the rate at the strip's default, the depth (the switch) at 0.0, off.
+            "vibrato.rate" to 5.0,
+            "vibrato.semitones" to 0.0,
             "onepole" to 0.0,
             "crush.bits" to 0.0,
             "coarse.factor" to 0.0,
@@ -153,7 +172,7 @@ class ClassicTailSpec : StringSpec({
     }
 
     "a slot's user-visible description claims a sprudel reader only where sprudel has one" {
-        val curveDoors = listOf("adsrCurves", "hpfCurves", "bpfCurves", "notchCurves", "lpfCurves")
+        val curveDoors = listOf("adsrCurves", "penvCurves", "hpfCurves", "bpfCurves", "notchCurves", "lpfCurves")
         val noReader = setOf("distort.shape", "tremolo.shape", "adsr.on") +
             curveDoors.flatMap { d -> listOf("$d.attack", "$d.decay", "$d.release") }
         val slots = tail.getParamSlots().filter { it.name != "analog" }

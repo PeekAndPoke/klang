@@ -54,7 +54,7 @@ stack(
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
     ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body(material = "glass").vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
     .superimpose(
-      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2 * 0.45)).vibrato(rate = "0.51".add(perlin.div(20)), depth = 0.06)
+      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2 * 0.45)).vibrato(rate = "0.51".add(perlin.div(20)), semitones = 0.06)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
         .crush(bits = "2.0".add(berlin.range(-1, 1).mul(0.75).slow(4)), oversample = 1).lpf(7.75 * 440).hpf(300)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                

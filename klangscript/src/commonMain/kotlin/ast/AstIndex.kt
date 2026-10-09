@@ -6,8 +6,8 @@
 package io.peekandpoke.klang.script.ast
 
 import io.peekandpoke.klang.common.SourceLocation
-import io.peekandpoke.klang.script.utils.buildLineOffsets
-import io.peekandpoke.klang.script.utils.lineColToOffset
+import io.peekandpoke.klang.common.strings.buildLineOffsets
+import io.peekandpoke.klang.common.strings.lineColToOffset
 
 /**
  * Result of finding a CallExpression at a cursor position.

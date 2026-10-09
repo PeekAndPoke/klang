@@ -120,18 +120,24 @@ class KatalystChain internal constructor(
     // a body and a vowel) find it through their own helpers (`_katalyst_test_helpers.kt`, engine tidy-up step 13).
 
     /**
-     * True when this chain declares a reverb or a delay, the two stages that ring on after their input stops: the
-     * master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan.
+     * True when this chain declares a stage that can ring on after its input stops: the reverb, the delay, and the
+     * distort stage (its DC blocker decays from the offset an asymmetric shape made, `KatalystDistortEffect.hasTail`;
+     * review round 2 of `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`: without it a stopped playback's master cut that decay).
+     * The master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan; [hasTail] then
+     * answers whether one is there. Body, vowel and phaser may ring too; whether that is audible is
+     * `docs/tasks/chain-swap-cuts-ringing-inserts.md`.
      */
-    val declaresTail: Boolean = serial.any { it is KatalystReverbEffect || it is KatalystDelayEffect }
+    val declaresTail: Boolean = serial.any {
+        it is KatalystReverbEffect || it is KatalystDelayEffect || it is KatalystDistortEffect
+    }
 
     /**
-     * Frames this chain delays the orbit by: the sum of its compressor stages' lookaheads (phase 3
-     * step 12 C2), since every stage runs in series on the one mix. 0 for a chain without a
-     * lookahead. A chain swap delays its ramps by the later of the two chains' latencies
-     * (`ChainSwap.begin`).
+     * Frames this chain delays the orbit by: the sum of its latent stages' delays ([KatalystLatentEffect]: a
+     * compressor's lookahead, phase 3 step 12 C2, and a distort stage's oversampling), since every stage runs in
+     * series on the one mix. 0 for a chain without one. A chain swap delays its ramps by the later of the two
+     * chains' latencies (`ChainSwap.begin`).
      */
-    val latencyFrames: Int = serial.sumOf { (it as? KatalystCompressorEffect)?.latencyFrames ?: 0 }
+    val latencyFrames: Int = serial.sumOf { (it as? KatalystLatentEffect)?.latencyFrames ?: 0 }
 
     /** Rents the warehouse refused any stage of this chain, for the diagnostics feedback. */
     val deniedRents: Int
@@ -340,7 +346,8 @@ class KatalystChain internal constructor(
      * Every other stage's tail ends: the reverb's comb feedback is at most 0.98 (its size is
      * bounded to 0..1 before it reaches the unit, `Reverb.normalizeSize`), the phaser's feedback is clamped at 0.95
      * (`PhaserCore.MAX_FEEDBACK`), the body and vowel resonators are stable filters, and the
-     * compressor's lookahead holds at most its own latency. The gain, eq and duck hold nothing.
+     * compressor's lookahead and the distort stage's oversampling hold at most a few frames. The gain, eq and duck
+     * hold nothing.
      */
     fun sustainsItself(): Boolean {
         for (i in stages.indices) {

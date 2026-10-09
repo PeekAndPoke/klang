@@ -93,3 +93,4 @@ mind when reading it: step size, and the review process itself maturing over the
 Counts for steps 1 to 3b were not recorded per severity at the time; from here on the
 coordinator records them in the step's commit message ("N review rounds, C critical, M major")
 so the table can be rebuilt from `git log`.
+| Katalyst `distort` stage (2026-10-09; branch `katalyst-distort`) | yes | 818 | 755 | 3 (round 3 clean, reviewer-xhigh) | 0+3 | 3.7 | the three MAJORs were one class twice (the tail question asked by three hosts: the swap, then the master) and one test gap (no behaviour row at an oversampling factor); filed in the escape ledger with their rules in `audio/ref/katalyst.md`; 23 mutants red |

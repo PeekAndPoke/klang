@@ -128,6 +128,8 @@ class LangDoorFormsSpec : StringSpec({
         k("katalystParam", "katalystParam(\"mykey\", %s)", katSlot("mykey"), { p, c -> p.katalystParam("mykey", c!!) }, { s, c -> s.katalystParam("mykey", c!!) }, { c -> katalystParam("mykey", c!!) }, { m, c -> m.katalystParam("mykey", c!!) }),
         k("katp", "katp(\"mykey\", %s)", katSlot("mykey"), { p, c -> p.katp("mykey", c!!) }, { s, c -> s.katp("mykey", c!!) }, { c -> katp("mykey", c!!) }, { m, c -> m.katp("mykey", c!!) }),
         k("analog", "analog(%s)", ignitorSlot("analog"), { p, c -> p.analog(c) }, { s, c -> s.analog(c) }, { c -> analog(c) }, { m, c -> m.analog(c) }, head = true),
+        // the parameter's word on both doors (Q25: `character`, was `amount`)
+        k("analog.character", "analog(character = %s)", ignitorSlot("analog"), { p, c -> p.analog(character = c) }, { s, c -> s.analog(character = c) }, { c -> analog(character = c) }, { m, c -> m.analog(character = c) }),
         k("duty", "duty(%s)", ignitorSlot("duty"), { p, c -> p.duty(c) }, { s, c -> s.duty(c) }, { c -> duty(c) }, { m, c -> m.duty(c) }, head = true),
         k("onepole", "onepole(%s)", ignitorSlot("onepole"), { p, c -> p.onepole(c) }, { s, c -> s.onepole(c) }, { c -> onepole(c) }, { m, c -> m.onepole(c) }, head = true),
 
@@ -271,9 +273,8 @@ class LangDoorFormsSpec : StringSpec({
         // -- vibrato and the pitch envelope, with their aliases ---------------------------------------------------------
         k("vibrato.rate", "vibrato(%s)", { it.vibrato }, { p, c -> p.vibrato(c) }, { s, c -> s.vibrato(c) }, { c -> vibrato(c) }, { m, c -> m.vibrato(c) }, head = true),
         k("vib", "vib(%s)", { it.vibrato }, { p, c -> p.vib(c) }, { s, c -> s.vib(c) }, { c -> vib(c) }, { m, c -> m.vib(c) }, head = true),
-        k("vibrato.depth", "vibrato(depth = %s)", { it.vibratoMod }, { p, c -> p.vibrato(depth = c) }, { s, c -> s.vibrato(depth = c) }, { c -> vibrato(depth = c) }, { m, c -> m.vibrato(depth = c) }),
-        k("penv.amount", "penv(%s)", { it.pEnv }, { p, c -> p.penv(c) }, { s, c -> s.penv(c) }, { c -> penv(c) }, { m, c -> m.penv(c) }, head = true),
-        k("pamt", "pamt(%s)", { it.pEnv }, { p, c -> p.pamt(c) }, { s, c -> s.pamt(c) }, { c -> pamt(c) }, { m, c -> m.pamt(c) }, head = true),
+        k("vibrato.semitones", "vibrato(semitones = %s)", { it.vibratoMod }, { p, c -> p.vibrato(semitones = c) }, { s, c -> s.vibrato(semitones = c) }, { c -> vibrato(semitones = c) }, { m, c -> m.vibrato(semitones = c) }),
+        k("penv.semitones", "penv(%s)", { it.pEnv }, { p, c -> p.penv(c) }, { s, c -> s.penv(c) }, { c -> penv(c) }, { m, c -> m.penv(c) }, head = true),
         k("penv.attack", "penv(attack = %s)", { it.pAttack }, { p, c -> p.penv(attack = c) }, { s, c -> s.penv(attack = c) }, { c -> penv(attack = c) }, { m, c -> m.penv(attack = c) }),
         k("penv.decay", "penv(decay = %s)", { it.pDecay }, { p, c -> p.penv(decay = c) }, { s, c -> s.penv(decay = c) }, { c -> penv(decay = c) }, { m, c -> m.penv(decay = c) }),
         k("penv.sustain", "penv(sustain = %s)", { it.pSustain }, { p, c -> p.penv(sustain = c) }, { s, c -> s.penv(sustain = c) }, { c -> penv(sustain = c) }, { m, c -> m.penv(sustain = c) }),
@@ -531,10 +532,6 @@ class LangDoorFormsSpec : StringSpec({
             Door(
                 "penv", """12, 0.01, 0.2, 0.25, 0.3""", { listOf(it.pEnv, it.pAttack, it.pDecay, it.pSustain, it.pRelease) }, listOf(12.0, 0.01, 0.2, 0.25, 0.3),
                 { it.penv(12, 0.01, 0.2, 0.25, 0.3) }, { it.penv(12, 0.01, 0.2, 0.25, 0.3) }, { penv(12, 0.01, 0.2, 0.25, 0.3) }, { it.penv(12, 0.01, 0.2, 0.25, 0.3) },
-            ),
-            Door(
-                "pamt", """12, 0.01, 0.2, 0.25, 0.3""", { listOf(it.pEnv, it.pAttack, it.pDecay, it.pSustain, it.pRelease) }, listOf(12.0, 0.01, 0.2, 0.25, 0.3),
-                { it.pamt(12, 0.01, 0.2, 0.25, 0.3) }, { it.pamt(12, 0.01, 0.2, 0.25, 0.3) }, { pamt(12, 0.01, 0.2, 0.25, 0.3) }, { it.pamt(12, 0.01, 0.2, 0.25, 0.3) },
             ),
             Door(
                 "sndPluck", """0.99, 0.8, 0.2, 0.3""", { listOf(it.soundName) + listOf("feedback", "brightness", "pickPosition", "stiffness").map { k -> it.ignitorParams?.get(k) } }, listOf("pluck", 0.99, 0.8, 0.2, 0.3),

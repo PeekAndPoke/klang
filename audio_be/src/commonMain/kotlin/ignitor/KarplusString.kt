@@ -71,7 +71,7 @@ internal class KarplusString {
      * [hasStiffnessOf] and [apCoeffOf].
      *
      * The shape of this function is measured (tidy-up step 11, review rounds 1 and 2, recorded in
-     * `docs/tasks/engine-tidy-up.md`, step 11 (b)), keep it:
+     * `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`, step 11 (b)), keep it:
      * - Every double value passes through `* 1.0` once, before the loop (exact for every value but a NaN's payload).
      *   On V8, a double that comes from a call result or a field and seeds a loop-carried variable (the delay, the
      *   drift ramp) stays a tagged value unless it passes through an arithmetic operation first, and then every

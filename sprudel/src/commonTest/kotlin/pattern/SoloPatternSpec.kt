@@ -26,7 +26,7 @@ import kotlin.math.floor
 
 /**
  * `solo(...)` covers its rests with CONTROL events: engine state (the amount and the solo id), never a voice
- * (`docs/tasks/bugfix-solo-rests-and-amount.md`). Until 2026-10-07 the rests were filled with a sounding sine at
+ * (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`). Until 2026-10-07 the rests were filled with a sounding sine at
  * gain 1e-6 and 0 Hz, which any `gain` plus any pitch op after the `solo()` turned into a sine at the part's level.
  */
 class SoloPatternSpec : StringSpec({

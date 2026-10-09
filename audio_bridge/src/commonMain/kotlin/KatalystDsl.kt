@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
@@ -433,6 +434,41 @@ sealed interface KatalystStageDsl {
         val attack: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_ATTACK_SECONDS),
         val release: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_RELEASE_SECONDS),
         val lookahead: Double = COMPRESSOR_LOOKAHEAD_SECONDS,
+    ) : KatalystStageDsl
+
+    /**
+     * Distortion of the bus mix: the Ignitor's `distort` at the bus position, one DSP and one word on
+     * both hosts (`docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`). A clipper is this stage with a clipping
+     * shape (`soft`, `hard`) and a small [amount]; saturation is a gentle shape at a moderate one.
+     *
+     * Unlike a voice's distort it bends the SUM: the notes of the bus meet inside one curve, so they
+     * intermodulate. That is the glue a master saturator is for and the growl of a guitar amp fed by
+     * the whole chord; pushed hard, chords turn to mush. Per-note distortion stays the voice's.
+     *
+     * The law is the voice's fused distort (`DistortionCore`): `shape(x * 10^(amount * 1.2))`, the
+     * drive applied inside the oversampler, then a DC blocker, no soft cap, run on each channel on its
+     * own. The house limiter after the master is the safety net; nothing here is clamped.
+     *
+     * @param amount the drive, `10^(amount * 1.2)` into the shape: 0.1 is about +2.4 dB, 0.25 about
+     *   +6 dB, 0.5 about +12 dB. Default [DISTORT_AMOUNT]. At or below 0, or unset, the stage is off
+     *   and the bus passes undistorted (with oversampling, still delayed by the stage's latency). A slot (`Katalyst.param`) moves it with a glide. No orbit twin:
+     *   sprudel's `distort(...)` is the voice's door.
+     * @param shape the waveshaper as an INDEX into [DistortionShapes.names]; the doors take a name.
+     *   A plain number fixed with the chain, never a slot: it picks the shaper when the chain is
+     *   built, as a voice reads it once per note. An unknown or out-of-range index is `soft`.
+     * @param oversample the oversampling FACTOR (2, 4, 8; 0 or 1 is none; a non-power of two is
+     *   floored), the voice's knob and law (`Oversampler.factorOf`). A plain number fixed with the
+     *   chain: it sizes the oversampler. Oversampling delays the bus by the oversampler's group delay
+     *   (4 frames at 2x, 6 at 4x and 8x, rounded), in every state, and nothing compensates, as with the
+     *   compressor's lookahead. Default 0: the voice's default, and on a whole mix today's oversampler
+     *   also dulls the top (measured 2026-10-09 at 48 kHz and 2x: -0.7 dB at 10 kHz, -2 dB at 16 kHz, -4 dB at
+     *   20 kHz), so it is the author's opt-in.
+     */
+    @WireName("distort")
+    data class Distort(
+        val amount: IgnitorDsl = IgnitorDsl.Constant(DISTORT_AMOUNT),
+        val shape: Int = DistortionShapes.SOFT_INDEX,
+        val oversample: Int = 0,
     ) : KatalystStageDsl
 
     /**

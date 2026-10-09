@@ -179,7 +179,7 @@ fun FilterBuilder.passes(n: Double): FilterBuilder = copy(knobs = knobs.copy(pas
  * warmth. It also scales [humanize]. Every cascade stage gets the full drive.
  */
 @KlangScript.Function
-fun FilterBuilder.analog(amount: IgnitorDslLike): FilterBuilder = copy(knobs = knobs.copy(analog = amount.toIgnitorDsl()))
+fun FilterBuilder.analog(character: IgnitorDslLike): FilterBuilder = copy(knobs = knobs.copy(analog = character.toIgnitorDsl()))
 
 /**
  * Per-voice analog character, scaled by `analog`: a cutoff tolerance drawn once per note plus a
@@ -225,7 +225,7 @@ fun FilterBuilder.adsr(
  * its four build-time rng draws, which shifts every later noise source on that voice.
  */
 @KlangScript.Function
-fun BandFilterBuilder.analog(amount: IgnitorDslLike): BandFilterBuilder = copy(knobs = knobs.copy(analog = amount.toIgnitorDsl()))
+fun BandFilterBuilder.analog(character: IgnitorDslLike): BandFilterBuilder = copy(knobs = knobs.copy(analog = character.toIgnitorDsl()))
 
 /** Per-voice cutoff tolerance and drift lane, scaled by `analog`; see `FilterBuilder.humanize`. */
 @KlangScript.Function

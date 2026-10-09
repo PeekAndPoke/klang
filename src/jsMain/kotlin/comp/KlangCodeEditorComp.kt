@@ -9,6 +9,7 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.strings.offsetToSourceLocation
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
@@ -213,7 +214,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
     private fun openTool(toolName: String, toolCtx: KlangUiToolContext, argFrom: Int, event: dynamic = null) {
         val tool = KlangUiToolRegistry.get(toolName) ?: return
 
-        val baseLoc = offsetToSourceLocation(props.ctrl.state().code, argFrom)
+        val baseLoc = offsetToSourceLocation(source = props.ctrl.state().code, offset = argFrom)
         var attrs = toolCtx.attrs.plus(KlangUiToolContext.BaseSourceLocation, baseLoc)
 
         props.ctrl.playback()?.let { pb ->
@@ -308,17 +309,4 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
             ).track(editorRef)
         }
     }
-}
-
-private fun offsetToSourceLocation(source: String, offset: Int): SourceLocation {
-    var line = 1
-    var col = 1
-    for (i in 0 until offset.coerceAtMost(source.length)) {
-        if (source[i] == '\n') {
-            line++; col = 1
-        } else {
-            col++
-        }
-    }
-    return SourceLocation(source = null, startLine = line, startColumn = col, endLine = line, endColumn = col)
 }

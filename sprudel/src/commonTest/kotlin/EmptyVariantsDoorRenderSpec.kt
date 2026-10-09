@@ -19,7 +19,7 @@ import kotlin.math.abs
 /**
  * An empty `Ignitor.variants()` is SILENCE on both doors (`/code-style` §21: user input is coerced, never asserted).
  * Until 2026-10-07 the engine's Variants pick ran `require(children.isNotEmpty())` at note-on, on the audio thread,
- * where nothing catches it (`docs/tasks/engine-tidy-up.md`, "First, a bug").
+ * where nothing catches it (`docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`, "First, a bug").
  *
  * Each row renders a song through the real voice path (`KlangOfflineRenderer`: the inline-DSL registration, the
  * scheduler, `VoiceFactory`, the build), so a throw anywhere on that path fails the row. Here because sprudel is the

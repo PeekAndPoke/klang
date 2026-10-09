@@ -1,8 +1,19 @@
 # One home for generic helpers in every module
 
-Status: **non-audio modules done, uncommitted, awaiting review (2026-10-07); the audio modules done in engine tidy-up step 6
-(2026-10-08, uncommitted, awaiting review).** The verdict per module is below. The `audio_*` modules are part of
-[`engine-tidy-up.md`](engine-tidy-up.md) ("Extract reusable helpers", step 6); their verdict is the last section here.
+> **DONE 2026-10-09.** The moves were committed on `engine-pass-1` (v0.6.0); the four helper merges left for a
+> decision were approved (Q15, "all ok") and done on `pitch-pipeline` between pitch pipeline steps 3b and 4. Their
+> record is the section "The four merges, done (2026-10-09)" below. Nothing is left.
+
+Status before archiving: **the moves are done, reviewed and committed on `engine-pass-1` (v0.6.0): the non-audio modules 2026-10-07
+(`0c16de3c` sprudel, `67fa50fe` klangscript), the audio modules in engine tidy-up step 6, 2026-10-08 (`d2e09a2c`).**
+The verdict per module is below. The `audio_*` modules were part of the engine tidy-up
+([`20261009-engine-tidy-up.md`](20261009-engine-tidy-up.md), "Extract reusable helpers",
+step 6); their verdict is the last section here.
+
+**What is left:** the four helper merges under "Left for a decision" (each changes behaviour or is an extraction, not
+a move). **Approved (maintainer, 2026-10-09, Q15: "all ok")**: all four, as small reviewed steps, queued beside the
+pitch pipeline (non-audio modules, done between two pipeline steps so they never share a tree with a running
+worker).
 
 ## The rule
 
@@ -37,13 +48,13 @@ into `utils/` and has none.
 ## Verdict and what was done (2026-10-07, non-audio modules)
 
 A helper earns a `utils/` home by being domain-free AND reused or worth pinning (the rule of
-[`engine-tidy-up.md`](engine-tidy-up.md)). A private helper with one caller inside one feature stays where it is.
+[`20261009-engine-tidy-up.md`](20261009-engine-tidy-up.md)). A private helper with one caller inside one feature stays where it is.
 
 **sprudel**
 
 | Helper | Verdict | Where now |
 |---|---|---|
-| `roundTo`, `decimalPlaces`, the trimming `toFixed` (was in `ui/_mn_selection_helpers.kt`) | generic number formatting: `utils/` | `sprudel/src/jsMain/kotlin/utils/number_formatting.kt`; the trimming `toFixed` is renamed `roundToString`, because ultra's `toFixed` (padding, imported by most tools) has the same name and the opposite trimming |
+| `roundTo`, `decimalPlaces`, the trimming `toFixed` (was in `ui/_mn_selection_helpers.kt`) | generic number formatting: `utils/` | `sprudel/src/jsMain/kotlin/utils/number_formatting.kt` (`_number_formatting.kt` since 2026-10-09: `TrackedTimeouts.kt` put a class file in the folder, `/code-style` §3); the trimming `toFixed` is renamed `roundToString`, because ultra's `toFixed` (padding, imported by most tools) has the same name and the opposite trimming |
 | `private fun Double.fmt()` (17 identical copies in the `Sprudel*EditorTool` files) | the generic law to `utils/` as `toFixedTrimmed(decimals)`; the tools' 3-decimal choice is a feature helper | `utils/number_formatting.kt` + `ui/_editor_tool_arg_helpers.kt` (`Double.formatArg()`); one deliberate change: from 1e21 up an exponent form is no longer trimmed (`"1.5e+30"` stays, the old copies printed `"1.5e+3"`) |
 | `parseNum`, `parseNumOrNull` (12 copies each), `parseStr` (2 copies) | editor-tool arg parsing, a feature helper | `ui/_editor_tool_arg_helpers.kt` |
 | the same parse law written inline in ten more tools (Gain, Pulze, Pan, Numeric, Dust numeric; Euclid, Waveform, Sample, Body, DistortShape string) and `toFixed(1).removeSuffix(".0")` in Gain and Numeric (review round 1) | the same helpers | `parseNum` / `parseStr(...).orEmpty()`, and `toFixedTrimmed(1)` (equal: `toFixed(1)` prints exactly one decimal) |
@@ -72,7 +83,7 @@ stays. No `utils/`.
 **root (`src/`)**: `utils/` holds `FullscreenController` and `VersionController`; `comp/editor_helpers.kt` and
 `TutorialHelpers.kt` are feature helpers. Unchanged.
 
-### Left for a decision (not behaviour-neutral, or a design step)
+### Left for a decision (not behaviour-neutral, or a design step); all four done 2026-10-09, see the next section
 
 - `Environment.loadLibrary` ranks library names with its own Levenshtein copy of `suggestNames` (threshold 3,
   double quotes). Folding it into `suggestNames` changes the message.
@@ -85,6 +96,20 @@ stays. No `utils/`.
 - `MnEditorBase` and `NoteStaffEditor` both carry `highlightTimeouts` + `scheduleTracked` + `cancelPendingHighlights`
   (a tracked set of window timeouts). A small class in `sprudel`'s `utils/` would hold it once; that is an extraction,
   not a move.
+
+## The four merges, done (2026-10-09)
+
+| Merge | What changed | Spec |
+|---|---|---|
+| `loadLibrary`'s own Levenshtein | `Environment.loadLibrary` builds its message with `suggestNames` (osaDistance, the threshold scaled to the name's length, at most three). The message changes: a suggestion is quoted `'sprudel'`, as every other "did you mean" is, and so is the list of available libraries; a transposition (`sprduel`) is one edit now. `levenshtein` in `common` lost its last caller and is removed (review round 1); `OsaDistanceSpec` keeps the contrast as a comment, and the file that holds `osaDistance` is `osa_distance.kt` | `LibrarySystemTest`: the nearest name suggested, quoted; no near name, the list only |
+| `MnRenderer.renderNumber` | gone; the four mods print with `formatAsIntOrDouble` (`common/math`). The one difference: a whole number above `Int.MAX_VALUE` keeps its value instead of a clamped `2147483647`. The browser prints it as written (`3000000000`), the JVM as `3.0E9`; both read back as the same number | `MnRoundTripSpec`: `a@3000000000` round-trips and keeps 3e9; `a*2 b@0.5` prints without `.0` |
+| The four text-position helpers | one home, `common/src/commonMain/kotlin/strings/text_positions.kt` (package `io.peekandpoke.klang.common.strings`, beside `osaDistance`): `buildLineOffsets` and `lineColToOffset` (were klangscript's `utils/line_offsets.kt`, read by `AstIndex` and `AnalyzedAst`), `String.lineStartOffset` (was `MnEditorBase`'s private `nthLineOffset`, one scan, no allocation), `clampedLineOffset` (the law of `AnalyzerDiagnosticOffsets`' `offsetOf`, which now calls it with its document's line bounds), `offsetToSourceLocation` (was `KlangCodeEditorComp`'s private one). Each keeps its semantics | `TextPositionsSpec` (common; `LineOffsetsSpec`'s rows moved there) |
+| The tracked timeouts | `TrackedTimeouts` (`sprudel/src/jsMain/kotlin/utils/`: `schedule`, `cancelAll`, `pendingCount`), the highlight timers of `MnPatternEditorBase` and `NoteStaffEditor` | `TrackedTimeoutsSpec` (sprudel `jsTest`, the browser's real timers) |
+
+Mutation-checked: the suggestion dropped and the list double-quoted (`LibrarySystemTest`), the old clamped number on
+the weight (`MnRoundTripSpec`), a line found one too late, a clamp one short of the line end, a column restarting at 0
+and a line start one too early (`TextPositionsSpec`, the clamp also through `AnalyzerDiagnosticOffsetsSpec`), a fired
+timer left tracked and `cancelAll` clearing nothing (`TrackedTimeoutsSpec`); each red on its rows.
 
 ## Verdict and what was done (2026-10-08, audio modules, engine tidy-up step 6)
 

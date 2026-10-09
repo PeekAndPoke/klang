@@ -205,10 +205,11 @@ class MasterBus(
     val isActive: Boolean get() = current.pipeline.isNotEmpty() || !swap.settled
 
     /**
-     * True while a reverb/delay in the master chain may still be ringing.
+     * True while a stage of the master chain that can ring ([KatalystChain.declaresTail]) may still be ringing.
      *
-     * The engine must stay alive until this clears, otherwise stopping a playback chops the master
-     * tail — the orbit buses have the same protection via `Cylinder.reverbHasTail()`.
+     * The engine must stay alive until this clears, otherwise stopping a playback chops the master tail. The orbits
+     * have the same protection in their deactivation (`Cylinder.tryDeactivate`: the mix scan, then the chain's
+     * `hasTail`).
      */
     val isRinging: Boolean get() = ringing && hasTailUnits()
 
@@ -223,7 +224,7 @@ class MasterBus(
      */
     fun sustainsItself(): Boolean = current.sustainsItself()
 
-    /** True when a chain in play declares a reverb/delay at all: cheap, no buffer scan. */
+    /** True when a chain in play declares a stage that can ring ([KatalystChain.declaresTail]): cheap, no buffer scan. */
     private fun hasTailUnits(): Boolean = current.declaresTail || swap.leaving?.declaresTail == true
 
     /** Number of built chains held by this bus — for tests asserting the cache stays bounded. */
@@ -450,12 +451,11 @@ class MasterBus(
     /**
      * Refreshes [isRinging] — cheaply on most blocks, thoroughly now and then.
      *
-     * A chain without time-based units can never ring. While the output is audible the answer is
-     * trivially yes. Only after a run of silent blocks is the tail question asked (does the
-     * reverb/delay still hold energy?), because a delay's output is silent between echoes and an
-     * output-only test would cut the rest of them. That question is [KatalystChain.hasTail], so it
-     * also counts a compressor's lookahead ring (at most 50 ms of audio not yet heard) in a chain
-     * that has a reverb or a delay; a limiter-only chain still never rings. Nothing is cut either way.
+     * A chain without a stage that can ring ([KatalystChain.declaresTail]) never rings. While the output is audible
+     * the answer is trivially yes. Only after a run of silent blocks is the tail question asked (does a stage still
+     * hold energy?), because a delay's output is silent between echoes and an output-only test would cut the rest of
+     * them. That question is [KatalystChain.hasTail], so it also counts a compressor's lookahead ring (at most 50 ms
+     * of audio not yet heard) in a chain that declares a tail; a limiter-only chain still never rings.
      */
     private fun updateTailState(bus: StereoBuffer, frames: Int) {
         if (!hasTailUnits()) {

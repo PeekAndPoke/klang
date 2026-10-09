@@ -371,24 +371,29 @@ object KlangScriptIgnitorExtensions {
     // ── The classic tail ─────────────────────────────────────────────────────
 
     /**
-     * Wraps this sound in the classic synth voice: the pattern's one-pole lowpass, crush, coarse,
-     * distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that order,
-     * every one of them driven by a slot the pattern's doors fill (`Ignitor.slot.onepole`, `Ignitor.slot.lpf.freq`,
-     * `Ignitor.slot.adsr.attack`, ...). A stage the note does not write is not built, so an untouched
+     * Wraps this sound in the classic synth voice: the pitch envelope, the accelerate and the vibrato on the source, then the
+     * pattern's one-pole lowpass, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that
+     * order, every one of them driven by a slot the pattern's doors fill (`Ignitor.slot.penv.semitones`,
+     * `Ignitor.slot.accelerate`, `Ignitor.slot.vibrato.semitones`,
+     * `Ignitor.slot.onepole`, `Ignitor.slot.lpf.freq`, `Ignitor.slot.adsr.attack`, ...). A stage the note does not write is not built, so an untouched
      * `classic()` costs one envelope and nothing else.
      *
      * Make it the LAST call (an `.optimizer(...)` hint after it is fine, it is not a stage). An instrument that ends
      * in `classic()` is the whole voice: the voice doors (`onepole(...)`, `lpf(...)`, `adsr(...)`, ...) reach its
      * slots, and nothing runs after it but the channel (`gain`, `pan`). Every built-in sound (`sound("saw")`) IS a
      * source with this tail. Every instrument is played as its tree. Around it the engine adds only the pitch doors
-     * in front (`vibrato`, `accelerate`, `penv`, `fm`), the teardown fade when the tree does not end in its own
-     * envelope (`BuiltIgnitor.endsInEnvelope`), and the channel after (`gain`, `pan`); so without `classic()` the
-     * doors of `classic()` reach only the slots the tree places itself. A pattern also reaches the slots by name:
+     * that still run outside the tree, in front (`fm`, until it moves into `classic()`),
+     * the teardown fade when the tree does not end in its own envelope (`BuiltIgnitor.endsInEnvelope`), and the
+     * channel after (`gain`, `pan`); so without `classic()` the doors of `classic()` reach only the slots the tree
+     * places itself. The pattern's pitch envelope (`penv`), `accelerate` and vibrato (`vib`) are `classic()` stages: an
+     * instrument without `classic()` ignores them, as it ignores `lpf` or `adsr`. A pattern also reaches the slots by name:
      * `ignp("lpf.freq", 1800)`.
      *
      * Want another order? Write your own tail from the same `Ignitor.slot` slots, as far as a door takes them: every
-     * filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs and the envelope's
-     * stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
+     * filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs, the pitch envelope's
+     * `penv.*` and `penvCurves.*` (`pitchEnvelope(Ignitor.slot.penv.semitones, ...)`), the flat `accelerate`
+     * (`accelerate(Ignitor.slot.accelerate)`), the vibrato's `vibrato.*`
+     * (`vibrato(Ignitor.slot.vibrato.rate, Ignitor.slot.vibrato.semitones)`) and the envelope's stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
      * around the instrument. Three groups only `classic()` can place: `lpf.passes` / `hpf.passes` (the filter
      * builder's `passes(n)` takes a number), `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
      * builds a drive into a shaper that always runs and caps its output; `classic()` uses the one distort node that
@@ -565,6 +570,14 @@ object KlangScriptIgnitorExtensions {
      * Applies FM synthesis with a modulator ignitor. The modulation index envelope is a knob on the
      * [FmBuilder]: `.fm(Ignitor.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.05))`, the built-in `sgbell`.
      *
+     * A pitch node means what it wraps. Above the fm it moves the whole operator, the note's pitch
+     * (`Ignitor.sine().fm(Ignitor.sine(), 3.5, 400).vibrato(6, 0.5)`; a modulator with an absolute frequency,
+     * `Ignitor.sine(330)`, stays at it); on the modulator, the modulator alone
+     * (`Ignitor.sine().fm(Ignitor.sine().vibrato(6, 0.5), 3.5, 400)`); on the carrier, the carrier alone
+     * (`Ignitor.sine().vibrato(6, 0.5).fm(Ignitor.sine(), 3.5, 400)`). One fm serves one pitch: over
+     * `x + x.detune(7)`, give each layer its own fm, inside its detune, and sum them,
+     * `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
+     *
      * @param configure receives the [FmBuilder] (knob: `adsr`) and returns it.
      */
     @KlangScript.Method
@@ -605,7 +618,7 @@ object KlangScriptIgnitorExtensions {
     fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, semitones: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl())
 
-    /** Applies continuous pitch acceleration over the voice duration, by [semitones] total. */
+    /** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
     @KlangScript.Method
     fun accelerate(self: IgnitorDsl, semitones: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Accelerate(inner = self, semitones = semitones.toIgnitorDsl())

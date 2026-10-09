@@ -9,12 +9,16 @@ package io.peekandpoke.klang.audio_bridge.constants
 // The pitch modulators' knob defaults, one home for every reader: the field
 // defaults of `IgnitorDsl.Vibrato` and `IgnitorDsl.Fm`, the runtime in
 // `audio_be` (`PitchModFactories.kt`), where a NON-FINITE knob value reads as
-// unset and takes the same default (the chain `adsr`'s `finiteOr` rule), and
-// the sprudel pitch path in `VoiceFactory` (`vib` without a rate, `fmh` unset).
+// unset and takes the same default (the chain `adsr`'s `finiteOr` rule), the
+// `vibrato.rate` slot of `classic()`'s vibrato stage (`VibratoSlots`, which
+// sprudel's `vib` fills; `vib` without a rate), and the sprudel FM path in
+// `VoiceFactory` (`fmh` unset).
 //
 // The switch knobs have no entry: the pitch envelope's and accelerate's
 // `semitones` and FM's `depth` default to 0, which is "off", and a non-finite
-// one reads as off.
+// one reads as off (the slots `penv.semitones` and `accelerate` alike). The vibrato's depth slot (`vibrato.semitones`) defaults to 0
+// too. A non-finite depth on the node's own knob reads as `VIBRATO_SEMITONES`
+// (built); in the slot it reads as the slot's 0.0 (off).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Vibrato LFO rate in Hz. */

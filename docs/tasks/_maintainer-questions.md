@@ -6,13 +6,11 @@ task file it belongs to, and the question leaves this list.
 
 The questions are numbered, so an answer can be as short as "Q3: yes, Q7: keep".
 
-Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
+Branch: `pitch-pipeline` (from `main` at `662aa8db`, v0.6.0; `katalyst-distort` merged in as `aab25677`; v0.6.1). The open engine items that are not questions: [`engine-follow-ups.md`](engine-follow-ups.md).
 
 ---
 
 # Part 1: Blocking (work waits on the answer)
-
-Nothing open (Q21 and Q22 answered 2026-10-08).
 
 ---
 
@@ -20,49 +18,38 @@ Nothing open (Q21 and Q22 answered 2026-10-08).
 
 Work went ahead with the conservative choice. A "no" here means a small follow-up change.
 
-Nothing open (Q6 to Q11 answered 2026-10-08).
+## Q28. Solo protects the SOLOED voice for its whole life (refining your Q14)
+
+Source: the small-items review (`tmp/reviews/small-r1-B.md`). Taken literally ("any of its voices"), Q14 kept a source
+protected for as long as it played, even after its solo was taken away: `solo(1)` edited to `solo(0)` left the pad at
+full level for all 16 s. Decided by default: a voice is kept only if it was soloed itself.
+
+```
+note("c3").sound(myPad).release(5).solo()   // the soloed pad rings at full level to its end   (Q14)
+// edit to .solo(0): the pad is ducked again 2 s after the last solo event, as before Q14
+```
+
+A note that started BEFORE its source was soloed is not kept either (it drops back 2 s after the solo's last event).
+Say if you meant otherwise.
+
+Three more behaviours neither Q14 nor Q28 named, measured in the third review (`tmp/reviews/small-r3.md`), as the
+code now does them:
+1. A soloed tail past its window does not hold the background down: the rest comes back after the window, while the
+   soloed pad rings on at full level (as before Q14).
+2. A soloed voice evicted from the solo tracker's 32 entries stays protected (it is the voice's own flag now).
+3. A ringing soloed voice of the WEAKER of two solos plays at full level, like every protected voice.
+
+Say if any of these should be different.
 
 ---
 
 # Part 3: For later (not blocking anything now)
 
-## Q25. Sprudel's `analog(amount)`: the word `amount` again
+## Q29. `duty(amount)`: the word `amount` once more
 
-Source: the slot-rename map (`tmp/reviews/slot-rename-map.md`, Q-D). Not blocking.
-
-Q21 decided that after the renames `amount` means only the distort drive (`distort(amount = ...)`). Sprudel's
-`analog` door still names its one parameter `amount`:
-
-```
-note("c3").s("saw").analog(amount = 4)   // today
-note("c3").s("saw").analog(4)            // positional, unchanged either way
-```
-
-`analog` is now a character scale (Q22). Options: keep `amount` (it is a one-knob door, where the name is rarely
-written), or rename the parameter, for example `analog(character = 4)`. Recommendation: rename to `character`, with the
-other renames, for one meaning per word. Say if you prefer to keep it. (`penv(amount)` is renamed by the pitch pipeline
-to `penv(semitones)`, already decided.)
-
-
-## Q23. `variants` with plain numbers?
-
-Source: [`engine-tidy-up.md`](engine-tidy-up.md) step 13, your D10 rule ("a plain number everywhere a constant value
-is accepted"). Not blocking.
-
-**Today.** `Ign.variants(...)` takes only Ignitor children. Your strict-argument decision of 2026-10-06 made
-`Ignitor.variants(1, Ign.sine())` a type error on every platform (`StrictArgumentConversionSpec`), where before it
-silently built a broken tree.
-
-**What D10 would allow.** Numbers as children, converted to constants at the door, as every other door does:
-
-```
-Ign.saw().lowpass(Ign.variants(400, 1200, 3000))   // :n picks the cutoff per note
-Ign.variants(1, Ign.sine())                        // a constant 1 or a sine, picked per note
-```
-
-The engine already plays such a tree. Recommendation: yes, numbers become `Constant` at the door (the same strict
-conversion, now with one more accepted type); the spec row changes from "type error" to "a number child is a
-constant". Say no if the 2026-10-06 rule was meant to keep `variants` Ignitor-only.
+From the small-items batch. `amount` is the distort drive only (Q21), but the pulse width door still says
+`duty(amount)`. Decided 2026-10-09: rename it later, not in v0.6.1. Proposal for then: `duty(width)` (0 to 1, the
+share of the cycle that is high); positional `duty(0.3)` unchanged.
 
 ## Q24. A third Kotlin spelling of the Ignitor doors: keep it as engine shorthand, or grow it?
 
@@ -91,72 +78,25 @@ every door (one word per concept says no). **Recommendation: keep them as engine
 limits in their file header, and point authors (Kotlin included) at the `klangscript-libs` door.** The alternative is
 to align them fully. No song is affected either way (songs are KlangScript).
 
-## Q12. Solo ramp times
+## Q13. The `progress()` signal (pitch plan §7f; not blocking, the composition block comes after the pipeline)
 
-**Today:** 1.5 s in and out (a cubic swell) with a 2 s hold.
+Decided so far (2026-10-09): public, 0 at the onset, 1.0 at the gate close, growing on past 1 so release-tail effects
+can be built; a foundation for tweens and general curves (one curve vocabulary with the `adsr` stages and the
+signal-graph tweens). Accelerate clamps it at 1 inside. Open:
 
-**Example.** `solo("<1 0>")` is meant as a toggle every cycle. At cps 1 it never settles: the swell is still moving
-when the next cycle flips it.
-
-**Recommendation from the review:** one ramp of about 0.1 to 0.25 s both ways, and a hold of `max(ramp, 0.5 s)`. Kept
-at 1.5 s until you decide; the KDoc now says that it fades.
-
-## Q13. Pitch pipeline, the composition block (D8 to D11)
-
-Source: §8. Step 2 of the pitch plan, recommendations as written there:
-- **D8:** a name for the new semitone pitch primitive. `pitchMod` stays the linear one; the suggestion is
-  `pitchSemitones`.
-- **D9:** no vibrato `range` and no vibrato `phase` on sprudel for now.
-- **D10 (pitch):** compose the pitch envelope through `adsr` only after a spike shows it matches.
-- **D11:** accelerate and FM stay nodes.
-
-## Q14. A soloed release tail beside another solo
-
-**What happens.** Protection now ends 2 s after the source's last solo event. A long release is therefore ducked
-mid-tail if another solo is live.
-
-**Example.**
+1. **After the gate: gate lengths, or seconds too?** In gate lengths, a 0.1 s note with a 2 s release reaches 21 at
+   its end, a 2 s note reaches 2: a tail effect runs 20 times faster on staccato notes. A seconds-based `sinceGate()`
+   (0 while the gate is open, then 0.5 after half a second ...) fits the units rule. Both?
+2. **Live MIDI notes:** a held key has no known gate length, so progress stays about 0 (the far horizon). At
+   note-off: (a) stay as decided in August (no tail effects on live notes), (b) jump to 1.0 and grow on (accelerate
+   would jump at the release), or (c) rely on `sinceGate()`, which starts counting at the real note-off for every
+   note.
+3. **How a curve is written** on a signal: `Ign.progress().curve("scurve")`, `.ease("scurve")`, or a curve argument
+   on `progress()` itself?
 
 ```
-note("c3").sound(myPad).release(5).solo()   // myPad: any instrument with a long tail
-s("bd*4").solo()
+Ign.saw().lowpass(Ign.progress().sub(1).clamp(0, 1).curve("scurve").range(4000, 600))   // the tail darkens, eased
 ```
-
-The pad's tail is ducked from about 2 s after its last event, measured -23.6 to -40.8 dB at 4 s. The old code let it
-ring at full level. The click is fixed (a 128-frame ramp).
-
-Should a tail stay protected until its voice ends?
-
-## Q15. Helper merges that change behaviour
-
-Source: [`utils-home-pass.md`](utils-home-pass.md), "Left for a decision". Four small steps:
-- **`Environment.loadLibrary`'s own Levenshtein folded into `suggestNames`.** Example: the "did you mean ...?" text for
-  a misspelt library name changes wording to match the other suggestions.
-- **`MnRenderer.renderNumber` swapped for `formatAsIntOrDouble`.** Example: a number above `Int.MAX_VALUE` (2147483647)
-  is clamped when rendered today; after the swap it renders as written.
-- **One home in `common` for the four text-position helpers.**
-- **A small class for the tracked-timeouts code** shared by `MnEditorBase` and `NoteStaffEditor`.
-
-The coordinator would do all four as small reviewed steps unless you say otherwise.
-
-## Q16. The oscillators do not use PolyBLEP
-
-Found in tidy-up step 1. `/code-style` §9, `CREDITS.MD` and `klang-music-writing/ref/ignitor-reference.md` say the
-oscillators use PolyBLEP. They use finite-slope flanks instead, and the unused `polyBlep` helper was deleted.
-
-**Example.** `CREDITS.MD` lists "PolyBLEP (Välimäki et al.): band-limited oscillator anti-aliasing", but the saw
-actually ramps its reset over a few samples (a finite-slope flank), with no PolyBLEP correction.
-
-The coordinator would correct the texts to say what the code does: those three, the in-app Credits page, the Zawtooth
-KDoc, and three `IgnitorsTest` row names. §9 is a rule text, so it waits for your word.
-
-## Q17. `WarehouseStats.reverbFailures` / `reverbDropped`
-
-Found in tidy-up step 1. These are wire fields the UI never shows; the warehouse panel shows their delay-ring twins.
-
-**Example.** When the reverb shelf runs dry, the panel shows nothing; when the ring shelf runs dry, it shows a count.
-
-Show them in the warehouse panel, or drop them?
 
 ## Q18. Named arguments in data tables
 

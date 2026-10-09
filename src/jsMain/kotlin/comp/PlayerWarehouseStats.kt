@@ -150,6 +150,8 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                     "${w.reverbDirtyCount}d" to "idle networks not yet zeroed",
                     "${w.reverbAllocations}a" to "networks allocated since start",
                     "${w.reverbHits}h" to "rents served from the shelf",
+                    "${w.reverbFailures}f" to "allocations that failed (out of memory)",
+                    "${w.reverbDropped}x" to "returned networks dropped because the shelf was full",
                 )
                 line(
                     "cyl", "Cylinders: whole orbits, built by the warmup, returned when a playback ends",

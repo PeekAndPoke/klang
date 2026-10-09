@@ -1,6 +1,19 @@
 # Engine tidy-up: the Katalyst leftovers and a backend ready for a Zig port
 
-Status: **V1, in progress (maintainer, 2026-10-07); steps 1 to 11 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build; 11 the twins: the shaper core, the runtime arithmetic, the Karplus string core and the unison stacks), see below.** Step 3 of the engine order in [`_v1-scope.md`](_v1-scope.md), after
+> **DONE 2026-10-09** (branch `engine-pass-1`, merged as PR #85, v0.6.0): the empty-variants bug, steps 1 to 13 and
+> the V8 allocation pass. Every step rendered the 18-song corpus and Kokon bit for bit the same.
+>
+> Key commits: the bug `4f68fabe` (the unison cap 256: `34c5eb5f`); step 1 `cff55038`, `cf584b8c`; step 2 `e79b5679`;
+> steps 3 to 5 `b018be31`; step 6 `d2e09a2c`; steps 7 to 9 `073e7076`; step 10 `e4bc40bc`; step 11 (a) `9dcdbb60`,
+> (d1) `fb24e509`, (b) `af86cd14`, (c) `3e0b5ea0`; step 12 (b) `f3c3a100`, (a) `7eb18dbe`, (c) `5d908a26`; step 13 (a)
+> `12727e8f`, (b) `ab9f172c`; the V8 pass `a6eebdbb`, `4c1c8bd1`, `9ca9c98b`, `e6ff9a00`, its record `15fa76ce`.
+>
+> **Where the open items went:** every item still open from the "Found during ..." sections, the V8 pass and the
+> audit's later steps and decisions is in [`docs/tasks/engine-follow-ups.md`](../../tasks/engine-follow-ups.md), with
+> a link back to its section here. The questions this work raised (Q16, Q17, Q19, Q23, Q24) stay in
+> [`docs/tasks/_maintainer-questions.md`](../../tasks/_maintainer-questions.md).
+
+Status before archiving: **V1, in progress (maintainer, 2026-10-07); steps 1 to 11 done (1 dead code, with its deferred `VoiceFactory` items; 2 the oversampler closure; 3 the RNG defaults; 4 the `KatalystSlots` helpers and the settings types; 5 constants and names; 6 the small shared helpers, the per-block copies and the audio `utils/` home; 7 the per-block iterators, the diagnostics closure and the solo ramp's curve; 8 one playback per scheduler; 9 the engine's end of life as one phase, and one render path; 10 the first-block and voice-count allocations moved to the build; 11 the twins: the shaper core, the runtime arithmetic, the Karplus string core and the unison stacks), see below.** Step 3 of the engine order in [`_v1-scope.md`](../../tasks/_v1-scope.md), after
 the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and the pitch pipeline (`pitch-pipeline-into-the-tree.md`).
 One exception runs first: the crash below.
 
@@ -12,7 +25,7 @@ subtle bugs (the 16-bit browser output was one), so each pass is also quality co
 
 ## The audit
 
-[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../audio-audit/2026-10-07-engine-tidy-audit.md), read-only, at
+[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../../audio-audit/2026-10-07-engine-tidy-audit.md), read-only, at
 `4481ea25`. Section A: the Katalyst DSL leftovers (7 of 10 named items still open, 13 unnamed code leftovers).
 Section B: tidiness with the Zig port in mind (dead code, duplicated laws, names, per-block allocations and closures,
 the wire). Section C: `../plans/effect-state-machines.md` verified DONE as written; the flags kept on purpose are

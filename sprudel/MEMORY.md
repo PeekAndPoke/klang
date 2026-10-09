@@ -17,11 +17,11 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   folds into the receiver's own. The class KDoc of `ParamBag` has the contract.
 - `toVoiceData()` is the one boundary. The voice doors stay TYPED on this side (the query hot loop keeps its
   one allocation, `docs/plans/signal-flow-redesign.md` §4) and are written there as `classic()` slot keys
-  into `ignitorParams` by `_classic_slot_params.kt`: the filters, `adsr`, distort / crush / coarse, tremolo and
-  the sample's flat `begin` / `end` / `speed` / `loop`. The rules are in that file's KDoc; the key names are
+  into `ignitorParams` by `_classic_slot_params.kt`: the pitch envelope (`penv.*`, `penvCurves.*`), the vibrato
+  (`vibrato.rate`, `vibrato.semitones`), the flat `accelerate`, the filters,
+  `adsr`, distort / crush / coarse, tremolo and the sample's flat `begin` / `end` / `speed` / `loop`. The rules are in that file's KDoc; the key names are
   read from `IgnitorDsl.Slots`, never retyped. Guard: `ClassicSlotParamsSpec`.
-- Still typed wire fields beside the two bags: `note`, `freqHz`, `accelerate`, `vibrato`, `vibratoMod`, `sourceId`, the `penv` and
-  `fm` fields, `gain`, `pan`, `legato`, `bank`, `sound`, `soundIndex` (from `n`), `cut`, `cylinder`, `solo`,
+- Still typed wire fields beside the two bags: `note`, `freqHz`, `sourceId`, the `fm` fields, `gain`, `pan`, `legato`, `bank`, `sound`, `soundIndex` (from `n`), `cut`, `cylinder`, `solo`,
   the `master` and `katalyst` names, `control`, `tags`, `cull`. The orbit stages travel only as
   `katalystParams` slots.
 - An authored instrument that does not end in `classic()` plays as its bare tree: a voice door reaches it
@@ -48,7 +48,7 @@ setter semantics) and `/dsl-design`. What they produce today:
 
 - Every numeric single-field setter is an accessor object named like its script name (`object gain`) on
   the `FieldAccessor` base; its `@KlangScript.Invoke` member is the Kotlin door. Aliases are constants
-  (`val vel: velocity = velocity`); `comp`, `uni`, `vib`, `pamt` stay.
+  (`val vel: velocity = velocity`); `comp`, `uni`, `vib` stay (`pamt` retired 2026-10-09).
 - The compound doors are objects with one reader child per numeric slot: `adsr`, `lpf` / `hpf`
   `(freq, q, passes, env, attack, decay, sustain, release)`, `bpf` / `notch` (the same without `passes`),
   `reverb(wet, size, lowpass)`, `delay(wet, time, feedback, cap)`, `phaser(wet, rate, center, sweep, floor)`,
@@ -189,4 +189,21 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-07: the sound door `sndTriangle()` is `sndTri()`, like `sndSaw()`; it still sets the sound `triangle`
   (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 4).
 - 2026-10-07: `solo(...)` covers its rests with control events instead of a sounding sine, one id per `solo` call,
-  `solo()` means 0.95 (`docs/tasks/bugfix-solo-rests-and-amount.md`).
+  `solo()` means 0.95 (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`).
+- 2026-10-09: `penv(semitones, attack, decay, sustain, release)` (was `amount`, also the reader `penv.semitones`) writes
+  `classic()`'s `penv.*` / `penvCurves.*` slots; its eight typed wire fields are gone
+  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 1).
+- 2026-10-09: `vibrato(rate, semitones)` / `vib` (was `depth`, also the reader `vibrato.semitones`) writes `classic()`'s
+  `vibrato.*` slots, its two typed wire fields are gone; `pamt` retired (`docs/tasks/pitch-pipeline-into-the-tree.md`
+  step 2).
+- 2026-10-09: `accelerate(semitones)` writes `classic()`'s flat `accelerate` slot, its typed wire field is gone; the glide
+  ends at the gate close and holds through the release (decision D2), a sound change for an `accelerate` under a
+  release tail and for `legato(0)` (the target from the first frame); the other shapes are named in the step record
+  (D6: lost without `classic()`; D1: an `fm` instrument's modulator; a non-finite amount is now dropped, the bare
+  voice) (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3).
+- 2026-10-09: `vib`, `penv` and `accelerate` over an fm instrument that ends in `classic()` (`sgbell`, an authored bell)
+  move the whole operator again, modulator with carrier, as on the strip (pitch pipeline step 3b, decision D1). Sprudel's
+  own `fm` door still runs on the strip until step 4, where no tree pitch stage reaches its modulator
+  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3b).
+- 2026-10-10: v0.6.1: `analog(character)` (was `amount`) on every analog door, sprudel's three forms and the mapper
+  included (Q25); with the four pitch entries above. The old names are in `docs/retired-names.md`.

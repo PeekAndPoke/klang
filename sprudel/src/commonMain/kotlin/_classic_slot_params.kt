@@ -9,7 +9,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.BandFilterSlots
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
-import io.peekandpoke.klang.audio_bridge.FilterCurvesSlots
+import io.peekandpoke.klang.audio_bridge.ModEnvelopeCurvesSlots
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.PassFilterSlots
@@ -48,6 +48,9 @@ internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
  *    an explicit `ignp` of either is never overwritten by a fill (the slot defaults, 0.707 and 1, are the
  *    values the wire used to carry); its envelope (depth, the four stages and the three curves) only
  *    when one of the five envelope knobs is set: exactly the `FilterDef` the wire used to carry;
+ *  - the pitch envelope writes every field that is set; its switch `penv.semitones` only when set (a stage-only
+ *    call switches nothing on); the vibrato the same, its switch `vibrato.semitones`; `accelerate` under its flat
+ *    slot when set;
  *  - shapes and curves travel as their catalogue INDEX (`DistortionShapes`, `LfoShapes`, `AdsrCurves`), a
  *    flag as 1.0 or 0.0.
  *
@@ -59,13 +62,36 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
     // The door-less event, the common case (a sample hit, a bare note): its own bag's copy, as the wire always
     // carried, with no writer and no key lookups.
     if (adsr == null && lpf == null && hpf == null && bpf == null && notch == null &&
-        distortion == null && tremolo == null && sample == null
+        distortion == null && tremolo == null && sample == null && pitchEnv == null && pitchMod == null
     ) {
         return ignitorParams?.toMap()
     }
 
     val k = ClassicSlotKeys
     val bag = ClassicSlotParams(ignitorParams)
+
+    // The pitch envelope: every field that is set, as on the retired wire fields. `penv.semitones` is the stage's
+    // switch and is written only when the pattern set it, so a stage-only call (`penv(attack = 0.1)`) leaves it at
+    // its slot default 0.0, which the gate reads as off (`/dsl-design` section 4: a tail-only call never invents it).
+    pitchEnv?.let { e ->
+        bag.put(k.penvSemitones, e.pEnv)
+        bag.put(k.penvAttack, e.pAttack)
+        bag.put(k.penvDecay, e.pDecay)
+        bag.put(k.penvSustain, e.pSustain)
+        bag.put(k.penvRelease, e.pRelease)
+        bag.putCurve(k.penvCurveAttack, e.pAttackCurve)
+        bag.putCurve(k.penvCurveDecay, e.pDecayCurve)
+        bag.putCurve(k.penvCurveRelease, e.pReleaseCurve)
+    }
+
+    // The vibrato (pitch pipeline step 2): the rate and the depth when set. `vibrato.semitones` is the switch, so a
+    // rate-only call (`vib(4)`) leaves the depth at its slot default 0.0 and builds no vibrato, as on the strip.
+    // The group's `accelerate` (step 3) is its own stage's switch, under the flat slot `accelerate`.
+    pitchMod?.let { m ->
+        bag.put(k.vibratoRate, m.vibrato)
+        bag.put(k.vibratoSemitones, m.vibratoMod)
+        bag.put(k.accelerate, m.accelerate)
+    }
 
     distortion?.let { d ->
         bag.put(k.crushBits, d.crush)
@@ -133,15 +159,28 @@ private object ClassicSlotKeys {
 
     private fun name(slot: IgnitorDsl): String = (slot as IgnitorDsl.Param).name
 
-    private fun pass(f: PassFilterSlots, c: FilterCurvesSlots) = FilterSlotKeys(
+    private fun pass(f: PassFilterSlots, c: ModEnvelopeCurvesSlots) = FilterSlotKeys(
         name(f.freq), name(f.q), name(f.passes), name(f.env), name(f.attack), name(f.decay), name(f.sustain),
         name(f.release), name(c.attack), name(c.decay), name(c.release),
     )
 
-    private fun band(f: BandFilterSlots, c: FilterCurvesSlots) = FilterSlotKeys(
+    private fun band(f: BandFilterSlots, c: ModEnvelopeCurvesSlots) = FilterSlotKeys(
         name(f.freq), name(f.q), null, name(f.env), name(f.attack), name(f.decay), name(f.sustain),
         name(f.release), name(c.attack), name(c.decay), name(c.release),
     )
+
+    val vibratoRate = name(s.vibrato.rate)
+    val vibratoSemitones = name(s.vibrato.semitones)
+    val accelerate = name(s.accelerate)
+
+    val penvSemitones = name(s.penv.semitones)
+    val penvAttack = name(s.penv.attack)
+    val penvDecay = name(s.penv.decay)
+    val penvSustain = name(s.penv.sustain)
+    val penvRelease = name(s.penv.release)
+    val penvCurveAttack = name(s.penvCurves.attack)
+    val penvCurveDecay = name(s.penvCurves.decay)
+    val penvCurveRelease = name(s.penvCurves.release)
 
     val crushBits = name(s.crush.bits)
     val crushOversample = CRUSH_OVERSAMPLE_KEY

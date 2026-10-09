@@ -23,6 +23,7 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
@@ -231,6 +232,20 @@ object KatalystChainBuilder {
                             release = KatalystKnob(stage.release, COMPRESSOR_RELEASE_SECONDS),
                         )
                     )
+                }
+
+                is KatalystStageDsl.Distort -> {
+                    // The shape and the oversampling factor are fixed per chain, as on a voice per note: they
+                    // pick the shaper and size the oversampler here, at build time. The amount is a slot.
+                    val fx = KatalystDistortEffect(
+                        sampleRate = sampleRate,
+                        blockFrames = blockFrames,
+                        shapeIndex = stage.shape,
+                        oversampleFactor = stage.oversample,
+                    )
+                    pipeline.add(fx)
+
+                    writers.add(KatalystDistortWriter(fx = fx, amount = KatalystKnob(stage.amount, DISTORT_AMOUNT)))
                 }
 
                 // Declared in the list, run outside it: `Cylinders` applies it after every orbit,

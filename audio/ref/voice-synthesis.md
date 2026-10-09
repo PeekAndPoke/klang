@@ -16,13 +16,12 @@ the composed pipeline.
 
 ```
 Pitch stage     (PitchPipelineBuilder → writes freqModBuffer)
-  1. Vibrato            : LFO pitch modulation
-  2. Accelerate         : pitch ramp modulation
-  3. PitchEnvelope      — one-shot pitch curve
-  4. FM                 — frequency modulation
+  1. FM                 : frequency modulation
+  (sprudel's pitch envelope, vibrato and accelerate left this stage in pitch pipeline steps 1 to 3: classic()'s
+   pitch stages)
 
 Ignite stage    (IgniteRenderer → writes audioBuffer)
-  5. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds)
+  2. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds)
 
 Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitude envelope with a
                  static release; the one home of the rule is BuiltIgnitor.endsInEnvelope. adsrOff
@@ -32,15 +31,26 @@ Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitu
                  pattern wrote; otherwise the fade does)
 
 Send stage      (SendRenderer → mixes to cylinder)
-  6. pan + gain → cylinder mix
+  4. pan + gain → cylinder mix
 ```
 
 **The voice chain is `classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`), a tail of slotted
 Ignitor stages in the classic subtractive order:
 
 ```
-onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
+this -> pitchEnvelope -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
 ```
+
+The pitch stages sit at the front, directly on the instrument (`docs/tasks/pitch-pipeline-into-the-tree.md`
+section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not change
+the sound, and their nesting is the retired pitch strip's grouping of the ratio product. Three pitch factors on one
+path can regroup it (one rounding, about -270 dB): while some doors still run on the strip, and for good where two
+of the instrument's own pitch nodes meet a door. A classic pitch stage bends an `fm` node's modulator with its
+carrier, as every pitch node above an fm does (decision D1, pitch pipeline step 3b; see "FM: a pitch node means what
+it wraps" below). Unlike the strip, it never bends a musical oscillator in a parameter position, such as a filter LFO
+(plan section 2). The pitch envelope is the
+Ignitor `pitchEnvelope` node, filled by the `penv.*` and `penvCurves.*` slots (sprudel's `penv`, `penvCurves`); the
+vibrato is the Ignitor `vibrato` node, filled by `vibrato.rate` and `vibrato.semitones` (sprudel's `vib`).
 
 Every knob is a slot (`<door>.<param>`) that the pattern fills through `VoiceData.ignitorParams`, and a stage
 whose slot is at its off value is not built. Every built-in sound is `source.pregain().classic()`, every
@@ -54,7 +64,7 @@ not per-voice: applied on the orbit bus after all voices mix into the cylinder.
 ### Voice construction
 
 `VoiceFactory` builds each `Voice` from `VoiceData`: the instrument's tree (`IgnitorRegistry.createExciter`,
-or the sample instrument for a sample), the pitch pipeline from the typed pitch fields, and the stages
+or the sample instrument for a sample), the pitch pipeline from the typed pitch fields that are left (FM), and the stages
 after the tree. `Voice` itself holds the lifecycle frames, `cylinderId`, `gain`, `pan`,
 `katalystParams`, `cut`, the cull window and the pipeline.
 
@@ -99,7 +109,7 @@ voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`); one not 
 - Solo: `SoloTracker` records "source soloed at amount a until t" from any event (control events included); a
   voice of a soloed source plays at `Voice.gainMultiplier` 1.0, every other voice at `1 - amount` of the strongest
   live solo, reached on a 1.5 s ramp (0 only at `solo(1.0)`); a change is ramped across one block in `SendRenderer`.
-  The rules: `audio/MEMORY.md`, and `docs/tasks/bugfix-solo-rests-and-amount.md`
+  The rules: `audio/MEMORY.md`, and `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`
 
 ## Oscillators
 
@@ -135,19 +145,30 @@ class Fm(ratio: Double, attack: Double, decay: Double, sustain: Double, env: Dou
 // env: modulation depth in semitones (scaled by envelope)
 ```
 
-### Vibrato
+## FM: a pitch node means what it wraps
 
-```kotlin
-class Vibrato(depth: Double, rate: Double)
-// Writes into freqModBuffer as a slow sinusoidal pitch deviation
-```
+Pitch pipeline step 3b (decision D1, the placement rule of 2026-10-09). A pitch modulation (a `vibrato`, `pitchMod`,
+`pitchEnvelope`, `accelerate`, an outer `fm`, a `classic()` pitch stage) above an `fm` node moves the whole operator,
+the note's pitch: the modulator follows the carrier and the ratio stays exact (a modulator with an absolute `freq`,
+`Ign.sine(330)`, stays at its frequency, shielded like every absolute oscillator). On the modulator it moves the modulator
+alone; on the carrier (`x.vibrato(...).fm(m, ...)`) the carrier alone. Sprudel's own `fm` door still runs on the
+voice strip until pitch pipeline step 4: its modulator is a sine inside `FmRenderer` that no tree pitch stage reaches.
 
-### PitchEnvelope
+The mechanism: the `Fm` arm builds the modulator under the outer mod, read through a `CarrierFreqMod` that asks it at
+the CARRIER's frequency, which the fm pins every block before it renders the modulator. Asked at the modulator's own
+frequency, a mod whose knobs read `Freq` (a vibrato rate on the note, an audio-rate `pitchMod`, an outer fm) would
+render twice per block and break the carrier's own modulation; pinned, the mod above the fm renders once per block for
+every carrier pitch, and a chain of N fms costs N + 1 oscillator renders. The wrapper ignores the frequency it is called
+with, so a pitch node INSIDE the modulator drops its freq key and renders once per block too, also over a forking
+detune. One wrapper per fm node and outer mod, so `let f = x.fm(m); f + f` keeps `m` one instance. Guards: `FmModulatorFollowsPitchSpec` (the matrix) and `FmModulatorTopologySpec` (chains, nesting, sums,
+parameter positions, shared lets, the render counts).
 
-```kotlin
-class PitchEnvelope(semitones: Double, envelope: Envelope)
-// An ADSR in frames (Voice.Envelope, with its three curves) scaling a pitch offset of `semitones`
-```
+One shape the engine does not process: one fm whose carrier holds two pitches (`(x + x.detune(7)).fm(m)`). Its one
+modulator serves both pitches and advances once per pitch per block; if the mod above the fm reads the note and the
+modulator holds a pitch node whose knobs read no `Freq`, the second pitch's render even reads the first pitch's outer
+mod (that node's memo was filled under the first pin). The author rule: give each layer its own fm,
+inside its detune, and sum them, `x.fm(m1) + x.fm(m2).detune(7)`. A build-time diagnostic is its own task
+(`docs/tasks/fm-above-forking-detune-diagnostic.md`).
 
 ## Envelope / voice-lifetime semantics
 
@@ -206,7 +227,7 @@ its release and its own output has stayed under the audibility floor for the cul
   its scheduled `endFrame`, because the list order decided who took an orbit next (measured 2026-09-15 on Der
   Schmetterling: -32 dBFS). Ownership now goes by onset (the newest `Sounding` voice), and every removal keeps the
   list's order, so nothing needs the zombie. One order effect remains, the unison phase-pool take on a voice's
-  first block (`docs/tasks/engine-tidy-up.md`).
+  first block (open: `docs/tasks/engine-follow-ups.md`, item 14).
 - **Never in the gate, and never before the voice has sounded.** The held part of a note may be
   silent on purpose (a slow attack, a silent lead-in). Only the release, which has been told to
   stop, is culled, and only once at least one block has been audible (`Voice.heard`): a sample
@@ -230,7 +251,7 @@ its release and its own output has stayed under the audibility floor for the cul
 
 - **One law, `EnvelopeCore`** (`audio_be/.../EnvelopeCore.kt`; its KDoc is the rule's home): every ADSR-shaped
   envelope is a thin host of it (the chain `adsr`, the filter cutoff envelope, the FM index envelope, the Ignitor
-  and the voice pitch envelope, the voice FM envelope). Attack and decay count fractional frames, the release
+  pitch envelope, which sprudel's `penv` fills through `classic()`, the voice FM envelope). Attack and decay count fractional frames, the release
   `floor(N)` frames ending on an exact 0.0, a non-positive or NaN time is a zero-length stage, the sustain is raw.
   A gate at or before the onset releases from 0 (the stateless law evaluated there would extrapolate the attack).
   Guard: `EnvelopeLawSpec`.

@@ -246,8 +246,25 @@ sealed interface IgnitorDsl {
         // door's word (`lpf.freq`, `crush.bits`); each group's KDoc in `IgnitorDslClassic.kt` names
         // the defaults and why.
 
+        /** The vibrato stage, outside the accelerate: `vibrato.rate` and `vibrato.semitones` (the switch). */
+        val vibrato: VibratoSlots = VibratoSlots()
+
         /**
-         * The one-pole lowpass stage, `classic()`'s FIRST stage: the cutoff in Hz, which sprudel's
+         * The accelerate stage, between the pitch envelope and the vibrato: the glide in SEMITONES from the onset to the
+         * gate close, held through the release (decision D2), which sprudel's `accelerate(semitones)` writes. It is the
+         * stage's switch: default 0.0, which the gate reads as off (a non-finite value reads as unset, so off too). A
+         * flat name, like [onepole]: the door has one knob (pitch pipeline step 3; decision D4).
+         */
+        val accelerate: IgnitorDsl = Param(name = "accelerate", default = 0.0, description = "Mirrors sprudel's reader `accelerate`")
+
+        /** The pitch envelope stage, `classic()`'s first: `penv.semitones` (the switch) and its four stages. */
+        val penv: PitchEnvelopeSlots = PitchEnvelopeSlots()
+
+        /** The pitch envelope's curves: `penvCurves.attack`, `penvCurves.decay`, `penvCurves.release`. */
+        val penvCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("penvCurves")
+
+        /**
+         * The one-pole lowpass stage, `classic()`'s first AMPLITUDE stage (behind the pitch stages): the cutoff in Hz, which sprudel's
          * `onepole(hz)` writes. Default 0.0, which the gate reads as off. A flat name, not `<door>.<param>`:
          * the door has one knob, and `onepole` is the key it has always written (phase 3 step 10 moved the
          * stage from the registry into `classic()`).
@@ -285,16 +302,16 @@ sealed interface IgnitorDsl {
         val adsrCurves: AdsrCurvesSlots = AdsrCurvesSlots()
 
         /** The highpass envelope's curves: `hpfCurves.attack`, `hpfCurves.decay`, `hpfCurves.release`. */
-        val hpfCurves: FilterCurvesSlots = FilterCurvesSlots("hpfCurves")
+        val hpfCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("hpfCurves")
 
         /** The bandpass envelope's curves: `bpfCurves.attack`, `bpfCurves.decay`, `bpfCurves.release`. */
-        val bpfCurves: FilterCurvesSlots = FilterCurvesSlots("bpfCurves")
+        val bpfCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("bpfCurves")
 
         /** The notch envelope's curves: `notchCurves.attack`, `notchCurves.decay`, `notchCurves.release`. */
-        val notchCurves: FilterCurvesSlots = FilterCurvesSlots("notchCurves")
+        val notchCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("notchCurves")
 
         /** The lowpass envelope's curves: `lpfCurves.attack`, `lpfCurves.decay`, `lpfCurves.release`. */
-        val lpfCurves: FilterCurvesSlots = FilterCurvesSlots("lpfCurves")
+        val lpfCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("lpfCurves")
 
         /** The sample instrument's playback: `begin`, `end`, `speed`, `loop` (flat names, one knob per door). */
         val sample: SampleSlots = SampleSlots()
@@ -444,7 +461,10 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Zawtooth wave oscillator. Naive sawtooth without PolyBLEP anti-aliasing (brighter/harsher). */
+    /**
+     * Zawtooth wave oscillator: a naive sawtooth with an instant reset, no flyback flank (brighter and harsher
+     * than the saw).
+     */
     @WireName("zawtooth")
     data class Zawtooth(
         val freq: IgnitorDsl = Freq,
@@ -1895,6 +1915,20 @@ sealed interface IgnitorDsl {
      * Frequency modulation synthesis. The modulator's output shifts the carrier's frequency
      * at audio rate, with an optional ADSR envelope controlling modulation depth over time. The
      * envelope has no curve knob yet; its stages run `MOD_ENV_CURVE`, exponential (decision D3).
+     *
+     * **A pitch node means what it wraps** (decision D1, pitch pipeline step 3b; the placement rule, maintainer,
+     * 2026-10-09). A pitch modulation (a `vibrato`, `pitchMod`, `pitchEnvelope`, `accelerate`, an outer `fm`, a sprudel
+     * pitch door through `classic()`):
+     *  - above the fm moves the whole operator, the note's pitch: carrier and modulator together, the ratio exact
+     *    (`Ign.sine().fm(Ign.sine(), 3.5, 400).vibrato(6, 0.5)`); a modulator with an absolute `freq`
+     *    (`Ign.sine(330)`) stays at its frequency, as every absolute oscillator does;
+     *  - on the modulator moves the modulator alone (`Ign.sine().fm(Ign.sine().vibrato(6, 0.5), 3.5, 400)`);
+     *  - on the carrier moves the carrier alone, the modulator does not follow
+     *    (`Ign.sine().vibrato(6, 0.5).fm(Ign.sine(), 3.5, 400)`).
+     *
+     * **One fm serves one carrier pitch.** When the fm's carrier holds two pitches (`(x + x.detune(7)).fm(m, ...)`),
+     * one modulator serves both, renders once per pitch per block and advances its state each time. Give each layer
+     * its own fm, inside its detune, and sum them: `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
      */
     @WireName("fm")
     data class Fm(
@@ -2171,7 +2205,7 @@ sealed interface IgnitorDsl {
      *
      * @param rate LFO frequency in Hz (default 5.0)
      * @param semitones modulation depth in SEMITONES (default 0.25 ≈ quarter-semitone wobble).
-     *   Matches the sprudel `vibratoMod()` unit; pitch params are named by their unit.
+     *   Sprudel's `vib(rate, semitones)` fills `classic()`'s vibrato stage, this node, through the `vibrato.*` slots.
      */
     @WireName("vibrato")
     data class Vibrato(
@@ -2185,8 +2219,10 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Pitch acceleration. Continuously shifts pitch over the voice's duration using an
-     * exponential curve, by [semitones] total: `accelerate(12)` ends one octave up.
+     * Pitch acceleration: an exponential glide by [semitones] from the onset to the gate close, then held through the
+     * release: `accelerate(12)` arrives one octave up when the note ends and stays there (decision D2 of the pitch
+     * pipeline, with its hold, 2026-10-09). Sprudel's `accelerate` fills `classic()`'s accelerate stage, this node,
+     * through the flat `accelerate` slot.
      */
     @WireName("accelerate")
     data class Accelerate(
@@ -2210,8 +2246,8 @@ sealed interface IgnitorDsl {
      *
      * The level is the engine's one envelope law (`EnvelopeCore` in `audio_be`, decision D3), the
      * chain `adsr`'s: fractional attack and decay frame counts (`seconds * sampleRate` as a Double).
-     * The voice's own pitch envelope (sprudel's `penv`) is a host of the same law with the same
-     * defaults (`constants/PitchEnvelopeDefaults.kt`), so the two sweep alike.
+     * Sprudel's `penv` IS this node: it fills the `penv.*` and `penvCurves.*` slots of the stage `classic()`
+     * places (pitch pipeline step 1), whose defaults are this node's (`constants/PitchEnvelopeDefaults.kt`).
      *
      * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
      *   +12 sweeps from an octave up, -24 from two octaves down.
@@ -3108,7 +3144,7 @@ fun IgnitorDsl.vibrato(rate: Double, semitones: Double) = IgnitorDsl.Vibrato(
     semitones = IgnitorDsl.Constant(semitones),
 )
 
-/** Applies continuous pitch acceleration over the voice's duration. */
+/** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
 fun IgnitorDsl.accelerate(semitones: Double) = IgnitorDsl.Accelerate(
     inner = this,
     semitones = IgnitorDsl.Constant(semitones),

@@ -68,8 +68,9 @@ delay, reverb, compressor and duck fields left the wire in step 5b-3). Ownership
 the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut (lifecycle step 5, `Cylinder.offer`), so all voices on an orbit SHARE these; put voices on different
 orbits for independent bus effects. Everything else is **per-voice**: `lpf`/`hpf`/`bpf`/`notch` +
 envelopes, `distort`, `crush`, `coarse`, `adsr`, `tremolo` as `classic()`'s slots in the instrument's
-Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; `vibrato`, `fm`, pitch env in the
-voice's pitch stage; `gain`/`pan` in its send stage.
+Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; the pitch envelope as `classic()`'s `penv.*`
+slots (pitch pipeline step 1), the vibrato as its `vibrato.*` slots (step 2) and `accelerate` as its flat
+`accelerate` slot (step 3); `fm` in the voice's pitch stage (the strip) until it moves into `classic()`; `gain`/`pan` in its send stage.
 
 | Katalyst effect            | Class           | Applied when                                                     |
 |----------------------------|-----------------|------------------------------------------------------------------|
@@ -80,6 +81,7 @@ voice's pitch stage; `gain`/`pan` in its send stage.
 | `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
 | `KatalystCompressorEffect` | `Compressor`    | any of the five `compressor.*` slots set                         |
 | `KatalystDuckEffect`       | `Ducking`       | `duck.orbit` names a source and `duck.depth` above 0             |
+| `KatalystDistortEffect`    | `DistortionCore` (one per channel, the house DC pole) | `distort.amount` finite and above 0 (not in the classic chain; declared with `k.distort(...)`) |
 
 How each stage switches and glides, when an orbit may deactivate, the chain swap and the output host (`MasterBus`):
 `audio/ref/katalyst.md`.

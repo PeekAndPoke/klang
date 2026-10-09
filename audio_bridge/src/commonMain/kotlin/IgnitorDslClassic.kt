@@ -11,7 +11,12 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
@@ -177,19 +182,60 @@ class AdsrCurvesSlots internal constructor() {
 }
 
 /**
- * The curve slots of a filter's cutoff envelope (`Slots.lpfCurves`, `Slots.hpfCurves`, `Slots.bpfCurves`,
- * `Slots.notchCurves`), mirroring sprudel's `lpfCurves(attack, decay, release)` and its three siblings
- * (phase 3 step 5b (c2)): `<door>Curves.attack|decay|release`, each an INDEX into [AdsrCurves] (sprudel
- * writes names, and the curves objects have no readers), default the index of `MOD_ENV_CURVE`, the curve
+ * The curve slots of a modulation envelope: a filter's cutoff envelope (`Slots.lpfCurves`, `Slots.hpfCurves`,
+ * `Slots.bpfCurves`, `Slots.notchCurves`, phase 3 step 5b (c2)) and the pitch envelope (`Slots.penvCurves`, pitch
+ * pipeline step 1), mirroring sprudel's `lpfCurves(attack, decay, release)`, its three filter siblings and
+ * `penvCurves(attack, decay, release)`: `<door>Curves.attack|decay|release`, each an INDEX into [AdsrCurves]
+ * (sprudel writes names, and the curves objects have no readers), default the index of `MOD_ENV_CURVE`, the curve
  * every modulation envelope has when nothing is written (decision D3; the defaults' one home is
  * `constants/EnvelopeDefaults.kt`).
  */
-class FilterCurvesSlots internal constructor(door: String) {
+class ModEnvelopeCurvesSlots internal constructor(door: String) {
     private val description = curveSlotDescription(door)
 
     val attack: IgnitorDsl = slot(door = door, param = "attack", default = AdsrCurves.indexOf(MOD_ENV_CURVE), description = description)
     val decay: IgnitorDsl = slot(door = door, param = "decay", default = AdsrCurves.indexOf(MOD_ENV_CURVE), description = description)
     val release: IgnitorDsl = slot(door = door, param = "release", default = AdsrCurves.indexOf(MOD_ENV_CURVE), description = description)
+}
+
+/**
+ * The slots of the vibrato stage (`Slots.vibrato`), mirroring sprudel's `vibrato(rate, semitones)` (alias `vib`) and
+ * its readers `vibrato.rate`, `vibrato.semitones` (pitch pipeline step 2; the names are decision D4).
+ *
+ * @property rate the LFO rate in Hz; mirrors `vibrato.rate`. Default `VIBRATO_RATE_HZ`, what the strip read for an
+ *   unwritten rate.
+ * @property semitones the depth in semitones; mirrors `vibrato.semitones`. It is the stage's SWITCH: default 0.0, which
+ *   the gate reads as off (the `vibrato` row of `audio/ref/off-values.md`: off at a FINITE depth `<= 0`). **It must
+ *   default to that safe literal, never to `SLOT_UNSET`:** the vibrato's gate keeps a NON-FINITE depth built (the
+ *   runtime reads it as the node's default, `VIBRATO_SEMITONES`), so an unset default would give every voice of every
+ *   song a vibrato (the shape of `mul`'s "must default to a safe literal", pitch pipeline step 0).
+ */
+class VibratoSlots internal constructor() {
+    val rate: IgnitorDsl = slot(door = "vibrato", param = "rate", default = VIBRATO_RATE_HZ)
+    val semitones: IgnitorDsl = slot(door = "vibrato", param = "semitones", default = 0.0)
+}
+
+/**
+ * The slots of the pitch envelope stage (`Slots.penv`), mirroring sprudel's `penv(semitones, attack, decay, sustain,
+ * release)` and its readers `penv.semitones` ... `penv.release` (pitch pipeline step 1; the names are decision D4).
+ *
+ * @property semitones the pitch at the envelope's peak, in semitones; mirrors `penv.semitones`. It is the stage's
+ *   SWITCH: default 0.0, which the gate reads as off (the `pitch envelope` row of `audio/ref/off-values.md`), so an
+ *   unwritten `penv.semitones` builds no stage, and a call that writes only stages (`penv(attack = 0.1)`) switches
+ *   nothing on, as on the retired strip.
+ * @property attack attack in seconds; mirrors `penv.attack`. Default `PITCH_ENV_ATTACK_SEC`.
+ * @property decay decay in seconds; mirrors `penv.decay`. Default `PITCH_ENV_DECAY_SEC`.
+ * @property sustain the held share of [semitones]; mirrors `penv.sustain`. Default `PITCH_ENV_SUSTAIN_LEVEL`.
+ * @property release release in seconds, from the gate; mirrors `penv.release`. Default `PITCH_ENV_RELEASE_SEC`.
+ *
+ * The defaults are the Ignitor `pitchEnvelope`'s, from `constants/PitchEnvelopeDefaults.kt`, the ones the strip read.
+ */
+class PitchEnvelopeSlots internal constructor() {
+    val semitones: IgnitorDsl = slot(door = "penv", param = "semitones", default = 0.0)
+    val attack: IgnitorDsl = slot(door = "penv", param = "attack", default = PITCH_ENV_ATTACK_SEC)
+    val decay: IgnitorDsl = slot(door = "penv", param = "decay", default = PITCH_ENV_DECAY_SEC)
+    val sustain: IgnitorDsl = slot(door = "penv", param = "sustain", default = PITCH_ENV_SUSTAIN_LEVEL)
+    val release: IgnitorDsl = slot(door = "penv", param = "release", default = PITCH_ENV_RELEASE_SEC)
 }
 
 /**
@@ -217,10 +263,15 @@ class SampleSlots internal constructor() {
  * order is written.
  *
  * ```
- * onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
+ * this -> pitchEnvelope -> accelerate -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
  * ```
  *
- * That is the retired strip's order with the canonical filter sub-order of
+ * The PITCH stages come first, directly on the instrument (pitch pipeline, `docs/tasks/pitch-pipeline-into-the-tree.md`
+ * section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not
+ * change the sound, and the nesting decides the grouping of the ratio product, which is the retired pitch strip's
+ * (vibrato outermost, then accelerate, then the pitch envelope, FM innermost, each placed at its final position by the
+ * step that moves it). The amplitude
+ * stages are the retired strip's order with the canonical filter sub-order of
  * `SprudelVoiceData.toVoiceData`, behind the pattern's `onepole`, which sat on the source in front of the
  * strip. Every knob is a slot of [IgnitorDsl.Slots] (the groups above), so a
  * pattern FILLS it and never adds structure, and every unwritten stage is NOT BUILT: its slot's default
@@ -230,8 +281,8 @@ class SampleSlots internal constructor() {
  * What it deliberately does NOT contain: `pregain`. An instrument places `.pregain()` where the player's
  * touch enters (section 5 of the plan).
  *
- * Every voice is its tree (the voice strip retired in phase 3 step 9): the engine adds nothing around it but the
- * pitch pipeline, the teardown fade unless the root is a built envelope with a static release
+ * Every voice is its tree (the voice strip retired in phase 3 step 9): the engine adds nothing around it but what
+ * is left of the pitch pipeline (the doors not yet moved into these stages), the teardown fade unless the root is a built envelope with a static release
  * (`BuiltIgnitor.endsInEnvelope`), and the channel. Every built-in sound is
  * `source.pregain().classic()` (since step 6); an authored instrument gets the voice chain by appending
  * `.classic()` as its LAST call ([endsInClassic]). An instrument without it is played as its bare tree, and a
@@ -250,6 +301,25 @@ class SampleSlots internal constructor() {
  *    where the strip drew every tolerance first (the section 8 migration cost); their cutoff
  *    envelopes are the strip's since D3 (one law, the block interpolation, and the default curve
  *    `MOD_ENV_CURVE` on both), and their curves are the `<door>Curves` slots since step 5b (c2);
+ *  - the pitch envelope is the Ignitor `pitchEnvelope` node, the law the retired pitch strip shared with it
+ *    (`renderPitchEnvelopeRatios`), so sprudel's `penv` renders the strip's bits (pitch pipeline step 1); an `fm`
+ *    node in the instrument moves under it as one operator, carrier and modulator, as on the strip (decision D1,
+ *    pitch pipeline step 3b). Except where the plan accepts a difference: a musical oscillator in a parameter
+ *    position (a filter LFO) stays unbent for good
+ *    (plan section 2); three pitch factors on one path regroup the product (one rounding, about -270 dB), for good
+ *    where two of the instrument's own pitch nodes meet a door; an instrument without `classic()` ignores the
+ *    door (D6);
+ *  - the vibrato is the Ignitor `vibrato` node (`VibratoModIgnitor`: the strip's accumulator, increment, wrap and
+ *    ratio), filled by sprudel's `vib` through the `vibrato.*` slots (pitch pipeline step 2), with the same accepted
+ *    differences as the pitch envelope;
+ *  - the accelerate is the Ignitor `accelerate` node, filled by sprudel's `accelerate` through the flat `accelerate`
+ *    slot (pitch pipeline step 3). NOT the strip's sound, by decision D2: the glide spans the GATE (onset to gate
+ *    close) and holds its target through the release, where the strip glided over the scheduled end, the release
+ *    tail included (a sound change for every `accelerate` voice with a release tail; in the corpus only Kokon's
+ *    `strike`), and a gate of 0 frames (`legato(0)`) holds the target from the first frame where the strip glided over
+ *    the release (Q27). A non-finite amount is dropped at sprudel's boundary and plays the bare voice, where the strip
+ *    froze the oscillator; from about 598 semitones the ratio is clamped at `SAFE_MAX`. Beyond that, the pitch
+ *    envelope's accepted differences;
  *  - the envelope evaluates the one envelope law (`EnvelopeCore`, shared with the old strip VCA since
  *    phase 3 D3), and its de-click is the constant `ENV_DECLICK_SECONDS`, not a slot: no door writes the
  *    de-click per note.
@@ -260,7 +330,25 @@ class SampleSlots internal constructor() {
 fun IgnitorDsl.classic(): IgnitorDsl {
     val s = IgnitorDsl.Slots
 
-    val onepoled = IgnitorDsl.OnePoleLowpass(inner = this, freq = s.onepole)
+    // The pitch stages, at the front: mods bubble to the pitched sources, so their place among the amplitude stages
+    // does not change the sound, and the root stays the envelope (`endsInClassic`).
+    val pitchEnveloped = IgnitorDsl.PitchEnvelope(
+        inner = this,
+        semitones = s.penv.semitones,
+        attack = s.penv.attack,
+        decay = s.penv.decay,
+        sustain = s.penv.sustain,
+        release = s.penv.release,
+        attackCurve = s.penvCurves.attack,
+        decayCurve = s.penvCurves.decay,
+        releaseCurve = s.penvCurves.release,
+    )
+    // Accelerate between the pitch envelope and the vibrato, its final place (pitch pipeline step 3).
+    val accelerated = IgnitorDsl.Accelerate(inner = pitchEnveloped, semitones = s.accelerate)
+    // The vibrato OUTSIDE, its final place: the outer mod is combined first, so the product groups as the strip's
+    // `(V * A) * P` (pitch pipeline steps 2 and 3).
+    val vibratoed = IgnitorDsl.Vibrato(inner = accelerated, rate = s.vibrato.rate, semitones = s.vibrato.semitones)
+    val onepoled = IgnitorDsl.OnePoleLowpass(inner = vibratoed, freq = s.onepole)
     val crushed = IgnitorDsl.Crush(inner = onepoled, bits = s.crush.bits)
     val coarsened = IgnitorDsl.Coarse(inner = crushed, factor = s.coarse.factor)
     val distorted = IgnitorDsl.Distort(

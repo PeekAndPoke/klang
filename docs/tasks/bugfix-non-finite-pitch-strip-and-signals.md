@@ -12,8 +12,10 @@ four of the amounts the Ignitor door now guards, and sprudel can deliver a NaN t
 `"Infinity"` both parse):
 
 - `accelerate`: a NaN passes `accelerate.semitones != 0.0` (`PitchPipelineBuilder.kt:40`) and `AccelerateRenderer`
-  writes NaN ratios;
-- `vib` (the vibrato rate): NaN with a positive depth makes `VibratoRenderer`'s phase NaN;
+  writes NaN ratios (dissolved in pitch pipeline step 3: sprudel drops a non-finite value and the flat `accelerate`
+  slot reads it as unset, off);
+- `vib` (the vibrato rate): NaN with a positive depth made `VibratoRenderer`'s phase NaN (dissolved in pitch pipeline
+  step 2: sprudel drops a non-finite value and the `vibrato.*` slots read it as unset);
 - `fmh` and `fmEnv`: a NaN builds `Voice.Fm` and passes `fm.depth != 0.0`.
 
 Only `pEnv` and `pSustain` are guarded there today. Fix: the same shape (`takeIf { it.isFinite() }` with the default,

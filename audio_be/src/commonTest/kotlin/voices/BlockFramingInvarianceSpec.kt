@@ -78,7 +78,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         startFrame: Int,
         blockFrames: Int,
         pid: String = "framing",
-        /** Lets a row add STRIP-door modulation (`vibrato`, `accelerate`, the pitch envelope). */
+        /** Lets a row add pitch-door modulation (the accelerate's, the vibrato's and the pitch envelope's slots). */
         dataMod: (VoiceData) -> VoiceData = { it },
     ): DoubleArray {
         val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", dsl.classic()) }
@@ -295,8 +295,10 @@ class BlockFramingInvarianceSpec : StringSpec({
     // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT `Voice.Fm`. The voice's own pitch
     // pipeline renderers (`voices/strip/pitch`) were therefore untouched by this harness, which is what P4 is about.
     //
-    // Only the PER-SAMPLE ones belong on a bit-identity list. `VibratoRenderer`,
-    // `PitchEnvelopeRenderer` and `AccelerateRenderer` all derive their position per sample from
+    // Only the PER-SAMPLE ones belong on a bit-identity list. The vibrato, the pitch envelope and accelerate (the
+    // strip's `VibratoRenderer`, `PitchEnvelopeRenderer` and `AccelerateRenderer` until pitch pipeline steps 2, 1 and 3,
+    // `classic()`'s stages since) all
+    // derive their position per sample from
     // `blockStart + offset` (+ a phase accumulator, in vibrato's case, advanced once per rendered
     // sample), so they are Class 1.
     //
@@ -307,18 +309,23 @@ class BlockFramingInvarianceSpec : StringSpec({
     // and Class 2 means "named, not fixed". `MidBlockOnsetControlRateSpec` pins the part of it that
     // IS fixed: the first evaluation lands on the voice's onset, not the block's first frame.
     val stripNodes = listOf<Pair<String, (VoiceData) -> VoiceData>>(
-        "strip vibrato" to { d -> d.copy(vibrato = 5.0, vibratoMod = 0.4) },
+        // The vibrato is `classic()`'s stage since pitch pipeline step 2, filled through its `vibrato.*` slots.
+        "classic vibrato" to { d -> d.withClassicSlots(DoorFields(vibratoRate = 5.0, vibratoSemitones = 0.4)) },
         // A sustain and a release inside the render: the gate at 4813 frames starts a 0.03 s release
         // (1323 frames) that ends inside the rendered tail, so the release path is framed too.
-        "strip pitch envelope" to { d ->
-            d.copy(pEnv = 3.0, pAttack = 0.011, pDecay = 0.023, pSustain = 0.4, pRelease = 0.03)
+        // Since pitch pipeline step 1 the pitch envelope is `classic()`'s stage (the probe ends in `classic()`), filled
+        // through its `penv.*` slots; its law is the Ignitor node's, per sample from `voiceElapsedFrames`.
+        "classic pitch envelope" to { d ->
+            d.withClassicSlots(DoorFields(penv = DoorPenv(semitones = 3.0, attack = 0.011, decay = 0.023, sustain = 0.4, release = 0.03)))
         },
     )
 
     // `accelerate` is deliberately NOT on the list above, for the same reason a modulated tremolo
     // depth is not: it reassociates the float arithmetic rather than changing the value.
-    // `AccelerateRenderer` seeds `ratio` with ONE `pow()` per block and then multiplies per sample
-    // (its KDoc says so — it is a deliberate cost trade). The mathematical result is identical, but
+    // The accelerate node (`classic()`'s stage since pitch pipeline step 3, filled through the flat `accelerate` slot;
+    // the strip's `AccelerateRenderer` before, with the same seed) seeds `ratio` with ONE `pow()` per block and then
+    // multiplies per sample up to the gate (its KDoc says so; it is a deliberate cost trade). From the gate on it holds
+    // its target, one constant, which every framing renders alike. The mathematical result is identical, but
     // the rounding accumulated since the last reseed depends on how many steps ago that was, so both
     // onset alignment and block size move the last bits.
     //
@@ -326,7 +333,7 @@ class BlockFramingInvarianceSpec : StringSpec({
     // it -250 dB. The bound below is three orders looser than that and still eleven orders tighter
     // than any logic error could hide in: a 2-semitone glide carries ratios around 1.12, so a
     // mis-seeded reseed would show up at O(0.1), not O(1e-13).
-    val accelerateData: (VoiceData) -> VoiceData = { d -> d.copy(accelerate = 2.0) }
+    val accelerateData: (VoiceData) -> VoiceData = { d -> d.withClassicSlots(DoorFields(accelerate = 2.0)) }
     val floatNoiseBound = 1e-11
 
     stripNodes.forEach { (name, mod) ->
@@ -351,7 +358,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         }
     }
 
-    "strip accelerate: block framing moves only the last bits, not the value" {
+    "classic accelerate: block framing moves only the last bits, not the value" {
         val ref = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = accelerateData)
         check(peak(ref) > 1e-3) { "accelerate reference is silent — vacuous comparison" }
 
@@ -372,7 +379,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         val bare = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128)
 
         // Without this, every row above would pass on three identical unmodulated renders.
-        (stripNodes + ("strip accelerate" to accelerateData)).forEach { (name, mod) ->
+        (stripNodes + ("classic accelerate" to accelerateData)).forEach { (name, mod) ->
             val modulated = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = mod)
             withClue(name) { (maxDiff(a = modulated, b = bare) > 1e-6) shouldBe true }
         }

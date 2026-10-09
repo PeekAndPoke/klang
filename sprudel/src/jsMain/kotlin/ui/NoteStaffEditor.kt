@@ -11,6 +11,7 @@ import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.InsertTarget
 import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.LayoutItem
 import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
+import io.peekandpoke.klang.sprudel.utils.TrackedTimeouts
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -310,26 +311,15 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
     private val highlightedRanges = mutableSetOf<IntRange>()
 
-    /** Pending highlight timers — each id removes itself when it fires; cleared wholesale on stop/update. */
-    private val highlightTimeouts = mutableSetOf<Int>()
+    /** Pending highlight timers: each one un-tracks itself when it fires; cleared wholesale on stop/update. */
+    private val highlightTimeouts = TrackedTimeouts()
 
     private fun cancelPendingHighlights() {
-        highlightTimeouts.forEach { window.clearTimeout(it) }
-        highlightTimeouts.clear()
+        highlightTimeouts.cancelAll()
         if (highlightedRanges.isNotEmpty()) {
             highlightedRanges.clear()
             triggerRedraw()
         }
-    }
-
-    /** Schedules [action] and tracks the timer id; the id un-tracks itself once fired. */
-    private fun scheduleTracked(delayMs: Int, action: () -> Unit) {
-        var id = 0
-        id = window.setTimeout({
-            highlightTimeouts.remove(id)
-            action()
-        }, delayMs)
-        highlightTimeouts.add(id)
     }
 
     init {
@@ -345,8 +335,8 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                     for (h in highlights) {
                         val startDelay = maxOf(1, (h.startTime * 1000.0 - now).toInt())
                         val endDelay = maxOf(1, (h.endTime * 1000.0 - now).toInt())
-                        scheduleTracked(startDelay) { if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }
-                        scheduleTracked(endDelay) { if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }
+                        highlightTimeouts.schedule(startDelay) { if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }
+                        highlightTimeouts.schedule(endDelay) { if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }
                     }
                 }
             }

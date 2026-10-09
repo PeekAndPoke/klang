@@ -367,6 +367,147 @@ signal, the KnobGlide machinery with a duration and a shape. A plain write is a 
 the automation of 6.6 and add nothing beside it. The frontend turns a cycle-based pattern (`saw.slow(8)`) into tweens,
 and the backend never learns cycles.
 
+### 6.9 `parallel` and `serial`: branches side by side, the twin of a chain (maintainer, 2026-10-09)
+
+Raised while listening to the Katalyst `distort` stage on Kokon's master ("now we are distorting the hats and the bass
+drum") and asking whether people saturate only some bands. They do: multiband saturation on the master, or more
+often saturation per group. The maintainer's operator:
+
+```javascript
+signal.split(
+  x => x.bandpass().distort(),
+  x => x...,
+  x => x...
+).shape().limiter()
+```
+
+`through(a, b, c)` runs a signal through stages in series; `split(a, b, c)` runs it through branches side by side and
+sums them. With the two a chain becomes a small graph, and many separate features become one-liners.
+
+**Back pocket for the tutorials** (maintainer: "We need to keep these things in the back-pocket for later
+tutorials"):
+
+| trick | with `split` |
+|---|---|
+| multiband saturation | `split(low => low, mid => mid.distort(0.3), high => high)` (with flat bands, see `bands` below) |
+| exciter | `split(x => x, x => x.highpass(3000).distort(0.4).gain(0.1))` |
+| parallel ("New York") compression | `split(x => x, x => x.compressor(-30, 10).gain(0.5))` |
+| parallel saturation, any wet/dry | `split(x => x.gain(0.7), x => x.distort(0.5).gain(0.3))` |
+| bass harmonics on any bass | `split(x => x, x => x.lowpass(120).distort(0.5, "rectify").highpass(90))` |
+
+**It is the general form of every `wet` knob** (maintainer): `signal.split(x => x.effect().mul(wet), x => x.mul(1 - wet))`.
+That is a LINEAR crossfade, right for a correlated branch (a distortion or a filter of the same signal: constant
+level). For a decorrelated branch (a reverb, a chorus) the right law is equal power, `cos` and `sin` of `wet * pi / 2`,
+or the mix dips by about 3 dB in the middle. That is why the engine's stages carry two wet laws (`WetDryMix`,
+correlated and decorrelated branches). A `wet` knob hides that choice; `split` makes the author choose. A helper could
+keep the classic form with the right law per kind (`x.blend(wet, y => y.reverb(...))`, a sketch).
+
+**Cost.** Memory is small: on a voice the input subtree is shared (the memo) and each branch takes a scratch buffer
+while it renders; on a bus each branch takes one stereo block buffer (128 x 2 x 8 bytes, about 2 KB). What costs is
+each branch's CPU, which a built-in `wet` stage pays too.
+
+**What it must get right:**
+1. **Flat bands.** `x.bandpass()` per branch does not reconstruct the input: the bands overlap and leave dips and
+   bumps. A frequency split needs complementary filters (Linkwitz-Riley crossovers: two chained 2nd-order
+   Butterworths per band; the bands sum to the input in level, only the phase turns). Hence a `bands(...)` helper next
+   to `split`.
+2. **Branch latency.** A branch with oversampling or a lookahead arrives late, and summed with an undelayed branch it
+   combs. The split delays the faster branches to the slowest (the engine knows each stage's latency,
+   `KatalystLatentEffect`). This happens on a voice TODAY: Kokon's Screamer pedal sums a clean branch with
+   `distort(0.35, "soft", 2)`, whose 2x oversampler is 4 samples late, a comb with a first notch near 6 kHz before its
+   lowpass.
+
+**The shape of `bands`, open** (maintainer: "it needs better params structure"). Two candidates:
+
+```javascript
+// A: left to right like the spectrum, band, cut, band, cut, band: bands cannot overlap or leave gaps
+x.bands(b => b.band(low => low).cut(120).band(mid => mid.distort(0.3)).cut(6000).band(high => high))
+
+// B: the crossovers first, the processors by position; a band left out passes untouched
+x.bands([120, 6000], [low => low, mid => mid.distort(0.3)])
+```
+
+**A it is (maintainer, 2026-10-09):** "I lean towards A too, as it is in the spirit of the rest of the DSLs. And as I
+said, I do not like the pythony parallel arrays at all." B is rejected.
+
+**A's rules (maintainer and coordinator, 2026-10-09; settle the details with `/dsl-design` when it is built):**
+- **It reads the spectrum from the bottom up.** Each `cut(f)` closes the band below it: `band(low).cut(120)
+  .band(mid).cut(6000).band(high)` is 0 to 120 Hz, 120 to 6000 Hz, and 6000 Hz to the Nyquist frequency.
+- **One builder type, no alternating types** (maintainer: "I would not overcomplicate it with something like an
+  alternating builder type").
+- **`band(...).band(...)` without a cut between them sums.** Both processors run on the same band and their outputs
+  add, through the same split-and-join mechanism (maintainer). It is a sum, so `band(x => x).band(x => x)` is twice the
+  band (+6 dB), the same as with the operator itself; the KDoc says so.
+- **A band nobody processes passes untouched.** That covers two cuts in a row, a chain that starts with a cut, and one
+  that ends with a cut: `b.cut(120).band(mid => mid.distort(0.3)).cut(6000)` processes only 120 to 6000 Hz.
+- **Cuts are coerced, never refused** (maintainer: "I like the coercion idea to at least the previous value, this
+  makes sense"). A cut below the one before it is raised to it, which leaves a zero-width band, silent rather than
+  wrong. It is one rule for a literal cut and for one a pattern moves, and never a silent sort: sorting would hand each
+  processor a band other than the one it was written for. The stone rule agrees: coerce user-reachable inputs, never
+  `require()` them.
+- **The bands sum flat:** Linkwitz-Riley crossovers, with the phase alignment that three or more bands need.
+
+**Credits when it lands** (the credits rule, 2026-10-09): Linkwitz-Riley crossovers (Siegfried Linkwitz and Russ Riley,
+1976) for `bands`; SuperCollider and SuperDirt as the precedent of the general graph under the orbit convention (6.1).
+
+**Decided (maintainer, 2026-10-09):**
+- **The names are `parallel` and `serial`**, the mixing vocabulary ("serial compression", "parallel compression"). The
+  maintainer: "parallel is a good name but not in the same spirit as through ... so I would suggest as pair parallel /
+  serial". `through` is RETIRED for `serial`, the same behaviour, removed and not deprecated (one word per concept).
+  It migrates 6 calls in the built-in songs (Kokon 4, Der Schmetterling 2), both doors (Ignitor and Katalyst), its
+  parity spec, the two writing references and a benchmark case, before the tutorials (a shape change), with an entry in
+  `docs/retired-names.md`.
+- **`parallel` SUMS its branches.** It does not average: a crossover's bands add up to the input only as a sum; dry/wet
+  stays plain arithmetic (`mul(wet)`, `mul(1 - wet)`); adding a branch never changes the others. The KDoc says that two
+  identity branches give +6 dB.
+- **An empty `parallel()` returns the signal unchanged** (maintainer), a deliberate definition (an empty sum would be
+  silence), and the same as `serial()` (today's `through()`). One branch is that branch's output.
+
+**The proposed scope, in build order** (2026-10-09, open points below):
+1. `serial`: the rename, both hosts.
+2. `parallel` on the Ignitor: the sum, empty is identity, branches ALIGNED BY LATENCY (an oversampled branch is 4 to 6
+   samples late).
+3. `parallel` on the Katalyst: a stage holding branches of stages. A branch's tail and latency count for the chain,
+   and one block buffer per branch is allocated at build. This makes "distort only the mids on the master" possible.
+4. `bands`, built on `parallel`, both hosts.
+5. Optional: a dry/wet helper, `x.blend(0.1, y => y.distort(0.5))` = `parallel(y => y.mul(0.9), y => y.distort(0.5).mul(0.1))`.
+
+**Every step ships something to hear** (maintainer, 2026-10-09: "definitely needs tutorials / recipes for that ...
+especially since I have to experience this first hand, which I never did"): a recipe per step in the writing
+references (`.claude/skills/klang-music-writing/ref/`), and listening material for the maintainer: a `bands` with
+nothing processed against the dry (the all-pass, level flat), the same with a crossover summed naively (the hump at
+the cut), parallel saturation at a few blends, the Kokon master with mids-only distortion. Material for the tutorial
+quarter as well (the back-pocket table above). The credits land with the code that uses them (Linkwitz and Riley with
+`bands`).
+
+Out of scope: the Motor routing, sprudel pattern doors, removing the stages' own `wet` knobs (to reconsider once
+`parallel` has proven itself), moving cuts, a better oversampler.
+
+**Open before building:**
+- **The crossover of `bands`.** With Linkwitz-Riley crossovers, a `bands` with nothing processed is an ALL-PASS, not the
+  input: flat in level, the phase turned around each cut, so the waveform and its peaks change. The alternatives:
+  complementary by subtraction (`high = x - low`, the sum is exactly the input, but the upper band's slope is soft and
+  bumpy), or linear phase (clean, but milliseconds of latency). The coordinator's lean: Linkwitz-Riley, the standard
+  of multiband tools, with the all-pass documented.
+- **The helper's name and law.** Not `wet` (a knob on many stages; a door of the same word blurs the two in
+  completion) and not `mix` (the Ignitor's crossfade, an alias of `lerp`); `blend` proposed. Linear law only (right
+  for distortion and filters); equal power, for reverb-like branches, when a song asks.
+- **Step 3 now, or after the Motor Lab:** `parallel` on the bus is local and simple; the coordinator's lean is to
+  build it directly and keep the lab for the routing questions.
+
+**The operator's name, the earlier search** (maintainer: "it needs a nicer name"), superseded by the decision above. `bands` stays as it is (maintainer, 2026-10-09:
+"bands is fine as a name"). The coordinator had proposed sprudel's `layer` and `superimpose`, which mean the same on
+patterns; rejected: "Sprudel should not be the naming source here." The name comes from the engine's own vocabulary or
+the common language of audio, to be found with `/dsl-design`.
+
+**Where it lives, and the order:**
+- On the Ignitor it is nearly free: sugar over `plus` with a shared input, plus the latency alignment.
+- On the Katalyst it is STRUCTURAL: a chain becomes a tree. That raises how a pattern addresses a stage inside a
+  branch, tails and swaps per branch, and the buffer per branch. This is the local half of the Motor, so it is decided
+  with the maintainer (the complexity rule).
+- Proposed order: try `split` and `bands` in the Motor Lab first, then the Ignitor, then the Katalyst as the first
+  real piece of the Motor. A `distort(..., band(...))` option would then never need to exist.
+
 ## Links
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).

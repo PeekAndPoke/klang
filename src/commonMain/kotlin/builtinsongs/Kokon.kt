@@ -90,9 +90,9 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  6.0)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  4.0)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  8.0)         // roar:  low mids
-    .band(freq = 2700, q = 2.0, db =  3.5)         // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 2.0, db =  3.7)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2))          // the low end
@@ -120,7 +120,7 @@ let makeGuitar = (rig) => {
   let pAttack     = Ign.param("attack",       0.006, "Attack")
   let pDecay      = Ign.param("decay",        1.000, "Decay")
   let pSustain    = Ign.param("sustain",      0.000, "sustain")
-  let pRelease    = Ign.param("release",      0.030, "Release")
+  let pRelease    = Ign.param("release",      0.010, "Release")
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
@@ -133,13 +133,15 @@ let makeGuitar = (rig) => {
 
   let signal = saw.mul(Ign.slot.pregain)
     // Simulate plucked string
-    .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
-    //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
-    // noise burst
-    .plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.03, 0.0, 0.05).mul(1.5))
+    .pitchEnvelope(0.2, x => x.adsr(0.001, 0.08, 0, 0))
+    // .eq(x => 
+    //   x.tap(freq = Ign.constant(3000).add(Ign.freq().times(16).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7, gain = 0.5),
+    // )
+    // noise burst - the pick
+    .plus(Ign.whitenoise().adsr(0.0005, 0.004, 0.0, 0.05).highpass(1200).mul(0.8))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
-
+  
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
   // synthetic (2026-09-14)
@@ -278,7 +280,7 @@ export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .ignp("decay", 3.0).clip(0.99)
   .tremolo(rate = beatRate(0.33), depth = perlin(0.300, 0.350))  // The guitar finger
-  .vibrato(rate = beatRate(0.33), depth = perlin(0.025, 0.040))
+  .vibrato(rate = beatRate(0.33), semitones = perlin(0.025, 0.040))
   .hpf(180)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
@@ -289,7 +291,7 @@ export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
   .ignp("decay", 2.8).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4450)                                       // less fizz, the wall keeps its own
+  .lpf(4650)                                       // less fizz, the wall keeps its own
   .gain(0.42).pan(0.5)
   .orbit(6)
 
@@ -430,7 +432,7 @@ let holdingBreath = stack(
 let breakingOpen = stack(
   soar(melodyOne)
     .tremolo(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.18).add(0.01))
-    .vibrato(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.10).add(0.01)),
+    .vibrato(rate = beatRate(0.25), semitones = saw.slow(4).pow(3).mul(0.10).add(0.01)),
   wings(cocoonPower),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -450,7 +452,7 @@ let lifting = stack(
   //spin(liftArp.add(14).ply(4)).gain(0.05).ignp("sustain", 0.0).clip(0.25).pan(0.25).superimpose(pan(0.75)),
   soar(melodyTwo)
     .tremolo(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.25).add(0.01))
-    .vibrato(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.10).add(0.01)),
+    .vibrato(rate = beatRate(0.25), semitones = saw.slow(4).pow(3).mul(0.10).add(0.01)),
   wings(liftPower),
   chug(liftRoots),    
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -461,7 +463,7 @@ let landing = stack(
   spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.35).ignp("sustain", 0.15).clip(0.66),
   soar("[4@6 ~@2]")
     .tremolo(rate = beatRate(0.25), depth = 0.35)
-    .vibrato(rate = beatRate(0.25), depth = 0.30),
+    .vibrato(rate = beatRate(0.25), semitones = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.0),
   beat("0").gain(0.45),
 )
