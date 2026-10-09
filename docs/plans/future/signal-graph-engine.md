@@ -427,7 +427,24 @@ x.bands(b => b.band(low => low).cut(120).band(mid => mid.distort(0.3)).cut(6000)
 x.bands([120, 6000], [low => low, mid => mid.distort(0.3)])
 ```
 
-The coordinator leans A (longer, impossible to get wrong); a `/dsl-design` decision when it is built.
+**A it is (maintainer, 2026-10-09):** "I lean towards A too, as it is in the spirit of the rest of the DSLs. And as I
+said, I do not like the pythony parallel arrays at all." B is rejected.
+
+**A's rules, proposed (coordinator, 2026-10-09; settle with `/dsl-design` when it is built):**
+- **It reads the spectrum from the bottom up.** Each `cut(f)` closes the band below it: `band(low).cut(120)
+  .band(mid).cut(6000).band(high)` is 0 to 120 Hz, 120 to 6000 Hz, and 6000 Hz to the Nyquist frequency.
+- **Two `band(...)` in a row cannot be written: the types say so.** After `band(...)` the builder offers only `cut(...)`;
+  after `cut(...)` it offers `band(...)` or another `cut(...)`. This is the house rule that the type split is the
+  documentation, so the editor never offers the wrong call.
+- **A band nobody processes passes untouched.** That covers two cuts in a row, a chain that starts with a cut and one
+  that ends with a cut: `b.cut(120).band(mid => mid.distort(0.3)).cut(6000)` processes only 120 to 6000 Hz.
+- **Cuts must rise.** A literal cut at or below the one before it is a script error when the chain is built, naming
+  the door ("bands: cut(600) comes after cut(1200); cuts must rise"). It is never sorted silently: sorting would hand
+  each processor a band other than the one it was written for.
+- **A cut a pattern can move** (a slot, should cuts ever be knobs) cannot be checked at build. While it runs the
+  coerce rule applies: a cut below its neighbour is raised to it, which leaves a zero-width band, silent rather than
+  wrong.
+- **The bands sum flat:** Linkwitz-Riley crossovers, with the phase alignment that three or more bands need.
 
 **Where it lives, and the order:**
 - On the Ignitor it is nearly free: sugar over `plus` with a shared input, plus the latency alignment.
