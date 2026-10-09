@@ -189,4 +189,4 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-07: the sound door `sndTriangle()` is `sndTri()`, like `sndSaw()`; it still sets the sound `triangle`
   (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 4).
 - 2026-10-07: `solo(...)` covers its rests with control events instead of a sounding sine, one id per `solo` call,
-  `solo()` means 0.95 (`docs/tasks/bugfix-solo-rests-and-amount.md`).
+  `solo()` means 0.95 (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`).

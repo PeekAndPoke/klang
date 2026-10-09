@@ -239,12 +239,12 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   tagged value, and every update allocates a heap number: one 16-byte box per sample. Computing it in the same
   function is not enough (a value from `lanes.startOf(n)` boxed so). The remedy is `* 1.0` once before the loop
   (exact for every value but a NaN's payload). Measured on the Karplus string: without it the superpluck with drift
-  ran 424 to 633 scavenges per run and 40 to 76 percent slower (records: `docs/tasks/engine-tidy-up.md`, step 11
+  ran 424 to 633 scavenges per run and 40 to 76 percent slower (records: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`, step 11
   (b)); the unison stacks' phased loops showed the same with arguments. No test can pin it, because the sound is
   bit-identical either way: the KDoc at the site is the guard. Check a new hot loop with `--trace-gc`.
   Applied by rule to every drift seed (the four unison stack loops, the sine, the partial bank, the wave, impulse and
   sample oscillators) and to the partial bank's phase, seeded from an argument (V8 allocation pass, 2026-10-08,
-  `docs/tasks/engine-tidy-up.md`). Before it a five-partial bank with drift took about 10.5 KB per block (one heap
+  `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`). Before it a five-partial bank with drift took about 10.5 KB per block (one heap
   number per sample per partial; 2.1 KB without drift when run alone, 10.5 KB under a mixed profile), 304 bytes
   after, on both bundles, pinned to one core and not. The stacks show why a loop shape needs a MIXED profile: run
   alone, a drifting stack boxed nothing per sample; with every oscillator case warmed in one process (the worklet's
@@ -269,7 +269,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   now hand a holder (`DelayConfig`, `ReverbConfig`, `PhaserConfig`) and the phaser stage hands `Phaser.process` a
   `PhaserBlock`. Measured and dropped: an inline finiteness compare in place of `isFinite()` (better pinned to one
   core, worse unpinned on the phaser and on all three stages together), a Unit-returning glide step (within noise),
-  and the resonator's split remedy on the delay (worse). **The stages are not clean after the pass.** At engine level
+  and the resonator's split remedy on the delay (worse). **The stages are not clean after the pass** (open: `docs/tasks/engine-follow-ups.md`, section 1). At engine level
   (one note through `PlaybackEngine`), bytes per block on the production bundle: pinned (medians of 3 to 6 runs,
   ranges in brackets), delay 82 (34 to 98; HEAD 81), reverb 22 (HEAD 21), phaser 144 (144 to 192; HEAD 176), with a
   floor of 0.5 192 (160 to 192; HEAD 240), all three 197 (HEAD 277); unpinned (median of three), 98, 38, 112, 128,

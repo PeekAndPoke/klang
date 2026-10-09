@@ -159,10 +159,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `subarray` view per call. The domain-free helpers (fast math, numeric guards, phase wraps, fades) live in `utils/`.
 - **The resonator stage is handed its config in a holder, not as double arguments** (`ResonatorConfig`, tidy-up step
   12 (a)): passing them made a steady body allocate about 40 bytes per block on V8, where a non-integral double
-  crossing a call V8 does not inline is a heap number. Measured for that stage only. The delay, reverb and phaser
-  writers still pass doubles per block and allocate 79 to 118 bytes per block on V8 in steady state, before and after
-  the step alike (the gain and the steady compressor 0): an open probe, `docs/tasks/engine-tidy-up.md` step 12.
-  `audio/ref/performance.md`.
+  crossing a call V8 does not inline is a heap number. The delay, reverb and phaser writers do the same since the V8
+  allocation pass (`DelayConfig`, `ReverbConfig`, `PhaserConfig`, the phaser's `PhaserBlock`). The stages still
+  allocate on V8 (production, engine level: delay 82, reverb 22, phaser 144 bytes per block), an open probe:
+  `docs/tasks/engine-follow-ups.md` section 1. `audio/ref/performance.md`.
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
   which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
   summation order, so changing it changes bits.
@@ -180,10 +180,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **The tube shape's constants are Pade-consistent** with `fastTanh` (`ShapingFuncs.kt`), so `tube(0)` is exactly
   0; recompute them if `fastTanh` changes.
 - **The unity-`mul` fold drops a `safeOut`** only over a signal survivor; in a parameter position the clamp does
-  work and the fold does not fire (`survivesUnityFold`). The Karplus family's raw `decay` is authored character.
+  work and the fold does not fire (`survivesUnityFold`). The Karplus family's raw `feedback` is authored character.
 - **The active list's order still reaches the sound** through one path: unison phase-pool takes are drawn on a
-  voice's first rendered block, so a change to the removal order re-deals phases (`docs/tasks/engine-tidy-up.md`).
-  Ownership no longer depends on it (newest onset wins).
+  voice's first rendered block, so a change to the removal order re-deals phases (open:
+  `docs/tasks/engine-follow-ups.md`, item 14). Ownership no longer depends on it (newest onset wins).
 - **Do not remove the past-cutoff in `VoiceScheduler.promoteScheduled`**: it stops `ReplaceVoices` from
   re-promoting voices that already played. `replaceVoices` dedups against active voices
   (`ScheduledVoice.isDuplicate`); the frontend's resync grace window is 0.2 s (`KlangPatternScheduler`).
@@ -223,6 +223,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 - **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
   `duck-orbit-switch-click.md`, and the owed rounds listed there.
+- **Engine pass 1 follow-ups**: `docs/tasks/engine-follow-ups.md` (the V8 residues, the JVM box per block-constant
+  read, the phase-pool order, the audit's later steps and open decisions).
 - **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
   §4, the cut-group fade, done by lifecycle step 4), `docs/tasks/svf-coefficient-cache-never-engages.md`,
   `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (the sprudel strip's raw pitch amounts, two NaN signals),
@@ -254,41 +256,44 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-09 v0.6.0: the engine tidy-up is done (steps 1 to 13: the twins written once, `FilterDef` retired, a plain
+  number at every constant door; the V8 allocation pass), bit-identical on the corpus; the open items:
+  `docs/tasks/engine-follow-ups.md`; the record: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`
 - 2026-10-09 The `classic()` slot renames: the envelope words and `declick`, `crush.bits`, `coarse.factor`, the
   pluck's `feedback`, brown noise's `leak`, on every door, node, wire field and runtime factory, bit-identical:
-  `docs/tasks/classic-slot-names-check.md`
+  `docs/tasks-archive/2026-10/20261009-classic-slot-names-check.md`
 - 2026-10-08 One fade law for the bank swap and the compressor (`utils/linear_crossfade.kt`); body and vowel are one
   stage class with two kinds on a pooled bank, no allocation per change; the band rows live with their catalogues
-  (`BodyMaterials.Mode`, `VowelBands.Band`) and `FilterDef` is retired: `docs/tasks/engine-tidy-up.md` step 12
+  (`BodyMaterials.Mode`, `VowelBands.Band`) and `FilterDef` is retired: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 12
 - 2026-10-08 First-block and voice-count allocations moved to the build (drift lanes, phaser, memo, partial banks,
-  stacks, strings, the phase pool's parse and key): `docs/tasks/engine-tidy-up.md` step 10
+  stacks, strings, the phase pool's parse and key): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 10
 - 2026-10-08 An engine's end of life is one `PlaybackEngine.Phase`; the dispatcher's `draining` set and `detached`
-  list are gone; `renderInto` is one path: `docs/tasks/engine-tidy-up.md` step 9
+  list are gone; `renderInto` is one path: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 9
 - 2026-10-08 One playback per scheduler: one `PlaybackCtx`, no `playbackId` filters or parameters
-  (`startRealtimeVoice` keeps its id, the context may be made from it): `docs/tasks/engine-tidy-up.md` step 8
+  (`startRealtimeVoice` keeps its id, the context may be made from it): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 8
 - 2026-10-08 Per-block walks are index loops (`Voice` stages, `Cylinders` in rent order with an id array, the
   scheduler, the dispatcher); the diagnostics closure is gone; the solo ramp is `SoloRamp` on an inlined
-  `easeInOutCubic`, `ValueRamp` deleted: `docs/tasks/engine-tidy-up.md` step 7
+  `easeInOutCubic`, `ValueRamp` deleted: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 7
 - 2026-10-08 The audio helpers live in `utils/` (`DspUtil.kt` split by content; `finiteOrZero`, `fadeToZero`,
   `timeConstantCoeff`, `wrapPhaseFastOrSafe`, `rampStep`, and `copyRangeInto` for every per-block copy, no `copyInto` view
-  on JS); the stereo add is the member `StereoBuffer.addFrom`: `docs/tasks/engine-tidy-up.md` step 6
+  on JS); the stereo add is the member `StereoBuffer.addFrom`: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 6
 - 2026-10-08 One silence floor, `SILENCE_FLOOR` (1e-5; the master's 1e-4 stays, D9); `BusEffectDefaults` holds
-  delay and reverb; `TEARDOWN_FADE_SECONDS`, `stageAskedFor`, `KatalystChain.writers`: `docs/tasks/engine-tidy-up.md` step 5
+  delay and reverb; `TEARDOWN_FADE_SECONDS`, `stageAskedFor`, `KatalystChain.writers`: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 5
 - 2026-10-07 The `KatalystSlots` composites live in their writers, one NaN rule per knob (body, vowel, reverb
-  lowpass: the stage's); `CompressorSettings` / `DuckSettings` left `Voice`: `docs/tasks/engine-tidy-up.md` step 4
+  lowpass: the stage's); `CompressorSettings` / `DuckSettings` left `Voice`: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 4
 - 2026-10-07 No `Random` default anywhere in the engine; an orbit knob's build draws from a fixed seed:
-  `docs/tasks/engine-tidy-up.md` step 3
+  `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 3
 - 2026-10-07 The oversampler is two halves, `upsample` and `decimate`, with the caller's shaping loop between
-  them inline (no closure per block, no `copyInto` view on JS): `docs/tasks/engine-tidy-up.md` step 2
+  them inline (no closure per block, no `copyInto` view on JS): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 2
 - 2026-10-07 The gate covers the four pitch arms, a fold (a non-finite vibrato depth stays built, its default);
   a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/pitch-pipeline-into-the-tree.md` step 0
 - 2026-10-07 Solo is engine state per source: the rest fillers are control-only events, `SoloTracker` records from any
   event before the control drop and the late guard, the others play at `1 - amount`; `ActiveVoice.soloAmount` gone,
-  audit B4.2 closed: `docs/tasks/bugfix-solo-rests-and-amount.md`
-- 2026-10-08 The unison cap is 256 (maintainer; it was 64): `docs/tasks/engine-tidy-up.md` (Decided)
+  audit B4.2 closed: `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`
+- 2026-10-08 The unison cap is 256 (maintainer; it was 64): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` (Decided)
 - 2026-10-07 An empty `Ignitor.variants()` is silence, no longer a `require` at note-on; the shimmer survives an empty,
   a huge or a non-finite pitch (no index error, no hang); a unison count is capped at `UNISON_MAX_VOICES` (64):
-  `docs/tasks/engine-tidy-up.md` ("First, a bug")
+  `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` ("First, a bug")
 - 2026-10-07 The voice's states are a sealed type; the fade window lives in `Fading`, the silence count in
   `Releasing` (lifecycle step 5b, no sound change by design; the 18-song corpus bit-identical to step 5,
   coordinator, 2026-10-07): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`

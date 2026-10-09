@@ -1,6 +1,15 @@
 # Bugfix: solo rests play a sine, and the solo amount never mutes
 
-Status: **implemented 2026-10-07, awaiting review and the coordinator's corpus render.** Two bugs the maintainer
+> **DONE 2026-10-07** (branch `engine-pass-1`, merged as PR #85, v0.6.0), the defaults confirmed by the maintainer
+> 2026-10-08 ("Confirmed" at the end). Reviewed in three rounds, the third clean; the 18-song corpus bit-identical.
+>
+> Key commit: `54786703` (the fix, both bugs). The confirmation: `55bbbe67`.
+>
+> **Where the open items went:** the solo ramp times are Q12 and a soloed release tail beside another solo is Q14,
+> both in [`docs/tasks/_maintainer-questions.md`](../../tasks/_maintainer-questions.md). Decision (5), the word
+> `control`, shipped as proposed and is not named in the confirmation. Nothing else is open.
+
+Status before archiving: **implemented 2026-10-07, awaiting review and the coordinator's corpus render.** Two bugs the maintainer
 reported on 2026-10-07. Two decisions taken the same day (below, "Decided"); the open ones run on today's behaviour,
 "decided by default, maintainer to confirm" (below, "Open decisions"). What was built: "Done" at the end.
 

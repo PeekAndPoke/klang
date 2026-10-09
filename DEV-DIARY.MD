@@ -4,6 +4,19 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-09) Every twin written once ... v0.6.0
+
+- the engine tidy-up, steps 1 to 13: the shaper, the arithmetic laws, the Karplus string, the unison stacks and the fade law each written once ... body and vowel are one effect now
+- FilterDef is retired, first-block allocations moved to the voice build, the audio helpers live in one utils/ home
+- faster in the browser: the pluck and superpluck 5 to 48 % faster, body and vowel at about 0.6 of their old time
+- heard on a real phone: Kokon runs (almost) smooth on the FF4 again ... definitely better than before
+- the partial bank went from about 10 KB to about 300 bytes per block, the delay, reverb and phaser together a quarter to a third less ... not clean yet, the rest is written down
+- solo fixed: rests stay silent, solo(0.7) does something, solo() is 0.95 and solo(1.0) is silence
+- an empty variants() is silence, the shimmer cannot hang anymore, unison voices are capped at 256
+- one word per knob: attack, decay, sustain, release, declick, crush(bits), coarse(factor), the pluck's feedback, brown's leak ... 8 slots the script door lacked, analog is a character amount
+- the rules at work: 2,557 engine calls name the arguments that could be swapped, the helpers found one utils/ home ... new: units in the KDoc, and a new rule starts provisional
+- every step rendered the 18-song corpus bit for bit the same ... the sound changes are the ones we meant: solo, and Der Schmetterling and Kokon touched up by ear
+
 ### (2026-10-07) Every voice knows where it is in life ... v0.5.5
 
 - a voice is a small state machine now: pending, sounding, releasing, fading, done ... one table in the Voice KDoc, every cell pinned by a test

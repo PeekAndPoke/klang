@@ -6,7 +6,7 @@ task file it belongs to, and the question leaves this list.
 
 The questions are numbered, so an answer can be as short as "Q3: yes, Q7: keep".
 
-Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5).
+Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5; merged as PR #85, v0.6.0). The open engine items that are not questions: [`engine-follow-ups.md`](engine-follow-ups.md).
 
 ---
 
@@ -46,7 +46,7 @@ to `penv(semitones)`, already decided.)
 
 ## Q23. `variants` with plain numbers?
 
-Source: [`engine-tidy-up.md`](engine-tidy-up.md) step 13, your D10 rule ("a plain number everywhere a constant value
+Source: [`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md) step 13, your D10 rule ("a plain number everywhere a constant value
 is accepted"). Not blocking.
 
 **Today.** `Ign.variants(...)` takes only Ignitor children. Your strict-argument decision of 2026-10-06 made

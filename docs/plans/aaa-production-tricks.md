@@ -563,7 +563,7 @@ never means the reference's melody, hook, chord loop or lyrics. The song credits
 Glass, Reich and Editors ("Inspired by: ...").
 
 **Where it starts:** song 1, with the listening sheet for the reference, once the engine tidy-up
-(`docs/tasks/engine-tidy-up.md`) is done. The task that holds the place is
+(`docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`) is done. The task that holds the place is
 [`../tasks/future/next-songs-production-path.md`](../tasks/future/next-songs-production-path.md).
 
 ## 11. Doors the engine must keep open

@@ -1,8 +1,14 @@
 # One home for generic helpers in every module
 
-Status: **non-audio modules done, uncommitted, awaiting review (2026-10-07); the audio modules done in engine tidy-up step 6
-(2026-10-08, uncommitted, awaiting review).** The verdict per module is below. The `audio_*` modules are part of
-[`engine-tidy-up.md`](engine-tidy-up.md) ("Extract reusable helpers", step 6); their verdict is the last section here.
+Status: **the moves are done, reviewed and committed on `engine-pass-1` (v0.6.0): the non-audio modules 2026-10-07
+(`0c16de3c` sprudel, `67fa50fe` klangscript), the audio modules in engine tidy-up step 6, 2026-10-08 (`d2e09a2c`).**
+The verdict per module is below. The `audio_*` modules were part of the engine tidy-up
+([`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md), "Extract reusable helpers",
+step 6); their verdict is the last section here.
+
+**What is left:** the four helper merges under "Left for a decision" (each changes behaviour or is an extraction, not
+a move): Q15 in [`_maintainer-questions.md`](_maintainer-questions.md). The coordinator would do them as small
+reviewed steps unless the maintainer says otherwise.
 
 ## The rule
 
@@ -37,7 +43,7 @@ into `utils/` and has none.
 ## Verdict and what was done (2026-10-07, non-audio modules)
 
 A helper earns a `utils/` home by being domain-free AND reused or worth pinning (the rule of
-[`engine-tidy-up.md`](engine-tidy-up.md)). A private helper with one caller inside one feature stays where it is.
+[`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md)). A private helper with one caller inside one feature stays where it is.
 
 **sprudel**
 

@@ -35,7 +35,7 @@ import kotlin.math.floor
  * The engine records "source [soloId] is soloed at this amount until the event's end" from any event that carries
  * a positive amount, control events and sounding notes alike (`VoiceScheduler`). The control events therefore keep
  * the solo alive through a rest, which sounding fillers used to do until 2026-10-07
- * (`docs/tasks/bugfix-solo-rests-and-amount.md`).
+ * (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`).
  *
  * Pure and immutable: [soloId] is fixed at construction by the door, and a query depends on its arguments only.
  *

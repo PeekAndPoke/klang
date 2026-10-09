@@ -545,7 +545,7 @@ Only CRITICAL and MAJOR loop; the safety valve after two unclean rounds stands.
 - **R6 Found while surveying, not in scope**: `Ignitor.variants()` with no children reaches
   `require(children.isNotEmpty())` in the engine (`IgnitorDslRuntime.kt:251`), a user-reachable `require` against
   the stone rule; the door should coerce or raise a script error. A separate task. **Fixed 2026-10-07:** the engine
-  plays an empty `Variants` as silence (`../tasks/engine-tidy-up.md`, "First, a bug").
+  plays an empty `Variants` as silence (`../tasks-archive/2026-10/20261009-engine-tidy-up.md`, "First, a bug").
 - **R7 Found while surveying**: `README.MD` lines 71 and 130 still list the retired `Master` and `Pipeline`; D1 fixes
   them in the same edit (published writing, `/public-voice`).
 

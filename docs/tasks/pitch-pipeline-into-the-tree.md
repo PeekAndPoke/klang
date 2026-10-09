@@ -516,7 +516,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   `fm`'s `h` and `env`) are removed, not aliased, each in the step that moves its door, with a door-parity row and an
   entry in `docs/retired-names.md`. Positional calls are unchanged. **The older `classic()` slots** (`lpf.freq`,
   `tremolo.depth`, `crush.amount`, ...) get the same check as its own step AFTER this pipeline, because a renamed slot
-  also changes `ignp("...")` calls in songs (`classic-slot-names-check.md`). The question as it
+  also changes `ignp("...")` calls in songs (`../tasks-archive/2026-10/20261009-classic-slot-names-check.md`, done 2026-10-09, pulled ahead of this pipeline). The question as it
   was put: slot names follow sprudel's readers, so the FM slots say `h` and `env` where the node says `ratio` and
   `depth`, and the vibrato slot says `depth` where the node says `semitones`. A naming asymmetry that already exists
   between the doors. **Recommendation: keep the readers' names (the `classic()` rule) and record the asymmetry**; a

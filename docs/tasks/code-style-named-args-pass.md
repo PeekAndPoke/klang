@@ -1,7 +1,17 @@
 # Code-style pass: name the arguments that could be swapped
 
-Status: **`audio_be` and `audio_bridge` done 2026-10-07 (uncommitted, awaiting review and the corpus render).** The
-other modules are the follow-up, if the maintainer wants it. Report: `tmp/reviews/named-args-report.md`.
+Status: **`audio_be` and `audio_bridge` done 2026-10-07, reviewed (round 1 clean) and committed on `engine-pass-1`
+(v0.6.0): `cf584b8c` (Task B), `315595ce` (`audio_bridge`), `3daf349e` (`audio_be` main), `a6fbbddf` (`audio_be`
+ignitor specs), `86065a81` (the other `audio_be` specs and the §24 exemptions); the 18-song corpus bit-identical.**
+Report: `tmp/reviews/named-args-report.md`.
+
+**What is left:**
+- the other modules (`sprudel`, `klangscript`, `klangscript-libs`, the UI modules, the root), if the maintainer wants
+  the pass there too; new code follows §24 already;
+- the data-table exception (`VowelBands.b`, `BodyMaterials.m`, 300 positional rows): Q18 in
+  [`_maintainer-questions.md`](_maintainer-questions.md);
+- `VoiceFactory.buildVoice`'s redundant `cut = data.cut` beside `data` moved to
+  [`engine-follow-ups.md`](engine-follow-ups.md).
 
 ## Why
 
@@ -60,6 +70,6 @@ a public surface; left as is. `VoiceFactory.buildVoice` (17 parameters) is named
 `cut = data.cut` beside `data`, a redundancy left for the tidy-up.
 
 **Commits** (in this order; the file lists are in the report): Task B, the deferred `VoiceFactory` items of tidy-up
-step 1 (`engine-tidy-up.md`), as `tmp/reviews/named-args-taskB.patch`, because 15 of its files also carry named
+step 1 (`../tasks-archive/2026-10/20261009-engine-tidy-up.md`), as `tmp/reviews/named-args-taskB.patch`, because 15 of its files also carry named
 arguments; then `audio_bridge`; `audio_be` main; `audio_be` ignitor tests; the other `audio_be` tests. Each commit
 compiles on its own.

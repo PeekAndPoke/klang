@@ -47,13 +47,16 @@ even when they are valuable.
 output was one), so each pass is also quality control. The backend should end up as tidy as it can be, for a later
 port to Zig.
 
-1. ~~The voice lifecycle state machine~~ **done 2026-10-07 (v0.5.5)**: [`20261007-voice-lifecycle-state-machine.md`](../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md); then [`code-style-named-args-pass.md`](code-style-named-args-pass.md).
+1. ~~The voice lifecycle state machine~~ **done 2026-10-07 (v0.5.5)**: [`20261007-voice-lifecycle-state-machine.md`](../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md); then [`code-style-named-args-pass.md`](code-style-named-args-pass.md) (`audio_be` and `audio_bridge` done 2026-10-07, v0.6.0).
 2. The pitch pipeline into the tree: [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md) (decisions D1
-   to D7 answered 2026-10-08). Before its step 1: the name check over the `classic()` slots,
-   [`classic-slot-names-check.md`](classic-slot-names-check.md) (decided 2026-10-08, pulled ahead).
-3. The Katalyst DSL leftovers and the engine tidy-up: [`engine-tidy-up.md`](engine-tidy-up.md) (audit 2026-10-07; the
-   effect state machines verified done, kept flags respected). Its one bug, an empty `variants()` crashing the audio
-   thread, goes right after lifecycle step 5 (**done 2026-10-07**: it is silence now).
+   to D7 answered 2026-10-08). Before its step 1: the name check over the `classic()` slots, **done 2026-10-09
+   (v0.6.0)**: [`20261009-classic-slot-names-check.md`](../tasks-archive/2026-10/20261009-classic-slot-names-check.md).
+3. ~~The Katalyst DSL leftovers and the engine tidy-up~~ **done 2026-10-09 (v0.6.0)**: steps 1 to 13 and the V8
+   allocation pass, [`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md) (audit
+   2026-10-07). Its bug, an empty `variants()` crashing the audio thread, was fixed first (2026-10-07: it is silence
+   now). What is still open (the V8 residues, the audit's later steps and decisions):
+   [`engine-follow-ups.md`](engine-follow-ups.md), behaviour-neutral items not V1 by the sorting rule, the shape
+   and sound items each a question for the maintainer first.
 4. Takeover / voice stealing and the cut-group semantics: [`future/cut-group-semantics.md`](future/cut-group-semantics.md)
    decided first, then [`voice-takeover.md`](voice-takeover.md) Phase 1.
 5. Pitch takeover (`glide`): [`voice-takeover.md`](voice-takeover.md) Phase 2.

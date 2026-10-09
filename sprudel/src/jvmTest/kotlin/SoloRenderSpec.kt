@@ -17,7 +17,7 @@ import kotlin.math.sqrt
 /**
  * `solo(...)` rendered through the real engine (`KlangOfflineRenderer`: the KlangScript compile, the inline-DSL
  * registration, the scheduler with its solo tracker, the orbits and the master), at 48 kHz and `cps = 0.5`, two
- * seconds per cycle. The two bugs of `docs/tasks/bugfix-solo-rests-and-amount.md`:
+ * seconds per cycle. The two bugs of `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`:
  *
  * 1. a rest after `.solo()` played a sine once a `gain` and a pitch op followed the solo;
  * 2. the background never went below 5 % (`1 - amount * 0.95`); decided: it plays at `1 - amount`.
