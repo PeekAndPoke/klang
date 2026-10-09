@@ -1,8 +1,8 @@
 # `parallel`, `serial` and `bands`: branches side by side, and frequency bands
 
-Status: **agreed with the maintainer 2026-10-09, queued as the next engine step; not started.** It moves to
-`docs/tasks/in-progress/` when step 1 starts. The design, the decisions and the reasons live in
-[`../plans/future/signal-graph-engine.md`](../plans/future/signal-graph-engine.md) §6.9; this file holds the steps.
+Status: **in progress since 2026-10-10, on the branch `parallel-serial-bands` (worktree
+`klang-worktrees/parallel-serial-bands`).** Step 1 started. The design, the decisions and the reasons live in
+[`../../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) §6.9; this file holds the steps.
 
 ## Why
 
@@ -33,9 +33,12 @@ one-liners (the plan's back-pocket table, also material for the tutorials).
 4. **`bands`, on both hosts,** built on `parallel`.
 5. **Optional:** a dry/wet helper, `x.blend(wet, y => ...)`.
 
-## Open, before building
+## Defaults taken when the work started (coordinator, 2026-10-10; the maintainer may reverse any of them)
 
-- **The crossover:** Linkwitz-Riley (the coordinator's lean; an untouched `bands` is then an all-pass, flat in level,
-  the phase turned at each cut, which is documented), complementary by subtraction, or linear phase.
-- **The helper:** `blend`, linear law only, or left out.
-- **Step 3:** build it directly (the coordinator's lean), or try it in the Motor Lab first.
+The maintainer asked for the steps to run in a loop, stopping only at a real decision. These three were open; the
+coordinator took its leans so the loop could start:
+
+- **The crossover:** Linkwitz-Riley. An untouched `bands` is then an all-pass: flat in level, the phase turned at each
+  cut, which is documented. Complementary by subtraction and linear phase stay the alternatives.
+- **The helper:** `blend`, linear law only, built last.
+- **Step 3:** built directly, not in the Motor Lab first.
