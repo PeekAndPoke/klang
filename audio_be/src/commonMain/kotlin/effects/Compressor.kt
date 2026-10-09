@@ -10,9 +10,11 @@ import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.DB20_OVER_LN10
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.ENV_COEFF_BLEND_DB
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.FAST_RELEASE_DIVISOR
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.LN10_OVER_20
-import io.peekandpoke.klang.audio_be.fastExp
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.audio_be.utils.fastExp
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
+import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
 import kotlin.math.abs
-import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.max
 
@@ -77,21 +79,21 @@ class Compressor(
     val lookaheadSeconds: Double = 0.0,
 ) {
     // Compressor parameters (all mutable for real-time changes; setters silently ignore non-finite values).
-    var thresholdDb: Double = guardOr(thresholdDb, -20.0)
+    var thresholdDb: Double = guardOr(value = thresholdDb, fallback = -20.0)
         set(value) {
             if (!value.isFinite()) return
             field = value
             updateCoefficients()
         }
 
-    var ratio: Double = guardOr(ratio, 4.0).coerceAtLeast(1.0)
+    var ratio: Double = guardOr(value = ratio, fallback = 4.0).coerceAtLeast(1.0)
         set(value) {
             if (!value.isFinite()) return
             field = value.coerceAtLeast(1.0)
             updateCoefficients()
         }
 
-    var kneeDb: Double = guardOr(kneeDb, 6.0).coerceAtLeast(0.0)
+    var kneeDb: Double = guardOr(value = kneeDb, fallback = 6.0).coerceAtLeast(0.0)
         set(value) {
             if (!value.isFinite()) return
             field = value.coerceAtLeast(0.0)
@@ -107,7 +109,7 @@ class Compressor(
      * [primeBoxes]), so a live write causes a small gain step bounded by the smoother's own lag.
      * Fine at a settings change, not something to call per block.
      */
-    var attackSeconds: Double = guardOr(attackSeconds, 0.003)
+    var attackSeconds: Double = guardOr(value = attackSeconds, fallback = 0.003)
         set(value) {
             if (!value.isFinite()) return
             field = value
@@ -115,20 +117,11 @@ class Compressor(
             if (delayFrames > 0) resizeSmoothing()
         }
 
-    var releaseSeconds: Double = guardOr(releaseSeconds, 0.1)
+    var releaseSeconds: Double = guardOr(value = releaseSeconds, fallback = 0.1)
         set(value) {
             if (!value.isFinite()) return
             field = value
             updateCoefficients()
-        }
-
-    /**
-     * Make-up gain in decibels to compensate for volume loss after compression.
-     */
-    var makeupGainDb: Double = 0.0
-        set(value) {
-            if (!value.isFinite()) return
-            field = value
         }
 
     // Envelope follower state.
@@ -148,7 +141,7 @@ class Compressor(
         // guardOr like every sibling param: Infinity would saturate .toInt() to Int.MAX_VALUE and
         // ask for a 2-billion-element array. KatalystCompressorEffect already guards, but this class is public
         // with two other call sites (MasterStage and EffectBenchmark).
-        val seconds = guardOr(lookaheadSeconds, 0.0)
+        val seconds = guardOr(value = lookaheadSeconds, fallback = 0.0)
         val frames = (seconds * sampleRate).toInt()
         if (frames < MIN_LOOKAHEAD_FRAMES) 0 else frames
     }
@@ -159,9 +152,6 @@ class Compressor(
 
     /** Frames of signal delay this instance actually adds — 0 on the classic path. */
     val latencyFrames: Int get() = delayFrames
-
-    /** [latencyFrames] in milliseconds. */
-    val latencyMs: Double get() = delayFrames * 1000.0 / sampleRate
 
     private var delayPos = 0
 
@@ -306,20 +296,18 @@ class Compressor(
      * Process a stereo buffer in-place.
      */
     fun process(left: AudioBuffer, right: AudioBuffer, blockSize: Int) {
-        val makeupLinear = computeMakeupLinear()
-
         // Two loop bodies, branched OUTSIDE the per-sample loop: `envelopeStep` is inlined into the
         // classic one so the zero-lookahead path stays exactly as specialized as it was. The
         // lookahead loop is [processLookahead]'s, with the block itself as the delayed-dry target
         // (every sample is read before it is written, so the aliasing is safe).
         if (delayFrames > 0) {
-            processLookahead(left, right, blockSize, left, right)
+            processLookahead(left = left, right = right, blockSize = blockSize, delayedLeft = left, delayedRight = right)
 
             return
         }
 
         for (i in 0 until blockSize) {
-            val totalGain = envelopeStep(max(abs(left[i]), abs(right[i]))) * makeupLinear
+            val totalGain = envelopeStep(max(abs(left[i]), abs(right[i])))
             left[i] = left[i] * totalGain
             right[i] = right[i] * totalGain
         }
@@ -366,12 +354,11 @@ class Compressor(
         kneeTo: Double,
     ) {
         if (delayFrames > 0 || blockSize <= 0) {
-            process(left, right, blockSize)
+            process(left = left, right = right, blockSize = blockSize)
 
             return
         }
 
-        val makeupLinear = computeMakeupLinear()
         val thresholdStep = (thresholdTo - thresholdFrom) / blockSize
         val inverseRatioStep = (inverseRatioTo - inverseRatioFrom) / blockSize
         val kneeStep = (kneeTo - kneeFrom) / blockSize
@@ -388,7 +375,7 @@ class Compressor(
                 slope = (inverseRatioTo - inverseRatioStep * back) - 1.0,
                 kneeDb = kneeTo - kneeStep * back,
             )
-            val totalGain = gainFor(reductionDb) * makeupLinear
+            val totalGain = gainFor(reductionDb)
 
             left[i] = left[i] * totalGain
             right[i] = right[i] * totalGain
@@ -417,19 +404,17 @@ class Compressor(
         delayedRight: AudioBuffer,
     ) {
         if (delayFrames <= 0) {
-            left.copyInto(delayedLeft, 0, 0, blockSize)
-            right.copyInto(delayedRight, 0, 0, blockSize)
-            process(left, right, blockSize)
+            left.copyRangeInto(destination = delayedLeft, destinationOffset = 0, startIndex = 0, endIndex = blockSize)
+            right.copyRangeInto(destination = delayedRight, destinationOffset = 0, startIndex = 0, endIndex = blockSize)
+            process(left = left, right = right, blockSize = blockSize)
 
             return
         }
 
-        val makeupLinear = computeMakeupLinear()
-
         for (i in 0 until blockSize) {
             val l = left[i]
             val r = right[i]
-            val gain = lookaheadStep(max(abs(l), abs(r))) * makeupLinear
+            val gain = lookaheadStep(max(abs(l), abs(r)))
             // Emit the DELAYED sample, then park the current one. One shared write index.
             val outL = delayL[delayPos]
             val outR = delayR[delayPos]
@@ -439,8 +424,8 @@ class Compressor(
             // delayFrames samples later, far from whatever produced it. Non-finite generally: an
             // Infinity survives `l != l`, is stored, and later emerges as `Inf * 0.0` = NaN, which
             // MasterStage maps to -1.0, the exact full-scale click this guard prevents.
-            delayL[delayPos] = if (l.isFinite()) l else 0.0
-            delayR[delayPos] = if (r.isFinite()) r else 0.0
+            delayL[delayPos] = l.finiteOrZero()
+            delayR[delayPos] = r.finiteOrZero()
             delayPos = if (delayPos + 1 == delayFrames) 0 else delayPos + 1
             delayedLeft[i] = outL
             delayedRight[i] = outR
@@ -459,10 +444,9 @@ class Compressor(
      * one). No production caller does this today; do not add one.
      */
     fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-        val makeupLinear = computeMakeupLinear()
         for (i in 0 until length) {
             val idx = offset + i
-            val totalGain = envelopeStep(abs(buffer[idx])) * makeupLinear
+            val totalGain = envelopeStep(abs(buffer[idx]))
             buffer[idx] = buffer[idx] * totalGain
         }
     }
@@ -494,7 +478,7 @@ class Compressor(
         // this returns exactly 1.0 forever — a brickwall that has become a bit-exact
         // pass-through with nothing to indicate it. Note the direction: a NaN SAMPLE never
         // latched it (`NaN > SILENCE_LIN` is false); only +/-Inf did.
-        val inputLevel = if (abs(level) <= Double.MAX_VALUE) level else 0.0
+        val inputLevel = level.finiteOrZero()
 
         // Convert to dB (with silence floor to avoid log(0)).
         val inputDb = if (inputLevel > SILENCE_LIN) {
@@ -549,7 +533,7 @@ class Compressor(
         // the whole window, and the master then fades the entire mix back in over ~450 ms. Reachable
         // in a raw engine via runaway feedback, and the DC blocker ahead of the limiter passes the
         // first Inf through unchanged. Same guard as the ring write, deliberately.
-        val level = if (inputLevel.isFinite()) inputLevel else 0.0
+        val level = inputLevel.finiteOrZero()
 
         val inputDb = if (level > SILENCE_LIN) DB20_OVER_LN10 * ln(level) else SILENCE_DB
         val reductionDb = calculateGainReduction(inputDb)
@@ -630,12 +614,6 @@ class Compressor(
         minTail = 1
     }
 
-    /** Block-rate makeup-gain linear multiplier; precomputed once per `process()` call. */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun computeMakeupLinear(): Double {
-        return if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * LN10_OVER_20) else 1.0
-    }
-
     /** Clamped cubic smoothstep: 0 below 0, 1 above 1, C1 at both ends. Polynomial (no `exp`). */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun smoothstep01(x: Double): Double {
@@ -650,7 +628,7 @@ class Compressor(
      */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun calculateGainReduction(inputDb: Double): Double =
-        gainReductionDb(inputDb, thresholdDb, 1.0 / ratio - 1.0, kneeDb)
+        gainReductionDb(inputDb = inputDb, thresholdDb = thresholdDb, slope = 1.0 / ratio - 1.0, kneeDb = kneeDb)
 
     /**
      * [calculateGainReduction] with the knobs passed in: the one home of the curve, shared by the
@@ -683,11 +661,11 @@ class Compressor(
         val attackTime = max(0.0001, attackSeconds)
         val releaseTime = max(0.0001, releaseSeconds)
 
-        attackCoeff = 1.0 - exp(-1.0 / (attackTime * sampleRate))
-        releaseCoeff = 1.0 - exp(-1.0 / (releaseTime * sampleRate))
+        attackCoeff = timeConstantCoeff(timeSeconds = attackTime, sampleRate = sampleRate.toDouble())
+        releaseCoeff = timeConstantCoeff(timeSeconds = releaseTime, sampleRate = sampleRate.toDouble())
         // Fast branch of the dual release (lookahead path only). A tenth of the configured release,
         // so `releaseSeconds` keeps meaning "the release" and no new knob is needed.
-        fastReleaseCoeff = 1.0 - exp(-1.0 / ((releaseTime / FAST_RELEASE_DIVISOR) * sampleRate))
+        fastReleaseCoeff = timeConstantCoeff(timeSeconds = releaseTime / FAST_RELEASE_DIVISOR, sampleRate = sampleRate.toDouble())
     }
 
     /**
@@ -730,7 +708,6 @@ class Compressor(
         // Compile-time constants for the dB↔linear math — saves one `ln(10.0)` per sample
         // in the hot loop. Full elimination of `exp`/`ln` would require a linear-domain
         // rewrite (deferred — see file KDoc).
-        private const val LN10: Double = 2.302585092994046
         private const val DB20_OVER_LN10: Double = 8.685889638065035   // 20 / ln(10)
         private const val LN10_OVER_20: Double = 0.11512925464970229   // ln(10) / 20
 

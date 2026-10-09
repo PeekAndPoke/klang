@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.SAFE_MAX
-import io.peekandpoke.klang.audio_be.SAFE_MIN
+import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
+import io.peekandpoke.klang.audio_be.utils.SAFE_MIN
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -14,6 +14,11 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Bit-parity guards for the constant-fold in the binary combinators' `generate()` — Plus/Times
@@ -36,8 +41,9 @@ class ConstantFoldParitySpec : StringSpec({
         voiceDurationFrames = blockFrames * 8,
         gateEndFrame = blockFrames * 8,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
-        this.updateOffsetAndLength(offset, length)
+        this.updateOffsetAndLength(offset = offset, length = length)
         voiceElapsedFrames = 0
     }
 
@@ -72,8 +78,8 @@ class ConstantFoldParitySpec : StringSpec({
         val sentinel = 123.456
         val bufF = AudioBuffer(blockFrames).apply { fill(sentinel) }
         val bufR = AudioBuffer(blockFrames).apply { fill(sentinel) }
-        folded.generate(bufF, freqHz, ctx(offset, length))
-        reference.generate(bufR, freqHz, ctx(offset, length))
+        folded.generate(bufF, freqHz, ctx(offset = offset, length = length))
+        reference.generate(bufR, freqHz, ctx(offset = offset, length = length))
         var windowPeak = 0.0
         for (i in 0 until blockFrames) {
             if (i in offset until offset + length) {
@@ -135,11 +141,11 @@ class ConstantFoldParitySpec : StringSpec({
     "times: safeOut clamps the RIGHT-folded product at ±SAFE_MAX exactly like the scratch path" {
         val folded = Ignitors.sine() * ParamIgnitor("g", 1e20)
         val reference = Ignitors.sine() * OpaqueIgnitor(ParamIgnitor("g", 1e20))
-        assertBitParity(folded, reference)
+        assertBitParity(folded = folded, reference = reference)
 
         // The clamp must actually engage: a 220 Hz block contains both polarities driven
-        // beyond ±SAFE_MAX. (Since the helper extraction, both single-const arms share ONE
-        // mulConstInPlace safeOut — this case and the LEFT variant below independently anchor
+        // beyond ±SAFE_MAX. (Both single-const arms run the ONE Times law, `timesLaw`, through
+        // the shared `binaryLadder`: this case and the LEFT variant below independently anchor
         // WHICH operand renders into the buffer, not two separate clamps.)
         val buf = AudioBuffer(blockFrames)
         (Ignitors.sine() * ParamIgnitor("g", 1e20)).generate(buf, 220.0, ctx())
@@ -150,10 +156,10 @@ class ConstantFoldParitySpec : StringSpec({
     "times: safeOut clamps the LEFT-folded product at ±SAFE_MAX exactly like the scratch path" {
         val folded = ParamIgnitor("g", 1e20) * Ignitors.sine()
         val reference = OpaqueIgnitor(ParamIgnitor("g", 1e20)) * Ignitors.sine()
-        assertBitParity(folded, reference)
+        assertBitParity(folded = folded, reference = reference)
 
-        // (Shares mulConstInPlace's safeOut with the RIGHT variant above — kept because it
-        // anchors the a-fold's operand routing, which the b-fold case cannot see.)
+        // (Shares `timesLaw`'s safeOut with the RIGHT variant above, kept because it anchors
+        // the a-fold's operand routing, which the b-fold case cannot see.)
         val buf = AudioBuffer(blockFrames)
         (ParamIgnitor("g", 1e20) * Ignitors.sine()).generate(buf, 220.0, ctx())
         (0 until blockFrames).any { buf[it] == SAFE_MAX }.shouldBeTrue()
@@ -212,7 +218,7 @@ class ConstantFoldParitySpec : StringSpec({
 
     "plus: stays BARE above SAFE_MAX — a spurious clamp would show here" {
         // Pins the deliberate Plus/Times asymmetry (per-op safety table): sums may exceed
-        // SAFE_MAX; adding safeOut to the fill or to addConstInPlace goes red here.
+        // SAFE_MAX; adding safeOut to `plusLaw` (the fill and both constant arms) goes red here.
         val bufFill = AudioBuffer(blockFrames)
         (ConstantIgnitor(1e15) + ParamIgnitor("dc", 1e15)).generate(bufFill, 220.0, ctx())
         for (i in 0 until blockFrames) {
@@ -290,7 +296,7 @@ class ConstantFoldParitySpec : StringSpec({
                 OpaqueIgnitor(ConstantIgnitor(-0.7)).pow(OpaqueIgnitor(ParamIgnitor("k", 2.0))),
         )
         for ((folded, reference) in cases) {
-            assertBitParity(folded, reference)
+            assertBitParity(folded = folded, reference = reference)
         }
     }
 
@@ -314,7 +320,7 @@ class ConstantFoldParitySpec : StringSpec({
                 OpaqueIgnitor(ConstantIgnitor(-0.0)).max(OpaqueIgnitor(ParamIgnitor("k", 0.0))),
         )
         for ((folded, reference) in cases) {
-            assertBitParity(folded, reference)
+            assertBitParity(folded = folded, reference = reference)
         }
     }
 
@@ -343,13 +349,13 @@ class ConstantFoldParitySpec : StringSpec({
             sine().pow(k(2.0)) to sine().pow(ok(2.0)),
             k(-0.7).pow(sine().abs()) to ok(-0.7).pow(sine().abs()),
             ConstantIgnitor(-0.7).pow(k(2.0)) to OpaqueIgnitor(ConstantIgnitor(-0.7)).pow(ok(2.0)),
-            sine().range(ConstantIgnitor(200.0), ConstantIgnitor(4000.0)) to
-                sine().range(OpaqueIgnitor(ConstantIgnitor(200.0)), OpaqueIgnitor(ConstantIgnitor(4000.0))),
-            sine().lerp(sine(), ConstantIgnitor(0.3)) to
-                sine().lerp(sine(), OpaqueIgnitor(ConstantIgnitor(0.3))),
+            sine().range(from = ConstantIgnitor(200.0), to = ConstantIgnitor(4000.0)) to
+                sine().range(from = OpaqueIgnitor(ConstantIgnitor(200.0)), to = OpaqueIgnitor(ConstantIgnitor(4000.0))),
+            sine().lerp(other = sine(), t = ConstantIgnitor(0.3)) to
+                sine().lerp(other = sine(), t = OpaqueIgnitor(ConstantIgnitor(0.3))),
         )
         for ((folded, reference) in cases) {
-            assertSubBlockParity(folded, reference)
+            assertSubBlockParity(folded = folded, reference = reference)
         }
     }
 
@@ -455,37 +461,37 @@ class ConstantFoldParitySpec : StringSpec({
 
     "clamp/range: constant bounds fold bit-identically and skip both scratch renders" {
         assertBitParity(
-            folded = Ignitors.sine().clamp(ConstantIgnitor(-0.5), ConstantIgnitor(0.5)),
-            reference = Ignitors.sine().clamp(OpaqueIgnitor(ConstantIgnitor(-0.5)), OpaqueIgnitor(ConstantIgnitor(0.5))),
+            folded = Ignitors.sine().clamp(lo = ConstantIgnitor(-0.5), hi = ConstantIgnitor(0.5)),
+            reference = Ignitors.sine().clamp(lo = OpaqueIgnitor(ConstantIgnitor(-0.5)), hi = OpaqueIgnitor(ConstantIgnitor(0.5))),
         )
         assertBitParity(
-            folded = Ignitors.sine().range(ConstantIgnitor(200.0), ConstantIgnitor(4000.0)),
-            reference = Ignitors.sine().range(OpaqueIgnitor(ConstantIgnitor(200.0)), OpaqueIgnitor(ConstantIgnitor(4000.0))),
+            folded = Ignitors.sine().range(from = ConstantIgnitor(200.0), to = ConstantIgnitor(4000.0)),
+            reference = Ignitors.sine().range(from = OpaqueIgnitor(ConstantIgnitor(200.0)), to = OpaqueIgnitor(ConstantIgnitor(4000.0))),
         )
         assertSubBlockParity(
-            folded = Ignitors.sine().clamp(ConstantIgnitor(-0.5), ConstantIgnitor(0.5)),
-            reference = Ignitors.sine().clamp(OpaqueIgnitor(ConstantIgnitor(-0.5)), OpaqueIgnitor(ConstantIgnitor(0.5))),
+            folded = Ignitors.sine().clamp(lo = ConstantIgnitor(-0.5), hi = ConstantIgnitor(0.5)),
+            reference = Ignitors.sine().clamp(lo = OpaqueIgnitor(ConstantIgnitor(-0.5)), hi = OpaqueIgnitor(ConstantIgnitor(0.5))),
         )
         val loProbe = RenderCountProbe(ConstantIgnitor(-0.5))
         val hiProbe = RenderCountProbe(ConstantIgnitor(0.5))
-        Ignitors.sine().clamp(loProbe, hiProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
+        Ignitors.sine().clamp(lo = loProbe, hi = hiProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
         loProbe.generateCalls shouldBe 0
         hiProbe.generateCalls shouldBe 0
 
         val rLoProbe = RenderCountProbe(ConstantIgnitor(200.0))
         val rHiProbe = RenderCountProbe(ConstantIgnitor(4000.0))
-        Ignitors.sine().range(rLoProbe, rHiProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
+        Ignitors.sine().range(from = rLoProbe, to = rHiProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
         rLoProbe.generateCalls shouldBe 0
         rHiProbe.generateCalls shouldBe 0
     }
 
     "lerp: constant t folds bit-identically and skips its scratch render" {
         assertBitParity(
-            folded = Ignitors.sine().lerp(Ignitors.sine(), ConstantIgnitor(0.3)),
-            reference = Ignitors.sine().lerp(Ignitors.sine(), OpaqueIgnitor(ConstantIgnitor(0.3))),
+            folded = Ignitors.sine().lerp(other = Ignitors.sine(), t = ConstantIgnitor(0.3)),
+            reference = Ignitors.sine().lerp(other = Ignitors.sine(), t = OpaqueIgnitor(ConstantIgnitor(0.3))),
         )
         val tProbe = RenderCountProbe(ConstantIgnitor(0.3))
-        Ignitors.sine().lerp(Ignitors.sine(), tProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
+        Ignitors.sine().lerp(other = Ignitors.sine(), t = tProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
         tProbe.generateCalls shouldBe 0
     }
 

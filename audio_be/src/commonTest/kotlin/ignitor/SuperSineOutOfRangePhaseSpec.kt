@@ -42,7 +42,7 @@ class SuperSineOutOfRangePhaseSpec : StringSpec({
         val buf = AudioBuffer(blockFrames)
 
         repeat(blocks) { b ->
-            c.updateOffsetAndLength(0, blockFrames)
+            c.updateOffsetAndLength(offset = 0, length = blockFrames)
             sig.generate(buf, freqHz, c)
 
             for (i in 0 until blockFrames) {

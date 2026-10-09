@@ -9,6 +9,11 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Render-effect guard: each newly-exposed *single-oscillator shape* knob must actually reach the audio,
@@ -19,7 +24,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
  * These oscillators render deterministically (no rng) once `analog` is pinned to a constant, so a plain
  * "default block != perturbed block" comparison isolates the knob's effect. The unison `Super*` character
  * knobs (`spreadPower`/`sideAtten`/`gainJitter`/`centerJitterScale`) can't be isolated this way — the engine
- * draws per-voice random gains/phases — so their audible effect is guarded on the shared `DetunedStackIgnitor`
+ * draws per-voice random gains/phases, so their audible effect is guarded on the shared `UnisonStackIgnitor`
  * by `AnalogSawSpec`, and their DSL binding by the `KlangScriptSuperOscSpec` dual-language spec.
  * The phase-pool knobs (`phasePool`/`drawTries`/`kMin`/`kMax`) DO get an end-to-end DSL→engine
  * guard — statistically — in `PhasePoolDslSeamSpec`.
@@ -34,14 +39,15 @@ class OscShapeEffectSpec : StringSpec({
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
     fun render(dsl: IgnitorDsl, freqHz: Double): List<Double> {
         val buffer = AudioBuffer(blockFrames)
-        dsl.toExciter().generate(buffer, freqHz, createCtx())
+        dsl.toExciter(random = testRandom).generate(buffer, freqHz, createCtx())
         return buffer.toList()
     }
 
@@ -55,51 +61,51 @@ class OscShapeEffectSpec : StringSpec({
 
     "Saw.resetSamples reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Saw(analog = clean, resetSamples = 2.0),
-            IgnitorDsl.Saw(analog = clean, resetSamples = 20.0),
+            default = IgnitorDsl.Saw(analog = clean, resetSamples = 2.0),
+            perturbed = IgnitorDsl.Saw(analog = clean, resetSamples = 20.0),
         )
     }
 
     "Saw.shapeMax reaches the audio (clamps the flyback at high pitch)" {
         assertTakesEffect(
-            IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.1),
-            IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.5),
+            default = IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.1),
+            perturbed = IgnitorDsl.Saw(analog = clean, resetSamples = 10.0, shapeMax = 0.5),
             freqHz = 4000.0,
         )
     }
 
     "Ramp.resetSamples reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Ramp(analog = clean, resetSamples = 2.0),
-            IgnitorDsl.Ramp(analog = clean, resetSamples = 20.0),
+            default = IgnitorDsl.Ramp(analog = clean, resetSamples = 2.0),
+            perturbed = IgnitorDsl.Ramp(analog = clean, resetSamples = 20.0),
         )
     }
 
     "Pulze.flankSamples reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Pulze(analog = clean, flankSamples = 2.0),
-            IgnitorDsl.Pulze(analog = clean, flankSamples = 20.0),
+            default = IgnitorDsl.Pulze(analog = clean, flankSamples = 2.0),
+            perturbed = IgnitorDsl.Pulze(analog = clean, flankSamples = 20.0),
         )
     }
 
     "Pulze.riseFlank reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Pulze(analog = clean, riseFlank = 0.0),
-            IgnitorDsl.Pulze(analog = clean, riseFlank = 0.9),
+            default = IgnitorDsl.Pulze(analog = clean, riseFlank = 0.0),
+            perturbed = IgnitorDsl.Pulze(analog = clean, riseFlank = 0.9),
         )
     }
 
     "Pulze.fallFlank reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Pulze(analog = clean, fallFlank = 0.0),
-            IgnitorDsl.Pulze(analog = clean, fallFlank = 0.9),
+            default = IgnitorDsl.Pulze(analog = clean, fallFlank = 0.0),
+            perturbed = IgnitorDsl.Pulze(analog = clean, fallFlank = 0.9),
         )
     }
 
     "Pulze.duty reaches the audio" {
         assertTakesEffect(
-            IgnitorDsl.Pulze(analog = clean, duty = IgnitorDsl.Constant(0.5)),
-            IgnitorDsl.Pulze(analog = clean, duty = IgnitorDsl.Constant(0.2)),
+            default = IgnitorDsl.Pulze(analog = clean, duty = IgnitorDsl.Constant(0.5)),
+            perturbed = IgnitorDsl.Pulze(analog = clean, duty = IgnitorDsl.Constant(0.2)),
         )
     }
 })

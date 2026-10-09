@@ -5,10 +5,10 @@
 
 package io.peekandpoke.klang.audio_benchmark
 
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.fastExp
-import io.peekandpoke.klang.audio_be.fastExp2
-import io.peekandpoke.klang.audio_be.fastSin
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.fastExp
+import io.peekandpoke.klang.audio_be.utils.fastExp2
+import io.peekandpoke.klang.audio_be.utils.fastSin
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.exp
 import kotlin.math.pow

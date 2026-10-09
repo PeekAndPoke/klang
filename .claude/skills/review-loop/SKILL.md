@@ -285,6 +285,11 @@ reader.
   dotted paths afterwards; the compiler cannot tell prose from code inside a string.
 - **Reviewers may run Gradle, under the lock** (maintainer, 2026-10-04): a doubt settled by a run beats a guess; the
   rules (one lock call around mutate, build, restore; `cp` and `cmp`) are in `/agent-fleet`, "Reviewers may build".
+- **Snapshot the working tree only inside a lock call** (2026-10-08). A blind pair runs side by side, and a
+  mutation check lives in the REAL tree for the length of its lock call. Reviewer B of tidy step 11 (b) and (c) copied
+  the tree without the lock while reviewer A had `polarity = -1.0` mutated in, and its "new side" carried the mutant.
+  Copy or `git archive` plus the uncommitted files inside one `console/with-build-lock.sh bash -c` call, and check the
+  copy against `git diff HEAD` there.
 - **Gradle: never run two builds concurrently** — corrupts the sprudel KSP cache; recover with
   `:sprudel:clean`.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards

@@ -44,10 +44,10 @@ class StdLibIgnitorTest : StringSpec({
     }
 
     // ── The chain adsr's builder (step 3c): curves and declick live in its lambda ──
-    "Ignitor.saw().adsr(..., e => e.declick(0.001)) sets the declickSeconds knob on the Adsr node" {
+    "Ignitor.saw().adsr(..., e => e.declick(0.001)) sets the declick knob on the Adsr node" {
         val dsl = evalIgnitorDsl("Ignitor.saw().adsr(0.01, 0.1, 0.5, 0.2, e => e.declick(0.001))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
-        dsl.declickSeconds shouldBe IgnitorDsl.Constant(0.001)
+        dsl.declick shouldBe IgnitorDsl.Constant(0.001)
         dsl.inner shouldBe IgnitorDsl.Saw()
     }
 
@@ -228,10 +228,10 @@ class StdLibIgnitorTest : StringSpec({
         dsl.bipolar shouldBe IgnitorDsl.Constant(1.0)
     }
 
-    "Ignitor.brownnoise(depth = 0.3) sets the white-leak knob" {
-        val dsl = evalIgnitorDsl("Ignitor.brownnoise(0.3)")
+    "Ignitor.brownnoise(leak = 0.3) sets the white-leak knob" {
+        val dsl = evalIgnitorDsl("Ignitor.brownnoise(leak = 0.3)")
         dsl.shouldBeInstanceOf<IgnitorDsl.BrownNoise>()
-        dsl.depth shouldBe IgnitorDsl.Constant(0.3)
+        dsl.leak shouldBe IgnitorDsl.Constant(0.3)
     }
 
     "Ignitor.pluck() returns Pluck" {

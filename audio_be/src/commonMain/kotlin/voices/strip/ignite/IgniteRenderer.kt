@@ -32,7 +32,7 @@ class IgniteRenderer(
         // The voice's limits, read per block (absolute frames, Double, see RenderClock.cursorFrame).
         val startFrame = ctx.limits.startFrame
 
-        signalCtx.updateOffsetAndLength(ctx.offset, ctx.length)
+        signalCtx.updateOffsetAndLength(offset = ctx.offset, length = ctx.length)
         // The voice-relative gate the ignitors read, derived here and only here from the one home, so a
         // realtime note-off (it moves `VoiceLimits.gateEndFrame`) reaches every ignitor envelope at the
         // next block ("amendment A1").

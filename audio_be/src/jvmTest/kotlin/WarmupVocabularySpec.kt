@@ -105,7 +105,7 @@ class WarmupVocabularySpec : StringSpec({
                 sampleRate = sampleRate, blockFrames = blockFrames,
                 commLink = KlangCommLink(capacity = 1024).backend, clock = clock,
             )
-            val engine = PlaybackEngine.create(context)
+            val engine = PlaybackEngine.create(context = context, playbackId = name)
             engine.scheduler.registerIgnitor(name, dsl)
             val start = 0.5 * blockFrames / sampleRate
             engine.scheduler.scheduleVoice(
@@ -136,7 +136,7 @@ class WarmupVocabularySpec : StringSpec({
                 // reset at disposal, the shelf zeroing a dirty unit). Keep it a signal.
                 peak shouldBeLessThan 10.0
             }
-            engine.scheduler.droppedVoiceCount("warm") shouldBe 0
+            engine.scheduler.droppedVoiceCount() shouldBe 0
         }
     }
 })

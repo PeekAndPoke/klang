@@ -16,7 +16,7 @@ import kotlin.math.abs
 
 /**
  * Regression guard for the envelope gain de-click smoother (ENV_DECLICK_SECONDS), the one `classic()`'s envelope
- * runs (the chain `adsr` with `declickSeconds`; it was the voice strip's VCA until the strip retired in phase 3
+ * runs (the chain `adsr` with `declick`; it was the voice strip's VCA until the strip retired in phase 3
  * step 9).
  *
  * The ADSR shape curves are value-continuous but not slope-continuous: at a
@@ -52,9 +52,9 @@ class EnvelopeDeclickSpec : StringSpec({
             gateEndFrame = 100.0,
             blockFrames = 512,
             signal = TestIgnitors.constant.adsr(
-                attackSec = 0.0, decaySec = 0.0, sustainLevel = 1.0, releaseSec = 0.0,
+                attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.0,
                 attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Linear, releaseCurve = AdsrCurve.Linear,
-                declickSeconds = ENV_DECLICK_SECONDS,
+                declick = ENV_DECLICK_SECONDS,
             ),
         )
 
@@ -76,9 +76,9 @@ class EnvelopeDeclickSpec : StringSpec({
             gateEndFrame = 400.0,
             blockFrames = 600,
             signal = TestIgnitors.constant.adsr(
-                attackSec = 20.0 / 44100, decaySec = 200.0 / 44100, sustainLevel = 0.5, releaseSec = 200.0 / 44100,
+                attack = 20.0 / 44100, decay = 200.0 / 44100, sustain = 0.5, release = 200.0 / 44100,
                 attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Exponential, releaseCurve = AdsrCurve.Exponential,
-                declickSeconds = ENV_DECLICK_SECONDS,
+                declick = ENV_DECLICK_SECONDS,
             ),
         )
 

@@ -10,7 +10,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.ignitor.FilterEnvDef
@@ -24,18 +23,24 @@ import io.peekandpoke.klang.audio_be.ignitor.adsr
 import io.peekandpoke.klang.audio_be.ignitor.fmModIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
+import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.PitchEnvelopeRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import kotlin.math.exp
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * THE envelope law ([EnvelopeCore], phase 3 decision D3), pinned against ORACLES written out in this
@@ -73,7 +78,7 @@ class EnvelopeLawSpec : StringSpec({
         r: Double,
         gate: Int,
         curve: AdsrCurve = AdsrCurve.Linear,
-    ): EnvelopeCore = EnvelopeCore().apply { prepare(a, d, s, r, gate, curve, curve, curve) }
+    ): EnvelopeCore = EnvelopeCore().apply { prepare(attackFrames = a, decayFrames = d, sustainLevel = s, releaseFrames = r, gateEndPos = gate, attackCurve = curve, decayCurve = curve, releaseCurve = curve) }
 
     // ── The core ──────────────────────────────────────────────────────────────────────────────────
 
@@ -167,15 +172,15 @@ class EnvelopeLawSpec : StringSpec({
 
         for ((curve, g) in expected) {
             withClue("attack $curve at a quarter") {
-                EnvelopeCore().apply { prepare(100.0, 100.0, 0.2, 101.0, far, curve, AdsrCurve.Linear, AdsrCurve.Linear) }
+                EnvelopeCore().apply { prepare(attackFrames = 100.0, decayFrames = 100.0, sustainLevel = 0.2, releaseFrames = 101.0, gateEndPos = far, attackCurve = curve, decayCurve = AdsrCurve.Linear, releaseCurve = AdsrCurve.Linear) }
                     .at(25) shouldBe (g plusOrMinus 1e-15)
             }
             withClue("decay $curve at three quarters (g at a quarter)") {
-                EnvelopeCore().apply { prepare(0.0, 100.0, 0.2, 101.0, far, AdsrCurve.Linear, curve, AdsrCurve.Linear) }
+                EnvelopeCore().apply { prepare(attackFrames = 0.0, decayFrames = 100.0, sustainLevel = 0.2, releaseFrames = 101.0, gateEndPos = far, attackCurve = AdsrCurve.Linear, decayCurve = curve, releaseCurve = AdsrCurve.Linear) }
                     .at(75) shouldBe (0.2 + 0.8 * g plusOrMinus 1e-15)
             }
             withClue("release $curve at three quarters (g at a quarter)") {
-                EnvelopeCore().apply { prepare(0.0, 0.0, 0.8, 101.0, 1, AdsrCurve.Linear, AdsrCurve.Linear, curve) }
+                EnvelopeCore().apply { prepare(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 0.8, releaseFrames = 101.0, gateEndPos = 1, attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Linear, releaseCurve = curve) }
                     .at(76) shouldBe (0.8 * g plusOrMinus 1e-15)
             }
         }
@@ -195,6 +200,7 @@ class EnvelopeLawSpec : StringSpec({
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = DoubleArray(total)
         val tmp = AudioBuffer(blockFrames)
@@ -203,7 +209,7 @@ class EnvelopeLawSpec : StringSpec({
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
 
-            ctx.updateOffsetAndLength(0, n)
+            ctx.updateOffsetAndLength(offset = 0, length = n)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, freqHz = freqHz, ctx = ctx)
 
@@ -224,17 +230,17 @@ class EnvelopeLawSpec : StringSpec({
     "host: the Ignitor chain adsr (fractional attack, stateless release, raw sustain, amplitude floor at 0)" {
         val lin = AdsrCurve.Linear
 
-        val frac = renderNode(dc().adsr(sec(240.5), sec(100.0), 0.5, sec(12.0), lin, lin, lin, 0.0), 400, gate = far / 2)
+        val frac = renderNode(dc().adsr(attack = sec(240.5), decay = sec(100.0), sustain = 0.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 400, gate = far / 2)
 
         frac[240] shouldBe (240.0 / 240.5 plusOrMinus 1e-12)
 
-        val gated = renderNode(dc().adsr(sec(100.0), sec(100.0), 0.2, sec(11.0), lin, lin, lin, 0.0), 80, gate = 50)
+        val gated = renderNode(dc().adsr(attack = sec(100.0), decay = sec(100.0), sustain = 0.2, release = sec(11.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 80, gate = 50)
 
         gated[50] shouldBe (0.5 plusOrMinus 1e-12)
         gated[60] shouldBe 0.0
 
-        renderNode(dc().adsr(0.0, sec(10.0), 1.5, sec(12.0), lin, lin, lin, 0.0), 40, gate = far / 2)[20] shouldBe 1.5
-        renderNode(dc().adsr(0.0, sec(10.0), -0.5, sec(12.0), lin, lin, lin, 0.0), 40, gate = far / 2)[20] shouldBe 0.0
+        renderNode(dc().adsr(attack = 0.0, decay = sec(10.0), sustain = 1.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 40, gate = far / 2)[20] shouldBe 1.5
+        renderNode(dc().adsr(attack = 0.0, decay = sec(10.0), sustain = -0.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 40, gate = far / 2)[20] shouldBe 0.0
     }
 
     "host: the Ignitor FM index envelope (fractional attack, raw sustain, the depth clamped to [0, 1])" {
@@ -245,16 +251,16 @@ class EnvelopeLawSpec : StringSpec({
             modulator = ParamIgnitor("m", 1.0),
             ratio = ParamIgnitor("ratio", 1.0),
             depth = ParamIgnitor("depth", 100.0),
-            envAttackSec = ParamIgnitor("a", sec(a)),
-            envDecaySec = ParamIgnitor("d", sec(d)),
-            envSustainLevel = ParamIgnitor("s", s),
-            envReleaseSec = ParamIgnitor("r", sec(r)),
+            attack = ParamIgnitor("a", sec(a)),
+            decay = ParamIgnitor("d", sec(d)),
+            sustain = ParamIgnitor("s", s),
+            release = ParamIgnitor("r", sec(r)),
             freq = FreqIgnitor,
         )
 
-        renderNode(fm(240.5, 100.0, 0.5, 12.0), 400, gate = far / 2)[240] - 1.0 shouldBe (expCurve(240.0 / 240.5) plusOrMinus 1e-9)
+        renderNode(fm(a = 240.5, d = 100.0, s = 0.5, r = 12.0), 400, gate = far / 2)[240] - 1.0 shouldBe (expCurve(240.0 / 240.5) plusOrMinus 1e-9)
 
-        val gated = renderNode(fm(100.0, 100.0, 0.2, 11.0), 80, gate = 50)
+        val gated = renderNode(fm(a = 100.0, d = 100.0, s = 0.2, r = 11.0), 80, gate = 50)
 
         gated[50] - 1.0 shouldBe (expCurve(0.5) plusOrMinus 1e-9)
         // halfway through the release (5 of its 10 steps): the release is Exponential too
@@ -263,22 +269,22 @@ class EnvelopeLawSpec : StringSpec({
 
         // The sustain is raw: -0.5 over a 10-frame decay is -0.5 + 1.5 g(0.8) at frame 2 (a clamped sustain
         // of 0 would give g(0.8) there), and the host clamps what goes below 0 (the raw -0.5 at frame 20)...
-        val low = renderNode(fm(0.0, 10.0, -0.5, 12.0), 40, gate = far / 2)
+        val low = renderNode(fm(a = 0.0, d = 10.0, s = -0.5, r = 12.0), 40, gate = far / 2)
 
         low[2] - 1.0 shouldBe (-0.5 + 1.5 * expCurve(0.8) plusOrMinus 1e-9)
         low[20] shouldBe 1.0
         // ...and what goes above 1: a sustain of 1.5 is 1.5 - 0.5 g(0.5) at frame 5 in the law, a full depth here.
-        renderNode(fm(0.0, 10.0, 1.5, 12.0), 40, gate = far / 2)[5] shouldBe (2.0 plusOrMinus 1e-12)
+        renderNode(fm(a = 0.0, d = 10.0, s = 1.5, r = 12.0), 40, gate = far / 2)[5] shouldBe (2.0 plusOrMinus 1e-12)
     }
 
     "host: the Ignitor pitch envelope (fractional attack, raw sustain, the release on floor(N))" {
         // 12 semitones: the output ratio is 2^level, so log2 of it is the level.
         fun pitch(a: Double, d: Double, s: Double, r: Double): Ignitor = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", sec(a)),
-            decaySec = ParamIgnitor("d", sec(d)),
-            releaseSec = ParamIgnitor("r", sec(r)),
+            attack = ParamIgnitor("a", sec(a)),
+            decay = ParamIgnitor("d", sec(d)),
+            release = ParamIgnitor("r", sec(r)),
             semitones = ParamIgnitor("st", 12.0),
-            sustainLevel = ParamIgnitor("s", s),
+            sustain = ParamIgnitor("s", s),
             attackCurve = AdsrCurve.Linear,
             decayCurve = AdsrCurve.Linear,
             releaseCurve = AdsrCurve.Linear,
@@ -286,18 +292,18 @@ class EnvelopeLawSpec : StringSpec({
 
         fun level(ratio: Double): Double = ln(ratio) / ln(2.0)
 
-        level(renderNode(pitch(240.5, 100.0, 0.5, 12.0), 400, gate = far / 2)[240]) shouldBe (240.0 / 240.5 plusOrMinus 1e-9)
-        level(renderNode(pitch(0.0, 10.0, 1.5, 12.0), 400, gate = far / 2)[300]) shouldBe (1.5 plusOrMinus 1e-9)
+        level(renderNode(pitch(a = 240.5, d = 100.0, s = 0.5, r = 12.0), 400, gate = far / 2)[240]) shouldBe (240.0 / 240.5 plusOrMinus 1e-9)
+        level(renderNode(pitch(a = 0.0, d = 10.0, s = 1.5, r = 12.0), 400, gate = far / 2)[300]) shouldBe (1.5 plusOrMinus 1e-9)
 
         // a 10.7-frame release is floor(10.7) = 10 frames: back on the note on its tenth frame
-        val released = renderNode(pitch(0.0, 0.0, 1.0, 10.7), 40, gate = 20)
+        val released = renderNode(pitch(a = 0.0, d = 0.0, s = 1.0, r = 10.7), 40, gate = 20)
 
         released[28] shouldBe (2.0.pow(1.0 / 9.0) plusOrMinus 1e-9)
         released[29] shouldBe 1.0
 
         // a block that starts after the gate but inside the release still follows the release, frame by
         // frame: 300 frames from the gate at 20, frame 150 is 130 of 299 frames down
-        level(renderNode(pitch(0.0, 0.0, 1.0, 300.0), 200, gate = 20)[150]) shouldBe (1.0 - 130.0 / 299.0 plusOrMinus 1e-9)
+        level(renderNode(pitch(a = 0.0, d = 0.0, s = 1.0, r = 300.0), 200, gate = 20)[150]) shouldBe (1.0 - 130.0 / 299.0 plusOrMinus 1e-9)
     }
 
     /**
@@ -319,7 +325,6 @@ class EnvelopeLawSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = far.toDouble()),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
         val out = DoubleArray(total)
         var pos = 0
@@ -332,7 +337,7 @@ class EnvelopeLawSpec : StringSpec({
             }
 
             ctx.blockStart = pos.toDouble()
-            ctx.updateOffsetAndLength(0, n)
+            ctx.updateOffsetAndLength(offset = 0, length = n)
             ctx.freqModBufferWritten = false
             renderer.render(ctx)
 
@@ -353,31 +358,31 @@ class EnvelopeLawSpec : StringSpec({
 
         fun level(ratio: Double): Double = ln(ratio) / ln(2.0)
 
-        level(renderStripPitch(Voice.Envelope(240.5, 100.0, 0.5, 12.0, lin, lin, lin), 12.0, 400, gate = far / 2)[240]) shouldBe
+        level(renderStripPitch(Voice.Envelope(attackFrames = 240.5, decayFrames = 100.0, sustainLevel = 0.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 400, gate = far / 2)[240]) shouldBe
             (240.0 / 240.5 plusOrMinus 1e-9)
-        level(renderStripPitch(Voice.Envelope(0.0, 10.0, 1.5, 12.0, lin, lin, lin), 12.0, 400, gate = far / 2)[300]) shouldBe
+        level(renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 10.0, sustainLevel = 1.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 400, gate = far / 2)[300]) shouldBe
             (1.5 plusOrMinus 1e-9)
 
         // a 10.7-frame release is floor(10.7) = 10 frames: back on the note on its tenth frame
-        val released = renderStripPitch(Voice.Envelope(0.0, 0.0, 1.0, 10.7, lin, lin, lin), 12.0, 40, gate = 20)
+        val released = renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 10.7, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 40, gate = 20)
 
         released[28] shouldBe (2.0.pow(1.0 / 9.0) plusOrMinus 1e-9)
         released[29] shouldBe 1.0
 
         // a block that starts after the gate but inside the release still follows the release, frame by frame
-        level(renderStripPitch(Voice.Envelope(0.0, 0.0, 1.0, 300.0, lin, lin, lin), 12.0, 200, gate = 20)[150]) shouldBe
+        level(renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 300.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 200, gate = 20)[150]) shouldBe
             (1.0 - 130.0 / 299.0 plusOrMinus 1e-9)
 
         // the gate is read on every block: a realtime note-off moved to frame 200 after the first block
         // releases there (release 0: on the note from the gate frame), not at the scheduled far gate
-        val moved = renderStripPitch(Voice.Envelope(0.0, 0.0, 1.0, 0.0, lin, lin, lin), 12.0, 400, gate = far, moveGateTo = 200)
+        val moved = renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 400, gate = far, moveGateTo = 200)
 
         moved[199] shouldBe 2.0
         moved[200] shouldBe 1.0
 
         // the gate on the LAST frame of a block (255, block 1 is 128..255): that block is not wholly in the
         // sustain, so the one-ratio shortcut must not take it; the gate frame is already on the note
-        val lastFrameGate = renderStripPitch(Voice.Envelope(0.0, 0.0, 1.0, 0.0, lin, lin, lin), 12.0, 384, gate = 255)
+        val lastFrameGate = renderStripPitch(Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 384, gate = 255)
 
         lastFrameGate[254] shouldBe 2.0
         lastFrameGate[255] shouldBe 1.0
@@ -429,8 +434,8 @@ class EnvelopeLawSpec : StringSpec({
             while (start < total) {
                 val n = minOf(blockFrames, total - start)
 
-                computeSvfCoeffs(base * 2.0.pow(depth / 12.0 * oracleLevel(start).coerceIn(0.0, 1.0)), q, sampleRate.toDouble(), c0)
-                computeSvfCoeffs(base * 2.0.pow(depth / 12.0 * oracleLevel(start + n).coerceIn(0.0, 1.0)), q, sampleRate.toDouble(), c1)
+                computeSvfCoeffs(cutoffHz = base * 2.0.pow(depth / 12.0 * oracleLevel(start).coerceIn(0.0, 1.0)), q = q, sampleRate = sampleRate.toDouble(), out = c0)
+                computeSvfCoeffs(cutoffHz = base * 2.0.pow(depth / 12.0 * oracleLevel(start + n).coerceIn(0.0, 1.0)), q = q, sampleRate = sampleRate.toDouble(), out = c1)
 
                 var a1 = c0.a1
                 var a2 = c0.a2
@@ -462,9 +467,9 @@ class EnvelopeLawSpec : StringSpec({
                     }
                 }
             }
-            val unnamed = FilterEnvDef(depth = depth, attackSec = sec(a), decaySec = sec(d), sustainLevel = sus, releaseSec = sec(r))
+            val unnamed = FilterEnvDef(depth = depth, attack = sec(a), decay = sec(d), sustain = sus, release = sec(r))
             val env = if (nameCurves) unnamed.copy(attackCurve = ac, decayCurve = dc, releaseCurve = rc) else unnamed
-            val node = source.lowpass(ParamIgnitor("f", base), ParamIgnitor("q", q), env)
+            val node = source.lowpass(cutoffHz = ParamIgnitor("f", base), q = ParamIgnitor("q", q), env = env)
             val out = renderNode(node, total, gate = gate)
 
             for (i in 0 until total) {
@@ -474,28 +479,28 @@ class EnvelopeLawSpec : StringSpec({
             }
         }
 
-        check(0.3, AdsrCurve.Square, AdsrCurve.Exponential, AdsrCurve.Cube)
-        check(1.5, AdsrCurve.Linear, AdsrCurve.Linear, AdsrCurve.Linear)
-        check(0.3, AdsrCurve.Exponential, AdsrCurve.Exponential, AdsrCurve.Exponential, nameCurves = false)
+        check(sus = 0.3, ac = AdsrCurve.Square, dc = AdsrCurve.Exponential, rc = AdsrCurve.Cube)
+        check(sus = 1.5, ac = AdsrCurve.Linear, dc = AdsrCurve.Linear, rc = AdsrCurve.Linear)
+        check(sus = 0.3, ac = AdsrCurve.Exponential, dc = AdsrCurve.Exponential, rc = AdsrCurve.Exponential, nameCurves = false)
     }
 
     "host: the strip's control-rate envelope (the offset on a zero release, the level clamped to [0, 1])" {
         val lin = AdsrCurve.Linear
 
         fun level(env: Voice.Envelope, blockStart: Double, gate: Double): Double =
-            calculateControlRateEnvelope(env, blockStart, 0.0, gate, EnvelopeCore())
+            calculateControlRateEnvelope(env = env, blockStart = blockStart, startFrame = 0.0, gateEndFrame = gate, core = EnvelopeCore())
 
-        level(Voice.Envelope(240.5, 100.0, 0.5, 12.0, lin, lin, lin), 240.0, far.toDouble()) shouldBe
+        level(env = Voice.Envelope(attackFrames = 240.5, decayFrames = 100.0, sustainLevel = 0.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), blockStart = 240.0, gate = far.toDouble()) shouldBe
             (240.0 / 240.5 plusOrMinus 1e-12)
-        level(Voice.Envelope(0.0, 0.0, 1.0, 0.0, lin, lin, lin), 128.0, 128.0) shouldBe 0.0
-        level(Voice.Envelope(0.0, 10.0, 1.5, 12.0, lin, lin, lin), 5.0, far.toDouble()) shouldBe 1.0
+        level(env = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), blockStart = 128.0, gate = 128.0) shouldBe 0.0
+        level(env = Voice.Envelope(attackFrames = 0.0, decayFrames = 10.0, sustainLevel = 1.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), blockStart = 5.0, gate = far.toDouble()) shouldBe 1.0
 
         // Each stage takes its own curve: a Square decay and a Cube release, a quarter into each
         // (g at a quarter is 0.0625 for Square, 0.015625 for Cube).
-        val shaped = Voice.Envelope(0.0, 100.0, 0.2, 101.0, lin, AdsrCurve.Square, AdsrCurve.Cube)
+        val shaped = Voice.Envelope(attackFrames = 0.0, decayFrames = 100.0, sustainLevel = 0.2, releaseFrames = 101.0, attackCurve = lin, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube)
 
-        level(shaped, 75.0, far.toDouble()) shouldBe (0.2 + 0.8 * 0.0625 plusOrMinus 1e-15)
-        level(shaped, 275.0, 200.0) shouldBe (0.2 * 0.015625 plusOrMinus 1e-15)
+        level(env = shaped, blockStart = 75.0, gate = far.toDouble()) shouldBe (0.2 + 0.8 * 0.0625 plusOrMinus 1e-15)
+        level(env = shaped, blockStart = 275.0, gate = 200.0) shouldBe (0.2 * 0.015625 plusOrMinus 1e-15)
     }
 
     "a gate at or before the onset releases from exactly 0.0, for every curve, with and without an attack" {
@@ -508,7 +513,7 @@ class EnvelopeLawSpec : StringSpec({
         for (curve in AdsrCurve.entries) {
             for (attack in listOf(0.0, 100.0)) {
                 for (gate in listOf(-50, 0)) {
-                    val c = EnvelopeCore().apply { prepare(attack, 100.0, 0.5, 200.0, gate, curve, curve, curve) }
+                    val c = EnvelopeCore().apply { prepare(attackFrames = attack, decayFrames = 100.0, sustainLevel = 0.5, releaseFrames = 200.0, gateEndPos = gate, attackCurve = curve, decayCurve = curve, releaseCurve = curve) }
                     val loudest = (0 until 400).maxOf { abs(c.at(it)) }
 
                     if (c.levelAtGate != 0.0 || loudest != 0.0) {
@@ -522,7 +527,7 @@ class EnvelopeLawSpec : StringSpec({
 
         // And on a host: the chain adsr with a Square attack and a negative gate renders silence.
         val silent = renderNode(
-            dc().adsr(0.0, sec(100.0), 1.0, sec(200.0), AdsrCurve.Square, AdsrCurve.Square, AdsrCurve.Square, 0.0),
+            dc().adsr(attack = 0.0, decay = sec(100.0), sustain = 1.0, release = sec(200.0), attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Square, declick = 0.0),
             400,
             gate = -50,
         )
@@ -531,7 +536,7 @@ class EnvelopeLawSpec : StringSpec({
 
         // And on the strip pitch envelope: level 0 on every frame is the note itself, a ratio of exactly 1.0.
         val onTheNote = renderStripPitch(
-            Voice.Envelope(0.0, 100.0, 1.0, 200.0, AdsrCurve.Square, AdsrCurve.Square, AdsrCurve.Square),
+            Voice.Envelope(attackFrames = 0.0, decayFrames = 100.0, sustainLevel = 1.0, releaseFrames = 200.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Square),
             12.0,
             400,
             gate = -50,
@@ -550,36 +555,36 @@ class EnvelopeLawSpec : StringSpec({
 
         fun fm(t: Double): Ignitor = fmModIgnitor(
             modulator = ParamIgnitor("m", 1.0), ratio = ParamIgnitor("ratio", 1.0), depth = ParamIgnitor("depth", 100.0),
-            envAttackSec = ParamIgnitor("a", t), envDecaySec = ParamIgnitor("d", t),
-            envSustainLevel = ParamIgnitor("s", 0.5), envReleaseSec = ParamIgnitor("r", sec(12.0)),
+            attack = ParamIgnitor("a", t), decay = ParamIgnitor("d", t),
+            sustain = ParamIgnitor("s", 0.5), release = ParamIgnitor("r", sec(12.0)),
             freq = FreqIgnitor,
         )
 
         fun pitch(t: Double): Ignitor = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", t), decaySec = ParamIgnitor("d", t), releaseSec = ParamIgnitor("r", sec(12.0)),
-            semitones = ParamIgnitor("st", 12.0), sustainLevel = ParamIgnitor("s", 0.5),
+            attack = ParamIgnitor("a", t), decay = ParamIgnitor("d", t), release = ParamIgnitor("r", sec(12.0)),
+            semitones = ParamIgnitor("st", 12.0), sustain = ParamIgnitor("s", 0.5),
         )
 
         fun filter(t: Double): Ignitor {
-            val env = FilterEnvDef(depth = 24.0, attackSec = t, decaySec = t, sustainLevel = 0.5, releaseSec = sec(12.0))
+            val env = FilterEnvDef(depth = 24.0, attack = t, decay = t, sustain = 0.5, release = sec(12.0))
 
-            return dc().lowpass(ParamIgnitor("f", 400.0), ParamIgnitor("q", 0.707), env)
+            return dc().lowpass(cutoffHz = ParamIgnitor("f", 400.0), q = ParamIgnitor("q", 0.707), env = env)
         }
 
         val hosts: List<Pair<String, (Double) -> List<Double>>> = listOf(
-            "core" to { t -> EnvelopeCore().apply { prepare(t, t, 0.5, 12.0, 20, lin, lin, lin) }.let { c -> (0 until 40).map { c.at(it) } } },
-            "chain adsr" to { t -> renderNode(dc().adsr(t, t, 0.5, sec(12.0), lin, lin, lin, 0.0), 40, gate = 20).toList() },
+            "core" to { t -> EnvelopeCore().apply { prepare(attackFrames = t, decayFrames = t, sustainLevel = 0.5, releaseFrames = 12.0, gateEndPos = 20, attackCurve = lin, decayCurve = lin, releaseCurve = lin) }.let { c -> (0 until 40).map { c.at(it) } } },
+            "chain adsr" to { t -> renderNode(dc().adsr(attack = t, decay = t, sustain = 0.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 40, gate = 20).toList() },
             "strip control-rate envelope" to { t ->
-                (0 until 40).map { calculateControlRateEnvelope(Voice.Envelope(t, t, 0.5, 12.0), it.toDouble(), 0.0, 20.0, EnvelopeCore()) }
+                (0 until 40).map { calculateControlRateEnvelope(env = Voice.Envelope(attackFrames = t, decayFrames = t, sustainLevel = 0.5, releaseFrames = 12.0), blockStart = it.toDouble(), startFrame = 0.0, gateEndFrame = 20.0, core = EnvelopeCore()) }
             },
             "FM index envelope" to { t -> renderNode(fm(t), 40, gate = 20).toList() },
             "pitch envelope" to { t -> renderNode(pitch(t), 40, gate = 20).toList() },
-            "strip pitch envelope" to { t -> renderStripPitch(Voice.Envelope(t, t, 0.5, 12.0, lin, lin, lin), 12.0, 40, gate = 20).toList() },
+            "strip pitch envelope" to { t -> renderStripPitch(Voice.Envelope(attackFrames = t, decayFrames = t, sustainLevel = 0.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), 12.0, 40, gate = 20).toList() },
             "filter envelope" to { t -> renderNode(filter(t), 400, gate = 200).toList() },
         )
 
         assertSoftly {
-            val c = EnvelopeCore().apply { prepare(tiny, tiny, 0.5, 12.0, far, lin, lin, lin) }
+            val c = EnvelopeCore().apply { prepare(attackFrames = tiny, decayFrames = tiny, sustainLevel = 0.5, releaseFrames = 12.0, gateEndPos = far, attackCurve = lin, decayCurve = lin, releaseCurve = lin) }
 
             withClue("core: the sustain from frame 0") { c.at(0) shouldBe 0.5 }
             withClue("core: the sustain on frame 1") { c.at(1) shouldBe 0.5 }

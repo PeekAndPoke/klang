@@ -6,24 +6,22 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.filters.WetDryMix
-import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.CrushCore
 import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
-import io.peekandpoke.klang.audio_be.Oversampler
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.HALF_PI
-import io.peekandpoke.klang.audio_be.fastSin
-import io.peekandpoke.klang.audio_be.applyDistortionShape
+import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.nanGuard
+import io.peekandpoke.klang.audio_be.filters.WetDryMix
 import io.peekandpoke.klang.audio_be.parseDistortionShape
+import io.peekandpoke.klang.audio_be.utils.HALF_PI
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.fastSin
+import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.nanGuard
+import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.exp
-import kotlin.math.pow
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Distortion
@@ -92,7 +90,7 @@ fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: In
  * Gain without a curve: every colour belongs to `shape`, which is why there is no drive type.
  */
 fun Ignitor.drive(amount: Ignitor): Ignitor =
-    DriveIgnitor(this, amount)
+    DriveIgnitor(upstream = this, amount = amount)
 
 private class DriveIgnitor(
     private val upstream: Ignitor,
@@ -154,39 +152,26 @@ fun Ignitor.shape(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
 internal fun Ignitor.shape(shape: DistortionShape, oversampleStages: Int): Ignitor =
     ShapeIgnitor(this, shape, oversampleStages)
 
+/**
+ * The `Shape` node: the shaper and the DC blocker are [DistortionCore] at drive 1.0 (the gain comes from an upstream
+ * `Drive` node), and the soft cap after them is this node's own (engine tidy-up step 11, audit B2.2). `x * 1.0` is
+ * exact for every value (-0.0, the infinities and the denormals included; a NaN stays a NaN, which the core's guard
+ * writes as 0), so the shared core renders this node's law bit for bit.
+ */
 private class ShapeIgnitor(
     private val upstream: Ignitor,
-    private val shape: DistortionShape,
+    shape: DistortionShape,
     oversampleStages: Int,
 ) : Ignitor {
-    private val oversampler: Oversampler? =
-        if (oversampleStages > 0) Oversampler(oversampleStages) else null
-
-    // DC blocker pre-softCap. See `Ignitor.distort` for the rationale.
-    private val dcBlocker = LowPassHighPassFilters.DcBlocker()
+    private val core = DistortionCore(shape = shape, oversampleStages = oversampleStages)
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
+            core.process(buffer = work, offset = ctx.offset, length = ctx.length, drive = 1.0, scratchBuffers = ctx.scratchBuffers)
+
             val end = ctx.windowEnd
-            val s = shape
-            val os = oversampler
-
-            if (os != null) {
-                // NaN-guard fused into the per-sample loop — see Oversampler.process KDoc.
-                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
-                    for (i in 0 until count) {
-                        w[i] = applyDistortionShape(s, w[i]).nanGuard()
-                    }
-                }
-            } else {
-                for (i in ctx.offset until end) {
-                    work[i] = applyDistortionShape(s, work[i]).nanGuard()
-                }
-            }
-
-            dcBlocker.process(work, ctx.offset, ctx.length)
 
             for (i in ctx.offset until end) {
                 buffer[i] = ShapingFuncs.softCap(work[i])
@@ -218,7 +203,7 @@ private class ShapeIgnitor(
  * @param oversampleStages 2x stages, read at build; 0 is the plain path.
  */
 internal fun Ignitor.fusedDistort(amount: Ignitor, shape: DistortionShape, oversampleStages: Int): Ignitor =
-    FusedDistortIgnitor(this, amount, DistortionCore(shape, oversampleStages))
+    FusedDistortIgnitor(upstream = this, amount = amount, core = DistortionCore(shape, oversampleStages))
 
 private class FusedDistortIgnitor(
     private val upstream: Ignitor,
@@ -233,7 +218,7 @@ private class FusedDistortIgnitor(
             // Unity at or below 0, never a bypass: see the KDoc (W5's hazard).
             val drive = if (amt <= 0.0) 1.0 else DistortionCore.drive(amt)
 
-            core.process(work, ctx.offset, ctx.length, drive, ctx.scratchBuffers)
+            core.process(buffer = work, offset = ctx.offset, length = ctx.length, drive = drive, scratchBuffers = ctx.scratchBuffers)
 
             val end = ctx.windowEnd
 
@@ -256,28 +241,28 @@ private class FusedDistortIgnitor(
  * The law is [CrushCore], the voice strip's crush law (phase 3
  * step 4, decision D1, 2026-09-25: FLOOR everywhere): an asymmetric `floor` quantizer,
  * `floor(x * halfLevels) / halfLevels`, clamped to `[-1, 1]`, with a DC offset of about
- * `-0.5 / halfLevels` (-0.5 at amount 1), which moves with a modulated amount: the classic crunch. A
+ * `-0.5 / halfLevels` (-0.5 at 1 bit), which moves with modulated bits: the classic crunch. A
  * NaN sample comes out as 0. Until step 4 this node rounded (a symmetric midtread quantizer),
- * up to one grid step (0.125 at amount 4) away from the strip.
+ * up to one grid step (0.125 at 4 bits) away from the strip.
  *
- * Amount is read once per block (control rate). **Bypasses when amount < 1.0**, and at a NaN amount:
+ * The bit depth is read once per block (control rate). **Bypasses below 1 bit**, and at a NaN depth:
  * fewer than 2 levels means the grid step exceeds the input range entirely.
  *
- * @param amount Bit depth. Below 1.0 = bypass. 1.0 = 2 levels (extreme lo-fi),
+ * @param bits Bit depth. Below 1.0 = bypass. 1.0 = 2 levels (extreme lo-fi),
  *   4.0 = 16 levels, 8.0 = 256 levels, 16.0 = 65536 levels (subtle).
- *   Internally: `levels = 2^amount`. Typical range: 2.0–8.0.
+ *   Internally: `levels = 2^bits`. Typical range: 2.0 to 8.0.
  */
-fun Ignitor.crush(amount: Ignitor): Ignitor = CrushIgnitor(this, amount)
+fun Ignitor.crush(bits: Ignitor): Ignitor = CrushIgnitor(upstream = this, bits = bits)
 
 private class CrushIgnitor(
     private val upstream: Ignitor,
-    private val amount: Ignitor,
+    private val bits: Ignitor,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
-            val halfLevels = CrushCore.halfLevels(Ignitors.readParam(amount, freqHz, ctx))
+            val halfLevels = CrushCore.halfLevels(Ignitors.readParam(bits, freqHz, ctx))
             val end = ctx.windowEnd
 
             if (halfLevels == CrushCore.BYPASS) {
@@ -287,20 +272,20 @@ private class CrushIgnitor(
                 return@use
             }
 
-            CrushCore.quantize(work, buffer, ctx.offset, end, halfLevels)
+            CrushCore.quantize(input = work, output = buffer, from = ctx.offset, to = end, halfLevels = halfLevels)
         }
     }
 }
 
 /**
- * Bit-depth reduction (convenience overload with fixed amount).
+ * Bit-depth reduction (convenience overload with a fixed depth).
  *
- * @param amount Bit depth. Below 1.0 = bypass. 4.0 = 16 levels (lo-fi),
+ * @param bits Bit depth. Below 1.0 = bypass. 4.0 = 16 levels (lo-fi),
  *   8.0 = 256 levels. Default: 0.0.
  */
-fun Ignitor.crush(amount: Double): Ignitor {
-    if (amount < 1.0) return this
-    return crush(ParamIgnitor("amount", amount))
+fun Ignitor.crush(bits: Double): Ignitor {
+    if (bits < 1.0) return this
+    return crush(ParamIgnitor("bits", bits))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -311,25 +296,25 @@ fun Ignitor.crush(amount: Double): Ignitor {
  * Sample-rate reducer (coarse). Holds a sample value for multiple frames. Processes per-sample.
  *
  * Creates aliased, metallic artifacts by reducing the effective sample rate.
- * Amount is read once per block (control rate). Amounts in (0, 1] are audibly inactive but the
+ * The factor is read once per block (control rate). Factors in (0, 1] are audibly inactive but the
  * hold clock keeps running (an exact take-every-sample copy — ledger W3: contiguity through a
- * modulated crossing); only `amount <= 0` and non-finite values take the true bypass arm, and
- * they HEAL when the amount returns. The first hold is `amount` samples (give or take one for
- * non-dyadic amounts — 1/amount accumulates in floats), like every later hold.
+ * modulated crossing); only `factor <= 0` and non-finite values take the true bypass arm, and
+ * they HEAL when the factor returns. The first hold is `factor` samples (give or take one for
+ * non-dyadic factors, as 1/factor accumulates in floats), like every later hold.
  *
- * @param amount Sample-hold factor. Values <= 1.0 are audibly inactive (see above).
+ * @param factor Sample-hold factor. Values <= 1.0 are audibly inactive (see above).
  *   2.0 = every 2nd sample held, 4.0 = every 4th (strong aliasing), 10.0+ = extreme lo-fi.
  *   Typical range: 2.0–8.0. Default: 0.0 (inactive).
  */
 private class CoarseIgnitor(
     private val upstream: Ignitor,
-    private val amount: Ignitor,
+    private val factor: Ignitor,
 ) : Ignitor {
     private var lastValue: Double = 0.0
 
     // Bootstrapped at 1.0 — "take a sample NOW", the oversampled strip path's shape (ledger
     // W1): the old 0.0 start + `idx == 0` block latch re-armed at note-relative sample
-    // `amount` for every power-of-two amount, so a block boundary landing there displaced the
+    // `factor` for every power-of-two factor, so a block boundary landing there displaced the
     // hold grid for the REST of the note (live in ATruthWorthLyingFor's coarse(2)); it also
     // made the first hold 2x long. Both die with this bootstrap, and every coarse path in the
     // engine now anchors its grid the same way.
@@ -339,15 +324,15 @@ private class CoarseIgnitor(
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
-            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val amt = Ignitors.readParam(factor, freqHz, ctx)
             val end = ctx.windowEnd
 
             // Ledger W3: the guard is load-bearing only for amt <= 0 (a negative increment
-            // would walk the counter down and hold forever) and for non-finite amounts (a NaN
+            // would walk the counter down and hold forever) and for non-finite factors (a NaN
             // would poison the counter and latch DC for the note's life, an Inf would hold
-            // forever — both now read as bypass and HEAL when the amount returns). For amt in
+            // forever; both now read as bypass and HEAL when the factor returns). For amt in
             // (0, 1] the engaged loop below already degenerates to an exact copy, so the S&H
-            // clock stays contiguous through the whole authorable range and a modulated amount
+            // clock stays contiguous through the whole authorable range and a modulated factor
             // crossing 1.0 no longer freezes the grid or replays a stale held sample.
             // NaN-guard: the !(x > 0) form is what catches NaN.
             if (!(amt > 0.0) || amt.isInfinite()) {
@@ -357,14 +342,14 @@ private class CoarseIgnitor(
                 return@use
             }
 
-            // coerceAtLeast(1.0): amounts in (0, 1] mean "take every sample" — without the
+            // coerceAtLeast(1.0): factors in (0, 1] mean "take every sample"; without the
             // floor the counter would grow unboundedly at increments > 1.
             val invAmt = 1.0 / amt.coerceAtLeast(1.0)
 
             for (i in ctx.offset until end) {
                 if (counter >= 1.0) {
                     // nanGuard mirrors the retired strip's coarse: a NaN input must not latch into the
-                    // held value for `amount` frames.
+                    // held value for `factor` frames.
                     lastValue = work[i].nanGuard()
                     counter -= 1.0
                 }
@@ -375,16 +360,16 @@ private class CoarseIgnitor(
     }
 }
 
-fun Ignitor.coarse(amount: Ignitor): Ignitor = CoarseIgnitor(this, amount)
+fun Ignitor.coarse(factor: Ignitor): Ignitor = CoarseIgnitor(upstream = this, factor = factor)
 
 /**
- * Sample-rate reducer (convenience overload with fixed amount).
+ * Sample-rate reducer (convenience overload with a fixed factor).
  *
- * @param amount Sample-hold factor. Values <= 1.0 = inactive. 4.0 = strong aliasing. Default: 0.0.
+ * @param factor Sample-hold factor. Values <= 1.0 = inactive. 4.0 = strong aliasing. Default: 0.0.
  */
-fun Ignitor.coarse(amount: Double): Ignitor {
-    if (amount <= 1.0) return this
-    return coarse(ParamIgnitor("amount", amount))
+fun Ignitor.coarse(factor: Double): Ignitor {
+    if (factor <= 1.0) return this
+    return coarse(ParamIgnitor("factor", factor))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -420,7 +405,7 @@ fun Ignitor.phaser(
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
     floor: Ignitor = ParamIgnitor("floor", 0.0),
-): Ignitor = PhaserIgnitor(this, rate, wet, center, sweep, floor)
+): Ignitor = PhaserIgnitor(upstream = this, rate = rate, wet = wet, center = center, sweep = sweep, floor = floor)
 
 private class PhaserIgnitor(
     private val upstream: Ignitor,
@@ -430,15 +415,21 @@ private class PhaserIgnitor(
     private val sweep: Ignitor,
     private val floor: Ignitor,
 ) : Ignitor {
-    // Lazy-init: PhaserCore needs sampleRate at construction, but we only see
-    // ctx.sampleRate on the first generate() call.
-    private var core: PhaserCore? = null
+    // Built with the node (tidy-up step 10: nothing allocates in generate). The rate it is built at is a placeholder:
+    // only `ctx.sampleRate` is the voice's, and it is bound at the first block, before the kernel is first used.
+    private val core = PhaserCore(stages = PhaserCore.DEFAULT_STAGES, sampleRate = DEFAULT_BUILD_SAMPLE_RATE)
+    private var rateBound = false
 
     // True while the cascade holds post-bypass state — cleared on bypass entry (ledger D5).
     private var stateDirty = false
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val phaser = core ?: PhaserCore(PhaserCore.DEFAULT_STAGES, ctx.sampleRate).also { core = it }
+        val phaser = core
+
+        if (!rateBound) {
+            rateBound = true
+            phaser.bindSampleRate(ctx.sampleRate)
+        }
 
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
@@ -522,11 +513,11 @@ fun Ignitor.phaser(
 ): Ignitor {
     if (wet <= 0.0) return this
     return phaser(
-        ParamIgnitor("wet", wet),
-        ParamIgnitor("rate", rate),
-        ParamIgnitor("center", center),
-        ParamIgnitor("sweep", sweep),
-        ParamIgnitor("floor", floor),
+        wet = ParamIgnitor("wet", wet),
+        rate = ParamIgnitor("rate", rate),
+        center = ParamIgnitor("center", center),
+        sweep = ParamIgnitor("sweep", sweep),
+        floor = ParamIgnitor("floor", floor),
     )
 }
 
@@ -551,7 +542,8 @@ fun Ignitor.phaser(
  *   Hard-clamped to 0.95 for stability.
  * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
  * @param pitches Semitone transpositions for grains. Each grain is assigned a pitch from this
- *   list in round-robin order. Default: `[0, 7, 12]` (root + fifth + octave).
+ *   list in round-robin order. Default: `[0, 7, 12]` (root + fifth + octave). An empty list spawns no grains:
+ *   only the dry plays, at its wet/dry level (silent at wet 1). A non-finite rate reads as 1.0.
  */
 fun Ignitor.shimmer(
     wet: Ignitor,
@@ -559,7 +551,7 @@ fun Ignitor.shimmer(
     tone: Ignitor,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
     floor: Ignitor = ParamIgnitor("floor", 0.0),
-): Ignitor = ShimmerIgnitor(this, wet, feedback, tone, pitches, floor)
+): Ignitor = ShimmerIgnitor(upstream = this, wet = wet, feedback = feedback, tone = tone, pitches = pitches, floor = floor)
 
 // NOTE: shimmer is WIP — internal grain bookkeeping may still change. Keep the
 // per-block logic readable; revisit perf rules (audio/ref/performance.md) once
@@ -586,7 +578,12 @@ private class ShimmerIgnitor(
     private val grainElapsed = IntArray(maxGrains)
     private val grainTotal = IntArray(maxGrains)
 
-    private val intervalRates = DoubleArray(pitches.size) { 2.0.pow(pitches[it] / 12.0) }
+    private val intervalRates = DoubleArray(pitches.size) {
+        val rate = pitches[it].semitones()
+        // NaN-guard on a value the author can write: a non-finite rate (a NaN pitch, or one past about 12288
+        // semitones) reads as 1.0, the unshifted grain. A finite rate is never clamped, however large (raw Motor).
+        if (rate.isFinite()) rate else 1.0
+    }
     private var nextIntervalIdx: Int = 0
 
     private val grainsPerSecond = 12.0
@@ -664,7 +661,10 @@ private class ShimmerIgnitor(
                 writePos++
                 if (writePos >= ringSize) writePos = 0
 
-                if (samplesUntilNextGrain <= 0) {
+                // An empty `pitches` list is user input (`shimmer(0.5, 0.5, 4000, [])` on the script door, or the wire):
+                // no grain ever spawns, the cloud is silent and the dry passes at its coefficient. Coerced, never an
+                // index error on the audio thread (`/code-style` §21). The countdown then just keeps running down.
+                if (samplesUntilNextGrain <= 0 && intervalRates.isNotEmpty()) {
                     samplesUntilNextGrain = grainPeriodSamples
                     val rate = intervalRates[nextIntervalIdx]
                     nextIntervalIdx = (nextIntervalIdx + 1) % intervalRates.size
@@ -676,11 +676,22 @@ private class ShimmerIgnitor(
                         }
                     }
                     if (slot >= 0) {
-                        val lookback = rate * grainTotalSamples
-                        var start = writePos - lookback
-                        while (start < 0.0) start += ringSize
+                        // A floor-mod, not a loop: a huge rate (`2^100` from a pitch of 1200) made `start += ringSize`
+                        // a no-op and the loop never exited. The rate is reduced modulo the ring first, so the product
+                        // stays finite for any finite rate; the read position is the same, since the ring is circular
+                        // and the grain length is whole. Bit-identical to the old loop for every rate below `ringSize`
+                        // (a pitch below about 198 semitones): its additions were exact, and `% ringSize` is the
+                        // identity there. Above it the rate reduction changes the rounding of the lookback, where the
+                        // old loop could spin forever.
+                        val reducedRate = rate % ringSize
+                        val lookback = reducedRate * grainTotalSamples
+                        var start = (writePos - lookback).mod(ringSize.toDouble())
+                        // A tiny negative remainder plus the ring size can round up to the ring size, one past the end.
+                        if (start >= ringSize) start = 0.0
                         grainReadPos[slot] = start
-                        grainRate[slot] = rate
+                        // The reduced rate too, so the read moves exactly at any finite rate and the wrap below is
+                        // one subtraction (`pos + reducedRate < 2 * ringSize`).
+                        grainRate[slot] = reducedRate
                         grainElapsed[slot] = 0
                         grainTotal[slot] = grainTotalSamples
                         grainActive[slot] = true
@@ -704,7 +715,7 @@ private class ShimmerIgnitor(
                     wetSample += sample * win
 
                     var nextPos = pos + grainRate[g]
-                    while (nextPos >= ringSize) nextPos -= ringSize
+                    if (nextPos >= ringSize) nextPos -= ringSize
                     grainReadPos[g] = nextPos
                     grainElapsed[g]++
                     if (grainElapsed[g] >= grainTotal[g]) grainActive[g] = false
@@ -738,11 +749,11 @@ fun Ignitor.shimmer(
 ): Ignitor {
     if (wet <= 0.0) return this
     return shimmer(
-        ParamIgnitor("wet", wet),
-        ParamIgnitor("feedback", feedback),
-        ParamIgnitor("tone", tone),
-        pitches,
-        ParamIgnitor("floor", floor),
+        wet = ParamIgnitor("wet", wet),
+        feedback = ParamIgnitor("feedback", feedback),
+        tone = ParamIgnitor("tone", tone),
+        pitches = pitches,
+        floor = ParamIgnitor("floor", floor),
     )
 }
 
@@ -780,7 +791,7 @@ private class DcBlockIgnitor(
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
-            dcBlocker.process(input, buffer, ctx.offset, ctx.length)
+            dcBlocker.process(input = input, output = buffer, offset = ctx.offset, length = ctx.length)
         }
     }
 }

@@ -43,8 +43,8 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
     /** The one mapping from a declared stage to the effect the cylinder runs for it. */
     fun effectClassOf(stage: KatalystStageDsl): String = when (stage) {
-        is KatalystStageDsl.Body -> "KatalystBodyEffect"
-        is KatalystStageDsl.Vowel -> "KatalystFormantEffect"
+        is KatalystStageDsl.Body -> "KatalystResonatorEffect(BODY)"
+        is KatalystStageDsl.Vowel -> "KatalystResonatorEffect(VOWEL)"
         is KatalystStageDsl.Delay -> "KatalystDelayEffect"
         is KatalystStageDsl.Reverb -> "KatalystReverbEffect"
         is KatalystStageDsl.Phaser -> "KatalystPhaserEffect"
@@ -81,8 +81,8 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
         // What the engine runs: the serial pipeline, then the ducking pass `Cylinders` does after
         // every orbit has been processed.
-        val engineOrder = cylinder.pipeline.map { it::class.simpleName } +
-            cylinder.duck.shouldNotBeNull()::class.simpleName
+        val engineOrder = cylinder.pipeline.map { it.stageName() } +
+            cylinder.duck.shouldNotBeNull().stageName()
 
         KatalystDsl.classic.stages.map { effectClassOf(it) } shouldBe engineOrder
     }
@@ -98,7 +98,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
             reverbs = ReverbUnits(48000),
         )
 
-        cylinder.pipeline.map { it::class.simpleName } shouldBe declared.pipeline.map { it::class.simpleName }
+        cylinder.pipeline.map { it.stageName() } shouldBe declared.pipeline.map { it.stageName() }
         cylinder.duck.shouldNotBeNull()::class.simpleName shouldBe
             declared.duck.shouldNotBeNull()::class.simpleName
     }

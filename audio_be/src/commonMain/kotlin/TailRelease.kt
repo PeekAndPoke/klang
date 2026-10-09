@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
-import kotlin.math.abs
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.pow
@@ -74,8 +74,8 @@ internal class TailRelease(sampleRate: Int, private val blockFrames: Int) {
             val left = sourceLeft[i]
             val right = sourceRight[i]
 
-            targetLeft[i] = targetLeft[i] + (if (abs(left) <= Double.MAX_VALUE) left else 0.0) * g
-            targetRight[i] = targetRight[i] + (if (abs(right) <= Double.MAX_VALUE) right else 0.0) * g
+            targetLeft[i] = targetLeft[i] + left.finiteOrZero() * g
+            targetRight[i] = targetRight[i] + right.finiteOrZero() * g
 
             k++
         }

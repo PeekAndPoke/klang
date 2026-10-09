@@ -28,10 +28,12 @@ import io.peekandpoke.klang.audio_be.ignitor.notch
 import io.peekandpoke.klang.audio_be.ignitor.onePoleHighpass
 import io.peekandpoke.klang.audio_be.ignitor.onePoleLowpass
 import io.peekandpoke.klang.audio_be.ignitor.plus
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.random.Random
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
@@ -215,6 +217,7 @@ class EffectBenchmark(
                 gateEndFrame = Int.MAX_VALUE / 2,
                 scratchBuffers = scratch,
                 voiceElapsedFrames = 0,
+                random = Random(0),
             ).apply {
                 updateOffsetAndLength(0, bf)
             }
@@ -248,21 +251,21 @@ class EffectBenchmark(
         // Representative resonator tables (the `wood` body + a soprano-ish `a` vowel) — mode/band
         // COUNT and Q range drive the cost, so exact values are not important for the benchmark.
         private val BODY_WOOD_MODES = listOf(
-            FilterDef.Body.Mode(100.0, 3.0, 12.0),
-            FilterDef.Body.Mode(200.0, 2.0, 11.0),
-            FilterDef.Body.Mode(300.0, 1.0, 10.0),
-            FilterDef.Body.Mode(430.0, 0.0, 9.0),
-            FilterDef.Body.Mode(650.0, -1.0, 8.0),
-            FilterDef.Body.Mode(900.0, -2.0, 7.0),
-            FilterDef.Body.Mode(1300.0, -4.0, 6.0),
-            FilterDef.Body.Mode(1900.0, -6.0, 5.0),
+            BodyMaterials.Mode(100.0, 3.0, 12.0),
+            BodyMaterials.Mode(200.0, 2.0, 11.0),
+            BodyMaterials.Mode(300.0, 1.0, 10.0),
+            BodyMaterials.Mode(430.0, 0.0, 9.0),
+            BodyMaterials.Mode(650.0, -1.0, 8.0),
+            BodyMaterials.Mode(900.0, -2.0, 7.0),
+            BodyMaterials.Mode(1300.0, -4.0, 6.0),
+            BodyMaterials.Mode(1900.0, -6.0, 5.0),
         )
         private val VOWEL_A_BANDS = listOf(
-            FilterDef.Formant.Band(600.0, 0.0, 60.0),
-            FilterDef.Formant.Band(1040.0, -7.0, 70.0),
-            FilterDef.Formant.Band(2250.0, -9.0, 110.0),
-            FilterDef.Formant.Band(2450.0, -9.0, 120.0),
-            FilterDef.Formant.Band(2750.0, -20.0, 130.0),
+            VowelBands.Band(600.0, 0.0, 60.0),
+            VowelBands.Band(1040.0, -7.0, 70.0),
+            VowelBands.Band(2250.0, -9.0, 110.0),
+            VowelBands.Band(2450.0, -9.0, 120.0),
+            VowelBands.Band(2750.0, -20.0, 130.0),
         )
 
         fun defaultCases(): List<Case> = listOf(
@@ -271,12 +274,19 @@ class EffectBenchmark(
             // source, so subtract "Ignitor sine (bare source baseline)" below for the filter alone.
             svfIgnitorCase("Ignitor onePoleLowpass (1k)") { Ignitors.sine().onePoleLowpass(1000.0) },
             svfIgnitorCase("Ignitor onePoleHighpass (1k)") { Ignitors.sine().onePoleHighpass(1000.0) },
-            // The class-form SVF left is the resonators' bandpass; the strip's lowpass, highpass and notch
-            // classes retired in phase 3 step 9 (the tree's SVF is the `Ignitor.svf` cases below).
-            monoFilterCase("SvfBPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfBPF(1000.0, 1.0, sr) },
+            // The class-form SVF bandpass (`SvfBPF`) folded into the resonator bank's band loop in engine tidy-up
+            // step 12 (a); its case is the bank with one band at full mix (the tree's SVF is the `Ignitor.svf` cases
+            // below).
+            monoFilterCase("Resonator (1 band, 1k, q=1, mix1)") { sr ->
+                LowPassHighPassFilters.createBody(
+                    bands = listOf(BodyMaterials.Mode(freq = 1000.0, db = 0.0, q = 1.0)),
+                    mix = 1.0,
+                    sampleRate = sr,
+                )
+            },
 
-            // Resonators — orbit-level body/vowel banks: ParallelMixFilter over an N-band parallel
-            // SVF-BPF (ResonatorBank). This is what body()/vowel() run per orbit.
+            // Resonators: the orbit-level body/vowel stage on one channel, an N-band parallel SVF bandpass bank
+            // blended over the dry (ResonatorBank). This is what body()/vowel() run per orbit.
             monoFilterCase("Body (wood, 8-band, mix0.5)") { sr ->
                 LowPassHighPassFilters.createBody(BODY_WOOD_MODES, 0.5, sr)
             },
@@ -298,7 +308,7 @@ class EffectBenchmark(
                 Ignitors.sine().lowpass(
                     cutoffHz = 1000.0,
                     q = 1.0,
-                    env = FilterEnvDef(depth = 7.0 /* C3: semitones */, attackSec = 0.05, decaySec = 0.1, sustainLevel = 0.7, releaseSec = 0.5),
+                    env = FilterEnvDef(depth = 7.0 /* C3: semitones */, attack = 0.05, decay = 0.1, sustain = 0.7, release = 0.5),
                 )
             },
 
@@ -404,6 +414,7 @@ class EffectBenchmark(
                     gateEndFrame = Int.MAX_VALUE / 2,
                     scratchBuffers = ScratchBuffers(bf),
                     voiceElapsedFrames = 0,
+                    random = Random(0),
                 ).apply {
                     updateOffsetAndLength(0, bf)
                 }

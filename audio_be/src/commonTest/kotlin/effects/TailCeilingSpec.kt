@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.effects
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 
 /**
  * The content ceiling on its own: the recurrence, the two-window lag, the geometric decay, the
@@ -334,7 +335,7 @@ class TailCeilingSpec : StringSpec({
 
             var n = 0
             observe(0.8, 128)
-            while (previous > TailCeiling.SILENCE || current > TailCeiling.SILENCE) {
+            while (previous > SILENCE_FLOOR || current > SILENCE_FLOOR) {
                 observe(0.0, if (n % 3 == 0) 64 else 128)
                 n++
             }

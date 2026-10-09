@@ -8,9 +8,11 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.peekandpoke.klang.audio_be.StereoBuffer
 
 /**
- * Shared context for all [KatalystEffect] stages in the orbit bus pipeline.
+ * Shared context for all [KatalystEffect] stages of one chain run over one bus.
  *
- * Created once per cylinder. Mutable fields are updated per block before the pipeline runs.
+ * Created once per cylinder, once per master bus (`MasterBus`, again when a caller hands it another
+ * buffer) and once per `ChainSwap` (the leaving chain's own context). Mutable fields are updated per
+ * block before the pipeline runs.
  *
  * Every stage reads and writes [mixBuffer] in place, in list order. The delay and the reverb take
  * their feed from it too (scaled by their `wet`, into a buffer of their own) and add their return

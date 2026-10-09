@@ -36,15 +36,15 @@ internal class EqSectionSpec(
  * of one core is that they cannot.
  */
 internal fun eqSectionSpec(section: IgnitorDsl.EqSection): EqSectionSpec = when (section) {
-    is IgnitorDsl.EqSection.Lowpass -> EqSectionSpec(EqCore.LOWPASS, section.freq, section.q)
+    is IgnitorDsl.EqSection.Lowpass -> EqSectionSpec(type = EqCore.LOWPASS, freq = section.freq, q = section.q)
 
-    is IgnitorDsl.EqSection.Highpass -> EqSectionSpec(EqCore.HIGHPASS, section.freq, section.q)
+    is IgnitorDsl.EqSection.Highpass -> EqSectionSpec(type = EqCore.HIGHPASS, freq = section.freq, q = section.q)
 
-    is IgnitorDsl.EqSection.Bandpass -> EqSectionSpec(EqCore.BANDPASS, section.freq, section.q)
+    is IgnitorDsl.EqSection.Bandpass -> EqSectionSpec(type = EqCore.BANDPASS, freq = section.freq, q = section.q)
 
-    is IgnitorDsl.EqSection.Notch -> EqSectionSpec(EqCore.NOTCH, section.freq, section.q)
+    is IgnitorDsl.EqSection.Notch -> EqSectionSpec(type = EqCore.NOTCH, freq = section.freq, q = section.q)
 
-    is IgnitorDsl.EqSection.Bell -> EqSectionSpec(EqCore.BELL, section.freq, section.q, db = section.db)
+    is IgnitorDsl.EqSection.Bell -> EqSectionSpec(type = EqCore.BELL, freq = section.freq, q = section.q, db = section.db)
 
-    is IgnitorDsl.EqSection.RawTap -> EqSectionSpec(EqCore.RAW_TAP, section.freq, section.q, gain = section.gain)
+    is IgnitorDsl.EqSection.RawTap -> EqSectionSpec(type = EqCore.RAW_TAP, freq = section.freq, q = section.q, gain = section.gain)
 }

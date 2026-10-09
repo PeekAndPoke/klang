@@ -31,6 +31,10 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * ULP-0 bit-parity guards for [EqCore] against chained per-voice SVF nodes (unified-eq plan,
  * D2a/D2b): the fused core must equal the chained `SvfIgnitor`s bit-for-bit — that is the graph
@@ -82,8 +86,9 @@ class EqCoreSpec : StringSpec({
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -99,7 +104,7 @@ class EqCoreSpec : StringSpec({
     fun buildCore(sections: List<Section>): EqCore =
         EqCore(sections.size).also { core ->
             sections.forEachIndexed { i, s ->
-                core.configureSection(i, s.type, s.freq, s.q, s.db, s.gain, sr.toDouble())
+                core.configureSection(index = i, type = s.type, freq = s.freq, q = s.q, db = s.db, gain = s.gain, sampleRate = sr.toDouble())
             }
         }
 
@@ -118,12 +123,12 @@ class EqCoreSpec : StringSpec({
         var acc: Ignitor = BufferSourceIgnitor(data, startAt)
         sections.forEachIndexed { idx, s ->
             acc = when (s.type) {
-                EqCore.LOWPASS -> acc.lowpass(s.freq, s.q)
-                EqCore.HIGHPASS -> acc.highpass(s.freq, s.q)
-                EqCore.BANDPASS -> acc.bandpass(s.freq, s.q)
-                EqCore.NOTCH -> acc.notch(s.freq, s.q)
+                EqCore.LOWPASS -> acc.lowpass(cutoffHz = s.freq, q = s.q)
+                EqCore.HIGHPASS -> acc.highpass(cutoffHz = s.freq, q = s.q)
+                EqCore.BANDPASS -> acc.bandpass(cutoffHz = s.freq, q = s.q)
+                EqCore.NOTCH -> acc.notch(cutoffHz = s.freq, q = s.q)
                 EqCore.RAW_TAP ->
-                    acc + BufferSourceIgnitor(data, startAt).bandpass(s.freq, s.q) *
+                    acc + BufferSourceIgnitor(data, startAt).bandpass(cutoffHz = s.freq, q = s.q) *
                         ConstantIgnitor(s.gain)
                 EqCore.BELL -> {
                     // Bell RELATION oracle: bell(x) = x + m1·bp(x; freq, q·A) — the same
@@ -135,7 +140,7 @@ class EqCoreSpec : StringSpec({
                     check(idx == 0) { "bell oracle only valid as the first section" }
                     check(s.db != 0.0) { "bell oracle needs db != 0 (0 dB is its own row)" }
                     val c = SvfCoeffs()
-                    computeSvfBellCoeffs(s.freq, s.q, s.db, sr.toDouble(), c)
+                    computeSvfBellCoeffs(cutoffHz = s.freq, q = s.q, db = s.db, sampleRate = sr.toDouble(), out = c)
                     // C2: the public bandpass node is unity-peak now (outputs k'·v1). The bell
                     // relation needs the RAW tap, so multiply by 1/k' = clamped(q·A). This adds
                     // one rounding step, which is why bell rows compare with a tolerance below (1e-12 relative:
@@ -143,7 +148,7 @@ class EqCoreSpec : StringSpec({
                     val qA = s.q * 10.0.pow(s.db / 40.0)
                     val clampedQA = if (qA.isFinite()) qA.coerceIn(0.1, 200.0) else 0.7071067811865475
                     acc + BufferSourceIgnitor(data, startAt)
-                        .bandpass(s.freq, qA) *
+                        .bandpass(cutoffHz = s.freq, q = qA) *
                         ConstantIgnitor(c.m1 * clampedQA)
                 }
                 else -> error("EqCoreSpec oracle has no node for type ${s.type}")
@@ -169,7 +174,7 @@ class EqCoreSpec : StringSpec({
                 buf[i] = 0.5 * sin(w * n)
                 n++
             }
-            core.process(buf, 0, blockFrames)
+            core.process(buffer = buf, offset = 0, length = blockFrames)
             if (blk >= warmBlocks) {
                 for (i in 0 until blockFrames) {
                     val a = abs(buf[i])
@@ -210,7 +215,7 @@ class EqCoreSpec : StringSpec({
         var outPeak = 0.0
 
         repeat(blocks) { blk ->
-            data.copyInto(bufCore, 0, blk * blockFrames, (blk + 1) * blockFrames)
+            data.copyInto(destination = bufCore, destinationOffset = 0, startIndex = blk * blockFrames, endIndex = (blk + 1) * blockFrames)
 
             for (i in 0 until blockFrames) {
                 val x = abs(bufCore[i])
@@ -220,7 +225,7 @@ class EqCoreSpec : StringSpec({
                 }
             }
 
-            core.process(bufCore, 0, blockFrames)
+            core.process(buffer = bufCore, offset = 0, length = blockFrames)
             oracle.generate(bufOracle, 220.0, c)
             for (i in 0 until blockFrames) {
                 val y = abs(bufOracle[i])
@@ -247,15 +252,15 @@ class EqCoreSpec : StringSpec({
     }
 
     val singleSections = listOf(
-        "lowpass" to Section(EqCore.LOWPASS, 1234.0, 1.7),
-        "highpass" to Section(EqCore.HIGHPASS, 440.0, 0.707),
-        "bandpass" to Section(EqCore.BANDPASS, 850.0, 0.9),
-        "notch" to Section(EqCore.NOTCH, 210.0, 2.5),
+        "lowpass" to Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7),
+        "highpass" to Section(type = EqCore.HIGHPASS, freq = 440.0, q = 0.707),
+        "bandpass" to Section(type = EqCore.BANDPASS, freq = 850.0, q = 0.9),
+        "notch" to Section(type = EqCore.NOTCH, freq = 210.0, q = 2.5),
     )
 
     // RAW_TAP joins every per-type parameterization (sub-block, denormal, pathological):
     // its arm is its own hand-written loop in the section-major body (checklist item 4).
-    val tapSection = Section(EqCore.RAW_TAP, 850.0, 0.9, gain = 2.0)
+    val tapSection = Section(type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, gain = 2.0)
     val allSections = singleSections + ("rawtap" to tapSection)
 
     // BELL joins the sub-block + denormal parameterizations via its relation oracle, but
@@ -263,7 +268,7 @@ class EqCoreSpec : StringSpec({
     // configure) while the relation oracle's MulConst applies safeOut per sample — identical
     // on sane data, divergent by design on NaN/Inf products. The bell's own pathology pin is
     // the 0 dB transparency row; the gained arm propagates NaN like every bare tap.
-    val bellSection = Section(EqCore.BELL, 1234.0, 1.7, db = 6.0)
+    val bellSection = Section(type = EqCore.BELL, freq = 1234.0, q = 1.7, db = 6.0)
     val windowSections = allSections + ("bell" to bellSection)
 
     for ((secName, section) in singleSections) {
@@ -275,10 +280,10 @@ class EqCoreSpec : StringSpec({
     "guitar-tail 4-section chain is bit-equal to the chained nodes" {
         assertChainParity(
             listOf(
-                Section(EqCore.NOTCH, 210.0, 2.5),
-                Section(EqCore.HIGHPASS, 440.0, 0.707),
-                Section(EqCore.LOWPASS, 5300.0, 0.707),
-                Section(EqCore.LOWPASS, 5300.0, 0.707),
+                Section(type = EqCore.NOTCH, freq = 210.0, q = 2.5),
+                Section(type = EqCore.HIGHPASS, freq = 440.0, q = 0.707),
+                Section(type = EqCore.LOWPASS, freq = 5300.0, q = 0.707),
+                Section(type = EqCore.LOWPASS, freq = 5300.0, q = 0.707),
             ),
         )
     }
@@ -293,12 +298,12 @@ class EqCoreSpec : StringSpec({
         // the serial tail runs after them (position-pinned tap definition).
         assertChainParity(
             listOf(
-                Section(EqCore.RAW_TAP, 1000.0, 0.8, gain = 2.0),
-                Section(EqCore.RAW_TAP, 4000.0, 0.85, gain = 5.5),
-                Section(EqCore.NOTCH, 210.0, 2.5),
-                Section(EqCore.HIGHPASS, 440.0, 0.707),
-                Section(EqCore.LOWPASS, 5300.0, 0.707),
-                Section(EqCore.LOWPASS, 5300.0, 0.707),
+                Section(type = EqCore.RAW_TAP, freq = 1000.0, q = 0.8, gain = 2.0),
+                Section(type = EqCore.RAW_TAP, freq = 4000.0, q = 0.85, gain = 5.5),
+                Section(type = EqCore.NOTCH, freq = 210.0, q = 2.5),
+                Section(type = EqCore.HIGHPASS, freq = 440.0, q = 0.707),
+                Section(type = EqCore.LOWPASS, freq = 5300.0, q = 0.707),
+                Section(type = EqCore.LOWPASS, freq = 5300.0, q = 0.707),
             ),
         )
     }
@@ -314,9 +319,9 @@ class EqCoreSpec : StringSpec({
         // not prune that one as "covered here".
         assertChainParity(
             listOf(
-                Section(EqCore.NOTCH, 210.0, 2.5),
-                Section(EqCore.RAW_TAP, 850.0, 0.9, gain = 1.0),
-                Section(EqCore.LOWPASS, 5300.0, 0.707),
+                Section(type = EqCore.NOTCH, freq = 210.0, q = 2.5),
+                Section(type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, gain = 1.0),
+                Section(type = EqCore.LOWPASS, freq = 5300.0, q = 0.707),
             ),
         )
     }
@@ -328,7 +333,7 @@ class EqCoreSpec : StringSpec({
         // so many samples exercise the flip.
         val negZeros = DoubleArray(blockFrames * (blocks + 1)) { -0.0 }.also { it[0] = 1.0 }
         assertChainParity(
-            listOf(Section(EqCore.RAW_TAP, 850.0, 0.9, gain = 0.0)),
+            listOf(Section(type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, gain = 0.0)),
             data = negZeros,
         )
     }
@@ -337,7 +342,7 @@ class EqCoreSpec : StringSpec({
         // gain 1e300 pushes the per-sample product far past SAFE_MAX on ordinary input:
         // both sides must clamp identically — a core that drops the tap's safeOut lands
         // near 1e299 instead of SAFE_MAX and reddens.
-        assertChainParity(listOf(Section(EqCore.RAW_TAP, 850.0, 0.9, gain = 1e300)))
+        assertChainParity(listOf(Section(type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, gain = 1e300)))
     }
 
     // ── BELL (D2c) ──
@@ -351,11 +356,11 @@ class EqCoreSpec : StringSpec({
             it[40] = Double.POSITIVE_INFINITY
             it[100] = Double.NaN
         }
-        val core = buildCore(listOf(Section(EqCore.BELL, 850.0, 0.9, db = 0.0)))
+        val core = buildCore(listOf(Section(type = EqCore.BELL, freq = 850.0, q = 0.9, db = 0.0)))
         val buf = AudioBuffer(blockFrames)
         repeat(blocks) { blk ->
-            data.copyInto(buf, 0, blk * blockFrames, (blk + 1) * blockFrames)
-            core.process(buf, 0, blockFrames)
+            data.copyInto(destination = buf, destinationOffset = 0, startIndex = blk * blockFrames, endIndex = (blk + 1) * blockFrames)
+            core.process(buffer = buf, offset = 0, length = blockFrames)
             for (i in 0 until blockFrames) {
                 buf[i].toRawBits() shouldBe data[blk * blockFrames + i].toRawBits()
             }
@@ -364,10 +369,10 @@ class EqCoreSpec : StringSpec({
         // The 0 dB branch is its own hand-written windowed loop (checklist item 4): a
         // mid-block first call must stay inside its window.
         val sentinel = 123.456
-        val fresh = buildCore(listOf(Section(EqCore.BELL, 850.0, 0.9, db = 0.0)))
+        val fresh = buildCore(listOf(Section(type = EqCore.BELL, freq = 850.0, q = 0.9, db = 0.0)))
         val winBuf = AudioBuffer(blockFrames).apply { fill(sentinel) }
-        input.copyInto(winBuf, 37, 37, 37 + 64)
-        fresh.process(winBuf, 37, 64)
+        input.copyInto(destination = winBuf, destinationOffset = 37, startIndex = 37, endIndex = 37 + 64)
+        fresh.process(buffer = winBuf, offset = 37, length = 64)
         for (i in 0 until blockFrames) {
             if (i in 37 until 37 + 64) {
                 winBuf[i].toRawBits() shouldBe input[i].toRawBits()
@@ -382,19 +387,19 @@ class EqCoreSpec : StringSpec({
         // 0 dB bell must advance state exactly like a BANDPASS at the same freq/q (A=1
         // coefficients are identical), observed through the reconfigure channel. An
         // offset-blind loop ingests the sentinel frames outside the window and diverges.
-        val bp = buildCore(listOf(Section(EqCore.BANDPASS, 850.0, 0.9)))
+        val bp = buildCore(listOf(Section(type = EqCore.BANDPASS, freq = 850.0, q = 0.9)))
         val bpBuf = AudioBuffer(blockFrames).apply { fill(sentinel) }
-        input.copyInto(bpBuf, 37, 37, 37 + 64)
-        bp.process(bpBuf, 37, 64)
+        input.copyInto(destination = bpBuf, destinationOffset = 37, startIndex = 37, endIndex = 37 + 64)
+        bp.process(buffer = bpBuf, offset = 37, length = 64)
 
-        fresh.configureSection(0, EqCore.BELL, 850.0, 0.9, 6.0, 1.0, sr.toDouble())
-        bp.configureSection(0, EqCore.BELL, 850.0, 0.9, 6.0, 1.0, sr.toDouble())
+        fresh.configureSection(index = 0, type = EqCore.BELL, freq = 850.0, q = 0.9, db = 6.0, gain = 1.0, sampleRate = sr.toDouble())
+        bp.configureSection(index = 0, type = EqCore.BELL, freq = 850.0, q = 0.9, db = 6.0, gain = 1.0, sampleRate = sr.toDouble())
         val nextA = AudioBuffer(blockFrames)
         val nextB = AudioBuffer(blockFrames)
-        input.copyInto(nextA, 0, blockFrames, 2 * blockFrames)
-        input.copyInto(nextB, 0, blockFrames, 2 * blockFrames)
-        fresh.process(nextA, 0, blockFrames)
-        bp.process(nextB, 0, blockFrames)
+        input.copyInto(destination = nextA, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+        input.copyInto(destination = nextB, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+        fresh.process(buffer = nextA, offset = 0, length = blockFrames)
+        bp.process(buffer = nextB, offset = 0, length = blockFrames)
         for (i in 0 until blockFrames) {
             nextA[i].toRawBits() shouldBe nextB[i].toRawBits()
         }
@@ -406,10 +411,10 @@ class EqCoreSpec : StringSpec({
         // m1 = SAFE_MAX) or a full null (-Inf -> m1 = -10). NaN alone cannot kill a
         // dropped-guard mutant (safeOut scrubs NaN back to 0) — the Inf legs are the teeth.
         for (db in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
-            val core = buildCore(listOf(Section(EqCore.BELL, 850.0, 0.9, db = db)))
+            val core = buildCore(listOf(Section(type = EqCore.BELL, freq = 850.0, q = 0.9, db = db)))
             val buf = AudioBuffer(blockFrames)
-            input.copyInto(buf, 0, 0, blockFrames)
-            core.process(buf, 0, blockFrames)
+            input.copyInto(destination = buf, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+            core.process(buffer = buf, offset = 0, length = blockFrames)
             for (i in 0 until blockFrames) {
                 buf[i].toRawBits() shouldBe input[i].toRawBits()
             }
@@ -433,10 +438,10 @@ class EqCoreSpec : StringSpec({
         val data = DoubleArray(blockFrames * 2) { i -> input[i] }.also {
             it[40] = Double.POSITIVE_INFINITY
         }
-        val core = buildCore(listOf(Section(EqCore.BELL, 850.0, 0.9, db = 12.0)))
+        val core = buildCore(listOf(Section(type = EqCore.BELL, freq = 850.0, q = 0.9, db = 12.0)))
         val buf = AudioBuffer(blockFrames)
-        data.copyInto(buf, 0, 0, blockFrames)
-        core.process(buf, 0, blockFrames)
+        data.copyInto(destination = buf, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        core.process(buffer = buf, offset = 0, length = blockFrames)
 
         // (1) the poisoned sample is not scrubbed …
         buf[40].isFinite() shouldBe false
@@ -444,8 +449,8 @@ class EqCoreSpec : StringSpec({
         buf[41].isFinite() shouldBe true
 
         // Block 2: the carry was flushed, so nothing survives into it.
-        data.copyInto(buf, 0, blockFrames, 2 * blockFrames)
-        core.process(buf, 0, blockFrames)
+        data.copyInto(destination = buf, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+        core.process(buffer = buf, offset = 0, length = blockFrames)
         for (i in 0 until blockFrames) {
             buf[i].isFinite() shouldBe true
         }
@@ -458,9 +463,9 @@ class EqCoreSpec : StringSpec({
         // trap the SvfCoeffs KDoc names for future shelf sections. Pinned directly, like
         // the other output-invisible invariants (hasRawTap, inputCopyCapacity).
         val c = SvfCoeffs()
-        computeSvfBellCoeffs(1000.0, 1.0, 12.0, sr.toDouble(), c)
+        computeSvfBellCoeffs(cutoffHz = 1000.0, q = 1.0, db = 12.0, sampleRate = sr.toDouble(), out = c)
         (c.m1 != 0.0) shouldBe true
-        computeSvfCoeffs(1000.0, 1.0, sr.toDouble(), c)
+        computeSvfCoeffs(cutoffHz = 1000.0, q = 1.0, sampleRate = sr.toDouble(), out = c)
         c.m1 shouldBe 0.0
     }
 
@@ -470,13 +475,13 @@ class EqCoreSpec : StringSpec({
         // the q·A pin alone: peak = A² holds for ANY effective k (the response rows are
         // k-blind), so a swapped q/A or bare q dies only here, via the oracle's independent
         // q·A restatement.
-        assertChainParity(listOf(Section(EqCore.BELL, 850.0, 0.9, db = 12.0)))
-        assertChainParity(listOf(Section(EqCore.BELL, 850.0, 0.9, db = -9.0)))
+        assertChainParity(listOf(Section(type = EqCore.BELL, freq = 850.0, q = 0.9, db = 12.0)))
+        assertChainParity(listOf(Section(type = EqCore.BELL, freq = 850.0, q = 0.9, db = -9.0)))
     }
 
     "BELL peak gain at fc is 10^(db/20)" {
         for (db in listOf(12.0, -12.0)) {
-            val core = buildCore(listOf(Section(EqCore.BELL, 1000.0, 1.0, db = db)))
+            val core = buildCore(listOf(Section(type = EqCore.BELL, freq = 1000.0, q = 1.0, db = db)))
             val ratio = sineGainThrough(core, 1000.0, warmBlocks = 40, measureBlocks = 10)
             val expected = 10.0.pow(db / 20.0)
             ratio shouldBe (expected plusOrMinus expected * 0.02)
@@ -486,8 +491,8 @@ class EqCoreSpec : StringSpec({
     "BELL cut/boost cancel at fc (reciprocal within the unclamped region)" {
         val core = buildCore(
             listOf(
-                Section(EqCore.BELL, 1000.0, 1.0, db = 9.0),
-                Section(EqCore.BELL, 1000.0, 1.0, db = -9.0),
+                Section(type = EqCore.BELL, freq = 1000.0, q = 1.0, db = 9.0),
+                Section(type = EqCore.BELL, freq = 1000.0, q = 1.0, db = -9.0),
             ),
         )
         val ratio = sineGainThrough(core, 1000.0, warmBlocks = 40, measureBlocks = 10)
@@ -498,7 +503,7 @@ class EqCoreSpec : StringSpec({
         // q·A = 10·10^3 clamps to 200. m1 from the CLAMPED k keeps peak = A² = 1e6 exact; a
         // recomputed m1 = (A²−1)/(q·A) lands ~34 dB off (factor ~50) and reddens. Effective
         // Q=200 settles in ~Q/(π·fc) ≈ 64 ms — hence the long warmup.
-        val core = buildCore(listOf(Section(EqCore.BELL, 1000.0, 10.0, db = 120.0)))
+        val core = buildCore(listOf(Section(type = EqCore.BELL, freq = 1000.0, q = 10.0, db = 120.0)))
         val ratio = sineGainThrough(core, 1000.0, warmBlocks = 80, measureBlocks = 10)
         ratio shouldBe (1e6 plusOrMinus 5e4)
     }
@@ -509,11 +514,11 @@ class EqCoreSpec : StringSpec({
         // near |v0| + SAFE_MAX·|v1|. Uncapped, samples reach ~1e248; capped they stay far
         // below 1e17 on this input. isFinite() alone would NOT catch a dropped cap (the
         // uncapped m1 is still finite) — the bound is what discriminates.
-        val core = buildCore(listOf(Section(EqCore.BELL, 1000.0, 1.0, db = 5000.0)))
+        val core = buildCore(listOf(Section(type = EqCore.BELL, freq = 1000.0, q = 1.0, db = 5000.0)))
         val buf = AudioBuffer(blockFrames)
         repeat(blocks) { blk ->
-            input.copyInto(buf, 0, blk * blockFrames, (blk + 1) * blockFrames)
-            core.process(buf, 0, blockFrames)
+            input.copyInto(destination = buf, destinationOffset = 0, startIndex = blk * blockFrames, endIndex = (blk + 1) * blockFrames)
+            core.process(buffer = buf, offset = 0, length = blockFrames)
             for (i in 0 until blockFrames) {
                 buf[i].isFinite() shouldBe true
                 (abs(buf[i]) < 1e17) shouldBe true
@@ -527,21 +532,21 @@ class EqCoreSpec : StringSpec({
         // different tap). So a bell that spent block 0 at 0 dB must continue at db=6
         // EXACTLY like a bandpass that processed the same block — a skip-freeze mutant
         // (0 dB branch emitting v0 without running the recurrence) diverges here.
-        val x = buildCore(listOf(Section(EqCore.BELL, 1234.0, 1.7, db = 0.0)))
-        val y = buildCore(listOf(Section(EqCore.BANDPASS, 1234.0, 1.7)))
+        val x = buildCore(listOf(Section(type = EqCore.BELL, freq = 1234.0, q = 1.7, db = 0.0)))
+        val y = buildCore(listOf(Section(type = EqCore.BANDPASS, freq = 1234.0, q = 1.7)))
         val bufX = AudioBuffer(blockFrames)
         val bufY = AudioBuffer(blockFrames)
-        input.copyInto(bufX, 0, 0, blockFrames)
-        input.copyInto(bufY, 0, 0, blockFrames)
-        x.process(bufX, 0, blockFrames)
-        y.process(bufY, 0, blockFrames)
+        input.copyInto(destination = bufX, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        input.copyInto(destination = bufY, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        x.process(buffer = bufX, offset = 0, length = blockFrames)
+        y.process(buffer = bufY, offset = 0, length = blockFrames)
 
-        x.configureSection(0, EqCore.BELL, 1234.0, 1.7, 6.0, 1.0, sr.toDouble())
-        y.configureSection(0, EqCore.BELL, 1234.0, 1.7, 6.0, 1.0, sr.toDouble())
-        input.copyInto(bufX, 0, blockFrames, 2 * blockFrames)
-        input.copyInto(bufY, 0, blockFrames, 2 * blockFrames)
-        x.process(bufX, 0, blockFrames)
-        y.process(bufY, 0, blockFrames)
+        x.configureSection(index = 0, type = EqCore.BELL, freq = 1234.0, q = 1.7, db = 6.0, gain = 1.0, sampleRate = sr.toDouble())
+        y.configureSection(index = 0, type = EqCore.BELL, freq = 1234.0, q = 1.7, db = 6.0, gain = 1.0, sampleRate = sr.toDouble())
+        input.copyInto(destination = bufX, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+        input.copyInto(destination = bufY, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+        x.process(buffer = bufX, offset = 0, length = blockFrames)
+        y.process(buffer = bufY, offset = 0, length = blockFrames)
         for (i in 0 until blockFrames) {
             bufX[i].toRawBits() shouldBe bufY[i].toRawBits()
         }
@@ -562,13 +567,13 @@ class EqCoreSpec : StringSpec({
 
             val core = buildCore(sections)
             val bufCore = AudioBuffer(blockFrames).apply { fill(sentinel) }
-            input.copyInto(bufCore, offset, offset, offset + length)
-            core.process(bufCore, offset, length)
+            input.copyInto(destination = bufCore, destinationOffset = offset, startIndex = offset, endIndex = offset + length)
+            core.process(buffer = bufCore, offset = offset, length = length)
 
             val oracle = chainOracle(input, sections, startAt = offset)
             val bufOracle = AudioBuffer(blockFrames).apply { fill(sentinel) }
             val c = ctx().apply {
-                this.updateOffsetAndLength(offset, length)
+                this.updateOffsetAndLength(offset = offset, length = length)
                 // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer
                 // index `offset`, the voice's first frame (never negative).
                 voiceElapsedFrames = 0
@@ -611,9 +616,9 @@ class EqCoreSpec : StringSpec({
             // only the THIRD call below can prove grow-vs-latch.
             val bufCore2 = AudioBuffer(blockFrames)
             val bufOracle2 = AudioBuffer(blockFrames)
-            input.copyInto(bufCore2, 0, offset + length, offset + length + blockFrames)
-            core.process(bufCore2, 0, blockFrames)
-            c.updateOffsetAndLength(0, blockFrames)
+            input.copyInto(destination = bufCore2, destinationOffset = 0, startIndex = offset + length, endIndex = offset + length + blockFrames)
+            core.process(buffer = bufCore2, offset = 0, length = blockFrames)
+            c.updateOffsetAndLength(offset = 0, length = blockFrames)
             c.voiceElapsedFrames = length
             oracle.generate(bufOracle2, 220.0, c)
             c.voiceElapsedFrames += blockFrames
@@ -636,16 +641,16 @@ class EqCoreSpec : StringSpec({
             // input values in the same order either way.
             val bufCore3 = AudioBuffer(2 * blockFrames)
             input.copyInto(
-                bufCore3,
-                0,
-                offset + length + blockFrames,
-                offset + length + 3 * blockFrames,
+                destination = bufCore3,
+                destinationOffset = 0,
+                startIndex = offset + length + blockFrames,
+                endIndex = offset + length + 3 * blockFrames,
             )
-            core.process(bufCore3, 0, 2 * blockFrames)
+            core.process(buffer = bufCore3, offset = 0, length = 2 * blockFrames)
 
             val bufOracle3 = AudioBuffer(blockFrames)
             for (half in 0 until 2) {
-                c.updateOffsetAndLength(0, blockFrames)
+                c.updateOffsetAndLength(offset = 0, length = blockFrames)
                 oracle.generate(bufOracle3, 220.0, c)
                 for (i in 0 until blockFrames) {
                     if (tol != null) {
@@ -677,9 +682,9 @@ class EqCoreSpec : StringSpec({
         val bufCore = AudioBuffer(blockFrames)
         val bufOracle = AudioBuffer(blockFrames)
         freqs.forEachIndexed { blk, f ->
-            core.configureSection(0, EqCore.LOWPASS, f, 0.707, 0.0, 1.0, sr.toDouble())
-            input.copyInto(bufCore, 0, blk * blockFrames, (blk + 1) * blockFrames)
-            core.process(bufCore, 0, blockFrames)
+            core.configureSection(index = 0, type = EqCore.LOWPASS, freq = f, q = 0.707, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
+            input.copyInto(destination = bufCore, destinationOffset = 0, startIndex = blk * blockFrames, endIndex = (blk + 1) * blockFrames)
+            core.process(buffer = bufCore, offset = 0, length = blockFrames)
             oracle.generate(bufOracle, f, c)
             for (i in 0 until blockFrames) {
                 bufCore[i].toRawBits() shouldBe bufOracle[i].toRawBits()
@@ -696,7 +701,7 @@ class EqCoreSpec : StringSpec({
         val tiny = DoubleArray(blockFrames * (blocks + 1)).also { it[0] = 1e-14 }
         for ((_, single) in windowSections) {
             assertChainParity(
-                listOf(Section(single.type, 1234.0, 1.7, gain = 2.0, db = single.db)),
+                listOf(Section(type = single.type, freq = 1234.0, q = 1.7, gain = 2.0, db = single.db)),
                 data = tiny,
             )
         }
@@ -707,11 +712,11 @@ class EqCoreSpec : StringSpec({
         // values where a well-meaning guard would diverge (NaN -> 1000 Hz fallback,
         // 1e9 -> Nyquist-1, q NaN -> Butterworth, q 1e9 -> 200, q 0 -> 0.1).
         val extremes = listOf(
-            Section(EqCore.LOWPASS, Double.NaN, 1.0),
-            Section(EqCore.LOWPASS, 1e9, 1.0),
-            Section(EqCore.HIGHPASS, 440.0, Double.NaN),
-            Section(EqCore.BANDPASS, 850.0, 1e9),
-            Section(EqCore.NOTCH, 210.0, 0.0),
+            Section(type = EqCore.LOWPASS, freq = Double.NaN, q = 1.0),
+            Section(type = EqCore.LOWPASS, freq = 1e9, q = 1.0),
+            Section(type = EqCore.HIGHPASS, freq = 440.0, q = Double.NaN),
+            Section(type = EqCore.BANDPASS, freq = 850.0, q = 1e9),
+            Section(type = EqCore.NOTCH, freq = 210.0, q = 0.0),
         )
         for (section in extremes) {
             assertChainParity(listOf(section))
@@ -727,11 +732,11 @@ class EqCoreSpec : StringSpec({
         // it reddens this row and moves the tripwire to 7.
         for (unknownType in listOf(6, 99, -42)) {
             val core = EqCore(1).also {
-                it.configureSection(0, unknownType, 1000.0, 1.0, 6.0, 1.5, sr.toDouble())
+                it.configureSection(index = 0, type = unknownType, freq = 1000.0, q = 1.0, db = 6.0, gain = 1.5, sampleRate = sr.toDouble())
             }
             val buf = AudioBuffer(blockFrames)
-            input.copyInto(buf, 0, 0, blockFrames)
-            core.process(buf, 0, blockFrames)
+            input.copyInto(destination = buf, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+            core.process(buffer = buf, offset = 0, length = blockFrames)
             for (i in 0 until blockFrames) {
                 buf[i].toRawBits() shouldBe input[i].toRawBits()
             }
@@ -758,7 +763,7 @@ class EqCoreSpec : StringSpec({
         // The extra UNITY-gain tap arms the gain==1.0 safeOut-skip mutant: on NaN data the
         // legacy Times scrubs (safeOut(NaN * 1.0) = 0.0) while a skipping core adds bare NaN
         // — normal-amplitude data cannot tell the two apart at unity.
-        val pathologySections = allSections + ("rawtap-unity" to Section(EqCore.RAW_TAP, 850.0, 0.9, gain = 1.0))
+        val pathologySections = allSections + ("rawtap-unity" to Section(type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, gain = 1.0))
         for (pathology in listOf(1e12, Double.POSITIVE_INFINITY, Double.NaN)) {
             val wild = DoubleArray(blockFrames * (blocks + 1)) { i -> input[i] }.also {
                 it[40] = pathology
@@ -772,14 +777,14 @@ class EqCoreSpec : StringSpec({
     "disableSection retires a section to PASSTHROUGH and zeroes its state" {
         // The sanctioned retire call for pooled cores: after disableSection the slot must
         // pass block 2 through bit-untouched (type back to UNCONFIGURED).
-        val core = buildCore(listOf(Section(EqCore.LOWPASS, 1234.0, 1.7)))
+        val core = buildCore(listOf(Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7)))
         val buf = AudioBuffer(blockFrames)
-        input.copyInto(buf, 0, 0, blockFrames)
-        core.process(buf, 0, blockFrames)
+        input.copyInto(destination = buf, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        core.process(buffer = buf, offset = 0, length = blockFrames)
 
         core.disableSection(0)
-        input.copyInto(buf, 0, blockFrames, 2 * blockFrames)
-        core.process(buf, 0, blockFrames)
+        input.copyInto(destination = buf, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+        core.process(buffer = buf, offset = 0, length = blockFrames)
         for (i in 0 until blockFrames) {
             buf[i].toRawBits() shouldBe input[blockFrames + i].toRawBits()
         }
@@ -787,13 +792,13 @@ class EqCoreSpec : StringSpec({
         // Re-enable: state was ZEROED on disable (KDoc — releasing stale pre-disable
         // integrator energy here would thump), so block 3 must equal a FRESH core's
         // first block bit-for-bit.
-        core.configureSection(0, EqCore.LOWPASS, 1234.0, 1.7, 0.0, 1.0, sr.toDouble())
-        val fresh = buildCore(listOf(Section(EqCore.LOWPASS, 1234.0, 1.7)))
+        core.configureSection(index = 0, type = EqCore.LOWPASS, freq = 1234.0, q = 1.7, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
+        val fresh = buildCore(listOf(Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7)))
         val bufFresh = AudioBuffer(blockFrames)
-        input.copyInto(buf, 0, 2 * blockFrames, 3 * blockFrames)
-        input.copyInto(bufFresh, 0, 2 * blockFrames, 3 * blockFrames)
-        core.process(buf, 0, blockFrames)
-        fresh.process(bufFresh, 0, blockFrames)
+        input.copyInto(destination = buf, destinationOffset = 0, startIndex = 2 * blockFrames, endIndex = 3 * blockFrames)
+        input.copyInto(destination = bufFresh, destinationOffset = 0, startIndex = 2 * blockFrames, endIndex = 3 * blockFrames)
+        core.process(buffer = buf, offset = 0, length = blockFrames)
+        fresh.process(buffer = bufFresh, offset = 0, length = blockFrames)
         for (i in 0 until blockFrames) {
             buf[i].toRawBits() shouldBe bufFresh[i].toRawBits()
         }
@@ -805,33 +810,33 @@ class EqCoreSpec : StringSpec({
         // numbers the loop-shape decision was made on assume serial cores pay no copy. So
         // the LIFECYCLE is pinned directly (internal visibility), not via output parity.
         val core = EqCore(2).also {
-            it.configureSection(0, EqCore.LOWPASS, 1234.0, 1.7, 0.0, 1.0, sr.toDouble())
+            it.configureSection(index = 0, type = EqCore.LOWPASS, freq = 1234.0, q = 1.7, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
         }
         core.hasRawTap shouldBe false
 
-        core.configureSection(1, EqCore.RAW_TAP, 850.0, 0.9, 0.0, 2.0, sr.toDouble())
+        core.configureSection(index = 1, type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, db = 0.0, gain = 2.0, sampleRate = sr.toDouble())
         core.hasRawTap shouldBe true
 
         core.disableSection(1)
         core.hasRawTap shouldBe false
 
-        core.configureSection(1, EqCore.RAW_TAP, 850.0, 0.9, 0.0, 2.0, sr.toDouble())
-        core.configureSection(1, EqCore.NOTCH, 210.0, 2.5, 0.0, 1.0, sr.toDouble())
+        core.configureSection(index = 1, type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, db = 0.0, gain = 2.0, sampleRate = sr.toDouble())
+        core.configureSection(index = 1, type = EqCore.NOTCH, freq = 210.0, q = 2.5, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
         core.hasRawTap shouldBe false // reconfiguring AWAY from a tap also clears the flag
 
         // TWO taps, one disabled: the flag must stay TRUE — a wrongly-CLEARED flag skips
         // captureInput and the surviving tap silently filters a one-block-stale copy (no
         // crash, wrong audio). This is the direction a blanket `hasRawTap = false` in
         // disableSection breaks.
-        core.configureSection(0, EqCore.RAW_TAP, 850.0, 0.9, 0.0, 2.0, sr.toDouble())
-        core.configureSection(1, EqCore.RAW_TAP, 1000.0, 0.8, 0.0, 2.0, sr.toDouble())
+        core.configureSection(index = 0, type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, db = 0.0, gain = 2.0, sampleRate = sr.toDouble())
+        core.configureSection(index = 1, type = EqCore.RAW_TAP, freq = 1000.0, q = 0.8, db = 0.0, gain = 2.0, sampleRate = sr.toDouble())
         core.disableSection(1)
         core.hasRawTap shouldBe true
 
         // ...and the MIRROR: disable the LOWER-indexed tap with the survivor above it — a
         // recompute scan that stops one slot short goes stuck-false only in this direction.
-        core.configureSection(0, EqCore.RAW_TAP, 850.0, 0.9, 0.0, 2.0, sr.toDouble())
-        core.configureSection(1, EqCore.RAW_TAP, 1000.0, 0.8, 0.0, 2.0, sr.toDouble())
+        core.configureSection(index = 0, type = EqCore.RAW_TAP, freq = 850.0, q = 0.9, db = 0.0, gain = 2.0, sampleRate = sr.toDouble())
+        core.configureSection(index = 1, type = EqCore.RAW_TAP, freq = 1000.0, q = 0.8, db = 0.0, gain = 2.0, sampleRate = sr.toDouble())
         core.disableSection(0)
         core.hasRawTap shouldBe true
     }
@@ -843,12 +848,12 @@ class EqCoreSpec : StringSpec({
         // pinned: buffer bit-untouched, NOTHING allocated, and state untouched.
         val core = buildCore(listOf(tapSection))
         val buf = AudioBuffer(blockFrames)
-        input.copyInto(buf, 0, 0, blockFrames)
+        input.copyInto(destination = buf, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
 
-        core.process(buf, 64, blockFrames) // reaches past the end
-        core.process(buf, -1, 32) // negative offset
-        core.process(buf, 0, -5) // negative length
-        core.process(buf, Int.MAX_VALUE, 1) // naive `offset + length` wraps NEGATIVE here
+        core.process(buffer = buf, offset = 64, length = blockFrames) // reaches past the end
+        core.process(buffer = buf, offset = -1, length = 32) // negative offset
+        core.process(buffer = buf, offset = 0, length = -5) // negative length
+        core.process(buffer = buf, offset = Int.MAX_VALUE, length = 1) // naive `offset + length` wraps NEGATIVE here
 
         for (i in 0 until blockFrames) {
             buf[i].toRawBits() shouldBe input[i].toRawBits()
@@ -864,18 +869,18 @@ class EqCoreSpec : StringSpec({
         val ref = buildCore(listOf(tapSection))
         val bufCore = AudioBuffer(blockFrames)
         val bufRef = AudioBuffer(blockFrames)
-        input.copyInto(bufCore, 0, 0, blockFrames)
-        input.copyInto(bufRef, 0, 0, blockFrames)
-        core.process(bufCore, 0, blockFrames)
-        ref.process(bufRef, 0, blockFrames)
+        input.copyInto(destination = bufCore, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        input.copyInto(destination = bufRef, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        core.process(buffer = bufCore, offset = 0, length = blockFrames)
+        ref.process(buffer = bufRef, offset = 0, length = blockFrames)
 
-        core.process(bufCore, 64, blockFrames) // insane, between the two valid blocks
-        core.process(bufCore, 0, -5)
+        core.process(buffer = bufCore, offset = 64, length = blockFrames) // insane, between the two valid blocks
+        core.process(buffer = bufCore, offset = 0, length = -5)
 
-        input.copyInto(bufCore, 0, blockFrames, 2 * blockFrames)
-        input.copyInto(bufRef, 0, blockFrames, 2 * blockFrames)
-        core.process(bufCore, 0, blockFrames)
-        ref.process(bufRef, 0, blockFrames)
+        input.copyInto(destination = bufCore, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+        input.copyInto(destination = bufRef, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+        core.process(buffer = bufCore, offset = 0, length = blockFrames)
+        ref.process(buffer = bufRef, offset = 0, length = blockFrames)
         for (i in 0 until blockFrames) {
             bufCore[i].toRawBits() shouldBe bufRef[i].toRawBits()
         }
@@ -886,18 +891,18 @@ class EqCoreSpec : StringSpec({
         // must never throw (house fall-through; JS typed arrays silently drop OOB writes,
         // the guard makes JVM behave the same). The core must act as if the calls never
         // happened.
-        val core = buildCore(listOf(Section(EqCore.LOWPASS, 1234.0, 1.7)))
-        core.configureSection(1, EqCore.HIGHPASS, 440.0, 0.707, 0.0, 1.0, sr.toDouble())
-        core.configureSection(-1, EqCore.HIGHPASS, 440.0, 0.707, 0.0, 1.0, sr.toDouble())
+        val core = buildCore(listOf(Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7)))
+        core.configureSection(index = 1, type = EqCore.HIGHPASS, freq = 440.0, q = 0.707, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
+        core.configureSection(index = -1, type = EqCore.HIGHPASS, freq = 440.0, q = 0.707, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
         core.disableSection(1)
         core.disableSection(-1)
 
-        val oracle = chainOracle(input, listOf(Section(EqCore.LOWPASS, 1234.0, 1.7)))
+        val oracle = chainOracle(input, listOf(Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7)))
         val c = ctx()
         val bufCore = AudioBuffer(blockFrames)
         val bufOracle = AudioBuffer(blockFrames)
-        input.copyInto(bufCore, 0, 0, blockFrames)
-        core.process(bufCore, 0, blockFrames)
+        input.copyInto(destination = bufCore, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        core.process(buffer = bufCore, offset = 0, length = blockFrames)
         oracle.generate(bufOracle, 220.0, c)
         for (i in 0 until blockFrames) {
             bufCore[i].toRawBits() shouldBe bufOracle[i].toRawBits()
@@ -913,15 +918,15 @@ class EqCoreSpec : StringSpec({
         // only distinguishable when configured work follows the hole.
         val core = EqCore(2).also {
             // section 0 deliberately NOT configured
-            it.configureSection(1, EqCore.LOWPASS, 1234.0, 1.7, 0.0, 1.0, sr.toDouble())
+            it.configureSection(index = 1, type = EqCore.LOWPASS, freq = 1234.0, q = 1.7, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
         }
-        val oracle = chainOracle(input, listOf(Section(EqCore.LOWPASS, 1234.0, 1.7)))
+        val oracle = chainOracle(input, listOf(Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7)))
         val c = ctx()
         val bufCore = AudioBuffer(blockFrames)
         val bufOracle = AudioBuffer(blockFrames)
         repeat(blocks) { blk ->
-            input.copyInto(bufCore, 0, blk * blockFrames, (blk + 1) * blockFrames)
-            core.process(bufCore, 0, blockFrames)
+            input.copyInto(destination = bufCore, destinationOffset = 0, startIndex = blk * blockFrames, endIndex = (blk + 1) * blockFrames)
+            core.process(buffer = bufCore, offset = 0, length = blockFrames)
             oracle.generate(bufOracle, 220.0, c)
             for (i in 0 until blockFrames) {
                 bufCore[i].toRawBits() shouldBe bufOracle[i].toRawBits()
@@ -934,20 +939,20 @@ class EqCoreSpec : StringSpec({
         // With a single section, "skip THIS section" and "skip the REST" are
         // indistinguishable — only a chain with sections AFTER the unknown one can tell
         // them apart: the trailing highpass must still run.
-        val lp = Section(EqCore.LOWPASS, 1234.0, 1.7)
-        val hp = Section(EqCore.HIGHPASS, 440.0, 0.707)
+        val lp = Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7)
+        val hp = Section(type = EqCore.HIGHPASS, freq = 440.0, q = 0.707)
         val core = EqCore(3).also {
-            it.configureSection(0, lp.type, lp.freq, lp.q, 0.0, 1.0, sr.toDouble())
-            it.configureSection(1, 99, 1000.0, 1.0, 6.0, 1.5, sr.toDouble())
-            it.configureSection(2, hp.type, hp.freq, hp.q, 0.0, 1.0, sr.toDouble())
+            it.configureSection(index = 0, type = lp.type, freq = lp.freq, q = lp.q, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
+            it.configureSection(index = 1, type = 99, freq = 1000.0, q = 1.0, db = 6.0, gain = 1.5, sampleRate = sr.toDouble())
+            it.configureSection(index = 2, type = hp.type, freq = hp.freq, q = hp.q, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
         }
         val oracle = chainOracle(input, listOf(lp, hp))
         val c = ctx()
         val bufCore = AudioBuffer(blockFrames)
         val bufOracle = AudioBuffer(blockFrames)
         repeat(blocks) { blk ->
-            input.copyInto(bufCore, 0, blk * blockFrames, (blk + 1) * blockFrames)
-            core.process(bufCore, 0, blockFrames)
+            input.copyInto(destination = bufCore, destinationOffset = 0, startIndex = blk * blockFrames, endIndex = (blk + 1) * blockFrames)
+            core.process(buffer = bufCore, offset = 0, length = blockFrames)
             oracle.generate(bufOracle, 220.0, c)
             for (i in 0 until blockFrames) {
                 bufCore[i].toRawBits() shouldBe bufOracle[i].toRawBits()
@@ -967,20 +972,20 @@ class EqCoreSpec : StringSpec({
         // mis-dispatched unknown type advances state invisibly.
         for (unknownType in listOf(6, 99, -42)) {
             val core = EqCore(1).also {
-                it.configureSection(0, unknownType, 1234.0, 1.7, 6.0, 1.5, sr.toDouble())
+                it.configureSection(index = 0, type = unknownType, freq = 1234.0, q = 1.7, db = 6.0, gain = 1.5, sampleRate = sr.toDouble())
             }
             val warm = AudioBuffer(blockFrames)
-            input.copyInto(warm, 0, 0, blockFrames)
-            core.process(warm, 0, blockFrames)
+            input.copyInto(destination = warm, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+            core.process(buffer = warm, offset = 0, length = blockFrames)
 
-            core.configureSection(0, EqCore.LOWPASS, 1234.0, 1.7, 0.0, 1.0, sr.toDouble())
-            val fresh = buildCore(listOf(Section(EqCore.LOWPASS, 1234.0, 1.7)))
+            core.configureSection(index = 0, type = EqCore.LOWPASS, freq = 1234.0, q = 1.7, db = 0.0, gain = 1.0, sampleRate = sr.toDouble())
+            val fresh = buildCore(listOf(Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7)))
             val bufCore = AudioBuffer(blockFrames)
             val bufFresh = AudioBuffer(blockFrames)
-            input.copyInto(bufCore, 0, blockFrames, 2 * blockFrames)
-            input.copyInto(bufFresh, 0, blockFrames, 2 * blockFrames)
-            core.process(bufCore, 0, blockFrames)
-            fresh.process(bufFresh, 0, blockFrames)
+            input.copyInto(destination = bufCore, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+            input.copyInto(destination = bufFresh, destinationOffset = 0, startIndex = blockFrames, endIndex = 2 * blockFrames)
+            core.process(buffer = bufCore, offset = 0, length = blockFrames)
+            fresh.process(buffer = bufFresh, offset = 0, length = blockFrames)
             for (i in 0 until blockFrames) {
                 bufCore[i].toRawBits() shouldBe bufFresh[i].toRawBits()
             }
@@ -992,10 +997,10 @@ class EqCoreSpec : StringSpec({
         // slot 0) leaves slots 1..3 ringing and reddens here — the pooling scenario
         // reset() exists for is multi-section.
         val sections = listOf(
-            Section(EqCore.NOTCH, 210.0, 2.5),
-            Section(EqCore.HIGHPASS, 440.0, 0.707),
-            Section(EqCore.BANDPASS, 850.0, 0.9),
-            Section(EqCore.LOWPASS, 1234.0, 1.7),
+            Section(type = EqCore.NOTCH, freq = 210.0, q = 2.5),
+            Section(type = EqCore.HIGHPASS, freq = 440.0, q = 0.707),
+            Section(type = EqCore.BANDPASS, freq = 850.0, q = 0.9),
+            Section(type = EqCore.LOWPASS, freq = 1234.0, q = 1.7),
         )
         val fresh = buildCore(sections)
         val recycled = buildCore(sections)
@@ -1003,16 +1008,16 @@ class EqCoreSpec : StringSpec({
         // Dirty the recycled core's state, then reset — it must match a fresh core
         // bit-for-bit WITHOUT reconfiguration (coefficients persist).
         val warm = AudioBuffer(blockFrames)
-        input.copyInto(warm, 0, 0, blockFrames)
-        recycled.process(warm, 0, blockFrames)
+        input.copyInto(destination = warm, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        recycled.process(buffer = warm, offset = 0, length = blockFrames)
         recycled.reset()
 
         val bufFresh = AudioBuffer(blockFrames)
         val bufRecycled = AudioBuffer(blockFrames)
-        input.copyInto(bufFresh, 0, 0, blockFrames)
-        input.copyInto(bufRecycled, 0, 0, blockFrames)
-        fresh.process(bufFresh, 0, blockFrames)
-        recycled.process(bufRecycled, 0, blockFrames)
+        input.copyInto(destination = bufFresh, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        input.copyInto(destination = bufRecycled, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+        fresh.process(buffer = bufFresh, offset = 0, length = blockFrames)
+        recycled.process(buffer = bufRecycled, offset = 0, length = blockFrames)
         for (i in 0 until blockFrames) {
             bufRecycled[i].toRawBits() shouldBe bufFresh[i].toRawBits()
         }

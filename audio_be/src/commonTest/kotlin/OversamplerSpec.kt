@@ -30,13 +30,26 @@ class OversamplerSpec : StringSpec({
         Oversampler.factorToStages(-1) shouldBe 0
     }
 
+    "stages 0: both halves are no-ops, upsample writes nothing and returns 0, decimate writes nothing" {
+        val os = Oversampler(stages = 0)
+        val buffer = AudioBuffer(blockFrames) { it * 0.01 }
+        val before = buffer.copyOf()
+        val work = AudioBuffer(blockFrames) { -1.0 }
+
+        os.upsample(source = buffer, offset = 0, length = blockFrames, work = work) shouldBe 0
+        work.all { it == -1.0 } shouldBe true
+
+        os.decimate(work = work, target = buffer, offset = 0, length = blockFrames)
+        buffer.toList() shouldBe before.toList()
+    }
+
     "identity transform preserves DC level" {
         val scratch = ScratchBuffers(blockFrames)
         val os = Oversampler(stages = 1) // 2x
 
         // DC signal — no phase issues, pure gain test
         val buffer = AudioBuffer(blockFrames) { 0.75 }
-        os.process(buffer, 0, blockFrames, scratch) { _, _ -> /* identity */ }
+        os.roundTrip(buffer = buffer, offset = 0, length = blockFrames, scratch = scratch) { _, _ -> /* identity */ }
 
         // After filter warmup, DC should pass through at unity
         for (i in 16 until blockFrames) {
@@ -56,7 +69,7 @@ class OversamplerSpec : StringSpec({
             sin(2.0 * PI * freq * i / sampleRate)
         }
 
-        os.process(buffer, 0, blockFrames, scratch) { _, _ -> /* identity */ }
+        os.roundTrip(buffer = buffer, offset = 0, length = blockFrames, scratch = scratch) { _, _ -> /* identity */ }
 
         // Find peak amplitude in the stable region (after warmup)
         var maxAmp = 0.0
@@ -92,7 +105,7 @@ class OversamplerSpec : StringSpec({
 
         // Hard clip with 2x oversampling
         val os = Oversampler(stages = 1)
-        os.process(inputOs, 0, blockFrames, scratch) { work, count ->
+        os.roundTrip(buffer = inputOs, offset = 0, length = blockFrames, scratch = scratch) { work, count ->
             for (i in 0 until count) work[i] = work[i].coerceIn(-0.5, 0.5)
         }
 
@@ -123,10 +136,10 @@ class OversamplerSpec : StringSpec({
             sin(2.0 * PI * freq * (i + blockFrames) / sampleRate)
         }
 
-        os.process(block1, 0, blockFrames, scratch) { work, count ->
+        os.roundTrip(buffer = block1, offset = 0, length = blockFrames, scratch = scratch) { work, count ->
             for (i in 0 until count) work[i] = work[i] * 0.5
         }
-        os.process(block2, 0, blockFrames, scratch) { work, count ->
+        os.roundTrip(buffer = block2, offset = 0, length = blockFrames, scratch = scratch) { work, count ->
             for (i in 0 until count) work[i] = work[i] * 0.5
         }
 
@@ -143,7 +156,7 @@ class OversamplerSpec : StringSpec({
         os.factor shouldBe 4
 
         val buffer = AudioBuffer(blockFrames) { 0.7 }
-        os.process(buffer, 0, blockFrames, scratch) { work, count ->
+        os.roundTrip(buffer = buffer, offset = 0, length = blockFrames, scratch = scratch) { work, count ->
             for (i in 0 until count) work[i] = work[i] * 0.5
         }
 
@@ -164,7 +177,7 @@ class OversamplerSpec : StringSpec({
         // Fill region with 1.0
         for (i in offset until offset + length) buffer[i] = 1.0
 
-        os.process(buffer, offset, length, scratch) { work, count ->
+        os.roundTrip(buffer = buffer, offset = offset, length = length, scratch = scratch) { work, count ->
             for (i in 0 until count) work[i] = work[i] * 0.5
         }
 

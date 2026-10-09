@@ -7,22 +7,15 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
-import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.VowelBands
-import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
-import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
-import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
+import kotlin.random.Random
 
 /**
- * Reads the knobs of a Katalyst chain: one [IgnitorDsl] slot node in, one `Double` out, plus the
- * three composite values a stage wants instead of a number (the body and vowel [FilterDef]s, the
- * compressor and duck settings).
+ * Reads the knobs of a Katalyst chain: one [IgnitorDsl] slot node in, one `Double` out. The
+ * composite values a stage wants instead of a number (the body and vowel `ResonatorConfig`s, the
+ * [CompressorSettings], the [DuckSettings]) are built by that stage's writer
+ * (`KatalystSlotWriters.kt`), each the one caller of its rule.
  *
  * Katalyst step 3a (2026-09-17). The per-stage contract is `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7 and the
  * value rule is the signal-flow plan §7 (D4): **a chain's stage knobs come from its slots only**,
@@ -48,6 +41,15 @@ internal object KatalystSlots {
      */
     private const val PROBE_A_HZ: Double = 440.0
     private const val PROBE_B_HZ: Double = 660.0 // not an octave of PROBE_A_HZ, so an octave-invariant use of freq still disagrees
+
+    /**
+     * The seed of the random stream a coerced knob's build draws from (see [coerce]). A bus has no
+     * voice and so no voice stream; a fixed seed keeps the build off the process-wide `Random`.
+     * No answer of [coerce] reads a draw: the nodes that draw at build (noise, the unison stacks,
+     * a humanized filter) answer null at control rate, so the knob takes its fallback whatever the
+     * seed. Fixed rather than global so a second backend has nothing hidden to reproduce.
+     */
+    private const val KNOB_BUILD_SEED: Int = 0
 
     /**
      * The AUTHORED value of one knob: [IgnitorDsl.Constant] is its number, [IgnitorDsl.Param] is
@@ -90,9 +92,13 @@ internal object KatalystSlots {
      * structural read by contract, so the second query cannot advance any state the first one saw.
      *
      * The try/catch is the audio-thread guard, not a diagnostic: [resolve] runs at chain-install
-     * time inside the render callback, where an escaping exception takes the worklet with it. A
-     * hand-built tree can still throw at build time (an empty `Ignitor.variants()` does), and the
-     * house answer to "the engine cannot read this knob" is the knob's default, not a dead voice.
+     * time inside the render callback, where an escaping exception takes the worklet with it. Should
+     * a build ever throw, the house answer to "the engine cannot read this knob" is the knob's default,
+     * not a dead voice.
+     *
+     * An empty `Ignitor.variants()` no longer throws (since 2026-10-07 it is silence everywhere): it builds
+     * `Constant(0)`, both probes agree, and the knob reads 0.0. Until then the build threw and the knob
+     * fell back to its default.
      *
      * The build itself allocates, which is why this is a chain-build path only.
      */
@@ -103,7 +109,7 @@ internal object KatalystSlots {
         val second: Double
 
         try {
-            val ignitor = node.buildExciter().ignitor
+            val ignitor = node.buildExciter(random = Random(KNOB_BUILD_SEED)).ignitor
 
             first = ignitor.controlRateValueOrNull(PROBE_A_HZ) ?: return fallback
             second = ignitor.controlRateValueOrNull(PROBE_B_HZ) ?: return fallback
@@ -118,112 +124,6 @@ internal object KatalystSlots {
         }
 
         return first
-    }
-
-    /**
-     * The body resonator a declared stage asks for, from its RESOLVED `wet` and `floor`, or null
-     * (the stage is off) when [bands] is null, whatever `mix` says.
-     *
-     * The bands come from `BodyMaterials.modesAt(index)`, which the writer calls directly: step 3c
-     * (2026-09-17) moved the table into `audio_bridge` and step 5a-2 (2026-09-18) made the wire
-     * carry the INDEX rather than the name, which left nothing for a wrapper here to add. An unset
-     * slot (non-finite), an index of 0 (`none`) and an index out of range are the same answer, off,
-     * which is the rule `SprudelVoiceData.toVoiceData` follows for an unknown NAME on the voice
-     * path; the name-to-index half is `BodyMaterials.indexOf`, and both doors call it.
-     *
-     * `mix` is the `wet` slot and a non-finite `floor` takes [BODY_FLOOR], which is also what a
-     * null floor means to [FilterDef.Body]; the constant is written out so the stage carries one
-     * value instead of two spellings of it. A non-finite `mix` takes [BODY_WET] by the same rule:
-     * unset is unset on every knob, and the resonator's own `mix` is read straight into the
-     * wet/dry law, where a NaN would silence the orbit.
-     *
-     * These two substitutions are the **NaN rule for a raw `katp` write**, not a second fill. The
-     * `body(...)` door fills its own companions when a call names the material (`/dsl-design` §4,
-     * checklist 11, Katalyst step 5a-3), so a slot only ever arrives unset here when somebody wrote
-     * `katp("body.material", n)` by hand, or when a chain declares the knob and nothing sets it.
-     */
-    fun bodyDef(bands: List<FilterDef.Body.Mode>?, mix: Double, floor: Double): FilterDef.Body? {
-        if (bands == null) {
-            return null
-        }
-
-        return FilterDef.Body(
-            bands = bands,
-            // NaN-guards on values the author can write: a non-finite slot is "unset".
-            mix = if (mix.isFinite()) mix else BODY_WET,
-            floor = if (floor.isFinite()) floor else BODY_FLOOR,
-        )
-    }
-
-    /**
-     * The formant bank a declared stage asks for. Twin of [bodyDef], with the vowel constants and
-     * `VowelBands.bandsAt` as the lookup, and the same NaN rule for a raw `katp` write.
-     */
-    fun vowelDef(bands: List<FilterDef.Formant.Band>?, mix: Double, floor: Double): FilterDef.Formant? {
-        if (bands == null) {
-            return null
-        }
-
-        return FilterDef.Formant(
-            bands = bands,
-            // NaN-guards on values the author can write: a non-finite slot is "unset".
-            mix = if (mix.isFinite()) mix else VOWEL_WET,
-            floor = if (floor.isFinite()) floor else VOWEL_FLOOR,
-        )
-    }
-
-    /**
-     * The compressor settings a declared stage asks for, from its five RESOLVED slot values, or
-     * null (the stage is off) when none of them is finite.
-     *
-     * Straight through [Voice.Compressor.fromParams], the one rule for it: any of the five
-     * set means on, and every unset one takes its `COMPRESSOR_*` constant. A non-finite slot is
-     * what "unset" looks like on the wire, so it maps to the `null` that function reads.
-     *
-     * That substitution is the NaN rule for a raw `katp` write, not a second fill: since Katalyst
-     * step 5a-3 the `compressor(...)` door fills the other four itself, whichever of the five the
-     * call named, so the values it writes are already the ones this function would have supplied.
-     */
-    fun compressorSettings(
-        threshold: Double,
-        ratio: Double,
-        knee: Double,
-        attack: Double,
-        release: Double,
-    ): Voice.Compressor? =
-        Voice.Compressor.fromParams(
-            threshold = finiteOrNull(threshold),
-            ratio = finiteOrNull(ratio),
-            knee = finiteOrNull(knee),
-            attack = finiteOrNull(attack),
-            release = finiteOrNull(release),
-        )
-
-    /**
-     * The duck settings a declared stage asks for, from its three RESOLVED slot values, or null
-     * (the stage is off) unless the stage names a source orbit AND asks for depth.
-     *
-     * `orbit` is a number the runtime coerces to an Int, exactly as the sprudel door does; a
-     * finite negative is a request like any other, not an off switch (the off switch is the
-     * non-finite default). A non-finite attack takes [DUCK_ATTACK_SECONDS].
-     */
-    fun duckSettings(orbit: Double, depth: Double, attack: Double): Voice.Ducking? {
-        // NaN-guard on values the author can write: a non-finite orbit is "no source named".
-        if (!orbit.isFinite() || !(depth > 0.0)) {
-            return null
-        }
-
-        return Voice.Ducking(
-            cylinderId = orbit.toInt(),
-            attackSeconds = if (attack.isFinite()) attack else DUCK_ATTACK_SECONDS,
-            depth = depth,
-        )
-    }
-
-    /** A resolved slot as a `Double?`: the number when it is finite, null when it reads as unset. */
-    private fun finiteOrNull(value: Double): Double? {
-        // NaN-guard on a value the author can write: a non-finite slot was never set.
-        return if (value.isFinite()) value else null
     }
 }
 
@@ -264,7 +164,7 @@ internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
      * True when [value] came OUT of the orbit's param state as a finite number, rather than from
      * what the chain authored. "The pattern wrote this knob", which is the slot twin of the wire's
      * old "the voice TOUCHED this effect" (`VoiceFactory`'s `reverbTouched` / `delayTouched`), and
-     * the two send stages need it to keep that rule (see [KatalystReverbWriter]).
+     * the delay and reverb stages need it to keep that rule (see [KatalystReverbWriter]).
      *
      * FINITE on purpose: a non-finite slot is the wire's "never set" (`/dsl-design` §4), so a
      * cleared knob reads as untouched, exactly as a null field did.
@@ -282,7 +182,16 @@ internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
 
         // NaN-guard on a value the author can write: a non-finite slot was never set, so it is not
         // a write either.
-        written = fromState != null && fromState.isFinite()
-        value = fromState ?: authored
+        // Two branches and not `fromState ?: authored`: on V8 that merge of the map's tagged value with the double
+        // field boxed an absent knob's non-integral default. Measured on the classic chain: about 180 of the about
+        // 1,310 bytes a new param map cost, on both bundles, pinned to one core and not (the V8 rule in
+        // `audio/ref/performance.md`, V8 allocation pass).
+        if (fromState != null) {
+            written = fromState.isFinite()
+            value = fromState
+        } else {
+            written = false
+            value = authored
+        }
     }
 }

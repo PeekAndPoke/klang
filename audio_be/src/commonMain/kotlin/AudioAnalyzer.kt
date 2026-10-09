@@ -15,21 +15,16 @@ import io.peekandpoke.ultra.streams.Stream
  */
 interface AudioAnalyzer {
     /**
-     * FFT size for analysis (e.g., 2048)
-     */
-    val fftSize: Int
-
-    /**
      * Stream of time-domain waveform data, emitted at a regular interval.
      * Values range from -1.0 to 1.0.
-     * Buffer size equals fftSize.
+     * Buffer size equals the analyser's FFT size.
      */
     val waveform: Stream<AnalyzerBufferHistory>
 
     /**
      * Fills [out] buffer with frequency-domain FFT data.
      * Values are magnitudes in dB (typically -100 to 0).
-     * Buffer size should equal fftSize / 2 (frequencyBinCount).
+     * Buffer size should equal half the analyser's FFT size (its frequency bin count).
      */
     fun getFft(out: AnalyzerBuffer)
 }

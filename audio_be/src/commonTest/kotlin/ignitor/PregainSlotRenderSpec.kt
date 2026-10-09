@@ -22,6 +22,10 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * What `pregain` does to SAMPLES, at the level where it is decided: the ignitor tree.
  *
@@ -59,8 +63,9 @@ class PregainSlotRenderSpec : StringSpec({
         voiceDurationFrames = blockFrames * blocks,
         gateEndFrame = blockFrames * blocks,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 

@@ -160,7 +160,7 @@ Ignitor.register("supersaw", Ignitor.supersaw().classic())
 - **The gate moves to the node (decided 2026-09-17, the optimization phase 3 stands on).** Today
   the two paths differ. `FilterPipelineBuilder` adds a stage only when the voice wrote it (coarse
   above 1, crush and distort above 0, tremolo depth above 0), so an off stage does not exist. The
-  Ignitor DSL path is not free: the literal overloads (`Ignitor.coarse(amount: Double)`) return the
+  Ignitor DSL path is not free: the literal overloads (`Ignitor.coarse(factor: Double)`) return the
   inner when the amount is off, but a node whose knob is a `Param` or `Constant`, which is what
   `.coarse(Ignitor.slot.coarse)` becomes, builds its `CoarseIgnitor` unconditionally and pays a scratch
   render and a copy per block even at 0. A classic tail of ten slotted stages with nothing written

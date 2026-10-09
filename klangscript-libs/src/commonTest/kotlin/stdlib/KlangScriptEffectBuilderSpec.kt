@@ -103,6 +103,12 @@ class KlangScriptEffectBuilderSpec : StringSpec({
         shouldThrowAny { ks("Ignitor.saw().shimmer(0.3, x => x.wet(0.4))") }
     }
 
+    "shimmer: a pitch that is not a number is the door's typed error, as on wet, feedback and tone" {
+        shouldThrow<KlangScriptTypeError> { ks("""Ignitor.saw().shimmer(0.3, 0.4, 3000, [0, "7", 12])""") }
+        shouldThrow<KlangScriptTypeError> { ks("""Ignitor.saw().shimmer(0.3, 0.4, 3000, [0, true, 12])""") }
+        (ks("Ignitor.saw().shimmer(0.3, 0.4, 3000, [0, 7, 12])") as IgnitorDsl.Shimmer).pitches shouldBe listOf(0.0, 7.0, 12.0)
+    }
+
     "drive: amount only, the type is gone on both doors" {
         ks("Ignitor.saw().drive(0.5)") shouldBe saw.drive(0.5)
         ks("Ignitor.saw().drive(0.5)") shouldBe IgnitorDsl.Drive(inner = saw, amount = IgnitorDsl.Constant(0.5))
@@ -111,10 +117,10 @@ class KlangScriptEffectBuilderSpec : StringSpec({
     "pitchEnvelope: no lambda is the node's defaults, attack 0.01, decay 0.1, sustain 0, release 0" {
         ks("Ignitor.saw().pitchEnvelope(12)") shouldBe IgnitorDsl.PitchEnvelope(inner = saw, semitones = IgnitorDsl.Constant(12.0))
         val n = IgnitorDsl.PitchEnvelope(inner = saw)
-        n.attackSec shouldBe IgnitorDsl.Constant(0.01)
-        n.decaySec shouldBe IgnitorDsl.Constant(0.1)
-        n.sustainLevel shouldBe IgnitorDsl.Constant(0.0)
-        n.releaseSec shouldBe IgnitorDsl.Constant(0.0)
+        n.attack shouldBe IgnitorDsl.Constant(0.01)
+        n.decay shouldBe IgnitorDsl.Constant(0.1)
+        n.sustain shouldBe IgnitorDsl.Constant(0.0)
+        n.release shouldBe IgnitorDsl.Constant(0.0)
         n.attackCurve shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
         n.decayCurve shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
         n.releaseCurve shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
@@ -125,10 +131,10 @@ class KlangScriptEffectBuilderSpec : StringSpec({
                 IgnitorDsl.PitchEnvelope(
                     inner = saw,
                     semitones = IgnitorDsl.Constant(24.0),
-                    attackSec = IgnitorDsl.Constant(0.001),
-                    decaySec = IgnitorDsl.Constant(0.05),
-                    sustainLevel = IgnitorDsl.Constant(0.2),
-                    releaseSec = IgnitorDsl.Constant(0.1),
+                    attack = IgnitorDsl.Constant(0.001),
+                    decay = IgnitorDsl.Constant(0.05),
+                    sustain = IgnitorDsl.Constant(0.2),
+                    release = IgnitorDsl.Constant(0.1),
                     attackCurve = AdsrCurves.knob(AdsrCurve.Exponential),
                     decayCurve = AdsrCurves.knob(AdsrCurve.Square),
                     releaseCurve = AdsrCurves.knob(AdsrCurve.Cube),
@@ -140,8 +146,8 @@ class KlangScriptEffectBuilderSpec : StringSpec({
         ks("Ignitor.saw().pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))") shouldBe IgnitorDsl.PitchEnvelope(
             inner = saw,
             semitones = IgnitorDsl.Constant(24.0),
-            attackSec = IgnitorDsl.Constant(0.001),
-            decaySec = IgnitorDsl.Constant(0.04),
+            attack = IgnitorDsl.Constant(0.001),
+            decay = IgnitorDsl.Constant(0.04),
         )
         shouldThrowAny { ks("Ignitor.saw().pitchEnvelope(24, 0.001, 0.04)") }
     }
@@ -175,7 +181,7 @@ class KlangScriptEffectBuilderSpec : StringSpec({
 
     "fm: the index envelope is ONE adsr call on the builder == the Kotlin door's env fields" {
         ks("Ignitor.saw().fm(Ignitor.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.2))") shouldBe
-                saw.fm(IgnitorDsl.Sine(), 1.4, 300.0, envAttackSec = 0.001, envDecaySec = 0.5, envSustainLevel = 0.0, envReleaseSec = 0.2)
+                saw.fm(IgnitorDsl.Sine(), 1.4, 300.0, attack = 0.001, decay = 0.5, sustain = 0.0, release = 0.2)
     }
 
     "fm: without a lambda the depth is constant, the same node as the Kotlin door's defaults" {

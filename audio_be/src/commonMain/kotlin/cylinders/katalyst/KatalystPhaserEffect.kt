@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Phaser
+import io.peekandpoke.klang.audio_be.effects.PhaserBlock
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
@@ -112,6 +113,9 @@ class KatalystPhaserEffect(
      */
     private var fresh: Boolean = true
 
+    /** The block's knob values, filled per block in [process] and handed over by reference ([PhaserBlock] says why). */
+    private val block = PhaserBlock()
+
     init {
         // Unset is identity: the dry mix, which is what the depth gate's off target is too.
         dryGlide.retarget(1.0)
@@ -134,12 +138,30 @@ class KatalystPhaserEffect(
     /** Test seam: the breakpoint sweep width in force right now, in Hz. */
     internal val sweep: Double get() = sweepGlide.value
 
+    /** The holder the five-number [configure] door fills, this stage's own instance ([PhaserConfig] says why). */
+    private val door = PhaserConfig()
+
+    /**
+     * The door for a direct caller (the specs): fills this stage's own [PhaserConfig] and configures from it, so the
+     * gate below is written once, in the holder overload.
+     */
+    fun configure(depth: Double, rate: Double, center: Double, sweep: Double, floor: Double) {
+        val c = door
+
+        c.depth = depth
+        c.rate = rate
+        c.center = center
+        c.sweep = sweep
+        c.floor = floor
+        configure(c)
+    }
+
     /**
      * Applies the orbit owner's five phaser knobs. Called by the chain's writer on every block the
      * orbit has an owner, so an unchanged owner must cost nothing: every write here is either a store of
      * the same number or a [KnobGlide.retarget] to the target that already stands.
      *
-     * THE GATE lives here, and there is only one: [depth] BELOW [Phaser.MIN_ACTIVE_DEPTH] aims the
+     * THE GATE lives here, and there is only one: [PhaserConfig.depth] BELOW [Phaser.MIN_ACTIVE_DEPTH] aims the
      * two coefficients at identity, and the KERNEL params are not written at all. A no-phaser owner
      * must not zero the sweep CLOCK (block-framing ledger D2): `VoiceFactory` defaults `rate` to
      * 0.0, and a rate of 0 freezes the LFO as surely as a skipped `prepareBlock`; the retained rate
@@ -150,8 +172,16 @@ class KatalystPhaserEffect(
      * Gate on the STORED depth, not the raw input: [Phaser.depth]'s setter silently rejects
      * non-finite input, and what reaches the DSP must never disagree with what the gate decided
      * (review round 2 of the stage's first version).
+     *
+     * The stage reads [config] and keeps no reference to it.
      */
-    fun configure(depth: Double, rate: Double, center: Double, sweep: Double, floor: Double) {
+    fun configure(config: PhaserConfig) {
+        val depth = config.depth
+        val rate = config.rate
+        val center = config.center
+        val sweep = config.sweep
+        val floor = config.floor
+
         phaser.depth = depth
 
         if (phaser.depth >= Phaser.MIN_ACTIVE_DEPTH) {
@@ -183,21 +213,15 @@ class KatalystPhaserEffect(
     override fun process(ctx: KatalystContext) {
         fresh = false
 
-        val dryFrom = dryGlide.value
-        val dryTo = dryGlide.advance()
-        val wetFrom = wetGlide.value
-        val wetTo = wetGlide.advance()
+        val b = block
 
-        phaser.process(
-            buffer = ctx.mixBuffer,
-            frames = ctx.blockFrames,
-            centerTo = centerGlide.advance(),
-            sweepTo = sweepGlide.advance(),
-            dryFrom = dryFrom,
-            dryTo = dryTo,
-            wetFrom = wetFrom,
-            wetTo = wetTo,
-        )
+        b.dryFrom = dryGlide.value
+        b.dryTo = dryGlide.advance()
+        b.wetFrom = wetGlide.value
+        b.wetTo = wetGlide.advance()
+        b.centerTo = centerGlide.advance()
+        b.sweepTo = sweepGlide.advance()
+        phaser.process(buffer = ctx.mixBuffer, frames = ctx.blockFrames, block = b)
     }
 
     /** Cascade + latch + LFO phase + kernel params + every glide: the full clean slate, rate included. */
@@ -219,7 +243,7 @@ class KatalystPhaserEffect(
     /**
      * False: the cascade, the latch and the LFO phase are state, but the phaser is an INSERT, so
      * whatever it still carries is in `ctx.mixBuffer` by the time
-     * `Cylinder.isMixBufferSilent()` scans it. See [KatalystBodyEffect.hasTail].
+     * `Cylinder.isMixBufferSilent()` scans it. See [KatalystResonatorEffect.hasTail].
      */
     override fun hasTail(): Boolean = false
 
@@ -227,4 +251,20 @@ class KatalystPhaserEffect(
     override fun retire() {
         reset()
     }
+}
+
+/**
+ * What a phaser stage is configured with on every block the orbit has an owner ([KatalystPhaserEffect.configure]): the
+ * [depth] (the `wet` knob), the [rate], the [center], the [sweep] and the [floor].
+ *
+ * **Mutable and reused, on purpose** (V8 allocation pass, 2026-10-08), for the reason `DelayConfig` gives. Each holder
+ * owns its instance: the slot writer one (filled when it is built and at every resolve), the stage one for its
+ * five-number door; the stage reads the values and keeps no reference.
+ */
+class PhaserConfig {
+    var depth: Double = Double.NaN
+    var rate: Double = Double.NaN
+    var center: Double = Double.NaN
+    var sweep: Double = Double.NaN
+    var floor: Double = Double.NaN
 }

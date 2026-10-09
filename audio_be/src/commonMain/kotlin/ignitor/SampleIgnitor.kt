@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.rampStep
 import kotlin.random.Random
 
 /**
@@ -35,10 +36,10 @@ class SampleIgnitor(
     /** The engine's block size: the drift lane steps once per block (see [AnalogDrift]). */
     blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     /** The voice's random stream (seeded-voice-rng) — wow/flutter drift seeds from it. */
-    rng: Random = Random,
+    rng: Random,
 ) : Ignitor {
 
-    private val drift = AnalogDrift(analog, analogDriftStepRate(sampleRate, blockFrames), rng)
+    private val drift = AnalogDrift(analog, analogDriftStepRate(sampleRate = sampleRate, blockFrames = blockFrames), rng)
     private val loopLength = if (isLooping && loopEnd > loopStart) loopEnd - loopStart else 0.0
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -51,8 +52,9 @@ class SampleIgnitor(
             // Analog drift path: wow & flutter on playback rate, one lane step per block, ramped
             drift.beginBlock()
 
-            var m = drift.blockStart
-            val dm = (drift.blockEnd - m) / ctx.length.coerceAtLeast(1)
+            // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+            var m = drift.blockStart * 1.0
+            val dm = rampStep(from = m, to = drift.blockEnd, frames = ctx.length)
 
             for (i in 0 until ctx.length) {
                 val idxOut = ctx.offset + i

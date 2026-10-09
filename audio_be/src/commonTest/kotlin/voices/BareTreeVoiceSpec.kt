@@ -10,7 +10,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
@@ -34,7 +33,7 @@ import kotlin.random.Random
  *
  * The source is a CONSTANT 0.5, so every expectation below is arithmetic written here: the level the channel
  * leaves ([level], measured on a frame the rule does not touch), the teardown fade's linear ramp over its 192
- * frames at 48 kHz (`VCA_OFF_TEARDOWN_FADE_SECONDS`), and a linear envelope's release (`EnvelopeCore`: `floor(N)`
+ * frames at 48 kHz (`TEARDOWN_FADE_SECONDS`), and a linear envelope's release (`EnvelopeCore`: `floor(N)`
  * frames over `floor(N) - 1`, an exact 0.0 on the last one).
  */
 class BareTreeVoiceSpec : StringSpec({
@@ -52,9 +51,9 @@ class BareTreeVoiceSpec : StringSpec({
         // No envelope, no stage: the bare tree.
         register("bare", dc)
         // Its own envelope at the ROOT, a static release of 0.2 s, linear stages so the release is arithmetic.
-        register("enveloped", dc.adsr(0.0, 0.0, 1.0, 0.2, linear, linear, linear))
+        register("enveloped", dc.adsr(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.2, attackCurve = linear, decayCurve = linear, releaseCurve = linear))
         // The same with an exponential release of a FRACTIONAL frame count: 0.00501 s is 240.48 frames.
-        register("envelopedexp", dc.adsr(0.0, 0.0, 1.0, 0.00501, AdsrCurve.Exponential, AdsrCurve.Exponential, AdsrCurve.Exponential))
+        register("envelopedexp", dc.adsr(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.00501, attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Exponential, releaseCurve = AdsrCurve.Exponential))
         // classic() below the root: each branch has the voice chain, the root is a sum.
         register("branches", dc.classic().plus(dc.classic()))
     }
@@ -62,10 +61,7 @@ class BareTreeVoiceSpec : StringSpec({
     fun render(data: VoiceData, blocks: Int = 140): DoubleArray {
         val factory = VoiceFactory(
             sampleRate = sampleRate,
-            sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
@@ -92,7 +88,7 @@ class BareTreeVoiceSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -120,7 +116,7 @@ class BareTreeVoiceSpec : StringSpec({
             ),
         )
 
-        withClue("first mismatching frame") { firstMismatch(plain, doors) shouldBe -1 }
+        withClue("first mismatching frame") { firstMismatch(a = plain, b = doors) shouldBe -1 }
     }
 
     "no voice envelope: full level from the first frame to the fade, straight through the gate" {
@@ -183,7 +179,7 @@ class BareTreeVoiceSpec : StringSpec({
         val doors = render(base.copy(sound = "branches", ignitorParams = mapOf("adsr.attack" to 0.05)))
         val lastFrame = gateFrame + (0.05 * sampleRate).toInt() - 1
 
-        withClue("engaged: the envelope slot reaches the branches") { firstMismatch(plain, doors) shouldNotBe -1 }
+        withClue("engaged: the envelope slot reaches the branches") { firstMismatch(a = plain, b = doors) shouldNotBe -1 }
         withClue("the last rendered frame is an exact zero") { plain[lastFrame] shouldBe 0.0 }
     }
 })

@@ -211,12 +211,12 @@ class LangSndSpec : StringSpec({
         }
     }
 
-    "sndBrown(\"depth\") compound string sets the white-leak Ignitor slot" {
+    "sndBrown(\"leak\") compound string sets the white-leak Ignitor slot" {
         val events = note("c3").sndBrown(0.5).queryArc(0.0, 1.0)
         events.shouldNotBeEmpty()
         assertSoftly {
             events[0].data.soundName shouldBe "brownnoise"
-            events[0].data.ignitorParams?.get("depth") shouldBe 0.5
+            events[0].data.ignitorParams?.get("leak") shouldBe 0.5
         }
     }
 

@@ -16,7 +16,7 @@ import kotlin.random.Random
  * per block by `analogSpread` into a ramp every voice reads as `startOf` and `endOf`.
  *
  * Every case runs against a test-side reference model built from the DOCUMENTED draw order (one int
- * for the shared lane's seed at construction, then own lanes in index order at `ensureLanes`) and
+ * for the shared lane's seed at `start`, then own lanes in index order at `ensureLanes`) and
  * the documented blend, so a reordered draw, a dropped term or a swapped weight shows as a value
  * mismatch rather than as "still drifts somehow".
  */
@@ -39,6 +39,13 @@ class DriftLanesSpec : StringSpec({
         val shared = AnalogDrift(analog, rate, Random(sharedSeed))
     }
 
+    /**
+     * A container built with [capacity] lanes (and the shared one when [sharedLane]) and started, as an adopter builds it
+     * with the node and starts it at the first block.
+     */
+    fun started(analog: Double, rng: Random, capacity: Int = 0, sharedLane: Boolean = false): DriftLanes =
+        DriftLanes(capacity = capacity, sharedLane = sharedLane).also { it.start(analog = analog, stepRate = rate, rng = rng) }
+
     /** One block for one lane, exactly as an adopter runs it: advance the lane, read the ramp's end. */
     fun end(lanes: DriftLanes, lane: Int): Double {
         lanes.advanceLane(lane)
@@ -48,12 +55,12 @@ class DriftLanesSpec : StringSpec({
 
     "spread 1: each lane's block end is its own AnalogDrift step bit for bit, and the lanes are all the rng pays for" {
         val rng = Random(7)
-        val lanes = DriftLanes(analog, rate, rng)
+        val lanes = started(analog, rng)
 
         lanes.active shouldBe true
         lanes.ensureLanes(3)
 
-        val ref = Reference(7, 3, analog, rate)
+        val ref = Reference(seed = 7, count = 3, analog = analog, rate = rate)
 
         repeat(blocks) {
             lanes.prepareBlock(1.0)
@@ -68,11 +75,11 @@ class DriftLanesSpec : StringSpec({
 
     "spread 0: every lane follows the one shared walk, no own lane advances, and the walk is free" {
         val rng = Random(7)
-        val lanes = DriftLanes(analog, rate, rng)
+        val lanes = started(analog, rng)
 
         lanes.ensureLanes(3)
 
-        val ref = Reference(7, 3, analog, rate)
+        val ref = Reference(seed = 7, count = 3, analog = analog, rate = rate)
 
         repeat(blocks) {
             lanes.prepareBlock(0.0)
@@ -99,11 +106,11 @@ class DriftLanesSpec : StringSpec({
 
     "spread 0.25: the constant-power blend of both walks (unequal weights pin the direction)" {
         val rng = Random(7)
-        val lanes = DriftLanes(analog, rate, rng)
+        val lanes = started(analog, rng)
 
         lanes.ensureLanes(2)
 
-        val ref = Reference(7, 2, analog, rate)
+        val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
         val wShared = sqrt(1.0 - 0.25)
         val wOwn = sqrt(0.25)
 
@@ -121,11 +128,11 @@ class DriftLanesSpec : StringSpec({
     }
 
     "the ramp is continuous: a block starts where the previous one ended, from the seeded state on" {
-        val lanes = DriftLanes(analog, rate, Random(7))
+        val lanes = started(analog, Random(7))
 
         lanes.ensureLanes(2)
 
-        val ref = Reference(7, 2, analog, rate)
+        val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
 
         // Before any step an own lane sits at its seeded state, the same value at both ends
         // (prepareBlock steps the shared lane, advanceLane the own one; neither has run for it).
@@ -148,7 +155,7 @@ class DriftLanesSpec : StringSpec({
 
         // And the seeded state is the lane's own: the first block's start is where the reference
         // lane sat before its first step (its block ramp, unstepped).
-        val fresh = DriftLanes(analog, rate, Random(7))
+        val fresh = started(analog, Random(7))
 
         fresh.ensureLanes(1)
         fresh.prepareBlock(1.0)
@@ -156,7 +163,7 @@ class DriftLanesSpec : StringSpec({
     }
 
     "the shared walk is the same whether the spread drops below 1 at the first block or the sixth" {
-        val early = DriftLanes(analog, rate, Random(7))
+        val early = started(analog, Random(7))
 
         early.ensureLanes(2)
 
@@ -166,7 +173,7 @@ class DriftLanesSpec : StringSpec({
         }
 
         val lateRng = Random(7)
-        val late = DriftLanes(analog, rate, lateRng)
+        val late = started(analog, lateRng)
 
         late.ensureLanes(2)
 
@@ -185,12 +192,12 @@ class DriftLanesSpec : StringSpec({
 
     "a NaN spread reads as 1 (the door default), and out-of-range coerces to the ends" {
         val nanRng = Random(7)
-        val nan = DriftLanes(analog, rate, nanRng)
+        val nan = started(analog, nanRng)
 
         nan.ensureLanes(2)
         nan.prepareBlock(Double.NaN)
 
-        val ref = Reference(7, 2, analog, rate)
+        val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
 
         for (n in 0 until 2) {
             end(nan, n).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
@@ -198,13 +205,13 @@ class DriftLanesSpec : StringSpec({
 
         nanRng.nextInt() shouldBe ref.rng.nextInt()
 
-        val high = DriftLanes(analog, rate, Random(7))
+        val high = started(analog, Random(7))
 
         high.ensureLanes(2)
         high.prepareBlock(4.0)
-        end(high, 0).toRawBits() shouldBe Reference(7, 1, analog, rate).own[0].nextMultiplier().toRawBits()
+        end(high, 0).toRawBits() shouldBe Reference(seed = 7, count = 1, analog = analog, rate = rate).own[0].nextMultiplier().toRawBits()
 
-        val low = DriftLanes(analog, rate, Random(7))
+        val low = started(analog, Random(7))
 
         low.ensureLanes(2)
         low.prepareBlock(-3.0)
@@ -213,12 +220,12 @@ class DriftLanesSpec : StringSpec({
     }
 
     "ensureLanes grows without disturbing the lanes that already exist" {
-        val lanes = DriftLanes(analog, rate, Random(7))
+        val lanes = started(analog, Random(7))
 
         lanes.ensureLanes(2)
         lanes.laneCount shouldBe 2
 
-        val ref = Reference(7, 2, analog, rate)
+        val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
 
         repeat(blocks) {
             lanes.prepareBlock(1.0)
@@ -243,11 +250,11 @@ class DriftLanesSpec : StringSpec({
     }
 
     "shrink then regrow creates FRESH lanes at the regrown indices" {
-        val lanes = DriftLanes(analog, rate, Random(7))
+        val lanes = started(analog, Random(7))
 
         lanes.ensureLanes(3)
 
-        val ref = Reference(7, 3, analog, rate)
+        val ref = Reference(seed = 7, count = 3, analog = analog, rate = rate)
 
         repeat(blocks) {
             lanes.prepareBlock(1.0)
@@ -276,7 +283,7 @@ class DriftLanesSpec : StringSpec({
     }
 
     "a retired index is nobody's lane: it does not advance and reads as no drift" {
-        val lanes = DriftLanes(analog, rate, Random(7))
+        val lanes = started(analog, Random(7))
 
         lanes.ensureLanes(3)
         lanes.prepareBlock(1.0)
@@ -290,9 +297,57 @@ class DriftLanesSpec : StringSpec({
         (end(lanes, 0) != 1.0) shouldBe true
     }
 
+    "what the node builds changes nothing: every capacity, with or without the shared lane, walks and draws bit for bit alike" {
+        // One script per capacity: grow to 2, then to 4 (past capacity 3, within 8), retire to 1 and regrow to 3
+        // (re-seeding lanes that were live before), with the shared walk in play. Capacity 0 is the container that
+        // builds every lane at render, as before tidy-up step 10; the others build some or all of them up front. The
+        // shared lane is either built up front or at the first block below spread 1.
+        fun script(capacity: Int, sharedLane: Boolean): Pair<DoubleArray, Int> {
+            val rng = Random(7)
+            val lanes = started(analog, rng, capacity = capacity, sharedLane = sharedLane)
+            val out = ArrayList<Double>()
+
+            fun blocks(spread: Double, count: Int) {
+                repeat(blocks) {
+                    lanes.prepareBlock(spread)
+
+                    for (n in 0 until count) {
+                        lanes.advanceLane(n)
+                        out.add(lanes.startOf(n))
+                        out.add(lanes.endOf(n))
+                    }
+                }
+            }
+
+            lanes.ensureLanes(2)
+            blocks(spread = 1.0, count = 2)
+            lanes.ensureLanes(4)
+            blocks(spread = 0.6, count = 4)
+            lanes.retireLanes(1)
+            lanes.ensureLanes(3)
+            blocks(spread = 1.0, count = 3)
+
+            return out.toDoubleArray() to rng.nextInt()
+        }
+
+        val (reference, referenceNext) = script(capacity = 0, sharedLane = false)
+
+        for ((capacity, sharedLane) in listOf(0 to true, 1 to false, 3 to true, 4 to false, 8 to true)) {
+            val (walked, next) = script(capacity = capacity, sharedLane = sharedLane)
+
+            walked.size shouldBe reference.size
+
+            for (i in reference.indices) {
+                walked[i].toRawBits() shouldBe reference[i].toRawBits()
+            }
+
+            next shouldBe referenceNext
+        }
+    }
+
     "analog 0: inactive, every method a no-op, the ramp exactly 1.0 and not one rng draw" {
         val rng = Random(7)
-        val lanes = DriftLanes(0.0, rate, rng)
+        val lanes = started(0.0, rng)
 
         lanes.active shouldBe false
         lanes.ensureLanes(4)

@@ -71,7 +71,7 @@ class CylinderUnits(
             hits++
 
             return shelf.removeAt(shelf.size - 1)
-                .also { it.adopt(id, silentBlocksBeforeTailCheck, katalysts) }
+                .also { it.adopt(id = id, silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck, katalysts = katalysts) }
         }
 
         allocations++

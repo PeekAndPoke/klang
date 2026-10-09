@@ -12,12 +12,12 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
 
 /**
@@ -64,7 +64,7 @@ class ClosedFormTailSpec : StringSpec({
             blocksWithTail++
             (blocksWithTail < 2000) shouldBe true
         }
-        (fx.delayLine!!.tapWindowPeakAbs() <= TailCeiling.SILENCE) shouldBe true
+        (fx.delayLine!!.tapWindowPeakAbs() <= SILENCE_FLOOR) shouldBe true
         // Positive control: the echoes were held — at least a few delay periods (0.05 s ≈ 17 blocks).
         blocksWithTail shouldBeGreaterThan 17
     }
@@ -126,7 +126,7 @@ class ClosedFormTailSpec : StringSpec({
         fx.configure(time = 0.05, feedback = 0.1, cap = 1.0, wet = 1.0)
         fx.feed(ctx, 0.0)
 
-        (fx.delayLine!!.tapWindowPeakAbs() > TailCeiling.SILENCE) shouldBe true
+        (fx.delayLine!!.tapWindowPeakAbs() > SILENCE_FLOOR) shouldBe true
         fx.hasTail() shouldBe true
     }
 

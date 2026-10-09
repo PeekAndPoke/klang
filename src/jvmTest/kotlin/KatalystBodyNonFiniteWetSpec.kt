@@ -18,24 +18,24 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * `body(material = "wood")`.
  *
  * **What it pins TODAY, restated in step 5b-1**, because the mechanism it was born for is no longer
- * the one it can catch. It was written on 2026-09-18 for a defect in `KatalystBodyEffect.configure`:
+ * the one it can catch. It was written on 2026-09-18 for a defect in the body stage's `configure` (then `KatalystBodyEffect`):
  * the rebuild test `body.mix != curMix` is TRUE FOREVER for a NaN against a NaN, so a non-finite
  * mix made the orbit allocate two filter banks per block on the audio thread and restart a 12 ms
  * crossfade that never completed. That NaN reached `configure` through the FIELD path of the chain
- * a cylinder is born with, and since 5b-1 there is no field path: every chain resolves through
- * `KatalystSlots.bodyDef`, which substitutes BODY_WET before `configure` ever sees the value. The
- * old born-with / declared distinction is therefore gone from this file, and the row can no longer
- * go red for the rebuild loop.
+ * a cylinder is born with, and since 5b-1 there is no field path. Since 2026-10-07 (audit B2.11)
+ * every chain's body writer (`KatalystResonatorWriter` since engine tidy-up step 12 (a)) hands the slots through raw, so the NaN reaches `configure`
+ * again and `configure`'s own substitution is the one home of the rule. The old born-with /
+ * declared distinction is gone from this file.
  *
- * It still has teeth, one level up: it pins `bodyDef`'s substitution end to end, through the door,
- * the wire and the cylinder. Break that substitution and this row fails.
+ * It pins that substitution end to end, through the door, the wire and the cylinder. Break it and
+ * this row fails.
  *
  * Minimal on purpose (plan §12: no full songs as tests): one orbit, one synth chord, one door.
  * The renderer of `:jvmTest` has no sample bank, so the source is a supersaw and never an `s("bd")`.
  *
- * The VOWEL half of the same rule is stage level, in `KatalystFormantEffectSpec`, and the entry
- * guard inside the two effects is now defence in depth with no production caller that can reach
- * it; their own KDocs say so.
+ * The VOWEL half of the same rule is stage level, in `KatalystResonatorVowelSpec`. The entry guard
+ * inside the stage (one class for both kinds since step 12 (a)) is the rule's ONE home, reached by a
+ * raw `katp` write through the writer, which hands the slots over raw (see above and its KDoc).
  */
 class KatalystBodyNonFiniteWetSpec : StringSpec({
 

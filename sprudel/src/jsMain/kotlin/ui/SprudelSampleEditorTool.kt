@@ -125,7 +125,7 @@ private class SprudelSampleEditorComp(ctx: Ctx<Props>) : Component<SprudelSample
 
     private val parsed
         get() = run {
-            val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
+            val raw = parseStr(initialValue).orEmpty()
             val name = raw.ifBlank { "bd" }
             aliasToCanonical[name] ?: name
         }

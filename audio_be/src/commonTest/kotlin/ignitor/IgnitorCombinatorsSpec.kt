@@ -20,6 +20,11 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 import io.kotest.matchers.ints.shouldBeGreaterThan as intShouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan as intShouldBeLessThan
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Tests for Ignitor combinator functions: effects, filters, envelopes, pitch mod, and FM.
@@ -38,8 +43,9 @@ class ExciterCombinatorsSpec : StringSpec({
             voiceDurationFrames = blockFrames,
             gateEndFrame = blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -101,7 +107,7 @@ class ExciterCombinatorsSpec : StringSpec({
     // Effects: crush
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "crush(amount) - output is quantized (fewer unique values than input)" {
+    "crush(bits) - output is quantized (fewer unique values than input)" {
         val dry = generate(Ignitors.sine())
         val wet = generate(Ignitors.sine().crush(3.0))
 
@@ -116,7 +122,7 @@ class ExciterCombinatorsSpec : StringSpec({
     // Effects: coarse
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "coarse(amount) - output has sample-and-hold staircase pattern" {
+    "coarse(factor) - output has sample-and-hold staircase pattern" {
         val wet = generate(Ignitors.sine().coarse(10.0))
 
         // In a sample-and-hold signal, consecutive samples are often identical
@@ -156,7 +162,7 @@ class ExciterCombinatorsSpec : StringSpec({
     "tremolo(rate, depth) - output amplitude varies (min < max)" {
         // Use a long block to capture multiple tremolo cycles
         val blockFrames = 44100 // 1 second
-        val wet = generate(IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0).toExciter(), blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0).toExciter(random = testRandom), blockFrames = blockFrames)
 
         // Compute RMS in windows to detect amplitude variation
         val windowSize = 2205 // 50ms windows
@@ -226,8 +232,8 @@ class ExciterCombinatorsSpec : StringSpec({
         // If a by-ear retune goes below ≈ 0.125, that is NOT a topology regression — widen the
         // bound and note the new value here.
         val cutoff = 800.0
-        val linBuf = generate(Ignitors.sine().lowpass(cutoff, 5.0, analog = 0.0), freqHz = cutoff)
-        val satBuf = generate(Ignitors.sine().lowpass(cutoff, 5.0, analog = 5.0), freqHz = cutoff)
+        val linBuf = generate(Ignitors.sine().lowpass(cutoffHz = cutoff, q = 5.0, analog = 0.0), freqHz = cutoff)
+        val satBuf = generate(Ignitors.sine().lowpass(cutoffHz = cutoff, q = 5.0, analog = 5.0), freqHz = cutoff)
 
         var linMax = 0.0
         var satMax = 0.0
@@ -248,7 +254,7 @@ class ExciterCombinatorsSpec : StringSpec({
         val cutoff = 2500.0
         val lowFreq = 200.0
         val dry = generate(Ignitors.sine(), freqHz = lowFreq)
-        val wet = generate(Ignitors.sine().highpass(cutoff, 1.0, analog = 3.0), freqHz = lowFreq)
+        val wet = generate(Ignitors.sine().highpass(cutoffHz = cutoff, q = 1.0, analog = 3.0), freqHz = lowFreq)
         wet.rms() shouldBeLessThan (dry.rms() * 0.3)
     }
 
@@ -261,11 +267,11 @@ class ExciterCombinatorsSpec : StringSpec({
         val q = 5.0
 
         // Signal at center frequency should pass through
-        val atCenter = generate(Ignitors.sine().svf(SvfMode.BANDPASS, centerFreq, q), freqHz = centerFreq)
+        val atCenter = generate(Ignitors.sine().svf(mode = SvfMode.BANDPASS, cutoffHz = centerFreq, q = q), freqHz = centerFreq)
         val rmsAtCenter = atCenter.rms()
 
         // Signal far from center should be attenuated
-        val offCenter = generate(Ignitors.sine().svf(SvfMode.BANDPASS, centerFreq, q), freqHz = 8000.0)
+        val offCenter = generate(Ignitors.sine().svf(mode = SvfMode.BANDPASS, cutoffHz = centerFreq, q = q), freqHz = 8000.0)
         val rmsOffCenter = offCenter.rms()
 
         rmsAtCenter shouldBeGreaterThan (rmsOffCenter * 2.0)
@@ -279,10 +285,10 @@ class ExciterCombinatorsSpec : StringSpec({
         val blockFrames = 44100 // 1 second
         val ctx = createCtx(blockFrames)
         val sig = Ignitors.sine().adsr(
-            attackSec = 0.1,   // 4410 frames
-            decaySec = 0.1,    // 4410 frames
-            sustainLevel = 0.5,
-            releaseSec = 0.1,
+            attack = 0.1,   // 4410 frames
+            decay = 0.1,    // 4410 frames
+            sustain = 0.5,
+            release = 0.1,
         )
         val buf = generate(sig, blockFrames = blockFrames, ctx = ctx)
 
@@ -303,10 +309,10 @@ class ExciterCombinatorsSpec : StringSpec({
     "adsr with instant attack - output starts near full level immediately" {
         val blockFrames = 4410
         val sig = Ignitors.sine().adsr(
-            attackSec = 0.0,
-            decaySec = 0.0,
-            sustainLevel = 1.0,
-            releaseSec = 0.0,
+            attack = 0.0,
+            decay = 0.0,
+            sustain = 1.0,
+            release = 0.0,
         )
         val buf = generate(sig, blockFrames = blockFrames)
 
@@ -322,8 +328,8 @@ class ExciterCombinatorsSpec : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "vibrato(rate, depth) - output differs from plain sine (frequency modulation)" {
-        val dry = generate(IgnitorDsl.Sine().toExciter())
-        val wet = generate(IgnitorDsl.Sine().vibrato(5.0, 0.05).toExciter())
+        val dry = generate(IgnitorDsl.Sine().toExciter(random = testRandom))
+        val wet = generate(IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.05).toExciter(random = testRandom))
 
         var differs = false
         for (i in dry.indices) {
@@ -344,7 +350,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "accelerate(semitones) - pitch changes over time" {
         val blockFrames = 44100 // 1 second
-        val wet = generate(IgnitorDsl.Sine().accelerate(24.0).toExciter(), freqHz = 440.0, blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().accelerate(24.0).toExciter(random = testRandom), freqHz = 440.0, blockFrames = blockFrames)
 
         // Count zero crossings in first half vs second half
         fun zeroCrossingsInRange(buf: AudioBuffer, start: Int, end: Int): Int {
@@ -358,8 +364,8 @@ class ExciterCombinatorsSpec : StringSpec({
         }
 
         val half = blockFrames / 2
-        val crossingsFirstHalf = zeroCrossingsInRange(wet, 0, half)
-        val crossingsSecondHalf = zeroCrossingsInRange(wet, half, blockFrames)
+        val crossingsFirstHalf = zeroCrossingsInRange(buf = wet, start = 0, end = half)
+        val crossingsSecondHalf = zeroCrossingsInRange(buf = wet, start = half, end = blockFrames)
 
         // With positive accelerate, pitch rises over time so second half should have more crossings
         crossingsSecondHalf intShouldBeGreaterThan crossingsFirstHalf
@@ -370,8 +376,8 @@ class ExciterCombinatorsSpec : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "fm(modulator, ratio, depth) - output has more harmonic content than carrier alone" {
-        val dry = generate(IgnitorDsl.Sine().toExciter())
-        val wet = generate(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 2.0, depth = 200.0).toExciter())
+        val dry = generate(IgnitorDsl.Sine().toExciter(random = testRandom))
+        val wet = generate(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 2.0, depth = 200.0).toExciter(random = testRandom))
 
         // FM synthesis creates sidebands — the waveform should differ substantially from a pure sine.
         // Compute mean absolute difference between dry and wet signals.

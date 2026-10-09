@@ -61,7 +61,7 @@ subnormal cliff (`1.18e-38`).
 Klang uses **`SAFE_MIN = 1e-15f` / `SAFE_MAX = 1e15f`** for arithmetic safety,
 matching SuperCollider/ChucK convention exactly.
 
-The constants live in `audio_be/src/commonMain/kotlin/DspUtil.kt`.
+The constants live in `audio_be/src/commonMain/kotlin/utils/numerical_safety.kt`.
 
 ### Where guards apply
 
@@ -141,7 +141,7 @@ historical reference and to make the regression-test surface obvious.
 | `PitchModFactories.kt::accelerateModIgnitor`    | `2.0.pow(amountVal * progress)` accumulated multiplicatively past `Float.MAX_VALUE`.                                                                                 | 2026-04-27 — `safeOut(ratio.toFloat())` per sample.                                                                 |
 | `PitchModFactories.kt::pitchEnvelopeModIgnitor` | `2.0.pow(amountVal * envLevel / 12.0)` overflowed for `                                                                                                              | amount                                                                                                              | > ~440`.                                               | 2026-04-27 — wrapped in `safeOut(...)`.                             |
 | `PitchModFactories.kt::fmModIgnitor`            | `effectiveDepth / freqHz` only guarded `freqHz <= 0`, not sub-Hz pitches from heavy detune.                                                                          | 2026-04-27 — `safeDiv(freqHz.toFloat())` + `safeOut` on output.                                                     |
-| `DspUtil.kt::wrapPhase`                         | O(N) `while (p >= period) p -= period` loop hung the audio thread when given any extreme phase (Inf/NaN, or huge phase increments from upstream pitch-mod overflow). | 2026-04-27 — O(1) modulo fallback for out-of-range; recover `0.0` for `Inf`/`NaN`. Common-case fast path preserved. |
+| `utils/phase_wrap.kt::wrapPhase`                | O(N) `while (p >= period) p -= period` loop hung the audio thread when given any extreme phase (Inf/NaN, or huge phase increments from upstream pitch-mod overflow). | 2026-04-27 — O(1) modulo fallback for out-of-range; recover `0.0` for `Inf`/`NaN`. Common-case fast path preserved. |
 
 The filter, envelope, and effect runtimes were all verified correctly guarded
 in the same review (cutoffs clamped before `tan()`, IIR state has

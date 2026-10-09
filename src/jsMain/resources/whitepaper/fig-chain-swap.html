@@ -207,7 +207,8 @@
    audio_be/src/commonMain/kotlin/ChainSwap.kt      MAX_DRAIN_SECONDS = 20.0, the four states
    audio_be/src/commonMain/kotlin/TailRelease.kt    RT60_SECONDS = 3.0, FLOOR_DB = -90.0
    audio_be/src/commonMain/kotlin/effects/Reverb.kt feedback = size/10 * 0.28 + 0.70, comb tunings,
-                                                     TAIL_THRESHOLD = 1e-5, the drain countdown
+                                                     the drain countdown
+   audio_bridge/src/commonMain/kotlin/constants/VoiceCullingDefaults.kt  SILENCE_FLOOR = 1e-5
    ------------------------------------------------------------------ */
 var XFADE_MS = 60;                       // Crossfade.kt: XFADE_SECONDS = 0.06
 var CAP_S = 20;                          // ChainSwap.kt: MAX_DRAIN_SECONDS
@@ -215,7 +216,7 @@ var RT60_S = 3;                          // TailRelease.kt: RT60_SECONDS
 var FLOOR_DB = -90;                      // TailRelease.kt: FLOOR_DB
 var REL_DB_PER_S = -60 / RT60_S;         // 60 dB every 3 s
 var REL_END_S = CAP_S + (-FLOOR_DB) / (60 / RT60_S);   // 20 + 4.5 = 24.5 s
-var SILENT_DB = -100;                    // Reverb.kt: TAIL_THRESHOLD = 1e-5, about -100 dBFS
+var SILENT_DB = -100;                    // VoiceCullingDefaults.kt: SILENCE_FLOOR = 1e-5, about -100 dBFS
 var COMB_S = (1617 + 23) / 44100;        // Reverb.kt: longest comb + stereo spread, seconds
 var DRAIN_MAX_S = 25;                    // right edge of the drain axis
 var POS_RAMP_END = 300;                  // slider: 0..300 is the ramp, 300..1000 is the drain
@@ -227,7 +228,7 @@ function reverbTail(size) {
     var periods = Math.ceil(Math.log(1e-5) / Math.log(fb)) + 1;   // Reverb.kt drainSamplesUntilSilent, peak 1
     return { fb: fb, dbPerS: perRev / COMB_S, retireS: periods * COMB_S };
 }
-var R5 = reverbTail(5), R10 = reverbTail(10);   // 5 is the default size (SendEffectDefaults.kt REVERB_SIZE)
+var R5 = reverbTail(5), R10 = reverbTail(10);   // 5 is the default size (BusEffectDefaults.kt REVERB_SIZE)
 
 var TAILS = [
     { id: "room5", label: "room, size 5 (the default)", kind: "room", r: R5 },

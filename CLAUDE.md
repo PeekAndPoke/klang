@@ -25,6 +25,11 @@ with a date. Examples that were never meant to last: "stop before commit" (a per
 superseded 2026-09-06 by "commit completed steps"), "this file is owned by another session",
 "do not compile the frontend right now".
 
+**A new general rule starts provisional** (maintainer, 2026-10-08): "Treat them as provisional until they are proven
+to be healthy rules. There is always the option to question these rules. Good rules make life easier, wrong rules lead
+to messy outcomes." A rule marked *(provisional)* is followed like any other, and a case where it makes the outcome
+messier is reported to the maintainer, not worked around. It loses the mark when it has proven itself.
+
 ### Stone
 
 | Rule                                                                                                                                                   | Since      | Detail                                    |
@@ -49,6 +54,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Two doors, one DSL: every surface addition lands in KlangScript stdlib AND Kotlin in the same deliverable, with a door-parity spec. | 2026-08 | `/dsl-design` §3                                |
 | Parameter parity: same name, meaning and scale on every surface; conversions in one place; asymmetries recorded with a reason. | 2026-08-02 | `/dsl-design` §4                              |
 | One word per concept end to end; a replaced surface is removed, not deprecated.                                              | 2026-08    | `/dsl-design` §5                                |
+| *(provisional)* Units: time always in seconds, pitch always in semitones (where it can be); the unit lives in the KDoc, not the name (`attack`, not `attackSec`). Slots are `<door>.<param>`, the param is the engine door's word, the sprudel door follows. | 2026-10-08 | `/dsl-design` §4 end |
 | Door shape: musical inputs on the door (`wet` always first), secondary knobs on a builder behind a `configure` lambda that is last and always optional, dynamics stages flat, one shape per concept across the DSLs. | 2026-09-05, refined 2026-09-23 | `/dsl-design` §2, `.claude/skills/dsl-design/door-shapes.md` |
 | Wire types over enums: sealed `@WireName` hierarchies for wire-visible distinctions; enum only for a closed param-less set.  | 2026-08    | `/dsl-design` §7                                |
 | KlangScript stdlib follows Kotlin conventions, not JavaScript (naming, argument style, `name = value` named args).           | 2026-05    | `klangscript/MEMORY.md` Design Decisions        |

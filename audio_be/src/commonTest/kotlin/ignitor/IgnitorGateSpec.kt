@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.abs
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
@@ -24,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.shape
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
@@ -31,21 +33,21 @@ import kotlin.random.Random
  *
  * Two different mechanisms, and the difference is the point of the row that uses this:
  *
- *  - `sustainLevel` survives BY GUARD, added 2026-09-20 in `AdsrIgnitor`'s `finiteOr`. Without it
+ *  - `sustain` survives BY GUARD, added 2026-09-20 in `AdsrIgnitor`'s `finiteOr`. Without it
  *    `coerceIn(0.0, 1.0)` is the identity on a NaN and the level multiplies every sample, so it
  *    puts NaN into the orbit mix. That mattered the moment the unity-`mul` fold landed: before it,
  *    a `pregain` at 1.0 after an envelope kept `TimesIgnitor`'s scrub and the voice went silent
  *    instead. (`expK` was the second guarded knob until step 3c removed it.)
- *  - `attackSec`, `decaySec` and `releaseSec` survive BY CONVERSION, and by accident: a time
+ *  - `attack`, `decay` and `release` survive BY CONVERSION, and by accident: a time
  *    becomes a frame count through `(seconds * sampleRate).toInt()`, and `Double.toInt()` of a NaN
- *    is 0 on both platforms, so a NaN-timed stage simply has no frames. `declickSeconds` is the
- *    same shape (`> 0.0` fails for a NaN). Nobody should rely on it: `releaseSec` was NOT safe in
+ *    is 0 on both platforms, so a NaN-timed stage simply has no frames. `declick` is the
+ *    same shape (`> 0.0` fails for a NaN). Nobody should rely on it: `release` was NOT safe in
  *    its other half, the voice's release TAIL, which is its own row below.
  *
  * So the set is all four, and the row asserts that with the reason attached rather than a number.
  */
 private val NAN_SAFE_ADSR_KNOBS: Set<String> = setOf(
-    "attackSec", "decaySec", "sustainLevel", "releaseSec",
+    "attack", "decay", "sustain", "release",
 )
 
 /**
@@ -93,12 +95,16 @@ class IgnitorGateSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         random = rng,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
-    fun build(dsl: IgnitorDsl, params: Map<String, Double>? = null, rng: Random = seed()): Ignitor =
-        dsl.buildExciter(ignitorParams = params, random = rng, freqHz = freqHz).ignitor
+    fun build(
+        dsl: IgnitorDsl,
+        params: Map<String, Double>? = null,
+        rng: Random = seed(),
+        sampleSource: Ignitor? = null,
+    ): Ignitor = dsl.buildExciter(ignitorParams = params, random = rng, freqHz = freqHz, sampleSource = sampleSource).ignitor
 
     /**
      * [blocks] blocks of [dsl], built with [params] and rendered end to end.
@@ -107,14 +113,23 @@ class IgnitorGateSpec : StringSpec({
      * construction draws and the render's per-sample draws come off the same stream, so a row that
      * is about draw ORDER is about the stream a voice really has.
      */
-    fun render(dsl: IgnitorDsl, params: Map<String, Double>? = null): DoubleArray {
+    fun render(
+        dsl: IgnitorDsl,
+        params: Map<String, Double>? = null,
+        stripPhaseMod: DoubleArray? = null,
+        sample: ((Random) -> Ignitor)? = null,
+    ): DoubleArray {
         val rng = seed()
-        val ignitor = build(dsl, params, rng)
+        // The playhead is built BEFORE the tree, off the same stream, as `VoiceFactory` builds it.
+        val sampleSource = sample?.invoke(rng)
+        val ignitor = build(dsl, params, rng, sampleSource)
         val out = DoubleArray(blockFrames * blocks)
         val buffer = AudioBuffer(blockFrames)
         val context = ctx(rng)
 
         for (b in 0 until blocks) {
+            // The voice strip's pitch ratios, handed to the whole tree at the root as `IgniteRenderer` does.
+            context.phaseMod = stripPhaseMod
             ignitor.generate(buffer, freqHz, context)
 
             for (i in 0 until blockFrames) {
@@ -137,8 +152,8 @@ class IgnitorGateSpec : StringSpec({
     /** The build's release-tail finding for [this], which is what voice lifetime is ranked on. */
     fun IgnitorDsl.tail(): Double? = buildExciter(random = seed(), freqHz = freqHz).releaseTailSec
 
-    val unsetRelease: IgnitorDsl = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(SLOT_UNSET))
-    val longRelease: IgnitorDsl = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(2.0))
+    val unsetRelease: IgnitorDsl = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(SLOT_UNSET))
+    val longRelease: IgnitorDsl = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(2.0))
 
     /** The oracle for every OFF row: the source with no stage on it at all. */
     val bare = render(saw).bits()
@@ -175,7 +190,7 @@ class IgnitorGateSpec : StringSpec({
 
     "coarse: at or below 1.0 is not built, above it is" {
         stageRow("coarse", listOf(1.0, 0.0, -4.0, SLOT_UNSET), on = 4.0) {
-            IgnitorDsl.Coarse(inner = saw, amount = it)
+            IgnitorDsl.Coarse(inner = saw, factor = it)
         }
     }
 
@@ -183,15 +198,15 @@ class IgnitorGateSpec : StringSpec({
         // Not 0: the renderer bypasses below two levels, and the Double door returns the inner
         // below 1.0. 1.0 itself is ON, one bit of the table that is easy to get wrong.
         stageRow("crush", listOf(0.999, 0.0, -4.0, SLOT_UNSET), on = 8.0) {
-            IgnitorDsl.Crush(inner = saw, amount = it)
+            IgnitorDsl.Crush(inner = saw, bits = it)
         }
 
         withClue("crush at exactly 1.0 is ON, and audibly so") {
-            // `CrushCore.halfLevels` engages at `amount >= 1.0`, so amount 1 is exactly TWO levels:
+            // `CrushCore.halfLevels` engages at `bits >= 1.0`, so 1 bit is exactly TWO levels:
             // the quantizer RUNS with `halfLevels = 1.0`, and under the floor law (D1, step 4) a saw
             // comes out a two-level pulse, -1 on its negative half and 0 on its positive half. The
             // boundary is `< 1.0`, not `<= 1.0`, and both halves say so.
-            val atOne = IgnitorDsl.Crush(inner = saw, amount = IgnitorDsl.Constant(1.0))
+            val atOne = IgnitorDsl.Crush(inner = saw, bits = IgnitorDsl.Constant(1.0))
 
             shapeOf(build(atOne)) shouldNotBe bareShape
             render(atOne).bits() shouldNotBe bare
@@ -245,6 +260,307 @@ class IgnitorGateSpec : StringSpec({
     "onepole: a cutoff at or below 0.0 is not built, above it is" {
         stageRow("onepole", listOf(0.0, -1.0, SLOT_UNSET), on = 2000.0) {
             IgnitorDsl.OnePoleLowpass(inner = saw, freq = it)
+        }
+    }
+
+    // ── The four pitch arms (pitch pipeline step 0, 2026-10-07) ──────────────────────────────
+    //
+    // A built pitch arm at its off value writes exactly 1.0 and every reader multiplies by it, so
+    // the gate is a FOLD: the "ungated" rows below build the same arm with a NON-LEAF knob at the
+    // off value (no build-time answer, so never gated) and must render the bits of the bare source.
+
+    /** A knob at [value] the gate cannot read: an expression, not a leaf, so the stage is built. */
+    fun ungated(value: Double): IgnitorDsl = IgnitorDsl.Constant(4.0).mul(IgnitorDsl.Constant(value / 4.0))
+
+    fun vibrato(inner: IgnitorDsl, depth: IgnitorDsl, rate: IgnitorDsl = IgnitorDsl.Constant(5.0)) =
+        IgnitorDsl.Vibrato(inner = inner, rate = rate, semitones = depth)
+
+    fun accelerate(inner: IgnitorDsl, amount: IgnitorDsl) = IgnitorDsl.Accelerate(inner = inner, semitones = amount)
+
+    fun pitchEnvelope(inner: IgnitorDsl, amount: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner = inner, semitones = amount)
+
+    fun fm(inner: IgnitorDsl, depth: IgnitorDsl, modulator: IgnitorDsl = IgnitorDsl.Sine()) =
+        IgnitorDsl.Fm(carrier = inner, modulator = modulator, depth = depth)
+
+    /** The four arms, each hung on an inner with its switch knob. */
+    val pitchArms: Map<String, (IgnitorDsl, IgnitorDsl) -> IgnitorDsl> = mapOf(
+        "vibrato" to { inner, knob -> vibrato(inner = inner, depth = knob) },
+        "accelerate" to { inner, knob -> accelerate(inner = inner, amount = knob) },
+        "pitch envelope" to { inner, knob -> pitchEnvelope(inner = inner, amount = knob) },
+        "fm" to { inner, knob -> fm(inner = inner, depth = knob) },
+    )
+
+    "vibrato: a FINITE depth at or below 0.0 is not built, above it is" {
+        stageRow("vibrato", listOf(0.0, -0.0, -0.5), on = 0.5) { vibrato(inner = saw, depth = it) }
+
+        withClue("the RATE is not a gating knob: a vibrato at rate 0 is still built") {
+            // At rate 0 the LFO sits at phase 0 and its law writes 2^0, so the BITS are the bare saw's;
+            // the graph is where "not a gating knob" shows.
+            shapeOf(build(vibrato(inner = saw, depth = IgnitorDsl.Constant(1.0), rate = IgnitorDsl.Constant(0.0)))) shouldNotBe bareShape
+        }
+    }
+
+    "vibrato: a NON-FINITE depth is built and renders the default depth, it is not off" {
+        // The one pitch arm whose unset is not off: the runtime reads a non-finite depth as the node's
+        // DEFAULT, VIBRATO_SEMITONES (`finiteOr`), so gating it would change the sound, not fold a stage.
+        val atDefault = render(vibrato(inner = saw, depth = IgnitorDsl.Constant(VIBRATO_SEMITONES))).bits()
+
+        atDefault shouldNotBe bare
+
+        val nonFinite = listOf(
+            IgnitorDsl.Constant(SLOT_UNSET),
+            IgnitorDsl.Constant(Double.POSITIVE_INFINITY),
+            IgnitorDsl.Constant(Double.NEGATIVE_INFINITY),
+            IgnitorDsl.Param(name = "vib", default = SLOT_UNSET),
+        )
+
+        for (depth in nonFinite) {
+            withClue("depth $depth") {
+                shapeOf(build(vibrato(inner = saw, depth = depth))) shouldNotBe bareShape
+                render(vibrato(inner = saw, depth = depth)).bits() shouldBe atDefault
+            }
+        }
+    }
+
+    "accelerate: exactly 0.0 is not built, any other amount is" {
+        stageRow("accelerate", listOf(0.0, -0.0, SLOT_UNSET, Double.POSITIVE_INFINITY), on = 12.0) {
+            accelerate(inner = saw, amount = it)
+        }
+
+        withClue("a NEGATIVE amount glides down and is built") {
+            shapeOf(build(accelerate(inner = saw, amount = IgnitorDsl.Constant(-12.0)))) shouldNotBe bareShape
+            render(accelerate(inner = saw, amount = IgnitorDsl.Constant(-12.0))).bits() shouldNotBe bare
+        }
+    }
+
+    "pitch envelope: an amount of exactly 0.0 is not built, any other amount is" {
+        stageRow("pitch envelope", listOf(0.0, -0.0, SLOT_UNSET, Double.NEGATIVE_INFINITY), on = 12.0) {
+            pitchEnvelope(inner = saw, amount = it)
+        }
+
+        withClue("a NEGATIVE amount sweeps from below and is built") {
+            shapeOf(build(pitchEnvelope(inner = saw, amount = IgnitorDsl.Constant(-12.0)))) shouldNotBe bareShape
+            render(pitchEnvelope(inner = saw, amount = IgnitorDsl.Constant(-12.0))).bits() shouldNotBe bare
+        }
+    }
+
+    "fm: a depth of exactly 0.0 is not built, any other depth is" {
+        stageRow("fm", listOf(0.0, -0.0, SLOT_UNSET), on = 200.0) { fm(inner = saw, depth = it) }
+
+        withClue("a NEGATIVE depth renders on both hosts and is built") {
+            shapeOf(build(fm(inner = saw, depth = IgnitorDsl.Constant(-200.0)))) shouldNotBe bareShape
+            render(fm(inner = saw, depth = IgnitorDsl.Constant(-200.0))).bits() shouldNotBe bare
+        }
+    }
+
+    "the four pitch arms UNGATED at their off value render the bare source: the gate is a fold" {
+        for ((name, arm) in pitchArms) {
+            val built = arm(saw, ungated(0.0))
+
+            withClue("$name, ungated at 0") {
+                shapeOf(build(built)) shouldNotBe bareShape
+                render(built).bits() shouldBe bare
+            }
+        }
+
+        withClue("vibrato ungated at a NEGATIVE depth, its other off value") {
+            render(vibrato(inner = saw, depth = ungated(-0.5))).bits() shouldBe bare
+        }
+    }
+
+    "the fold holds for every pitched source family, the sample playhead included" {
+        // Each reader multiplies by the ratio: the oscillators' `phaseInc * phaseMod[i]`, the sample's
+        // `rate * phaseMod[i]`, the Karplus loop's `dl / phaseMod[i]`. At exactly 1.0 that is the identity.
+        val ramp = DoubleArray(4096) { (it % 512) / 256.0 - 1.0 }
+        val playhead: (Random) -> Ignitor = { rng ->
+            SampleIgnitor(
+                pcm = ramp,
+                rate = 0.73,
+                playhead = 0.0,
+                loopStart = 0.0,
+                loopEnd = 0.0,
+                isLooping = false,
+                stopFrame = ramp.size.toDouble(),
+                sampleRate = 48000,
+                rng = rng,
+            )
+        }
+
+        val sources: Map<String, IgnitorDsl> = mapOf(
+            "sine" to IgnitorDsl.Sine(),
+            "sine, analog 0.5" to IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.5)),
+            "square" to IgnitorDsl.Square(),
+            "tri" to IgnitorDsl.Tri(),
+            "supersaw" to IgnitorDsl.SuperSaw(),
+            "pluck" to IgnitorDsl.Pluck(),
+            "sample" to IgnitorDsl.Sample,
+        )
+
+        /** The sources that draw off the voice's stream at RENDER, after the fm modulator's first block. */
+        val drawsAtRender = setOf("sine, analog 0.5", "supersaw", "pluck")
+
+        for ((sourceName, source) in sources) {
+            val sample = if (source == IgnitorDsl.Sample) playhead else null
+            val alone = render(source, sample = sample).bits()
+
+            for ((armName, arm) in pitchArms) {
+                withClue("$armName over $sourceName") {
+                    render(arm(source, IgnitorDsl.Constant(0.0)), sample = sample).bits() shouldBe alone
+
+                    if (armName == "fm" && sourceName in drawsAtRender) {
+                        // The fm seed consequence (its own row below): the ungated modulator seeds its drift
+                        // lane first, so a source that draws at render starts from other numbers.
+                        render(arm(source, ungated(0.0)), sample = sample).bits() shouldNotBe alone
+                    } else {
+                        render(arm(source, ungated(0.0)), sample = sample).bits() shouldBe alone
+                    }
+                }
+            }
+        }
+    }
+
+    "the fold holds under the strip's own ratios, which the tree's mods multiply into" {
+        // `ModApplyingIgnitor` writes `treeMod * phaseMod`: at a tree mod of 1.0, the strip's ratio itself.
+        val strip = DoubleArray(blockFrames) { 1.0 + 0.01 * sin(it * 0.05) }
+        val bareUnderStrip = render(saw, stripPhaseMod = strip).bits()
+
+        withClue("engagement: the strip's ratios move the saw") {
+            bareUnderStrip shouldNotBe bare
+        }
+
+        for ((name, arm) in pitchArms) {
+            withClue("$name under the strip") {
+                render(arm(saw, ungated(0.0)), stripPhaseMod = strip).bits() shouldBe bareUnderStrip
+                render(arm(saw, IgnitorDsl.Constant(0.0)), stripPhaseMod = strip).bits() shouldBe bareUnderStrip
+            }
+        }
+    }
+
+    "a gated OUTER pitch arm leaves a built inner one alone: the product folds" {
+        // `combineMods` multiplies the outer mod into the inner's: at an outer 1.0 the inner's ratios exactly.
+        val inner = vibrato(inner = saw, depth = IgnitorDsl.Constant(0.5))
+        val innerAlone = render(inner).bits()
+
+        innerAlone shouldNotBe bare
+
+        for ((name, arm) in pitchArms) {
+            withClue("$name around a built vibrato") {
+                render(arm(inner, IgnitorDsl.Constant(0.0))).bits() shouldBe innerAlone
+                render(arm(inner, ungated(0.0))).bits() shouldBe innerAlone
+            }
+        }
+    }
+
+    // ── The pitch arms' named consequences: the gated tree is the tree WITHOUT the node ──────
+
+    "a gated pitch arm's knobs are not built, so a drawing knob there takes no draws" {
+        // The sibling row above, for the pitch arms: a `perlin` vibrato rate, and a `crackle` FM
+        // modulator, stop drawing, and the crackle after them renders as in a tree without the stage.
+        val crackle = IgnitorDsl.Crackle()
+        val never = IgnitorDsl.Plus(left = IgnitorDsl.Silence, right = crackle)
+
+        fun withStage(stage: IgnitorDsl) = IgnitorDsl.Plus(left = stage, right = crackle)
+
+        val drawingRate = vibrato(inner = IgnitorDsl.Silence, depth = IgnitorDsl.Constant(0.0), rate = IgnitorDsl.PerlinNoise())
+        val drawingModulator = fm(inner = IgnitorDsl.Silence, depth = IgnitorDsl.Constant(0.0), modulator = IgnitorDsl.Crackle())
+
+        render(withStage(drawingRate)).bits() shouldBe render(never).bits()
+        render(withStage(drawingModulator)).bits() shouldBe render(never).bits()
+
+        withClue("engagement: ungated, each one draws and the crackle moves") {
+            val ungatedRate = vibrato(inner = IgnitorDsl.Silence, depth = ungated(0.0), rate = IgnitorDsl.PerlinNoise())
+            val ungatedModulator = fm(inner = IgnitorDsl.Silence, depth = ungated(0.0), modulator = IgnitorDsl.Crackle())
+
+            render(withStage(ungatedRate)).bits() shouldNotBe render(never).bits()
+            render(withStage(ungatedModulator)).bits() shouldNotBe render(never).bits()
+        }
+    }
+
+    "a gated fm no longer counts its modulator's release tail" {
+        // The FM arm counts the modulator's tail (`maxTail(carrier, modulator)`); gated, there is no modulator.
+        val longModulator = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), release = IgnitorDsl.Constant(2.0))
+
+        fm(inner = saw, depth = IgnitorDsl.Constant(0.0), modulator = longModulator).tail() shouldBe null
+
+        withClue("engagement: built, at a written depth or an ungated 0, the tail counts") {
+            fm(inner = saw, depth = IgnitorDsl.Constant(200.0), modulator = longModulator).tail() shouldBe 2.0
+            fm(inner = saw, depth = ungated(0.0), modulator = longModulator).tail() shouldBe 2.0
+        }
+    }
+
+    "a gated fm's modulator takes no drift seed, so a later draw of the voice stays in place" {
+        // The modulator `Sine` seeds its drift lane off the voice's stream on its first block, at analog 0
+        // too. Gated, it never renders, and a noise layer after it draws as in a tree without the stage.
+        val noise = IgnitorDsl.WhiteNoise()
+        val never = IgnitorDsl.Plus(left = saw, right = noise)
+
+        render(IgnitorDsl.Plus(left = fm(inner = saw, depth = IgnitorDsl.Constant(0.0)), right = noise)).bits() shouldBe
+                render(never).bits()
+
+        withClue("engagement: ungated at depth 0 the modulator renders, draws, and the noise moves") {
+            render(IgnitorDsl.Plus(left = fm(inner = saw, depth = ungated(0.0)), right = noise)).bits() shouldNotBe
+                    render(never).bits()
+        }
+    }
+
+    "a gated pitch arm's inner SHARES the build of the same node elsewhere, as `s + s` does" {
+        // A built pitch arm builds its inner under a new mod, so the inner is its own instance. Gated, the
+        // walk descends with the unchanged mod and the inner hits the cache entry of the same node outside
+        // it: one instance, read twice (D13: one `let` is one signal). A supersaw is the strong case: each
+        // instance draws its own per-voice dice, so two instances are two different sounds and one doubled is
+        // not (+4.6 dB through the engine, audio review of step 0). An analog saw would show it in the bits only.
+        val s = IgnitorDsl.SuperSaw()
+        val twice = render(IgnitorDsl.Plus(left = s, right = s)).bits()
+
+        for ((name, arm) in pitchArms) {
+            withClue("$name gated: the tree without the node") {
+                render(IgnitorDsl.Plus(left = s, right = arm(s, IgnitorDsl.Constant(0.0)))).bits() shouldBe twice
+            }
+
+            withClue("$name ungated: two instances, which is what the gate changes") {
+                render(IgnitorDsl.Plus(left = s, right = arm(s, ungated(0.0)))).bits() shouldNotBe twice
+            }
+        }
+    }
+
+    "a gated pitch arm INSIDE a built one descends with the outer mod: the outer still bends the source" {
+        // The shape `classic()` builds from step 1 on (vibrato outermost, fm innermost): an unwritten inner stage
+        // must fold away WITHOUT dropping the mod of the written stages around it.
+        val outerAlone = render(vibrato(inner = saw, depth = IgnitorDsl.Constant(0.5))).bits()
+
+        outerAlone shouldNotBe bare
+
+        for ((name, arm) in pitchArms) {
+            withClue("$name gated at 0 inside a built vibrato") {
+                val nested = vibrato(inner = arm(saw, IgnitorDsl.Constant(0.0)), depth = IgnitorDsl.Constant(0.5))
+
+                render(nested).bits() shouldBe outerAlone
+            }
+        }
+    }
+
+    "a gated outer pitch arm leaves the freq key off the mods inside it" {
+        // The fifth named consequence. `combineMods` keeps a mod's freq key when its knobs read `Freq` (fm's
+        // `freq` and its default modulator do; so does a vibrato rate written over `Freq`) and hands that key to
+        // every pitch mod inside it. A detuned layer under the inner mod then renders it a SECOND time per block
+        // (residue 2 of the shared-modulator record), and its LFO runs double. Gated, the outer node is absent,
+        // the inner memo is freq-invariant and renders once: the tree without the node.
+        val layered = IgnitorDsl.Plus(left = saw, right = IgnitorDsl.Detune(inner = saw, semitones = IgnitorDsl.Constant(7.0)))
+        val inner = vibrato(inner = layered, depth = IgnitorDsl.Constant(0.5))
+        val without = render(inner).bits()
+        val freqRate = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(0.01))
+
+        withClue("fm gated: the tree without the node") {
+            render(fm(inner = inner, depth = IgnitorDsl.Constant(0.0))).bits() shouldBe without
+        }
+
+        withClue("fm ungated at 0: the inner vibrato renders twice per block under the detune") {
+            render(fm(inner = inner, depth = ungated(0.0))).bits() shouldNotBe without
+        }
+
+        withClue("a vibrato whose rate reads the note, gated and ungated") {
+            render(vibrato(inner = inner, depth = IgnitorDsl.Constant(0.0), rate = freqRate)).bits() shouldBe without
+            render(vibrato(inner = inner, depth = ungated(0.0), rate = freqRate)).bits() shouldNotBe without
         }
     }
 
@@ -424,7 +740,7 @@ class IgnitorGateSpec : StringSpec({
         // Inverted from the plan's sketch, and the spike is why: the voice strip's VCA ran (until it retired)
         // on EVERY voice with the voice envelope (`VOICE_ADSR_*`) when the pattern set nothing. What switches
         // the tail's envelope off is an explicit `adsrOff`, which `classic()` writes into `on`.
-        val unsetAttack = IgnitorDsl.Adsr(inner = saw, attackSec = IgnitorDsl.Constant(SLOT_UNSET))
+        val unsetAttack = IgnitorDsl.Adsr(inner = saw, attack = IgnitorDsl.Constant(SLOT_UNSET))
 
         shapeOf(build(unsetAttack)) shouldNotBe bareShape
         render(unsetAttack).bits() shouldNotBe bare
@@ -479,14 +795,14 @@ class IgnitorGateSpec : StringSpec({
         // 6's identity depends on the node doing the same: off drops the SAMPLES of the stage, not
         // the note's length. A leaf release only (see `offEnvelopeTail`).
         fun env(on: Double, release: IgnitorDsl) =
-            IgnitorDsl.Adsr(inner = saw, releaseSec = release, on = IgnitorDsl.Constant(on))
+            IgnitorDsl.Adsr(inner = saw, release = release, on = IgnitorDsl.Constant(on))
 
         env(0.0, IgnitorDsl.Constant(2.0)).tail() shouldBe 2.0
         env(0.0, IgnitorDsl.Constant(2.0)).tail() shouldBe env(1.0, IgnitorDsl.Constant(2.0)).tail()
 
         withClue("a slot release reports its WRITTEN value, as on the ON path") {
             val slotted = IgnitorDsl.Adsr(
-                inner = saw, releaseSec = IgnitorDsl.Param("release", 0.1), on = IgnitorDsl.Constant(0.0),
+                inner = saw, release = IgnitorDsl.Param("release", 0.1), on = IgnitorDsl.Constant(0.0),
             )
 
             slotted.buildExciter(ignitorParams = mapOf("release" to 3.0), random = seed(), freqHz = freqHz)
@@ -508,7 +824,7 @@ class IgnitorGateSpec : StringSpec({
 
         withClue("and the tail still competes with a sibling's like any other") {
             IgnitorDsl.Plus(
-                left = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(0.5)),
+                left = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(0.5)),
                 right = env(0.0, IgnitorDsl.Constant(2.0)),
             ).tail() shouldBe 2.0
         }
@@ -524,17 +840,17 @@ class IgnitorGateSpec : StringSpec({
 
         fun envelope(attack: IgnitorDsl?, declick: IgnitorDsl?, on: Double) = IgnitorDsl.Plus(
             left = IgnitorDsl.Adsr(inner = IgnitorDsl.Silence, on = IgnitorDsl.Constant(on)).let {
-                it.copy(attackSec = attack ?: it.attackSec, declickSeconds = declick ?: it.declickSeconds)
+                it.copy(attack = attack ?: it.attack, declick = declick ?: it.declick)
             },
             right = crackle,
         )
         val never = IgnitorDsl.Plus(left = IgnitorDsl.Silence, right = crackle)
 
-        render(envelope(IgnitorDsl.PerlinNoise(), IgnitorDsl.PerlinNoise(), on = 0.0)).bits() shouldBe render(never).bits()
+        render(envelope(attack = IgnitorDsl.PerlinNoise(), declick = IgnitorDsl.PerlinNoise(), on = 0.0)).bits() shouldBe render(never).bits()
 
         withClue("engagement: ON, each knob's perlin draws on its own, and the crackle moves") {
-            render(envelope(IgnitorDsl.PerlinNoise(), null, on = 1.0)).bits() shouldNotBe render(never).bits()
-            render(envelope(null, IgnitorDsl.PerlinNoise(), on = 1.0)).bits() shouldNotBe render(never).bits()
+            render(envelope(attack = IgnitorDsl.PerlinNoise(), declick = null, on = 1.0)).bits() shouldNotBe render(never).bits()
+            render(envelope(attack = null, declick = IgnitorDsl.PerlinNoise(), on = 1.0)).bits() shouldNotBe render(never).bits()
         }
     }
 
@@ -545,10 +861,10 @@ class IgnitorGateSpec : StringSpec({
         val unset = IgnitorDsl.Constant(SLOT_UNSET)
 
         val perKnob = mapOf(
-            "attackSec" to IgnitorDsl.Adsr(inner = saw, attackSec = unset),
-            "decaySec" to IgnitorDsl.Adsr(inner = saw, decaySec = unset),
-            "sustainLevel" to IgnitorDsl.Adsr(inner = saw, sustainLevel = unset),
-            "releaseSec" to IgnitorDsl.Adsr(inner = saw, releaseSec = unset),
+            "attack" to IgnitorDsl.Adsr(inner = saw, attack = unset),
+            "decay" to IgnitorDsl.Adsr(inner = saw, decay = unset),
+            "sustain" to IgnitorDsl.Adsr(inner = saw, sustain = unset),
+            "release" to IgnitorDsl.Adsr(inner = saw, release = unset),
         )
 
         val survives = perKnob.filterValues { tree -> render(tree).all { it.isFinite() } }.keys
@@ -557,40 +873,40 @@ class IgnitorGateSpec : StringSpec({
 
         // What the guarded knob renders, so the substitution is pinned to a VALUE and not
         // merely to "finite": the same thing the knob's own default renders.
-        withClue("a non-finite sustainLevel renders what ADSR_SUSTAIN_LEVEL renders") {
+        withClue("a non-finite sustain renders what ADSR_SUSTAIN_LEVEL renders") {
             val atDefault = render(
-                IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(ADSR_SUSTAIN_LEVEL)),
+                IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(ADSR_SUSTAIN_LEVEL)),
             ).bits()
 
-            render(IgnitorDsl.Adsr(inner = saw, sustainLevel = unset)).bits() shouldBe atDefault
+            render(IgnitorDsl.Adsr(inner = saw, sustain = unset)).bits() shouldBe atDefault
 
             // The INFINITIES pin the substitution's PLACEMENT, which a NaN cannot: `coerceIn` is
             // the identity on a NaN, so before or after the coercion ends at the same value, but
             // it has a real answer for an infinity. `+Inf` used to sustain at the 1.0 rail and
             // `-Inf` at the 0.0 rail; substituting FIRST makes both read as unset instead, which
             // is the house rule the gate one file over applies to every knob it tests.
-            render(IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(Double.POSITIVE_INFINITY)))
+            render(IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(Double.POSITIVE_INFINITY)))
                 .bits() shouldBe atDefault
-            render(IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(Double.NEGATIVE_INFINITY)))
+            render(IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(Double.NEGATIVE_INFINITY)))
                 .bits() shouldBe atDefault
 
             withClue("and the two rails are NOT what it renders, so the placement is what is pinned") {
                 atDefault shouldNotBe render(
-                    IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(1.0)),
+                    IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(1.0)),
                 ).bits()
                 atDefault shouldNotBe render(
-                    IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(0.0)),
+                    IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(0.0)),
                 ).bits()
             }
         }
 
         withClue("engagement: a DIFFERENT finite value still renders differently") {
-            render(IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(0.2))).bits() shouldNotBe
-                    render(IgnitorDsl.Adsr(inner = saw, sustainLevel = unset)).bits()
+            render(IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(0.2))).bits() shouldNotBe
+                    render(IgnitorDsl.Adsr(inner = saw, sustain = unset)).bits()
         }
     }
 
-    "a non-finite releaseSec cannot swallow a SIBLING's tail, in the order where it could" {
+    "a non-finite release cannot swallow a SIBLING's tail, in the order where it could" {
         // `maxTail` is `if (a >= b) a else b` and a NaN loses every comparison, so it wins ONLY as
         // the second argument: `maxTail(NaN, 2.0)` discards it, `maxTail(2.0, NaN)` returns it.
         // `buildRaw` accumulates the left operand first, so the swallowing shape is the one with
@@ -614,7 +930,7 @@ class IgnitorGateSpec : StringSpec({
         }
     }
 
-    "a non-finite releaseSec cannot swallow the INNER envelope's tail in a chain" {
+    "a non-finite release cannot swallow the INNER envelope's tail in a chain" {
         // The commoner shape, and the one a slotted tail makes: this arm builds its inner before
         // it accumulates its own release, so an outer envelope with a non-finite release lands as
         // `maxTail(2.0, NaN)` over whatever the chain below it reported.
@@ -626,14 +942,14 @@ class IgnitorGateSpec : StringSpec({
         // for `noMod()` where it should use `inner.withMod()` would silently drop the inner
         // envelope's two seconds and cut every voice of that instrument short.
         val chained = IgnitorDsl.Adsr(
-            inner = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(2.0)).lowpass(freq = 2000.0),
-            releaseSec = IgnitorDsl.Constant(SLOT_UNSET),
+            inner = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(2.0)).lowpass(freq = 2000.0),
+            release = IgnitorDsl.Constant(SLOT_UNSET),
         )
 
         chained.tail() shouldBe 2.0
 
         withClue("engagement: a finite outer release still wins when it is longer") {
-            IgnitorDsl.Adsr(inner = chained, releaseSec = IgnitorDsl.Constant(5.0)).tail() shouldBe 5.0
+            IgnitorDsl.Adsr(inner = chained, release = IgnitorDsl.Constant(5.0)).tail() shouldBe 5.0
         }
     }
 
@@ -667,12 +983,15 @@ class IgnitorGateSpec : StringSpec({
         val unsetSlot = IgnitorDsl.Param(name = "gateKnob", default = SLOT_UNSET)
 
         val trees = mapOf(
-            "crush" to IgnitorDsl.Crush(inner = saw, amount = unsetSlot),
-            "coarse" to IgnitorDsl.Coarse(inner = saw, amount = unsetSlot),
+            "crush" to IgnitorDsl.Crush(inner = saw, bits = unsetSlot),
+            "coarse" to IgnitorDsl.Coarse(inner = saw, factor = unsetSlot),
             "distort" to IgnitorDsl.Distort(inner = saw, amount = unsetSlot),
             "drive" to IgnitorDsl.Drive(inner = saw, amount = unsetSlot),
             "tremolo" to IgnitorDsl.Tremolo(inner = saw, rate = IgnitorDsl.Constant(5.0), depth = unsetSlot),
             "onepole" to IgnitorDsl.OnePoleLowpass(inner = saw, freq = unsetSlot),
+            "accelerate" to IgnitorDsl.Accelerate(inner = saw, semitones = unsetSlot),
+            "pitch envelope" to IgnitorDsl.PitchEnvelope(inner = saw, semitones = unsetSlot),
+            "fm" to IgnitorDsl.Fm(carrier = saw, modulator = IgnitorDsl.Sine(), depth = unsetSlot),
             "lowpass" to saw.lowpass(freq = unsetSlot),
             "highpass" to saw.highpass(freq = unsetSlot),
             "bandpass" to saw.bandpass(freq = unsetSlot),
@@ -700,6 +1019,9 @@ class IgnitorGateSpec : StringSpec({
                 "distort" -> 0.5
                 "drive" -> 0.5
                 "tremolo" -> 0.5
+                "accelerate" -> 12.0
+                "pitch envelope" -> 12.0
+                "fm" -> 200.0
                 else -> 2000.0
             }
 
@@ -711,12 +1033,12 @@ class IgnitorGateSpec : StringSpec({
     }
 
     "a knob that is NOT a build-time constant is never gated, even at its off value" {
-        // An LFO on the amount can move within the note, so no single build-time answer is right.
+        // An LFO on the factor can move within the note, so no single build-time answer is right.
         // `Constant(4).mul(Constant(0))` is an expression, not a leaf: it resolves to 0, which is
         // coarse's off value, and the stage is built all the same.
         val expression = IgnitorDsl.Constant(4.0).mul(IgnitorDsl.Constant(0.0))
 
-        shapeOf(build(IgnitorDsl.Coarse(inner = saw, amount = expression))) shouldNotBe bareShape
+        shapeOf(build(IgnitorDsl.Coarse(inner = saw, factor = expression))) shouldNotBe bareShape
     }
 
     // ── The rng stream ───────────────────────────────────────────────────────────────────────
@@ -733,7 +1055,7 @@ class IgnitorGateSpec : StringSpec({
         val crackle = IgnitorDsl.Crackle()
         val drawingKnob = IgnitorDsl.PerlinNoise().abs().neg()
 
-        render(IgnitorDsl.Coarse(inner = crackle, amount = drawingKnob)).bits() shouldBe
+        render(IgnitorDsl.Coarse(inner = crackle, factor = drawingKnob)).bits() shouldBe
                 render(crackle).bits()
     }
 
@@ -746,7 +1068,7 @@ class IgnitorGateSpec : StringSpec({
         // constant for a cache's whole lifetime and no key change is needed. This row is the
         // tripwire under that: a cache that ever spanned two voices would hand the written voice
         // the unwritten voice's graph, and the two shapes below would become one.
-        val instrument = IgnitorDsl.Coarse(inner = saw, amount = IgnitorDsl.Param("coarse", 0.0))
+        val instrument = IgnitorDsl.Coarse(inner = saw, factor = IgnitorDsl.Param("coarse", 0.0))
 
         val unwritten = build(instrument, emptyMap())
         val written = build(instrument, mapOf("coarse" to 4.0))

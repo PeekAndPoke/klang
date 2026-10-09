@@ -17,9 +17,9 @@ import kotlin.math.tan
 
 /**
  * The shared interpolation of the engine's modulated SVFs ([SvfCoeffSweep]) and the shared endpoint
- * mapping ([filterEnvCutoff]), each against an oracle written here. Its hosts (the Ignitor filter node,
- * and `BaseSvf`, which since the voice strip retired only snaps through it at construction) call this
- * code, so a parity row between hosts cannot see a mistake inside it; these rows can.
+ * mapping ([filterEnvCutoff]), each against an oracle written here. Its host (the Ignitor filter node;
+ * the fixed `BaseSvf` that also snapped through it went in engine tidy-up step 12 (a)) calls this code,
+ * so a parity row between hosts could not see a mistake inside it; these rows can.
  */
 class SvfCoeffSweepSpec : StringSpec({
 
@@ -45,20 +45,20 @@ class SvfCoeffSweepSpec : StringSpec({
     "the start coefficients are the start cutoff's, and each step is (end - start) / frames" {
         val sweep = SvfCoeffSweep()
 
-        sweep.prepare(800.0, 3200.0, 2.0, sr, 128)
+        sweep.prepare(cutoffStartHz = 800.0, cutoffEndHz = 3200.0, q = 2.0, sampleRate = sr, frames = 128)
 
-        val s = oracle(800.0, 2.0)
-        val e = oracle(3200.0, 2.0)
+        val s = oracle(fc = 800.0, q = 2.0)
+        val e = oracle(fc = 3200.0, q = 2.0)
         val start = startOf(sweep)
         val steps = stepsOf(sweep)
 
         for (i in 0 until 5) {
-            relClose(start[i], s[i], 1e-14) shouldBe true
+            relClose(actual = start[i], expected = s[i], tol = 1e-14) shouldBe true
         }
 
         // a1, a2, a3 and g move; k does not (one q at both ends).
         for (i in listOf(0, 1, 2, 4)) {
-            relClose(steps[i], (e[i] - s[i]) / 128.0, 1e-9) shouldBe true
+            relClose(actual = steps[i], expected = (e[i] - s[i]) / 128.0, tol = 1e-9) shouldBe true
         }
 
         sweep.kStep shouldBe 0.0
@@ -67,7 +67,7 @@ class SvfCoeffSweepSpec : StringSpec({
     "the steps carry the start coefficients to the end cutoff's in exactly `frames` samples" {
         val sweep = SvfCoeffSweep()
 
-        sweep.prepare(12000.0, 150.0, 0.707, sr, 91)
+        sweep.prepare(cutoffStartHz = 12000.0, cutoffEndHz = 150.0, q = 0.707, sampleRate = sr, frames = 91)
 
         val acc = startOf(sweep)
         val steps = stepsOf(sweep)
@@ -78,7 +78,7 @@ class SvfCoeffSweepSpec : StringSpec({
             }
         }
 
-        val e = oracle(150.0, 0.707)
+        val e = oracle(fc = 150.0, q = 0.707)
 
         for (i in 0 until 5) {
             acc[i] shouldBe (e[i] plusOrMinus 1e-12)
@@ -88,22 +88,22 @@ class SvfCoeffSweepSpec : StringSpec({
     "equal ends step nothing, even right after a sweep that moved" {
         val sweep = SvfCoeffSweep()
 
-        sweep.prepare(500.0, 4000.0, 1.0, sr, 128)
-        sweep.prepare(900.0, 900.0, 1.0, sr, 128)
+        sweep.prepare(cutoffStartHz = 500.0, cutoffEndHz = 4000.0, q = 1.0, sampleRate = sr, frames = 128)
+        sweep.prepare(cutoffStartHz = 900.0, cutoffEndHz = 900.0, q = 1.0, sampleRate = sr, frames = 128)
 
-        val s = oracle(900.0, 1.0)
+        val s = oracle(fc = 900.0, q = 1.0)
 
         stepsOf(sweep).toList() shouldBe listOf(0.0, 0.0, 0.0, 0.0, 0.0)
-        relClose(sweep.start.a1, s[0], 1e-14) shouldBe true
+        relClose(actual = sweep.start.a1, expected = s[0], tol = 1e-14) shouldBe true
     }
 
     "a sweep of no frames is a snap to the start cutoff" {
         val sweep = SvfCoeffSweep()
 
-        sweep.prepare(500.0, 4000.0, 1.0, sr, 0)
+        sweep.prepare(cutoffStartHz = 500.0, cutoffEndHz = 4000.0, q = 1.0, sampleRate = sr, frames = 0)
 
         stepsOf(sweep).toList() shouldBe listOf(0.0, 0.0, 0.0, 0.0, 0.0)
-        relClose(sweep.start.g, oracle(500.0, 1.0)[4], 1e-14) shouldBe true
+        relClose(actual = sweep.start.g, expected = oracle(fc = 500.0, q = 1.0)[4], tol = 1e-14) shouldBe true
     }
 
     "filterEnvCutoff: base * 2^(depth/12 * level), the level clamped to [0, 1]" {
@@ -116,10 +116,10 @@ class SvfCoeffSweepSpec : StringSpec({
         )
 
         // Frame 25 of the attack: level 0.25.
-        core.filterEnvCutoff(25, 600.0, 24.0) shouldBe (600.0 * 2.0.pow(24.0 / 12.0 * 0.25) plusOrMinus 1e-9)
+        core.filterEnvCutoff(pos = 25, baseCutoff = 600.0, depthSemitones = 24.0) shouldBe (600.0 * 2.0.pow(24.0 / 12.0 * 0.25) plusOrMinus 1e-9)
         // The sustain: level 1.5, clamped to 1.
-        core.filterEnvCutoff(5000, 600.0, 24.0) shouldBe (600.0 * 4.0 plusOrMinus 1e-9)
+        core.filterEnvCutoff(pos = 5000, baseCutoff = 600.0, depthSemitones = 24.0) shouldBe (600.0 * 4.0 plusOrMinus 1e-9)
         // A negative depth sweeps down.
-        core.filterEnvCutoff(5000, 600.0, -12.0) shouldBe (300.0 plusOrMinus 1e-9)
+        core.filterEnvCutoff(pos = 5000, baseCutoff = 600.0, depthSemitones = -12.0) shouldBe (300.0 plusOrMinus 1e-9)
     }
 })

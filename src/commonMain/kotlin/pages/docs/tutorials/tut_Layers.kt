@@ -15,7 +15,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * Engine truth behind §§3–4 (verified in audio_be): the reverb
  * is per-orbit; `reverb(wet)` is how much of the orbit goes into it, one amount per orbit since
  * Katalyst step 5b-2, and a bare reverb(wet) plays in
- * the default room, size 5 (constants/SendEffectDefaults.kt, since 2026-09-16). The newest note
+ * the default room, size 5 (constants/BusEffectDefaults.kt, since 2026-09-16). The newest note
  * that is still held (its gate open, not a release tail) sets the orbit's effects (Cylinder.kt), so the lesson only ever demos
  * uncontested configurations and teaches the engine's own craft rule — an
  * effect-carrying layer gets its own orbit. The contested shared-channel case

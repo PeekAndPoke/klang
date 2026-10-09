@@ -17,6 +17,11 @@ import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.plus
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Guards [BuiltIgnitor.releaseTailSec] — the number `VoiceFactory` turns into voice lifetime.
@@ -31,7 +36,7 @@ import io.peekandpoke.klang.audio_bridge.plus
 class IgnitorTailSpec : StringSpec({
 
     fun tailOf(dsl: IgnitorDsl, ignitorParams: Map<String, Double>? = null, freqHz: Double = 440.0): Double? =
-        dsl.buildExciter(ignitorParams, freqHz = freqHz).releaseTailSec
+        dsl.buildExciter(ignitorParams, freqHz = freqHz, random = testRandom).releaseTailSec
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
@@ -44,11 +49,11 @@ class IgnitorTailSpec : StringSpec({
     }
 
     "a literal release is reported exactly" {
-        tailOf(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.4)) shouldBe 0.4
+        tailOf(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.4)) shouldBe 0.4
     }
 
     "a Param release falls back to its default" {
-        val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Param("rel", 0.7))
+        val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), release = IgnitorDsl.Param("rel", 0.7))
         tailOf(dsl) shouldBe 0.7
     }
 
@@ -58,13 +63,13 @@ class IgnitorTailSpec : StringSpec({
         // THE original bug: `maxReleaseSec` read Param DEFAULTS only, so a 1.5 s release requested
         // via .ignp("release", …) was delivered as the voice's own ~0.05 s. The override is folded
         // into ParamIgnitor at build time, so it reaches the tail with no second lookup rule.
-        val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Param("rel", 0.013))
+        val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), release = IgnitorDsl.Param("rel", 0.013))
         tailOf(dsl, ignitorParams = mapOf("rel" to 1.5)) shouldBe 1.5
     }
 
     "an ignp override under a different param name works the same" {
         // The name is never hardcoded; it is read off the node.
-        val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Param("damping", 0.02))
+        val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), release = IgnitorDsl.Param("damping", 0.02))
         tailOf(dsl, ignitorParams = mapOf("damping" to 0.9)) shouldBe 0.9
     }
 
@@ -74,7 +79,7 @@ class IgnitorTailSpec : StringSpec({
         // `maxReleaseSec` returned a hardcoded 0.3 here, truncating anything longer.
         val dsl = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Sine(),
-            releaseSec = IgnitorDsl.Param("rel", 0.4).mul(c(2.0)),
+            release = IgnitorDsl.Param("rel", 0.4).mul(c(2.0)),
         )
         tailOf(dsl) shouldBe 0.8
     }
@@ -84,7 +89,7 @@ class IgnitorTailSpec : StringSpec({
         // for low notes: express the release in periods rather than milliseconds. 200 periods of 100 Hz = 2.0 s.
         val dsl = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Sine(),
-            releaseSec = IgnitorDsl.Recip(IgnitorDsl.Freq).mul(c(200.0)),
+            release = IgnitorDsl.Recip(IgnitorDsl.Freq).mul(c(200.0)),
         )
         tailOf(dsl, freqHz = 100.0) shouldBe 2.0
     }
@@ -93,7 +98,7 @@ class IgnitorTailSpec : StringSpec({
         // No single static value is correct here, so make no claim: the voice's own release governs.
         val dsl = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Sine(),
-            releaseSec = IgnitorDsl.Sine(freq = c(0.5)).mul(c(0.5)),
+            release = IgnitorDsl.Sine(freq = c(0.5)).mul(c(0.5)),
         )
         tailOf(dsl).shouldBeNull()
     }
@@ -103,12 +108,12 @@ class IgnitorTailSpec : StringSpec({
     "an envelope in a filter-cutoff position does NOT extend lifetime" {
         // A filter sweep is modulation, not amplitude. `maxReleaseSec` already excluded it
         // (`is Lowpass -> inner`), and the withMod/noMod split keeps that.
-        val sweep = IgnitorDsl.Adsr(inner = IgnitorDsl.Constant(2000.0), releaseSec = c(5.0))
+        val sweep = IgnitorDsl.Adsr(inner = IgnitorDsl.Constant(2000.0), release = c(5.0))
         tailOf(IgnitorDsl.Sine().lowpass(sweep)).shouldBeNull()
     }
 
     "an envelope multiplied into the signal DOES extend lifetime" {
-        val env = IgnitorDsl.Adsr(inner = c(1.0), releaseSec = c(1.25))
+        val env = IgnitorDsl.Adsr(inner = c(1.0), release = c(1.25))
         tailOf(IgnitorDsl.Sine().mul(env)) shouldBe 1.25
     }
 
@@ -120,7 +125,7 @@ class IgnitorTailSpec : StringSpec({
         // so its tail is discarded there) and caches it. The later spine reference is a cache HIT.
         // With an accumulator gated on spine-ness, that hit contributes nothing and the voice is cut
         // 0.8 s short. Carrying the tail inside the cached value is what makes this work.
-        val env = IgnitorDsl.Adsr(inner = c(1.0), releaseSec = IgnitorDsl.Param("rel", 0.8))
+        val env = IgnitorDsl.Adsr(inner = c(1.0), release = IgnitorDsl.Param("rel", 0.8))
         val dsl = IgnitorDsl.Sine()
             .lowpass(c(800.0).mul(env))
             .mul(env)
@@ -132,8 +137,8 @@ class IgnitorTailSpec : StringSpec({
         // Same hazard one level down: on a cache hit the walk does not descend, so the inner Adsr
         // would be missed if the stored value were not already the subtree max.
         val nested = IgnitorDsl.Adsr(
-            inner = IgnitorDsl.Adsr(inner = c(1.0), releaseSec = c(1.4)),
-            releaseSec = c(0.2),
+            inner = IgnitorDsl.Adsr(inner = c(1.0), release = c(1.4)),
+            release = c(0.2),
         )
         val dsl = IgnitorDsl.Sine().lowpass(c(800.0).mul(nested)).mul(nested)
 
@@ -146,17 +151,19 @@ class IgnitorTailSpec : StringSpec({
         // Env A has the longer attack+release; env B needs the longer tail. Ranking by total would
         // pick A (0.1 s) and truncate B (0.5 s) — attack happens INSIDE the gate and never
         // contributes to the tail.
-        val a = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), attackSec = c(2.0), releaseSec = c(0.1))
-        val b = IgnitorDsl.Adsr(inner = IgnitorDsl.Saw(), attackSec = c(0.001), releaseSec = c(0.5))
+        val a = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), attack = c(2.0), release = c(0.1))
+        val b = IgnitorDsl.Adsr(inner = IgnitorDsl.Saw(), attack = c(0.001), release = c(0.5))
 
-        tailOf(IgnitorDsl.Plus(a, b)) shouldBe 0.5
+        tailOf(IgnitorDsl.Plus(left = a, right = b)) shouldBe 0.5
     }
 
     "an FM modulator's envelope still counts" {
         // Not on the amplitude spine, but `maxReleaseSec` counted it (maxOf(carrier, modulator)).
         // Keeping it errs large; dropping it would silently shorten voices that render fine today.
-        val modulator = IgnitorDsl.Sine().adsr(0.001, 0.1, 0.5, 0.9)
-        val dsl = IgnitorDsl.Fm(carrier = IgnitorDsl.Sine(), modulator = modulator)
+        // A written depth: at depth 0 the FM stage is gated off and has no modulator to count
+        // (`IgnitorGateSpec`, "a gated fm no longer counts its modulator's release tail").
+        val modulator = IgnitorDsl.Sine().adsr(attack = 0.001, decay = 0.1, sustain = 0.5, release = 0.9)
+        val dsl = IgnitorDsl.Fm(carrier = IgnitorDsl.Sine(), modulator = modulator, depth = c(200.0))
 
         tailOf(dsl) shouldBe 0.9
     }
@@ -168,78 +175,78 @@ class IgnitorTailSpec : StringSpec({
         // over-allocated lifetime to its longest sibling. The build only builds the picked child.
         val dsl = IgnitorDsl.Variants(
             listOf(
-                IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2),
-                IgnitorDsl.Saw().adsr(0.01, 0.1, 0.5, 1.5),
-                IgnitorDsl.Square().adsr(0.01, 0.1, 0.5, 0.8),
+                IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2),
+                IgnitorDsl.Saw().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 1.5),
+                IgnitorDsl.Square().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.8),
             )
         )
 
-        dsl.buildExciter(soundIndex = 0).releaseTailSec shouldBe 0.2
-        dsl.buildExciter(soundIndex = 1).releaseTailSec shouldBe 1.5
-        dsl.buildExciter(soundIndex = 2).releaseTailSec shouldBe 0.8
+        dsl.buildExciter(soundIndex = 0, random = testRandom).releaseTailSec shouldBe 0.2
+        dsl.buildExciter(soundIndex = 1, random = testRandom).releaseTailSec shouldBe 1.5
+        dsl.buildExciter(soundIndex = 2, random = testRandom).releaseTailSec shouldBe 0.8
         // Wraps, like the render dispatch does.
-        dsl.buildExciter(soundIndex = 3).releaseTailSec shouldBe 0.2
+        dsl.buildExciter(soundIndex = 3, random = testRandom).releaseTailSec shouldBe 0.2
     }
 
     // ── The registry seam ─────────────────────────────────────────────────────
 
     "createExciter carries the tail through the registry and the onepole wrap" {
         val registry = IgnitorRegistry()
-        registry.register("pad", IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 1.1))
+        registry.register("pad", IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 1.1))
 
         val data = io.peekandpoke.klang.audio_bridge.VoiceData.empty.copy(sound = "pad")
-        registry.createExciter("pad", data, 440.0)?.releaseTailSec shouldBe 1.1
+        registry.createExciter("pad", data, 440.0, random = testRandom)?.releaseTailSec shouldBe 1.1
 
         // The onepole wrap replaces the ignitor; it must not drop the finding with it.
         val withOnepole = data.copy(ignitorParams = mapOf("onepole" to 900.0))
-        registry.createExciter("pad", withOnepole, 440.0)?.releaseTailSec shouldBe 1.1
+        registry.createExciter("pad", withOnepole, 440.0, random = testRandom)?.releaseTailSec shouldBe 1.1
     }
     // ── endsInEnvelope: the root is a BUILT amplitude envelope (phase 3 step 6) ──────────────────
 
     "endsInEnvelope: classic()'s envelope when it is on; switched off it hands on what is below it; not for a bare source, not under a later stage" {
         fun ends(dsl: IgnitorDsl, ignitorParams: Map<String, Double>? = null): Boolean =
-            dsl.buildExciter(ignitorParams, freqHz = 440.0).endsInEnvelope
+            dsl.buildExciter(ignitorParams, freqHz = 440.0, random = testRandom).endsInEnvelope
 
         ends(IgnitorDsl.Sine().classic()) shouldBe true
         ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 0.0)) shouldBe false
         ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 1.0, "lpf.freq" to 800.0)) shouldBe true
         // switched off, classic()'s envelope hands on what sits below it: an authored static-release envelope ends
         // the voice, unless a written classic() stage (here the lowpass) is built over it
-        val authored = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).classic()
+        val authored = IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).classic()
         ends(authored, mapOf("adsr.on" to 0.0)) shouldBe true
         ends(authored, mapOf("adsr.on" to 0.0, "lpf.freq" to 800.0)) shouldBe false
         ends(IgnitorDsl.Sine()) shouldBe false
-        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2)) shouldBe true
-        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).lowpass(800.0)) shouldBe false
+        ends(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2)) shouldBe true
+        ends(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).lowpass(800.0)) shouldBe false
         // a MODULATED release has no static length, so it cannot promise to reach zero by the voice's end: the
         // voice keeps its teardown fade (step 10); the same envelope with a static release ends the voice
-        val modulated = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Constant(0.3).plus(IgnitorDsl.PerlinNoise().mul(c(0.01))))
+        val modulated = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), release = IgnitorDsl.Constant(0.3).plus(IgnitorDsl.PerlinNoise().mul(c(0.01))))
         ends(modulated) shouldBe false
-        ends(modulated.copy(releaseSec = c(0.3))) shouldBe true
+        ends(modulated.copy(release = c(0.3))) shouldBe true
         // ...but a stage the gate did NOT build is its inner, so it hands the envelope's answer through:
         // an unwritten lowpass slot, and a `mul` at exactly unity
-        val unsetLowpass = IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2), freq = IgnitorDsl.Slots.lpf.freq)
+        val unsetLowpass = IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2), freq = IgnitorDsl.Slots.lpf.freq)
         ends(unsetLowpass) shouldBe true
         ends(unsetLowpass, mapOf("lpf.freq" to 800.0)) shouldBe false
-        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).mul(IgnitorDsl.Param("level", 1.0))) shouldBe true
+        ends(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).mul(IgnitorDsl.Param("level", 1.0))) shouldBe true
         // the unity fold with the knob on the LEFT
-        ends(IgnitorDsl.Times(left = IgnitorDsl.Param("level", 1.0), right = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2))) shouldBe true
+        ends(IgnitorDsl.Times(left = IgnitorDsl.Param("level", 1.0), right = IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2))) shouldBe true
         // a written, non-unity level is a built multiply over the envelope: it does not end in it
-        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).mul(IgnitorDsl.Param("level", 1.0)), mapOf("level" to 0.5)) shouldBe false
+        ends(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).mul(IgnitorDsl.Param("level", 1.0)), mapOf("level" to 0.5)) shouldBe false
         // a detune scales the frequency, not the amplitude: both of its branches hand the answer on
-        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).detune(semitones = 12.0)) shouldBe true
-        ends(IgnitorDsl.Sine(freq = c(5.0)).adsr(0.01, 0.1, 0.5, 0.2).detune(semitones = 12.0)) shouldBe true
+        ends(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).detune(semitones = 12.0)) shouldBe true
+        ends(IgnitorDsl.Sine(freq = c(5.0)).adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).detune(semitones = 12.0)) shouldBe true
         // a pitch-mod wrapper does not touch the amplitude, so it hands the envelope's answer through
-        ends(IgnitorDsl.Vibrato(inner = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2), rate = c(5.0), semitones = c(0.2))) shouldBe true
+        ends(IgnitorDsl.Vibrato(inner = IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2), rate = c(5.0), semitones = c(0.2))) shouldBe true
     }
 
     "endsInEnvelope on the SHIPPING path: a registered tree renders OPTIMIZED, where a bare mul is an Affine" {
         // `buildExciter` alone does not optimize, so the rows above reach the `Times` arms. Every registered
         // tree renders `optimize()`d, and the optimizer folds a bare `x.mul(k)` into an `Affine`.
-        val optimized = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).mul(IgnitorDsl.Param("level", 1.0)).optimize()
+        val optimized = IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).mul(IgnitorDsl.Param("level", 1.0)).optimize()
 
         optimized.shouldBeInstanceOf<IgnitorDsl.Affine>()
-        optimized.buildExciter(freqHz = 440.0).endsInEnvelope shouldBe true
-        optimized.buildExciter(mapOf("level" to 0.5), freqHz = 440.0).endsInEnvelope shouldBe false
+        optimized.buildExciter(freqHz = 440.0, random = testRandom).endsInEnvelope shouldBe true
+        optimized.buildExciter(mapOf("level" to 0.5), freqHz = 440.0, random = testRandom).endsInEnvelope shouldBe false
     }
 })

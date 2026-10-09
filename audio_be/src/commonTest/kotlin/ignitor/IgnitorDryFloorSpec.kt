@@ -14,6 +14,10 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * C4.2 guard: the ignitor-door `floor` follows the shared wet/dry law on both routed
  * effects: phaser `dry = max(floor, cos²(w·π/2))` (correlated, p = 2), shimmer
@@ -41,6 +45,7 @@ class IgnitorDryFloorSpec : StringSpec({
         gateEndFrame = frames * 2,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
+        random = testRandom,
     )
 
     val noise = DoubleArray(frames).also {
@@ -61,12 +66,12 @@ class IgnitorDryFloorSpec : StringSpec({
 
     fun render(chain: Ignitor): DoubleArray {
         val c = ctx()
-        c.updateOffsetAndLength(0, blockFrames)
+        c.updateOffsetAndLength(offset = 0, length = blockFrames)
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(frames)
         repeat(blocks) { blk ->
             chain.generate(buf, 220.0, c)
-            buf.copyInto(out, blk * blockFrames, 0, blockFrames)
+            buf.copyInto(destination = out, destinationOffset = blk * blockFrames, startIndex = 0, endIndex = blockFrames)
             c.voiceElapsedFrames += blockFrames
         }
         // anti-vacuous tripwire

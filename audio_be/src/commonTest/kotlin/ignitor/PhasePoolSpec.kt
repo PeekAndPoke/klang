@@ -45,12 +45,16 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Behavioral guards for the banded best-of-M start-phase selection
@@ -97,10 +101,11 @@ class PhasePoolSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         var sumSq = 0.0
         for (b in 0 until blocks) {
-            ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
+            ctx.apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = b * blockFrames }
             sig.generate(buffer, freqHz, ctx)
             for (i in 0 until blockFrames) {
                 sumSq += buffer[i] * buffer[i]
@@ -161,13 +166,14 @@ class PhasePoolSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         var re = 0.0
         var im = 0.0
         var idx = 0
         val w = TWO_PI * freqHz / sampleRate
         for (b in 0 until blocks) {
-            ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
+            ctx.apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = b * blockFrames }
             sig.generate(buffer, freqHz, ctx)
             for (i in 0 until blockFrames) {
                 re += buffer[i] * cos(w * idx)
@@ -211,8 +217,8 @@ class PhasePoolSpec : StringSpec({
             // every family, and a dropped-drawTries mutant for the 5-try saw family (~4.3×). For
             // supertri/supersine (defaults 16/40) a dropped drawTries barely moves this ratio —
             // the shallow-vs-deep case below is the depth guard for ALL families.
-            val high = (1..5).sumOf { amp(0.85, 0.95, 64.0, it) }
-            val low = (1..5).sumOf { amp(0.02, 0.10, 64.0, it) }
+            val high = (1..5).sumOf { amp(lo = 0.85, hi = 0.95, tries = 64.0, seed = it) }
+            val low = (1..5).sumOf { amp(lo = 0.02, hi = 0.10, tries = 64.0, seed = it) }
             high shouldBeGreaterThan low * 6.0
         }
 
@@ -220,8 +226,8 @@ class PhasePoolSpec : StringSpec({
             // Same band both sides — only the search depth differs. A factory (or runtime) that
             // stops threading drawTries makes both sides fall back to the family constant, and
             // the ratio collapses to ~1 for EVERY family regardless of its default depth.
-            val deep = (1..5).sumOf { amp(0.85, 0.95, 64.0, it) }
-            val shallow = (1..5).sumOf { amp(0.85, 0.95, 1.0, it) }
+            val deep = (1..5).sumOf { amp(lo = 0.85, hi = 0.95, tries = 64.0, seed = it) }
+            val shallow = (1..5).sumOf { amp(lo = 0.85, hi = 0.95, tries = 1.0, seed = it) }
             deep shouldBeGreaterThan shallow * 1.7
         }
     }
@@ -243,24 +249,24 @@ class PhasePoolSpec : StringSpec({
 
     val bandRows = listOf(
         BandRow(
-            "supersaw", SUPERSAW_K_MIN, SUPERSAW_K_MAX, SUPERSAW_DRAW_TRIES,
-            SUPERSAW_SIDE_ATTEN, SUPERSAW_GAIN_JITTER, SUPERSAW_CENTER_JITTER_SCALE,
+            label = "supersaw", kMin = SUPERSAW_K_MIN, kMax = SUPERSAW_K_MAX, tries = SUPERSAW_DRAW_TRIES,
+            sideAtten = SUPERSAW_SIDE_ATTEN, gainJitter = SUPERSAW_GAIN_JITTER, centerJitterScale = SUPERSAW_CENTER_JITTER_SCALE,
         ),
         BandRow(
-            "superramp", SUPERRAMP_K_MIN, SUPERRAMP_K_MAX, SUPERRAMP_DRAW_TRIES,
-            SUPERRAMP_SIDE_ATTEN, SUPERRAMP_GAIN_JITTER, SUPERRAMP_CENTER_JITTER_SCALE,
+            label = "superramp", kMin = SUPERRAMP_K_MIN, kMax = SUPERRAMP_K_MAX, tries = SUPERRAMP_DRAW_TRIES,
+            sideAtten = SUPERRAMP_SIDE_ATTEN, gainJitter = SUPERRAMP_GAIN_JITTER, centerJitterScale = SUPERRAMP_CENTER_JITTER_SCALE,
         ),
         BandRow(
-            "supersquare", SUPERSQUARE_K_MIN, SUPERSQUARE_K_MAX, SUPERSQUARE_DRAW_TRIES,
-            SUPERSQUARE_SIDE_ATTEN, SUPERSQUARE_GAIN_JITTER, SUPERSQUARE_CENTER_JITTER_SCALE,
+            label = "supersquare", kMin = SUPERSQUARE_K_MIN, kMax = SUPERSQUARE_K_MAX, tries = SUPERSQUARE_DRAW_TRIES,
+            sideAtten = SUPERSQUARE_SIDE_ATTEN, gainJitter = SUPERSQUARE_GAIN_JITTER, centerJitterScale = SUPERSQUARE_CENTER_JITTER_SCALE,
         ),
         BandRow(
-            "supertri", SUPERTRI_K_MIN, SUPERTRI_K_MAX, SUPERTRI_DRAW_TRIES,
-            SUPERTRI_SIDE_ATTEN, SUPERTRI_GAIN_JITTER, SUPERTRI_CENTER_JITTER_SCALE,
+            label = "supertri", kMin = SUPERTRI_K_MIN, kMax = SUPERTRI_K_MAX, tries = SUPERTRI_DRAW_TRIES,
+            sideAtten = SUPERTRI_SIDE_ATTEN, gainJitter = SUPERTRI_GAIN_JITTER, centerJitterScale = SUPERTRI_CENTER_JITTER_SCALE,
         ),
         BandRow(
-            "supersine", SUPERSINE_K_MIN, SUPERSINE_K_MAX, SUPERSINE_DRAW_TRIES,
-            SUPERSINE_SIDE_ATTEN, SUPERSINE_GAIN_JITTER, SUPERSINE_CENTER_JITTER_SCALE,
+            label = "supersine", kMin = SUPERSINE_K_MIN, kMax = SUPERSINE_K_MAX, tries = SUPERSINE_DRAW_TRIES,
+            sideAtten = SUPERSINE_SIDE_ATTEN, gainJitter = SUPERSINE_GAIN_JITTER, centerJitterScale = SUPERSINE_CENTER_JITTER_SCALE,
         ),
     )
 
@@ -307,7 +313,8 @@ class PhasePoolSpec : StringSpec({
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
                 scratchBuffers = ScratchBuffers(blockFrames),
-            ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
+                random = testRandom,
+            ).apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = 0 }
             sig.generate(buffer, freqHz, ctx)
             withClue(name) { rng.nextDouble() shouldBe expected }
         }
@@ -345,6 +352,7 @@ class PhasePoolSpec : StringSpec({
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
                 scratchBuffers = ScratchBuffers(blockFrames),
+                random = testRandom,
             )
             var maxDelta = 0.0
             var prev = 0.0
@@ -353,7 +361,7 @@ class PhasePoolSpec : StringSpec({
                 if (b == 2) {
                     voicesParam.value = 13.0
                 }
-                ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
+                ctx.apply { updateOffsetAndLength(offset = 0, length = blockFrames); voiceElapsedFrames = b * blockFrames }
                 sig.generate(buffer, freqHz, ctx)
                 for (i in 0 until blockFrames) {
                     if (idx > 0) {

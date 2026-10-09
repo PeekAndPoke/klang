@@ -227,7 +227,7 @@ class WireCodecProcessor(
 
     private fun fqn(decl: KSClassDeclaration): String = decl.qualifiedName!!.asString()
 
-    /** Flattened, collision-free codec id from the nesting chain: FilterDef.LowPass → "FilterDef_LowPass". */
+    /** Flattened, collision-free codec id from the nesting chain: IgnitorDsl.Plus → "IgnitorDsl_Plus". */
     private fun codecId(decl: KSClassDeclaration): String =
         generateSequence(decl) { it.parentDeclaration as? KSClassDeclaration }
             .map { it.simpleName.asString() }

@@ -6,6 +6,11 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /** TEST ONLY. Plays [data] from its own cursor, one window per call: a source whose samples the test chose. */
 class ArrayIgnitor(private val data: DoubleArray) : Ignitor {
@@ -31,6 +36,7 @@ fun renderNodeWindows(node: Ignitor, lengths: List<Int>, sampleRate: Int): Doubl
         voiceDurationFrames = total,
         gateEndFrame = total,
         scratchBuffers = ScratchBuffers(widest),
+        random = testRandom,
     )
     val out = DoubleArray(total)
     val buffer = AudioBuffer(widest)
@@ -38,9 +44,9 @@ fun renderNodeWindows(node: Ignitor, lengths: List<Int>, sampleRate: Int): Doubl
 
     for (len in lengths) {
         ctx.voiceElapsedFrames = at
-        ctx.updateOffsetAndLength(0, len)
+        ctx.updateOffsetAndLength(offset = 0, length = len)
         node.generate(buffer, 220.0, ctx)
-        buffer.copyInto(out, at, 0, len)
+        buffer.copyInto(destination = out, destinationOffset = at, startIndex = 0, endIndex = len)
         at += len
     }
 

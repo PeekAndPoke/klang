@@ -12,10 +12,15 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.safeOut
+import io.peekandpoke.klang.audio_be.utils.safeOut
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.sqrt
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 class PitchModFactoriesSpec : StringSpec({
 
@@ -27,8 +32,9 @@ class PitchModFactoriesSpec : StringSpec({
         voiceDurationFrames = sampleRate, // 1 second
         gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(frames),
+        random = testRandom,
     ).apply {
-        updateOffsetAndLength(0, frames)
+        updateOffsetAndLength(offset = 0, length = frames)
         voiceElapsedFrames = 0
     }
 
@@ -104,8 +110,8 @@ class PitchModFactoriesSpec : StringSpec({
 
     "pitchEnvelopeMod: amount=0 produces all ones" {
         val mod = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", 0.1),
-            decaySec = ParamIgnitor("d", 0.1),
+            attack = ParamIgnitor("a", 0.1),
+            decay = ParamIgnitor("d", 0.1),
             semitones = ParamIgnitor("amount", 0.0),
         )
         val out = render(mod)
@@ -194,12 +200,13 @@ class PitchModFactoriesSpec : StringSpec({
             voiceDurationFrames = totalFrames * 4,
             gateEndFrame = totalFrames * 4,   // gate far away: the env release never engages
             scratchBuffers = ScratchBuffers(128),
+            random = testRandom,
         )
         val out = DoubleArray(totalFrames)
         val tmp = AudioBuffer(128)
         var pos = 0
         while (pos < totalFrames) {
-            ctx.updateOffsetAndLength(0, 128)
+            ctx.updateOffsetAndLength(offset = 0, length = 128)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, 220.0, ctx)
             for (i in 0 until 128) out[pos + i] = tmp[i]
@@ -214,10 +221,10 @@ class PitchModFactoriesSpec : StringSpec({
         // gapped and the constant-depth renders must agree EXACTLY: same modulator phase, same
         // depth, same math.
         val gapped = renderBlocks(
-            fmModIgnitor(Ignitors.sine(), ConstantIgnitor(1.4), gapDepth), totalFrames = 512,
+            fmModIgnitor(modulator = Ignitors.sine(), ratio = ConstantIgnitor(1.4), depth = gapDepth), totalFrames = 512,
         )
         val constant = renderBlocks(
-            fmModIgnitor(Ignitors.sine(), ConstantIgnitor(1.4), ConstantIgnitor(300.0)), totalFrames = 512,
+            fmModIgnitor(modulator = Ignitors.sine(), ratio = ConstantIgnitor(1.4), depth = ConstantIgnitor(300.0)), totalFrames = 512,
         )
         for (i in 128 until 256) gapped[i] shouldBe 1.0     // the gap itself outputs unity
         var m = 0.0
@@ -235,10 +242,10 @@ class PitchModFactoriesSpec : StringSpec({
             }
         }
         val gapped = renderBlocks(
-            vibratoModIgnitor(ConstantIgnitor(8.0), gapSemitones), totalFrames = 512,
+            vibratoModIgnitor(rate = ConstantIgnitor(8.0), semitones = gapSemitones), totalFrames = 512,
         )
         val constant = renderBlocks(
-            vibratoModIgnitor(ConstantIgnitor(8.0), ConstantIgnitor(0.5)), totalFrames = 512,
+            vibratoModIgnitor(rate = ConstantIgnitor(8.0), semitones = ConstantIgnitor(0.5)), totalFrames = 512,
         )
         for (i in 128 until 256) gapped[i] shouldBe 1.0
         var m = 0.0
@@ -252,25 +259,26 @@ class PitchModFactoriesSpec : StringSpec({
         // Comparative on purpose: if the engine lost its release-ramp handling, both renders
         // collapse identically and the ratio below hits 1.0 -> red.
         val gate = 6000
-        fun renderAcrossGate(releaseSec: Double): DoubleArray {
+        fun renderAcrossGate(release: Double): DoubleArray {
             val total = gate + 2400
             val ig = fmModIgnitor(
-                Ignitors.sine(), ConstantIgnitor(1.4), ConstantIgnitor(300.0),
-                envAttackSec = ConstantIgnitor(0.001),
-                envDecaySec = ConstantIgnitor(0.5),
-                envSustainLevel = ConstantIgnitor(0.0),
-                envReleaseSec = ConstantIgnitor(releaseSec),
+                modulator = Ignitors.sine(), ratio = ConstantIgnitor(1.4), depth = ConstantIgnitor(300.0),
+                attack = ConstantIgnitor(0.001),
+                decay = ConstantIgnitor(0.5),
+                sustain = ConstantIgnitor(0.0),
+                release = ConstantIgnitor(release),
             )
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
                 scratchBuffers = ScratchBuffers(128),
+                random = testRandom,
             )
             val out = DoubleArray(total)
             val tmp = AudioBuffer(128)
             var pos = 0
             while (pos < total) {
                 val n = minOf(128, total - pos)
-                ctx.updateOffsetAndLength(0, n)
+                ctx.updateOffsetAndLength(offset = 0, length = n)
                 ctx.voiceElapsedFrames = pos
                 ig.generate(tmp, 523.25, ctx)
                 for (i in 0 until n) out[pos + i] = tmp[i]
@@ -295,37 +303,38 @@ class PitchModFactoriesSpec : StringSpec({
         // With a release the index is still alive: the stages run the exponential default (decision D3),
         // so the level at the gate is g(1 - (6000 - 44.1) / 22050) = g(0.73) ~ 0.42 of the depth, and the
         // ratio swings by about 300 * 0.42 / 523.25 ~ 0.24 right after it.
-        maxDev(steppedRender, gate + 2, gate + 100) shouldBe 0.0          // the raw hard cut: 0 means 0
-        (maxDev(rampedRender, gate + 2, gate + 100) > 0.15) shouldBe true // a release keeps the depth alive
+        maxDev(x = steppedRender, from = gate + 2, until = gate + 100) shouldBe 0.0          // the raw hard cut: 0 means 0
+        (maxDev(x = rampedRender, from = gate + 2, until = gate + 100) > 0.15) shouldBe true // a release keeps the depth alive
     }
 
     "fm env: a RELEASE-ONLY envelope is honoured, not silently dropped (hasEnv counts release)" {
         // attack 0 / decay 0 / sustain 1 / release 0.05: the exact E10 remedy shape on a sound
-        // with no other envelope shaping. A hasEnv gate that ignores envReleaseSec treats this as
+        // with no other envelope shaping. A hasEnv gate that ignores release treats this as
         // "no envelope" and drops the release silently — the depth then holds FULL through the
         // whole tail. During the gate a release-only envelope is exactly 1.0, so both renders
         // below must be bit-identical up to the gate; after it they must diverge hard.
         val gate = 6000
         val rel = 2400
-        fun render(releaseSec: Double): DoubleArray {
+        fun render(release: Double): DoubleArray {
             val total = gate + rel
             val ig = fmModIgnitor(
-                Ignitors.sine(), ConstantIgnitor(1.4), ConstantIgnitor(300.0),
-                envAttackSec = ConstantIgnitor(0.0),
-                envDecaySec = ConstantIgnitor(0.0),
-                envSustainLevel = ConstantIgnitor(1.0),
-                envReleaseSec = ConstantIgnitor(releaseSec),
+                modulator = Ignitors.sine(), ratio = ConstantIgnitor(1.4), depth = ConstantIgnitor(300.0),
+                attack = ConstantIgnitor(0.0),
+                decay = ConstantIgnitor(0.0),
+                sustain = ConstantIgnitor(1.0),
+                release = ConstantIgnitor(release),
             )
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
                 scratchBuffers = ScratchBuffers(128),
+                random = testRandom,
             )
             val out = DoubleArray(total)
             val tmp = AudioBuffer(128)
             var pos = 0
             while (pos < total) {
                 val n = minOf(128, total - pos)
-                ctx.updateOffsetAndLength(0, n)
+                ctx.updateOffsetAndLength(offset = 0, length = n)
                 ctx.voiceElapsedFrames = pos
                 ig.generate(tmp, 523.25, ctx)
                 for (i in 0 until n) out[pos + i] = tmp[i]
@@ -348,8 +357,8 @@ class PitchModFactoriesSpec : StringSpec({
         }
         // Deep in the release the ramped depth is ~gone while the dropped-release depth still
         // swings at full modulation index.
-        (maxDev(relOnly, gate + 2200, gate + 2395) < 0.02) shouldBe true
-        (maxDev(noEnv, gate + 2200, gate + 2395) > 0.3) shouldBe true
+        (maxDev(x = relOnly, from = gate + 2200, until = gate + 2395) < 0.02) shouldBe true
+        (maxDev(x = noEnv, from = gate + 2200, until = gate + 2395) > 0.3) shouldBe true
     }
 
     "fm env: a NON-FINITE sustain reads as unset (1.0, the node's default), never a carrier frozen at ratio 0" {
@@ -394,15 +403,16 @@ class PitchModFactoriesSpec : StringSpec({
 
         fun renderFm(sustain: Double): DoubleArray {
             val ig = fmModIgnitor(
-                ConstantIgnitor(0.5), ConstantIgnitor(1.0), ConstantIgnitor(depth),
-                envAttackSec = ConstantIgnitor(a),
-                envDecaySec = ConstantIgnitor(d),
-                envSustainLevel = ConstantIgnitor(sustain),
-                envReleaseSec = ConstantIgnitor(r),
+                modulator = ConstantIgnitor(0.5), ratio = ConstantIgnitor(1.0), depth = ConstantIgnitor(depth),
+                attack = ConstantIgnitor(a),
+                decay = ConstantIgnitor(d),
+                sustain = ConstantIgnitor(sustain),
+                release = ConstantIgnitor(r),
             )
             val ctx = IgniteContext(
                 sampleRate = sr, voiceDurationFrames = gate, gateEndFrame = gate,
                 scratchBuffers = ScratchBuffers(128),
+                random = testRandom,
             )
             val out = DoubleArray(total)
             val tmp = AudioBuffer(128)
@@ -410,7 +420,7 @@ class PitchModFactoriesSpec : StringSpec({
 
             while (pos < total) {
                 val n = minOf(128, total - pos)
-                ctx.updateOffsetAndLength(0, n)
+                ctx.updateOffsetAndLength(offset = 0, length = n)
                 ctx.voiceElapsedFrames = pos
                 ig.generate(tmp, freq, ctx)
 

@@ -43,7 +43,7 @@ let blockfloete =
 
 // Guitar — more sustain and release
 let fingerpick =
-    Ign.pluck(x => x.decay(0.99).brightness(0.45).pickPosition(0.5))
+    Ign.pluck(x => x.feedback(0.99).brightness(0.45).pickPosition(0.5))
         .plus(Ign.sine().mul(0.12))
         .plus(Ign.sine().detune(-12).mul(0.1))
         .lowpass(2800)
@@ -56,9 +56,9 @@ let fingerpick =
 
 // Pizzicato contrabass
 let contrabass =
-  Ign.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05))
+  Ign.pluck(x => x.feedback(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05))
     .pitchEnvelope(0.5, x => x.adsr(0.003, 0.02, 0, 0))
-    .plus(Ign.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05)).detune(0.05).mul(0.15))
+    .plus(Ign.pluck(x => x.feedback(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05)).detune(0.05).mul(0.15))
     .plus(Ign.sine().detune(0.01).lowpass(200).mul(0.3).adsr(0.005, 0.6, 0.0, 0.15))
     .plus(Ign.tri().lowpass(1200).mul(0.15).adsr(0.005, 0.3, 0.0, 0.05))
     .plus(Ign.brownnoise().lowpass(600).mul(0.06).adsr(0.001, 0.04, 0.0, 0.01))

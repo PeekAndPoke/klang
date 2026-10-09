@@ -17,7 +17,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -91,10 +90,7 @@ private class SprudelDustEditorComp(ctx: Ctx<Props>) : Component<SprudelDustEdit
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private fun parseInput(): Double {
-        val raw = currentValue.trim().removePrefix("\"").removeSuffix("\"")
-        return raw.toDoubleOrNull() ?: 0.2
-    }
+    private fun parseInput(): Double = parseNum(currentValue, 0.2)
 
     private var density by value(parseInput())
 
@@ -102,11 +98,8 @@ private class SprudelDustEditorComp(ctx: Ctx<Props>) : Component<SprudelDustEdit
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
-        "\"${density.fmt()}\""
+        "\"${density.formatArg()}\""
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = currentValue != buildValue()

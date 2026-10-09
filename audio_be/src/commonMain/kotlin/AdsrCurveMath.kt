@@ -5,9 +5,9 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.utils.fastExp
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
-import kotlin.math.exp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The curve math of the envelope law (`EnvelopeCore`, which every ADSR envelope hosts, the voice's pitch
@@ -61,7 +61,7 @@ internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm:
     AdsrCurve.Cube -> x * x * x
     AdsrCurve.SCurve -> if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
     AdsrCurve.InvSquare -> x * (2.0 - x)
-    AdsrCurve.Exponential -> adsrExpShape(x, k, norm)
+    AdsrCurve.Exponential -> adsrExpShape(x = x, k = k, norm = norm)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm:
 // Dividing by N-1 lands p = 1.0 exactly on the last rendered frame, so the CURVE
 // ends on 0.0. Both endpoints are then exact: p=0 at gate end, p=1 at the final frame.
 //
-// Scope, measured: on the ignitor envelope (AdsrIgnitor, where declickSeconds defaults
+// Scope, measured: on the ignitor envelope (AdsrIgnitor, where declick defaults
 // to 0 = off) the rendered gain reaches 0.0 too, and that is the path Der Schmetterling's
 // guitars clicked on. With the de-click one-pole on (`classic()`'s envelope, as on the retired strip VCA)
 // it sits DOWNSTREAM of the curve, lagging ~47 frames at ENV_DECLICK_SECONDS, so the gain on the last
@@ -121,9 +121,7 @@ internal inline fun releaseProgressOffset(releaseFrames: Double): Double =
 //
 // The time constant itself is ENV_DECLICK_SECONDS, in audio_bridge/constants — see its
 // KDoc for the corner/floor measurement rather than repeating it here.
+//
+// Its per-sample coefficient is the one-pole time constant `timeConstantCoeff` (`utils/time_constant.kt`),
+// derived once per block by the envelope node.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** Per-sample one-pole coefficient for a [declickSeconds] time constant at [sampleRate] Hz. */
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun envDeclickCoeff(declickSeconds: Double, sampleRate: Double): Double =
-    1.0 - exp(-1.0 / (declickSeconds * sampleRate))

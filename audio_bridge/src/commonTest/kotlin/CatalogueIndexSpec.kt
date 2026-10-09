@@ -59,7 +59,7 @@ class CatalogueIndexSpec : StringSpec({
         val wood = BodyMaterials.modesAt(1.0).shouldNotBeNull()
 
         wood.size shouldBe 8
-        wood.first() shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
+        wood.first() shouldBe BodyMaterials.Mode(freq = 100.0, db = 3.0, q = 12.0)
 
         // ...and the neighbour is a DIFFERENT material, so the row cannot pass on a table where
         // every index answers the same list.
@@ -138,7 +138,7 @@ class CatalogueIndexSpec : StringSpec({
         val bassA = VowelBands.bandsAt(1.0).shouldNotBeNull()
 
         bassA.size shouldBe 5
-        bassA.first() shouldBe FilterDef.Formant.Band(freq = 600.0, db = 0.0, q = 60.0)
+        bassA.first() shouldBe VowelBands.Band(freq = 600.0, db = 0.0, q = 60.0)
 
         // The soprano `a` is a different bank at a different index, so nothing collapsed.
         VowelBands.bandsFor("soprano:a").shouldNotBeNull().first().freq shouldBe 800.0
@@ -232,6 +232,43 @@ class CatalogueIndexSpec : StringSpec({
             VowelBands.bandsAt(4.5) shouldBeSameInstanceAs VowelBands.bandsFor(VowelBands.names[4])
             VowelBands.bandsAt(4.5) shouldNotBe VowelBands.bandsFor(VowelBands.names[5])
         }
+    }
+
+    "slotIndexAt is the position modesAt and bandsAt read: 0 for none, the nearest index inside, ties to even" {
+        // The backend keeps a table per index (`ResonatorTables`, engine tidy-up step 12 (a)) and reads it through this
+        // rule, so it must be the one the row lookups use, value for value.
+        val sweep = listOf(SLOT_UNSET, Double.POSITIVE_INFINITY, -1.0, -0.51, -0.49, 0.0, 0.4, 0.5, 0.6, 1.0, 1.5, 2.5, 4.5, 7.49) +
+            (0..BodyMaterials.names.size + 1).map { it.toDouble() } + (0..VowelBands.names.size + 1).map { it - 0.3 }
+
+        for (v in sweep) {
+            withClue("value $v") {
+                val b = BodyMaterials.slotIndexAt(v)
+                val w = VowelBands.slotIndexAt(v)
+
+                if (b == 0) {
+                    BodyMaterials.modesAt(v).shouldBeNull()
+                } else {
+                    BodyMaterials.modesAt(v) shouldBeSameInstanceAs BodyMaterials.modesAt(b.toDouble())
+                }
+
+                if (w == 0) {
+                    VowelBands.bandsAt(v).shouldBeNull()
+                } else {
+                    VowelBands.bandsAt(v) shouldBeSameInstanceAs VowelBands.bandsAt(w.toDouble())
+                }
+            }
+        }
+
+        BodyMaterials.slotIndexAt(SLOT_UNSET) shouldBe 0
+        BodyMaterials.slotIndexAt(-1.0) shouldBe 0
+        BodyMaterials.slotIndexAt(0.5) shouldBe 0
+        BodyMaterials.slotIndexAt(0.6) shouldBe 1
+        BodyMaterials.slotIndexAt(2.5) shouldBe 2
+        BodyMaterials.slotIndexAt(BodyMaterials.names.size.toDouble()) shouldBe 0
+        BodyMaterials.slotIndexAt(BodyMaterials.names.size - 0.6) shouldBe BodyMaterials.names.size - 1
+        VowelBands.slotIndexAt(4.5) shouldBe 4
+        VowelBands.slotIndexAt(VowelBands.names.size.toDouble()) shouldBe 0
+        VowelBands.slotIndexAt(VowelBands.names.size - 0.6) shouldBe VowelBands.names.size - 1
     }
 
     // ── The waveshaper and LFO catalogues (phase 3 step 3b, 2026-09-25) ────────────────────────────

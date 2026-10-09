@@ -62,12 +62,12 @@ class PhaserCoreLawSpec : StringSpec({
         }
 
         fun block(n: Int, centerFrom: Double, sweepFrom: Double, centerTo: Double, sweepTo: Double) {
-            val start = alphaAt(phase, centerFrom, sweepFrom)
+            val start = alphaAt(phase = phase, center = centerFrom, sweep = sweepFrom)
             val next = phase + 2.0 * PI * rate * n / sampleRate
 
             phase = next - 2.0 * PI * floor(next / (2.0 * PI))
             alpha = start
-            alphaStep = (alphaAt(phase, centerTo, sweepTo) - start) / n
+            alphaStep = (alphaAt(phase = phase, center = centerTo, sweep = sweepTo) - start) / n
         }
 
         fun step(x: Double): Double {
@@ -109,27 +109,27 @@ class PhaserCoreLawSpec : StringSpec({
             doubleArrayOf(3.0, 1.5, 800.0, 1200.0, 2.0),
             doubleArrayOf(4.0, 2.5, 1500.0, 2000.0, -0.5),
         )
-        val input = noise(frames, 7)
+        val input = noise(n = frames, seed = 7)
 
         for (cfg in configs) {
             val stages = cfg[0].toInt()
             val label = "stages $stages, rate ${cfg[1]}, center ${cfg[2]}, sweep ${cfg[3]}, feedback ${cfg[4]}"
 
             for (sampleRate in listOf(48000, 44100)) {
-                val core = PhaserCore(stages, sampleRate).apply {
+                val core = PhaserCore(stages = stages, sampleRate = sampleRate).apply {
                     rate = cfg[1]
                     center = cfg[2]
                     sweep = cfg[3]
                     feedback = cfg[4]
                 }
-                val oracle = Oracle(stages, sampleRate, cfg[1], cfg[4])
+                val oracle = Oracle(stages = stages, sampleRate = sampleRate, rate = cfg[1], feedback = cfg[4])
                 val out = DoubleArray(frames)
                 val ref = DoubleArray(frames)
                 var at = 0
 
                 while (at < frames) {
                     core.prepareBlock(block)
-                    oracle.block(block, cfg[2], cfg[3], cfg[2], cfg[3])
+                    oracle.block(n = block, centerFrom = cfg[2], sweepFrom = cfg[3], centerTo = cfg[2], sweepTo = cfg[3])
 
                     for (i in 0 until block) {
                         out[at + i] = core.step(input[at + i])
@@ -139,21 +139,21 @@ class PhaserCoreLawSpec : StringSpec({
                     at += block
                 }
 
-                withClue("$label at $sampleRate: the phaser is not the input") { worst(out, input) shouldBeGreaterThan 0.1 }
-                withClue("$label at $sampleRate: worst distance ${worst(out, ref)}") { worst(out, ref) shouldBeLessThan 1e-12 }
+                withClue("$label at $sampleRate: the phaser is not the input") { worst(a = out, b = input) shouldBeGreaterThan 0.1 }
+                withClue("$label at $sampleRate: worst distance ${worst(a = out, b = ref)}") { worst(a = out, b = ref) shouldBeLessThan 1e-12 }
             }
         }
     }
 
     "the kernel: a moving breakpoint ramps α from the old breakpoint's value to the new one's across the block" {
         val sampleRate = 48000
-        val input = noise(frames, 11)
-        val core = PhaserCore(4, sampleRate).apply {
+        val input = noise(n = frames, seed = 11)
+        val core = PhaserCore(stages = 4, sampleRate = sampleRate).apply {
             rate = 1.3
             center = 600.0
             sweep = 400.0
         }
-        val oracle = Oracle(4, sampleRate, 1.3, 0.5)
+        val oracle = Oracle(stages = 4, sampleRate = sampleRate, rate = 1.3, feedback = 0.5)
         val out = DoubleArray(frames)
         val ref = DoubleArray(frames)
         var center = 600.0
@@ -165,8 +165,8 @@ class PhaserCoreLawSpec : StringSpec({
             val centerTo = center * 1.25
             val sweepTo = sweep + 150.0
 
-            core.prepareBlock(block, centerTo, sweepTo)
-            oracle.block(block, center, sweep, centerTo, sweepTo)
+            core.prepareBlock(blockFrames = block, centerTo = centerTo, sweepTo = sweepTo)
+            oracle.block(n = block, centerFrom = center, sweepFrom = sweep, centerTo = centerTo, sweepTo = sweepTo)
 
             for (i in 0 until block) {
                 out[at + i] = core.step(input[at + i])
@@ -178,32 +178,32 @@ class PhaserCoreLawSpec : StringSpec({
             at += block
         }
 
-        withClue("worst distance ${worst(out, ref)}") { worst(out, ref) shouldBeLessThan 1e-12 }
+        withClue("worst distance ${worst(a = out, b = ref)}") { worst(a = out, b = ref) shouldBeLessThan 1e-12 }
     }
 
     "the node: four stages at feedback 0.5, mixed by max(floor, cos²(wπ/2)) · dry + sin²(wπ/2) · wet" {
         val sampleRate = 48000
-        val input = noise(frames, 3)
+        val input = noise(n = frames, seed = 3)
         val windows = List(frames / block) { block }
 
         // (wet, floor): a crossfade, a floor above cos² (0.345 at wet 0.6, so the floor holds the dry), full wet.
         for ((wet, floor) in listOf(0.6 to 0.0, 0.6 to 0.5, 1.0 to 0.0)) {
             val out = renderNodeWindows(
                 ArrayIgnitor(input).phaser(
-                    ParamIgnitor("wet", wet), ParamIgnitor("rate", 2.0), ParamIgnitor("center", 1200.0),
-                    ParamIgnitor("sweep", 1600.0), ParamIgnitor("floor", floor),
+                    wet = ParamIgnitor("wet", wet), rate = ParamIgnitor("rate", 2.0), center = ParamIgnitor("center", 1200.0),
+                    sweep = ParamIgnitor("sweep", 1600.0), floor = ParamIgnitor("floor", floor),
                 ),
                 windows,
                 sampleRate,
             )
-            val oracle = Oracle(4, sampleRate, 2.0, 0.5)
+            val oracle = Oracle(stages = 4, sampleRate = sampleRate, rate = 2.0, feedback = 0.5)
             val dryC = maxOf(floor, cos(wet * PI / 2.0).let { it * it })
             val wetC = sin(wet * PI / 2.0).let { it * it }
             val ref = DoubleArray(frames)
             var at = 0
 
             while (at < frames) {
-                oracle.block(block, 1200.0, 1600.0, 1200.0, 1600.0)
+                oracle.block(n = block, centerFrom = 1200.0, sweepFrom = 1600.0, centerTo = 1200.0, sweepTo = 1600.0)
 
                 for (i in 0 until block) {
                     val x = input[at + i]
@@ -214,7 +214,7 @@ class PhaserCoreLawSpec : StringSpec({
                 at += block
             }
 
-            withClue("wet $wet, floor $floor: worst distance ${worst(out, ref)}") { worst(out, ref) shouldBeLessThan 1e-12 }
+            withClue("wet $wet, floor $floor: worst distance ${worst(a = out, b = ref)}") { worst(a = out, b = ref) shouldBeLessThan 1e-12 }
         }
     }
 })

@@ -7,7 +7,6 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Ducking
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 
 /**
@@ -205,7 +204,7 @@ class KatalystDuckEffect(
      * chain's writer on every block the orbit has an owner, so an unchanged owner must cost nothing:
      * every write here is a store of the same number or a [KnobGlide.retarget] that already stands.
      */
-    fun configure(settings: Voice.Ducking?) {
+    fun configure(settings: DuckSettings?) {
         if (handedOver) {
             // The incoming chain of a running crossfade owns this envelope now ([takeOver]);
             // writing here would build a second `Ducking` nobody runs and undo the handover.
@@ -362,7 +361,7 @@ class KatalystDuckEffect(
 
     /**
      * False: the duck's envelope is state, but like the compressor it only attenuates and emits
-     * nothing from silence. See [KatalystBodyEffect.hasTail].
+     * nothing from silence. See [KatalystResonatorEffect.hasTail].
      */
     override fun hasTail(): Boolean = false
 

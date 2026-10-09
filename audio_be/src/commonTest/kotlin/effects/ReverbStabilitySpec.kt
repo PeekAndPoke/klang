@@ -64,7 +64,7 @@ class ReverbStabilitySpec : StringSpec({
                 }
             }
             output.clear()
-            reverb.process(input, output, blockFrames)
+            reverb.process(input = input, output = output, length = blockFrames)
 
             for (i in 0 until blockFrames) {
                 output.left[i].isFinite() shouldBe true
@@ -128,7 +128,7 @@ class ReverbStabilitySpec : StringSpec({
                         input.left[t - at] = v
                     }
                 }
-                process(input, output, n)
+                process(input = input, output = output, length = n)
                 at += n
             }
         }

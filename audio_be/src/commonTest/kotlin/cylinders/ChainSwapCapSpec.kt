@@ -79,7 +79,7 @@ class ChainSwapCapSpec : StringSpec({
         val swapped = rig()
         val control = rig()
         val frames = swapped.blockFrames
-        val law = CapLaw(swapped.sampleRate, frames)
+        val law = CapLaw(sampleRate = swapped.sampleRate, blockFrames = frames)
         val releaseAt = law.releaseStart
         val releaseBlocks = law.releaseBlocks
 
@@ -113,7 +113,7 @@ class ChainSwapCapSpec : StringSpec({
             val want = control.block(level = 0.0)
 
             for (i in 0 until frames) {
-                val weight = law.weight(b, i)
+                val weight = law.weight(b = b, i = i)
 
                 if (got[i] != want[i] * weight) {
                     withClue("block $b sample $i (release starts at block $releaseAt): got ${got[i]}, want ${want[i]} x $weight") {
@@ -174,7 +174,7 @@ class ChainSwapCapSpec : StringSpec({
 
         val a = rig()
         val b = rig()
-        val law = CapLaw(a.sampleRate, a.blockFrames)
+        val law = CapLaw(sampleRate = a.sampleRate, blockFrames = a.blockFrames)
         val bound = law.releaseStart + law.releaseBlocks + 30
 
         for (rig in listOf(a, b)) {
@@ -206,7 +206,7 @@ class ChainSwapCapSpec : StringSpec({
             val want = b.block(level = 0.0)
 
             for (i in 0 until a.blockFrames) {
-                val weight = law.weight(blk, i)
+                val weight = law.weight(b = blk, i = i)
 
                 if (got[i] != want[i] * weight) {
                     withClue("second release, block $blk sample $i: got ${got[i]}, want ${want[i]} x $weight") {

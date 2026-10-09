@@ -32,10 +32,10 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
  * and the envelope after the fill. `passes` is a constant 1 on the two band filters, which have no such knob.
  */
 private fun IgnitorDsl.filterFields(): Map<String, Any?> = when (this) {
-    is IgnitorDsl.Lowpass -> fields(freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
-    is IgnitorDsl.Highpass -> fields(freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
-    is IgnitorDsl.Bandpass -> fields(freq, q, analog, IgnitorDsl.Constant(1.0), env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
-    is IgnitorDsl.Notch -> fields(freq, q, analog, IgnitorDsl.Constant(1.0), env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Lowpass -> fields(freq, q, analog, passes, env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Highpass -> fields(freq, q, analog, passes, env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Bandpass -> fields(freq, q, analog, IgnitorDsl.Constant(1.0), env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Notch -> fields(freq, q, analog, IgnitorDsl.Constant(1.0), env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve, humanize)
     else -> error("not a filter node: ${this::class.simpleName}")
 }
 
@@ -45,13 +45,13 @@ private fun fields(
     ac: IgnitorDsl, dc: IgnitorDsl, rc: IgnitorDsl, humanize: Boolean,
 ): Map<String, Any?> = linkedMapOf(
     "freq" to freq, "q" to q, "analog" to analog, "passes" to passes, "env" to env,
-    "attackSec" to a, "decaySec" to d, "sustainLevel" to s, "releaseSec" to r,
+    "attack" to a, "decay" to d, "sustain" to s, "release" to r,
     "attackCurve" to ac, "decayCurve" to dc, "releaseCurve" to rc, "humanize" to humanize,
 )
 
 /** The five cutoff-envelope values of a filter node after the fill, in node order. */
 private fun IgnitorDsl.envKnobs(): List<Any?> = filterFields().let { f ->
-    listOf(f["env"], f["attackSec"], f["decaySec"], f["sustainLevel"], f["releaseSec"])
+    listOf(f["env"], f["attack"], f["decay"], f["sustain"], f["release"])
 }
 
 private fun c(v: Double) = IgnitorDsl.Constant(v)
@@ -268,8 +268,8 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         withClue("notch") { IgnitorDsl.Saw().notch(800.0).filterFields() shouldBe IgnitorDsl.Saw().notch(f).filterFields() }
 
         withClue("the scalar overload carries the curves and the fill too") {
-            IgnitorDsl.Saw().lowpass(800.0, decaySec = 0.3, releaseCurve = AdsrCurve.Cube).filterFields() shouldBe
-                IgnitorDsl.Saw().lowpass(f, decaySec = c(0.3), releaseCurve = AdsrCurves.knob(AdsrCurve.Cube)).filterFields()
+            IgnitorDsl.Saw().lowpass(800.0, decay = 0.3, releaseCurve = AdsrCurve.Cube).filterFields() shouldBe
+                IgnitorDsl.Saw().lowpass(f, decay = c(0.3), releaseCurve = AdsrCurves.knob(AdsrCurve.Cube)).filterFields()
         }
     }
 })

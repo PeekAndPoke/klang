@@ -61,13 +61,13 @@ class DcBlockerSpec : StringSpec({
             var at = 0
 
             for (n in windows) {
-                inPlaceBlocker.process(inPlace, at, n)
-                outOfBlocker.process(input, outOf, at, n)
+                inPlaceBlocker.process(buffer = inPlace, offset = at, length = n)
+                outOfBlocker.process(input = input, output = outOf, offset = at, length = n)
                 at += n
             }
 
-            withClue("$label, in place: first mismatching frame") { firstMismatch(inPlace, expected) shouldBe null }
-            withClue("$label, input to output: first mismatching frame") { firstMismatch(outOf, expected) shouldBe null }
+            withClue("$label, in place: first mismatching frame") { firstMismatch(a = inPlace, b = expected) shouldBe null }
+            withClue("$label, input to output: first mismatching frame") { firstMismatch(a = outOf, b = expected) shouldBe null }
         }
     }
 
@@ -78,11 +78,11 @@ class DcBlockerSpec : StringSpec({
         val input = DoubleArray(700) { i -> if (i < 100) 0.7 * sin(i * 0.3) + 0.2 else 0.0 }
         val out = input.copyOf()
 
-        LowPassHighPassFilters.DcBlocker(0.9).process(out, 0, out.size)
+        LowPassHighPassFilters.DcBlocker(0.9).process(buffer = out, offset = 0, length = out.size)
 
         withClue("the tail is audible right after the signal") { (abs(out[101]) > 1e-3) shouldBe true }
         withClue("the last 100 frames are exact zeros") { (600 until 700).all { out[it] == 0.0 } shouldBe true }
-        withClue("bit for bit the oracle, flush included") { firstMismatch(out, oracle(input, 0.9)) shouldBe null }
+        withClue("bit for bit the oracle, flush included") { firstMismatch(a = out, b = oracle(input, 0.9)) shouldBe null }
     }
 
     "a finite coefficient out of range is clamped to [0, 0.99999]" {
@@ -91,9 +91,9 @@ class DcBlockerSpec : StringSpec({
         for ((given, clamped) in listOf(1.5 to 0.99999, 1.0 to 0.99999, -0.3 to 0.0)) {
             val out = input.copyOf()
 
-            LowPassHighPassFilters.DcBlocker(given).process(out, 0, out.size)
+            LowPassHighPassFilters.DcBlocker(given).process(buffer = out, offset = 0, length = out.size)
 
-            withClue("coefficient $given runs as $clamped: first mismatching frame") { firstMismatch(out, oracle(input, clamped)) shouldBe null }
+            withClue("coefficient $given runs as $clamped: first mismatching frame") { firstMismatch(a = out, b = oracle(input, clamped)) shouldBe null }
         }
     }
 
@@ -104,9 +104,9 @@ class DcBlockerSpec : StringSpec({
         for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
             val out = input.copyOf()
 
-            LowPassHighPassFilters.DcBlocker(bad).process(out, 0, out.size)
+            LowPassHighPassFilters.DcBlocker(bad).process(buffer = out, offset = 0, length = out.size)
 
-            withClue("coefficient $bad: first mismatching frame") { firstMismatch(out, expected) shouldBe null }
+            withClue("coefficient $bad: first mismatching frame") { firstMismatch(a = out, b = expected) shouldBe null }
         }
     }
 })

@@ -8,23 +8,15 @@ package io.peekandpoke.klang.audio_be.voices
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.utils.fadeToZero
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
 import kotlin.math.ceil
-
-// Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
-// object), causing heap allocation on every operation. Int maps directly to a JS number.
-// At 48kHz with 128-sample blocks, Int overflows after ~12.4 hours — sufficient for any session.
 
 /**
  * A voice in the audio engine.
@@ -135,7 +127,8 @@ class Voice(
     private val gateEndFrame: Double get() = limits.gateEndFrame
 
     // The stages before the send: Pitch → Ignite → (teardown fade). A cut's fade runs between them and the send.
-    private val stages: List<BlockRenderer> = pipeline
+    // An array with an index loop: a `List` loop makes an iterator per voice per block on Kotlin/JS.
+    private val stages: Array<BlockRenderer> = pipeline.toTypedArray()
 
     // The last stage: the send into the orbit.
     private val send: BlockRenderer = SendRenderer(voice = this)
@@ -175,6 +168,13 @@ class Voice(
         state is State.Sounding && gateEndFrame > maxOf(blockStart, startFrame)
 
     /**
+     * Whether the gate is still open at [frame]: the voice has not been released, cut or ended (`Pending` or
+     * `Sounding`) and its gate ends after [frame]. The scheduler's realtime solo reads it once per block.
+     */
+    fun gateOpenAt(frame: Double): Boolean =
+        (state is State.Pending || state is State.Sounding) && gateEndFrame > frame
+
+    /**
      * True once any block of this voice has been audible (peak at or above [VOICE_CULL_FLOOR]).
      * A voice that has not sounded yet is never culled, whatever its gate says: a sample with
      * leading silence pitched two octaves down, or an ignitor envelope whose attack outlives a
@@ -199,13 +199,29 @@ class Voice(
         else -> (cull * blockCtx.sampleRateD).toInt()
     }
 
-    // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
+    // Dynamic gain multiplier (set by VoiceScheduler once per block, for solo/mute)
     private var _gainMultiplier: Double = 1.0
+    private var _gainMultiplierFrom: Double = 1.0
+    private var gainMultiplierSet: Boolean = false
 
+    /** The multiplier this block ends on. */
     val gainMultiplier: Double get() = _gainMultiplier
 
+    /**
+     * The multiplier this block starts from: the one the previous block ended on. `SendRenderer` ramps linearly
+     * from here to [gainMultiplier] across the block, so a change is never a step inside a sample (a click); when
+     * the two are equal (no solo anywhere: 1.0 to 1.0) it applies the plain constant, bit for bit as before.
+     */
+    val gainMultiplierFrom: Double get() = _gainMultiplierFrom
+
+    /**
+     * Sets the multiplier for the coming block; called once per block. The first call sets both ends, so a voice
+     * starts at its multiplier instead of ramping in from 1.0.
+     */
     fun setGainMultiplier(multiplier: Double) {
+        _gainMultiplierFrom = if (gainMultiplierSet) _gainMultiplier else multiplier
         _gainMultiplier = multiplier
+        gainMultiplierSet = true
     }
 
     /**
@@ -386,7 +402,7 @@ class Voice(
 
         // Update per-block state
         blockCtx.audioBuffer = ctx.voiceBuffer
-        blockCtx.updateOffsetAndLength(offset, length)
+        blockCtx.updateOffsetAndLength(offset = offset, length = length)
         blockCtx.blockStart = ctx.blockStart
         blockCtx.renderContext = ctx
         blockCtx.freqModBufferWritten = false
@@ -400,8 +416,8 @@ class Voice(
 
         // ── Pitch → Ignite → (teardown fade) → Send ───────────────────────────────
 
-        for (renderer in stages) {
-            renderer.render(blockCtx)
+        for (i in 0 until stages.size) {
+            stages[i].render(blockCtx)
         }
 
         if (isFading) {
@@ -438,24 +454,21 @@ class Voice(
      * The cut's ramp on this block's window: gain 1 up to the fade start, then linear to exact zero on the LAST
      * frame the voice renders, `ceil(fadeEnd) - 1` ([State.Fading.fadeEndFrame]; the voice is `Done` from the first
      * block that starts at or after the fade end, so that frame always renders), zero after it. The law of
-     * `TeardownFadeRenderer`, whose zero is `floor(endFrame) - 1`: the ramp spans the fade length minus one frame
+     * `TeardownFadeRenderer` (both run `fadeToZero`), whose zero is `floor(endFrame) - 1`: the ramp spans the fade length minus one frame
      * (191 steps at 48 kHz). The clamps absorb a 1-ulp overshoot at the entry frame.
      */
     private fun applyCutFade() {
-        val buffer = blockCtx.audioBuffer
         val fadeStart = fading.fadeStartFrame
         val zeroFrame = ceil(fading.fadeEndFrame) - 1.0
-        val scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0)
-        // The buffer index at which the gain reaches zero (frame = blockStart + index).
-        val zeroIdx = zeroFrame - blockCtx.blockStart
-        val end = blockCtx.windowEnd
 
-        for (idx in blockCtx.offset until end) {
-            val remaining = (zeroIdx - idx) * scale
-            val gain = if (remaining < 0.0) 0.0 else if (remaining > 1.0) 1.0 else remaining
-
-            buffer[idx] = buffer[idx] * gain
-        }
+        fadeToZero(
+            buffer = blockCtx.audioBuffer,
+            startIndex = blockCtx.offset,
+            endIndex = blockCtx.windowEnd,
+            // The buffer index at which the gain reaches zero (frame = blockStart + index).
+            zeroIndex = zeroFrame - blockCtx.blockStart,
+            scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0),
+        )
     }
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -599,47 +612,6 @@ class Voice(
         val attackCurve: AdsrCurve = AdsrCurve.Default,
         val decayCurve: AdsrCurve = AdsrCurve.Default,
         val releaseCurve: AdsrCurve = AdsrCurve.Default,
-    )
-
-    class Compressor(
-        val thresholdDb: Double,
-        val ratio: Double,
-        val kneeDb: Double,
-        val attackSeconds: Double,
-        val releaseSeconds: Double,
-    ) {
-        companion object {
-            /**
-             * Builds the orbit compressor's settings from its five knobs, as
-             * `KatalystSlots.compressorSettings` resolves them from the owner's slots (a
-             * non-finite slot arrives here as null). Null when no knob is set; a missing knob
-             * falls back to its `COMPRESSOR_*` constant.
-             */
-            fun fromParams(
-                threshold: Double?,
-                ratio: Double?,
-                knee: Double?,
-                attack: Double?,
-                release: Double?,
-            ): Compressor? {
-                if (threshold == null && ratio == null && knee == null && attack == null && release == null) {
-                    return null
-                }
-                return Compressor(
-                    thresholdDb = threshold ?: COMPRESSOR_THRESHOLD_DB,
-                    ratio = ratio ?: COMPRESSOR_RATIO,
-                    kneeDb = knee ?: COMPRESSOR_KNEE_DB,
-                    attackSeconds = attack ?: COMPRESSOR_ATTACK_SECONDS,
-                    releaseSeconds = release ?: COMPRESSOR_RELEASE_SECONDS,
-                )
-            }
-        }
-    }
-
-    class Ducking(
-        val cylinderId: Int,
-        val attackSeconds: Double,
-        val depth: Double,
     )
 
     companion object {

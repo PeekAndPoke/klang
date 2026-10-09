@@ -37,7 +37,7 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 |--------------|------------|----------------------------------------|
 | `gain`       | `Double?`  | The channel fader: the one level word on the wire (1.0 = unity, null = unset). A frontend's articulation shorthand (sprudel's `velocity`, a MIDI key velocity) is multiplied into it BEFORE it crosses, so `velocity` and the retired second multiplier are not wire fields (signal-flow plan section 6, 2026-09-19). |
 | `legato`     | `Double?`  | Legato                                 |
-| `solo`       | `Double?`  | 1.0 = full solo (mute others), 0.0 = no solo |
+| `solo`       | `Double?`  | 0.0 = no solo, 1.0 = full solo; the other voices play at `1 - amount` (1.0 silences them, the strongest solo wins). Recorded per `sourceId` from any event, `control` events included |
 
 ### Sound Selection
 
@@ -111,8 +111,8 @@ phase 3 step 9. The one rule of which chain reads which slot lives in the `katal
 
 ### Control and metadata
 
-`master` and `katalyst` (chain names in the one Katalyst namespace since phase 3 step 12, last writer wins), `control` (a control-only event, never
-synthesized), `tags` (UI only), `sourceId`.
+`master` and `katalyst` (chain names in the one Katalyst namespace since phase 3 step 12, last writer wins), `control` (a control-only event carrying engine state: a master or orbit chain swap, a solo keep-alive; never
+synthesized), `tags` (UI only), `sourceId` (the id solo state is tracked by).
 
 ## AdsrDef
 
@@ -131,23 +131,30 @@ sample instrument fills the `adsr.*` slots the pattern left unset from it (`with
 audio_be). A voice's own envelope travels as `classic()`'s `adsr.*` slots; their defaults are the
 `VOICE_ADSR_*` constants (`audio_bridge/.../constants/EnvelopeDefaults.kt`).
 
-## FilterDef
+## The body and vowel rows
 
 ```kotlin
-sealed class FilterDef {
-    // Resonators: parallel modal BPF banks blended over the dry via ParallelMixFilter(mix, floor).
-    // Applied at the ORBIT level (KatalystFormantEffect / KatalystBodyEffect), never per voice.
-    data class Formant(val bands: List<Band>, val mix: Double, val floor: Double? = null)  // vowel()
-    data class Body(val bands: List<Mode>,   val mix: Double, val floor: Double? = null)   // body()
-    // Band / Mode are both (freq, db, q). floor null → engine default (VOWEL_FLOOR / BODY_FLOOR).
+object BodyMaterials {
+    data class Mode(val freq: Double, val db: Double, val q: Double)  // unity-peak: db IS the peak
+    // ...the material tables, names, indexOf, slotIndexAt, modesAt, modesFor
+}
+
+object VowelBands {
+    data class Band(val freq: Double, val db: Double, val q: Double)  // legacy Q-peak: the peak is Q * 10^(db/20)
+    // ...the register-by-vowel tables, names, indexOf, slotIndexAt, bandsAt, bandsFor
 }
 ```
 
-- Not a wire type any more: the orbit builds these from its slots. The bands resolve from the
-  `body.material` / `vowel.vowel` INDEX slot through `BodyMaterials.modesAt` / `VowelBands.bandsAt`
-  (`KatalystSlotWriters`, `KatalystSlots`); DSP = one `ResonatorBank` (band gain rules in `bodyBand` /
-  `vowelBand`) + `createBody`/`createFormant`; blend + declick-crossfade in `ParallelMixFilter` /
-  `KatalystFilterSwap`. See `ref/architecture.md` "Per-Playback Engine".
+- The rows live with the catalogue that owns them. The bridge's band carriers (`FilterDef.Formant` / `Body`, rows
+  plus mix and floor) are retired since engine tidy-up step 12 (c); the stage is offered a `ResonatorConfig`
+  (table, mix, floor) in audio_be.
+- Not a wire type: the orbit builds its resonators from its slots. The `body.material` / `vowel.vowel` INDEX
+  slot picks a `ResonatorTable` (`ResonatorTables.at`, through `BodyMaterials.slotIndexAt` / `VowelBands.slotIndexAt`;
+  one table per index, built once from the rows, equal rows sharing one instance) in `KatalystResonatorWriter`; an
+  unset `wet` / `floor` takes its constant in `KatalystResonatorEffect.configure`. The DSP is one mono
+  `ResonatorBank` per channel (bands, band gain rules `bodyGain` / `vowelGain`, and the dry/wet blend); the
+  declick crossfade is `KatalystFilterSwap`. `createBody` / `createFormant` build a one-shot bank for the specs and
+  the benchmark. See `ref/architecture.md` "Per-Playback Engine".
 - The per-voice filters are `classic()`'s `lpf`/`hpf`/`bpf`/`notch` stages, each an `Ignitor.svf` node
   with its cutoff envelope, filled from the `<door>.<param>` slots.
 

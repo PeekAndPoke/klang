@@ -24,7 +24,7 @@ class KnobGlideSpec : StringSpec({
     val frames = 128
 
     /** A glide that has consumed one block at [from], so the next retarget GLIDES instead of snapping. */
-    fun settledAt(from: Double, sampleRate: Int = 44100): KnobGlide = KnobGlide(sampleRate, frames).apply {
+    fun settledAt(from: Double, sampleRate: Int = 44100): KnobGlide = KnobGlide(sampleRate = sampleRate, blockFrames = frames).apply {
         retarget(from)
         advance()
     }
@@ -99,7 +99,7 @@ class KnobGlideSpec : StringSpec({
     }
 
     "the first value snaps, after construction and after reset, until a block has consumed it" {
-        val glide = KnobGlide(44100, frames)
+        val glide = KnobGlide(sampleRate = 44100, blockFrames = frames)
 
         glide.retarget(0.7)
         glide.value shouldBe 0.7
@@ -147,7 +147,7 @@ class KnobGlideSpec : StringSpec({
         glide.isGliding shouldBe false
 
         // Before the first value, a non-finite arrival does not use up the snap either.
-        val fresh = KnobGlide(44100, frames)
+        val fresh = KnobGlide(sampleRate = 44100, blockFrames = frames)
 
         fresh.retarget(Double.NaN)
         fresh.retarget(0.5)
@@ -201,7 +201,7 @@ class KnobGlideSpec : StringSpec({
     "LEVEL: a settled or snapped knob multiplies by the value itself, one multiply per sample" {
         // The identity the whole step's "unchanged songs render the same" rests on: at a constant
         // wet the feed is the mix times that number, which is what a constant send was.
-        val glide = KnobGlide(44100, frames)
+        val glide = KnobGlide(sampleRate = 44100, blockFrames = frames)
         val source = StereoBuffer(frames)
         val out = StereoBuffer(frames)
 

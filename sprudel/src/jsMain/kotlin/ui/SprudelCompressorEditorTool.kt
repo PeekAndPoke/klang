@@ -114,12 +114,6 @@ private class SprudelCompressorEditorComp(ctx: Ctx<Props>) : Component<SprudelCo
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
     private val parsedThreshold
         get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, -20.0)
@@ -152,14 +146,11 @@ private class SprudelCompressorEditorComp(ctx: Ctx<Props>) : Component<SprudelCo
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
         if (call != null) {
-            "${threshold.fmt()}, ${ratio.fmt()}, ${knee.fmt()}, ${attack.fmt()}, ${release.fmt()}"
+            "${threshold.formatArg()}, ${ratio.formatArg()}, ${knee.formatArg()}, ${attack.formatArg()}, ${release.formatArg()}"
         } else {
-            threshold.fmt()
+            threshold.formatArg()
         }
 
     /**
@@ -179,14 +170,14 @@ private class SprudelCompressorEditorComp(ctx: Ctx<Props>) : Component<SprudelCo
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 5) texts.add(null)
-            put(texts, 0, threshold.fmt())
-            put(texts, 1, ratio.fmt())
-            put(texts, 2, knee.fmt())
-            put(texts, 3, attack.fmt())
-            put(texts, 4, release.fmt())
+            put(texts, 0, threshold.formatArg())
+            put(texts, 1, ratio.formatArg())
+            put(texts, 2, knee.formatArg())
+            put(texts, 3, attack.formatArg())
+            put(texts, 4, release.formatArg())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(threshold.fmt())
+            props.toolCtx.onCommit(threshold.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()

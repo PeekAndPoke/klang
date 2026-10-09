@@ -39,8 +39,8 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
     /** Every classic slot: its script path and the Kotlin object it must be. */
     val slots: List<Pair<String, IgnitorDsl>> = listOf(
         "onepole" to s.onepole,
-        "crush.amount" to s.crush.amount,
-        "coarse.amount" to s.coarse.amount,
+        "crush.bits" to s.crush.bits,
+        "coarse.factor" to s.coarse.factor,
         "distort.amount" to s.distort.amount,
         "distort.shape" to s.distort.shape,
         "distort.oversample" to s.distort.oversample,

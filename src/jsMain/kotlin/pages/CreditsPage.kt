@@ -339,10 +339,10 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         - **Chebyshev-polynomial waveshaping** — harmonic distortion
                         - **Padé `tanh` approximation** `x(27+x²)/(27+9x²)` — the public-domain "27/9" fast-tanh
                         from the musicdsp.org / KVR community, used in Klang's soft-clipping (`ShapingFuncs.fastTanh`)
-                        - **Minimax polynomial sine** — the oscillators' `fastSin` (`DspUtil.kt`): an odd polynomial on
+                        - **Minimax polynomial sine** — the oscillators' `fastSin` (`fast_math.kt`): an odd polynomial on
                         the folded half period, the classic method of Cecil Hastings Jr., *Approximations for Digital
                         Computers* (Princeton, 1955); the degree-11 coefficients were fitted for Klang, no third-party code
-                        - **Table-and-polynomial `2^x` and `e^x`** — `fastExp2` and `fastExp` (`DspUtil.kt`), the pitch
+                        - **Table-and-polynomial `2^x` and `e^x`** — `fastExp2` and `fastExp` (`fast_math.kt`), the pitch
                         paths' ratio, the envelopes' exponential curve and the compressor's gain: the integer octave from
                         a table of powers of two, the fraction by a minimax polynomial, `e^x` as `2^(x·log2 e)`; the range
                         reduction of William J. Cody and William Waite, *Software Manual for the Elementary Functions*

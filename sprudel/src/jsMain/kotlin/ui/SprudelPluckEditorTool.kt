@@ -17,7 +17,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -40,12 +39,12 @@ import kotlinx.html.div
 // ── Tool singleton ───────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param sndPluck(decay, brightness, pickPosition, stiffness) call.
+ * [KlangUiToolEmbeddable] for the per-param sndPluck(feedback, brightness, pickPosition, stiffness) call.
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits all four params of the
  *   host call (incl. presets) and commits the full argument list.
- * - Scalar fallback (embedded / sequence atom): edits a single decay value.
+ * - Scalar fallback (embedded / sequence atom): edits a single feedback value.
  */
 object SprudelPluckEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Pluck Editor"
@@ -71,7 +70,7 @@ private fun Tag.SprudelPluckEditorComp(toolCtx: KlangUiToolContext, embedded: Bo
 
 private data class PluckPreset(
     val name: String,
-    val decay: Double,
+    val feedback: Double,
     val brightness: Double,
     val pickPosition: Double,
     val stiffness: Double,
@@ -106,14 +105,8 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
-    private val parsedDecay
+    private val parsedFeedback
         get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, 0.996)
 
     private val parsedBrightness
@@ -125,7 +118,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
     private val parsedStiffness
         get() = parseNum(call?.args?.getOrNull(3), 0.0)
 
-    private var decay by value(parsedDecay)
+    private var feedback by value(parsedFeedback)
     private var brightness by value(parsedBrightness)
     private var pickPosition by value(parsedPickPosition)
     private var stiffness by value(parsedStiffness)
@@ -140,14 +133,11 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
         if (call != null) {
-            "${decay.fmt()}, ${brightness.fmt()}, ${pickPosition.fmt()}, ${stiffness.fmt()}"
+            "${feedback.formatArg()}, ${brightness.formatArg()}, ${pickPosition.formatArg()}, ${stiffness.formatArg()}"
         } else {
-            decay.fmt()
+            feedback.formatArg()
         }
 
     /**
@@ -167,13 +157,13 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 4) texts.add(null)
-            put(texts, 0, decay.fmt())
-            put(texts, 1, brightness.fmt())
-            put(texts, 2, pickPosition.fmt())
-            put(texts, 3, stiffness.fmt())
+            put(texts, 0, feedback.formatArg())
+            put(texts, 1, brightness.formatArg())
+            put(texts, 2, pickPosition.formatArg())
+            put(texts, 3, stiffness.formatArg())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(decay.fmt())
+            props.toolCtx.onCommit(feedback.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()
@@ -208,7 +198,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
     private fun onReset() {
         dirty.clear()
         currentValue = initialValue
-        decay = parsedDecay
+        feedback = parsedFeedback
         brightness = parsedBrightness
         pickPosition = parsedPickPosition
         stiffness = parsedStiffness
@@ -223,7 +213,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
     }
 
     private fun applyPreset(preset: PluckPreset) {
-        decay = preset.decay
+        feedback = preset.feedback
         brightness = preset.brightness
         pickPosition = preset.pickPosition
         stiffness = preset.stiffness
@@ -271,7 +261,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
                         marginBottom = 8.px
                     }
                     val matchedPreset = PRESETS.find {
-                        it.decay == decay && it.brightness == brightness &&
+                        it.feedback == feedback && it.brightness == brightness &&
                                 it.pickPosition == pickPosition && it.stiffness == stiffness
                     }
 
@@ -298,12 +288,12 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
                 key = "pluck-editor-form"
                 ui.four.stackable.fields {
                     key = "pluck-editor-fields"
-                    UiInputField(decay, { decay = it; dirty += 0; liveUpdate() }) {
-                        domKey("decay")
+                    UiInputField(feedback, { feedback = it; dirty += 0; liveUpdate() }) {
+                        domKey("feedback")
                         step(0.001)
                         label {
-                            +"Decay"
-                            paramInfoIcon("decay", props.toolCtx, infoPopup)
+                            +"Feedback"
+                            paramInfoIcon("feedback", props.toolCtx, infoPopup)
                         }
                     }
                     if (call != null) {

@@ -8,10 +8,11 @@ package io.peekandpoke.klang.audio_be.effects
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.effects.DelayLine.Companion.MIN_DELAY_SECONDS
+import io.peekandpoke.klang.audio_be.utils.nanGuard
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.ln
@@ -88,7 +89,7 @@ class DelayLine(
         sampleRate: Int,
         time: Double = 0.5,
         feedback: Double = 0.0,
-    ) : this(StereoBuffer((maxDelaySeconds * sampleRate).toInt()), sampleRate, time, feedback)
+    ) : this(ring = StereoBuffer((maxDelaySeconds * sampleRate).toInt()), sampleRate = sampleRate, time = time, feedback = feedback)
 
     /** The ring itself, so an owner can give it back to the warehouse. */
     internal val ring: StereoBuffer = ring
@@ -223,7 +224,7 @@ class DelayLine(
      * is below threshold, no future feedback iteration can bring the output
      * back above threshold, so a `false` return is safe.
      */
-    fun hasTail(threshold: Double = 0.00001): Boolean {
+    fun hasTail(threshold: Double = SILENCE_FLOOR): Boolean {
         // Test/diagnostic only since the content-ceiling tail (`TailCeiling`): no production caller,
         // and none should return — this is O(ring) with no ceiling on the ring.
         for (i in 0 until bufferSize) {
@@ -296,7 +297,7 @@ class DelayLine(
     fun drainSamplesUntilSilent(
         peak: Double,
         feedback: Double = this.feedback,
-        threshold: Double = 0.00001,
+        threshold: Double = SILENCE_FLOOR,
     ): Double {
         if (peak <= threshold) {
             return 0.0
@@ -421,7 +422,7 @@ class DelayLine(
         }
 
         if (fading) {
-            processCrossfade(input, output, length, fbEnd, fbStep)
+            processCrossfade(input = input, output = output, length = length, fbEnd = fbEnd, fbStep = fbStep)
 
             return
         }
@@ -451,10 +452,10 @@ class DelayLine(
             val chunk = min(length - done, bufferSize - pos)
 
             processInternal(
-                buffer.left, input.left, output.left, done, chunk, pos, delayInt, alpha, fbEnd, fbStep, last, safeCap,
+                buffer = buffer.left, input = input.left, output = output.left, offset = done, length = chunk, startWritePos = pos, delayInt = delayInt, alpha = alpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap,
             )
             processInternal(
-                buffer.right, input.right, output.right, done, chunk, pos, delayInt, alpha, fbEnd, fbStep, last, safeCap,
+                buffer = buffer.right, input = input.right, output = output.right, offset = done, length = chunk, startWritePos = pos, delayInt = delayInt, alpha = alpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap,
             )
 
             done += chunk
@@ -490,12 +491,12 @@ class DelayLine(
             val chunk = min(length - done, bufferSize - pos)
 
             processInternalCrossfade(
-                buffer.left, input.left, output.left, done, chunk, pos,
-                fromInt, fromAlpha, toInt, toAlpha, fbEnd, fbStep, last, safeCap, fadeStart,
+                buffer = buffer.left, input = input.left, output = output.left, offset = done, length = chunk, startWritePos = pos,
+                fromInt = fromInt, fromAlpha = fromAlpha, toInt = toInt, toAlpha = toAlpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap, fadeStart = fadeStart,
             )
             processInternalCrossfade(
-                buffer.right, input.right, output.right, done, chunk, pos,
-                fromInt, fromAlpha, toInt, toAlpha, fbEnd, fbStep, last, safeCap, fadeStart,
+                buffer = buffer.right, input = input.right, output = output.right, offset = done, length = chunk, startWritePos = pos,
+                fromInt = fromInt, fromAlpha = fromAlpha, toInt = toInt, toAlpha = toAlpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap, fadeStart = fadeStart,
             )
 
             done += chunk

@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.SAFE_MAX
+import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -14,6 +14,11 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Safety tests for pitch-mod factories — ensures extreme user inputs don't produce
@@ -34,8 +39,9 @@ class PitchModSafetyTest : StringSpec({
         voiceDurationFrames = durationFrames,
         gateEndFrame = durationFrames,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = elapsedFrames
     }
 
@@ -108,8 +114,8 @@ class PitchModSafetyTest : StringSpec({
     "pitch envelope with extreme amount stays finite" {
         // amount = 1000 semitones — way past Float pow overflow at envLevel=1.
         val sig = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("att", 0.01),
-            decaySec = ParamIgnitor("dec", 0.1),
+            attack = ParamIgnitor("att", 0.01),
+            decay = ParamIgnitor("dec", 0.1),
             semitones = ParamIgnitor("amt", 1000.0),
         )
         val out = render(sig)
@@ -119,8 +125,8 @@ class PitchModSafetyTest : StringSpec({
 
     "pitch envelope with zero amount outputs exactly 1.0" {
         val sig = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("att", 0.01),
-            decaySec = ParamIgnitor("dec", 0.1),
+            attack = ParamIgnitor("att", 0.01),
+            decay = ParamIgnitor("dec", 0.1),
             semitones = ParamIgnitor("amt", 0.0),
         )
         val out = render(sig)
@@ -214,7 +220,7 @@ class PitchModSafetyTest : StringSpec({
         // Without the safety clamp, an extreme depth would set phase=Inf on first sample
         // and the oscillator would output 0/NaN forever. With the clamp, output stays bounded.
         val mod = vibratoModIgnitor(rate = 5.0, semitones = 10000.0)
-        val osc = ModApplyingIgnitor(Ignitors.sine(), mod)
+        val osc = ModApplyingIgnitor(inner = Ignitors.sine(), mod = mod)
         val out = render(osc, freqHz = 440.0)
         out.allFinite() shouldBe true
         // Output isn't silent — at least one sample is non-zero (oscillator is still running).
@@ -234,15 +240,16 @@ class PitchModSafetyTest : StringSpec({
             voiceDurationFrames = frames * blocks,
             gateEndFrame = frames * blocks,
             scratchBuffers = ScratchBuffers(frames),
+            random = testRandom,
         )
-        val ignitor = dsl.buildExciter(freqHz = 220.0, sampleRate = sampleRate).ignitor
+        val ignitor = dsl.buildExciter(freqHz = 220.0, sampleRate = sampleRate, random = testRandom).ignitor
         val buf = AudioBuffer(frames)
         val out = DoubleArray(frames * blocks)
 
         for (b in 0 until blocks) {
-            c.updateOffsetAndLength(0, frames)
+            c.updateOffsetAndLength(offset = 0, length = frames)
             ignitor.generate(buf, 220.0, c)
-            buf.copyInto(out, b * frames, 0, frames)
+            buf.copyInto(destination = out, destinationOffset = b * frames, startIndex = 0, endIndex = frames)
             c.voiceElapsedFrames += frames
         }
 
@@ -252,6 +259,12 @@ class PitchModSafetyTest : StringSpec({
     fun k(v: Double) = IgnitorDsl.Constant(v)
 
     val nan = k(Double.NaN)
+
+    // The same NaN as a NON-LEAF knob. A `Constant` or `Param` leaf at a non-finite value is gated off at build
+    // for accelerate, the pitch envelope and fm (pitch pipeline step 0, `audio/ref/off-values.md`), so a leaf NaN
+    // never reaches the runtime's `finiteOr` these rows guard. The marker dissolves to the NaN at build but has no
+    // build-time answer for the gate. Not `Times`: its `safeOut` would scrub the NaN to 0 before the node sees it.
+    val nonLeafNan = IgnitorDsl.OptimizerHint(inner = nan)
     val saw = IgnitorDsl.Saw(analog = k(0.0))
     val fmCarrier = IgnitorDsl.Sine(analog = k(0.0))
     // Note-pitched, so a NaN ratio reaches its drive (an absolute modulator would ignore the ratio).
@@ -262,18 +275,18 @@ class PitchModSafetyTest : StringSpec({
     listOf(
         Triple(
             "pitch envelope semitones",
-            IgnitorDsl.PitchEnvelope(saw, semitones = nan),
+            IgnitorDsl.PitchEnvelope(saw, semitones = nonLeafNan),
             IgnitorDsl.PitchEnvelope(saw),
         ),
         Triple(
             "fm ratio",
-            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = nan, depth = k(300.0)),
-            IgnitorDsl.Fm(fmCarrier, fmModulator, depth = k(300.0)),
+            IgnitorDsl.Fm(carrier = fmCarrier, modulator = fmModulator, ratio = nan, depth = k(300.0)),
+            IgnitorDsl.Fm(carrier = fmCarrier, modulator = fmModulator, depth = k(300.0)),
         ),
         Triple(
             "fm depth",
-            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0), depth = nan),
-            IgnitorDsl.Fm(fmCarrier, fmModulator, ratio = k(2.0)),
+            IgnitorDsl.Fm(carrier = fmCarrier, modulator = fmModulator, ratio = k(2.0), depth = nonLeafNan),
+            IgnitorDsl.Fm(carrier = fmCarrier, modulator = fmModulator, ratio = k(2.0)),
         ),
         Triple(
             "vibrato rate",
@@ -287,7 +300,7 @@ class PitchModSafetyTest : StringSpec({
         ),
         Triple(
             "accelerate semitones",
-            IgnitorDsl.Accelerate(saw, semitones = nan),
+            IgnitorDsl.Accelerate(saw, semitones = nonLeafNan),
             IgnitorDsl.Accelerate(saw),
         ),
     ).forEach { (knob, withNan, withDefault) ->

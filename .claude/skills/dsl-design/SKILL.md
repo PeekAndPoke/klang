@@ -79,7 +79,7 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
     `floor` is always on the builder.
   - A DYNAMICS stage is flat, because every one of its knobs is musical: `compressor` and `duck`,
     each identical to sprudel's, and `limiter`, the Katalyst's compressor preset (no sprudel twin).
-  - An envelope is ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` call, never four
+  - An envelope is ONE `adsr(attack, decay, sustain, release, configure)` call, never four
     stage knobs, with the SAME shape wherever it appears: on the chain and nested inside a filter's or the
     pitch envelope's builder (`x => x.adsr(a, d, s, r, e => e.curves(...))`). Inside a builder a knob drops
     the prefix its door needed (`curves`, not `adsrCurves`; `declick`, not `declickSeconds`). An envelope's
@@ -152,9 +152,9 @@ the bug.
 - Shared conversions live in ONE place (`Reverb.normalizeSize` serves both buses). Never let
   each host convert on its own.
 - **Defaults are the same on every surface, and live in ONE place** (maintainer, 2026-09-16): the
-  wire defaults in `audio_bridge/constants/` (`SendEffectDefaults.kt` for delay and reverb). The
+  wire defaults in `audio_bridge/constants/` (`BusEffectDefaults.kt` for every Katalyst stage). The
   Katalyst stage (on an orbit or at the output), a sprudel call (it sets every slot it leaves unset at write time), the engine's
-  wire fallback (`VoiceFactory`) and the editor tools all read the same constant; a non-finite
+  rule for a slot written raw through `katp` and the editor tools all read the same constant; a non-finite
   value reads as unset. Never a literal default per host.
 - **A compound door fills per param, at the door, everywhere** (maintainer, 2026-09-18): when a
   call NAMES a stage, the door checks every companion slot of that stage and, if it is not yet
@@ -221,6 +221,20 @@ the bug.
   `docs/tasks/master-dsl-followups.md` section 1 for the parity audit brief.
 
 ---
+
+**Units in names (maintainer, 2026-10-08, provisional: question it when it makes an outcome messier):** time is always in seconds, pitch is always in semitones (where it can
+be), and the unit lives in the KDoc, never in the name: `attack`, not `attackSec`; `declick`, not `declickSeconds`;
+`threshold`, not `thresholdDb`. A name says what the value IS when the bare word would hide it: `crush.bits`,
+`coarse.factor`, `penv.semitones`. The filter `env` stays `env` and is documented in semitones. One word keeps one
+meaning: `depth` is how far a modulation swings, in the stage's unit (tremolo and duck 0 to 1, FM in Hz); `amount`
+is the distort drive only. A name may also stand for a CHARACTER rather than a unit, when the component maps it
+through multipliers of its own: `analog` is "how analog", 0 ideal, 1 to 8 usual, 10 strong, and each component
+documents its tells per unit (Q22).
+
+**Slot names (maintainer, 2026-10-08, decision D4 and Q21, provisional):** a slot is `<door>.<param>`; the namespace is the sprudel
+door's name (`lpf`, `penv`); the param part is the engine door's word (the Ignitor's, or the Katalyst's for a bus
+stage), after a check that it is the better word, and the sprudel door's parameter takes the same word. A one-knob
+door stays flat (`onepole`, `accelerate`, `pregain`, the sample slots). The table: `docs/tasks/classic-slot-names-check.md`.
 
 ## 5. One word per concept, end to end
 

@@ -244,7 +244,9 @@ Plan and decisions (a) to (j): `docs/tasks-archive/2026-09/20260928-phase3-step1
   the hosts and an oracle spec for the law.
 - **The oversampler's transform lambda is built once per instance** in both cores' hosts (it was a new
   closure per block in the strip's crush and distort); it reads a field set per block. Same bits (the
-  oracle rows and the corpus prove it).
+  oracle rows and the corpus prove it). (Superseded 2026-10-07, engine tidy-up step 2: `ShapeIgnitor` had kept
+  a closure per block; `Oversampler.process` is now split into `upsample` and `decimate`, and both callers run
+  their loop between them inline, so neither a field lambda nor its drive side channel is left.)
 - **Songs that PLAY a strip distort are more than the plan listed**: besides Tetris, TetrisRemix,
   IrishLamentTechno and the frozen songs, StrangerThings (melody), ATruthWorthLyingFor (`Gitarre!`,
   bass), DrunkenSailor (bass), SoundOfTheSea (glockenspiel sample) and DerSchmetterling (sample kick).

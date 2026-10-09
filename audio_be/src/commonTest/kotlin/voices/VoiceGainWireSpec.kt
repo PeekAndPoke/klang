@@ -10,7 +10,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
@@ -64,10 +63,7 @@ class VoiceGainWireSpec : StringSpec({
         val registry = IgnitorRegistry().apply { registerDefaults() }
         val factory = VoiceFactory(
             sampleRate = sampleRate,
-            sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),

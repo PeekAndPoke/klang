@@ -28,14 +28,14 @@ class FilterPassesKnobSpec : StringSpec({
 
     fun lp(passes: IgnitorDsl): IgnitorDsl = IgnitorDsl.Lowpass(inner = saw, freq = IgnitorDsl.Constant(900.0), q = IgnitorDsl.Constant(2.0), passes = passes)
 
-    fun literal(n: Int): DoubleArray = renderVoiceWindows(saw.lowpass(900.0, 2.0, passes = n))
+    fun literal(n: Int): DoubleArray = renderVoiceWindows(saw.lowpass(freq = 900.0, q = 2.0, passes = n))
 
     fun shouldBeCount(clue: String, n: Int, actual: DoubleArray) {
-        withClue("$clue renders $n passes") { firstBitMismatch(literal(n), actual) shouldBe -1 }
+        withClue("$clue renders $n passes") { firstBitMismatch(a = literal(n), b = actual) shouldBe -1 }
 
         val other = if (n == 1) 2 else 1
 
-        withClue("$clue is not $other passes") { firstBitMismatch(literal(other), actual) shouldNotBe -1 }
+        withClue("$clue is not $other passes") { firstBitMismatch(a = literal(other), b = actual) shouldNotBe -1 }
     }
 
     val slot = IgnitorDsl.Param("p", 1.0)
@@ -79,8 +79,8 @@ class FilterPassesKnobSpec : StringSpec({
         val actual = renderVoiceWindows(hp, mapOf("p" to 2.0))
 
         withClue("hpf p = 2") {
-            firstBitMismatch(renderVoiceWindows(saw.highpass(900.0, 2.0, passes = 2)), actual) shouldBe -1
-            firstBitMismatch(renderVoiceWindows(saw.highpass(900.0, 2.0, passes = 1)), actual) shouldNotBe -1
+            firstBitMismatch(a = renderVoiceWindows(saw.highpass(freq = 900.0, q = 2.0, passes = 2)), b = actual) shouldBe -1
+            firstBitMismatch(a = renderVoiceWindows(saw.highpass(freq = 900.0, q = 2.0, passes = 1)), b = actual) shouldNotBe -1
         }
     }
 })

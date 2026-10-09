@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
@@ -47,18 +48,25 @@ class FilterNormalizationSpec : StringSpec({
         return peak
     }
 
+    // The resonator's band (the bandpass `SvfBPF` was until engine tidy-up step 12 (a)): one band at 0 dB, full mix,
+    // no floor, so the dry coefficient is cos(pi/2)^2, about 4e-33, and the output is the band.
     fun svfBpfPeak(q: Double, freq: Double = 1000.0): Double {
-        val f = LowPassHighPassFilters.SvfBPF(freq, q, sr)
-        return sinePeakThrough(freq) { buf -> f.process(buf, 0, blockFrames) }
+        val f = ResonatorBank(capacity = 1, sampleRate = sr, blockFrames = blockFrames)
+
+        val band = ResonatorTable.ofBody(listOf(BodyMaterials.Mode(freq = freq, db = 0.0, q = q)))
+
+        f.install(ResonatorConfig(table = band, mix = 1.0, floor = 0.0))
+
+        return sinePeakThrough(freq) { buf -> f.process(buffer = buf, offset = 0, length = blockFrames) }
     }
 
     fun eqCorePeak(type: Int, q: Double, freq: Double = 1000.0, gain: Double = 1.0, warmBlocks: Int = 60): Double {
         val core = EqCore(1)
-        core.configureSection(0, type, freq, q, db = 0.0, gain = gain, sampleRate = sr)
-        return sinePeakThrough(freq, warmBlocks = warmBlocks) { buf -> core.process(buf, 0, blockFrames) }
+        core.configureSection(index = 0, type = type, freq = freq, q = q, db = 0.0, gain = gain, sampleRate = sr)
+        return sinePeakThrough(freq, warmBlocks = warmBlocks) { buf -> core.process(buffer = buf, offset = 0, length = blockFrames) }
     }
 
-    "SvfBPF peaks at unity at fc regardless of q" {
+    "a resonator band peaks at unity at fc regardless of q" {
         svfBpfPeak(q = 4.0) shouldBe (1.0 plusOrMinus 0.02)
         svfBpfPeak(q = 0.5) shouldBe (1.0 plusOrMinus 0.02)
     }

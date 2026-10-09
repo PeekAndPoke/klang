@@ -8,7 +8,9 @@ package io.peekandpoke.klang.audio_be.effects
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb.Companion.FEEDBACK_OFFSET
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.ln
@@ -137,7 +139,7 @@ class Reverb(
      * threshold (steady-state bound is `threshold / (1 − fb) ≈ 50 · threshold`,
      * still well below audibility for typical thresholds).
      */
-    fun hasTail(threshold: Double = TAIL_THRESHOLD): Boolean {
+    fun hasTail(threshold: Double = SILENCE_FLOOR): Boolean {
         // Test/diagnostic only since the content-ceiling tail (`TailCeiling`): no production caller.
         for (c in 0 until numCombs) {
             for (sample in combBufsL[c]) {
@@ -236,7 +238,7 @@ class Reverb(
      * the proof needs a bound on the feedback of every revolution, and a countdown taken from a
      * feedback that is still rising would end while the tail is audible.
      */
-    fun drainSamplesUntilSilent(peak: Double, threshold: Double = TAIL_THRESHOLD, size: Double = this.size): Double {
+    fun drainSamplesUntilSilent(peak: Double, threshold: Double = SILENCE_FLOOR, size: Double = this.size): Double {
         if (peak <= threshold) {
             return 0.0
         }
@@ -348,12 +350,11 @@ class Reverb(
             // guarded at configure), so a FINITE input can never drive the state non-finite.
             // Guarding the input is therefore equivalent and 12x cheaper. Without it, one Inf
             // sample latched every comb and allpass for the life of the orbit.
-            // `abs(x) <= MAX_VALUE` rejects Inf AND NaN in one compare (NaN fails every
-            // comparison) and leaves no branch on the data — see `flushState`.
+            // `finiteOrZero` rejects Inf AND NaN in one compare and leaves no branch on the data.
             val rawL = inL[i]
             val rawR = inR[i]
-            val inpL = if (abs(rawL) <= Double.MAX_VALUE) rawL else 0.0
-            val inpR = if (abs(rawR) <= Double.MAX_VALUE) rawR else 0.0
+            val inpL = rawL.finiteOrZero()
+            val inpR = rawR.finiteOrZero()
 
             // Each side's room hears the other side too ([CROSS_FEED]). Written as a step towards the other
             // side, so an input with equal sides (inpL == inpR) feeds exactly what it did before, bit for bit.
@@ -492,9 +493,6 @@ class Reverb(
 
             return (authored / AUTHORED_SIZE_SCALE).coerceIn(0.0, 1.0)
         }
-
-        /** The silence threshold [hasTail] and [drainSamplesUntilSilent] share (~-100 dBFS). */
-        const val TAIL_THRESHOLD: Double = 0.00001
 
         /** Reference sample rate the canonical Freeverb tunings were tuned for. */
         private const val REFERENCE_SAMPLE_RATE: Int = 44100

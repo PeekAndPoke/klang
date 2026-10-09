@@ -20,6 +20,12 @@ import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WarmupVocabulary
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.body
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.compressor
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.phaser
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.vowel
 import io.peekandpoke.klang.audio_be.interleavedCopy
 import io.peekandpoke.klang.audio_be.peak
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
@@ -189,13 +195,13 @@ class CylinderShelfSpec : StringSpec({
 
     "the shelf holds at most maxIdle cylinders and refuses a double return" {
         val rings = SizedBuffers.forRings(sampleRate)
-        val units = CylinderUnits(blockFrames, sampleRate, rings, ReverbUnits(sampleRate), maxIdle = 2)
+        val units = CylinderUnits(blockFrames = blockFrames, sampleRate = sampleRate, rings = rings, reverbs = ReverbUnits(sampleRate), maxIdle = 2)
         // The renting engine's chain registry; this spec is about the shelf, so one empty
         // registry serves every rent.
         val katalysts = KatalystRegistry()
-        val a = units.rent(0, 10, katalysts)
-        val b = units.rent(1, 10, katalysts)
-        val c = units.rent(2, 10, katalysts)
+        val a = units.rent(id = 0, silentBlocksBeforeTailCheck = 10, katalysts = katalysts)
+        val b = units.rent(id = 1, silentBlocksBeforeTailCheck = 10, katalysts = katalysts)
+        val c = units.rent(id = 2, silentBlocksBeforeTailCheck = 10, katalysts = katalysts)
         units.allocations shouldBe 3
 
         units.giveBack(a)
@@ -208,8 +214,8 @@ class CylinderShelfSpec : StringSpec({
         units.idleCount shouldBe 2
         units.dropped shouldBe 1
 
-        units.rent(7, 10, katalysts) shouldBeSameInstanceAs b
-        units.rent(8, 10, katalysts).let { it shouldBeSameInstanceAs a; it.id shouldBe 8 }
+        units.rent(id = 7, silentBlocksBeforeTailCheck = 10, katalysts = katalysts) shouldBeSameInstanceAs b
+        units.rent(id = 8, silentBlocksBeforeTailCheck = 10, katalysts = katalysts).let { it shouldBeSameInstanceAs a; it.id shouldBe 8 }
         units.hits shouldBe 2
     }
 
@@ -324,7 +330,7 @@ class CylinderShelfSpec : StringSpec({
         repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
 
         val engine = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull()
-        engine.scheduler.droppedVoiceCount(WarmupRunner.WARMUP_PLAYBACK_ID) shouldBe 0
+        engine.scheduler.droppedVoiceCount() shouldBe 0
         WarmupVocabulary.sounds.forEach { (name, _) -> engine.scheduler.containsIgnitor(name) shouldBe true }
         engine.scheduler.getActiveVoiceCount() shouldBe WarmupRunner.WARMUP_ORBITS
     }
@@ -359,6 +365,6 @@ class CylinderShelfSpec : StringSpec({
             c.delay!!.delayLine.shouldNotBeNull()
             c.reverb!!.reverb.shouldNotBeNull()
         }
-        engine.scheduler.droppedVoiceCount(WarmupRunner.WARMUP_PLAYBACK_ID) shouldBe 0
+        engine.scheduler.droppedVoiceCount() shouldBe 0
     }
 })

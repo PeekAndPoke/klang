@@ -49,7 +49,7 @@ class ResourceWarehouse(
     allocateReverb: (sampleRate: Int) -> Reverb? = ReverbUnits::allocateOrNull,
 ) {
     /** Delay rings. Class 0 is [MIN_RING_SECONDS] at [sampleRate]. */
-    val sized: SizedBuffers = SizedBuffers.forRings(sampleRate, budgetBytes, allocate)
+    val sized: SizedBuffers = SizedBuffers.forRings(sampleRate = sampleRate, budgetBytes = budgetBytes, allocate = allocate)
 
     /** Reverb units — one size, lazy on the first `room`, shelved by return (step 2d). */
     val reverbs: ReverbUnits = ReverbUnits(sampleRate, allocate = allocateReverb)
@@ -190,9 +190,9 @@ class ResourceWarehouse(
          * beyond it the trade is the user's.
          *
          * A sub-pool is NOT pre-sized beyond its construction default (4 work buffers): the real
-         * depth is ONE — `Oversampler.process` opens a single `use`, and `ShapeIgnitor` renders its
-         * upstream BEFORE opening it, so oversampled work never nests even when shaped nodes stack —
-         * and the DoubleArray half stays EMPTY, since nothing on an oversampled path calls
+         * depth is ONE (an oversampled round trip holds a single `use` across `Oversampler.upsample` and
+         * `Oversampler.decimate`, and both shaper nodes render their upstream BEFORE `DistortionCore` opens it, so
+         * oversampled work never nests even when shaped nodes stack), and the DoubleArray half stays EMPTY, since nothing on an oversampled path calls
          * `useDouble` (only `ModApplyingIgnitor`, on the main pool). Review round 1 had warmed both
          * halves to depth 8, ~460 KB that no render can reach, paid eagerly in the worklet's first
          * `process()` (review round 2). The proof is the sub-pool's own counters after a render.

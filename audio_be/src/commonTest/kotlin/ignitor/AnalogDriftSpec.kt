@@ -58,7 +58,7 @@ class AnalogDriftSpec : StringSpec({
     }
 
     "attack is in tune - slow layer seeded at centre (every lane of a unison stack)" {
-        val lanes = DriftLanes(analog = 8.0, stepRate = sr, rng = Random(1))
+        val lanes = DriftLanes(capacity = 0, sharedLane = false).apply { start(analog = 8.0, stepRate = sr, rng = Random(1)) }
         val voices = 16
 
         lanes.ensureLanes(voices)
@@ -124,7 +124,7 @@ class AnalogDriftSpec : StringSpec({
     "the coefficients' steady-state sigma is the recurrence's, at the block rate and the sample rate" {
         // The output scales normalise each layer by its steady-state sigma, so the depth in cents
         // is only right if that sigma IS the recurrence's. The recurrences from the class KDoc,
-        // driven by uniform [-1, 1] noise, against `AnalogDriftCoeffs`: the exact AR(1) forms
+        // driven by uniform [-1, 1] noise, against the law in `AnalogDriftCoeffs.kt`: the exact AR(1) forms
         // (2026-09-15; the small-alpha approximations were 1.4 percent off at the block rate).
         // The slow layer at the sample rate has a 3.2e5-step correlation length and is left out.
         fun realisedSigma(steps: Int, correlationSteps: Int, next: (Double) -> Double): Double {
@@ -143,22 +143,25 @@ class AnalogDriftSpec : StringSpec({
         }
 
         for (rate in listOf(375, 48_000)) {
-            val c = AnalogDriftCoeffs(8.0, rate)
+            val alphaFast = analogDriftAlpha(tauSec = ANALOG_FAST_TAU_SEC, stepRate = rate)
+            val sigmaYFast = analogDriftSigmaFast(alphaFast)
             val rng = Random(5)
-            val fast = realisedSigma(20_000_000, (1.0 / c.alphaFast).toInt()) { y ->
-                y + c.alphaFast * ((rng.nextDouble() * 2.0 - 1.0) - y)
+            val fast = realisedSigma(steps = 20_000_000, correlationSteps = (1.0 / alphaFast).toInt()) { y ->
+                y + alphaFast * ((rng.nextDouble() * 2.0 - 1.0) - y)
             }
 
-            withClue("rate $rate: fast layer sigma $fast vs ${c.sigmaYFast}") { fast shouldBe (c.sigmaYFast plusOrMinus c.sigmaYFast * 0.03) }
+            withClue("rate $rate: fast layer sigma $fast vs $sigmaYFast") { fast shouldBe (sigmaYFast plusOrMinus sigmaYFast * 0.03) }
         }
 
-        val c = AnalogDriftCoeffs(8.0, 375)
+        val alphaSlow = analogDriftAlpha(tauSec = ANALOG_SLOW_TAU_SEC, stepRate = 375)
+        val betaSlow = analogDriftBetaSlow(alphaSlow)
+        val sigmaYSlow = analogDriftSigmaSlow(alphaSlow = alphaSlow, betaSlow = betaSlow)
         val rng = Random(6)
-        val slow = realisedSigma(20_000_000, (1.0 / (c.alphaSlow + c.betaSlow)).toInt()) { y ->
-            y + c.alphaSlow * ((rng.nextDouble() * 2.0 - 1.0) - y) - c.betaSlow * y
+        val slow = realisedSigma(steps = 20_000_000, correlationSteps = (1.0 / (alphaSlow + betaSlow)).toInt()) { y ->
+            y + alphaSlow * ((rng.nextDouble() * 2.0 - 1.0) - y) - betaSlow * y
         }
 
-        withClue("slow layer sigma $slow vs ${c.sigmaYSlow}") { slow shouldBe (c.sigmaYSlow plusOrMinus c.sigmaYSlow * 0.03) }
+        withClue("slow layer sigma $slow vs $sigmaYSlow") { slow shouldBe (sigmaYSlow plusOrMinus sigmaYSlow * 0.03) }
     }
 
     "does not run away - centred and bounded over millions of steps" {

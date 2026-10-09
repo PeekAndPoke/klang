@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.WorkletContract.sendCmd
+import io.peekandpoke.klang.audio_be.utils.jsObject
 import io.peekandpoke.klang.audio_bridge.AnalyserNode
 import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.AudioContextOptions

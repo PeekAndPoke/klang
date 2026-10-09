@@ -11,7 +11,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**
  * The lifecycle of [KatalystCompressorEffect] is a state machine whose transitions are POINTER SWAPS
@@ -32,10 +31,10 @@ class KatalystCompressorStateIdentitySpec : StringSpec({
     val sampleRate = 44100
     val n = 128
 
-    val settings = Voice.Compressor(thresholdDb = -20.0, ratio = 4.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = 0.1)
+    val settings = CompressorSettings(thresholdDb = -20.0, ratio = 4.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = 0.1)
 
     "every reachable cell of the table points at the three states created with the effect" {
-        val fx = KatalystCompressorEffect(sampleRate, n)
+        val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = n)
         val ctx = KatalystContext(blockFrames = n, mixBuffer = StereoBuffer(n))
 
         // An IDENTITY collection, deliberately: a `Set` compares with `equals`, so a state written

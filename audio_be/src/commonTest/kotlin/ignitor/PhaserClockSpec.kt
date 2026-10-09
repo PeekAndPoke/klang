@@ -12,6 +12,11 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import kotlin.math.abs
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Guards ledger D1/D2/D5/D7: the phaser LFO is a CLOCK — it advances with note-relative time on
@@ -29,6 +34,7 @@ class PhaserClockSpec : StringSpec({
     fun ctx() = IgniteContext(
         sampleRate = sampleRate, voiceDurationFrames = 100_000, gateEndFrame = 100_000,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     )
 
     // Deterministic, stateless tone — depends only on the note-relative sample position.
@@ -51,7 +57,7 @@ class PhaserClockSpec : StringSpec({
 
     fun render(ig: Ignitor, c: IgniteContext, pos: Int, len: Int): DoubleArray {
         val tmp = AudioBuffer(blockFrames)
-        c.updateOffsetAndLength(0, len)
+        c.updateOffsetAndLength(offset = 0, length = len)
         c.voiceElapsedFrames = pos
         ig.generate(tmp, 220.0, c)
         return tmp.copyOf(maxOf(len, 1))
@@ -98,8 +104,8 @@ class PhaserClockSpec : StringSpec({
             gapWet.value = if (block < 4 || block >= 10) 1.0 else 0.0
             ctlWet.value = if (block >= 10) 1.0 else 0.0
 
-            val g = render(gapIg, gapCtx, block * blockFrames, blockFrames)
-            val c = render(ctlIg, ctlCtx, block * blockFrames, blockFrames)
+            val g = render(ig = gapIg, c = gapCtx, pos = block * blockFrames, len = blockFrames)
+            val c = render(ig = ctlIg, c = ctlCtx, pos = block * blockFrames, len = blockFrames)
 
             if (block == 10) {
                 gapBlock10 = g
@@ -114,8 +120,8 @@ class PhaserClockSpec : StringSpec({
 
         // Identical from the FIRST re-entry sample: a frozen LFO would displace the notch
         // (ledger D1), stale allpass state would transient right here (ledger D5).
-        maxDiff(gapBlock10, ctlBlock10) shouldBe 0.0
-        maxDiff(gapBlock11, ctlBlock11) shouldBe 0.0
+        maxDiff(a = gapBlock10, b = ctlBlock10) shouldBe 0.0
+        maxDiff(a = gapBlock11, b = ctlBlock11) shouldBe 0.0
     }
 
     "ignitor door: a zero-length window does not get to decide the bypass (ledger D7)" {
@@ -133,12 +139,12 @@ class PhaserClockSpec : StringSpec({
         var probeBlock6 = DoubleArray(0)
 
         for (block in 0 until 7) {
-            val r = render(refIg, refCtx, block * blockFrames, blockFrames)
+            val r = render(ig = refIg, c = refCtx, pos = block * blockFrames, len = blockFrames)
 
             if (block == 6) {
-                render(probeIg, probeCtx, block * blockFrames, 0)
+                render(ig = probeIg, c = probeCtx, pos = block * blockFrames, len = 0)
             }
-            val p = render(probeIg, probeCtx, block * blockFrames, blockFrames)
+            val p = render(ig = probeIg, c = probeCtx, pos = block * blockFrames, len = blockFrames)
 
             if (block == 6) {
                 refBlock6 = r
@@ -146,7 +152,7 @@ class PhaserClockSpec : StringSpec({
             }
         }
 
-        maxDiff(refBlock6, probeBlock6) shouldBe 0.0
+        maxDiff(a = refBlock6, b = probeBlock6) shouldBe 0.0
     }
 
     "bus door: a depth gap resumes exactly like a first engagement — LFO advanced, cascade clean" {
@@ -154,7 +160,7 @@ class PhaserClockSpec : StringSpec({
 
         fun fill(buf: StereoBuffer, block: Int, silent: Boolean) {
             for (i in 0 until blockFrames) {
-                val v = if (silent) 0.0 else tone(block, i)
+                val v = if (silent) 0.0 else tone(block = block, i = i)
                 buf.left[i] = v
                 buf.right[i] = v
             }
@@ -223,10 +229,10 @@ class PhaserClockSpec : StringSpec({
         val refIg = TestTone().phaser(rate = ParamIgnitor("rate", 2.0), wet = ParamIgnitor("wet", 1.0))
         val refCtx = ctx()
 
-        val s0 = render(sharedIg, sharedCtx, 0, blockFrames)
-        val r0 = render(refIg, refCtx, 0, blockFrames)
+        val s0 = render(ig = sharedIg, c = sharedCtx, pos = 0, len = blockFrames)
+        val r0 = render(ig = refIg, c = refCtx, pos = 0, len = blockFrames)
 
-        maxDiff(s0, r0) shouldBe 0.0
+        maxDiff(a = s0, b = r0) shouldBe 0.0
     }
 
     "bus door: a rate-0 static notch still clears its cascade when gated" {

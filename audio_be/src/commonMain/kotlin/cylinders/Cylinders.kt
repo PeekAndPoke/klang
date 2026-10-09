@@ -38,22 +38,36 @@ class Cylinders(
     private val katalysts: KatalystRegistry = KatalystRegistry(),
 ) {
     companion object {
-        const val MAX_CYLINDERS = 256
+        const val MAX_CYLINDERS = 255
     }
-    private val maxCylinders = maxCylinders.coerceIn(1, 255)
-    private val id2cylinder = mutableMapOf<Int, Cylinder>()
+    private val maxCylinders = maxCylinders.coerceIn(1, MAX_CYLINDERS)
+
+    /**
+     * The rented cylinders in the order they were rented. That order is the mix's summation order (and the
+     * round-robin cleanup's), so it is kept exactly: a cylinder is only ever appended, and only [releaseAll]
+     * removes, all at once. Every per-block walk is an index loop over it: a map or list iterator would allocate
+     * per block on Kotlin/JS.
+     */
+    private val rented = ArrayList<Cylinder>()
+
+    /**
+     * The cylinder for each orbit id, by [slotOf]. A folded id (`id % maxCylinders`, see [cylinderFor]) keeps the
+     * sign of a negative orbit, so the ids run from `-(maxCylinders - 1)` to `maxCylinders - 1`.
+     */
+    private val byId = arrayOfNulls<Cylinder>(2 * this.maxCylinders - 1)
+
     private var cleanupIndex = 0
 
-    /** Get all cylinders */
-    val cylinders get() = id2cylinder.values
+    /** All rented cylinders, in rent order (the mix order). */
+    val cylinders: List<Cylinder> get() = rented
 
-    /** Get all currently allocated cylinder IDs. */
-    val cylindersIds: Set<Int> get() = id2cylinder.keys
+    /** The ids of all rented cylinders, in rent order. Allocates: for specs and diagnostics, not the render path. */
+    val cylindersIds: Set<Int> get() = rented.mapTo(LinkedHashSet()) { it.id }
 
-    /** True if any cylinder is currently active. Alloc-free (no lambda) — safe to poll on the audio thread. */
+    /** True if any cylinder is currently active. Alloc-free (no lambda, no iterator): safe to poll on the audio thread. */
     fun anyActive(): Boolean {
-        for (cylinder in id2cylinder.values) {
-            if (cylinder.isActive) {
+        for (i in 0 until rented.size) {
+            if (rented[i].isActive) {
                 return true
             }
         }
@@ -63,8 +77,8 @@ class Cylinders(
 
     /** True while any orbit rings with a tail that can never end on its own ([Cylinder.sustainsItself]). */
     fun anySustainsItself(): Boolean {
-        for (cylinder in id2cylinder.values) {
-            if (cylinder.sustainsItself()) {
+        for (i in 0 until rented.size) {
+            if (rented[i].sustainsItself()) {
                 return true
             }
         }
@@ -73,24 +87,23 @@ class Cylinders(
     }
 
     /**
-     * Clear all cylinders
-     */
-    /**
      * Returns every cylinder to the warehouse (which retires it: units back to their shelves,
      * state to a clean slate) and forgets them — the engine is being disposed (resource warehouse,
      * 2f + cylinders). The next playback's first voice on an orbit takes a shelved cylinder, and its
      * first delay or room a shelved ring or network: nothing is built in render.
      */
     fun releaseAll() {
-        for (cylinder in id2cylinder.values) {
-            units.giveBack(cylinder)
+        for (i in 0 until rented.size) {
+            units.giveBack(rented[i])
         }
-        id2cylinder.clear()
+
+        rented.clear()
+        byId.fill(null)
     }
 
     fun clearAll() {
-        for (cylinder in id2cylinder.values) {
-            cylinder.clear()
+        for (i in 0 until rented.size) {
+            rented[i].clear()
         }
     }
 
@@ -111,8 +124,11 @@ class Cylinders(
      */
     // blockStart is an ABSOLUTE backend frame, a Double (see RenderClock.cursorFrame).
     fun processAndMix(fusionMix: StereoBuffer, blockStart: Double) {
+        val count = rented.size
+
         // Step 1: Process katalyst pipeline on all cylinders
-        for (cylinder in id2cylinder.values) {
+        for (i in 0 until count) {
+            val cylinder = rented[i]
             // The block's owner, once, after every voice has rendered: the newest `Sounding` offer
             // ([Cylinder.commitOwner]). Before the pending poll, which resolves an arriving chain from it.
             cylinder.commitOwner()
@@ -125,49 +141,29 @@ class Cylinders(
             cylinder.processEffects()
         }
 
-        // Step 2: Apply ducking (cross-cylinder sidechain)
-        for (cylinder in id2cylinder.values) {
+        // Step 2: Apply ducking (cross-cylinder sidechain). The duck names its sidechain by the RAW orbit id, not
+        // folded: an id outside the folded range finds no cylinder, as it never did.
+        for (i in 0 until count) {
+            val cylinder = rented[i]
             val duckCylinderId = cylinder.duck?.duckCylinderId ?: continue
-            val sidechainCylinder = id2cylinder[duckCylinderId] ?: continue
+            val sidechainCylinder = rentedOrNull(duckCylinderId) ?: continue
             cylinder.processDuck(sidechainCylinder.mixBuffer)
         }
 
         // Step 3: Mix all cylinders to output
-        for (cylinder in id2cylinder.values) {
-            if (!cylinder.isActive) continue
+        for (i in 0 until count) {
+            val cylinder = rented[i]
 
-            run {
-                val fusionLeft = fusionMix.left
-                val cylinderLeft = cylinder.mixBuffer.left
-
-                for (i in 0 until blockFrames) {
-                    fusionLeft[i] = fusionLeft[i] + cylinderLeft[i]
-                }
+            if (!cylinder.isActive) {
+                continue
             }
 
-            run {
-                val fusionRight = fusionMix.right
-                val cylinderRight = cylinder.mixBuffer.right
-
-                for (i in 0 until blockFrames) {
-                    fusionRight[i] = fusionRight[i] + cylinderRight[i]
-                }
-            }
+            fusionMix.addFrom(source = cylinder.mixBuffer, frames = blockFrames)
         }
 
-        // Step 4: Cleanup stale cylinders (round-robin, no allocation)
-        if (id2cylinder.isNotEmpty()) {
-            val size = id2cylinder.size
-            val keyIndex = cleanupIndex % size
-            // Iterate to the keyIndex-th entry without allocating a list
-            var idx = 0
-            for ((cylinderId, cylinder) in id2cylinder) {
-                if (idx == keyIndex) {
-                    cylinder.tryDeactivate(blockStart)
-                    break
-                }
-                idx++
-            }
+        // Step 4: Cleanup stale cylinders (round-robin over the rent order, no allocation)
+        if (count > 0) {
+            rented[cleanupIndex % count].tryDeactivate(blockStart)
             cleanupIndex = (cleanupIndex + 1) % maxCylinders
         }
     }
@@ -224,13 +220,34 @@ class Cylinders(
      */
     private fun cylinderFor(id: Int): Cylinder {
         val safeId = id % maxCylinders
+        val slot = slotOf(safeId)
+        val existing = byId[slot]
 
-        return id2cylinder.getOrPut(safeId) {
-            units.rent(
-                id = safeId,
-                silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
-                katalysts = katalysts,
-            )
+        if (existing != null) {
+            return existing
         }
+
+        val cylinder = units.rent(
+            id = safeId,
+            silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
+            katalysts = katalysts,
+        )
+
+        byId[slot] = cylinder
+        rented.add(cylinder)
+
+        return cylinder
     }
+
+    /** The rented cylinder whose id is exactly [id], or null: an id outside the folded range has none. */
+    private fun rentedOrNull(id: Int): Cylinder? {
+        if (id <= -maxCylinders || id >= maxCylinders) {
+            return null
+        }
+
+        return byId[slotOf(id)]
+    }
+
+    /** The [byId] index of a folded id (`-(maxCylinders - 1)` to `maxCylinders - 1`). */
+    private fun slotOf(foldedId: Int): Int = foldedId + maxCylinders - 1
 }

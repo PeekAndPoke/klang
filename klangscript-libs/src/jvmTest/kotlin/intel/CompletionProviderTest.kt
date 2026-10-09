@@ -289,7 +289,7 @@ class CompletionProviderTest : StringSpec({
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.memberCompletions(KlangType("KlangScriptIgnitorSlots"), "").map { it.name }
         names.toSet().containsAll(
-            listOf("analog", "voices", "spread", "duty", "density", "decay", "brightness", "pickPosition", "stiffness", "rate")
+            listOf("analog", "voices", "spread", "duty", "density", "feedback", "brightness", "pickPosition", "stiffness", "rate")
         ) shouldBe true
     }
 

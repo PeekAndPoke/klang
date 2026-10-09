@@ -15,13 +15,10 @@ import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
 import io.peekandpoke.klang.audio_be.filters.filterEnvCutoff
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
-import io.peekandpoke.klang.audio_be.flushState
+import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
-import kotlin.math.PI
-import kotlin.math.pow
-import kotlin.math.tan
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SVF Mode enum — determines which output tap is used
@@ -59,10 +56,10 @@ data class FilterEnvDef(
     // the surface constants would suggest they were the source of truth, which
     // `FilterEnvelopeDefaults.kt` is.
     val depth: Double = 0.0,
-    val attackSec: Double = 0.0,
-    val decaySec: Double = 0.0,
-    val sustainLevel: Double = 1.0,
-    val releaseSec: Double = 0.0,
+    val attack: Double = 0.0,
+    val decay: Double = 0.0,
+    val sustain: Double = 1.0,
+    val release: Double = 0.0,
     // The three stage curves, RESOLVED (`IgnitorDslRuntime.filterEnvDef` names them from the node's
     // knobs). Unlike the values above these default to the surface's own constant, `MOD_ENV_CURVE`:
     // a curve has no neutral value, and a partial shape built to mean "the node's envelope" must run
@@ -104,7 +101,7 @@ data class FilterEnvDef(
  * `null` is no humanization and renders bit-for-bit what this filter rendered without the
  * feature. See [FilterHumanization].
  *
- * Coefficient math is shared with `BaseSvf` via `computeSvfCoeffs`. NaN/Inf-safe
+ * Coefficient math is shared with `ResonatorBank` and `EqCore` via `computeSvfCoeffs`. NaN/Inf-safe
  * cutoff (via `bilinearK`); Q is clamped to `[0.1, 200.0]` with `isFinite` fallback.
  *
  * Mode dispatch is hoisted out of the per-sample loop into one specialized loop
@@ -127,7 +124,7 @@ fun Ignitor.svf(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env, analog, humanize)
+): Ignitor = SvfIgnitor(upstream = this, mode = mode, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 private class SvfIgnitor(
     private val upstream: Ignitor,
@@ -188,16 +185,16 @@ private class SvfIgnitor(
 
             if (hasEnv) {
                 envCore.prepareModEnvelope(
-                    ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
-                    env.attackCurve, env.decayCurve, env.releaseCurve,
+                    ctx = ctx, attack = env.attack, decay = env.decay, sustain = env.sustain, release = env.release,
+                    attackCurve = env.attackCurve, decayCurve = env.decayCurve, releaseCurve = env.releaseCurve,
                 )
                 // The cutoff at the block's two ends, the drift held across the block
                 // (`filterEnvCutoff`: depth in SEMITONES, C3), swept linearly in between.
                 val pos = ctx.voiceElapsedFrames
-                val cutoffStart = envCore.filterEnvCutoff(pos, baseCutoff, env.depth) * driftMul * offsetMul
-                val cutoffEnd = envCore.filterEnvCutoff(pos + length, baseCutoff, env.depth) * driftMul * offsetMul
+                val cutoffStart = envCore.filterEnvCutoff(pos = pos, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
+                val cutoffEnd = envCore.filterEnvCutoff(pos = pos + length, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
 
-                sweep.prepare(cutoffStart, cutoffEnd, qVal, sr, length)
+                sweep.prepare(cutoffStartHz = cutoffStart, cutoffEndHz = cutoffEnd, q = qVal, sampleRate = sr, frames = length)
 
                 val c = sweep.start
 
@@ -208,7 +205,7 @@ private class SvfIgnitor(
                 // `hasDrift` is false without a lane, so the cheap latch below is untouched for
                 // every node that does not humanize; with one, the cutoff moves every block and
                 // there is nothing to latch.
-                computeSvfCoeffs(baseCutoff * driftMul * offsetMul, qVal, sr, coefs)
+                computeSvfCoeffs(cutoffHz = baseCutoff * driftMul * offsetMul, q = qVal, sampleRate = sr, out = coefs)
                 a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
                 initialized = true
             } else {
@@ -292,7 +289,7 @@ private class SvfIgnitor(
 
                 SvfMode.BANDPASS -> {
                     // C2 (filter unification): k * v1 = unity peak at fc (k = 1/clampedQ) —
-                    // q is a pure width control, matching SvfBPF and the fused EqCore
+                    // q is a pure width control, matching the `ResonatorBank` bands and the fused EqCore
                     // BANDPASS arm bit-for-bit. Both env-path coefficient sets share one
                     // per-block q, so kStep is structurally 0: no mid-sweep mismatch.
                     for (i in ctx.offset until end) {
@@ -339,8 +336,8 @@ fun Ignitor.svf(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Double = 0.0,
 ): Ignitor = svf(
-    mode, ParamIgnitor("cutoffHz", cutoffHz), ParamIgnitor("q", q), env,
-    ParamIgnitor("analog", analog),
+    mode = mode, cutoffHz = ParamIgnitor("cutoffHz", cutoffHz), q = ParamIgnitor("q", q), env = env,
+    analog = ParamIgnitor("analog", analog),
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -375,8 +372,7 @@ fun Ignitor.svf(
  * A [ParamIgnitor] that engine code constructs directly (the `Double` overloads of [svf] and its
  * wrappers) would be a third, but no production caller does that today: `scaledBy` has exactly two
  * callers, both in `IgnitorDslRuntime`'s passes cascade and both fed `q.noMod()`. A voice's filter q
- * reaches the tree as a slot (`classic()`), never as a `FilterDef`; the ignitor package does not
- * reference `FilterDef`.
+ * reaches the tree only as a slot (`classic()`).
  */
 internal fun Ignitor.scaledBy(factor: Double): Ignitor = when {
     factor == 1.0 -> this
@@ -397,7 +393,7 @@ fun Ignitor.lowpass(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = svf(SvfMode.LOWPASS, cutoffHz, q, env, analog, humanize)
+): Ignitor = svf(mode = SvfMode.LOWPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 /**
  * Lowpass filter (convenience overload with fixed values).
@@ -408,7 +404,7 @@ fun Ignitor.lowpass(
  * @param analog Analog character amount. Default: 0 (clean linear). >0 engages OB-X-style state-dependent damping.
  */
 fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
-    svf(SvfMode.LOWPASS, cutoffHz, q, env, analog)
+    svf(mode = SvfMode.LOWPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog)
 
 /**
  * Highpass filter — lets high frequencies through, removes the bottom.
@@ -423,7 +419,7 @@ fun Ignitor.highpass(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog, humanize)
+): Ignitor = svf(mode = SvfMode.HIGHPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 /**
  * Highpass filter (convenience overload with fixed values).
@@ -434,7 +430,7 @@ fun Ignitor.highpass(
  * @param analog Analog character amount. Default: 0 (clean linear). >0 engages OB-X-style state-dependent damping.
  */
 fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
-    svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog)
+    svf(mode = SvfMode.HIGHPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog)
 
 /**
  * Bandpass filter — keeps only a frequency band, removes everything above and below.
@@ -449,7 +445,7 @@ fun Ignitor.bandpass(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog, humanize)
+): Ignitor = svf(mode = SvfMode.BANDPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 /**
  * Bandpass filter (convenience overload with fixed values).
@@ -460,7 +456,7 @@ fun Ignitor.bandpass(
  * @param analog Reserved — currently a no-op (BP saturation not implemented).
  */
 fun Ignitor.bandpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
-    svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
+    svf(mode = SvfMode.BANDPASS, cutoffHz = cutoffHz, q = q, env = env, analog = analog)
 
 /**
  * Notch (band-reject) filter — removes one frequency band, keeps everything else.
@@ -475,7 +471,7 @@ fun Ignitor.notch(
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
     humanize: FilterHumanization? = null,
-): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog, humanize)
+): Ignitor = svf(mode = SvfMode.NOTCH, cutoffHz = cutoffHz, q = q, env = env, analog = analog, humanize = humanize)
 
 /**
  * Notch (band-reject) filter (convenience overload with fixed values).
@@ -486,7 +482,7 @@ fun Ignitor.notch(
  * @param analog Reserved — currently a no-op.
  */
 fun Ignitor.notch(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
-    svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
+    svf(mode = SvfMode.NOTCH, cutoffHz = cutoffHz, q = q, env = env, analog = analog)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // One-Pole Lowpass (for warmth / simple smoothing)
@@ -519,7 +515,7 @@ private class OnePoleLowpassIgnitor(
             upstream.generate(input, freqHz, ctx)
 
             val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
-            val a = onePoleLpfCoeff(fc, ctx.sampleRate.toDouble())
+            val a = onePoleLpfCoeff(cutoffHz = fc, sampleRate = ctx.sampleRate.toDouble())
 
             val end = ctx.windowEnd
             for (i in ctx.offset until end) {
@@ -531,7 +527,7 @@ private class OnePoleLowpassIgnitor(
     }
 }
 
-fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor = OnePoleLowpassIgnitor(this, cutoffHz)
+fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor = OnePoleLowpassIgnitor(upstream = this, cutoffHz = cutoffHz)
 
 /**
  * One-pole lowpass with constant cutoff (convenience overload).
@@ -569,7 +565,7 @@ private class OnePoleHighpassIgnitor(
             upstream.generate(input, freqHz, ctx)
 
             val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
-            val k = bilinearK(fc, ctx.sampleRate.toDouble())
+            val k = bilinearK(cutoffHz = fc, sampleRate = ctx.sampleRate.toDouble())
             val invOnePlusK = 1.0 / (1.0 + k)
             val b0 = invOnePlusK
             val a1 = (1.0 - k) * invOnePlusK
@@ -586,7 +582,7 @@ private class OnePoleHighpassIgnitor(
     }
 }
 
-fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor = OnePoleHighpassIgnitor(this, cutoffHz)
+fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor = OnePoleHighpassIgnitor(upstream = this, cutoffHz = cutoffHz)
 
 /**
  * One-pole highpass with constant cutoff (convenience overload).
@@ -594,86 +590,6 @@ fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor = OnePoleHighpassIgnitor
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 30–500.
  */
 fun Ignitor.onePoleHighpass(cutoffHz: Double): Ignitor = onePoleHighpass(ParamIgnitor("cutoffHz", cutoffHz))
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Formant Filter (parallel bandpass bank)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Formant filter — parallel bandpass filter bank for vowel synthesis.
- *
- * Sums multiple SVF bandpass filters, each at a different frequency with its own Q and gain.
- * Use to create vowel sounds ("ah", "ee", "oo") or instrument body resonances.
- *
- * @param bands List of [FormantBand] specifications, each with freq (Hz), q, and db (gain).
- *   Typical vowel: 3–5 bands between 300–3500 Hz with Q of 5–15.
- */
-fun Ignitor.formant(bands: List<FormantBand>): Ignitor = FormantIgnitor(this, bands)
-
-private class FormantIgnitor(
-    private val upstream: Ignitor,
-    bands: List<FormantBand>,
-) : Ignitor {
-    private class BandState(val freq: Double, val q: Double, val linearGain: Double) {
-        var ic1eq = 0.0
-        var ic2eq = 0.0
-        var a1 = 0.0
-        var a2 = 0.0
-        var a3 = 0.0
-        var initialized = false
-    }
-
-    private val bandStates = bands.map { band ->
-        BandState(band.freq, band.q, 10.0.pow(band.db / 20.0))
-    }
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        ctx.scratchBuffers.use { input ->
-            upstream.generate(input, freqHz, ctx)
-
-            val end = ctx.windowEnd
-            for (i in ctx.offset until end) {
-                buffer[i] = 0.0
-            }
-
-            for (band in bandStates) {
-                if (!band.initialized) {
-                    val nyquist = 0.5 * ctx.sampleRate
-                    val fc = band.freq.coerceIn(5.0, nyquist - 1.0)
-                    val Q = band.q.coerceIn(0.1, 50.0)
-                    val g = tan(PI * fc / ctx.sampleRate)
-                    band.a1 = 1.0 / (1.0 + g * (g + 1.0 / Q))
-                    band.a2 = g * band.a1
-                    band.a3 = g * band.a2
-                    band.initialized = true
-                }
-
-                for (i in ctx.offset until end) {
-                    val v0 = input[i]
-                    val v3 = v0 - band.ic2eq
-                    val v1 = band.a1 * band.ic1eq + band.a2 * v3
-                    val v2 = band.ic2eq + band.a2 * band.ic1eq + band.a3 * v3
-                    band.ic1eq = (2.0 * v1 - band.ic1eq).flushState()
-                    band.ic2eq = (2.0 * v2 - band.ic2eq).flushState()
-                    buffer[i] = (buffer[i] + v1 * band.linearGain)
-                }
-            }
-        }
-    }
-}
-
-/**
- * A single formant band specification.
- *
- * @property freq Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–3500.
- * @property q Bandwidth (resonance). Higher = narrower peak. Typical: 5–15.
- * @property db Gain in decibels. 0 = unity, negative = attenuated, positive = boosted.
- */
-data class FormantBand(
-    val freq: Double,
-    val q: Double,
-    val db: Double,
-)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Internal: the filter and FM envelopes' block setup, one place for both node hosts
@@ -687,19 +603,19 @@ data class FormantBand(
  */
 internal fun EnvelopeCore.prepareModEnvelope(
     ctx: IgniteContext,
-    attackSec: Double,
-    decaySec: Double,
-    sustainLevel: Double,
-    releaseSec: Double,
+    attack: Double,
+    decay: Double,
+    sustain: Double,
+    release: Double,
     attackCurve: AdsrCurve,
     decayCurve: AdsrCurve,
     releaseCurve: AdsrCurve,
 ) {
     prepare(
-        attackFrames = attackSec * ctx.sampleRate,
-        decayFrames = decaySec * ctx.sampleRate,
-        sustainLevel = sustainLevel,
-        releaseFrames = releaseSec * ctx.sampleRate,
+        attackFrames = attack * ctx.sampleRate,
+        decayFrames = decay * ctx.sampleRate,
+        sustainLevel = sustain,
+        releaseFrames = release * ctx.sampleRate,
         gateEndPos = ctx.gateEndFrame,
         attackCurve = attackCurve,
         decayCurve = decayCurve,

@@ -1,9 +1,8 @@
 # Bugfix: solo rests play a sine, and the solo amount never mutes
 
-Status: **diagnosed 2026-10-07, not started.** Two bugs the maintainer reported on 2026-10-07. Two decisions taken
-the same day (below, "Decided"). The fix touches `VoiceScheduler.kt` and sprudel's `SoloPattern`; schedule it after
-voice lifecycle step 5 has landed and been reviewed (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done 2026-10-07), because the culling row it
-needs lives in `VoiceCullingSpec`, which step 5 is editing.
+Status: **implemented 2026-10-07, awaiting review and the coordinator's corpus render.** Two bugs the maintainer
+reported on 2026-10-07. Two decisions taken the same day (below, "Decided"); the open ones run on today's behaviour,
+"decided by default, maintainer to confirm" (below, "Open decisions"). What was built: "Done" at the end.
 
 All numbers below come from a probe that rendered KlangScript through the real engine the way the corpus harness
 does (`KlangAudioRenderer`, 48 kHz, 128-frame blocks, `cps = 0.5`, raw double mix). The probe is deleted.
@@ -131,8 +130,9 @@ exactly this. The tracker also allocates per block (audit item B4.2 in
   `stack(p.solo(), p.transpose(7))` no longer solos the unsoloed copy (today both share `p`'s atom id).
 - **Source events** keep the `solo` amount sampled at their onset, as today (the scheduler reads it too, see below).
 - **Control events**: for each event of `soloControl` that overlaps the query window, one event whose part and whole
-  are the overlap (`whole == part`, so it is an onset in every query chunk, the same trick the filler uses today; a
-  solo then engages within one chunk after a live edit). Its data is `control = true`, `solo = amount`,
+  are the overlap (`whole == part`, so it is an onset in every query chunk, the same trick the filler uses today; the
+  claim "a solo then engages within one chunk after a live edit" did not hold, see "Review round 1": the events are
+  now also cut on a 1/8-cycle grid). Its data is `control = true`, `solo = amount`,
   `patternId = soloId`, and NOTHING else: no note, no freq, no sound, no gain. The control events cover the whole
   window, with or without rests, so there is no gap arithmetic any more.
 - `control` survives every later op: `merge` never takes it from the other side (`SprudelVoiceData.kt:765-768`), and
@@ -167,7 +167,7 @@ the multiplier is an input, not lifecycle, per the lifecycle doc's inventory).
 
 Read from the code; each point gets a test below.
 
-- **The ramp.** `ValueRamp` ends on the exact target (`current = targetValue` at `progress >= 1`), so after 1.5 s of
+- **The ramp.** `ValueRamp` (since tidy-up step 7 `SoloRamp`, the same law) ends on the exact target (`current = targetValue` at `progress >= 1`), so after 1.5 s of
   `Ease.InOut.cubic` the multiplier is exactly 0.0 and every background voice adds `signal * 0.0` to its orbit. No
   denormal risk: the values on the way down stay far above the subnormal range. Unchanged class: a voice that has
   already blown up (Inf or NaN) still puts NaN into the mix (`Inf * 0`), as it does at 0.05 today.
@@ -215,6 +215,14 @@ sounds and "filler"/"keep-alive" finds only `SoloPattern`. `master(...)` and `ka
   attenuation (0.05), not a mute" (becomes "solo(1.0) is exact silence").
 
 ## Open decisions for the maintainer
+
+Each one ships with today's behaviour, **decided by default, maintainer to confirm** (coordinator, 2026-10-07):
+
+- (1) ramp times: 1.5 s in and out, 2 s hold, kept (`VoiceScheduler.SOLO_RAMP_SEC`, `SOLO_HOLD_SEC`);
+- (2) orbit tails under `solo(1.0)` decay naturally; no extra mute of an orbit without a soloed voice;
+- (3) several solos: the strongest wins;
+- (4) one id per `solo` call: the call's full source location (see "Done" for why);
+- (5) the word `control` stays.
 
 1. **The ramp times.** Today: duck 1.5 s in, 1.5 s back out, cubic, 2 s protection hold. A full mute that takes
    1.5 s to arrive may feel slow when soloing while editing. Keep, or shorten the way in (for example 0.3 s) and keep
@@ -265,3 +273,135 @@ Engine and wire changes: mutation-check at the mandatory tier (`/review-loop`).
 - The bug-1 song-shaped chain: the rest window is silent (below 1e-9 RMS).
 - The background ratio for `solo()`, `solo(0.7)` and `solo(1.0)`: 0.05, 0.3, 0.
 - The corpus ladder: bit-identical (no song uses `solo`).
+
+## Done (2026-10-07)
+
+Implemented as designed above, with one change to the tracker's rule found by the render test (below, "One
+deviation"). No song changes sound: every `solo(` in the songs is commented out, so the corpus is expected
+bit-identical (the coordinator renders it).
+
+### Sprudel
+
+- `SoloPattern(source, soloControl, soloId)` is pure: no mutable field, no counter. Source events keep the amount
+  sampled at their onset and get `patternId = soloId`. For every `soloControl` event overlapping the window, one
+  control event with `whole == part ==` the overlap and only `control = true`, `solo`, `patternId`. A NaN amount
+  reads as 0.0, a non-number as unset (no control event).
+- `solo()` / `solo(null)` mean 0.95 (`SOLO_DEFAULT_AMOUNT` in `lang_structural_mute.kt`); the four KDocs say
+  `1 - amount` and "`solo(1)`: the others are silent".
+- **The solo id** (`soloIdOf`): `"solo@" + callInfo.callLocation`, the location's full text: module name (the
+  `source` a library import parses under; null for the main script), line, column span. Why this one: it is the
+  plainest value that already exists, it is stable across a live re-evaluation and across two compiles of the same
+  code, and it cannot collide between modules, which the atom ids can (`generateSourceId` hashes line and column
+  only). Not hashed, so it cannot collide by hash either. Every pattern ONE call site solos shares the id (a mapper
+  `solo()` applied to two patterns, a user function that calls `.solo()`): one source to the engine, which is what
+  the same call means. Known corner: such a shared call site with DIFFERENT amounts per invocation shares one
+  entry, and the last recorded amount wins. A call without a location (the Kotlin door) takes
+  `generateSourceId`'s counter (`"solo@id_N"`), unique per call. `generateSourceId` itself is unchanged: the atom ids
+  no longer take part in solo.
+
+### Engine
+
+- `SoloTracker` (`audio_be/.../voices/SoloTracker.kt`): fixed arrays (id, amount, end), capacity 32, a source
+  beyond it takes the slot of the entry that ends first; linear scan; no allocation after construction. Closes
+  audit B4.2. A field of `VoiceScheduler`, which is per playback, so it dies with the playback's engine.
+- Recorded in `promoteScheduled` next to master and katalyst, before the control drop and the late guard, from any
+  event with `solo` and `sourceId`: end = `epoch + gateEndTime`. An amount that is not positive and finite (0, NaN,
+  an infinity) or an end that is not finite records nothing. An amount above 1.0 is kept raw (the Motor stays raw;
+  sprudel coerces).
+- Live while `end + grace > now` (grace 4 blocks, `SOLO_GRACE_BLOCKS`); protected while `end + hold > now`
+  (`SOLO_HOLD_SEC` 2.0 s, at least `SOLO_RAMP_SEC` 1.5 s). `targetGain = 1 - max(live amounts)`, else 1.0.
+  `ActiveVoice.soloAmount` and the old `SoloSourceTracker` are gone.
+- Realtime path (since review round 2): every realtime voice whose gate is open at a block's start records its
+  source until that block's end (`VoiceScheduler.recordRealtimeSolo`, the amount on `VoiceOrigin.Realtime`). The
+  solo lasts while ANY voice of the source is held and ends the grace after the last gate closes (one block more only for a fixed gate that closes inside a block; a note-off lands on a block boundary)
+  (a note-off, a cut, a voice that ended on its own); a note that made no voice records nothing. Control events
+  stay ignored on the realtime path, as before.
+
+### One deviation from the design: the later end wins
+
+The design said a re-recorded source overwrites its entry. The render test showed why that cannot hold for the end:
+a soloed note (gate 1 s) and the control event over its cycle (2 s) start at the same time, the heap pops equal
+starts in no fixed order, and when the note popped last its shorter gate ended the solo a second early (the
+background ramped up in the last rest of the render). Now the AMOUNT is the last writer (so `solo("<1 0.5>")`
+follows its pattern) and the END is the later of the two. Consequence, same as before the fix: a soloed note with a
+long gate keeps its source soloed until its gate ends, also after a live edit removed the `.solo()`.
+
+### Review round 1 (2026-10-07): what changed
+
+- **The control events are cut on a 1/8-cycle grid** (`SoloPattern.CONTROL_GRID_PER_CYCLE`). A live edit resends
+  only the events that start after its cutoff (now plus 0.2 s, `KlangPatternScheduler.resyncCurrentCycle`); with
+  one control event per cycle, reviewer B measured an added `.solo(1.0)` taking effect 2 s after the edit (3.7 to
+  3.85 s until silence at cps 0.5) and a removed one 2 s after the edit (bed at 99 % 3.3 to 3.4 s after it). With the
+  grid both directions take effect within 1/8 cycle after the cutoff, then the ramp runs. Pattern-level guard in
+  `SoloPatternSpec`; no engine or frontend change.
+- **The per-voice multiplier is ramped across each block** (`SendRenderer.mixRamped`, `Voice.gainMultiplierFrom`):
+  linearly over the 128 frames from the value the voice ended the last block on to the new one. Before, a voice
+  entering or leaving protection while another solo was live stepped within one sample (reviewer B: a 0.086 step
+  against 0.005, and 0.285 against 0.0005 in the pre-existing `solo("<1 0>")` case). When the value does not change
+  (1.0 to 1.0, every song without solo) the old constant multiply runs, bit for bit. A voice's first block starts at
+  its multiplier (no ramp in from 1.0). The background's own 1.5 s ramp is now also smooth inside each block.
+- **A realtime voice that leaves the list ends its source's solo** (a cut or a one-shot sample, without a note-off),
+  as well as its note-off. Superseded in round 2: it ended the solo while another voice of the source was held.
+
+### Review round 2 (2026-10-07): what changed
+
+- **The realtime solo is refreshed per block instead of recorded to the held horizon and ended by `endAt`.** Round
+  1's "end on leave" ended a source's solo while another of its voices was still held (reviewer, measured: legato
+  with key 2 held, the bed back at 0.99996; a mono `cut` line, back at 1.0 on every second note). Now each realtime
+  voice with its gate open records its source until the block's end, so the solo follows the held gates. This also
+  fixes "two held keys: the first note-off ends the solo" (it was a known difference) and a held note whose voice was
+  never made (a sample still loading) keeping its source soloed for hours (it records nothing now).
+  `SoloTracker.endAt` is gone. Timeline voices are unchanged: their solo comes from the events.
+- **Recorded, no change (NIT 3): the 1/8 grid is in the soloed pattern's own time.** A tempo op after the solo
+  scales it with everything else: `.solo().slow(8)` makes one piece per cycle again (up to a cycle of live-edit
+  delay comes back), `.solo().fast(16)` sends 128 control events per cycle. Each piece is a heap push, a `record`
+  (a scan of a few entries) and one small wire event the frontend filters out of `VoicesScheduled`; at the common
+  shape (`.solo()` last, or followed by gain or pitch ops) it is 8 events per cycle per soloed pattern.
+
+### Known differences from the old behaviour (maintainer question)
+
+- **A soloed release tail is ducked after the hold if another solo is live.** Protection now ends 2 s after the
+  source's last solo EVENT, not when its last voice leaves. Reviewer B measured it with a pad (release 5 s) at
+  `solo("<1 0 0 0>")` beside drums at `.solo()`: the pad's tail plays at full level until 4.0 s, then drops from
+  -23.6 dB to -40.8 dB. Before round 1 that drop was a step inside one sample (largest sample step 0.086 against 0.005
+  half a second earlier, a click); since the block ramp it is a 128-frame fade (2.7 ms). Alone (no other solo
+  live), the background is back at 1.0 by then and nothing changes. The old code kept such a tail at full level.
+  Reviewer B's option if the maintainer wants the old tail back: protect a voice whose own activation happened
+  inside its source's live window (one flag on `ActiveVoice`), and drop the hold for voices activated later; that
+  also stops the pre-existing case below.
+- **Pre-existing, kept:** with `solo("<1 0>")` beside another solo, the pattern's voices stay at full level for the
+  2 s hold into its 0 cycle, then drop (now a 128-frame fade, before a click: step 0.285).
+- **Accepted (review round 1, A MINOR 3): solo state survives a quick stop and resume.** A stopped engine that is
+  not yet releasing is resumed by `PlaybackEngineDispatcher.engineFor`, scheduler and all, so the tracker's entries
+  and the ramp's level carry over: a restart within about a cycle plus 2 s of stopping a soloed song starts with the
+  background ducked and ramps it back up. It expires by itself, and the old tracker and ramp carried over the same
+  way. Not reset in `cleanup`, which would lift the background under the tails ringing out.
+
+### Tests (all mutation-checked; the list is in `tmp/reviews/solo-fix-report.md`)
+
+- `sprudel/.../pattern/SoloPatternSpec.kt` (new): rests are control only; control survives the bug-1 chains and the
+  Der Schmetterling form; gapless coverage in chunks; the 1/8-cycle grid and the live-edit resend bound; `solo("<1 0>")`; NaN; purity; ids (same code twice, two
+  calls, `stack(p.solo(), p.transpose(7))`, two modules at the same line and column).
+- `sprudel/.../lang/LangSoloSpec.kt`: 0.97 rows to 0.95, `solo(0.7)` on both doors, control events filtered out.
+- `sprudel/src/jvmTest/.../SoloRenderSpec.kt` (new, through `KlangOfflineRenderer`): bug 1, the rest silent and the
+  whole render identical to the unsoloed one, both chain forms; bug 2, background 0.05, 0.3 and exact 0. In sprudel,
+  not `:klang`, because `:klang` cannot compile sprudel.
+- `audio_be/.../voices/VoiceSchedulerSoloCutSpec.kt`: the mapping rows, exact silence, max wins in both orders,
+  control-only duck with no voice, the rest held by control events, same-start note and control in both orders, the
+  grace, the hold through the ramp back, late control, 0/NaN/Inf/null id, a 0 or NaN source is not protected, held
+  realtime solo and its note-off, legato, a mono cut line, two held keys with one released, a held note that made
+  no voice, a held realtime voice cut by another source, a muted voice back mid-note, a muted
+  voice in release not culled, entering and leaving protection without a sample step (the block ramp), a voice
+  that starts muted is silent from its first sample.
+- `audio_be/.../voices/SoloTrackerSpec.kt` (new): live and protected windows, the later end, last-writer amount,
+  capacity eviction.
+- Not added: a `KlangPatternScheduler` row for "control events are not phantom voices": the filter is the existing
+  `control != true` line that already serves `master(...)`, unchanged here.
+
+
+## Confirmed (maintainer, 2026-10-08)
+
+The defaults kept by the fix are confirmed ("good like this"): the ramps (1.5 s in and out, 2 s hold), the cylinder
+tails under `solo(1.0)` decaying naturally, the strongest solo wins, one solo id per call site, the latest amount and
+the later end for a source that solos again, and protection ending 2 s after the source's last solo event. The ramp
+times and the protection of a long release tail stay open as later questions (`_maintainer-questions.md`).

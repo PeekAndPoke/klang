@@ -11,6 +11,10 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * Render-effect guard for the fBm knobs (`octaves` / `persistence`) on perlin / berlin noise.
  *
@@ -31,8 +35,9 @@ class NoiseFbmEffectSpec : StringSpec({
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 

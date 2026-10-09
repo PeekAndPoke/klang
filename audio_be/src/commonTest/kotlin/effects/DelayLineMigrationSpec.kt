@@ -43,7 +43,7 @@ class DelayLineMigrationSpec : StringSpec({
             input.left[0] = ramp(t)
             input.right[0] = -ramp(t)
             output.clear()
-            line.process(input, output, 1)
+            line.process(input = input, output = output, length = 1)
         }
         return line
     }
@@ -100,7 +100,7 @@ class DelayLineMigrationSpec : StringSpec({
         for (d in 1..64) {
             withClue("d = $d") { sampleAgo(to, d) shouldBe sampleAgo(from, d) }
         }
-        to.process(StereoBuffer(128), StereoBuffer(128), 128) // must return
+        to.process(input = StereoBuffer(128), output = StereoBuffer(128), length = 128) // must return
     }
 
     "smaller target keeps the NEWEST samples, aligned — never the oldest, shifted" {

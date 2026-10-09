@@ -62,7 +62,7 @@ class LangControlRestSpec : StringSpec({
     val vibratoSlots = arrayOf(t("rate", "4", "6"), t("depth", "0.3", "0.6"))
     val superSlots = arrayOf(t("voices", "3", "5"), t("spread", "0.1", "0.2"))
     val pluckSlots = arrayOf(
-        t("decay", "0.9", "0.95"), t("brightness", "0.3", "0.6"),
+        t("feedback", "0.9", "0.95"), t("brightness", "0.3", "0.6"),
         t("pickPosition", "0.3", "0.6"), t("stiffness", "0.3", "0.6"),
     )
 
@@ -93,8 +93,8 @@ class LangControlRestSpec : StringSpec({
         compound("delay", t("wet", "0.3", "0.6"), t("time", "0.25", "0.5"), t("feedback", "0.4", "0.7"), t("cap", "1", "2")),
         compound("reverb", t("size", "3", "6"), t("lowpass", "1000", "2000")),
         compound("distort", t("amount", "0.3", "0.6"), t("oversample", "2", "4")),
-        compound("crush", t("amount", "4", "8"), t("oversample", "2", "4")),
-        compound("coarse", t("amount", "2", "4"), t("oversample", "2", "4")),
+        compound("crush", t("bits", "4", "8"), t("oversample", "2", "4")),
+        compound("coarse", t("factor", "2", "4"), t("oversample", "2", "4")),
         compound(
             "phaser", t("wet", "0.3", "0.6"), t("rate", "0.5", "1"), t("center", "1000", "2000"),
             t("sweep", "500", "1000"), t("floor", "0.3", "0.6"),
@@ -128,7 +128,7 @@ class LangControlRestSpec : StringSpec({
             Row(it, "params", "1", "1", fresh = true)
         },
         compound("sndNoise", t("color", "0.3", "0.6")),
-        compound("sndBrown", t("depth", "0.3", "0.6")),
+        compound("sndBrown", t("leak", "0.3", "0.6")),
         compound("sndPulze", t("duty", "0.3", "0.6")),
         compound("sndDust", t("density", "1", "2"), t("tail", "0.3", "0.6")),
         compound("sndCrackle", t("chaos", "0.3", "0.6")),

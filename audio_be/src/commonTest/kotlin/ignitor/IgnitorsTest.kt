@@ -17,10 +17,13 @@ import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 private fun gain(value: Double) = ParamIgnitor("gain", value)
 private fun density(value: Double) = ParamIgnitor("density", value)
@@ -29,7 +32,7 @@ private fun chaos(value: Double) = ConstantIgnitor(value)
 private fun color(value: Double) = ConstantIgnitor(value)
 private fun tail(value: Double) = ConstantIgnitor(value)
 private fun bipolar(value: Double) = ConstantIgnitor(value)
-private fun depth(value: Double) = ConstantIgnitor(value)
+private fun leak(value: Double) = ConstantIgnitor(value)
 
 /**
  * Audio-output tests for Ignitor oscillator primitives.
@@ -48,8 +51,9 @@ class ExcitersTest : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -509,7 +513,7 @@ class ExcitersTest : StringSpec({
     }
 
     "silence - all zeros via DSL runtime" {
-        val sig = IgnitorDsl.Silence.toExciter()
+        val sig = IgnitorDsl.Silence.toExciter(random = testRandom)
         val buf = generate(sig)
         buf.all { it == 0.0 } shouldBe true
     }
@@ -577,15 +581,15 @@ class ExcitersTest : StringSpec({
         (peak2 / peak1) shouldBe (0.5 plusOrMinus 0.05)
     }
 
-    "brown noise - default depth reproduces the original /1.02 walk byte-for-byte" {
+    "brown noise - default leak reproduces the original /1.02 walk byte-for-byte" {
         val def = generate(Ignitors.brownNoise(Random(42)), freqHz = 440.0).toList()
-        val explicit = generate(Ignitors.brownNoise(Random(42), depth(0.02)), freqHz = 440.0).toList()
+        val explicit = generate(Ignitors.brownNoise(Random(42), leak(0.02)), freqHz = 440.0).toList()
         explicit shouldBe def
     }
 
-    "brown noise - higher depth brightens (more high-frequency content)" {
+    "brown noise - higher leak brightens (more high-frequency content)" {
         fun hfEnergy(d: Double): Double {
-            val buf = generate(Ignitors.brownNoise(Random(42), depth(d)), freqHz = 440.0).toList()
+            val buf = generate(Ignitors.brownNoise(Random(42), leak(d)), freqHz = 440.0).toList()
             var sum = 0.0
             for (i in 1 until buf.size) {
                 val delta = buf[i] - buf[i - 1]
@@ -656,7 +660,7 @@ class ExcitersTest : StringSpec({
 
     "perlin noise - DSL round-trip produces output" {
         val dsl = IgnitorDsl.PerlinNoise()
-        val sig = dsl.toExciter()
+        val sig = dsl.toExciter(random = testRandom)
         val buf = generate(sig)
         buf.any { it != 0.0 } shouldBe true
     }
@@ -691,7 +695,7 @@ class ExcitersTest : StringSpec({
 
     "berlin noise - DSL round-trip produces output" {
         val dsl = IgnitorDsl.BerlinNoise()
-        val sig = dsl.toExciter()
+        val sig = dsl.toExciter(random = testRandom)
         val buf = generate(sig)
         buf.any { it != 0.0 } shouldBe true
     }
@@ -839,18 +843,18 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "supersaw - produces non-zero output" {
-        val buf = generate(Ignitors.superSaw(), freqHz = 440.0)
+        val buf = generate(Ignitors.superSaw(rng = testRandom), freqHz = 440.0)
         buf.any { it != 0.0 } shouldBe true
     }
 
     "supersaw - amplitude bounded by voice-normalized output" {
-        val buf = generate(Ignitors.superSaw(), freqHz = 440.0)
+        val buf = generate(Ignitors.superSaw(rng = testRandom), freqHz = 440.0)
         buf.peakAmplitude() shouldBeLessThan 1.1
     }
 
     "supersaw - more voices increases energy" {
-        val buf1 = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 1.0)), freqHz = 440.0)
-        val buf5 = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 5.0)), freqHz = 440.0)
+        val buf1 = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 1.0), rng = testRandom), freqHz = 440.0)
+        val buf5 = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 5.0), rng = testRandom), freqHz = 440.0)
         // Both should produce output
         buf1.any { it != 0.0 } shouldBe true
         buf5.any { it != 0.0 } shouldBe true
@@ -859,7 +863,7 @@ class ExcitersTest : StringSpec({
     "supersaw - single voice equals sawtooth character" {
         // Single voice supersaw should have sawtooth-like zero crossings
         val buf =
-            generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 1.0), detune = ParamIgnitor("spread", 0.0)), freqHz = 440.0)
+            generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 1.0), detune = ParamIgnitor("spread", 0.0), rng = testRandom), freqHz = 440.0)
         val crossings = buf.zeroCrossings()
         // 440Hz over 100ms ≈ 44 cycles, saw has ~1-2 crossings per cycle
         crossings shouldBeGreaterThanOrEqual 40
@@ -867,12 +871,12 @@ class ExcitersTest : StringSpec({
     }
 
     "supersaw - symmetric around zero (no DC offset)" {
-        val buf = generate(Ignitors.superSaw(), freqHz = 440.0)
+        val buf = generate(Ignitors.superSaw(rng = testRandom), freqHz = 440.0)
         buf.dcOffset() shouldBe (0.0 plusOrMinus 0.05)
     }
 
     "supersaw - phase continuity across blocks" {
-        val sig = Ignitors.superSaw()
+        val sig = Ignitors.superSaw(rng = testRandom)
         val blockSize = 128
         val ctx = createCtx(blockSize)
         val buf1 = AudioBuffer(blockSize)
@@ -889,7 +893,7 @@ class ExcitersTest : StringSpec({
     }
 
     "supersaw - negative phaseMod does not cause drift" {
-        val sig = Ignitors.superSaw()
+        val sig = Ignitors.superSaw(rng = testRandom)
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
@@ -907,8 +911,8 @@ class ExcitersTest : StringSpec({
 
     "supersaw DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperSaw(voices = IgnitorDsl.Param("voices", 3.0))
-        val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
+        val bufDefault = generate(dsl.toExciter(random = testRandom), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0), random = testRandom), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
@@ -916,8 +920,8 @@ class ExcitersTest : StringSpec({
 
     "supersine DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperSine(voices = IgnitorDsl.Param("voices", 3.0))
-        val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
+        val bufDefault = generate(dsl.toExciter(random = testRandom), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0), random = testRandom), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
@@ -925,8 +929,8 @@ class ExcitersTest : StringSpec({
 
     "supersquare DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperSquare(voices = IgnitorDsl.Param("voices", 3.0))
-        val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
+        val bufDefault = generate(dsl.toExciter(random = testRandom), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0), random = testRandom), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
@@ -934,8 +938,8 @@ class ExcitersTest : StringSpec({
 
     "supertri DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperTri(voices = IgnitorDsl.Param("voices", 3.0))
-        val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
+        val bufDefault = generate(dsl.toExciter(random = testRandom), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0), random = testRandom), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
@@ -943,8 +947,8 @@ class ExcitersTest : StringSpec({
 
     "superramp DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperRamp(voices = IgnitorDsl.Param("voices", 3.0))
-        val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
+        val bufDefault = generate(dsl.toExciter(random = testRandom), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0), random = testRandom), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
@@ -952,8 +956,8 @@ class ExcitersTest : StringSpec({
 
     "superpluck DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperPluck(voices = IgnitorDsl.Param("voices", 3.0))
-        val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
+        val bufDefault = generate(dsl.toExciter(random = testRandom), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0), random = testRandom), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
@@ -965,7 +969,7 @@ class ExcitersTest : StringSpec({
 
     "supersaw DSL - ignitorParams voices=1 produces single-voice output" {
         val dsl = IgnitorDsl.SuperSaw()
-        val buf = generate(dsl.toExciter(mapOf("voices" to 1.0)), freqHz = 440.0)
+        val buf = generate(dsl.toExciter(mapOf("voices" to 1.0), random = testRandom), freqHz = 440.0)
         buf.any { it != 0.0 } shouldBe true
         // Single-voice supersaw should have clean saw zero-crossing count
         buf.zeroCrossings() shouldBeGreaterThanOrEqual 40
@@ -977,13 +981,13 @@ class ExcitersTest : StringSpec({
 
     "supersaw DSL - absent ignitorParams uses default voices" {
         val dsl = IgnitorDsl.SuperSaw(voices = IgnitorDsl.Param("voices", 5.0))
-        val bufNull = generate(dsl.toExciter(null), freqHz = 440.0)
-        val bufEmpty = generate(dsl.toExciter(emptyMap()), freqHz = 440.0)
+        val bufNull = generate(dsl.toExciter(null, random = testRandom), freqHz = 440.0)
+        val bufEmpty = generate(dsl.toExciter(emptyMap(), random = testRandom), freqHz = 440.0)
         // Both should produce non-zero output (5 voices active)
         bufNull.any { it != 0.0 } shouldBe true
         bufEmpty.any { it != 0.0 } shouldBe true
         // Both should differ from single-voice (proving default voices > 1)
-        val buf1 = generate(dsl.toExciter(mapOf("voices" to 1.0)), freqHz = 440.0)
+        val buf1 = generate(dsl.toExciter(mapOf("voices" to 1.0), random = testRandom), freqHz = 440.0)
         bufNull.zip(buf1).any { (a, b) -> a != b } shouldBe true
         bufEmpty.zip(buf1).any { (a, b) -> a != b } shouldBe true
     }
@@ -994,8 +998,8 @@ class ExcitersTest : StringSpec({
 
     "supersaw DSL - multiple ignitorParams applied together" {
         val dsl = IgnitorDsl.SuperSaw()
-        val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "spread" to 0.5)), freqHz = 440.0)
+        val bufDefault = generate(dsl.toExciter(random = testRandom), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "spread" to 0.5), random = testRandom), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         // Output should differ due to different voices and spread
@@ -1008,8 +1012,8 @@ class ExcitersTest : StringSpec({
 
     "supersaw DSL - ignitorParams override spread" {
         val dsl = IgnitorDsl.SuperSaw(spread = IgnitorDsl.Param("spread", 0.1))
-        val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("spread" to 0.5)), freqHz = 440.0)
+        val bufDefault = generate(dsl.toExciter(random = testRandom), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("spread" to 0.5), random = testRandom), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
@@ -1017,8 +1021,8 @@ class ExcitersTest : StringSpec({
 
     "dust DSL - ignitorParams override density" {
         val dsl = IgnitorDsl.Dust(density = IgnitorDsl.Param("density", 0.01))
-        val sigOverride = dsl.toExciter(mapOf("density" to 0.99))
-        val sigDefault = dsl.toExciter()
+        val sigOverride = dsl.toExciter(mapOf("density" to 0.99), random = testRandom)
+        val sigDefault = dsl.toExciter(random = testRandom)
         val bufOverride = generate(sigOverride, freqHz = 440.0)
         val bufDefault = generate(sigDefault, freqHz = 440.0)
         // Higher density should produce more impulses
@@ -1033,7 +1037,7 @@ class ExcitersTest : StringSpec({
 
     "Constant is not overridden by ignitorParams" {
         val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(880.0))
-        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // ignitorParam tries to override
+        val sig = dsl.toExciter(mapOf("freq" to 440.0), random = testRandom)  // ignitorParam tries to override
         val buf = generate(sig, freqHz = 220.0)  // voice freq is 220
         // Should use 880 Hz (Constant), not 440 (ignitorParam) or 220 (voice)
         val crossings = buf.zeroCrossings()
@@ -1043,7 +1047,7 @@ class ExcitersTest : StringSpec({
 
     "Param is overridden by ignitorParams" {
         val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Param("freq", 880.0))
-        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // ignitorParam overrides
+        val sig = dsl.toExciter(mapOf("freq" to 440.0), random = testRandom)  // ignitorParam overrides
         val buf = generate(sig, freqHz = 220.0)
         // Should use 440 Hz (ignitorParam override), not 880 (default) or 220 (voice)
         val crossings = buf.zeroCrossings()
@@ -1053,7 +1057,7 @@ class ExcitersTest : StringSpec({
 
     "default Freq uses voice frequency" {
         val dsl = IgnitorDsl.Sine()  // default freq = Freq (voice note frequency)
-        val sig = dsl.toExciter()
+        val sig = dsl.toExciter(random = testRandom)
         val buf = generate(sig, freqHz = 440.0)
         val crossings = buf.zeroCrossings()
         crossings shouldBeInRange 84..92
@@ -1101,17 +1105,17 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "supersaw - zero voices produces silence" {
-        val buf = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 0.0)), freqHz = 440.0)
+        val buf = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 0.0), rng = testRandom), freqHz = 440.0)
         buf.all { it == 0.0 } shouldBe true
     }
 
     "supersaw - negative voices produces silence" {
-        val buf = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", -5.0)), freqHz = 440.0)
+        val buf = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", -5.0), rng = testRandom), freqHz = 440.0)
         buf.all { it == 0.0 } shouldBe true
     }
 
     "supersine - zero voices produces silence" {
-        val buf = generate(Ignitors.superSine(voices = ParamIgnitor("voices", 0.0)), freqHz = 440.0)
+        val buf = generate(Ignitors.superSine(voices = ParamIgnitor("voices", 0.0), rng = testRandom), freqHz = 440.0)
         buf.all { it == 0.0 } shouldBe true
     }
 
@@ -1200,11 +1204,8 @@ class ExcitersTest : StringSpec({
             scratchBuffers = ScratchBuffers(defaultBlockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = defaultBlockFrames.toDouble(), endFrame = defaultBlockFrames.toDouble()),
-            cylinders = Cylinders(
-                blockFrames = defaultBlockFrames, sampleRate = sampleRate,
-            ),
         ).apply {
-            updateOffsetAndLength(0, defaultBlockFrames); blockStart = 0.0
+            updateOffsetAndLength(offset = 0, length = defaultBlockFrames); blockStart = 0.0
         }
         val renderer = io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer(
             signal = signal,
@@ -1213,6 +1214,7 @@ class ExcitersTest : StringSpec({
                 voiceDurationFrames = defaultBlockFrames,
                 gateEndFrame = defaultBlockFrames,
                 scratchBuffers = ScratchBuffers(defaultBlockFrames),
+                random = testRandom,
             ),
             freqHz = 440.0,
         )

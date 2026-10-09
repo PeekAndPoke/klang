@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  *
  * **Two methods, because the orbit's param state changes far more rarely than a block goes by**
  * (Katalyst step 5a). [resolve] re-reads this stage's [KatalystKnob]s from the state and rebuilds
- * whatever composite the stage wants (a `FilterDef`, a `Voice.Compressor`); [apply] writes what is
+ * whatever composite the stage wants (a `ResonatorConfig`, a [CompressorSettings]); [apply] writes what is
  * already resolved into the stage and does no lookup and no allocation, so it can run on every
  * block. [KatalystChain.applyParams] is the one place that decides
  * which of the two a block needs.
@@ -66,7 +66,7 @@ class KatalystChain internal constructor(
      */
     private val serial: Array<KatalystEffect>,
     /** One writer per declared stage, in DSL order, the duck's last. See [KatalystSlotWriter]. */
-    private val statics: Array<KatalystSlotWriter>,
+    private val writers: Array<KatalystSlotWriter>,
     /** The duck stage, or null when the chain declares none. The LAST declared duck wins. */
     val duck: KatalystDuckEffect?,
     /**
@@ -95,10 +95,10 @@ class KatalystChain internal constructor(
      * duplicate has no writer" from "it has one that nothing runs", which is what the last-duck
      * rule turns on.
      */
-    internal val writerCount: Int get() = statics.size
+    internal val writerCount: Int get() = writers.size
 
     /**
-     * The param state [statics] last resolved from, by REFERENCE: the gate of [applyParams]. Null
+     * The param state [writers] last resolved from, by REFERENCE: the gate of [applyParams]. Null
      * both before anything resolved (see [everResolved]) and after a resolve from no owner.
      */
     private var resolvedFrom: Map<String, Double>? = null
@@ -111,28 +111,19 @@ class KatalystChain internal constructor(
         private set
 
     // ════════════════════════════════════════════════════════════════════════════
-    // Typed accessors
+    // Chain properties, computed once at build
     // ════════════════════════════════════════════════════════════════════════════
 
-    // The seven classic EFFECTS by name (the fader has no accessor: nothing asks a chain for its
-    // gain stage), for the hosts and the specs that ask about ONE of them
-    // (the warehouse specs about the rented ring and network, the diagnostics about denied rents).
-    // Null when the chain declares no such stage: "the cylinder's delay" is a property of the
-    // chain, not of the cylinder, which is exactly what this step makes true. A chain that
-    // declares a kind twice reports the LAST one here, the same rule the duck follows, while BOTH
-    // run and both are covered by the lifecycle (which goes through [stages], not through these).
+    // No typed accessor for a serial stage is left on the chain (the duck, which runs outside [pipeline], keeps its
+    // own): production walks [pipeline] and asks the questions below, which test stages by kind once at build. The
+    // specs that ask about ONE stage (the warehouse specs about the rented ring and network, the resonator specs about
+    // a body and a vowel) find it through their own helpers (`_katalyst_test_helpers.kt`, engine tidy-up step 13).
 
-    val body: KatalystBodyEffect? = serial.filterIsInstance<KatalystBodyEffect>().lastOrNull()
-
-    val vowel: KatalystFormantEffect? = serial.filterIsInstance<KatalystFormantEffect>().lastOrNull()
-
-    val delay: KatalystDelayEffect? = serial.filterIsInstance<KatalystDelayEffect>().lastOrNull()
-
-    val reverb: KatalystReverbEffect? = serial.filterIsInstance<KatalystReverbEffect>().lastOrNull()
-
-    val phaser: KatalystPhaserEffect? = serial.filterIsInstance<KatalystPhaserEffect>().lastOrNull()
-
-    val compressor: KatalystCompressorEffect? = serial.filterIsInstance<KatalystCompressorEffect>().lastOrNull()
+    /**
+     * True when this chain declares a reverb or a delay, the two stages that ring on after their input stops: the
+     * master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan.
+     */
+    val declaresTail: Boolean = serial.any { it is KatalystReverbEffect || it is KatalystDelayEffect }
 
     /**
      * Frames this chain delays the orbit by: the sum of its compressor stages' lookaheads (phase 3
@@ -140,7 +131,7 @@ class KatalystChain internal constructor(
      * lookahead. A chain swap delays its ramps by the later of the two chains' latencies
      * (`ChainSwap.begin`).
      */
-    val latencyFrames: Int = serial.filterIsInstance<KatalystCompressorEffect>().sumOf { it.latencyFrames }
+    val latencyFrames: Int = serial.sumOf { (it as? KatalystCompressorEffect)?.latencyFrames ?: 0 }
 
     /** Rents the warehouse refused any stage of this chain, for the diagnostics feedback. */
     val deniedRents: Int
@@ -199,8 +190,8 @@ class KatalystChain internal constructor(
     fun applyParams(params: Map<String, Double>?) {
         resolveParams(params)
 
-        for (i in statics.indices) {
-            statics[i].apply()
+        for (i in writers.indices) {
+            writers[i].apply()
         }
     }
 
@@ -229,8 +220,8 @@ class KatalystChain internal constructor(
         resolvedFrom = params
         resolveCount++
 
-        for (i in statics.indices) {
-            statics[i].resolve(params)
+        for (i in writers.indices) {
+            writers[i].resolve(params)
         }
     }
 
@@ -323,8 +314,8 @@ class KatalystChain internal constructor(
         resolvedFrom = null
         resolveCount++
 
-        for (i in statics.indices) {
-            statics[i].resolve(null)
+        for (i in writers.indices) {
+            writers[i].resolve(null)
         }
     }
 

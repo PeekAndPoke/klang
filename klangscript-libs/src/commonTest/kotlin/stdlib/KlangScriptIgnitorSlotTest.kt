@@ -50,8 +50,8 @@ class KlangScriptIgnitorSlotTest : StringSpec({
         evalIgnitorDsl("Ignitor.slot.density") shouldBe IgnitorDsl.Param("density", 0.2)
     }
 
-    "Ignitor.slot.decay → Param(\"decay\", 0.996)" {
-        evalIgnitorDsl("Ignitor.slot.decay") shouldBe IgnitorDsl.Param("decay", 0.996)
+    "Ignitor.slot.feedback → Param(\"feedback\", 0.996)" {
+        evalIgnitorDsl("Ignitor.slot.feedback") shouldBe IgnitorDsl.Param("feedback", 0.996)
     }
 
     "Ignitor.slot.brightness → Param(\"brightness\", 0.5)" {
@@ -72,6 +72,40 @@ class KlangScriptIgnitorSlotTest : StringSpec({
 
     "Ignitor.slot.pregain → Param(\"pregain\", 1.0)" {
         evalIgnitorDsl("Ignitor.slot.pregain") shouldBe IgnitorDsl.Param("pregain", 1.0)
+    }
+
+    // The eight flat slots the script door lacked until the slot-name check (step 3, 2026-10-09).
+
+    "Ignitor.slot.octaves → Param(\"octaves\", 1.0)" {
+        evalIgnitorDsl("Ignitor.slot.octaves") shouldBe IgnitorDsl.Param("octaves", 1.0)
+    }
+
+    "Ignitor.slot.persistence → Param(\"persistence\", 0.5)" {
+        evalIgnitorDsl("Ignitor.slot.persistence") shouldBe IgnitorDsl.Param("persistence", 0.5)
+    }
+
+    "Ignitor.slot.color → Param(\"color\", 0.0)" {
+        evalIgnitorDsl("Ignitor.slot.color") shouldBe IgnitorDsl.Param("color", 0.0)
+    }
+
+    "Ignitor.slot.leak → Param(\"leak\", 0.02)" {
+        evalIgnitorDsl("Ignitor.slot.leak") shouldBe IgnitorDsl.Param("leak", 0.02)
+    }
+
+    "Ignitor.slot.tail → Param(\"tail\", 1.0)" {
+        evalIgnitorDsl("Ignitor.slot.tail") shouldBe IgnitorDsl.Param("tail", 1.0)
+    }
+
+    "Ignitor.slot.bipolar → Param(\"bipolar\", 0.0)" {
+        evalIgnitorDsl("Ignitor.slot.bipolar") shouldBe IgnitorDsl.Param("bipolar", 0.0)
+    }
+
+    "Ignitor.slot.chaos → Param(\"chaos\", 1.5)" {
+        evalIgnitorDsl("Ignitor.slot.chaos") shouldBe IgnitorDsl.Param("chaos", 1.5)
+    }
+
+    "Ignitor.slot.declick → Param(\"declick\", 0.0)" {
+        evalIgnitorDsl("Ignitor.slot.declick") shouldBe IgnitorDsl.Param("declick", 0.0)
     }
 
     "Ign.slot.analog (the short name) → Param(\"analog\", 0.0)" {

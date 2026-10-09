@@ -16,10 +16,10 @@ import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 
 /**
- * Mixing channel / Effect bus — called "Cylinder" in strudel.
+ * Mixing channel / effect bus: a cylinder (Strudel and sprudel's `orbit()` call it an orbit).
  *
  * Each orbit runs one [KatalystChain], the per-orbit effect chain, built from a [KatalystDsl]:
  * **Body → Vowel → Delay → Reverb → Phaser → Compressor → Gain** for [KatalystDsl.classic], which is what
@@ -175,7 +175,7 @@ class Cylinder(
      * It also carries the rents the warehouse refused the chains this cylinder has swapped AWAY
      * from ([ChainSwap.retire]), because a stage zeroes its own count when it retires.
      */
-    private val swap = ChainSwap(sampleRate, blockFrames)
+    private val swap = ChainSwap(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /**
      * Test seams: which phase of a swap this cylinder is in. The audio shows the blend, but a spec
@@ -189,16 +189,12 @@ class Cylinder(
     /** Test seam: the swap itself, for the specs that inspect its states and references. */
     internal val chainSwap: ChainSwap get() = swap
 
-    // The chain's stages by name. Null when the chain declares no such stage, which
-    // `KatalystDsl.classic` never does, so every one of them is present on every cylinder that
-    // was handed no declaration. These are the CURRENT chain's instances, not the cylinder's: a
-    // cylinder no longer knows what a body or a reverb IS, which is the whole point of the step.
-
-    val body get() = chain.body
-
-    val vowel get() = chain.vowel
-
-    val delay get() = chain.delay
+    /**
+     * Test seam: the chain in service. A cylinder no longer knows what a body or a reverb IS, so it names no stage;
+     * the specs that ask about one find it on this chain through their own helpers (`_katalyst_test_helpers.kt`,
+     * engine tidy-up step 13).
+     */
+    internal val currentChain: KatalystChain get() = chain
 
     /**
      * True while this orbit rings with a tail that can never end on its own, in the chain in
@@ -209,12 +205,6 @@ class Cylinder(
      */
     fun sustainsItself(): Boolean =
         isActive && (chain.sustainsItself() || (!swap.isReleasing && swap.leaving?.sustainsItself() == true))
-
-    val reverb get() = chain.reverb
-
-    val phaser get() = chain.phaser
-
-    val compressor get() = chain.compressor
 
     /**
      * The duck that governs this orbit's mix, and the one `Cylinders` resolves the sidechain orbit
@@ -227,14 +217,6 @@ class Cylinder(
      * `duckCylinderId` of null is exactly how `Cylinders` skips the pass for such a stage.
      */
     val duck get() = swap.duckingOut ?: chain.duck
-
-    /**
-     * The bus effect pipeline, in the order this orbit's chain declares its stages.
-     *
-     * The duck is NOT in this pipeline; it is applied separately by [Cylinders] after all orbits
-     * are processed, because it needs cross-orbit access to the sidechain source.
-     */
-    val pipeline get() = chain.pipeline
 
     /**
      * Rents the warehouse refused this orbit, for the diagnostics feedback: the current chain's
@@ -341,7 +323,7 @@ class Cylinder(
 
         val current = candidate
 
-        if (current == null || isNewer(voice.startFrame, voice.id, current.startFrame, current.id)) {
+        if (current == null || isNewer(aStart = voice.startFrame, aId = voice.id, bStart = current.startFrame, bId = current.id)) {
             candidate = voice
         }
     }
@@ -508,12 +490,12 @@ class Cylinder(
         pendingKey = null
 
         if (isActive) {
-            beginFade(key, name, dsl)
+            beginFade(key = key, rawName = name, dsl = dsl)
 
             return
         }
 
-        install(key, name, dsl)
+        install(key = key, rawName = name, dsl = dsl)
     }
 
     /**
@@ -778,7 +760,7 @@ class Cylinder(
     private fun isMixBufferSilent(): Boolean {
         // Shared with the voice cull floor (VOICE_CULL_FLOOR), so a culled voice is by definition
         // below what keeps an orbit alive.
-        val threshold = ORBIT_SILENCE_FLOOR
+        val threshold = SILENCE_FLOOR
         for (sample in mixBuffer.left) {
             if (sample > threshold || sample < -threshold) return false
         }
@@ -820,7 +802,7 @@ class Cylinder(
         pendingKey = null
 
         if (isActive) {
-            beginFade(key, key, dsl)
+            beginFade(key = key, rawName = key, dsl = dsl)
 
             return true
         }
@@ -828,7 +810,7 @@ class Cylinder(
         // What the caller needs is "did the chain change", not "was the key consumed": a
         // content-classic key lands on the chain already in service (see [chainFor]), and
         // [tryDeactivate] must still reach its own clean slate in that case (review round 1, m1).
-        return install(key, key, dsl)
+        return install(key = key, rawName = key, dsl = dsl)
     }
 
     /**

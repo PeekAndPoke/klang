@@ -6,19 +6,20 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 
 /**
  * N-times oversampler for anti-aliased nonlinear processing.
  *
  * **How it works:**
- * 1. Upsamples by `2^stages` using **linear interpolation** (direct-to-target).
- * 2. Caller-supplied `transform(sample)` is applied at the oversampled rate.
- * 3. Cascaded 2× decimation via a 15-tap half-band FIR (one stage per 2×), polyphase and
- *    indexed straight into the work buffer (see [decimate2x]).
+ * 1. [upsample] upsamples by `2^stages` using **linear interpolation** (direct-to-target).
+ * 2. The caller shapes the oversampled block in place, in its own loop between the two halves.
+ * 3. [decimate] runs the cascaded 2× decimation via a 15-tap half-band FIR (one stage per 2×),
+ *    polyphase and indexed straight into the work buffer (see [decimate2x]), and writes back.
  *
- * Filter state persists across `process()` calls for inter-block continuity.
- * Scratch buffer is borrowed from [ScratchBuffers.oversample] — no per-voice
- * allocation. [reset] exists for a future pooled-instance world; today every instance is
+ * Filter state persists across round trips for inter-block continuity.
+ * The work buffer is the caller's lease from [ScratchBuffers.oversample], held across both
+ * halves: no per-voice allocation. [reset] exists for a future pooled-instance world; today every instance is
  * per-voice and nothing calls it (ledger W11).
  *
  * **Filter quality (honest characterisation):**
@@ -40,8 +41,8 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
  * oversampler operates correctly at any input sample rate. Group delay is in
  * input samples, not seconds.
  *
- * **`stages = 0` semantics**: [process] is a no-op (zero work, no state
- * change) — used by callers that may receive `oversample = 1` from a DSL.
+ * **`stages = 0` semantics**: [upsample] and [decimate] are no-ops (zero work, no state
+ * change), used by callers that may receive `oversample = 1` from a DSL.
  *
  * @param stages Number of 2× stages. 1 = 2×, 2 = 4×, 3 = 8×. Negative values
  * are coerced to 0 (no oversampling).
@@ -62,56 +63,81 @@ class Oversampler(stages: Int) {
     private var lastSample: Double = 0.0
 
     /**
-     * Processes [length] samples from [buffer] starting at [offset].
+     * The FIRST HALF of a round trip: upsamples `source[offset, offset + length)` into [work] (linear
+     * interpolation, direct to the target rate) and returns the oversampled count, `length * factor`.
+     * The caller shapes `work[0 until count]` in place, in its own loop, and closes the round trip
+     * with [decimate]. [work] is the caller's lease from `ScratchBuffers.oversample(factor)`, held
+     * across both halves:
      *
-     * 1. Upsamples the region into a working buffer from [scratchBuffers].
-     * 2. Invokes [transformBlock] **once** with the work buffer and the
-     *    oversampled-region count — the caller owns the per-sample loop and
-     *    operates on `work[0 until count]` in place. This block-level
-     *    callback avoids the per-sample `Function1.invoke` dispatch + Double
-     *    boxing that a `(Double) -> Double` callback would force on JS.
-     * 3. Decimates back to original rate via cascaded half-band filters.
-     * 4. Writes results back into `buffer[offset..offset+length)`.
+     * ```
+     * scratchBuffers.oversample(os.factor).use { work ->
+     *     val count = os.upsample(source = buffer, offset = offset, length = length, work = work)
      *
-     * **Caller contract — NaN-guard responsibility**: [transformBlock] MUST
-     * sterilise NaN samples (e.g. with `.nanGuard()`) before they reach the
-     * decimator FIR. A single NaN entering a stage poisons every output whose taps
-     * reach it, up to 8 per stage (1 when it sits on an even, centre-only sample),
-     * and it lives on in the stage's history into the next block.
-     * Fusing the guard into the caller's per-sample expression gives a single
-     * pass over the work buffer; a defensive second sweep here would force a
-     * two-pass loop and measurably slow the path on V8.
+     *     for (i in 0 until count) {
+     *         work[i] = shape(work[i]).nanGuard()
+     *     }
      *
-     * When [stages] is 0 this method is a no-op.
+     *     os.decimate(work = work, target = buffer, offset = offset, length = length)
+     * }
+     * ```
+     *
+     * The loop between the halves is the caller's and runs inline, so no function value crosses the
+     * audio path (`use` is inline too). The round trip used to be one call taking the loop as a
+     * lambda, and a capturing lambda there was a new closure object per block (engine tidy-up step 2,
+     * audit B4.1).
+     *
+     * **Caller contract, NaN guard**: the caller's loop MUST sterilise NaN samples (e.g. with
+     * `.nanGuard()`) before [decimate] reads them. A single NaN entering a stage poisons every output
+     * whose taps reach it, up to 8 per stage (1 when it sits on an even, centre-only sample), and it
+     * lives on in the stage's history into the next block. Fusing the guard into the caller's
+     * per-sample expression gives a single pass over the work buffer; a defensive second sweep here
+     * would force a two-pass loop and measurably slow the path on V8.
+     *
+     * When [stages] is 0 this writes nothing and returns 0, and [decimate] writes nothing: no
+     * oversampling and no state change.
      */
-    fun process(
-        buffer: AudioBuffer,
-        offset: Int,
-        length: Int,
-        scratchBuffers: ScratchBuffers,
-        transformBlock: (work: AudioBuffer, count: Int) -> Unit,
-    ) {
-        if (stages == 0) return
-
-        val oversampledLen = length * factor
-
-        scratchBuffers.oversample(factor).use { work ->
-            // Step 1: Upsample (linear interpolation, direct to target rate)
-            upsample(buffer, offset, length, work)
-
-            // Step 2: Apply caller's transform to the entire oversampled block in one call.
-            // Caller is responsible for NaN-sterilising via .nanGuard() — see KDoc.
-            transformBlock(work, oversampledLen)
-
-            // Step 3: Cascaded 2x decimation (in-place in work buffer)
-            var currentLen = oversampledLen
-            for (stage in 0 until stages) {
-                currentLen = decimate2x(decimators[stage], work, currentLen)
-            }
-
-            // Step 4: Copy back to original buffer
-            work.copyInto(buffer, offset, 0, length)
+    fun upsample(source: AudioBuffer, offset: Int, length: Int, work: AudioBuffer): Int {
+        if (stages == 0) {
+            return 0
         }
+
+        val f = factor
+        var prev = lastSample
+
+        for (i in 0 until length) {
+            val curr = source[offset + i]
+            val base = i * f
+            val step = (curr - prev) / f
+            for (j in 0 until f) {
+                work[base + j] = (prev + step * j)
+            }
+            prev = curr
+        }
+
+        lastSample = prev
+
+        return length * f
+    }
+
+    /**
+     * The SECOND HALF of a round trip (see [upsample]): decimates `work[0 until length * factor)` back
+     * to the base rate through the cascaded half-band stages, in place in [work], and writes the
+     * result into `target[offset, offset + length)`. [offset] and [length] are the ones the
+     * [upsample] of this round trip took.
+     */
+    fun decimate(work: AudioBuffer, target: AudioBuffer, offset: Int, length: Int) {
+        if (stages == 0) {
+            return
+        }
+
+        var currentLen = length * factor
+
+        for (stage in 0 until stages) {
+            currentLen = decimate2x(decimators[stage], work, currentLen)
+        }
+
+        // Back into the caller's buffer, without `copyInto`'s typed-array view on JS (see `copyRangeInto`).
+        work.copyRangeInto(destination = target, destinationOffset = offset, startIndex = 0, endIndex = length)
     }
 
     /**
@@ -127,25 +153,6 @@ class Oversampler(stages: Int) {
             d.hist.fill(0.0)
         }
         lastSample = 0.0
-    }
-
-    // ── Linear interpolation upsample ───────────────────────────────────────────
-
-    private fun upsample(buffer: AudioBuffer, offset: Int, length: Int, work: AudioBuffer) {
-        val f = factor
-        var prev = lastSample
-
-        for (i in 0 until length) {
-            val curr = buffer[offset + i]
-            val base = i * f
-            val step = (curr - prev) / f
-            for (j in 0 until f) {
-                work[base + j] = (prev + step * j)
-            }
-            prev = curr
-        }
-
-        lastSample = prev
     }
 
     // ── 2x decimation with half-band FIR ────────────────────────────────────────
@@ -234,7 +241,7 @@ class Oversampler(stages: Int) {
 
     /**
      * Persistent state for one half-band decimation stage: the last [HIST] input samples of the
-     * stream, oldest first. Survives across `process()` calls for filter continuity at block
+     * stream, oldest first. Survives across round trips for filter continuity at block
      * boundaries.
      */
     private class HalfBandState {

@@ -110,7 +110,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
         if (depth <= 0 || r.nextInt(5) == 0) {
             val leaf: IgnitorDsl = when (r.nextInt(7)) {
                 0 -> IgnitorDsl.Sine(freq = IgnitorDsl.Freq)
-                1 -> IgnitorDsl.Sine(freq = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.0 + r.nextDouble())))
+                1 -> IgnitorDsl.Sine(freq = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(1.0 + r.nextDouble())))
                 2 -> IgnitorDsl.Saw()
                 3 -> IgnitorDsl.WhiteNoise()
                 4 -> IgnitorDsl.Constant(constant(r, stats))
@@ -132,13 +132,13 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
         val inner = tree(r, depth - 1, pool, stats)
         val k = IgnitorDsl.Constant(constant(r, stats))
         val node: IgnitorDsl = when (r.nextInt(27)) {
-            0 -> IgnitorDsl.Times(inner, k)
-            1 -> IgnitorDsl.Times(k, inner)
-            2 -> IgnitorDsl.Plus(inner, k)
-            3 -> IgnitorDsl.Minus(inner, k)
-            4 -> IgnitorDsl.Div(inner, k)
-            5 -> IgnitorDsl.Times(inner, tree(r, depth - 1, pool, stats))
-            6 -> IgnitorDsl.Plus(inner, tree(r, depth - 1, pool, stats))
+            0 -> IgnitorDsl.Times(left = inner, right = k)
+            1 -> IgnitorDsl.Times(left = k, right = inner)
+            2 -> IgnitorDsl.Plus(left = inner, right = k)
+            3 -> IgnitorDsl.Minus(left = inner, right = k)
+            4 -> IgnitorDsl.Div(left = inner, right = k)
+            5 -> IgnitorDsl.Times(left = inner, right = tree(r, depth - 1, pool, stats))
+            6 -> IgnitorDsl.Plus(left = inner, right = tree(r, depth - 1, pool, stats))
             7 -> IgnitorDsl.Neg(inner)
             8 -> IgnitorDsl.Abs(inner)
             9 -> IgnitorDsl.Tanh(inner)
@@ -149,9 +149,9 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             14 -> IgnitorDsl.Lowpass(inner, freq = IgnitorDsl.Param("cut", 1000.0), passes = IgnitorDsl.Constant((1 + r.nextInt(3)).toDouble()))
             15 -> IgnitorDsl.Drive(inner, amount = IgnitorDsl.Constant(r.nextDouble()))
             16 -> inner.shape(listOf("soft", "tube", "hard", "asym")[r.nextInt(4)], oversample = listOf(0, 2, 4)[r.nextInt(3)])
-            17 -> IgnitorDsl.Adsr(inner, attackSec = IgnitorDsl.Constant(0.001 + r.nextDouble() * 0.05), decaySec = IgnitorDsl.Constant(r.nextDouble() * 0.2))
+            17 -> IgnitorDsl.Adsr(inner, attack = IgnitorDsl.Constant(0.001 + r.nextDouble() * 0.05), decay = IgnitorDsl.Constant(r.nextDouble() * 0.2))
             18 -> IgnitorDsl.Clamp(inner, lo = IgnitorDsl.Constant(-1.0), hi = IgnitorDsl.Constant(1.0))
-            19 -> IgnitorDsl.Lerp(inner, tree(r, depth - 1, pool, stats), t = k)
+            19 -> IgnitorDsl.Lerp(left = inner, right = tree(r, depth - 1, pool, stats), t = k)
             20 -> IgnitorDsl.Range(inner, from = IgnitorDsl.Constant(0.0), to = IgnitorDsl.Constant(1.0)) // the LFO scaler, -1..1 onto 0..1
             21 -> {
                 val on = if (r.nextInt(4) == 0) 0 else 1
@@ -171,12 +171,12 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
                 val shared = IgnitorDsl.Lowpass(inner, freq = IgnitorDsl.Constant(500.0 + r.nextDouble() * 3000.0))
 
                 IgnitorDsl.Plus(
-                    IgnitorDsl.Highpass(shared, freq = IgnitorDsl.Constant(100.0 + r.nextDouble() * 500.0)),
-                    IgnitorDsl.Notch(shared, freq = IgnitorDsl.Constant(800.0 + r.nextDouble() * 2000.0)),
+                    left = IgnitorDsl.Highpass(shared, freq = IgnitorDsl.Constant(100.0 + r.nextDouble() * 500.0)),
+                    right = IgnitorDsl.Notch(shared, freq = IgnitorDsl.Constant(800.0 + r.nextDouble() * 2000.0)),
                 )
             }
 
-            23 -> IgnitorDsl.Lowpass(IgnitorDsl.Times(inner, k), freq = IgnitorDsl.Constant(300.0 + r.nextDouble() * 5000.0))
+            23 -> IgnitorDsl.Lowpass(IgnitorDsl.Times(left = inner, right = k), freq = IgnitorDsl.Constant(300.0 + r.nextDouble() * 5000.0))
 
             // Phase 3 step 3a, and the two arms below buy DIFFERENT things, which is worth
             // saying because it is easy to assume they are a pair.
@@ -202,10 +202,10 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
                     inner,
                     freq = IgnitorDsl.Constant(300.0 + r.nextDouble() * 4000.0),
                     env = IgnitorDsl.Constant(-24.0 + r.nextDouble() * 48.0),
-                    attackSec = IgnitorDsl.Constant(r.nextDouble() * 0.05),
-                    decaySec = IgnitorDsl.Constant(r.nextDouble() * 0.3),
-                    sustainLevel = IgnitorDsl.Constant(r.nextDouble()),
-                    releaseSec = IgnitorDsl.Constant(r.nextDouble() * 0.3),
+                    attack = IgnitorDsl.Constant(r.nextDouble() * 0.05),
+                    decay = IgnitorDsl.Constant(r.nextDouble() * 0.3),
+                    sustain = IgnitorDsl.Constant(r.nextDouble()),
+                    release = IgnitorDsl.Constant(r.nextDouble() * 0.3),
                 )
             }
 
@@ -320,16 +320,16 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             repeat(blocks) { block ->
                 val offset = if (block == 0) 37 else 0
 
-                ca.updateOffsetAndLength(offset, blockFrames - offset)
-                cb.updateOffsetAndLength(offset, blockFrames - offset)
+                ca.updateOffsetAndLength(offset = offset, length = blockFrames - offset)
+                cb.updateOffsetAndLength(offset = offset, length = blockFrames - offset)
                 a.generate(bufA, f, ca)
                 b.generate(bufB, f, cb)
 
-                val scale = scaleOf(bufA, bufB, offset, blockFrames)
+                val scale = scaleOf(bufA = bufA, bufB = bufB, from = offset, until = blockFrames)
 
                 for (i in offset until blockFrames) {
                     withClue("seed $seed freq $f block $block sample $i: ${bufA[i]} vs ${bufB[i]} (scale $scale)") {
-                        withinParity(bufA[i], bufB[i], scale) shouldBe true
+                        withinParity(a = bufA[i], b = bufB[i], scale = scale) shouldBe true
                     }
                 }
 
@@ -357,7 +357,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
                     mutableListOf<IgnitorDsl.Param>().also { authored.collectParams(it) }.map { it.name }.distinct()
             }
 
-            assertParity(seed, authored, optimized)
+            assertParity(seed = seed, authored = authored, optimized = optimized)
             registry.register("fuzz-$seed", authored)
         }
 

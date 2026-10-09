@@ -159,5 +159,5 @@ stated bounds of Part A's parity rows elsewhere).
 - The plan the core came from: [`../../plans/unified-eq.md`](../../plans/unified-eq.md) (D9, the ramp API).
 - The earlier decision this reopens: the filter-unification record, section C6 (archived, linked above).
 - Neighbours: [`onepole-highpass-door.md`](onepole-highpass-door.md),
-  [`svf-resonator-class-collapse.md`](svf-resonator-class-collapse.md),
+  [`svf-resonator-class-collapse.md`](../../tasks-archive/2026-10/20261008-svf-resonator-class-collapse.md) (done),
   [`envelope-shape-followups.md`](envelope-shape-followups.md), [`../oversampling-regions.md`](../oversampling-regions.md).

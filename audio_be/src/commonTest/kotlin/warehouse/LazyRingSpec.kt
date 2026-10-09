@@ -20,6 +20,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
@@ -90,7 +91,7 @@ class LazyRingSpec : StringSpec({
         val (rings, alloc) = shelf()
         val cylinders = Cylinders(
             blockFrames = blockFrames, sampleRate = sampleRate,
-            units = CylinderUnits(blockFrames, sampleRate, rings = rings, reverbs = ReverbUnits(sampleRate)),
+            units = CylinderUnits(blockFrames = blockFrames, sampleRate = sampleRate, rings = rings, reverbs = ReverbUnits(sampleRate)),
         )
 
         // Touching an orbit constructs its cylinder; that used to cost 7.68 MB each, eight times.

@@ -13,8 +13,8 @@ fully complete** (maintainer, 2026-09-23). Not started.
 >   have no oversampler and place no such slot, so `crush(oversample = ...)` and `coarse(oversample = ...)` do
 >   nothing today, on every voice. The value travels so it is not lost before this task decides (section 9,
 >   point 2).
-> - The oversamplers left in the engine: `DistortionCore` (the fused `Distort` node) and `ShapeIgnitor` (the
->   Ignitor `shape` and `distort` doors).
+> - The oversampler left in the engine: `DistortionCore`, shared by the fused `Distort` node and the `Shape` node
+>   (the Ignitor `shape` and `distort` doors) since engine tidy-up step 11 (2026-10-08).
 
 Rewritten 2026-09-23 from the future draft of 2026-07-04 (`future/pipeline-oversampling-regions.md`,
 kept in git history). That draft was written for the Pipeline DSL, which phase 3 retires, and used an
@@ -102,7 +102,8 @@ more than one place per effect, the factoring is not done.
 ## 4. The mechanism, as far as the code shows it today (2026-09-23)
 
 - **The region node** upsamples its input, renders its body under a child `IgniteContext` at factor
-  times the rate, and decimates. `Oversampler.process` already takes a block callback, and
+  times the rate, and decimates. `Oversampler.upsample` and `Oversampler.decimate` are already the two
+  halves a region wraps around its body (engine tidy-up step 2, 2026-10-07), and
   `ScratchBuffers.oversample(factor)` already keeps a scratch pool at factor times the block.
 - **How the rate travels.** The maintainer's phrasing: the buffers carry their rate. In the Ignitor that
   is the context that accompanies the buffer: `IgniteContext.sampleRate` is read at render time by the
@@ -116,9 +117,9 @@ more than one place per effect, the factoring is not done.
   (`FilterHumanization`, `SampleIgnitor`, via `analogDriftStepRate`); the phaser builds its `PhaserCore`
   at first render from the context it is given, which is correct inside a region because the factor
   never changes. A build-time factor lets the build hand the drift lanes the region's rate.
-- **Counted in samples:** coarse's `amount` means "hold every Nth input sample"; the strip divides its
-  counter increment by the factor to keep that meaning, and inside a generic region coarse has to learn
-  the factor from the context. The draft's list of sample-count constants (`FILTER_SMOOTH_SAMPLES`, retired
+- **Counted in samples:** coarse's `factor` means "hold every Nth input sample"; the strip divides its
+  counter increment by the oversample factor to keep that meaning, and inside a generic region coarse has to learn
+  the oversample factor from the context. The draft's list of sample-count constants (`FILTER_SMOOTH_SAMPLES`, retired
   2026-09-25 in step 5b (a2); the ADSR de-click coefficient) belongs here too. The audit finds the rest.
 
 ## 5. Where it applies

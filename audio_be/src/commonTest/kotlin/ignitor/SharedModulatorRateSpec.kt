@@ -13,6 +13,10 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * One stateful modulator shared by two oscillators at different pitches (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`).
  *
@@ -45,7 +49,7 @@ class SharedModulatorRateSpec : StringSpec({
         val out = DoubleArray(blocks * blockFrames)
 
         for (b in 0 until blocks) {
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             ignitor.generate(buffer, noteHz, ctx)
 
             for (i in 0 until blockFrames) {
@@ -62,7 +66,7 @@ class SharedModulatorRateSpec : StringSpec({
 
     /** Max difference between the two layers sharing one tree and the two layers built separately and summed. */
     fun sharedAgainstSeparate(a: IgnitorDsl, b: IgnitorDsl): Double {
-        val shared = renderNode(IgnitorDsl.Plus(a, b))
+        val shared = renderNode(IgnitorDsl.Plus(left = a, right = b))
         val sa = renderNode(a)
         val sb = renderNode(b)
         var worst = 0.0
@@ -76,11 +80,11 @@ class SharedModulatorRateSpec : StringSpec({
 
     fun peak(dsl: IgnitorDsl): Double = renderNode(dsl).maxOf { abs(it) }
 
-    val upper = IgnitorDsl.Times(IgnitorDsl.Freq, c(1.5))
+    val upper = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = c(1.5))
 
-    fun phaseLfo() = IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(30.0), analog = c(0.0)), c(0.3))
+    fun phaseLfo() = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = c(30.0), analog = c(0.0)), right = c(0.3))
 
-    fun dutyLfo() = IgnitorDsl.Plus(IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(30.0), analog = c(0.0)), c(0.2)), c(0.5))
+    fun dutyLfo() = IgnitorDsl.Plus(left = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = c(30.0), analog = c(0.0)), right = c(0.2)), right = c(0.5))
 
     "a phase LFO shared by two oscillators at the SAME pitch renders as two separate LFOs (control row)" {
         val lfo = phaseLfo()
@@ -88,8 +92,8 @@ class SharedModulatorRateSpec : StringSpec({
         // A tri, not a ramp: a saw plus a ramp at one phase cancel to silence.
         val b = IgnitorDsl.Tri(analog = c(0.0), phase = lfo)
 
-        peak(IgnitorDsl.Plus(a, b)) shouldBeGreaterThan 0.1
-        sharedAgainstSeparate(a, b) shouldBe 0.0
+        peak(IgnitorDsl.Plus(left = a, right = b)) shouldBeGreaterThan 0.1
+        sharedAgainstSeparate(a = a, b = b) shouldBe 0.0
     }
 
     "a phase LFO shared by two oscillators at DIFFERENT pitches runs once per block" {
@@ -97,8 +101,8 @@ class SharedModulatorRateSpec : StringSpec({
         val a = IgnitorDsl.Saw(analog = c(0.0), phase = lfo)
         val b = IgnitorDsl.Saw(freq = upper, analog = c(0.0), phase = lfo)
 
-        peak(IgnitorDsl.Plus(a, b)) shouldBeGreaterThan 0.1
-        sharedAgainstSeparate(a, b) shouldBe 0.0
+        peak(IgnitorDsl.Plus(left = a, right = b)) shouldBeGreaterThan 0.1
+        sharedAgainstSeparate(a = a, b = b) shouldBe 0.0
     }
 
     "a duty LFO shared by two pulses at DIFFERENT pitches runs once per block" {
@@ -106,8 +110,8 @@ class SharedModulatorRateSpec : StringSpec({
         val a = IgnitorDsl.Pulze(analog = c(0.0), duty = duty)
         val b = IgnitorDsl.Pulze(freq = upper, analog = c(0.0), duty = duty)
 
-        peak(IgnitorDsl.Plus(a, b)) shouldBeGreaterThan 0.1
-        sharedAgainstSeparate(a, b) shouldBe 0.0
+        peak(IgnitorDsl.Plus(left = a, right = b)) shouldBeGreaterThan 0.1
+        sharedAgainstSeparate(a = a, b = b) shouldBe 0.0
     }
 
     "an fm modulator also heard on the spine runs once per block at ratio 2" {
@@ -115,8 +119,8 @@ class SharedModulatorRateSpec : StringSpec({
         val m = IgnitorDsl.Sine(freq = c(310.0), analog = c(0.0))
         val a = IgnitorDsl.Fm(carrier = IgnitorDsl.Sine(analog = c(0.0)), modulator = m, ratio = c(2.0), depth = c(150.0))
 
-        peak(IgnitorDsl.Plus(a, m)) shouldBeGreaterThan 0.1
-        sharedAgainstSeparate(a, m) shouldBe 0.0
+        peak(IgnitorDsl.Plus(left = a, right = m)) shouldBeGreaterThan 0.1
+        sharedAgainstSeparate(a = a, b = m) shouldBe 0.0
     }
 
     "RESIDUE (author rule): a shared modulator that reads Freq anywhere renders once per pitch, its LFO too" {
@@ -125,19 +129,19 @@ class SharedModulatorRateSpec : StringSpec({
         // runs twice per block; build it once per layer. A build-time fix (re-pitching doors) was built in review
         // round 1 and dropped by the maintainer on 2026-10-07 for its weight. These shapes pin the residue.
         val lfo = IgnitorDsl.Sine(freq = c(30.0), analog = c(0.0))
-        val tracked = IgnitorDsl.Times(lfo, IgnitorDsl.Times(IgnitorDsl.Freq, c(0.002)))
+        val tracked = IgnitorDsl.Times(left = lfo, right = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = c(0.002)))
 
         sharedAgainstSeparate(
-            IgnitorDsl.Saw(analog = c(0.0), phase = tracked),
-            IgnitorDsl.Saw(freq = upper, analog = c(0.0), phase = tracked),
+            a = IgnitorDsl.Saw(analog = c(0.0), phase = tracked),
+            b = IgnitorDsl.Saw(freq = upper, analog = c(0.0), phase = tracked),
         ) shouldBeGreaterThan 0.1
 
-        val wob = IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(30.0), analog = c(0.0)), c(0.3))
-        val duty = IgnitorDsl.Plus(IgnitorDsl.Times(wob, IgnitorDsl.Div(c(220.0), IgnitorDsl.Freq)), c(0.5))
+        val wob = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = c(30.0), analog = c(0.0)), right = c(0.3))
+        val duty = IgnitorDsl.Plus(left = IgnitorDsl.Times(left = wob, right = IgnitorDsl.Div(left = c(220.0), right = IgnitorDsl.Freq)), right = c(0.5))
 
         sharedAgainstSeparate(
-            IgnitorDsl.Pulze(analog = c(0.0), duty = duty),
-            IgnitorDsl.Pulze(freq = upper, analog = c(0.0), duty = duty),
+            a = IgnitorDsl.Pulze(analog = c(0.0), duty = duty),
+            b = IgnitorDsl.Pulze(freq = upper, analog = c(0.0), duty = duty),
         ) shouldBeGreaterThan 0.1
     }
 
@@ -146,11 +150,11 @@ class SharedModulatorRateSpec : StringSpec({
         // shared instance renders at both rates and advances twice. This row flips to `shouldBe 0.0` the day a pitch
         // context forks it (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, the residue); until then authors build it
         // once per layer.
-        val lfo = IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Div(IgnitorDsl.Freq, c(8.0)), analog = c(0.0)), c(0.3))
+        val lfo = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = c(8.0)), analog = c(0.0)), right = c(0.3))
         val a = IgnitorDsl.Saw(analog = c(0.0), phase = lfo)
         val b = IgnitorDsl.Saw(freq = upper, analog = c(0.0), phase = lfo)
 
-        sharedAgainstSeparate(a, b) shouldBeGreaterThan 0.1
+        sharedAgainstSeparate(a = a, b = b) shouldBeGreaterThan 0.1
     }
 
     // ── One pitch mod over several pitched sources (review round 1, B-1) ─────────────────────────────────────────
@@ -172,14 +176,14 @@ class SharedModulatorRateSpec : StringSpec({
                 random = Random(7),
             )
             val saw = IgnitorDsl.Saw(analog = c(0.0)).buildExciter(random = ctx.random, freqHz = noteHz, sampleRate = sampleRate).ignitor
-            val ignitor = ModApplyingIgnitor(saw, vibratoModIgnitor(ConstantIgnitor(2.0), ConstantIgnitor(1.0)))
+            val ignitor = ModApplyingIgnitor(inner = saw, mod = vibratoModIgnitor(rate = ConstantIgnitor(2.0), semitones = ConstantIgnitor(1.0)))
             val buffer = AudioBuffer(blockFrames)
             val out = DoubleArray(blocks * blockFrames)
 
             for (b in 0 until blocks) {
-                ctx.updateOffsetAndLength(0, blockFrames)
+                ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
                 ignitor.generate(buffer, noteHz, ctx)
-                buffer.copyInto(out, b * blockFrames, 0, blockFrames)
+                buffer.copyInto(destination = out, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
                 ctx.voiceElapsedFrames += blockFrames
             }
 
@@ -193,7 +197,7 @@ class SharedModulatorRateSpec : StringSpec({
     "one vibrato over a sine and a tri at one pitch runs its LFO once per block" {
         val a = IgnitorDsl.Sine(analog = c(0.0))
         val b = IgnitorDsl.Tri(analog = c(0.0))
-        val shared = renderNode(vibrato(IgnitorDsl.Plus(a, b)))
+        val shared = renderNode(vibrato(IgnitorDsl.Plus(left = a, right = b)))
         val sa = renderNode(vibrato(a))
         val sb = renderNode(vibrato(b))
 
@@ -204,7 +208,7 @@ class SharedModulatorRateSpec : StringSpec({
     "one vibrato over a saw at the note and a saw at 1.5 times it runs its LFO once per block" {
         val a = IgnitorDsl.Saw(analog = c(0.0))
         val b = IgnitorDsl.Saw(freq = upper, analog = c(0.0))
-        val shared = renderNode(vibrato(IgnitorDsl.Plus(a, b), rate = c(5.0)))
+        val shared = renderNode(vibrato(IgnitorDsl.Plus(left = a, right = b), rate = c(5.0)))
         val sa = renderNode(vibrato(a, rate = c(5.0)))
         val sb = renderNode(vibrato(b, rate = c(5.0)))
 
@@ -213,10 +217,10 @@ class SharedModulatorRateSpec : StringSpec({
     }
 
     "a vibrato whose depth is an LFO, over two sources, reads that LFO once per block" {
-        val depth = IgnitorDsl.Plus(IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(0.7), analog = c(0.0)), c(0.5)), c(0.5))
+        val depth = IgnitorDsl.Plus(left = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = c(0.7), analog = c(0.0)), right = c(0.5)), right = c(0.5))
         val a = IgnitorDsl.Sine(analog = c(0.0))
         val b = IgnitorDsl.Tri(analog = c(0.0))
-        val shared = renderNode(vibrato(IgnitorDsl.Plus(a, b), semitones = depth))
+        val shared = renderNode(vibrato(IgnitorDsl.Plus(left = a, right = b), semitones = depth))
         val sa = renderNode(vibrato(a, semitones = depth))
         val sb = renderNode(vibrato(b, semitones = depth))
 
@@ -228,7 +232,7 @@ class SharedModulatorRateSpec : StringSpec({
         // The detuned source calls the mod at twice the note: the mod's memo must drop its freq key.
         val a = IgnitorDsl.Saw(analog = c(0.0))
         val b = IgnitorDsl.Detune(inner = IgnitorDsl.Saw(analog = c(0.0)), semitones = c(12.0))
-        val shared = renderNode(vibrato(IgnitorDsl.Plus(a, b)))
+        val shared = renderNode(vibrato(IgnitorDsl.Plus(left = a, right = b)))
         val sa = renderNode(vibrato(a))
         val sb = renderNode(vibrato(b))
 
@@ -238,11 +242,11 @@ class SharedModulatorRateSpec : StringSpec({
 
     "a vibrato over one source and a pitch-enveloped one runs its LFO once per block" {
         // The outer mod has two readers: the plain source, and the inner pitch envelope's product.
-        fun penv(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner = inner, semitones = c(7.0), attackSec = c(0.01), decaySec = c(0.3))
+        fun penv(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner = inner, semitones = c(7.0), attack = c(0.01), decay = c(0.3))
 
         val a = IgnitorDsl.Sine(analog = c(0.0))
         val b = IgnitorDsl.Tri(analog = c(0.0))
-        val shared = renderNode(vibrato(IgnitorDsl.Plus(a, penv(b))))
+        val shared = renderNode(vibrato(IgnitorDsl.Plus(left = a, right = penv(b))))
         val sa = renderNode(vibrato(a))
         val sb = renderNode(vibrato(penv(b)))
 
@@ -260,7 +264,7 @@ class SharedModulatorRateSpec : StringSpec({
 
         val a = IgnitorDsl.Sine(analog = c(0.0))
         val b = IgnitorDsl.Tri(analog = c(0.0))
-        val shared = renderNode(fm(IgnitorDsl.Plus(a, b)))
+        val shared = renderNode(fm(IgnitorDsl.Plus(left = a, right = b)))
         val sa = renderNode(fm(a))
         val sb = renderNode(fm(b))
 
@@ -269,7 +273,7 @@ class SharedModulatorRateSpec : StringSpec({
     }
 
     "the build resolves the freq key at the share: kept for a Freq reader, dropped for a Freq-free node" {
-        val cache = IgnitorBuildCache(freqHz = noteHz)
+        val cache = IgnitorBuildCache(freqHz = noteHz, random = testRandom)
         val reader = IgnitorDsl.Sine(analog = c(0.0))
         val lfo = phaseLfo()
 
@@ -288,28 +292,28 @@ class SharedModulatorRateSpec : StringSpec({
         // renders it once per pitch and each saw reads what a separate build reads. A memo that dropped the key would
         // hand the second saw the first saw's value (review round 3, the load-bearing direction).
         val tracked = IgnitorDsl.Adsr(
-            inner = IgnitorDsl.Times(IgnitorDsl.Freq, c(0.001)),
-            attackSec = c(0.05),
-            decaySec = c(0.05),
-            sustainLevel = c(0.5),
-            releaseSec = c(0.1),
+            inner = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = c(0.001)),
+            attack = c(0.05),
+            decay = c(0.05),
+            sustain = c(0.5),
+            release = c(0.1),
         )
         val a = IgnitorDsl.Saw(analog = c(0.0), phase = tracked)
         val b = IgnitorDsl.Saw(freq = upper, analog = c(0.0), phase = tracked)
 
-        peak(IgnitorDsl.Plus(a, b)) shouldBeGreaterThan 0.1
-        sharedAgainstSeparate(a, b) shouldBe 0.0
+        peak(IgnitorDsl.Plus(left = a, right = b)) shouldBeGreaterThan 0.1
+        sharedAgainstSeparate(a = a, b = b) shouldBe 0.0
     }
 
     "the freq key: dropped exactly for a subtree that reads no Freq and carries no pitch mod" {
-        val cache = IgnitorBuildCache(freqHz = noteHz)
+        val cache = IgnitorBuildCache(freqHz = noteHz, random = testRandom)
         val mod = ConstantIgnitor(1.0)
 
         // No Freq anywhere below: the LFO.
         cache.isFreqInvariant(phaseLfo(), null) shouldBe true
         // Freq as the oscillator's own pitch, and Freq deeper down, under an arithmetic node.
         cache.isFreqInvariant(IgnitorDsl.Sine(analog = c(0.0)), null) shouldBe false
-        cache.isFreqInvariant(IgnitorDsl.Times(IgnitorDsl.Sine(freq = upper, analog = c(0.0)), c(0.3)), null) shouldBe false
+        cache.isFreqInvariant(IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = upper, analog = c(0.0)), right = c(0.3)), null) shouldBe false
         // Freq-free, but under a pitch mod: the memo wraps the mod too, whose knobs could read Freq.
         cache.isFreqInvariant(phaseLfo(), mod) shouldBe false
     }
@@ -319,8 +323,8 @@ class SharedModulatorRateSpec : StringSpec({
         // its freq key, the detuned layer calls it at twice the note, and its modulator or LFO advances twice per block
         // (review round 2: 3.82 and 3.41). Build the detuned layer with its own mod.
         val stack = IgnitorDsl.Plus(
-            IgnitorDsl.Saw(analog = c(0.0)),
-            IgnitorDsl.Detune(inner = IgnitorDsl.Saw(analog = c(0.0)), semitones = c(12.0)),
+            left = IgnitorDsl.Saw(analog = c(0.0)),
+            right = IgnitorDsl.Detune(inner = IgnitorDsl.Saw(analog = c(0.0)), semitones = c(12.0)),
         )
         val layers = listOf(stack.left, stack.right)
 
@@ -329,7 +333,7 @@ class SharedModulatorRateSpec : StringSpec({
         )
 
         fun trackedVibrato(inner: IgnitorDsl) =
-            vibrato(inner, rate = c(5.0), semitones = IgnitorDsl.Div(IgnitorDsl.Times(c(0.5), IgnitorDsl.Freq), c(220.0)))
+            vibrato(inner, rate = c(5.0), semitones = IgnitorDsl.Div(left = IgnitorDsl.Times(left = c(0.5), right = IgnitorDsl.Freq), right = c(220.0)))
 
         for (mod in listOf(::fm, ::trackedVibrato)) {
             val shared = renderNode(mod(stack))

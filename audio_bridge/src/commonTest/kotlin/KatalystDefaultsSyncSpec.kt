@@ -46,7 +46,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *     the touched constant would switch that effect on for every song that never asked for it:
  *     `delay.wet`, `reverb.wet`, `phaser.wet`, `duck.depth`.
  *  2. **unset** ([SLOT_UNSET]): where "off" is an absence rather than a number, so the wire's
- *     non-finite marker carries it: all five compressor slots (`Voice.Compressor.fromParams`
+ *     non-finite marker carries it: all five compressor slots (`KatalystCompressorWriter`
  *     gates on "any of the five set", so even one finite constant is a compressor already on),
  *     `duck.orbit`, `reverb.lowpass`, and the four name-and-amount slots of the two stages gated
  *     on a NAME, `body.material`, `body.wet`, `vowel.vowel` and `vowel.wet`.
@@ -137,7 +137,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
     }
 
     "family 2, the unset slots: off is an absence, carried by the non-finite marker" {
-        // ALL FIVE compressor slots, not just the threshold. `Voice.Compressor.fromParams` gates on
+        // ALL FIVE compressor slots, not just the threshold. `KatalystCompressorWriter` gates on
         // "any of the five set", so a single finite constant among them is a compressor that is
         // already on for every song that never wrote `compressor(...)`.
         //
@@ -147,7 +147,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // belt to that braces, not the mechanism.
         //
         // `body.wet` and `vowel.wet` joined them in round 1 of that step's review, for the
-        // compressor's reason and not the index's: `KatalystSlots.bodyDef` substitutes BODY_WET for
+        // compressor's reason and not the index's: `KatalystResonatorEffect.configure` substitutes BODY_WET for
         // an UNSET mix, and a 0.0 default is set, so a material-only `body(material = "wood")` ran the bank
         // fully dry on a declared chain. Safe here and nowhere else in this family, because these
         // two stages are gated on their NAME: no material, no stage, whatever the amount says.
@@ -357,33 +357,33 @@ class KatalystDefaultsSyncSpec : StringSpec({
             KatalystDsl.classic.stages.map { stage ->
                 when (stage) {
                     is KatalystStageDsl.Body -> KatalystStageDsl.Body(
-                        freshKnob(stage.material), freshKnob(stage.wet), freshKnob(stage.floor),
+                        material = freshKnob(stage.material), wet = freshKnob(stage.wet), floor = freshKnob(stage.floor),
                     )
 
                     is KatalystStageDsl.Vowel -> KatalystStageDsl.Vowel(
-                        freshKnob(stage.vowel), freshKnob(stage.wet), freshKnob(stage.floor),
+                        vowel = freshKnob(stage.vowel), wet = freshKnob(stage.wet), floor = freshKnob(stage.floor),
                     )
 
                     is KatalystStageDsl.Delay -> KatalystStageDsl.Delay(
-                        freshKnob(stage.wet), freshKnob(stage.time), freshKnob(stage.feedback), freshKnob(stage.cap),
+                        wet = freshKnob(stage.wet), time = freshKnob(stage.time), feedback = freshKnob(stage.feedback), cap = freshKnob(stage.cap),
                     )
 
                     is KatalystStageDsl.Reverb -> KatalystStageDsl.Reverb(
-                        freshKnob(stage.wet), freshKnob(stage.size), stage.lowpass?.let { freshKnob(it) },
+                        wet = freshKnob(stage.wet), size = freshKnob(stage.size), lowpass = stage.lowpass?.let { freshKnob(it) },
                     )
 
                     is KatalystStageDsl.Phaser -> KatalystStageDsl.Phaser(
-                        freshKnob(stage.rate), freshKnob(stage.wet), freshKnob(stage.center),
-                        freshKnob(stage.sweep), freshKnob(stage.floor),
+                        rate = freshKnob(stage.rate), wet = freshKnob(stage.wet), center = freshKnob(stage.center),
+                        sweep = freshKnob(stage.sweep), floor = freshKnob(stage.floor),
                     )
 
                     is KatalystStageDsl.Compressor -> KatalystStageDsl.Compressor(
-                        freshKnob(stage.threshold), freshKnob(stage.ratio), freshKnob(stage.knee),
-                        freshKnob(stage.attack), freshKnob(stage.release),
+                        threshold = freshKnob(stage.threshold), ratio = freshKnob(stage.ratio), knee = freshKnob(stage.knee),
+                        attack = freshKnob(stage.attack), release = freshKnob(stage.release),
                     )
 
                     is KatalystStageDsl.Duck -> KatalystStageDsl.Duck(
-                        freshKnob(stage.orbit), freshKnob(stage.depth), freshKnob(stage.attack),
+                        orbit = freshKnob(stage.orbit), depth = freshKnob(stage.depth), attack = freshKnob(stage.attack),
                     )
 
                     is KatalystStageDsl.Eq -> KatalystStageDsl.Eq(stage.sections.toList())

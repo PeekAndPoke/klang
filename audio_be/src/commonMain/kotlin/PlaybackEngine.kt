@@ -19,8 +19,40 @@ import kotlin.math.min
  * [Cylinders] (orbits + FX). The only thing it does NOT own is the shared backend state
  * ([AudioBackendContext]); in particular the audio timeline (clock) is read from there, never per
  * engine — see `docs/tasks-archive/2026-09/20260904-per-playback-engine.md` (D2·b/D2·d).
+ *
+ * ## The end of life: one [Phase]
+ *
+ * The engine's whole lifecycle is its [phase] (tidy-up step 9, audit item C3.1). The dispatcher asks it and never
+ * keeps a lifecycle of its own; the offline renderer never stops its engine. States times events, every transition
+ * (a dash: the phase stays):
+ *
+ * | phase \ event | [renderInto]                                                        | [stop]    | [resume]  | [dispose]  |
+ * |---------------|---------------------------------------------------------------------|-----------|-----------|------------|
+ * | `Playing`     | renders; counts its quiet blocks                                    | `Stopped` | -         | `Disposed` |
+ * | `Stopped`     | renders; `Releasing` once the hold is over and an endless tail rings | -         | `Playing` | `Disposed` |
+ * | `Releasing`   | renders under the release; `Released` when it falls under its floor | -         | -         | `Disposed` |
+ * | `Released`    | renders under the release, which is 0 from here on                  | -         | -         | `Disposed` |
+ * | `Disposed`    | never rendered (the dispatcher drops an engine before disposing it) | -         | -         | -          |
+ *
+ * - **The hold** ([renderInto], `Stopped` only): [MAX_TAIL_HOLD_SECONDS] of quiet blocks counted from the last
+ *   active voice (the count runs while `Playing` too, so a stop after a long silence holds only the rest), the
+ *   master swap settled, and a tail that can never end still ringing ([sustainsItself]). A finite tail never
+ *   triggers it: it rings out in full.
+ * - **No way back from a release:** [resume] in `Releasing` or `Released` changes nothing; the dispatcher detaches
+ *   such an engine from its id instead and gives the id a fresh one.
+ * - **Idle** ([isIdle]), when the dispatcher may dispose a stopped engine: `Playing` and `Stopped` when nothing of
+ *   it sounds and its master has settled and stopped ringing; `Releasing` never; `Released` and `Disposed` always.
+ *
+ * Every phase is a `data object`: none carries data of its own (`docs/plans/effect-state-machines.md` §1). The
+ * quiet-block count is the engine's, because `Playing` counts it and `Stopped` reads it; the [TailRelease] is a
+ * resource created with the engine, which `Releasing` restarts and both release phases render through.
  */
 class PlaybackEngine(
+    /**
+     * The id the dispatcher files this engine under (the offline renderer's one engine has
+     * the fixed id `"offline"`). The scheduler's context takes its id from the voices.
+     */
+    val playbackId: String,
     val scheduler: VoiceScheduler,
     val cylinders: Cylinders,
     private val masterBus: MasterBus,
@@ -37,27 +69,41 @@ class PlaybackEngine(
     private val bus = StereoBuffer(blockFrames)
 
     /**
+     * The engine's end of life, one state at a time; the transition table is in the class KDoc.
+     */
+    sealed class Phase {
+        /** Scheduled and rendering, not told to stop. */
+        data object Playing : Phase()
+
+        /** Told to stop ([stop]): its finite tails ring out, its endless ones are held; [resume] returns to Playing. */
+        data object Stopped : Phase()
+
+        /** The hold is over and an endless tail rang: the whole output is being released. No way back. */
+        data object Releasing : Phase()
+
+        /** The release has fallen under its floor: nothing this engine renders is heard. Idle. */
+        data object Released : Phase()
+
+        /** Its units are back in the warehouse ([dispose]); it renders no more. */
+        data object Disposed : Phase()
+    }
+
+    /** Where this engine is in its life; every transition is in the class KDoc. */
+    var phase: Phase = Phase.Playing
+        private set
+
+    /**
      * Consecutive rendered blocks in which this engine had no active voice: how long its notes
      * have been over, saturated at [maxTailHoldBlocks] (an always-on engine never overflows it: the `min` in
      * [renderInto] caps it before `+ 1` could reach `Int.MAX_VALUE`, on every path, a never-audible one included).
-     * A stopped playback's endless tails are held for this long before they are released (see
-     * [isIdle]); a tail that sustains itself on an orbit keeps the orbit active, so a count that
+     * Counted in every phase, `Playing` included: a stopped playback's endless tails are held until it reaches the
+     * bound (see [isIdle]); a tail that sustains itself on an orbit keeps the orbit active, so a count that
      * waited for the orbits too would never start.
      */
     private var quietBlocks: Int = 0
 
-    /** True once the playback was told to stop ([stop]); [resume] clears it before any release. */
-    private var stopped: Boolean = false
-
-    /** The release of the stopped engine's whole output, started once when its hold ends ([renderInto]). */
-    private val tailRelease: TailRelease = TailRelease(sampleRate, blockFrames)
-
-    /** True while the stopped engine's output is being released; there is no way back. */
-    var isReleasing: Boolean = false
-        private set
-
-    /** True once the release has fallen under its floor: nothing this engine renders is heard. */
-    private var released: Boolean = false
+    /** The release of the stopped engine's whole output, restarted once when its hold ends ([renderInto]). */
+    private val tailRelease: TailRelease = TailRelease(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /**
      * The tail-hold bound in blocks, derived per engine.
@@ -84,7 +130,21 @@ class PlaybackEngine(
      */
     fun registerKatalyst(name: String, dsl: KatalystDsl) = katalystRegistry.register(name, dsl)
 
-    /** Render this engine's voices through its own cylinders, accumulating into [target]. */
+    /**
+     * Render this engine's voices through its own cylinders, accumulating into [target]: one path for every phase
+     * (audit item A2.11).
+     *
+     * - **Straight into [target]** while neither a master chain nor a release is in play: byte-identical to the
+     *   engine before authored masters (the orbits sum straight into the shared mix, no copy).
+     * - **Through the engine's own bus** otherwise: the orbits sum into it, the master chain runs on it when one
+     *   is active, and it joins [target] whole, or under the [TailRelease] gain while `Releasing` or `Released`.
+     *
+     * The master bus learns that a block has been produced at the END of the call (master round M1): "this engine
+     * has rendered" is true from the next block on, so a `master(…)` promoted in the engine's FIRST block still sees
+     * `false` and is adopted at full weight instead of fading up from unmastered. Called before `scheduler.process`
+     * instead, the very first master would crossfade; and it cannot live inside `MasterBus.process`, which the
+     * straight path skips while the bus is inactive, exactly the unmastered case being told apart.
+     */
     // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
     // grows for the life of the backend and overflows Int after ~12.4 h. Exact below 2^53
     // (~5,950 years at 48 kHz). See RenderClock.cursorFrame. Per-sample offsets stay Int.
@@ -100,78 +160,41 @@ class PlaybackEngine(
         // what a stopped playback's endless tails are held for (see [isIdle]).
         quietBlocks = if (scheduler.getActiveVoiceCount() != 0) 0 else min(quietBlocks + 1, maxTailHoldBlocks)
 
-        if (!isReleasing && stopped && quietBlocks >= maxTailHoldBlocks && masterBus.isSettled && sustainsItself()) {
+        if (phase == Phase.Stopped && quietBlocks >= maxTailHoldBlocks && masterBus.isSettled && sustainsItself()) {
             // Decision (j): the hold is over and a tail that can never end still rings. Released,
             // never dropped, and with it whatever finite tail rings beside it. Waits for a master
             // swap to settle first: its own drain is capped and released ([ChainSwap]).
-            isReleasing = true
+            phase = Phase.Releasing
             tailRelease.restart()
         }
 
-        if (isReleasing) {
-            renderReleased(target, cursorFrame)
-            markMasterBusRendered()
-            return
+        val releasing = when (phase) {
+            Phase.Playing, Phase.Stopped, Phase.Disposed -> false
+            Phase.Releasing, Phase.Released -> true
         }
+        // Read before the orbits render: they cannot change it (only the swap's own process can).
+        val mastered = masterBus.isActive
 
-        if (!masterBus.isActive) {
-            // Fast path: an empty output chain, byte-identical to the engine before authored masters.
+        if (!releasing && !mastered) {
             cylinders.processAndMix(target, cursorFrame)
-            markMasterBusRendered()
-            return
+        } else {
+            val ownBus = bus
+
+            ownBus.clear()
+            cylinders.processAndMix(ownBus, cursorFrame)
+
+            if (mastered) {
+                masterBus.process(ownBus, blockFrames)
+            }
+
+            if (!releasing) {
+                target.addFrom(source = ownBus, frames = blockFrames)
+            } else if (tailRelease.addReleased(target = target, source = ownBus)) {
+                // Under the floor from this block on: true in every block after, and `Released` stays.
+                phase = Phase.Released
+            }
         }
 
-        // A master chain needs the engine's bus in isolation before it joins the shared mix.
-        val ownBus = bus
-        ownBus.clear()
-        cylinders.processAndMix(ownBus, cursorFrame)
-        masterBus.process(ownBus, blockFrames)
-
-        val targetL = target.left
-        val targetR = target.right
-        val busL = ownBus.left
-        val busR = ownBus.right
-
-        for (i in 0 until blockFrames) {
-            targetL[i] += busL[i]
-            targetR[i] += busR[i]
-        }
-
-        markMasterBusRendered()
-    }
-
-    /**
-     * One block of the stopped engine's release: everything it renders, orbits and master alike,
-     * goes through its own bus and is added to [target] under the [TailRelease] gain.
-     */
-    private fun renderReleased(target: StereoBuffer, cursorFrame: Double) {
-        val ownBus = bus
-
-        ownBus.clear()
-        cylinders.processAndMix(ownBus, cursorFrame)
-
-        if (masterBus.isActive) {
-            masterBus.process(ownBus, blockFrames)
-        }
-
-        if (tailRelease.addReleased(target = target, source = ownBus)) {
-            released = true
-        }
-    }
-
-    /**
-     * Tells the master bus a block has now been produced (master round M1). Called from the END
-     * of each of [renderInto]'s three exits, so "this engine has rendered" is true from the next
-     * block onward and a `master(…)` promoted in the engine's FIRST block still sees `false` and
-     * is adopted at full weight instead of fading up from unmastered.
-     *
-     * The PLACEMENT is the contract, so it is deliberately at the end of the audio work rather
-     * than somewhere in the middle whose position a reader has to reason about: called before
-     * `scheduler.process` instead, the very first master would crossfade and M1 would be back.
-     * It cannot live inside `MasterBus.process` either — the fast path above skips that entirely
-     * while the bus is inactive, which is exactly the unmastered case being discriminated.
-     */
-    private fun markMasterBusRendered() {
         masterBus.markRendered()
     }
 
@@ -184,29 +207,37 @@ class PlaybackEngine(
 
     /**
      * The playback was told to stop (`Cmd.Cleanup`): from now on its finite tails ring out and its
-     * endless ones are released after [MAX_TAIL_HOLD_SECONDS] ([isIdle]).
+     * endless ones are released after [MAX_TAIL_HOLD_SECONDS] ([isIdle]). `Playing` becomes `Stopped`; in any
+     * other phase nothing changes (a second stop, a release under way).
      */
     fun stop() {
-        stopped = true
+        phase = when (phase) {
+            Phase.Playing -> Phase.Stopped
+            Phase.Stopped, Phase.Releasing, Phase.Released, Phase.Disposed -> phase
+        }
     }
 
     /**
-     * The stopped playback was scheduled again before it was disposed (a resume). Only valid while
-     * not [isReleasing]: a release has no way back, so the dispatcher detaches a releasing engine
-     * instead of resuming it.
+     * The stopped playback was scheduled again before it was disposed (a resume): `Stopped` becomes `Playing`.
+     * A release has no way back, so in `Releasing` and `Released` nothing changes; the dispatcher detaches such an
+     * engine instead of resuming it.
      */
     fun resume() {
-        stopped = false
+        phase = when (phase) {
+            Phase.Stopped -> Phase.Playing
+            Phase.Playing, Phase.Releasing, Phase.Released, Phase.Disposed -> phase
+        }
     }
 
     /**
      * The engine's end: every rented unit (orbit delay rings, reverb networks, master chain units)
-     * goes back to the backend's warehouse (2f). Called by the dispatcher exactly once, after the
-     * engine has been removed from the render set; nothing renders through it afterwards.
+     * goes back to the backend's warehouse (2f), and the phase is `Disposed`. Called by the dispatcher exactly
+     * once, after the engine has been removed from the render set; nothing renders through it afterwards.
      */
     fun dispose() {
         cylinders.releaseAll()
         masterBus.releaseAll()
+        phase = Phase.Disposed
     }
 
     /**
@@ -231,20 +262,10 @@ class PlaybackEngine(
      * finite tail, or the hold plus the release when an endless one is present. A playback that
      * was not stopped is never released: its drone is the authored sound.
      */
-    fun isIdle(): Boolean {
-        if (isReleasing) {
-            return released
-        }
-
-        if (hasOwnSound()) {
-            return false
-        }
-
-        if (!masterBus.isSettled) {
-            return false
-        }
-
-        return !masterBus.isRinging
+    fun isIdle(): Boolean = when (phase) {
+        Phase.Playing, Phase.Stopped -> !hasOwnSound() && masterBus.isSettled && !masterBus.isRinging
+        Phase.Releasing -> false
+        Phase.Released, Phase.Disposed -> true
     }
 
     companion object {
@@ -259,8 +280,8 @@ class PlaybackEngine(
          */
         private const val MAX_TAIL_HOLD_SECONDS = 20.0
 
-        /** Builds an engine: its own [Cylinders] + a [VoiceScheduler] wired to the shared [context]. */
-        fun create(context: AudioBackendContext): PlaybackEngine {
+        /** Builds an engine for [playbackId]: its own [Cylinders] + a [VoiceScheduler] wired to the shared [context]. */
+        fun create(context: AudioBackendContext, playbackId: String): PlaybackEngine {
             // ONE fork per engine, shared by everything that needs it: this engine registers its
             // chains here, every cylinder it rents resolves a `katalyst(…)` name against it, and the
             // master bus resolves a `master(…)` name against it. It dies with the engine, so a
@@ -285,6 +306,7 @@ class PlaybackEngine(
                 VoiceScheduler.Options(context = context, cylinders = cylinders, masterBus = masterBus)
             )
             return PlaybackEngine(
+                playbackId = playbackId,
                 scheduler = scheduler,
                 cylinders = cylinders,
                 masterBus = masterBus,

@@ -33,6 +33,11 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   Both unset gives `null`; a non-finite operand reads as unset before the product. Guard: `WireGainFoldSpec`.
 - `tag(name)` tags cross the wire as `VoiceData.tags`, an unordered set. The argument is a literal
   (`reinterpretVoice`), never lifted as mini-notation.
+- `control = true` marks an event that carries engine state and is never a voice: `master(...)`, `katalyst(...)`
+  and the events `solo(...)` puts over its whole query window (amount and solo id only, cut on a 1/8-cycle grid so
+  a live edit of the solo takes effect within 1/8 cycle). `merge` never takes
+  `control` from the other side, so no later op can make such an event sound. The solo id is the `solo` call's
+  full source location (`soloIdOf` in `lang_structural_mute.kt`). Guards: `SoloPatternSpec`, `SoloRenderSpec`.
 - Both bags reach the wire as `toMap()` copies: the backend holds `katalystParams` for the voice's life and
   gates its re-resolve on the map's identity.
 
@@ -183,3 +188,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   mini-notation string scales with `.mul(k).add(c)` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
 - 2026-10-07: the sound door `sndTriangle()` is `sndTri()`, like `sndSaw()`; it still sets the sound `triangle`
   (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 4).
+- 2026-10-07: `solo(...)` covers its rests with control events instead of a sounding sine, one id per `solo` call,
+  `solo()` means 0.95 (`docs/tasks/bugfix-solo-rests-and-amount.md`).

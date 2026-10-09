@@ -157,7 +157,9 @@ Each `utils` helper has a spec of its exact behaviour; a hot-path helper taking 
 Shared DSP utilities (`flushState`, shape resolution, etc.) must live in exactly one place
 and be imported. Never copy a utility function into another file as a `private` copy.
 
-**Canonical location:** `DspUtil.kt` in the module root package.
+**Canonical location:** the module's `utils/` package (see "One home for generic helpers" above); in `audio_be`
+the numeric guards are in `utils/numerical_safety.kt`, the phase wraps in `utils/phase_wrap.kt`, the fast math in
+`utils/fast_math.kt`.
 
 ### 4. No Duplicated Data Classes or Resolution Logic
 
@@ -264,7 +266,7 @@ These allocate strings and can kill the AudioWorklet thread.
 ### 8. Flush IIR Filter State
 
 Every IIR filter (SVF, one-pole, allpass, DC blocker) must flush its state variables after
-each update. Use the shared `flushState()` from `DspUtil.kt`.
+each update. Use the shared `flushState()` from `utils/numerical_safety.kt`.
 
 **Why, two reasons:** denormal floats cause 10-100x CPU spikes on some platforms, and a
 NON-FINITE carry latches the filter permanently — an IIR whose state goes NaN can never
@@ -431,6 +433,12 @@ a single argument or for arguments whose types cannot be confused.
 ```kotlin
 cylinders.checkIn(orbit = voice.cylinderId, voiceId = voice.id, blockStart = ctx.blockStart) // not checkIn(7, 42, 1024.0)
 ```
+
+Exempt, because naming cannot or need not help: calls to the standard library whose order is standard or does not
+matter (`maxOf`, `minOf`, `coerceIn`, `fill`, `copyOfRange`, `subList`, `Pair`, `Triple`; `copyInto` IS named, its
+destination offset sits next to a range), calls of a function-typed value (Kotlin forbids names there) and Java calls.
+Whether literal data tables with their column helper declared right above stay positional is open
+(`docs/tasks/_maintainer-questions.md`).
 
 (Maintainer, 2026-10-07, after a review found `Cylinders.checkIn(id: Int, voiceId: Int, ...)`
 whose two ids swap silently and whose order differed from `Cylinder.checkIn`.)

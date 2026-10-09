@@ -69,8 +69,8 @@ class KatalystInsertFeedSpec : StringSpec({
 
         for (b in 0 until blocks) {
             for (i in 0 until blockFrames) {
-                ctx.mixBuffer.left[i] = if (impulse) (if (b == 0 && i == 0) 0.5 else 0.0) else input(b, i, false)
-                ctx.mixBuffer.right[i] = if (impulse) (if (b == 0 && i == 0) 0.5 else 0.0) else input(b, i, true)
+                ctx.mixBuffer.left[i] = if (impulse) (if (b == 0 && i == 0) 0.5 else 0.0) else input(block = b, i = i, right = false)
+                ctx.mixBuffer.right[i] = if (impulse) (if (b == 0 && i == 0) 0.5 else 0.0) else input(block = b, i = i, right = true)
             }
 
             chain.process(ctx)
@@ -105,13 +105,13 @@ class KatalystInsertFeedSpec : StringSpec({
 
         for (b in 0 until blocks) {
             for (i in 0 until blockFrames) {
-                mix.left[i] = input(b, i, false) * fader
-                mix.right[i] = input(b, i, true) * fader
+                mix.left[i] = input(block = b, i = i, right = false) * fader
+                mix.right[i] = input(block = b, i = i, right = true) * fader
                 feed.left[i] = mix.left[i] * wet
                 feed.right[i] = mix.right[i] * wet
             }
 
-            room.process(feed, mix, blockFrames)
+            room.process(input = feed, output = mix, length = blockFrames)
 
             for (i in 0 until blockFrames) {
                 expected[(b * blockFrames + i) * 2] = mix.left[i]
@@ -122,7 +122,7 @@ class KatalystInsertFeedSpec : StringSpec({
         val actual = render(chain)
 
         withClue("the room is really in the render: it differs from the faded dry alone") {
-            (0 until actual.size / 2).any { abs(actual[it * 2] - input(it / blockFrames, it % blockFrames, false) * fader) > 1e-3 } shouldBe true
+            (0 until actual.size / 2).any { abs(actual[it * 2] - input(block = it / blockFrames, i = it % blockFrames, right = false) * fader) > 1e-3 } shouldBe true
         }
 
         actual.bits() shouldBe expected.bits()
@@ -143,13 +143,13 @@ class KatalystInsertFeedSpec : StringSpec({
 
         for (b in 0 until blocks) {
             for (i in 0 until blockFrames) {
-                mix.left[i] = input(b, i, false) * fader
-                mix.right[i] = input(b, i, true) * fader
+                mix.left[i] = input(block = b, i = i, right = false) * fader
+                mix.right[i] = input(block = b, i = i, right = true) * fader
                 feed.left[i] = mix.left[i] * wet
                 feed.right[i] = mix.right[i] * wet
             }
 
-            line.process(feed, mix, blockFrames)
+            line.process(input = feed, output = mix, length = blockFrames)
 
             for (i in 0 until blockFrames) {
                 expected[(b * blockFrames + i) * 2] = mix.left[i]
@@ -191,7 +191,7 @@ class KatalystInsertFeedSpec : StringSpec({
                     lineFeed.right[i] = x * delayWet
                 }
 
-                line.process(lineFeed, mix, blockFrames)
+                line.process(input = lineFeed, output = mix, length = blockFrames)
 
                 for (i in 0 until blockFrames) {
                     // The room's feed: the mix after the delay, or (the control) the dry input only.
@@ -201,7 +201,7 @@ class KatalystInsertFeedSpec : StringSpec({
                     roomFeed.right[i] = (if (roomHearsTheDelay) mix.right[i] else dry) * roomWet
                 }
 
-                room.process(roomFeed, mix, blockFrames)
+                room.process(input = roomFeed, output = mix, length = blockFrames)
 
                 for (i in 0 until blockFrames) {
                     out[(b * blockFrames + i) * 2] = mix.left[i]

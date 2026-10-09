@@ -9,6 +9,11 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeExactly
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 class MemoizingIgnitorSpec : StringSpec({
 
@@ -20,8 +25,9 @@ class MemoizingIgnitorSpec : StringSpec({
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -68,7 +74,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "multi-consumer: second call within same block uses cache (probe not re-run)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers() // simulate shared node (2 consumers)
+        memo.incConsumers(blockFrames) // simulate shared node (2 consumers)
         val ctx = createCtx()
         val out1 = AudioBuffer(blockFrames)
         val out2 = AudioBuffer(blockFrames)
@@ -84,7 +90,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "advancing voiceElapsedFrames invalidates cache" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers()
+        memo.incConsumers(blockFrames)
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames)
 
@@ -100,7 +106,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "changing freqHz invalidates cache (e.g. detune path)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers()
+        memo.incConsumers(blockFrames)
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames)
 
@@ -114,11 +120,11 @@ class MemoizingIgnitorSpec : StringSpec({
     "changing offset invalidates cache (sub-block render)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers()
+        memo.incConsumers(blockFrames)
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames * 2)
 
-        ctx.updateOffsetAndLength(0, blockFrames)
+        ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 1
 
@@ -130,8 +136,8 @@ class MemoizingIgnitorSpec : StringSpec({
     "three readers within same block trigger one generate call" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
-        memo.incConsumers() // 2
-        memo.incConsumers() // 3
+        memo.incConsumers(blockFrames) // 2
+        memo.incConsumers(blockFrames) // 3
         val ctx = createCtx()
         val a = AudioBuffer(blockFrames)
         val b = AudioBuffer(blockFrames)
@@ -153,14 +159,14 @@ class MemoizingIgnitorSpec : StringSpec({
         // got two keys and ran TWICE per block: double state advance, disjoint sample windows —
         // the E8 shape, family-wide. All reads now share the voice freqHz.
         val counter = CountingIgnitor()
-        val shared = MemoizingIgnitor(counter).also { it.incConsumers() }
+        val shared = MemoizingIgnitor(counter).also { it.incConsumers(blockFrames) }
         val sig = Ignitors.whiteNoise(kotlin.random.Random(1), color = shared) + shared
 
         val ctx = createCtx()
         val buf = AudioBuffer(blockFrames)
         val blocks = 8
         for (b in 0 until blocks) {
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             ctx.voiceElapsedFrames = b * blockFrames
             sig.generate(buf, 220.0, ctx)
         }

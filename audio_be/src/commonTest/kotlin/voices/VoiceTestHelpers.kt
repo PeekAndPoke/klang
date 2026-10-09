@@ -21,6 +21,11 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Shared test helpers for voice tests.
@@ -66,7 +71,7 @@ object VoiceTestHelpers {
         signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
+        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         pitchEnvelope: Voice.PitchEnvelope? = null,
 
         // Dynamics
@@ -99,6 +104,7 @@ object VoiceTestHelpers {
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
 
         val instrument = if (envelope == null) {
@@ -107,10 +113,10 @@ object VoiceTestHelpers {
             val sr = sampleRate.toDouble()
 
             signal.adsr(
-                attackSec = envelope.attackFrames / sr,
-                decaySec = envelope.decayFrames / sr,
-                sustainLevel = envelope.sustainLevel,
-                releaseSec = envelope.releaseFrames / sr,
+                attack = envelope.attackFrames / sr,
+                decay = envelope.decayFrames / sr,
+                sustain = envelope.sustainLevel,
+                release = envelope.releaseFrames / sr,
                 attackCurve = envelope.attackCurve,
                 decayCurve = envelope.decayCurve,
                 releaseCurve = envelope.releaseCurve,
@@ -139,7 +145,6 @@ object VoiceTestHelpers {
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
         return Voice(
@@ -166,7 +171,7 @@ object VoiceTestHelpers {
         signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
+        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
@@ -199,7 +204,7 @@ object VoiceTestHelpers {
         stopFrame: Double = Double.MAX_VALUE,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
+        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
@@ -217,6 +222,7 @@ object VoiceTestHelpers {
             isLooping = isLooping,
             stopFrame = stopFrame,
             sampleRate = sampleRate,
+            rng = testRandom,
         ),
         fm = fm, accelerate = accelerate,
         vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,

@@ -108,7 +108,7 @@ class LimiterLookaheadSpec : StringSpec({
         val signal = kick(frames, peak = exp(overshootDb / 20.0 * 2.302585092994046))
         val left = signal.copyOf()
         val right = signal.copyOf()
-        houseLimiter().process(left, right, frames)
+        houseLimiter().process(left = left, right = right, blockSize = frames)
         return left
     }
 
@@ -145,7 +145,7 @@ class LimiterLookaheadSpec : StringSpec({
         signal[impulseAt] = 4.0                    // ~+12 dB over the ceiling, one sample wide
         val left = signal.copyOf()
         val right = signal.copyOf()
-        houseLimiter().process(left, right, frames)
+        houseLimiter().process(left = left, right = right, blockSize = frames)
 
         // The impulse emerges delayed by exactly the lookahead...
         val loudest = (0 until frames).maxByOrNull { abs(left[it]) } ?: -1
@@ -168,7 +168,7 @@ class LimiterLookaheadSpec : StringSpec({
         }
         val left = signal.copyOf()
         val right = signal.copyOf()
-        houseLimiter().process(left, right, frames)
+        houseLimiter().process(left = left, right = right, blockSize = frames)
 
         // Long after the burst the quiet tail must be passing at essentially unity again. With the
         // release removed it stays ducked by ~12 dB forever.
@@ -211,7 +211,7 @@ class LimiterLookaheadSpec : StringSpec({
             val signal = kick(frames, peak = exp(12.0 / 20.0 * 2.302585092994046))
             val left = signal.copyOf()
             val right = signal.copyOf()
-            limiter.process(left, right, frames)
+            limiter.process(left = left, right = right, blockSize = frames)
             samplesOverCeiling(left)
         }
 
@@ -235,7 +235,7 @@ class LimiterLookaheadSpec : StringSpec({
         }
         val left = signal.copyOf()
         val right = signal.copyOf()
-        houseLimiter().process(left, right, frames)
+        houseLimiter().process(left = left, right = right, blockSize = frames)
 
         samplesOverCeiling(left) shouldBe 0
     }
@@ -248,13 +248,13 @@ class LimiterLookaheadSpec : StringSpec({
         val frames = 512
 
         val loud = DoubleArray(frames) { 0.9 }
-        limiter.process(loud, loud.copyOf(), frames)   // fill the ring with signal
+        limiter.process(left = loud, right = loud.copyOf(), blockSize = frames)   // fill the ring with signal
 
         limiter.reset()
 
         val silence = DoubleArray(frames)
         val right = DoubleArray(frames)
-        limiter.process(silence, right, frames)
+        limiter.process(left = silence, right = right, blockSize = frames)
 
         // Every sample must be silence. Without the reset the ring still holds the 0.9 block.
         silence.forEach { abs(it) shouldBe 0.0 }
@@ -280,7 +280,7 @@ class LimiterLookaheadSpec : StringSpec({
         }
         val left = signal.copyOf()
         val right = signal.copyOf()
-        houseLimiter().process(left, right, frames)
+        houseLimiter().process(left = left, right = right, blockSize = frames)
 
         samplesOverCeiling(left) shouldBe 0
     }
@@ -308,7 +308,7 @@ class LimiterLookaheadSpec : StringSpec({
 
         val left = signal.copyOf()
         val right = signal.copyOf()
-        houseLimiter().process(left, right, frames)
+        houseLimiter().process(left = left, right = right, blockSize = frames)
 
         val delayFrames = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRateLocal).toInt()
         val probe = sampleRateLocal + period * 3 / 4           // settled, mid-gap
@@ -335,7 +335,7 @@ class LimiterLookaheadSpec : StringSpec({
 
         val left = signal.copyOf()
         val right = signal.copyOf()
-        houseLimiter().process(left, right, frames)
+        houseLimiter().process(left = left, right = right, blockSize = frames)
 
         // (a) nothing non-finite reaches the output...
         left.all { it.isFinite() } shouldBe true
@@ -354,8 +354,8 @@ class LimiterLookaheadSpec : StringSpec({
         }
 
         val window = sampleRate / 25                     // 40 ms
-        val before = rms(eventAt - window, eventAt)
-        val after = rms(eventAt, eventAt + window)
+        val before = rms(from = eventAt - window, until = eventAt)
+        val after = rms(from = eventAt, until = eventAt + window)
 
         (after > before * 0.7) shouldBe true
     }

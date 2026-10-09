@@ -73,8 +73,8 @@ voice's pitch stage; `gain`/`pan` in its send stage.
 
 | Katalyst effect            | Class           | Applied when                                                     |
 |----------------------------|-----------------|------------------------------------------------------------------|
-| `KatalystBodyEffect`       | `ResonatorBank` (`bodyBand`) | `body.material` names a material                                 |
-| `KatalystFormantEffect`    | `ResonatorBank` (`vowelBand`) | `vowel.vowel` names a vowel                                      |
+| `KatalystResonatorEffect` (`BODY`)  | `ResonatorBank` (`bodyGain`)  | `body.material` names a material                        |
+| `KatalystResonatorEffect` (`VOWEL`) | `ResonatorBank` (`vowelGain`) | `vowel.vowel` names a vowel                             |
 | `KatalystDelayEffect`      | `DelayLine`     | `delay.wet` above 0 and `delay.time` >= 0.01 s (default 0.25)    |
 | `KatalystReverbEffect`     | `Reverb`        | `reverb.wet` above 0 and `reverb.size` >= 0.1 authored (default 5) |
 | `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
@@ -158,14 +158,13 @@ retired with the Pipeline DSL in phase 3 step 9. An Ignitor tree can hold its ow
 
 `audio_be/src/commonMain/kotlin/filters/`
 
-The class-form resonators implement `AudioFilter` (`process(buffer, offset, length)`); `DcBlocker` and
+The class-form resonator implements `AudioFilter` (`process(buffer, offset, length)`); `DcBlocker` and
 `EqCore` have their own shapes.
 
 | Class                                     | Type                                              |
 |-------------------------------------------|---------------------------------------------------|
-| `BaseSvf`, `SvfBPF`                       | SVF kernels (the resonators' bandpass)            |
 | `DcBlocker`                               | raw-pole DC blocker (the one-pole lowpass and highpass are Ignitor nodes, `ignitor/IgnitorFilters.kt`) |
-| `ResonatorBank` + `ParallelMixFilter`     | parallel SVF bandpass bank (body, vowel), blended |
+| `ResonatorBank`                           | parallel SVF bandpass bank (body, vowel) and its dry/wet blend, mono; reconfigured only while unheard (tidy-up step 12 (a)) |
 | `EqCore`                                  | the equalizer's fused sections                    |
 
 The per-voice filters are not class-form any more: `lpf`/`hpf`/`bpf`/`notch` are `classic()` stages, each the
@@ -177,15 +176,15 @@ step 9.
 
 `audio_be/src/commonMain/kotlin/StereoBuffer.kt`
 
-Holds two `FloatArray`s (left, right) of `blockFrames` length.
+Holds two `AudioBuffer`s (`DoubleArray`; left, right) of `blockFrames` length.
 Used at cylinder level and at master mix level.
 
 ```kotlin
-class StereoBuffer(val blockFrames: Int) {
-    val left: FloatArray
-    val right: FloatArray
+class StereoBuffer(blockFrames: Int) {
+    val left: AudioBuffer
+    val right: AudioBuffer
     fun clear()
-    fun addFrom(other: StereoBuffer, gain: Float = 1f)
-    fun limit(threshold: Float, ratio: Float, attack: Float, release: Float)
+    fun fill(value: AudioSample)
+    inline fun addFrom(source: StereoBuffer, frames: Int) // left into left, right into right, no gain
 }
 ```

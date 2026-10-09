@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.SAFE_MAX
-import io.peekandpoke.klang.audio_be.SAFE_MIN
+import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
+import io.peekandpoke.klang.audio_be.utils.SAFE_MIN
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
@@ -17,6 +17,11 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.ln
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Bit-exact guards for the `controlRateValueOrNull` contract (unified-eq plan, D1a step 1):
@@ -47,8 +52,9 @@ class ControlRateScalarParitySpec : StringSpec({
         voiceDurationFrames = blockFrames * 8,
         gateEndFrame = blockFrames * 8,
         scratchBuffers = ScratchBuffers(blockFrames),
+        random = testRandom,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -89,8 +95,8 @@ class ControlRateScalarParitySpec : StringSpec({
 
     "affine scalar is bit-equal to the scratch render" {
         assertScalarBitEqualsScratchRender(
-            sig = ConstantIgnitor(a).affine(ConstantIgnitor(0.25), ParamIgnitor("p", b), ConstantIgnitor(-1.5)),
-            reference = opq(a).affine(opq(0.25), opq(b), opq(-1.5)),
+            sig = ConstantIgnitor(a).affine(pre = ConstantIgnitor(0.25), mul = ParamIgnitor("p", b), add = ConstantIgnitor(-1.5)),
+            reference = opq(a).affine(pre = opq(0.25), mul = opq(b), add = opq(-1.5)),
         )
     }
 
@@ -153,8 +159,8 @@ class ControlRateScalarParitySpec : StringSpec({
 
     "clamp scalar is bit-equal to the scratch render" {
         assertScalarBitEqualsScratchRender(
-            sig = ParamIgnitor("p", b).clamp(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)),
-            reference = opq(b).clamp(opq(-1.0), opq(1.0)),
+            sig = ParamIgnitor("p", b).clamp(lo = ConstantIgnitor(-1.0), hi = ConstantIgnitor(1.0)),
+            reference = opq(b).clamp(lo = opq(-1.0), hi = opq(1.0)),
         )
     }
 
@@ -207,17 +213,17 @@ class ControlRateScalarParitySpec : StringSpec({
         }
         val pairs: List<Pair<Ignitor, Ignitor>> = listOf(
             ParamIgnitor("p", a).mod(ConstantIgnitor(b)) to opq(a).mod(opq(b)),
-            ConstantIgnitor(a).lerp(ParamIgnitor("p", b), ConstantIgnitor(0.3)) to
-                opq(a).lerp(opq(b), opq(0.3)),
-            ParamIgnitor("p", b).range(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)) to
-                opq(b).range(opq(-1.0), opq(1.0)),
-            ConstantIgnitor(1.0).select(ParamIgnitor("t", a), ParamIgnitor("f", b)) to
-                opq(1.0).select(opq(a), opq(b)),
-            ConstantIgnitor(-1.0).select(ParamIgnitor("t", a), ParamIgnitor("f", b)) to
-                opq(-1.0).select(opq(a), opq(b)),
+            ConstantIgnitor(a).lerp(other = ParamIgnitor("p", b), t = ConstantIgnitor(0.3)) to
+                opq(a).lerp(other = opq(b), t = opq(0.3)),
+            ParamIgnitor("p", b).range(from = ConstantIgnitor(-1.0), to = ConstantIgnitor(1.0)) to
+                opq(b).range(from = opq(-1.0), to = opq(1.0)),
+            ConstantIgnitor(1.0).select(whenTrue = ParamIgnitor("t", a), whenFalse = ParamIgnitor("f", b)) to
+                opq(1.0).select(whenTrue = opq(a), whenFalse = opq(b)),
+            ConstantIgnitor(-1.0).select(whenTrue = ParamIgnitor("t", a), whenFalse = ParamIgnitor("f", b)) to
+                opq(-1.0).select(whenTrue = opq(a), whenFalse = opq(b)),
         )
         for ((sig, reference) in pairs) {
-            assertScalarBitEqualsScratchRender(sig, reference)
+            assertScalarBitEqualsScratchRender(sig = sig, reference = reference)
         }
     }
 
@@ -229,7 +235,7 @@ class ControlRateScalarParitySpec : StringSpec({
     }
 
     "affine scalar clamps at SAFE_MAX" {
-        ConstantIgnitor(1e10).affine(ConstantIgnitor(-0.0), ParamIgnitor("p", 1e10), ConstantIgnitor(-0.0))
+        ConstantIgnitor(1e10).affine(pre = ConstantIgnitor(-0.0), mul = ParamIgnitor("p", 1e10), add = ConstantIgnitor(-0.0))
             .controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 
@@ -307,7 +313,7 @@ class ControlRateScalarParitySpec : StringSpec({
         // consumer 2 then misses the cache and re-renders the stateless inner, which must equal
         // a scratch-path render bit-for-bit.
         val probe = RenderCountProbe(FreqIgnitor * ParamIgnitor("track", 1.9))
-        val memo = MemoizingIgnitor(probe).apply { incConsumers() }
+        val memo = MemoizingIgnitor(probe).apply { incConsumers(blockFrames) }
         val c = ctx()
 
         val folded = AudioBuffer(blockFrames)
@@ -353,9 +359,9 @@ class ControlRateScalarParitySpec : StringSpec({
             "min b" to { x -> ConstantIgnitor(0.5).min(x) },
             "max a" to { x -> x.max(ConstantIgnitor(0.5)) },
             "max b" to { x -> ConstantIgnitor(0.5).max(x) },
-            "clamp upstream" to { x -> x.clamp(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)) },
-            "clamp lo" to { x -> ConstantIgnitor(0.5).clamp(x, ConstantIgnitor(1.0)) },
-            "clamp hi" to { x -> ConstantIgnitor(0.5).clamp(ConstantIgnitor(-1.0), x) },
+            "clamp upstream" to { x -> x.clamp(lo = ConstantIgnitor(-1.0), hi = ConstantIgnitor(1.0)) },
+            "clamp lo" to { x -> ConstantIgnitor(0.5).clamp(lo = x, hi = ConstantIgnitor(1.0)) },
+            "clamp hi" to { x -> ConstantIgnitor(0.5).clamp(lo = ConstantIgnitor(-1.0), hi = x) },
             "exp" to { x -> x.exp() },
             "log" to { x -> x.log() },
             "memoizing" to { x -> MemoizingIgnitor(x) },
@@ -371,18 +377,18 @@ class ControlRateScalarParitySpec : StringSpec({
             "sq" to { x -> x.sq() },
             "mod a" to { x -> x.mod(ConstantIgnitor(0.5)) },
             "mod b" to { x -> ConstantIgnitor(0.5).mod(x) },
-            "lerp a" to { x -> x.lerp(ConstantIgnitor(0.5), ConstantIgnitor(0.3)) },
-            "lerp b" to { x -> ConstantIgnitor(0.5).lerp(x, ConstantIgnitor(0.3)) },
-            "lerp t" to { x -> ConstantIgnitor(0.5).lerp(ConstantIgnitor(1.0), x) },
-            "range upstream" to { x -> x.range(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)) },
-            "range from" to { x -> ConstantIgnitor(0.5).range(x, ConstantIgnitor(1.0)) },
-            "range to" to { x -> ConstantIgnitor(0.5).range(ConstantIgnitor(-1.0), x) },
+            "lerp a" to { x -> x.lerp(other = ConstantIgnitor(0.5), t = ConstantIgnitor(0.3)) },
+            "lerp b" to { x -> ConstantIgnitor(0.5).lerp(other = x, t = ConstantIgnitor(0.3)) },
+            "lerp t" to { x -> ConstantIgnitor(0.5).lerp(other = ConstantIgnitor(1.0), t = x) },
+            "range upstream" to { x -> x.range(from = ConstantIgnitor(-1.0), to = ConstantIgnitor(1.0)) },
+            "range from" to { x -> ConstantIgnitor(0.5).range(from = x, to = ConstantIgnitor(1.0)) },
+            "range to" to { x -> ConstantIgnitor(0.5).range(from = ConstantIgnitor(-1.0), to = x) },
             // select: no short-circuit on the condition — a stateful UNTAKEN branch must force
             // null (its state advances in generate; a scalar that ignores it would desync).
-            "select cond" to { x -> x.select(ConstantIgnitor(1.0), ConstantIgnitor(2.0)) },
-            "select whenTrue" to { x -> ConstantIgnitor(1.0).select(x, ConstantIgnitor(2.0)) },
+            "select cond" to { x -> x.select(whenTrue = ConstantIgnitor(1.0), whenFalse = ConstantIgnitor(2.0)) },
+            "select whenTrue" to { x -> ConstantIgnitor(1.0).select(whenTrue = x, whenFalse = ConstantIgnitor(2.0)) },
             "select whenFalse (untaken, stateful must poison)" to
-                { x -> ConstantIgnitor(1.0).select(ConstantIgnitor(2.0), x) },
+                { x -> ConstantIgnitor(1.0).select(whenTrue = ConstantIgnitor(2.0), whenFalse = x) },
         )
         val c = ctx()
         for ((name, build) in cases) {

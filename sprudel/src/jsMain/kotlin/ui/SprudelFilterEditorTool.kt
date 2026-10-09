@@ -22,7 +22,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
@@ -147,12 +146,6 @@ private class SprudelFilterEditorComp(ctx: Ctx<Props>) : Component<SprudelFilter
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
     // Whole-call mode reads freq/q from the host call's args; scalar mode reads the single arg.
     private val parsedFreq
         get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, 2000.0)
@@ -174,11 +167,8 @@ private class SprudelFilterEditorComp(ctx: Ctx<Props>) : Component<SprudelFilter
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
-        if (call != null) "${freq.fmt()}, ${resonance.fmt()}" else freq.fmt()
+        if (call != null) "${freq.formatArg()}, ${resonance.formatArg()}" else freq.formatArg()
 
     /**
      * Writes a slot only when that is safe: the user touched it, or the original arg parses
@@ -197,11 +187,11 @@ private class SprudelFilterEditorComp(ctx: Ctx<Props>) : Component<SprudelFilter
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 2) texts.add(null)
-            put(texts, 0, freq.fmt())
-            put(texts, 1, resonance.fmt())
+            put(texts, 0, freq.formatArg())
+            put(texts, 1, resonance.formatArg())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(freq.fmt())
+            props.toolCtx.onCommit(freq.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()

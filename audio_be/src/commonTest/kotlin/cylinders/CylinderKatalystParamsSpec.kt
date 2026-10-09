@@ -17,6 +17,9 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.phaser
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.pipeline
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
@@ -284,7 +287,7 @@ class CylinderKatalystParamsSpec : StringSpec({
     }
 
     "a WRITTEN wet of 0 keeps the room running and feeds it nothing; a room nobody named rents nothing" {
-        // Step 5b-2: `wet` is the orbit's amount, and the 5b-1 on/off rule stays (`sendStageRuns`):
+        // Step 5b-2: `wet` is the orbit's amount, and the 5b-1 on/off rule stays (`stageAskedFor`):
         // a written 0 runs the stage with nothing fed in, so a later wet glides up from there
         // instead of switching a room on; an authored 0 nobody writes rents nothing at all.
         //

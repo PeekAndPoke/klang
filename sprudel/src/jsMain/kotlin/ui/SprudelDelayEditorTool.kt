@@ -26,7 +26,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -52,7 +51,7 @@ import kotlin.math.exp
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the wet (send) plus the optional
  *   time/feedback/cap params of the host call and commits the full argument list. Unset optionals
- *   stay omitted (null slots), so the shared defaults apply (`constants/SendEffectDefaults.kt`).
+ *   stay omitted (null slots), so the shared defaults apply (`constants/BusEffectDefaults.kt`).
  * - Scalar fallback (embedded / sequence atom): edits a single wet (send) value.
  */
 object SprudelDelayEditorTool : KlangUiToolEmbeddable {
@@ -94,12 +93,6 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
     // Whole-call mode reads wet/time/feedback/cap from the host call's args; scalar mode reads the single arg.
     private val parsedWet
         get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, DELAY_WET)
@@ -128,14 +121,11 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
         if (call != null) {
-            "${wet.fmt()}, ${time?.fmt() ?: "-"}, ${feedback?.fmt() ?: "-"}, ${cap?.fmt() ?: "-"}"
+            "${wet.formatArg()}, ${time?.formatArg() ?: "-"}, ${feedback?.formatArg() ?: "-"}, ${cap?.formatArg() ?: "-"}"
         } else {
-            wet.fmt()
+            wet.formatArg()
         }
 
     /**
@@ -155,13 +145,13 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 4) texts.add(null)
-            put(texts, 0, wet.fmt())
-            put(texts, 1, time?.fmt())
-            put(texts, 2, feedback?.fmt())
-            put(texts, 3, cap?.fmt())
+            put(texts, 0, wet.formatArg())
+            put(texts, 1, time?.formatArg())
+            put(texts, 2, feedback?.formatArg())
+            put(texts, 3, cap?.formatArg())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(wet.fmt())
+            props.toolCtx.onCommit(wet.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()
@@ -362,7 +352,7 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
             for (v in listOf(0.0, 0.5, 1.0)) {
                 val y = padT + drawH - drawH * v
                 svgLine(padL, y, padL + drawW, y, stroke = "rgba(255,255,255,0.2)", strokeWidth = "0.5")
-                svgText(padL - 3, y + 2, v.fmt(), fill = "#ccc", fontSize = "5", textAnchor = "end")
+                svgText(padL - 3, y + 2, v.formatArg(), fill = "#ccc", fontSize = "5", textAnchor = "end")
             }
 
             // X-axis tick marks and labels

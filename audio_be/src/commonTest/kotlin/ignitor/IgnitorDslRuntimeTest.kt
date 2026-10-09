@@ -17,6 +17,11 @@ import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 class IgnitorDslRuntimeTest : StringSpec({
 
@@ -29,8 +34,9 @@ class IgnitorDslRuntimeTest : StringSpec({
             voiceDurationFrames = sampleRate, // 1 second
             gateEndFrame = sampleRate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -45,7 +51,7 @@ class IgnitorDslRuntimeTest : StringSpec({
     fun AudioBuffer.hasNonZeroSamples(): Boolean = any { it != 0.0 }
 
     "Freq DSL maps to FreqIgnitor" {
-        val sig = IgnitorDsl.Freq.toExciter()
+        val sig = IgnitorDsl.Freq.toExciter(random = testRandom)
         sig shouldBe FreqIgnitor
     }
 
@@ -58,39 +64,39 @@ class IgnitorDslRuntimeTest : StringSpec({
 
     "Constant(0.0) as freq produces 0 Hz (silence), not voice frequency" {
         val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.0))
-        val sig = dsl.toExciter()
+        val sig = dsl.toExciter(random = testRandom)
         val buffer = generateBlock(sig, freqHz = 440.0)
         // 0 Hz sine stays at sin(0) = 0, so all samples should be zero
         buffer.all { it == 0.0 } shouldBe true
     }
 
     "Sine DSL produces non-zero output" {
-        val sig = IgnitorDsl.Sine().toExciter()
+        val sig = IgnitorDsl.Sine().toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
     "Saw DSL produces non-zero output" {
-        val sig = IgnitorDsl.Saw().toExciter()
+        val sig = IgnitorDsl.Saw().toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
     "Square DSL produces non-zero output" {
-        val sig = IgnitorDsl.Square().toExciter()
+        val sig = IgnitorDsl.Square().toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
     "Tri DSL produces non-zero output" {
-        val sig = IgnitorDsl.Tri().toExciter()
+        val sig = IgnitorDsl.Tri().toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
     "WhiteNoise DSL produces non-zero output" {
-        val sig = IgnitorDsl.WhiteNoise().toExciter()
+        val sig = IgnitorDsl.WhiteNoise().toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
     "Silence DSL produces zero output" {
-        val sig = IgnitorDsl.Silence.toExciter()
+        val sig = IgnitorDsl.Silence.toExciter(random = testRandom)
         generateBlock(sig).all { it == 0.0 } shouldBe true
     }
 
@@ -98,15 +104,15 @@ class IgnitorDslRuntimeTest : StringSpec({
         val dsl = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
-                IgnitorDsl.EqSection.Lowpass(IgnitorDsl.Constant(2000.0), IgnitorDsl.Constant(1.0)),
+                IgnitorDsl.EqSection.Lowpass(freq = IgnitorDsl.Constant(2000.0), q = IgnitorDsl.Constant(1.0)),
             ),
         )
-        generateBlock(dsl.toExciter()).hasNonZeroSamples() shouldBe true
+        generateBlock(dsl.toExciter(random = testRandom)).hasNonZeroSamples() shouldBe true
     }
 
     "Plus composition produces non-zero output" {
         val dsl = IgnitorDsl.Sine() + IgnitorDsl.Saw()
-        val sig = dsl.toExciter()
+        val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
@@ -114,7 +120,7 @@ class IgnitorDslRuntimeTest : StringSpec({
         val dsl = (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1))
             .div(IgnitorDsl.Param("divisor", 2.0))
             .onepole(3000.0)
-        val sig = dsl.toExciter()
+        val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
@@ -123,18 +129,18 @@ class IgnitorDslRuntimeTest : StringSpec({
             modulator = IgnitorDsl.Sine(),
             ratio = 1.4,
             depth = 300.0,
-            envAttackSec = 0.001,
-            envDecaySec = 0.5,
-            envSustainLevel = 0.0,
-            envReleaseSec = 0.05,   // kept in sync with IgnitorDefaults (ledger E10)
+            attack = 0.001,
+            decay = 0.5,
+            sustain = 0.0,
+            release = 0.05,   // kept in sync with IgnitorDefaults (ledger E10)
         )
-        val sig = dsl.toExciter()
+        val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
     "sgbuzz composition produces non-zero output" {
         val dsl = IgnitorDsl.Square().lowpass(2000.0)
-        val sig = dsl.toExciter()
+        val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
@@ -147,8 +153,9 @@ class IgnitorDslRuntimeTest : StringSpec({
             voiceDurationFrames = sr,
             gateEndFrame = sr,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
 
@@ -162,13 +169,13 @@ class IgnitorDslRuntimeTest : StringSpec({
 
         // Normal sine at voice frequency
         val normalDsl = IgnitorDsl.Sine()
-        val normalSig = normalDsl.toExciter()
+        val normalSig = normalDsl.toExciter(random = testRandom)
         val normalBuf = AudioBuffer(blockFrames)
         normalSig.generate(normalBuf, 440.0, ctx())
 
         // Sine with freq = Freq / 2 (should be 220 Hz)
         val halfFreqDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0)))
-        val halfFreqSig = halfFreqDsl.toExciter()
+        val halfFreqSig = halfFreqDsl.toExciter(random = testRandom)
         val halfBuf = AudioBuffer(blockFrames)
         halfFreqSig.generate(halfBuf, 440.0, ctx())
 
@@ -182,8 +189,8 @@ class IgnitorDslRuntimeTest : StringSpec({
 
     "toExciter creates independent instances" {
         val dsl = IgnitorDsl.Sine()
-        val sig1 = dsl.toExciter()
-        val sig2 = dsl.toExciter()
+        val sig1 = dsl.toExciter(random = testRandom)
+        val sig2 = dsl.toExciter(random = testRandom)
 
         val buf1 = generateBlock(sig1)
         val buf2 = generateBlock(sig2)
@@ -211,32 +218,32 @@ class IgnitorDslRuntimeTest : StringSpec({
 
     // ─── Variants dispatch ────────────────────────────────────────────────────
 
-    fun referenceBlock(dsl: IgnitorDsl): AudioBuffer = generateBlock(dsl.toExciter())
+    fun referenceBlock(dsl: IgnitorDsl): AudioBuffer = generateBlock(dsl.toExciter(random = testRandom))
 
     "Variants with soundIndex=0 picks the first child" {
         val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw()))
-        val picked = generateBlock(dsl.toExciter(soundIndex = 0))
+        val picked = generateBlock(dsl.toExciter(soundIndex = 0, random = testRandom))
         val expected = referenceBlock(IgnitorDsl.Sine())
         for (i in picked.indices) picked[i] shouldBe expected[i]
     }
 
     "Variants with soundIndex=1 picks the second child" {
         val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw()))
-        val picked = generateBlock(dsl.toExciter(soundIndex = 1))
+        val picked = generateBlock(dsl.toExciter(soundIndex = 1, random = testRandom))
         val expected = referenceBlock(IgnitorDsl.Saw())
         for (i in picked.indices) picked[i] shouldBe expected[i]
     }
 
     "Variants wraps via floor-mod for overflow indices" {
         val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw()))
-        val picked = generateBlock(dsl.toExciter(soundIndex = 2)) // 2.mod(2) = 0 → Sine
+        val picked = generateBlock(dsl.toExciter(soundIndex = 2, random = testRandom)) // 2.mod(2) = 0 → Sine
         val expected = referenceBlock(IgnitorDsl.Sine())
         for (i in picked.indices) picked[i] shouldBe expected[i]
     }
 
     "Variants wraps via floor-mod for negative indices" {
         val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Saw()))
-        val picked = generateBlock(dsl.toExciter(soundIndex = -1)) // -1.mod(2) = 1 → Saw
+        val picked = generateBlock(dsl.toExciter(soundIndex = -1, random = testRandom)) // -1.mod(2) = 1 → Saw
         val expected = referenceBlock(IgnitorDsl.Saw())
         for (i in picked.indices) picked[i] shouldBe expected[i]
     }
@@ -253,21 +260,17 @@ class IgnitorDslRuntimeTest : StringSpec({
         val expectedIndex0 = referenceBlock(IgnitorDsl.Sine().lowpass(2000.0))
         val expectedIndex1 = referenceBlock(IgnitorDsl.Square().drive(0.4))
 
-        val pickedIndex0 = generateBlock(outer.toExciter(soundIndex = 0))
-        val pickedIndex1 = generateBlock(outer.toExciter(soundIndex = 1))
+        val pickedIndex0 = generateBlock(outer.toExciter(soundIndex = 0, random = testRandom))
+        val pickedIndex1 = generateBlock(outer.toExciter(soundIndex = 1, random = testRandom))
 
         for (i in pickedIndex0.indices) pickedIndex0[i] shouldBe expectedIndex0[i]
         for (i in pickedIndex1.indices) pickedIndex1[i] shouldBe expectedIndex1[i]
     }
 
-    "Variants with empty children throws at build time" {
-        val dsl = IgnitorDsl.Variants(emptyList())
-        var thrown: Throwable? = null
-        try {
-            dsl.toExciter()
-        } catch (t: Throwable) {
-            thrown = t
-        }
-        (thrown != null) shouldBe true
+    // User input both doors accept and the wire carries; the build runs at note-on on the audio thread, so an empty
+    // Variants is silence, never a throw (`/code-style` §21). Until 2026-10-07 this row pinned the opposite.
+    "Variants with empty children builds and renders silence" {
+        val picked = generateBlock(IgnitorDsl.Variants(emptyList()).toExciter(soundIndex = 3, random = testRandom))
+        for (i in picked.indices) picked[i] shouldBe 0.0
     }
 })

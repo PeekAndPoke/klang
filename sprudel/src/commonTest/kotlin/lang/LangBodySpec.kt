@@ -9,7 +9,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
@@ -48,7 +47,7 @@ class LangBodySpec : StringSpec({
     }
 
     "body params survive the grouped merge (material + wet + floor)" {
-        // The wire carries the raw value; the [0, 1] coercion is the ENGINE's (ParallelMixFilter, C4).
+        // The wire carries the raw value; the [0, 1] coercion is the ENGINE's (ResonatorBank, C4).
         val events = note("c3").body(material = "brass", wet = 0.8, floor = 0.15).queryArc(0.0, 1.0)
         val slots = events[0].data.toVoiceData().katalystParams ?: emptyMap()
 
@@ -67,12 +66,12 @@ class LangBodySpec : StringSpec({
 
     "the door resolves through the shared BodyMaterials table (Katalyst step 3c parity)" {
         // The door half of the parity `KatalystSlotResolverSpec` holds the other half of: a declared Katalyst
-        // chain's `body` stage reads the SAME table through `KatalystSlots`. `audio_be` does not depend on
+        // chain's `body` stage reads the SAME table through `KatalystResonatorWriter`. `audio_be` does not depend on
         // `sprudel`, so the landmark mode is pinned on both sides.
         val slots = slots(note("c3").body(material = "wood", wet = 0.3))
 
         modes(slots) shouldBe BodyMaterials.modesFor("wood")
-        modes(slots)?.get(0) shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
+        modes(slots)?.get(0) shouldBe BodyMaterials.Mode(freq = 100.0, db = 3.0, q = 12.0)
         slots["body.wet"] shouldBe 0.3
         slots["body.floor"] shouldBe BODY_FLOOR
     }

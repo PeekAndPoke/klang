@@ -10,7 +10,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
@@ -27,7 +26,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 class LangVowelComprehensiveSpec : StringSpec({
 
     /** The formant bands the orbit resolves from this wire voice's `vowel.vowel` slot, or null (no vowel). */
-    fun bandsOf(voiceData: VoiceData): List<FilterDef.Formant.Band>? =
+    fun bandsOf(voiceData: VoiceData): List<VowelBands.Band>? =
         VowelBands.bandsAt(voiceData.katalystParams?.get("vowel.vowel") ?: Double.NaN)
 
     fun voiceOf(vowel: String): VoiceData = note("c3").vowel(vowel = vowel).queryArc(0.0, 1.0)[0].data.toVoiceData()
@@ -82,14 +81,14 @@ class LangVowelComprehensiveSpec : StringSpec({
 
     "the voice path resolves through the shared VowelBands table (Katalyst step 3c parity)" {
         // The door half of the parity `KatalystSlotResolverSpec` holds the other half of: a
-        // declared Katalyst chain's `vowel` stage reads the SAME table through `KatalystSlots`.
+        // declared Katalyst chain's `vowel` stage reads the SAME table through `KatalystResonatorWriter`.
         // `audio_be` does not depend on `sprudel`, so the landmark band is pinned on both sides.
         // The door fills the floor when a call names the vowel (Katalyst step 5a-3).
         val voiceData = note("c3").vowel(vowel = "a", wet = 0.3).queryArc(0.0, 1.0)[0].data.toVoiceData()
         val bands = bandsOf(voiceData).shouldNotBeNull()
 
         bands shouldBe VowelBands.bandsFor("soprano:a")
-        bands[0] shouldBe FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0)
+        bands[0] shouldBe VowelBands.Band(freq = 800.0, db = 0.0, q = 80.0)
         voiceData.katalystParams?.get("vowel.wet") shouldBe 0.3
         voiceData.katalystParams?.get("vowel.floor") shouldBe VOWEL_FLOOR
     }

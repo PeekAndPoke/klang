@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDuckEffect
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import kotlin.math.max
 
 /**
@@ -77,7 +78,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
     private val fade: Crossfade = Crossfade(sampleRate)
 
     /** The release at the drain's cap ([Releasing]). One per host, created once; it outlives every state. */
-    private val release: TailRelease = TailRelease(sampleRate, blockFrames)
+    private val release: TailRelease = TailRelease(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /**
      * What the leaving chain is fed: the host's mix scaled by the outgoing weight during the fade,
@@ -246,8 +247,8 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
                 // back in with the weights reversed, so the orbit's gain travels from "not ducked" to
                 // "ducked" across the fade instead of dropping by the whole reduction on the first
                 // sample the trigger is seen.
-                mix.left.copyInto(duckMix.left, 0, 0, blockFrames)
-                mix.right.copyInto(duckMix.right, 0, 0, blockFrames)
+                mix.left.copyRangeInto(destination = duckMix.left, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+                mix.right.copyRangeInto(destination = duckMix.right, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
                 chain.processDuck(ctx)
                 fade.blendHeld(target = mix, incoming = mix, outgoing = duckMix, frames = blockFrames)
 
@@ -272,8 +273,8 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             // in with the weights this block's chains were blended with. NOT by ramping the duck's
             // depth: that knob can only be written per block, and a per-block step in a gain that
             // multiplies the whole orbit is a zipper (measured at 0.038 on a 0.5 probe, depth 0.8).
-            mix.left.copyInto(duckMix.left, 0, 0, blockFrames)
-            mix.right.copyInto(duckMix.right, 0, 0, blockFrames)
+            mix.left.copyRangeInto(destination = duckMix.left, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+            mix.right.copyRangeInto(destination = duckMix.right, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
             leavingDuck.process(ctx)
             fade.blendHeld(target = mix, incoming = duckMix, outgoing = mix, frames = blockFrames)
 
@@ -353,7 +354,8 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             leavingMix.clear()
             out.process(leavingContext)
             chain.process(ctx)
-            addLeavingMix(ctx.mixBuffer)
+            // The draining chain's ring-out, at full weight: it is the host's own tail, not a second mix.
+            ctx.mixBuffer.addFrom(source = leavingMix, frames = blockFrames)
 
             // The tail is asked FIRST: a drain that ends on its own in the block that reaches the
             // cap is an ordinary drain, not released.
@@ -567,20 +569,6 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
     fun retire(chain: KatalystChain) {
         retiredDeniedRents += chain.deniedRents
         chain.retire()
-    }
-
-    /** The draining chain's ring-out, at full weight: it is the host's own tail, not a second mix. */
-    private fun addLeavingMix(mix: StereoBuffer) {
-        val mixLeft = mix.left
-        val mixRight = mix.right
-        val outLeft = leavingMix.left
-        val outRight = leavingMix.right
-        val frames = blockFrames
-
-        for (i in 0 until frames) {
-            mixLeft[i] = mixLeft[i] + outLeft[i]
-            mixRight[i] = mixRight[i] + outRight[i]
-        }
     }
 
     companion object {

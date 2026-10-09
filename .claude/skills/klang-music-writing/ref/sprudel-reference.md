@@ -367,7 +367,7 @@ selection — extended to ignitor variants and per-note gain.
 | Function           | Aliases         | Description                     | Example                                |
 |--------------------|-----------------|---------------------------------|----------------------------------------|
 | `sound(name)`      | `s`             | Set sound/instrument            | `sound("bd sd hh cp")`                 |
-| `analog(amt)`      |                 | Analog oscillator drift         | `note("c3").s("supersaw").analog(0.2)` |
+| `analog(amt)`      |                 | How analog: a character scale, 0 ideal, 1 to 8 usual, 10 strong (an oscillator drifts about a cent per unit) | `note("c3").s("supersaw").analog(4)` |
 | `ignitorParam(slot, value)` | `ignp` | Write one slot of the playing instrument, per voice. `slot` is the slot's NAME or the param OBJECT itself (`Ignitor.param(...)` held in a variable, or `Ignitor.slot.*`); only the name is written, the default stays the instrument's. A Katalyst param is a script error at the call (`a Katalyst param passed to ignp; use katp`), and so is a number or a sound | `note("c2").sound(bass).ignp("cutoff", 1200)`, `.ignp(cutoff, 1200)`, `.ignp(Ignitor.slot.analog, 4)` |
 | `unison(voices, spread, pan)`                                          | `uni`      | Unison voices, detune spread in semitones, stereo spread (reserved); readers `unison.voices`, `.spread`, `.pan`                                        | `note("c3").s("supersaw").unison(5, 0.3)`                                                            |
 | `density(amt)`     | `d`             | Oscillator density (noise)      | `note("a").s("dust").density(40)`      |
@@ -405,8 +405,8 @@ at the cutoff). Same third slot on the ignitor door.
 | `delay.wet` / `delay.time` / `delay.feedback` / `delay.cap`                 |          | Read a delay slot                                                                                                                                                | `p.delay(time = 0.25).reverb(size = delay.time.mul(20))`     |
 | `distort(amount, shape, oversample)`                                        |          | Distortion amount, shape name (`soft`, `hard`, `fold`, `exp`, ...), oversample factor (Int)                                                                      | `s("bd").distort(amount = 2, shape = "fold")`                |
 | `distort.amount` / `distort.oversample`                                     |          | Read a distortion slot (`shape` is a string, no reader)                                                                                                          | `p.distort(0.4).pan(distort.amount)`                         |
-| `crush(amount, oversample)`                                                 |          | Bitcrusher bits, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `crush.amount`, `crush.oversample` | `s("hh").crush(8)`                                           |
-| `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `coarse.amount`, `coarse.oversample` | `note("c3").s("saw").coarse(3)`                              |
+| `crush(bits, oversample)`                                                   |          | Bitcrusher bits, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `crush.bits`, `crush.oversample` | `s("hh").crush(8)`                                           |
+| `coarse(factor, oversample)`                                                |          | Sample-rate reduction factor, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `coarse.factor`, `coarse.oversample` | `note("c3").s("saw").coarse(3)`                              |
 | `phaser(wet, rate, center, sweep, floor)`                                   |          | Phaser: wet FIRST (additive by default), then the LFO rate in Hz, center Hz, sweep range Hz, floor. A bare `phaser()` reads the pattern's values as `wet` | `note("c3").phaser(wet = 0.5, rate = 1, center = 1000)`      |
 | `phaser.wet` / `phaser.rate` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
 | `tremolo(depth, rate, shape)`                                               |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`rate`, `beatRate(n)` follows the tempo), LFO shape name (the oscillator of that name; square, sawtooth and ramp get a 16 ms soft edge). The level always dips from 1 to `1 - depth`; a swell upward is the Ignitor door's `range` knob, `.tremolo(rate, depth, x => x.range(0, 1))`: no pattern slot, by decision (2026-10-06) | `note("c3").tremolo(depth = 0.5, rate = 4, shape = "sine")`  |
@@ -833,7 +833,7 @@ stack(
   // Melody: Karplus-Strong plucked string with tremolo
   n(`<[8@2 8 8 8@2 8 8] [8 4  6  8]  [7@2 7 7 7@2 7 7] [7 3  5  7]
       [8@2 8 8 8@2 8 8] [8 9 10 11]  [10 8 7 5]        [4@2 4@2  ]
-  >`).sndPluck(0.999, 0.8)      // high decay + brightness pluck
+  >`).sndPluck(0.999, 0.8)      // high feedback + brightness pluck
     .clip(0.8)                    // note duration 80%
     .scale("c3:dorian")          // dorian mode for folk feel
     .gain(0.8)

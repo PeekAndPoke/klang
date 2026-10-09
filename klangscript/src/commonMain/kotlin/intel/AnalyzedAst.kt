@@ -43,13 +43,13 @@ import io.peekandpoke.klang.script.runtime.ArgAlignment
 import io.peekandpoke.klang.script.ast.TernaryExpression
 import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.ast.WhileStatement
-import io.peekandpoke.klang.script.ast.buildLineOffsets
-import io.peekandpoke.klang.script.ast.lineColToOffset
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
+import io.peekandpoke.klang.script.utils.buildLineOffsets
+import io.peekandpoke.klang.script.utils.lineColToOffset
 
 /**
  * Result of parsing and analyzing a KlangScript program.
@@ -192,7 +192,7 @@ class AnalyzedAst(
      * Returns null if the position doesn't map to an expression or the type is unknown.
      */
     fun getTypeAt(line: Int, col: Int): KlangType? {
-        val offset = lineColToOffset(lineOffsets, line, col) ?: return null
+        val offset = lineColToOffset(lineOffsets = lineOffsets, line = line, column = col) ?: return null
         return getTypeAtOffset(offset)
     }
 

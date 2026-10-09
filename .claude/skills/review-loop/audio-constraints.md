@@ -39,8 +39,9 @@ gone is removed when someone notices, not kept for history.
   The engine's tail questions are `TailCeiling` compares (`KatalystChain.hasTail()`, on an orbit and at the output
   since phase 3 step 12 C3); `MasterBus` still asks only after `TAIL_CHECK_INTERVAL_BLOCKS` silent blocks, because a
   delay is silent between echoes and an output-only test would cut them.
-- **`KatalystBodyEffect` / `KatalystFormantEffect` are intentional un-deduped twins**: change one,
-  mirror the other.
+- **A sounding resonator bank never retunes** (body and vowel, one class with two kinds, `KatalystResonatorEffect`,
+  tidy-up step 12 (a)): a change installs only into the pooled pair the swap does not hold, from zero state. Do not
+  morph or reconfigure the bank in service; the 5c-10 morph was rejected by ear (`ResonatorBank`'s KDoc).
 - **Numerical contract**: `SAFE_MIN 1e-15` / `SAFE_MAX 1e15` (matches SuperCollider `zapgremlins`);
   "safe" means finite, **not** small: consumers must be O(1) regardless of magnitude.
 - **Rejected optimisations, do not retry:** `fastCopy` (about 22x slower on JS), ProtoBuf for the

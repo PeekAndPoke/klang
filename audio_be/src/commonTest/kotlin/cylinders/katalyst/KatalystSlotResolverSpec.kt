@@ -5,17 +5,18 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -24,14 +25,21 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
@@ -108,7 +116,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "delay: wet 0.0 is OFF in this step, so the stage rents nothing" {
         // `wet` decides WHETHER the stage runs until step 5b-2 makes the sends insert-style
-        // (`sendStageRuns` is the one home): a chain cannot
+        // (`stageAskedFor` is the one home): a chain cannot
         // say HOW MUCH yet, but it must be able to say NOTHING, like the phaser's depth and the
         // duck's orbit.
         val chain = declared(
@@ -140,8 +148,27 @@ class KatalystSlotResolverSpec : StringSpec({
         unit.lowpass shouldBe 3000.0
     }
 
-    "reverb: a non-finite lowpass is unset, which is the engine's own damping" {
-        val chain = declared(KatalystStageDsl.Reverb(size = c(6.0), lowpass = c(SLOT_UNSET)))
+    "reverb: a non-finite lowpass is unset, which is the engine's own damping, never the previous one" {
+        // `Reverb.lowpass`'s setter DROPS a non-finite write and keeps what it had, so on a fresh
+        // room a dropped NaN and an honoured "unset" both read null. Only a lowpass that was SET
+        // first tells them apart: the stage's guard (the one home of the rule since the writer
+        // hands the slot through raw, audit B2.11) has to clear it.
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Reverb(size = c(6.0), lowpass = IgnitorDsl.Param("reverb.lowpass", SLOT_UNSET))
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        chain.applyParams(mapOf("reverb.lowpass" to 3000.0))
+
+        chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().lowpass shouldBe 3000.0
+
+        // A new map instance: the chain re-resolves only when the param state changes.
+        chain.applyParams(mapOf("reverb.lowpass" to SLOT_UNSET))
 
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().lowpass.shouldBeNull()
     }
@@ -159,7 +186,7 @@ class KatalystSlotResolverSpec : StringSpec({
     }
 
     "reverb: an AUTHORED wet of 0.0 that no pattern writes rents nothing" {
-        // Half of the send gate (`sendStageRuns`), and the half decided on 2026-09-17: a chain
+        // Half of the stage gate (`stageAskedFor`), and the half decided on 2026-09-17: a chain
         // that says `wet(0.0)` asked for a chain that HAS a room, not for a room. Nothing in the
         // param state, so `KatalystKnob.written` is false and only the authored amount speaks.
         val chain = declared(KatalystStageDsl.Reverb(wet = c(0.0), size = c(6.0)))
@@ -169,7 +196,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "reverb: a WRITTEN wet of 0.0 keeps the room running, fed nothing" {
         // The other half, put back in review round 1 of Katalyst step 5b-1 and kept by the 5b-2
-        // decision (`sendStageRuns`): a written wet is the orbit's amount, a LEVEL that glides, so
+        // decision (`stageAskedFor`): a written wet is the orbit's amount, a LEVEL that glides, so
         // a written 0 runs the stage with nothing fed in and a later amount glides up from there
         // instead of switching a room on. `VoiceFactory` ran the stage on a TOUCHED field, a
         // written 0 included, and the slot twin of touched is "the map carries the key with a
@@ -386,6 +413,75 @@ class KatalystSlotResolverSpec : StringSpec({
         phaser.feedback shouldBe 0.5
     }
 
+    // ── The writers' holders ─────────────────────────────────────────────────────────────────────
+
+    "a writer applied before its first resolve writes the authored values: its holder is filled when it is built" {
+        // The resonator, delay, reverb and phaser writers hand their stage a holder (`ResonatorConfig`, `DelayConfig`,
+        // `ReverbConfig`, `PhaserConfig`; V8 allocation pass) that they fill at resolve AND when they are built. The
+        // chain resolves before it applies, so no engine path applies first today; this row keeps the second half, so
+        // a path that does never meets an empty holder (no table, all NaN: every stage off).
+        val body = KatalystResonatorEffect(kind = ResonatorKind.BODY, sampleRate = sampleRate.toDouble(), blockFrames = blockFrames)
+        val wood = BodyMaterials.indexOf("wood")
+
+        KatalystResonatorWriter(
+            fx = body,
+            index = KatalystKnob(c(wood), SLOT_UNSET),
+            wet = KatalystKnob(c(0.6), BODY_WET),
+            floor = KatalystKnob(c(0.3), BODY_FLOOR),
+        ).apply()
+
+        body.installedTable shouldBeSameInstanceAs ResonatorTables.at(kind = ResonatorKind.BODY, slotValue = wood).shouldNotBeNull()
+        body.installedMix shouldBe 0.6
+        body.installedFloor shouldBe 0.3
+
+        val delay = KatalystDelayEffect(rings = SizedBuffers.forRings(sampleRate), sampleRate = sampleRate, blockFrames = blockFrames)
+
+        KatalystDelayWriter(
+            fx = delay,
+            wet = KatalystKnob(c(0.3), DELAY_WET),
+            time = KatalystKnob(c(0.25), DELAY_TIME_SECONDS),
+            feedback = KatalystKnob(c(0.4), DELAY_FEEDBACK),
+            cap = KatalystKnob(c(0.9), DELAY_CAP),
+        ).apply()
+
+        val line = delay.delayLine.shouldNotBeNull()
+
+        line.time shouldBe 0.25
+        line.feedback shouldBe 0.4
+        line.cap shouldBe 0.9
+
+        val reverb = KatalystReverbEffect(units = ReverbUnits(sampleRate), blockFrames = blockFrames)
+
+        KatalystReverbWriter(
+            fx = reverb,
+            wet = KatalystKnob(c(0.3), REVERB_WET),
+            size = KatalystKnob(c(6.0), REVERB_SIZE),
+            lowpass = KatalystKnob(c(3000.0), SLOT_UNSET),
+        ).apply()
+
+        val unit = reverb.reverb.shouldNotBeNull()
+
+        unit.size shouldBe Reverb.normalizeSize(6.0)
+        unit.lowpass shouldBe 3000.0
+
+        val phaser = KatalystPhaserEffect(phaser = Phaser(sampleRate), sampleRate = sampleRate, blockFrames = blockFrames)
+
+        KatalystPhaserWriter(
+            fx = phaser,
+            wet = KatalystKnob(c(0.5), PHASER_WET),
+            rate = KatalystKnob(c(3.0), PHASER_RATE_HZ),
+            center = KatalystKnob(c(700.0), PHASER_CENTER_HZ),
+            sweep = KatalystKnob(c(400.0), PHASER_SWEEP_HZ),
+            floor = KatalystKnob(c(0.2), PHASER_FLOOR),
+        ).apply()
+
+        phaser.phaser.depth shouldBe 0.5
+        phaser.phaser.rate shouldBe 3.0
+        phaser.phaser.floor shouldBe 0.2
+        phaser.center shouldBe 700.0
+        phaser.sweep shouldBe 400.0
+    }
+
     // ── Compressor ───────────────────────────────────────────────────────────────────────────────
 
     "compressor: ONE finite slot switches it on, the other four take their constants" {
@@ -406,6 +502,41 @@ class KatalystSlotResolverSpec : StringSpec({
         comp.kneeDb shouldBe COMPRESSOR_KNEE_DB
         comp.attackSeconds shouldBe COMPRESSOR_ATTACK_SECONDS
         comp.releaseSeconds shouldBe COMPRESSOR_RELEASE_SECONDS
+    }
+
+    "compressor: EACH of the five alone switches it on, and a set slot passes through untouched" {
+        // The writer's rule (folded from `Voice.Compressor.fromParams`, 2026-10-07): ANY finite slot
+        // means on, and every non-finite one takes its constant. One sub-case per slot, so a gate
+        // that forgot one of the five is red on that slot's line.
+        val set = listOf(-15.0, 3.0, 2.0, 0.004, 0.2)
+        val constants = listOf(
+            COMPRESSOR_THRESHOLD_DB,
+            COMPRESSOR_RATIO,
+            COMPRESSOR_KNEE_DB,
+            COMPRESSOR_ATTACK_SECONDS,
+            COMPRESSOR_RELEASE_SECONDS,
+        )
+
+        fun stage(slots: List<Double>) = KatalystStageDsl.Compressor(
+            threshold = c(slots[0]),
+            ratio = c(slots[1]),
+            knee = c(slots[2]),
+            attack = c(slots[3]),
+            release = c(slots[4]),
+        )
+
+        fun read(comp: Compressor) = listOf(comp.thresholdDb, comp.ratio, comp.kneeDb, comp.attackSeconds, comp.releaseSeconds)
+
+        for (alone in set.indices) {
+            val slots = set.indices.map { if (it == alone) set[it] else SLOT_UNSET }
+            val comp = declared(stage(slots)).compressor.shouldNotBeNull().compressor
+
+            withClue("only slot $alone set") {
+                read(comp.shouldNotBeNull()) shouldBe set.indices.map { if (it == alone) set[it] else constants[it] }
+            }
+        }
+
+        read(declared(stage(set)).compressor.shouldNotBeNull().compressor.shouldNotBeNull()) shouldBe set
     }
 
     "compressor: all five unset is OFF, even with a voice that carries one" {
@@ -522,9 +653,9 @@ class KatalystSlotResolverSpec : StringSpec({
         )
 
         chain.body.shouldNotBeNull().isEngaged shouldBe true
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
         chain.vowel.shouldNotBeNull().isEngaged shouldBe true
-        chain.vowel.shouldNotBeNull().installedBands shouldBe VowelBands.bandsFor("bass:a")
+        chain.vowel.shouldNotBeNull().installedTable.bandList() shouldBe vowelBandList(VowelBands.bandsFor("bass:a"))
 
         // A moved index re-resolves to the other box, and index 0 (`none`) switches it back off.
         chain.applyParams(
@@ -536,14 +667,14 @@ class KatalystSlotResolverSpec : StringSpec({
             )
         )
 
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("glass")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("glass"))
         chain.vowel.shouldNotBeNull().isEngaged shouldBe false
     }
 
-    "body and vowel: the def is rebuilt only when the param map INSTANCE changes" {
+    "body and vowel: the table is looked up only when the param map INSTANCE changes" {
         // The cost rule of the param state: `apply` runs every block and writes a def already in
         // hand, and only a new map instance costs a lookup. A writer that resolved in `apply`
-        // would do a catalogue lookup and allocate a FilterDef per block per orbit.
+        // would do a catalogue lookup per block per orbit.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Body(
@@ -561,19 +692,19 @@ class KatalystSlotResolverSpec : StringSpec({
 
         chain.applyParams(first)
         chain.resolveCount shouldBe 1
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
 
         // The SAME instance again does not re-resolve: the gate is identity, so a live owner
         // re-offering its map every block costs one reference compare and no lookup.
         chain.applyParams(first)
         chain.applyParams(first)
         chain.resolveCount shouldBe 1
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
 
         // A DIFFERENT map with a different index does, and lands on the other box.
         chain.applyParams(mapOf("body.material" to BodyMaterials.indexOf("bell"), "body.wet" to 0.3))
         chain.resolveCount shouldBe 2
-        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("bell")
+        chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("bell"))
     }
 
     "body and vowel: a signal-rate node on the index slot is coerced, never refused" {
@@ -581,12 +712,12 @@ class KatalystSlotResolverSpec : StringSpec({
         // author's number, so `0.5 * 2` picks the first material; an oscillator has no bus value,
         // so it takes the knob's fallback, which is unset, which is the stage off.
         val folded = declared(
-            KatalystStageDsl.Body(material = IgnitorDsl.Times(c(0.5), c(2.0)), wet = c(0.3))
+            KatalystStageDsl.Body(material = IgnitorDsl.Times(left = c(0.5), right = c(2.0)), wet = c(0.3))
         )
 
         folded.body.shouldNotBeNull().isEngaged shouldBe true
-        folded.body.shouldNotBeNull().installedBands shouldBe
-                BodyMaterials.modesFor(BodyMaterials.names[1])
+        folded.body.shouldNotBeNull().installedTable.bandList() shouldBe
+                bodyBandList(BodyMaterials.modesFor(BodyMaterials.names[1]))
 
         val oscillated = declared(
             KatalystStageDsl.Body(material = IgnitorDsl.Sine(), wet = c(0.3)),
@@ -605,40 +736,41 @@ class KatalystSlotResolverSpec : StringSpec({
         perNote.body.shouldNotBeNull().isEngaged shouldBe false
     }
 
-    "body and vowel: the resolved def is the voice path's, up to the floor fill" {
+    "body and vowel: the installed bank is the voice path's, up to the floor fill" {
         // Parity with `SprudelVoiceData.toVoiceData` (Katalyst step 3c): both paths read the SAME
         // [BodyMaterials] / [VowelBands] table, so this row pins the table's answer on the chain
         // side while `LangBodySpec` and `LangVowelComprehensiveSpec` pin the voice side against the
         // same landmark modes. `audio_be` does not depend on `sprudel`, so the two halves of the
         // parity cannot live in one file.
         //
-        // The ONE difference between the paths is the floor FILL: a voice leaves `floor = null`,
-        // which [FilterDef.Body] documents as "engine default", while a declared stage writes that
-        // same default out as a number. Same filter, two spellings of one value.
-        val body = KatalystSlots.bodyDef(
-            bands = BodyMaterials.modesAt(BodyMaterials.indexOf("wood")),
-            mix = 0.3,
-            floor = BODY_FLOOR,
-        ).shouldNotBeNull()
+        // The ONE difference between the paths was the floor FILL: a voice left `floor = null`,
+        // which the bridge's band carrier (`FilterDef.Body`, retired in engine tidy-up step 12 (c))
+        // documented as "engine default", while a declared stage writes that same default out as a
+        // number. Same filter, two spellings of one value (and since engine tidy-up step 12 (a) one
+        // key in the stage, which takes a number).
+        val chain = declared(
+            KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("wood")), wet = c(0.3), floor = c(BODY_FLOOR)),
+            KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("a")), wet = c(0.3), floor = c(VOWEL_FLOOR)),
+        )
 
-        body.bands shouldBe BodyMaterials.modesFor("wood")
-        body.bands.first() shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
-        body.bands.size shouldBe 8
-        body.mix shouldBe 0.3
-        body.floor shouldBe BODY_FLOOR
+        val body = chain.body.shouldNotBeNull()
 
-        val vowel = KatalystSlots.vowelDef(
-            bands = VowelBands.bandsAt(VowelBands.indexOf("a")),
-            mix = 0.3,
-            floor = VOWEL_FLOOR,
-        ).shouldNotBeNull()
+        body.installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
+        body.installedTable.bandList().shouldNotBeNull().first() shouldBe
+            bodyBandList(listOf(BodyMaterials.Mode(freq = 100.0, db = 3.0, q = 12.0))).shouldNotBeNull().first()
+        body.installedTable.shouldNotBeNull().count shouldBe 8
+        body.installedMix shouldBe 0.3
+        body.installedFloor shouldBe BODY_FLOOR
+
+        val vowel = chain.vowel.shouldNotBeNull()
 
         // A bare vowel name is the soprano register, the voice path's rule as well.
-        vowel.bands shouldBe VowelBands.bandsFor("soprano:a")
-        vowel.bands.first() shouldBe FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0)
-        vowel.bands.size shouldBe 5
-        vowel.mix shouldBe 0.3
-        vowel.floor shouldBe VOWEL_FLOOR
+        vowel.installedTable.bandList() shouldBe vowelBandList(VowelBands.bandsFor("soprano:a"))
+        vowel.installedTable.bandList().shouldNotBeNull().first() shouldBe
+            vowelBandList(listOf(VowelBands.Band(freq = 800.0, db = 0.0, q = 80.0))).shouldNotBeNull().first()
+        vowel.installedTable.shouldNotBeNull().count shouldBe 5
+        vowel.installedMix shouldBe 0.3
+        vowel.installedFloor shouldBe VOWEL_FLOOR
     }
 
     "body and vowel: an index that names nothing is OFF, the rule toVoiceData follows for a name" {
@@ -663,42 +795,47 @@ class KatalystSlotResolverSpec : StringSpec({
     }
 
     "body and vowel: with bands, mix IS wet and a non-finite floor takes its constant" {
-        val modes = listOf(FilterDef.Body.Mode(freq = 200.0, db = 0.0, q = 8.0))
-        val bands = listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 90.0))
+        // The writer hands the slots through raw and the stage substitutes (the one home of the
+        // rule since 2026-10-07, audit B2.11), so this row reads what the stage INSTALLED.
+        val chain = declared(
+            KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("wood")), wet = c(0.3), floor = c(SLOT_UNSET)),
+            KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("a")), wet = c(0.4), floor = c(SLOT_UNSET)),
+        )
 
-        val body = KatalystSlots.bodyDef(bands = modes, mix = 0.3, floor = SLOT_UNSET).shouldNotBeNull()
+        val body = chain.body.shouldNotBeNull()
 
-        body.bands shouldBe modes
-        body.mix shouldBe 0.3
-        body.floor shouldBe BODY_FLOOR
+        body.installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
+        body.installedMix shouldBe 0.3
+        body.installedFloor shouldBe BODY_FLOOR
 
-        val vowel = KatalystSlots.vowelDef(bands = bands, mix = 0.4, floor = SLOT_UNSET).shouldNotBeNull()
+        val vowel = chain.vowel.shouldNotBeNull()
 
-        vowel.bands shouldBe bands
-        vowel.mix shouldBe 0.4
-        vowel.floor shouldBe VOWEL_FLOOR
+        vowel.installedTable.bandList() shouldBe vowelBandList(VowelBands.bandsFor("soprano:a"))
+        vowel.installedMix shouldBe 0.4
+        vowel.installedFloor shouldBe VOWEL_FLOOR
 
         // A finite floor is the author's, untouched (the Motor stays raw).
-        KatalystSlots.bodyDef(bands = modes, mix = BODY_WET, floor = 0.05)
-            .shouldNotBeNull().floor shouldBe 0.05
+        declared(KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("wood")), wet = c(BODY_WET), floor = c(0.05)))
+            .body.shouldNotBeNull().installedFloor shouldBe 0.05
     }
 
     "body and vowel: a non-finite mix takes its constant, like the floor" {
-        val modes = listOf(FilterDef.Body.Mode(freq = 200.0, db = 0.0, q = 8.0))
-        val bands = listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 90.0))
-
         // A NaN mix reaches the wet/dry law and silences the orbit, so unset has to read as the
         // constant here exactly as it does for the floor.
-        KatalystSlots.bodyDef(bands = modes, mix = SLOT_UNSET, floor = BODY_FLOOR)
-            .shouldNotBeNull().mix shouldBe BODY_WET
+        val chain = declared(
+            KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("wood")), wet = c(SLOT_UNSET), floor = c(BODY_FLOOR)),
+            KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("a")), wet = c(SLOT_UNSET), floor = c(VOWEL_FLOOR)),
+        )
 
-        KatalystSlots.vowelDef(bands = bands, mix = SLOT_UNSET, floor = VOWEL_FLOOR)
-            .shouldNotBeNull().mix shouldBe VOWEL_WET
-    }
+        chain.body.shouldNotBeNull().apply {
+            isEngaged shouldBe true
+            installedMix shouldBe BODY_WET
+        }
 
-    "body and vowel: null bands is the off switch, whatever the slots say" {
-        KatalystSlots.bodyDef(bands = null, mix = 1.0, floor = BODY_FLOOR).shouldBeNull()
-        KatalystSlots.vowelDef(bands = null, mix = 1.0, floor = VOWEL_FLOOR).shouldBeNull()
+        chain.vowel.shouldNotBeNull().apply {
+            isEngaged shouldBe true
+            installedMix shouldBe VOWEL_WET
+        }
     }
 
     // ── The value vocabulary ─────────────────────────────────────────────────────────────────────
@@ -713,7 +850,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "a foldable arithmetic node is read at control rate, not refused" {
         val chain = declared(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Times(c(0.1), c(3.0)))
+            KatalystStageDsl.Delay(time = IgnitorDsl.Times(left = c(0.1), right = c(3.0)))
         )
 
         // 0.1 * 3 is 0.30000000000000004 in binary floating point; the row pins the FOLD, so the
@@ -754,7 +891,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // first version of the resolver got wrong: `Times` scrubs a non-finite probe to 0.0
         // through `safeOut`, so a NaN-based discriminator read it as a legitimate zero.
         val chain = declared(
-            KatalystStageDsl.Delay(time = c(0.25), feedback = IgnitorDsl.Times(IgnitorDsl.Freq, c(2.0)))
+            KatalystStageDsl.Delay(time = c(0.25), feedback = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = c(2.0)))
         )
 
         chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().feedback shouldBe DELAY_FEEDBACK
@@ -766,7 +903,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // number means off, and the resolver may not second-guess it: the same rule keeps
         // `phaser(rate = 0)` meaning a standing sweep.
         val chain = declared(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Div(c(1.0), c(0.0)))
+            KatalystStageDsl.Delay(time = IgnitorDsl.Div(left = c(1.0), right = c(0.0)))
         )
 
         chain.delay.shouldNotBeNull().delayLine.shouldBeNull()

@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.SampleStore
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
@@ -67,24 +66,24 @@ object ClassicVoiceRig {
         val an = IgnitorDsl.Slots.analog
         val filter: IgnitorDsl = when (door) {
             "lpf" -> IgnitorDsl.Lowpass(
-                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
-                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attack = c(0.01), decay = c(0.15), sustain = c(0.3),
+                release = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             "hpf" -> IgnitorDsl.Highpass(
-                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
-                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attack = c(0.01), decay = c(0.15), sustain = c(0.3),
+                release = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             "bpf" -> IgnitorDsl.Bandpass(
-                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
-                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attack = c(0.01), decay = c(0.15), sustain = c(0.3),
+                release = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             else -> IgnitorDsl.Notch(
-                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
-                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attack = c(0.01), decay = c(0.15), sustain = c(0.3),
+                release = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
         }
 
-        return filter.adsr(VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
+        return filter.adsr(attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC, declick = ENV_DECLICK_SECONDS)
     }
 
     fun render(data: VoiceData, sampleRate: Int): DoubleArray {
@@ -96,7 +95,7 @@ object ClassicVoiceRig {
             register("saw2x", source.mul(IgnitorDsl.Constant(2.0)).classic())
             register("saw1p7x", source.mul(IgnitorDsl.Constant(1.7)).classic())
             // The other order, for the 1.7 row's anti-vacuous side: the source, a onepole, THEN the gain.
-            register("onepolethen1p7x", IgnitorDsl.OnePoleLowpass(source, IgnitorDsl.Constant(900.0)).mul(IgnitorDsl.Constant(1.7)).classic())
+            register("onepolethen1p7x", IgnitorDsl.OnePoleLowpass(inner = source, freq = IgnitorDsl.Constant(900.0)).mul(IgnitorDsl.Constant(1.7)).classic())
 
             for ((door, freq) in curveFilters) {
                 register("curved$door", namedCurveNode(door, freq))
@@ -104,10 +103,7 @@ object ClassicVoiceRig {
         }
         val factory = VoiceFactory(
             sampleRate = sampleRate,
-            sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
@@ -135,7 +131,7 @@ object ClassicVoiceRig {
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -172,11 +168,11 @@ object ClassicVoiceRig {
         ClassicRow("untouched: the envelope alone, at the voice envelope's defaults", emptyMap()),
 
         // ── crush (D1, floor, CrushCore) ──
-        ClassicRow("crush 4", mapOf("crush.amount" to 4.0)),
+        ClassicRow("crush 4", mapOf("crush.bits" to 4.0)),
 
         // ── coarse ──
-        ClassicRow("coarse 3", mapOf("coarse.amount" to 3.0)),
-        ClassicRow("coarse 7.5", mapOf("coarse.amount" to 7.5)),
+        ClassicRow("coarse 3", mapOf("coarse.factor" to 3.0)),
+        ClassicRow("coarse 7.5", mapOf("coarse.factor" to 7.5)),
 
         // ── distort (D2 option A, DistortionCore) ──
         *listOf(
@@ -268,7 +264,7 @@ object ClassicVoiceRig {
         ClassicRow("adsrOff with release 0.2: the fade over a longer tail", mapOf("adsr.on" to 0.0, "adsr.release" to 0.2)),
 
         // ── the onepole: `classic()`'s first stage, in front of every other ──
-        ClassicRow("onepole 900 with crush 5: in front of the quantizer", mapOf("onepole" to 900.0, "crush.amount" to 5.0)),
+        ClassicRow("onepole 900 with crush 5: in front of the quantizer", mapOf("onepole" to 900.0, "crush.bits" to 5.0)),
 
         // ── the voice's pitch pipeline under a filtered built-in: it stays on the voice ──
         ClassicRow(
@@ -281,10 +277,10 @@ object ClassicVoiceRig {
         ClassicRow(
             "coarse, hpf, lpf, tremolo and the envelope together",
             mapOf(
-                "coarse.amount" to 2.0, "hpf.freq" to 150.0, "lpf.freq" to 2500.0, "lpf.q" to 2.0,
+                "coarse.factor" to 2.0, "hpf.freq" to 150.0, "lpf.freq" to 2500.0, "lpf.q" to 2.0,
                 "tremolo.depth" to 0.4, "tremolo.rate" to 6.0, "adsr.attack" to 0.02, "adsr.sustain" to 0.6, "adsr.release" to 0.1,
             ),
         ),
-        ClassicRow("crush and distort in the chain", mapOf("crush.amount" to 5.0, "distort.amount" to 0.4, "lpf.freq" to 3000.0)),
+        ClassicRow("crush and distort in the chain", mapOf("crush.bits" to 5.0, "distort.amount" to 0.4, "lpf.freq" to 3000.0)),
     )
 }

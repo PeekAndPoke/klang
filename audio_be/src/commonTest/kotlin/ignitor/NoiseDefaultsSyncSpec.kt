@@ -33,9 +33,9 @@ class NoiseDefaultsSyncSpec : StringSpec({
         (color as IgnitorDsl.Param).default shouldBe NOISE_TILT_DEFAULT
     }
 
-    "IgnitorDsl.BrownNoise depth default matches the BROWN_LEAK_DEFAULT engine constant" {
-        val depth = IgnitorDsl.BrownNoise().depth
-        (depth as IgnitorDsl.Param).default shouldBe BROWN_LEAK_DEFAULT
+    "IgnitorDsl.BrownNoise leak default matches the BROWN_LEAK_DEFAULT engine constant" {
+        val leak = IgnitorDsl.BrownNoise().leak
+        (leak as IgnitorDsl.Param).default shouldBe BROWN_LEAK_DEFAULT
     }
 
     "IgnitorDsl.Dust tail/bipolar defaults match the DUST_* engine constants" {

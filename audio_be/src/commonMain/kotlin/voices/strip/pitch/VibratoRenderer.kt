@@ -5,11 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.pitch
 
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.fastExp2
-import io.peekandpoke.klang.audio_be.fastSin
-import io.peekandpoke.klang.audio_be.smallNumFastMod
-import io.peekandpoke.klang.audio_be.wrapPhase
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.fastExp2
+import io.peekandpoke.klang.audio_be.utils.fastSin
+import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
@@ -41,7 +40,7 @@ class VibratoRenderer(
                 // Equal temperament: symmetric, never negative
                 buf[idx] *= fastExp2(fastSin(phase) * depthOctaves)
                 phase += phaseInc
-                phase = if (safeWrap) phase.wrapPhase(TWO_PI) else phase.smallNumFastMod(TWO_PI)
+                phase = phase.wrapPhaseFastOrSafe(period = TWO_PI, safe = safeWrap)
             }
         } else {
             // First pitch renderer — write directly
@@ -49,7 +48,7 @@ class VibratoRenderer(
                 val idx = off + i
                 buf[idx] = fastExp2(fastSin(phase) * depthOctaves)
                 phase += phaseInc
-                phase = if (safeWrap) phase.wrapPhase(TWO_PI) else phase.smallNumFastMod(TWO_PI)
+                phase = phase.wrapPhaseFastOrSafe(period = TWO_PI, safe = safeWrap)
             }
             ctx.freqModBufferWritten = true
         }

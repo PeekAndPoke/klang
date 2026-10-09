@@ -53,11 +53,11 @@ class PitchModulationTest : StringSpec({
         val realDepth = render(Voice.Vibrato(rate = 5.0, semitones = 2.0))
 
         // The claim: depth 0 is inert whatever the rate says.
-        diffRms(zeroDepth, bare) shouldBeLessThan 1e-6
+        diffRms(a = zeroDepth, b = bare) shouldBeLessThan 1e-6
         // ...and so is a negative depth: the pitch pipeline builds the vibrato only for a depth above 0.
-        diffRms(negativeDepth, bare) shouldBeLessThan 1e-6
+        diffRms(a = negativeDepth, b = bare) shouldBeLessThan 1e-6
         // The control, which is what makes the line above falsifiable at all.
-        diffRms(realDepth, bare) shouldBeGreaterThan 1e-3
+        diffRms(a = realDepth, b = bare) shouldBeGreaterThan 1e-3
     }
 
     "accelerate with 0 semitones produces no pitch change — and a real glide does" {
@@ -74,8 +74,8 @@ class PitchModulationTest : StringSpec({
         val zero = render(Voice.Accelerate(semitones = 0.0))
         val glide = render(Voice.Accelerate(semitones = 12.0))
 
-        diffRms(zero, bare) shouldBeLessThan 1e-6
-        diffRms(glide, bare) shouldBeGreaterThan 1e-3
+        diffRms(a = zero, b = bare) shouldBeLessThan 1e-6
+        diffRms(a = glide, b = bare) shouldBeGreaterThan 1e-3
     }
 
     "vibrato and accelerate combine correctly" {
@@ -107,8 +107,8 @@ class PitchModulationTest : StringSpec({
         voiceAccelOnly.render(ctxAcc)
 
         // Combined should differ from vibrato-only and accelerate-only
-        val diffFromVib = diffRms(ctxBoth.voiceBuffer, ctxVib.voiceBuffer)
-        val diffFromAcc = diffRms(ctxBoth.voiceBuffer, ctxAcc.voiceBuffer)
+        val diffFromVib = diffRms(a = ctxBoth.voiceBuffer, b = ctxVib.voiceBuffer)
+        val diffFromAcc = diffRms(a = ctxBoth.voiceBuffer, b = ctxAcc.voiceBuffer)
         (diffFromVib > 1e-4) shouldBe true
         (diffFromAcc > 1e-4) shouldBe true
     }
@@ -118,13 +118,13 @@ class PitchModulationTest : StringSpec({
             blockFrames = bf,
             signal = Ignitors.sine(),
             vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.5),
-            fm = Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
+            fm = Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0))
         )
         val voiceNoVib = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
             vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
-            fm = Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
+            fm = Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0))
         )
 
         val ctxWithVib = createContext(blockFrames = bf)
@@ -133,7 +133,7 @@ class PitchModulationTest : StringSpec({
         voiceNoVib.render(ctxNoVib)
 
         // Vibrato should affect both carrier and FM modulator, producing different output
-        val diff = diffRms(ctxWithVib.voiceBuffer, ctxNoVib.voiceBuffer)
+        val diff = diffRms(a = ctxWithVib.voiceBuffer, b = ctxNoVib.voiceBuffer)
         (diff > 1e-4) shouldBe true
     }
 })

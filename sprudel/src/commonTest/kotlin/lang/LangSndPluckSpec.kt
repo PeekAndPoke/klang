@@ -19,18 +19,18 @@ class LangSndPluckSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.soundName shouldBe "pluck"
-        events[0].data.ignitorParams?.get("decay") shouldBe null
+        events[0].data.ignitorParams?.get("feedback") shouldBe null
     }
 
     // -- single param ------------------------------------------------------------------------------------------------
 
-    "sndPluck(\"0.99\") sets decay only" {
+    "sndPluck(\"0.99\") sets feedback only" {
         val p = note("c3").sndPluck(0.99)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.soundName shouldBe "pluck"
-        events[0].data.ignitorParams?.get("decay") shouldBe 0.99
+        events[0].data.ignitorParams?.get("feedback") shouldBe 0.99
         events[0].data.ignitorParams?.get("brightness") shouldBe null
     }
 })

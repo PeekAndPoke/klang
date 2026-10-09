@@ -24,7 +24,8 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | `src/commonMain/kotlin/VoiceData.kt`                   | Voice event: pitch, gain, routing; door slots in `ignitorParams`, orbit slots in `katalystParams` |
 | `src/commonMain/kotlin/IgnitorDslClassic.kt`           | `classic()`, the voice chain, and its slot groups        |
 | `src/commonMain/kotlin/AdsrDef.kt`                     | `AdsrCurve`; `AdsrDef` for a sample's own envelope |
-| `src/commonMain/kotlin/FilterDef.kt`                   | The orbit resonators' band carriers (`Formant`, `Body`) |
+| `src/commonMain/kotlin/BodyMaterials.kt`, `VowelBands.kt` | The body and vowel catalogues and their rows (`BodyMaterials.Mode`, `VowelBands.Band`) |
+| `src/commonMain/kotlin/_resource_bounds.kt`             | The resource bounds: `coercePasses`, `coerceUnisonVoices` |
 | `src/commonMain/kotlin/ScheduledVoice.kt`              | Voice scheduling message (VoiceData + timing)  |
 | `src/commonMain/kotlin/MonoSamplePcm.kt`               | Decoded sample data (FloatArray + metadata)    |
 | `src/commonMain/kotlin/infra/KlangCommLink.kt`         | Ring-buffer IPC; Cmd + Feedback sealed classes |
@@ -43,7 +44,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | `src/commonMain/kotlin/cylinders/Cylinders.kt`      | Effect bus manager                                                                                                  |
 | `src/commonMain/kotlin/cylinders/Cylinder.kt`       | Single effect bus (delay/reverb/phaser/…)                                                                           |
 | `src/commonMain/kotlin/cylinders/katalyst/`         | Orbit-level effects: body/vowel resonators, `KatalystFilterSwap` declick (ownership: `Cylinder.offer`)                |
-| `src/commonMain/kotlin/filters/`                    | SVF kernels (`BaseSvf`, `SvfBPF`), OnePoles, resonator bank (`ResonatorBank`/`ParallelMixFilter`)     |
+| `src/commonMain/kotlin/filters/`                    | SVF coefficient helpers, DcBlocker, the resonator bank (`ResonatorBank`, `ResonatorTable`), `EqCore`    |
 | `src/commonMain/kotlin/ignitor/Ignitors.kt`         | Oscillator + signal-gen factories (Ignitor DSL); samples via `ignitor/SampleIgnitor.kt`                             |
 | `src/jvmMain/kotlin/JvmAudioBackend.kt`             | JVM: javax.sound.sampled output                                                                                     |
 | `src/jsMain/kotlin/JsAudioBackend.kt`               | JS: Web Audio API AudioContext output                                                                               |
@@ -69,7 +70,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | Topic                                                                              | File                       |
 |------------------------------------------------------------------------------------|----------------------------|
 | Architecture, data flow, comm-link protocol, platform backends                     | `ref/architecture.md`      |
-| VoiceData fields, the `ignitorParams` / `katalystParams` slots, AdsrDef, FilterDef, ScheduledVoice | `ref/data-model.md` |
+| VoiceData fields, the `ignitorParams` / `katalystParams` slots, AdsrDef, the body and vowel rows, ScheduledVoice | `ref/data-model.md` |
 | Voice stages, `classic()`, the sample instrument, oscillators                      | `ref/voice-synthesis.md`   |
 | Envelope rules — voice-lifetime semantics, amp vs modulator envelopes              | `ref/voice-synthesis.md`   |
 | The gate off values: when a stage is not built (the one home)                      | `ref/off-values.md`        |

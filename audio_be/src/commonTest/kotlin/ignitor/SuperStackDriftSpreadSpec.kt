@@ -45,7 +45,7 @@ class SuperStackDriftSpreadSpec : StringSpec({
         val out = DoubleArray(blocks * blockFrames)
 
         for (b in 0 until blocks) {
-            c.updateOffsetAndLength(0, blockFrames)
+            c.updateOffsetAndLength(offset = 0, length = blockFrames)
             c.voiceElapsedFrames = b * blockFrames
             sig.generate(buf, freqHz, c)
 
@@ -140,7 +140,7 @@ class SuperStackDriftSpreadSpec : StringSpec({
 
         // The shared walk is really there: against a stack with the drift off (same start phases,
         // no gain jitter, so nothing else can differ) the wobble moves whole samples.
-        (maxDiff(locked, sineStack(analog = 0.0, spread = 0.0)) > 0.1) shouldBe true
+        (maxDiff(a = locked, b = sineStack(analog = 0.0, spread = 0.0)) > 0.1) shouldBe true
     }
 
     "analogSpread 1: the voices walk apart and the stack beats" {
@@ -273,7 +273,7 @@ class SuperStackDriftSpreadSpec : StringSpec({
         val buf = AudioBuffer(blockFrames)
 
         fun renderBlock(b: Int) {
-            c.updateOffsetAndLength(0, blockFrames)
+            c.updateOffsetAndLength(offset = 0, length = blockFrames)
             c.voiceElapsedFrames = b * blockFrames
             ig.generate(buf, 220.0, c)
         }
@@ -306,12 +306,12 @@ class SuperStackDriftSpreadSpec : StringSpec({
         val locked = pluck(analog = 20.0, spread = 0.0)
 
         // Drift is present at spread 0, it is shared, not switched off.
-        (maxDiff(locked, pluck(analog = 0.0, spread = 0.0)) > 0.02) shouldBe true
+        (maxDiff(a = locked, b = pluck(analog = 0.0, spread = 0.0)) > 0.02) shouldBe true
 
         // And the two ends of the knob are two different sounds.
-        (maxDiff(locked, pluck(analog = 20.0, spread = 1.0)) > 0.05) shouldBe true
+        (maxDiff(a = locked, b = pluck(analog = 20.0, spread = 1.0)) > 0.05) shouldBe true
 
         // With no drift depth there is nothing to spread, at either end, bit for bit.
-        maxDiff(pluck(analog = 0.0, spread = 0.0), pluck(analog = 0.0, spread = 1.0)) shouldBe 0.0
+        maxDiff(a = pluck(analog = 0.0, spread = 0.0), b = pluck(analog = 0.0, spread = 1.0)) shouldBe 0.0
     }
 })

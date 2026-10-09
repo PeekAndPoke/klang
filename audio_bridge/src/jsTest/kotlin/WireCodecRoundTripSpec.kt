@@ -160,9 +160,9 @@ class WireCodecRoundTripSpec : StringSpec({
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
         val sv = ScheduledVoice(
-            "pb-2",
-            VoiceData.empty.copy(note = "a4", freqHz = 440.0),
-            0.0, 1.0, 0.0,
+            playbackId = "pb-2",
+            data = VoiceData.empty.copy(note = "a4", freqHz = 440.0),
+            startTime = 0.0, gateEndTime = 1.0, playbackStartTime = 0.0,
         )
         decode_ScheduledVoice(encode_ScheduledVoice(sv)) shouldBe sv
     }
@@ -170,7 +170,7 @@ class WireCodecRoundTripSpec : StringSpec({
     "Feedback round-trips (sealed dispatch + nested list)" {
         val cases = listOf<KlangCommLink.Feedback>(
             KlangCommLink.Feedback.BackendReady(),
-            KlangCommLink.Feedback.RequestSample("pb", SampleRequest("b", "s", 1, "c3")),
+            KlangCommLink.Feedback.RequestSample("pb", SampleRequest(bank = "b", sound = "s", index = 1, note = "c3")),
             KlangCommLink.Feedback.Diagnostics(
                 playbackId = "pb", sampleRate = 48000, renderHeadroom = 0.8, activeVoiceCount = 3,
                 cylinders = listOf(
@@ -199,11 +199,11 @@ class WireCodecRoundTripSpec : StringSpec({
     }
 
     "Cmd round-trips (flattened sealed, ScheduledVoice list, recursive IgnitorDsl tree)" {
-        val voice = ScheduledVoice("pb", VoiceData.empty.copy(note = "c3"), 0.0, 1.0, 0.0)
+        val voice = ScheduledVoice(playbackId = "pb", data = VoiceData.empty.copy(note = "c3"), startTime = 0.0, gateEndTime = 1.0, playbackStartTime = 0.0)
         val dsl = IgnitorDsl.Variants(
             listOf(
                 IgnitorDsl.Sine(freq = IgnitorDsl.Freq),
-                IgnitorDsl.Adsr(inner = IgnitorDsl.SuperSaw(), attackSec = IgnitorDsl.Constant(0.02), attackCurve = AdsrCurves.knob(AdsrCurve.Linear)),
+                IgnitorDsl.Adsr(inner = IgnitorDsl.SuperSaw(), attack = IgnitorDsl.Constant(0.02), attackCurve = AdsrCurves.knob(AdsrCurve.Linear)),
                 IgnitorDsl.Shimmer(inner = IgnitorDsl.Square(), pitches = listOf(0.0, 7.0, 12.0)),
             )
         )
@@ -216,13 +216,13 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 7, data = voice.data, gateDurSec = 0.4)),
             KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 8, data = voice.data, gateDurSec = null)),
             KlangCommLink.Cmd.StopRealtimeVoice("pb", liveId = 8),
-            KlangCommLink.Cmd.RegisterIgnitor("pb", "mysynth", dsl),
+            KlangCommLink.Cmd.RegisterIgnitor(playbackId = "pb", name = "mysynth", dsl = dsl),
             KlangCommLink.Cmd.RegisterKatalyst(
-                "pb", "katalyst-0",
-                KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)), KatalystStageDsl.Reverb()),
+                playbackId = "pb", name = "katalyst-0",
+                dsl = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)), KatalystStageDsl.Reverb()),
             ),
-            KlangCommLink.Cmd.RegisterKatalyst("pb", "katalyst-1", KatalystDsl.classic),
-            KlangCommLink.Cmd.Sample.NotFound(SampleRequest("b", "s", 1, "c3")),
+            KlangCommLink.Cmd.RegisterKatalyst(playbackId = "pb", name = "katalyst-1", dsl = KatalystDsl.classic),
+            KlangCommLink.Cmd.Sample.NotFound(SampleRequest(bank = "b", sound = "s", index = 1, note = "c3")),
         )
         cases.forEach { decode_KlangCommLink_Cmd(encode_KlangCommLink_Cmd(it)) shouldBe it }
     }
@@ -231,10 +231,10 @@ class WireCodecRoundTripSpec : StringSpec({
         // The orbit chain rides the same field family as the master: if the codec dropped it,
         // every declared chain would silently stay unregistered on the far side.
         val control = ScheduledVoice(
-            "pb", VoiceData.empty.copy(katalyst = "katalyst-3", control = true), 0.0, 1.0, 0.0,
+            playbackId = "pb", data = VoiceData.empty.copy(katalyst = "katalyst-3", control = true), startTime = 0.0, gateEndTime = 1.0, playbackStartTime = 0.0,
         )
         val sounding = ScheduledVoice(
-            "pb", VoiceData.empty.copy(note = "c3", sound = "sine", katalyst = "katalyst-3"), 0.0, 1.0, 0.0,
+            playbackId = "pb", data = VoiceData.empty.copy(note = "c3", sound = "sine", katalyst = "katalyst-3"), startTime = 0.0, gateEndTime = 1.0, playbackStartTime = 0.0,
         )
 
         listOf(control, sounding).forEach {
@@ -246,10 +246,10 @@ class WireCodecRoundTripSpec : StringSpec({
         // If `control` were dropped by the codec, every master(...) carrier would decode as an
         // audible default-oscillator voice — once per cycle, forever. Guard both directions.
         val control = ScheduledVoice(
-            "pb", VoiceData.empty.copy(master = "katalyst-7", control = true), 0.0, 1.0, 0.0,
+            playbackId = "pb", data = VoiceData.empty.copy(master = "katalyst-7", control = true), startTime = 0.0, gateEndTime = 1.0, playbackStartTime = 0.0,
         )
         val sounding = ScheduledVoice(
-            "pb", VoiceData.empty.copy(note = "c3", sound = "sine", master = "katalyst-7"), 0.0, 1.0, 0.0,
+            playbackId = "pb", data = VoiceData.empty.copy(note = "c3", sound = "sine", master = "katalyst-7"), startTime = 0.0, gateEndTime = 1.0, playbackStartTime = 0.0,
         )
 
         listOf(control, sounding).forEach {
@@ -259,7 +259,7 @@ class WireCodecRoundTripSpec : StringSpec({
 
     "Cmd.Sample.Chunk round-trips its DoubleArray (compared by content)" {
         val chunk = KlangCommLink.Cmd.Sample.Chunk(
-            req = SampleRequest("b", "s", null, "c3"), note = "c3", pitchHz = 261.6, sampleRate = 48000,
+            req = SampleRequest(bank = "b", sound = "s", index = null, note = "c3"), note = "c3", pitchHz = 261.6, sampleRate = 48000,
             meta = SampleMetadata.default, totalSize = 3, isLastChunk = true, chunkOffset = 0,
             data = doubleArrayOf(0.1, -0.2, 0.3),
         )
@@ -281,7 +281,7 @@ class WireCodecRoundTripSpec : StringSpec({
             ),
         )
         val chunk = KlangCommLink.Cmd.Sample.Chunk(
-            req = SampleRequest("b", "s", null, "c3"), note = "c3", pitchHz = 261.6, sampleRate = 48000,
+            req = SampleRequest(bank = "b", sound = "s", index = null, note = "c3"), note = "c3", pitchHz = 261.6, sampleRate = 48000,
             meta = meta, totalSize = 1, isLastChunk = true, chunkOffset = 0,
             data = doubleArrayOf(0.5),
         )

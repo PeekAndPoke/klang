@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -172,7 +173,7 @@ class LazyReverbSpec : StringSpec({
         // Used hard under other parameters, then returned.
         val used = units.rent().shouldNotBeNull().apply { size = 0.95; lowpass = 900.0 }
         val sink = StereoBuffer(blockFrames)
-        repeat(200) { used.process(noise(blockFrames, seed = it + 1), sink, blockFrames) }
+        repeat(200) { used.process(input = noise(blockFrames, seed = it + 1), output = sink, length = blockFrames) }
         units.giveBack(used)
 
         // Review round 3: the return is O(1) — parameters back now, the network still charged —
@@ -200,8 +201,8 @@ class LazyReverbSpec : StringSpec({
         for (block in 0 until 100) {
             val input = noise(blockFrames, seed = 1000 + block)
             outA.clear(); outB.clear()
-            fresh.process(input, outA, blockFrames)
-            again.process(input, outB, blockFrames)
+            fresh.process(input = input, output = outA, length = blockFrames)
+            again.process(input = input, output = outB, length = blockFrames)
             for (i in 0 until blockFrames) {
                 outB.left[i] shouldBe outA.left[i]
                 outB.right[i] shouldBe outA.right[i]
@@ -215,7 +216,7 @@ class LazyReverbSpec : StringSpec({
         val (units, _) = shelf()
         val used = units.rent().shouldNotBeNull()
         val sink = StereoBuffer(blockFrames)
-        repeat(50) { used.process(noise(blockFrames, seed = it + 1), sink, blockFrames) }
+        repeat(50) { used.process(input = noise(blockFrames, seed = it + 1), output = sink, length = blockFrames) }
         units.giveBack(used)
 
         val again = units.rent().shouldNotBeNull()
@@ -233,7 +234,7 @@ class LazyReverbSpec : StringSpec({
         units.giveBack(a)
         units.housekeep() // a is clean
         val sink = StereoBuffer(blockFrames)
-        b.process(noise(blockFrames, seed = 3), sink, blockFrames)
+        b.process(input = noise(blockFrames, seed = 3), output = sink, length = blockFrames)
         units.giveBack(b) // b is dirty, and newer
 
         units.rent() shouldBeSameInstanceAs a

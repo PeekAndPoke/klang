@@ -148,8 +148,8 @@ class LangKatalystParamSpec : StringSpec({
 
     "compressor(...) fills the other four, whichever of the five the call named" {
         // The compressor has no NAME KNOB, so ANY of the five names it (Katalyst step 5a-3). The
-        // constants are the ones `Voice.Compressor.fromParams` already substituted for an unset
-        // field, which is why moving the fill to the door changed no sound.
+        // constants are the ones the engine already substituted for an unset field (today
+        // `KatalystCompressorWriter`), which is why moving the fill to the door changed no sound.
         val p = note("c3").compressor(ratio = 8)
 
         slot(p, "compressor.ratio") shouldBe 8.0

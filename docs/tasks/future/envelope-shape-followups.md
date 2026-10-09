@@ -66,7 +66,7 @@ authored value visible in the DSL.
 
 > **2026-09-27:** the `Vca` stage and the strip below retired in phase 3 step 9. `.adsrOff()` now switches
 > `classic()`'s envelope off (the slot `adsr.on`); the off envelope still reports its release as the voice's tail,
-> and for a tree with no envelope of its own the teardown fade (`VCA_OFF_TEARDOWN_FADE_SECONDS`) ends the voice
+> and for a tree with no envelope of its own the teardown fade (`TEARDOWN_FADE_SECONDS`) ends the voice
 > (the full rule: `BuiltIgnitor.endsInEnvelope`). The finding holds; the sketched
 > knob needs a new home (the `Vca` stage and `PipelineDsl.kt` named below are gone).
 
@@ -76,7 +76,7 @@ self-oscillating filter never falls silent**, and nothing upstream will stop it:
 `gate end + max(voice release, ignitor tail)`, and the ignitor tail is `null` (contributes nothing)
 exactly when there is no envelope to read.
 
-Today the teardown fade (`VCA_OFF_TEARDOWN_FADE_SECONDS`, 4 ms) still ends such a voice cleanly, so
+Today the teardown fade (`TEARDOWN_FADE_SECONDS`, 4 ms) still ends such a voice cleanly, so
 this is not a runaway-voice bug — it is that the *duration* of a gate-only voice is decided by the
 voice's own release default rather than by anything the author expressed.
 
@@ -103,7 +103,7 @@ Added 2026-09-27 from `ignitor-dsl-open-items.md` (archived as
 above, but the same subject.
 
 The door-shape walk of 2026-09-23 (`.claude/skills/dsl-design/door-shapes.md` (the record's section 3b)) gave `fm` a builder with
-`adsr(attackSec, decaySec, sustainLevel, releaseSec)`, but NOT `adsrCurves`, because the FM index envelope
+`adsr(attack, decay, sustain, release)`, but NOT `adsrCurves`, because the FM index envelope
 has no curve support and a knob that does nothing is not offered. The maintainer wants it later, so `fm`
 speaks the same envelope vocabulary as the chain, the four filters and the pitch envelope.
 

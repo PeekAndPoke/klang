@@ -18,6 +18,11 @@ import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import kotlin.math.log10
 import kotlin.math.sqrt
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * C5 guards: `passes` cascades the SVF stage with the STAGGERED Butterworth q ladder
@@ -33,15 +38,16 @@ class PassesCascadeSpec : StringSpec({
 
     /** Steady-state RMS of a [freq] sine rendered THROUGH the ignitor door (no optimizer). */
     fun rmsIgnitor(dsl: IgnitorDsl, freq: Double): Double {
-        val chain = dsl.toExciter()
+        val chain = dsl.toExciter(random = testRandom)
         val block = 128
         val ctx = IgniteContext(
             sampleRate = sr.toInt(),
             voiceDurationFrames = frames,
             gateEndFrame = frames,
             scratchBuffers = ScratchBuffers(blockFrames = block),
+            random = testRandom,
         )
-        ctx.updateOffsetAndLength(0, block)
+        ctx.updateOffsetAndLength(offset = 0, length = block)
         val buf = AudioBuffer(block)
         var sum = 0.0
         var n = 0
@@ -61,10 +67,10 @@ class PassesCascadeSpec : StringSpec({
     }
 
     fun rmsIgnitorLp(passes: Int, freq: Double): Double =
-        rmsIgnitor(IgnitorDsl.Sine().lowpass(1000.0, 0.707, passes = passes), freq)
+        rmsIgnitor(IgnitorDsl.Sine().lowpass(freq = 1000.0, q = 0.707, passes = passes), freq)
 
     fun rmsIgnitorHp(passes: Int, freq: Double): Double =
-        rmsIgnitor(IgnitorDsl.Sine().highpass(1000.0, 0.707, passes = passes), freq)
+        rmsIgnitor(IgnitorDsl.Sine().highpass(freq = 1000.0, q = 0.707, passes = passes), freq)
 
     "the q ladder: passes = 1 is the user q VERBATIM; passes = 2 is the 4th-order Butterworth pair" {
         butterworthQLadder(1, 1.2).toList() shouldBe listOf(1.2)

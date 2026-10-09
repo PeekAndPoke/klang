@@ -96,7 +96,10 @@ voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`); one not 
 - On each block: activates due voices, removes finished voices
 - Sample resolution: when a sample voice is due but the PCM isn't loaded yet,
   sends `Feedback.RequestSample` to frontend and delays activation
-- Solo/mute: `Voice.gainMultiplier` set to 0 for muted voices
+- Solo: `SoloTracker` records "source soloed at amount a until t" from any event (control events included); a
+  voice of a soloed source plays at `Voice.gainMultiplier` 1.0, every other voice at `1 - amount` of the strongest
+  live solo, reached on a 1.5 s ramp (0 only at `solo(1.0)`); a change is ramped across one block in `SendRenderer`.
+  The rules: `audio/MEMORY.md`, and `docs/tasks/bugfix-solo-rests-and-amount.md`
 
 ## Oscillators
 
@@ -108,7 +111,7 @@ registered in `ignitor/IgnitorDefaults.kt` / `IgnitorRegistry.kt`. (There is no 
 | Sine             | `sine`                                                      | Pure sinusoid (inherently band-limited)                                                                                                                         |
 | Trapezoid shapes | `saw` `ramp` `square` `pulze` `tri`                         | ONE `waveTrapezoid` / `WaveVoiceState` engine (`WaveIgnitor`); finite-slope edges, no PolyBLEP, softens with pitch. `pulze` duty is audio-rate (PWM)            |
 | Raw shapes       | `zaw`/`zawtooth` `zamp`                                     | `flankSamples = 0` → instant / aliased edges                                                                                                                    |
-| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `DetunedStackIgnitor` — detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` ignitorParams |
+| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `UnisonStackIgnitor` (a `StackKind` per shape): detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` ignitorParams |
 | Noise            | `noise` `pink` `dust` …                                     | White / pink / impulse noise                                                                                                                                    |
 
 Per-oscillator character constants live in `ignitor/OscillatorTuning.kt`
@@ -217,7 +220,7 @@ its release and its own output has stayed under the audibility floor for the cul
   does not move the orbit's ownership either.
 - **Knobs:** `cull(seconds)` sets the window per voice (`VoiceData.cull`, default
   `VOICE_CULL_SECONDS` = 50 ms), `noCull()` writes `VOICE_CULL_NEVER` (negative = never). Floor
-  `VOICE_CULL_FLOOR` = `ORBIT_SILENCE_FLOOR` = 1e-5 (-100 dBFS; one constant shared with the
+  `VOICE_CULL_FLOOR` = `SILENCE_FLOOR` = 1e-5 (-100 dBFS; one constant shared with the
   cylinder's silence test, so per voice and per bus a culled voice is already below what keeps an
   orbit alive; the known exceptions, summed sub-floor tails and a feedback delay's tail ceiling,
   are on the constant's KDoc). Constants in `audio_bridge/constants/VoiceCullingDefaults.kt`.
@@ -245,7 +248,7 @@ its release and its own output has stayed under the audibility floor for the cul
   infinities read as unset too; a finite sustain passes raw, no clamp). A sample's own envelope fills only the `adsr.*` slots a pattern
   left unset (`withSampleEnvelopeDefaults`).
 - **De-click**: `EnvelopeDeclick` is the one smoother. `classic()`'s envelope de-clicks with the constant
-  `ENV_DECLICK_SECONDS` (1 ms, not a slot); the chain `adsr` builder's `declick` writes the node's `declickSeconds`
+  `ENV_DECLICK_SECONDS` (1 ms, not a slot); the chain `adsr` builder's `declick` writes the node's `declick`
   (default 0, off). Modulation envelopes are not de-clicked.
 - **An instrument whose own tail outlasts the envelope** writes `adsr(release = <tail>)`; the engine does not
   stretch a release to an instrument's tail (maintainer, 2026-09-26).

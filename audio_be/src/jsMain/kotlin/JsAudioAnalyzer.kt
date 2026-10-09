@@ -13,11 +13,11 @@ import io.peekandpoke.ultra.streams.ops.animTicker
 import io.peekandpoke.ultra.streams.ops.map
 
 class JsAudioAnalyzer(
-    override val fftSize: Int = 2048,
+    fftSize: Int = 2048,
     private val node: () -> AnalyserNode?,
 ) : AudioAnalyzer {
 
-    private val history = AnalyzerBufferHistory(fftSize, HISTORY_CAPACITY)
+    private val history = AnalyzerBufferHistory(bufferSize = fftSize, capacity = HISTORY_CAPACITY)
 
     companion object {
         private const val HISTORY_CAPACITY = 50

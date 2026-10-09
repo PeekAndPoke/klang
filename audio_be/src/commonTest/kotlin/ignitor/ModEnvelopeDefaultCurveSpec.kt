@@ -28,6 +28,10 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.random.Random
 
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
+
 /**
  * **Every modulation envelope defaults to the house EXPONENTIAL curve** (decision D3 (b), 2026-09-25): an
  * envelope whose author writes no curve bends every stage by `g(x) = (e^(3x) - 1) / (e^3 - 1)`, the curve
@@ -80,6 +84,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = DoubleArray(total)
         val tmp = AudioBuffer(blockFrames)
@@ -88,7 +93,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
 
-            ctx.updateOffsetAndLength(0, n)
+            ctx.updateOffsetAndLength(offset = 0, length = n)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, freqHz, ctx)
 
@@ -117,11 +122,11 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         // `fastExp` and raises through `fastExp2`.
         val out = renderRuntime(
             pitchEnvelopeModIgnitor(
-                attackSec = ParamIgnitor("a", sec(a)),
-                decaySec = ParamIgnitor("d", sec(d)),
-                releaseSec = ParamIgnitor("r", sec(r)),
+                attack = ParamIgnitor("a", sec(a)),
+                decay = ParamIgnitor("d", sec(d)),
+                release = ParamIgnitor("r", sec(r)),
                 semitones = ParamIgnitor("st", 12.0),
-                sustainLevel = ParamIgnitor("s", s),
+                sustain = ParamIgnitor("s", s),
             ),
             freqHz = 220.0,
         )
@@ -132,8 +137,8 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
 
         // The node's own field defaults, through the whole build: the same as the curve named Exponential.
         val bare = IgnitorDsl.PitchEnvelope(
-            saw, IgnitorDsl.Constant(12.0), IgnitorDsl.Constant(sec(a)), IgnitorDsl.Constant(sec(d)),
-            IgnitorDsl.Constant(s), IgnitorDsl.Constant(sec(r)),
+            inner = saw, semitones = IgnitorDsl.Constant(12.0), attack = IgnitorDsl.Constant(sec(a)), decay = IgnitorDsl.Constant(sec(d)),
+            sustain = IgnitorDsl.Constant(s), release = IgnitorDsl.Constant(sec(r)),
         )
 
         renderDsl(bare) shouldBe renderDsl(bare.copy(attackCurve = expKnob, decayCurve = expKnob, releaseCurve = expKnob))
@@ -153,10 +158,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
             val freqModBuffer = DoubleArray(blockFrames)
             val factory = VoiceFactory(
                 sampleRate = sampleRate,
-                sampleRateDouble = sampleRate.toDouble(),
                 blockFrames = blockFrames,
-                ignitorRegistry = registry,
-                cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
                 voiceBuffer = voiceBuffer,
                 freqModBuffer = freqModBuffer,
                 scratchBuffers = ScratchBuffers(blockFrames),
@@ -193,8 +195,8 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
             }
         }
 
-        val shaped = multipliers(sec(a), sec(d), s)
-        val flat = multipliers(0.0, 0.0, 1.0)
+        val shaped = multipliers(attack = sec(a), decay = sec(d), sustain = s)
+        val flat = multipliers(attack = 0.0, decay = 0.0, sustain = 1.0)
         var compared = 0
 
         for (b in shaped.indices) {
@@ -223,10 +225,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
             val freqModBuffer = DoubleArray(blockFrames)
             val factory = VoiceFactory(
                 sampleRate = sampleRate,
-                sampleRateDouble = sampleRate.toDouble(),
                 blockFrames = blockFrames,
-                ignitorRegistry = registry,
-                cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
                 voiceBuffer = voiceBuffer,
                 freqModBuffer = freqModBuffer,
                 scratchBuffers = ScratchBuffers(blockFrames),

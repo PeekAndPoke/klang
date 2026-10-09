@@ -35,7 +35,7 @@ holds the full text, this file names it and gives the short form. How each law w
   accepted so that "non-finite is unset" holds on every knob. Guard: `KatalystSlotResolverSpec`.
 - **Delay and reverb are insert-style**: the feed is the orbit mix at the stage's position times the owner's one
   `wet`, the return is added to the mix, the dry stays. A stage runs when its wet is WRITTEN (a written 0 included)
-  or authored above 0 (`sendStageRuns` in `KatalystChainBuilder.kt`); an authored 0 nobody writes rents nothing.
+  or authored above 0 (`stageAskedFor` in `KatalystChainBuilder.kt`); an authored 0 nobody writes rents nothing.
 - **The orbit's group fader** is the `gain` stage (`gain.gain`, unity on the classic chain and bit-transparent
   there). It scales dry and returns alike.
 
@@ -113,9 +113,15 @@ reverb, the filter swap and the compressor copy it. What every copy must keep:
 
 ## Body and vowel
 
-`KatalystBodyEffect` and `KatalystFormantEffect` are intentional un-deduped twins: change one, mirror the other.
-Both run on `filters/ResonatorBank.kt`; the gain rules live in `LowPassHighPassFilters.bodyBand` / `vowelBand` (the
-vowel's operand order is load-bearing). `body.material` and `vowel.vowel` carry an INDEX into
-`BodyMaterials.names` / `VowelBands.names` (audio_bridge): append only, never reorder, the index is the wire
-encoding. Both tables hand out one shared band list per entry, which `configure` compares by identity. Guard:
-`CatalogueIndexSpec`.
+One class, two kinds since engine tidy-up step 12 (a): `KatalystResonatorEffect` with `ResonatorKind.BODY` or
+`.VOWEL` (the kind supplies the unset wet and floor), one writer (`KatalystResonatorWriter`). A chain declares a body
+stage and a vowel stage, two instances with their own slots and banks, so a vowel sung through a body runs both. The
+DSP is `filters/ResonatorBank.kt` (the bands and the dry/wet blend in one mono bank); the gain rules live in
+`LowPassHighPassFilters.bodyGain` / `vowelGain` (the vowel's operand order is load-bearing). `body.material` and
+`vowel.vowel` carry an INDEX into `BodyMaterials.names` / `VowelBands.names` (audio_bridge): append only, never
+reorder, the index is the wire encoding. `ResonatorTables` builds one table per index once and SHARES one instance
+between indices whose rows are equal (`bass:a`, `bass:ei`, `bass:au`), so the stage's compare by reference keeps a
+switch among aliases free. A change installs into the pooled pair the swap does not hold (two pairs, built at the
+stage's first install), from zero state: no allocation per change, and a sounding bank never retunes. The stage is
+offered a `ResonatorConfig` by reference (a double crossing a call boxes on V8). Guards: `CatalogueIndexSpec`,
+`ResonatorTablesSpec`, `ResonatorBankSpec`, `KatalystResonatorEffectSpec`, `KatalystResonatorAllocationSpec`.

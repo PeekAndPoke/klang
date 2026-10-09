@@ -12,7 +12,6 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.voices.Voice
 import kotlin.math.abs
 
 /**
@@ -54,7 +53,7 @@ class BusPipelineSpec : StringSpec({
         val compressor = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames).apply {
             if (compressorThreshold != null) {
                 configure(
-                    Voice.Compressor(
+                    CompressorSettings(
                         thresholdDb = compressorThreshold,
                         ratio = 4.0,
                         kneeDb = 0.0,

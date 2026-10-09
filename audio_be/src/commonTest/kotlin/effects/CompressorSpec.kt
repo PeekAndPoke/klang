@@ -29,7 +29,7 @@ class CompressorSpec : StringSpec({
         // Create a buffer with loud signal (above threshold)
         val buffer = AudioBuffer(1000) { 0.5 } // ~-6 dB
 
-        compressor.process(buffer, 0, 1000)
+        compressor.process(buffer = buffer, offset = 0, length = 1000)
 
         // Signal should be reduced
         val avgLevel = buffer.map { abs(it) }.average()
@@ -50,7 +50,7 @@ class CompressorSpec : StringSpec({
         val buffer = AudioBuffer(1000) { 0.01 } // ~-40 dB
         val original = buffer.copyOf()
 
-        compressor.process(buffer, 0, 1000)
+        compressor.process(buffer = buffer, offset = 0, length = 1000)
 
         // Signal should be mostly unchanged
         for (i in buffer.indices) {
@@ -68,7 +68,7 @@ class CompressorSpec : StringSpec({
 
         // Process some audio
         val buffer = AudioBuffer(100) { 0.5 }
-        compressor.process(buffer, 0, 100)
+        compressor.process(buffer = buffer, offset = 0, length = 100)
 
         // Reset
         compressor.reset()
@@ -76,7 +76,7 @@ class CompressorSpec : StringSpec({
         // Process quiet signal - should not be affected by previous state
         val quietBuffer = AudioBuffer(100) { 0.01 }
         val original = quietBuffer.copyOf()
-        compressor.process(quietBuffer, 0, 100)
+        compressor.process(buffer = quietBuffer, offset = 0, length = 100)
 
         for (i in quietBuffer.indices) {
             quietBuffer[i] shouldBe (original[i] plusOrMinus 0.01)
@@ -96,7 +96,7 @@ class CompressorSpec : StringSpec({
         val left = AudioBuffer(1000) { 0.5 }
         val right = AudioBuffer(1000) { 0.5 }
 
-        compressor.process(left, right, 1000)
+        compressor.process(left = left, right = right, blockSize = 1000)
 
         // Both channels should be reduced
         val avgLeft = left.map { abs(it) }.average()
@@ -129,8 +129,8 @@ class CompressorSpec : StringSpec({
         val bufferHard = AudioBuffer(1000) { 0.1 } // ~-20 dB
         val bufferSoft = bufferHard.copyOf()
 
-        hardKnee.process(bufferHard, 0, 1000)
-        softKnee.process(bufferSoft, 0, 1000)
+        hardKnee.process(buffer = bufferHard, offset = 0, length = 1000)
+        softKnee.process(buffer = bufferSoft, offset = 0, length = 1000)
 
         // Both should compress, but soft knee should be gentler
         val avgHard = bufferHard.map { abs(it) }.average()
@@ -163,11 +163,11 @@ class CompressorSpec : StringSpec({
             )
             val warm = AudioBuffer(64) { if (poison && it == 0) Double.POSITIVE_INFINITY else 0.5 }
             val other = AudioBuffer(64) { 0.5 }
-            c.process(warm, other, 64)
+            c.process(left = warm, right = other, blockSize = 64)
 
             val loud = AudioBuffer(2000) { 0.5 }
             val loudR = AudioBuffer(2000) { 0.5 }
-            c.process(loud, loudR, 2000)
+            c.process(left = loud, right = loudR, blockSize = 2000)
 
             return loud.takeLast(500).map { abs(it) }.average()
         }

@@ -188,7 +188,7 @@ class IgnitorBenchmark(
          * song writes (phase 3 step 8), through the one translation and no copy of it. A case that asks for a room
          * writes what the `reverb(...)` door does: the named knob plus the companion the door would fill (the
          * orbit reverb reads its slots alone; a size-only case would measure a dry orbit, because the stage's
-         * gate is "the wet was written or is positive", `sendStageRuns`).
+         * gate is "the wet was written or is positive", `stageAskedFor`).
          */
         private fun voice(
             sound: String,
@@ -447,8 +447,8 @@ class IgnitorBenchmark(
             val plucked = IgnitorDsl.PitchEnvelope(
                 inner = saw,
                 semitones = IgnitorDsl.Constant(0.5),
-                attackSec = IgnitorDsl.Constant(0.001),
-                decaySec = IgnitorDsl.Constant(0.02),
+                attack = IgnitorDsl.Constant(0.001),
+                decay = IgnitorDsl.Constant(0.02),
             ).plus(if (muls) burst.mul(IgnitorDsl.Constant(1.0)) else burst)
 
             // Sustain held: the song's 0.0 would end the voice during warmup and leave an empty renderer to measure.

@@ -21,9 +21,10 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 // `classic()`: the voice strip's chain as a tail of slotted Ignitor stages (phase 3 step 5; the strip retired in step 9)
 //
 // The plan is `docs/plans/signal-flow-redesign.md` section 5 and `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`.
-// The SLOTS below are grouped per stage and named `<door>.<param>`, which is sprudel's own reader
-// vocabulary (`lpf.freq`, `adsr.attack`, ...) and the `<stage>.<knob>` rule of the Katalyst's classic
-// chain. Each slot's KDoc names the sprudel reader it mirrors, and sprudel's `toVoiceData` writes exactly
+// The SLOTS below are grouped per stage and named `<door>.<param>`: the sprudel door's name, then the
+// engine door's word (`lpf.freq`, `crush.bits`, `adsr.attack`, ...), the `<stage>.<knob>` rule of the
+// Katalyst's classic chain (Q21, `/dsl-design` section 4). Sprudel's door parameter and reader take the
+// same word. Each slot's KDoc names the sprudel reader it mirrors, and sprudel's `toVoiceData` writes exactly
 // these keys (`classicSlotParams`, phase 3 step 8). Every default is the value the voice strip
 // used when the pattern wrote nothing, read from the same constant the strip read.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
@@ -58,14 +59,14 @@ private fun slot(door: String, param: String, default: Double, description: Stri
  * @property release cutoff-envelope release in seconds; mirrors `<door>.release`.
  */
 class PassFilterSlots internal constructor(door: String) {
-    val freq: IgnitorDsl = slot(door, "freq", SLOT_UNSET)
-    val q: IgnitorDsl = slot(door, "q", 0.707)
-    val passes: IgnitorDsl = slot(door, "passes", 1.0)
-    val env: IgnitorDsl = slot(door, "env", SLOT_UNSET)
-    val attack: IgnitorDsl = slot(door, "attack", FILTER_ENV_ATTACK_SEC)
-    val decay: IgnitorDsl = slot(door, "decay", FILTER_ENV_DECAY_SEC)
-    val sustain: IgnitorDsl = slot(door, "sustain", FILTER_ENV_SUSTAIN_LEVEL)
-    val release: IgnitorDsl = slot(door, "release", FILTER_ENV_RELEASE_SEC)
+    val freq: IgnitorDsl = slot(door = door, param = "freq", default = SLOT_UNSET)
+    val q: IgnitorDsl = slot(door = door, param = "q", default = 0.707)
+    val passes: IgnitorDsl = slot(door = door, param = "passes", default = 1.0)
+    val env: IgnitorDsl = slot(door = door, param = "env", default = SLOT_UNSET)
+    val attack: IgnitorDsl = slot(door = door, param = "attack", default = FILTER_ENV_ATTACK_SEC)
+    val decay: IgnitorDsl = slot(door = door, param = "decay", default = FILTER_ENV_DECAY_SEC)
+    val sustain: IgnitorDsl = slot(door = door, param = "sustain", default = FILTER_ENV_SUSTAIN_LEVEL)
+    val release: IgnitorDsl = slot(door = door, param = "release", default = FILTER_ENV_RELEASE_SEC)
 }
 
 /**
@@ -74,22 +75,31 @@ class PassFilterSlots internal constructor(door: String) {
  * (`notch` the same). Defaults as there.
  */
 class BandFilterSlots internal constructor(door: String) {
-    val freq: IgnitorDsl = slot(door, "freq", SLOT_UNSET)
-    val q: IgnitorDsl = slot(door, "q", 0.707)
-    val env: IgnitorDsl = slot(door, "env", SLOT_UNSET)
-    val attack: IgnitorDsl = slot(door, "attack", FILTER_ENV_ATTACK_SEC)
-    val decay: IgnitorDsl = slot(door, "decay", FILTER_ENV_DECAY_SEC)
-    val sustain: IgnitorDsl = slot(door, "sustain", FILTER_ENV_SUSTAIN_LEVEL)
-    val release: IgnitorDsl = slot(door, "release", FILTER_ENV_RELEASE_SEC)
+    val freq: IgnitorDsl = slot(door = door, param = "freq", default = SLOT_UNSET)
+    val q: IgnitorDsl = slot(door = door, param = "q", default = 0.707)
+    val env: IgnitorDsl = slot(door = door, param = "env", default = SLOT_UNSET)
+    val attack: IgnitorDsl = slot(door = door, param = "attack", default = FILTER_ENV_ATTACK_SEC)
+    val decay: IgnitorDsl = slot(door = door, param = "decay", default = FILTER_ENV_DECAY_SEC)
+    val sustain: IgnitorDsl = slot(door = door, param = "sustain", default = FILTER_ENV_SUSTAIN_LEVEL)
+    val release: IgnitorDsl = slot(door = door, param = "release", default = FILTER_ENV_RELEASE_SEC)
 }
 
 /**
- * The one slot of a crush or a coarse stage (`Slots.crush`, `Slots.coarse`), mirroring sprudel's
- * `crush.amount` / `coarse.amount`. Default 0.0, the strip's untouched amount, which the gate reads
- * as off. Sprudel's `oversample` of these two has no slot: it moved to `oversampling-regions.md`.
+ * The one slot of the crush stage (`Slots.crush`), mirroring sprudel's `crush.bits`: the bit depth.
+ * Default 0.0, the strip's untouched value, which the gate reads as off (below 1). Sprudel's
+ * `oversample` of this stage has no slot: it moved to `oversampling-regions.md`.
  */
-class AmountSlots internal constructor(door: String) {
-    val amount: IgnitorDsl = slot(door, "amount", 0.0)
+class CrushSlots internal constructor() {
+    val bits: IgnitorDsl = slot(door = "crush", param = "bits", default = 0.0)
+}
+
+/**
+ * The one slot of the coarse stage (`Slots.coarse`), mirroring sprudel's `coarse.factor`: the
+ * sample-hold factor. Default 0.0, the strip's untouched value, which the gate reads as off (1 or
+ * less). Sprudel's `oversample` of this stage has no slot: it moved to `oversampling-regions.md`.
+ */
+class CoarseSlots internal constructor() {
+    val factor: IgnitorDsl = slot(door = "coarse", param = "factor", default = 0.0)
 }
 
 /**
@@ -99,12 +109,12 @@ class AmountSlots internal constructor(door: String) {
  * factor, default 0, no oversampler; the D7 stopgap, read at voice build).
  */
 class DistortSlots internal constructor() {
-    val amount: IgnitorDsl = slot("distort", "amount", 0.0)
+    val amount: IgnitorDsl = slot(door = "distort", param = "amount", default = 0.0)
     val shape: IgnitorDsl = slot(
-        "distort", "shape", DistortionShapes.SOFT_INDEX.toDouble(),
-        "The waveshaper as its index in the shape list; what sprudel's `distort(shape = ...)` names",
+        door = "distort", param = "shape", default = DistortionShapes.SOFT_INDEX.toDouble(),
+        description = "The waveshaper as its index in the shape list; what sprudel's `distort(shape = ...)` names",
     )
-    val oversample: IgnitorDsl = slot("distort", "oversample", 0.0)
+    val oversample: IgnitorDsl = slot(door = "distort", param = "oversample", default = 0.0)
 }
 
 /**
@@ -119,11 +129,11 @@ class DistortSlots internal constructor() {
  * song that wants a swell reopens it (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`, decision 4).
  */
 class TremoloSlots internal constructor() {
-    val depth: IgnitorDsl = slot("tremolo", "depth", 0.0)
-    val rate: IgnitorDsl = slot("tremolo", "rate", 0.0)
+    val depth: IgnitorDsl = slot(door = "tremolo", param = "depth", default = 0.0)
+    val rate: IgnitorDsl = slot(door = "tremolo", param = "rate", default = 0.0)
     val shape: IgnitorDsl = slot(
-        "tremolo", "shape", LfoShapes.SINE_INDEX.toDouble(),
-        "The LFO shape as its index in the shape list; what sprudel's `tremolo(shape = ...)` names",
+        door = "tremolo", param = "shape", default = LfoShapes.SINE_INDEX.toDouble(),
+        description = "The LFO shape as its index in the shape list; what sprudel's `tremolo(shape = ...)` names",
     )
 }
 
@@ -140,11 +150,11 @@ class TremoloSlots internal constructor() {
  * to 1.0 (on) and must never default to 0.0, which is OFF (the envelope row of the gate).
  */
 class AdsrSlots internal constructor() {
-    val attack: IgnitorDsl = slot("adsr", "attack", VOICE_ADSR_ATTACK_SEC)
-    val decay: IgnitorDsl = slot("adsr", "decay", VOICE_ADSR_DECAY_SEC)
-    val sustain: IgnitorDsl = slot("adsr", "sustain", VOICE_ADSR_SUSTAIN_LEVEL)
-    val release: IgnitorDsl = slot("adsr", "release", VOICE_ADSR_RELEASE_SEC)
-    val on: IgnitorDsl = slot("adsr", "on", 1.0, "The envelope's switch, 0 is off; what sprudel's `adsrOn()` / `adsrOff()` write")
+    val attack: IgnitorDsl = slot(door = "adsr", param = "attack", default = VOICE_ADSR_ATTACK_SEC)
+    val decay: IgnitorDsl = slot(door = "adsr", param = "decay", default = VOICE_ADSR_DECAY_SEC)
+    val sustain: IgnitorDsl = slot(door = "adsr", param = "sustain", default = VOICE_ADSR_SUSTAIN_LEVEL)
+    val release: IgnitorDsl = slot(door = "adsr", param = "release", default = VOICE_ADSR_RELEASE_SEC)
+    val on: IgnitorDsl = slot(door = "adsr", param = "on", default = 1.0, description = "The envelope's switch, 0 is off; what sprudel's `adsrOn()` / `adsrOff()` write")
 }
 
 /** The description of a curves group's three slots, which sprudel writes by name ([door]) and has no reader for. */
@@ -161,9 +171,9 @@ private val CURVE_SLOT_DESCRIPTION = curveSlotDescription("adsrCurves")
  * every amplitude envelope has when nothing is written.
  */
 class AdsrCurvesSlots internal constructor() {
-    val attack: IgnitorDsl = slot("adsrCurves", "attack", AdsrCurves.indexOf(AdsrCurve.Default), CURVE_SLOT_DESCRIPTION)
-    val decay: IgnitorDsl = slot("adsrCurves", "decay", AdsrCurves.indexOf(AdsrCurve.Default), CURVE_SLOT_DESCRIPTION)
-    val release: IgnitorDsl = slot("adsrCurves", "release", AdsrCurves.indexOf(AdsrCurve.Default), CURVE_SLOT_DESCRIPTION)
+    val attack: IgnitorDsl = slot(door = "adsrCurves", param = "attack", default = AdsrCurves.indexOf(AdsrCurve.Default), description = CURVE_SLOT_DESCRIPTION)
+    val decay: IgnitorDsl = slot(door = "adsrCurves", param = "decay", default = AdsrCurves.indexOf(AdsrCurve.Default), description = CURVE_SLOT_DESCRIPTION)
+    val release: IgnitorDsl = slot(door = "adsrCurves", param = "release", default = AdsrCurves.indexOf(AdsrCurve.Default), description = CURVE_SLOT_DESCRIPTION)
 }
 
 /**
@@ -177,9 +187,9 @@ class AdsrCurvesSlots internal constructor() {
 class FilterCurvesSlots internal constructor(door: String) {
     private val description = curveSlotDescription(door)
 
-    val attack: IgnitorDsl = slot(door, "attack", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
-    val decay: IgnitorDsl = slot(door, "decay", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
-    val release: IgnitorDsl = slot(door, "release", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
+    val attack: IgnitorDsl = slot(door = door, param = "attack", default = AdsrCurves.indexOf(MOD_ENV_CURVE), description = description)
+    val decay: IgnitorDsl = slot(door = door, param = "decay", default = AdsrCurves.indexOf(MOD_ENV_CURVE), description = description)
+    val release: IgnitorDsl = slot(door = door, param = "release", default = AdsrCurves.indexOf(MOD_ENV_CURVE), description = description)
 }
 
 /**
@@ -251,8 +261,8 @@ fun IgnitorDsl.classic(): IgnitorDsl {
     val s = IgnitorDsl.Slots
 
     val onepoled = IgnitorDsl.OnePoleLowpass(inner = this, freq = s.onepole)
-    val crushed = IgnitorDsl.Crush(inner = onepoled, amount = s.crush.amount)
-    val coarsened = IgnitorDsl.Coarse(inner = crushed, amount = s.coarse.amount)
+    val crushed = IgnitorDsl.Crush(inner = onepoled, bits = s.crush.bits)
+    val coarsened = IgnitorDsl.Coarse(inner = crushed, factor = s.coarse.factor)
     val distorted = IgnitorDsl.Distort(
         inner = coarsened,
         amount = s.distort.amount,
@@ -266,10 +276,10 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         analog = s.analog,
         passes = s.hpf.passes,
         env = s.hpf.env,
-        attackSec = s.hpf.attack,
-        decaySec = s.hpf.decay,
-        sustainLevel = s.hpf.sustain,
-        releaseSec = s.hpf.release,
+        attack = s.hpf.attack,
+        decay = s.hpf.decay,
+        sustain = s.hpf.sustain,
+        release = s.hpf.release,
         attackCurve = s.hpfCurves.attack,
         decayCurve = s.hpfCurves.decay,
         releaseCurve = s.hpfCurves.release,
@@ -281,10 +291,10 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         q = s.bpf.q,
         analog = s.analog,
         env = s.bpf.env,
-        attackSec = s.bpf.attack,
-        decaySec = s.bpf.decay,
-        sustainLevel = s.bpf.sustain,
-        releaseSec = s.bpf.release,
+        attack = s.bpf.attack,
+        decay = s.bpf.decay,
+        sustain = s.bpf.sustain,
+        release = s.bpf.release,
         attackCurve = s.bpfCurves.attack,
         decayCurve = s.bpfCurves.decay,
         releaseCurve = s.bpfCurves.release,
@@ -296,10 +306,10 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         q = s.notch.q,
         analog = s.analog,
         env = s.notch.env,
-        attackSec = s.notch.attack,
-        decaySec = s.notch.decay,
-        sustainLevel = s.notch.sustain,
-        releaseSec = s.notch.release,
+        attack = s.notch.attack,
+        decay = s.notch.decay,
+        sustain = s.notch.sustain,
+        release = s.notch.release,
         attackCurve = s.notchCurves.attack,
         decayCurve = s.notchCurves.decay,
         releaseCurve = s.notchCurves.release,
@@ -312,10 +322,10 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         analog = s.analog,
         passes = s.lpf.passes,
         env = s.lpf.env,
-        attackSec = s.lpf.attack,
-        decaySec = s.lpf.decay,
-        sustainLevel = s.lpf.sustain,
-        releaseSec = s.lpf.release,
+        attack = s.lpf.attack,
+        decay = s.lpf.decay,
+        sustain = s.lpf.sustain,
+        release = s.lpf.release,
         attackCurve = s.lpfCurves.attack,
         decayCurve = s.lpfCurves.decay,
         releaseCurve = s.lpfCurves.release,
@@ -330,14 +340,14 @@ fun IgnitorDsl.classic(): IgnitorDsl {
 
     return IgnitorDsl.Adsr(
         inner = tremoloed,
-        attackSec = s.adsr.attack,
-        decaySec = s.adsr.decay,
-        sustainLevel = s.adsr.sustain,
-        releaseSec = s.adsr.release,
+        attack = s.adsr.attack,
+        decay = s.adsr.decay,
+        sustain = s.adsr.sustain,
+        release = s.adsr.release,
         attackCurve = s.adsrCurves.attack,
         decayCurve = s.adsrCurves.decay,
         releaseCurve = s.adsrCurves.release,
-        declickSeconds = IgnitorDsl.Constant(ENV_DECLICK_SECONDS),
+        declick = IgnitorDsl.Constant(ENV_DECLICK_SECONDS),
         on = s.adsr.on,
     )
 }

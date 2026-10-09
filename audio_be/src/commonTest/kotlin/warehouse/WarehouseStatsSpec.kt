@@ -51,30 +51,30 @@ class WarehouseStatsSpec : StringSpec({
 
     "every part's change re-snapshots, and the numbers are the part's own" {
         val (w, _) = warehouse()
-        val s0 = w.stats(0, 0)
+        val s0 = w.stats(droppedVoices = 0, deniedRents = 0)
 
         // Rings: rent (allocates), return (dirty), housekeep (clean), rent again (hit).
         val ring = w.sized.rent(1).shouldNotBeNull()
-        val s1 = w.stats(0, 0)
+        val s1 = w.stats(droppedVoices = 0, deniedRents = 0)
         s1 shouldNotBeSameInstanceAs s0
         s1.ringAllocations shouldBe 1
         w.sized.giveBack(ring)
-        val s2 = w.stats(0, 0)
+        val s2 = w.stats(droppedVoices = 0, deniedRents = 0)
         s2.ringIdleCount shouldBe 1
         s2.ringDirtyCount shouldBe 1
         s2.ringIdleBytes shouldBe SizedBuffers.bytesOf(ring)
         while (!w.isClean) {
             w.housekeep()
         }
-        val s3 = w.stats(0, 0)
+        val s3 = w.stats(droppedVoices = 0, deniedRents = 0)
         s3.ringDirtyCount shouldBe 0
         w.sized.rent(1)
-        w.stats(0, 0).ringHits shouldBe 1
+        w.stats(droppedVoices = 0, deniedRents = 0).ringHits shouldBe 1
 
         // Reverbs and cylinders.
         val unit = w.reverbs.rent().shouldNotBeNull()
         w.reverbs.giveBack(unit)
-        val s4 = w.stats(0, 0)
+        val s4 = w.stats(droppedVoices = 0, deniedRents = 0)
         s4.reverbAllocations shouldBe 1
         s4.reverbIdleCount shouldBe 1
         s4.reverbDirtyCount shouldBe 1
@@ -84,14 +84,14 @@ class WarehouseStatsSpec : StringSpec({
             katalysts = KatalystRegistry(),
         )
         w.cylinders.giveBack(cylinder)
-        val s5 = w.stats(0, 0)
+        val s5 = w.stats(droppedVoices = 0, deniedRents = 0)
         s5.cylinderAllocations shouldBe 1
         s5.cylinderIdleCount shouldBe 1
 
         // Scratch: the pre-sized capacity, and a deeper nesting bumps the high water.
         s5.scratchCapacity shouldBe ResourceWarehouse.SCRATCH_DEPTH
         w.scratch.use { w.scratch.use { } }
-        w.stats(0, 0).scratchHighWater shouldBe 2
+        w.stats(droppedVoices = 0, deniedRents = 0).scratchHighWater shouldBe 2
 
         // Samples: bytes and count follow arrivals; a failed allocation is counted.
         w.samples.addSample(
@@ -101,7 +101,7 @@ class WarehouseStatsSpec : StringSpec({
                 sample = MonoSamplePcm(sampleRate = sampleRate, pcm = DoubleArray(1000), meta = SampleMetadata.default),
             )
         )
-        val s6 = w.stats(0, 0)
+        val s6 = w.stats(droppedVoices = 0, deniedRents = 0)
         s6.sampleCount shouldBe 1
         s6.sampleBytes shouldBe 8000.0
 
@@ -124,7 +124,7 @@ class WarehouseStatsSpec : StringSpec({
         )
         upload(1000)
         upload(4000)
-        val s = w.stats(0, 0)
+        val s = w.stats(droppedVoices = 0, deniedRents = 0)
         s.sampleCount shouldBe 1
         s.sampleBytes shouldBe 32_000.0
     }

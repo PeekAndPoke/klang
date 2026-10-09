@@ -155,6 +155,218 @@ its wet under the vocal, and the whole playback pumping under the kick at the ou
 **Open when the plan starts:** the tap point (before or after the referenced bus's own chain; today after, so a
 kick's reverb tail also holds the duck), the follower's shape and defaults, the names.
 
+## 6. The layout lives outside the patterns (maintainer, 2026-10-08)
+
+> "I think we have to reason one level higher. The idea of writing patterns that shape everything is cute and a
+> simple starting point to make some music. But it falls short at closer inspection ... So the real challenge is how
+> do we define the entire setup of busses, groups, master etc. outside of the patterns. The cool idea of the patterns
+> is, that everything is stateless. But in reality you need a state: the setup of the 'machine': busses and their
+> wiring until in the end everything leaves the master. The strudel setup is just one special case of it ... So
+> having only one code file is probably not going to work anymore. We need another file, that defines the entire
+> layout ... which would also be a step toward all of the AAA tricks we can currently not do. Fiddling around with
+> `.classic()` at the current layer will not help, we will run into the same issue again and again."
+
+How it surfaced: the production research ([`../aaa-production-tricks.md`](../aaa-production-tricks.md)) found four
+structural gaps, and three of them are this one: no routing (G3), no automation of bus and master knobs (G2), the
+doors bolted onto the instrument ([`../../tasks/classic-doors-and-velocity.md`](../../tasks/classic-doors-and-velocity.md),
+G6). Each fix tried at the pattern layer ran into the next.
+
+### 6.1 Precedent: Strudel inherited a convention, not a necessity
+
+Tidal sends its events to SuperDirt, which runs on SuperCollider. SuperCollider's server is a general node graph,
+with synths, groups, audio buses and arbitrary routing. SuperDirt's "orbits" (each with its own global effects, all
+summed to the output) are one fixed CONVENTION that SuperDirt laid on top of that general graph. Strudel copied the
+convention and lost the graph underneath. DAWs split the same way: the arrangement (clips, notes, automation) is one
+thing, the mixer (tracks, inserts, groups, returns, sidechains, master) another. Klang today has SuperDirt's
+convention welded into the engine; this plan puts the general graph back under it.
+
+### 6.2 Two kinds of code
+
+- **The machine** (name open): the layout, declared once and stateful while it runs.
+  - The instruments and the per-note stage after each one (the doors, default `classic`; see the task above).
+  - The buses and their Katalyst chains, groups (sub-sums), sends and returns with levels, and sidechain references
+    (section 5).
+  - The master.
+  - Which knobs the patterns may move, by name.
+
+  It is an immutable value like every DSL value (stone rule); the engine holds its running state (tails, followers).
+  Changing it is a structural swap with a crossfade (`ChainSwap`, generalised).
+- **The song** (the patterns): what is played, stateless, a pure function of time, as now. It addresses the
+  machine BY NAME and writes two kinds of things:
+  - **notes into an input** (`.to("guitars")` instead of `orbit(3)`), with their per-note values (pitch, velocity,
+    the per-note stage's doors);
+  - **automation of the machine's knobs**: a control lane that writes `hall.reverb.wet` or `master.eq.freq` over
+    time, independent of any note. That retires "the newest sounding voice owns the orbit's settings": every knob has
+    ONE value over time, and patterns are its automation. It also gives the master its slots (G2) and lets a filter
+    rise sweep a whole group.
+- **A library** (natural, not required): instruments and rigs shared between songs and machines. Today Kokon copies
+  Der Schmetterling's rig stages by hand.
+
+### 6.3 What stays true
+
+- **No machine file means the default machine:** sprudel's orbits, each running the `classic` per-note stage and a
+  `classic` Katalyst, summed into the master. Every song written today plays unchanged; byte identity is the
+  acceptance. The one-file song stays the way in, for tutorials and first sounds.
+- **Structure never depends on an event value** (signal-flow plan §3, rule 2): events choose inputs and write knobs,
+  and never create nodes.
+- **The engine is the horse** (stone): routing is an engine mechanism, and sprudel's layout is one machine a frontend
+  sends. A MIDI controller, a sequencer and a tracker frontend address the same machine.
+- **Only seconds cross the wire** (stone): the machine is a new wire value (a sealed `@WireName` hierarchy), and
+  automation arrives as timed control events in seconds.
+- **The cost rules** of section 3: allocation-free per block, per-playback cleanup, the block budget on the Fairphone
+  and on Node.js. References read the previous block (section 5), so the graph needs no evaluation order and allows
+  cycles.
+
+### 6.4 What it unlocks (from the research)
+
+- Shared reverb and delay returns with send levels. Parallel (New York) compression. Group buses: the drums through
+  one compressor, the guitar strings into one amp (the real power-chord growl).
+- Sidechain anything: section 5's reference, a follower and a knob that takes a signal.
+- Automation on any bus and on the master: filter rises, the build-up highpass, volume rides.
+- An Ignitor tree as a node on a bus (research section 4.0 (b)): a node kind of the machine.
+- The per-note stage choice: a node kind too. This is where the doors and velocity question gets its answer.
+- Stem-style mastering: the groups ARE the stems.
+
+### 6.5 Open, for the design round
+
+1. **The name** of the machine: candidates:
+   - `Motor`: the author assembles their own Klangmotor from Ignitors, Cylinders and Katalysts; the house metaphor
+     completes itself.
+   - `Rig`: what Kokon already calls a guitar's chain; a musician's word for a whole setup.
+   - `Studio`, `Patch`.
+2. **Files:** a project of several files with imports, or one file with two sections as the smaller first step.
+   What exists: an `import ... from "name"` resolves through `LibraryLoader.loadLibrary(name)`, which returns a
+   registered library's KlangScript SOURCE (`KlangScriptEngine.kt`), so a user file registered as a library looks like
+   a small step. Not verified beyond reading that path (2026-10-08).
+3. **The pattern doors that write bus knobs today** (`reverb`, `delay`, `compressor`, `duck`, `phaser`, `body`,
+   `vowel`): do they become automation of the input's bus, and what is the rule when two patterns write one knob?
+4. **V1 or after:** the default machine keeps tutorials possible without it. But if a bus door's meaning changes
+   from "this note's orbit setting" to "automation", that is a shape change, and shape changes land before the
+   tutorials (`docs/tasks/_v1-scope.md`).
+5. **Section 3's inventory** is still the first step, now with a target in view.
+
+### 6.6 The name, and the bridge from a pattern into the Motor (maintainer, 2026-10-08)
+
+**The name is `Motor`** (maintainer: "Motor would be a nice name here"). The author assembles their own Motor from
+Ignitors, Cylinders and Katalysts, and the Klangmotor runs it. The user can build any layout. The defaults are lanes,
+each starting with an instrument, routed through its effects to the master, so that every sprudel door finds its
+stage. "The layout becomes essentially fixed. Unused stages are basically skipped." That second sentence is the
+gate law already in force: a stage at its off value is not built.
+
+**The maintainer's sketch: the bridge on the language level.**
+
+```javascript
+note("a").compressor(...)                                     // an error: no bus defined
+note("a").bus("abc").compressor(...)                          // an error if "abc" has no compressor stage, or it works
+note("a").bus("abc").compressor("c1", ...).compressor("c2", ...)  // two compressors on "abc": they need names
+```
+
+"Also `.bus()` is probably not the correct naming here. This is more like an injection / input point into the
+machine. This is a very rough sketch but it might work."
+
+**The coordinator's refinements (2026-10-08, for the design round):**
+
+1. **Resolve a door along the note's path.** `.compressor(...)` looks along the path from the note's entry point
+   through its groups to the master. It errors in three cases:
+   - none is found: "track 'abc' reaches no compressor";
+   - exactly one is found: that stage;
+   - several are found: an error that lists their names, so the author picks one.
+
+   The default Motor has one of each classic stage per lane, so every sprudel door resolves and every song today
+   plays unchanged.
+2. **Names are part of the Motor, not of the call.** A stage is named where it is declared (default: its kind), and a
+   call picks one by name. The candidates are a `name` argument (`compressor(threshold = -20, name = "glue")`), a
+   full address (`set("abc.glue.threshold", -20)`), or both. KlangScript forbids mixing positional and named
+   arguments in one call, which argues against a positional name first.
+3. **Two time meanings, decided by where the stage sits.**
+   - A door on the PER-NOTE stage (`lpf`, `adsr`, `distort`) is the note's own value, as today.
+   - A door on a SHARED stage (a lane's, a group's or the master's Katalyst) is AUTOMATION: a timed write that holds
+     until the next one, like a MIDI CC.
+
+   Continuous pattern signals arrive as ramps (a target and seconds; the knob glide already moves a knob to a
+   target). The later write in time wins, and equal times go by stack order. This replaces the newest-voice
+   ownership of a bus.
+4. **Automation without notes:** a lane of knob values with no note attached (`"<-20 -12>".set("abc.glue.threshold")`,
+   spelling open). The note-attached door is sugar for a write at the note's onset.
+5. **Errors in the frontend, at evaluation.** Sprudel holds the Motor value, so the editor can underline
+   `compressor` on a track that reaches none. This closes the item left open on 2026-09-18 (signal-flow plan §6):
+   "a construction that makes 'this instrument does not listen to that door' impossible to write by accident".
+6. **The entry point's word.**
+   - `track` is the common language (Ableton: MIDI and audio tracks, group tracks, return tracks, the master, sends),
+     so the Motor would declare tracks, groups, returns and the master, and a pattern would write
+     `note("a").track("bass")`. `to`, `track` and `input` are all free in sprudel today (grep, 2026-10-08).
+   - It needs one decision: "cylinder is the word, orbit a sprudel alias" (maintainer, 2026-10-07). Is the user's
+     word `track`, with Cylinder the engine's word for what runs it, or `cylinder` everywhere? `orbit(n)` stays
+     sprudel's alias for the default Motor's numbered lanes.
+7. **Instrument per track or per note.** A DAW track has one instrument; sprudel picks one per note
+   (`s("bd sd")`). Both can hold: a track may declare its instrument, and a note's `sound()` overrides it unless the
+   track forbids that. To decide.
+
+### 6.7 How we get there: a prototype first, outside the codebase (maintainer, 2026-10-08)
+
+> "Before we do any implementation here in the codebase we need to build a prototype, with graphical display of the
+> motor to visually check. Then we construct events and send them into the motor, to see which errors they produce and
+> how they are routed. Basically a 'debugger' of sorts. I want to keep this out of the main codebase, so we can test the
+> design in quick iterations, where the code quality does not matter."
+
+**The rule:** no Motor code in the repository until the design has been played with in the prototype. The prototype is
+throwaway, and its job is to find out whether the design holds. What survives goes into this plan, not code.
+
+**What it shows**, as the coordinator sketched it on 2026-10-08:
+- **A Motor drawn as a graph:**
+  - tracks, each an instrument, its per-note stage and its Katalyst stages;
+  - groups, returns and the master;
+  - sends with their levels, and sidechain references (section 5) as dashed edges;
+  - stages that nothing writes, drawn as skipped.
+- **An event console:** write events in a sprudel-like mini syntax (`note("a").track("bass").lpf(800)
+  .compressor(threshold = -20)`, a note-free `set("bass.glue.threshold", ...)`) and send them in.
+- **The resolution trace, per event:**
+  - the note's path through the graph, highlighted;
+  - every door resolved to its stage, per-note or automation (6.6 item 3);
+  - the errors: no such track, no such stage on the path, an ambiguous stage with its candidates.
+- **An automation timeline per knob:** the timed writes, which writer won where two collide, and the ramps.
+- **Example Motors to test the design against:**
+  - the default sprudel layout, which must route every door exactly as today;
+  - a Kokon-style band: guitar strings into one amp group, a shared hall return;
+  - a deep-house setup: the kick referenced by the bass's duck, pads into hall and delay returns, a master with glue,
+    clipper and limiter.
+
+**Where it lives:** outside the repository, a single-page prototype (HTML and JavaScript). It is published privately as
+an artifact so it can be opened on any device, and its source is kept in a folder next to the repo, not in it.
+
+**Built: Motor Lab v0, 2026-10-08.**
+- **Source:** `/opt/dev/peekandpoke/klang-labs/motor/`, with its own local git and no remote. `node test.js` checks the
+  routing rules.
+- **Published privately:** https://claude.ai/artifact/DR6VcnEd7kaikuMTDLuAuU
+- **What it holds:**
+  - the maintainer's first layout, 8 tracks "0" to "7" with the classic chain, all into the master, and a number
+    becoming a string (`orbit(0)` is `track("0")`);
+  - a sketch band with groups, returns and a wired duck;
+  - every sprudel door mapped to its slot keys (`doors.js`, read from the repo the same day).
+
+**Findings so far:**
+1. **Stage names can repeat across the nodes of one path:** `glue` on the drums group and on the master. "Pick a
+   stage by name" is then still ambiguous, so a name may be qualified with its node (`"drums.glue"`).
+2. **A track with the full classic chain carries its own bus effects.** In a band layout, `.reverb()` on such a
+   track lands on the track's own reverb, never on a shared hall. The lab therefore has `classicNote()`: the per-note
+   doors without the classic bus chain. Which of the two the default Motor's tracks use decides what `.reverb()`
+   means.
+3. **The duck is the only door whose value is wiring:** `duck(orbit = n)` picks its sidechain source per note. The lab
+   shows it as a warning in the default Motor (legacy) and refuses it where the Motor wires the duck.
+
+### 6.8 Continuous automation: tweens (maintainer, 2026-10-08)
+
+> "Advanced topic would be how to send continuous automation for e.g. a filter instead of doing it per event ...
+> something like 'tween the lpf freq from 100 to 10000 Hz over 10 s along this curve' ... but this can be built
+> regardless of the stuff above, it should only add more sophistication, not new functionality."
+
+**A tween is one automation write with a duration and a curve:** a start value, a target, the seconds, and a curve
+index from a catalogue (linear, exponential, the s-curve; the envelope's `AdsrCurves` are a natural start). It crosses
+the wire as seconds (stone rule). The engine moves the knob along it per block, or per sample where the knob takes a
+signal, the KnobGlide machinery with a duration and a shape. A plain write is a tween of zero seconds, so tweens refine
+the automation of 6.6 and add nothing beside it. The frontend turns a cycle-based pattern (`saw.slow(8)`) into tweens,
+and the backend never learns cycles.
+
 ## Links
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).

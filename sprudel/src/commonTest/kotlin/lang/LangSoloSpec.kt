@@ -19,10 +19,10 @@ import io.peekandpoke.klang.sprudel.soundName
 
 class LangSoloSpec : StringSpec({
 
-    // SoloPattern fills silent gaps with filler events (gain=0.000001, sound="sine").
-    // Source events have gain=null, so we filter by that to get the real events.
+    // SoloPattern covers every query window with control events (engine state, never a voice);
+    // the source events are the rest.
     fun List<SprudelPatternEvent>.sourceEvents() =
-        filter { it.data.gain == null }
+        filter { it.data.control != true }
 
     // -- dsl interface tests -----------------------------------------------------------------------------------------
 
@@ -35,9 +35,9 @@ class LangSoloSpec : StringSpec({
             "apply(solo())" to s("bd").apply(solo()),
             "script apply(solo())" to SprudelPattern.compile("""s("bd").apply(solo())"""),
         ) { _, events ->
-            val onsets = events.filter { it.isOnset }
+            val onsets = events.filter { it.isOnset }.sourceEvents()
             onsets shouldHaveSize 1
-            onsets[0].data.solo shouldBe 0.97
+            onsets[0].data.solo shouldBe 0.95
         }
     }
 
@@ -48,15 +48,26 @@ class LangSoloSpec : StringSpec({
             "script pattern.solo(1)" to SprudelPattern.compile("""s("bd").solo(1)"""),
             "script string.solo(1)" to SprudelPattern.compile(""""bd".solo(1)"""),
         ) { _, events ->
-            val onsets = events.filter { it.isOnset }
+            val onsets = events.filter { it.isOnset }.sourceEvents()
             onsets shouldHaveSize 1
             onsets[0].data.solo shouldBe 1.0
         }
     }
 
-    // -- default amount (0.97) ---------------------------------------------------------------------------------------
+    "solo(0.7) dsl interface" {
+        dslInterfaceTests(
+            "pattern.solo(0.7)" to s("bd").solo(0.7),
+            "script pattern.solo(0.7)" to SprudelPattern.compile("""s("bd").solo(0.7)"""),
+        ) { _, events ->
+            val onsets = events.filter { it.isOnset }.sourceEvents()
+            onsets shouldHaveSize 1
+            onsets[0].data.solo shouldBe 0.7
+        }
+    }
 
-    "solo() sets data.solo = 0.97" {
+    // -- default amount (0.95) ---------------------------------------------------------------------------------------
+
+    "solo() sets data.solo = 0.95" {
         val subject = s("bd").solo()
 
         assertSoftly {
@@ -64,39 +75,39 @@ class LangSoloSpec : StringSpec({
                 withClue("Cycle $cycle") {
                     val cycleDbl = cycle.toDouble()
                     val events = subject.queryArc(cycleDbl, cycleDbl + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
                     events[0].data.soundName shouldBeEqualIgnoringCase "bd"
-                    events[0].data.solo shouldBe 0.97
+                    events[0].data.solo shouldBe 0.95
                 }
             }
         }
     }
 
-    "solo(null) falls back to 0.97" {
+    "solo(null) falls back to 0.95" {
         val subject = s("bd").solo(null)
 
         assertSoftly {
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
-                    events[0].data.solo shouldBe 0.97
+                    events[0].data.solo shouldBe 0.95
                 }
             }
         }
     }
 
-    "apply(solo(null)) falls back to 0.97 via PatternMapperFn" {
+    "apply(solo(null)) falls back to 0.95 via PatternMapperFn" {
         val p = s("bd sd").apply(solo(null))
         val events = p.queryArc(0.0, 1.0).sourceEvents()
 
         assertSoftly {
             events.shouldNotBeEmpty()
-            events.forEach { it.data.solo shouldBe 0.97 }
+            events.forEach { it.data.solo shouldBe 0.95 }
         }
     }
 
@@ -109,7 +120,7 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
                     events[0].data.solo shouldBe 1.0
@@ -125,7 +136,7 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
                     events[0].data.solo shouldBe 0.0
@@ -141,7 +152,7 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
                     events[0].data.solo shouldBe 0.5
@@ -157,7 +168,7 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
                     events[0].data.solo shouldBe 1.0
@@ -173,7 +184,7 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
                     events[0].data.solo shouldBe 0.0
@@ -191,7 +202,7 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 2
 
@@ -212,7 +223,7 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 2
                     events[0].data.soundName shouldBeEqualIgnoringCase "bd"
@@ -233,11 +244,11 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
                     events[0].data.value?.asString shouldBe "bd"
-                    events[0].data.solo shouldBe 0.97
+                    events[0].data.solo shouldBe 0.95
                 }
             }
         }
@@ -251,7 +262,7 @@ class LangSoloSpec : StringSpec({
 
         assertSoftly {
             events.shouldNotBeEmpty()
-            events.forEach { it.data.solo shouldBe 0.97 }
+            events.forEach { it.data.solo shouldBe 0.95 }
         }
     }
 
@@ -271,7 +282,7 @@ class LangSoloSpec : StringSpec({
 
         assertSoftly {
             events.shouldNotBeEmpty()
-            events.forEach { it.data.solo shouldBe 0.97 }
+            events.forEach { it.data.solo shouldBe 0.95 }
         }
     }
 
@@ -284,11 +295,11 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 2
-                    events[0].data.solo shouldBe 0.97
-                    events[1].data.solo shouldBe 0.97
+                    events[0].data.solo shouldBe 0.95
+                    events[1].data.solo shouldBe 0.95
                 }
             }
         }
@@ -301,11 +312,11 @@ class LangSoloSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val events = subject.queryArc(cycle.toDouble(), cycle.toDouble() + 1)
-                        .filter { it.isOnset }
+                        .filter { it.isOnset }.sourceEvents()
 
                     events.size shouldBe 1
                     events[0].data.gain shouldBe 0.5
-                    events[0].data.solo shouldBe 0.97
+                    events[0].data.solo shouldBe 0.95
                 }
             }
         }
@@ -319,7 +330,7 @@ class LangSoloSpec : StringSpec({
 
         assertSoftly {
             events.shouldNotBeEmpty()
-            events.forEach { it.data.solo shouldBe 0.97 }
+            events.forEach { it.data.solo shouldBe 0.95 }
         }
     }
 

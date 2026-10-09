@@ -61,9 +61,9 @@ class KatalystChainBuilderSpec : StringSpec({
     "the classic chain builds the historical effects and the fader, in DSL order, the duck outside the list" {
         val chain = build(KatalystDsl.classic)
 
-        chain.pipeline.map { it::class.simpleName } shouldBe listOf(
-            "KatalystBodyEffect",
-            "KatalystFormantEffect",
+        chain.pipeline.map { it.stageName() } shouldBe listOf(
+            "KatalystResonatorEffect(BODY)",
+            "KatalystResonatorEffect(VOWEL)",
             "KatalystDelayEffect",
             "KatalystReverbEffect",
             "KatalystPhaserEffect",
@@ -79,7 +79,7 @@ class KatalystChainBuilderSpec : StringSpec({
         chain.pipeline.any { it is KatalystDuckEffect } shouldBe false
     }
 
-    "the typed accessors are the very instances in the pipeline, at their declared positions" {
+    "the spec helpers find the very instances in the pipeline, at their declared positions" {
         val chain = build(KatalystDsl.classic)
 
         chain.body.shouldNotBeNull() shouldBeSameInstanceAs chain.pipeline[0]
@@ -88,6 +88,24 @@ class KatalystChainBuilderSpec : StringSpec({
         chain.reverb.shouldNotBeNull() shouldBeSameInstanceAs chain.pipeline[3]
         chain.phaser.shouldNotBeNull() shouldBeSameInstanceAs chain.pipeline[4]
         chain.compressor.shouldNotBeNull() shouldBeSameInstanceAs chain.pipeline[5]
+    }
+
+    "a chain declares a tail exactly when it declares a reverb or a delay" {
+        // The master's "is a tail possible at all" test reads this (`MasterBus.isRinging`); it moved from the master
+        // onto the chain in engine tidy-up step 13 (A2.1).
+        val wet = IgnitorDsl.Constant(0.4)
+
+        build(KatalystDsl.classic).declaresTail shouldBe true
+        build(KatalystDsl(emptyList())).declaresTail shouldBe false
+        build(KatalystDsl.of(KatalystStageDsl.Reverb(wet = wet))).declaresTail shouldBe true
+        build(KatalystDsl.of(KatalystStageDsl.Delay(wet = wet))).declaresTail shouldBe true
+        build(KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(0.8)))).declaresTail shouldBe false
+        build(KatalystDsl.of(KatalystStageDsl.Compressor())).declaresTail shouldBe false
+        build(KatalystDsl.of(KatalystStageDsl.Phaser())).declaresTail shouldBe false
+
+        // Every other stage the classic chain declares (body, vowel, phaser, compressor, gain, duck), none a tail.
+        val noTail = KatalystDsl.classic.stages.filter { it !is KatalystStageDsl.Reverb && it !is KatalystStageDsl.Delay }
+        build(KatalystDsl(noTail)).declaresTail shouldBe false
     }
 
     "building rents nothing: the delay has no ring and the reverb no network until an owner asks" {

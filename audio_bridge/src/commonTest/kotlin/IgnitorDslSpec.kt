@@ -107,7 +107,7 @@ class IgnitorDslSpec : StringSpec({
     }
 
     "tap and band append into ONE ordered section list" {
-        val dsl = IgnitorDsl.Saw().eq().tap(850.0, 0.707, 1.7).band(4000.0, 0.7, -3.0)
+        val dsl = IgnitorDsl.Saw().eq().tap(freq = 850.0, q = 0.707, gain = 1.7).band(freq = 4000.0, q = 0.7, db = -3.0)
         dsl.sections.size shouldBe 2
         dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
         dsl.sections[1].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()

@@ -52,8 +52,8 @@ class KlangScriptSuperPluckSpec : StringSpec({
         ks("Ignitor.superpluck(x => x.spread(0.15))") shouldBe (node() as IgnitorDsl.SuperPluck).copy(spread = IgnitorDsl.Constant(0.15))
     }
 
-    "decay(0.99)" {
-        ks("Ignitor.superpluck(x => x.decay(0.99))") shouldBe (node() as IgnitorDsl.SuperPluck).copy(decay = IgnitorDsl.Constant(0.99))
+    "feedback(0.99)" {
+        ks("Ignitor.superpluck(x => x.feedback(0.99))") shouldBe (node() as IgnitorDsl.SuperPluck).copy(feedback = IgnitorDsl.Constant(0.99))
     }
 
     "brightness(0.45)" {
@@ -81,13 +81,13 @@ class KlangScriptSuperPluckSpec : StringSpec({
     }
 
     "every knob in one lambda, freq on the door" {
-        val code = "Ignitor.superpluck(110, x => x.voices(6).spread(0.15).decay(0.99)" +
+        val code = "Ignitor.superpluck(110, x => x.voices(6).spread(0.15).feedback(0.99)" +
                 ".brightness(0.45).pickPosition(0.3).stiffness(0.2).analog(4.0).analogSpread(0.25))"
         ks(code) shouldBe (node() as IgnitorDsl.SuperPluck).copy(
             freq = IgnitorDsl.Constant(110.0),
             voices = IgnitorDsl.Constant(6.0),
             spread = IgnitorDsl.Constant(0.15),
-            decay = IgnitorDsl.Constant(0.99),
+            feedback = IgnitorDsl.Constant(0.99),
             brightness = IgnitorDsl.Constant(0.45),
             pickPosition = IgnitorDsl.Constant(0.3),
             stiffness = IgnitorDsl.Constant(0.2),

@@ -17,6 +17,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.interleavedCopy
+import io.peekandpoke.klang.audio_be.releaseStarted
 import io.peekandpoke.klang.audio_be.cylinders.CapLaw
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
@@ -708,7 +709,7 @@ class MasterBusTest : StringSpec({
         }
         // Past the hold bound (about 6890 blocks after the note) it is being released, not gone.
         d.activePlaybackIds.contains("song") shouldBe true
-        d.engine("song")?.isReleasing shouldBe true
+        d.engine("song")?.releaseStarted shouldBe true
 
         for (b in 8000 until 9000) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
@@ -756,7 +757,7 @@ class MasterBusTest : StringSpec({
         // (decision (j), 2026-09-28): it rings out, however long.
         d.engine("song")?.scheduler?.getActiveVoiceCount() shouldBe 0
         d.engine("song")?.isIdle() shouldBe false
-        d.engine("song")?.isReleasing shouldBe false
+        d.engine("song")?.releaseStarted shouldBe false
     }
 
     "switching to an inaudible master holds the engine for the old room's ring-out, then releases it" {
@@ -1128,7 +1129,7 @@ class MasterBusTest : StringSpec({
 
         val swapped = rig()
         val control = rig()
-        val law = CapLaw(sampleRate, blockFrames)
+        val law = CapLaw(sampleRate = sampleRate, blockFrames = blockFrames)
         val releaseAt = law.releaseStart
         val releaseBlocks = law.releaseBlocks
         val swap = swapped.bus.chainSwap
@@ -1146,7 +1147,7 @@ class MasterBusTest : StringSpec({
             val want = control.block(0.0)
 
             for (i in 0 until blockFrames) {
-                val weight = law.weight(b, i)
+                val weight = law.weight(b = b, i = i)
 
                 if (got[i] != want[i] * weight) {
                     withClue("block $b sample $i (release starts at block $releaseAt): got ${got[i]}, want ${want[i]} x $weight") {

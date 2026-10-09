@@ -33,8 +33,8 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * Fills the voice FIELDS with the same two constants, so the field accessors (`vowel.wet`) read what
  * the slots hold. The wire does not carry the fields: since step 5b-1 the orbit's formant bank reads
  * the SLOTS and nothing else, and the `filters` field that once carried a `FilterDef.Formant` left
- * `VoiceData` in phase 3 step 9. The chain resolves the same two constants through
- * `KatalystSlots.vowelDef`.
+ * `VoiceData` in phase 3 step 9. The engine substitutes the same two constants for an unset slot
+ * in `KatalystResonatorEffect.configure`.
  */
 private fun SprudelVoiceData.fillVowelDefaults() {
     val slots = katalystParamsOrNew()

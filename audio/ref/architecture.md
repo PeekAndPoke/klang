@@ -86,12 +86,12 @@ registries (the forks inherit the built-ins from them).
 (last-writer-wins). Per-engine isolation fixes that — two playbacks on orbit 0 get independent
 cylinders.
 
-**Invariant that matters when coding**: a `VoiceScheduler` — and everything it holds (`scheduled`,
-`active`) — belongs to **exactly one playbackId**. So inside a scheduler, **every voice already
+**Invariant that matters when coding**: a `VoiceScheduler`, and everything it holds (`scheduled`,
+`active`, its one `PlaybackCtx`), belongs to **exactly one playbackId**. So inside a scheduler, **every voice already
 shares one playbackId**; comparing `playbackId` between voices there is always true and redundant
-(see `ScheduledVoice.isDuplicate`, which deliberately omits it). The `playbackId` filters that DO
-appear (`clearScheduled`, the `replaceVoices` scheduled-removal) are belt-and-suspenders, not because
-a scheduler can ever mix playbacks.
+(see `ScheduledVoice.isDuplicate`, which deliberately omits it). Since tidy-up step 8 (2026-10-08) the scheduler
+filters nothing by id and its methods take none; the context is made by the playback's first voice and dropped by
+`cleanup`.
 
 Test harness: `PlaybackEngineDispatcherTest` drives the real dispatcher — `d.handle(cmd)`,
 `d.engine(pid)?.scheduler`, `d.activePlaybackIds`, and `d.renderBlock(cursorFrame, out)` to advance

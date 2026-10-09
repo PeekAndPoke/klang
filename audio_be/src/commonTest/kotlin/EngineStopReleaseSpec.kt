@@ -14,6 +14,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
@@ -115,7 +116,7 @@ class EngineStopReleaseSpec : StringSpec({
                 lastVoiceBlock = blk
             }
 
-            if (releaseAt < 0 && a.engine.isReleasing) {
+            if (releaseAt < 0 && a.engine.releaseStarted) {
                 releaseAt = blk
             }
 
@@ -164,10 +165,10 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(masterEvent("runaway"), blip())))
         }
 
-        releasedAgainstControl(a, b)
+        releasedAgainstControl(a = a, b = b)
 
         withClue("the control, never stopped, is never released: its drone is the authored sound") {
-            b.engine.isReleasing shouldBe false
+            b.engine.releaseStarted shouldBe false
             b.engine.isIdle() shouldBe false
         }
     }
@@ -185,7 +186,7 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(blip(params))))
         }
 
-        releasedAgainstControl(a, b)
+        releasedAgainstControl(a = a, b = b)
 
         withClue("the control's orbit still rings: it was the release that ended the stopped one") {
             b.engine.cylinders.anyActive() shouldBe true
@@ -208,7 +209,7 @@ class EngineStopReleaseSpec : StringSpec({
             )
         }
 
-        releasedAgainstControl(a, b)
+        releasedAgainstControl(a = a, b = b)
 
         withClue("the control's orbit still rings on the drain: it was the release that ended the stopped one") {
             b.engine.cylinders.anyActive() shouldBe true
@@ -278,7 +279,7 @@ class EngineStopReleaseSpec : StringSpec({
             }
 
             withClue("block $blk: nothing endless is left, so the engine is never released") {
-                a.engine.isReleasing shouldBe false
+                a.engine.releaseStarted shouldBe false
             }
 
             if (a.engine.isIdle()) {
@@ -334,7 +335,7 @@ class EngineStopReleaseSpec : StringSpec({
                 got.contentEquals(want) shouldBe true
             }
 
-            a.engine.isReleasing shouldBe false
+            a.engine.releaseStarted shouldBe false
 
             if (settledAt < 0 && blk > 700 && a.engine.masterBusForTest.isSettled) {
                 settledAt = blk
@@ -390,7 +391,7 @@ class EngineStopReleaseSpec : StringSpec({
         withClue("disposed, long before any hold, and never released") {
             disposedAt shouldBeGreaterThan 0
             disposedAt shouldBeLessThan holdBlocks
-            engine.isReleasing shouldBe false
+            engine.releaseStarted shouldBe false
         }
 
         withClue("in the block before, it still had sound of its own: no extra hold") {
@@ -450,13 +451,13 @@ class EngineStopReleaseSpec : StringSpec({
 
         val stopped = a.d.engine("song").shouldNotBeNull()
 
-        while (!stopped.isReleasing && blk < 100 + holdBlocks + 10) {
+        while (!stopped.releaseStarted && blk < 100 + holdBlocks + 10) {
             a.render(blk)
             c.render(blk)
             blk++
         }
 
-        stopped.isReleasing shouldBe true
+        stopped.releaseStarted shouldBe true
 
         val later = 1000.0
         a.d.handle(
@@ -524,7 +525,7 @@ class EngineStopReleaseSpec : StringSpec({
             }
 
             withClue("block $blk: a finite tail is never released") {
-                a.engine.isReleasing shouldBe false
+                a.engine.releaseStarted shouldBe false
             }
 
             if (a.engine.isIdle()) {
@@ -545,7 +546,7 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(blip(params))))
         }
 
-        val idleAt = ringsOutAgainstControl(a, b, stopAt = 100, bound = 30000)
+        val idleAt = ringsOutAgainstControl(a = a, b = b, stopAt = 100, bound = 30000)
 
         withClue("idle, and only after the hold: the tail was still ringing when the hold ended") {
             idleAt shouldBeGreaterThan 100 + holdBlocks
@@ -566,7 +567,7 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(masterEvent("echo"), blip())))
         }
 
-        val idleAt = ringsOutAgainstControl(a, b, stopAt = 100, bound = 30000)
+        val idleAt = ringsOutAgainstControl(a = a, b = b, stopAt = 100, bound = 30000)
 
         withClue("idle, and only after the hold: the tail was still ringing when the hold ended") {
             idleAt shouldBeGreaterThan 100 + holdBlocks

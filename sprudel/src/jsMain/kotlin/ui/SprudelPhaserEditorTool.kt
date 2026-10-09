@@ -22,7 +22,6 @@ import io.peekandpoke.kraft.forms.formController
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -100,12 +99,6 @@ private class SprudelPhaserEditorComp(ctx: Ctx<Props>) : Component<SprudelPhaser
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseNum(text: String?, fallback: Double): Double =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
-
-    private fun parseNumOrNull(text: String?): Double? =
-        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
-
     // Whole-call mode reads the params from the host call's args, by the door's parameter index
     // (wet, rate, center, sweep); scalar mode reads the single arg, which is the rate.
     private val parsedDepth
@@ -135,14 +128,11 @@ private class SprudelPhaserEditorComp(ctx: Ctx<Props>) : Component<SprudelPhaser
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun Double.fmt(): String =
-        toFixed(3).trimEnd('0').trimEnd('.')
-
     private fun buildValue(): String =
         if (call != null) {
-            "${depth?.fmt() ?: "-"}, ${rate.fmt()}, ${center?.fmt() ?: "-"}, ${sweep?.fmt() ?: "-"}"
+            "${depth?.formatArg() ?: "-"}, ${rate.formatArg()}, ${center?.formatArg() ?: "-"}, ${sweep?.formatArg() ?: "-"}"
         } else {
-            rate.fmt()
+            rate.formatArg()
         }
 
     /**
@@ -162,13 +152,13 @@ private class SprudelPhaserEditorComp(ctx: Ctx<Props>) : Component<SprudelPhaser
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 4) texts.add(null)
-            put(texts, WET, depth?.fmt())
-            put(texts, RATE, rate.fmt())
-            put(texts, CENTER, center?.fmt())
-            put(texts, SWEEP, sweep?.fmt())
+            put(texts, WET, depth?.formatArg())
+            put(texts, RATE, rate.formatArg())
+            put(texts, CENTER, center?.formatArg())
+            put(texts, SWEEP, sweep?.formatArg())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(rate.fmt())
+            props.toolCtx.onCommit(rate.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()

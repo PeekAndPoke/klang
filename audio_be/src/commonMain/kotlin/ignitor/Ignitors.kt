@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 import io.peekandpoke.klang.audio_bridge.constants.BROWN_LEAK_DEFAULT
 import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_C
 import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_CHAOS_DEFAULT
@@ -83,16 +84,17 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
-import io.peekandpoke.klang.audio_be.fastSin
-import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.smallNumFastMod
-import io.peekandpoke.klang.audio_be.waveTrapezoid
-import io.peekandpoke.klang.audio_be.wrapPhase
-import io.peekandpoke.klang.audio_be.wrapToUnitCycle
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.fastSin
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
+import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.rampStep
+import io.peekandpoke.klang.audio_be.utils.wrapPhase
+import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
+import io.peekandpoke.klang.audio_be.utils.wrapToUnitCycle
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
+import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -125,10 +127,10 @@ object Ignitors {
     private val persistenceDefault = ConstantIgnitor(0.5)
     private val chaosDefault = ConstantIgnitor(CRACKLE_CHAOS_DEFAULT)
     private val colorDefault = ConstantIgnitor(NOISE_TILT_DEFAULT)
-    private val brownDepthDefault = ConstantIgnitor(BROWN_LEAK_DEFAULT)
+    private val brownLeakDefault = ConstantIgnitor(BROWN_LEAK_DEFAULT)
     private val tailDefault = ConstantIgnitor(DUST_TAIL_DEFAULT)
     private val bipolarDefault = ConstantIgnitor(DUST_BIPOLAR_DEFAULT)
-    private val decayDefault = ConstantIgnitor(0.996)
+    private val feedbackDefault = ConstantIgnitor(0.996)
     private val brightnessDefault = ConstantIgnitor(0.5)
     private val pickPositionDefault = ConstantIgnitor(0.5)
     private val stiffnessDefault = ConstantIgnitor(0.0)
@@ -141,7 +143,7 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
-    ): Ignitor = SineIgnitor(freq, analog, phase?.let { PhaseOffset(it) })
+    ): Ignitor = SineIgnitor(freq = freq, analog = analog, phaseIn = phase?.let { PhaseOffset(it) })
 
     private class SineIgnitor(
         private val freq: Ignitor,
@@ -149,12 +151,20 @@ object Ignitors {
         private val phaseIn: PhaseOffset?,
     ) : Ignitor {
         private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
+
+        /** Built with the node, seeded at the first block (see [seedAnalogDrift]). */
+        private val drift = AnalogDrift()
+        private var driftSeeded: Boolean = false
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
+            if (!driftSeeded) {
+                driftSeeded = true
+                seedAnalogDrift(drift = drift, analog = analog, freqHz = actualFreq, ctx = ctx)
+            }
+
+            val d = drift
             val phaseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val phaseMod = ctx.phaseMod
             val end = ctx.windowEnd
@@ -169,7 +179,7 @@ object Ignitors {
                 }
 
                 if (phaseIn.perSample) {
-                    renderPhased(buffer, actualFreq, ctx, d, phaseInc, phaseIn)
+                    renderPhased(buffer = buffer, actualFreq = actualFreq, ctx = ctx, d = d, phaseInc = phaseInc, phaseIn = phaseIn)
 
                     return
                 }
@@ -178,8 +188,9 @@ object Ignitors {
             if (d.active) {
                 d.beginBlock()
 
-                var m = d.blockStart
-                val dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                var m = d.blockStart * 1.0
+                val dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
 
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
@@ -233,8 +244,9 @@ object Ignitors {
 
                 if (d.active) {
                     d.beginBlock()
-                    m = d.blockStart
-                    dm = (d.blockEnd - m) / (end - off).coerceAtLeast(1)
+                    // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                    m = d.blockStart * 1.0
+                    dm = rampStep(from = m, to = d.blockEnd, frames = end - off)
                 }
 
                 for (i in off until end) {
@@ -265,6 +277,17 @@ object Ignitors {
 
     /** Engine cap per bank (coerced, like every count): a runaway `count` signal cannot allocate without bound. */
     private const val PARTIAL_BANK_MAX_COUNT = 64
+
+    /** The partial count [count] will read at the first block, as [unisonCapacity] reads a voice count. */
+    private fun partialCapacity(count: Ignitor, countsAtBuild: Boolean): Int {
+        if (!countsAtBuild) {
+            return 0
+        }
+
+        val c = sizingValueOrNull(count) ?: return 0
+
+        return c.toInt().coerceIn(0, PARTIAL_BANK_MAX_COUNT)
+    }
 
     /**
      * A sine carrying banks of sine partials at multiples of its own frequency, rendered in ONE
@@ -314,10 +337,11 @@ object Ignitors {
         suboctavesRolloff: Ignitor = ConstantIgnitor(1.0),
         analogSpread: Ignitor = ConstantIgnitor(1.0),
         phase: Ignitor? = null,
+        countsAtBuild: Boolean = false,
     ): Ignitor = PartialBankIgnitor(
-        freq, analog, fundamental,
-        harmonics, harmonicsRolloff, octaves, octavesRolloff, suboctaves, suboctavesRolloff,
-        analogSpread, phase?.let { PhaseOffset(it) },
+        freq = freq, analog = analog, fundamental = fundamental,
+        harmonics = harmonics, harmonicsRolloff = harmonicsRolloff, octaves = octaves, octavesRolloff = octavesRolloff, suboctaves = suboctaves, suboctavesRolloff = suboctavesRolloff,
+        analogSpread = analogSpread, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
     )
 
     private class PartialBankIgnitor(
@@ -332,16 +356,21 @@ object Ignitors {
         private val suboctavesRolloff: Ignitor,
         private val analogSpread: Ignitor,
         private val phaseIn: PhaseOffset?,
+        countsAtBuild: Boolean,
     ) : Ignitor {
-        /** One bank's partial state: growth-only arrays, a live [count], (re)activated partials restart at the applied phase. */
-        private class Bank {
+        /**
+         * One bank's partial state: growth-only arrays, a live [count], (re)activated partials restart at the applied
+         * phase. The arrays are built with the node at [capacity], the count the build can read (see
+         * [partialCapacity]); only a count signal past it grows them at render.
+         */
+        private class Bank(capacity: Int) {
             var count: Int = 0
-            var phase: DoubleArray = DoubleArray(0)
-            var gain: DoubleArray = DoubleArray(0)
-            var inc: DoubleArray = DoubleArray(0)
+            var phase: DoubleArray = DoubleArray(capacity)
+            var gain: DoubleArray = DoubleArray(capacity)
+            var inc: DoubleArray = DoubleArray(capacity)
 
             /** This bank's own drift lane per partial, as an index into the ignitor's [DriftLanes]. */
-            var laneIdx: IntArray = IntArray(0)
+            var laneIdx: IntArray = IntArray(capacity)
             private var lanesAssigned: Int = 0
 
             /** [startPhase]: where a (re)activated partial starts, in radians (the offset a block-constant `phase` applied so far). */
@@ -379,16 +408,25 @@ object Ignitors {
         private var fundGain: Double = 0.0
         private var fundInc: Double = 0.0
 
-        private val harmonicsBank = Bank()
-        private val octavesBank = Bank()
-        private val suboctavesBank = Bank()
+        private val harmonicsBank = Bank(capacity = partialCapacity(count = harmonics, countsAtBuild = countsAtBuild))
+        private val octavesBank = Bank(capacity = partialCapacity(count = octaves, countsAtBuild = countsAtBuild))
+        private val suboctavesBank = Bank(capacity = partialCapacity(count = suboctaves, countsAtBuild = countsAtBuild))
         private val banks = arrayOf(harmonicsBank, octavesBank, suboctavesBank)
 
         /** Drift depth, latched at the first block like the plain sine; a NaN read latches as inactive. */
         private var analogAmt: Double = 0.0
         private var latched: Boolean = false
 
-        /** Lane 0 is the fundamental; each bank's partials take the lanes after it as they grow. */
+        /**
+         * Lane 0 is the fundamental; each bank's partials take the lanes after it as they grow. Built with the node when
+         * `analog` may be above 0, one lane per partial the build can count (see [buildDriftLanes]); [drift] is the
+         * container once started at the first block, null while `analog` is 0.
+         */
+        private val builtLanes: DriftLanes? = buildDriftLanes(
+            analog = analog,
+            analogSpread = analogSpread,
+            lanes = 1 + harmonicsBank.phase.size + octavesBank.phase.size + suboctavesBank.phase.size,
+        )
         private var drift: DriftLanes? = null
 
         /** Coerces a count signal to `0..PARTIAL_BANK_MAX_COUNT`; NaN reads as 0. */
@@ -398,7 +436,7 @@ object Ignitors {
         /** `m ^ -rolloff`, 0 when the law overflows (a huge negative rolloff); NaN-guard: never NaN. */
         private fun law(m: Double, rolloff: Double): Double {
             val g = m.pow(-rolloff)
-            return if (g.isFinite()) g else 0.0
+            return g.finiteOrZero()
         }
 
         /** Gain of a partial at [partialFreq]: [g], or 0 at or above Nyquist. */
@@ -415,15 +453,19 @@ object Ignitors {
             phaseIn: Double, d: Double, g: Double,
             pm: DoubleArray?, drift: DriftLanes?, lane: Int,
         ): Double {
-            var ph = phaseIn
+            // `* 1.0`: an argument that seeds a loop-carried phase must pass an arithmetic op on V8, or every sample
+            // boxes it: about 10 KB per block for a five-partial bank with drift, on both bundles, pinned to one core
+            // and not (audio/ref/performance.md, V8 allocation pass).
+            var ph = phaseIn * 1.0
             // The drift ramp for this partial and block: one add per sample (DriftLanes KDoc).
             var m = 1.0
             var dm = 0.0
 
             if (drift != null) {
                 drift.advanceLane(lane)
-                m = drift.startOf(lane)
-                dm = (drift.endOf(lane) - m) / (end - off).coerceAtLeast(1)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(lane) * 1.0
+                dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
             }
 
             for (i in off until end) {
@@ -452,14 +494,18 @@ object Ignitors {
             phaseIn: Double, d: Double, g: Double,
             pm: DoubleArray?, drift: DriftLanes?, lane: Int, offsets: AudioBuffer,
         ): Double {
-            var ph = phaseIn
+            // `* 1.0`: an argument that seeds a loop-carried phase must pass an arithmetic op on V8, or every sample
+            // boxes it: about 10 KB per block for a five-partial bank with drift, on both bundles, pinned to one core
+            // and not (audio/ref/performance.md, V8 allocation pass).
+            var ph = phaseIn * 1.0
             var m = 1.0
             var dm = 0.0
 
             if (drift != null) {
                 drift.advanceLane(lane)
-                m = drift.startOf(lane)
-                dm = (drift.endOf(lane) - m) / (end - off).coerceAtLeast(1)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(lane) * 1.0
+                dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
             }
 
             for (i in off until end) {
@@ -494,7 +540,10 @@ object Ignitors {
 
                 if (analogAmt > 0.0) {
                     // Lane 0 is the fundamental, drawn here so it keeps the head of the draw order.
-                    drift = DriftLanes(analogAmt, ctx.driftStepRate, ctx.random).also { it.ensureLanes(1) }
+                    val lanes = startDriftLanes(built = builtLanes, analog = analogAmt, ctx = ctx)
+
+                    lanes.ensureLanes(1)
+                    drift = lanes
                 }
             }
 
@@ -513,7 +562,7 @@ object Ignitors {
             val baseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val fund = readParam(fundamental, actualFreq, ctx)
             // NaN-guard: a non-finite fundamental gain reads as 0 (the hand-rolled `.mul(gain)` scrubbed NaN too).
-            fundGain = gate(actualFreq, if (fund.isFinite()) fund else 0.0, ctx)
+            fundGain = gate(partialFreq = actualFreq, g = fund.finiteOrZero(), ctx = ctx)
             fundInc = baseInc
 
             val rh = readParam(harmonicsRolloff, actualFreq, ctx)
@@ -522,7 +571,7 @@ object Ignitors {
 
             for (i in 0 until h) {
                 val m = (2 + i).toDouble()
-                harmonicsBank.gain[i] = gate(m * actualFreq, law(m, rh), ctx)
+                harmonicsBank.gain[i] = gate(partialFreq = m * actualFreq, g = law(m = m, rolloff = rh), ctx = ctx)
                 harmonicsBank.inc[i] = TWO_PI * (m * actualFreq) / ctx.sampleRateD
             }
 
@@ -530,7 +579,7 @@ object Ignitors {
 
             for (i in 0 until o) {
                 m *= 2.0
-                octavesBank.gain[i] = gate(m * actualFreq, law(m, ro), ctx)
+                octavesBank.gain[i] = gate(partialFreq = m * actualFreq, g = law(m = m, rolloff = ro), ctx = ctx)
                 octavesBank.inc[i] = TWO_PI * (m * actualFreq) / ctx.sampleRateD
             }
 
@@ -539,7 +588,7 @@ object Ignitors {
             for (i in 0 until sub) {
                 m *= 2.0
                 val partialFreq = actualFreq / m
-                suboctavesBank.gain[i] = gate(partialFreq, law(m, rs), ctx)
+                suboctavesBank.gain[i] = gate(partialFreq = partialFreq, g = law(m = m, rolloff = rs), ctx = ctx)
                 suboctavesBank.inc[i] = TWO_PI * partialFreq / ctx.sampleRateD
             }
 
@@ -565,14 +614,14 @@ object Ignitors {
                 if (phaseIn.perSample) {
                     ctx.scratchBuffers.use { offsets ->
                         phaseIn.render(offsets, actualFreq, ctx)
-                        renderPartials(buffer, off, end, pm, lanes, offsets)
+                        renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = offsets)
                     }
 
                     return
                 }
             }
 
-            renderPartials(buffer, off, end, pm, lanes, null)
+            renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = null)
         }
 
         /** Moves every live accumulator by a block-constant phase change of [shift] cycles (0: nothing moves). */
@@ -600,9 +649,9 @@ object Ignitors {
 
             if (fundGain != 0.0) {
                 fundPhase = if (offsets == null) {
-                    renderPartial(buffer, off, end, first, fundPhase, fundInc, fundGain, pm, lanes, 0)
+                    renderPartial(buffer = buffer, off = off, end = end, first = first, phaseIn = fundPhase, d = fundInc, g = fundGain, pm = pm, drift = lanes, lane = 0)
                 } else {
-                    renderPartialPhased(buffer, off, end, first, fundPhase, fundInc, fundGain, pm, lanes, 0, offsets)
+                    renderPartialPhased(buffer = buffer, off = off, end = end, first = first, phaseIn = fundPhase, d = fundInc, g = fundGain, pm = pm, drift = lanes, lane = 0, offsets = offsets)
                 }
                 first = false
             }
@@ -616,10 +665,10 @@ object Ignitors {
                     }
 
                     bank.phase[i] = if (offsets == null) {
-                        renderPartial(buffer, off, end, first, bank.phase[i], bank.inc[i], g, pm, lanes, bank.laneIdx[i])
+                        renderPartial(buffer = buffer, off = off, end = end, first = first, phaseIn = bank.phase[i], d = bank.inc[i], g = g, pm = pm, drift = lanes, lane = bank.laneIdx[i])
                     } else {
                         renderPartialPhased(
-                            buffer, off, end, first, bank.phase[i], bank.inc[i], g, pm, lanes, bank.laneIdx[i], offsets,
+                            buffer = buffer, off = off, end = end, first = first, phaseIn = bank.phase[i], d = bank.inc[i], g = g, pm = pm, drift = lanes, lane = bank.laneIdx[i], offsets = offsets,
                         )
                     }
                     first = false
@@ -661,6 +710,12 @@ object Ignitors {
         private val phaseIn: PhaseOffset? = null,
     ) : Ignitor {
         private val voice = WaveVoiceState()
+
+        /**
+         * The drift lane, built with the node when `analog` may be above 0 ([mayDrift]); seeded and handed to [voice] at
+         * the first block when `analog` is above 0, built there if the build ruled it out.
+         */
+        private val builtLane: AnalogDrift? = if (mayDrift(analog)) AnalogDrift() else null
         private var driftInit = false
         private var lastDt: Double = Double.NaN
         private var lastDuty: Double = Double.NaN
@@ -673,12 +728,19 @@ object Ignitors {
 
                 val amt = readParam(analog, actualFreq, ctx)
 
-                voice.drift = if (amt > 0.0) AnalogDrift(amt, ctx.driftStepRate, ctx.random) else null
+                if (amt > 0.0) {
+                    val lane = builtLane ?: AnalogDrift()
+
+                    lane.seed(analog = amt, stepRate = ctx.driftStepRate, rng = ctx.random)
+                    voice.drift = lane
+                } else {
+                    voice.drift = null
+                }
             }
 
             val dt = actualFreq / ctx.sampleRateD
             val pm = ctx.phaseMod
-            // Same hoist as the wave-engine stacks (see TrapezoidStackIgnitor.renderVoice): the
+            // Same hoist as the unison stacks (see UnisonStackIgnitor.trapezoidLoop): the
             // one-subtract wrap holds only while |inc| < 1. Past that a positive dt parks the
             // trapezoid on its low plateau and a negative one rides the rise ramp without bound.
             val safeWrap = pm != null || voice.drift != null || !(abs(dt) < 1.0)
@@ -708,9 +770,9 @@ object Ignitors {
                 }
 
                 if (phased != null) {
-                    renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, null, 0.0)
+                    renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = null, floor = 0.0)
                 } else {
-                    renderHoisted(buffer, off, end, dt, pm, safeWrap)
+                    renderHoisted(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap)
                 }
 
                 return
@@ -727,13 +789,13 @@ object Ignitors {
 
                 if (d != lastDuty || dt != lastDt) {
                     lastDuty = d; lastDt = dt
-                    voice.setPulseShape(d, riseFlank, fallFlank, flankSamples * dt)
+                    voice.setPulseShape(duty = d, riseFlank = riseFlank, fallFlank = fallFlank, floor = flankSamples * dt)
                 }
 
                 if (phased != null) {
-                    renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, null, 0.0)
+                    renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = null, floor = 0.0)
                 } else {
-                    renderHoisted(buffer, off, end, dt, pm, safeWrap)
+                    renderHoisted(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap)
                 }
             } else {
                 if (dt != lastDt) {
@@ -746,7 +808,7 @@ object Ignitors {
                     duty.generate(dutyBuf, actualFreq, ctx)
 
                     if (phased != null) {
-                        renderPhased(buffer, off, end, dt, pm, safeWrap, phased, actualFreq, ctx, dutyBuf, floor)
+                        renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = dutyBuf, floor = floor)
 
                         return
                     }
@@ -759,19 +821,20 @@ object Ignitors {
 
                     if (drift != null) {
                         drift.beginBlock()
-                        m = drift.blockStart
-                        dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+                        // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                        m = drift.blockStart * 1.0
+                        dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
                     }
 
                     for (i in off until end) {
                         val d = dutyBuf[i]
 
                         if (d != lastDuty) {
-                            lastDuty = d; voice.setPulseShape(d, riseFlank, fallFlank, floor)
+                            lastDuty = d; voice.setPulseShape(duty = d, riseFlank = riseFlank, fallFlank = fallFlank, floor = floor)
                         }
 
                         buffer[i] = pol * waveTrapezoid(
-                            phase, voice.riseEnd, voice.highEnd, voice.fallEnd, voice.riseSlope, voice.fallSlope,
+                            p = phase, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope,
                         )
 
                         var inc = dt * m
@@ -782,7 +845,7 @@ object Ignitors {
 
                         m += dm
                         phase += inc
-                        phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                        phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
                     }
 
                     voice.phase = phase
@@ -802,8 +865,9 @@ object Ignitors {
 
             if (drift != null) {
                 drift.beginBlock()
-                m = drift.blockStart
-                dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.blockStart * 1.0
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             val riseEnd = voice.riseEnd
@@ -813,7 +877,7 @@ object Ignitors {
             val fallSlope = voice.fallSlope
 
             for (i in off until end) {
-                buffer[i] = pol * waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope)
+                buffer[i] = pol * waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
 
                 var inc = dt * m
 
@@ -823,7 +887,7 @@ object Ignitors {
 
                 m += dm
                 phase += inc
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
             }
 
             voice.phase = phase
@@ -849,8 +913,9 @@ object Ignitors {
 
                 if (drift != null) {
                     drift.beginBlock()
-                    m = drift.blockStart
-                    dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+                    // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                    m = drift.blockStart * 1.0
+                    dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
                 }
 
                 for (i in off until end) {
@@ -858,7 +923,7 @@ object Ignitors {
                         val d = dutyBuf[i]
 
                         if (d != lastDuty) {
-                            lastDuty = d; voice.setPulseShape(d, riseFlank, fallFlank, floor)
+                            lastDuty = d; voice.setPulseShape(duty = d, riseFlank = riseFlank, fallFlank = fallFlank, floor = floor)
                         }
                     }
 
@@ -869,7 +934,7 @@ object Ignitors {
                     }
 
                     buffer[i] = pol * waveTrapezoid(
-                        p, voice.riseEnd, voice.highEnd, voice.fallEnd, voice.riseSlope, voice.fallSlope,
+                        p = p, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope,
                     )
 
                     var inc = dt * m
@@ -880,7 +945,7 @@ object Ignitors {
 
                     m += dm
                     phase += inc
-                    phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                    phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
                 }
 
                 voice.phase = phase
@@ -900,7 +965,7 @@ object Ignitors {
         shapeMax: Double = SAW_SHAPE_MAX,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = resetSamples, shapeMax = shapeMax,
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = 1.0, flankSamples = resetSamples, shapeMax = shapeMax,
         phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -912,7 +977,7 @@ object Ignitors {
         shapeMax: Double = RAMP_SHAPE_MAX,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = resetSamples, shapeMax = shapeMax,
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = -1.0, flankSamples = resetSamples, shapeMax = shapeMax,
         phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -921,7 +986,7 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
-    ): Ignitor = pulze(freq, ConstantIgnitor(0.5), analog, phase = phase)
+    ): Ignitor = pulze(freq = freq, duty = ConstantIgnitor(0.5), analog = analog, phase = phase)
 
     /** Triangle wave: the pulse engine with both flanks fully open (duty 0.5, rise = fall = 1). Phase 0 is -1, its lowest point. */
     fun tri(
@@ -929,7 +994,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
+        freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
         duty = ConstantIgnitor(0.5), riseFlank = 1.0, fallFlank = 1.0, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -980,7 +1045,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = 1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /** Raw ramp ("zamp"): the negated [zawtooth] (naive reverse saw, no anti-aliasing). Phase 0 is +1. */
@@ -989,7 +1054,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = -1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /**
@@ -1003,7 +1068,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = 0.0,
+        freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = 0.0,
         duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
@@ -1017,7 +1082,7 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
-    ): Ignitor = ImpulseIgnitor(freq, analog, phase?.let { PhaseOffset(it) })
+    ): Ignitor = ImpulseIgnitor(freq = freq, analog = analog, phaseIn = phase?.let { PhaseOffset(it) })
 
     private class ImpulseIgnitor(
         private val freq: Ignitor,
@@ -1026,13 +1091,21 @@ object Ignitors {
     ) : Ignitor {
         private var phase: Double = 0.0
         private var lastPhase: Double = Double.POSITIVE_INFINITY
-        private var drift: AnalogDrift? = null
+
+        /** Built with the node, seeded at the first block (see [seedAnalogDrift]). */
+        private val drift = AnalogDrift()
+        private var driftSeeded: Boolean = false
         private var started: Boolean = false
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
+            if (!driftSeeded) {
+                driftSeeded = true
+                seedAnalogDrift(drift = drift, analog = analog, freqHz = actualFreq, ctx = ctx)
+            }
+
+            val d = drift
             val phaseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val phaseMod = ctx.phaseMod
             val end = ctx.windowEnd
@@ -1045,7 +1118,7 @@ object Ignitors {
                 }
 
                 if (phaseIn.perSample) {
-                    renderPhased(buffer, actualFreq, ctx, d, phaseInc, phaseIn)
+                    renderPhased(buffer = buffer, actualFreq = actualFreq, ctx = ctx, d = d, phaseInc = phaseInc, phaseIn = phaseIn)
 
                     return
                 }
@@ -1056,8 +1129,9 @@ object Ignitors {
             if (d.active) {
                 d.beginBlock()
 
-                var m = d.blockStart
-                val dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                var m = d.blockStart * 1.0
+                val dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
 
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
@@ -1150,8 +1224,9 @@ object Ignitors {
 
                 if (d.active) {
                     d.beginBlock()
-                    m = d.blockStart
-                    dm = (d.blockEnd - m) / (end - off).coerceAtLeast(1)
+                    // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                    m = d.blockStart * 1.0
+                    dm = rampStep(from = m, to = d.blockEnd, frames = end - off)
                 }
 
                 for (i in off until end) {
@@ -1195,22 +1270,22 @@ object Ignitors {
         fallFlank: Double = PULSE_FALL_FLANK,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = flankSamples,
+        freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = flankSamples,
         duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, phaseIn = phase?.let { PhaseOffset(it) },
     )
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
     /**
-     * Brown (random-walk) noise. [depth] is the per-sample white-leak `k` in `out = (out + k·white)/(1+k)`
-     * (read control-rate). `depth = BROWN_LEAK_DEFAULT` reproduces the original `/1.02` walk byte-for-byte.
+     * Brown (random-walk) noise. [leak] is the per-sample white-leak `k` in `out = (out + k·white)/(1+k)`
+     * (read control-rate). `leak = BROWN_LEAK_DEFAULT` reproduces the original `/1.02` walk byte-for-byte.
      */
-    fun brownNoise(rng: Random, depth: Ignitor = brownDepthDefault): Ignitor = BrownNoiseIgnitor(rng, depth)
+    fun brownNoise(rng: Random, leak: Ignitor = brownLeakDefault): Ignitor = BrownNoiseIgnitor(rng = rng, leak = leak)
 
-    private class BrownNoiseIgnitor(private val rng: Random, private val depth: Ignitor) : Ignitor {
+    private class BrownNoiseIgnitor(private val rng: Random, private val leak: Ignitor) : Ignitor {
         private var out: Double = 0.0
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val k = depth.blockStartValue(freqHz, ctx).coerceAtLeast(0.0)   // real freqHz: ledger O6
+            val k = leak.blockStartValue(freqHz, ctx).coerceAtLeast(0.0)   // real freqHz: ledger O6
             val denom = 1.0 + k
             val end = ctx.windowEnd
 
@@ -1262,7 +1337,7 @@ object Ignitors {
         rate: Ignitor = rateDefault,
         octaves: Ignitor = octavesDefault,
         persistence: Ignitor = persistenceDefault,
-    ): Ignitor = PerlinNoiseIgnitor(rng, rate, octaves, persistence)
+    ): Ignitor = PerlinNoiseIgnitor(rng = rng, rate = rate, octaves = octaves, persistence = persistence)
 
     private class PerlinNoiseIgnitor(
         rng: Random,
@@ -1284,7 +1359,7 @@ object Ignitors {
             val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
-                buffer[i] = noise.fbm(pos, oct, pers)
+                buffer[i] = noise.fbm(x = pos, octaves = oct, persistence = pers)
                 pos += step
             }
         }
@@ -1296,7 +1371,7 @@ object Ignitors {
         rate: Ignitor = rateDefault,
         octaves: Ignitor = octavesDefault,
         persistence: Ignitor = persistenceDefault,
-    ): Ignitor = BerlinNoiseIgnitor(rng, rate, octaves, persistence)
+    ): Ignitor = BerlinNoiseIgnitor(rng = rng, rate = rate, octaves = octaves, persistence = persistence)
 
     private class BerlinNoiseIgnitor(
         rng: Random,
@@ -1316,7 +1391,7 @@ object Ignitors {
 
             for (i in ctx.offset until end) {
                 // BerlinNoise outputs 0..1, scale to -1..1
-                buffer[i] = (noise.fbm(pos, oct, pers) * 2.0 - 1.0)
+                buffer[i] = (noise.fbm(t = pos, octaves = oct, persistence = pers) * 2.0 - 1.0)
                 pos += step
             }
         }
@@ -1333,7 +1408,7 @@ object Ignitors {
         tail: Ignitor = tailDefault,
         bipolar: Ignitor = bipolarDefault,
         maxRateHz: Double = 200.0,
-    ): Ignitor = DustIgnitor(rng, density, tail, bipolar, maxRateHz)
+    ): Ignitor = DustIgnitor(rng = rng, density = density, tail = tail, bipolar = bipolar, maxRateHz = maxRateHz)
 
     private class DustIgnitor(
         private val rng: Random,
@@ -1416,7 +1491,7 @@ object Ignitors {
 
     /**
      * Supersaw: a detuned stack of the analog-flyback saw shape (mono). Voice count is read lazily
-     * from the [voices] Ignitor param on the first block. See [SawStackIgnitor].
+     * from the [voices] Ignitor param on the first block. See [UnisonStackIgnitor].
      */
     fun superSawRaw(
         freq: Ignitor = FreqIgnitor,
@@ -1424,7 +1499,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         // Unison character — defaults are the SUPERSAW_* tuning constants; the DSL threads per-voice overrides.
         sideAtten: Double = SUPERSAW_SIDE_ATTEN,
         gainJitter: Double = SUPERSAW_GAIN_JITTER,
@@ -1441,13 +1516,15 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
         phase: Ignitor? = null,
-    ): Ignitor = SawStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        countsAtBuild: Boolean = false,
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.SAW,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
         resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX,
     )
 
@@ -1458,7 +1535,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERSAW_SIDE_ATTEN,
         gainJitter: Double = SUPERSAW_GAIN_JITTER,
         spreadPower: Double = SUPERSAW_SPREAD_POWER,
@@ -1474,27 +1551,41 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
         phase: Ignitor? = null,
+        countsAtBuild: Boolean = false,
     ): Ignitor = superSawRaw(
-        freq, voices, detune, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phase = phase,
+        phasePools = phasePools, orbit = orbit, phase = phase, countsAtBuild = countsAtBuild,
     )
 
+    /** The voice shape of a [UnisonStackIgnitor]: the analog-flyback saw, the [waveTrapezoid] pulse, or a pure sine. */
+    private enum class StackKind { SAW, PULSE, SINE }
+
     /**
-     * Shared engine for every unison oscillator: a stack of detuned voices summed to mono with the
-     * super-saw character — center-dominant [sideAtten] gains, per-voice amplitude [gainJitter],
-     * per-voice drift lanes ([DriftLanes] blended by [analogSpread]), even [detune] spacing (shaped
-     * by [spreadPower]) with the
-     * **gain-weighted mean detune removed** so the pitch centroid sits exactly on the note. [polarity]
-     * flips the waveform and is baked into the voice gains (no per-sample sign flip).
+     * The one engine behind every unison oscillator (supersaw, superramp, supersquare, supertri, supersine): a stack of
+     * detuned voices summed to mono with the super-saw character: center-dominant [sideAtten] gains, per-voice
+     * amplitude [gainJitter], per-voice drift lanes ([DriftLanes] blended by [analogSpread]), even [detune] spacing
+     * (shaped by [spreadPower]) with the **gain-weighted mean detune removed** so the pitch centroid sits exactly on the
+     * note. [polarity] flips the waveform and is baked into the voice gains (no per-sample sign flip).
      *
-     * Subclasses supply only the per-voice shape — [configureShape] (control-rate, from the detuned
-     * increment) and [renderVoice] (the per-sample inner loop). Voice count is read lazily from the
-     * [voices] param; detune + shape are cached, recomputed only when freq / voice count / spread change.
+     * [kind] picks the voice shape, like [WaveIgnitor]'s [WaveKind]: [configureShape] sets it per voice (control rate,
+     * from the detuned increment), and the voice loop renders it, the [waveTrapezoid] for SAW and PULSE, a sine for
+     * SINE, each in a plain and a phased loop of its own (one small loop per method, which the JIT compiles whole).
+     * Each loop runs its own drift prologue. One shared prologue that handed the ramp to the loops as arguments was
+     * measured 20 to 25 percent slower on V8 for the phased loops (tidy-up step 11, review round 1): V8 did not inline
+     * them, so the arguments arrived untyped. The ramp's start passes `* 1.0` (the V8 rule in `audio/ref/performance.md`:
+     * a seed from a call result stays tagged and every `m += dm` can allocate a heap number, one per sample per voice
+     * with drift: seen under a mixed profile, every oscillator warmed in one process, in 2 of 3 processes on the
+     * development bundle and none after; on the production bundle in 2 of 3 in one sample and 0 of 3 in another; V8
+     * allocation pass).
+     * The shape knobs are read only by their kind: [resetSamples] and [shapeMax] by SAW, [duty], [riseFlank],
+     * [fallFlank] and [flankSamples] by PULSE; SINE reads none. Voice count is read lazily from the [voices] param;
+     * detune + shape are cached, recomputed only when freq / voice count / spread change.
      */
-    private abstract class DetunedStackIgnitor(
+    private class UnisonStackIgnitor(
+        private val kind: StackKind,
         private val freq: Ignitor,
         private val voices: Ignitor,
         private val detune: Ignitor,
@@ -1517,16 +1608,39 @@ object Ignitors {
         private val phasePools: PhasePools?,
         private val orbit: Int,
         private val phaseIn: PhaseOffset?,
+        countsAtBuild: Boolean,
+        private val resetSamples: Double = 0.0,
+        private val shapeMax: Double = 0.0,
+        private val duty: Double = 0.0,
+        private val riseFlank: Double = 0.0,
+        private val fallFlank: Double = 0.0,
+        private val flankSamples: Double = 0.0,
     ) : Ignitor {
-        /** `selection` parsed lazily at the first POOLED note-on (`"name[:width[:outliers]]"` —
-         *  see [parsePhasePoolSelection]); voices with the pool OFF (the default) never pay
-         *  the parse, and the per-sample render loop never touches the string. */
-        private var parsedSelection: PhasePoolSelectionParsed? = null
+        /** `selection` parsed at build (`"name[:width[:outliers]]"`, see [parsePhasePoolSelection]) when the pool is
+         *  on; voices with the pool OFF (the default) never pay the parse, and the render never touches the string. */
+        private val parsedSelection: PhasePoolSelectionParsed? = if (phasePool > 0.5) parsePhasePoolSelection(selection) else null
 
+        /** The live voice count: the first [v] entries of [voiceStates] are the voices. */
         private var v: Int = 0
-        private var voiceStates: Array<WaveVoiceState> = emptyArray()
 
-        /** One lane per voice plus the shared walk; null while `analog` is 0, which is the fast path. */
+        /**
+         * The voices' states, built with the node at the count the build can read ([unisonCapacity]); a shrink keeps
+         * them and a voice that comes back re-uses its state. Only a count past the array
+         * grows it, at render (a `voices` signal the build could not read).
+         */
+        private var voiceStates: Array<WaveVoiceState> = Array(unisonCapacity(voices = voices, countsAtBuild = countsAtBuild)) { WaveVoiceState() }
+
+        /** The base gain profile of the live count, written by [computeVoiceGains]; sized like [voiceStates]. */
+        private var baseGains: DoubleArray = DoubleArray(voiceStates.size)
+
+        /** The best candidate of the stateless banded draw ([selectBandedPhases]); built only when that draw can run. */
+        private var bestPhases: DoubleArray = DoubleArray(if (phasePool > 0.5 && phasePools == null) voiceStates.size else 0)
+
+        /**
+         * One lane per voice plus the shared walk, built with the node when `analog` may be above 0 (see
+         * [buildDriftLanes]); [drift] is the container once started, null while `analog` is 0, which is the fast path.
+         */
+        private val builtLanes: DriftLanes? = buildDriftLanes(analog = analog, analogSpread = analogSpread, lanes = voiceStates.size)
         private var drift: DriftLanes? = null
         private var analogLatched: Boolean = false
 
@@ -1534,38 +1648,21 @@ object Ignitors {
         private var lastFreq: Double = Double.NaN
         private var lastSpread: Double = Double.NaN
 
-        /** Set the per-voice shape from its detuned per-sample increment [dt] (control rate). */
-        protected abstract fun configureShape(vs: WaveVoiceState, dt: Double)
-
-        /** Render voice [n]'s block: write the buffer when [first], else accumulate onto it. */
-        protected abstract fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?,
-        )
-
-        /**
-         * [renderVoice] for a moving `phase` signal: reads the voice's shape at `phase + offsets[i]` and advances the
-         * phase exactly as [renderVoice] does. Every voice reads the same [offsets], so the stack moves as one.
-         */
-        protected abstract fun renderVoicePhased(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
-        )
-
-        final override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
-            val newV = maxOf(0, readParam(voices, actualFreq, ctx).toInt())
+            val newV = coerceUnisonVoices(readParam(voices, actualFreq, ctx))
             // Read every block, like the bank and the pluck read theirs: a modulated subtree
             // advances once per block whether or not anything uses its value (ledger O2). Only the
             // DEPTH is latched, below.
             val analogAmt = readParam(analog, actualFreq, ctx)
 
             if (newV != v) {
+                val oldV = v
+
                 v = newV
 
-                val old = voiceStates
-                // Banded selection runs at note-on only (empty → v); mid-note voice-count changes
+                // Banded selection runs at note-on only (none → v); mid-note voice-count changes
                 // keep plain random phases for added voices, and with the pool off the rng stream
                 // must stay identical to the legacy draw order (phases here, jitter in
                 // computeVoiceGains) — the bypass guarantee is bit-exact.
@@ -1573,20 +1670,26 @@ object Ignitors {
                 // first observation is below 2 forfeits the pool for the whole note; one that
                 // starts at 0 gets its pool serve at the first observed rise. Both are the
                 // control-rate observation semantics, not bugs — do not re-judge.
-                val banded = phasePool > 0.5 && old.isEmpty() && v >= 2
+                val banded = phasePool > 0.5 && oldV == 0 && v >= 2
 
-                // Reuse existing voice objects (preserve phase); random start phase for new ones —
-                // lush (phase-0 is thin; even spacing makes voice-count-dependent overtones). Innocent
-                // for tuning: a phase offset doesn't change frequency, and `p += dt` is unbiased.
-                voiceStates = Array(v) { i ->
-                    if (i < old.size) {
-                        old[i]
-                    } else {
-                        WaveVoiceState().also {
-                            if (!banded) {
-                                it.phase = rng.nextDouble()
-                            }
-                        }
+                // Past the arrays built with the node: grow them (the one allocation left here).
+                if (v > voiceStates.size) {
+                    val old = voiceStates
+
+                    voiceStates = Array(v) { i -> if (i < old.size) old[i] else WaveVoiceState() }
+                    baseGains = DoubleArray(v)
+                }
+
+                // Surviving voices keep their state (and phase); the voices from the old count up are new, or back
+                // after a shrink, and take a random start phase, in index order: lush (phase-0 is thin; even spacing
+                // makes voice-count-dependent overtones). Innocent for tuning: a phase offset doesn't change
+                // frequency, and `p += dt` is unbiased. A state back after a shrink needs no reset: every field the
+                // stack reads is written before the next render (the phase here or by the banded selection, the
+                // jitter by drawGainJitterFor, the gain by computeVoiceGains, dt and the shape by computeDetunes,
+                // forced below), so it renders as a freshly built one (review round 1).
+                for (i in oldV until v) {
+                    if (!banded) {
+                        voiceStates[i].phase = rng.nextDouble()
                     }
                 }
 
@@ -1596,7 +1699,7 @@ object Ignitors {
                 // SURVIVING voices keep their phase, their drift lane (the slow OU layer must not
                 // re-seed to centre mid-note) and their gain-jitter draw; only indices that are NEW,
                 // or that were dropped by a shrink and have come back, draw from the rng (ledger
-                // O4). At note-on `old` is empty, so the draw order below is bit-identical to the
+                // O4). At note-on the old count is 0, so the draw order below is bit-identical to the
                 // legacy path — the phase-pool bypass guarantee holds.
 
                 // Drift depth is latched at the first block that sizes the stack, the way the plain
@@ -1606,17 +1709,17 @@ object Ignitors {
                     analogLatched = true
 
                     if (analogAmt > 0.0) {
-                        drift = DriftLanes(analogAmt, ctx.driftStepRate, ctx.random)
+                        drift = startDriftLanes(built = builtLanes, analog = analogAmt, ctx = ctx)
                     }
                 }
 
-                // A shrink drops those voice states (the `Array(v)` above keeps only the first v),
-                // so their lanes are retired too: a voice that comes back gets a state AND a lane
-                // built fresh, which is how it attacks in tune again.
+                // A shrink drops those voices (a voice that comes back is rewritten whole, above),
+                // so their lanes are retired too: a voice that comes back gets a fresh state AND a fresh
+                // lane, which is how it attacks in tune again.
                 drift?.retireLanes(v)
                 drift?.ensureLanes(v)
 
-                drawGainJitterFor(from = old.size)
+                drawGainJitterFor(from = oldV)
                 computeVoiceGains()
 
                 // Gains BEFORE phases: the stateless path scores candidates against the note's
@@ -1630,9 +1733,11 @@ object Ignitors {
                         warmup = warmup,
                     )
 
-                    if (pool != null) {
-                        val sel = parsedSelection ?: parsePhasePoolSelection(selection).also { parsedSelection = it }
-                        val entry = pool.next(sel.mode, sel.width, sel.outliers)
+                    // `banded` needs the pool on, so the selection was parsed at build.
+                    val sel = parsedSelection
+
+                    if (pool != null && sel != null) {
+                        val entry = pool.next(mode = sel.mode, width = sel.width, outliers = sel.outliers)
 
                         for (n in 0 until v) {
                             voiceStates[n].phase = entry[n]
@@ -1656,7 +1761,7 @@ object Ignitors {
             if (actualFreq != lastFreq || spread != lastSpread) {
                 lastFreq = actualFreq
                 lastSpread = spread
-                computeDetunes(actualFreq, spread, ctx.sampleRateD)
+                computeDetunes(actualFreq = actualFreq, spread = spread, sr = ctx.sampleRateD)
             }
 
             // Voice-major: each voice runs its whole sample block in one call (register residency);
@@ -1695,7 +1800,10 @@ object Ignitors {
                         phaseIn.render(offsets, actualFreq, ctx)
 
                         for (n in 0 until v) {
-                            renderVoicePhased(buffer, off, end, voiceStates[n], n, n == 0, pm, lanes, offsets)
+                            when (kind) {
+                                StackKind.SAW, StackKind.PULSE -> trapezoidLoopPhased(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes, offsets = offsets)
+                                StackKind.SINE -> sineLoopPhased(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes, offsets = offsets)
+                            }
                         }
                     }
 
@@ -1704,8 +1812,230 @@ object Ignitors {
             }
 
             for (n in 0 until v) {
-                renderVoice(buffer, off, end, voiceStates[n], n, n == 0, pm, lanes)
+                when (kind) {
+                    StackKind.SAW, StackKind.PULSE -> trapezoidLoop(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes)
+                    StackKind.SINE -> sineLoop(buffer = buffer, off = off, end = end, vs = voiceStates[n], n = n, first = n == 0, pm = pm, drift = lanes)
+                }
             }
+        }
+
+        /** Set the per-voice shape from its detuned per-sample increment [dt] (control rate). */
+        private fun configureShape(vs: WaveVoiceState, dt: Double) {
+            when (kind) {
+                StackKind.SAW -> {
+                    val rf = (resetSamples * dt).coerceAtMost(shapeMax)
+
+                    // NaN-guard: a NaN frequency made the flyback NaN and every sample NaN (the trapezoid's fall
+                    // branch). The phase is scrubbed to 0 by the wrap meanwhile, so any finite shape holds -1: a voice at a NaN
+                    // frequency now carries a held -1 (DC through its envelope) where it used to be NaN, scrubbed to silence.
+                    vs.setSawShape(if (rf != rf) shapeMax else rf)
+                }
+
+                // No NaN guard here, none needed: a NaN frequency gives a NaN flank floor, and `coerceAtLeast(NaN)`
+                // keeps the flank, so the floor drops out and the voice holds its floor-free shape (`UnisonStackShapeSpec`).
+                StackKind.PULSE -> vs.setPulseShape(duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, floor = flankSamples * dt)
+
+                // The sine carries no shape.
+                StackKind.SINE -> Unit
+            }
+        }
+
+        /**
+         * Renders voice [n]'s [waveTrapezoid] block: writes the buffer when [first], else accumulates onto it. The drift
+         * prologue advances lane [n] right before voice [n] renders, voice by voice in index order. The order inside
+         * (the voice's fields and `safeWrap`, then the prologue, then the samples) is the one the loops had before step
+         * 11; the other order measured 9 to 11 percent slower on V8 for the sine (review round 1).
+         */
+        private fun trapezoidLoop(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
+            // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
+            // uncoerced), gives |dt| >= 1, and a drifting voice can hold a near-1 dt over the edge for
+            // seconds (the slow drift layer is a 10 s walk). Then the phase escapes: the trapezoid parks on
+            // its low plateau (positive dt) or rides the rise ramp without bound (negative dt), the
+            // polynomial sine diverges (1.8e34 measured in review). Hoisted: dt is block-constant. NaN
+            // and infinite dt take the safe branch, which wraps them to 0.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            val riseEnd = vs.riseEnd
+            val highEnd = vs.highEnd
+            val fallEnd = vs.fallEnd
+            val riseSlope = vs.riseSlope
+            val fallSlope = vs.fallSlope
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(n) * 1.0
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+            }
+
+            for (i in off until end) {
+                val s = waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                // No phaseMod, no drift and |dt| < 1 ⇒ |inc| < 1 ⇒ one conditional subtract or add;
+                // otherwise the safe wrap (see safeWrap above).
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
+            }
+
+            vs.phase = phase
+        }
+
+        /**
+         * [trapezoidLoop] for a moving `phase` signal: reads the shape at `phase + offsets[i]` and advances `phase` alike.
+         * Every voice reads the same [offsets] (rendered before the first lane advances), so the stack moves as one.
+         */
+        private fun trapezoidLoopPhased(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            // The safe wrap as in trapezoidLoop.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            val riseEnd = vs.riseEnd
+            val highEnd = vs.highEnd
+            val fallEnd = vs.fallEnd
+            val riseSlope = vs.riseSlope
+            val fallSlope = vs.fallSlope
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(n) * 1.0
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+            }
+
+            for (i in off until end) {
+                var p = phase + offsets[i].wrapToUnitCycle()
+
+                if (p >= 1.0) {
+                    p -= 1.0
+                }
+
+                val s = waveTrapezoid(p = p, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
+            }
+
+            vs.phase = phase
+        }
+
+        /** Renders voice [n]'s sine block, as [trapezoidLoop] renders the trapezoid. */
+        private fun sineLoop(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            // The safe wrap as in trapezoidLoop.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(n) * 1.0
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+            }
+
+            for (i in off until end) {
+                val s = fastSin(phase * TWO_PI) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
+            }
+
+            vs.phase = phase
+        }
+
+        /** [sineLoop] for a moving `phase` signal: reads the sine at `phase + offsets[i]`, advances `phase` alike. */
+        private fun sineLoopPhased(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            // The safe wrap as in trapezoidLoop.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
+            val gain = vs.gain
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(n) * 1.0
+                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+            }
+
+            for (i in off until end) {
+                var p = phase + offsets[i].wrapToUnitCycle()
+
+                if (p >= 1.0) {
+                    p -= 1.0
+                }
+
+                val s = fastSin(p * TWO_PI) * gain
+
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var inc = dt * m
+
+                if (pm != null) {
+                    inc *= pm[i]
+                }
+
+                m += dm
+                phase += inc
+                phase = phase.wrapPhaseFastOrSafe(period = 1.0, safe = safeWrap)
+            }
+
+            vs.phase = phase
         }
 
         /**
@@ -1727,7 +2057,10 @@ object Ignitors {
         }
 
         private fun computeVoiceGains() {
-            val base = superSawVoiceGains(v, sideAtten)
+            val base = baseGains
+
+            superSawVoiceGainsInto(v = v, sideAtten = sideAtten, gains = base)
+
             val center = (v - 1) / 2
             var s = 0.0
 
@@ -1770,7 +2103,11 @@ object Ignitors {
                 gsum += voiceStates[n].gain
             }
 
-            val best = DoubleArray(v)
+            if (bestPhases.size < v) {
+                bestPhases = DoubleArray(v) // past the size built with the node (a `voices` signal)
+            }
+
+            val best = bestPhases
             var bestDist = Double.MAX_VALUE
 
             @Suppress("unused")
@@ -1828,7 +2165,7 @@ object Ignitors {
             for (n in 0 until v) {
                 val g = voiceStates[n].gain
 
-                wsum += getUnisonDetune(v, spread, n, spreadPower) * g; gsum += g
+                wsum += getUnisonDetune(unison = v, detune = spread, voiceIndex = n, spreadPower = spreadPower) * g; gsum += g
             }
 
             val mean = if (gsum != 0.0) wsum / gsum else 0.0
@@ -1836,281 +2173,14 @@ object Ignitors {
             for (n in 0 until v) {
                 val vs = voiceStates[n]
 
-                vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(v, spread, n, spreadPower) - mean) / sr
+                vs.dt = actualFreq * (getUnisonDetune(unison = v, detune = spread, voiceIndex = n, spreadPower = spreadPower) - mean).semitones() / sr
                 configureShape(vs, vs.dt)
             }
         }
     }
 
-    /** A [DetunedStackIgnitor] whose voices render the piecewise-linear [waveTrapezoid] shape. */
-    private abstract class TrapezoidStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
-        phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
-    ) : DetunedStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
-        polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
-        centerJitterScale = centerJitterScale,
-        phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
-    ) {
-        final override fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?,
-        ) {
-            var phase = vs.phase
-            val dt = vs.dt
-            // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
-            // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
-            // uncoerced), gives |dt| >= 1, and a drifting voice can hold a near-1 dt over the edge for
-            // seconds (the slow drift layer is a 10 s walk). Then the phase escapes: the trapezoid parks on
-            // its low plateau (positive dt) or rides the rise ramp without bound (negative dt), the
-            // polynomial sine diverges (1.8e34 measured in review). Hoisted: dt is block-constant. NaN
-            // and infinite dt take the safe branch, which wraps them to 0.
-            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
-            val gain = vs.gain
-            val riseEnd = vs.riseEnd
-            val highEnd = vs.highEnd
-            val fallEnd = vs.fallEnd
-            val riseSlope = vs.riseSlope
-            val fallSlope = vs.fallSlope
-            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
-            var m = 1.0
-            var dm = 0.0
-
-            if (drift != null) {
-                drift.advanceLane(n)
-                m = drift.startOf(n)
-                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
-            }
-
-            for (i in off until end) {
-                val s = waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
-                var inc = dt * m
-
-                if (pm != null) {
-                    inc *= pm[i]
-                }
-
-                m += dm
-                phase += inc
-                // No phaseMod, no drift and |dt| < 1 ⇒ |inc| < 1 ⇒ one conditional subtract or add;
-                // otherwise the safe wrap (see safeWrap above).
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
-            }
-
-            vs.phase = phase
-        }
-
-        final override fun renderVoicePhased(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
-        ) {
-            var phase = vs.phase
-            val dt = vs.dt
-            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
-            val gain = vs.gain
-            val riseEnd = vs.riseEnd
-            val highEnd = vs.highEnd
-            val fallEnd = vs.fallEnd
-            val riseSlope = vs.riseSlope
-            val fallSlope = vs.fallSlope
-            var m = 1.0
-            var dm = 0.0
-
-            if (drift != null) {
-                drift.advanceLane(n)
-                m = drift.startOf(n)
-                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
-            }
-
-            for (i in off until end) {
-                var p = phase + offsets[i].wrapToUnitCycle()
-
-                if (p >= 1.0) {
-                    p -= 1.0
-                }
-
-                val s = waveTrapezoid(p, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
-                var inc = dt * m
-
-                if (pm != null) {
-                    inc *= pm[i]
-                }
-
-                m += dm
-                phase += inc
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
-            }
-
-            vs.phase = phase
-        }
-    }
-
-    /** Unison saw / ramp ([polarity] ±1): the analog-flyback saw shape per voice. */
-    private class SawStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
-        phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
-        private val resetSamples: Double, private val shapeMax: Double,
-    ) : TrapezoidStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
-        polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
-        centerJitterScale = centerJitterScale,
-        phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
-    ) {
-        override fun configureShape(vs: WaveVoiceState, dt: Double) {
-            val rf = (resetSamples * dt).coerceAtMost(shapeMax)
-
-            // NaN-guard: a NaN frequency made the flyback NaN and every sample NaN (the trapezoid's fall
-            // branch). The phase is scrubbed to 0 by the wrap meanwhile, so any finite shape holds -1: a voice at a NaN
-            // frequency now carries a held -1 (DC through its envelope) where it used to be NaN, scrubbed to silence.
-            vs.setSawShape(if (rf != rf) shapeMax else rf)
-        }
-    }
-
-    /** Unison pulse / square / triangle: the [waveTrapezoid] pulse shape per voice ([duty] + flanks). */
-    private class PulseStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
-        phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
-        private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
-        private val flankSamples: Double,
-    ) : TrapezoidStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
-        polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
-        centerJitterScale = centerJitterScale,
-        phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
-    ) {
-        override fun configureShape(vs: WaveVoiceState, dt: Double) {
-            vs.setPulseShape(duty, riseFlank, fallFlank, flankSamples * dt)
-        }
-    }
-
-    /** Unison sine: a pure sine per voice (no shape config; inherently band-limited). */
-    private class SineStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
-        sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
-        phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
-        phasePools: PhasePools?, orbit: Int, phaseIn: PhaseOffset?,
-    ) : DetunedStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
-        polarity = 1.0, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
-        centerJitterScale = centerJitterScale,
-        phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phaseIn,
-    ) {
-        override fun configureShape(vs: WaveVoiceState, dt: Double) { /* sine carries no shape */
-        }
-
-        override fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?,
-        ) {
-            var phase = vs.phase
-            val dt = vs.dt
-            // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
-            // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
-            // uncoerced), gives |dt| >= 1, and a drifting voice can hold a near-1 dt over the edge for
-            // seconds (the slow drift layer is a 10 s walk). Then the phase escapes: the trapezoid parks on
-            // its low plateau (positive dt) or rides the rise ramp without bound (negative dt), the
-            // polynomial sine diverges (1.8e34 measured in review). Hoisted: dt is block-constant. NaN
-            // and infinite dt take the safe branch, which wraps them to 0.
-            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
-            val gain = vs.gain
-            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
-            var m = 1.0
-            var dm = 0.0
-
-            if (drift != null) {
-                drift.advanceLane(n)
-                m = drift.startOf(n)
-                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
-            }
-
-            for (i in off until end) {
-                val s = fastSin(phase * TWO_PI) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
-                var inc = dt * m
-
-                if (pm != null) {
-                    inc *= pm[i]
-                }
-
-                m += dm
-                phase += inc
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
-            }
-
-            vs.phase = phase
-        }
-
-        override fun renderVoicePhased(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
-            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
-        ) {
-            var phase = vs.phase
-            val dt = vs.dt
-            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
-            val gain = vs.gain
-            var m = 1.0
-            var dm = 0.0
-
-            if (drift != null) {
-                drift.advanceLane(n)
-                m = drift.startOf(n)
-                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
-            }
-
-            for (i in off until end) {
-                var p = phase + offsets[i].wrapToUnitCycle()
-
-                if (p >= 1.0) {
-                    p -= 1.0
-                }
-
-                val s = fastSin(p * TWO_PI) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
-                var inc = dt * m
-
-                if (pm != null) {
-                    inc *= pm[i]
-                }
-
-                m += dm
-                phase += inc
-                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
-            }
-
-            vs.phase = phase
-        }
-    }
-
     /**
-     * Supersine: a detuned stack of pure sines (mono) on the shared [SineStackIgnitor] / super-saw
+     * Supersine: a detuned stack of pure sines (mono) on the shared [UnisonStackIgnitor] / super-saw
      * unison engine (center-dominant gains, per-voice drift, centroid-anchored detune; its own
      * `SUPERSINE_*` knobs, seeded to the super-saw values). Inherently band-limited, no anti-aliasing
      * needed. Voice count is read lazily from the [voices] Ignitor param on the first block.
@@ -2121,7 +2191,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERSINE_SIDE_ATTEN,
         gainJitter: Double = SUPERSINE_GAIN_JITTER,
         spreadPower: Double = SUPERSINE_SPREAD_POWER,
@@ -2137,18 +2207,21 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
         phase: Ignitor? = null,
-    ): Ignitor = SineStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        countsAtBuild: Boolean = false,
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.SINE,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
+        polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
     )
 
     /**
      * Supersquare: a detuned stack of the finite-slope pulse shape (duty 0.5, mono) on the shared
-     * [PulseStackIgnitor] / super-saw unison engine (center-dominant gains, per-voice drift,
+     * [UnisonStackIgnitor] / super-saw unison engine (center-dominant gains, per-voice drift,
      * centroid-anchored detune; its own `SUPERSQUARE_*` knobs, seeded to the super-saw values). Edges
      * are finite-slope flanks (no PolyBLEP), like the mono square. Voice count is read lazily from the
      * [voices] Ignitor param on the first block.
@@ -2159,7 +2232,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERSQUARE_SIDE_ATTEN,
         gainJitter: Double = SUPERSQUARE_GAIN_JITTER,
         spreadPower: Double = SUPERSQUARE_SPREAD_POWER,
@@ -2175,19 +2248,21 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
         phase: Ignitor? = null,
-    ): Ignitor = PulseStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        countsAtBuild: Boolean = false,
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.PULSE,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
         duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
     /**
-     * Supertri: a detuned stack of triangles (mono) on the shared [PulseStackIgnitor] / super-saw
+     * Supertri: a detuned stack of triangles (mono) on the shared [UnisonStackIgnitor] / super-saw
      * unison engine — the pulse shape with fully-open flanks (1.0/1.0, duty 0.5); its own `SUPERTRI_*`
      * knobs, seeded to the super-saw values. Piecewise linear, inherently band-limited. Voice count is
      * read lazily from the [voices] Ignitor param on the first block.
@@ -2198,7 +2273,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERTRI_SIDE_ATTEN,
         gainJitter: Double = SUPERTRI_GAIN_JITTER,
         spreadPower: Double = SUPERTRI_SPREAD_POWER,
@@ -2214,20 +2289,22 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
         phase: Ignitor? = null,
-    ): Ignitor = PulseStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        countsAtBuild: Boolean = false,
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.PULSE,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
         duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
     /**
      * Superramp: a detuned stack of the analog saw shape, **negated** (the mirror of [superSaw]).
-     * Shares [SawStackIgnitor] with `polarity = −1`, the `RAMP_*` shape and its own
+     * Shares [UnisonStackIgnitor] (the SAW kind) with `polarity = −1`, the `RAMP_*` shape and its own
      * `SUPERRAMP_*` unison knobs (seeded to the super-saw values; change them to diverge). Voice
      * count is read lazily from the [voices] Ignitor param on the first block.
      */
@@ -2237,7 +2314,7 @@ object Ignitors {
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
         sideAtten: Double = SUPERRAMP_SIDE_ATTEN,
         gainJitter: Double = SUPERRAMP_GAIN_JITTER,
         spreadPower: Double = SUPERRAMP_SPREAD_POWER,
@@ -2253,92 +2330,67 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
         phase: Ignitor? = null,
-    ): Ignitor = SawStackIgnitor(
-        freq, voices, detune, analog, analogSpread, rng,
+        countsAtBuild: Boolean = false,
+    ): Ignitor = UnisonStackIgnitor(
+        kind = StackKind.SAW,
+        freq = freq, voices = voices, detune = detune, analog = analog, analogSpread = analogSpread, rng = rng,
         polarity = -1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) },
+        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
         resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
     )
 
     /**
      * Karplus-Strong plucked string synthesis via noise-burst-excited delay line with filtered feedback.
-     * Extended with pick position modeling and allpass stiffness filtering.
+     * Extended with pick position modeling and allpass stiffness filtering. One [KarplusString].
      */
-    @Suppress("DuplicatedCode")
     fun karplusStrong(
         freq: Ignitor = FreqIgnitor,
-        decay: Ignitor = decayDefault,
+        feedback: Ignitor = feedbackDefault,
         brightness: Ignitor = brightnessDefault,
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
-        rng: Random = Random,
-    ): Ignitor = KarplusStrongIgnitor(freq, decay, brightness, pickPosition, stiffness, analog, rng)
+        rng: Random,
+    ): Ignitor = KarplusStrongIgnitor(freq = freq, feedback = feedback, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, rng = rng)
 
     private class KarplusStrongIgnitor(
         private val freq: Ignitor,
-        private val decay: Ignitor,
+        private val feedback: Ignitor,
         private val brightness: Ignitor,
         private val pickPosition: Ignitor,
         private val stiffness: Ignitor,
         private val analog: Ignitor,
         private val rng: Random,
     ) : Ignitor {
-        // Max delay line: supports down to ~20 Hz at 48kHz (2400 samples)
-        private val maxDelay = 2500
-        private val delayLine = AudioBuffer(maxDelay)
-        private var writePos: Int = 0
-        private var excited: Boolean = false
-        private var drift: AnalogDrift? = null
+        private val string = KarplusString()
 
-        // One-pole lowpass state for brightness filtering
-        private var lpState: Double = 0.0
-
-        // Allpass state for stiffness
-        private var apPrevIn: Double = 0.0
-        private var apPrevOut: Double = 0.0
-
+        /** Built with the node, seeded at the first block (see [seedAnalogDrift]). */
+        private val drift = AnalogDrift()
+        private var driftSeeded: Boolean = false
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
-            val decayVal = readParam(decay, actualFreq, ctx)
+            if (!driftSeeded) {
+                driftSeeded = true
+                seedAnalogDrift(drift = drift, analog = analog, freqHz = actualFreq, ctx = ctx)
+            }
+
+            val d = drift
+            val feedbackVal = readParam(feedback, actualFreq, ctx)
             val brightnessVal = readParam(brightness, actualFreq, ctx)
             val stiffnessVal = readParam(stiffness, actualFreq, ctx)
-
-            val lpAlpha = brightnessVal.coerceIn(0.01, 1.0)
-            val hasStiffness = stiffnessVal > 0.0
-            val apCoeff = stiffnessVal.coerceIn(0.0, 0.99) * 0.5
-
-            val sr = ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
             val end = ctx.windowEnd
+            val baseDelay = KarplusString.baseDelayOf(sampleRate = ctx.sampleRateD, freqHz = actualFreq)
 
-            val baseDelay = (sr / actualFreq).coerceIn(2.0, (maxDelay - 1.0))
-
-            if (!excited) {
-                excited = true
-
-                val pickPosVal = readParam(pickPosition, actualFreq, ctx)
-                val delayLen = baseDelay.toInt()
-                val pp = pickPosVal.coerceIn(0.0, 1.0)
-                val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
-                val burstStart = ((delayLen - burstLen) * pp).toInt()
-
-                for (j in 0 until delayLen) {
-                    delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                        (rng.nextDouble() * 2.0 - 1.0)
-                    } else {
-                        0.0
-                    }
-                }
-
-                writePos = delayLen % maxDelay
+            // The pick position is read once, at the pluck.
+            if (!string.excited) {
+                string.excited = true
+                string.excite(baseDelay = baseDelay, pickPos = readParam(pickPosition, actualFreq, ctx), rng = rng)
             }
 
             var m = 1.0
@@ -2348,46 +2400,15 @@ object Ignitors {
             if (hasDrift) {
                 d.beginBlock()
                 m = d.blockStart
-                dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+                dm = rampStep(from = m, to = d.blockEnd, frames = end - ctx.offset)
             }
 
-            for (i in ctx.offset until end) {
-                var dl = baseDelay
-
-                if (phaseMod != null) {
-                    dl /= phaseMod[i]
-                }
-
-                if (hasDrift) {
-                    dl /= m
-                    m += dm
-                }
-
-                dl = dl.coerceIn(2.0, (maxDelay - 1.0))
-
-                val readPosF = writePos - dl
-                val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
-                val readIdx = readPosWrapped.toInt() % maxDelay
-                val frac = readPosWrapped - readPosWrapped.toInt()
-                val nextIdx = (readIdx + 1) % maxDelay
-                val sample = delayLine[readIdx] + (delayLine[nextIdx] - delayLine[readIdx]) * frac
-
-                lpState = (lpState + lpAlpha * (sample - lpState)).flushState()
-
-                var filtered = lpState
-
-                if (hasStiffness) {
-                    val apOut = apCoeff * (filtered - apPrevOut) + apPrevIn
-
-                    apPrevIn = filtered.flushState()
-                    apPrevOut = apOut.flushState()
-                    filtered = apOut
-                }
-
-                delayLine[writePos] = (filtered * decayVal)
-                buffer[i] = sample
-                writePos = (writePos + 1) % maxDelay
-            }
+            string.render(
+                buffer = buffer, from = ctx.offset, to = end, baseDelay = baseDelay, phaseMod = ctx.phaseMod,
+                hasDrift = hasDrift, driftStart = m, driftStep = dm,
+                lpAlpha = KarplusString.lpAlphaOf(brightnessVal), hasStiffness = KarplusString.hasStiffnessOf(stiffnessVal),
+                apCoeff = KarplusString.apCoeffOf(stiffnessVal), feedback = feedbackVal, gain = 1.0, accumulate = false,
+            )
         }
     }
 
@@ -2395,52 +2416,53 @@ object Ignitors {
      * Super Karplus-Strong: multiple detuned plucked strings summed together.
      * Each string has independent noise excitation and its own drift lane, creating rich evolving
      * shimmer; [analogSpread] blends those lanes towards one shared walk for the whole instrument.
-     * Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Voice count is read lazily from the [voices] Ignitor param on the first block. One [KarplusString] per voice.
      */
-    @Suppress("DuplicatedCode")
     fun superKarplusStrong(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
-        decay: Ignitor = decayDefault,
+        feedback: Ignitor = feedbackDefault,
         brightness: Ignitor = brightnessDefault,
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
         analogSpread: Ignitor = analogSpreadDefault,
-        rng: Random = Random,
+        rng: Random,
+        countsAtBuild: Boolean = false,
     ): Ignitor = SuperKarplusStrongIgnitor(
-        freq, voices, detune, decay, brightness, pickPosition, stiffness, analog, analogSpread, rng,
+        freq = freq, voices = voices, detune = detune, feedback = feedback, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, analogSpread = analogSpread, rng = rng,
+        countsAtBuild = countsAtBuild,
     )
 
     private class SuperKarplusStrongIgnitor(
         private val freq: Ignitor,
         private val voices: Ignitor,
         private val detune: Ignitor,
-        private val decay: Ignitor,
+        private val feedback: Ignitor,
         private val brightness: Ignitor,
         private val pickPosition: Ignitor,
         private val stiffness: Ignitor,
         private val analog: Ignitor,
         private val analogSpread: Ignitor,
         private val rng: Random,
+        countsAtBuild: Boolean,
     ) : Ignitor {
-        private val maxDelay = 2500
-
-        private class StringState(
-            val delayLine: AudioBuffer,
-            var writePos: Int = 0,
-            var excited: Boolean = false,
-            var lpState: Double = 0.0,
-            var apPrevIn: Double = 0.0,
-            var apPrevOut: Double = 0.0,
-        )
-
         private var v: Int = 0
         private var voiceGain: Double = 0.0
-        private var strings: Array<StringState> = emptyArray()
 
-        /** One lane per string plus the shared walk; null while `analog` is 0, which is the fast path. */
+        /**
+         * The strings, each with its delay line, built with the node at the count the build can read
+         * ([unisonCapacity]); only a count past them grows the array, at render (a `voices` signal the build could
+         * not read). A shrink keeps them all.
+         */
+        private var strings: Array<KarplusString> = Array(unisonCapacity(voices = voices, countsAtBuild = countsAtBuild)) { KarplusString() }
+
+        /**
+         * One lane per string plus the shared walk, built with the node when `analog` may be above 0 (see
+         * [buildDriftLanes]); [drift] is the container once started, null while `analog` is 0, which is the fast path.
+         */
+        private val builtLanes: DriftLanes? = buildDriftLanes(analog = analog, analogSpread = analogSpread, lanes = strings.size)
         private var drift: DriftLanes? = null
         private var analogLatched: Boolean = false
 
@@ -2450,7 +2472,7 @@ object Ignitors {
             // readParam, NEVER a raw scratch render + index (ledger O1): on a zero-length terminal
             // window generate() writes nothing and the index read returns stale cross-voice pool
             // residue — which used to size the string array below.
-            val newV = maxOf(0, readParam(voices, actualFreq, ctx).toInt())
+            val newV = coerceUnisonVoices(readParam(voices, actualFreq, ctx))
 
             if (newV != v) {
                 // DECIDED (maintainer, 2026-08-28): voice-count changes are OBSERVED AT BLOCK
@@ -2468,7 +2490,7 @@ object Ignitors {
                 if (v > strings.size) {
                     val old = strings
 
-                    strings = Array(v) { i -> if (i < old.size) old[i] else StringState(AudioBuffer(maxDelay)) }
+                    strings = Array(v) { i -> if (i < old.size) old[i] else KarplusString() }
                 }
 
                 // A regrown string RE-PLUCKS (the DECIDED note above), so it gets a fresh lane
@@ -2488,13 +2510,13 @@ object Ignitors {
 
             // Read control-rate params once per block
             val spread = readParam(detune, actualFreq, ctx)
-            val decayVal = readParam(decay, actualFreq, ctx)
+            val feedbackVal = readParam(feedback, actualFreq, ctx)
             val brightnessVal = readParam(brightness, actualFreq, ctx)
             val stiffnessVal = readParam(stiffness, actualFreq, ctx)
 
-            val lpAlpha = brightnessVal.coerceIn(0.01, 1.0)
-            val hasStiffness = stiffnessVal > 0.0
-            val apCoeff = stiffnessVal.coerceIn(0.0, 0.99) * 0.5
+            val lpAlpha = KarplusString.lpAlphaOf(brightnessVal)
+            val hasStiffness = KarplusString.hasStiffnessOf(stiffnessVal)
+            val apCoeff = KarplusString.apCoeffOf(stiffnessVal)
 
             val sr = ctx.sampleRateD
             val phaseMod = ctx.phaseMod
@@ -2514,7 +2536,7 @@ object Ignitors {
                 analogLatched = true
 
                 if (analogAmt > 0.0) {
-                    drift = DriftLanes(analogAmt, ctx.driftStepRate, ctx.random)
+                    drift = startDriftLanes(built = builtLanes, analog = analogAmt, ctx = ctx)
                 }
             }
 
@@ -2533,31 +2555,16 @@ object Ignitors {
                 // one held its own lane; a string that came back after a shrink draws a fresh one.
                 lanes?.ensureLanes(n + 1)
 
-                val detuneSemitones = getUnisonDetune(v, spread, n)
-                val detunedFreq = actualFreq.applySemitoneDetuneToFrequency(detuneSemitones)
-                val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1.0))
+                val detuneSemitones = getUnisonDetune(unison = v, detune = spread, voiceIndex = n)
+                val detunedFreq = actualFreq * detuneSemitones.semitones()
+                val baseDelay = KarplusString.baseDelayOf(sampleRate = sr, freqHz = detunedFreq)
 
-                // Excite each string independently
+                // Excite each string independently; a string that comes back keeps its filter state.
                 if (!s.excited) {
                     s.excited = true
-
-                    val delayLen = baseDelay.toInt()
-                    val pp = pickPosVal.coerceIn(0.0, 1.0)
-                    val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
-                    val burstStart = ((delayLen - burstLen) * pp).toInt()
-
-                    for (j in 0 until delayLen) {
-                        s.delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                            (rng.nextDouble() * 2.0 - 1.0)
-                        } else {
-                            0.0
-                        }
-                    }
-
-                    s.writePos = delayLen % maxDelay
+                    s.excite(baseDelay = baseDelay, pickPos = pickPosVal, rng = rng)
                 }
 
-                val isFirst = n == 0
                 // Hoisted once per string: everything the blend reads is constant for the block.
                 var m = 1.0
                 var dm = 0.0
@@ -2565,61 +2572,16 @@ object Ignitors {
                 if (lanes != null) {
                     lanes.advanceLane(n)
                     m = lanes.startOf(n)
-                    dm = (lanes.endOf(n) - m) / (end - ctx.offset).coerceAtLeast(1)
+                    dm = rampStep(from = m, to = lanes.endOf(n), frames = end - ctx.offset)
                 }
 
-                for (i in ctx.offset until end) {
-                    // Effective delay with detune, phaseMod, and per-voice drift
-                    var dl = baseDelay
-
-                    if (phaseMod != null) {
-                        dl /= phaseMod[i]
-                    }
-
-                    if (lanes != null) {
-                        dl /= m
-                        m += dm
-                    }
-
-                    dl = dl.coerceIn(2.0, (maxDelay - 1.0))
-
-                    // Read with linear interpolation
-                    val readPosF = s.writePos - dl
-                    val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
-                    val readIdx = readPosWrapped.toInt() % maxDelay
-                    val frac = readPosWrapped - readPosWrapped.toInt()
-                    val nextIdx = (readIdx + 1) % maxDelay
-                    val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac
-
-                    // One-pole lowpass (brightness)
-                    s.lpState = s.lpState + lpAlpha * (sample - s.lpState)
-                    s.lpState = s.lpState.flushState()
-
-                    var filtered = s.lpState
-
-                    // Allpass stiffness
-                    if (hasStiffness) {
-                        val apOut = apCoeff * (filtered - s.apPrevOut) + s.apPrevIn
-
-                        s.apPrevIn = filtered.flushState()
-                        s.apPrevOut = apOut.flushState()
-                        filtered = apOut
-                    }
-
-                    // Write back with decay
-                    s.delayLine[s.writePos] = (filtered * decayVal)
-
-                    // Sum to output
-                    val out = (sample * voiceGain)
-
-                    if (isFirst) {
-                        buffer[i] = out
-                    } else {
-                        buffer[i] = buffer[i] + out
-                    }
-
-                    s.writePos = (s.writePos + 1) % maxDelay
-                }
+                // The first string writes the buffer, the others add to it.
+                s.render(
+                    buffer = buffer, from = ctx.offset, to = end, baseDelay = baseDelay, phaseMod = phaseMod,
+                    hasDrift = lanes != null, driftStart = m, driftStep = dm,
+                    lpAlpha = lpAlpha, hasStiffness = hasStiffness, apCoeff = apCoeff, feedback = feedbackVal,
+                    gain = voiceGain, accumulate = n != 0,
+                )
             }
         }
     }
@@ -2649,9 +2611,71 @@ object Ignitors {
     internal fun resolveFreq(freq: Ignitor, voiceFreqHz: Double, ctx: IgniteContext): Double =
         readParam(freq, voiceFreqHz, ctx)
 
-    /** Initialize [AnalogDrift] lazily from the [analog] param on the first block (read once, control rate). */
-    internal fun initAnalogDrift(analog: Ignitor, freqHz: Double, ctx: IgniteContext): AnalogDrift =
-        AnalogDrift(readParam(analog, freqHz, ctx), ctx.driftStepRate, ctx.random)
+    /**
+     * Seeds [drift] from the [analog] param on the first block (read once, control rate). The lane is built with the
+     * node; its draws stay here, at the first block, where they have always been (tidy-up step 10).
+     */
+    internal fun seedAnalogDrift(drift: AnalogDrift, analog: Ignitor, freqHz: Double, ctx: IgniteContext) {
+        drift.seed(analog = readParam(analog, freqHz, ctx), stepRate = ctx.driftStepRate, rng = ctx.random)
+    }
+
+    /**
+     * A param's value at BUILD, for sizing only (tidy-up step 10): its block-constant value, read at freq 0, or null
+     * for a signal. Nothing reads this for sound: a node sizes its storage from it and still reads the param at its
+     * first block. A COUNT is read here only when the build vouched that it does not read the note's frequency
+     * (`countsAtBuild`), so the value is the one the first block reads: a count that falls with pitch, read at freq
+     * 0, built up to the cap of 64 strings (review round 1). `analog` and `analogSpread` are read here as a yes or no
+     * ([mayDrift], [mayShare]); a frequency-dependent one can guess wrong, which costs one lane or container nobody
+     * uses, or the construction at the first block that every node did before this step.
+     */
+    private fun sizingValueOrNull(param: Ignitor): Double? = param.controlRateValueOrNull(freqHz = 0.0)
+
+    /**
+     * Whether [analog] may be above 0 at the first block, as far as the build can tell ([sizingValueOrNull]): drift
+     * storage is built only then. A wrong guess costs storage nobody uses, or the old construction at the first block.
+     */
+    private fun mayDrift(analog: Ignitor): Boolean {
+        val a = sizingValueOrNull(analog)
+
+        return a == null || a > 0.0
+    }
+
+    /** Whether [analogSpread] may be below 1 at some block, as far as the build can tell: the shared walk is built only then. */
+    private fun mayShare(analogSpread: Ignitor): Boolean {
+        val s = sizingValueOrNull(analogSpread)
+
+        return s == null || s < 1.0
+    }
+
+    /** The drift container a multi-voice node builds with itself: [lanes] own lanes, or none at all when [analog] is known to be 0. */
+    private fun buildDriftLanes(analog: Ignitor, analogSpread: Ignitor, lanes: Int): DriftLanes? =
+        if (mayDrift(analog)) DriftLanes(capacity = lanes, sharedLane = mayShare(analogSpread)) else null
+
+    /**
+     * Starts the container [built] with the node at the first block whose depth [analog] is above 0, or one made here
+     * when the build ruled drift out (a depth the build read as 0). Draws the shared seed (see [DriftLanes.start]).
+     */
+    private fun startDriftLanes(built: DriftLanes?, analog: Double, ctx: IgniteContext): DriftLanes {
+        val lanes = built ?: DriftLanes(capacity = 0, sharedLane = false)
+
+        lanes.start(analog = analog, stepRate = ctx.driftStepRate, rng = ctx.random)
+
+        return lanes
+    }
+
+    /**
+     * The unison voice count [voices] will read at the first block, when [countsAtBuild] says it does not read the
+     * note's frequency; 0 for a signal or a count that does (it grows at the first block, as before tidy-up step 10).
+     */
+    private fun unisonCapacity(voices: Ignitor, countsAtBuild: Boolean): Int {
+        if (!countsAtBuild) {
+            return 0
+        }
+
+        val v = sizingValueOrNull(voices) ?: return 0
+
+        return coerceUnisonVoices(v)
+    }
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Internal helpers
@@ -2664,8 +2688,8 @@ object Ignitors {
     private const val PERLIN_FBM_MAX_OCTAVES = 8
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // wrapPhase(), smallNumFastMod(), applySemitoneDetuneToFrequency()
-    // are in DspUtil.kt — imported via `import io.peekandpoke.klang.audio_be.*`
+    // wrapPhase(), smallNumFastMod() live in `utils/phase_wrap.kt`; a semitone detune is
+    // `common.math.semitones()`
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Unison / supersaw helpers
@@ -2684,17 +2708,26 @@ object Ignitors {
      * center voice (defaults to [SUPERSAW_SIDE_ATTEN]; the super-ramp passes its own). Tune by ear.
      */
     internal fun superSawVoiceGains(v: Int, sideAtten: Double = SUPERSAW_SIDE_ATTEN): DoubleArray {
+        val gains = DoubleArray(if (v > 0) v else 0)
+
+        superSawVoiceGainsInto(v = v, sideAtten = sideAtten, gains = gains)
+
+        return gains
+    }
+
+    /** [superSawVoiceGains] written into the first [v] entries of [gains] (at least [v] long), allocating nothing. */
+    internal fun superSawVoiceGainsInto(v: Int, sideAtten: Double, gains: DoubleArray) {
         if (v <= 0) {
-            return DoubleArray(0)
+            return
         }
 
         if (v == 1) {
-            return doubleArrayOf(1.0)
+            gains[0] = 1.0
+            return
         }
 
         val c = (v - 1) * 0.5            // center index (fractional)
         val halfSpan = c                 // > 0 for v >= 2
-        val gains = DoubleArray(v)
         var s = 0.0
 
         for (n in 0 until v) {
@@ -2711,8 +2744,6 @@ object Ignitors {
         for (n in 0 until v) {
             gains[n] *= norm
         }
-
-        return gains
     }
 
     // Oscillator character constants (SAW_* / SUPERSAW_* / RAMP_* / SUPERRAMP_*) live in OscillatorTuning.kt.

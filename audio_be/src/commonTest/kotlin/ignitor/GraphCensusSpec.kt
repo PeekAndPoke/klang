@@ -86,12 +86,12 @@ class GraphCensusSpec : StringSpec({
             sections = listOf(
                 IgnitorDsl.EqSection.Lowpass(c(1000.0)),
                 IgnitorDsl.EqSection.Highpass(c(100.0)),
-                IgnitorDsl.EqSection.Bell(c(500.0), c(1.0), c(3.0)),
+                IgnitorDsl.EqSection.Bell(freq = c(500.0), q = c(1.0), db = c(3.0)),
             ),
         )
         val tapped = IgnitorDsl.Eq(
             saw,
-            sections = listOf(IgnitorDsl.EqSection.Lowpass(c(1000.0)), IgnitorDsl.EqSection.RawTap(c(800.0), c(1.0), c(0.5))),
+            sections = listOf(IgnitorDsl.EqSection.Lowpass(c(1000.0)), IgnitorDsl.EqSection.RawTap(freq = c(800.0), q = c(1.0), gain = c(0.5))),
         )
 
         GraphCensus.of(serial).let {
@@ -128,7 +128,7 @@ class GraphCensusSpec : StringSpec({
         // drives and shapes eight in place (2 * 4), runs the DC blocker in place (2) and copies its
         // work buffer out (2), plus the oversampler's round trip; its state is the oversampler's plus
         // the DC blocker's 24 bytes.
-        val census = GraphCensus.of(IgnitorDsl.Distort(saw, IgnitorDsl.Constant(0.5), oversample = IgnitorDsl.Constant(4.0)))
+        val census = GraphCensus.of(IgnitorDsl.Distort(inner = saw, amount = IgnitorDsl.Constant(0.5), oversample = IgnitorDsl.Constant(4.0)))
 
         census.passes shouldBe 1 + 1
         census.traffic shouldBe 1 + (2 * 4 + 2 + 2 + GraphCensus.oversampleTraffic(4))
@@ -175,8 +175,8 @@ class GraphCensusSpec : StringSpec({
     }
 
     "a lerp always renders its second signal and a select both branches, whatever their kind" {
-        GraphCensus.of(IgnitorDsl.Lerp(saw, c(0.5), c(0.5))).traffic shouldBe 1 + 3
-        GraphCensus.of(IgnitorDsl.Select(saw, c(1.0), c(0.0))).traffic shouldBe 1 + 4
+        GraphCensus.of(IgnitorDsl.Lerp(left = saw, right = c(0.5), t = c(0.5))).traffic shouldBe 1 + 3
+        GraphCensus.of(IgnitorDsl.Select(cond = saw, whenTrue = c(1.0), whenFalse = c(0.0))).traffic shouldBe 1 + 4
     }
 
     "a unison stack is a pass per voice; the count comes from the literal, the voice's params, or the slot's default" {
@@ -193,7 +193,7 @@ class GraphCensusSpec : StringSpec({
         for (shape in LfoShapes.names) {
             withClue("$shape, a constant depth") {
                 // the saw (1 pass, 1 write) + the LFO (1, 1) + range in place (1, 2) + the multiply (1, 3)
-                GraphCensus.of(saw.tremolo(4.0, 0.5, shape = shape)).let {
+                GraphCensus.of(saw.tremolo(rate = 4.0, depth = 0.5, shape = shape)).let {
                     it.passes shouldBe 4
                     it.traffic shouldBe 7
                     it.bytes shouldBe 64 + 64
@@ -215,7 +215,7 @@ class GraphCensusSpec : StringSpec({
 
             withClue("$shape, block-constant arithmetic as the depth: control-rate, so counted like a leaf") {
                 // the floor and 1 - depth fold to one value per block, and the range keeps its constant-bound path
-                val depth = IgnitorDsl.Plus(IgnitorDsl.Param("d", 0.2), c(0.3))
+                val depth = IgnitorDsl.Plus(left = IgnitorDsl.Param("d", 0.2), right = c(0.3))
                 val node = IgnitorDsl.Tremolo(saw, rate = c(4.0), depth = depth, shape = c(LfoShapes.indexOf(shape)))
 
                 GraphCensus.of(node).let {
@@ -254,7 +254,7 @@ class GraphCensusSpec : StringSpec({
 
         // scalar depth and bounds fold to one value per block: the classic tremolo's count
         GraphCensus.of(IgnitorDsl.Tremolo(saw, rate = c(4.0), depth = c(0.5), rangeFrom = c(0.0), rangeTo = c(1.0))) shouldBe
-            GraphCensus.of(saw.tremolo(4.0, 0.5))
+            GraphCensus.of(saw.tremolo(rate = 4.0, depth = 0.5))
 
         // a signal upper bound, a scalar depth: the saw (1, 1), the LFO (1, 1), the bound's own sine (1, 1),
         // `floored * to` in place over the scalar side (1, 2), `+ 1` in place (1, 2), the range reading both bounds

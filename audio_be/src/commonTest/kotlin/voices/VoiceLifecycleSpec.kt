@@ -614,10 +614,10 @@ class VoiceLifecycleSpec : StringSpec({
         fun withGate(scheduledGate: Double): Voice = createVoice(
             startFrame = 0.0, gateEndFrame = scheduledGate, endFrame = scheduledGate + span,
             sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER, signal = echo,
-            envelope = Voice.Envelope(0.0, 0.0, 1.0, span, lin, lin, lin),
-            pitchEnvelope = Voice.PitchEnvelope(semitones = 12.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 1024.0, lin, lin, lin)),
+            envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = span, attackCurve = lin, decayCurve = lin, releaseCurve = lin),
+            pitchEnvelope = Voice.PitchEnvelope(semitones = 12.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 1024.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin)),
             // A fresh FM per voice: the modulator phase lives on it.
-            fm = Voice.Fm(ratio = 1.0, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
+            fm = Voice.Fm(ratio = 1.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)),
         )
 
         val reference = withGate(gate)

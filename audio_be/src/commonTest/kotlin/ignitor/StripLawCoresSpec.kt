@@ -14,12 +14,18 @@ import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.parseDistortionShape
+import io.peekandpoke.klang.audio_be.roundTrip
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.sin
+import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * The LAWS of the two cores phase 3 step 4 made shared (`CrushCore`, decision D1; `DistortionCore`,
@@ -30,7 +36,7 @@ import kotlin.math.sin
  * move together. Only a copy of the law that lives outside the core can see it. Each oracle below is the law as the step-4
  * brief states it, written the plain way:
  *
- *  - crush: `floor(x * hl) / hl`, clamped to `[-1, 1]`, a NaN out as 0, `hl = 2^amount / 2`;
+ *  - crush: `floor(x * hl) / hl`, clamped to `[-1, 1]`, a NaN out as 0, `hl = 2^bits / 2`;
  *  - distort: `shape(x * 10^(1.2 * amount))` with the drive INSIDE the oversampler, NaN out as 0, then
  *    the DC blocker, and no soft cap; the node runs a MODULATED amount at or below 0 at unity drive,
  *    contiguously (ledger W5's hazard designed out).
@@ -75,13 +81,14 @@ class StripLawCoresSpec : StringSpec({
             voiceDurationFrames = blocks * blockFrames,
             gateEndFrame = blocks * blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = DoubleArray(blocks * blockFrames)
         val buffer = AudioBuffer(blockFrames)
 
         for (b in 0 until blocks) {
             ctx.voiceElapsedFrames = b * blockFrames
-            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             node.generate(buffer, 220.0, ctx)
             buffer.copyInto(out, b * blockFrames)
         }
@@ -104,10 +111,10 @@ class StripLawCoresSpec : StringSpec({
     fun oracleRound(x: Double, hl: Double): Double = clampNan(round(x * hl) / hl)
 
     /** The crush law over blocks (the node has no oversampler). */
-    fun oracleCrush(input: DoubleArray, amount: Double): DoubleArray {
-        val hl = 2.0.pow(amount) / 2.0
+    fun oracleCrush(input: DoubleArray, bits: Double): DoubleArray {
+        val hl = 2.0.pow(bits) / 2.0
 
-        return DoubleArray(input.size) { oracleFloor(input[it], hl) }
+        return DoubleArray(input.size) { oracleFloor(x = input[it], hl = hl) }
     }
 
     /**
@@ -134,7 +141,7 @@ class StripLawCoresSpec : StringSpec({
 
                 val inside = if (driveInside) d else 1.0
 
-                os.process(out, from, blockFrames, scratch) { work, count ->
+                os.roundTrip(buffer = out, offset = from, length = blockFrames, scratch = scratch) { work, count ->
                     for (i in 0 until count) {
                         val y = applyDistortionShape(shape, work[i] * inside)
                         work[i] = if (y.isNaN()) 0.0 else y
@@ -147,7 +154,7 @@ class StripLawCoresSpec : StringSpec({
                 }
             }
 
-            dc.process(out, from, blockFrames)
+            dc.process(buffer = out, offset = from, length = blockFrames)
         }
 
         return out
@@ -159,24 +166,24 @@ class StripLawCoresSpec : StringSpec({
 
     "crush: the node quantizes with FLOOR, the oracle's law, not round (D1)" {
         val blocks = 4
-        val input = sine(blocks, 0.95, 440.0)
+        val input = sine(blocks = blocks, amplitude = 0.95, hz = 440.0)
 
-        for (amount in listOf(1.0, 2.5, 4.0, 8.0)) {
-            val hl = 2.0.pow(amount) / 2.0
-            val expected = oracleCrush(input, amount)
+        for (bits in listOf(1.0, 2.5, 4.0, 8.0)) {
+            val hl = 2.0.pow(bits) / 2.0
+            val expected = oracleCrush(input, bits)
 
-            withClue("amount $amount: not vacuous, floor and round disagree on this input") {
-                expected.bits() shouldNotBe input.map { oracleRound(it, hl) }.toDoubleArray().bits()
+            withClue("bits $bits: not vacuous, floor and round disagree on this input") {
+                expected.bits() shouldNotBe input.map { oracleRound(x = it, hl = hl) }.toDoubleArray().bits()
             }
-            withClue("amount $amount: the Ignitor node") {
-                renderNode(ArraySource(input).crush(ConstantIgnitor(amount)), blocks).bits() shouldBe expected.bits()
+            withClue("bits $bits: the Ignitor node") {
+                renderNode(ArraySource(input).crush(ConstantIgnitor(bits)), blocks).bits() shouldBe expected.bits()
             }
         }
     }
 
     "crush: the Ignitor node takes the strip's NaN handling and bypass rule (release notes, step 4)" {
         val blocks = 2
-        val input = sine(blocks, 0.8, 440.0).also { it[5] = Double.NaN; it[130] = Double.NaN }
+        val input = sine(blocks = blocks, amplitude = 0.8, hz = 440.0).also { it[5] = Double.NaN; it[130] = Double.NaN }
 
         for ((host, render) in listOf<Pair<String, (Double) -> DoubleArray>>(
             "node" to { a -> renderNode(ArraySource(input).crush(ConstantIgnitor(a)), blocks) },
@@ -205,7 +212,7 @@ class StripLawCoresSpec : StringSpec({
 
     "distort: the fused node renders the strip's law, the drive INSIDE the oversampler and no cap (D2)" {
         val blocks = 6
-        val input = sine(blocks, 0.9, 220.0)
+        val input = sine(blocks = blocks, amplitude = 0.9, hz = 220.0)
 
         for (shapeName in listOf("soft", "gentle", "tube")) {
             for (stages in listOf(0, 1, 2)) {
@@ -246,7 +253,7 @@ class StripLawCoresSpec : StringSpec({
         // twice inside the render (near blocks 85 and 179), drive between unity and 10^0.6.
         val blocks = 200
         val amounts = List(blocks) { 0.5 * sin(2.0 * PI * 2.0 * (it * blockFrames).toDouble() / sampleRate + 0.3) }
-        val input = sine(blocks, 0.9, 220.0)
+        val input = sine(blocks = blocks, amplitude = 0.9, hz = 220.0)
         val drives = amounts.map { if (it <= 0.0) 1.0 else driveOf(it) }
         val expected = oracleDistort(input, drives, "soft", 1)
 
@@ -303,7 +310,7 @@ class StripLawCoresSpec : StringSpec({
         // The next block is finite and renders the signal again.
         val amounts = listOf(0.3, 0.3, Double.NaN, 0.3, 0.3)
         val blocks = amounts.size
-        val input = sine(blocks, 0.9, 220.0)
+        val input = sine(blocks = blocks, amplitude = 0.9, hz = 220.0)
         val drives = amounts.map { if (it <= 0.0) 1.0 else driveOf(it) }
         val expected = oracleDistort(input, drives, "soft", 1)
 

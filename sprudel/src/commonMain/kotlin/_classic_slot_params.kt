@@ -68,9 +68,9 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
     val bag = ClassicSlotParams(ignitorParams)
 
     distortion?.let { d ->
-        bag.put(k.crushAmount, d.crush)
+        bag.put(k.crushBits, d.crush)
         bag.put(k.crushOversample, d.crushOversample?.toDouble())
-        bag.put(k.coarseAmount, d.coarse)
+        bag.put(k.coarseFactor, d.coarse)
         bag.put(k.coarseOversample, d.coarseOversample?.toDouble())
         bag.put(k.distortAmount, d.distort)
         bag.put(k.distortShape, d.distortShape?.let { DistortionShapes.indexOf(it) })
@@ -143,9 +143,9 @@ private object ClassicSlotKeys {
         name(f.release), name(c.attack), name(c.decay), name(c.release),
     )
 
-    val crushAmount = name(s.crush.amount)
+    val crushBits = name(s.crush.bits)
     val crushOversample = CRUSH_OVERSAMPLE_KEY
-    val coarseAmount = name(s.coarse.amount)
+    val coarseFactor = name(s.coarse.factor)
     val coarseOversample = COARSE_OVERSAMPLE_KEY
     val distortAmount = name(s.distort.amount)
     val distortShape = name(s.distort.shape)

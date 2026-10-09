@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
+import io.peekandpoke.klang.audio_be.roundTrip
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
@@ -75,7 +76,7 @@ class DoorDistortionLawSpec : StringSpec({
         DistortionShape.FOLD -> sin(x) to 0.0
         DistortionShape.CHEBYSHEV -> clamp1(x).let { 4.0 * it * it * it - 3.0 * it } to 0.0
         DistortionShape.RECTIFY -> minOf(abs(x), 1.0) to 0.0
-        // e^x through the engine's fastExp (relative error bound 1e-10, DspUtil) against the library exp here: measured
+        // e^x through the engine's fastExp (relative error bound 1e-10, utils/fast_math.kt) against the library exp here: measured
         // 3.3e-11 (EXP) and 1.8e-11 (STOMP_BOX), so the bound itself is the tolerance.
         DistortionShape.EXP -> (if (x >= 0.0) 1.0 - exp(-x) else -(1.0 - exp(x))) to 1e-10
         DistortionShape.SOFT_SAT -> x / sqrt(1.0 + x * x) to 0.0
@@ -160,7 +161,7 @@ class DoorDistortionLawSpec : StringSpec({
             }
 
             if (os != null) {
-                os.process(work, 0, n, scratch) { w, count ->
+                os.roundTrip(buffer = work, offset = 0, length = n, scratch = scratch) { w, count ->
                     for (i in 0 until count) {
                         w[i] = curve(shape, w[i]).first
                     }
@@ -217,8 +218,8 @@ class DoorDistortionLawSpec : StringSpec({
 
             // 1e-13: measured at most 8.3e-16 (JVM, 2026-09-28), the tube curve's last-bit difference carried through
             // the blocker. A wrong chain (a step dropped or moved, another drive law) is orders of magnitude further.
-            withClue("$label: distort(...)") { maxAbsDiff(viaDistort, expected) shouldBeLessThan 1e-13 }
-            withClue("$label: drive(...).shape(...)") { maxAbsDiff(viaChain, expected) shouldBeLessThan 1e-13 }
+            withClue("$label: distort(...)") { maxAbsDiff(a = viaDistort, b = expected) shouldBeLessThan 1e-13 }
+            withClue("$label: drive(...).shape(...)") { maxAbsDiff(a = viaChain, b = expected) shouldBeLessThan 1e-13 }
         }
     }
 })

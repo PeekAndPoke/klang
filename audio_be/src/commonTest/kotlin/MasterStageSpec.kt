@@ -27,7 +27,7 @@ class MasterStageSpec : StringSpec({
         val mix = StereoBuffer(blockFrames)            // cleared on construction
         val out = StereoBuffer(blockFrames).apply { fill(0.999) }  // non-zero, must be overwritten
 
-        master.process(mix, out)
+        master.process(mix = mix, out = out)
 
         out.isExactlySilent() shouldBe true
     }
@@ -46,7 +46,7 @@ class MasterStageSpec : StringSpec({
             // left-only impulse in the first block, well below the -1 dB limiter threshold
             if (block == 0) mix.left[0] = 0.5
 
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
 
             for (i in 0 until blockFrames) {
                 if (out.left[i] != 0.0) leftSeen += block * blockFrames + i
@@ -83,7 +83,7 @@ class MasterStageSpec : StringSpec({
                     mix.left[i] = v
                     mix.right[i] = v
                 }
-                master.process(mix, out)
+                master.process(mix = mix, out = out)
                 if (it >= settleBlocks) {
                     for (i in 0 until blockFrames) {
                         val a = kotlin.math.abs(out.left[i])
@@ -102,14 +102,13 @@ class MasterStageSpec : StringSpec({
     }
 
     "the stage reports the latency it actually adds" {
-        // Phase 5: the FE latency budget and the offline frame count both read this. If it drifts
-        // from the real delay, visuals misalign and offline renders truncate — silently, in both
-        // cases, because nothing throws.
+        // Phase 5: the FE latency budget adds HOUSE_LIMITER_LOOKAHEAD_SECONDS (JsAudioBackend), and the
+        // offline renderer adds latencyFrames to its frame count (KlangOfflineRenderer), so the tail is not
+        // cut. If either drifts from the real delay, visuals misalign or renders lose their end silently.
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val expected = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
 
         master.latencyFrames shouldBe expected
-        master.latencyMs shouldBe (expected * 1000.0 / sampleRate)
 
         // ...and it must match what the stage really does. Feed one impulse, find it in the output.
         val out = StereoBuffer(blockFrames)
@@ -119,7 +118,7 @@ class MasterStageSpec : StringSpec({
         repeat(16) { block ->
             val mix = StereoBuffer(blockFrames)
             if (block == 0) mix.left[0] = 0.5
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
             for (i in 0 until blockFrames) {
                 if (foundAt < 0 && out.left[i] != 0.0) foundAt = frame + i
             }
@@ -145,7 +144,7 @@ class MasterStageSpec : StringSpec({
                 mix.left[i] = 1000.0 * kotlin.math.sin(2.0 * kotlin.math.PI * 220.0 * t)
             }
 
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
 
             if (block >= 100) {
                 for (i in 0 until blockFrames) {
@@ -185,7 +184,7 @@ class MasterStageSpec : StringSpec({
                 mix.right[20] = it
             }
 
-            master.process(mix, out)
+            master.process(mix = mix, out = out)
 
             for (s in out.interleavedCopy()) {
                 if (s == -1.0 || s == 1.0) {

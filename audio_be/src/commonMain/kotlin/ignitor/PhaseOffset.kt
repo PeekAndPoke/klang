@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.wrapToUnitCycle
+import io.peekandpoke.klang.audio_be.utils.wrapToUnitCycle
 
 /**
  * A periodic oscillator's `phase` input (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): an offset in cycles, wrapped into

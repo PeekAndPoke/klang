@@ -62,7 +62,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         random = rng,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -168,10 +168,10 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val lp = IgnitorDsl.Lowpass(inner = saw, freq = IgnitorDsl.Constant(800.0))
 
         lp.env shouldBe IgnitorDsl.Constant(0.0)
-        lp.attackSec shouldBe IgnitorDsl.Constant(FILTER_ENV_ATTACK_SEC)
-        lp.decaySec shouldBe IgnitorDsl.Constant(FILTER_ENV_DECAY_SEC)
-        lp.sustainLevel shouldBe IgnitorDsl.Constant(FILTER_ENV_SUSTAIN_LEVEL)
-        lp.releaseSec shouldBe IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC)
+        lp.attack shouldBe IgnitorDsl.Constant(FILTER_ENV_ATTACK_SEC)
+        lp.decay shouldBe IgnitorDsl.Constant(FILTER_ENV_DECAY_SEC)
+        lp.sustain shouldBe IgnitorDsl.Constant(FILTER_ENV_SUSTAIN_LEVEL)
+        lp.release shouldBe IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC)
         lp.humanize shouldBe false
     }
 
@@ -180,7 +180,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         // `FilterEnvDef.NONE`, which is literally the code path that existed before this step.
         val rng = seed()
         val oracleSource = saw.buildExciter(random = rng, freqHz = freqHz).ignitor
-        val oracle = oracleSource.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707))
+        val oracle = oracleSource.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707))
         val out = DoubleArray(blockFrames * blocks)
         val buffer = AudioBuffer(blockFrames)
         val context = ctx(rng)
@@ -201,13 +201,13 @@ class IgnitorFilterKnobsSpec : StringSpec({
     "naming a stage knob and NOT env sweeps, because the door fills the depth" {
         // The compound fill, heard rather than read off the node (`/dsl-design` section 4 and
         // `fillFilterEnvelope`). `lpf(800, decay = 0.3, sustain = 0.2)` is an audible pluck on
-        // sprudel, so `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` has to be one here.
+        // sprudel, so `lowpass(800, decay = 0.3, sustain = 0.2)` has to be one here.
         val plain = saw.lowpass(800.0)
 
-        render(saw.lowpass(800.0, decaySec = 0.3, sustainLevel = 0.2)) shouldNotBe render(plain)
-        render(saw.lowpass(800.0, attackSec = 0.4)) shouldNotBe render(plain)
-        render(saw.lowpass(800.0, sustainLevel = 0.1)) shouldNotBe render(plain)
-        render(saw.lowpass(800.0, releaseSec = 0.9)) shouldNotBe render(plain)
+        render(saw.lowpass(800.0, decay = 0.3, sustain = 0.2)) shouldNotBe render(plain)
+        render(saw.lowpass(800.0, attack = 0.4)) shouldNotBe render(plain)
+        render(saw.lowpass(800.0, sustain = 0.1)) shouldNotBe render(plain)
+        render(saw.lowpass(800.0, release = 0.9)) shouldNotBe render(plain)
 
         withClue("a call that names NONE of the five is the untouched filter, cascade included") {
             // The ORACLE is the runtime door with `FilterEnvDef.NONE`, which is the code path
@@ -219,7 +219,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
             // without the knobs rendered" row above, deliberately: that row is the identity claim
             // and this one is the fill's negative case, and they would be deleted for different
             // reasons. Do not fold them together without checking both clues.
-            renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707)) } shouldBe render(plain)
+            renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707)) } shouldBe render(plain)
 
             // ...and through a passes cascade, which the single-stage oracle does not reach.
             //
@@ -232,8 +232,8 @@ class IgnitorFilterKnobsSpec : StringSpec({
 
             renderRaw {
                 it
-                    .lowpass(ConstantIgnitor(800.0), ConstantIgnitor(1.2 * ladder[0]))
-                    .lowpass(ConstantIgnitor(800.0), ConstantIgnitor(1.2 * ladder[1]))
+                    .lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(1.2 * ladder[0]))
+                    .lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(1.2 * ladder[1]))
             } shouldBe render(saw.lowpass(800.0, q = 1.2, passes = 2))
         }
     }
@@ -246,18 +246,18 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val plainNt = saw.notch(1200.0)
 
         withClue("highpass") {
-            render(saw.highpass(400.0, decaySec = 0.3, sustainLevel = 0.2)) shouldNotBe render(plainHp)
-            render(saw.highpass(400.0, env = 0.0, decaySec = 0.3, sustainLevel = 0.2)) shouldBe render(plainHp)
+            render(saw.highpass(400.0, decay = 0.3, sustain = 0.2)) shouldNotBe render(plainHp)
+            render(saw.highpass(400.0, env = 0.0, decay = 0.3, sustain = 0.2)) shouldBe render(plainHp)
         }
 
         withClue("bandpass") {
-            render(saw.bandpass(1200.0, decaySec = 0.3, sustainLevel = 0.2)) shouldNotBe render(plainBp)
-            render(saw.bandpass(1200.0, env = 0.0, decaySec = 0.3, sustainLevel = 0.2)) shouldBe render(plainBp)
+            render(saw.bandpass(1200.0, decay = 0.3, sustain = 0.2)) shouldNotBe render(plainBp)
+            render(saw.bandpass(1200.0, env = 0.0, decay = 0.3, sustain = 0.2)) shouldBe render(plainBp)
         }
 
         withClue("notch") {
-            render(saw.notch(1200.0, decaySec = 0.3, sustainLevel = 0.2)) shouldNotBe render(plainNt)
-            render(saw.notch(1200.0, env = 0.0, decaySec = 0.3, sustainLevel = 0.2)) shouldBe render(plainNt)
+            render(saw.notch(1200.0, decay = 0.3, sustain = 0.2)) shouldNotBe render(plainNt)
+            render(saw.notch(1200.0, env = 0.0, decay = 0.3, sustain = 0.2)) shouldBe render(plainNt)
         }
 
         withClue("humanize draws on every kind, and only when analog is above 0") {
@@ -273,15 +273,15 @@ class IgnitorFilterKnobsSpec : StringSpec({
             // The node KDoc's claim that `analog` is not inert on the taps without saturation.
             val tolerance = FilterHumanization(cutoffOffsetMul = 1.25, drift = null)
 
-            renderRaw { it.bandpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), humanize = tolerance) } shouldBe
-                renderRaw { it.bandpass(ConstantIgnitor(1000.0), ConstantIgnitor(0.707)) }
+            renderRaw { it.bandpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), humanize = tolerance) } shouldBe
+                renderRaw { it.bandpass(cutoffHz = ConstantIgnitor(1000.0), q = ConstantIgnitor(0.707)) }
         }
     }
 
     "env = 0 written EXPLICITLY is the node's switch: the four stage knobs are then inert" {
         val plain = saw.lowpass(800.0)
         val offWithOddStages =
-            saw.lowpass(800.0, env = 0.0, attackSec = 0.9, decaySec = 0.7, sustainLevel = 0.2, releaseSec = 1.3)
+            saw.lowpass(800.0, env = 0.0, attack = 0.9, decay = 0.7, sustain = 0.2, release = 1.3)
 
         withClue("a written zero depth is bit for bit the filter with no envelope at all") {
             render(offWithOddStages) shouldBe render(plain)
@@ -290,7 +290,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         withClue("the same stage knobs at a depth DO change it (the control)") {
             val swept = saw.lowpass(
                 800.0, env = 24.0,
-                attackSec = 0.9, decaySec = 0.7, sustainLevel = 0.2, releaseSec = 1.3,
+                attack = 0.9, decay = 0.7, sustain = 0.2, release = 1.3,
             )
 
             render(swept) shouldNotBe render(plain)
@@ -302,16 +302,16 @@ class IgnitorFilterKnobsSpec : StringSpec({
     "each stage knob moves the sweep on its own" {
         val base = saw.lowpass(800.0, env = 24.0)
 
-        withClue("attack") { render(saw.lowpass(800.0, env = 24.0, attackSec = 0.5)) shouldNotBe render(base) }
+        withClue("attack") { render(saw.lowpass(800.0, env = 24.0, attack = 0.5)) shouldNotBe render(base) }
         withClue("decay, which needs a sustain BELOW 1 or it has nothing to fall to") {
             // At the default sustain of 1.0 the decay segment runs from the peak to the peak, so
-            // `decaySec` alone is inaudible and a row that compared it against `base` would pass
+            // `decay` alone is inaudible and a row that compared it against `base` would pass
             // for the wrong reason (review checklist item 10).
-            render(saw.lowpass(800.0, env = 24.0, sustainLevel = 0.2, decaySec = 0.5)) shouldNotBe
-                render(saw.lowpass(800.0, env = 24.0, sustainLevel = 0.2))
+            render(saw.lowpass(800.0, env = 24.0, sustain = 0.2, decay = 0.5)) shouldNotBe
+                render(saw.lowpass(800.0, env = 24.0, sustain = 0.2))
         }
-        withClue("sustain") { render(saw.lowpass(800.0, env = 24.0, sustainLevel = 0.1)) shouldNotBe render(base) }
-        withClue("release") { render(saw.lowpass(800.0, env = 24.0, releaseSec = 0.9)) shouldNotBe render(base) }
+        withClue("sustain") { render(saw.lowpass(800.0, env = 24.0, sustain = 0.1)) shouldNotBe render(base) }
+        withClue("release") { render(saw.lowpass(800.0, env = 24.0, release = 0.9)) shouldNotBe render(base) }
     }
 
     "a SLOT drives the depth, and an unwritten slot is the same as no envelope" {
@@ -337,7 +337,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
             inner = saw,
             freq = IgnitorDsl.Constant(800.0),
             env = IgnitorDsl.Constant(24.0),
-            attackSec = IgnitorDsl.PerlinNoise(rate = IgnitorDsl.Constant(2.0)),
+            attack = IgnitorDsl.PerlinNoise(rate = IgnitorDsl.Constant(2.0)),
         )
 
         render(modulated) shouldBe render(saw.lowpass(800.0, env = 24.0))
@@ -349,9 +349,9 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val expressionDepth = IgnitorDsl.Lowpass(
             inner = saw,
             freq = IgnitorDsl.Constant(800.0),
-            env = IgnitorDsl.Max(IgnitorDsl.Param("lpenv", 24.0), IgnitorDsl.Constant(36.0)),
-            decaySec = IgnitorDsl.Constant(0.3),
-            sustainLevel = IgnitorDsl.Constant(0.2),
+            env = IgnitorDsl.Max(left = IgnitorDsl.Param("lpenv", 24.0), right = IgnitorDsl.Constant(36.0)),
+            decay = IgnitorDsl.Constant(0.3),
+            sustain = IgnitorDsl.Constant(0.2),
         )
 
         render(expressionDepth) shouldBe render(saw.lowpass(800.0))
@@ -361,7 +361,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val expressionAnalog = IgnitorDsl.Lowpass(
             inner = saw,
             freq = IgnitorDsl.Constant(800.0),
-            analog = IgnitorDsl.Max(IgnitorDsl.Param("analog", 4.0), IgnitorDsl.Constant(8.0)),
+            analog = IgnitorDsl.Max(left = IgnitorDsl.Param("analog", 4.0), right = IgnitorDsl.Constant(8.0)),
             humanize = true,
         )
 
@@ -421,9 +421,9 @@ class IgnitorFilterKnobsSpec : StringSpec({
             // Same function, same stream position: `perVoiceCutoffOffsetMul` has one home and
             // both callers reach it. A second copy of the expression is what this row forbids.
             val replay = seed()
-            val expected = perVoiceCutoffOffsetMul(4.0, FILTER_CUTOFF_OFFSET_PER_ANALOG, replay)
+            val expected = perVoiceCutoffOffsetMul(analog = 4.0, cutoffOffsetPerAnalog = FILTER_CUTOFF_OFFSET_PER_ANALOG, rng = replay)
 
-            buildFilterHumanization(4.0, sampleRate, blockFrames, seed())!!
+            buildFilterHumanization(analog = 4.0, sampleRate = sampleRate, blockFrames = blockFrames, rng = seed())!!
                 .cutoffOffsetMul shouldBe expected
         }
     }
@@ -469,12 +469,12 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val tolerance = FilterHumanization(cutoffOffsetMul = 1.25, drift = null)
 
         // 800 * 1.25 is exactly 1000 in binary, so the claim is an exact bit equality.
-        renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), humanize = tolerance) } shouldBe
-            renderRaw { it.lowpass(ConstantIgnitor(1000.0), ConstantIgnitor(0.707)) }
+        renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), humanize = tolerance) } shouldBe
+            renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(1000.0), q = ConstantIgnitor(0.707)) }
 
         withClue("...and it is NOT the same as the untouched 800 Hz filter") {
-            renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), humanize = tolerance) } shouldNotBe
-                renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707)) }
+            renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), humanize = tolerance) } shouldNotBe
+                renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707)) }
         }
 
         withClue("the ENVELOPE path carries the tolerance too") {
@@ -482,11 +482,11 @@ class IgnitorFilterKnobsSpec : StringSpec({
             // multiplies AFTER `base * 2^(depth/12 * env)`, so `(800 * 2^x) * 1.25` and
             // `1000 * 2^x` round differently. What has to hold is that the tolerance is ON
             // that path at all.
-            val swept = FilterEnvDef(depth = 24.0, attackSec = 0.01, decaySec = 0.2, sustainLevel = 0.3, releaseSec = 0.1)
+            val swept = FilterEnvDef(depth = 24.0, attack = 0.01, decay = 0.2, sustain = 0.3, release = 0.1)
 
             renderRaw {
-                it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), swept, humanize = tolerance)
-            } shouldNotBe renderRaw { it.lowpass(ConstantIgnitor(800.0), ConstantIgnitor(0.707), swept) }
+                it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), env = swept, humanize = tolerance)
+            } shouldNotBe renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), env = swept) }
         }
     }
 
@@ -494,7 +494,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         // Two stages sharing one lane must see ONE multiplier per block. If each stage stepped
         // it, the second stage would filter at a different cutoff than the first and the render
         // would differ from a lane that is stepped once and held.
-        val lane = buildFilterHumanization(4.0, sampleRate, blockFrames, seed())!!
+        val lane = buildFilterHumanization(analog = 4.0, sampleRate = sampleRate, blockFrames = blockFrames, rng = seed())!!
         val context = ctx(seed())
 
         val first = lane.blockDriftMultiplier(context)
@@ -510,9 +510,9 @@ class IgnitorFilterKnobsSpec : StringSpec({
         // A contract, not the constant restated: the drift's trajectory does not depend on `analog`, only its
         // scale does, so a pitch lane at the same analog on the same stream must move exactly half as far.
         val analog = 3.0
-        val lane = buildFilterHumanization(analog, sampleRate, blockFrames, seed())!!
+        val lane = buildFilterHumanization(analog = analog, sampleRate = sampleRate, blockFrames = blockFrames, rng = seed())!!
         // Skip the tolerance draw `buildFilterHumanization` takes before its drift lane.
-        val pitch = AnalogDrift(analog, analogDriftStepRate(sampleRate, blockFrames), seed().also { it.nextDouble() })
+        val pitch = AnalogDrift(analog, analogDriftStepRate(sampleRate = sampleRate, blockFrames = blockFrames), seed().also { it.nextDouble() })
         val context = ctx(seed())
 
         repeat(2000) {

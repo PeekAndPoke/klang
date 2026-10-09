@@ -198,7 +198,7 @@ Ignitor.supersaw(55, x => x.voices(7))
 | Method                                      | Description                                                     |
 |---------------------------------------------|-----------------------------------------------------------------|
 | `Ignitor.whitenoise(color?)`                    | Flat spectrum; `color` tilts it (see below)                     |
-| `Ignitor.brownnoise(depth?)`                    | Low-frequency weighted (-6 dB/oct); `depth` = white-leak        |
+| `Ignitor.brownnoise(leak?)`                     | Low-frequency weighted (-6 dB/oct); `leak` = white-leak         |
 | `Ignitor.pinknoise()`                           | Balanced noise (-3 dB/oct) — canonical exact pink, no knobs     |
 | `Ignitor.perlin(rate?, octaves?, persistence?)` | Smooth organic noise; fBm via `octaves`/`persistence`           |
 | `Ignitor.berlin(rate?, octaves?, persistence?)` | Angular piecewise-linear noise; same fBm knobs                  |
@@ -210,7 +210,7 @@ Ignitor.supersaw(55, x => x.voices(7))
 | Knob          | On                | Meaning                                                                                    |
 |---------------|-------------------|--------------------------------------------------------------------------------------------|
 | `color`       | `whitenoise`      | Spectral tilt −1..1: `0` flat (default), `<0` darken toward pink/brown, `>0` brighten      |
-| `depth`       | `brownnoise`      | Per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter       |
+| `leak`        | `brownnoise`      | Per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter       |
 | `octaves`     | `perlin`/`berlin` | fBm octaves: `1` plain (default, perf-neutral), higher = more fractal detail (capped at 8) |
 | `persistence` | `perlin`/`berlin` | fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves)              |
 | `tail`        | `dust`            | Heavy-tailed amplitude exponent: `1` uniform (default), `>1` = mostly-tiny / rare-loud     |
@@ -224,8 +224,8 @@ Ignitor.supersaw(55, x => x.voices(7))
 
 | Method                                    | Description                     |
 |-------------------------------------------|---------------------------------|
-| `Ignitor.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `decay` (0.996), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
-| `Ignitor.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8), `spread` (0.2) and `analogSpread` (1): `Ignitor.superpluck(x => x.voices(6).decay(0.995))` |
+| `Ignitor.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `feedback` (0.996, the loop feedback per pass), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
+| `Ignitor.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8), `spread` (0.2) and `analogSpread` (1): `Ignitor.superpluck(x => x.voices(6).feedback(0.995))` |
 
 ### Utility
 
@@ -299,7 +299,7 @@ past an omitted q: `.lowpass(800, x => x.analog(3))`.
 - `passes(n)` is the cascade count: `2` = 24 dB/oct, `3` = 36, coerced to 1..16. At the default q
   the cascade stays -3 dB AT the cutoff; a resonant q compounds across stages, and so does
   `analog` (every stage gets the full drive).
-- `env(semitones)` and `adsr(attackSec, decaySec, sustainLevel, releaseSec)` are the cutoff
+- `env(semitones)` and `adsr(attack, decay, sustain, release)` are the cutoff
   envelope: naming EITHER switches it on and the other fills from the shared constants (depth 7
   semitones; stages 0.01 / 0.1 / 1.0 / 0.1). `.lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))`
   is a pluck. The `adsr` takes its own lambda to shape the stages with the chain's curves,
@@ -415,8 +415,8 @@ their short names) and `declick(seconds)` rounds the gain's corners (0 = off, th
 | `.drive(amount)`                        | Pre-amplification: gain, no curve          |
 | `.shape(shape?, oversample?)`           | The waveshaper curve alone, no gain        |
 | `.distort(amount, shape?, oversample?)` | `.drive()` + `.shape()` in one node        |
-| `.crush(amount)`                        | Bit-depth reduction                        |
-| `.coarse(amount)`                       | Sample-rate reduction                      |
+| `.crush(bits)`                          | Bit-depth reduction                        |
+| `.coarse(factor)`                       | Sample-rate reduction                      |
 | `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
 | `.shimmer(wet?, feedback?, tone?, pitches?, x => x.floor(f))` | Granular pitch-shift cloud: wet 0.5, feedback 0.5, tone 4000, pitches `[0, 7, 12]`; dry floor on the builder |
 | `.tremolo(rate, depth, x => x.shape(name).range(from, to))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), which is the oscillator of that name; the square, sawtooth and ramp get a 16 ms soft edge. `range(from, to)` places the swing in the -1..1 language of `range`, the gain being `1 + depth * that`: default `range(-1, 0)`, the dip from 1 to `1 - depth`; `range(0, 1)` swells upward to `1 + depth`, `range(-1, 1)` both ways; raw, no clamp |
@@ -476,9 +476,9 @@ three layers was heard at three times its rate; a patch tuned before then may so
 
 ### Analog Drift
 
-| Method            | Description                                 |
-|-------------------|---------------------------------------------|
-| `.analog(amount)` | Perlin noise pitch jitter for analog warmth |
+| Knob                                   | Description                                                                                                      |
+|----------------------------------------|------------------------------------------------------------------------------------------------------------------|
+| `x => x.analog(n)` (oscillator builders) | How analog: one unitless character scale, 0 ideal, 1 to 8 usual, 10 strong. An oscillator's tell is its pitch drift, about one cent of peak per unit (a fast jitter and a slow wander) |
 
 ### Arithmetic (Signal Mixing)
 
@@ -603,13 +603,13 @@ note("c3 e3 g3").sound(guitar).lpf(1800).adsr(release = 0.2)
 
 The slots it places are grouped per stage on `Ignitor.slot`, named after the sprudel
 readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
-same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.amount`, `Ignitor.slot.coarse.amount`,
+same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.bits`, `Ignitor.slot.coarse.factor`,
 `Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
 `Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`, and the filter envelope curves
 `Ignitor.slot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
 
 Want another order? Write your own tail from the same slots, as far as a door takes them:
-`Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).crush(Ignitor.slot.crush.amount).lowpass(Ignitor.slot.lpf.freq)`.
+`Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).crush(Ignitor.slot.crush.bits).lowpass(Ignitor.slot.lpf.freq)`.
 The doors take a slot for every filter's `freq`, `q`, `env` and envelope stages, for `crush`, `coarse`,
 the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.classic()` can place:
 - `lpf.passes` / `hpf.passes`: the filter builder's `passes(n)` takes a number, not a slot;
@@ -688,10 +688,10 @@ Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 
 | `supersquare` | `supersqr`, `superpulse` | SuperSquare(Freq, voices=8, spread=0.2)                         |
 | `supertri`    |                          | SuperTri(Freq, voices=8, spread=0.2)                            |
 | `superramp`   |                          | SuperRamp(Freq, voices=8, spread=0.2)                           |
-| `pluck`       | `ks`, `string`           | Pluck(Freq, decay=0.996, brightness=0.5, pick=0.5, stiffness=0) |
+| `pluck`       | `ks`, `string`           | Pluck(Freq, feedback=0.996, brightness=0.5, pick=0.5, stiffness=0) |
 | `superpluck`  |                          | SuperPluck(Freq, voices=8, spread=0.2, ...)                     |
 | `whitenoise`  | `white`                  | WhiteNoise(color=0)                                             |
-| `brownnoise`  | `brown`                  | BrownNoise(depth=0.02)                                          |
+| `brownnoise`  | `brown`                  | BrownNoise(leak=0.02)                                           |
 | `pinknoise`   | `pink`                   | PinkNoise                                                       |
 | `perlinnoise` | `perlin`                 | PerlinNoise(rate=1, octaves=1, persistence=0.5)                 |
 | `berlinnoise` | `berlin`                 | BerlinNoise(rate=1, octaves=1, persistence=0.5)                 |

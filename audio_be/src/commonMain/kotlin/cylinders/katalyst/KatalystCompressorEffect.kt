@@ -9,9 +9,11 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.audio_be.utils.crossfadeLinear
+import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.min
 
 /**
@@ -130,11 +132,10 @@ class KatalystCompressorEffect(
      * `Compressor` on the audio thread). It outlives every state: [Off.enter] resets it (the
      * envelope back to rest) and the ON arm of [configure] writes all five knobs, which together
      * give the same doubles as a freshly built instance on the classic path (the constructor and
-     * the setters store the same coerced values and compute the same coefficients; nothing on an
-     * orbit writes `makeupGainDb`). Proven by every spec row that compares a new life against a
-     * FRESH bare `Compressor` bit for bit. One difference remains for a direct caller only: a
+     * the setters store the same coerced values and compute the same coefficients). Proven by every
+     * spec row that compares a new life against a FRESH bare `Compressor` bit for bit. One difference remains for a direct caller only: a
      * non-finite knob keeps the previous value where a constructor takes its default; the writer
-     * never hands one (`Voice.Compressor.fromParams` substitutes the constants).
+     * never hands one (`KatalystCompressorWriter` substitutes the constants).
      */
     private val instance = Compressor(
         sampleRate = sampleRate,
@@ -148,7 +149,7 @@ class KatalystCompressorEffect(
     private val latent: Boolean = latencyFrames > 0
 
     /**
-     * Frames since the last input block that held a sample above [ORBIT_SILENCE_FLOOR], counted at
+     * Frames since the last input block that held a sample above [SILENCE_FLOOR], counted at
      * block ends and held at [latencyFrames]. Below [latencyFrames] the ring may still hold audio
      * the orbit has not heard yet, which is the tail [hasTail] reports. Only a latent instance
      * counts; [reset] sets it to "nothing in the ring".
@@ -167,7 +168,7 @@ class KatalystCompressorEffect(
      * instead of five setters and about fifteen `exp()` (the open item on `writeCompressor`,
      * closed here). Forgotten in [Off.enter], so the ON arm out of Off always writes the knobs.
      */
-    private var applied: Voice.Compressor? = null
+    private var applied: CompressorSettings? = null
 
     private val thresholdGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
     /** The ratio glides as its INVERSE, `1 / ratio`: see [Compressor.processGliding]. */
@@ -277,9 +278,9 @@ class KatalystCompressorEffect(
             val mixL = ctx.mixBuffer.left
             val mixR = ctx.mixBuffer.right
 
-            instance.processLookahead(mixL, mixR, n, dryL, dryR)
-            dryL.copyInto(mixL, 0, 0, n)
-            dryR.copyInto(mixR, 0, 0, n)
+            instance.processLookahead(left = mixL, right = mixR, blockSize = n, delayedLeft = dryL, delayedRight = dryR)
+            dryL.copyRangeInto(destination = mixL, destinationOffset = 0, startIndex = 0, endIndex = n)
+            dryR.copyRangeInto(destination = mixR, destinationOffset = 0, startIndex = 0, endIndex = n)
         }
     }
 
@@ -300,7 +301,7 @@ class KatalystCompressorEffect(
         }
 
         override fun process(ctx: KatalystContext) {
-            compress(instance, ctx.mixBuffer.left, ctx.mixBuffer.right, ctx.blockFrames)
+            compress(c = instance, left = ctx.mixBuffer.left, right = ctx.mixBuffer.right, n = ctx.blockFrames)
         }
     }
 
@@ -326,7 +327,8 @@ class KatalystCompressorEffect(
         }
 
         /** The weight the next sample would carry: where a turned-around fade starts. */
-        private fun weightNow(): Double = to + (from - to) * ((fadeLen - pos) * invFadeLen)
+        private fun weightNow(): Double =
+            linearFadeWeight(weightFrom = from, weightTo = to, remaining = fadeLen - pos, invLength = invFadeLen)
 
         override fun switchOn() {
             if (to == 0.0) {
@@ -361,21 +363,37 @@ class KatalystCompressorEffect(
             // is what the orbit would sound like uncompressed at this moment: the input itself,
             // or with a lookahead the input D frames ago, straight out of the instance's ring.
             if (latent) {
-                c.processLookahead(mixL, mixR, n, dL, dR)
+                c.processLookahead(left = mixL, right = mixR, blockSize = n, delayedLeft = dL, delayedRight = dR)
             } else {
-                mixL.copyInto(dL, 0, 0, n)
-                mixR.copyInto(dR, 0, 0, n)
-                compress(c, mixL, mixR, n)
+                mixL.copyRangeInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
+                mixR.copyRangeInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
+                compress(c = c, left = mixL, right = mixR, n = n)
             }
 
             val end = min(n, len - p0)
 
-            for (i in 0 until end) {
-                val w = t + (f - t) * ((len - p0 - i) * inv)
-
-                mixL[i] = dL[i] + w * (mixL[i] - dL[i])
-                mixR[i] = dR[i] + w * (mixR[i] - dR[i])
-            }
+            // out = dry + w * (compressed - dry), the one law of the FilterSwap's bank fade too
+            // (`utils/linear_crossfade.kt`).
+            crossfadeLinear(
+                target = mixL,
+                base = dL,
+                other = mixL,
+                count = end,
+                weightFrom = f,
+                weightTo = t,
+                remaining = len - p0,
+                invLength = inv,
+            )
+            crossfadeLinear(
+                target = mixR,
+                base = dR,
+                other = mixR,
+                count = end,
+                weightFrom = f,
+                weightTo = t,
+                remaining = len - p0,
+                invLength = inv,
+            )
 
             if (p0 + n < len) {
                 pos = p0 + n
@@ -386,8 +404,8 @@ class KatalystCompressorEffect(
             // Landed: the samples from `end` on carry `to` exactly.
             if (t == 0.0) {
                 // Gain reduction 0 dB: the rest of the block IS the dry mix, and the life ends.
-                dL.copyInto(mixL, end, end, n)
-                dR.copyInto(mixR, end, end, n)
+                dL.copyRangeInto(destination = mixL, destinationOffset = end, startIndex = end, endIndex = n)
+                dR.copyRangeInto(destination = mixR, destinationOffset = end, startIndex = end, endIndex = n)
                 off.enter()
             } else {
                 // Full weight: the rest of the block is the compressed mix as it stands.
@@ -419,7 +437,7 @@ class KatalystCompressorEffect(
      * every block the orbit has an owner (`KatalystChain.applyParams`), so an unchanged owner must cost
      * nothing: the knobs are written only when the settings object changes (see [applied]).
      */
-    fun configure(settings: Voice.Compressor?) {
+    fun configure(settings: CompressorSettings?) {
         if (settings == null) {
             state.switchOff()
 
@@ -468,7 +486,7 @@ class KatalystCompressorEffect(
         val kneeTo = kneeGlide.advance()
 
         if (thresholdFrom == thresholdTo && inverseRatioFrom == inverseRatioTo && kneeFrom == kneeTo) {
-            c.process(left, right, n)
+            c.process(left = left, right = right, blockSize = n)
 
             return
         }
@@ -509,7 +527,7 @@ class KatalystCompressorEffect(
         val n = ctx.blockFrames
         val left = ctx.mixBuffer.left
         val right = ctx.mixBuffer.right
-        val floor = ORBIT_SILENCE_FLOOR
+        val floor = SILENCE_FLOOR
 
         for (i in 0 until n) {
             val l = left[i]
@@ -528,10 +546,10 @@ class KatalystCompressorEffect(
     /**
      * Without a lookahead, false: the envelope follower is state, but a compressor only ATTENUATES
      * what it is given and emits nothing from silence, so it can neither hold nor start a tail,
-     * fading or not. See [KatalystBodyEffect.hasTail] for the insert-vs-send rule a future stage has
+     * fading or not. See [KatalystResonatorEffect.hasTail] for the insert-vs-send rule a future stage has
      * to apply.
      *
-     * With a lookahead, true while the ring may still hold audio above [ORBIT_SILENCE_FLOOR] (fewer
+     * With a lookahead, true while the ring may still hold audio above [SILENCE_FLOOR] (fewer
      * than [latencyFrames] quiet frames since the last loud input block): the orbit has not heard it
      * yet, and a chain swap retires a leaving chain at the end of its ramp unless it reports a tail
      * (`ChainSwap`), which would cut it.

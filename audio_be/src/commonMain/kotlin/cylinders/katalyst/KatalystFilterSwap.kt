@@ -9,6 +9,9 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.audio_be.utils.crossfadeLinear
+import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 
 /**
@@ -45,10 +48,10 @@ import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
  * bank: [set], [clear] and [resume] have nothing to hold it in, and a host that built a bank for a
  * change that a later one overtakes would allocate for a bank nobody hears. The hosts ask
  * [settled] first and offer the parked config again from their own `process` once a fade lands
- * (see [KatalystBodyEffect.configure]). That is what keeps this class at two banks and the orbit
+ * (see [KatalystResonatorEffect.configure]). That is what keeps this class at two banks and the orbit
  * EQ at two pre-built ones.
  *
- * Used by [KatalystBodyEffect], [KatalystFormantEffect] and [KatalystEqEffect], which share this
+ * Used by [KatalystResonatorEffect] (body and vowel) and [KatalystEqEffect], which share this
  * one path. The hosts own the pairs (the swap only references them) and keep the INTENT apart from
  * the sound: [active] is what the owner asked for as far as THIS class knows, [sounding] is whether
  * any pair is still heard. A host with a parked config knows one more thing than this class does,
@@ -165,7 +168,7 @@ class KatalystFilterSwap(
             }
 
             // Dry is what sounds now: it becomes the outgoing entry, the new pair fades in from 0.
-            crossfading.enter(null, null)
+            crossfading.enter(fromL = null, fromR = null)
             curL = left
             curR = right
         }
@@ -196,7 +199,7 @@ class KatalystFilterSwap(
                 return
             }
 
-            crossfading.enter(curL, curR)
+            crossfading.enter(fromL = curL, fromR = curR)
             curL = left
             curR = right
         }
@@ -210,7 +213,7 @@ class KatalystFilterSwap(
                 return
             }
 
-            crossfading.enter(curL, curR)
+            crossfading.enter(fromL = curL, fromR = curR)
             curL = null
             curR = null
         }
@@ -224,8 +227,8 @@ class KatalystFilterSwap(
             val l = curL ?: return
             val r = curR ?: return
 
-            l.process(mix.left, 0, n)
-            r.process(mix.right, 0, n)
+            l.process(buffer = mix.left, offset = 0, length = n)
+            r.process(buffer = mix.right, offset = 0, length = n)
         }
     }
 
@@ -324,16 +327,16 @@ class KatalystFilterSwap(
             val w0 = outFrom
 
             // Keep the dry input: the outgoing pair and the dry partner both read it.
-            mixL.copyInto(dL, 0, 0, n)
-            mixR.copyInto(dR, 0, 0, n)
+            mixL.copyRangeInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
+            mixR.copyRangeInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
 
             // The target in place: the mix becomes its output (untouched when the target is dry).
             val tL = curL
             val tR = curR
 
             if (tL != null && tR != null) {
-                tL.process(mixL, 0, n)
-                tR.process(mixR, 0, n)
+                tL.process(buffer = mixL, offset = 0, length = n)
+                tR.process(buffer = mixR, offset = 0, length = n)
             }
 
             val bL = outL
@@ -343,10 +346,10 @@ class KatalystFilterSwap(
 
             if (bL != null && bR != null) {
                 // The entry runs the whole block, so its own state stays continuous.
-                dL.copyInto(sL, 0, 0, n)
-                dR.copyInto(sR, 0, 0, n)
-                bL.process(sL, 0, n)
-                bR.process(sR, 0, n)
+                dL.copyRangeInto(destination = sL, destinationOffset = 0, startIndex = 0, endIndex = n)
+                dR.copyRangeInto(destination = sR, destinationOffset = 0, startIndex = 0, endIndex = n)
+                bL.process(buffer = sL, offset = 0, length = n)
+                bR.process(buffer = sR, offset = 0, length = n)
                 srcL = sL
                 srcR = sR
             } else {
@@ -354,16 +357,31 @@ class KatalystFilterSwap(
                 srcR = dR
             }
 
-            // out = target + w * (entry - target), which is (1 - w) * target + w * entry.
+            // out = target + w * (entry - target), which is (1 - w) * target + w * entry. The weight counts
+            // DOWN to the landing (`weightTo` 0), so it is exactly 0 there, never a rounding. The one law
+            // of the compressor's switch fade too (`utils/linear_crossfade.kt`).
             val end = if (n < len - p0) n else len - p0
 
-            // The weight counts DOWN to the landing, so it is exactly 0 there, never a rounding.
-            for (k in 0 until end) {
-                val w = w0 * ((len - p0 - k) * inv)
-
-                mixL[k] += w * (srcL[k] - mixL[k])
-                mixR[k] += w * (srcR[k] - mixR[k])
-            }
+            crossfadeLinear(
+                target = mixL,
+                base = mixL,
+                other = srcL,
+                count = end,
+                weightFrom = w0,
+                weightTo = 0.0,
+                remaining = len - p0,
+                invLength = inv,
+            )
+            crossfadeLinear(
+                target = mixR,
+                base = mixR,
+                other = srcR,
+                count = end,
+                weightFrom = w0,
+                weightTo = 0.0,
+                remaining = len - p0,
+                invLength = inv,
+            )
 
             outPos = p0 + n
 
@@ -380,7 +398,8 @@ class KatalystFilterSwap(
         }
 
         /** The target's weight at the next sample to be processed: the complement of the entry's. */
-        private fun targetWeight(): Double = 1.0 - outFrom * ((fadeLen - outPos) * invFadeLen)
+        private fun targetWeight(): Double =
+            1.0 - linearFadeWeight(weightFrom = outFrom, weightTo = 0.0, remaining = fadeLen - outPos, invLength = invFadeLen)
     }
 
     private val off = Off()
@@ -431,7 +450,7 @@ class KatalystFilterSwap(
      * Only while [settled]. A call while a fade runs is REFUSED and changes nothing.
      */
     fun set(left: AudioFilter, right: AudioFilter) {
-        state.set(left, right)
+        state.set(left = left, right = right)
     }
 
     /**

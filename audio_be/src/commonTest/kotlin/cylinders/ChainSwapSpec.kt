@@ -96,7 +96,7 @@ class ChainSwapSpec : StringSpec({
         }
 
         withClue("and the output is the twin's, which was offered nothing, through the drain") {
-            sameFrom(a, b, blocks = a.fadeBlocks + 40, level = 0.5)
+            sameFrom(a = a, b = b, blocks = a.fadeBlocks + 40, level = 0.5)
         }
     }
 
@@ -124,7 +124,7 @@ class ChainSwapSpec : StringSpec({
             a.reverbs.idleCount shouldBe shelved + 1
         }
 
-        sameFrom(a, b, blocks = 60, level = 0.0)
+        sameFrom(a = a, b = b, blocks = 60, level = 0.0)
     }
 
     // ── The re-entry ─────────────────────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ class ChainSwapSpec : StringSpec({
             left.contentEquals(right) shouldBe true
         }
 
-        sameFrom(a, b, blocks = a.fadeBlocks + 20, level = 0.3)
+        sameFrom(a = a, b = b, blocks = a.fadeBlocks + 20, level = 0.3)
     }
 
     // ── A finished life leaves no record ─────────────────────────────────────────────────────────

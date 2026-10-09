@@ -222,7 +222,7 @@ class KatalystDelayEffect(
      * - at `|feedback| > 1` the ring GROWS under the frozen ceiling (to the cap, from a charge the
      *   ceiling froze at a fraction of it), and a new owner returning with a tame feedback used to
      *   resume that stale value: ring and ceiling then decayed together and the ceiling crossed
-     *   [TailCeiling.SILENCE] with the ring still at -39 to -87 dBFS (0.4 s, charges 0.1 to
+     *   `SILENCE_FLOOR` with the ring still at -39 to -87 dBFS (0.4 s, charges 0.1 to
      *   0.0002). CLOSED: that return RE-MEASURES ([Draining.resume]); after it, nothing above
      *   -110 dBFS is left when the orbit resets.
      * - a feedback REDUCED to (near) zero, after a drain or LIVE on an owner handover or a glide:
@@ -350,7 +350,7 @@ class KatalystDelayEffect(
                 feedback = line.feedback,
                 lapsPerWindow = line.tailLapsPerWindow,
             )
-            line.process(feed, ctx.mixBuffer, frames)
+            line.process(input = feed, output = ctx.mixBuffer, length = frames)
         }
 
         /** A ceiling, not a scan: [process] maintains it from the feed. */
@@ -446,7 +446,7 @@ class KatalystDelayEffect(
             val frames = min(ctx.blockFrames, silentInput.left.size)
 
             advanceGlide(line)
-            line.process(silentInput, ctx.mixBuffer, frames)
+            line.process(input = silentInput, output = ctx.mixBuffer, length = frames)
 
             // Infinity minus a block stays Infinity, so the self-oscillating case needs no branch.
             val left = remaining - frames
@@ -494,19 +494,41 @@ class KatalystDelayEffect(
      */
     internal val currentState: Any get() = state
 
+    /** The holder the four-number [configure] door fills, this stage's own instance ([DelayConfig] says why). */
+    private val door = DelayConfig()
+
+    /**
+     * The door for a direct caller (the specs): fills this stage's own [DelayConfig] and configures from it, so the
+     * rules below are written once, in the holder overload.
+     */
+    fun configure(time: Double, feedback: Double, cap: Double, wet: Double) {
+        val c = door
+
+        c.time = time
+        c.feedback = feedback
+        c.cap = cap
+        c.wet = wet
+        configure(c)
+    }
+
     /**
      * Applies the orbit owner's delay settings. Called by `KatalystChain.applyParams` on every
      * block an owner is committed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
      *
-     * [wet] is how much of the orbit mix feeds the line. Raw: no clamp, a negative wet feeds the
-     * line inverted, above 1 hotter than the mix.
+     * [DelayConfig.wet] is how much of the orbit mix feeds the line. Raw: no clamp, a negative wet feeds the
+     * line inverted, above 1 hotter than the mix. The stage reads [config] and keeps no reference to it.
      */
-    fun configure(time: Double, feedback: Double, cap: Double, wet: Double) {
+    fun configure(config: DelayConfig) {
+        val time = config.time
+        val feedback = config.feedback
+        val cap = config.cap
+        val wet = config.wet
+
         // Non-finite reads as OFF (time) or as the shared default (feedback, cap, wet), never as the
         // previous owner's value: DelayLine's setters DROP non-finite writes, so passing one through
         // would leave whatever the last owner set. The slot writer never hands a non-finite wet to a
-        // running stage (`sendStageRuns`); this guard is the door's own contract for a direct caller
+        // running stage (`stageAskedFor`); this guard is the door's own contract for a direct caller
         // (the reverb door reads a non-finite size as off the same way).
         if (time.isFinite() && time >= MIN_ACTIVE_DELAY_SECONDS) {
             // No ring and none to be had: the orbit stays dry rather than the worklet dying.
@@ -632,4 +654,22 @@ class KatalystDelayEffect(
          */
         const val MIN_ACTIVE_DELAY_SECONDS = 0.01
     }
+}
+
+/**
+ * What a delay stage is configured with on every block an owner is committed ([KatalystDelayEffect.configure]): the
+ * [time] in seconds (non-finite or below `MIN_ACTIVE_DELAY_SECONDS` is OFF), the [feedback], the [cap] and the [wet].
+ *
+ * **Mutable and reused, on purpose** (V8 allocation pass, 2026-10-08). The writer configures the stage on every block,
+ * and on V8 a non-integral double handed to a function that is not inlined travels as a heap number, one allocation
+ * per value per call (the rule in `audio/ref/performance.md`; `ResonatorConfig` is the precedent). So the numbers stay
+ * in the fields of one holder, and the call hands over the reference. Each holder owns its instance: the slot writer
+ * one (filled when it is built and at every resolve), the stage one for its four-number door; the stage reads the
+ * values and keeps no reference.
+ */
+class DelayConfig {
+    var time: Double = Double.NaN
+    var feedback: Double = Double.NaN
+    var cap: Double = Double.NaN
+    var wet: Double = Double.NaN
 }

@@ -46,7 +46,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(3),
         ).apply {
-            updateOffsetAndLength(0, blockFrames)
+            updateOffsetAndLength(offset = 0, length = blockFrames)
             voiceElapsedFrames = 0
         }
         val out = ArrayList<Long>(frames)
@@ -74,10 +74,10 @@ class EnvelopeCurveKnobSpec : StringSpec({
     fun chain(attack: IgnitorDsl? = null, decay: IgnitorDsl? = null, release: IgnitorDsl? = null): IgnitorDsl.Adsr {
         val base = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Constant(1.0),
-            attackSec = IgnitorDsl.Constant(0.01),
-            decaySec = IgnitorDsl.Constant(0.02),
-            sustainLevel = IgnitorDsl.Constant(0.4),
-            releaseSec = IgnitorDsl.Constant(0.02),
+            attack = IgnitorDsl.Constant(0.01),
+            decay = IgnitorDsl.Constant(0.02),
+            sustain = IgnitorDsl.Constant(0.4),
+            release = IgnitorDsl.Constant(0.02),
         )
 
         return base.copy(
@@ -88,25 +88,25 @@ class EnvelopeCurveKnobSpec : StringSpec({
     }
 
     fun oracle(a: AdsrCurve, d: AdsrCurve, r: AdsrCurve): List<Long> =
-        render(ConstantIgnitor(1.0).adsr(0.01, 0.02, 0.4, 0.02, attackCurve = a, decayCurve = d, releaseCurve = r))
+        render(ConstantIgnitor(1.0).adsr(attack = 0.01, decay = 0.02, sustain = 0.4, release = 0.02, attackCurve = a, decayCurve = d, releaseCurve = r))
 
     val exp = AdsrCurve.Exponential
-    val chainDefault = oracle(exp, exp, exp)
+    val chainDefault = oracle(a = exp, d = exp, r = exp)
 
     "the chain: every curve on every stage renders what the runtime renders for that enum" {
         for (curve in AdsrCurve.entries) {
             val knob = AdsrCurves.knob(curve)
 
-            withClue("attack $curve") { renderDsl(chain(attack = knob)) shouldBe oracle(curve, exp, exp) }
-            withClue("decay $curve") { renderDsl(chain(decay = knob)) shouldBe oracle(exp, curve, exp) }
-            withClue("release $curve") { renderDsl(chain(release = knob)) shouldBe oracle(exp, exp, curve) }
+            withClue("attack $curve") { renderDsl(chain(attack = knob)) shouldBe oracle(a = curve, d = exp, r = exp) }
+            withClue("decay $curve") { renderDsl(chain(decay = knob)) shouldBe oracle(a = exp, d = curve, r = exp) }
+            withClue("release $curve") { renderDsl(chain(release = knob)) shouldBe oracle(a = exp, d = exp, r = curve) }
 
             if (curve != exp) {
                 // Anti-vacuous, per stage: the curve really moves that stage in this fixture.
                 withClue("$curve is audible on every stage") {
-                    oracle(curve, exp, exp) shouldNotBe chainDefault
-                    oracle(exp, curve, exp) shouldNotBe chainDefault
-                    oracle(exp, exp, curve) shouldNotBe chainDefault
+                    oracle(a = curve, d = exp, r = exp) shouldNotBe chainDefault
+                    oracle(a = exp, d = curve, r = exp) shouldNotBe chainDefault
+                    oracle(a = exp, d = exp, r = curve) shouldNotBe chainDefault
                 }
             }
         }
@@ -121,7 +121,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
             "unset" to IgnitorDsl.Constant(SLOT_UNSET),
             "negative" to IgnitorDsl.Constant(-1.0),
             "past the end" to IgnitorDsl.Constant(AdsrCurves.names.size.toDouble()),
-            "non-leaf" to IgnitorDsl.Plus(IgnitorDsl.Constant(0.5), IgnitorDsl.Constant(0.5)),
+            "non-leaf" to IgnitorDsl.Plus(left = IgnitorDsl.Constant(0.5), right = IgnitorDsl.Constant(0.5)),
         )
 
         for ((name, knob) in bad) {
@@ -132,7 +132,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
 
         // The fallback is OBSERVABLE: linear, the curve an index clamped to the first entry would read,
         // renders differently here (the first row proves every other curve does too).
-        oracle(AdsrCurve.Linear, AdsrCurve.Linear, AdsrCurve.Linear) shouldNotBe chainDefault
+        oracle(a = AdsrCurve.Linear, d = AdsrCurve.Linear, r = AdsrCurve.Linear) shouldNotBe chainDefault
     }
 
     "the chain: a curve SLOT reads the pattern's value from the voice's bag" {
@@ -140,7 +140,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
 
         renderDsl(slotted, emptyMap()) shouldBe chainDefault
         renderDsl(slotted, mapOf("adsr.decayCurve" to AdsrCurves.indexOf(AdsrCurve.Square))) shouldBe
-                oracle(exp, AdsrCurve.Square, exp)
+                oracle(a = exp, d = AdsrCurve.Square, r = exp)
     }
 
     // ── The modulation envelopes: the four filters and the pitch envelope ────────────────────
@@ -169,32 +169,32 @@ class EnvelopeCurveKnobSpec : StringSpec({
     val modulationEnvelopes: List<Pair<String, (String, IgnitorDsl?) -> IgnitorDsl>> = listOf(
         "lowpass" to { s, k ->
             IgnitorDsl.Lowpass(
-                saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
-                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+                inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain,
+                attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
         "highpass" to { s, k ->
             IgnitorDsl.Highpass(
-                saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
-                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+                inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain,
+                attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
         "bandpass" to { s, k ->
             IgnitorDsl.Bandpass(
-                saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
-                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+                inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain,
+                attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
         "notch" to { s, k ->
             IgnitorDsl.Notch(
-                saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
-                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+                inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain,
+                attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
         "pitch" to { s, k ->
             IgnitorDsl.PitchEnvelope(
-                saw, IgnitorDsl.Constant(12.0), decaySec = decay, sustainLevel = sustain, releaseSec = pitchRelease,
-                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+                inner = saw, semitones = IgnitorDsl.Constant(12.0), decay = decay, sustain = sustain, release = pitchRelease,
+                attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
     )
@@ -215,7 +215,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
                 }
 
                 withClue("$name $stage: a non-leaf falls back to MOD_ENV_CURVE") {
-                    renderDsl(envelope(stage, IgnitorDsl.Plus(IgnitorDsl.Constant(2.5), IgnitorDsl.Constant(2.5)))) shouldBe
+                    renderDsl(envelope(stage, IgnitorDsl.Plus(left = IgnitorDsl.Constant(2.5), right = IgnitorDsl.Constant(2.5)))) shouldBe
                             atDefault
                 }
 
@@ -249,11 +249,11 @@ class EnvelopeCurveKnobSpec : StringSpec({
         // on. Pinned twice: the knob itself, and the render against an explicit MOD_ENV_CURVE knob.
         val mod = AdsrCurves.knob(MOD_ENV_CURVE)
         val bare: List<Pair<String, IgnitorDsl>> = listOf(
-            "lowpass" to IgnitorDsl.Lowpass(saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain),
-            "highpass" to IgnitorDsl.Highpass(saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain),
-            "bandpass" to IgnitorDsl.Bandpass(saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain),
-            "notch" to IgnitorDsl.Notch(saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain),
-            "pitch" to IgnitorDsl.PitchEnvelope(saw, IgnitorDsl.Constant(12.0), decaySec = decay, sustainLevel = sustain),
+            "lowpass" to IgnitorDsl.Lowpass(inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain),
+            "highpass" to IgnitorDsl.Highpass(inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain),
+            "bandpass" to IgnitorDsl.Bandpass(inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain),
+            "notch" to IgnitorDsl.Notch(inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain),
+            "pitch" to IgnitorDsl.PitchEnvelope(inner = saw, semitones = IgnitorDsl.Constant(12.0), decay = decay, sustain = sustain),
         )
 
         for ((name, node) in bare) {

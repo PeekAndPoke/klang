@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.voices.strip
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceLimits
@@ -49,13 +48,6 @@ class BlockContext(
      * instance, which a realtime note-off moves. Stages read it on every render call and never keep a copy.
      */
     val limits: VoiceLimits,
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Routing
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /** Cylinder management for routing and effects */
-    val cylinders: Cylinders,
 ) {
     // ═══════════════════════════════════════════════════════════════════════════
     // Mutable per block (updated before pipeline runs)

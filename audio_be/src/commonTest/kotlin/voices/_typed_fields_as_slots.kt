@@ -105,8 +105,8 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
         putCurve(c.release, env.releaseCurve)
     }
 
-    put(s.crush.amount, doors.crush)
-    put(s.coarse.amount, doors.coarse)
+    put(s.crush.bits, doors.crush)
+    put(s.coarse.factor, doors.coarse)
     put(s.distort.amount, doors.distort)
     put(s.distort.shape, doors.distortShape?.let { DistortionShapes.indexOf(it) })
     put(s.distort.oversample, doors.distortOversample?.toDouble())
@@ -117,26 +117,26 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
                 put(s.hpf.freq, def.freq)
                 put(s.hpf.q, def.q)
                 put(s.hpf.passes, def.passes.toDouble())
-                putEnv(def.envelope, s.hpf.env, s.hpf.attack, s.hpf.decay, s.hpf.sustain, s.hpf.release, s.hpfCurves)
+                putEnv(env = def.envelope, depth = s.hpf.env, a = s.hpf.attack, d = s.hpf.decay, su = s.hpf.sustain, r = s.hpf.release, c = s.hpfCurves)
             }
 
             is DoorFilter.BandPass -> {
                 put(s.bpf.freq, def.freq)
                 put(s.bpf.q, def.q)
-                putEnv(def.envelope, s.bpf.env, s.bpf.attack, s.bpf.decay, s.bpf.sustain, s.bpf.release, s.bpfCurves)
+                putEnv(env = def.envelope, depth = s.bpf.env, a = s.bpf.attack, d = s.bpf.decay, su = s.bpf.sustain, r = s.bpf.release, c = s.bpfCurves)
             }
 
             is DoorFilter.Notch -> {
                 put(s.notch.freq, def.freq)
                 put(s.notch.q, def.q)
-                putEnv(def.envelope, s.notch.env, s.notch.attack, s.notch.decay, s.notch.sustain, s.notch.release, s.notchCurves)
+                putEnv(env = def.envelope, depth = s.notch.env, a = s.notch.attack, d = s.notch.decay, su = s.notch.sustain, r = s.notch.release, c = s.notchCurves)
             }
 
             is DoorFilter.LowPass -> {
                 put(s.lpf.freq, def.freq)
                 put(s.lpf.q, def.q)
                 put(s.lpf.passes, def.passes.toDouble())
-                putEnv(def.envelope, s.lpf.env, s.lpf.attack, s.lpf.decay, s.lpf.sustain, s.lpf.release, s.lpfCurves)
+                putEnv(env = def.envelope, depth = s.lpf.env, a = s.lpf.attack, d = s.lpf.decay, su = s.lpf.sustain, r = s.lpf.release, c = s.lpfCurves)
             }
         }
     }

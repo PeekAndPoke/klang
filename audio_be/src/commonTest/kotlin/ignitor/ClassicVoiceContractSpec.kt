@@ -37,10 +37,10 @@ class ClassicVoiceContractSpec : StringSpec({
                     val named = classic(env + curves, rate)
 
                     withClue("first mismatching frame against the node with Linear, SCurve, InvSquare named") {
-                        firstMismatch(classic(emptyMap(), rate, sound = "curved$door"), named) shouldBe -1
+                        firstMismatch(a = classic(emptyMap(), rate, sound = "curved$door"), b = named) shouldBe -1
                     }
                     withClue("anti-vacuous: the named curves change the sweep") {
-                        firstMismatch(classic(env, rate), named) shouldNotBe -1
+                        firstMismatch(a = classic(env, rate), b = named) shouldNotBe -1
                     }
                 }
             }
@@ -50,17 +50,17 @@ class ClassicVoiceContractSpec : StringSpec({
             "[$rate Hz] [pregain] a built-in's pregain sits IN FRONT of its nonlinear stages: distort and crush see the doubled source" {
                 for ((label, bag) in listOf(
                     "distort 0.5" to mapOf("distort.amount" to 0.5),
-                    "crush 5 with onepole 900" to mapOf("crush.amount" to 5.0, "onepole" to 900.0),
+                    "crush 5 with onepole 900" to mapOf("crush.bits" to 5.0, "onepole" to 900.0),
                 )) {
                     val builtIn = classic(bag + ("pregain" to 2.0), rate)
                     val oracle = classic(bag, rate, sound = "saw2x")
                     val afterTheStage = classic(bag, rate).map { 2.0 * it }.toDoubleArray()
 
                     withClue("$label: first mismatch against the doubled source through classic()") {
-                        firstMismatch(oracle, builtIn) shouldBe -1
+                        firstMismatch(a = oracle, b = builtIn) shouldBe -1
                     }
                     withClue("$label: anti-vacuous, doubling AFTER the stage is a different signal") {
-                        firstMismatch(afterTheStage, builtIn) shouldNotBe -1
+                        firstMismatch(a = afterTheStage, b = builtIn) shouldNotBe -1
                     }
                 }
             }
@@ -72,10 +72,10 @@ class ClassicVoiceContractSpec : StringSpec({
                 val oracle = classic(mapOf("onepole" to 900.0), rate, sound = "saw1p7x")
 
                 withClue("first mismatch against the 1.7x source through classic()'s onepole") {
-                    firstMismatch(oracle, builtIn) shouldBe -1
+                    firstMismatch(a = oracle, b = builtIn) shouldBe -1
                 }
                 withClue("anti-vacuous, the onepole-then-gain order is a different signal") {
-                    firstMismatch(classic(emptyMap(), rate, sound = "onepolethen1p7x"), builtIn) shouldNotBe -1
+                    firstMismatch(a = classic(emptyMap(), rate, sound = "onepolethen1p7x"), b = builtIn) shouldNotBe -1
                 }
             }
         }

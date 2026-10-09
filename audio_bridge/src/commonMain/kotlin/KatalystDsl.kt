@@ -149,21 +149,20 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *    [KatalystStageDsl.Gain] rather than read from `constants/`, for the reason that KDoc
          *    gives: an identity element is not a taste decision anybody could retune.
          *
-         * The compressor is the one stage whose gate is not a single knob. `Voice.Compressor
-         * .fromParams` reads "ANY of the five set = on, and each unset one takes its constant", so
-         * four constants and an unset threshold would be a compressor that is ALREADY ON with a
-         * threshold to be derived. All five are unset here, and a step-2 resolver that reproduces
-         * `fromParams` verbatim (any finite = on, each non-finite = its constant) then behaves
-         * exactly as the voice path does today.
+         * The compressor is the one stage whose gate is not a single knob. `KatalystCompressorWriter`
+         * reads "ANY of the five set = on, and each unset one takes its constant", so four
+         * constants and an unset threshold would be a compressor that is ALREADY ON with a
+         * threshold to be derived. All five are unset here, so a chain that names no compressor
+         * knob has none.
          *
          * **`body.wet` and `vowel.wet` follow the compressor, not the sends** (round 1 of step
          * 5a-2's review, 2026-09-18). They are [SLOT_UNSET] rather than 0.0, because 0.0 is a SET
-         * value: `KatalystSlots.bodyDef` substitutes [BODY_WET] for an unset mix exactly as
-         * `fromParams` substitutes [COMPRESSOR_THRESHOLD_DB], and with a 0.0 default it never saw
+         * value: `KatalystResonatorEffect.configure` substitutes [BODY_WET] for an unset mix exactly as
+         * the compressor writer substitutes [COMPRESSOR_THRESHOLD_DB], and with a 0.0 default it never saw
          * "unset", so a material-only `body(material = "wood")` on a declared classic chain ran the bank at a
          * fully dry mix while the same call on an undeclared orbit played it at [BODY_WET]. Unset
          * is safe here and NOT on the sends, because these two stages are gated on their NAME:
-         * `bodyDef` returns null whenever the bands are null, so an orbit that names no material
+         * `KatalystResonatorWriter` resolves no table for an unnamed index, so an orbit that names no material
          * cannot be switched on by a wet, however large. The engine's substitution is what makes a
          * raw `katp("body.material", 1)` behave like the door, and it is the NaN rule for a raw
          * write, not a second fill.
@@ -271,7 +270,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * **Every knob keeps the name and the scale of its sprudel door**, so a number means the same
  * thing whether it is written on a pattern or in a chain. A BARE stage means "I reached for this
  * effect", so its knob defaults are the shared touched constants from
- * `constants/SendEffectDefaults.kt` and `constants/BusEffectDefaults.kt`, never a literal here.
+ * `constants/BusEffectDefaults.kt`, never a literal here.
  *
  * Four stages are deliberately NOT audible bare, matching their sprudel doors. Three of them wait
  * for a NAME: [Body] and [Vowel] until `material` respectively `vowel` names an index, and [Duck]

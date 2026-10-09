@@ -61,7 +61,7 @@ class SampleVoiceOnsetSpec : StringSpec({
             commLink = KlangCommLink(capacity = 1024).backend,
             clock = clock,
         )
-        val engine = PlaybackEngine.create(context)
+        val engine = PlaybackEngine.create(context = context, playbackId = "song")
         private val mix = StereoBuffer(blockFrames)
 
         init {
@@ -192,7 +192,7 @@ class SampleVoiceOnsetSpec : StringSpec({
         frames.count { it > 1e-12 } shouldBe 0
 
         // ...and it is COUNTED, which is the only trace a stalled link leaves now that nothing smears.
-        rig.engine.scheduler.droppedVoiceCount("song") shouldBe 1
+        rig.engine.scheduler.droppedVoiceCount() shouldBe 1
     }
 
     "a sample voice scheduled exactly AT the cursor is on time — the boundary is inclusive" {
@@ -209,6 +209,6 @@ class SampleVoiceOnsetSpec : StringSpec({
         frames.max() shouldBeGreaterThan 1e-6
         // Same slack as the on-time rows above: the ADSR attack is exactly 0.0 on the onset frame.
         firstAudibleFrame(frames) shouldBeLessThan 8
-        rig.engine.scheduler.droppedVoiceCount("song") shouldBe 0
+        rig.engine.scheduler.droppedVoiceCount() shouldBe 0
     }
 })

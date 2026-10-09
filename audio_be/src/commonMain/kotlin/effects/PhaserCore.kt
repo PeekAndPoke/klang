@@ -5,9 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.effects
 
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.wrapPhase
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
+import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.wrapPhase
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.tan
@@ -15,8 +16,8 @@ import kotlin.math.tan
 /**
  * Single per-channel phaser kernel — `stages`-count first-order allpass cascade with
  * sine-LFO-modulated breakpoint and feedback. Used by both Phaser surfaces:
- *   - [Phaser]                                          — cylinder bus, 2× PhaserCore for stereo
- *   - `ignitor/IgnitorEffects.kt::PhaserIgnitor`        — Ignitor DSL, mono, lazy-init from `ctx.sampleRate`
+ *   - [Phaser]: cylinder bus, 2× PhaserCore for stereo
+ *   - `ignitor/IgnitorEffects.kt::PhaserIgnitor`: Ignitor DSL, mono, built with the voice, `ctx.sampleRate` bound at the first block
  *
  * **Topology** — bilinear 1st-order allpass per stage:
  *   - `α = (tan(π·f/fs) − 1) / (tan(π·f/fs) + 1)`
@@ -54,7 +55,9 @@ internal class PhaserCore(
     internal val stages: Int,
     sampleRate: Int,
 ) {
-    internal val inverseSampleRate: Double = 1.0 / sampleRate
+    /** `1 / sampleRate`; [bindSampleRate] moves it. */
+    internal var inverseSampleRate: Double = 1.0 / sampleRate
+        private set
     internal val z1 = DoubleArray(stages)
     internal var lastOutput: Double = 0.0
     internal var lfoPhase: Double = 0.0
@@ -101,7 +104,7 @@ internal class PhaserCore(
      * `blockFrames = 0` is a no-op (alphaIncrement set to 0; α unchanged).
      */
     fun prepareBlock(blockFrames: Int) {
-        prepareBlock(blockFrames, center, sweep)
+        prepareBlock(blockFrames = blockFrames, centerTo = center, sweepTo = sweep)
     }
 
     /**
@@ -164,7 +167,7 @@ internal class PhaserCore(
     @Suppress("NOTHING_TO_INLINE")
     internal inline fun step(x: Double): Double {
         // Snap NaN/Inf input to 0 — never poison the cascade or feedback state.
-        val safeX = if (x.isFinite()) x else 0.0
+        val safeX = x.finiteOrZero()
 
         val a = alpha
         var signal = safeX + lastOutput * feedback
@@ -186,6 +189,15 @@ internal class PhaserCore(
      */
     fun zeroPhase() {
         lfoPhase = 0.0
+    }
+
+    /**
+     * Sets the rate the kernel runs at, for a caller that builds the kernel before it knows the rate: the Ignitor
+     * phaser builds it with the voice and binds the context's rate at the first block (tidy-up step 10). Nothing
+     * else changes; the same rate gives the same `1 / sampleRate` bit for bit.
+     */
+    fun bindSampleRate(sampleRate: Int) {
+        inverseSampleRate = 1.0 / sampleRate
     }
 
     /** Clear allpass state and `lastOutput`. LFO phase is preserved for cross-note continuity. */

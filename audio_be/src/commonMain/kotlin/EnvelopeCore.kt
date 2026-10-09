@@ -119,8 +119,8 @@ internal class EnvelopeCore {
     /** The attack-decay-sustain level at [pos], as if the gate were still open. */
     @Suppress("NOTHING_TO_INLINE")
     internal inline fun adsAt(pos: Int): Double = when {
-        pos < attackFrames -> adsrCurveShape(attackCurve, pos * attRate, k, norm)
-        pos < attDecFrames -> sustain + (1.0 - sustain) * adsrCurveShape(decayCurve, 1.0 - (pos - attackFrames) * decRate, k, norm)
+        pos < attackFrames -> adsrCurveShape(curve = attackCurve, x = pos * attRate, k = k, norm = norm)
+        pos < attDecFrames -> sustain + (1.0 - sustain) * adsrCurveShape(curve = decayCurve, x = 1.0 - (pos - attackFrames) * decRate, k = k, norm = norm)
         else -> sustain
     }
 
@@ -129,14 +129,14 @@ internal class EnvelopeCore {
     internal inline fun releaseAt(relPos: Int, startLevel: Double): Double {
         val p = ((relPos + relOffset) / relDenom).coerceAtMost(1.0)
 
-        return startLevel * adsrCurveShape(releaseCurve, 1.0 - p, k, norm)
+        return startLevel * adsrCurveShape(curve = releaseCurve, x = 1.0 - p, k = k, norm = norm)
     }
 
     /** The frame where the attack and decay end and the sustain begins. Set by [prepare]. */
     val sustainFrom: Double get() = attDecFrames
 
     /** The level a finished release holds: [levelAtGate] times the release curve at its end. */
-    fun releaseEndLevel(): Double = levelAtGate * adsrCurveShape(releaseCurve, 0.0, k, norm)
+    fun releaseEndLevel(): Double = levelAtGate * adsrCurveShape(curve = releaseCurve, x = 0.0, k = k, norm = norm)
 
     /** True when the release has fully arrived at its end by [relPos] frames after the gate. */
     fun releaseDone(relPos: Int): Boolean = (relPos + relOffset) / relDenom >= 1.0
@@ -154,7 +154,7 @@ internal class EnvelopeCore {
  * The one-pole de-click smoother on an AMPLITUDE envelope's gain, primed to the first level it sees so a
  * voice that starts mid-note or at full level is not faded in. `classic()`'s envelope runs it always (its
  * `declick` is the constant `ENV_DECLICK_SECONDS`), any other Ignitor `adsr` when its `declick` knob is above 0. The modulation envelopes
- * have none. See [envDeclickCoeff].
+ * have none. Its coefficient is `timeConstantCoeff` (`utils/time_constant.kt`) of the `declick` time.
  */
 internal class EnvelopeDeclick {
     private var smoothed: Double = 0.0

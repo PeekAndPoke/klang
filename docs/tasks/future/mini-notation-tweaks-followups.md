@@ -34,7 +34,7 @@ is the same silent-inert class the design was written to avoid.
 
 Only the analysis layer sees the whole script and can prove that *no* binding anywhere claims a name.
 Build it there, reusing the levenshtein helper from commit `09783f50`
-(`suggestNames`, `klangscript/src/commonMain/kotlin/runtime/NameSuggestions.kt:25`), reported as an
+(`suggestNames`, `klangscript/src/commonMain/kotlin/utils/name_suggestions.kt:25`), reported as an
 editor diagnostic: *unknown tweak 'swel', did you mean 'swell'?*
 
 Until this lands, tweaks work but will bite someone.

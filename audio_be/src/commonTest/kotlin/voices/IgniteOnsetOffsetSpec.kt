@@ -30,7 +30,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
  * shape returned a negative value, clamped to zero, and the note's first `offset` samples rendered
  * silent and then stepped. Measured before the fix at 44.1 kHz / 128-frame blocks with a 10 ms
  * attack and `startFrame = 76`: 52 silent frames, then a jump from 0 to 0.0222 in one sample —
- * larger than the teardown step `VCA_OFF_TEARDOWN_FADE_SECONDS` exists to remove.
+ * larger than the teardown step `TEARDOWN_FADE_SECONDS` exists to remove.
  *
  * It hid because the strip VCA was simultaneously in its own correctly-timed, de-clicked attack and
  * attenuated the step by 10-20x. `.adsrOff()` replaces that with unity and exposes it at full size,
@@ -43,19 +43,17 @@ class IgniteOnsetOffsetSpec : StringSpec({
     // A DC source with a 10 ms attack, so the rendered output IS the ignitor's envelope.
     val instrument = IgnitorDsl.Adsr(
         inner = IgnitorDsl.Constant(1.0),
-        attackSec = IgnitorDsl.Constant(0.010),
-        decaySec = IgnitorDsl.Constant(2.0),
-        sustainLevel = IgnitorDsl.Constant(1.0),
-        releaseSec = IgnitorDsl.Constant(0.05),
+        attack = IgnitorDsl.Constant(0.010),
+        decay = IgnitorDsl.Constant(2.0),
+        sustain = IgnitorDsl.Constant(1.0),
+        release = IgnitorDsl.Constant(0.05),
     )
 
     fun render(startFrameWanted: Int): DoubleArray {
         val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", instrument) }
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
-            sampleRate = sampleRate, sampleRateDouble = sampleRate.toDouble(), blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
+            sampleRate = sampleRate, blockFrames = blockFrames,
             voiceBuffer = voiceBuffer, freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )

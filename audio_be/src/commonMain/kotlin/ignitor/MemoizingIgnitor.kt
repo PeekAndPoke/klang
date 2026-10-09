@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 
 /**
  * Wraps an [Ignitor] so that its output is computed at most once per block.
@@ -48,7 +49,9 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * such a modulator once per layer).
  * `ctx.phaseMod` is not in the key either: only a sample leaf reads it without a `Freq` leaf.
  *
- * The cache buffer grows lazily to match the largest `output.size` seen.
+ * The cache buffer is allocated at BUILD, when the memo turns into a caching one ([incConsumers], [cachePerBlock]),
+ * at the voice's block size (tidy-up step 10: nothing allocates in generate). A caller handing in a larger buffer
+ * still grows it at render, as before.
  */
 class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
 
@@ -79,8 +82,10 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
     private var cachedLength: Int = Int.MIN_VALUE
     private var cachedFreqHz: Double = Double.NaN
 
-    fun incConsumers() {
+    /** One more reader. From two on the memo caches per block, in a buffer of [blockFrames] allocated here. Build time only. */
+    fun incConsumers(blockFrames: Int) {
         consumers++
+        reserveCache(blockFrames)
     }
 
     /** See [freqInvariant]. Build time only. */
@@ -90,11 +95,20 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
 
     /**
      * Caches per block even with a single reader: a pitch-mod memo (`combineMods` in `IgnitorDslRuntime.kt`), read by
-     * every pitched source under it, caches always rather than counting its readers. Build time only.
+     * every pitched source under it, caches always rather than counting its readers. The cache buffer, [blockFrames]
+     * long, is allocated here. Build time only.
      */
-    fun cachePerBlock() {
+    fun cachePerBlock(blockFrames: Int) {
         if (consumers < 2) {
             consumers = 2
+        }
+
+        reserveCache(blockFrames)
+    }
+
+    private fun reserveCache(blockFrames: Int) {
+        if (cache.size < blockFrames) {
+            cache = AudioBuffer(blockFrames)
         }
     }
 
@@ -110,6 +124,8 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
                 (!freqInvariant && freqHz != cachedFreqHz)
 
         if (miss) {
+            // Only a buffer larger than the block reserved at build gets here: a voice renders into block-sized buffers
+            // (its own and the scratch pool's), so this is a test rig's larger buffer.
             if (cache.size < buffer.size) {
                 cache = AudioBuffer(buffer.size)
             }
@@ -120,6 +136,6 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
             cachedFreqHz = freqHz
         }
 
-        cache.copyInto(buffer, ctx.offset, ctx.offset, ctx.windowEnd)
+        cache.copyRangeInto(destination = buffer, destinationOffset = ctx.offset, startIndex = ctx.offset, endIndex = ctx.windowEnd)
     }
 }

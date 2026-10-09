@@ -114,18 +114,18 @@ class KlangAudioRendererSpec : StringSpec({
         repeat(200) {
             val left = AudioBuffer(blockFrames) { loudAmplitude }
             val right = AudioBuffer(blockFrames) { loudAmplitude }
-            limiter.process(left, right, blockFrames)
+            limiter.process(left = left, right = right, blockSize = blockFrames)
             prevMax = left.maxOrNull()!!
         }
 
         // After convergence, two consecutive blocks should produce nearly identical levels
         val block1 = AudioBuffer(blockFrames) { loudAmplitude }
         val block1R = AudioBuffer(blockFrames) { loudAmplitude }
-        limiter.process(block1, block1R, blockFrames)
+        limiter.process(left = block1, right = block1R, blockSize = blockFrames)
 
         val block2 = AudioBuffer(blockFrames) { loudAmplitude }
         val block2R = AudioBuffer(blockFrames) { loudAmplitude }
-        limiter.process(block2, block2R, blockFrames)
+        limiter.process(left = block2, right = block2R, blockSize = blockFrames)
 
         val level1 = block1.last()
         val level2 = block2.last()
@@ -158,7 +158,7 @@ class KlangAudioRendererSpec : StringSpec({
         repeat(100) {
             lastLeft = AudioBuffer(blockFrames) { loudAmplitude }
             lastRight = AudioBuffer(blockFrames) { loudAmplitude }
-            limiter.process(lastLeft, lastRight, blockFrames)
+            limiter.process(left = lastLeft, right = lastRight, blockSize = blockFrames)
         }
 
         // After convergence, all samples should be compressed well below the input amplitude
@@ -188,12 +188,12 @@ class KlangAudioRendererSpec : StringSpec({
         repeat(50) {
             val left = AudioBuffer(blockFrames) { quietAmplitude }
             val right = AudioBuffer(blockFrames) { quietAmplitude }
-            limiter.process(left, right, blockFrames)
+            limiter.process(left = left, right = right, blockSize = blockFrames)
         }
 
         val left = AudioBuffer(blockFrames) { quietAmplitude }
         val right = AudioBuffer(blockFrames) { quietAmplitude }
-        limiter.process(left, right, blockFrames)
+        limiter.process(left = left, right = right, blockSize = blockFrames)
 
         // Quiet signals below -1 dB threshold should be essentially unity-gained
         for (i in 0 until blockFrames) {

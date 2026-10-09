@@ -11,7 +11,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 ## The signal flow and its owners
 
 - **Per playback.** `PlaybackEngineDispatcher` routes every `Cmd` by `playbackId` to its own `PlaybackEngine`
-  (scheduler, orbits, registry forks, `MasterBus`); the engines' outputs sum into the house stage. File map:
+  (scheduler, orbits, registry forks, `MasterBus`); the engines' outputs sum into the house stage. A
+  `VoiceScheduler` serves its engine's one playback: one `PlaybackCtx`, made by the first voice, dropped by
+  `cleanup`, nothing filtered by id. File map:
   `docs/audio-backend-file-map.md`; data flow and isolation: `audio/ref/architecture.md`.
 - **Instrument = the voice's Ignitor tree** (phase 3, done 2026-09-28). `Voice` runs Pitch, Ignite, (teardown
   fade), Send. Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
@@ -20,7 +22,12 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   (`IgnitorDsl.endsInClassic()`); a tree without it plays bare: no doors, no default envelope.
 - **`classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`): onepole, crush, coarse, distort, highpass,
   bandpass, notch, lowpass, tremolo, adsr. Its knobs are `<door>.<param>` slots the pattern fills through
-  `VoiceData.ignitorParams`; a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
+  `VoiceData.ignitorParams`, the param part the engine door's word (`adsr.attack`, `crush.bits`,
+  `coarse.factor`); a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
+- **One word per knob, node to wire** (Q21, 2026-10-09): every envelope says `attack`, `decay`, `sustain`,
+  `release` (the unit in the KDoc, not the name) and `declick`; the pluck's loop gain is `feedback`, brown noise's
+  white leak is `leak`. The frame-domain core keeps `sustainLevel` (`EnvelopeCore.prepare`, `Voice.Envelope`)
+  and the constants keep their `*_SEC` names. Old names: `docs/retired-names.md`.
 - **The pitch stage stays outside the tree**: vibrato, accelerate, pitch envelope and FM in `voices/strip/pitch/`
   (moving in is `docs/tasks/pitch-pipeline-into-the-tree.md`).
 - **Voice lifetime** = gate end plus the tree's own release tail (`VoiceFactory.treeLifetime`, floored at 0;
@@ -62,7 +69,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   (`writePcm16` in `_pcm16_edge.kt`, the one home). The lookahead delays the whole output uniformly.
 - **The wire** (`VoiceData`, `KlangCommLink`): pitch, gain, pan, routing, lifetime, and two slot maps; only seconds
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
-  `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`). Fields: `audio/ref/data-model.md`.
+  `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`; an empty one is silence everywhere, so as a
+  Katalyst bus knob it reads 0.0, not the knob's default). Fields: `audio/ref/data-model.md`.
 
 ## Laws and constants in force
 
@@ -71,14 +79,23 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The envelope law** is `EnvelopeCore` (its KDoc). Voice defaults `VOICE_ADSR_*` (0.01, 0.1, 1.0, 0.05); curves
   are index knobs with the reader's default, both Exponential; `ADSR_EXP_K` 3.0; de-click `ENV_DECLICK_SECONDS`
   1 ms on `classic()`. Knobs and `Adsr.on`: `audio/ref/voice-synthesis.md`.
-- **The gate**: a stage whose gating knob is a leaf at its off value (or unset) is not built. The rule's text is
-  the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
+- **The gate**: a stage whose gating knob is a leaf at its off value (or unset, except where the table says
+  otherwise) is not built; since 2026-10-07 the four pitch arms too (vibrato, accelerate, pitch envelope, fm). The
+  rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
   at most `MAX_DRAIN_SECONDS` 20 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
   under -90 dB. **A stopped playback is never hard-cut**; only an endless tail triggers the release, 20 s after the
-  last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`.
+  last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
+  `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
+  dispatcher keeps only the render order and the disposal order, both exact.
 - **Knob glide** `KNOB_GLIDE_SECONDS` 0.05 in whole blocks (17 at 44.1 kHz, 19 at 48 kHz); **bank crossfade**
-  `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. Which knob glides how:
+  `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. The bank crossfade and the compressor's switch
+  fade run one linear law, `utils/linear_crossfade.kt` (the chain swap's `Crossfade` and the duck's glide are other
+  laws). Which knob glides how: `audio/ref/katalyst.md`.
+- **Body and vowel** are one stage class with two kinds (`KatalystResonatorEffect`, `ResonatorKind`); a chain runs
+  both stages as two instances. One table per catalogue index (`ResonatorTables`, equal rows share an instance, so a
+  switch among aliases installs nothing); a change installs into the pooled pair nobody hears (two pairs, built at
+  the stage's first install), from zero state: no allocation per change, and a sounding bank never retunes.
   `audio/ref/katalyst.md`.
 - **Authored lookahead** (Katalyst `compressor` / `limiter`): build-time, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` 0.05, uncompensated by the author's choice; the authored limiter defaults to
@@ -100,7 +117,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The voice rng**: one stream per voice, and the draw ORDER is part of the sound (`audio/ref/voice-synthesis.md`,
   "The voice rng").
 - **Silence culling**: a voice in its release whose output stays under `VOICE_CULL_FLOOR` (=
-  `ORBIT_SILENCE_FLOOR`, 1e-5) for `VOICE_CULL_SECONDS` (0.05) stops rendering; never in the gate, never before it
+  `SILENCE_FLOOR`, 1e-5) for `VOICE_CULL_SECONDS` (0.05) stops rendering; never in the gate, never before it
   was heard, and not with a tremolo on the output unless `cull` is set.
 - **The optimizer's promise** is `OPTIMIZER_PARITY` (1e-12 relative to the block's loudest sample), not bit
   identity; every registered tree renders optimized. A synthesized coefficient may be zero only when the authored
@@ -114,6 +131,13 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Build-time knobs** (shapes, the oversample factor, `passes`, curves, the tremolo shape) are read once,
   leaf-only; a non-leaf takes the default and is not built. `Oversampler.factorOf`: non-finite is 0, a fraction
   truncates, no upper clamp (the D7 stopgap until `docs/tasks/oversampling-regions.md`).
+- **Solo**: background gain `1 - max(live amounts)` (`solo(1.0)` is exact silence, `solo()` is 0.95); `SoloTracker` (per
+  playback, fixed arrays) records "soloed at a until t" from any event, control events included; live = `end + 4 blocks >
+  now`, protected = `end + SOLO_HOLD_SEC > now`; `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`). Realtime voices have no
+  control events: each one whose gate is open records its source until the block's end, so a realtime solo follows the
+  held gates.
+- **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
+  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0), both in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -131,6 +155,24 @@ The list a reviewer pastes is `.claude/skills/review-loop/audio-constraints.md`;
 (block size, reverb `+ ANTI_DENORMAL`, OnePole HPF bias, the house limiter, script-door literal defaults, `min`/`max`
 crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
+- **A per-block copy is `copyRangeInto`** (`audio_be/.../utils/buffer_copy.kt`), never `copyInto`, whose JS form makes a
+  `subarray` view per call. The domain-free helpers (fast math, numeric guards, phase wraps, fades) live in `utils/`.
+- **The resonator stage is handed its config in a holder, not as double arguments** (`ResonatorConfig`, tidy-up step
+  12 (a)): passing them made a steady body allocate about 40 bytes per block on V8, where a non-integral double
+  crossing a call V8 does not inline is a heap number. Measured for that stage only. The delay, reverb and phaser
+  writers still pass doubles per block and allocate 79 to 118 bytes per block on V8 in steady state, before and after
+  the step alike (the gain and the steady compressor 0): an open probe, `docs/tasks/engine-tidy-up.md` step 12.
+  `audio/ref/performance.md`.
+- **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
+  which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
+  summation order, so changing it changes bits.
+- **A node builds its storage with the voice and draws at its first block** (tidy-up step 10): drift lanes
+  (`AnalogDrift()` then `seed`, `DriftLanes(capacity, sharedLane)` then `start`, only when `analog` may be above 0
+  and, for the shared lane, the spread below 1), a stack's voice states and scratch, the superpluck's strings, the
+  partial banks' arrays, the phaser kernel and a caching memo's buffer are allocated at build, sized from what the
+  build can read (a count only when it reads no `Freq`, `countsAtBuild`); the first block reads the depth and draws,
+  when and in the order it always did. Still allocated at render: a count signal's rise past that size, the shared drift lane's `Random` below
+  spread 1 (D7), the phase pool's vocabulary while it grows. Guards: `FirstBlockAllocationSpec`, `SeededVoiceRngSpec`.
 - **The SVF**: bandpass, notch and the resonators are linear. Lowpass and highpass at `analog > 0` take a
   state-dependent DAMPING path (a diode-pair term grows `k` with the state; `IgnitorFilters.kt`, `Ignitor.svf`).
   Never saturate by capping the feedback signal with tanh: two such attempts went unstable and were reverted
@@ -195,12 +237,15 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
 - **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
-- **Voice and instruments, future**: `svf-resonator-class-collapse.md`,
-  `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
+- **Voice and instruments, future**: `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
 - **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
   `optimize-constant-control-fast-path.md`, `audit-parked-decisions.md`, `worklet-clock-divergence.md`,
   `high-performance-audio-backend.md` (parked behind the sound-first priorities).
+- **Keep possible** (maintainer, 2026-10-08): stereo voices, signal knobs on a bus and on the master, routing,
+  a delay line on the voice, glide, velocity in the tree, an Ignitor on a bus. Where each assumption lives and what a
+  change must not do: `docs/plans/aaa-production-tricks.md` §11. Crossing one of those lines is a question for the
+  maintainer first.
 - **Never measured**: the build-time cost of the gate's ON path (the per-block numbers are in the history's gate
   entry).
 
@@ -209,6 +254,41 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-09 The `classic()` slot renames: the envelope words and `declick`, `crush.bits`, `coarse.factor`, the
+  pluck's `feedback`, brown noise's `leak`, on every door, node, wire field and runtime factory, bit-identical:
+  `docs/tasks/classic-slot-names-check.md`
+- 2026-10-08 One fade law for the bank swap and the compressor (`utils/linear_crossfade.kt`); body and vowel are one
+  stage class with two kinds on a pooled bank, no allocation per change; the band rows live with their catalogues
+  (`BodyMaterials.Mode`, `VowelBands.Band`) and `FilterDef` is retired: `docs/tasks/engine-tidy-up.md` step 12
+- 2026-10-08 First-block and voice-count allocations moved to the build (drift lanes, phaser, memo, partial banks,
+  stacks, strings, the phase pool's parse and key): `docs/tasks/engine-tidy-up.md` step 10
+- 2026-10-08 An engine's end of life is one `PlaybackEngine.Phase`; the dispatcher's `draining` set and `detached`
+  list are gone; `renderInto` is one path: `docs/tasks/engine-tidy-up.md` step 9
+- 2026-10-08 One playback per scheduler: one `PlaybackCtx`, no `playbackId` filters or parameters
+  (`startRealtimeVoice` keeps its id, the context may be made from it): `docs/tasks/engine-tidy-up.md` step 8
+- 2026-10-08 Per-block walks are index loops (`Voice` stages, `Cylinders` in rent order with an id array, the
+  scheduler, the dispatcher); the diagnostics closure is gone; the solo ramp is `SoloRamp` on an inlined
+  `easeInOutCubic`, `ValueRamp` deleted: `docs/tasks/engine-tidy-up.md` step 7
+- 2026-10-08 The audio helpers live in `utils/` (`DspUtil.kt` split by content; `finiteOrZero`, `fadeToZero`,
+  `timeConstantCoeff`, `wrapPhaseFastOrSafe`, `rampStep`, and `copyRangeInto` for every per-block copy, no `copyInto` view
+  on JS); the stereo add is the member `StereoBuffer.addFrom`: `docs/tasks/engine-tidy-up.md` step 6
+- 2026-10-08 One silence floor, `SILENCE_FLOOR` (1e-5; the master's 1e-4 stays, D9); `BusEffectDefaults` holds
+  delay and reverb; `TEARDOWN_FADE_SECONDS`, `stageAskedFor`, `KatalystChain.writers`: `docs/tasks/engine-tidy-up.md` step 5
+- 2026-10-07 The `KatalystSlots` composites live in their writers, one NaN rule per knob (body, vowel, reverb
+  lowpass: the stage's); `CompressorSettings` / `DuckSettings` left `Voice`: `docs/tasks/engine-tidy-up.md` step 4
+- 2026-10-07 No `Random` default anywhere in the engine; an orbit knob's build draws from a fixed seed:
+  `docs/tasks/engine-tidy-up.md` step 3
+- 2026-10-07 The oversampler is two halves, `upsample` and `decimate`, with the caller's shaping loop between
+  them inline (no closure per block, no `copyInto` view on JS): `docs/tasks/engine-tidy-up.md` step 2
+- 2026-10-07 The gate covers the four pitch arms, a fold (a non-finite vibrato depth stays built, its default);
+  a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/pitch-pipeline-into-the-tree.md` step 0
+- 2026-10-07 Solo is engine state per source: the rest fillers are control-only events, `SoloTracker` records from any
+  event before the control drop and the late guard, the others play at `1 - amount`; `ActiveVoice.soloAmount` gone,
+  audit B4.2 closed: `docs/tasks/bugfix-solo-rests-and-amount.md`
+- 2026-10-08 The unison cap is 256 (maintainer; it was 64): `docs/tasks/engine-tidy-up.md` (Decided)
+- 2026-10-07 An empty `Ignitor.variants()` is silence, no longer a `require` at note-on; the shimmer survives an empty,
+  a huge or a non-finite pitch (no index error, no hang); a unison count is capped at `UNISON_MAX_VOICES` (64):
+  `docs/tasks/engine-tidy-up.md` ("First, a bug")
 - 2026-10-07 The voice's states are a sealed type; the fade window lives in `Fading`, the silence count in
   `Releasing` (lifecycle step 5b, no sound change by design; the 18-song corpus bit-identical to step 5,
   coordinator, 2026-10-07): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`

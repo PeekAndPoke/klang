@@ -21,7 +21,7 @@ The chain is complete from DSL to DSP:
 | layer | file | tested? |
 |-------|------|---------|
 | DSL — `duck()` / `duck(depth = ...)` / `duck(attack = ...)` | `sprudel/lang_dynamics_orbit.kt` | ✅ `LangDuckingSpec` |
-| wire | `VoiceData.ducking` → `Voice.Ducking(cylinderId, attackSeconds, depth)` | — |
+| wire | the `duck.*` slots of the owner's `katalystParams` → `KatalystDuckWriter` → `DuckSettings(cylinderId, attackSeconds, depth)` (until 2026-10-07 `Voice.Ducking`) | - |
 | **per-voice → per-orbit join** | `KatalystChainBuilder.applyDuck` configures the chain's `KatalystDuckEffect` from whichever voice owns the orbit (the newest `Sounding` voice, committed once per block) | ❌ **nothing** |
 | **cross-orbit sidechain resolution** | `Cylinders.kt:87-89`, step 2 of `processAndMix`, after every cylinder has rendered | ❌ **nothing** |
 | bus effect | `KatalystDuckEffect` | ✅ `KatalystDuckEffectSpec` |
@@ -54,7 +54,7 @@ discovered.
 
 ### 3. It is a per-voice parameter driving a per-orbit effect
 
-`Voice.Ducking` rides on each voice, but the effect lives on the cylinder. `Cylinder.kt:198-203`
+The duck's settings ride on each voice (its `duck.*` slots, resolved into `DuckSettings`, until 2026-10-07 `Voice.Ducking`), but the effect lives on the cylinder. `Cylinder.kt:198-203`
 configures the orbit from whichever voice currently owns it, so with two differently-ducked voices in
 one orbit, the last one to take ownership wins. Related to the standing "mark per-orbit vs per-voice
 on every effect" documentation item.

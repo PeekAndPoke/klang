@@ -11,7 +11,6 @@ package io.peekandpoke.klang.audio_bridge
  */
 data class VoiceData(
     // note, freq
-    // TODO: note can also be numbers -> Midi and detune, f.e. 50.3
     val note: String?,
     val freqHz: Double?,
 
@@ -107,7 +106,11 @@ data class VoiceData(
     val cut: Int?,
 
     // Solo
-    /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. */
+    /**
+     * Solo amount: 0.0 = no solo, 1.0 = full solo. While a source is soloed every other voice of the playback
+     * plays at `1 - amount` (the strongest solo wins), so 1.0 silences them. Recorded by the scheduler from any
+     * event that carries it with a [sourceId], a [control] event included.
+     */
     val solo: Double?,
 
     /** Unique source ID for tracking which audio source this voice came from (e.g., pattern, track, instrument) */
@@ -146,8 +149,8 @@ data class VoiceData(
     val katalyst: String? = null,
 
     /**
-     * Control-only event: carries engine/bus configuration (e.g. [master]) and is **never
-     * synthesized**.
+     * Control-only event: carries engine state (a [master] or [katalyst] swap, a [solo] keep-alive) and is
+     * **never synthesized**.
      *
      * The scheduler consumes such an event at its start time and drops it before voice creation.
      * The flag has to be explicit: a voice with `sound == null` is *not* silent — the ignitor

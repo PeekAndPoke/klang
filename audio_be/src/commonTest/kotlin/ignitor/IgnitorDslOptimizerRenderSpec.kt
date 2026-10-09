@@ -68,7 +68,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         random = random,
     ).apply {
-        updateOffsetAndLength(0, blockFrames)
+        updateOffsetAndLength(offset = 0, length = blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -78,7 +78,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
      */
     fun onsetCtx(random: Random, offset: Int, length: Int): IgniteContext =
         ctx(random).apply {
-            this.updateOffsetAndLength(offset, length)
+            this.updateOffsetAndLength(offset = offset, length = length)
             voiceElapsedFrames = 0
         }
 
@@ -158,8 +158,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             val sentinel = -12345.0
             val bufA = AudioBuffer(blockFrames)
             val bufB = AudioBuffer(blockFrames)
-            val ca = onsetCtx(rngA, offset, length)
-            val cb = onsetCtx(rngB, offset, length)
+            val ca = onsetCtx(random = rngA, offset = offset, length = length)
+            val cb = onsetCtx(random = rngB, offset = offset, length = length)
 
             repeat(blocks) { block ->
                 // Production shape: only the FIRST block is partial (the voice starts
@@ -180,8 +180,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 // allocated 128 for the 64-frame window (EqCoreSpec pins re-growth directly).
                 val curOffset = if (block == 0) offset else 0
                 val curLength = if (block == 0) length else blockFrames
-                ca.updateOffsetAndLength(curOffset, curLength)
-                cb.updateOffsetAndLength(curOffset, curLength)
+                ca.updateOffsetAndLength(offset = curOffset, length = curLength)
+                cb.updateOffsetAndLength(offset = curOffset, length = curLength)
 
                 for (i in 0 until blockFrames) {
                     bufA[i] = sentinel
@@ -190,7 +190,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 a.generate(bufA, f, ca)
                 b.generate(bufB, f, cb)
 
-                val scale = scaleOf(bufA, bufB, curOffset, curOffset + curLength)
+                val scale = scaleOf(bufA = bufA, bufB = bufB, from = curOffset, until = curOffset + curLength)
 
                 for (i in curOffset until curOffset + curLength) {
                     val a0 = bufA[i]
@@ -199,7 +199,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                     }
                     // NaN compares as NaN: payload bits are outside the contract (EqCoreSpec).
                     withClue("freq=$f sample=$i: ${bufA[i]} vs ${bufB[i]} (scale $scale)") {
-                        withinParity(bufA[i], bufB[i], scale) shouldBe true
+                        withinParity(a = bufA[i], b = bufB[i], scale = scale) shouldBe true
                     }
                 }
                 // The fused path renders upstream into the CALLER's buffer where the chained
@@ -243,7 +243,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                     (va == null) shouldBe (vb == null)
 
                     if (va != null && vb != null) {
-                        withinParity(va, vb) shouldBe true
+                        withinParity(a = va, b = vb) shouldBe true
                     }
                 }
             }
@@ -256,7 +256,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // INDEPENDENTLY written ladder implementations (bridge `passesLadderRel` and engine
         // `butterworthQLadder`). PassesLadderParitySpec pins the numbers; this pins the render.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Saw().lowpass(2400.0, 0.707, passes = 2)
+            IgnitorDsl.Saw().lowpass(freq = 2400.0, q = 0.707, passes = 2)
         )
     }
 
@@ -434,8 +434,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 inner = IgnitorDsl.Saw(),
                 freq = IgnitorDsl.Constant(1800.0),
                 q = IgnitorDsl.Plus(
-                    IgnitorDsl.Constant(1.4),
-                    IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)), IgnitorDsl.Constant(0.5)),
+                    left = IgnitorDsl.Constant(1.4),
+                    right = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)), right = IgnitorDsl.Constant(0.5)),
                 ),
                 passes = IgnitorDsl.Constant(2.0),
             )
@@ -446,10 +446,10 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // The shape D4 exists for. Every one of these is a node today and one Eq afterwards.
         assertOptimizeIsInaudible(
             IgnitorDsl.Saw()
-                .notch(210.0, 2.5)
-                .highpass(440.0, 0.707)
-                .lowpass(5300.0, 0.707)
-                .lowpass(5300.0, 0.707)
+                .notch(freq = 210.0, q = 2.5)
+                .highpass(freq = 440.0, q = 0.707)
+                .lowpass(freq = 5300.0, q = 0.707)
+                .lowpass(freq = 5300.0, q = 0.707)
         )
     }
 
@@ -462,18 +462,18 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Saw()
                 .eq()
-                .tap(850.0, 0.707, 1.7)
-                .tap(2500.0, 0.7, 5.0)
-                .notch(210.0, 2.5)
+                .tap(freq = 850.0, q = 0.707, gain = 1.7)
+                .tap(freq = 2500.0, q = 0.7, gain = 5.0)
+                .notch(freq = 210.0, q = 2.5)
                 .let {
                     IgnitorDsl.Highpass(
                         inner = it,
-                        freq = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.0)),
+                        freq = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(1.0)),
                         q = IgnitorDsl.Constant(0.707),
                     )
                 }
-                .lowpass(5250.0, 0.707)
-                .lowpass(5250.0, 0.707),
+                .lowpass(freq = 5250.0, q = 0.707)
+                .lowpass(freq = 5250.0, q = 0.707),
             freqs = listOf(110.0, 220.0, 440.0),
             // Mid-block onset on the HEADLINE shape. What this actually adds is the
             // out-of-window sentinel, which is vacuous at offset 0. It does NOT pin EqCore's
@@ -494,10 +494,10 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // With a single consumer (or with Constant-only params) a reordering rewrite is
         // invisible, which is exactly how the D3 params-before-upstream bug shipped.
         fun lfoCutoff() = IgnitorDsl.Plus(
-            IgnitorDsl.Constant(2000.0),
-            IgnitorDsl.Times(
-                IgnitorDsl.Sine(freq = IgnitorDsl.Constant(2.0), analog = IgnitorDsl.Constant(0.3)),
-                IgnitorDsl.Constant(500.0),
+            left = IgnitorDsl.Constant(2000.0),
+            right = IgnitorDsl.Times(
+                left = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(2.0), analog = IgnitorDsl.Constant(0.3)),
+                right = IgnitorDsl.Constant(500.0),
             ),
         )
 
@@ -506,7 +506,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 inner = IgnitorDsl.Saw(analog = IgnitorDsl.Constant(0.7)),
                 freq = lfoCutoff(),
                 q = IgnitorDsl.Constant(0.9),
-            ).notch(210.0, 2.5)
+            ).notch(freq = 210.0, q = 2.5)
         )
     }
 
@@ -516,8 +516,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // draw-order regression would sail through. Different seeds must produce different
         // audio, or those rows prove nothing.
         val dsl = IgnitorDsl.Saw(analog = IgnitorDsl.Constant(0.7))
-            .notch(210.0, 2.5)
-            .lowpass(5300.0, 0.707)
+            .notch(freq = 210.0, q = 2.5)
+            .lowpass(freq = 5300.0, q = 0.707)
 
         fun render(seed: Int): AudioBuffer {
             val rng = Random(seed)
@@ -548,7 +548,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // sample from the shared stream, so a fused path that rendered a different number of
         // upstream samples would desynchronise it even with the order intact.
         assertOptimizeIsInaudible(
-            IgnitorDsl.WhiteNoise().highpass(300.0, 0.8).lowpass(6000.0, 0.707)
+            IgnitorDsl.WhiteNoise().highpass(freq = 300.0, q = 0.8).lowpass(freq = 6000.0, q = 0.707)
         )
     }
 
@@ -563,31 +563,31 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.PerlinNoise(),
                 freq = IgnitorDsl.Plus(
-                    IgnitorDsl.Constant(4000.0),
-                    IgnitorDsl.Times(IgnitorDsl.PerlinNoise(), IgnitorDsl.Constant(200.0)),
+                    left = IgnitorDsl.Constant(4000.0),
+                    right = IgnitorDsl.Times(left = IgnitorDsl.PerlinNoise(), right = IgnitorDsl.Constant(200.0)),
                 ),
                 q = IgnitorDsl.Constant(0.8),
-            ).highpass(300.0, 0.8)
+            ).highpass(freq = 300.0, q = 0.8)
         )
     }
 
     "a single filter converting to a one-section Eq is inaudible" {
-        assertOptimizeIsInaudible(IgnitorDsl.Sine().lowpass(2000.0, 0.707))
+        assertOptimizeIsInaudible(IgnitorDsl.Sine().lowpass(freq = 2000.0, q = 0.707))
     }
 
     "every fusible filter type survives the rewrite" {
         assertOptimizeIsInaudible(
             IgnitorDsl.Saw()
-                .lowpass(4000.0, 0.8)
-                .highpass(200.0, 0.9)
-                .bandpass(1200.0, 1.1)
-                .notch(600.0, 1.3)
+                .lowpass(freq = 4000.0, q = 0.8)
+                .highpass(freq = 200.0, q = 0.9)
+                .bandpass(freq = 1200.0, q = 1.1)
+                .notch(freq = 600.0, q = 1.3)
         )
     }
 
     "a chain split by a nonlinear node is inaudible on BOTH sides" {
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sine().bandpass(1000.0, 0.8).distort(0.5).lowpass(4000.0, 0.707)
+            IgnitorDsl.Sine().bandpass(freq = 1000.0, q = 0.8).distort(0.5).lowpass(freq = 4000.0, q = 0.707)
         )
     }
 
@@ -597,7 +597,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // Eq's output. This is the live counterpart of followups section 2's merge trap, and
         // the tripwire for the day that merge is implemented.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Saw().lowpass(1000.0, 0.707).eq().tap(850.0, 0.707, 1.7)
+            IgnitorDsl.Saw().lowpass(freq = 1000.0, q = 0.707).eq().tap(freq = 850.0, q = 0.707, gain = 1.7)
         )
     }
 
@@ -605,40 +605,40 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // The nearest miss: `asFusibleSection` must decline these while its neighbours fuse.
         // `.onepole()` especially — it is a one-liner people reach for constantly.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Saw().lowpass(2000.0, 0.707).onepole(800.0).lowpass(4000.0, 0.707)
+            IgnitorDsl.Saw().lowpass(freq = 2000.0, q = 0.707).onepole(800.0).lowpass(freq = 4000.0, q = 0.707)
         )
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
-                inner = IgnitorDsl.Saw().lowpass(2000.0, 0.707),
+                inner = IgnitorDsl.Saw().lowpass(freq = 2000.0, q = 0.707),
                 freq = IgnitorDsl.Constant(3000.0),
                 q = IgnitorDsl.Constant(0.707),
                 analog = IgnitorDsl.Constant(2.0),
-            ).lowpass(4000.0, 0.707)
+            ).lowpass(freq = 4000.0, q = 0.707)
         )
     }
 
     "a chain split by a gain multiply is inaudible" {
         assertOptimizeIsInaudible(
             IgnitorDsl.Sine()
-                .lowpass(2000.0, 0.707)
+                .lowpass(freq = 2000.0, q = 0.707)
                 .mul(IgnitorDsl.Constant(0.5))
-                .lowpass(3000.0, 0.707)
+                .lowpass(freq = 3000.0, q = 0.707)
         )
     }
 
     "a filter appended onto an AUTHORED Eq is inaudible" {
         // Mixed provenance: sections the user wrote plus a section the optimizer folded in.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Saw().eq().band(1200.0, 0.9, 6.0).tap(850.0, 0.707, 1.7)
-                .lowpass(5300.0, 0.707)
-                .notch(210.0, 2.5)
+            IgnitorDsl.Saw().eq().band(freq = 1200.0, q = 0.9, db = 6.0).tap(freq = 850.0, q = 0.707, gain = 1.7)
+                .lowpass(freq = 5300.0, q = 0.707)
+                .notch(freq = 210.0, q = 2.5)
         )
     }
 
     "a shared intermediate renders identically and is not forked" {
-        val shared = IgnitorDsl.Saw().notch(210.0, 2.5)
+        val shared = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5)
         assertOptimizeIsInaudible(
-            IgnitorDsl.Plus(shared.lowpass(3000.0, 0.707), shared.lowpass(6000.0, 0.707))
+            IgnitorDsl.Plus(left = shared.lowpass(freq = 3000.0, q = 0.707), right = shared.lowpass(freq = 6000.0, q = 0.707))
         )
     }
 
@@ -648,9 +648,9 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Highpass(
                 inner = IgnitorDsl.Saw(),
-                freq = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.5)),
+                freq = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(1.5)),
                 q = IgnitorDsl.Constant(0.707),
-            ).lowpass(5300.0, 0.707),
+            ).lowpass(freq = 5300.0, q = 0.707),
             freqs = listOf(110.0, 220.0, 440.0, 880.0),
         )
     }
@@ -828,7 +828,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     "the production sub-block onset shape is inaudible (offset != 0, partial length)" {
         // Voices start mid-block; the partial window must be the FIRST call on fresh state.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0, 0.707),
+            IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(freq = 5300.0, q = 0.707),
             freqs = listOf(220.0),
             offset = 37,
             length = 64,
@@ -847,12 +847,12 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // un-modulate any sound carrying the kill switch — the one place a difference must
         // never appear, since it would look like the fusion A/B rather than the hatch.
         val bare = IgnitorDsl.Vibrato(
-            inner = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0, 0.707),
+            inner = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(freq = 5300.0, q = 0.707),
             rate = IgnitorDsl.Constant(5.0),
             semitones = IgnitorDsl.Constant(0.3),
         )
         val marked = IgnitorDsl.Vibrato(
-            inner = IgnitorDsl.Saw().notch(210.0, 2.5).lowpass(5300.0, 0.707).optimizer(on = 0),
+            inner = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(freq = 5300.0, q = 0.707).optimizer(on = 0),
             rate = IgnitorDsl.Constant(5.0),
             semitones = IgnitorDsl.Constant(0.3),
         )

@@ -253,7 +253,7 @@ class KatalystReverbEffect(
                 feedback = unit.tailFeedback,
                 lapsPerWindow = unit.tailLapsPerWindow,
             )
-            unit.process(feed, ctx.mixBuffer, frames)
+            unit.process(input = feed, output = ctx.mixBuffer, length = frames)
         }
 
         /** A ceiling, not a scan: [process] maintains it from the feed. */
@@ -314,7 +314,7 @@ class KatalystReverbEffect(
             val frames = min(ctx.blockFrames, silentInput.left.size)
 
             advanceGlide(unit)
-            unit.process(silentInput, ctx.mixBuffer, frames)
+            unit.process(input = silentInput, output = ctx.mixBuffer, length = frames)
 
             // A plain end test: a non-finite countdown never gets here, [Active.deactivate] heals it.
             val left = remaining - frames
@@ -358,12 +358,33 @@ class KatalystReverbEffect(
      */
     internal val currentState: Any get() = state
 
+    /** The holder the three-value [configure] door fills, this stage's own instance ([ReverbConfig] says why). */
+    private val door = ReverbConfig()
+
+    /**
+     * The door for a direct caller (the specs): fills this stage's own [ReverbConfig] and configures from it, so the
+     * rules below are written once, in the holder overload.
+     */
+    fun configure(
+        size: Double,
+        lowpass: Double?,
+        wet: Double,
+    ) {
+        val c = door
+
+        c.size = size
+        c.lowpass = lowpass
+        c.wet = wet
+        configure(c)
+    }
+
     /**
      * Applies the orbit owner's reverb settings. Called by `KatalystChain.applyParams` on every
      * block an owner is committed. An off-config does NOT reach the [reverb]: the retained
-     * last-active parameters are what the drain runs on.
+     * last-active parameters are what the drain runs on. The stage reads [config] and keeps no
+     * reference to it.
      *
-     * [wet] is how much of the orbit mix feeds the room. Raw: no clamp; a non-finite wet reads as
+     * [ReverbConfig.wet] is how much of the orbit mix feeds the room. Raw: no clamp; a non-finite wet reads as
      * the shared default, like the master's (the slot writer never hands one to a running stage).
      *
      * Non-finite params read as OFF (or as unset, for [Reverb.lowpass]), never as the previous
@@ -376,11 +397,11 @@ class KatalystReverbEffect(
      * gate, `KatalystSlotWriters.kt`; the door bound is bit-identical there and protects a future
      * direct caller).
      */
-    fun configure(
-        size: Double,
-        lowpass: Double?,
-        wet: Double,
-    ) {
+    fun configure(config: ReverbConfig) {
+        val size = config.size
+        val lowpass = config.lowpass
+        val wet = config.wet
+
         if (size.isFinite() && size >= MIN_ACTIVE_SIZE) {
             // Out of Off the glide was forgotten on the way in, so the room ARRIVES, it does not
             // move (see [sizeGlide]).
@@ -391,6 +412,8 @@ class KatalystReverbEffect(
             val boundedSize = size.coerceIn(0.0, 1.0)
 
             unit.size = boundedSize
+            // NaN-guard on a value the author can write: a non-finite lowpass is unset, the
+            // engine's own fixed damping. The one home of that rule; the writer hands the slot raw.
             unit.lowpass = lowpass?.takeIf { it.isFinite() }
             sizeGlide.retarget(boundedSize)
             // NaN-guard on a value a direct caller can pass: the shared default, see above.
@@ -510,4 +533,20 @@ class KatalystReverbEffect(
          */
         const val MIN_ACTIVE_SIZE = 0.01
     }
+}
+
+/**
+ * What a reverb stage is configured with on every block an owner is committed ([KatalystReverbEffect.configure]): the
+ * normalized [size] (non-finite or below `MIN_ACTIVE_SIZE` is OFF), the [lowpass] (null or non-finite is unset, the
+ * engine's own fixed damping) and the [wet].
+ *
+ * **Mutable and reused, on purpose** (V8 allocation pass, 2026-10-08), for the reason [DelayConfig] gives. [lowpass]
+ * stays `Double?` and tagged end to end: the writer boxes it once per resolve, and nothing boxes it per block. Each
+ * holder owns its instance: the slot writer one (filled when it is built and at every resolve), the stage one for its
+ * three-value door; the stage reads the values and keeps no reference.
+ */
+class ReverbConfig {
+    var size: Double = Double.NaN
+    var lowpass: Double? = null
+    var wet: Double = Double.NaN
 }

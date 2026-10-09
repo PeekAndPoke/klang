@@ -65,7 +65,7 @@ object DistortionShapes {
      * The position in [names] a knob value selects, or [SOFT_INDEX] when it selects none. See
      * [catalogueIndexAt] for the rounding and the fallbacks.
      */
-    fun indexAt(index: Double): Int = catalogueIndexAt(index, names.size, SOFT_INDEX)
+    fun indexAt(index: Double): Int = catalogueIndexAt(index = index, size = names.size, fallback = SOFT_INDEX)
 }
 
 /** Name and alias to position, for a catalogue whose aliases all name one of its [names]. */

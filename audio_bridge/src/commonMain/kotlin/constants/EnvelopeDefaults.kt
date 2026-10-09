@@ -11,8 +11,8 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 // Envelope character defaults: wire defaults for the ignitor `adsr(...)`
 // surface and `classic()`'s envelope.
 //
-// The shape math that consumes them (`adsrExpShape`, `envDeclickCoeff`) stays
-// in `audio_be/AdsrCurveMath.kt`; only the tunable values live here, so the
+// The shape math that consumes them (`adsrExpShape` in `audio_be/AdsrCurveMath.kt`, the de-click
+// coefficient `timeConstantCoeff` in `audio_be/utils/time_constant.kt`) stays in the engine; only the tunable values live here, so the
 // authoring side and the engine cannot disagree about them.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Exponential
  * instrument and 0.7 is what the door has always meant by "a sustained note". Do not unify them
  * without deciding which sound moves.
  *
- * Consumers: `IgnitorDsl.Adsr.sustainLevel`'s default, and `AdsrIgnitor`'s non-finite
+ * Consumers: `IgnitorDsl.Adsr.sustain`'s default, and `AdsrIgnitor`'s non-finite
  * substitution (see its `finiteOr` note; the `Param` leaf's unset rule cannot reach a value that
  * was authored non-finite).
  */
@@ -108,7 +108,7 @@ const val VOICE_ADSR_RELEASE_SEC: Double = 0.05
  * Tunable by ear, like [ADSR_EXP_K].
  *
  * Consumer: `classic()`'s envelope, as a constant, not a slot. The Ignitor `adsr`'s own `declick` knob is
- * `Slots.declickSeconds`, a slot that defaults to 0.0 (off); it does not read this value.
+ * `Slots.declick`, a slot that defaults to 0.0 (off); it does not read this value.
  */
 const val ENV_DECLICK_SECONDS: Double = 0.001
 
@@ -138,12 +138,12 @@ const val ENV_DECLICK_SECONDS: Double = 0.001
  *
  * Consumer: `TeardownFadeRenderer`.
  */
-const val VCA_OFF_TEARDOWN_FADE_SECONDS: Double = 0.004
+const val TEARDOWN_FADE_SECONDS: Double = 0.004
 
 /**
  * The cut fade, in seconds: how long a voice choked by its cut group (`cut(n)`) takes to reach exact zero once
  * the cutting voice begins. A linear ramp from the cutting voice's onset frame to exact zero, the law of the
- * teardown fade ([VCA_OFF_TEARDOWN_FADE_SECONDS]), applied by the choked voice itself after its instrument tree and
+ * teardown fade ([TEARDOWN_FADE_SECONDS]), applied by the choked voice itself after its instrument tree and
  * before its send stage (`Voice.cutOff`), so its orbit sends fade with it.
  *
  * **Why this length.** It is today's teardown length: long enough to turn the cut's step into a ramp, short

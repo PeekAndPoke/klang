@@ -24,8 +24,9 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *   by construction. That is why §2 and §3 keep one gain across the whole `<>` climb.
  * - Defaults, from IgnitorDsl.Slots: `voices` 8, `spread` 0.2, `analog` 0.0. So a bare
  *   `sound("supersaw")` is ALREADY eight layers at 0.2 — §1 leans on exactly that.
- * - `spread` is in SEMITONES (±spread/2 per edge layer); `analog` is peak drift in
- *   CENTS (±analog cents, AnalogDrift/DriftLanes), NOT the 0..1 the sprudel KDoc
+ * - `spread` is in SEMITONES (±spread/2 per edge layer); `analog` is a character scale
+ *   (0 ideal, 1 to 8 usual, 10 strong) whose tell on these oscillators is about one cent
+ *   of peak drift per unit (AnalogDrift/DriftLanes), NOT the 0..1 the sprudel KDoc
  *   used to claim. That KDoc was wrong and was corrected at source in the same change
  *   as this lesson (lang_synthesis_ignitorparam.kt), the way A4's `lpe` unit was.
  * - The slow drift layer is seeded at CENTRE so every note attacks in tune, and only
@@ -125,7 +126,7 @@ val thicknessTutorial = Tutorial(
                     markdown = """
                     `unison` and `spread` build a stack that is thick but fixed: the layers sit where you put them and stay. Real analog synthesizers cannot do that. Their oscillators wander, by tiny amounts, all the time, and that refusal to hold still is most of what people mean by analog warmth.
 
-                    `analog()` puts the wandering back. Its number is the size of the wobble in **cents**, a hundredth of a semitone, and every layer wanders on its own. `analog(6)` is six hundredths of a semitone: far too small to hear as a pitch, big enough to hear as life.
+                    `analog()` puts the wandering back. Its number is how analog the voice is. On these oscillators each step is about one **cent** of wobble, a hundredth of a semitone, and every layer wanders on its own. `analog(6)` is far too small to hear as a pitch, big enough to hear as life.
 
                     It needs a note long enough to wander during, so this phrase now wears the pad shape from ${Tut.shapeOfANote} and `slow(2)` from ${Tut.theTransformToolkit} to stretch each note over a whole cycle. (Notes always begin in tune; the wander only develops while one is held. On a short pluck there is nothing to hear.)
 

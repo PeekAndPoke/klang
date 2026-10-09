@@ -48,10 +48,11 @@ class IgniteContext(
      * construction reads it here; build-time consumers get the SAME instance via
      * `IgnitorBuildCache.random`). One instance per voice is safe because in-graph draw
      * order is deterministic; deriving per voice is what makes draw order BETWEEN voices
-     * irrelevant and playback runs bit-reproducible. Default = the global (test/tool
-     * convenience; production always passes the voice's own).
+     * irrelevant and playback runs bit-reproducible. No default: every caller passes a stream
+     * (production the voice's own, a spec a seeded `Random(n)`), so a forgotten one is a compile
+     * error, never the process-wide `Random`.
      */
-    val random: Random = Random,
+    val random: Random,
 
     // ── Mutable per block (updated by caller before each generate() call) ──────
     // NOTE: `offset` and `length` are NOT here — they live in the body, because they carry
@@ -128,7 +129,7 @@ class IgniteContext(
     val sampleRateD: Double = sampleRate.toDouble()
 
     /** The rate an [AnalogDrift] lane built for this context steps at: once per block. */
-    val driftStepRate: Int = analogDriftStepRate(sampleRate, scratchBuffers.blockFrames)
+    val driftStepRate: Int = analogDriftStepRate(sampleRate = sampleRate, blockFrames = scratchBuffers.blockFrames)
 
     /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */
     val voiceDurationFramesD: Double = voiceDurationFrames.toDouble()

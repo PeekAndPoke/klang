@@ -5,14 +5,13 @@
 
 package io.peekandpoke.klang.audio_bridge
 
-import kotlin.math.round
 
 /**
  * Vowel formant catalogue: the fixed formant banks behind `vowel(vowel = "<name>")`.
  *
- * A vowel is *pure data*: a list of [FilterDef.Formant.Band] `(freq Hz, db, Q)` triples, one per
+ * A vowel is *pure data*: a list of [Band] `(freq Hz, db, Q)` triples, one per
  * formant, played as a parallel SVF-bandpass bank blended over the dry source (the source-filter
- * model). The `db` convention is the legacy Q-peak one, documented on [FilterDef.Formant.Band];
+ * model). The `db` convention is the legacy Q-peak one, documented on [Band];
  * do not "clean up" a value here without reading it first.
  *
  * The name is `"<voice>:<vowel>"`, and a bare `"<vowel>"` means the soprano register. The four
@@ -21,8 +20,8 @@ import kotlin.math.round
  * what lets a German lyric be sung rather than transliterated.
  *
  * Lives in `audio_bridge` (Katalyst step 3c, 2026-09-17) so that both readers of a vowel NAME reach
- * it: sprudel's `toVoiceData`, which resolves a voice's vowel, and the backend's `KatalystSlots`,
- * which resolves a declared Katalyst chain's `vowel` stage.
+ * it: sprudel's `toVoiceData`, which resolves a voice's vowel, and the backend's `KatalystResonatorWriter`,
+ * which resolves a declared Katalyst chain's `vowel` stage (through `slotIndexAt`).
  *
  * **A vowel is also an INDEX** (Katalyst step 5a-2, 2026-09-18): [names] flattens the
  * register-by-vowel table into one closed, ordered list of canonical `"<register>:<vowel>"` names,
@@ -33,8 +32,25 @@ import kotlin.math.round
  */
 object VowelBands {
 
+    /**
+     * One formant band: a single SVF bandpass tuned to a vowel formant peak.
+     *
+     * **Gain semantic (legacy Q-peak convention, preserved by a fold):** the actual peak gain at `freq` is
+     * `Q · 10^(db/20)`. The engine bandpass is UNITY-peak since C2 of the filter unification; the engine's vowel
+     * mapping folds the legacy Q peak into its band gains so the shipped vowel tables keep this convention exactly. Do
+     * NOT "clean up" that fold without rewriting every table. A band with `db = 0, q = 10` produces **+20 dB** at
+     * `freq`. F1 is conventionally `db = 0`; upper formants use negative dB to compensate for their own Q-driven peak.
+     *
+     * **Q range**: SVF accepts `q ∈ [0.1, 200.0]`. Vowel tables typically use 60 to 130.
+     */
+    data class Band(
+        val freq: Double,
+        val db: Double,
+        val q: Double,
+    )
+
     /** Helper for band creation. */
-    private fun b(freq: Double, db: Double, q: Double) = FilterDef.Formant.Band(freq, db, q)
+    private fun b(freq: Double, db: Double, q: Double) = Band(freq = freq, db = db, q = q)
 
     /**
      * The voice registers [bandsOf] accepts, in table order. `alto` and `countertenor` are two
@@ -80,10 +96,11 @@ object VowelBands {
      * The bank of every name in [names], by index, built once from [bandsOf].
      *
      * As with the body table, [bandsFor] and [bandsAt] hand back the table's OWN list, the same
-     * instance every time, so a consumer deciding whether to rebuild a formant bank short-circuits
-     * on identity instead of walking five bands per note.
+     * instance every time. Two names of one bank (`bass:a` and `bass:ei`) are two lists with equal
+     * content; the backend's `ResonatorTables` gives them ONE table, so switching between them installs
+     * nothing.
      */
-    private val bandsByIndex: List<List<FilterDef.Formant.Band>?> = names.map { name ->
+    private val bandsByIndex: List<List<Band>?> = names.map { name ->
         val parts = name.split(':')
 
         if (parts.size > 1) bandsOf(voice = parts[0], vowel = parts[1]) else null
@@ -104,20 +121,13 @@ object VowelBands {
      * 0 is off, and anything else rounds to the nearest index, a tie to the EVEN one (0.5 is
      * `none`, 1.5 is index 2), which is what `kotlin.math.round` does on both platforms.
      */
-    fun bandsAt(index: Double): List<FilterDef.Formant.Band>? {
-        // NaN-guard on a value the author can write: a non-finite index was never set.
-        if (!index.isFinite()) {
-            return null
-        }
+    fun bandsAt(index: Double): List<Band>? = bandsByIndex[slotIndexAt(index)]
 
-        val i = round(index).toInt()
-
-        if (i <= 0 || i >= names.size) {
-            return null
-        }
-
-        return bandsByIndex[i]
-    }
+    /**
+     * The position in [names] a slot value names, 0 (`none`) when it names none: the one index rule of [bandsAt],
+     * the twin of `BodyMaterials.slotIndexAt` and for its reader.
+     */
+    fun slotIndexAt(index: Double): Int = catalogueIndexAt(index = index, size = names.size, fallback = 0)
 
     /**
      * Resolves a vowel name to its formant bank. Returns null for an unknown voice register or an
@@ -125,7 +135,7 @@ object VowelBands {
      *
      * Goes through the index, so the name path and the slot path cannot answer differently.
      */
-    fun bandsFor(vowelValue: String): List<FilterDef.Formant.Band>? = bandsAt(indexOf(vowelValue))
+    fun bandsFor(vowelValue: String): List<Band>? = bandsAt(indexOf(vowelValue))
 
     /**
      * The canonical `"<register>:<vowel>"` spelling of a written name: lowercased, and a name with
@@ -142,7 +152,7 @@ object VowelBands {
      * The formant table itself, by register and vowel. Private and index-free: it is what fills
      * [bandsByIndex], so it may not ask [bandsAt] anything.
      */
-    private fun bandsOf(voice: String, vowel: String): List<FilterDef.Formant.Band>? {
+    private fun bandsOf(voice: String, vowel: String): List<Band>? {
         return when (voice) {
             "bass" -> when (vowel) {
                 "a", "ei", "au" -> listOf(

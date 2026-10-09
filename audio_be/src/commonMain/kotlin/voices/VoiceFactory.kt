@@ -7,7 +7,6 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
@@ -48,10 +47,7 @@ import kotlin.random.Random
  */
 class VoiceFactory(
     private val sampleRate: Int,
-    private val sampleRateDouble: Double,
     private val blockFrames: Int,
-    private val ignitorRegistry: IgnitorRegistry,
-    private val cylinders: Cylinders,
     private val voiceBuffer: AudioBuffer,
     private val freqModBuffer: DoubleArray,
     private val scratchBuffers: ScratchBuffers,
@@ -123,12 +119,11 @@ class VoiceFactory(
         // the sample playhead, and the render context (IgniteContext.random).
         val voiceRandom = Random(playbackCtx.coreRandom.nextInt())
 
-        // Decision: oscillator vs sample. A name that is not a registered instrument is a sample. `isOsci` asks the
-        // factory's registry and the build asks the playback's; in production both are the scheduler's fork
-        // (`VoiceScheduler`), while a test may hand in two different ones.
+        // Decision: oscillator vs sample. A name that is not a registered instrument is a sample. `isOsci` and the
+        // build ask the same registry, the playback's (in production the scheduler's fork, `VoiceScheduler`).
         val freqHz = data.freqHz
         val sound = data.sound
-        val isOsci = ignitorRegistry.contains(sound)
+        val isOsci = playbackCtx.ignitorRegistry.contains(sound)
         val isSample = !isOsci && sound != null
 
         // Routing
@@ -199,7 +194,7 @@ class VoiceFactory(
                 decayCurve = MOD_ENV_CURVE,
                 releaseCurve = MOD_ENV_CURVE,
             )
-            Voice.Fm(ratio, depth, fmEnv)
+            Voice.Fm(ratio = ratio, depth = depth, envelope = fmEnv)
         } else {
             null
         }
@@ -218,9 +213,9 @@ class VoiceFactory(
                 ) ?: return null
 
                 buildVoice(
-                    data, treeLifetime(built), startFrame, gateEndFrame, voiceDurationFrames, cylinder,
-                    gain, accelerate, vibrato, pitchEnvelope,
-                    fm, built.ignitor, freqHz ?: 0.0, voiceRandom = voiceRandom,
+                    data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
+                    gain = gain, accelerate = accelerate, vibrato = vibrato, pitchEnvelope = pitchEnvelope,
+                    fm = fm, signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
                     treeStages = treeStages(built),
@@ -340,9 +335,9 @@ class VoiceFactory(
                 )
 
                 buildVoice(
-                    data, treeLifetime(built), sampleStartFrame, gateEndFrame, voiceDurationFrames, cylinder,
-                    gain, accelerate, vibrato, pitchEnvelope,
-                    fm, built.ignitor, baseSamplePitchHz,
+                    data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
+                    gain = gain, accelerate = accelerate, vibrato = vibrato, pitchEnvelope = pitchEnvelope,
+                    fm = fm, signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
@@ -444,7 +439,6 @@ class VoiceFactory(
             sampleRate = sampleRate,
             // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.
             limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
-            cylinders = cylinders,
         )
 
         return Voice(

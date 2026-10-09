@@ -119,8 +119,8 @@ class ClassicDoorRenderParitySpec : StringSpec({
 
     val rows: List<Row> = buildList {
         add(Row("onepole", mapOf("onepole" to 900.0)))
-        add(Row("crush.amount", mapOf("crush.amount" to 4.0)))
-        add(Row("coarse.amount", mapOf("coarse.amount" to 3.0)))
+        add(Row("crush.bits", mapOf("crush.bits" to 4.0)))
+        add(Row("coarse.factor", mapOf("coarse.factor" to 3.0)))
         add(Row("distort.amount", mapOf("distort.amount" to 0.5)))
         add(Row("distort.shape", mapOf("distort.amount" to 0.5, "distort.shape" to DistortionShapes.indexOf("tube"))))
         add(Row("distort.oversample", mapOf("distort.amount" to 0.5, "distort.oversample" to 2.0)))
@@ -148,7 +148,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
             Row(
                 null,
                 mapOf(
-                    "crush.amount" to 6.0, "hpf.freq" to 150.0, "bpf.freq" to 1200.0, "bpf.q" to 0.5, "notch.freq" to 3000.0,
+                    "crush.bits" to 6.0, "hpf.freq" to 150.0, "bpf.freq" to 1200.0, "bpf.q" to 0.5, "notch.freq" to 3000.0,
                     "lpf.freq" to 2500.0, "lpf.env" to 12.0, "lpf.decay" to 0.2, "lpf.sustain" to 0.2,
                     "tremolo.depth" to 0.3, "tremolo.rate" to 6.0, "adsr.attack" to 0.01, "adsr.sustain" to 0.7,
                 ),
@@ -158,7 +158,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
             Row(
                 null,
                 mapOf(
-                    "distort.amount" to 0.8, "distort.shape" to DistortionShapes.indexOf("fold"), "coarse.amount" to 2.0,
+                    "distort.amount" to 0.8, "distort.shape" to DistortionShapes.indexOf("fold"), "coarse.factor" to 2.0,
                     "analog" to 1.5, "lpf.freq" to 4000.0, "adsr.on" to 0.0,
                 ),
             ),

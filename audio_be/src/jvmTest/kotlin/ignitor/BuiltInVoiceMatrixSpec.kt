@@ -14,7 +14,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.SampleStore
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
@@ -58,10 +57,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
         val onsetSec = 37.0 / sampleRate
         val factory = VoiceFactory(
             sampleRate = sampleRate,
-            sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
@@ -89,7 +85,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -102,7 +98,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
 
     val rows = listOf(
         Row("untouched", null),
-        Row("analog 2, lpf 1200: one filter", mapOf("analog" to 2.0), DoorFields(filters = listOf(DoorFilter.LowPass(1200.0, 0.707)))),
+        Row("analog 2, lpf 1200: one filter", mapOf("analog" to 2.0), DoorFields(filters = listOf(DoorFilter.LowPass(freq = 1200.0, q = 0.707)))),
     )
 
     val untouched = mutableMapOf<String, DoubleArray>()
@@ -140,6 +136,21 @@ class BuiltInVoiceMatrixSpec : StringSpec({
             }
 
             withClue(name) { untouchedOf(name).any { it != 0.0 } shouldBe true }
+        }
+    }
+
+    "pluck and superpluck at stiffness 0.5: the stiffness allpass, pinned" {
+        // The matrix's rows run every built-in, and stiffness moves only the Karplus pair, so this row is its own.
+        // It pins the allpass law and its state across blocks, which the rows above (stiffness 0) never reach.
+        for (name in listOf("pluck", "superpluck")) {
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = name, ignitorParams = mapOf("stiffness" to 0.5))
+            val stiff = render(data)
+            val hash = stiff.rawBitsHash()
+
+            println("MATRIX-STIFF | \"$name\" to \"$hash\",")
+
+            withClue("$name: the frozen fingerprint") { hash shouldBe STIFF_BASELINE[name] }
+            withClue("$name: engagement, the stiffness changes the voice") { stiff.toList() shouldNotBe untouchedOf(name).toList() }
         }
     }
 })
@@ -231,4 +242,13 @@ private val BASELINE: Map<String, String> = mapOf(
     "sgbuzz | analog 2, lpf 1200: one filter" to "ab39851ae017881b",
     "eqdemo | untouched" to "f58847ba293b4ac3",
     "eqdemo | analog 2, lpf 1200: one filter" to "8a8cdb05c981be0c",
+)
+
+/**
+ * The stiffness row's pins, captured from the code before tidy-up step 11 (`fb24e509`, review round 2), when the string
+ * still lived in the two nodes; regenerate them only for a heard sound decision, as [BASELINE].
+ */
+private val STIFF_BASELINE: Map<String, String> = mapOf(
+    "pluck" to "8d3c57e0a0cac217",
+    "superpluck" to "169e38991c225e64",
 )

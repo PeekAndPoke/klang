@@ -46,7 +46,7 @@ class ScratchBuffersSpec : StringSpec({
 
     "pool grows when depth exceeds initial capacity" {
         val initialCapacity = 2
-        val scratch = ScratchBuffers(blockFrames, initialCapacity)
+        val scratch = ScratchBuffers(blockFrames = blockFrames, initialCapacity = initialCapacity)
 
         // Nest deeper than initialCapacity — pool must grow
         scratch.use { a ->

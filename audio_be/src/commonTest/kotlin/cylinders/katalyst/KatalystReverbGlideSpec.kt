@@ -78,7 +78,7 @@ class KatalystReverbGlideSpec : StringSpec({
             fillInput(referenceOut, block)
 
             effect.process(effectCtx)
-            reference.process(referenceIn, referenceOut, blockFrames)
+            reference.process(input = referenceIn, output = referenceOut, length = blockFrames)
 
             for (i in 0 until blockFrames) {
                 worst = maxOf(worst, abs(effectCtx.mixBuffer.left[i] - referenceOut.left[i]))
@@ -139,7 +139,7 @@ class KatalystReverbGlideSpec : StringSpec({
         reference.size = 0.2
 
         val settled = drive(
-            effect, effectCtx, reference, refIn, refOut, firstBlock = 0, blocks = 30,
+            effect = effect, effectCtx = effectCtx, reference = reference, referenceIn = refIn, referenceOut = refOut, firstBlock = 0, blocks = 30,
             configure = { effect.configure(size = 0.2, lowpass = null, wet = 1.0) },
             setReference = {},
             peak = peak,
@@ -150,7 +150,7 @@ class KatalystReverbGlideSpec : StringSpec({
 
         // The glide and 30 blocks after it, against the straight line by hand.
         val gliding = drive(
-            effect, effectCtx, reference, refIn, refOut, firstBlock = 30, blocks = glideBlocks + 30,
+            effect = effect, effectCtx = effectCtx, reference = reference, referenceIn = refIn, referenceOut = refOut, firstBlock = 30, blocks = glideBlocks + 30,
             configure = { effect.configure(size = 0.8, lowpass = null, wet = 1.0) },
             setReference = { k -> reference.size = if (k >= glideBlocks) 0.8 else 0.2 + 0.6 * k / glideBlocks },
             peak = peak,
@@ -181,8 +181,8 @@ class KatalystReverbGlideSpec : StringSpec({
             fillInput(refIn, block)
             glideOut.clear()
             jumpOut.clear()
-            glideRef.process(refIn, glideOut, blockFrames)
-            jumpRef.process(refIn, jumpOut, blockFrames)
+            glideRef.process(input = refIn, output = glideOut, length = blockFrames)
+            jumpRef.process(input = refIn, output = jumpOut, length = blockFrames)
 
             for (i in 0 until blockFrames) {
                 snapGap = maxOf(snapGap, abs(glideOut.left[i] - jumpOut.left[i]))
@@ -367,7 +367,7 @@ class KatalystReverbGlideSpec : StringSpec({
                     }
 
                     effect.process(c)
-                    reference.process(refIn, refOut, blockFrames)
+                    reference.process(input = refIn, output = refOut, length = blockFrames)
 
                     effect.reverb!!.size shouldBe 0.45
 
@@ -404,7 +404,7 @@ class KatalystReverbGlideSpec : StringSpec({
             }
 
             effect.process(c)
-            reference.process(refIn, refOut, blockFrames)
+            reference.process(input = refIn, output = refOut, length = blockFrames)
 
             var worst = 0.0
 

@@ -12,6 +12,10 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.body
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.pipeline
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -164,7 +168,7 @@ class KatalystChainRequestSpec : StringSpec({
 
         render(d, blocks = 4, from = 344)
 
-        d.engine("song")?.scheduler?.droppedVoiceCount("song") shouldBe 1
+        d.engine("song")?.scheduler?.droppedVoiceCount() shouldBe 1
         cylinder(d, 2).shouldNotBeNull().runsClassic() shouldBe false
     }
 })

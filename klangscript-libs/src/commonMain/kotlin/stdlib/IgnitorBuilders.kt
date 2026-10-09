@@ -57,7 +57,7 @@ data class OscSineBuilder(val node: IgnitorDsl.Sine)
 @KlangScript.Function
 fun OscSineBuilder.phase(phase: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. With partial banks, the depth of every partial. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. With partial banks, the depth of every partial. */
 @KlangScript.Function
 fun OscSineBuilder.analog(analog: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -156,7 +156,7 @@ data class OscTriBuilder(val node: IgnitorDsl.Tri)
 @KlangScript.Function
 fun OscTriBuilder.phase(phase: IgnitorDslLike): OscTriBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscTriBuilder.analog(analog: IgnitorDslLike): OscTriBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -182,7 +182,7 @@ data class OscZawtoothBuilder(val node: IgnitorDsl.Zawtooth)
 @KlangScript.Function
 fun OscZawtoothBuilder.phase(phase: IgnitorDslLike): OscZawtoothBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscZawtoothBuilder.analog(analog: IgnitorDslLike): OscZawtoothBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -208,7 +208,7 @@ data class OscZampBuilder(val node: IgnitorDsl.Zamp)
 @KlangScript.Function
 fun OscZampBuilder.phase(phase: IgnitorDslLike): OscZampBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscZampBuilder.analog(analog: IgnitorDslLike): OscZampBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -235,7 +235,7 @@ data class OscImpulseBuilder(val node: IgnitorDsl.Impulse)
 @KlangScript.Function
 fun OscImpulseBuilder.phase(phase: IgnitorDslLike): OscImpulseBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscImpulseBuilder.analog(analog: IgnitorDslLike): OscImpulseBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -266,7 +266,7 @@ fun OscPulzeBuilder.phase(phase: IgnitorDslLike): OscPulzeBuilder = copy(node = 
 @KlangScript.Function
 fun OscPulzeBuilder.duty(duty: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(duty = duty.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscPulzeBuilder.analog(analog: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -297,7 +297,7 @@ fun OscSquareBuilder.phase(phase: IgnitorDslLike): OscSquareBuilder = copy(node 
 @KlangScript.Function
 fun OscSquareBuilder.duty(duty: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(duty = duty.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscSquareBuilder.analog(analog: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -336,7 +336,7 @@ data class OscSawBuilder(val node: IgnitorDsl.Saw)
 @KlangScript.Function
 fun OscSawBuilder.phase(phase: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscSawBuilder.analog(analog: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -371,7 +371,7 @@ data class OscRampBuilder(val node: IgnitorDsl.Ramp)
 @KlangScript.Function
 fun OscRampBuilder.phase(phase: IgnitorDslLike): OscRampBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscRampBuilder.analog(analog: IgnitorDslLike): OscRampBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -416,7 +416,7 @@ fun OscSuperSawBuilder.voices(voices: IgnitorDslLike): OscSuperSawBuilder = copy
 @KlangScript.Function
 fun OscSuperSawBuilder.spread(spread: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperSawBuilder.analog(analog: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -520,7 +520,7 @@ fun OscSuperSineBuilder.voices(voices: IgnitorDslLike): OscSuperSineBuilder = co
 @KlangScript.Function
 fun OscSuperSineBuilder.spread(spread: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperSineBuilder.analog(analog: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -625,7 +625,7 @@ fun OscSuperSquareBuilder.voices(voices: IgnitorDslLike): OscSuperSquareBuilder 
 @KlangScript.Function
 fun OscSuperSquareBuilder.spread(spread: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperSquareBuilder.analog(analog: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -728,7 +728,7 @@ fun OscSuperTriBuilder.voices(voices: IgnitorDslLike): OscSuperTriBuilder = copy
 @KlangScript.Function
 fun OscSuperTriBuilder.spread(spread: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperTriBuilder.analog(analog: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -833,7 +833,7 @@ fun OscSuperRampBuilder.voices(voices: IgnitorDslLike): OscSuperRampBuilder = co
 @KlangScript.Function
 fun OscSuperRampBuilder.spread(spread: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperRampBuilder.analog(analog: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -909,14 +909,14 @@ fun OscSuperRampBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.Pluck], handed to the `configure` lambda of `Ignitor.pluck(...)`.
- * Knobs: `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscPluckBuilder(val node: IgnitorDsl.Pluck)
 
-/** Loop decay per pass (default 0.996). Higher = longer sustain (0..1). */
+/** Loop feedback per pass, 0.9 to 0.999 (default 0.996); higher rings longer. A coefficient, not a time. */
 @KlangScript.Function
-fun OscPluckBuilder.decay(decay: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(decay = decay.toIgnitorDsl()))
+fun OscPluckBuilder.feedback(feedback: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(feedback = feedback.toIgnitorDsl()))
 
 /** Initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright. */
 @KlangScript.Function
@@ -930,7 +930,7 @@ fun OscPluckBuilder.pickPosition(pickPosition: IgnitorDslLike): OscPluckBuilder 
 @KlangScript.Function
 fun OscPluckBuilder.stiffness(stiffness: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(stiffness = stiffness.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscPluckBuilder.analog(analog: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 
@@ -938,7 +938,7 @@ fun OscPluckBuilder.analog(analog: IgnitorDslLike): OscPluckBuilder = copy(node 
 
 /**
  * Builder for [IgnitorDsl.SuperPluck], handed to the `configure` lambda of `Ignitor.superpluck(...)`.
- * Knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperPluckBuilder(val node: IgnitorDsl.SuperPluck)
@@ -951,9 +951,9 @@ fun OscSuperPluckBuilder.voices(voices: IgnitorDslLike): OscSuperPluckBuilder = 
 @KlangScript.Function
 fun OscSuperPluckBuilder.spread(spread: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
 
-/** Loop decay per pass (default 0.996). Higher = longer sustain (0..1). */
+/** Loop feedback per pass, 0.9 to 0.999 (default 0.996); higher rings longer. A coefficient, not a time. */
 @KlangScript.Function
-fun OscSuperPluckBuilder.decay(decay: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(decay = decay.toIgnitorDsl()))
+fun OscSuperPluckBuilder.feedback(feedback: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(feedback = feedback.toIgnitorDsl()))
 
 /** Initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright. */
 @KlangScript.Function
@@ -967,7 +967,7 @@ fun OscSuperPluckBuilder.pickPosition(pickPosition: IgnitorDslLike): OscSuperPlu
 @KlangScript.Function
 fun OscSuperPluckBuilder.stiffness(stiffness: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(stiffness = stiffness.toIgnitorDsl()))
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperPluckBuilder.analog(analog: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
 

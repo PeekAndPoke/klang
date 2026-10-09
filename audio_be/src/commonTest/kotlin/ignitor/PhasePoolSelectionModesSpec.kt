@@ -9,13 +9,17 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * The `selection` modes (user decisions, 2026-08-24): STRING-valued, value-colon compound
@@ -185,11 +189,12 @@ class PhasePoolSelectionModesSpec : StringSpec({
                     voiceDurationFrames = 128,
                     gateEndFrame = 128,
                     scratchBuffers = ScratchBuffers(blockFrames = 128),
+                    random = testRandom,
                 )
-                ctx.updateOffsetAndLength(0, 128)
+                ctx.updateOffsetAndLength(offset = 0, length = 128)
                 val buf = AudioBuffer(128)
                 chain.generate(buf, 110.0, ctx)
-                buf.copyInto(out, note * 128, 0, 128)
+                buf.copyInto(destination = out, destinationOffset = note * 128, startIndex = 0, endIndex = 128)
             }
             return out
         }

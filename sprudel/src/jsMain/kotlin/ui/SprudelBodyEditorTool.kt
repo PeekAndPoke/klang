@@ -88,7 +88,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
 
     private val parsed
         get() = run {
-            val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"").lowercase()
+            val raw = parseStr(initialValue).orEmpty().lowercase()
             if (raw in materials) raw else materials.first()
         }
 

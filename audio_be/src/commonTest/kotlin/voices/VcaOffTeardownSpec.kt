@@ -8,7 +8,6 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
@@ -25,6 +24,10 @@ import io.kotest.assertions.withClue
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import kotlin.math.abs
+
+/** This file's one seeded stream: every run draws the same, and successive builds still draw
+ *  differently (as they did from the process-wide stream these calls used before). */
+private val testRandom = Random(0x5EED)
 
 /**
  * Guards the teardown fade (`TeardownFadeRenderer`): the voice's last frames when its tree does not end in a
@@ -54,10 +57,10 @@ class VcaOffTeardownSpec : StringSpec({
 
     fun env(inner: IgnitorDsl) = IgnitorDsl.Adsr(
         inner = inner,
-        attackSec = IgnitorDsl.Constant(0.010),
-        decaySec = IgnitorDsl.Constant(2.0),
-        sustainLevel = IgnitorDsl.Constant(0.0),      // decays toward silence, like the guitar
-        releaseSec = IgnitorDsl.Constant(0.050),
+        attack = IgnitorDsl.Constant(0.010),
+        decay = IgnitorDsl.Constant(2.0),
+        sustain = IgnitorDsl.Constant(0.0),      // decays toward silence, like the guitar
+        release = IgnitorDsl.Constant(0.050),
     )
 
     fun amp(inner: IgnitorDsl) = IgnitorDsl.Highpass(
@@ -80,10 +83,11 @@ class VcaOffTeardownSpec : StringSpec({
      */
     fun renderSpan(dsl: IgnitorDsl, freqHz: Double, gate: Int, rel: Int, endFrame: Double): AudioBuffer {
         val total = gate + rel
-        val signal: Ignitor = dsl.toExciter()
+        val signal: Ignitor = dsl.toExciter(random = testRandom)
         val signalCtx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = AudioBuffer(total)
         val block = AudioBuffer(blockFrames)
@@ -92,14 +96,13 @@ class VcaOffTeardownSpec : StringSpec({
             audioBuffer = block, freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames), sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = endFrame),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
         var pos = 0
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
-            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(offset = 0, length = n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
-            ctx.updateOffsetAndLength(0, n); ctx.blockStart = pos.toDouble()
+            ctx.updateOffsetAndLength(offset = 0, length = n); ctx.blockStart = pos.toDouble()
             renderer.render(ctx)
             for (i in 0 until n) out[pos + i] = block[i]
             pos += n
@@ -109,12 +112,13 @@ class VcaOffTeardownSpec : StringSpec({
 
     /** Renders a whole voice through the teardown fade. */
     fun renderVoiceVcaOff(dsl: IgnitorDsl, freqHz: Double): AudioBuffer {
-        val signal: Ignitor = dsl.toExciter()
+        val signal: Ignitor = dsl.toExciter(random = testRandom)
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = AudioBuffer(totalFrames)
         val block = AudioBuffer(blockFrames)
@@ -125,16 +129,15 @@ class VcaOffTeardownSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateFrames.toDouble(), endFrame = totalFrames.toDouble()),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
-            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(offset = 0, length = n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
 
-            ctx.updateOffsetAndLength(0, n); ctx.blockStart = pos.toDouble()
+            ctx.updateOffsetAndLength(offset = 0, length = n); ctx.blockStart = pos.toDouble()
             renderer.render(ctx)
 
             for (i in 0 until n) out[pos + i] = block[i]
@@ -145,19 +148,20 @@ class VcaOffTeardownSpec : StringSpec({
 
     /** The same signal with NO fade at all: the reference the fade must not shape. */
     fun renderRaw(dsl: IgnitorDsl, freqHz: Double): AudioBuffer {
-        val signal: Ignitor = dsl.toExciter()
+        val signal: Ignitor = dsl.toExciter(random = testRandom)
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
         )
         val out = AudioBuffer(totalFrames)
         val block = AudioBuffer(blockFrames)
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
-            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(offset = 0, length = n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
             for (i in 0 until n) out[pos + i] = block[i]
             pos += n
@@ -186,7 +190,7 @@ class VcaOffTeardownSpec : StringSpec({
             // the gate, so widening the window makes it red immediately.
             val gated = renderVoiceVcaOff(envelopeBeforeAmp, freq)
             val raw = renderRaw(envelopeBeforeAmp, freq)
-            // A FIXED ceiling, deliberately not derived from VCA_OFF_TEARDOWN_FADE_SECONDS: deriving
+            // A FIXED ceiling, deliberately not derived from TEARDOWN_FADE_SECONDS: deriving
             // it lets the test follow the constant, and a 60x widening then still passes (it did).
             // 10 ms is the bound this guard must stay under to remain a guard rather than an envelope.
             val maxGuardFrames = sampleRate * 10 / 1000
@@ -257,10 +261,7 @@ class VcaOffTeardownSpec : StringSpec({
         val registry = IgnitorRegistry().apply { register("guitar", envelopeBeforeAmp) }
         val factory = VoiceFactory(
             sampleRate = sampleRate,
-            sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = AudioBuffer(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
@@ -288,7 +289,7 @@ class VcaOffTeardownSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, b * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }

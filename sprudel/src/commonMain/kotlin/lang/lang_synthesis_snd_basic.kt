@@ -298,15 +298,15 @@ private fun applySndBrown(source: SprudelPattern): SprudelPattern =
 /**
  * Sets the sound to brown noise (Brownian/red noise).
  *
- * @param depth Depth (0–1).
+ * @param leak Per-sample white leak (default 0.02): lower is deeper and slower, higher is brighter.
  * @return A new pattern with sound set to "brownnoise".
  * @category tonal
  * @tags noise, brownnoise, brown, snd
  */
 @KlangScript.Function
-fun SprudelPattern.sndBrown(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.sndBrown(leak: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndBrown(this)
-    if (depth != null) p = p.ignitorParam("depth", depth, callInfo?.forParam(0, 1))
+    if (leak != null) p = p.ignitorParam("leak", leak, callInfo?.forParam(0, 1))
     return p
 }
 
@@ -315,21 +315,21 @@ fun SprudelPattern.sndBrown(depth: PatternLike? = null, callInfo: CallInfo? = nu
  * @tags noise, brownnoise, brown, snd
  */
 @KlangScript.Function
-fun String.sndBrown(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).sndBrown(depth, callInfo)
+fun String.sndBrown(leak: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndBrown(leak, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to brown noise.
  * @category tonal
  * @tags noise, brownnoise, brown, snd
  */
 @KlangScript.Function
-fun sndBrown(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.sndBrown(depth, callInfo) }
+fun sndBrown(leak: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.sndBrown(leak, callInfo) }
 
 /** Chains a brown noise sound onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.sndBrown(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.sndBrown(depth, callInfo) }
+fun PatternMapperFn.sndBrown(leak: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.sndBrown(leak, callInfo) }
 
 // -- sndPink() --------------------------------------------------------------------------------------------------------
 

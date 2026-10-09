@@ -10,7 +10,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.SampleStore
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
@@ -71,10 +70,7 @@ class TreeVoiceSpec : StringSpec({
     ): DoubleArray {
         val factory = VoiceFactory(
             sampleRate = sampleRate,
-            sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
-            ignitorRegistry = registry,
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
@@ -107,7 +103,7 @@ class TreeVoiceSpec : StringSpec({
 
             val cylinder = ctx.cylinders.offerAndCommit(voice.cylinderId, voice, 0.0)
 
-            cylinder.mixBuffer.left.copyInto(out, block * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.copyInto(destination = out, destinationOffset = block * blockFrames, startIndex = 0, endIndex = blockFrames)
             cylinder.mixBuffer.left.fill(0.0)
             cylinder.mixBuffer.right.fill(0.0)
         }
@@ -115,7 +111,7 @@ class TreeVoiceSpec : StringSpec({
         return out
     }
 
-    val lpf = DoorFields(filters = listOf(DoorFilter.LowPass(300.0, 0.707)))
+    val lpf = DoorFields(filters = listOf(DoorFilter.LowPass(freq = 300.0, q = 0.707)))
     val base = VoiceData.empty.copy(freqHz = 220.0)
 
     "a SAMPLE voice runs the sample instrument: its lowpass and its envelope apply (as slots)" {

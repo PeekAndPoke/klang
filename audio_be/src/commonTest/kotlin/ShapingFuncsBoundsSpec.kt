@@ -205,7 +205,7 @@ class ShapingFuncsBoundsSpec : StringSpec({
             val knee = 0.95 * cap
 
             for (x in allInputs) {
-                val y = ShapingFuncs.softCapTo(x, cap)
+                val y = ShapingFuncs.softCapTo(x = x, cap = cap)
 
                 withClue("softCapTo($x, $cap) = $y") {
                     y.isFinite() shouldBe true
@@ -225,26 +225,26 @@ class ShapingFuncsBoundsSpec : StringSpec({
             val h = 1e-6 * cap
 
             withClue("cap $cap: value at the knee, both sides") {
-                ShapingFuncs.softCapTo(knee - eps, cap) shouldBe (knee plusOrMinus 2.0 * eps)
-                ShapingFuncs.softCapTo(knee + eps, cap) shouldBe (knee plusOrMinus 2.0 * eps)
+                ShapingFuncs.softCapTo(x = knee - eps, cap = cap) shouldBe (knee plusOrMinus 2.0 * eps)
+                ShapingFuncs.softCapTo(x = knee + eps, cap = cap) shouldBe (knee plusOrMinus 2.0 * eps)
             }
             withClue("cap $cap: slope 1 on both sides of the knee") {
-                ((ShapingFuncs.softCapTo(knee, cap) - ShapingFuncs.softCapTo(knee - h, cap)) / h) shouldBe (1.0 plusOrMinus 1e-3)
-                ((ShapingFuncs.softCapTo(knee + h, cap) - ShapingFuncs.softCapTo(knee, cap)) / h) shouldBe (1.0 plusOrMinus 1e-3)
+                ((ShapingFuncs.softCapTo(x = knee, cap = cap) - ShapingFuncs.softCapTo(x = knee - h, cap = cap)) / h) shouldBe (1.0 plusOrMinus 1e-3)
+                ((ShapingFuncs.softCapTo(x = knee + h, cap = cap) - ShapingFuncs.softCapTo(x = knee, cap = cap)) / h) shouldBe (1.0 plusOrMinus 1e-3)
             }
-            withClue("cap $cap: a hot input reaches the cap") { ShapingFuncs.softCapTo(1e6, cap) shouldBe (cap plusOrMinus 1e-12 * cap) }
+            withClue("cap $cap: a hot input reaches the cap") { ShapingFuncs.softCapTo(x = 1e6, cap = cap) shouldBe (cap plusOrMinus 1e-12 * cap) }
         }
 
         // The guards: a unity cap IS softCap, a non-finite cap falls back to it, a cap at or below 0 is silence.
         for (x in allInputs) {
-            withClue("cap 1 @ x=$x") { ShapingFuncs.softCapTo(x, 1.0).toRawBits() shouldBe ShapingFuncs.softCap(x).toRawBits() }
+            withClue("cap 1 @ x=$x") { ShapingFuncs.softCapTo(x = x, cap = 1.0).toRawBits() shouldBe ShapingFuncs.softCap(x).toRawBits() }
 
             for (cap in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
-                withClue("cap $cap @ x=$x") { ShapingFuncs.softCapTo(x, cap).toRawBits() shouldBe ShapingFuncs.softCap(x).toRawBits() }
+                withClue("cap $cap @ x=$x") { ShapingFuncs.softCapTo(x = x, cap = cap).toRawBits() shouldBe ShapingFuncs.softCap(x).toRawBits() }
             }
 
             for (cap in listOf(0.0, -0.5, -2.0)) {
-                withClue("cap $cap @ x=$x") { ShapingFuncs.softCapTo(x, cap) shouldBe 0.0 }
+                withClue("cap $cap @ x=$x") { ShapingFuncs.softCapTo(x = x, cap = cap) shouldBe 0.0 }
             }
         }
     }

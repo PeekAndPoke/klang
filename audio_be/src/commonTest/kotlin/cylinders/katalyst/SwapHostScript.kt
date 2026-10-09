@@ -38,8 +38,8 @@ internal class SwapHostScript(
         val buf = DoubleArray(n)
 
         for (b in block until input.size / n) {
-            input.copyInto(buf, 0, b * n, b * n + n)
-            filter.process(buf, 0, n)
+            input.copyInto(destination = buf, destinationOffset = 0, startIndex = b * n, endIndex = b * n + n)
+            filter.process(buffer = buf, offset = 0, length = n)
             buf.copyInto(out, b * n)
         }
 

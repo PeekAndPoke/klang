@@ -189,7 +189,7 @@ var LAYERS = [
       code: ".orbit(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)", gate: "wait * 1" },
     { key: "pad", name: "pad (6 lines)", short: "pad", orbit: "4", n: 3, slow: true, startsAt: STARTS,
       title: "Pad, six lines from root to high fifth",
-      code: ".orbit(4).adsr(release = 1.5).coarse(amount = 2, oversample = 1)", gate: "wait * 3" },
+      code: ".orbit(4).adsr(release = 1.5).coarse(factor = 2, oversample = 1)", gate: "wait * 3" },
     { key: "dust", name: "noise: dust", short: "dust", orbit: null, n: null, slow: false, group: 1,
       title: "Noise, dust",
       code: 'sound("dust!2").gain(0.0400).vel(sine.range(0.500, 1.0).slow(21))', gate: null },
