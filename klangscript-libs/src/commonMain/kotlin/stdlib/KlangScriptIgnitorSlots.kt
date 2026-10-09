@@ -24,9 +24,12 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * Reachable only as `Ignitor.slot` (and `Ign.slot`): registered with `@TypeExtensions` on itself,
  * like the slot groups, so it adds no global name. The Kotlin door is `IgnitorDsl.Slots`.
  *
- * Without opting in, custom sounds ignore sprudel modulation (the data-class
- * defaults are sealed `Constant(0.0)`). Opting in wires the named slot to
- * `ignitorParams[ name ]` lookup at voice-trigger time.
+ * Whether a custom sound answers the pattern depends on its door: the oscillator doors keep the
+ * node's open slots (`Ignitor.sine()` reads `analog` from the pattern, `Ignitor.supersaw()` also
+ * `voices` and `spread`), while the noise doors seal their knobs to constants and the pluck doors
+ * seal all but `analog`. Placing
+ * `Ignitor.slot.<name>` on a knob opts it in: the slot reads `ignitorParams[name]` at voice-trigger
+ * time and falls back to its default.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorSlots::class)
@@ -73,6 +76,42 @@ object KlangScriptIgnitorSlots {
     @KlangScript.Property
     val rate: IgnitorDsl = IgnitorDsl.Slots.rate
 
+    /** Open `octaves` slot (default 1.0): the fBm octaves, 1 plain, the engine caps at 8. Used by perlin / berlin noise. */
+    @KlangScript.Property
+    val octaves: IgnitorDsl = IgnitorDsl.Slots.octaves
+
+    /** Open `persistence` slot (default 0.5): the fBm amplitude falloff per octave, 0 to 1. Used by perlin / berlin noise. */
+    @KlangScript.Property
+    val persistence: IgnitorDsl = IgnitorDsl.Slots.persistence
+
+    /** Open `color` slot (default 0.0): the spectral tilt, -1 to 1, 0 flat. Used by whitenoise; sprudel's `sndNoise(color)` writes it. */
+    @KlangScript.Property
+    val color: IgnitorDsl = IgnitorDsl.Slots.color
+
+    /** Open `leak` slot (default 0.02): the per-sample white leak, lower is deeper. Used by brownnoise; sprudel's `sndBrown(leak)` writes it. */
+    @KlangScript.Property
+    val leak: IgnitorDsl = IgnitorDsl.Slots.leak
+
+    /** Open `tail` slot (default 1.0): the amplitude exponent, above 1 mostly tiny pops and rare loud ones. Used by dust; sprudel's `sndDust` writes it. */
+    @KlangScript.Property
+    val tail: IgnitorDsl = IgnitorDsl.Slots.tail
+
+    /** Open `bipolar` slot (default 0.0): above 0.5 every pop takes a random sign. Used by dust. */
+    @KlangScript.Property
+    val bipolar: IgnitorDsl = IgnitorDsl.Slots.bipolar
+
+    /** Open `chaos` slot (default 1.5): the crackle map's drive, about 1 sparse to 2 dense. Used by crackle; sprudel's `sndCrackle(chaos)` writes it. */
+    @KlangScript.Property
+    val chaos: IgnitorDsl = IgnitorDsl.Slots.chaos
+
+    /**
+     * Open `declick` slot (default 0.0, off): the envelope's de-click one-pole, in seconds. Every authored
+     * `adsr` reads it unless its builder sets `declick(...)`; no sprudel door writes it (`classic()`'s envelope
+     * de-clicks with a constant instead).
+     */
+    @KlangScript.Property
+    val declick: IgnitorDsl = IgnitorDsl.Slots.declick
+
     /**
      * Open `pregain` slot (default 1.0): how hard the pattern plays INTO the instrument, the
      * level at which the signal meets the instrument's first nonlinearity. Mirrors sprudel
@@ -102,8 +141,9 @@ object KlangScriptIgnitorSlots {
     // ── The slots of the classic tail, one group per stage (`Ignitor.slot.lpf.freq`) ──
     //
     // What `x.classic()` places, and what a tail of your own places when it wants the pattern's
-    // voice doors to reach it. Named after sprudel's readers (`lpf.freq`, `adsr.attack`); the Kotlin
-    // door is `IgnitorDsl.Slots.lpf.freq`, the same object.
+    // voice doors to reach it. Named `<door>.<param>`: the sprudel door's name, then the engine door's
+    // word (`lpf.freq`, `crush.bits`, `adsr.attack`); the Kotlin door is `IgnitorDsl.Slots.lpf.freq`, the
+    // same object.
 
     /**
      * The one-pole lowpass stage's slot (default 0.0, off): the cutoff in Hz that the pattern's `onepole(hz)`

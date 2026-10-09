@@ -186,3 +186,24 @@ Before the pitch pipeline's step 1, so its new slots are born with the final wor
   the pitch pipeline's line 517 and `docs/plans/signal-flow-redesign.md:132` (a plan sketch whose
   `Ignitor.slot.decay` is the envelope decay of a design that did not ship). `ignitorParam("decay" | "depth"` in
   sprudel: none.
+
+### Step 3, the eight missing script slots (2026-10-09)
+
+- **What changed.** `Ignitor.slot` (`KlangScriptIgnitorSlots`) gains `octaves`, `persistence`, `color`, `leak`,
+  `tail`, `bipolar`, `chaos` and `declick`, each the same `IgnitorDsl.Slots` object as the Kotlin door, its default
+  and its user in the KDoc. The class KDoc no longer claims the data-class defaults are sealed constants (the
+  oscillator doors keep the open slots, the noise doors seal theirs, the pluck doors all but `analog`). The three "named after sprudel's
+  readers" comments (`KlangScriptIgnitorSlots`, `IgnitorDsl.Slots`, `IgnitorDslClassic.kt`'s header) and the
+  `Ignitor.param` KDoc's slot list now say `<door>.<param>` with the engine door's word, and that `declick` has no
+  sprudel door.
+- **No tree changes, so no corpus re-render:** the step adds script properties and rewrites comments; nothing a
+  song or a built-in builds is different.
+- **Tests.** `KlangScriptIgnitorSlotTest` gets eight rows; the new `KlangScriptIgnitorSlotCompletenessSpec`
+  (jvmTest) reads every flat `Param` leaf of `IgnitorDsl.Slots` by reflection and checks that `Ignitor.slot.<name>`
+  is the same object (`shouldBeSameInstanceAs`), and that every flat script property is a Kotlin leaf of the same name,
+  so the gap cannot reopen from either side. Mutation checks, each killed: `declick` removed from the script door
+  (its row red, and the completeness row red), `color` pointed at `Slots.chaos` (completeness red), `color` a fresh
+  equal `Param` copy (both identity rows red), a stray script-only slot (the reverse row red).
+- **Suites.** `klangscript-libs` jvmTest 832 and jsTest 609 (after review round 1: one step-1 row dropped, the
+  completeness spec checks both directions by identity, two rows), the rest as step 2b, green but for the known rig-anchor
+  row.

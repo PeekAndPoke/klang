@@ -242,8 +242,9 @@ sealed interface IgnitorDsl {
         // ── The slots of the classic tail (phase 3 step 5), one group per stage ──
         //
         // `classic()` places them; an author writing a tail of their own places the same ones, and
-        // the same doors fill them. Named `<door>.<param>` after sprudel's readers (`lpf.freq`); each
-        // group's KDoc in `IgnitorDslClassic.kt` names the defaults and why.
+        // the same doors fill them. Named `<door>.<param>`: the sprudel door's name, then the engine
+        // door's word (`lpf.freq`, `crush.bits`); each group's KDoc in `IgnitorDslClassic.kt` names
+        // the defaults and why.
 
         /**
          * The one-pole lowpass stage, `classic()`'s FIRST stage: the cutoff in Hz, which sprudel's

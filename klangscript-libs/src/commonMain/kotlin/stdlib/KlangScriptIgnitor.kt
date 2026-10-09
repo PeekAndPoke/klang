@@ -424,11 +424,12 @@ object KlangScriptIgnitor {
      * Param slots are the leaf nodes of the ignitor tree — they produce a constant signal
      * at [default] unless the pattern writes the slot with `ignitorParam` at play time.
      *
-     * `Ignitor.slot` holds the names a sprudel door already writes, so placing one of those wires that
-     * door into your instrument. The one to know is `pregain`: how hard the pattern plays INTO
-     * the instrument, written by `pregain(x)`, with the default 1.0 and no meaning of its own
-     * beyond where you place it. `analog`, `voices`, `spread`, `duty`, `density`, `feedback`,
-     * `brightness`, `pickPosition`, `stiffness` and `rate` are the others. Reach for
+     * `Ignitor.slot` holds the engine's open slots, most of them written by a sprudel door, so placing
+     * one of those wires that door into your instrument. The one to know is `pregain`: how hard the
+     * pattern plays INTO the instrument, written by `pregain(x)`, with the default 1.0 and no meaning of
+     * its own beyond where you place it. The sources' knobs are the others (`analog`, `voices`, `spread`,
+     * `duty`, `density`, `feedback`, `color`, `leak`, ...), and `declick`, the envelope's de-click, which
+     * no sprudel door writes. Reach for
      * `Ignitor.slot.<name>` rather than retyping the name and the default here, so one default serves
      * every instrument; a name of your own is what this door is for.
      *

@@ -145,8 +145,9 @@ fun IgnitorDsl.classic(): IgnitorDsl {
 }
 ```
 
-**The slot names follow sprudel's readers**, the rule `classic()` already keeps (`<door>.<param>`, a single-knob door
-flat like `onepole`): `vibrato.rate`, `vibrato.semitones`; `accelerate`; `penv.semitones`, `penv.attack`, `penv.decay`,
+**The slot names follow the decided rule (D4, Q21; `/dsl-design` section 4)**, the one `classic()` keeps:
+`<door>.<param>`, the namespace the sprudel door's name, the param part the engine door's word, a single-knob door
+flat like `onepole`: `vibrato.rate`, `vibrato.semitones`; `accelerate`; `penv.semitones`, `penv.attack`, `penv.decay`,
 `penv.sustain`, `penv.release`; `penvCurves.attack|decay|release` (curve INDEX, default `MOD_ENV_CURVE`); `fm.ratio`,
 `fm.depth`, `fm.attack`, `fm.decay`, `fm.sustain` (and `fm.release`, D3). Defaults are the strip's, from the same
 constants: the switches (`vibrato.semitones`, `accelerate`, `penv.semitones`, `fm.depth`) default to 0.0, which the gate reads

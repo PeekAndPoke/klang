@@ -21,9 +21,10 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 // `classic()`: the voice strip's chain as a tail of slotted Ignitor stages (phase 3 step 5; the strip retired in step 9)
 //
 // The plan is `docs/plans/signal-flow-redesign.md` section 5 and `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`.
-// The SLOTS below are grouped per stage and named `<door>.<param>`, which is sprudel's own reader
-// vocabulary (`lpf.freq`, `adsr.attack`, ...) and the `<stage>.<knob>` rule of the Katalyst's classic
-// chain. Each slot's KDoc names the sprudel reader it mirrors, and sprudel's `toVoiceData` writes exactly
+// The SLOTS below are grouped per stage and named `<door>.<param>`: the sprudel door's name, then the
+// engine door's word (`lpf.freq`, `crush.bits`, `adsr.attack`, ...), the `<stage>.<knob>` rule of the
+// Katalyst's classic chain (Q21, `/dsl-design` section 4). Sprudel's door parameter and reader take the
+// same word. Each slot's KDoc names the sprudel reader it mirrors, and sprudel's `toVoiceData` writes exactly
 // these keys (`classicSlotParams`, phase 3 step 8). Every default is the value the voice strip
 // used when the pattern wrote nothing, read from the same constant the strip read.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
