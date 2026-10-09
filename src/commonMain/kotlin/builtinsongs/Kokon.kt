@@ -278,7 +278,7 @@ export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .ignp("decay", 3.0).clip(0.99)
   .tremolo(rate = beatRate(0.33), depth = perlin(0.300, 0.350))  // The guitar finger
-  .vibrato(rate = beatRate(0.33), depth = perlin(0.025, 0.040))
+  .vibrato(rate = beatRate(0.33), semitones = perlin(0.025, 0.040))
   .hpf(180)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
@@ -430,7 +430,7 @@ let holdingBreath = stack(
 let breakingOpen = stack(
   soar(melodyOne)
     .tremolo(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.18).add(0.01))
-    .vibrato(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.10).add(0.01)),
+    .vibrato(rate = beatRate(0.25), semitones = saw.slow(4).pow(3).mul(0.10).add(0.01)),
   wings(cocoonPower),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -450,7 +450,7 @@ let lifting = stack(
   //spin(liftArp.add(14).ply(4)).gain(0.05).ignp("sustain", 0.0).clip(0.25).pan(0.25).superimpose(pan(0.75)),
   soar(melodyTwo)
     .tremolo(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.25).add(0.01))
-    .vibrato(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.10).add(0.01)),
+    .vibrato(rate = beatRate(0.25), semitones = saw.slow(4).pow(3).mul(0.10).add(0.01)),
   wings(liftPower),
   chug(liftRoots),    
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -461,7 +461,7 @@ let landing = stack(
   spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.35).ignp("sustain", 0.15).clip(0.66),
   soar("[4@6 ~@2]")
     .tremolo(rate = beatRate(0.25), depth = 0.35)
-    .vibrato(rate = beatRate(0.25), depth = 0.30),
+    .vibrato(rate = beatRate(0.25), semitones = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.0),
   beat("0").gain(0.45),
 )

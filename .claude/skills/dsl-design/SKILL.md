@@ -202,7 +202,9 @@ the bug.
   `penv(semitones, attack, decay, sustain, release)` (phase 3 step 5b (c), 2026-09-25; `semitones` was `amount`
   until pitch pipeline step 1, 2026-10-09) is a voice-side door on
   neither closed list: `semitones` is its switch and a tail-only call never invents it; its unset stages read
-  the shared `PitchEnvelopeDefaults` (the `penv.*` slot defaults of `classic()`'s pitch envelope stage). The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
+  the shared `PitchEnvelopeDefaults` (the `penv.*` slot defaults of `classic()`'s pitch envelope stage). Sprudel's
+  `vib(rate, semitones)` has the same shape (pitch pipeline step 2): `semitones` is its switch, and a rate-only call
+  (`vib(4)`) writes `vibrato.rate` and never invents the depth. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
   `lpfCurves`, ...) are setters only: a curve never switches its envelope on, and a bare call changes
   nothing. **It is adopted AT THE DOOR only, and a door fill does not survive
   SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the

@@ -23,7 +23,6 @@ import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
-import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -128,13 +127,6 @@ class VoiceFactory(
         // Pitch / Glissando
         val accelerate = Voice.Accelerate(semitones = data.accelerate ?: 0.0)
 
-        // Vibrato (depth in semitones — VibratoRenderer converts to ET frequency ratio)
-        val vibratoDepthSemitones = data.vibratoMod ?: 0.0
-        val vibrato = Voice.Vibrato(
-            semitones = vibratoDepthSemitones,
-            rate = if (vibratoDepthSemitones > 0.0) data.vibrato ?: VIBRATO_RATE_HZ else 0.0,
-        )
-
         // Silence culling: the author's `cull(...)`; a tremolo inside the tree adds its own cull-never rule at the
         // build (`treeCull`).
         val cull = data.cull
@@ -187,7 +179,7 @@ class VoiceFactory(
 
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
-                    gain = gain, accelerate = accelerate, vibrato = vibrato,
+                    gain = gain, accelerate = accelerate,
                     fm = fm, signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
@@ -309,7 +301,7 @@ class VoiceFactory(
 
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
-                    gain = gain, accelerate = accelerate, vibrato = vibrato,
+                    gain = gain, accelerate = accelerate,
                     fm = fm, signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
@@ -366,7 +358,6 @@ class VoiceFactory(
         cylinder: Int,
         gain: Double,
         accelerate: Voice.Accelerate,
-        vibrato: Voice.Vibrato,
         fm: Voice.Fm?,
         signal: Ignitor,
         freqHz: Double,
@@ -390,7 +381,6 @@ class VoiceFactory(
         )
 
         val pipeline = buildPitchPipeline(
-            vibrato = vibrato,
             accelerate = accelerate,
             fm = fm,
             freqHz = freqHz,

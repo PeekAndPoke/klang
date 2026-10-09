@@ -586,13 +586,6 @@ class Voice(
     /** [semitones] = total pitch glide over the voice, in SEMITONES (12 = one octave). */
     class Accelerate(val semitones: Double)
 
-    /** @param rate LFO frequency in Hz. @param semitones modulation depth in SEMITONES. */
-    class Vibrato(
-        val rate: Double,
-        val semitones: Double,
-        var phase: Double = 0.0,
-    )
-
     /** A modulation envelope of the voice's pitch pipeline (the FM index), in frames. */
     class Envelope(
         val attackFrames: Double,

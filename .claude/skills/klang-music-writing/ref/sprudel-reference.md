@@ -288,7 +288,7 @@ with limiter defaults, so it works on an orbit too.
 | `rootNotes()`           |         | Extract chord root notes      | `chord("Am C").rootNotes()`                     |
 | `freq(hz)`              |         | Set frequency in Hz           | `freq("440 880")`                               |
 | `accelerate(semitones)` |         | Pitch ramp during playback (SEMITONES over the event; 12 = one octave) | `s("cr").accelerate(24)`                        |
-| `vibrato(rate, depth)`                                                 | `vib`      | Vibrato LFO rate in Hz and depth in semitones; readers `vibrato.rate`, `.depth`                                                                        | `note("c4").s("saw").vibrato(5, 0.5)`                                                                |
+| `vibrato(rate, semitones)`                                             | `vib`      | Vibrato LFO rate in Hz and depth in semitones (`classic()`'s stage; a rate alone is no vibrato); readers `vibrato.rate`, `.semitones`                   | `note("c4").s("saw").vibrato(5, 0.5)`                                                                |
 
 #### Scale degrees: two things that are easy to get wrong
 
@@ -461,7 +461,7 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 
 | Function          | Aliases | Description          | Example                             |
 |-------------------|---------|----------------------|-------------------------------------|
-| `penv(semitones, attack, decay, sustain, release)`                     | `pamt`     | Pitch envelope, the Ignitor `pitchEnvelope` (`classic()`'s stage): depth in semitones and an ADSR (sustain a share of the depth, 0 = the note); stages exponential by default; unset stages 0.01 / 0.1 / 0 / 0 | `s("bd*4").penv(24, 0.001, 0.08)`                                                                    |
+| `penv(semitones, attack, decay, sustain, release)`                     |            | Pitch envelope, the Ignitor `pitchEnvelope` (`classic()`'s stage): depth in semitones and an ADSR (sustain a share of the depth, 0 = the note); stages exponential by default; unset stages 0.01 / 0.1 / 0 / 0 | `s("bd*4").penv(24, 0.001, 0.08)`                                                                    |
 | `penvCurves(attack, decay, release)`                                   |            | Stage curves of the pitch envelope, like `adsrCurves` (`"exp"`, `"linear"`, `"square"`, ...; an omitted stage keeps its curve) | `s("bd*4").penv(24, 0.001, 0.08).penvCurves("linear", "linear", "linear")`                          |
 | `penv.semitones` / `penv.attack` / ... / `penv.release`                |            | Read a pitch envelope slot                                                                                                                             | `p.penv("12 -12", 0.01, 0.2).lpf(penv.semitones.mul(100).add(2000))`                                 |
 

@@ -38,7 +38,7 @@ export lead = note(leadPattern).slow(2)
     .sound("supersquare").adsr(0.025, 0.12, 0.5, 0.2).gain(0.5 * 0.25).unison(spread = 0.3)
     .hpf(500).lpf(freq = 1600, q = 2.5, env = 12)
     .reverb(0.8, 1).pan(0.5).superimpose(x => x.sound("brown").gain(0.35 * 0.25))
-    .vibrato(rate = "2.1".add(berlin.range(-1, 1).mul(0.1)), depth = 0.03)
+    .vibrato(rate = "2.1".add(berlin.range(-1, 1).mul(0.1)), semitones = 0.03)
     .orbit(1)  // .solo()
     .filterWhen(x => x >= 16)
 

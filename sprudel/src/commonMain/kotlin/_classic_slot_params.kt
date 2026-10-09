@@ -49,7 +49,7 @@ internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
  *    values the wire used to carry); its envelope (depth, the four stages and the three curves) only
  *    when one of the five envelope knobs is set: exactly the `FilterDef` the wire used to carry;
  *  - the pitch envelope writes every field that is set; its switch `penv.semitones` only when set (a stage-only
- *    call switches nothing on);
+ *    call switches nothing on); the vibrato the same, its switch `vibrato.semitones`;
  *  - shapes and curves travel as their catalogue INDEX (`DistortionShapes`, `LfoShapes`, `AdsrCurves`), a
  *    flag as 1.0 or 0.0.
  *
@@ -61,7 +61,7 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
     // The door-less event, the common case (a sample hit, a bare note): its own bag's copy, as the wire always
     // carried, with no writer and no key lookups.
     if (adsr == null && lpf == null && hpf == null && bpf == null && notch == null &&
-        distortion == null && tremolo == null && sample == null && pitchEnv == null
+        distortion == null && tremolo == null && sample == null && pitchEnv == null && pitchMod == null
     ) {
         return ignitorParams?.toMap()
     }
@@ -81,6 +81,14 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
         bag.putCurve(k.penvCurveAttack, e.pAttackCurve)
         bag.putCurve(k.penvCurveDecay, e.pDecayCurve)
         bag.putCurve(k.penvCurveRelease, e.pReleaseCurve)
+    }
+
+    // The vibrato (pitch pipeline step 2): the rate and the depth when set. `vibrato.semitones` is the switch, so a
+    // rate-only call (`vib(4)`) leaves the depth at its slot default 0.0 and builds no vibrato, as on the strip.
+    // The group also carries `accelerate`, still a wire field until its step.
+    pitchMod?.let { m ->
+        bag.put(k.vibratoRate, m.vibrato)
+        bag.put(k.vibratoSemitones, m.vibratoMod)
     }
 
     distortion?.let { d ->
@@ -158,6 +166,9 @@ private object ClassicSlotKeys {
         name(f.freq), name(f.q), null, name(f.env), name(f.attack), name(f.decay), name(f.sustain),
         name(f.release), name(c.attack), name(c.decay), name(c.release),
     )
+
+    val vibratoRate = name(s.vibrato.rate)
+    val vibratoSemitones = name(s.vibrato.semitones)
 
     val penvSemitones = name(s.penv.semitones)
     val penvAttack = name(s.penv.attack)

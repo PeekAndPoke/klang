@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 
 /**
  * TEST ONLY. The voice-door settings a spec states in typed form: the shape `VoiceData` carried as typed fields until
- * phase 3 step 9 cut them (the pitch envelope's until pitch pipeline step 1) (a voice door travels as `classic()` slot keys in `ignitorParams` since step 8). Specs that
+ * phase 3 step 9 cut them (the pitch envelope's until pitch pipeline step 1, the vibrato's until step 2) (a voice door travels as `classic()` slot keys in `ignitorParams` since step 8). Specs that
  * read more clearly as "a lowpass at 900 with an envelope" than as a list of slot keys state their settings here and
  * send them through [withClassicSlots], which writes the same key names, units and on/off rules as sprudel's
  * `classicSlotParams`. Three differences are deliberate and inaudible: the rig always writes `passes` (default 1.0)
@@ -24,6 +24,8 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
  * nothing reads.
  */
 data class DoorFields(
+    val vibratoRate: Double? = null,
+    val vibratoSemitones: Double? = null,
     val penv: DoorPenv? = null,
     val filters: List<DoorFilter> = emptyList(),
     val adsr: DoorAdsr? = null,
@@ -120,6 +122,9 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
         putCurve(c.decay, env.decayCurve)
         putCurve(c.release, env.releaseCurve)
     }
+
+    put(s.vibrato.rate, doors.vibratoRate)
+    put(s.vibrato.semitones, doors.vibratoSemitones)
 
     doors.penv?.let { e ->
         put(s.penv.semitones, e.semitones)

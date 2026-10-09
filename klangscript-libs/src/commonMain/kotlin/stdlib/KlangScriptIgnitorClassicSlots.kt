@@ -21,6 +21,21 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 // `@Object`, so it is reachable only through `Ignitor.slot` and adds no global name.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
+/** `Ignitor.slot.vibrato`: the vibrato stage's slots. */
+@KlangScript.Library(KlangScriptLibraries.STDLIB)
+@KlangScript.TypeExtensions(KlangScriptIgnitorVibratoSlots::class)
+object KlangScriptIgnitorVibratoSlots {
+    override fun toString(): String = "[Ignitor.slot.vibrato]"
+
+    /** The LFO rate in Hz, default 5. Mirrors sprudel's `vibrato.rate`. */
+    @KlangScript.Property
+    val rate: IgnitorDsl = IgnitorDsl.Slots.vibrato.rate
+
+    /** The depth in semitones, default 0 (off: no vibrato). Mirrors sprudel's `vibrato.semitones`. */
+    @KlangScript.Property
+    val semitones: IgnitorDsl = IgnitorDsl.Slots.vibrato.semitones
+}
+
 /** `Ignitor.slot.penv`: the pitch envelope stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorPenvSlots::class)

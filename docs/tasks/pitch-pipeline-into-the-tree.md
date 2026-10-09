@@ -162,7 +162,7 @@ one") applied; every clause not named here is kept.
 | door | old expression (strip) | new (classic stage) | identity |
 |---|---|---|---|
 | pitch envelope | built when `pEnv` finite and `!= 0`; stages `(p* ?: PITCH_ENV_*) * sampleRate`; sustain non-finite reads unset; curves `?: MOD_ENV_CURVE`; gate from the voice's limits per block; `renderPitchEnvelopeRatios` multiplying into the buffer | gate off at a leaf amount `== 0` or non-finite; the node's arm with the same constants; the same `renderPitchEnvelopeRatios` writing, combined by `Times` | **bit-identical** (one law, one mapping, `x * p == p * x`). Only a non-finite stage TIME differs (NaN and ±Infinity): the strip passed it to `EnvelopeCore` (NaN a zero-length stage, +Infinity a stage that never ends, -Infinity zero-length), while sprudel drops every non-finite value at the wire boundary, so the slot reads it as unset (the default time; review round 1 of step 1, B MINOR 2) |
-| vibrato | built when `vibratoMod > 0`; rate `vibrato ?: VIBRATO_RATE_HZ`; phase from 0, `(TWO_PI * rate) / sampleRate`, the one-subtract or full wrap; `fastExp2(fastSin(phase) * depth / 12)` | gate off at a FINITE leaf depth `<= 0` (a non-finite depth stays built and renders the default, step 0); `VibratoModIgnitor`: the same accumulator, increment, wrap pair and ratio, plus `safeOut` (the identity on a finite ratio) | **bit-identical**. A NaN rate poisoned the strip's phase; the slot reads it as unset |
+| vibrato | built when `vibratoMod > 0`; rate `vibrato ?: VIBRATO_RATE_HZ`; phase from 0, `(TWO_PI * rate) / sampleRate`, the one-subtract or full wrap; `fastExp2(fastSin(phase) * depth / 12)` | gate off at a FINITE leaf depth `<= 0` (a non-finite depth stays built and renders the default, step 0); `VibratoModIgnitor`: the same accumulator, increment, wrap pair and ratio, plus `safeOut` (the identity on a ratio up to `SAFE_MAX`, 1e15) | **bit-identical**, except at the raw edges (step 2, review round 1, B MINOR 1, measured on the full engine): a depth above about 598 semitones (`log2(1e15) * 12`) is clamped by `safeOut` where the strip ran raw (597 identical, 598 on differ); a non-finite rate (NaN, ±Infinity) played NO vibrato on the strip (the wrap pinned the phase) and now plays the slot's default 5 Hz, because sprudel drops it and the slot reads it as unset; a +Infinity depth built the strip's vibrato and silenced the voice (NaN, scrubbed), while sprudel now drops it and builds no vibrato. All of it is the house rule (a non-finite value reads as unset) or a raw-Motor extreme |
 | accelerate | built when `accelerate != 0` and `end > onset`; base = `endFrame - startFrame` (scheduled end, the release tail INCLUDED, a Double); per block `2^(octaves * rel / total)`, then `ratio *= 2^(octaves / total)` per sample | today's node: base = `voiceDurationFrames` (the GATE length, an Int) and `2^(octaves * (rel / total))` | **not identical as the node stands**: a different base and a different rounding. D2 decided for the GATE (2026-10-08): the sprudel door moves to the node's base, a sound change for Kokon's `strike` (step 3). The per-block seed keeps the known float-reassociation class (P4: 5.3e-15 across onsets, 1.7e-13 across block sizes, bounded at 1e-11) on both |
 | FM | built when `fmh` set or `fmEnv != 0`, rendered when depth `!= 0`; modulator phase in radians, `fastSin`; depth envelope evaluated ONCE per block at the block's first frame and held (ledger E11, Class 2), release always 0; `1 + sin * ((depth * env) / freq)`; divides by the raw note, no bypass at freq 0 | the `Fm` node: depth envelope PER SAMPLE (E1's fix), `1 + (mod * depth) / safeDiv(freq)` (with an envelope `(mod * (depth * env)) / freq`), bypass at `freq <= 0`, `safeOut`; the modulator a `Sine` whose drift lane seeds from the voice rng on its first block | **not bit-identical.** See below |
 
@@ -402,6 +402,103 @@ slots on its `classic()` probe; the realtime gate row of `VoiceLifecycleSpec` ho
   `pitchEnvelope` per path, so the order flips and the bits do not). Predicted identical; the engagement mutant
   (depth divided by 12.5) must move exactly those songs.
 
+**What was done (2026-10-09, uncommitted, for review; 56 files).** `audio_bridge`: `VibratoSlots` (`vibrato.rate` default
+`VIBRATO_RATE_HZ`, `vibrato.semitones` default the finite 0.0, its KDoc says why never `SLOT_UNSET`), `Slots.vibrato`;
+`classic()` places `Vibrato(inner = pitchEnveloped, ...)`; `VoiceData` lost `vibrato` and `vibratoMod`. `sprudel`:
+`vibrato(rate, semitones)` / `vib(rate, semitones)` and the reader `vibrato.semitones` (`depth` removed, a row in
+`docs/retired-names.md`); `classicSlotParams` writes the rate and the depth from the `pitchMod` group (the switch only
+when set) and its early return checks `pitchMod == null`; `toVoiceData` stops writing the two fields. `pamt` is retired
+(maintainer: "drop pamt"; its forms, the constant, the alias rows of `LangPitchEnvelopeSpec`, `LangDoorFormsSpec`,
+`LangFieldAccessorsSpec`, `LangControlRestSpec`, `CallableObjectDocsSpec`, `FreqAccessorIntelSpec`, the skill reference,
+a `retired-names.md` row). `audio_be`: `VibratoRenderer` and `Voice.Vibrato` gone, `buildPitchPipeline` lost its
+vibrato. `klangscript-libs`: `Ignitor.slot.vibrato` (`KlangScriptIgnitorVibratoSlots`) and its parity rows; the script
+`classic()` KDoc and the sprudel `vibrato` KDoc say the vibrato is a `classic()` stage now. Songs: the five `depth =`
+arguments of TetrisRemix, IrishLamentTechno (3) and StrangerThings, the frozen Stranger Things (and its header note),
+`SongBenchmarkCases`, and the four in `Kokon.kt` (maintainer's permission; only those four arguments) say
+`semitones =`. Specs: `VibratoConsistencyTest` retired into the new oracle `ClassicVibratoSpec` (the ramp probe against
+`2^(sin(2 pi rate p / sr) * semitones / 12)` with the library's `sin` and `pow`, three rows at two onsets; a rate alone,
+a depth of 0 and a negative depth are the bare voice; a non-finite `vibrato.semitones` in the bag reads as the slot's
+0; the step 0 guard row: an unwritten `vibrato.semitones` builds no vibrato, the built root's class equal to the bare
+source's, with a written depth as the positive control). `PitchModulationTest`'s vibrato rows render the tree
+vibrato (with the strip's accelerate and FM); `ModulatorPhaseWrapSpec`'s strip vibrato row retired (the node row
+stays); `SynthVoiceTest` drives its strip rows with accelerate; `BlockFramingInvarianceSpec`, `ClassicVoiceRig` and
+`SharedScratchSpec` write the slots; `ClassicTailSpec`, `IgnitorRegistryTest`, `ClassicSlotParamsSpec` (the literal
+map and a vibrato row), `ClassicDoorRenderParitySpec` (two engagement rows), `SprudelVoiceDataSpec` and
+`LangPitchParamNamesSpec` (a door-parity row: sprudel word = slot = node knob) follow. Docs: `data-model.md`,
+`voice-synthesis.md`, `off-values.md`, `effects-mixing.md`, `PitchModDefaults.kt`, the two skill references, the two
+`MEMORY.md` files, `bugfix-non-finite-pitch-strip-and-signals.md`, `katalyst-master-configure-doors.md`.
+
+- **Wire.** `WIRE_SCHEMA_HASH` `-168072926` to `-1897999924` (`vibrato`, `vibratoMod` cut). JS codec green.
+- **Corpus, bit-identical** (`tmp/naming/corpus-pp-s2.txt` against `corpus-pp-before.txt`): 17 of 18 rows identical,
+  the songs whose text changed included (Remix: Echo um Echo, Seltsamere Dinge, The Synthsale Piper's Last Rave, frozen
+  Stranger Things); live Kokon differs, as in step 1, from the maintainer's own edits. Kokon from HEAD's text: before is
+  HEAD's text with `depth` (`f0bf378664bc2077`, the step 1 render), after is the same text with the same four
+  `semitones` renames (`$S/songs/kokon-head-s2.ks`): `f0bf378664bc2077`, identical. Der Schmetterling is unmodified in
+  the tree, so its live row is HEAD's text: identical.
+- **Engagement mutant** (sprudel writes `vibrato.semitones` divided by 12.5): exactly the predicted songs moved, Remix:
+  Echo um Echo (TetrisRemix), Seltsamere Dinge (StrangerThings), The Synthsale Piper's Last Rave (IrishLamentTechno),
+  frozen Stranger Things and Kokon (live and HEAD's text, `e835aea7145e5a0e`); the 13 others stayed (Die Kirschblüte and
+  The Synthsale Piper's Farewell play an authored `vibrato` node, which the door does not touch). Restored, `cmp` clean.
+- **What "bit-identical" excludes** (review round 1, A3 and B MINOR 3, measured by reviewer B on the full engine; no
+  corpus song has one of these shapes): D6, `vib` is lost on an instrument without `classic()`; D1, the strip's
+  vibrato bent an `fm` modulator and parameter-position oscillators, the stage does not: `s("sgbell").vib(...)` -5.0 dB
+  diff RMS and an authored fm instrument -2.8 dB until step 3b bends the modulator again, a musical oscillator in a
+  parameter position -15.1 dB for good; the regroupings, at most about 7.3e-13, about -270 dB: `vib` + `penv` +
+  `accelerate` (6.3e-13), `vib` + `accelerate` + `fm` (6.9e-13, new in this step), all four doors (7.3e-13), an own
+  `pitchEnvelope` + `vib` + `accelerate` (5.2e-13), all four ending with step 3, and two own pitch nodes + `vib`
+  (5.0e-13, for good, plan section 2); the restorations: `vib` + `penv` + `fm` (the sample instrument too) and an own
+  `vibrato` + `vib` + `penv` are back to the bits from before step 1. The raw edges of the vibrato row in section 3
+  (a depth past about 598 semitones, non-finite rates and a +Infinity depth) apply.
+- **Door matrix** (the scratch spec of step 1 with two more rows, HEAD `5bb3c78f` exported against the tree): 450 rows,
+  420 identical; the 30 rows of "vib with penv and accelerate (3 factors)" differ, as section 3 predicts ("across steps":
+  tree `(V * P) * A` against step 1's `P * (V * A)`): max abs 7.6e-14 at a peak of 0.46 (supersaw at analog 0.5, onset
+  37), about -256 dB, one rounding. Step 3 moves accelerate between them and restores the strip's grouping. Every other
+  door row, the two-door rows (vib with penv, accelerate or fm) and the off rows (`vib(4)`, `vib(5, -0.3)`) identical.
+- **Mutation checks** (one lock call each, restored, `cmp` clean): `classic()`'s rate fixed at the default (red: the
+  7.3 Hz oracle rows, the `vibrato.rate` engagement row, the door-parity row); its depth wired to the rate slot (red:
+  every oracle row, the off row, the guard); `vibrato.semitones` defaulting to `SLOT_UNSET` (red: the guard row "an
+  unwritten `vibrato.semitones` builds no vibrato", the off row, `ClassicTailSpec`); sprudel writing the rate under
+  `vibrato.semitones` (red: `ClassicSlotParamsSpec` twice, the door-parity row); the early return ignoring `pitchMod`
+  (red: the vibrato row); the reader reading the rate (red: door parity); `Ignitor.slot.vibrato.semitones` the rate
+  slot (red: `KlangScriptClassicDoorParitySpec`); the law's `/ 12.0` as `/ 12.5` (red: the six oracle rows); the
+  `Param` leaf reading a non-finite override raw (red: the non-finite row); the vibrato nested inside the pitch
+  envelope (red: `ClassicTailSpec`'s order and vocabulary). Review round 1: `PitchModulationTest`'s FM row now checks
+  the product against each door alone (red when the strip's FM is not built, restored `cmp` clean); the stale strip
+  texts (`ModBlockingIgnitor`, four test KDocs, `PitchModDefaults.kt`), the `vib` sentence in `/dsl-design` section 4
+  and the per-step checklist above step 3 were added.
+- **Cost, the baseline for steps 3 and 4** (review round 1, B MINOR 2: one voice through `VoiceFactory`, HEAD / tree /
+  HEAD again as the control, medians of 3): gated off (rate only, or no `vib`) is free to render. Gated on, V8
+  production bundle: a saw + `vib` about +22 percent per block (+544 to +600 ns; pinned 1.216, unpinned 1.231, controls
+  1.003 and 1.025), a supersaw +8 to +10 percent, sgpad (two pitched sources) +16 to +19 percent (+700 to +800 ns),
+  0.02 to 0.03 percent of a 2.67 ms block; render bytes equal on both sides; build +2.0 to +2.1 KB per voice. JVM: +7 to
+  +12 percent render (saw 1810 to 2021 ns), allocation-free, build +1.2 to +1.4 KB per voice. My own
+  `sine+vibrato+tremolo` run through `IgnitorBenchmark` (V8 pinned 1.057, unpinned 1.020; JVM 1.068) dilutes the
+  vibrato with the tremolo and the harness, so B's isolated numbers are the baseline. The cause: the strip's vibrato
+  was one loop writing one buffer; the tree adds the memo, a `ModApplyingIgnitor` per pitched source (two scratch
+  buffers, two copies), two `readParam`s and a `safeOut` per sample.
+- **Found on the way.** `AccelerateRenderer` is now the strip's first renderer, so its multiply-in branch has no
+  caller until step 3 deletes the renderer (`PitchModulationTest` guarded it through the strip vibrato; its row now
+  combines a tree vibrato with the strip's accelerate). The per-door `SampleInstrumentSpec` row is again the ramp probe
+  (step 1's reason).
+- **Suites.** `audio_bridge` jvmTest 146 and jsTest 264; `audio_be` jvmTest 2,417 and jsBrowserTest 2,312; `sprudel`
+  jvmTest 3,480 test cases (skipped ones included); `klangscript-libs` jvmTest 832 and jsTest 608;
+  `BuiltInSongsSmokeTest` (the live Kokon included), `SongBenchmarkCasesCompileSpec`, `DslDocExamplesSpec` green;
+  `compileTestKotlinJs` of `audio_bridge`, `audio_be`, `sprudel`, `klangscript-libs` and the root green.
+
+#### Per-step checklist for steps 3 to 5 (Standard 3: every escape closes one hole)
+
+Steps 1 and 2 both overstated their records (review round 1 of each: "bit-identical" without the exceptions, the
+identity table's non-finite rows). So every later step, before its record says "bit-identical" anywhere:
+
+- **(a) Name every shape that is NOT bit-identical**, with measured numbers, in the step record AND in every KDoc and
+  `MEMORY.md` claim the step writes: D1 (an `fm` modulator, a parameter-position oscillator), D6 (bare instruments),
+  the regroupings (three or more pitch factors on one path; which end and which are for good), the restorations, and
+  the non-finite reads.
+- **(b) Render NaN, +Infinity, -Infinity and one magnitude past `SAFE_MAX`** for EVERY knob of the door being moved,
+  HEAD against the tree on the full engine, and state each result in the identity table of section 3.
+- **(c) Record the per-voice cost** against HEAD as the step's baseline: V8 production bundle pinned and unpinned,
+  and the JVM, render and build, with an old-against-old control, the door isolated (not diluted by other stages).
+
 #### Step 3. Accelerate, and one glide base: the gate (M, a sound change for the sprudel door)
 
 Decision D2 (maintainer, 2026-10-08): **the glide spans the gate**, onset to gate close, for both doors: "gliding to
@@ -487,7 +584,9 @@ at the end of the pipeline and in the public voice (`/public-voice`; review roun
 `src/jsMain/resources/klang-whitepaper.html:1733-1735` ("the engine runs the pitch calls ... in front of every
 instrument"), `whitepaper/fig-three-owners.html:202`, `whitepaper/fig-classic-stages.html:166` and its `STAGES` list
 at `:195` (no pitch stage), `whitepaper/fig-two-senders.html:374-378` (`VoiceData`'s fields in declaration order, the
-cut fields included; line numbers as of step 1). Proof: pure removal, the corpus
+cut fields included; line numbers as of step 1). And the planning texts that still name the strip as live:
+`docs/tasks/voice-takeover.md:259-261` (`VibratoRenderer` as a sibling) and `docs/plans/aaa-production-tricks.md:65`
+("vibrato, accelerate, pitch envelope, fm ... still outside the tree"). Proof: pure removal, the corpus
 identical; about 38 files name `freqModBuffer`, most of them specs building a `RenderContext`.
 
 ### 5. The edges

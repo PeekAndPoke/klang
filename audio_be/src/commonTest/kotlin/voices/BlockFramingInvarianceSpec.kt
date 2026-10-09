@@ -78,7 +78,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         startFrame: Int,
         blockFrames: Int,
         pid: String = "framing",
-        /** Lets a row add pitch-door modulation (the strip's `vibrato` and `accelerate`, the pitch envelope's slots). */
+        /** Lets a row add pitch-door modulation (the strip's `accelerate`, the vibrato's and pitch envelope's slots). */
         dataMod: (VoiceData) -> VoiceData = { it },
     ): DoubleArray {
         val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", dsl.classic()) }
@@ -295,8 +295,9 @@ class BlockFramingInvarianceSpec : StringSpec({
     // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT `Voice.Fm`. The voice's own pitch
     // pipeline renderers (`voices/strip/pitch`) were therefore untouched by this harness, which is what P4 is about.
     //
-    // Only the PER-SAMPLE ones belong on a bit-identity list. `VibratoRenderer`, the pitch envelope (the strip's
-    // `PitchEnvelopeRenderer` until pitch pipeline step 1, `classic()`'s stage since) and `AccelerateRenderer` all
+    // Only the PER-SAMPLE ones belong on a bit-identity list. The vibrato and the pitch envelope (the strip's
+    // `VibratoRenderer` and `PitchEnvelopeRenderer` until pitch pipeline steps 2 and 1, `classic()`'s stages since) and
+    // `AccelerateRenderer` all
     // derive their position per sample from
     // `blockStart + offset` (+ a phase accumulator, in vibrato's case, advanced once per rendered
     // sample), so they are Class 1.
@@ -308,7 +309,8 @@ class BlockFramingInvarianceSpec : StringSpec({
     // and Class 2 means "named, not fixed". `MidBlockOnsetControlRateSpec` pins the part of it that
     // IS fixed: the first evaluation lands on the voice's onset, not the block's first frame.
     val stripNodes = listOf<Pair<String, (VoiceData) -> VoiceData>>(
-        "strip vibrato" to { d -> d.copy(vibrato = 5.0, vibratoMod = 0.4) },
+        // The vibrato is `classic()`'s stage since pitch pipeline step 2, filled through its `vibrato.*` slots.
+        "classic vibrato" to { d -> d.withClassicSlots(DoorFields(vibratoRate = 5.0, vibratoSemitones = 0.4)) },
         // A sustain and a release inside the render: the gate at 4813 frames starts a 0.03 s release
         // (1323 frames) that ends inside the rendered tail, so the release path is framed too.
         // Since pitch pipeline step 1 the pitch envelope is `classic()`'s stage (the probe ends in `classic()`), filled

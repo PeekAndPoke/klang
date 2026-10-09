@@ -246,6 +246,9 @@ sealed interface IgnitorDsl {
         // door's word (`lpf.freq`, `crush.bits`); each group's KDoc in `IgnitorDslClassic.kt` names
         // the defaults and why.
 
+        /** The vibrato stage, outside the pitch envelope: `vibrato.rate` and `vibrato.semitones` (the switch). */
+        val vibrato: VibratoSlots = VibratoSlots()
+
         /** The pitch envelope stage, `classic()`'s first: `penv.semitones` (the switch) and its four stages. */
         val penv: PitchEnvelopeSlots = PitchEnvelopeSlots()
 
@@ -2177,7 +2180,7 @@ sealed interface IgnitorDsl {
      *
      * @param rate LFO frequency in Hz (default 5.0)
      * @param semitones modulation depth in SEMITONES (default 0.25 ≈ quarter-semitone wobble).
-     *   Matches the sprudel `vibratoMod()` unit; pitch params are named by their unit.
+     *   Sprudel's `vib(rate, semitones)` fills `classic()`'s vibrato stage, this node, through the `vibrato.*` slots.
      */
     @WireName("vibrato")
     data class Vibrato(

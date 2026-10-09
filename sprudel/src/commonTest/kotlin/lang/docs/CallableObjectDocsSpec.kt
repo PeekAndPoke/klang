@@ -142,7 +142,7 @@ class CallableObjectDocsSpec : StringSpec({
         val page = KlangDocsRegistry().apply { registerAll(generatedSprudelDocs) }
         mapOf(
             "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "comp" to "compressor", "uni" to "unison",
-            "vib" to "vibrato", "pamt" to "penv", "vel" to "velocity", "o" to "orbit", "d" to "density", "clip" to "legato",
+            "vib" to "vibrato", "vel" to "velocity", "o" to "orbit", "d" to "density", "clip" to "legato",
         ).forEach { (alias, canonical) ->
             withClue(alias) {
                 page.callFormFor(page.get(alias).shouldNotBeNull()) shouldBe page.get(canonical).shouldNotBeNull().callForm.shouldNotBeNull()

@@ -59,7 +59,8 @@ package io.peekandpoke.klang
  * and the 2026-09-28 Master DSL retirement (phase 3 step 12 C5: `master(Master(m => m.` ->
  * `master(Katalyst(k => k.`, the output runs the same chain type as an orbit; same stages and values,
  * the render bit-identical), and the 2026-10-03 Ignitor/Katalyst naming (the script object, its slot accessor
- * and its slot setter under their new names; the render bit-identical).
+ * and its slot setter under their new names; the render bit-identical), and the 2026-10-09 pitch pipeline step 2
+ * (`vibrato(rate = r, depth = d)` -> `vibrato(rate = r, semitones = d)`, one call; the render bit-identical).
  *
  * 2026-09-19, the first migration whose renders are not bit-identical to older captures (the second is the
  * 2026-09-26 `.classic()` migration above):
@@ -563,7 +564,7 @@ stack(
         .pan(sine.range(0.15, 0.8).slow(32)).clip(0.79)
     ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.75).body(material = "glass").vowel(vowel = "i a e".slow(12), wet = 0.2)
     .superimpose(
-      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0 * 0.45)).vibrato(rate = "0.51".add(perlin.div(10)), depth = 0.05)
+      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0 * 0.45)).vibrato(rate = "0.51".add(perlin.div(10)), semitones = 0.05)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
         .crush(bits = "1.85".add(berlin.range(-1, 1).mul(0.5).slow(4)), oversample = 1).lpf(5.5 * 440).hpf(300)
         .pan(0.2).superimpose(pan(0.8))                

@@ -16,13 +16,12 @@ the composed pipeline.
 
 ```
 Pitch stage     (PitchPipelineBuilder → writes freqModBuffer)
-  1. Vibrato            : LFO pitch modulation
-  2. Accelerate         : pitch ramp modulation
-  3. FM                 : frequency modulation
-  (sprudel's pitch envelope left this stage in pitch pipeline step 1: it is classic()'s first stage)
+  1. Accelerate         : pitch ramp modulation
+  2. FM                 : frequency modulation
+  (sprudel's pitch envelope and vibrato left this stage in pitch pipeline steps 1 and 2: classic()'s pitch stages)
 
 Ignite stage    (IgniteRenderer → writes audioBuffer)
-  4. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds)
+  3. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds)
 
 Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitude envelope with a
                  static release; the one home of the rule is BuiltIgnitor.endsInEnvelope. adsrOff
@@ -32,14 +31,14 @@ Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitu
                  pattern wrote; otherwise the fade does)
 
 Send stage      (SendRenderer → mixes to cylinder)
-  5. pan + gain → cylinder mix
+  4. pan + gain → cylinder mix
 ```
 
 **The voice chain is `classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`), a tail of slotted
 Ignitor stages in the classic subtractive order:
 
 ```
-this -> pitchEnvelope -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
+this -> pitchEnvelope -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
 ```
 
 The pitch stages sit at the front, directly on the instrument (`docs/tasks/pitch-pipeline-into-the-tree.md`
@@ -49,7 +48,8 @@ path can regroup it (one rounding, about -270 dB): while some doors still run on
 of the instrument's own pitch nodes meet a door. Unlike the strip, a classic pitch stage does not bend an `fm` node's
 modulator until pitch pipeline step 3b bends it again (decision D1 (b)), and it never bends a musical oscillator in a
 parameter position, such as a filter LFO (plan section 2). The pitch envelope is the
-Ignitor `pitchEnvelope` node, filled by the `penv.*` and `penvCurves.*` slots (sprudel's `penv`, `penvCurves`).
+Ignitor `pitchEnvelope` node, filled by the `penv.*` and `penvCurves.*` slots (sprudel's `penv`, `penvCurves`); the
+vibrato is the Ignitor `vibrato` node, filled by `vibrato.rate` and `vibrato.semitones` (sprudel's `vib`).
 
 Every knob is a slot (`<door>.<param>`) that the pattern fills through `VoiceData.ignitorParams`, and a stage
 whose slot is at its off value is not built. Every built-in sound is `source.pregain().classic()`, every
@@ -63,8 +63,8 @@ not per-voice: applied on the orbit bus after all voices mix into the cylinder.
 ### Voice construction
 
 `VoiceFactory` builds each `Voice` from `VoiceData`: the instrument's tree (`IgnitorRegistry.createExciter`,
-or the sample instrument for a sample), the pitch pipeline from the typed pitch fields that are left (vibrato,
-accelerate, FM), and the stages
+or the sample instrument for a sample), the pitch pipeline from the typed pitch fields that are left (accelerate,
+FM), and the stages
 after the tree. `Voice` itself holds the lifecycle frames, `cylinderId`, `gain`, `pan`,
 `katalystParams`, `cut`, the cull window and the pipeline.
 
@@ -143,13 +143,6 @@ class Envelope(attack: Double, decay: Double, sustain: Double, release: Double)
 class Fm(ratio: Double, attack: Double, decay: Double, sustain: Double, env: Double)
 // ratio: modulator freq = carrier * ratio
 // env: modulation depth in semitones (scaled by envelope)
-```
-
-### Vibrato
-
-```kotlin
-class Vibrato(depth: Double, rate: Double)
-// Writes into freqModBuffer as a slow sinusoidal pitch deviation
 ```
 
 ## Envelope / voice-lifetime semantics

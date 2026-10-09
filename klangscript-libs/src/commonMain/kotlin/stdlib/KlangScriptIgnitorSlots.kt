@@ -145,6 +145,10 @@ object KlangScriptIgnitorSlots {
     // word (`lpf.freq`, `crush.bits`, `adsr.attack`); the Kotlin door is `IgnitorDsl.Slots.lpf.freq`, the
     // same object.
 
+    /** The vibrato stage's slots: `rate`, `semitones` (the switch). A pitch stage of `classic()`, outside the pitch envelope. */
+    @KlangScript.Property
+    val vibrato: KlangScriptIgnitorVibratoSlots = KlangScriptIgnitorVibratoSlots
+
     /** The pitch envelope stage's slots: `semitones` (the switch), `attack`, `decay`, `sustain`, `release`. `classic()`'s first stage. */
     @KlangScript.Property
     val penv: KlangScriptIgnitorPenvSlots = KlangScriptIgnitorPenvSlots

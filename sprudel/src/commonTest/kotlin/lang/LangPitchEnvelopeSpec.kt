@@ -34,9 +34,9 @@ class LangPitchEnvelopeSpec : StringSpec({
 
     // ---- sustain (replaced the anchor, phase 3 step 5b (c1)) ----
 
-    "every penv and pamt form forwards sustain and release to their own slots, by name and positionally" {
+    "every penv form forwards sustain and release to their own slots, by name and positionally" {
         // Sustain and release are the two slots a forwarding call can swap unseen: both are numbers with
-        // neighbouring positions. Distinct values in each, on all forms of both names, mapper and chained
+        // neighbouring positions. Distinct values in each, on all forms of the door, mapper and chained
         // mapper included (the chain forwards its own argument list).
         fun check(forms: List<Pair<String, SprudelPattern?>>) = dslInterfaceTests(*forms.toTypedArray()) { _, events ->
             events.shouldNotBeEmpty()
@@ -49,21 +49,19 @@ class LangPitchEnvelopeSpec : StringSpec({
             }
         }
 
-        for (name in listOf("penv", "pamt")) {
-            val named = "semitones = 12, attack = 0.01, decay = 0.2, sustain = 0.5, release = 0.3"
-            val positional = "12, 0.01, 0.2, 0.5, 0.3"
+        val named = "semitones = 12, attack = 0.01, decay = 0.2, sustain = 0.5, release = 0.3"
+        val positional = "12, 0.01, 0.2, 0.5, 0.3"
 
-            for (args in listOf(named, positional)) {
-                withClue("$name($args)") {
-                    check(
-                        listOf(
-                            "script pattern" to SprudelPattern.compile("""note("c").$name($args)"""),
-                            "script string" to SprudelPattern.compile(""""c".$name($args)"""),
-                            "script mapper" to SprudelPattern.compile("""note("c").apply($name($args))"""),
-                            "script chained mapper" to SprudelPattern.compile("""note("c").apply(gain(1).$name($args))"""),
-                        ),
-                    )
-                }
+        for (args in listOf(named, positional)) {
+            withClue("penv($args)") {
+                check(
+                    listOf(
+                        "script pattern" to SprudelPattern.compile("""note("c").penv($args)"""),
+                        "script string" to SprudelPattern.compile(""""c".penv($args)"""),
+                        "script mapper" to SprudelPattern.compile("""note("c").apply(penv($args))"""),
+                        "script chained mapper" to SprudelPattern.compile("""note("c").apply(gain(1).penv($args))"""),
+                    ),
+                )
             }
         }
 
@@ -73,10 +71,6 @@ class LangPitchEnvelopeSpec : StringSpec({
                 "penv string" to "c".penv(12, 0.01, 0.2, 0.5, 0.3),
                 "penv mapper" to note("c").apply(penv(12, 0.01, 0.2, 0.5, 0.3)),
                 "penv chained mapper" to note("c").apply(gain(1).penv(12, 0.01, 0.2, 0.5, 0.3)),
-                "pamt pattern" to note("c").pamt(12, 0.01, 0.2, 0.5, 0.3),
-                "pamt string" to "c".pamt(12, 0.01, 0.2, 0.5, 0.3),
-                "pamt mapper" to note("c").apply(pamt(12, 0.01, 0.2, 0.5, 0.3)),
-                "pamt chained mapper" to note("c").apply(gain(1).pamt(12, 0.01, 0.2, 0.5, 0.3)),
             ),
         )
     }

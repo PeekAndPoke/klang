@@ -68,7 +68,7 @@ already means a mapper, so the form would be ambiguous there.
 ## 4. Parked for the maintainer
 
 - **§D1, the short form `.kat`.** The register keeps a few short forms on purpose (`comp`, `uni`,
-  `vib`, `pamt`), and `katp` already uses the stem. If `kat` joins them it is added on all four
+  `vib`; `pamt` was retired 2026-10-09), and `katp` already uses the stem. If `kat` joins them it is added on all four
   door forms of `katalyst`, recorded in the rules register beside the others, and the docs use
   ONE spelling in examples (the long one) so the tutorial text stays searchable. No short form
   for `master`: it is short already.

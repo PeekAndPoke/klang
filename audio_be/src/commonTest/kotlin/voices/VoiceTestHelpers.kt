@@ -71,7 +71,6 @@ object VoiceTestHelpers {
         signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
 
         // Dynamics
         gain: Double = 1.0,
@@ -124,7 +123,6 @@ object VoiceTestHelpers {
 
         // The voice's stages: Pitch → Ignite (the Send stage is appended by the voice)
         val pipeline = buildPitchPipeline(
-            vibrato = vibrato,
             accelerate = accelerate,
             fm = fm,
             freqHz = freqHz,
@@ -169,7 +167,6 @@ object VoiceTestHelpers {
         signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope? = null,
@@ -178,7 +175,7 @@ object VoiceTestHelpers {
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
         freqHz = freqHz, signal = signal, fm = fm, accelerate = accelerate,
-        vibrato = vibrato, gain = gain, pan = pan,
+        gain = gain, pan = pan,
         envelope = envelope,
         katalystParams = katalystParams,
     )
@@ -201,7 +198,6 @@ object VoiceTestHelpers {
         stopFrame: Double = Double.MAX_VALUE,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
-        vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope? = null,
@@ -221,7 +217,7 @@ object VoiceTestHelpers {
             rng = testRandom,
         ),
         fm = fm, accelerate = accelerate,
-        vibrato = vibrato, gain = gain, pan = pan,
+        gain = gain, pan = pan,
         envelope = envelope,
     )
 }

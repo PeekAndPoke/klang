@@ -354,7 +354,7 @@ class IgnitorRegistryTest : StringSpec({
             val onepole = n.inner.shouldBeInstanceOf<IgnitorDsl.OnePoleLowpass>()
 
             onepole.freq shouldBe IgnitorDsl.Slots.onepole
-            onepole.inner.shouldBeInstanceOf<IgnitorDsl.PitchEnvelope>().inner shouldBe saw.pregain()
+            onepole.inner.shouldBeInstanceOf<IgnitorDsl.Vibrato>().inner.shouldBeInstanceOf<IgnitorDsl.PitchEnvelope>().inner shouldBe saw.pregain()
         }
     }
 

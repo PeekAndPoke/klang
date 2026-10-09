@@ -12,18 +12,16 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  * Builds the pitch pipeline (BlockRenderer chain) from voice parameters.
  *
  * Pipeline order:
- * 1. Vibrato (LFO pitch modulation)
- * 2. Accelerate (pitch glide over voice lifetime)
- * 3. FM Synthesis (frequency modulation)
+ * 1. Accelerate (pitch glide over voice lifetime)
+ * 2. FM Synthesis (frequency modulation)
  *
- * Sprudel's pitch envelope (`penv`) left this pipeline in pitch pipeline step 1: it is `classic()`'s pitch envelope
- * stage now (`docs/tasks/pitch-pipeline-into-the-tree.md`).
+ * Sprudel's pitch envelope (`penv`) and vibrato (`vib`) left this pipeline in pitch pipeline steps 1 and 2: they are
+ * `classic()`'s pitch stages now (`docs/tasks/pitch-pipeline-into-the-tree.md`).
  *
- * Only active stages are included (e.g. vibrato is skipped if depth == 0).
+ * Only active stages are included (e.g. FM is skipped if depth == 0).
  * Returns empty list if no pitch modulation is active.
  */
 fun buildPitchPipeline(
-    vibrato: Voice.Vibrato,
     accelerate: Voice.Accelerate,
     fm: Voice.Fm?,
     freqHz: Double,
@@ -34,10 +32,6 @@ fun buildPitchPipeline(
     // (decided semantics, docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
     endFrame: Double,
 ): List<BlockRenderer> = buildList {
-    if (vibrato.semitones > 0.0) {
-        add(VibratoRenderer(vibrato, sampleRate))
-    }
-
     if (accelerate.semitones != 0.0 && endFrame > startFrame) {
         add(AccelerateRenderer(accelerate, totalFrames = endFrame - startFrame))
     }

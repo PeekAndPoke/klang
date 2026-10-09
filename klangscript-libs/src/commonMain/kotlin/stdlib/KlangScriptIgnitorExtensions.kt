@@ -371,9 +371,10 @@ object KlangScriptIgnitorExtensions {
     // ── The classic tail ─────────────────────────────────────────────────────
 
     /**
-     * Wraps this sound in the classic synth voice: the pitch envelope on the source, then the pattern's one-pole
-     * lowpass, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that
+     * Wraps this sound in the classic synth voice: the pitch envelope and the vibrato on the source, then the
+     * pattern's one-pole lowpass, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that
      * order, every one of them driven by a slot the pattern's doors fill (`Ignitor.slot.penv.semitones`,
+     * `Ignitor.slot.vibrato.semitones`,
      * `Ignitor.slot.onepole`, `Ignitor.slot.lpf.freq`, `Ignitor.slot.adsr.attack`, ...). A stage the note does not write is not built, so an untouched
      * `classic()` costs one envelope and nothing else.
      *
@@ -381,17 +382,17 @@ object KlangScriptIgnitorExtensions {
      * in `classic()` is the whole voice: the voice doors (`onepole(...)`, `lpf(...)`, `adsr(...)`, ...) reach its
      * slots, and nothing runs after it but the channel (`gain`, `pan`). Every built-in sound (`sound("saw")`) IS a
      * source with this tail. Every instrument is played as its tree. Around it the engine adds only the pitch doors
-     * that still run outside the tree, in front (`vibrato`, `accelerate`, `fm`, until each moves into `classic()`),
+     * that still run outside the tree, in front (`accelerate`, `fm`, until each moves into `classic()`),
      * the teardown fade when the tree does not end in its own envelope (`BuiltIgnitor.endsInEnvelope`), and the
      * channel after (`gain`, `pan`); so without `classic()` the doors of `classic()` reach only the slots the tree
-     * places itself. The pattern's pitch envelope (`penv`) is a `classic()` stage: an instrument without `classic()`
-     * ignores it, as it ignores `lpf` or `adsr`. A pattern also reaches the slots by name:
+     * places itself. The pattern's pitch envelope (`penv`) and vibrato (`vib`) are `classic()` stages: an instrument
+     * without `classic()` ignores them, as it ignores `lpf` or `adsr`. A pattern also reaches the slots by name:
      * `ignp("lpf.freq", 1800)`.
      *
      * Want another order? Write your own tail from the same `Ignitor.slot` slots, as far as a door takes them: every
      * filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs, the pitch envelope's
-     * `penv.*` and `penvCurves.*` (`pitchEnvelope(Ignitor.slot.penv.semitones, ...)`) and the envelope's stages and
-     * curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
+     * `penv.*` and `penvCurves.*` (`pitchEnvelope(Ignitor.slot.penv.semitones, ...)`), the vibrato's `vibrato.*`
+     * (`vibrato(Ignitor.slot.vibrato.rate, Ignitor.slot.vibrato.semitones)`) and the envelope's stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
      * around the instrument. Three groups only `classic()` can place: `lpf.passes` / `hpf.passes` (the filter
      * builder's `passes(n)` takes a number), `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
      * builds a drive into a shaper that always runs and caps its output; `classic()` uses the one distort node that

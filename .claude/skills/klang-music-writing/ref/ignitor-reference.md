@@ -581,10 +581,10 @@ Ignitor.sine(5)  // fixed 5 Hz (for LFO use)
 
 ### `.classic()`: the pattern's voice doors on your instrument
 
-`.classic()` wraps a sound in the classic synth voice: the pitch envelope (on the source), onepole, crush, coarse,
-distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that order. The pattern's `penv`
-reaches only an instrument with `.classic()`; `vib`, `accelerate` and `fm` still reach every instrument (they run
-outside the tree until each moves into `classic()`). Make it the LAST call: an instrument whose
+`.classic()` wraps a sound in the classic synth voice: the pitch envelope and the vibrato (on the source), onepole,
+crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that order. The
+pattern's `penv` and `vib` reach only an instrument with `.classic()`; `accelerate` and `fm` still reach every
+instrument (they run outside the tree until each moves into `classic()`). Make it the LAST call: an instrument whose
 tree ends in `.classic()` is a whole voice that ends on its own envelope. `adsrOff()` switches that envelope off, and
 the voice ends on the instrument's own envelope when its `.adsr(...)` (with a fixed release) is the last thing
 built before `.classic()`; anything built after it, a stage of the instrument's own or a filter or other stage the
@@ -608,7 +608,8 @@ readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, 
 same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.bits`, `Ignitor.slot.coarse.factor`,
 `Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
 `Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`,
-the pitch envelope `Ignitor.slot.penv.semitones|attack|decay|sustain|release` (`semitones` is the switch, unset = off)
+the vibrato `Ignitor.slot.vibrato.rate|semitones` (`semitones` is the switch, unset = off), the pitch envelope
+`Ignitor.slot.penv.semitones|attack|decay|sustain|release` (`semitones` is the switch, unset = off)
 and its curves `Ignitor.slot.penvCurves.attack|decay|release`, and the filter envelope curves
 `Ignitor.slot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
 

@@ -11,15 +11,20 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
+import io.peekandpoke.klang.audio_be.ignitor.toExciter
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.vibrato
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
- * The voice's pitch pipeline (vibrato, accelerate, FM) switched on and off through a real voice, and two of its
- * stages multiplying into one frequency-modulation buffer. The stage laws are pinned elsewhere: vibrato and FM in
+ * Pitch modulation switched on and off through a real voice: the vibrato as a tree node (sprudel's `vib` is
+ * `classic()`'s stage since pitch pipeline step 2), the strip's accelerate, and a tree mod combined with the strip's
+ * buffer in `ModApplyingIgnitor`. The laws are pinned elsewhere: the vibrato in `ClassicVibratoSpec` and
  * `ModulatorPhaseWrapSpec`, accelerate in `AccelerateSemitoneLawSpec`, the pitch envelope in `EnvelopeLawSpec` and
- * `FastExp2Spec` (which also pins its multiply-in).
+ * `PitchEnvelopeModFastExp2Spec`.
  */
 class PitchModulationTest : StringSpec({
 
@@ -35,26 +40,26 @@ class PitchModulationTest : StringSpec({
         return sqrt(sum / (to - from))
     }
 
-    "vibrato with depth 0 produces no modulation — and a real depth does" {
-        // Audit F12. Both voices used to be built with `semitones = 0.0` (only `rate` differed,
-        // and rate alone modulates nothing), so this compared a run against ITSELF: true by
-        // construction, and no mutation anywhere could falsify it. The zero-claim only means
-        // something next to a positive control proving the comparison can see a difference.
-        fun render(vibrato: Voice.Vibrato): AudioBuffer {
-            val voice = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), vibrato = vibrato)
+    "vibrato with depth 0 produces no modulation, and a real depth does" {
+        // Audit F12. The vibrato is a tree node since pitch pipeline step 2 (`classic()`'s stage), so the voice
+        // renders it through the instrument: depth 0 and a negative depth are gated off (the bare sine), a real
+        // depth is the positive control that makes the zero claims falsifiable.
+        fun render(rate: Double, semitones: Double?): AudioBuffer {
+            val dsl = if (semitones == null) IgnitorDsl.Sine() else IgnitorDsl.Sine().vibrato(rate = rate, semitones = semitones)
+            val voice = createSynthVoice(blockFrames = bf, signal = dsl.toExciter(random = Random(1)))
             val ctx = createContext(blockFrames = bf)
             voice.render(ctx)
             return ctx.voiceBuffer
         }
 
-        val bare = render(Voice.Vibrato(rate = 0.0, semitones = 0.0))
-        val zeroDepth = render(Voice.Vibrato(rate = 5.0, semitones = 0.0))
-        val negativeDepth = render(Voice.Vibrato(rate = 5.0, semitones = -0.25))
-        val realDepth = render(Voice.Vibrato(rate = 5.0, semitones = 2.0))
+        val bare = render(rate = 0.0, semitones = null)
+        val zeroDepth = render(rate = 5.0, semitones = 0.0)
+        val negativeDepth = render(rate = 5.0, semitones = -0.25)
+        val realDepth = render(rate = 5.0, semitones = 2.0)
 
         // The claim: depth 0 is inert whatever the rate says.
         diffRms(a = zeroDepth, b = bare) shouldBeLessThan 1e-6
-        // ...and so is a negative depth: the pitch pipeline builds the vibrato only for a depth above 0.
+        // ...and so is a negative depth: the gate builds the vibrato only for a depth above 0.
         diffRms(a = negativeDepth, b = bare) shouldBeLessThan 1e-6
         // The control, which is what makes the line above falsifiable at all.
         diffRms(a = realDepth, b = bare) shouldBeGreaterThan 1e-3
@@ -78,26 +83,13 @@ class PitchModulationTest : StringSpec({
         diffRms(a = glide, b = bare) shouldBeGreaterThan 1e-3
     }
 
-    "vibrato and accelerate combine correctly" {
-        // The only guard of accelerate's multiply-in branch (it runs after the vibrato): a mutant that
-        // overwrote the vibrato's buffer instead of multiplying into it is red here and nowhere else in
-        // the audio_be suite (probed 2026-09-27).
-        val voiceBoth = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
-            accelerate = Voice.Accelerate(semitones = 1.0)
-        )
-        val voiceVibratoOnly = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
-        )
-        val voiceAccelOnly = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            accelerate = Voice.Accelerate(semitones = 1.0),
-        )
+    "a tree vibrato and the strip's accelerate combine" {
+        // The vibrato is the instrument's (a tree node, pitch pipeline step 2), the accelerate still the strip's:
+        // the source reads their product (`ModApplyingIgnitor`: the tree mod times the strip's `phaseMod`).
+        val vibrato = { IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.25).toExciter(random = Random(1)) }
+        val voiceBoth = createSynthVoice(blockFrames = bf, signal = vibrato(), accelerate = Voice.Accelerate(semitones = 1.0))
+        val voiceVibratoOnly = createSynthVoice(blockFrames = bf, signal = vibrato())
+        val voiceAccelOnly = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), accelerate = Voice.Accelerate(semitones = 1.0))
 
         val ctxBoth = createContext(blockFrames = bf)
         val ctxVib = createContext(blockFrames = bf)
@@ -113,27 +105,25 @@ class PitchModulationTest : StringSpec({
         (diffFromAcc > 1e-4) shouldBe true
     }
 
-    "pitch modulation affects FM modulator frequency" {
+    "a tree vibrato and the strip's FM combine: the product differs from each alone" {
+        val fm = { Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)) }
         val voiceWithVib = createSynthVoice(
             blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.5),
-            fm = Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0))
+            signal = IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.5).toExciter(random = Random(1)),
+            fm = fm(),
         )
-        val voiceNoVib = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
-            fm = Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0))
-        )
+        val voiceNoVib = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), fm = fm())
+        val voiceNoFm = createSynthVoice(blockFrames = bf, signal = IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.5).toExciter(random = Random(1)))
 
         val ctxWithVib = createContext(blockFrames = bf)
         val ctxNoVib = createContext(blockFrames = bf)
+        val ctxNoFm = createContext(blockFrames = bf)
         voiceWithVib.render(ctxWithVib)
         voiceNoVib.render(ctxNoVib)
+        voiceNoFm.render(ctxNoFm)
 
-        // Vibrato should affect both carrier and FM modulator, producing different output
-        val diff = diffRms(a = ctxWithVib.voiceBuffer, b = ctxNoVib.voiceBuffer)
-        (diff > 1e-4) shouldBe true
+        // Both reach the source: without the vibrato, and without the FM, the voice is something else.
+        (diffRms(a = ctxWithVib.voiceBuffer, b = ctxNoVib.voiceBuffer) > 1e-4) shouldBe true
+        (diffRms(a = ctxWithVib.voiceBuffer, b = ctxNoFm.voiceBuffer) > 1e-4) shouldBe true
     }
 })

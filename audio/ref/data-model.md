@@ -70,10 +70,9 @@ A tree without it plays as it is, and the door slots in the bag go unread.
 
 ### Pitch Modulation
 
-| Field        | Type      | Meaning                          |
-|--------------|-----------|----------------------------------|
-| `vibrato`    | `Double?` | Vibrato LFO rate in Hz           |
-| `vibratoMod` | `Double?` | Vibrato depth in SEMITONES (sprudel `vibrato(depth)`) |
+The vibrato (sprudel's `vib(rate, semitones)`) has no wire field since pitch pipeline step 2: it travels as
+`classic()`'s `vibrato.rate` and `vibrato.semitones` (the switch, 0 or unset is off) slots and fills the Ignitor
+`vibrato` stage `classic()` places outside the pitch envelope.
 
 The pitch envelope (sprudel's `penv` and `penvCurves`) has no wire field since pitch pipeline step 1: it travels as
 `classic()`'s `penv.semitones` (the switch, 0 or unset is off), `penv.attack`, `penv.decay`, `penv.sustain`,

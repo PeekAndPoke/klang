@@ -30,14 +30,14 @@ private fun applyVibratoRate(source: SprudelPattern, args: List<SprudelDslArg<An
     return source._liftOrReinterpretNumericalField(args, vibratoRateMutation)
 }
 
-private val vibratoDepthMutation = voiceSetter { vibratoMod = it?.asDoubleOrNull() }
+private val vibratoSemitonesMutation = voiceSetter { vibratoMod = it?.asDoubleOrNull() }
 
-private fun applyVibratoDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyVibratoSemitones(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.vibratoMod }, update = vibratoDepthMutation)
+        return source._mapNumericField(mapper, read = { it.vibratoMod }, update = vibratoSemitonesMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, vibratoDepthMutation)
+    return source._liftOrReinterpretNumericalField(args, vibratoSemitonesMutation)
 }
 
 /**
@@ -48,11 +48,12 @@ private fun applyVibratoDepth(source: SprudelPattern, args: List<SprudelDslArg<A
  * 0.5 expressive, 1 a wide wobble.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`vibrato(depth = mul(2))`), and the numeric slots read back as `vibrato.rate`, `vibrato.depth`.
+ * a mapper (`vibrato(semitones = mul(2))`), and the numeric slots read back as `vibrato.rate`, `vibrato.semitones`.
  * With no argument at all, the pattern's own values are reinterpreted as `rate`.
  *
- * The engine applies it in front of every instrument, `classic()` or not, from the voice's pitch strip, until the
- * vibrato moves into `classic()` (`docs/tasks/pitch-pipeline-into-the-tree.md`).
+ * The door fills the vibrato stage of `classic()` (the `vibrato.*` slots), the Ignitor `vibrato` node; an instrument
+ * without `classic()` ignores it, like the other `classic()` doors. A rate alone (`vib(4)`) switches nothing on: the
+ * depth is the switch.
  *
  * ```KlangScript(Playable)
  * note("c4 e4").s("saw").vibrato(5, 0.5)                                  // a singing vibrato
@@ -67,37 +68,37 @@ private fun applyVibratoDepth(source: SprudelPattern, args: List<SprudelDslArg<A
  * ```
  *
  * @param rate LFO rate in Hz.
- * @param depth Depth in semitones.
+ * @param semitones Depth in semitones.
  *
  * @scope voice
  * @category tonal
- * @tags vibrato, rate, depth
+ * @tags vibrato, rate, semitones
  */
 @KlangScript.Function
-fun SprudelPattern.vibrato(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.vibrato(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     // A tail-only call must not touch rate: reinterpret runs only on a fully bare call.
-    var p = if (rate != null || !(depth != null)) {
+    var p = if (rate != null || !(semitones != null)) {
         applyVibratoRate(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
     } else {
         this
     }
-    if (depth != null) p = applyVibratoDepth(p, listOf<Any?>(depth).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (semitones != null) p = applyVibratoSemitones(p, listOf<Any?>(semitones).asSprudelDslArgs(callInfo?.forParam(1)))
     return p
 }
 
 /** Parses this string as a pattern, then applies [vibrato]. */
 @KlangScript.Function
-fun String.vibrato(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(rate, depth, callInfo)
+fun String.vibrato(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(rate, semitones, callInfo)
 
 /** Chains a [vibrato] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.vibrato(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vibrato(rate, depth, callInfo) }
+fun PatternMapperFn.vibrato(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.vibrato(rate, semitones, callInfo) }
 
 /**
  * The `vibrato` object: `vibrato(...)` sets the slots, and each numeric slot reads back as a child,
- * `vibrato.rate`, `vibrato.depth`.
+ * `vibrato.rate`, `vibrato.semitones`.
  *
  * @scope voice
  * @category tonal
@@ -111,19 +112,19 @@ object vibrato {
     @KlangScript.Property
     val rate: FieldAccessor = FieldAccessor { it.vibrato }
 
-    /** The depth slot of each event, as a value other setters can read. */
+    /** The semitones slot (the depth) of each event, as a value other setters can read. */
     @KlangScript.Property
-    val depth: FieldAccessor = FieldAccessor { it.vibratoMod }
+    val semitones: FieldAccessor = FieldAccessor { it.vibratoMod }
 
     /**
      * The setter, see [SprudelPattern.vibrato].
      *
      * @param rate LFO rate in Hz.
-     * @param depth Depth in semitones.
+     * @param semitones Depth in semitones.
      */
     @KlangScript.Invoke
-    operator fun invoke(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.vibrato(rate, depth, callInfo) }
+    operator fun invoke(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.vibrato(rate, semitones, callInfo) }
 }
 
 /**
@@ -138,13 +139,13 @@ object vibrato {
  * @tags vib, vibrato
  */
 @KlangScript.Function
-fun SprudelPattern.vib(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    vibrato(rate, depth, callInfo)
+fun SprudelPattern.vib(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    vibrato(rate, semitones, callInfo)
 
 /** Parses this string as a pattern, then applies [vib]. */
 @KlangScript.Function
-fun String.vib(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.vibrato(rate, depth, callInfo)
+fun String.vib(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.vibrato(rate, semitones, callInfo)
 
 /**
  * Alias of [vibrato]: the same object under its short name.
@@ -158,8 +159,8 @@ val vib: vibrato = vibrato
 
 /** Chains a [vib] step onto this [PatternMapperFn] (see [SprudelPattern.vib]). */
 @KlangScript.Function
-fun PatternMapperFn.vib(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.vibrato(rate, depth, callInfo)
+fun PatternMapperFn.vib(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.vibrato(rate, semitones, callInfo)
 
 // -- penv ------------------------------------------------------------------------------------------------------------
 
@@ -229,7 +230,7 @@ private fun applyPenvRelease(source: SprudelPattern, args: List<SprudelDslArg<An
  * are reinterpreted as `semitones`.
  *
  * The door fills the pitch envelope stage of `classic()` (the `penv.*` slots), the Ignitor `pitchEnvelope` node; an
- * instrument without `classic()` ignores it, like every voice door.
+ * instrument without `classic()` ignores it, like the other `classic()` doors.
  *
  * ```KlangScript(Playable)
  * note("c2*4").s("sine").penv(24, 0.001, 0.08)                               // a kick: two octaves down onto the note
@@ -357,62 +358,6 @@ object penv {
     ): PatternMapperFn =
         { p -> p.penv(semitones, attack, decay, sustain, release, callInfo) }
 }
-
-/**
- * `pamt`, the short name of [penv]: the same door, use whichever reads better.
- *
- * ```KlangScript(Playable)
- * note("c2*4").s("sine").pamt(24, 0.001, 0.08)
- * ```
- *
- * @scope voice
- * @category tonal
- * @tags pamt, penv
- */
-@KlangScript.Function
-fun SprudelPattern.pamt(
-    semitones: PatternLike? = null,
-    attack: PatternLike? = null,
-    decay: PatternLike? = null,
-    sustain: PatternLike? = null,
-    release: PatternLike? = null,
-    callInfo: CallInfo? = null
-): SprudelPattern =
-    penv(semitones, attack, decay, sustain, release, callInfo)
-
-/** Parses this string as a pattern, then applies [pamt]. */
-@KlangScript.Function
-fun String.pamt(
-    semitones: PatternLike? = null,
-    attack: PatternLike? = null,
-    decay: PatternLike? = null,
-    sustain: PatternLike? = null,
-    release: PatternLike? = null,
-    callInfo: CallInfo? = null
-): SprudelPattern =
-    this.penv(semitones, attack, decay, sustain, release, callInfo)
-
-/**
- * Alias of [penv]: the same object under its short name.
- *
- * @scope voice
- * @category tonal
- * @tags pamt, penv, accessor
- */
-@KlangScript.Constant
-val pamt: penv = penv
-
-/** Chains a [pamt] step onto this [PatternMapperFn] (see [SprudelPattern.pamt]). */
-@KlangScript.Function
-fun PatternMapperFn.pamt(
-    semitones: PatternLike? = null,
-    attack: PatternLike? = null,
-    decay: PatternLike? = null,
-    sustain: PatternLike? = null,
-    release: PatternLike? = null,
-    callInfo: CallInfo? = null
-): PatternMapperFn =
-    this.penv(semitones, attack, decay, sustain, release, callInfo)
 
 // -- penvCurves ------------------------------------------------------------------------------------------------------
 

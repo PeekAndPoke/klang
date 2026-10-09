@@ -69,8 +69,8 @@ the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives
 orbits for independent bus effects. Everything else is **per-voice**: `lpf`/`hpf`/`bpf`/`notch` +
 envelopes, `distort`, `crush`, `coarse`, `adsr`, `tremolo` as `classic()`'s slots in the instrument's
 Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; the pitch envelope as `classic()`'s `penv.*`
-slots (pitch pipeline step 1); `vibrato`, `accelerate` and `fm` in the voice's pitch stage (the strip) until each
-moves into `classic()`; `gain`/`pan` in its send stage.
+slots (pitch pipeline step 1) and the vibrato as its `vibrato.*` slots (step 2); `accelerate` and `fm` in the
+voice's pitch stage (the strip) until each moves into `classic()`; `gain`/`pan` in its send stage.
 
 | Katalyst effect            | Class           | Applied when                                                     |
 |----------------------------|-----------------|------------------------------------------------------------------|

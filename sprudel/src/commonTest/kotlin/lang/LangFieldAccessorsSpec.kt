@@ -143,7 +143,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("bodyFloor", """s("bd sd").body(floor = 0.2).body(floor = add(0.3))""", { it.bodyFloor }, 0.5, s("bd sd").body(floor = 0.2).body(floor = add(0.3))),
         row("legato", """s("bd sd").legato(0.8).legato(mul(2))""", { it.legato }, 1.6, s("bd sd").legato(0.8).legato(mul(2))),
         row("vibrato.rate", """s("bd sd").vibrato(5).vibrato(mul(2))""", { it.vibrato }, 10.0, s("bd sd").vibrato(5).vibrato(mul(2))),
-        row("vibratoMod", """s("bd sd").vibrato(depth = 0.3).vibrato(depth = mul(2))""", { it.vibratoMod }, 0.6, s("bd sd").vibrato(depth = 0.3).vibrato(depth = mul(2))),
+        row("vibratoMod", """s("bd sd").vibrato(semitones = 0.3).vibrato(semitones = mul(2))""", { it.vibratoMod }, 0.6, s("bd sd").vibrato(semitones = 0.3).vibrato(semitones = mul(2))),
         row("pattack", """s("bd sd").penv(attack = 0.1).penv(attack = mul(2))""", { it.pAttack }, 0.2, s("bd sd").penv(attack = 0.1).penv(attack = mul(2))),
         row("pdecay", """s("bd sd").penv(decay = 0.2).penv(decay = mul(2))""", { it.pDecay }, 0.4, s("bd sd").penv(decay = 0.2).penv(decay = mul(2))),
         row("prelease", """s("bd sd").penv(release = 0.3).penv(release = mul(2))""", { it.pRelease }, 0.6, s("bd sd").penv(release = 0.3).penv(release = mul(2))),
@@ -191,7 +191,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("bodyFloor", """s("bd sd").body(floor = 0.2).pan(body.floor)""", { it.pan }, 0.2, s("bd sd").body(floor = 0.2).pan(body.floor)),
         row("legato", """s("bd sd").legato(0.8).pan(legato)""", { it.pan }, 0.8, s("bd sd").legato(0.8).pan(legato)),
         row("vibrato.rate", """s("bd sd").vibrato(5).pan(vibrato.rate)""", { it.pan }, 5.0, s("bd sd").vibrato(5).pan(vibrato.rate)),
-        row("vibratoMod", """s("bd sd").vibrato(depth = 0.3).pan(vibrato.depth)""", { it.pan }, 0.3, s("bd sd").vibrato(depth = 0.3).pan(vibrato.depth)),
+        row("vibratoMod", """s("bd sd").vibrato(semitones = 0.3).pan(vibrato.semitones)""", { it.pan }, 0.3, s("bd sd").vibrato(semitones = 0.3).pan(vibrato.semitones)),
         row("pattack", """s("bd sd").penv(attack = 0.1).pan(penv.attack)""", { it.pan }, 0.1, s("bd sd").penv(attack = 0.1).pan(penv.attack)),
         row("pdecay", """s("bd sd").penv(decay = 0.2).pan(penv.decay)""", { it.pan }, 0.2, s("bd sd").penv(decay = 0.2).pan(penv.decay)),
         row("prelease", """s("bd sd").penv(release = 0.3).pan(penv.release)""", { it.pan }, 0.3, s("bd sd").penv(release = 0.3).pan(penv.release)),
@@ -227,13 +227,11 @@ class LangFieldAccessorsSpec : StringSpec({
     val aliasSetsBatchThree = listOf(
         row("clip", """s("bd sd").apply(clip(2))""", { it.legato }, 2.0, s("bd sd").apply(clip(2))),
         row("vib", """s("bd sd").apply(vib(2))""", { it.vibrato }, 2.0, s("bd sd").apply(vib(2))),
-        row("pamt", """s("bd sd").apply(pamt(2))""", { it.pEnv }, 2.0, s("bd sd").apply(pamt(2))),
     )
 
     val aliasReadsBatchThree = listOf(
         row("clip", """s("bd sd").legato(2).pan(clip)""", { it.pan }, 2.0, s("bd sd").legato(2).pan(clip)),
         row("vib", """s("bd sd").vib(2).pan(vib.rate)""", { it.pan }, 2.0, s("bd sd").vib(2).pan(vib.rate)),
-        row("pamt", """s("bd sd").pamt(2).pan(pamt.semitones)""", { it.pan }, 2.0, s("bd sd").pamt(2).pan(pamt.semitones)),
     )
 
     // Batch four: the dynamics leftovers, the routing fields, the compressor threshold and fmenv.
@@ -713,7 +711,7 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.katalystParams?.get("duck.depth") shouldBe 0.4
                 it.katalystParams?.get("duck.attack") shouldBe 0.2
             },
-            Case("vibrato(depth = mul(2))", note("c e").vibrato(5, 0.5).vibrato(depth = mul(2)), """note("c e").vibrato(5, 0.5).vibrato(depth = mul(2))""") {
+            Case("vibrato(semitones = mul(2))", note("c e").vibrato(5, 0.5).vibrato(semitones = mul(2)), """note("c e").vibrato(5, 0.5).vibrato(semitones = mul(2))""") {
                 it.vibrato shouldBe 5.0
                 it.vibratoMod shouldBe 1.0
             },
@@ -765,7 +763,7 @@ class LangFieldAccessorsSpec : StringSpec({
         add("duck", s("bd sd").duck(depth = "0.1 0.5"), """s("bd sd").duck(depth = "0.1 0.5")""") { it.katalystParams?.get("duck.depth") }
         add("duck", s("bd sd").duck(attack = "0.1 0.5"), """s("bd sd").duck(attack = "0.1 0.5")""") { it.katalystParams?.get("duck.attack") }
         add("vibrato", s("bd sd").vibrato(rate = "0.1 0.5"), """s("bd sd").vibrato(rate = "0.1 0.5")""") { it.vibrato }
-        add("vibrato", s("bd sd").vibrato(depth = "0.1 0.5"), """s("bd sd").vibrato(depth = "0.1 0.5")""") { it.vibratoMod }
+        add("vibrato", s("bd sd").vibrato(semitones = "0.1 0.5"), """s("bd sd").vibrato(semitones = "0.1 0.5")""") { it.vibratoMod }
         add("penv", s("bd sd").penv(semitones = "0.1 0.5"), """s("bd sd").penv(semitones = "0.1 0.5")""") { it.pEnv }
         add("penv", s("bd sd").penv(attack = "0.1 0.5"), """s("bd sd").penv(attack = "0.1 0.5")""") { it.pAttack }
         add("penv", s("bd sd").penv(decay = "0.1 0.5"), """s("bd sd").penv(decay = "0.1 0.5")""") { it.pDecay }
@@ -802,7 +800,7 @@ class LangFieldAccessorsSpec : StringSpec({
             Case("compressor(ratio = 4)", seq("3 4").compressor(ratio = 4), """seq("3 4").compressor(ratio = 4)""", { it.katalystParams?.get("compressor.threshold") }, { it.katalystParams?.get("compressor.ratio") }, COMPRESSOR_THRESHOLD_DB),
             Case("unison(spread = 4)", seq("3 4").unison(spread = 4), """seq("3 4").unison(spread = 4)""", { it.ignitorParams?.get("voices") }, { it.ignitorParams?.get("spread") }),
             Case("duck(depth = 4)", seq("3 4").duck(depth = 4), """seq("3 4").duck(depth = 4)""", { it.katalystParams?.get("duck.orbit") }, { it.katalystParams?.get("duck.depth") }),
-            Case("vibrato(depth = 4)", seq("3 4").vibrato(depth = 4), """seq("3 4").vibrato(depth = 4)""", { it.vibrato }, { it.vibratoMod }),
+            Case("vibrato(semitones = 4)", seq("3 4").vibrato(semitones = 4), """seq("3 4").vibrato(semitones = 4)""", { it.vibrato }, { it.vibratoMod }),
             Case("penv(attack = 4)", seq("3 4").penv(attack = 4), """seq("3 4").penv(attack = 4)""", { it.pEnv }, { it.pAttack }),
             Case("fm(h = 4)", seq("3 4").fm(h = 4), """seq("3 4").fm(h = 4)""", { it.fmEnv }, { it.fmh }),
             // Since step 3d(iii) the head of `vowel` and `body` is the WET; a floor-only call leaves it

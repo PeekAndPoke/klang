@@ -920,12 +920,10 @@ data class SprudelVoiceData(
             // contract for both (`ParamBag.toMap`). The boundary already allocates a `VoiceData`,
             // and one copy here replaces the one-per-slot copies the doors used to make.
             // The voice doors travel as slot keys in this bag (`classicSlotParams`, phase 3 step 8); their typed
-            // wire fields left in phase 3 step 9, the pitch envelope's in pitch pipeline step 1.
+            // wire fields left in phase 3 step 9, the pitch envelope's in pitch pipeline step 1, the vibrato's in step 2.
             ignitorParams = classicSlotParams(),
             katalystParams = katalystParams?.toMap(),
             accelerate = accelerate,
-            vibrato = vibrato,
-            vibratoMod = vibratoMod,
             fmh = fmh,
             fmAttack = fmAttack,
             fmDecay = fmDecay,
