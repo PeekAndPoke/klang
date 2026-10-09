@@ -12,7 +12,50 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5; merged as PR #85, v0
 
 # Part 1: Blocking (work waits on the answer)
 
-Nothing open (Q21 and Q22 answered 2026-10-08).
+## Q26. Inharmonic partials on the sine: five design points (pulled ahead, 2026-10-09)
+
+Source: [`future/sine-inharmonic-partials.md`](future/sine-inharmonic-partials.md). Blocks that task only; the pitch
+pipeline runs first. Decided already (2026-10-02): it gets built. The shape:
+
+```
+Ign.sine(x => x.fundamental(0).partials(
+    ratios = [0.6571, 0.7571, 0.8714],
+    gains  = [0.520, 0.676, -0.652],
+))
+```
+
+One node instead of Der Schmetterling's 13 hand-rolled sines (the snare's thud), so far fewer objects per hit.
+
+**a. Together with the other banks.** What does `Ign.sine(x => x.harmonics(7).partials(ratios = [1.5], gains = [0.3]))`
+play? Recommendation: **all of them, summed** (the rule the banks already follow: `harmonics(7).octaves(3)` plays both
+today). Inside, the engine renders one list, every bank's pairs concatenated, in one pass. The alternative, "the last
+bank wins", would change what `harmonics(7).octaves(3)` plays.
+
+**b. `fundamental` when the cluster has no partial at ratio 1.** Recommendation: **unchanged.** `fundamental(g)` is the
+sine's own partial at ratio 1 (default 1.0); a pure cluster writes `fundamental(0)`, as the thud would. No magic.
+
+**c. The lists: fixed at build, or modulatable?** Today every bank knob is a signal read per block; a list is new on
+both doors and on the wire. Recommendation: **numbers, fixed at build** (a learnable, fixed target, the caricature
+model). If a moving cluster is ever wanted, a signal per gain can come later.
+
+```
+partials(ratios = [0.66, 0.76], gains = [0.5, 0.7])        // yes
+partials(ratios = [0.66, Ign.perlin(1)], ...)                // no, a type error
+```
+
+**d. A start phase per partial.** Choosing each partial's sign was worth 8 dB of onset peak on the thud. The
+oscillators already have a `phase` knob (a fraction of one cycle, 0 to 1). Recommendation: **an optional
+`phases = [...]` list in the same unit,** default 0 for every partial; a negative gain stays a valid shortcut for half a
+cycle.
+
+```
+partials(ratios = [...], gains = [...], phases = [0, 0.5, 0.25, ...])
+```
+
+**e. Drift.** Recommendation: **as for the other banks:** `analog` drifts them, `analogSpread(0)` moves the whole
+cluster as one oscillator, `analogSpread(1)` gives each partial its own lane.
+
+
 
 ---
 
