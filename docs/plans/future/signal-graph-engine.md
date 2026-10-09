@@ -367,6 +367,76 @@ signal, the KnobGlide machinery with a duration and a shape. A plain write is a 
 the automation of 6.6 and add nothing beside it. The frontend turns a cycle-based pattern (`saw.slow(8)`) into tweens,
 and the backend never learns cycles.
 
+### 6.9 `split`: parallel branches, the twin of `through` (maintainer, 2026-10-09)
+
+Raised while listening to the Katalyst `distort` stage on Kokon's master ("now we are distorting the hats and the bass
+drum") and asking whether people saturate only some bands. They do: multiband saturation on the master, or more
+often saturation per group. The maintainer's operator:
+
+```javascript
+signal.split(
+  x => x.bandpass().distort(),
+  x => x...,
+  x => x...
+).shape().limiter()
+```
+
+`through(a, b, c)` runs a signal through stages in series; `split(a, b, c)` runs it through branches side by side and
+sums them. With the two a chain becomes a small graph, and many separate features become one-liners.
+
+**Back pocket for the tutorials** (maintainer: "We need to keep these things in the back-pocket for later
+tutorials"):
+
+| trick | with `split` |
+|---|---|
+| multiband saturation | `split(low => low, mid => mid.distort(0.3), high => high)` (with flat bands, see `bands` below) |
+| exciter | `split(x => x, x => x.highpass(3000).distort(0.4).gain(0.1))` |
+| parallel ("New York") compression | `split(x => x, x => x.compressor(-30, 10).gain(0.5))` |
+| parallel saturation, any wet/dry | `split(x => x.gain(0.7), x => x.distort(0.5).gain(0.3))` |
+| bass harmonics on any bass | `split(x => x, x => x.lowpass(120).distort(0.5, "rectify").highpass(90))` |
+
+**It is the general form of every `wet` knob** (maintainer): `signal.split(x => x.effect().mul(wet), x => x.mul(1 - wet))`.
+That is a LINEAR crossfade, right for a correlated branch (a distortion or a filter of the same signal: constant
+level). For a decorrelated branch (a reverb, a chorus) the right law is equal power, `cos` and `sin` of `wet * pi / 2`,
+or the mix dips by about 3 dB in the middle. That is why the engine's stages carry two wet laws (`WetDryMix`,
+correlated and decorrelated branches). A `wet` knob hides that choice; `split` makes the author choose. A helper could
+keep the classic form with the right law per kind (`x.blend(wet, y => y.reverb(...))`, a sketch).
+
+**Cost.** Memory is small: on a voice the input subtree is shared (the memo) and each branch takes a scratch buffer
+while it renders; on a bus each branch takes one stereo block buffer (128 x 2 x 8 bytes, about 2 KB). What costs is
+each branch's CPU, which a built-in `wet` stage pays too.
+
+**What it must get right:**
+1. **Flat bands.** `x.bandpass()` per branch does not reconstruct the input: the bands overlap and leave dips and
+   bumps. A frequency split needs complementary filters (Linkwitz-Riley crossovers: two chained 2nd-order
+   Butterworths per band; the bands sum to the input in level, only the phase turns). Hence a `bands(...)` helper next
+   to `split`.
+2. **Branch latency.** A branch with oversampling or a lookahead arrives late, and summed with an undelayed branch it
+   combs. The split delays the faster branches to the slowest (the engine knows each stage's latency,
+   `KatalystLatentEffect`). This happens on a voice TODAY: Kokon's Screamer pedal sums a clean branch with
+   `distort(0.35, "soft", 2)`, whose 2x oversampler is 4 samples late, a comb with a first notch near 6 kHz before its
+   lowpass.
+
+**The shape of `bands`, open** (maintainer: "it needs better params structure"). Two candidates:
+
+```javascript
+// A: left to right like the spectrum, band, cut, band, cut, band: bands cannot overlap or leave gaps
+x.bands(b => b.band(low => low).cut(120).band(mid => mid.distort(0.3)).cut(6000).band(high => high))
+
+// B: the crossovers first, the processors by position; a band left out passes untouched
+x.bands([120, 6000], [low => low, mid => mid.distort(0.3)])
+```
+
+The coordinator leans A (longer, impossible to get wrong); a `/dsl-design` decision when it is built.
+
+**Where it lives, and the order:**
+- On the Ignitor it is nearly free: sugar over `plus` with a shared input, plus the latency alignment.
+- On the Katalyst it is STRUCTURAL: a chain becomes a tree. That raises how a pattern addresses a stage inside a
+  branch, tails and swaps per branch, and the buffer per branch. This is the local half of the Motor, so it is decided
+  with the maintainer (the complexity rule).
+- Proposed order: try `split` and `bands` in the Motor Lab first, then the Ignitor, then the Katalyst as the first
+  real piece of the Motor. A `distort(..., band(...))` option would then never need to exist.
+
 ## Links
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).
