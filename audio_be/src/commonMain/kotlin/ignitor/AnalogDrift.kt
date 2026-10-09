@@ -17,7 +17,9 @@ import kotlin.random.Random
  *   cents per unit `analog`) — the lazy, breathing pitch wander that makes a
  *   sustained note feel alive rather than perfectly stable.
  *
- * Total drift peak ≈ ±`analog` cents (clean linear mapping). Tuning constants
+ * Total drift peak ≈ ±`analog` cents (clean linear mapping): this is the oscillator's TELL of `analog`,
+ * which is one unitless character scale (0 ideal, 1 to 8 usual, 10 strong; Q22, `/dsl-design` section 4),
+ * not a unit; the filters map the same number through multipliers of their own. Tuning constants
  * and the coefficient law live in `AnalogDriftCoeffs.kt`, the single source of truth; [DriftLanes]
  * stacks these lanes for the multi-voice oscillators.
  *

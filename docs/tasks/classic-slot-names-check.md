@@ -207,3 +207,20 @@ Before the pitch pipeline's step 1, so its new slots are born with the final wor
 - **Suites.** `klangscript-libs` jvmTest 832 and jsTest 609 (after review round 1: one step-1 row dropped, the
   completeness spec checks both directions by identity, two rows), the rest as step 2b, green but for the known rig-anchor
   row.
+
+### Step 4, `analog` as a character amount (2026-10-09)
+
+- **What changed, docs and KDoc only.** Every `analog` door now says what Q22 decided: one unitless CHARACTER scale,
+  0 ideal, 1 to 8 usual, 10 strong, each component with its tells per unit. Sprudel's `analog` (the door, the string
+  door, the object and its invoke, the mapper chain) no longer calls the amount "peak drift in cents"; the 16
+  oscillator and pluck builders' `analog` knobs, `Lowpass.analog` (its tells: the resonance damping, and with
+  `humanize` the cutoff tolerance and the wander), `Highpass.analog`, `Bandpass.analog`, `AnalogDrift`'s KDoc (the
+  oscillator's tell, about a cent of peak per unit), the header of `FilterHumanizationDefaults.kt` (the filter's
+  three tells), the Thickness tutorial's comment and the two skill references follow. `AnalogDriftCoeffs`,
+  `FilterHumanization` and the per-constant KDoc already state per-unit tells and stay; so do `AnalogDriftSpec`'s
+  "cents budget" comments, which describe a measurement.
+- **Found on the way.** The music-writing reference listed an Ignitor chain method `.analog(amount)` ("Perlin noise
+  pitch jitter") that does not exist; the row now names the builder knob `x => x.analog(n)`.
+- **Not this step:** sprudel's `analog(amount)` keeps its parameter name, as Q-D put that to the maintainer (Q25).
+- **Proof.** The diff touches comment and markdown lines only (checked by filtering the patch to non-comment
+  lines); bit-identical by construction, no corpus re-render.

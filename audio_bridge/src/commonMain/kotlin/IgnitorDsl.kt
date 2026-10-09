@@ -1406,10 +1406,11 @@ sealed interface IgnitorDsl {
         val freq: IgnitorDsl = Constant(2000.0),
         val q: IgnitorDsl = Constant(0.707),
         /**
-         * Analog character amount. `0` = clean linear filter (default — bit-identical
-         * to pre-saturation behaviour). Higher values engage the OB-X-style state-dependent
-         * damping in the SVF resonance feedback, compressing the resonance peak.
-         * Typical range 0..10; values around 1–3 give Diva-default warmth.
+         * How analog the filter is, one unitless character scale (`/dsl-design` section 4): `0` is the
+         * clean linear filter (the default, bit-identical to no saturation), 1 to 8 is usual, 10 strong.
+         * Its tells per unit: the OB-X-style state-dependent damping in the SVF resonance feedback,
+         * compressing the resonance peak (`FILTER_DRIVE_PER_ANALOG`), and with [humanize] the per-voice
+         * cutoff tolerance and the cutoff wander, about two cents per unit (`FilterHumanizationDefaults.kt`).
          */
         val analog: IgnitorDsl = Constant(0.0),
         /**
@@ -1514,7 +1515,7 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val freq: IgnitorDsl = Constant(200.0),
         val q: IgnitorDsl = Constant(0.707),
-        /** See [Lowpass.analog] — same semantics for the HP tap. */
+        /** See [Lowpass.analog]: the same character scale and tells for the HP tap. */
         val analog: IgnitorDsl = Constant(0.0),
         /** Cascade count, a knob read once at voice build; see [Lowpass.passes]. */
         val passes: IgnitorDsl = Constant(1.0),
@@ -1567,8 +1568,8 @@ sealed interface IgnitorDsl {
          * The analog SATURATION is not implemented for this tap and the value does not reach it
          * (as the retired voice strip's bandpass had none); see [Lowpass.analog] for the semantics when
          * it is. The value is NOT inert, though: it scales [humanize]'s per-voice cutoff tolerance
-         * and its drift lane, exactly as it did on the strip, so `analog` on a bandpass is a
-         * humanization amount today and a saturation amount as well later.
+         * and its drift lane, exactly as it did on the strip, so on a bandpass the character amount's
+         * only tells today are the humanization ones; the saturation joins them when the tap gets it.
          */
         val analog: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */

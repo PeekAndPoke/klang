@@ -367,7 +367,7 @@ selection — extended to ignitor variants and per-note gain.
 | Function           | Aliases         | Description                     | Example                                |
 |--------------------|-----------------|---------------------------------|----------------------------------------|
 | `sound(name)`      | `s`             | Set sound/instrument            | `sound("bd sd hh cp")`                 |
-| `analog(amt)`      |                 | Analog oscillator drift         | `note("c3").s("supersaw").analog(0.2)` |
+| `analog(amt)`      |                 | How analog: a character scale, 0 ideal, 1 to 8 usual, 10 strong (an oscillator drifts about a cent per unit) | `note("c3").s("supersaw").analog(4)` |
 | `ignitorParam(slot, value)` | `ignp` | Write one slot of the playing instrument, per voice. `slot` is the slot's NAME or the param OBJECT itself (`Ignitor.param(...)` held in a variable, or `Ignitor.slot.*`); only the name is written, the default stays the instrument's. A Katalyst param is a script error at the call (`a Katalyst param passed to ignp; use katp`), and so is a number or a sound | `note("c2").sound(bass).ignp("cutoff", 1200)`, `.ignp(cutoff, 1200)`, `.ignp(Ignitor.slot.analog, 4)` |
 | `unison(voices, spread, pan)`                                          | `uni`      | Unison voices, detune spread in semitones, stereo spread (reserved); readers `unison.voices`, `.spread`, `.pan`                                        | `note("c3").s("supersaw").unison(5, 0.3)`                                                            |
 | `density(amt)`     | `d`             | Oscillator density (noise)      | `note("a").s("dust").density(40)`      |

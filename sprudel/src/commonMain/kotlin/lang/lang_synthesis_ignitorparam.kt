@@ -179,9 +179,12 @@ private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * perturbations to the oscillator's phase increment. For unison/super oscillators,
  * each voice drifts independently, creating lush analog-like chorusing.
  *
- * The amount is the **peak drift in cents**: `analog(1)` wobbles up to about a cent
- * either side of the note, `analog(8)` up to eight. `0.0` is off (and costs nothing).
- * Typical values run from `1` to `8`; the built-in songs live in that band.
+ * The amount is **how analog**, one unitless CHARACTER scale, not a unit: `0` is ideal (off, and costs
+ * nothing), `1` to `8` is usual (the built-in songs live in that band), `10` is strong. Each part of the
+ * instrument maps it through its own multipliers and has its own tells per unit: an oscillator drifts about
+ * a cent of peak pitch per unit (`analog(8)` up to about eight either side of the note); in the built-in
+ * instruments the lowpass and highpass saturate their resonance, and every filter takes a per-voice cutoff
+ * tolerance and wanders its cutoff.
  *
  * Two layers make it up: a fast jitter (~50 ms) and a slow wander (~10 s). The slow
  * layer starts CENTRED, so notes attack in tune and the wander only develops on notes
@@ -195,7 +198,7 @@ private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * note("c3*4").s("sine").analog("<0 2 6>")   // cycle through drift amounts
  * ```
  *
- * @param amount Peak drift in cents; 0 is off, 1 to 8 is usual.
+ * @param amount How analog, a character scale: 0 is ideal, 1 to 8 usual, 10 strong (an oscillator drifts about a cent per unit).
  * @return A new pattern with analog drift applied.
  * @scope voice
  * @category tonal
@@ -206,13 +209,13 @@ fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = nul
     applyAnalog(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
- * Parses this string as a pattern and sets the analog drift amount.
+ * Parses this string as a pattern and sets how analog the sound is.
  *
  * ```KlangScript(Playable)
  * "c3 e3".analog(4).s("supersaw").note()
  * ```
  *
- * @param amount Peak drift in cents; 0 is off, 1 to 8 is usual.
+ * @param amount How analog, a character scale: 0 is ideal, 1 to 8 usual, 10 strong (an oscillator drifts about a cent per unit).
  * @return A new pattern with analog drift applied.
  * @scope voice
  * @category tonal
@@ -223,7 +226,7 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).analog(amount, callInfo)
 
 /**
- * The analog drift amount of each event, as a value other setters can read.
+ * How analog each event is (the `analog` character amount), as a value other setters can read.
  *
  * Bare `analog` reads what the chain has set so far, so it comes after whatever set the field
  * (`analog(...)`). Call it, `analog(...)`, to set the field; a mapper argument applies to the field.
@@ -245,13 +248,13 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
 object analog : FieldAccessor({ it.ignitorParams?.get("analog") }) {
 
     /**
-     * Creates a [PatternMapperFn] that sets the analog drift amount.
+     * Creates a [PatternMapperFn] that sets how analog the sound is.
      *
      * ```KlangScript(Playable)
      * note("c3 e3").apply(analog(4))
      * ```
      *
-     * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
+     * @param amount How analog, a character scale: `0` is ideal, `1` to `8` usual, `10` strong.
      * @return A [PatternMapperFn] that sets analog drift.
      */
     @KlangScript.Invoke
@@ -267,7 +270,7 @@ object analog : FieldAccessor({ it.ignitorParams?.get("analog") }) {
  * note("c3 e3").apply(gain(0.8).analog(4))
  * ```
  *
- * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
+ * @param amount How analog, a character scale: `0` is ideal, `1` to `8` usual, `10` strong.
  */
 @KlangScript.Function
 fun PatternMapperFn.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

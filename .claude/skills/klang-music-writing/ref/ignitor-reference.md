@@ -476,9 +476,9 @@ three layers was heard at three times its rate; a patch tuned before then may so
 
 ### Analog Drift
 
-| Method            | Description                                 |
-|-------------------|---------------------------------------------|
-| `.analog(amount)` | Perlin noise pitch jitter for analog warmth |
+| Knob                                   | Description                                                                                                      |
+|----------------------------------------|------------------------------------------------------------------------------------------------------------------|
+| `x => x.analog(n)` (oscillator builders) | How analog: one unitless character scale, 0 ideal, 1 to 8 usual, 10 strong. An oscillator's tell is its pitch drift, about one cent of peak per unit (a fast jitter and a slow wander) |
 
 ### Arithmetic (Signal Mixing)
 

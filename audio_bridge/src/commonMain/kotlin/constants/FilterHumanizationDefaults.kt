@@ -17,8 +17,11 @@ package io.peekandpoke.klang.audio_bridge.constants
 // Engine-internal tuning with no DSL field (the oscillator drift depths in
 // `AnalogDriftCoeffs`) deliberately stays in `audio_be`. The rule is: a constant belongs here iff it is a wire default.
 //
-// All scaled by the `analog` parameter. `analog = 0` is exactly no humanization —
-// bit-identical to the textbook filter, and the saturated branch is skipped entirely.
+// All scaled by the `analog` parameter. `analog = 0` is exactly no humanization, bit-identical to
+// the textbook filter, and the saturated branch is skipped entirely. `analog` is one unitless
+// CHARACTER scale (Q22, `/dsl-design` section 4): 0 ideal, 1 to 8 usual, 10 strong; the three
+// constants below are the filter's tells per unit (its saturation drive, its cutoff tolerance and its
+// wander), each a multiplier of its own, which is why the number is not a unit.
 //
 // The old "1 = mild / 3 = Memorymoog / 10 = broken VCO" ladder that used to head this
 // block was written for the pre-2026-08-11 values and overstated today's (cutoff offset 5x,
