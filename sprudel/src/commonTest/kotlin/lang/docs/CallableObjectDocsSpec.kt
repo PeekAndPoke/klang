@@ -161,6 +161,21 @@ class CallableObjectDocsSpec : StringSpec({
         sorted.parametersByName().single { it.name == "amount" }.description shouldBe "Pan position, 0 left to 1 right."
     }
 
+    "analog names its parameter `character` in the docs model, on every door (Q25)" {
+        val symbol = registry.get("analog").shouldNotBeNull()
+        val callables = symbol.variants.filterIsInstance<KlangCallable>() + listOfNotNull(registry.callFormFor(symbol))
+
+        callables.mapNotNull { it.receiver?.simpleName }.toSet().let { receivers ->
+            listOf("SprudelPattern", "String", "Function1", "OscSineBuilder", "OscSuperSawBuilder", "FilterBuilder", "BandFilterBuilder")
+                .forEach { receivers shouldContain it }
+        }
+        registry.callFormFor(symbol).shouldNotBeNull()
+
+        callables.forEach { callable ->
+            withClue(callable.signature) { callable.params.map { it.name } shouldBe listOf("character") }
+        }
+    }
+
     "a local named like a callable object is never the object: no false named-argument error" {
         analyze("const gain = (amount) => amount\ngain(level = 1)").diagnostics.size shouldBe 0
         analyze("let speed = (x) => x * 2\nspeed(x = 3)").diagnostics.size shouldBe 0

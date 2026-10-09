@@ -128,6 +128,8 @@ class LangDoorFormsSpec : StringSpec({
         k("katalystParam", "katalystParam(\"mykey\", %s)", katSlot("mykey"), { p, c -> p.katalystParam("mykey", c!!) }, { s, c -> s.katalystParam("mykey", c!!) }, { c -> katalystParam("mykey", c!!) }, { m, c -> m.katalystParam("mykey", c!!) }),
         k("katp", "katp(\"mykey\", %s)", katSlot("mykey"), { p, c -> p.katp("mykey", c!!) }, { s, c -> s.katp("mykey", c!!) }, { c -> katp("mykey", c!!) }, { m, c -> m.katp("mykey", c!!) }),
         k("analog", "analog(%s)", ignitorSlot("analog"), { p, c -> p.analog(c) }, { s, c -> s.analog(c) }, { c -> analog(c) }, { m, c -> m.analog(c) }, head = true),
+        // the parameter's word on both doors (Q25: `character`, was `amount`)
+        k("analog.character", "analog(character = %s)", ignitorSlot("analog"), { p, c -> p.analog(character = c) }, { s, c -> s.analog(character = c) }, { c -> analog(character = c) }, { m, c -> m.analog(character = c) }),
         k("duty", "duty(%s)", ignitorSlot("duty"), { p, c -> p.duty(c) }, { s, c -> s.duty(c) }, { c -> duty(c) }, { m, c -> m.duty(c) }, head = true),
         k("onepole", "onepole(%s)", ignitorSlot("onepole"), { p, c -> p.onepole(c) }, { s, c -> s.onepole(c) }, { c -> onepole(c) }, { m, c -> m.onepole(c) }, head = true),
 

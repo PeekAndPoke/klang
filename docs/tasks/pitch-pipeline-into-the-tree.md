@@ -841,15 +841,6 @@ per block, N fms are N + 1 oscillator renders.
   only the bent child along signal edges, and its task names MINOR 1's condition as part of the shape. Texts and spec
   rows only, no render path changed, so no corpus run.
 
-#### Queued beside the pipeline: sprudel's `analog(amount)` becomes `analog(character)` (Q25)
-
-The maintainer, 2026-10-09: "yes rename to character". `amount` is the distort drive only (Q21), and `analog` is a
-character scale (Q22). A small rename of the parameter on every `analog` door (parameter parity): sprudel's `analog(amount)`, the
-KlangScript filter builders' `analog(amount)` (`EffectBuilders.kt`) and the oscillator builders' `analog(analog)`
-(`IgnitorBuilders.kt`) all become `analog(character)`, with KDoc and a row in `docs/retired-names.md`; positional
-`analog(4)` is unchanged. Done between two pipeline steps, so it never shares a
-tree with a running worker.
-
 #### Queued beside the pipeline: `variants` accepts plain numbers (Q23)
 
 The maintainer, 2026-10-09: "yes make numbers constants". `Ign.variants(400, 1200, 3000)` and

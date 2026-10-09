@@ -59,7 +59,7 @@ fun OscSineBuilder.phase(phase: IgnitorDslLike): OscSineBuilder = copy(node = no
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. With partial banks, the depth of every partial. */
 @KlangScript.Function
-fun OscSineBuilder.analog(analog: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSineBuilder.analog(character: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /**
  * Gain of the sine's own partial (default 1). `0` leaves only the partial banks, so
@@ -158,7 +158,7 @@ fun OscTriBuilder.phase(phase: IgnitorDslLike): OscTriBuilder = copy(node = node
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscTriBuilder.analog(analog: IgnitorDslLike): OscTriBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscTriBuilder.analog(character: IgnitorDslLike): OscTriBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 // ── Zawtooth ─────────────────────────────────────────────────────────────────
 
@@ -184,7 +184,7 @@ fun OscZawtoothBuilder.phase(phase: IgnitorDslLike): OscZawtoothBuilder = copy(n
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscZawtoothBuilder.analog(analog: IgnitorDslLike): OscZawtoothBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscZawtoothBuilder.analog(character: IgnitorDslLike): OscZawtoothBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 // ── Zamp ─────────────────────────────────────────────────────────────────
 
@@ -210,7 +210,7 @@ fun OscZampBuilder.phase(phase: IgnitorDslLike): OscZampBuilder = copy(node = no
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscZampBuilder.analog(analog: IgnitorDslLike): OscZampBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscZampBuilder.analog(character: IgnitorDslLike): OscZampBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 // ── Impulse ─────────────────────────────────────────────────────────────────
 
@@ -237,7 +237,7 @@ fun OscImpulseBuilder.phase(phase: IgnitorDslLike): OscImpulseBuilder = copy(nod
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscImpulseBuilder.analog(analog: IgnitorDslLike): OscImpulseBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscImpulseBuilder.analog(character: IgnitorDslLike): OscImpulseBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 // ── RawPulze ─────────────────────────────────────────────────────────────────
 
@@ -268,7 +268,7 @@ fun OscPulzeBuilder.duty(duty: IgnitorDslLike): OscPulzeBuilder = copy(node = no
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscPulzeBuilder.analog(analog: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscPulzeBuilder.analog(character: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 // ── Pulze ─────────────────────────────────────────────────────────────────
 
@@ -299,7 +299,7 @@ fun OscSquareBuilder.duty(duty: IgnitorDslLike): OscSquareBuilder = copy(node = 
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscSquareBuilder.analog(analog: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSquareBuilder.analog(character: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** Minimum flank length in samples, a floor on every edge that softens with pitch (default 2.0). */
 @KlangScript.Function
@@ -338,7 +338,7 @@ fun OscSawBuilder.phase(phase: IgnitorDslLike): OscSawBuilder = copy(node = node
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscSawBuilder.analog(analog: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSawBuilder.analog(character: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** Analog flyback time in samples: lower = brighter, sharper reset; higher = softer (default 1.0). */
 @KlangScript.Function
@@ -373,7 +373,7 @@ fun OscRampBuilder.phase(phase: IgnitorDslLike): OscRampBuilder = copy(node = no
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscRampBuilder.analog(analog: IgnitorDslLike): OscRampBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscRampBuilder.analog(character: IgnitorDslLike): OscRampBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** Analog flyback time in samples: lower = brighter, sharper reset; higher = softer (default 1.0). */
 @KlangScript.Function
@@ -418,7 +418,7 @@ fun OscSuperSawBuilder.spread(spread: IgnitorDslLike): OscSuperSawBuilder = copy
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscSuperSawBuilder.analog(analog: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSuperSawBuilder.analog(character: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
@@ -522,7 +522,7 @@ fun OscSuperSineBuilder.spread(spread: IgnitorDslLike): OscSuperSineBuilder = co
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscSuperSineBuilder.analog(analog: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSuperSineBuilder.analog(character: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
@@ -627,7 +627,7 @@ fun OscSuperSquareBuilder.spread(spread: IgnitorDslLike): OscSuperSquareBuilder 
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscSuperSquareBuilder.analog(analog: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSuperSquareBuilder.analog(character: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
@@ -730,7 +730,7 @@ fun OscSuperTriBuilder.spread(spread: IgnitorDslLike): OscSuperTriBuilder = copy
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscSuperTriBuilder.analog(analog: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSuperTriBuilder.analog(character: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
@@ -835,7 +835,7 @@ fun OscSuperRampBuilder.spread(spread: IgnitorDslLike): OscSuperRampBuilder = co
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscSuperRampBuilder.analog(analog: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSuperRampBuilder.analog(character: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
@@ -932,7 +932,7 @@ fun OscPluckBuilder.stiffness(stiffness: IgnitorDslLike): OscPluckBuilder = copy
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscPluckBuilder.analog(analog: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscPluckBuilder.analog(character: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 // ── SuperPluck ─────────────────────────────────────────────────────────────────
 
@@ -969,7 +969,7 @@ fun OscSuperPluckBuilder.stiffness(stiffness: IgnitorDslLike): OscSuperPluckBuil
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
-fun OscSuperPluckBuilder.analog(analog: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+fun OscSuperPluckBuilder.analog(character: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as

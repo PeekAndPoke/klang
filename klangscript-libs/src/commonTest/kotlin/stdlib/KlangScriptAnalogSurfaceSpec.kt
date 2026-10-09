@@ -90,6 +90,62 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
         shouldThrow<KlangScriptTypeError> { eval("""Ignitor.sine().pitchEnvelope(0.4, x => x.adsr(0.001, 0.04, 0, 0)).analog(2)""") }
     }
 
+    "door parity: the knob's word is `character` on every builder, script and Kotlin alike (Q25)" {
+        val ign = KlangScriptIgnitor
+        val kotlin = listOf<Pair<String, IgnitorDsl>>(
+            "sine" to ign.sine(configure = { it.analog(character = 3.0) }),
+            "saw" to ign.saw(configure = { it.analog(character = 3.0) }),
+            "tri" to ign.tri(configure = { it.analog(character = 3.0) }),
+            "ramp" to ign.ramp(configure = { it.analog(character = 3.0) }),
+            "zawtooth" to ign.zawtooth(configure = { it.analog(character = 3.0) }),
+            "zamp" to ign.zamp(configure = { it.analog(character = 3.0) }),
+            "impulse" to ign.impulse(configure = { it.analog(character = 3.0) }),
+            "square" to ign.square(configure = { it.analog(character = 3.0) }),
+            "pulze" to ign.pulze(configure = { it.analog(character = 3.0) }),
+            "pluck" to ign.pluck(configure = { it.analog(character = 3.0) }),
+            "superpluck" to ign.superpluck(configure = { it.analog(character = 3.0) }),
+            "supersaw" to ign.supersaw(configure = { it.analog(character = 3.0) }),
+            "supersine" to ign.supersine(configure = { it.analog(character = 3.0) }),
+            "supersquare" to ign.supersquare(configure = { it.analog(character = 3.0) }),
+            "supertri" to ign.supertri(configure = { it.analog(character = 3.0) }),
+            "superramp" to ign.superramp(configure = { it.analog(character = 3.0) }),
+        )
+
+        kotlin.size shouldBe supported.size
+
+        for ((door, node) in kotlin) {
+            withClue(door) {
+                eval("""Ignitor.$door(x => x.analog(character = 3))""") shouldBe node
+                node.analogOf() shouldBe IgnitorDsl.Constant(3.0)
+            }
+        }
+
+        // the four filters' builders take the same word
+        val ext = KlangScriptIgnitorExtensions
+        val saw = ign.saw()
+        val filters = listOf<Pair<String, IgnitorDsl>>(
+            "lowpass" to ext.lowpass(self = saw, freq = 800, q = 1, configure = { it.analog(character = 4.0) }),
+            "highpass" to ext.highpass(self = saw, freq = 800, q = 1, configure = { it.analog(character = 4.0) }),
+            "bandpass" to ext.bandpass(self = saw, freq = 800, q = 1, configure = { it.analog(character = 4.0) }),
+            "notch" to ext.notch(self = saw, freq = 800, q = 1, configure = { it.analog(character = 4.0) }),
+        )
+
+        for ((door, node) in filters) {
+            withClue(door) {
+                eval("""Ignitor.saw().$door(800, 1, x => x.analog(character = 4))""") shouldBe node
+                val analog = when (node) {
+                    is IgnitorDsl.Lowpass -> node.analog
+                    is IgnitorDsl.Highpass -> node.analog
+                    is IgnitorDsl.Bandpass -> node.analog
+                    is IgnitorDsl.Notch -> node.analog
+                    else -> null
+                }
+
+                analog shouldBe IgnitorDsl.Constant(4.0)
+            }
+        }
+    }
+
     "analog actually reaches the node (it is not merely accepted and dropped)" {
         val sine = eval("""Ignitor.sine(x => x.analog(7))""") as IgnitorDsl.Sine
         sine.analog shouldBe IgnitorDsl.Constant(7.0)
