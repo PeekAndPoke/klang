@@ -367,7 +367,7 @@ signal, the KnobGlide machinery with a duration and a shape. A plain write is a 
 the automation of 6.6 and add nothing beside it. The frontend turns a cycle-based pattern (`saw.slow(8)`) into tweens,
 and the backend never learns cycles.
 
-### 6.9 `split`: parallel branches, the twin of `through` (maintainer, 2026-10-09)
+### 6.9 `split`: parallel branches, the twin of `through` (maintainer, 2026-10-09; names proposed below: `layer`, `superimpose`)
 
 Raised while listening to the Katalyst `distort` stage on Kokon's master ("now we are distorting the hats and the bass
 drum") and asking whether people saturate only some bands. They do: multiband saturation on the master, or more
@@ -430,21 +430,31 @@ x.bands([120, 6000], [low => low, mid => mid.distort(0.3)])
 **A it is (maintainer, 2026-10-09):** "I lean towards A too, as it is in the spirit of the rest of the DSLs. And as I
 said, I do not like the pythony parallel arrays at all." B is rejected.
 
-**A's rules, proposed (coordinator, 2026-10-09; settle with `/dsl-design` when it is built):**
+**A's rules (maintainer and coordinator, 2026-10-09; settle the details with `/dsl-design` when it is built):**
 - **It reads the spectrum from the bottom up.** Each `cut(f)` closes the band below it: `band(low).cut(120)
   .band(mid).cut(6000).band(high)` is 0 to 120 Hz, 120 to 6000 Hz, and 6000 Hz to the Nyquist frequency.
-- **Two `band(...)` in a row cannot be written: the types say so.** After `band(...)` the builder offers only `cut(...)`;
-  after `cut(...)` it offers `band(...)` or another `cut(...)`. This is the house rule that the type split is the
-  documentation, so the editor never offers the wrong call.
-- **A band nobody processes passes untouched.** That covers two cuts in a row, a chain that starts with a cut and one
+- **One builder type, no alternating types** (maintainer: "I would not overcomplicate it with something like an
+  alternating builder type").
+- **`band(...).band(...)` without a cut between them sums.** Both processors run on the same band and their outputs
+  add, through the same split-and-join mechanism (maintainer). It is a sum, so `band(x => x).band(x => x)` is twice the
+  band (+6 dB), the same as with the operator itself; the KDoc says so.
+- **A band nobody processes passes untouched.** That covers two cuts in a row, a chain that starts with a cut, and one
   that ends with a cut: `b.cut(120).band(mid => mid.distort(0.3)).cut(6000)` processes only 120 to 6000 Hz.
-- **Cuts must rise.** A literal cut at or below the one before it is a script error when the chain is built, naming
-  the door ("bands: cut(600) comes after cut(1200); cuts must rise"). It is never sorted silently: sorting would hand
-  each processor a band other than the one it was written for.
-- **A cut a pattern can move** (a slot, should cuts ever be knobs) cannot be checked at build. While it runs the
-  coerce rule applies: a cut below its neighbour is raised to it, which leaves a zero-width band, silent rather than
-  wrong.
+- **Cuts are coerced, never refused** (maintainer: "I like the coercion idea to at least the previous value, this
+  makes sense"). A cut below the one before it is raised to it, which leaves a zero-width band, silent rather than
+  wrong. It is one rule for a literal cut and for one a pattern moves, and never a silent sort: sorting would hand each
+  processor a band other than the one it was written for. The stone rule agrees: coerce user-reachable inputs, never
+  `require()` them.
 - **The bands sum flat:** Linkwitz-Riley crossovers, with the phase alignment that three or more bands need.
+
+**The operator's name** (maintainer: "it needs a nicer name"). The coordinator's proposal: sprudel's own words, which
+already mean exactly this on patterns (`sprudel/.../lang_structural_layer.kt`): `layer(f, g)` applies each function to
+the input and stacks the results, and `superimpose(f, g)` does the same and keeps the original. On a signal:
+- **`x.layer(f, g, h)`** is the sum of `f(x)`, `g(x)` and `h(x)`: multiband, dry/wet;
+- **`x.superimpose(f)`** is `x + f(x)`: the exciter, parallel compression, bass harmonics.
+
+One word per concept across the DSLs hands over the names, and a pattern author already knows them. To decide with
+`/dsl-design`.
 
 **Where it lives, and the order:**
 - On the Ignitor it is nearly free: sugar over `plus` with a shared input, plus the latency alignment.
