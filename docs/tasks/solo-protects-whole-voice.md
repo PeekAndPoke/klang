@@ -29,3 +29,8 @@ s("bd*4").solo()
   source whose voices all ended (protection ends then), and the realtime path. Mutation-checked.
 - Proof: the corpus. Does any song solo a source with a release longer than 2 s beside another solo? If not,
   bit-identical; if so, that row moves as intended and gets a listening pair.
+
+## Settled alongside (maintainer, 2026-10-09, Q12)
+
+The solo ramps stay as they are (1.5 s in and out, a 2 s hold): "this is fine, solo is not meant to be a musical
+thing, more for production use". `solo("<1 0>")` is not a supported toggle; a fast musical mute is a different tool.

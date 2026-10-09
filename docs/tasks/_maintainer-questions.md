@@ -49,16 +49,6 @@ every door (one word per concept says no). **Recommendation: keep them as engine
 limits in their file header, and point authors (Kotlin included) at the `klangscript-libs` door.** The alternative is
 to align them fully. No song is affected either way (songs are KlangScript).
 
-## Q12. Solo ramp times
-
-**Today:** 1.5 s in and out (a cubic swell) with a 2 s hold.
-
-**Example.** `solo("<1 0>")` is meant as a toggle every cycle. At cps 1 it never settles: the swell is still moving
-when the next cycle flips it.
-
-**Recommendation from the review:** one ramp of about 0.1 to 0.25 s both ways, and a hold of `max(ramp, 0.5 s)`. Kept
-at 1.5 s until you decide; the KDoc now says that it fades.
-
 ## Q13. Pitch pipeline, the composition block (D8 to D11)
 
 Source: §8. Step 2 of the pitch plan, recommendations as written there:
