@@ -120,7 +120,7 @@ let makeGuitar = (rig) => {
   let pAttack     = Ign.param("attack",       0.006, "Attack")
   let pDecay      = Ign.param("decay",        1.000, "Decay")
   let pSustain    = Ign.param("sustain",      0.000, "sustain")
-  let pRelease    = Ign.param("release",      0.030, "Release")
+  let pRelease    = Ign.param("release",      0.010, "Release")
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
@@ -131,17 +131,16 @@ let makeGuitar = (rig) => {
     .analog(pAnalog).analogSpread(0.3)
   )
 
-  let string = saw.mul(Ign.slot.pregain)
+  let signal = saw.mul(Ign.slot.pregain)
     // Simulate plucked string
     .pitchEnvelope(0.2, x => x.adsr(0.001, 0.08, 0, 0))
-    //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
+    // .eq(x => 
+    //   x.tap(freq = Ign.constant(3000).add(Ign.freq().times(16).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7, gain = 0.5),
+    // )
+    // noise burst - the pick
+    .plus(Ign.whitenoise().adsr(0.0005, 0.004, 0.0, 0.05).highpass(1200).mul(0.8))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
-
-  // noise burst - the pick
-  let pick = Ign.whitenoise().adsr(0.0005, 0.004, 0.0, 0.05).highpass(2500).mul(0.3)
-
-  let signal = string.plus(pick)
   
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
