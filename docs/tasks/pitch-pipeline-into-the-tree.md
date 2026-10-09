@@ -692,6 +692,15 @@ KlangScript filter builders' `analog(amount)` (`EffectBuilders.kt`) and the osci
 `analog(4)` is unchanged. Done between two pipeline steps, so it never shares a
 tree with a running worker.
 
+#### Queued beside the pipeline: `variants` accepts plain numbers (Q23)
+
+The maintainer, 2026-10-09: "yes make numbers constants". `Ign.variants(400, 1200, 3000)` and
+`Ign.variants(1, Ign.sine())` become valid: a number child is converted to a `Constant` at the door, the same strict
+conversion with one more accepted type (D10's rule: a plain number wherever a constant value is accepted). Both doors
+(KlangScript and Kotlin), a door-parity row; `StrictArgumentConversionSpec`'s "type error" row becomes "a number child
+is a constant"; anything else that is neither a number nor an Ignitor stays a type error. Done between two pipeline
+steps, with the `analog(character)` rename.
+
 #### Step 4. FM (M to L, a listening pair)
 
 - `Slots.fm` (`fm.ratio`, `fm.depth`, `fm.attack`, `fm.decay`, `fm.sustain`, and `fm.release` with sprudel's
