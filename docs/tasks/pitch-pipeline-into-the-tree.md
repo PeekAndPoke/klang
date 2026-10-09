@@ -841,13 +841,6 @@ per block, N fms are N + 1 oscillator renders.
   only the bent child along signal edges, and its task names MINOR 1's condition as part of the shape. Texts and spec
   rows only, no render path changed, so no corpus run.
 
-#### Queued beside the pipeline: the warehouse panel shows the reverb counters (Q17)
-
-The maintainer, 2026-10-09: "add them to the panel". `WarehouseStats.reverbFailures` and `reverbDropped` cross the
-wire already; `src/jsMain/kotlin/comp/PlayerWarehouseStats.kt` shows only their ring twins (`ringFailures` at :143).
-Add the two reverb counters beside them, with the same hover texts ("allocations that failed (out of memory)", and the
-dropped one's). UI only.
-
 **Step 3b, decided (maintainer, 2026-10-09):** build the general mechanism (v2, one `CarrierFreqMod` wrapper per fm,
 outer mod and detune scope; "better to have the general case first, maybe we find optimizations later"); an fm over
 another fm's carrier FOLLOWS; the one shape the engine cannot process (an fm above a forking `detune`) is an author

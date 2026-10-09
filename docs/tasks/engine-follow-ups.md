@@ -167,9 +167,14 @@ Each was checked against the code: none is done.
     (the orbit's activity flags, `WarmupRunner`). D7 (own the RNG) is decided: deferred to the Zig port's preparation;
     the shared drift lane's `Random(sharedSeed)` at the first block waits on it.
 
-## 7. Questions already with the maintainer
+## 7. Questions with the maintainer
 
-In [`_maintainer-questions.md`](_maintainer-questions.md), not repeated here: Q16 (the oscillators are not PolyBLEP;
-the texts that say so), Q17 (`WarehouseStats.reverbFailures` / `reverbDropped`), Q19 (the engine disposal order), Q23
-(`variants` with plain numbers), Q24 (the third Kotlin spelling of the Ignitor doors), and from the solo fix Q12 (the
-ramp times) and Q14 (a soloed release tail beside another solo).
+Open, in [`_maintainer-questions.md`](_maintainer-questions.md), not repeated here: Q19 (the engine disposal order),
+Q24 (the third Kotlin spelling of the Ignitor doors) and Q28 (solo protects the SOLOED voice, the refinement of Q14).
+
+Decided 2026-10-09 and done in the batch of small items between pitch pipeline steps 3b and 4: Q14 (a soloed release
+tail beside another solo stays at full level while the voice lives:
+[`20261009-solo-protects-whole-voice.md`](../tasks-archive/2026-10/20261009-solo-protects-whole-voice.md)), Q16
+(the PolyBLEP texts; `CREDITS.MD` and the Credits page keep it), Q17 (the warehouse panel shows `reverbFailures` and
+`reverbDropped`) and Q23 (`variants` takes plain numbers as constants). Decided and kept as they are: Q12, the solo
+ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
