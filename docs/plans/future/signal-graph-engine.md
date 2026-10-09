@@ -472,6 +472,14 @@ said, I do not like the pythony parallel arrays at all." B is rejected.
 4. `bands`, built on `parallel`, both hosts.
 5. Optional: a dry/wet helper, `x.blend(0.1, y => y.distort(0.5))` = `parallel(y => y.mul(0.9), y => y.distort(0.5).mul(0.1))`.
 
+**Every step ships something to hear** (maintainer, 2026-10-09: "definitely needs tutorials / recipes for that ...
+especially since I have to experience this first hand, which I never did"): a recipe per step in the writing
+references (`.claude/skills/klang-music-writing/ref/`), and listening material for the maintainer: a `bands` with
+nothing processed against the dry (the all-pass, level flat), the same with a crossover summed naively (the hump at
+the cut), parallel saturation at a few blends, the Kokon master with mids-only distortion. Material for the tutorial
+quarter as well (the back-pocket table above). The credits land with the code that uses them (Linkwitz and Riley with
+`bands`).
+
 Out of scope: the Motor routing, sprudel pattern doors, removing the stages' own `wet` knobs (to reconsider once
 `parallel` has proven itself), moving cuts, a better oversampler.
 
