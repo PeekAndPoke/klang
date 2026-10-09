@@ -90,9 +90,9 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  4.0)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  3.5)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  8.0)         // roar:  low mids
-    .band(freq = 2700, q = 2.0, db =  3.7)         // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 1.6, db =  3.8)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2))          // the low end
@@ -279,7 +279,7 @@ export spin = notes => n(notes)
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .ignp("decay", 3.0).clip(0.99)
-  .tremolo(rate = beatRate(0.33), depth = perlin(0.300, 0.350))  // The guitar finger
+  .tremolo(rate = beatRate(0.33), depth = perlin(0.200, 0.250))  // The guitar finger
   .vibrato(rate = beatRate(0.33), semitones = perlin(0.025, 0.040))
   .hpf(180)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
@@ -291,7 +291,7 @@ export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
   .ignp("decay", 2.8).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4650)                                       // less fizz, the wall keeps its own
+  .lpf(4600)                                       // less fizz, the wall keeps its own
   .gain(0.42).pan(0.5)
   .orbit(6)
 
@@ -464,7 +464,7 @@ let landing = stack(
   soar("[4@6 ~@2]")
     .tremolo(rate = beatRate(0.25), depth = 0.35)
     .vibrato(rate = beatRate(0.25), semitones = 0.30),
-  strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.0),
+  strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.5),
   beat("0").gain(0.45),
 )
 
@@ -528,7 +528,8 @@ export song = stack(
    
   , master(Katalyst(k => k
     .reverb(0.20, 7, 7000)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.10)                                    // the house level, -14 LUFS
+    .gain(1.00)                                    // the house level, -14 LUFS
+    .distort(0.15, "soft", 4)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
 )

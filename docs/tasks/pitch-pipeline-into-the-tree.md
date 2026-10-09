@@ -634,7 +634,8 @@ Docs: `data-model.md`, `voice-synthesis.md`, `off-values.md`, `effects-mixing.md
   jvmTest 3,483 (486 skipped); `klangscript-libs` jvmTest 832 and jsTest 609; `BuiltInSongsSmokeTest`,
   `SongBenchmarkCasesCompileSpec`, `DslDocExamplesSpec` green; `compileTestKotlinJs` of `audio_bridge`, `audio_be`,
   `sprudel`, `klangscript-libs` and the root green.
-- **Listening pair:** `tmp/listening/pp-step3/` (`kokon-before.wav`, `kokon-after.wav`, `README.md`).
+- **Listening pair:** `tmp/listening/pp-step3/` (`kokon-before.wav`, `kokon-after.wav`, `README.md`). Heard and
+  accepted by the maintainer 2026-10-10: "it's ok like this".
 - **Review round 1** (`tmp/reviews/pp3-r1-A.md`, `tmp/reviews/pp3-r1-B.md`; 0 MAJOR, clean), applied: the zero gate
   holds the target (A1, Q27) and its law row; the first-window row (A2); `AbsoluteFreqPitchModSpec`'s KDocs name `fm`
   as the one strip door (A3); the temporary regrouping with sprudel `fm` and `penv` + `accelerate` + `fm` among the
