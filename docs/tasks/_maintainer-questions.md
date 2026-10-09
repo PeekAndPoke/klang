@@ -49,13 +49,19 @@ every door (one word per concept says no). **Recommendation: keep them as engine
 limits in their file header, and point authors (Kotlin included) at the `klangscript-libs` door.** The alternative is
 to align them fully. No song is affected either way (songs are KlangScript).
 
-## Q13. Pitch pipeline, the composition block (D8 to D11)
+## Q13. Pitch pipeline, the composition block: one name left
 
-Source: §8. Step 2 of the pitch plan, recommendations as written there:
-- **D8:** answered 2026-10-09: `pitchMod(mod)` stays linear, `pitchModSemitones` is added.
-- **D9:** no vibrato `range` and no vibrato `phase` on sprudel for now.
-- **D10 (pitch):** compose the pitch envelope through `adsr` only after a spike shows it matches.
-- **D11:** accelerate and FM stay nodes.
+D8 to D11 are answered (2026-10-09; recorded in [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)
+§8). One thing left from D11: accelerate leaves, built from a new note-progress primitive, a signal that rises from 0
+to 1 over the gate and then holds at 1.
+
+```
+Ign.saw().pitchModSemitones(Ign.constant(12).mul(Ign.progress()))   // what accelerate(12) becomes inside
+Ign.saw().lowpass(Ign.progress().range(300, 3000))                   // a filter that opens over the note
+```
+
+Is `progress()` a good name? Alternatives: `noteProgress()`, `gateRamp()`. And FM stays a node (the D1 reason); say if
+you see it differently.
 
 ## Q18. Named arguments in data tables
 

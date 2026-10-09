@@ -826,7 +826,8 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   primitive. The chain `adsr` is the AMPLITUDE host (the level floors at 0), the pitch law is raw; the product
   `amount * level` and the `/ 12` match today's bits, so the spike checks whether a negative sustain is the only
   difference, and whether the amplitude host's shortcuts keep `renderPitchEnvelopeRatios`' settled-block cost (D10).
-- **7e. Accelerate and FM stay nodes** (D11). Accelerate's law is a per-block seed with per-sample stepping and one
+- **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and
+  `pitchModSemitones`; FM keeps its node for D1). The original reasoning: Accelerate's law is a per-block seed with per-sample stepping and one
   reader; a `progress` primitive would be a node for one use. FM is already a composition (any modulator tree), and its
   law (linear deviation, the index envelope, the freq bypass) has no second reader.
 - **The start phase**: no `phase` knob on the vibrato for now (D9).
@@ -903,11 +904,19 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   the oscillator; no song or page uses it today). Both doors, a door-parity row, the KDoc of each naming its unit. The
   question as it was put: the name of the semitone pitch primitive, and that `pitchMod` stays as the linear one.
   Recommendation: keep `pitchMod`; name the new one for its unit (for example `pitchSemitones`), the maintainer's word.
-- **D9. (step 2) No vibrato `range` on sprudel and no slot for it in `classic()`** (the tremolo's precedent, "not in
+- **D9. (step 2)** **DECIDED (maintainer, 2026-10-09): add the vibrato `range` and `phase` to sprudel too, if it stays
+  small** (two `classic()` slots each, the door parameters, parity rows), right after 7c. The question as it was put: **No vibrato `range` on sprudel and no slot for it in `classic()`** (the tremolo's precedent, "not in
   sprudel yet"); **no `phase` knob on the vibrato for now**. Recommendation: both as stated.
-- **D10. (step 2) Compose the pitch envelope through the amplitude `adsr`** only if the spike shows the negative-sustain
+- **D10. (step 2)** **DECIDED (maintainer, 2026-10-09): compose it** ("let us use the composition approach again"), the
+  tremolo's way; the spike confirms the same sound and cost first, and if a negative sustain is the only difference,
+  the `adsr` gets what it needs to stay unclamped for pitch. The question as it was put: **Compose the pitch envelope through the amplitude `adsr`** only if the spike shows the negative-sustain
   floor is the only difference; otherwise keep `PitchEnvelopeModIgnitor`. Recommendation: spike first.
-- **D11. (step 2) Accelerate and FM stay nodes.** Recommendation: yes (taste is also what we do not do).
+- **D11. (step 2)** **Maintainer, 2026-10-09: "if we can represent them through other primitives, they should leave,
+  same as the tremolo node did."** So accelerate leaves: `pitchModSemitones(constant(semitones) * progress())`, with a
+  new note-progress primitive (0 to 1 over the gate, then held at 1), useful beyond pitch (a filter that opens over the
+  note). FM stays a node, because D1 (the modulator follows the pitch) needs the node to know which subtree is its
+  modulator; a free composition would lose that. The primitive's name (`progress()`) awaits the maintainer's word
+  (`_maintainer-questions.md` Q13). The question as it was put: **Accelerate and FM stay nodes.** Recommendation: yes (taste is also what we do not do).
 
 ### 9. Sizing
 
