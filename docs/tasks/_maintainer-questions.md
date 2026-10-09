@@ -52,8 +52,7 @@ to align them fully. No song is affected either way (songs are KlangScript).
 ## Q13. Pitch pipeline, the composition block (D8 to D11)
 
 Source: §8. Step 2 of the pitch plan, recommendations as written there:
-- **D8:** a name for the new semitone pitch primitive. `pitchMod` stays the linear one; the suggestion is
-  `pitchSemitones`.
+- **D8:** answered 2026-10-09: `pitchMod(mod)` stays linear, `pitchModSemitones` is added.
 - **D9:** no vibrato `range` and no vibrato `phase` on sprudel for now.
 - **D10 (pitch):** compose the pitch envelope through `adsr` only after a spike shows it matches.
 - **D11:** accelerate and FM stay nodes.

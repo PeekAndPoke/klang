@@ -898,7 +898,10 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
 - **D7. The `voices/strip/` package.** **DECIDED (maintainer, 2026-10-08): dissolve it into `voices/`.** After step 5 it holds `BlockContext`, `BlockRenderer`, `IgniteRenderer`,
   `SendRenderer`. **Recommendation: dissolve it into `voices/`** (flat directories, `/code-style` section 3), rather than
   rename it.
-- **D8. (step 2) The name of the semitone pitch primitive**, and that `pitchMod` stays as the linear one.
+- **D8. (step 2) The name of the semitone pitch primitive** **DECIDED (maintainer, 2026-10-09): `pitchModSemitones`
+  is added; `pitchMod(mod)` stays as it is**, the linear one (`frequency x (1 + mod)`: 1.0 is an octave up, -1.0 stops
+  the oscillator; no song or page uses it today). Both doors, a door-parity row, the KDoc of each naming its unit. The
+  question as it was put: the name of the semitone pitch primitive, and that `pitchMod` stays as the linear one.
   Recommendation: keep `pitchMod`; name the new one for its unit (for example `pitchSemitones`), the maintainer's word.
 - **D9. (step 2) No vibrato `range` on sprudel and no slot for it in `classic()`** (the tremolo's precedent, "not in
   sprudel yet"); **no `phase` knob on the vibrato for now**. Recommendation: both as stated.
