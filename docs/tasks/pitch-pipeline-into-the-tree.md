@@ -734,7 +734,12 @@ outer mod and detune scope; "better to have the general case first, maybe we fin
 another fm's carrier FOLLOWS; the one shape the engine cannot process (an fm above a forking `detune`) is an author
 rule ("define the FM on both x and x.detune() and sum both") with a build-time diagnostic as its own task
 (`fm-above-forking-detune-diagnostic.md`); `s("sgpad").fm(...)` in step 4 stays quiet and recorded, decided when it
-happens on a real song. The carrier-only vibrato shape waits for the maintainer's ear.
+happens on a real song. **Listened (maintainer, 2026-10-09):** the bell under `vib` "after" is fine; the two-modulator
+pair showed no audible difference, so "follows" stands. **The placement rule:** "`Ign.sine().fm(Ign.sine(), 3.5,
+400).vibrato(6, 0.5)` should mean the note's pitch. Otherwise it would probably be `Ign.sine().fm(Ign.sine().vibrato(),
+3.5, 400)`." So a pitch node means what it wraps: above the fm, the whole operator (the note's pitch); on the
+modulator, the modulator alone; on the carrier (`Ign.sine().vibrato(6, 0.5).fm(...)`), the carrier alone, the modulator
+does not follow (the build's natural result, now decided).
 
 **Step 3b, the maintainer's principle (2026-10-09):** "It would be good to find a general solution. If not possible we
 should report an error, when something is authored that the engine cannot process." So the FM rule must hold for
