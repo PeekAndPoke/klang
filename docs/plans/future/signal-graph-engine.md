@@ -367,7 +367,7 @@ signal, the KnobGlide machinery with a duration and a shape. A plain write is a 
 the automation of 6.6 and add nothing beside it. The frontend turns a cycle-based pattern (`saw.slow(8)`) into tweens,
 and the backend never learns cycles.
 
-### 6.9 `split`: parallel branches, the twin of `through` (maintainer, 2026-10-09; the name is open, see below)
+### 6.9 `parallel` and `serial`: branches side by side, the twin of a chain (maintainer, 2026-10-09)
 
 Raised while listening to the Katalyst `distort` stage on Kokon's master ("now we are distorting the hats and the bass
 drum") and asking whether people saturate only some bands. They do: multiband saturation on the master, or more
@@ -450,7 +450,44 @@ said, I do not like the pythony parallel arrays at all." B is rejected.
 **Credits when it lands** (the credits rule, 2026-10-09): Linkwitz-Riley crossovers (Siegfried Linkwitz and Russ Riley,
 1976) for `bands`; SuperCollider and SuperDirt as the precedent of the general graph under the orbit convention (6.1).
 
-**The operator's name: open** (maintainer: "it needs a nicer name"). `bands` stays as it is (maintainer, 2026-10-09:
+**Decided (maintainer, 2026-10-09):**
+- **The names are `parallel` and `serial`**, the mixing vocabulary ("serial compression", "parallel compression"). The
+  maintainer: "parallel is a good name but not in the same spirit as through ... so I would suggest as pair parallel /
+  serial". `through` is RETIRED for `serial`, the same behaviour, removed and not deprecated (one word per concept).
+  It migrates 6 calls in the built-in songs (Kokon 4, Der Schmetterling 2), both doors (Ignitor and Katalyst), its
+  parity spec, the two writing references and a benchmark case, before the tutorials (a shape change), with an entry in
+  `docs/retired-names.md`.
+- **`parallel` SUMS its branches.** It does not average: a crossover's bands add up to the input only as a sum; dry/wet
+  stays plain arithmetic (`mul(wet)`, `mul(1 - wet)`); adding a branch never changes the others. The KDoc says that two
+  identity branches give +6 dB.
+- **An empty `parallel()` returns the signal unchanged** (maintainer), a deliberate definition (an empty sum would be
+  silence), and the same as `serial()` (today's `through()`). One branch is that branch's output.
+
+**The proposed scope, in build order** (2026-10-09, open points below):
+1. `serial`: the rename, both hosts.
+2. `parallel` on the Ignitor: the sum, empty is identity, branches ALIGNED BY LATENCY (an oversampled branch is 4 to 6
+   samples late).
+3. `parallel` on the Katalyst: a stage holding branches of stages. A branch's tail and latency count for the chain,
+   and one block buffer per branch is allocated at build. This makes "distort only the mids on the master" possible.
+4. `bands`, built on `parallel`, both hosts.
+5. Optional: a dry/wet helper, `x.blend(0.1, y => y.distort(0.5))` = `parallel(y => y.mul(0.9), y => y.distort(0.5).mul(0.1))`.
+
+Out of scope: the Motor routing, sprudel pattern doors, removing the stages' own `wet` knobs (to reconsider once
+`parallel` has proven itself), moving cuts, a better oversampler.
+
+**Open before building:**
+- **The crossover of `bands`.** With Linkwitz-Riley crossovers, a `bands` with nothing processed is an ALL-PASS, not the
+  input: flat in level, the phase turned around each cut, so the waveform and its peaks change. The alternatives:
+  complementary by subtraction (`high = x - low`, the sum is exactly the input, but the upper band's slope is soft and
+  bumpy), or linear phase (clean, but milliseconds of latency). The coordinator's lean: Linkwitz-Riley, the standard
+  of multiband tools, with the all-pass documented.
+- **The helper's name and law.** Not `wet` (a knob on many stages; a door of the same word blurs the two in
+  completion) and not `mix` (the Ignitor's crossfade, an alias of `lerp`); `blend` proposed. Linear law only (right
+  for distortion and filters); equal power, for reverb-like branches, when a song asks.
+- **Step 3 now, or after the Motor Lab:** `parallel` on the bus is local and simple; the coordinator's lean is to
+  build it directly and keep the lab for the routing questions.
+
+**The operator's name, the earlier search** (maintainer: "it needs a nicer name"), superseded by the decision above. `bands` stays as it is (maintainer, 2026-10-09:
 "bands is fine as a name"). The coordinator had proposed sprudel's `layer` and `superimpose`, which mean the same on
 patterns; rejected: "Sprudel should not be the naming source here." The name comes from the engine's own vocabulary or
 the common language of audio, to be found with `/dsl-design`.
