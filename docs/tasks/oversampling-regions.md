@@ -183,6 +183,17 @@ more than one place per effect, the factoring is not done.
 - Latency: two layers at different factors summed, no unexpected comb.
 - The whole-corpus net for every identity step of phase 0.
 
+## 8a. Found 2026-10-09: the oversampler is not clean enough for a whole mix
+
+Measured while building the Katalyst `distort` stage (`docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`):
+on a clean signal the round trip (the linear-interpolation upsampler and the 15-tap half-band decimator) loses, at
+48 kHz and 2x, 0.7 dB at 10 kHz, 2 dB at 16 kHz and 4 dB at 20 kHz (4x and 8x a little more). On a distorted voice that
+is inaudible; on a bus or the master it dulls the whole mix even at a small drive. So the bus `distort` defaults to no
+oversampling. A transparent oversampler for buses (a longer half-band, or an interpolating upsampler instead of the
+linear one) belongs to this task's factoring. The alternative for the soft shapes is antiderivative anti-aliasing (no
+resampling, no latency). The group delay figures were corrected the same day (`Oversampler.groupDelaySamples`: 4.0, 5.5
+and 6.25 input samples).
+
 ## 9. Open decisions, for the maintainer when the task starts
 
 1. The Master: in or out.

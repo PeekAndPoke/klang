@@ -261,7 +261,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `docs/tasks/katalyst-master-configure-doors.md`, `docs/tasks/pluck-release-tail.md`,
   `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
-  `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md`, `idea-master-saturation.md` (all in
+  `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md` (all in
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
 - **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).

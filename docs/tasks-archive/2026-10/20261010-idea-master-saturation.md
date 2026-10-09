@@ -1,6 +1,6 @@
 # Master saturation: glue and warmth on the final mix
 
-Status: **future, idea, not designed.** Created 2026-09-27 (maintainer) from the March plan
+Status: **archived 2026-10-10: the saturator half was built as the Katalyst `distort` stage; the rest is homed below.** Was: future, idea, not designed. Created 2026-09-27 (maintainer) from the March plan
 `docs/tasks-archive/2026-03/20260323-klang-audio-master-configuration.md`, which was carried in
 `audio-pipeline-open-topics.md` §2 until that file was retired
 (`docs/tasks-archive/2026-09/20260927-audio-pipeline-open-topics.md`).
@@ -56,3 +56,19 @@ approximation `x (27 + x^2) / (27 + 9 x^2)`, clamped at |x| > 3.
 - **Where it sits against the house limiter.** The final safety limiter stays on the summed mix in
   `MasterStage` (decision of 2026-08-04, `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md`
   §4); an authored saturator runs before it.
+
+## Closed (2026-10-10)
+
+What the idea asked for, and where each part went:
+
+| part | now |
+|---|---|
+| a soft saturator on the master, `drive` and `bias` | BUILT as the Katalyst `distort` stage (`docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`): the voice's law at the bus position, `k.distort(amount, shape, oversample)`. The `bias` is covered by the asymmetric shapes (`tube`, `asym`, `diode`), which add the even harmonics |
+| "is it wanted at all; listen first" | ANSWERED by the maintainer's Kokon pair (2026-10-09, `distort(0.15)` before the limiter, loudness-matched): "the glueing effect is real" |
+| the shape of the surface | DECIDED: `distort`, one word per concept with the voice; no `saturate` |
+| oversampling a full mix | ANSWERED by measurement: today's oversampler dulls a whole mix (at 2x about -2 dB at 16 kHz), so the default is 0 and a transparent oversampler for buses is a follow-up, recorded in `docs/tasks/oversampling-regions.md` |
+| where it sits against the house limiter | as written: an authored stage runs before `MasterStage` |
+| a glue compressor before the saturator | the `compressor` stage already runs on the master; what glue still needs (a low-cut on the detector, so the bass does not pump it, and a `wet` for parallel use) is candidate K5 of `docs/plans/aaa-production-tricks.md` |
+| the output scaled by `1 / drive` (more drive, not more level) | NOT built: a `gain` after the stage does it by hand. Reopen if a song wants it |
+| the presets ("Transparent", "Analog Warmth") | NOT built: a product decision on top of the stages, as the idea itself said |
+

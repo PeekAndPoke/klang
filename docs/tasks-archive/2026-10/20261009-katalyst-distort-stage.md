@@ -10,7 +10,7 @@
 
 Status before archiving: **built and reviewed 2026-10-09 on branch `katalyst-distort` (worktree); a PR to `main` waits for the maintainer.** Agreed with the maintainer 2026-10-09. The first item out of the production research
 ([`../plans/aaa-production-tricks.md`](../../plans/aaa-production-tricks.md), candidate K1, there named `saturate`). It
-absorbs [`future/idea-master-saturation.md`](../../tasks/future/idea-master-saturation.md). It needs no routing, so it is neutral
+absorbs [`20261010-idea-master-saturation.md`](20261010-idea-master-saturation.md). It needs no routing, so it is neutral
 to the Motor design ([`../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) §6).
 
 ## Why
