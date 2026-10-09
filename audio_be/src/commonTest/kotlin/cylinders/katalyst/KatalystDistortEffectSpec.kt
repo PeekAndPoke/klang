@@ -32,7 +32,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * The Katalyst `distort` stage (`docs/tasks/katalyst-distort-stage.md`): the voice's fused distort law on each
+ * The Katalyst `distort` stage (`docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`): the voice's fused distort law on each
  * channel of a bus, the compressor's switching law, a gliding amount, and the oversampler's latency held in every
  * state.
  *

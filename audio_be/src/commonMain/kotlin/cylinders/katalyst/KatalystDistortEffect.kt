@@ -25,7 +25,7 @@ import kotlin.math.roundToInt
 
 /**
  * The bus distortion, an insert: the voice's distort at the bus position (`KatalystStageDsl.Distort`,
- * `docs/tasks/katalyst-distort-stage.md`). It bends the orbit mix in place, left and right each through a core
+ * `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`). It bends the orbit mix in place, left and right each through a core
  * of their own, so the notes of the bus meet inside one curve: the glue of a master saturator, the clipper before
  * a limiter, the amp fed by a whole chord.
  *

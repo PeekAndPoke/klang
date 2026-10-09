@@ -122,7 +122,7 @@ class KatalystChain internal constructor(
     /**
      * True when this chain declares a stage that can ring on after its input stops: the reverb, the delay, and the
      * distort stage (its DC blocker decays from the offset an asymmetric shape made, `KatalystDistortEffect.hasTail`;
-     * review round 2 of `docs/tasks/katalyst-distort-stage.md`: without it a stopped playback's master cut that decay).
+     * review round 2 of `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`: without it a stopped playback's master cut that decay).
      * The master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan; [hasTail] then
      * answers whether one is there. Body, vowel and phaser may ring too; whether that is audible is
      * `docs/tasks/chain-swap-cuts-ringing-inserts.md`.

@@ -1,7 +1,7 @@
 # A chain swap may cut an insert stage that still rings
 
 Status: **found 2026-10-09, not measured, not started.** Found in review round 1 of the Katalyst `distort` stage
-([`katalyst-distort-stage.md`](katalyst-distort-stage.md)), where the same mechanism was measured for that stage and fixed.
+([`20261009-katalyst-distort-stage.md`](../tasks-archive/2026-10/20261009-katalyst-distort-stage.md)), where the same mechanism was measured for that stage and fixed.
 
 ## What the code does (read 2026-10-09)
 

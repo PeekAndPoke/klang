@@ -438,7 +438,7 @@ sealed interface KatalystStageDsl {
 
     /**
      * Distortion of the bus mix: the Ignitor's `distort` at the bus position, one DSP and one word on
-     * both hosts (`docs/tasks/katalyst-distort-stage.md`). A clipper is this stage with a clipping
+     * both hosts (`docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`). A clipper is this stage with a clipping
      * shape (`soft`, `hard`) and a small [amount]; saturation is a gentle shape at a moderate one.
      *
      * Unlike a voice's distort it bends the SUM: the notes of the bus meet inside one curve, so they

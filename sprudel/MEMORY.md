@@ -205,3 +205,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   move the whole operator again, modulator with carrier, as on the strip (pitch pipeline step 3b, decision D1). Sprudel's
   own `fm` door still runs on the strip until step 4, where no tree pitch stage reaches its modulator
   (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3b).
+- 2026-10-10: v0.6.1: `analog(character)` (was `amount`) on every analog door, sprudel's three forms and the mapper
+  included (Q25); with the four pitch entries above. The old names are in `docs/retired-names.md`.

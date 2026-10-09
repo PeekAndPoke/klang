@@ -282,8 +282,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 v0.6.1: pitch pipeline steps 1 to 3b, the Katalyst `distort` stage (merged from `katalyst-distort`), a
+  soloed voice protected to its end, the warehouse panel's reverb counters, `analog(character)` on every door and
+  `variants` with plain numbers; the corpus identical except Kokon's two landing strikes (accelerate, at most 2.5
+  cents): the entries below and `DEV-DIARY.MD`
 - 2026-10-09 A `distort` stage on the Katalyst (bus and master), the voice's law at the house DC pole, the oversampler's
-  latency held in every state: `docs/tasks/katalyst-distort-stage.md`
+  latency held in every state: `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`
 - 2026-10-09 A soloed voice is protected for its whole life (`ActiveVoice.soloed`, Q14 and Q28); the window serves between events:
   `docs/tasks-archive/2026-10/20261009-solo-protects-whole-voice.md`
 - 2026-10-09 Pitch pipeline step 3b: a pitch node means what it wraps; above an `fm` it moves the whole operator

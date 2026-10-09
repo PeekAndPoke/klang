@@ -49,8 +49,9 @@ port to Zig.
 
 1. ~~The voice lifecycle state machine~~ **done 2026-10-07 (v0.5.5)**: [`20261007-voice-lifecycle-state-machine.md`](../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md); then [`code-style-named-args-pass.md`](code-style-named-args-pass.md) (`audio_be` and `audio_bridge` done 2026-10-07, v0.6.0).
 2. The pitch pipeline into the tree: [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md) (decisions D1
-   to D7 answered 2026-10-08). Before its step 1: the name check over the `classic()` slots, **done 2026-10-09
-   (v0.6.0)**: [`20261009-classic-slot-names-check.md`](../tasks-archive/2026-10/20261009-classic-slot-names-check.md).
+   to D7 answered 2026-10-08). Steps 1, 2, 3 and 3b done 2026-10-09 (v0.6.1: `penv`, `vib` and `accelerate` are
+   `classic()` stages, the fm modulator follows the pitch); steps 4 (fm) and 5 (the strip's shell) remain.
+   Before its step 1: the name check over the `classic()` slots, **done 2026-10-09 (v0.6.0)**: [`20261009-classic-slot-names-check.md`](../tasks-archive/2026-10/20261009-classic-slot-names-check.md).
 3. ~~The Katalyst DSL leftovers and the engine tidy-up~~ **done 2026-10-09 (v0.6.0)**: steps 1 to 13 and the V8
    allocation pass, [`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md) (audit
    2026-10-07). Its bug, an empty `variants()` crashing the audio thread, was fixed first (2026-10-07: it is silence

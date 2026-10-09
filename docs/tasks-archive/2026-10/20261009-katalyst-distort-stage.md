@@ -1,9 +1,17 @@
 # A `distort` stage on the Katalyst: the clipper and the glue for buses and the master
 
-Status: **built and reviewed 2026-10-09 on branch `katalyst-distort` (worktree); a PR to `main` waits for the maintainer.** Agreed with the maintainer 2026-10-09. The first item out of the production research
-([`../plans/aaa-production-tricks.md`](../plans/aaa-production-tricks.md), candidate K1, there named `saturate`). It
-absorbs [`future/idea-master-saturation.md`](future/idea-master-saturation.md). It needs no routing, so it is neutral
-to the Motor design ([`../plans/future/signal-graph-engine.md`](../plans/future/signal-graph-engine.md) §6).
+> **DONE 2026-10-09** (branch `katalyst-distort`, merged into `pitch-pipeline` on 2026-10-10 as `aab25677`, v0.6.1).
+> Key commits: the stage `fd7839ee`, review round 3 and the minor batch `9e34567b`, the ledger row `8c32d2a9`. Review
+> total: 3 rounds, 0 critical, 3 major (all fixed). The record is "What was built", "Review" and "Listening" below.
+> Left open: the chain swap that may cut body, vowel and phaser
+> ([`chain-swap-cuts-ringing-inserts.md`](../../tasks/chain-swap-cuts-ringing-inserts.md)); the band split the
+> listening asked for (the `bands` and `parallel` plans in `docs/plans/future/signal-graph-engine.md`); and, with no
+> task file yet, a transparent oversampler for the master and `wet` on the voice and the bus at once.
+
+Status before archiving: **built and reviewed 2026-10-09 on branch `katalyst-distort` (worktree); a PR to `main` waits for the maintainer.** Agreed with the maintainer 2026-10-09. The first item out of the production research
+([`../plans/aaa-production-tricks.md`](../../plans/aaa-production-tricks.md), candidate K1, there named `saturate`). It
+absorbs [`future/idea-master-saturation.md`](../../tasks/future/idea-master-saturation.md). It needs no routing, so it is neutral
+to the Motor design ([`../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) §6).
 
 ## Why
 
@@ -95,7 +103,7 @@ to the Motor design ([`../plans/future/signal-graph-engine.md`](../plans/future/
 - **Round 1** (opus, code and audio, blind): 2 MAJOR, 5 MINOR, all fixed.
   - MAJOR: an amount glide clicked at both seams with oversampling on. Fixed by `DistortionCore.processRamped`.
   - MAJOR: a chain swap cut an asymmetric shape's DC blocker decay. Fixed by `DcBlocker.holdsEnergy` in `hasTail`.
-  - The same swap mechanism may cut body, vowel and phaser: [`chain-swap-cuts-ringing-inserts.md`](chain-swap-cuts-ringing-inserts.md).
+  - The same swap mechanism may cut body, vowel and phaser: [`chain-swap-cuts-ringing-inserts.md`](../../tasks/chain-swap-cuts-ringing-inserts.md).
 - **Round 2** (reviewer-high, two-phase): both reviewers found 1 MAJOR, the same one. The master never asked the
   stage for its tail, because `KatalystChain.declaresTail` counted only reverb and delay, so a stopped playback cut the
   decay. Fixed: `declaresTail` counts the stage, and `MasterOutputChainSpec` has a row for it. The reconcile phase

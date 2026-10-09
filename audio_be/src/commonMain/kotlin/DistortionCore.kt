@@ -112,7 +112,7 @@ internal class DistortionCore(
      * oversampled one with an oversampler), written from the END so the last sample carries [driveTo] exactly, and it
      * is applied where [process] applies its drive: on the shaper's input, inside the oversampler. So the
      * oversampler's history stays in the input's own domain, and a block that glides and a block that does not meet
-     * without a seam (round 1 of `docs/tasks/katalyst-distort-stage.md`: a host that pre-multiplied the input at the
+     * without a seam (round 1 of `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`: a host that pre-multiplied the input at the
      * base rate instead left the history one domain off at every change, a click at both ends of each glide).
      */
     fun processRamped(
