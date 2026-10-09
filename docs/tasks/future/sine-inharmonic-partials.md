@@ -93,6 +93,16 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
 - **Decided 2026-10-02: it gets built**: the maintainer decided to build the partials knob on the sine in any case (in
   today's names it would be written `Ignitor.sine(x => x.partials())`). The allocation measurement still belongs in the record, as the before and after.
 
+## Decided (maintainer, 2026-10-09, Q26)
+
+- **a.** Together with the other banks, all of them play, summed (the banks' existing rule).
+- **b.** `fundamental` is unchanged: the sine's own ratio-1 partial; a pure cluster writes `fundamental(0)`.
+- **c.** No neighbouring arrays ("I really do not like this python style of having two arrays as neighbours"): a
+  builder where every partial is added on its own. The proposed shape, `partial(ratio, gain, phase)` per call on the
+  sine builder, is in `_maintainer-questions.md` Q26, awaiting the word.
+- **d.** Optional start phases, per partial, in c's shape.
+- **e.** (drift) not yet answered; the recommendation stands: as the other banks.
+
 ## Follow-ups
 
 - [`sine-noise-band.md`](sine-noise-band.md): a noise band as one more generator of partials, with the

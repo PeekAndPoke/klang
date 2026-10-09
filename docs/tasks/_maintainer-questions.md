@@ -12,50 +12,40 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5; merged as PR #85, v0
 
 # Part 1: Blocking (work waits on the answer)
 
-## Q26. Inharmonic partials on the sine: five design points (pulled ahead, 2026-10-09)
+## Q26. Inharmonic partials on the sine (pulled ahead, 2026-10-09)
 
-Source: [`future/sine-inharmonic-partials.md`](future/sine-inharmonic-partials.md). Blocks that task only; the pitch
-pipeline runs first. Decided already (2026-10-02): it gets built. The shape:
+Source: [`future/sine-inharmonic-partials.md`](future/sine-inharmonic-partials.md). Answered 2026-10-09: **a** all banks
+play, summed; **b** `fundamental` unchanged; **d** optional start phases, in the shape of c. **c** asked for a builder
+instead of two neighbouring arrays. The proposal, for your word:
 
-```
-Ign.sine(x => x.fundamental(0).partials(
-    ratios = [0.6571, 0.7571, 0.8714],
-    gains  = [0.520, 0.676, -0.652],
-))
-```
-
-One node instead of Der Schmetterling's 13 hand-rolled sines (the snare's thud), so far fewer objects per hit.
-
-**a. Together with the other banks.** What does `Ign.sine(x => x.harmonics(7).partials(ratios = [1.5], gains = [0.3]))`
-play? Recommendation: **all of them, summed** (the rule the banks already follow: `harmonics(7).octaves(3)` plays both
-today). Inside, the engine renders one list, every bank's pairs concatenated, in one pass. The alternative, "the last
-bank wins", would change what `harmonics(7).octaves(3)` plays.
-
-**b. `fundamental` when the cluster has no partial at ratio 1.** Recommendation: **unchanged.** `fundamental(g)` is the
-sine's own partial at ratio 1 (default 1.0); a pure cluster writes `fundamental(0)`, as the thud would. No magic.
-
-**c. The lists: fixed at build, or modulatable?** Today every bank knob is a signal read per block; a list is new on
-both doors and on the wire. Recommendation: **numbers, fixed at build** (a learnable, fixed target, the caricature
-model). If a moving cluster is ever wanted, a signal per gain can come later.
+**One partial per call, on the sine's own builder.** `partial(ratio, gain, phase)` adds ONE partial; calling it again
+adds the next. No arrays to keep in step, and each line reads as one partial:
 
 ```
-partials(ratios = [0.66, 0.76], gains = [0.5, 0.7])        // yes
-partials(ratios = [0.66, Ign.perlin(1)], ...)                // no, a type error
+let thud = Ign.sine(x => x
+    .fundamental(0)
+    .partial(0.6571, 0.520)
+    .partial(0.7571, 0.676)
+    .partial(0.8714, 0.652, phase = 0.5)   // half a cycle: what the minus sign did before
+    .partial(1.2143, 0.410)
+)
 ```
 
-**d. A start phase per partial.** Choosing each partial's sign was worth 8 dB of onset peak on the thud. The
-oscillators already have a `phase` knob (a fraction of one cycle, 0 to 1). Recommendation: **an optional
-`phases = [...]` list in the same unit,** default 0 for every partial; a negative gain stays a valid shortcut for half a
-cycle.
+- **The knobs:** `ratio` (required, a multiple of the sine's frequency), `gain` (default 1.0), `phase` (default 0, a
+  fraction of one cycle, the unit of the oscillators' existing `phase` knob). A negative gain still works and is the
+  same as `phase = 0.5`.
+- **Numbers or signals, like every other knob** (your rule from D10 the other way round: a constant is just the
+  common case). `.partial(1.5, Ign.perlin(1).range(0.2, 0.4))` lets one partial breathe. The thud passes numbers.
+  This replaces my earlier "fixed numbers only", which only made sense for arrays.
+- **The same on both doors:** the KlangScript builder above, and in Kotlin `sine { partial(ratio = 0.6571,
+  gain = 0.52) }` on the Kotlin door (two doors, one DSL).
+- **On the wire:** the `Sine` node gets a list of `Partial(ratio, gain, phase)` entries, each knob an Ignitor value as
+  everywhere else.
+- **A cap on the count,** like the unison voices (a resource count, not a tone): 256 partials. A song that adds more
+  plays the first 256.
+- **Order does not matter for the sound** (they are summed); it is kept as written, so the code reads as the list.
 
-```
-partials(ratios = [...], gains = [...], phases = [0, 0.5, 0.25, ...])
-```
-
-**e. Drift.** Recommendation: **as for the other banks:** `analog` drifts them, `analogSpread(0)` moves the whole
-cluster as one oscillator, `analogSpread(1)` gives each partial its own lane.
-
-
+Say yes, or what to change (a name other than `partial`, a different default gain, no signals).
 
 ---
 
