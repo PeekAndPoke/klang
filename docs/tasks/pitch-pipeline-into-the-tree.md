@@ -835,7 +835,8 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   `phaseMod` for the whole subtree: bit-identical everywhere, a second mechanism, against "complexity is the enemy".
   **Recommendation: (a) now** (no corpus song is affected), (b) as its own small item for the ear later.
 - **D2. One accelerate base for both doors.** **DECIDED (maintainer, 2026-10-08): the gate, for both doors** ("gliding
-  to the gate close is the correct behaviour"); step 3 is rewritten for it. **And the hold (maintainer, 2026-10-09):** the node
+  to the gate close is the correct behaviour"); step 3 is rewritten for it. **A zero-length gate holds the target from the first frame** (Q27, confirmed by the maintainer 2026-10-09: "yes
+  this is fine"). **And the hold (maintainer, 2026-10-09):** the node
   kept rising past the gate at the same rate (+12 st over a 1280-frame gate read 2.0 at the gate, 4.0 at 2560, 8.0 at
   3839; `tmp/reviews/pp-step3-report.md`), so step 3 adds the hold: from the gate on the node writes its target,
   `2^(semitones / 12)`, through the release. Frames before the gate keep their bits. The Ignitor door's sound changes
