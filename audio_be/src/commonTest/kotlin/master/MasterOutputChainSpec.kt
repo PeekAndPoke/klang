@@ -314,7 +314,8 @@ class MasterOutputChainSpec : StringSpec({
         // Review round 2 of the Katalyst distort stage: `tube` makes DC while signal flows, and after the input stops
         // the stage's DC blocker decays from that offset for a few hundred milliseconds. The master asked a chain for
         // its tail only when it declared a reverb or a delay, so a stopped playback disposed the engine and cut the
-        // decay in one sample. The step is measured in `KatalystDistortEffectSpec`; here, the host asks.
+        // decay in one sample. The step is measured in `KatalystDistortEffectSpec`; here, the host asks, inside the
+        // window where only the stage's answer keeps it ringing (round 3).
         val bus = adopted(
             KatalystDsl.of(KatalystStageDsl.Distort(amount = c(0.5), shape = DistortionShapes.indexOf("tube").toInt())),
             SizedBuffers.forRings(sampleRate),
@@ -338,14 +339,32 @@ class MasterOutputChainSpec : StringSpec({
             block(loud = true, b = b)
         }
 
-        // Past the master's own silent grace: the decay is still there, so the bus still rings.
-        for (b in 0 until 15) {
+        // Silence until the bus output is under the master's own audibility threshold (1e-4, the master's
+        // `TAIL_SILENCE_THRESHOLD`, written here as a literal): from here on the master no longer counts the output as
+        // audible and, after its interval of quiet blocks, ASKS the chain. The decay is still above the stage's floor.
+        var quiet = 0
+
+        while (true) {
+            block(loud = false, b = quiet)
+            quiet++
+
+            val peak = maxOf(onBus.left.maxOf { abs(it) }, onBus.right.maxOf { abs(it) })
+
+            if (peak < 1e-4) {
+                break
+            }
+
+            (quiet < 400) shouldBe true
+        }
+
+        // The master's interval of quiet blocks (10) and one more: it has asked, and the stage still holds.
+        for (b in 0 until 11) {
             block(loud = false, b = b)
         }
 
         bus.isRinging shouldBe true
 
-        // ...and once it has decayed (a few hundred milliseconds), it lets the engine go.
+        // ...and once the decay is under the stage's floor, it lets the engine go.
         for (b in 0 until 400) {
             block(loud = false, b = b)
         }

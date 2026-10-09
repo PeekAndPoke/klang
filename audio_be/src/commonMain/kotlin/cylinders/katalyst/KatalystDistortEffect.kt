@@ -121,7 +121,8 @@ class KatalystDistortEffect(
      * path, which is longer than the dry ring's [latencyFrames]. The interpolation holds one input sample and each
      * half-band stage reaches 13 samples back at its own input rate, so `1 + 13 * (1 - 2^-stages)`: 7.5, 10.75 and
      * 12.375 frames at 2x, 4x and 8x, rounded up (the tail rule of `audio/ref/katalyst.md`: err towards holding
-     * longer). 0 without oversampling.
+     * longer). 0 without oversampling. At the pinned 128-frame block any value up to a block holds exactly one quiet
+     * block ([countQuiet] adds whole blocks); the reach is the bound for a shorter block, not a tuning.
      */
     private val holdFrames: Int = if (stages == 0) 0 else ceil(1.0 + 13.0 * (1.0 - 1.0 / (1 shl stages))).toInt()
 

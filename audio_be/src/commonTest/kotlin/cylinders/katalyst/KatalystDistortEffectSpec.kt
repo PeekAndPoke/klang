@@ -134,7 +134,7 @@ class KatalystDistortEffectSpec : StringSpec({
     "a settled stage IS the voice's fused law on each channel, at the house DC pole, bit for bit" {
         listOf(soft to 0, tube to 0, soft to 2, hard to 4).forEach { (shape, factor) ->
             val blocks = 6
-            val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = shape, oversampleFactor = factor)
+            val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = shape, oversampleFactor = factor)
             // A first configure on a fresh stage acts at once: full weight from the first sample.
             val out = run(fx, blocks) { 0.25 }
             val expected = oracle(shape = shape, amount = 0.25, factor = factor, blocks = blocks)
@@ -150,7 +150,7 @@ class KatalystDistortEffectSpec : StringSpec({
         // The audible meaning of the pole (2026-10-09): a bus carries the sub of every voice on it. A tiny amount
         // keeps `soft` in its linear region, so the level change is the DC blocker's alone.
         val blocks = 200
-        val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = soft)
+        val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = soft)
         val sine = { k: Int -> 0.001 * sin(2 * PI * 40.0 * k / sampleRate) }
         val out = run(fx, blocks, inL = sine, inR = sine) { 1e-6 }
 
@@ -172,7 +172,7 @@ class KatalystDistortEffectSpec : StringSpec({
 
     "an amount at or below 0, or not finite, is OFF: the mix passes untouched" {
         listOf(0.0, -0.5, Double.NaN, Double.POSITIVE_INFINITY).forEach { amount ->
-            val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = tube)
+            val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = tube)
             val out = run(fx, 3) { amount }
 
             withClue("amount $amount") {
@@ -186,20 +186,20 @@ class KatalystDistortEffectSpec : StringSpec({
     "oversampling delays the orbit by the rounded group delay, and OFF is that delay exactly" {
         mapOf(0 to 0, 1 to 0, 2 to 4, 3 to 4, 4 to 6, 8 to 6).forEach { (factor, latency) ->
             withClue("factor $factor") {
-                KatalystDistortEffect(sampleRate, blockFrames, oversampleFactor = factor).latencyFrames shouldBe latency
+                KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = factor).latencyFrames shouldBe latency
             }
         }
 
         // The rounding stays within half a frame of the measured group delay (`OversamplerGroupDelaySpec`).
         for (stages in 1..3) {
             val factor = 1 shl stages
-            val latency = KatalystDistortEffect(sampleRate, blockFrames, oversampleFactor = factor).latencyFrames
+            val latency = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = factor).latencyFrames
 
             abs(latency - Oversampler.groupDelaySamples(stages)) shouldBeLessThan 0.51
         }
 
         // Off, with a 4-frame latency: out[k] = in[k - 4], across the block seams.
-        val fx = KatalystDistortEffect(sampleRate, blockFrames, oversampleFactor = 2)
+        val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = 2)
         val out = run(fx, 3) { 0.0 }
 
         out.left.toList() shouldBe List(3 * blockFrames) { if (it < 4) 0.0 else inputL(it - 4) }
@@ -229,8 +229,8 @@ class KatalystDistortEffectSpec : StringSpec({
         listOf(0, 2).forEach { factor ->
             val blocks = 2 + (fadeLen / blockFrames) + 3
             val k0 = 2 * blockFrames
-            val latency = KatalystDistortEffect(sampleRate, blockFrames, oversampleFactor = factor).latencyFrames
-            val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = tube, oversampleFactor = factor)
+            val latency = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = factor).latencyFrames
+            val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = tube, oversampleFactor = factor)
             // Two blocks off (the stage is no longer fresh), then on.
             val out = run(fx, blocks) { b -> if (b < 2) 0.0 else 0.3 }
             val wet = oracle(shape = tube, amount = 0.3, factor = factor, blocks = blocks, fromBlock = 2)
@@ -260,7 +260,7 @@ class KatalystDistortEffectSpec : StringSpec({
             val offBlock = 3
             val blocks = offBlock + (fadeLen / blockFrames) + 3
             val k0 = offBlock * blockFrames
-            val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = soft, oversampleFactor = factor)
+            val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = soft, oversampleFactor = factor)
             val latency = fx.latencyFrames
             val out = run(fx, blocks) { b -> if (b < offBlock) 0.4 else 0.0 }
             val wet = oracle(shape = soft, amount = 0.4, factor = factor, blocks = blocks)
@@ -296,7 +296,7 @@ class KatalystDistortEffectSpec : StringSpec({
         val offAt = 5
         val backAt = 8
         val blocks = backAt + (fadeLen / blockFrames) + 3
-        val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = tube)
+        val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = tube)
         val out = run(fx, blocks) { b -> if (b < onAt) 0.0 else if (b < offAt) 0.3 else if (b < backAt) 0.0 else 0.3 }
         val wet = oracle(shape = tube, amount = 0.3, factor = 0, blocks = blocks, fromBlock = onAt)
 
@@ -327,7 +327,7 @@ class KatalystDistortEffectSpec : StringSpec({
         val nyquist = { k: Int -> if (k % 2 == 0) c else -c }
         val change = 6
         val blocks = change + glideBlocks + 4
-        val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = soft)
+        val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = soft)
         val out = run(fx, blocks, inL = nyquist, inR = nyquist) { b -> if (b < change) 0.1 else 0.5 }
 
         fun amp(k: Int) = abs(out.left[k] - out.left[k - 1]) / 2
@@ -357,7 +357,7 @@ class KatalystDistortEffectSpec : StringSpec({
         val blocks = down + glideBlocks + 6
 
         listOf(2, 4).forEach { factor ->
-            val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = soft, oversampleFactor = factor)
+            val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = soft, oversampleFactor = factor)
             val out = run(fx, blocks, inL = sine, inR = sine) { b -> if (b < up) 0.1 else if (b < down) 0.5 else 0.1 }
             var worst = 0.0
 
@@ -370,7 +370,7 @@ class KatalystDistortEffectSpec : StringSpec({
     }
 
     "reset is a hard cut to Off, and the next switch is instant again" {
-        val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = tube)
+        val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = tube)
 
         run(fx, 3) { 0.3 }
         fx.isOn shouldBe true
@@ -389,7 +389,7 @@ class KatalystDistortEffectSpec : StringSpec({
         val loud = { k: Int -> inputL(k) }
         val silent = { _: Int -> 0.0 }
 
-        val latent = KatalystDistortEffect(sampleRate, blockFrames, oversampleFactor = 2)
+        val latent = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = 2)
         run(latent, 1, inL = loud, inR = loud) { 0.3 }
         latent.hasTail() shouldBe true
 
@@ -399,7 +399,7 @@ class KatalystDistortEffectSpec : StringSpec({
 
         // OFF, the cores are reset and hold nothing, but the dry ring still holds the last frames: a tail until one
         // quiet block has pushed them out.
-        val off = KatalystDistortEffect(sampleRate, blockFrames, oversampleFactor = 2)
+        val off = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = 2)
         run(off, 1, inL = loud, inR = loud) { 0.0 }
         off.hasTail() shouldBe true
         run(off, 1, inL = silent, inR = silent) { 0.0 }
@@ -412,7 +412,7 @@ class KatalystDistortEffectSpec : StringSpec({
         // tail, which used to cut that decay to 0 in one sample. Without oversampling, so the ring plays no part.
         val loud = { k: Int -> 0.5 * sin(2 * PI * 110.0 * k / sampleRate) }
         val silent = { _: Int -> 0.0 }
-        val fx = KatalystDistortEffect(sampleRate, blockFrames, shapeIndex = tube)
+        val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = tube)
 
         run(fx, 8, inL = loud, inR = loud) { 0.5 }
 
@@ -428,7 +428,7 @@ class KatalystDistortEffectSpec : StringSpec({
     }
 
     "only the three state objects ever appear, through every edge of the table" {
-        val fx = KatalystDistortEffect(sampleRate, blockFrames)
+        val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val seen = mutableSetOf<Any>()
         val config = DistortConfig()
         val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))

@@ -1,6 +1,6 @@
 # A `distort` stage on the Katalyst: the clipper and the glue for buses and the master
 
-Status: **built 2026-10-09 on branch `katalyst-distort` (worktree), in review.** Agreed with the maintainer 2026-10-09. The first item out of the production research
+Status: **built and reviewed 2026-10-09 on branch `katalyst-distort` (worktree); a PR to `main` waits for the maintainer.** Agreed with the maintainer 2026-10-09. The first item out of the production research
 ([`../plans/aaa-production-tricks.md`](../plans/aaa-production-tricks.md), candidate K1, there named `saturate`). It
 absorbs [`future/idea-master-saturation.md`](future/idea-master-saturation.md). It needs no routing, so it is neutral
 to the Motor design ([`../plans/future/signal-graph-engine.md`](../plans/future/signal-graph-engine.md) §6).
@@ -101,6 +101,39 @@ to the Motor design ([`../plans/future/signal-graph-engine.md`](../plans/future/
   decay. Fixed: `declaresTail` counts the stage, and `MasterOutputChainSpec` has a row for it. The reconcile phase
   confirmed every round-1 fix, and two MINORs were withdrawn.
 - **Mutation checks:** 21 mutants, all red after the M11 and M20 rows were added.
+- **Round 3** (reviewer-xhigh, fable): CLEAN on both sides, no CRITICAL and no MAJOR. The MINORs were applied once
+  as a batch, without a round:
+  - the master row now asserts inside the window where only the stage's answer keeps the bus ringing (round 3's
+    mutant "the stage answers no DC tail" survived the first version; it is red now);
+  - `MasterBus` KDocs point at `declaresTail` instead of the old reverb-and-delay pair, and a dead reference is gone;
+  - the `declaresTail` table spec has its distort row;
+  - the two door lists presented as complete (`KlangScriptKatalyst`'s KDoc, the music-writing reference) name
+    `distort`;
+  - `holdFrames` says what it does at the pinned block;
+  - named arguments in the new spec.
+- **Measured on the real master** (round 3 audio reviewer): after a stop, a master `distort` rings out for 0.19 to 0.27 s
+  (the house pole's decay down to the stage's floor) and lets go at about -102 dBFS, under one 16-bit step. It cannot
+  hold an engine forever.
+- **Voice identity, the evidence:** voices render bit for bit as before by construction. `DistortionCore.process` is
+  untouched, its new parameter defaults to the voice's pole, and `MasterStage`'s literal 0.999 is now a const of the
+  same value. The specs that pin the voice's distort law bit for bit (`StripLawCoresSpec`,
+  `OversamplerDecimatorParitySpec`, `DoorDistortionLawSpec`) are green on the final tree, inside the 2434 `audio_be`
+  JVM tests. No corpus render was run, because a bit-level claim needs a spec, not the corpus (`audio/ref/verification.md`).
 - **Escapes filed in the ledger:** two. The process changes are in `audio/ref/katalyst.md`, "Writing a stage
   lifecycle": the three tail askers, and the build-time option multiplying the behaviour rows.
+
+## Listening (maintainer, 2026-10-09)
+
+The Kokon pair (`/opt/dev/peekandpoke/klang-labs/listening/kokon-master-clip/`, outside the repo): today's master
+against `.distort(0.15)` between the master's gain and its limiter, matched to -14.73 LUFS. At equal loudness the
+clipper leaves 2.3 dB more headroom (peak to loudness 12.3 dB down to 10.0 dB).
+
+> "The glueing effect is real and I think I also hear more highs / overtones, everything sounds more full. But as
+> usual one solution sparks new 'problems'. Now we are distorting the hats and the bass drum."
+
+The follow-up is a band split, saturating only the mids. It was discussed as a general `split(...)` operator (parallel
+branches summed, the twin of `through`) with a flat-summing `bands(...)` helper and automatic latency alignment of
+the branches. That belongs to the Motor design (`docs/plans/future/signal-graph-engine.md`), to be tried in the
+Motor Lab first. Today's workaround: put `distort` on the music orbits' chains instead of the master, so the drums
+never pass through it. Part of the "more highs" may be aliasing (no oversampling by default), which the hats show first.
 

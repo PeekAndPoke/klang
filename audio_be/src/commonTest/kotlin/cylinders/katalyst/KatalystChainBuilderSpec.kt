@@ -90,7 +90,7 @@ class KatalystChainBuilderSpec : StringSpec({
         chain.compressor.shouldNotBeNull() shouldBeSameInstanceAs chain.pipeline[5]
     }
 
-    "a chain declares a tail exactly when it declares a reverb or a delay" {
+    "a chain declares a tail exactly when it declares a reverb, a delay or a distort (the list of KatalystChain.declaresTail)" {
         // The master's "is a tail possible at all" test reads this (`MasterBus.isRinging`); it moved from the master
         // onto the chain in engine tidy-up step 13 (A2.1).
         val wet = IgnitorDsl.Constant(0.4)
@@ -102,6 +102,8 @@ class KatalystChainBuilderSpec : StringSpec({
         build(KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(0.8)))).declaresTail shouldBe false
         build(KatalystDsl.of(KatalystStageDsl.Compressor())).declaresTail shouldBe false
         build(KatalystDsl.of(KatalystStageDsl.Phaser())).declaresTail shouldBe false
+        // The distort stage's DC blocker decays after its input stops (review round 2 of the distort stage).
+        build(KatalystDsl.of(KatalystStageDsl.Distort())).declaresTail shouldBe true
 
         // Every other stage the classic chain declares (body, vowel, phaser, compressor, gain, duck), none a tail.
         val noTail = KatalystDsl.classic.stages.filter { it !is KatalystStageDsl.Reverb && it !is KatalystStageDsl.Delay }

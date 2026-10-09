@@ -53,7 +53,7 @@ object KlangScriptKatalyst {
 
     /**
      * Builds a chain (for an orbit or the output): the lambda receives a [KatalystBuilder] and appends stages in order
-     * (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `eq`, `gain`, and
+     * (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `distort`, `eq`, `gain`, and
      * `classic` for the whole familiar block at once, at most once per builder). No lambda, or an
      * empty one, is the empty chain.
      *
