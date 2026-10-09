@@ -68,6 +68,20 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
     where the release lasts only a few hundred blocks; likely the release path of the amplitude envelope, the class of
     10a. Locate it with the sampling heap profiler. Source: `tmp/reviews/pp3-r1-B.md` (pitch pipeline step 3, review
     round 1, reviewer B, NIT 3). S.
+10c. **An fm whose modulator reads a freq-keyed mod allocates a heap number per block on V8** (fixed for
+    freq-invariant mods, open for freq-keyed ones). The site (pitch pipeline step 3b, review round 1, reviewer B
+    MINOR 1): `CarrierFreqMod.generate` hands the pinned carrier frequency, a double loaded from a field, to
+    `mod.generate`, a megamorphic call V8 does not inline, so it boxes one heap number (about 16 bytes) per wrapper per
+    block; the house rule in `audio/ref/performance.md`. Holding the pin in a `DoubleArray(1)` does not help (the load
+    is the same). Fixed where the outer mod is freq-invariant (every sprudel door, every vibrato with constant knobs, a
+    nested wrapper): the wrapper hands on the caller's tagged `freqHz` instead, the same samples (the 3b specs bit for
+    bit). Measured on the production test bundle, render bytes per block, median of 3, HEAD / tree / HEAD control: the
+    bell under `vib` 164.4 / 165.0 / 154.7 pinned and 161.6 / 161.9 / 165.1 unpinned, HEAD's bytes again (it was +24 to
+    +28 before). Open: a wrapper whose outer mod keeps its freq key, here the inner fms of a chain (the outer fms read
+    the note): a chain of three fms +7 and +37 without a door, +24 and +44 under `vib` (pinned and unpinned; HEAD's own
+    spread is about 30), about one heap number per such wrapper per block. The JVM renders all of it allocation-free.
+    A remedy would hand the pinned value on without a load V8 boxes. Source: `tmp/reviews/pp3b-r1-B.md`,
+    `tmp/reviews/pp-step3b-report.md`. S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

@@ -45,9 +45,10 @@ The pitch stages sit at the front, directly on the instrument (`docs/tasks/pitch
 section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not change
 the sound, and their nesting is the retired pitch strip's grouping of the ratio product. Three pitch factors on one
 path can regroup it (one rounding, about -270 dB): while some doors still run on the strip, and for good where two
-of the instrument's own pitch nodes meet a door. Unlike the strip, a classic pitch stage does not bend an `fm` node's
-modulator until pitch pipeline step 3b bends it again (decision D1 (b)), and it never bends a musical oscillator in a
-parameter position, such as a filter LFO (plan section 2). The pitch envelope is the
+of the instrument's own pitch nodes meet a door. A classic pitch stage bends an `fm` node's modulator with its
+carrier, as every pitch node above an fm does (decision D1, pitch pipeline step 3b; see "FM: a pitch node means what
+it wraps" below). Unlike the strip, it never bends a musical oscillator in a parameter position, such as a filter LFO
+(plan section 2). The pitch envelope is the
 Ignitor `pitchEnvelope` node, filled by the `penv.*` and `penvCurves.*` slots (sprudel's `penv`, `penvCurves`); the
 vibrato is the Ignitor `vibrato` node, filled by `vibrato.rate` and `vibrato.semitones` (sprudel's `vib`).
 
@@ -143,6 +144,31 @@ class Fm(ratio: Double, attack: Double, decay: Double, sustain: Double, env: Dou
 // ratio: modulator freq = carrier * ratio
 // env: modulation depth in semitones (scaled by envelope)
 ```
+
+## FM: a pitch node means what it wraps
+
+Pitch pipeline step 3b (decision D1, the placement rule of 2026-10-09). A pitch modulation (a `vibrato`, `pitchMod`,
+`pitchEnvelope`, `accelerate`, an outer `fm`, a `classic()` pitch stage) above an `fm` node moves the whole operator,
+the note's pitch: the modulator follows the carrier and the ratio stays exact (a modulator with an absolute `freq`,
+`Ign.sine(330)`, stays at its frequency, shielded like every absolute oscillator). On the modulator it moves the modulator
+alone; on the carrier (`x.vibrato(...).fm(m, ...)`) the carrier alone. Sprudel's own `fm` door still runs on the
+voice strip until pitch pipeline step 4: its modulator is a sine inside `FmRenderer` that no tree pitch stage reaches.
+
+The mechanism: the `Fm` arm builds the modulator under the outer mod, read through a `CarrierFreqMod` that asks it at
+the CARRIER's frequency, which the fm pins every block before it renders the modulator. Asked at the modulator's own
+frequency, a mod whose knobs read `Freq` (a vibrato rate on the note, an audio-rate `pitchMod`, an outer fm) would
+render twice per block and break the carrier's own modulation; pinned, the mod above the fm renders once per block for
+every carrier pitch, and a chain of N fms costs N + 1 oscillator renders. The wrapper ignores the frequency it is called
+with, so a pitch node INSIDE the modulator drops its freq key and renders once per block too, also over a forking
+detune. One wrapper per fm node and outer mod, so `let f = x.fm(m); f + f` keeps `m` one instance. Guards: `FmModulatorFollowsPitchSpec` (the matrix) and `FmModulatorTopologySpec` (chains, nesting, sums,
+parameter positions, shared lets, the render counts).
+
+One shape the engine does not process: one fm whose carrier holds two pitches (`(x + x.detune(7)).fm(m)`). Its one
+modulator serves both pitches and advances once per pitch per block; if the mod above the fm reads the note and the
+modulator holds a pitch node whose knobs read no `Freq`, the second pitch's render even reads the first pitch's outer
+mod (that node's memo was filled under the first pin). The author rule: give each layer its own fm,
+inside its detune, and sum them, `x.fm(m1) + x.fm(m2).detune(7)`. A build-time diagnostic is its own task
+(`docs/tasks/fm-above-forking-detune-diagnostic.md`).
 
 ## Envelope / voice-lifetime semantics
 

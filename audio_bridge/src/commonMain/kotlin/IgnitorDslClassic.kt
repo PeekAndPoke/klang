@@ -302,9 +302,10 @@ class SampleSlots internal constructor() {
  *    envelopes are the strip's since D3 (one law, the block interpolation, and the default curve
  *    `MOD_ENV_CURVE` on both), and their curves are the `<door>Curves` slots since step 5b (c2);
  *  - the pitch envelope is the Ignitor `pitchEnvelope` node, the law the retired pitch strip shared with it
- *    (`renderPitchEnvelopeRatios`), so sprudel's `penv` renders the strip's bits (pitch pipeline step 1), except
- *    where the plan accepts a difference: an `fm` node's modulator is not bent by it until step 3b, which bends it
- *    again (decision D1 (b)); a musical oscillator in a parameter position (a filter LFO) stays unbent for good
+ *    (`renderPitchEnvelopeRatios`), so sprudel's `penv` renders the strip's bits (pitch pipeline step 1); an `fm`
+ *    node in the instrument moves under it as one operator, carrier and modulator, as on the strip (decision D1,
+ *    pitch pipeline step 3b). Except where the plan accepts a difference: a musical oscillator in a parameter
+ *    position (a filter LFO) stays unbent for good
  *    (plan section 2); three pitch factors on one path regroup the product (one rounding, about -270 dB), for good
  *    where two of the instrument's own pitch nodes meet a door; an instrument without `classic()` ignores the
  *    door (D6);

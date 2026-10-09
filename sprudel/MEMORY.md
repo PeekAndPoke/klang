@@ -201,3 +201,7 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   release tail and for `legato(0)` (the target from the first frame); the other shapes are named in the step record
   (D6: lost without `classic()`; D1: an `fm` instrument's modulator; a non-finite amount is now dropped, the bare
   voice) (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3).
+- 2026-10-09: `vib`, `penv` and `accelerate` over an fm instrument that ends in `classic()` (`sgbell`, an authored bell)
+  move the whole operator again, modulator with carrier, as on the strip (pitch pipeline step 3b, decision D1). Sprudel's
+  own `fm` door still runs on the strip until step 4, where no tree pitch stage reaches its modulator
+  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3b).

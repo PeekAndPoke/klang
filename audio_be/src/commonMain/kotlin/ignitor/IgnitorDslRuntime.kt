@@ -181,6 +181,40 @@ internal class IgnitorBuildCache(
         return v
     }
 
+    /** The fm wrappers of this build, created on the first fm under a pitch node: a voice without one pays nothing. */
+    private var carrierFreqMods: ArrayList<CarrierFreqMod>? = null
+
+    /**
+     * The one [CarrierFreqMod] of fm [node] under the outer [mod]. A second visit of the same fm under the same mod
+     * (`let f = x.fm(m); f + f`) builds its modulator under the SAME wrapper, so the build cache keeps the modulator
+     * one instance (one let, one signal), as it is when no pitch node sits above the fm. Keyed by the node, so two fms
+     * sharing one modulator let get one modulator each, and by the mod, so the same fm under two pitch nodes gets one
+     * modulator per pitch node. Not by the detune scope: the modulator's own cache key carries it, and the fm pins the
+     * wrapper right before each render. Build time only.
+     *
+     * The mod is part of the modulator's key, the house rule for every pitch node (`n.vibrato() + n` forks `n` on HEAD
+     * too). So under a pitch node above the fm, two shapes that HEAD built as ONE instance become two: a modulator let
+     * also used outside the fm (`x.fm(n).vibrato(...) + n`), and a modulator let shared by two fms, even at the same
+     * ratio. Bit for bit the same for draw-free oscillators; a noise or a drifting oscillator decorrelates, and the
+     * second instance takes its own draws from the voice rng. With no pitch node above the fm the one instance stays,
+     * rendered once per ratio (the memo's freq-key residue).
+     */
+    fun carrierFreqMod(node: IgnitorDsl, mod: Ignitor): CarrierFreqMod {
+        val known = carrierFreqMods ?: ArrayList<CarrierFreqMod>().also { carrierFreqMods = it }
+
+        for (i in known.indices) {
+            if (known[i].fmNode === node && known[i].mod === mod) {
+                return known[i]
+            }
+        }
+
+        val made = CarrierFreqMod(mod = mod, fmNode = node)
+
+        known.add(made)
+
+        return made
+    }
+
     /**
      * Entry [i] was reached a second time: its memo now has two consumers and caches per block, and its freq key is
      * resolved here, at the share, not at every wrap: resolving at every wrap made a voice build about five times
@@ -410,8 +444,14 @@ internal fun IgnitorDsl.buildIgnitor(
                 return carrier.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
-            val modulatorBuilt = modulator.buildIgnitor(ignitorParams, cache)
-            val fmMod = fmModIgnitor(
+            // Decision D1 (pitch pipeline step 3b): every pitch mod that reaches the carrier reaches the modulator too,
+            // so the operator moves as one and the ratio stays exact. The modulator builds under the outer mod,
+            // read through a [CarrierFreqMod] at the carrier's frequency (its KDoc says why; one per fm node and
+            // outer mod). A pitch node means what it wraps (the placement rule, maintainer, 2026-10-09): one on
+            // the carrier only does not reach the modulator, one on the modulator stays the modulator's own.
+            val modulatorPitch = if (accumulatedMod != null) cache.carrierFreqMod(node = this, mod = accumulatedMod) else null
+            val modulatorBuilt = modulator.buildIgnitor(ignitorParams, cache, modulatorPitch)
+            val fmMod = FmModIgnitor(
                 modulator = modulatorBuilt.ignitor,
                 ratio = this.ratio.buildIgnitor(ignitorParams, cache).ignitor,
                 depth = this.depth.buildIgnitor(ignitorParams, cache).ignitor,
@@ -420,6 +460,7 @@ internal fun IgnitorDsl.buildIgnitor(
                 sustain = this.sustain.buildIgnitor(ignitorParams, cache).ignitor,
                 release = this.release.buildIgnitor(ignitorParams, cache).ignitor,
                 freq = this.freq.buildIgnitor(ignitorParams, cache).ignitor,
+                modulatorPitch = modulatorPitch,
             )
             val carrierBuilt = carrier.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, fmMod, node = this))
             // The modulator is not on the amplitude spine, but the old `maxReleaseSec` counted it
@@ -464,7 +505,12 @@ internal fun IgnitorDsl.buildIgnitor(
  */
 private fun IgnitorBuildCache.combineMods(existing: Ignitor?, newMod: Ignitor, node: IgnitorDsl): Ignitor {
     val memo = MemoizingIgnitor(if (existing != null) existing * newMod else newMod)
-    val outerInvariant = existing == null || (existing is MemoizingIgnitor && existing.freqInvariant)
+    // A [CarrierFreqMod] (the mod above an fm, as the fm's modulator reads it) ignores the frequency it is called with,
+    // so it is freq-invariant for one pin, one carrier pitch: without this clause a pitch node inside a modulator kept
+    // its freq key and rendered twice per block over a forking detune (step 3b, review round 1, A MAJOR 1). Not across
+    // a re-pin within the block: in the author rule's shape (an fm whose carrier holds two pitches) under a mod that
+    // reads the note, the second pitch's modulator reads the first pitch's outer mod (its KDoc; review round 2, MINOR 1).
+    val outerInvariant = existing == null || existing is CarrierFreqMod || (existing is MemoizingIgnitor && existing.freqInvariant)
     // The knobs are every child but the first: every pitch-mod node lists the child it bends (`inner`, FM's
     // `carrier`) first. By position, not identity: a knob may be the inner node itself (`x.pitchMod(x)`).
     val children = node.childNodes()

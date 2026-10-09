@@ -683,7 +683,8 @@ yet, which is the point):
 node; the corpus run confirms it); listening pairs for the bell under `vib`, for scenario 2's "inside the carrier"
 shape, and for sprudel `fm` plus `vib`.
 
-**Stopped for a decision (2026-10-09, worker; no code in the tree).** The matrix is written
+**The first run stopped for a decision (2026-10-09, decided the same day: the two maintainer paragraphs after the
+queued items below).** The matrix is written
 (`FmModulatorFollowsPitchSpec`, 43 rows; report `tmp/reviews/pp-step3b-report.md`). HEAD fails 37 rows. Candidate (b)
 fails 3: an outer mod that reads `Freq` (a vibrato rate on the note, an audio-rate `pitchMod`, an outer fm) keeps its
 memo's freq key, and the modulator asks for it at `f x ratio`. It then renders twice per block and breaks the
@@ -695,6 +696,150 @@ carrier: "follows" is the rule as written and keeps step 4's `s("sgbell").fm(...
 "parallel" is HEAD). Listening: `tmp/listening/pp-step3b/` (the bell under `vib`, the inside-the-carrier pair, the
 two-modulator pair). Patches: `3b-PROPOSAL-carrier-freq-mod.patch` and `3b-candidate-b-as-written.patch` in the
 session scratchpad's `patches-pp/`.
+
+**What was done (2026-10-09, uncommitted, for review; 15 files after review round 1).** The decisions applied: the general mechanism
+(the proposal's v2), an fm over another fm's carrier FOLLOWS, the forking-detune shape an author rule, and **the
+placement rule** (maintainer, 2026-10-09, after listening): a pitch node means what it wraps. Above an `fm` it moves
+the whole operator, the note's pitch (`Ign.sine().fm(Ign.sine(), 3.5, 400).vibrato(6, 0.5)`); on the modulator, the
+modulator alone (`Ign.sine().fm(Ign.sine().vibrato(6, 0.5), 3.5, 400)`); on the carrier, the carrier alone
+(`Ign.sine().vibrato(6, 0.5).fm(Ign.sine(), 3.5, 400)`: the modulator does not follow). `audio_be`: the new
+`CarrierFreqMod` (`ignitor/CarrierFreqMod.kt`): the outer mod as the modulator reads it, asked at the CARRIER's
+frequency, which `FmModIgnitor` pins every block before it renders the modulator (one field write, no allocation); the
+`Fm` arm builds the modulator under it (`IgnitorDslRuntime.kt`), one wrapper per fm node and outer mod
+(`IgnitorBuildCache.carrierFreqMod`, one list created on the first fm under a pitch node, so a voice without one
+allocates nothing more; the detune scope is not in the key, the modulator's own cache key carries it, and the fm
+re-pins the wrapper before each render); `combineMods` counts a `CarrierFreqMod` as freq-invariant (it ignores the
+frequency it is called with), so a pitch node inside a modulator drops its freq key (review round 1, A MAJOR 1); the
+runtime builds the internal `FmModIgnitor` with the wrapper, and the public `fmModIgnitor` keeps HEAD's signature, so
+`CarrierFreqMod` and its pin stay internal (A NIT 1). KDocs: the `Fm` node (the placement rule with its three examples, the author
+rule), the script `fm` door, `classic()`. Docs: `audio/ref/voice-synthesis.md` ("FM: a pitch node means what it
+wraps"), the two `MEMORY.md` files, the music-writing Ignitor reference. Specs: `FmModulatorFollowsPitchSpec` (43 rows,
+the scenario matrix; its three `PLACEMENT` rows pin the placement rule) and `FmModulatorTopologySpec` (23 rows, the
+general case's guard: chains of three and four fms, under a vibrato, under a vibrato whose rate reads the note, under a
+counted `pitchMod` LFO, in `classic()` under `vib`; nested modulators three deep; a pitch node at every level; summed
+branches with their own chains; an fm voice in a parameter position; five shared-let rows against their intended
+constructions; the author rule's two RESIDUE rows; review round 1's two rows: a pitch node inside the modulator, over
+a forking detune, under a pitch node above the fm, renders its LFO once per block; one fm in two detune scopes shares
+its wrapper, re-pinned per render, under a freq-keyed mod; review round 2's two rows: the nested "inside" shape, a pitch
+node in the modulator of a modulator over a forking detune, once per block; the third RESIDUE row, a pitch node inside
+the modulator of the author rule's shape under a mod on the note). Every chain row also pins the cost: each lane renders once
+per block, N fms are N + 1 oscillator renders.
+
+- **Wire.** `WIRE_SCHEMA_HASH` `-275171334`, unchanged.
+- **Corpus, bit-identical** (`tmp/naming/corpus-pp-s3b-fm.txt` against step 3's `corpus-pp-s3.txt`): 18 of 18 rows
+  identical, live Kokon included; Kokon from HEAD's text (lines 19 to 550 of `436bb0ef`'s `Kokon.kt`, the same text
+  as step 3's) `6d22988a5668b97f`, step 3's. No corpus song writes `fm`, so the corpus is the control only; the
+  engagement is the spec rows: HEAD's runtime turns 37 of the 43 matrix rows and 15 of the 19 topology rows red (the
+  green ones are the "does not reach" rows, the controls, and four guards that hold on HEAD too).
+- **The `sgbell` door matrix** (step 3's matrix, `sgbell` only, 26 door rows times six onsets, against a pre-step-1
+  export where every pitch door ran on the strip): `vib`, `vib wide fast`, `vib with penv` and the three `penv` rows are
+  the strip's render **bit for bit again** (36 of 36): the strip bent `sgbell`'s modulator with its root buffer, the
+  stages now bend it through `CarrierFreqMod`, and the carrier's product `(V * P) * fm` equals the strip's
+  `fm * (V * P)`. Still not the strip's: every `accelerate` row (D2, the gate base), every row with sprudel's `fm`
+  (the regrouping that ends in step 4) and the non-finite `accelerate` rows (dropped at the door since step 3).
+  Against step 3's tree, every row with a pitch door differs (the modulator follows now); the off rows are identical.
+- **What is not HEAD's sound** (checklist (a)): (1) every authored fm tree with a pitch node above an fm, and sprudel's
+  `vib`, `penv` and `accelerate` over an fm instrument that ends in `classic()`: the modulator follows, the decided
+  sound change (the question's bell under `vib(6, 0.5)`: -7.3 dB diff RMS against HEAD on the full engine, from the
+  first note; `sgbell` back to the strip's bits above); (2) an fm over another fm's carrier, with or without a pitch
+  node (`x.fm(a, 1.5, 300).fm(b, 2.5, 200)`): the inner modulator follows the outer fm, -12.8 dB diff RMS in the
+  listening pair, which the maintainer heard as no audible difference; (3) two shared-modulator shapes HEAD rendered at
+  two pitches with one stateful modulator, now two instances each running once per block, the intended construction
+  bit for bit: one `let` as an fm's modulator and on the spine (HEAD +1.7 dB diff RMS from the construction) and one
+  modulator `let` in two fms at two ratios (HEAD -3.0 dB); both under a pitch node only (with none above the fm, the
+  one instance stays, the memo's freq-key residue). The same key forks two shapes HEAD built as ONE instance, under a
+  pitch node above the fm (review round 1, A MINOR 2; the mod is part of the key, as `n.vibrato() + n` forks `n` on
+  HEAD): a modulator let also used outside the fm (`x.fm(n).vibrato(...) + n`) and a modulator let shared by two fms at
+  the same ratio; bit for bit the same for draw-free oscillators, while a noise or a drifting oscillator decorrelates
+  and the second instance takes its own draws from the voice rng. (4) The author rule's shape, one fm whose carrier
+  holds two pitches (`(x + x.detune(7)).fm(m)`; review round 1, B MINOR 2): with no pitch node above, HEAD's bits;
+  under one, the one modulator follows on each of its per-pitch renders, a sound change against HEAD (sprudel `vib`
+  +0.8 dB, `vibrato(9, 1.5)` +1.3 dB, `penv` +2.3 to +3.3 dB, an authored vibrato above the fm -2.1 dB diff RMS), and
+  under `vib`, `penv` and `vib` + `penv` the pre-step-1 strip's render bit for bit again, like `sgbell`. The residue
+  itself stays: one modulator, two pitches, rendered once per pitch (-5.8 dB from one operator per layer, HEAD -5.9 dB),
+  and with one more condition it reads the wrong pitch's mod (review round 2, MINOR 1, recorded as part of the
+  residue): if the mod above the fm reads the note (a vibrato rate on the note, an audio-rate `pitchMod`, an outer fm)
+  and the modulator holds a pitch node whose knobs read no `Freq`, that node's memo, freq-invariant over the wrapper,
+  is filled under the first pitch's pin, and the second pitch's modulator reads the first pitch's outer mod (an exact
+  identity node, `pitchMod(0)`, changes the output by -21.5 dB diff RMS under a vibrato on the note and -3.4 dB under
+  an outer fm; nothing under a constant vibrato or any sprudel door; a RESIDUE row of `FmModulatorTopologySpec` pins
+  it). The author rule covers both: "define the FM on both x and x.detune() and sum both", written
+  `x.fm(m1) + x.fm(m2).detune(7)`; the diagnostic is `../tasks/fm-above-forking-detune-diagnostic.md`. Unchanged: a modulator with an absolute `freq` (`Ign.sine(330)`),
+  shielded like every absolute oscillator (B NIT); sprudel's own `fm` door, whose modulator lives in
+  the strip's `FmRenderer` and follows nothing until step 4; a musical oscillator in a parameter position (the
+  placement rule: it is not under the pitch node); the regrouping with sprudel `fm` (step 3's, ends in step 4).
+- **Hostile values** (checklist (b); one voice through `VoiceFactory`, the bell `sine.fm(sine, R, D).adsr(...)
+  .classic()` registered by name, HEAD's runtime against the tree, raw doubles; `$S/s3b/hostile-*`). Every tree row
+  is finite, no NaN frame anywhere. Identical to HEAD: a non-finite depth (NaN, ±Infinity: the gate builds no fm, the
+  carrier alone), the non-finite slot amounts (`vibrato.semitones`, `accelerate`, `penv.semitones` NaN or ±Infinity:
+  the slot reads unset, off). Different from the first note, the modulator now following, finite on both: a
+  non-finite ratio (NaN, ±Infinity read as `FM_RATIO` 1 on both, the modulator at the note), the first ratio whose
+  modulator frequency passes `SAFE_MAX` (4.6e12: the modulator far past audio rate on both), the first depth whose term passes
+  `SAFE_MAX` (2.3e17: `safeOut` clamps the term on both), the first pitch amounts whose ratio passes `SAFE_MAX`
+  (`vibrato.semitones`, `accelerate`, `penv.semitones` 599, and 597 beside them: `safeOut` clamps the ratio on both),
+  an authored vibrato with a non-finite depth or rate (built, the default read on both), an authored `accelerate(599)`
+  and an authored `pitchMod` at +Infinity (silent for about a third of the frames on both, HEAD 12,810 zero frames,
+  the tree 12,825). Silent on both, identical: an authored `pitchMod` at NaN (a NaN ratio, the NaN task's open
+  signal case, `bugfix-non-finite-pitch-strip-and-signals.md` section 2). What HEAD did, measured: no row produced a NaN
+  or an infinite sample on HEAD either; HEAD's `penv.semitones` 599 voice ended one block earlier (13,952 frames
+  against 14,080).
+- **Mutation checks** (one lock call each, both 3b specs, restored, `cmp` clean; `$S/s3b/mut-*`): the pin never
+  written (red: 3 matrix rows, the freq-keyed ones and the fm over an fm's carrier, and 10 topology rows: the seven
+  chains, the nested row under the vibrato on the note, the summed branches and the pitch node at every level, every
+  row where an outer mod keeps its freq key); the pin written after the modulator renders (red: the same 13
+  rows); the wrapper asking the outer mod at the modulator's own frequency, candidate (b) (red: the same 13); the
+  modulator built under no mod, HEAD's arm (red: 37 matrix rows, 15 topology rows); a new wrapper per visit (red: the
+  `f + f` row); the wrapper lookup ignoring the fm node (red: the one-modulator-let-in-two-fms row); the lookup ignoring
+  the outer mod (red: the same-fm-under-two-vibratos row); the lazily created wrapper list never stored, so every
+  visit makes a new wrapper (red: the `f + f` row). The three lookup mutants ran again on the final code (the list
+  became lazy after the first cost run, below), each red on the same row. Review round 1: without the `combineMods`
+  clause for the wrapper, the new "inside" row is red (its LFO renders at 330 and 494 Hz); the pin written only once
+  (A's M2, which survived round 1's specs) turns the new "repin" row red; the freq-invariant shortcut taken for every
+  mod (B's remedy, below, applied blindly) turns the 13 freq-keyed rows red; the shortcut never taken stays green,
+  as it must (it only changes which double reaches an invariant memo).
+- **Cost** (checklist (c)): one voice through `VoiceFactory`, an authored bell (`sine.fm(sine, 3.5, 400)`) and a chain
+  of three fms, each under `classic()` with and without `vib`; HEAD / the tree / HEAD again as the control, two
+  `git archive` exports; `$S/s3b/cost/`. V8 production test bundle, render per 128-frame block, medians of 3 rounds:
+  an fm with no pitch node above is free (the bell 0.99 pinned and 0.98 unpinned, controls 0.99 and 0.98); the bell
+  under `vib` +4.6 and +5.5 percent (4311 to 4510 ns, 4316 to 4555 ns; controls 1.00 and 1.01), about +200 to
+  +240 ns; the chain +12.4 and +12.5 percent without a door (4632 to 5206 ns; the outer fms are pitch mods over the
+  inner modulators now) and +12.0 and +14.0 percent under `vib` (6127 to 6862 ns, 6167 to 7030 ns; controls 0.99 to
+  1.00), about +575 to +865 ns. Build: the bell without a door allocates what HEAD does (15,660 against 15,669 bytes);
+  under `vib` +0.4 KB per voice, the chain +0.45 to +0.6 KB; build time inside the noise. Render bytes (review round 1, B MINOR 1):
+  `CarrierFreqMod.generate` handed the pinned double to a call V8 does not inline, one heap number per wrapper per
+  block; where the outer mod is freq-invariant (every sprudel door) the wrapper now hands on the caller's `freqHz`,
+  the same samples, and the bell under `vib` is at HEAD's bytes again (165.0 against 164.4 pinned, 161.9 against
+  161.6 unpinned, control 154.7 and 165.1); open for a freq-keyed outer mod, a chain's inner fms (+7 to +44 per block,
+  `engine-follow-ups.md` item 10c). JVM, medians of 9: render allocation-free on both sides; the
+  bell without a door free (1.006, control 1.015), under `vib` +9 percent (3329 to 3644 ns), the chain +6 and +8.5
+  percent (controls 0.99 and 1.03); build +8 bytes per voice without a pitch node above an fm (one field of the build
+  cache), +144 bytes for the bell under `vib`, +216 to +272 for the chain. All under 0.04 percent of a 2.67 ms
+  block. The first cost run found every voice paying about +300 bytes per build on V8 (+88 on the JVM) for three empty
+  lookup lists; the lookup became one list created on first use, and the run above is the final code's. The cause of
+  the render cost is step 2's: each pitched source of a modulator under a pitch node gets a `ModApplyingIgnitor` (two
+  scratch buffers and a copy per block).
+- **Suites.** `audio_bridge` jvmTest 146 and jsTest 265; `audio_be` jvmTest 2,498 (2,432 plus the 66 new rows) and
+  jsBrowserTest 2,392 (before review round 2's two rows; 2,494 and 2,390 before round 1's two); `sprudel` jvmTest 3,483 (486 skipped, as before); `klangscript-libs` jvmTest 832 and jsTest
+  609; `BuiltInSongsSmokeTest`, `SongBenchmarkCasesCompileSpec`, `DslDocExamplesSpec` green; `compileTestKotlinJs`
+  of `audio_bridge`, `audio_be`, `sprudel`, `klangscript-libs` and the root green.
+- **Listening:** `tmp/listening/pp-step3b/` (the bell under `vib`, the carrier-only pair, the two-modulator pair),
+  heard and decided.
+- **Review round 1** (`tmp/reviews/pp3b-r1-A.md`, 1 MAJOR; `tmp/reviews/pp3b-r1-B.md`, 0 MAJOR: the rule read from the
+  audio at exactly 1.5000, a transposition oracle bit for bit on 13 topologies), applied: the `combineMods` clause for
+  the wrapper and its "inside" row (A MAJOR 1); the "repin" row (A MINOR 1); the forks named (A MINOR 2, item (3));
+  the recipe written with the fm inside the detune everywhere and the diagnostic's predicate narrowed to an fm whose
+  carrier holds two pitches (A MINOR 3); 10c's site and B's remedy for freq-invariant mods (B MINOR 1, the cost
+  bullet); item (4), the forking shape under a pitch node (B MINOR 2); the absolute modulator (B NIT); the wrapper and
+  `FmModIgnitor` internal (A NIT 1); the 1e-12 check kept as documentation (A NIT 3). The corpus ran again
+  (`tmp/naming/corpus-pp-s3b-fm2.txt`): 18 of 18 identical to step 3, Kokon from HEAD's text `6d22988a5668b97f`.
+- **Review round 2** (`tmp/reviews/pp3b-r2.md`, clean: 0 MAJOR, 3 MINOR), applied: MINOR 1 recorded as part of the
+  author rule's residue (option (a)): the wrapper is freq-invariant for one pin, one carrier pitch, and the four texts
+  that said "by construction" now state the exception (`CarrierFreqMod`, `combineMods`, the first RESIDUE row, item
+  (4)), with a third RESIDUE row that pins it; MINOR 2: the nested "inside" row, red under the reviewer's Me (the
+  clause narrowed to a wrapper over an invariant memo; it also flips the new RESIDUE row) and under the clause removed
+  (both "inside" rows red, the RESIDUE row flips), restored `cmp` clean; MINOR 3: the diagnostic's predicate follows
+  only the bent child along signal edges, and its task names MINOR 1's condition as part of the shape. Texts and spec
+  rows only, no render path changed, so no corpus run.
 
 #### Queued beside the pipeline: sprudel's `analog(amount)` becomes `analog(character)` (Q25)
 

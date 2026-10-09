@@ -450,6 +450,18 @@ The modulator is another `Ignitor` node. `ratio` sets the modulator frequency re
 modulation amount in Hz. Without the lambda the depth is constant; `x => x.adsr(0.001, 0.5, 0, 0.05)` is the decaying
 bell of the built-in `sgbell`.
 
+A pitch node means what it wraps (since 2026-10-09):
+
+- above the fm it moves the whole operator, the note's pitch, and the timbre stays put:
+  `Ignitor.sine().fm(Ignitor.sine(), 3.5, 400).vibrato(6, 0.5)`; so do sprudel's `vib`, `penv` and `accelerate` on an
+  fm instrument that ends in `.classic()`, and an outer `.fm(...)` (two fms in a row: the inner modulator follows the
+  outer one); a modulator with an absolute frequency (`Ignitor.sine(330)`) stays at it;
+- on the modulator it moves the modulator alone: `Ignitor.sine().fm(Ignitor.sine().vibrato(6, 0.5), 3.5, 400)`;
+- on the carrier it moves the carrier alone, so the ratio wobbles: `Ignitor.sine().vibrato(6, 0.5).fm(Ignitor.sine(), 3.5, 400)`.
+
+One fm serves one pitch: over a detuned stack (`(x + x.detune(7)).fm(m, ...)`) give each layer its own fm, inside its
+detune, and sum them: `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
+
 ### Pitch Modulation
 
 | Method                                              | Description                                |

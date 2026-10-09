@@ -570,6 +570,14 @@ object KlangScriptIgnitorExtensions {
      * Applies FM synthesis with a modulator ignitor. The modulation index envelope is a knob on the
      * [FmBuilder]: `.fm(Ignitor.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.05))`, the built-in `sgbell`.
      *
+     * A pitch node means what it wraps. Above the fm it moves the whole operator, the note's pitch
+     * (`Ignitor.sine().fm(Ignitor.sine(), 3.5, 400).vibrato(6, 0.5)`; a modulator with an absolute frequency,
+     * `Ignitor.sine(330)`, stays at it); on the modulator, the modulator alone
+     * (`Ignitor.sine().fm(Ignitor.sine().vibrato(6, 0.5), 3.5, 400)`); on the carrier, the carrier alone
+     * (`Ignitor.sine().vibrato(6, 0.5).fm(Ignitor.sine(), 3.5, 400)`). One fm serves one pitch: over
+     * `x + x.detune(7)`, give each layer its own fm, inside its detune, and sum them,
+     * `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
+     *
      * @param configure receives the [FmBuilder] (knob: `adsr`) and returns it.
      */
     @KlangScript.Method

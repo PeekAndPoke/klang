@@ -31,7 +31,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The pitch doors are moving into the tree** (`docs/tasks/pitch-pipeline-into-the-tree.md`): sprudel's pitch
   envelope, accelerate and vibrato are `classic()`'s `PitchEnvelope`, `Accelerate` and `Vibrato` stages, filled by
   the `penv.*` / `penvCurves.*` (step 1), flat `accelerate` (step 3) and `vibrato.*` (step 2) slots; FM still runs on
-  the strip in `voices/strip/pitch/`, and a source reads `treeMods * stripFm`.
+  the strip in `voices/strip/pitch/`, and a source reads `treeMods * stripFm`. An `fm` node in the instrument moves as
+  one operator under them (step 3b, "FM: a pitch node means what it wraps" below); the strip's FM modulator does not
+  until step 4.
 - **Accelerate glides over the GATE and holds** (decision D2, with its hold, 2026-10-09): `2^(semitones / 12 *
   progress)` from the onset to the gate close (`IgniteContext.voiceDurationFrames`, which a note-off never moves),
   then the target through the release, for both doors; a gate of 0 frames holds the target from the first frame
@@ -215,6 +217,16 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   modulator advances once per block for every source at one pitch (it ran once per source until 2026-10-07; Sakura and
   Irish Lament were retuned to keep their sound). Except: a source detuned under a mod that keeps its freq key (an
   `fm`, or a mod whose knobs read `Freq`) renders the whole mod again. Guard: the B-1 rows of `SharedModulatorRateSpec`.
+- **FM: a pitch node means what it wraps** (decision D1 and the placement rule, pitch pipeline step 3b, 2026-10-09):
+  above an `fm` it moves the whole operator (the modulator follows the carrier, the ratio stays exact; an outer `fm`
+  counts; a modulator with an absolute `freq` stays put), on the modulator the modulator alone, on the carrier the carrier alone. The modulator builds under the
+  outer mod through a `CarrierFreqMod`, which asks it at the CARRIER's frequency, pinned by the fm every block before
+  it renders the modulator (one field write); asked at the modulator's own frequency a `Freq`-keyed mod rendered twice
+  per block and broke the carrier too (a chain of N fms rendered 2^N times; now N + 1). One wrapper per fm node and
+  outer mod (`IgnitorBuildCache.carrierFreqMod`), so `let f = x.fm(m); f + f` keeps `m` one instance. The one shape
+  not processed, an author rule: one fm whose carrier holds two pitches (`(x + x.detune(7)).fm(m)`) serves both with one
+  modulator (and under a mod on the note, a pitch node inside the modulator reads the first pitch's mod) (give each layer its own fm, inside its detune, and sum them: `x.fm(m1) + x.fm(m2).detune(7)`). Reference: `audio/ref/voice-synthesis.md`; guards: `FmModulatorFollowsPitchSpec`,
+  `FmModulatorTopologySpec`.
 - **`phaseMod` save and restore has no try/finally** (`ModApplyingIgnitor`, `ModBlockingIgnitor`): accepted, an
   exception on the audio thread is fatal anyway.
 - **The click-hunt harness** `GuitarClickHuntTest` is tagged `ClickHunt`, out of the default run
@@ -239,7 +251,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (the sprudel strip's raw pitch amounts, two NaN signals),
   `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md` (two residues, both an author rule today: a shared modulator that reads
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
-  the mod again).
+  the mod again); the build-time diagnostic for the second, an fm above a forking detune:
+  `docs/tasks/fm-above-forking-detune-diagnostic.md`.
 - **Scheduled or designed**: `docs/tasks/oversampling-regions.md`, `docs/tasks/master-dsl-followups.md`,
   `docs/tasks/katalyst-master-configure-doors.md`, `docs/tasks/pluck-release-tail.md`,
   `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
@@ -265,6 +278,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-09 Pitch pipeline step 3b: a pitch node means what it wraps; above an `fm` it moves the whole operator
+  (`CarrierFreqMod`, the modulator reads the outer mod at the carrier's frequency, once per block). A sound change for
+  authored fm trees under a pitch node and for sprudel's pitch doors over an fm instrument (the strip moved the modulator too),
+  and for two shared-modulator shapes that rendered one modulator at two pitches; the corpus identical; one author rule
+  (an fm above a forking detune): `docs/tasks/pitch-pipeline-into-the-tree.md` step 3b
 - 2026-10-09 Pitch pipeline step 3: sprudel's `accelerate` is `classic()`'s accelerate stage (the flat `accelerate`
   slot), its wire field and the strip's `AccelerateRenderer` gone; the node holds its target from the gate on (D2):
   a sound change for an `accelerate` under a release tail on both doors (corpus: Kokon's `strike` only, a listening

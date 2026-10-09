@@ -1912,6 +1912,20 @@ sealed interface IgnitorDsl {
      * Frequency modulation synthesis. The modulator's output shifts the carrier's frequency
      * at audio rate, with an optional ADSR envelope controlling modulation depth over time. The
      * envelope has no curve knob yet; its stages run `MOD_ENV_CURVE`, exponential (decision D3).
+     *
+     * **A pitch node means what it wraps** (decision D1, pitch pipeline step 3b; the placement rule, maintainer,
+     * 2026-10-09). A pitch modulation (a `vibrato`, `pitchMod`, `pitchEnvelope`, `accelerate`, an outer `fm`, a sprudel
+     * pitch door through `classic()`):
+     *  - above the fm moves the whole operator, the note's pitch: carrier and modulator together, the ratio exact
+     *    (`Ign.sine().fm(Ign.sine(), 3.5, 400).vibrato(6, 0.5)`); a modulator with an absolute `freq`
+     *    (`Ign.sine(330)`) stays at its frequency, as every absolute oscillator does;
+     *  - on the modulator moves the modulator alone (`Ign.sine().fm(Ign.sine().vibrato(6, 0.5), 3.5, 400)`);
+     *  - on the carrier moves the carrier alone, the modulator does not follow
+     *    (`Ign.sine().vibrato(6, 0.5).fm(Ign.sine(), 3.5, 400)`).
+     *
+     * **One fm serves one carrier pitch.** When the fm's carrier holds two pitches (`(x + x.detune(7)).fm(m, ...)`),
+     * one modulator serves both, renders once per pitch per block and advances its state each time. Give each layer
+     * its own fm, inside its detune, and sum them: `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
      */
     @WireName("fm")
     data class Fm(

@@ -355,6 +355,9 @@ internal fun renderPitchEnvelopeRatios(
  * @param ratio frequency ratio between modulator and carrier
  * @param depth modulation depth in Hz
  * @param freq the FM machinery's frequency; default = the note
+ *
+ * The DSL runtime builds [FmModIgnitor] directly, with the pitch mod above the fm as its modulator reads it
+ * ([CarrierFreqMod], pitch pipeline step 3b); this factory builds an fm with no pitch node above it.
  */
 fun fmModIgnitor(
     modulator: Ignitor,
@@ -365,9 +368,15 @@ fun fmModIgnitor(
     sustain: Ignitor = ParamIgnitor("sustain", 1.0),
     release: Ignitor = ParamIgnitor("release", 0.0),
     freq: Ignitor = FreqIgnitor,
-): Ignitor = FmModIgnitor(modulator = modulator, ratio = ratio, depth = depth, attack = attack, decay = decay, sustain = sustain, release = release, freq = freq)
+): Ignitor = FmModIgnitor(modulator = modulator, ratio = ratio, depth = depth, attack = attack, decay = decay, sustain = sustain, release = release, freq = freq, modulatorPitch = null)
 
-private class FmModIgnitor(
+/**
+ * The fm's mod (see [fmModIgnitor]). [modulatorPitch] is the pitch mod above this fm as its modulator reads it (pitch
+ * pipeline step 3b, decision D1), or null when no pitch node sits above the fm: the modulator's sources apply it, so
+ * the operator moves as one, and this node pins the carrier's frequency on it every block before it renders the
+ * modulator ([CarrierFreqMod]). Internal, as the wrapper is: only the DSL runtime builds one with a [modulatorPitch].
+ */
+internal class FmModIgnitor(
     private val modulator: Ignitor,
     private val ratio: Ignitor,
     private val depth: Ignitor,
@@ -376,6 +385,7 @@ private class FmModIgnitor(
     private val sustain: Ignitor,
     private val release: Ignitor,
     private val freq: Ignitor,
+    private val modulatorPitch: CarrierFreqMod?,
 ) : Ignitor {
     private val envCore = EnvelopeCore()
 
@@ -438,6 +448,9 @@ private class FmModIgnitor(
             // `depth == 0` skipped it, freezing its phase for whole blocks — a modulated depth
             // passing through zero resumed the modulator from a phase stale by a block-size-
             // dependent amount (block-framing ledger E2).
+            // The modulator reads the pitch mod above this fm at the CARRIER's frequency, which is this call's
+            // `freqHz` (the carrier's sources render this node): pinned BEFORE the modulator renders (step 3b).
+            modulatorPitch?.pin(carrierHz = freqHz)
             modulator.generate(modBuf, fmFreqVal * ratioVal, ctx)
 
             if (depthVal == 0.0) {
