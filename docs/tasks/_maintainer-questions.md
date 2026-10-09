@@ -68,14 +68,6 @@ Source: §8. Step 2 of the pitch plan, recommendations as written there:
 - **D10 (pitch):** compose the pitch envelope through `adsr` only after a spike shows it matches.
 - **D11:** accelerate and FM stay nodes.
 
-## Q17. `WarehouseStats.reverbFailures` / `reverbDropped`
-
-Found in tidy-up step 1. These are wire fields the UI never shows; the warehouse panel shows their delay-ring twins.
-
-**Example.** When the reverb shelf runs dry, the panel shows nothing; when the ring shelf runs dry, it shows a count.
-
-Show them in the warehouse panel, or drop them?
-
 ## Q18. Named arguments in data tables
 
 From the `/code-style` §24 pass. The vowel and body-material tables stay positional (`VowelBands.b`, 180 rows;

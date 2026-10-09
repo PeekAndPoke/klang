@@ -709,6 +709,13 @@ not needed". Done now: `/code-style` section 9 and 16, the music-writing ignitor
 no flyback") and the three `IgnitorsTest` row names and comments (222, 225, 262, 268, 410) that credit PolyBLEP for
 softened peaks. `CREDITS.MD` and the in-app Credits page keep the entry.
 
+#### Queued beside the pipeline: the warehouse panel shows the reverb counters (Q17)
+
+The maintainer, 2026-10-09: "add them to the panel". `WarehouseStats.reverbFailures` and `reverbDropped` cross the
+wire already; `src/jsMain/kotlin/comp/PlayerWarehouseStats.kt` shows only their ring twins (`ringFailures` at :143).
+Add the two reverb counters beside them, with the same hover texts ("allocations that failed (out of memory)", and the
+dropped one's). UI only.
+
 #### Step 4. FM (M to L, a listening pair)
 
 - `Slots.fm` (`fm.ratio`, `fm.depth`, `fm.attack`, `fm.decay`, `fm.sustain`, and `fm.release` with sprudel's
