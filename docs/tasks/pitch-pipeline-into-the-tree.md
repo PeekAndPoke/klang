@@ -683,6 +683,13 @@ yet, which is the point):
 node; the corpus run confirms it); listening pairs for the bell under `vib`, for scenario 2's "inside the carrier"
 shape, and for sprudel `fm` plus `vib`.
 
+#### Queued beside the pipeline: sprudel's `analog(amount)` becomes `analog(character)` (Q25)
+
+The maintainer, 2026-10-09: "yes rename to character". `amount` is the distort drive only (Q21), and `analog` is a
+character scale (Q22). A small rename of sprudel's door parameter, its accessor wording and KDoc, with a row in
+`docs/retired-names.md`; positional `analog(4)` is unchanged. Done between two pipeline steps, so it never shares a
+tree with a running worker.
+
 #### Step 4. FM (M to L, a listening pair)
 
 - `Slots.fm` (`fm.ratio`, `fm.depth`, `fm.attack`, `fm.decay`, `fm.sustain`, and `fm.release` with sprudel's
