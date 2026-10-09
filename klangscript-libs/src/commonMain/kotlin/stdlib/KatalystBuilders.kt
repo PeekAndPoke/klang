@@ -8,6 +8,7 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystParam
@@ -429,6 +430,49 @@ fun KatalystBuilder.limiter(
         lookahead = lookahead ?: AUTHORED_LIMITER_LOOKAHEAD_SECONDS,
     )
 )
+
+/**
+ * Appends a distortion of the bus mix: the voice's `distort` at the bus position, same knobs, same
+ * scales, same shapes. A clipper before the master limiter is this stage with `soft` (or `hard`) and
+ * a small [amount]; saturation is a gentle shape (`tube`, `softsat`) at a moderate one. Flat, as the
+ * voice's door is.
+ *
+ * It bends the SUM: every note of the bus goes through one curve, so they intermodulate. That is
+ * the glue a master saturator gives and the growl of an amp fed by a whole chord; pushed hard, chords
+ * turn to mush.
+ *
+ * ```
+ * master(Katalyst(k => k.gain(1.1).distort(0.15).limiter(threshold = -3.0)))   // clip, then limit
+ * katalyst(Katalyst(k => k.distort(0.6, "tube").eq(e => e.band(freq = 2700, q = 2.0, db = 3.0))))
+ * ```
+ *
+ * @param amount the drive into the shape, `10^(amount * 1.2)`: 0.1 is about +2.4 dB, 0.25 about
+ *   +6 dB, 0.5 (the default) about +12 dB. At or below 0 the stage is off. A number, or a
+ *   `Katalyst.param` slot that a pattern moves with `katp` (the change glides). No orbit twin:
+ *   sprudel's `distort(...)` is the voice's door.
+ * @param shape the waveshaper by name, from the voice's list (`soft`, `hard`, `tube`, `softsat`,
+ *   `gentle`, ...); an unknown name is `soft`. Fixed with the chain.
+ * @param oversample the oversampling factor (2, 4, 8; 0 or 1 is none). Fixed with the chain. It
+ *   delays this orbit (at the output, the whole playback) by 4 frames at 2x and 6 at 4x and 8x, and
+ *   on a whole mix today's oversampler also dulls the top (about -2 dB at 16 kHz and -4 dB at 20 kHz
+ *   at 2x), so the default is 0, as on the voice.
+ */
+@KlangScript.Function
+fun KatalystBuilder.distort(
+    amount: IgnitorDslLike? = null,
+    shape: String = "soft",
+    oversample: Int = 0,
+): KatalystBuilder {
+    val bare = KatalystStageDsl.Distort()
+
+    return plus(
+        KatalystStageDsl.Distort(
+            amount = amount?.toKatalystKnob() ?: bare.amount,
+            shape = DistortionShapes.indexOf(shape).toInt(),
+            oversample = oversample,
+        )
+    )
+}
 
 /**
  * Appends a sidechain duck: this orbit is pulled down whenever the orbit it listens to sounds.

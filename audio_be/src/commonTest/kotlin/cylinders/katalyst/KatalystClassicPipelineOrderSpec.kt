@@ -55,6 +55,8 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         // arms the exhaustive `when` needs, so a new stage kind cannot slip past this spec either.
         is KatalystStageDsl.Eq -> "KatalystEqEffect"
         is KatalystStageDsl.Gain -> "KatalystGainEffect"
+        // The bus distort (2026-10-09) never had a per-voice twin either, and the classic chain does not carry it.
+        is KatalystStageDsl.Distort -> "KatalystDistortEffect"
     }
 
     "the classic chain declares no eq, and its one gain stage is a bit-transparent unity slot" {

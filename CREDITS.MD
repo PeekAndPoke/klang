@@ -66,11 +66,11 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 - **Chebyshev-polynomial waveshaping** — harmonic distortion
 - **Padé `tanh` approximation** `x(27+x²)/(27+9x²)` — the public-domain "27/9" fast-tanh from the
   musicdsp.org / KVR community, used in Klang's soft-clipping (`ShapingFuncs.fastTanh`)
-- **Minimax polynomial sine** — the oscillators' `fastSin` (`DspUtil.kt`): an odd polynomial on the
+- **Minimax polynomial sine** — the oscillators' `fastSin` (`fast_math.kt`): an odd polynomial on the
   folded half period, the classic method of Cecil Hastings Jr., *Approximations for Digital
   Computers* (Princeton, 1955); the degree-11 coefficients were fitted for Klang (least squares
   with Remez-style reweighting), no third-party code
-- **Table-and-polynomial `2^x` and `e^x`** — `fastExp2` and `fastExp` (`DspUtil.kt`), the pitch
+- **Table-and-polynomial `2^x` and `e^x`** — `fastExp2` and `fastExp` (`fast_math.kt`), the pitch
   paths' ratio, the envelopes' exponential curve and the compressor's gain: the integer octave from
   a table of powers of two, the fraction by a minimax polynomial with both ends pinned, `e^x` as
   `2^(x·log2 e)`; the range reduction of William J. Cody and William Waite, *Software Manual for the
@@ -85,6 +85,12 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 - **Feed-forward dynamics topology** — the compressor's dB-domain peak detector and soft-knee parabolic gain curve
   follow the standard design described across the DSP literature (Giannoulis, Massberg & Reiss, *"Digital Dynamic Range
   Compressor Design"*, JAES 2012)
+- **The missing fundamental**: the bass trick of Kokon and Der Schmetterling, a sine sub plus partials at 2f to 8f,
+  which a small speaker can play and the ear folds back into the fundamental it cannot reproduce. The psychoacoustics is
+  Jan F. Schouten's residue pitch (*"The residue, a new component in subjective sound analysis"*, 1940); the production
+  precedent is psychoacoustic bass enhancement (Waves MaxxBass). Klang builds it additively, from its own sine partials
+- **Loudness, ITU-R BS.1770 and EBU R 128**: the LUFS measure behind the songs' house level (-14 LUFS) and the
+  loudness-matched listening pairs that judge an engine change by ear
 
 ## Hardware Inspirations
 

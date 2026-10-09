@@ -121,7 +121,7 @@ class KatalystCompressorEffect(
      * building this effect allocates; 0 (the default) is no lookahead and no latency.
      */
     lookaheadSeconds: Double = 0.0,
-) : KatalystEffect {
+) : KatalystEffect, KatalystLatentEffect {
 
     private val fadeLen: Int = (sampleRate * KNOB_GLIDE_SECONDS).toInt().coerceAtLeast(1)
 
@@ -143,7 +143,7 @@ class KatalystCompressorEffect(
     )
 
     /** Frames this stage delays the orbit by, in every state; 0 without a lookahead. */
-    val latencyFrames: Int = instance.latencyFrames
+    override val latencyFrames: Int = instance.latencyFrames
 
     /** True when the instance has a lookahead ring: every lookahead-only branch below tests this. */
     private val latent: Boolean = latencyFrames > 0

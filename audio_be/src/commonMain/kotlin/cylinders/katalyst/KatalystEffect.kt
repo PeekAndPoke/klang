@@ -65,3 +65,13 @@ interface KatalystEffect {
      */
     val deniedRents: Int get() = 0
 }
+
+/**
+ * A stage that delays the orbit it runs on: [latencyFrames] frames, in every state, fixed when the stage is built.
+ * The chain sums them (`KatalystChain.latencyFrames`), and a chain swap places two chains' weights by that sum
+ * (`ChainSwap`). Two stages delay today: the compressor with a lookahead and the distort stage with oversampling.
+ */
+interface KatalystLatentEffect {
+    /** Frames this stage delays the orbit by; 0 when it does not. */
+    val latencyFrames: Int
+}

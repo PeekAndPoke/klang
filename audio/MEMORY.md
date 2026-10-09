@@ -156,7 +156,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Distortion**: `classic()`'s distort is the fused `IgnitorDsl.Distort` running `DistortionCore` (drive inside
   the oversampler, DC blocker, no cap; a modulated amount at or below 0 runs at unity drive). The `distort` and
   `shape` doors build `Shape(Drive(...))`, bounded to +-1 by `ShapingFuncs.softCap`. `CrushCore` floors. Guard for
-  both laws: `StripLawCoresSpec`.
+  both laws: `StripLawCoresSpec`. The Katalyst `distort` stage (`KatalystDistortEffect`, 2026-10-09) runs the fused law
+  on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz) and
+  the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 4.0, 5.5,
+  6.25; held as 4, 6 and 6 frames).
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
@@ -279,6 +282,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-09 A `distort` stage on the Katalyst (bus and master), the voice's law at the house DC pole, the oversampler's
+  latency held in every state: `docs/tasks/katalyst-distort-stage.md`
 - 2026-10-09 A soloed voice is protected for its whole life (`ActiveVoice.soloed`, Q14 and Q28); the window serves between events:
   `docs/tasks-archive/2026-10/20261009-solo-protects-whole-voice.md`
 - 2026-10-09 Pitch pipeline step 3b: a pitch node means what it wraps; above an `fm` it moves the whole operator

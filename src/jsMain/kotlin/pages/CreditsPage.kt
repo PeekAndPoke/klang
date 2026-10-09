@@ -357,6 +357,13 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         - **Feed-forward dynamics topology** — the compressor's dB-domain peak detector and soft-knee
                         parabolic gain curve follow the standard design described across the DSP literature
                         (Giannoulis, Massberg & Reiss, *"Digital Dynamic Range Compressor Design"*, JAES 2012)
+                        - **The missing fundamental**: the bass trick of Kokon and Der Schmetterling, a sine sub plus
+                        partials at 2f to 8f, which a small speaker can play and the ear folds back into the fundamental it
+                        cannot reproduce. The psychoacoustics is Jan F. Schouten's residue pitch (*"The residue, a new
+                        component in subjective sound analysis"*, 1940); the production precedent is psychoacoustic bass
+                        enhancement (Waves MaxxBass). Klang builds it additively, from its own sine partials
+                        - **Loudness, ITU-R BS.1770 and EBU R 128**: the LUFS measure behind the songs' house level
+                        (-14 LUFS) and the loudness-matched listening pairs that judge an engine change by ear
                     """.trimIndent()
                 )
             }

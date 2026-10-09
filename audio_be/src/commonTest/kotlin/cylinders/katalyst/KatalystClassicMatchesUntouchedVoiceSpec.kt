@@ -98,6 +98,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
                     listOf(stage.threshold, stage.ratio, stage.knee, stage.attack, stage.release)
 
                 is KatalystStageDsl.Duck -> listOf(stage.orbit, stage.depth, stage.attack)
+                is KatalystStageDsl.Distort -> listOf(stage.amount)
                 is KatalystStageDsl.Eq -> emptyList()
                 is KatalystStageDsl.Gain -> listOf(stage.gain)
             }.forEach { knob -> knob.collectParams(params) }

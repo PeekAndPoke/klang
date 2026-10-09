@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Defaults of the per-orbit bus effects, the Katalyst stages: delay, reverb,
-// phaser, compressor, duck, body, vowel. The master limiter's live in
+// phaser, compressor, duck, body, vowel, distort. The master limiter's live in
 // `MasterLimiterDefaults.kt`. At the end, two timings that are not knob
 // defaults but belong to the orbit knobs and stages whose jump is audible:
 // [KNOB_GLIDE_SECONDS] for a level or dynamics glide, [BANK_CROSSFADE_SECONDS]
@@ -162,6 +162,15 @@ const val VOWEL_WET: Double = 0.5
  * between formants (avoids sparse/robotic). Tunable.
  */
 const val VOWEL_FLOOR: Double = 0.2
+
+// ── Distort ──────────────────────────────────────────────────────────────────
+
+/**
+ * Distort amount of a Katalyst `distort` stage that names none: the drive `10^(amount * 1.2)` into
+ * the shape, so 0.5 is about +12 dB. The same 0.5 the Ignitor's `Distort` and `Drive` nodes default
+ * to, so a bare `distort` means the same push on a voice and on a bus.
+ */
+const val DISTORT_AMOUNT: Double = 0.5
 
 // ── Knob glide ───────────────────────────────────────────────────────────────
 
