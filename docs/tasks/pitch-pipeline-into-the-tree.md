@@ -612,7 +612,8 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   doors follow** (the parity rule): `vib(rate, semitones)`, `penv(semitones, attack, decay, sustain, release)`,
   `fm(depth, ratio, attack, decay, sustain, release)`; the old parameter names (`vib`'s `depth`, `penv`'s `amount`,
   `fm`'s `h` and `env`) are removed, not aliased, each in the step that moves its door, with a door-parity row and an
-  entry in `docs/retired-names.md`. Positional calls are unchanged. **The older `classic()` slots** (`lpf.freq`,
+  entry in `docs/retired-names.md`. Positional calls are unchanged. `pamt`, `penv`'s short alias, is retired too (maintainer,
+  2026-10-09: "drop pamt"; it abbreviates the retired "amount"). **The older `classic()` slots** (`lpf.freq`,
   `tremolo.depth`, `crush.amount`, ...) get the same check as its own step AFTER this pipeline, because a renamed slot
   also changes `ignp("...")` calls in songs (`../tasks-archive/2026-10/20261009-classic-slot-names-check.md`, done 2026-10-09, pulled ahead of this pipeline). The question as it
   was put: slot names follow sprudel's readers, so the FM slots say `h` and `env` where the node says `ratio` and

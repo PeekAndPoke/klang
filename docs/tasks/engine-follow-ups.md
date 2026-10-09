@@ -9,6 +9,17 @@ production bundle, pinned AND unpinned (`audio/ref/performance.md`).
 
 Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
 
+**Assessed and discussed (2026-10-09).** The assessment, item by item with expected outcome and a recommendation:
+`tmp/reviews/engine-follow-ups-assessment.md`. The maintainer's answers:
+- **The phone runs Chrome** (the Fairphone 4), so the V8 numbers here are the ones that matter.
+- **Where Kokon still glitches:** when the drum set comes in, for a few seconds, then it settles. Likely first-use
+  resource allocation (`future/first-run-spike-v2.md`) and the voice build in the render callback (item 11), not the
+  steady per-block items. "Fine for now, unless there is a simple fix in the resource warehouse, where we maybe create
+  more resources upfront."
+- **Sequential, no rush:** these follow the pitch pipeline and the inharmonic partials, one at a time. The first two
+  candidates by expected outcome are the shaper's per-sample boxes (item 9) and the noise voice (item 3), each to be
+  measured on the production bundle first.
+
 ## 1. Allocation on V8 (the worklet)
 
 The JVM allocates nothing per block in steady state; these are V8 only. The method and the rules learned are in
