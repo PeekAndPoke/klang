@@ -18,9 +18,29 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5; merged as PR #85, v0
 
 Work went ahead with the conservative choice. A "no" here means a small follow-up change.
 
+## Q28. Solo protects the SOLOED voice for its whole life (refining your Q14)
+
+Source: the small-items review (`tmp/reviews/small-r1-B.md`). Taken literally ("any of its voices"), Q14 kept a source
+protected for as long as it played, even after its solo was taken away: `solo(1)` edited to `solo(0)` left the pad at
+full level for all 16 s. Decided by default: a voice is kept only if it was soloed itself.
+
+```
+note("c3").sound(myPad).release(5).solo()   // the soloed pad rings at full level to its end   (Q14)
+// edit to .solo(0): the pad is ducked again 2 s after the last solo event, as before Q14
+```
+
+A note that started BEFORE its source was soloed is not kept either (it drops back 2 s after the solo's last event).
+Say if you meant otherwise.
+
 ---
 
 # Part 3: For later (not blocking anything now)
+
+## Q29. `duty(amount)`: the word `amount` once more
+
+From the small-items batch. `amount` is the distort drive only (Q21), but the pulse width door still says
+`duty(amount)`. Decided 2026-10-09: rename it later, not in v0.6.1. Proposal for then: `duty(width)` (0 to 1, the
+share of the cycle that is high); positional `duty(0.3)` unchanged.
 
 ## Q24. A third Kotlin spelling of the Ignitor doors: keep it as engine shorthand, or grow it?
 

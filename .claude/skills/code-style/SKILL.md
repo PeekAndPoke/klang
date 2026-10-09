@@ -148,6 +148,9 @@ module already use. Never `util`, `helpers` or `common` for this. A helper that 
 mini-notation editor's node helpers, a tutorial's page helpers) stays next to that feature as `_<feature>_helpers.kt`.
 Each `utils` helper has a spec of its exact behaviour; a hot-path helper taking a lambda is `inline`.
 
+The `common` module is the exception: it is a module OF helpers, so it has no `utils/` and groups them by topic
+(`math/`, `strings/`), each with its spec (2026-10-09, the helper merges).
+
 ---
 
 ## No Duplication Rules
