@@ -841,14 +841,6 @@ per block, N fms are N + 1 oscillator renders.
   only the bent child along signal edges, and its task names MINOR 1's condition as part of the shape. Texts and spec
   rows only, no render path changed, so no corpus run.
 
-#### Queued beside the pipeline: the PolyBLEP texts (Q16)
-
-The maintainer, 2026-10-09: "keep PolyBLEP in the credits, as once we used it. Clean up the other references where
-not needed". Done now: `/code-style` section 9 and 16, the music-writing ignitor reference. Queued (they sit in
-`audio_bridge` / `audio_be`, built by a running worker): the Zawtooth KDoc (`IgnitorDsl.kt:464`, "an instant reset,
-no flyback") and the three `IgnitorsTest` row names and comments (222, 225, 262, 268, 410) that credit PolyBLEP for
-softened peaks. `CREDITS.MD` and the in-app Credits page keep the entry.
-
 #### Queued beside the pipeline: the warehouse panel shows the reverb counters (Q17)
 
 The maintainer, 2026-10-09: "add them to the panel". `WarehouseStats.reverbFailures` and `reverbDropped` cross the

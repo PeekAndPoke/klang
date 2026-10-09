@@ -461,7 +461,10 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Zawtooth wave oscillator. Naive sawtooth without PolyBLEP anti-aliasing (brighter/harsher). */
+    /**
+     * Zawtooth wave oscillator: a naive sawtooth with an instant reset, no flyback flank (brighter and harsher
+     * than the saw).
+     */
     @WireName("zawtooth")
     data class Zawtooth(
         val freq: IgnitorDsl = Freq,
