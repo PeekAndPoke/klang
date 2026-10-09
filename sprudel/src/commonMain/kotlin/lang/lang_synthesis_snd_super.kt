@@ -23,8 +23,8 @@ private fun applySndPluck(source: SprudelPattern): SprudelPattern =
  * Sets the sound to a Karplus-Strong plucked string and optionally configures its
  * parameters. Each parameter is independent and patternable.
  *
- * Each field is optional — trailing fields can be omitted.
- * - **decay**: feedback amount, 0.9–0.999 (higher = longer ring)
+ * Each field is optional; trailing fields can be omitted.
+ * - **feedback**: how long the string rings, 0.9 (a short thud) to 0.999 (rings for seconds)
  * - **brightness**: lowpass cutoff, 0.0 (dark) to 1.0 (bright)
  * - **pickPosition**: pluck position, 0.0 (bridge) to 1.0 (neck)
  * - **stiffness**: harmonic stiffness, 0.0 (nylon) to 1.0 (piano wire)
@@ -39,22 +39,22 @@ private fun applySndPluck(source: SprudelPattern): SprudelPattern =
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
- * @param-tool decay SprudelPluckEditor, SprudelPluckSequenceEditor
- * @param decay Feedback amount (0.9–0.999, higher = longer ring)
+ * @param-tool feedback SprudelPluckEditor, SprudelPluckSequenceEditor
+ * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time
  * @return A new pattern with sound set to "pluck" and parameters applied.
  * @category tonal
  * @tags pluck, string, karplus-strong, physical-model, snd
  */
 @KlangScript.Function
 fun SprudelPattern.sndPluck(
-    decay: PatternLike? = null,
+    feedback: PatternLike? = null,
     brightness: PatternLike? = null,
     pickPosition: PatternLike? = null,
     stiffness: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern {
     var p = applySndPluck(this)
-    if (decay != null) p = p.ignitorParam("decay", decay, callInfo?.forParam(0, 1))
+    if (feedback != null) p = p.ignitorParam("feedback", feedback, callInfo?.forParam(0, 1))
     if (brightness != null) p = p.ignitorParam("brightness", brightness, callInfo?.forParam(1, 1))
     if (pickPosition != null) p = p.ignitorParam("pickPosition", pickPosition, callInfo?.forParam(2, 1))
     if (stiffness != null) p = p.ignitorParam("stiffness", stiffness, callInfo?.forParam(3, 1))
@@ -64,7 +64,7 @@ fun SprudelPattern.sndPluck(
 /**
  * Parses this string as a pattern and sets sound to plucked string.
  *
- * @param decay Feedback amount (0.9–0.999, higher = longer ring).
+ * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
@@ -74,13 +74,13 @@ fun SprudelPattern.sndPluck(
  */
 @KlangScript.Function
 fun String.sndPluck(
-    decay: PatternLike? = null,
+    feedback: PatternLike? = null,
     brightness: PatternLike? = null,
     pickPosition: PatternLike? = null,
     stiffness: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).sndPluck(decay, brightness, pickPosition, stiffness, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndPluck(feedback, brightness, pickPosition, stiffness, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to plucked string.
@@ -89,7 +89,7 @@ fun String.sndPluck(
  * note("c3 e3 g3").apply(sndPluck(0.999, 0.8))
  * ```
  *
- * @param decay Feedback amount (0.9–0.999, higher = longer ring).
+ * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
@@ -99,31 +99,31 @@ fun String.sndPluck(
  */
 @KlangScript.Function
 fun sndPluck(
-    decay: PatternLike? = null,
+    feedback: PatternLike? = null,
     brightness: PatternLike? = null,
     pickPosition: PatternLike? = null,
     stiffness: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    { p -> p.sndPluck(decay, brightness, pickPosition, stiffness, callInfo) }
+    { p -> p.sndPluck(feedback, brightness, pickPosition, stiffness, callInfo) }
 
 /**
  * Chains a plucked string sound onto this [PatternMapperFn].
  *
- * @param decay Feedback amount (0.9–0.999, higher = longer ring).
+ * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  */
 @KlangScript.Function
 fun PatternMapperFn.sndPluck(
-    decay: PatternLike? = null,
+    feedback: PatternLike? = null,
     brightness: PatternLike? = null,
     pickPosition: PatternLike? = null,
     stiffness: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    this.chain { p -> p.sndPluck(decay, brightness, pickPosition, stiffness, callInfo) }
+    this.chain { p -> p.sndPluck(feedback, brightness, pickPosition, stiffness, callInfo) }
 
 // -- sndSuperPluck() --------------------------------------------------------------------------------------------------
 
@@ -132,7 +132,7 @@ private fun applySndSuperPluck(source: SprudelPattern): SprudelPattern =
 
 /**
  * Sets the sound to a super plucked string (multiple detuned Karplus-Strong strings)
- * and optionally configures parameters via `"voices:detune:decay:brightness:pickPosition:stiffness"`.
+ * and optionally configures parameters via `"voices:detune:feedback:brightness:pickPosition:stiffness"`.
  *
  * Like a 12-string guitar or chorus of harps — each string has independent noise excitation
  * and drift, creating rich evolving shimmer.
@@ -149,7 +149,7 @@ private fun applySndSuperPluck(source: SprudelPattern): SprudelPattern =
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  * @param-tool voices SprudelSuperPluckEditor, SprudelSuperPluckSequenceEditor
- * @param decay Feedback amount (0.9–0.999, higher = longer ring)
+ * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time
  * @return A new pattern with sound set to "superpluck" and parameters applied.
  * @category tonal
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd
@@ -158,7 +158,7 @@ private fun applySndSuperPluck(source: SprudelPattern): SprudelPattern =
 fun SprudelPattern.sndSuperPluck(
     voices: PatternLike? = null,
     spread: PatternLike? = null,
-    decay: PatternLike? = null,
+    feedback: PatternLike? = null,
     brightness: PatternLike? = null,
     pickPosition: PatternLike? = null,
     stiffness: PatternLike? = null,
@@ -167,7 +167,7 @@ fun SprudelPattern.sndSuperPluck(
     var p = applySndSuperPluck(this)
     if (voices != null) p = p.ignitorParam("voices", voices, callInfo?.forParam(0, 1))
     if (spread != null) p = p.ignitorParam("spread", spread, callInfo?.forParam(1, 1))
-    if (decay != null) p = p.ignitorParam("decay", decay, callInfo?.forParam(2, 1))
+    if (feedback != null) p = p.ignitorParam("feedback", feedback, callInfo?.forParam(2, 1))
     if (brightness != null) p = p.ignitorParam("brightness", brightness, callInfo?.forParam(3, 1))
     if (pickPosition != null) p = p.ignitorParam("pickPosition", pickPosition, callInfo?.forParam(4, 1))
     if (stiffness != null) p = p.ignitorParam("stiffness", stiffness, callInfo?.forParam(5, 1))
@@ -179,7 +179,7 @@ fun SprudelPattern.sndSuperPluck(
  *
  * @param voices Number of unison voices.
  * @param spread Detune spread between voices.
- * @param decay Feedback amount (0.9–0.999, higher = longer ring).
+ * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
@@ -191,20 +191,20 @@ fun SprudelPattern.sndSuperPluck(
 fun String.sndSuperPluck(
     voices: PatternLike? = null,
     spread: PatternLike? = null,
-    decay: PatternLike? = null,
+    feedback: PatternLike? = null,
     brightness: PatternLike? = null,
     pickPosition: PatternLike? = null,
     stiffness: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperPluck(voices, spread, decay, brightness, pickPosition, stiffness, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperPluck(voices, spread, feedback, brightness, pickPosition, stiffness, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to super plucked string.
  *
  * @param voices Number of unison voices.
  * @param spread Detune spread between voices.
- * @param decay Feedback amount (0.9–0.999, higher = longer ring).
+ * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
@@ -216,20 +216,20 @@ fun String.sndSuperPluck(
 fun sndSuperPluck(
     voices: PatternLike? = null,
     spread: PatternLike? = null,
-    decay: PatternLike? = null,
+    feedback: PatternLike? = null,
     brightness: PatternLike? = null,
     pickPosition: PatternLike? = null,
     stiffness: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    { p -> p.sndSuperPluck(voices, spread, decay, brightness, pickPosition, stiffness, callInfo) }
+    { p -> p.sndSuperPluck(voices, spread, feedback, brightness, pickPosition, stiffness, callInfo) }
 
 /**
  * Chains a super plucked string sound onto this [PatternMapperFn].
  *
  * @param voices Number of unison voices.
  * @param spread Detune spread between voices.
- * @param decay Feedback amount (0.9–0.999, higher = longer ring).
+ * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
@@ -238,13 +238,13 @@ fun sndSuperPluck(
 fun PatternMapperFn.sndSuperPluck(
     voices: PatternLike? = null,
     spread: PatternLike? = null,
-    decay: PatternLike? = null,
+    feedback: PatternLike? = null,
     brightness: PatternLike? = null,
     pickPosition: PatternLike? = null,
     stiffness: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    this.chain { p -> p.sndSuperPluck(voices, spread, decay, brightness, pickPosition, stiffness, callInfo) }
+    this.chain { p -> p.sndSuperPluck(voices, spread, feedback, brightness, pickPosition, stiffness, callInfo) }
 
 // -- sndSuperSaw() ----------------------------------------------------------------------------------------------------
 

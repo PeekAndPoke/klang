@@ -11,7 +11,7 @@ import kotlin.random.Random
 
 /**
  * One Karplus-Strong string: a delay line excited by a noise burst, read with linear interpolation, its feedback
- * filtered by a brightness one-pole and an optional stiffness allpass, then scaled by the decay.
+ * filtered by a brightness one-pole and an optional stiffness allpass, then scaled by the feedback coefficient.
  *
  * The string core of both pluck nodes: `Ignitors.karplusStrong` holds one string, `Ignitors.superKarplusStrong` one
  * per unison voice (engine tidy-up step 11). The nodes keep what differs: their param reads (order, count and
@@ -66,7 +66,7 @@ internal class KarplusString {
     /**
      * Renders the string over `[from, to)`: the delay [baseDelay] divided by `phaseMod[i]` (when there is one) and by
      * the drift ramp (when [hasDrift]: it starts at [driftStart] and steps by [driftStep] per sample), clamped to the
-     * line; the read, the filters, the write-back scaled by [decay]. The output is `sample * gain`, written to
+     * line; the read, the filters, the write-back scaled by [feedback]. The output is `sample * gain`, written to
      * [buffer] or, when [accumulate], added to it. [lpAlpha], [hasStiffness] and [apCoeff] come from [lpAlphaOf],
      * [hasStiffnessOf] and [apCoeffOf].
      *
@@ -100,7 +100,7 @@ internal class KarplusString {
         lpAlpha: Double,
         hasStiffness: Boolean,
         apCoeff: Double,
-        decay: Double,
+        feedback: Double,
         gain: Double,
         accumulate: Boolean,
     ) {
@@ -109,7 +109,7 @@ internal class KarplusString {
         val dm = driftStep * 1.0
         val alpha = lpAlpha * 1.0
         val ap = apCoeff * 1.0
-        val decayGain = decay * 1.0
+        val feedbackGain = feedback * 1.0
         val g = gain * 1.0
         val line = delayLine
         val len = line.size
@@ -154,8 +154,8 @@ internal class KarplusString {
                 filtered = allpass
             }
 
-            // Write back with decay
-            line[wp] = (filtered * decayGain)
+            // Write back with feedback
+            line[wp] = (filtered * feedbackGain)
 
             val out = (sample * g)
 

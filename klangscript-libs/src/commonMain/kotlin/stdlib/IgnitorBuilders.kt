@@ -909,14 +909,14 @@ fun OscSuperRampBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.Pluck], handed to the `configure` lambda of `Ignitor.pluck(...)`.
- * Knobs: `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscPluckBuilder(val node: IgnitorDsl.Pluck)
 
-/** Loop decay per pass (default 0.996). Higher = longer sustain (0..1). */
+/** Loop feedback per pass, 0.9 to 0.999 (default 0.996); higher rings longer. A coefficient, not a time. */
 @KlangScript.Function
-fun OscPluckBuilder.decay(decay: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(decay = decay.toIgnitorDsl()))
+fun OscPluckBuilder.feedback(feedback: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(feedback = feedback.toIgnitorDsl()))
 
 /** Initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright. */
 @KlangScript.Function
@@ -938,7 +938,7 @@ fun OscPluckBuilder.analog(analog: IgnitorDslLike): OscPluckBuilder = copy(node 
 
 /**
  * Builder for [IgnitorDsl.SuperPluck], handed to the `configure` lambda of `Ignitor.superpluck(...)`.
- * Knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperPluckBuilder(val node: IgnitorDsl.SuperPluck)
@@ -951,9 +951,9 @@ fun OscSuperPluckBuilder.voices(voices: IgnitorDslLike): OscSuperPluckBuilder = 
 @KlangScript.Function
 fun OscSuperPluckBuilder.spread(spread: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
 
-/** Loop decay per pass (default 0.996). Higher = longer sustain (0..1). */
+/** Loop feedback per pass, 0.9 to 0.999 (default 0.996); higher rings longer. A coefficient, not a time. */
 @KlangScript.Function
-fun OscSuperPluckBuilder.decay(decay: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(decay = decay.toIgnitorDsl()))
+fun OscSuperPluckBuilder.feedback(feedback: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(feedback = feedback.toIgnitorDsl()))
 
 /** Initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright. */
 @KlangScript.Function

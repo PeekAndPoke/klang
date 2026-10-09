@@ -140,3 +140,49 @@ Before the pitch pipeline's step 1, so its new slots are born with the final wor
 - **Suites.** As step 1, same counts, all green; `SongBenchmarkCasesCompileSpec`'s every-case row green (it compiles
   the three `coarse(factor = 2, oversample = 4)` cases), its rig-anchor row still red on the live
   `DerSchmetterling.kt` only.
+
+### Step 2b, the pluck's `feedback` and brown noise's `leak` (2026-10-09)
+
+- **What changed.** `Slots.decay` is `Slots.feedback` (key `"feedback"`, default 0.996) and `Slots.depth` is
+  `Slots.leak` (key `"leak"`, default 0.02), `Slots` still alphabetical; `Pluck.feedback`, `SuperPluck.feedback`,
+  `BrownNoise.leak`; the walk; the runtime `karplusStrong(feedback)`, `superKarplusStrong(feedback)`,
+  `brownNoise(leak)`, their fields and defaults, and the kernel `KarplusString`'s `feedback` (Q-B); the builder knob
+  `x.feedback(...)` on `Ignitor.pluck` / `Ignitor.superpluck`, `Ignitor.brownnoise(leak)`, `Ignitor.slot.feedback`;
+  sprudel's `sndPluck(feedback, ...)`, `sndSuperPluck(..., feedback, ...)`, `sndBrown(leak)` and their keys; the
+  pluck editor tools (`domKey`, `paramInfoIcon`, the label "Feedback"). The Synthsale Piper's Farewell
+  (`IrishLament.kt`) writes `x.feedback(...)`; the whitepaper figure's comment, the skill references and the open
+  tasks (`pluck-release-tail.md`, `sprudel-sound-doors-compound.md`, the proposal in
+  `sprudel-sound-function-surface.md`) follow. The envelope `decay`, the songs' own `Ign.param("decay")` with their
+  `ignp("decay", ...)` (Der Schmetterling, Kokon, the frozen songs and pieces, `ParamToolArgumentSpec`), `echo`'s
+  `decay` and every other `depth` (tremolo, duck, vibrato, FM, the filter envelope) are untouched.
+- **A side effect, as the map predicted (D5).** A song's `ignp("decay", ...)` used to feed a built-in pluck in the
+  same voice too, since both used the key `"decay"`; the keys are apart now. No corpus song played a built-in pluck
+  while writing `ignp("decay")`, so nothing moved.
+- **Found on the way.** Test keys the map did not list: `CompletionProviderTest` (the `Ignitor.slot` completion
+  list), `LangControlRestSpec` (`pluckSlots`), `LangDoorFormsSpec`'s positional rows, `IgnitorsTest`'s `depth(...)`
+  helper and `NoiseDefaultsSyncSpec`. And a weak spot that is older than this change: `IgnitorDefaultsTest`'s
+  "pluck responds to ignitorParam ..." rows render both sides from one shared, advancing seed, so they differ even
+  when the slot is not read (a mutant of `Slots.feedback`'s key left the renamed row green). The new rows below
+  render both sides from the same fresh seed.
+- **Wire.** `WIRE_SCHEMA_HASH` `380449250` to `1326193870` (`Pluck.feedback`, `SuperPluck.feedback`,
+  `BrownNoise.leak`). New codec rows with the renamed fields NON-default: "BrownNoise with leak", "Pluck with
+  feedback", "SuperPluck with feedback" (`:audio_bridge:jsTest` 265, green).
+- **Corpus, bit-identical** (`corpus-ep1-sn2b.txt`): all 16 rows identical, The Synthsale Piper's Farewell (text
+  edited) and every guitar row writing `ignp("decay", ...)` (frozen Der Schmetterling and its piece) among them; Der
+  Schmetterling and Kokon from HEAD's text identical.
+- **Engagement controls.** sprudel's `sndPluck` writing `"decay"` while the slot says `feedback`: Drunken Synthlor
+  (`sndPluck(0.999, 0.8)`) moved; The Synthsale Piper's Farewell and Greensleeves identical. `OscPluckBuilder.feedback`
+  made a no-op: The Synthsale Piper's Farewell moved, Greensleeves identical. Restored, `cmp` clean.
+- **The leak row** (no song writes `leak`, so the corpus cannot see it): `IgnitorDefaultsTest` renders brown noise
+  and the pluck from one fresh seed per render; the default equals itself and an explicit default, `leak = 0.3`
+  (`feedback = 0.9`) moves it, the retired key `depth` (`decay`) does not. Plus `LangSndSpec` (`sndBrown` writes
+  `"leak"`) and `StdLibIgnitorTest` (`Ignitor.brownnoise(leak = 0.3)`, named). Mutation checks, each killed:
+  `Slots.leak` keyed `"depth"`, `Slots.feedback` keyed `"decay"`, `sndBrown` writing `"depth"`, the script door's
+  parameter back to `depth`.
+- **Suites.** `audio_bridge` jvmTest 146 and jsTest 265, `klangscript-libs` jvmTest 822 (after the completion-list
+  fix and the round-1 row removal) and jsTest 601, `sprudel` jvmTest 3,471, `audio_be` jvmTest 2,414 and jsBrowserTest 2,310, root guards green
+  but for the known rig-anchor row on the live `DerSchmetterling.kt`.
+- **The grep of map §C** finds no old name outside history: only `docs/retired-names.md`, this task's decision text,
+  the pitch pipeline's line 517 and `docs/plans/signal-flow-redesign.md:132` (a plan sketch whose
+  `Ignitor.slot.decay` is the envelope decay of a design that did not ship). `ignitorParam("decay" | "depth"` in
+  sprudel: none.

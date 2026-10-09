@@ -24,18 +24,18 @@ note through their own physics, with **no `Adsr` node anywhere in the tree**
 
 ## The arithmetic that makes this hard
 
-`Pluck.decay` is **not a duration**. `decayDefault = ConstantIgnitor(0.996)`
+`Pluck.feedback` (named `decay` until 2026-10-09) is **not a duration**. `feedbackDefault = ConstantIgnitor(0.996)`
 (`audio_be/ignitor/Ignitors.kt:59`), and it is applied inside the Karplus-Strong feedback loop as
 
 ```kotlin
-line[wp] = (filtered * decayGain)      // KarplusString.kt, render (both pluck nodes); decayGain is the decay
+line[wp] = (filtered * feedbackGain)   // KarplusString.kt, render (both pluck nodes); feedbackGain is the feedback
 ```
 
 — once per **delay-line pass**, i.e. once per period of the note. Amplitude after `t` seconds is
-therefore `decay^(t·f)`, and the time to fall 60 dB is
+therefore `feedback^(t·f)`, and the time to fall 60 dB is
 
 ```
-t60 = ln(0.001) / (f · ln(decay))     ≈  1723 / f  seconds   at the default decay = 0.996
+t60 = ln(0.001) / (f · ln(feedback))  ≈  1723 / f  seconds   at the default feedback = 0.996
 ```
 
 | note | frequency | ring to −60 dB |
@@ -99,9 +99,9 @@ Not an interface — a policy. In rough dependency order:
   [`20260831-ignitor-envelope-ownership.md`](../tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md)
   — the build-accumulator design, the six-case ownership table, `.adsrOff()` semantics, the fade guard.
 - Code: `audio_bridge/IgnitorDsl.kt:643` (`Pluck` node), `audio_be/ignitor/Ignitors.kt:59`
-  (`decayDefault`), `Ignitors.kt:1176+` (`karplusStrong` / `KarplusStrongIgnitor`), `Ignitors.kt:1282+`
+  (`feedbackDefault`), `Ignitors.kt:1176+` (`karplusStrong` / `KarplusStrongIgnitor`), `Ignitors.kt:1282+`
   (`superKarplusStrong`), `audio_be/ignitor/KarplusString.kt` (the string both nodes share; `render` holds the
-  feedback write-back with the decay).
+  feedback write-back).
 - Prior art in this repo for "express time relative to the note rather than in absolute units": the
   harmonic-relative string filter and the period-scaled minimum release, both in the parent task.
   The latter is now carried forward on its own in `docs/tasks/future/envelope-shape-followups.md`.

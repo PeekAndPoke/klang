@@ -46,7 +46,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
             inner, freq, q, analog, env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.BerlinNoise -> listOf(rate, octaves, persistence)
-        is IgnitorDsl.BrownNoise -> listOf(depth)
+        is IgnitorDsl.BrownNoise -> listOf(leak)
         is IgnitorDsl.Ceil -> listOf(inner)
         is IgnitorDsl.Clamp -> listOf(inner, lo, hi)
         is IgnitorDsl.Coarse -> listOf(inner, factor)
@@ -91,7 +91,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
             inner, semitones, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.PitchMod -> listOf(inner, mod)
-        is IgnitorDsl.Pluck -> listOf(freq, decay, brightness, pickPosition, stiffness, analog)
+        is IgnitorDsl.Pluck -> listOf(freq, feedback, brightness, pickPosition, stiffness, analog)
         is IgnitorDsl.Plus -> listOf(left, right)
         is IgnitorDsl.Pow -> listOf(base, exp)
         is IgnitorDsl.Pulze -> listOf(freq, duty, analog, phase)
@@ -115,7 +115,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Sqrt -> listOf(inner)
         is IgnitorDsl.Square -> listOf(freq, analog, phase)
         is IgnitorDsl.SuperPluck -> listOf(
-            freq, voices, spread, decay, brightness, pickPosition, stiffness, analog, analogSpread,
+            freq, voices, spread, feedback, brightness, pickPosition, stiffness, analog, analogSpread,
         )
         is IgnitorDsl.SuperRamp -> listOf(freq, voices, spread, analog, analogSpread, phase)
         is IgnitorDsl.SuperSaw -> listOf(freq, voices, spread, analog, analogSpread, phase)
@@ -178,7 +178,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             attackCurve = new[9], decayCurve = new[10], releaseCurve = new[11],
         )
         is IgnitorDsl.BerlinNoise -> copy(rate = new[0], octaves = new[1], persistence = new[2])
-        is IgnitorDsl.BrownNoise -> copy(depth = new[0])
+        is IgnitorDsl.BrownNoise -> copy(leak = new[0])
         is IgnitorDsl.Ceil -> copy(inner = new[0])
         is IgnitorDsl.Clamp -> copy(inner = new[0], lo = new[1], hi = new[2])
         is IgnitorDsl.Coarse -> copy(inner = new[0], factor = new[1])
@@ -258,7 +258,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.PitchMod -> copy(inner = new[0], mod = new[1])
         is IgnitorDsl.Pluck -> copy(
             freq = new[0],
-            decay = new[1],
+            feedback = new[1],
             brightness = new[2],
             pickPosition = new[3],
             stiffness = new[4],
@@ -291,7 +291,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             freq = new[0],
             voices = new[1],
             spread = new[2],
-            decay = new[3],
+            feedback = new[3],
             brightness = new[4],
             pickPosition = new[5],
             stiffness = new[6],

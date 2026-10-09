@@ -127,10 +127,10 @@ object Ignitors {
     private val persistenceDefault = ConstantIgnitor(0.5)
     private val chaosDefault = ConstantIgnitor(CRACKLE_CHAOS_DEFAULT)
     private val colorDefault = ConstantIgnitor(NOISE_TILT_DEFAULT)
-    private val brownDepthDefault = ConstantIgnitor(BROWN_LEAK_DEFAULT)
+    private val brownLeakDefault = ConstantIgnitor(BROWN_LEAK_DEFAULT)
     private val tailDefault = ConstantIgnitor(DUST_TAIL_DEFAULT)
     private val bipolarDefault = ConstantIgnitor(DUST_BIPOLAR_DEFAULT)
-    private val decayDefault = ConstantIgnitor(0.996)
+    private val feedbackDefault = ConstantIgnitor(0.996)
     private val brightnessDefault = ConstantIgnitor(0.5)
     private val pickPositionDefault = ConstantIgnitor(0.5)
     private val stiffnessDefault = ConstantIgnitor(0.0)
@@ -1276,16 +1276,16 @@ object Ignitors {
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
     /**
-     * Brown (random-walk) noise. [depth] is the per-sample white-leak `k` in `out = (out + k·white)/(1+k)`
-     * (read control-rate). `depth = BROWN_LEAK_DEFAULT` reproduces the original `/1.02` walk byte-for-byte.
+     * Brown (random-walk) noise. [leak] is the per-sample white-leak `k` in `out = (out + k·white)/(1+k)`
+     * (read control-rate). `leak = BROWN_LEAK_DEFAULT` reproduces the original `/1.02` walk byte-for-byte.
      */
-    fun brownNoise(rng: Random, depth: Ignitor = brownDepthDefault): Ignitor = BrownNoiseIgnitor(rng, depth)
+    fun brownNoise(rng: Random, leak: Ignitor = brownLeakDefault): Ignitor = BrownNoiseIgnitor(rng = rng, leak = leak)
 
-    private class BrownNoiseIgnitor(private val rng: Random, private val depth: Ignitor) : Ignitor {
+    private class BrownNoiseIgnitor(private val rng: Random, private val leak: Ignitor) : Ignitor {
         private var out: Double = 0.0
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val k = depth.blockStartValue(freqHz, ctx).coerceAtLeast(0.0)   // real freqHz: ledger O6
+            val k = leak.blockStartValue(freqHz, ctx).coerceAtLeast(0.0)   // real freqHz: ledger O6
             val denom = 1.0 + k
             val end = ctx.windowEnd
 
@@ -2349,17 +2349,17 @@ object Ignitors {
      */
     fun karplusStrong(
         freq: Ignitor = FreqIgnitor,
-        decay: Ignitor = decayDefault,
+        feedback: Ignitor = feedbackDefault,
         brightness: Ignitor = brightnessDefault,
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
         rng: Random,
-    ): Ignitor = KarplusStrongIgnitor(freq = freq, decay = decay, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, rng = rng)
+    ): Ignitor = KarplusStrongIgnitor(freq = freq, feedback = feedback, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, rng = rng)
 
     private class KarplusStrongIgnitor(
         private val freq: Ignitor,
-        private val decay: Ignitor,
+        private val feedback: Ignitor,
         private val brightness: Ignitor,
         private val pickPosition: Ignitor,
         private val stiffness: Ignitor,
@@ -2381,7 +2381,7 @@ object Ignitors {
             }
 
             val d = drift
-            val decayVal = readParam(decay, actualFreq, ctx)
+            val feedbackVal = readParam(feedback, actualFreq, ctx)
             val brightnessVal = readParam(brightness, actualFreq, ctx)
             val stiffnessVal = readParam(stiffness, actualFreq, ctx)
             val end = ctx.windowEnd
@@ -2407,7 +2407,7 @@ object Ignitors {
                 buffer = buffer, from = ctx.offset, to = end, baseDelay = baseDelay, phaseMod = ctx.phaseMod,
                 hasDrift = hasDrift, driftStart = m, driftStep = dm,
                 lpAlpha = KarplusString.lpAlphaOf(brightnessVal), hasStiffness = KarplusString.hasStiffnessOf(stiffnessVal),
-                apCoeff = KarplusString.apCoeffOf(stiffnessVal), decay = decayVal, gain = 1.0, accumulate = false,
+                apCoeff = KarplusString.apCoeffOf(stiffnessVal), feedback = feedbackVal, gain = 1.0, accumulate = false,
             )
         }
     }
@@ -2422,7 +2422,7 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
-        decay: Ignitor = decayDefault,
+        feedback: Ignitor = feedbackDefault,
         brightness: Ignitor = brightnessDefault,
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
@@ -2431,7 +2431,7 @@ object Ignitors {
         rng: Random,
         countsAtBuild: Boolean = false,
     ): Ignitor = SuperKarplusStrongIgnitor(
-        freq = freq, voices = voices, detune = detune, decay = decay, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, analogSpread = analogSpread, rng = rng,
+        freq = freq, voices = voices, detune = detune, feedback = feedback, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, analogSpread = analogSpread, rng = rng,
         countsAtBuild = countsAtBuild,
     )
 
@@ -2439,7 +2439,7 @@ object Ignitors {
         private val freq: Ignitor,
         private val voices: Ignitor,
         private val detune: Ignitor,
-        private val decay: Ignitor,
+        private val feedback: Ignitor,
         private val brightness: Ignitor,
         private val pickPosition: Ignitor,
         private val stiffness: Ignitor,
@@ -2510,7 +2510,7 @@ object Ignitors {
 
             // Read control-rate params once per block
             val spread = readParam(detune, actualFreq, ctx)
-            val decayVal = readParam(decay, actualFreq, ctx)
+            val feedbackVal = readParam(feedback, actualFreq, ctx)
             val brightnessVal = readParam(brightness, actualFreq, ctx)
             val stiffnessVal = readParam(stiffness, actualFreq, ctx)
 
@@ -2579,7 +2579,7 @@ object Ignitors {
                 s.render(
                     buffer = buffer, from = ctx.offset, to = end, baseDelay = baseDelay, phaseMod = phaseMod,
                     hasDrift = lanes != null, driftStart = m, driftStep = dm,
-                    lpAlpha = lpAlpha, hasStiffness = hasStiffness, apCoeff = apCoeff, decay = decayVal,
+                    lpAlpha = lpAlpha, hasStiffness = hasStiffness, apCoeff = apCoeff, feedback = feedbackVal,
                     gain = voiceGain, accumulate = n != 0,
                 )
             }

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -160,10 +161,50 @@ class IgnitorDefaultsTest : StringSpec({
     // Pluck ignitorParam overrides
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "pluck responds to ignitorParam 'decay'" {
+    "pluck responds to ignitorParam 'feedback'" {
         val bufDefault = createAndGenerate("pluck")
-        val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("decay" to 0.9))
+        val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("feedback" to 0.9))
         buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
+    }
+
+    // The two source slots renamed by Q21 decision 7, each against the SAME seeded draw, so only the
+    // slot can move the render: the old key is inert, the new key is read. The corpus cannot see
+    // `leak` (no song writes it), so this row is its proof.
+    fun renderSeeded(soundName: String, ignitorParams: Map<String, Double>? = null): List<Double> {
+        val data = VoiceData.empty.copy(sound = soundName, ignitorParams = ignitorParams)
+        val exciter = registry.createExciter(soundName, data, 440.0, random = Random(7))
+            ?.ignitor ?: error("Unknown sound: $soundName")
+        val buffer = AudioBuffer(blockFrames)
+        val ctx = IgniteContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = sampleRate,
+            gateEndFrame = sampleRate,
+            scratchBuffers = ScratchBuffers(blockFrames),
+            random = Random(7),
+        ).apply {
+            updateOffsetAndLength(offset = 0, length = blockFrames)
+            voiceElapsedFrames = 0
+        }
+        exciter.generate(buffer, 440.0, ctx)
+        return buffer.toList()
+    }
+
+    "brownnoise reads its white leak from the slot 'leak'; the retired key 'depth' is inert" {
+        val bare = renderSeeded("brownnoise")
+
+        renderSeeded("brownnoise") shouldBe bare
+        renderSeeded("brownnoise", mapOf("leak" to 0.02)) shouldBe bare
+        renderSeeded("brownnoise", mapOf("leak" to 0.3)) shouldNotBe bare
+        renderSeeded("brownnoise", mapOf("depth" to 0.3)) shouldBe bare
+    }
+
+    "pluck reads its loop feedback from the slot 'feedback'; the retired key 'decay' is inert" {
+        val bare = renderSeeded("pluck")
+
+        renderSeeded("pluck") shouldBe bare
+        renderSeeded("pluck", mapOf("feedback" to 0.996)) shouldBe bare
+        renderSeeded("pluck", mapOf("feedback" to 0.9)) shouldNotBe bare
+        renderSeeded("pluck", mapOf("decay" to 0.9)) shouldBe bare
     }
 
     "pluck responds to ignitorParam 'brightness'" {

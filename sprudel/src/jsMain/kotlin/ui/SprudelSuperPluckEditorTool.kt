@@ -40,7 +40,7 @@ import kotlinx.html.div
 
 /**
  * [KlangUiToolEmbeddable] for the per-param
- * sndSuperPluck(voices, spread, decay, brightness, pickPosition, stiffness) call.
+ * sndSuperPluck(voices, spread, feedback, brightness, pickPosition, stiffness) call.
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits all six params of the
@@ -74,7 +74,7 @@ private data class SuperPluckPreset(
     val name: String,
     val voices: Int,
     val detune: Double,
-    val decay: Double,
+    val feedback: Double,
     val brightness: Double,
     val pickPosition: Double,
     val stiffness: Double,
@@ -116,7 +116,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
     private val parsedDetune
         get() = parseNum(call?.args?.getOrNull(1), 0.2)
 
-    private val parsedDecay
+    private val parsedFeedback
         get() = parseNum(call?.args?.getOrNull(2), 0.996)
 
     private val parsedBrightness
@@ -130,7 +130,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
 
     private var voices by value(parsedVoices)
     private var detune by value(parsedDetune)
-    private var decay by value(parsedDecay)
+    private var feedback by value(parsedFeedback)
     private var brightness by value(parsedBrightness)
     private var pickPosition by value(parsedPickPosition)
     private var stiffness by value(parsedStiffness)
@@ -147,7 +147,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
 
     private fun buildValue(): String =
         if (call != null) {
-            "$voices, ${detune.formatArg()}, ${decay.formatArg()}, ${brightness.formatArg()}, ${pickPosition.formatArg()}, ${stiffness.formatArg()}"
+            "$voices, ${detune.formatArg()}, ${feedback.formatArg()}, ${brightness.formatArg()}, ${pickPosition.formatArg()}, ${stiffness.formatArg()}"
         } else {
             voices.toString()
         }
@@ -172,7 +172,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
             // voices is an integer param — no decimal point
             put(texts, 0, voices.toString())
             put(texts, 1, detune.formatArg())
-            put(texts, 2, decay.formatArg())
+            put(texts, 2, feedback.formatArg())
             put(texts, 3, brightness.formatArg())
             put(texts, 4, pickPosition.formatArg())
             put(texts, 5, stiffness.formatArg())
@@ -215,7 +215,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
         currentValue = initialValue
         voices = parsedVoices
         detune = parsedDetune
-        decay = parsedDecay
+        feedback = parsedFeedback
         brightness = parsedBrightness
         pickPosition = parsedPickPosition
         stiffness = parsedStiffness
@@ -232,7 +232,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
     private fun applyPreset(preset: SuperPluckPreset) {
         voices = preset.voices
         detune = preset.detune
-        decay = preset.decay
+        feedback = preset.feedback
         brightness = preset.brightness
         pickPosition = preset.pickPosition
         stiffness = preset.stiffness
@@ -280,7 +280,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
                         marginBottom = 8.px
                     }
                     val matchedPreset = PRESETS.find {
-                        it.voices == voices && it.detune == detune && it.decay == decay &&
+                        it.voices == voices && it.detune == detune && it.feedback == feedback &&
                                 it.brightness == brightness && it.pickPosition == pickPosition && it.stiffness == stiffness
                     }
 
@@ -333,12 +333,12 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
                 if (call != null) {
                     ui.four.stackable.fields {
                         key = "superpluck-editor-string"
-                        UiInputField(decay, { decay = it; dirty += 2; liveUpdate() }) {
-                            domKey("decay")
+                        UiInputField(feedback, { feedback = it; dirty += 2; liveUpdate() }) {
+                            domKey("feedback")
                             step(0.001)
                             label {
-                                +"Decay"
-                                paramInfoIcon("decay", props.toolCtx, infoPopup)
+                                +"Feedback"
+                                paramInfoIcon("feedback", props.toolCtx, infoPopup)
                             }
                         }
                         UiInputField(brightness, { brightness = it; dirty += 3; liveUpdate() }) {

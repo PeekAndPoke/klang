@@ -53,7 +53,7 @@ facts; the few that would go into code first were checked against a source and a
   - Saw, square, tri, zawtooth, zamp, impulse, pulze (duty as a signal), ramp.
   - The `super*` unison stacks: spread, `spreadPower`, `sideAtten`, jitter, the phase pool.
   - White, pink, brown, perlin and berlin noise, dust, crackle.
-  - Pluck and superpluck (Karplus: decay, brightness, `pickPosition`, `stiffness`).
+  - Pluck and superpluck (Karplus: feedback, brightness, `pickPosition`, `stiffness`).
   - Sample and variants.
 - **Math:** the full arithmetic set, including `abs`, `tanh`, `clamp`, `select`, `range`, `rangex`, `freq`.
 - **Filters:** SVF lowpass and highpass (q, `analog` damping, `passes`, cutoff envelope, humanize lane), onepole

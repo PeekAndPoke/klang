@@ -22,7 +22,12 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   (`IgnitorDsl.endsInClassic()`); a tree without it plays bare: no doors, no default envelope.
 - **`classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`): onepole, crush, coarse, distort, highpass,
   bandpass, notch, lowpass, tremolo, adsr. Its knobs are `<door>.<param>` slots the pattern fills through
-  `VoiceData.ignitorParams`; a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
+  `VoiceData.ignitorParams`, the param part the engine door's word (`adsr.attack`, `crush.bits`,
+  `coarse.factor`); a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
+- **One word per knob, node to wire** (Q21, 2026-10-09): every envelope says `attack`, `decay`, `sustain`,
+  `release` (the unit in the KDoc, not the name) and `declick`; the pluck's loop gain is `feedback`, brown noise's
+  white leak is `leak`. The frame-domain core keeps `sustainLevel` (`EnvelopeCore.prepare`, `Voice.Envelope`)
+  and the constants keep their `*_SEC` names. Old names: `docs/retired-names.md`.
 - **The pitch stage stays outside the tree**: vibrato, accelerate, pitch envelope and FM in `voices/strip/pitch/`
   (moving in is `docs/tasks/pitch-pipeline-into-the-tree.md`).
 - **Voice lifetime** = gate end plus the tree's own release tail (`VoiceFactory.treeLifetime`, floored at 0;
@@ -249,6 +254,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-09 The `classic()` slot renames: the envelope words and `declick`, `crush.bits`, `coarse.factor`, the
+  pluck's `feedback`, brown noise's `leak`, on every door, node, wire field and runtime factory, bit-identical:
+  `docs/tasks/classic-slot-names-check.md`
 - 2026-10-08 One fade law for the bank swap and the compressor (`utils/linear_crossfade.kt`); body and vowel are one
   stage class with two kinds on a pooled bank, no allocation per change; the band rows live with their catalogues
   (`BodyMaterials.Mode`, `VowelBands.Band`) and `FilterDef` is retired: `docs/tasks/engine-tidy-up.md` step 12

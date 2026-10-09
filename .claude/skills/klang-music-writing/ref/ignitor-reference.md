@@ -198,7 +198,7 @@ Ignitor.supersaw(55, x => x.voices(7))
 | Method                                      | Description                                                     |
 |---------------------------------------------|-----------------------------------------------------------------|
 | `Ignitor.whitenoise(color?)`                    | Flat spectrum; `color` tilts it (see below)                     |
-| `Ignitor.brownnoise(depth?)`                    | Low-frequency weighted (-6 dB/oct); `depth` = white-leak        |
+| `Ignitor.brownnoise(leak?)`                     | Low-frequency weighted (-6 dB/oct); `leak` = white-leak         |
 | `Ignitor.pinknoise()`                           | Balanced noise (-3 dB/oct) — canonical exact pink, no knobs     |
 | `Ignitor.perlin(rate?, octaves?, persistence?)` | Smooth organic noise; fBm via `octaves`/`persistence`           |
 | `Ignitor.berlin(rate?, octaves?, persistence?)` | Angular piecewise-linear noise; same fBm knobs                  |
@@ -210,7 +210,7 @@ Ignitor.supersaw(55, x => x.voices(7))
 | Knob          | On                | Meaning                                                                                    |
 |---------------|-------------------|--------------------------------------------------------------------------------------------|
 | `color`       | `whitenoise`      | Spectral tilt −1..1: `0` flat (default), `<0` darken toward pink/brown, `>0` brighten      |
-| `depth`       | `brownnoise`      | Per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter       |
+| `leak`        | `brownnoise`      | Per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter       |
 | `octaves`     | `perlin`/`berlin` | fBm octaves: `1` plain (default, perf-neutral), higher = more fractal detail (capped at 8) |
 | `persistence` | `perlin`/`berlin` | fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves)              |
 | `tail`        | `dust`            | Heavy-tailed amplitude exponent: `1` uniform (default), `>1` = mostly-tiny / rare-loud     |
@@ -224,8 +224,8 @@ Ignitor.supersaw(55, x => x.voices(7))
 
 | Method                                    | Description                     |
 |-------------------------------------------|---------------------------------|
-| `Ignitor.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `decay` (0.996), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
-| `Ignitor.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8), `spread` (0.2) and `analogSpread` (1): `Ignitor.superpluck(x => x.voices(6).decay(0.995))` |
+| `Ignitor.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `feedback` (0.996, the loop feedback per pass), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
+| `Ignitor.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8), `spread` (0.2) and `analogSpread` (1): `Ignitor.superpluck(x => x.voices(6).feedback(0.995))` |
 
 ### Utility
 
@@ -688,10 +688,10 @@ Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 
 | `supersquare` | `supersqr`, `superpulse` | SuperSquare(Freq, voices=8, spread=0.2)                         |
 | `supertri`    |                          | SuperTri(Freq, voices=8, spread=0.2)                            |
 | `superramp`   |                          | SuperRamp(Freq, voices=8, spread=0.2)                           |
-| `pluck`       | `ks`, `string`           | Pluck(Freq, decay=0.996, brightness=0.5, pick=0.5, stiffness=0) |
+| `pluck`       | `ks`, `string`           | Pluck(Freq, feedback=0.996, brightness=0.5, pick=0.5, stiffness=0) |
 | `superpluck`  |                          | SuperPluck(Freq, voices=8, spread=0.2, ...)                     |
 | `whitenoise`  | `white`                  | WhiteNoise(color=0)                                             |
-| `brownnoise`  | `brown`                  | BrownNoise(depth=0.02)                                          |
+| `brownnoise`  | `brown`                  | BrownNoise(leak=0.02)                                           |
 | `pinknoise`   | `pink`                   | PinkNoise                                                       |
 | `perlinnoise` | `perlin`                 | PerlinNoise(rate=1, octaves=1, persistence=0.5)                 |
 | `berlinnoise` | `berlin`                 | BerlinNoise(rate=1, octaves=1, persistence=0.5)                 |

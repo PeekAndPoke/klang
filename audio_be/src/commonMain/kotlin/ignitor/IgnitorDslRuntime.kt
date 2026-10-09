@@ -663,10 +663,10 @@ private fun IgnitorDsl.gatedOffAtUnity(ignitorParams: Map<String, Double>?, cach
  * **A rule for NEW nodes, not an audited invariant, and here is the known exception.** A node that
  * can emit a non-finite sample from finite input owes a substitution at its own read, the way the
  * envelope now does. The FEEDBACK sources do not obey it and must not be made to: `Pluck` and
- * `SuperPluck` write `delayLine[writePos] = filtered * decayVal` with `decay` read raw off
- * `Slots.decay`, so `ignp("decay", 10)` diverges geometrically to an infinity and the fractional
+ * `SuperPluck` write `delayLine[writePos] = filtered * feedbackVal` with `feedback` read raw off
+ * `Slots.feedback`, so `ignp("feedback", 10)` diverges geometrically to an infinity and the fractional
  * read turns it into NaN. That divergence is authored character and the Motor stays raw, so the
- * rule is "a new node owes it", not "every node has it". `note("c3").sound("pluck").ignp("decay", 10)`
+ * rule is "a new node owes it", not "every node has it". `note("c3").sound("pluck").ignp("feedback", 10)`
  * is unguarded with or without this fold; what the fold contributes is that the built-ins' unity
  * `pregain` (placed on every built-in's source since phase 3 step 6) does not MASK it by scrubbing
  * the NaN to silence on its way out.
@@ -1129,7 +1129,7 @@ private fun IgnitorDsl.buildRaw(
 
         // Noise sources ignore phaseMod — skip ModApplyingIgnitor to avoid wasting cycles.
         is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(cache.random, color.noMod())
-        is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(cache.random, depth.noMod())
+        is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(rng = cache.random, leak = leak.noMod())
         is IgnitorDsl.PinkNoise -> Ignitors.pinkNoise(cache.random)
         is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(rng = cache.random, rate = rate.noMod(), octaves = octaves.noMod(), persistence = persistence.noMod())
         is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(rng = cache.random, rate = rate.noMod(), octaves = octaves.noMod(), persistence = persistence.noMod())
@@ -1210,7 +1210,7 @@ private fun IgnitorDsl.buildRaw(
             freq,
             Ignitors.karplusStrong(
                 freq = freq.noMod(),
-                decay = decay.noMod(),
+                feedback = feedback.noMod(),
                 brightness = brightness.noMod(),
                 pickPosition = pickPosition.noMod(),
                 stiffness = stiffness.noMod(),
@@ -1225,7 +1225,7 @@ private fun IgnitorDsl.buildRaw(
                 freq = freq.noMod(),
                 voices = voices.noMod(),
                 detune = spread.noMod(),
-                decay = decay.noMod(),
+                feedback = feedback.noMod(),
                 brightness = brightness.noMod(),
                 pickPosition = pickPosition.noMod(),
                 stiffness = stiffness.noMod(),

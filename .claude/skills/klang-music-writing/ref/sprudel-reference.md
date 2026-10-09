@@ -833,7 +833,7 @@ stack(
   // Melody: Karplus-Strong plucked string with tremolo
   n(`<[8@2 8 8 8@2 8 8] [8 4  6  8]  [7@2 7 7 7@2 7 7] [7 3  5  7]
       [8@2 8 8 8@2 8 8] [8 9 10 11]  [10 8 7 5]        [4@2 4@2  ]
-  >`).sndPluck(0.999, 0.8)      // high decay + brightness pluck
+  >`).sndPluck(0.999, 0.8)      // high feedback + brightness pluck
     .clip(0.8)                    // note duration 80%
     .scale("c3:dorian")          // dorian mode for folk feel
     .gain(0.8)

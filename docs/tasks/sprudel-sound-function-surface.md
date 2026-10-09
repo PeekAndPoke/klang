@@ -60,7 +60,7 @@ problems with their current surface:
 ## Proposed direction (NOT decided — user's quick suggestions)
 
 1. **Lowercase, multi-positional + named params** — `.saw(p1, p2, …)`, `.supersaw(voices, spread, …)`,
-   `.pluck(decay, brightness, pickPosition, stiffness)`. Each param is independently patternable (its own
+   `.pluck(feedback, brightness, pickPosition, stiffness)`. Each param is independently patternable (its own
    control pattern), which fixes problem 2. **Named args now work** (`name = value`) — so the surface can be
    `.supersaw(voices = 8, spread = 0.3)` (override only what you want), not just positional. (Note: the super-osc
    spread param is `spread`, not `freqSpread`, post-rename; and `analog` is a chained character knob, not a

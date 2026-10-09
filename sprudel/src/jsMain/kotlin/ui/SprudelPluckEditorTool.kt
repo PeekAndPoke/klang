@@ -39,12 +39,12 @@ import kotlinx.html.div
 // ── Tool singleton ───────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param sndPluck(decay, brightness, pickPosition, stiffness) call.
+ * [KlangUiToolEmbeddable] for the per-param sndPluck(feedback, brightness, pickPosition, stiffness) call.
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits all four params of the
  *   host call (incl. presets) and commits the full argument list.
- * - Scalar fallback (embedded / sequence atom): edits a single decay value.
+ * - Scalar fallback (embedded / sequence atom): edits a single feedback value.
  */
 object SprudelPluckEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Pluck Editor"
@@ -70,7 +70,7 @@ private fun Tag.SprudelPluckEditorComp(toolCtx: KlangUiToolContext, embedded: Bo
 
 private data class PluckPreset(
     val name: String,
-    val decay: Double,
+    val feedback: Double,
     val brightness: Double,
     val pickPosition: Double,
     val stiffness: Double,
@@ -106,7 +106,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
     private var currentValue by value(initialValue)
 
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
-    private val parsedDecay
+    private val parsedFeedback
         get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, 0.996)
 
     private val parsedBrightness
@@ -118,7 +118,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
     private val parsedStiffness
         get() = parseNum(call?.args?.getOrNull(3), 0.0)
 
-    private var decay by value(parsedDecay)
+    private var feedback by value(parsedFeedback)
     private var brightness by value(parsedBrightness)
     private var pickPosition by value(parsedPickPosition)
     private var stiffness by value(parsedStiffness)
@@ -135,9 +135,9 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
 
     private fun buildValue(): String =
         if (call != null) {
-            "${decay.formatArg()}, ${brightness.formatArg()}, ${pickPosition.formatArg()}, ${stiffness.formatArg()}"
+            "${feedback.formatArg()}, ${brightness.formatArg()}, ${pickPosition.formatArg()}, ${stiffness.formatArg()}"
         } else {
-            decay.formatArg()
+            feedback.formatArg()
         }
 
     /**
@@ -157,13 +157,13 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 4) texts.add(null)
-            put(texts, 0, decay.formatArg())
+            put(texts, 0, feedback.formatArg())
             put(texts, 1, brightness.formatArg())
             put(texts, 2, pickPosition.formatArg())
             put(texts, 3, stiffness.formatArg())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(decay.formatArg())
+            props.toolCtx.onCommit(feedback.formatArg())
         }
         hasCommitted = true
         lastCommitted = buildValue()
@@ -198,7 +198,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
     private fun onReset() {
         dirty.clear()
         currentValue = initialValue
-        decay = parsedDecay
+        feedback = parsedFeedback
         brightness = parsedBrightness
         pickPosition = parsedPickPosition
         stiffness = parsedStiffness
@@ -213,7 +213,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
     }
 
     private fun applyPreset(preset: PluckPreset) {
-        decay = preset.decay
+        feedback = preset.feedback
         brightness = preset.brightness
         pickPosition = preset.pickPosition
         stiffness = preset.stiffness
@@ -261,7 +261,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
                         marginBottom = 8.px
                     }
                     val matchedPreset = PRESETS.find {
-                        it.decay == decay && it.brightness == brightness &&
+                        it.feedback == feedback && it.brightness == brightness &&
                                 it.pickPosition == pickPosition && it.stiffness == stiffness
                     }
 
@@ -288,12 +288,12 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
                 key = "pluck-editor-form"
                 ui.four.stackable.fields {
                     key = "pluck-editor-fields"
-                    UiInputField(decay, { decay = it; dirty += 0; liveUpdate() }) {
-                        domKey("decay")
+                    UiInputField(feedback, { feedback = it; dirty += 0; liveUpdate() }) {
+                        domKey("feedback")
                         step(0.001)
                         label {
-                            +"Decay"
-                            paramInfoIcon("decay", props.toolCtx, infoPopup)
+                            +"Feedback"
+                            paramInfoIcon("feedback", props.toolCtx, infoPopup)
                         }
                     }
                     if (call != null) {

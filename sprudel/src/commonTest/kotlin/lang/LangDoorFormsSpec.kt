@@ -280,7 +280,7 @@ class LangDoorFormsSpec : StringSpec({
         k("penv.release", "penv(release = %s)", { it.pRelease }, { p, c -> p.penv(release = c) }, { s, c -> s.penv(release = c) }, { c -> penv(release = c) }, { m, c -> m.penv(release = c) }),
 
         // -- the pluck oscillators' knobs (ignitorParams) --------------------------------------------------------------------
-        k("sndPluck.decay", "sndPluck(decay = %s)", { it.soundName to it.ignitorParams?.get("decay") }, { p, c -> p.sndPluck(decay = c) }, { s, c -> s.sndPluck(decay = c) }, { c -> sndPluck(decay = c) }, { m, c -> m.sndPluck(decay = c) },
+        k("sndPluck.feedback", "sndPluck(feedback = %s)", { it.soundName to it.ignitorParams?.get("feedback") }, { p, c -> p.sndPluck(feedback = c) }, { s, c -> s.sndPluck(feedback = c) }, { c -> sndPluck(feedback = c) }, { m, c -> m.sndPluck(feedback = c) },
             expected = listOf("pluck" to 0.5, "pluck" to 1.0), continuous = null),
         k("sndPluck.brightness", "sndPluck(brightness = %s)", { it.soundName to it.ignitorParams?.get("brightness") }, { p, c -> p.sndPluck(brightness = c) }, { s, c -> s.sndPluck(brightness = c) }, { c -> sndPluck(brightness = c) }, { m, c -> m.sndPluck(brightness = c) },
             expected = listOf("pluck" to 0.5, "pluck" to 1.0), continuous = null),
@@ -292,7 +292,7 @@ class LangDoorFormsSpec : StringSpec({
             ctrl = "3 5", expected = listOf("superpluck" to 3.0, "superpluck" to 5.0), continuous = null),
         k("sndSuperPluck.spread", "sndSuperPluck(spread = %s)", { it.soundName to it.ignitorParams?.get("spread") }, { p, c -> p.sndSuperPluck(spread = c) }, { s, c -> s.sndSuperPluck(spread = c) }, { c -> sndSuperPluck(spread = c) }, { m, c -> m.sndSuperPluck(spread = c) },
             expected = listOf("superpluck" to 0.5, "superpluck" to 1.0), continuous = null),
-        k("sndSuperPluck.decay", "sndSuperPluck(decay = %s)", { it.soundName to it.ignitorParams?.get("decay") }, { p, c -> p.sndSuperPluck(decay = c) }, { s, c -> s.sndSuperPluck(decay = c) }, { c -> sndSuperPluck(decay = c) }, { m, c -> m.sndSuperPluck(decay = c) },
+        k("sndSuperPluck.feedback", "sndSuperPluck(feedback = %s)", { it.soundName to it.ignitorParams?.get("feedback") }, { p, c -> p.sndSuperPluck(feedback = c) }, { s, c -> s.sndSuperPluck(feedback = c) }, { c -> sndSuperPluck(feedback = c) }, { m, c -> m.sndSuperPluck(feedback = c) },
             expected = listOf("superpluck" to 0.5, "superpluck" to 1.0), continuous = null),
         k("sndSuperPluck.brightness", "sndSuperPluck(brightness = %s)", { it.soundName to it.ignitorParams?.get("brightness") }, { p, c -> p.sndSuperPluck(brightness = c) }, { s, c -> s.sndSuperPluck(brightness = c) }, { c -> sndSuperPluck(brightness = c) }, { m, c -> m.sndSuperPluck(brightness = c) },
             expected = listOf("superpluck" to 0.5, "superpluck" to 1.0), continuous = null),
@@ -537,11 +537,11 @@ class LangDoorFormsSpec : StringSpec({
                 { it.pamt(12, 0.01, 0.2, 0.25, 0.3) }, { it.pamt(12, 0.01, 0.2, 0.25, 0.3) }, { pamt(12, 0.01, 0.2, 0.25, 0.3) }, { it.pamt(12, 0.01, 0.2, 0.25, 0.3) },
             ),
             Door(
-                "sndPluck", """0.99, 0.8, 0.2, 0.3""", { listOf(it.soundName) + listOf("decay", "brightness", "pickPosition", "stiffness").map { k -> it.ignitorParams?.get(k) } }, listOf("pluck", 0.99, 0.8, 0.2, 0.3),
+                "sndPluck", """0.99, 0.8, 0.2, 0.3""", { listOf(it.soundName) + listOf("feedback", "brightness", "pickPosition", "stiffness").map { k -> it.ignitorParams?.get(k) } }, listOf("pluck", 0.99, 0.8, 0.2, 0.3),
                 { it.sndPluck(0.99, 0.8, 0.2, 0.3) }, { it.sndPluck(0.99, 0.8, 0.2, 0.3) }, { sndPluck(0.99, 0.8, 0.2, 0.3) }, { it.sndPluck(0.99, 0.8, 0.2, 0.3) },
             ),
             Door(
-                "sndSuperPluck", """7, 0.3, 0.99, 0.8, 0.2, 0.1""", { listOf(it.soundName) + listOf("voices", "spread", "decay", "brightness", "pickPosition", "stiffness").map { k -> it.ignitorParams?.get(k) } }, listOf("superpluck", 7.0, 0.3, 0.99, 0.8, 0.2, 0.1),
+                "sndSuperPluck", """7, 0.3, 0.99, 0.8, 0.2, 0.1""", { listOf(it.soundName) + listOf("voices", "spread", "feedback", "brightness", "pickPosition", "stiffness").map { k -> it.ignitorParams?.get(k) } }, listOf("superpluck", 7.0, 0.3, 0.99, 0.8, 0.2, 0.1),
                 { it.sndSuperPluck(7, 0.3, 0.99, 0.8, 0.2, 0.1) }, { it.sndSuperPluck(7, 0.3, 0.99, 0.8, 0.2, 0.1) }, { sndSuperPluck(7, 0.3, 0.99, 0.8, 0.2, 0.1) }, { it.sndSuperPluck(7, 0.3, 0.99, 0.8, 0.2, 0.1) },
             ),
         )

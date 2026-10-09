@@ -197,11 +197,11 @@ sealed interface IgnitorDsl {
         val brightness: IgnitorDsl = Param(name = "brightness", default = 0.5)
         val chaos: IgnitorDsl = Param(name = "chaos", default = 1.5)
         val color: IgnitorDsl = Param(name = "color", default = 0.0)
-        val decay: IgnitorDsl = Param(name = "decay", default = 0.996)
         val declick: IgnitorDsl = Param(name = "declick", default = 0.0)
         val density: IgnitorDsl = Param(name = "density", default = 0.2)
-        val depth: IgnitorDsl = Param(name = "depth", default = 0.02)
         val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
+        val feedback: IgnitorDsl = Param(name = "feedback", default = 0.996)
+        val leak: IgnitorDsl = Param(name = "leak", default = 0.02)
 
         val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
         val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
@@ -542,18 +542,18 @@ sealed interface IgnitorDsl {
     /**
      * Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope.
      *
-     * [depth] is the per-sample white-leak coefficient `k` in `out = (out + k·white)/(1+k)`: lower =
+     * [leak] is the per-sample white-leak coefficient `k` in `out = (out + k·white)/(1+k)`: lower =
      * deeper / slower-walking brown (default 0.02); higher = brighter (more white mixed in each sample).
      *
      * See [WhiteNoise] for the [uid] instance-discriminator story.
      */
     @WireName("brown-noise")
     data class BrownNoise(
-        val depth: IgnitorDsl = Slots.depth,
+        val leak: IgnitorDsl = Slots.leak,
         val uid: Int = nextNoiseUid(),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            depth.collectParams(out)
+            leak.collectParams(out)
         }
     }
 
@@ -976,14 +976,15 @@ sealed interface IgnitorDsl {
     @WireName("pluck")
     data class Pluck(
         val freq: IgnitorDsl = Freq,
-        val decay: IgnitorDsl = Slots.decay,
+        /** The loop feedback per pass, 0.9 to 0.999 (default 0.996): higher rings longer. Not a time. */
+        val feedback: IgnitorDsl = Slots.feedback,
         val brightness: IgnitorDsl = Slots.brightness,
         val pickPosition: IgnitorDsl = Slots.pickPosition,
         val stiffness: IgnitorDsl = Slots.stiffness,
         val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); decay.collectParams(out); brightness.collectParams(out); pickPosition.collectParams(out)
+            freq.collectParams(out); feedback.collectParams(out); brightness.collectParams(out); pickPosition.collectParams(out)
             stiffness.collectParams(out); analog.collectParams(out)
         }
     }
@@ -994,7 +995,8 @@ sealed interface IgnitorDsl {
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Slots.voices,
         val spread: IgnitorDsl = Slots.spread,
-        val decay: IgnitorDsl = Slots.decay,
+        /** The loop feedback per pass, as [Pluck.feedback]. */
+        val feedback: IgnitorDsl = Slots.feedback,
         val brightness: IgnitorDsl = Slots.brightness,
         val pickPosition: IgnitorDsl = Slots.pickPosition,
         val stiffness: IgnitorDsl = Slots.stiffness,
@@ -1003,7 +1005,7 @@ sealed interface IgnitorDsl {
         val analogSpread: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); decay.collectParams(out); brightness.collectParams(
+            freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); feedback.collectParams(out); brightness.collectParams(
                 out
             )
             pickPosition.collectParams(out); stiffness.collectParams(out); analog.collectParams(out)

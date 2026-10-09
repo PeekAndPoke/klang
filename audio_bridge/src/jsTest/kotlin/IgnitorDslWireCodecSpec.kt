@@ -127,6 +127,8 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- noise sources --------------------------------------------------------------------------------------
     "WhiteNoise" { check(IgnitorDsl.WhiteNoise()) }
     "BrownNoise" { check(IgnitorDsl.BrownNoise()) }
+    // The renamed field (Q21 decision 7), NON-default, so a dropped field cannot round-trip green.
+    "BrownNoise with leak" { check(IgnitorDsl.BrownNoise(leak = IgnitorDsl.Constant(0.3))) }
     "PinkNoise" { check(IgnitorDsl.PinkNoise()) }
     "PerlinNoise" { check(IgnitorDsl.PerlinNoise()) }
     "BerlinNoise" { check(IgnitorDsl.BerlinNoise()) }
@@ -136,6 +138,9 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- physical models ------------------------------------------------------------------------------------
     "Pluck" { check(IgnitorDsl.Pluck()) }
     "SuperPluck" { check(IgnitorDsl.SuperPluck(analogSpread = IgnitorDsl.Constant(0.25))) }
+    // The renamed field (Q21 decision 7), NON-default on both nodes.
+    "Pluck with feedback" { check(IgnitorDsl.Pluck(feedback = IgnitorDsl.Constant(0.98))) }
+    "SuperPluck with feedback" { check(IgnitorDsl.SuperPluck(feedback = IgnitorDsl.Param("feedback", 0.97))) }
 
     // --- arithmetic / math ----------------------------------------------------------------------------------
     "Plus" { check(IgnitorDsl.Sine() + IgnitorDsl.Saw()) }

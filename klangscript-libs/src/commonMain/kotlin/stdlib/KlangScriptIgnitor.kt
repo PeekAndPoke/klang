@@ -211,11 +211,11 @@ object KlangScriptIgnitor {
 
     /**
      * Creates a brown noise source (1/f^2 spectrum, deeper). Each call yields a fresh DSL instance.
-     * @param depth per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter.
+     * @param leak per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter.
      */
     @KlangScript.Method
-    fun brownnoise(depth: IgnitorDslLike = 0.02): IgnitorDsl =
-        IgnitorDsl.BrownNoise(depth = depth.toIgnitorDsl())
+    fun brownnoise(leak: IgnitorDslLike = 0.02): IgnitorDsl =
+        IgnitorDsl.BrownNoise(leak = leak.toIgnitorDsl())
 
     /** Creates a pink noise source (1/f spectrum). Each call yields a fresh DSL instance. */
     @KlangScript.Method
@@ -371,10 +371,10 @@ object KlangScriptIgnitor {
      * Creates a Karplus-Strong plucked string model.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscPluckBuilder] (knobs: `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`) and returns it.
+     * @param configure receives the [OscPluckBuilder] (knobs: `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`) and returns it.
      *
      * ```KlangScript
-     * Ignitor.pluck(x => x.decay(0.99).brightness(0.45).pickPosition(0.5))
+     * Ignitor.pluck(x => x.feedback(0.99).brightness(0.45).pickPosition(0.5))
      * ```
      */
     @KlangScript.Method
@@ -384,7 +384,7 @@ object KlangScriptIgnitor {
             // per-note modulation unless the author opts in with `Ignitor.slot.*` (see [KlangScriptIgnitorSlots]).
             IgnitorDsl.Pluck(
                 freq = freq.orNoteFreq(),
-                decay = IgnitorDsl.Constant(0.996),
+                feedback = IgnitorDsl.Constant(0.996),
                 brightness = IgnitorDsl.Constant(0.5),
                 pickPosition = IgnitorDsl.Constant(0.5),
                 stiffness = IgnitorDsl.Constant(0.0),
@@ -395,10 +395,10 @@ object KlangScriptIgnitor {
      * Creates a unison Karplus-Strong plucked string model.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperPluckBuilder] (knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`) and returns it.
+     * @param configure receives the [OscSuperPluckBuilder] (knobs: `voices`, `spread`, `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`) and returns it.
      *
      * ```KlangScript
-     * Ignitor.superpluck(x => x.voices(6).spread(0.15).decay(0.995))
+     * Ignitor.superpluck(x => x.voices(6).spread(0.15).feedback(0.995))
      * ```
      */
     @KlangScript.Method
@@ -409,7 +409,7 @@ object KlangScriptIgnitor {
                 freq = freq.orNoteFreq(),
                 voices = IgnitorDsl.Constant(8.0),
                 spread = IgnitorDsl.Constant(0.2),
-                decay = IgnitorDsl.Constant(0.996),
+                feedback = IgnitorDsl.Constant(0.996),
                 brightness = IgnitorDsl.Constant(0.5),
                 pickPosition = IgnitorDsl.Constant(0.5),
                 stiffness = IgnitorDsl.Constant(0.0),
@@ -427,7 +427,7 @@ object KlangScriptIgnitor {
      * `Ignitor.slot` holds the names a sprudel door already writes, so placing one of those wires that
      * door into your instrument. The one to know is `pregain`: how hard the pattern plays INTO
      * the instrument, written by `pregain(x)`, with the default 1.0 and no meaning of its own
-     * beyond where you place it. `analog`, `voices`, `spread`, `duty`, `density`, `decay`,
+     * beyond where you place it. `analog`, `voices`, `spread`, `duty`, `density`, `feedback`,
      * `brightness`, `pickPosition`, `stiffness` and `rate` are the others. Reach for
      * `Ignitor.slot.<name>` rather than retyping the name and the default here, so one default serves
      * every instrument; a name of your own is what this door is for.

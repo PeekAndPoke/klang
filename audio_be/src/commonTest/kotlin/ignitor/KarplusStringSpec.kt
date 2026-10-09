@@ -95,7 +95,7 @@ class KarplusStringSpec : StringSpec({
             buffer = buf, from = 3, to = 103, baseDelay = 100.0, phaseMod = null,
             hasDrift = false, driftStart = 1.0, driftStep = 0.0,
             lpAlpha = KarplusString.lpAlphaOf(0.5), hasStiffness = KarplusString.hasStiffnessOf(0.3),
-            apCoeff = KarplusString.apCoeffOf(0.3), decay = 0.99, gain = 1.0, accumulate = false,
+            apCoeff = KarplusString.apCoeffOf(0.3), feedback = 0.99, gain = 1.0, accumulate = false,
         )
 
         for (i in 0 until 128) {
@@ -111,7 +111,7 @@ class KarplusStringSpec : StringSpec({
             buffer = acc, from = 3, to = 103, baseDelay = 100.0, phaseMod = null,
             hasDrift = false, driftStart = 1.0, driftStep = 0.0,
             lpAlpha = KarplusString.lpAlphaOf(0.5), hasStiffness = KarplusString.hasStiffnessOf(0.3),
-            apCoeff = KarplusString.apCoeffOf(0.3), decay = 0.99, gain = 0.5, accumulate = true,
+            apCoeff = KarplusString.apCoeffOf(0.3), feedback = 0.99, gain = 0.5, accumulate = true,
         )
 
         for (i in 0 until 128) {

@@ -153,7 +153,7 @@ class FirstBlockAllocationSpec : StringSpec({
         allocatesNothingAfterBuild("saw") { Ignitors.saw(freq = freq, analog = drift) }
         allocatesNothingAfterBuild("impulse") { Ignitors.impulse(freq = freq, analog = drift) }
         allocatesNothingAfterBuild("pluck") { random ->
-            Ignitors.karplusStrong(freq = freq, decay = Hold(0.996), brightness = Hold(0.5), pickPosition = Hold(0.5), stiffness = off, analog = drift, rng = random)
+            Ignitors.karplusStrong(freq = freq, feedback = Hold(0.996), brightness = Hold(0.5), pickPosition = Hold(0.5), stiffness = off, analog = drift, rng = random)
         }
     }
 
@@ -219,21 +219,21 @@ class FirstBlockAllocationSpec : StringSpec({
         allocatesNothingAfterBuild("superpluck") { random ->
             Ignitors.superKarplusStrong(
                 countsAtBuild = true,
-                freq = freq, voices = Count(4.0), detune = Hold(0.2), decay = Hold(0.996), brightness = Hold(0.5), pickPosition = Hold(0.5),
+                freq = freq, voices = Count(4.0), detune = Hold(0.2), feedback = Hold(0.996), brightness = Hold(0.5), pickPosition = Hold(0.5),
                 stiffness = off, analog = drift, analogSpread = one, rng = random,
             )
         }
         allocatesNothingAfterBuild("superpluck, no drift") { random ->
             Ignitors.superKarplusStrong(
                 countsAtBuild = true,
-                freq = freq, voices = Count(4.0), detune = Hold(0.2), decay = Hold(0.996), brightness = Hold(0.5), pickPosition = Hold(0.5),
+                freq = freq, voices = Count(4.0), detune = Hold(0.2), feedback = Hold(0.996), brightness = Hold(0.5), pickPosition = Hold(0.5),
                 stiffness = off, analog = off, analogSpread = one, rng = random,
             )
         }
         changesWithinMaxAllocateNothing("superpluck") { voices, random ->
             Ignitors.superKarplusStrong(
                 countsAtBuild = true,
-                freq = freq, voices = voices, detune = Hold(0.2), decay = Hold(0.996), brightness = Hold(0.5), pickPosition = Hold(0.5),
+                freq = freq, voices = voices, detune = Hold(0.2), feedback = Hold(0.996), brightness = Hold(0.5), pickPosition = Hold(0.5),
                 stiffness = off, analog = drift, analogSpread = one, rng = random,
             )
         }

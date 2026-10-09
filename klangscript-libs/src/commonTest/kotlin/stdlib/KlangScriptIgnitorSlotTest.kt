@@ -50,8 +50,8 @@ class KlangScriptIgnitorSlotTest : StringSpec({
         evalIgnitorDsl("Ignitor.slot.density") shouldBe IgnitorDsl.Param("density", 0.2)
     }
 
-    "Ignitor.slot.decay → Param(\"decay\", 0.996)" {
-        evalIgnitorDsl("Ignitor.slot.decay") shouldBe IgnitorDsl.Param("decay", 0.996)
+    "Ignitor.slot.feedback → Param(\"feedback\", 0.996)" {
+        evalIgnitorDsl("Ignitor.slot.feedback") shouldBe IgnitorDsl.Param("feedback", 0.996)
     }
 
     "Ignitor.slot.brightness → Param(\"brightness\", 0.5)" {

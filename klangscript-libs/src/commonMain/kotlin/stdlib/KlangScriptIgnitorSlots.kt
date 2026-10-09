@@ -53,9 +53,9 @@ object KlangScriptIgnitorSlots {
     @KlangScript.Property
     val density: IgnitorDsl = IgnitorDsl.Slots.density
 
-    /** Open `decay` slot (default 0.996). Used by pluck. */
+    /** Open `feedback` slot (default 0.996): the loop feedback per pass, 0.9 to 0.999. Used by pluck. */
     @KlangScript.Property
-    val decay: IgnitorDsl = IgnitorDsl.Slots.decay
+    val feedback: IgnitorDsl = IgnitorDsl.Slots.feedback
 
     /** Open `brightness` slot (default 0.5). Used by pluck. */
     @KlangScript.Property

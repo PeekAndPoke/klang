@@ -228,10 +228,10 @@ class StdLibIgnitorTest : StringSpec({
         dsl.bipolar shouldBe IgnitorDsl.Constant(1.0)
     }
 
-    "Ignitor.brownnoise(depth = 0.3) sets the white-leak knob" {
-        val dsl = evalIgnitorDsl("Ignitor.brownnoise(0.3)")
+    "Ignitor.brownnoise(leak = 0.3) sets the white-leak knob" {
+        val dsl = evalIgnitorDsl("Ignitor.brownnoise(leak = 0.3)")
         dsl.shouldBeInstanceOf<IgnitorDsl.BrownNoise>()
-        dsl.depth shouldBe IgnitorDsl.Constant(0.3)
+        dsl.leak shouldBe IgnitorDsl.Constant(0.3)
     }
 
     "Ignitor.pluck() returns Pluck" {

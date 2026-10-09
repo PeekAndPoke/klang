@@ -36,7 +36,8 @@ fun IgnitorRegistry.registerDefaults() {
  * - "voices", "spread" on super oscillators
  * - "duty" on square/sqr/pulse/pulze (one pulse oscillator; 0.5 = square)
  * - "density" on dust/crackle
- * - "decay", "brightness", "pickPosition", "stiffness" on pluck
+ * - "leak" on brownnoise
+ * - "feedback", "brightness", "pickPosition", "stiffness" on pluck
  */
 internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
 
@@ -158,7 +159,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
 
     val pluck = IgnitorDsl.Pluck(
         freq = IgnitorDsl.Freq,
-        decay = slots.decay,
+        feedback = slots.feedback,
         brightness = slots.brightness,
         pickPosition = slots.pickPosition,
         stiffness = slots.stiffness,
@@ -172,7 +173,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
         freq = IgnitorDsl.Freq,
         voices = slots.voices,
         spread = slots.spread,
-        decay = slots.decay,
+        feedback = slots.feedback,
         brightness = slots.brightness,
         pickPosition = slots.pickPosition,
         stiffness = slots.stiffness,

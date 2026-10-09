@@ -32,7 +32,7 @@ private fun chaos(value: Double) = ConstantIgnitor(value)
 private fun color(value: Double) = ConstantIgnitor(value)
 private fun tail(value: Double) = ConstantIgnitor(value)
 private fun bipolar(value: Double) = ConstantIgnitor(value)
-private fun depth(value: Double) = ConstantIgnitor(value)
+private fun leak(value: Double) = ConstantIgnitor(value)
 
 /**
  * Audio-output tests for Ignitor oscillator primitives.
@@ -581,15 +581,15 @@ class ExcitersTest : StringSpec({
         (peak2 / peak1) shouldBe (0.5 plusOrMinus 0.05)
     }
 
-    "brown noise - default depth reproduces the original /1.02 walk byte-for-byte" {
+    "brown noise - default leak reproduces the original /1.02 walk byte-for-byte" {
         val def = generate(Ignitors.brownNoise(Random(42)), freqHz = 440.0).toList()
-        val explicit = generate(Ignitors.brownNoise(Random(42), depth(0.02)), freqHz = 440.0).toList()
+        val explicit = generate(Ignitors.brownNoise(Random(42), leak(0.02)), freqHz = 440.0).toList()
         explicit shouldBe def
     }
 
-    "brown noise - higher depth brightens (more high-frequency content)" {
+    "brown noise - higher leak brightens (more high-frequency content)" {
         fun hfEnergy(d: Double): Double {
-            val buf = generate(Ignitors.brownNoise(Random(42), depth(d)), freqHz = 440.0).toList()
+            val buf = generate(Ignitors.brownNoise(Random(42), leak(d)), freqHz = 440.0).toList()
             var sum = 0.0
             for (i in 1 until buf.size) {
                 val delta = buf[i] - buf[i - 1]
