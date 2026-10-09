@@ -63,7 +63,18 @@ cluster as one oscillator, `analogSpread(1)` gives each partial its own lane.
 
 Work went ahead with the conservative choice. A "no" here means a small follow-up change.
 
-Nothing open (Q6 to Q11 answered 2026-10-08).
+## Q27. `accelerate` on a zero-length gate: the target from the first frame
+
+Source: pitch pipeline step 3 review (`tmp/reviews/pp3-r1-A.md`, A1). Your D2 says the glide "arrives at the gate close
+and holds". With a gate of 0 (reachable through `legato(0)`), the node wrote no glide at all. Decided by default: it
+has already arrived, so it plays the held target from the first frame.
+
+```
+note("c4").accelerate(12).legato(0)   // before step 3: glided over the release tail
+                                      // now: one octave up from the start, held
+```
+
+No song writes `legato(0)` with `accelerate`. Say if you prefer "no glide" there.
 
 ---
 
