@@ -32,6 +32,15 @@ note("c3").sound(myPad).release(5).solo()   // the soloed pad rings at full leve
 A note that started BEFORE its source was soloed is not kept either (it drops back 2 s after the solo's last event).
 Say if you meant otherwise.
 
+Three more behaviours neither Q14 nor Q28 named, measured in the third review (`tmp/reviews/small-r3.md`), as the
+code now does them:
+1. A soloed tail past its window does not hold the background down: the rest comes back after the window, while the
+   soloed pad rings on at full level (as before Q14).
+2. A soloed voice evicted from the solo tracker's 32 entries stays protected (it is the voice's own flag now).
+3. A ringing soloed voice of the WEAKER of two solos plays at full level, like every protected voice.
+
+Say if any of these should be different.
+
 ---
 
 # Part 3: For later (not blocking anything now)
