@@ -149,7 +149,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             14 -> IgnitorDsl.Lowpass(inner, freq = IgnitorDsl.Param("cut", 1000.0), passes = IgnitorDsl.Constant((1 + r.nextInt(3)).toDouble()))
             15 -> IgnitorDsl.Drive(inner, amount = IgnitorDsl.Constant(r.nextDouble()))
             16 -> inner.shape(listOf("soft", "tube", "hard", "asym")[r.nextInt(4)], oversample = listOf(0, 2, 4)[r.nextInt(3)])
-            17 -> IgnitorDsl.Adsr(inner, attackSec = IgnitorDsl.Constant(0.001 + r.nextDouble() * 0.05), decaySec = IgnitorDsl.Constant(r.nextDouble() * 0.2))
+            17 -> IgnitorDsl.Adsr(inner, attack = IgnitorDsl.Constant(0.001 + r.nextDouble() * 0.05), decay = IgnitorDsl.Constant(r.nextDouble() * 0.2))
             18 -> IgnitorDsl.Clamp(inner, lo = IgnitorDsl.Constant(-1.0), hi = IgnitorDsl.Constant(1.0))
             19 -> IgnitorDsl.Lerp(left = inner, right = tree(r, depth - 1, pool, stats), t = k)
             20 -> IgnitorDsl.Range(inner, from = IgnitorDsl.Constant(0.0), to = IgnitorDsl.Constant(1.0)) // the LFO scaler, -1..1 onto 0..1
@@ -202,10 +202,10 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
                     inner,
                     freq = IgnitorDsl.Constant(300.0 + r.nextDouble() * 4000.0),
                     env = IgnitorDsl.Constant(-24.0 + r.nextDouble() * 48.0),
-                    attackSec = IgnitorDsl.Constant(r.nextDouble() * 0.05),
-                    decaySec = IgnitorDsl.Constant(r.nextDouble() * 0.3),
-                    sustainLevel = IgnitorDsl.Constant(r.nextDouble()),
-                    releaseSec = IgnitorDsl.Constant(r.nextDouble() * 0.3),
+                    attack = IgnitorDsl.Constant(r.nextDouble() * 0.05),
+                    decay = IgnitorDsl.Constant(r.nextDouble() * 0.3),
+                    sustain = IgnitorDsl.Constant(r.nextDouble()),
+                    release = IgnitorDsl.Constant(r.nextDouble() * 0.3),
                 )
             }
 

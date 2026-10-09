@@ -285,10 +285,10 @@ class ExciterCombinatorsSpec : StringSpec({
         val blockFrames = 44100 // 1 second
         val ctx = createCtx(blockFrames)
         val sig = Ignitors.sine().adsr(
-            attackSec = 0.1,   // 4410 frames
-            decaySec = 0.1,    // 4410 frames
-            sustainLevel = 0.5,
-            releaseSec = 0.1,
+            attack = 0.1,   // 4410 frames
+            decay = 0.1,    // 4410 frames
+            sustain = 0.5,
+            release = 0.1,
         )
         val buf = generate(sig, blockFrames = blockFrames, ctx = ctx)
 
@@ -309,10 +309,10 @@ class ExciterCombinatorsSpec : StringSpec({
     "adsr with instant attack - output starts near full level immediately" {
         val blockFrames = 4410
         val sig = Ignitors.sine().adsr(
-            attackSec = 0.0,
-            decaySec = 0.0,
-            sustainLevel = 1.0,
-            releaseSec = 0.0,
+            attack = 0.0,
+            decay = 0.0,
+            sustain = 1.0,
+            release = 0.0,
         )
         val buf = generate(sig, blockFrames = blockFrames)
 

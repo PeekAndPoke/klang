@@ -122,18 +122,18 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         modulator = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0)), // the strip's modulator never drifted
         ratio = s.fm.ratio,
         depth = s.fm.depth,
-        envAttackSec = s.fm.attack,
-        envDecaySec = s.fm.decay,
-        envSustainLevel = s.fm.sustain,
-        envReleaseSec = s.fm.release, // decision D3: sprudel's fm gets a release
+        attack = s.fm.attack,
+        decay = s.fm.decay,
+        sustain = s.fm.sustain,
+        release = s.fm.release, // decision D3: sprudel's fm gets a release
     )
     val pitchEnveloped = IgnitorDsl.PitchEnvelope(
         inner = fmed,
         semitones = s.penv.semitones,
-        attackSec = s.penv.attack,
-        decaySec = s.penv.decay,
-        sustainLevel = s.penv.sustain,
-        releaseSec = s.penv.release,
+        attack = s.penv.attack,
+        decay = s.penv.decay,
+        sustain = s.penv.sustain,
+        release = s.penv.release,
         attackCurve = s.penvCurves.attack,
         decayCurve = s.penvCurves.decay,
         releaseCurve = s.penvCurves.release,

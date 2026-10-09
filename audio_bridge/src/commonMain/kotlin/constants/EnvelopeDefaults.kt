@@ -59,7 +59,7 @@ val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Exponential
  * instrument and 0.7 is what the door has always meant by "a sustained note". Do not unify them
  * without deciding which sound moves.
  *
- * Consumers: `IgnitorDsl.Adsr.sustainLevel`'s default, and `AdsrIgnitor`'s non-finite
+ * Consumers: `IgnitorDsl.Adsr.sustain`'s default, and `AdsrIgnitor`'s non-finite
  * substitution (see its `finiteOr` note; the `Param` leaf's unset rule cannot reach a value that
  * was authored non-finite).
  */
@@ -108,7 +108,7 @@ const val VOICE_ADSR_RELEASE_SEC: Double = 0.05
  * Tunable by ear, like [ADSR_EXP_K].
  *
  * Consumer: `classic()`'s envelope, as a constant, not a slot. The Ignitor `adsr`'s own `declick` knob is
- * `Slots.declickSeconds`, a slot that defaults to 0.0 (off); it does not read this value.
+ * `Slots.declick`, a slot that defaults to 0.0 (off); it does not read this value.
  */
 const val ENV_DECLICK_SECONDS: Double = 0.001
 

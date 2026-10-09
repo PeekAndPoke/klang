@@ -39,11 +39,11 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Abs -> listOf(inner)
         is IgnitorDsl.Accelerate -> listOf(inner, semitones)
         is IgnitorDsl.Adsr -> listOf(
-            inner, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, declickSeconds, on,
+            inner, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve, declick, on,
         )
         is IgnitorDsl.Affine -> listOf(inner, pre, mul, add)
         is IgnitorDsl.Bandpass -> listOf(
-            inner, freq, q, analog, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
+            inner, freq, q, analog, env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.BerlinNoise -> listOf(rate, octaves, persistence)
         is IgnitorDsl.BrownNoise -> listOf(depth)
@@ -61,17 +61,17 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Eq -> listOf(inner) + sections.flatMap { it.childNodes() }
         is IgnitorDsl.Exp -> listOf(inner)
         is IgnitorDsl.Floor -> listOf(inner)
-        is IgnitorDsl.Fm -> listOf(carrier, modulator, ratio, depth, envAttackSec, envDecaySec, envSustainLevel, envReleaseSec, freq)
+        is IgnitorDsl.Fm -> listOf(carrier, modulator, ratio, depth, attack, decay, sustain, release, freq)
         is IgnitorDsl.Frac -> listOf(inner)
         is IgnitorDsl.Freq -> emptyList()
         is IgnitorDsl.Highpass -> listOf(
-            inner, freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
+            inner, freq, q, analog, passes, env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.Impulse -> listOf(freq, analog, phase)
         is IgnitorDsl.Lerp -> listOf(left, right, t)
         is IgnitorDsl.Log -> listOf(inner)
         is IgnitorDsl.Lowpass -> listOf(
-            inner, freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
+            inner, freq, q, analog, passes, env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.Max -> listOf(left, right)
         is IgnitorDsl.Min -> listOf(left, right)
@@ -79,7 +79,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Mod -> listOf(left, right)
         is IgnitorDsl.Neg -> listOf(inner)
         is IgnitorDsl.Notch -> listOf(
-            inner, freq, q, analog, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
+            inner, freq, q, analog, env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.OnePoleLowpass -> listOf(inner, freq)
         is IgnitorDsl.OptimizerHint -> listOf(inner)
@@ -88,7 +88,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Phaser -> listOf(inner, rate, wet, center, sweep, floor)
         is IgnitorDsl.PinkNoise -> emptyList()
         is IgnitorDsl.PitchEnvelope -> listOf(
-            inner, semitones, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
+            inner, semitones, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.PitchMod -> listOf(inner, mod)
         is IgnitorDsl.Pluck -> listOf(freq, decay, brightness, pickPosition, stiffness, analog)
@@ -161,20 +161,20 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Accelerate -> copy(inner = new[0], semitones = new[1])
         is IgnitorDsl.Adsr -> copy(
             inner = new[0],
-            attackSec = new[1],
-            decaySec = new[2],
-            sustainLevel = new[3],
-            releaseSec = new[4],
+            attack = new[1],
+            decay = new[2],
+            sustain = new[3],
+            release = new[4],
             attackCurve = new[5],
             decayCurve = new[6],
             releaseCurve = new[7],
-            declickSeconds = new[8],
+            declick = new[8],
             on = new[9],
         )
         is IgnitorDsl.Affine -> copy(inner = new[0], pre = new[1], mul = new[2], add = new[3])
         is IgnitorDsl.Bandpass -> copy(
             inner = new[0], freq = new[1], q = new[2], analog = new[3],
-            env = new[4], attackSec = new[5], decaySec = new[6], sustainLevel = new[7], releaseSec = new[8],
+            env = new[4], attack = new[5], decay = new[6], sustain = new[7], release = new[8],
             attackCurve = new[9], decayCurve = new[10], releaseCurve = new[11],
         )
         is IgnitorDsl.BerlinNoise -> copy(rate = new[0], octaves = new[1], persistence = new[2])
@@ -207,17 +207,17 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             modulator = new[1],
             ratio = new[2],
             depth = new[3],
-            envAttackSec = new[4],
-            envDecaySec = new[5],
-            envSustainLevel = new[6],
-            envReleaseSec = new[7],
+            attack = new[4],
+            decay = new[5],
+            sustain = new[6],
+            release = new[7],
             freq = new[8],
         )
         is IgnitorDsl.Frac -> copy(inner = new[0])
         is IgnitorDsl.Freq -> this
         is IgnitorDsl.Highpass -> copy(
             inner = new[0], freq = new[1], q = new[2], analog = new[3], passes = new[4],
-            env = new[5], attackSec = new[6], decaySec = new[7], sustainLevel = new[8], releaseSec = new[9],
+            env = new[5], attack = new[6], decay = new[7], sustain = new[8], release = new[9],
             attackCurve = new[10], decayCurve = new[11], releaseCurve = new[12],
         )
         is IgnitorDsl.Impulse -> copy(freq = new[0], analog = new[1], phase = new[2])
@@ -225,7 +225,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Log -> copy(inner = new[0])
         is IgnitorDsl.Lowpass -> copy(
             inner = new[0], freq = new[1], q = new[2], analog = new[3], passes = new[4],
-            env = new[5], attackSec = new[6], decaySec = new[7], sustainLevel = new[8], releaseSec = new[9],
+            env = new[5], attack = new[6], decay = new[7], sustain = new[8], release = new[9],
             attackCurve = new[10], decayCurve = new[11], releaseCurve = new[12],
         )
         is IgnitorDsl.Max -> copy(left = new[0], right = new[1])
@@ -235,7 +235,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Neg -> copy(inner = new[0])
         is IgnitorDsl.Notch -> copy(
             inner = new[0], freq = new[1], q = new[2], analog = new[3],
-            env = new[4], attackSec = new[5], decaySec = new[6], sustainLevel = new[7], releaseSec = new[8],
+            env = new[4], attack = new[5], decay = new[6], sustain = new[7], release = new[8],
             attackCurve = new[9], decayCurve = new[10], releaseCurve = new[11],
         )
         is IgnitorDsl.OnePoleLowpass -> copy(inner = new[0], freq = new[1])
@@ -247,10 +247,10 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.PitchEnvelope -> copy(
             inner = new[0],
             semitones = new[1],
-            attackSec = new[2],
-            decaySec = new[3],
-            sustainLevel = new[4],
-            releaseSec = new[5],
+            attack = new[2],
+            decay = new[3],
+            sustain = new[4],
+            release = new[5],
             attackCurve = new[6],
             decayCurve = new[7],
             releaseCurve = new[8],

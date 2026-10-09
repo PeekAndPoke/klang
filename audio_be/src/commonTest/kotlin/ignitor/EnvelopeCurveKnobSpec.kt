@@ -74,10 +74,10 @@ class EnvelopeCurveKnobSpec : StringSpec({
     fun chain(attack: IgnitorDsl? = null, decay: IgnitorDsl? = null, release: IgnitorDsl? = null): IgnitorDsl.Adsr {
         val base = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Constant(1.0),
-            attackSec = IgnitorDsl.Constant(0.01),
-            decaySec = IgnitorDsl.Constant(0.02),
-            sustainLevel = IgnitorDsl.Constant(0.4),
-            releaseSec = IgnitorDsl.Constant(0.02),
+            attack = IgnitorDsl.Constant(0.01),
+            decay = IgnitorDsl.Constant(0.02),
+            sustain = IgnitorDsl.Constant(0.4),
+            release = IgnitorDsl.Constant(0.02),
         )
 
         return base.copy(
@@ -88,7 +88,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
     }
 
     fun oracle(a: AdsrCurve, d: AdsrCurve, r: AdsrCurve): List<Long> =
-        render(ConstantIgnitor(1.0).adsr(attackSec = 0.01, decaySec = 0.02, sustainLevel = 0.4, releaseSec = 0.02, attackCurve = a, decayCurve = d, releaseCurve = r))
+        render(ConstantIgnitor(1.0).adsr(attack = 0.01, decay = 0.02, sustain = 0.4, release = 0.02, attackCurve = a, decayCurve = d, releaseCurve = r))
 
     val exp = AdsrCurve.Exponential
     val chainDefault = oracle(a = exp, d = exp, r = exp)
@@ -169,31 +169,31 @@ class EnvelopeCurveKnobSpec : StringSpec({
     val modulationEnvelopes: List<Pair<String, (String, IgnitorDsl?) -> IgnitorDsl>> = listOf(
         "lowpass" to { s, k ->
             IgnitorDsl.Lowpass(
-                inner = saw, freq = cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
+                inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain,
                 attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
         "highpass" to { s, k ->
             IgnitorDsl.Highpass(
-                inner = saw, freq = cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
+                inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain,
                 attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
         "bandpass" to { s, k ->
             IgnitorDsl.Bandpass(
-                inner = saw, freq = cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
+                inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain,
                 attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
         "notch" to { s, k ->
             IgnitorDsl.Notch(
-                inner = saw, freq = cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
+                inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain,
                 attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
         "pitch" to { s, k ->
             IgnitorDsl.PitchEnvelope(
-                inner = saw, semitones = IgnitorDsl.Constant(12.0), decaySec = decay, sustainLevel = sustain, releaseSec = pitchRelease,
+                inner = saw, semitones = IgnitorDsl.Constant(12.0), decay = decay, sustain = sustain, release = pitchRelease,
                 attackCurve = k.on(stage = s, at = "attack"), decayCurve = k.on(stage = s, at = "decay"), releaseCurve = k.on(stage = s, at = "release"),
             )
         },
@@ -249,11 +249,11 @@ class EnvelopeCurveKnobSpec : StringSpec({
         // on. Pinned twice: the knob itself, and the render against an explicit MOD_ENV_CURVE knob.
         val mod = AdsrCurves.knob(MOD_ENV_CURVE)
         val bare: List<Pair<String, IgnitorDsl>> = listOf(
-            "lowpass" to IgnitorDsl.Lowpass(inner = saw, freq = cutoff, env = sweep, decaySec = decay, sustainLevel = sustain),
-            "highpass" to IgnitorDsl.Highpass(inner = saw, freq = cutoff, env = sweep, decaySec = decay, sustainLevel = sustain),
-            "bandpass" to IgnitorDsl.Bandpass(inner = saw, freq = cutoff, env = sweep, decaySec = decay, sustainLevel = sustain),
-            "notch" to IgnitorDsl.Notch(inner = saw, freq = cutoff, env = sweep, decaySec = decay, sustainLevel = sustain),
-            "pitch" to IgnitorDsl.PitchEnvelope(inner = saw, semitones = IgnitorDsl.Constant(12.0), decaySec = decay, sustainLevel = sustain),
+            "lowpass" to IgnitorDsl.Lowpass(inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain),
+            "highpass" to IgnitorDsl.Highpass(inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain),
+            "bandpass" to IgnitorDsl.Bandpass(inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain),
+            "notch" to IgnitorDsl.Notch(inner = saw, freq = cutoff, env = sweep, decay = decay, sustain = sustain),
+            "pitch" to IgnitorDsl.PitchEnvelope(inner = saw, semitones = IgnitorDsl.Constant(12.0), decay = decay, sustain = sustain),
         )
 
         for ((name, node) in bare) {

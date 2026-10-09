@@ -248,7 +248,7 @@ its release and its own output has stayed under the audibility floor for the cul
   infinities read as unset too; a finite sustain passes raw, no clamp). A sample's own envelope fills only the `adsr.*` slots a pattern
   left unset (`withSampleEnvelopeDefaults`).
 - **De-click**: `EnvelopeDeclick` is the one smoother. `classic()`'s envelope de-clicks with the constant
-  `ENV_DECLICK_SECONDS` (1 ms, not a slot); the chain `adsr` builder's `declick` writes the node's `declickSeconds`
+  `ENV_DECLICK_SECONDS` (1 ms, not a slot); the chain `adsr` builder's `declick` writes the node's `declick`
   (default 0, off). Modulation envelopes are not de-clicked.
 - **An instrument whose own tail outlasts the envelope** writes `adsr(release = <tail>)`; the engine does not
   stretch a release to an instrument's tail (maintainer, 2026-09-26).

@@ -56,10 +56,10 @@ data class FilterEnvDef(
     // the surface constants would suggest they were the source of truth, which
     // `FilterEnvelopeDefaults.kt` is.
     val depth: Double = 0.0,
-    val attackSec: Double = 0.0,
-    val decaySec: Double = 0.0,
-    val sustainLevel: Double = 1.0,
-    val releaseSec: Double = 0.0,
+    val attack: Double = 0.0,
+    val decay: Double = 0.0,
+    val sustain: Double = 1.0,
+    val release: Double = 0.0,
     // The three stage curves, RESOLVED (`IgnitorDslRuntime.filterEnvDef` names them from the node's
     // knobs). Unlike the values above these default to the surface's own constant, `MOD_ENV_CURVE`:
     // a curve has no neutral value, and a partial shape built to mean "the node's envelope" must run
@@ -185,7 +185,7 @@ private class SvfIgnitor(
 
             if (hasEnv) {
                 envCore.prepareModEnvelope(
-                    ctx = ctx, attackSec = env.attackSec, decaySec = env.decaySec, sustainLevel = env.sustainLevel, releaseSec = env.releaseSec,
+                    ctx = ctx, attack = env.attack, decay = env.decay, sustain = env.sustain, release = env.release,
                     attackCurve = env.attackCurve, decayCurve = env.decayCurve, releaseCurve = env.releaseCurve,
                 )
                 // The cutoff at the block's two ends, the drift held across the block
@@ -603,19 +603,19 @@ fun Ignitor.onePoleHighpass(cutoffHz: Double): Ignitor = onePoleHighpass(ParamIg
  */
 internal fun EnvelopeCore.prepareModEnvelope(
     ctx: IgniteContext,
-    attackSec: Double,
-    decaySec: Double,
-    sustainLevel: Double,
-    releaseSec: Double,
+    attack: Double,
+    decay: Double,
+    sustain: Double,
+    release: Double,
     attackCurve: AdsrCurve,
     decayCurve: AdsrCurve,
     releaseCurve: AdsrCurve,
 ) {
     prepare(
-        attackFrames = attackSec * ctx.sampleRate,
-        decayFrames = decaySec * ctx.sampleRate,
-        sustainLevel = sustainLevel,
-        releaseFrames = releaseSec * ctx.sampleRate,
+        attackFrames = attack * ctx.sampleRate,
+        decayFrames = decay * ctx.sampleRate,
+        sustainLevel = sustain,
+        releaseFrames = release * ctx.sampleRate,
         gateEndPos = ctx.gateEndFrame,
         attackCurve = attackCurve,
         decayCurve = decayCurve,

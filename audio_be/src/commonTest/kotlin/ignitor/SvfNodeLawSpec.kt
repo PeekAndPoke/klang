@@ -268,7 +268,7 @@ class SvfNodeLawSpec : StringSpec({
         }
 
         val env = FilterEnvDef(
-            depth = depth, attackSec = attack / sr, decaySec = decay / sr, sustainLevel = sustain, releaseSec = 0.0,
+            depth = depth, attack = attack / sr, decay = decay / sr, sustain = sustain, release = 0.0,
             attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Linear, releaseCurve = AdsrCurve.Linear,
         )
 

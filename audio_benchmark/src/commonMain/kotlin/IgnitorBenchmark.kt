@@ -447,8 +447,8 @@ class IgnitorBenchmark(
             val plucked = IgnitorDsl.PitchEnvelope(
                 inner = saw,
                 semitones = IgnitorDsl.Constant(0.5),
-                attackSec = IgnitorDsl.Constant(0.001),
-                decaySec = IgnitorDsl.Constant(0.02),
+                attack = IgnitorDsl.Constant(0.001),
+                decay = IgnitorDsl.Constant(0.02),
             ).plus(if (muls) burst.mul(IgnitorDsl.Constant(1.0)) else burst)
 
             // Sustain held: the song's 0.0 would end the voice during warmup and leave an empty renderer to measure.

@@ -299,7 +299,7 @@ past an omitted q: `.lowpass(800, x => x.analog(3))`.
 - `passes(n)` is the cascade count: `2` = 24 dB/oct, `3` = 36, coerced to 1..16. At the default q
   the cascade stays -3 dB AT the cutoff; a resonant q compounds across stages, and so does
   `analog` (every stage gets the full drive).
-- `env(semitones)` and `adsr(attackSec, decaySec, sustainLevel, releaseSec)` are the cutoff
+- `env(semitones)` and `adsr(attack, decay, sustain, release)` are the cutoff
   envelope: naming EITHER switches it on and the other fills from the shared constants (depth 7
   semitones; stages 0.01 / 0.1 / 1.0 / 0.1). `.lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))`
   is a pluck. The `adsr` takes its own lambda to shape the stages with the chain's curves,

@@ -66,24 +66,24 @@ object ClassicVoiceRig {
         val an = IgnitorDsl.Slots.analog
         val filter: IgnitorDsl = when (door) {
             "lpf" -> IgnitorDsl.Lowpass(
-                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
-                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attack = c(0.01), decay = c(0.15), sustain = c(0.3),
+                release = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             "hpf" -> IgnitorDsl.Highpass(
-                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
-                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attack = c(0.01), decay = c(0.15), sustain = c(0.3),
+                release = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             "bpf" -> IgnitorDsl.Bandpass(
-                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
-                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attack = c(0.01), decay = c(0.15), sustain = c(0.3),
+                release = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
             else -> IgnitorDsl.Notch(
-                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
-                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+                inner = saw, freq = c(freq), q = c(0.707), analog = an, env = c(24.0), attack = c(0.01), decay = c(0.15), sustain = c(0.3),
+                release = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
             )
         }
 
-        return filter.adsr(attackSec = VOICE_ADSR_ATTACK_SEC, decaySec = VOICE_ADSR_DECAY_SEC, sustainLevel = VOICE_ADSR_SUSTAIN_LEVEL, releaseSec = VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
+        return filter.adsr(attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC, declick = ENV_DECLICK_SECONDS)
     }
 
     fun render(data: VoiceData, sampleRate: Int): DoubleArray {

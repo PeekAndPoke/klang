@@ -88,10 +88,10 @@ class FilterEnvelopeCurvesSpec : StringSpec({
     val kinds = listOf("lowpass", "highpass", "bandpass", "notch")
 
     fun node(kind: String, env: Double, ac: AdsrCurve?, dc: AdsrCurve?, rc: AdsrCurve?): IgnitorDsl = when (kind) {
-        "lowpass" -> saw.lowpass(900.0, env = env, decaySec = 0.02, sustainLevel = 0.2, releaseSec = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
-        "highpass" -> saw.highpass(300.0, env = env, decaySec = 0.02, sustainLevel = 0.2, releaseSec = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
-        "bandpass" -> saw.bandpass(900.0, env = env, decaySec = 0.02, sustainLevel = 0.2, releaseSec = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
-        else -> saw.notch(900.0, env = env, decaySec = 0.02, sustainLevel = 0.2, releaseSec = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
+        "lowpass" -> saw.lowpass(900.0, env = env, decay = 0.02, sustain = 0.2, release = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
+        "highpass" -> saw.highpass(300.0, env = env, decay = 0.02, sustain = 0.2, release = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
+        "bandpass" -> saw.bandpass(900.0, env = env, decay = 0.02, sustain = 0.2, release = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
+        else -> saw.notch(900.0, env = env, decay = 0.02, sustain = 0.2, release = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
     }
 
     fun raw(kind: String, env: FilterEnvDef): (Ignitor) -> Ignitor = { src ->
@@ -110,7 +110,7 @@ class FilterEnvelopeCurvesSpec : StringSpec({
             val oracle = raw(
                 kind,
                 FilterEnvDef(
-                    depth = 24.0, attackSec = 0.01, decaySec = 0.02, sustainLevel = 0.2, releaseSec = 0.01,
+                    depth = 24.0, attack = 0.01, decay = 0.02, sustain = 0.2, release = 0.01,
                     attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Exponential, releaseCurve = AdsrCurve.Cube,
                 ),
             )
@@ -127,7 +127,7 @@ class FilterEnvelopeCurvesSpec : StringSpec({
                 unset shouldBe render(node(kind = kind, env = 24.0, ac = AdsrCurve.Exponential, dc = AdsrCurve.Exponential, rc = AdsrCurve.Exponential))
             }
             withClue("$kind: == the runtime door with a resolved envelope that names no curve") {
-                unset shouldBe renderRaw(raw(kind, FilterEnvDef(depth = 24.0, attackSec = 0.01, decaySec = 0.02, sustainLevel = 0.2, releaseSec = 0.01)))
+                unset shouldBe renderRaw(raw(kind, FilterEnvDef(depth = 24.0, attack = 0.01, decay = 0.02, sustain = 0.2, release = 0.01)))
             }
             withClue("$kind: a shaped decay is heard (the control)") {
                 render(node(kind = kind, env = 24.0, ac = null, dc = AdsrCurve.Linear, rc = null)) shouldNotBe unset

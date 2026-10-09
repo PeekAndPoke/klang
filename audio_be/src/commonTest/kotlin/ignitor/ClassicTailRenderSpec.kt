@@ -34,8 +34,8 @@ class ClassicTailRenderSpec : StringSpec({
     val tail = saw.classic()
 
     val envelopeAlone = saw.adsr(
-        attackSec = VOICE_ADSR_ATTACK_SEC, decaySec = VOICE_ADSR_DECAY_SEC, sustainLevel = VOICE_ADSR_SUSTAIN_LEVEL, releaseSec = VOICE_ADSR_RELEASE_SEC,
-        declickSeconds = ENV_DECLICK_SECONDS,
+        attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC,
+        declick = ENV_DECLICK_SECONDS,
     )
 
     "an unwritten classic() renders the envelope alone, bit for bit" {
@@ -53,8 +53,8 @@ class ClassicTailRenderSpec : StringSpec({
         // under the unwritten envelope, bit for bit, and an unwritten slot builds no onepole (the row above).
         val expected = renderVoiceWindows(
             saw.onepole(900.0).adsr(
-                attackSec = VOICE_ADSR_ATTACK_SEC, decaySec = VOICE_ADSR_DECAY_SEC, sustainLevel = VOICE_ADSR_SUSTAIN_LEVEL, releaseSec = VOICE_ADSR_RELEASE_SEC,
-                declickSeconds = ENV_DECLICK_SECONDS,
+                attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC,
+                declick = ENV_DECLICK_SECONDS,
             ),
         )
 
@@ -64,8 +64,8 @@ class ClassicTailRenderSpec : StringSpec({
         withClue("in front of crush, not behind it: the other order is a different signal") {
             val behind = renderVoiceWindows(
                 IgnitorDsl.Crush(inner = saw, amount = IgnitorDsl.Constant(5.0)).onepole(900.0).adsr(
-                    attackSec = VOICE_ADSR_ATTACK_SEC, decaySec = VOICE_ADSR_DECAY_SEC, sustainLevel = VOICE_ADSR_SUSTAIN_LEVEL, releaseSec = VOICE_ADSR_RELEASE_SEC,
-                    declickSeconds = ENV_DECLICK_SECONDS,
+                    attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC,
+                    declick = ENV_DECLICK_SECONDS,
                 ),
             )
             val inFront = renderVoiceWindows(tail, mapOf("onepole" to 900.0, "crush.amount" to 5.0))

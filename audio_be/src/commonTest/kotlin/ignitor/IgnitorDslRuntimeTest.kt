@@ -129,10 +129,10 @@ class IgnitorDslRuntimeTest : StringSpec({
             modulator = IgnitorDsl.Sine(),
             ratio = 1.4,
             depth = 300.0,
-            envAttackSec = 0.001,
-            envDecaySec = 0.5,
-            envSustainLevel = 0.0,
-            envReleaseSec = 0.05,   // kept in sync with IgnitorDefaults (ledger E10)
+            attack = 0.001,
+            decay = 0.5,
+            sustain = 0.0,
+            release = 0.05,   // kept in sync with IgnitorDefaults (ledger E10)
         )
         val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true

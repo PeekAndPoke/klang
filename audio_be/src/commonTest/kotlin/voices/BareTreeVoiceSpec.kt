@@ -51,9 +51,9 @@ class BareTreeVoiceSpec : StringSpec({
         // No envelope, no stage: the bare tree.
         register("bare", dc)
         // Its own envelope at the ROOT, a static release of 0.2 s, linear stages so the release is arithmetic.
-        register("enveloped", dc.adsr(attackSec = 0.0, decaySec = 0.0, sustainLevel = 1.0, releaseSec = 0.2, attackCurve = linear, decayCurve = linear, releaseCurve = linear))
+        register("enveloped", dc.adsr(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.2, attackCurve = linear, decayCurve = linear, releaseCurve = linear))
         // The same with an exponential release of a FRACTIONAL frame count: 0.00501 s is 240.48 frames.
-        register("envelopedexp", dc.adsr(attackSec = 0.0, decaySec = 0.0, sustainLevel = 1.0, releaseSec = 0.00501, attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Exponential, releaseCurve = AdsrCurve.Exponential))
+        register("envelopedexp", dc.adsr(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.00501, attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Exponential, releaseCurve = AdsrCurve.Exponential))
         // classic() below the root: each branch has the voice chain, the root is a sum.
         register("branches", dc.classic().plus(dc.classic()))
     }

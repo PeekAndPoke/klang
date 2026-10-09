@@ -204,7 +204,7 @@ object WarmupVocabulary {
     /** Every envelope, modulation and effect node. */
     val effects: IgnitorDsl = IgnitorDsl.Sine()
         .fm(modulator = IgnitorDsl.Sine(), ratio = 2.0, depth = 0.3)
-        .adsr(attackSec = 0.005, decaySec = 0.1, sustainLevel = 0.6, releaseSec = 0.2)
+        .adsr(attack = 0.005, decay = 0.1, sustain = 0.6, release = 0.2)
         .drive(0.4)
         .shape("soft")
         .distort(0.5, "hard", oversample = 4) // = Drive + Shape (oversampled)
@@ -219,7 +219,7 @@ object WarmupVocabulary {
         .vibrato(rate = 5.0, semitones = 0.2)
         .accelerate(1.0)
         .pitchMod(IgnitorDsl.Sine(freq = Constant(3.0)).mul(Constant(0.1)))
-        .let { IgnitorDsl.PitchEnvelope(inner = it, semitones = Constant(12.0), decaySec = Constant(0.1)) }
+        .let { IgnitorDsl.PitchEnvelope(inner = it, semitones = Constant(12.0), decay = Constant(0.1)) }
         .mul(Constant(0.4))
 
     /** name → graph. The warmup registers each on its own playback and rotates its orbits through them. */

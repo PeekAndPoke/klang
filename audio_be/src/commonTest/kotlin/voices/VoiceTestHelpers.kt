@@ -113,10 +113,10 @@ object VoiceTestHelpers {
             val sr = sampleRate.toDouble()
 
             signal.adsr(
-                attackSec = envelope.attackFrames / sr,
-                decaySec = envelope.decayFrames / sr,
-                sustainLevel = envelope.sustainLevel,
-                releaseSec = envelope.releaseFrames / sr,
+                attack = envelope.attackFrames / sr,
+                decay = envelope.decayFrames / sr,
+                sustain = envelope.sustainLevel,
+                release = envelope.releaseFrames / sr,
                 attackCurve = envelope.attackCurve,
                 decayCurve = envelope.decayCurve,
                 releaseCurve = envelope.releaseCurve,

@@ -180,34 +180,34 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
  * See `audio/ref/numerical-safety.md`.
  *
  * @param semitones semitones of pitch shift at peak
- * @param attackSec attack time
- * @param decaySec decay time
- * @param releaseSec release time, from the gate's end
- * @param sustainLevel held level, a share of [semitones]; not clamped (the Motor stays raw), and a
+ * @param attack attack time
+ * @param decay decay time
+ * @param release release time, from the gate's end
+ * @param sustain held level, a share of [semitones]; not clamped (the Motor stays raw), and a
  *   non-finite one reads as unset, [PITCH_ENV_SUSTAIN_LEVEL] (`finiteOr`, the chain `adsr`'s rule)
  * @param attackCurve attack shape, [MOD_ENV_CURVE] when the node leaves it unset
  * @param decayCurve decay shape
  * @param releaseCurve release shape
  */
 fun pitchEnvelopeModIgnitor(
-    attackSec: Ignitor,
-    decaySec: Ignitor,
-    releaseSec: Ignitor = ParamIgnitor("releaseSec", PITCH_ENV_RELEASE_SEC),
+    attack: Ignitor,
+    decay: Ignitor,
+    release: Ignitor = ParamIgnitor("release", PITCH_ENV_RELEASE_SEC),
     semitones: Ignitor,
-    sustainLevel: Ignitor = ParamIgnitor("sustainLevel", PITCH_ENV_SUSTAIN_LEVEL),
+    sustain: Ignitor = ParamIgnitor("sustain", PITCH_ENV_SUSTAIN_LEVEL),
     attackCurve: AdsrCurve = MOD_ENV_CURVE,
     decayCurve: AdsrCurve = MOD_ENV_CURVE,
     releaseCurve: AdsrCurve = MOD_ENV_CURVE,
 ): Ignitor = PitchEnvelopeModIgnitor(
-    attackSec = attackSec, decaySec = decaySec, releaseSec = releaseSec, semitones = semitones, sustainLevel = sustainLevel, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve,
+    attack = attack, decay = decay, release = release, semitones = semitones, sustain = sustain, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve,
 )
 
 private class PitchEnvelopeModIgnitor(
-    private val attackSec: Ignitor,
-    private val decaySec: Ignitor,
-    private val releaseSec: Ignitor,
+    private val attack: Ignitor,
+    private val decay: Ignitor,
+    private val release: Ignitor,
     private val semitones: Ignitor,
-    private val sustainLevel: Ignitor,
+    private val sustain: Ignitor,
     private val attackCurve: AdsrCurve,
     private val decayCurve: AdsrCurve,
     private val releaseCurve: AdsrCurve,
@@ -228,18 +228,18 @@ private class PitchEnvelopeModIgnitor(
 
         // Read order is the pre-ADSR order (attack, decay, release, then the sustain in the slot the
         // anchor had): a stateful param subtree advances when it is read.
-        val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx)
-        val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx)
-        val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx)
+        val attackVal = Ignitors.readParam(attack, freqHz, ctx)
+        val decayVal = Ignitors.readParam(decay, freqHz, ctx)
+        val releaseVal = Ignitors.readParam(release, freqHz, ctx)
         // NaN-guard: a non-finite sustain reads as UNSET and takes the shared default, the chain
         // `adsr`'s rule (`finiteOr`). No clamp: every finite sustain passes raw (the Motor stays raw).
-        val sustainVal = finiteOr(value = Ignitors.readParam(sustainLevel, freqHz, ctx), fallback = PITCH_ENV_SUSTAIN_LEVEL)
+        val sustainVal = finiteOr(value = Ignitors.readParam(sustain, freqHz, ctx), fallback = PITCH_ENV_SUSTAIN_LEVEL)
 
         core.prepare(
-            attackFrames = attackSecVal * ctx.sampleRate,
-            decayFrames = decaySecVal * ctx.sampleRate,
+            attackFrames = attackVal * ctx.sampleRate,
+            decayFrames = decayVal * ctx.sampleRate,
             sustainLevel = sustainVal,
-            releaseFrames = releaseSecVal * ctx.sampleRate,
+            releaseFrames = releaseVal * ctx.sampleRate,
             gateEndPos = ctx.gateEndFrame,
             attackCurve = attackCurve,
             decayCurve = decayCurve,
@@ -336,21 +336,21 @@ fun fmModIgnitor(
     modulator: Ignitor,
     ratio: Ignitor,
     depth: Ignitor,
-    envAttackSec: Ignitor = ParamIgnitor("envAttackSec", 0.0),
-    envDecaySec: Ignitor = ParamIgnitor("envDecaySec", 0.0),
-    envSustainLevel: Ignitor = ParamIgnitor("envSustainLevel", 1.0),
-    envReleaseSec: Ignitor = ParamIgnitor("envReleaseSec", 0.0),
+    attack: Ignitor = ParamIgnitor("attack", 0.0),
+    decay: Ignitor = ParamIgnitor("decay", 0.0),
+    sustain: Ignitor = ParamIgnitor("sustain", 1.0),
+    release: Ignitor = ParamIgnitor("release", 0.0),
     freq: Ignitor = FreqIgnitor,
-): Ignitor = FmModIgnitor(modulator = modulator, ratio = ratio, depth = depth, envAttackSec = envAttackSec, envDecaySec = envDecaySec, envSustainLevel = envSustainLevel, envReleaseSec = envReleaseSec, freq = freq)
+): Ignitor = FmModIgnitor(modulator = modulator, ratio = ratio, depth = depth, attack = attack, decay = decay, sustain = sustain, release = release, freq = freq)
 
 private class FmModIgnitor(
     private val modulator: Ignitor,
     private val ratio: Ignitor,
     private val depth: Ignitor,
-    private val envAttackSec: Ignitor,
-    private val envDecaySec: Ignitor,
-    private val envSustainLevel: Ignitor,
-    private val envReleaseSec: Ignitor,
+    private val attack: Ignitor,
+    private val decay: Ignitor,
+    private val sustain: Ignitor,
+    private val release: Ignitor,
     private val freq: Ignitor,
 ) : Ignitor {
     private val envCore = EnvelopeCore()
@@ -397,16 +397,16 @@ private class FmModIgnitor(
         // Read — and thereby advance — the env subtrees BEFORE the depth gate below: state moves
         // once per rendered block whatever the output, or a depth passing through zero would
         // freeze a modulated envelope time. The same E2 shape, one level down.
-        val envAttackSecVal = Ignitors.readParam(envAttackSec, fmFreqVal, ctx)
-        val envDecaySecVal = Ignitors.readParam(envDecaySec, fmFreqVal, ctx)
+        val attackVal = Ignitors.readParam(attack, fmFreqVal, ctx)
+        val decayVal = Ignitors.readParam(decay, fmFreqVal, ctx)
         // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default 1.0, the chain
         // `adsr`'s rule (`finiteOr`); a NaN would otherwise make the depth NaN and `safeOut` would
         // freeze the carrier at ratio 0. The sustain passes raw into the envelope law; the LEVEL is
         // clamped to [0, 1] below, the depth range, as the filter envelope clamps it. The three stage
         // times need no guard: the envelope law reads a NaN or negative time as a zero-length stage,
         // and an infinite one as a stage that never ends, never a NaN.
-        val envSustainLevelVal = finiteOr(value = Ignitors.readParam(envSustainLevel, fmFreqVal, ctx), fallback = 1.0)
-        val envReleaseSecVal = Ignitors.readParam(envReleaseSec, fmFreqVal, ctx)
+        val sustainVal = finiteOr(value = Ignitors.readParam(sustain, fmFreqVal, ctx), fallback = 1.0)
+        val releaseVal = Ignitors.readParam(release, fmFreqVal, ctx)
 
         ctx.scratchBuffers.use { modBuf ->
             // The modulator advances FIRST, unconditionally: its state moves once per rendered
@@ -423,11 +423,11 @@ private class FmModIgnitor(
                 return
             }
 
-            // envReleaseSec COUNTS: a release-ONLY envelope (attack 0, decay 0, sustain 1) is
+            // release COUNTS: a release-ONLY envelope (attack 0, decay 0, sustain 1) is
             // exactly the E10 remedy shape, and a gate that ignores it drops the release silently
             // — the depth then holds full through the tail and collapses at teardown instead.
-            val hasEnv = envAttackSecVal > 0.0 || envDecaySecVal > 0.0 ||
-                envSustainLevelVal < 1.0 || envReleaseSecVal > 0.0
+            val hasEnv = attackVal > 0.0 || decayVal > 0.0 ||
+                sustainVal < 1.0 || releaseVal > 0.0
 
             // Sub-Hz fmFreq (from heavy detune) would otherwise blow up `effectiveDepth / fmFreq`.
             val safeFreq = safeDiv(fmFreqVal)
@@ -451,7 +451,7 @@ private class FmModIgnitor(
             // the FM index envelope has no curve surface yet (`future/envelope-shape-followups.md` §4), so the
             // default is all it gets.
             envCore.prepareModEnvelope(
-                ctx = ctx, attackSec = envAttackSecVal, decaySec = envDecaySecVal, sustainLevel = envSustainLevelVal, releaseSec = envReleaseSecVal,
+                ctx = ctx, attack = attackVal, decay = decayVal, sustain = sustainVal, release = releaseVal,
                 attackCurve = MOD_ENV_CURVE, decayCurve = MOD_ENV_CURVE, releaseCurve = MOD_ENV_CURVE,
             )
 

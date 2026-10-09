@@ -71,10 +71,10 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
         fun adsrNode(a: AdsrCurve?, d: AdsrCurve?, r: AdsrCurve?): IgnitorDsl.Adsr {
             val base = IgnitorDsl.Adsr(
                 inner = IgnitorDsl.Sine(),
-                attackSec = IgnitorDsl.Constant(0.005),
-                decaySec = IgnitorDsl.Constant(0.005),
-                sustainLevel = IgnitorDsl.Constant(0.6),
-                releaseSec = IgnitorDsl.Constant(0.01),
+                attack = IgnitorDsl.Constant(0.005),
+                decay = IgnitorDsl.Constant(0.005),
+                sustain = IgnitorDsl.Constant(0.6),
+                release = IgnitorDsl.Constant(0.01),
             )
 
             return base.copy(
@@ -101,10 +101,10 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
     }
 
     "raw factory (Double overload): no curves renders bit-identical to explicit Exponential" {
-        val defaulted = render(Ignitors.sine().adsr(attackSec = 0.005, decaySec = 0.005, sustainLevel = 0.6, releaseSec = 0.01))
+        val defaulted = render(Ignitors.sine().adsr(attack = 0.005, decay = 0.005, sustain = 0.6, release = 0.01))
         val explicit = render(
             Ignitors.sine().adsr(
-                attackSec = 0.005, decaySec = 0.005, sustainLevel = 0.6, releaseSec = 0.01,
+                attack = 0.005, decay = 0.005, sustain = 0.6, release = 0.01,
                 attackCurve = AdsrCurve.Exponential,
                 decayCurve = AdsrCurve.Exponential,
                 releaseCurve = AdsrCurve.Exponential,
@@ -120,11 +120,11 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
         // curves explicitly, so without this row a reverted default there survives green.
         fun p(name: String, v: Double): Ignitor = ParamIgnitor(name, v)
         val defaulted = render(
-            Ignitors.sine().adsr(attackSec = p("a", 0.005), decaySec = p("d", 0.005), sustainLevel = p("s", 0.6), releaseSec = p("r", 0.01))
+            Ignitors.sine().adsr(attack = p("a", 0.005), decay = p("d", 0.005), sustain = p("s", 0.6), release = p("r", 0.01))
         )
         val explicit = render(
             Ignitors.sine().adsr(
-                attackSec = p("a", 0.005), decaySec = p("d", 0.005), sustainLevel = p("s", 0.6), releaseSec = p("r", 0.01),
+                attack = p("a", 0.005), decay = p("d", 0.005), sustain = p("s", 0.6), release = p("r", 0.01),
                 attackCurve = AdsrCurve.Exponential,
                 decayCurve = AdsrCurve.Exponential,
                 releaseCurve = AdsrCurve.Exponential,

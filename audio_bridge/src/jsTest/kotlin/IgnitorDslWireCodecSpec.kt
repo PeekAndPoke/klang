@@ -232,9 +232,9 @@ class IgnitorDslWireCodecSpec : StringSpec({
     }
 
     // --- envelope / FM --------------------------------------------------------------------------------------
-    "Adsr" { check(IgnitorDsl.Sine().adsr(attackSec = 0.01, decaySec = 0.3, sustainLevel = 0.5, releaseSec = 0.5)) }
+    "Adsr" { check(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5)) }
     "Adsr with declick" {
-        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), declickSeconds = IgnitorDsl.Constant(0.0008)))
+        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), declick = IgnitorDsl.Constant(0.0008)))
     }
     // Every field step 3c added or retyped, each NON-default: the three curve knobs (one a slot)
     // and the ON/OFF switch (off, and a slot).
@@ -242,7 +242,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
         check(
             IgnitorDsl.Adsr(
                 inner = IgnitorDsl.SuperSaw(),
-                attackSec = IgnitorDsl.Constant(0.02),
+                attack = IgnitorDsl.Constant(0.02),
                 attackCurve = AdsrCurves.knob(AdsrCurve.Linear),
                 decayCurve = IgnitorDsl.Param("adsr.decayCurve", 1.0),
                 releaseCurve = AdsrCurves.knob(AdsrCurve.Square),
@@ -251,7 +251,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
         check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), on = IgnitorDsl.Param("adsrOn", 1.0)))
     }
-    "Fm" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0, envDecaySec = 0.5)) }
+    "Fm" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0, decay = 0.5)) }
     "Fm with absolute freq" {
         // freq NON-default per the file rule: a dropped emitted field would otherwise be
         // filled by the Kotlin default and round-trip green (review round 1).
@@ -260,7 +260,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
                 .let { it as IgnitorDsl.Fm }.copy(freq = IgnitorDsl.Constant(220.0))
         )
     }
-    "Fm with Adsr" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0).adsr(attackSec = 0.01, decaySec = 0.3, sustainLevel = 0.5, releaseSec = 0.5)) }
+    "Fm with Adsr" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0).adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5)) }
 
     // --- effects --------------------------------------------------------------------------------------------
     "Drive" { check(IgnitorDsl.Sine().drive(0.5)) }
@@ -309,10 +309,10 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.PitchEnvelope(
                 inner = IgnitorDsl.Sine(),
                 semitones = IgnitorDsl.Constant(24.0),
-                attackSec = IgnitorDsl.Constant(0.002),
-                decaySec = IgnitorDsl.Constant(0.07),
-                sustainLevel = IgnitorDsl.Constant(0.3),
-                releaseSec = IgnitorDsl.Constant(0.2),
+                attack = IgnitorDsl.Constant(0.002),
+                decay = IgnitorDsl.Constant(0.07),
+                sustain = IgnitorDsl.Constant(0.3),
+                release = IgnitorDsl.Constant(0.2),
                 attackCurve = AdsrCurves.knob(AdsrCurve.Square),
                 decayCurve = AdsrCurves.knob(AdsrCurve.Exponential),
                 releaseCurve = IgnitorDsl.Param("pcurve", 4.0),
@@ -336,7 +336,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
     }
     "deep composite (SuperSaw → lowpass → adsr)" {
-        check(IgnitorDsl.SuperSaw(freq = IgnitorDsl.Constant(5.0)).lowpass(2000.0).adsr(attackSec = 0.01, decaySec = 0.3, sustainLevel = 0.5, releaseSec = 0.5))
+        check(IgnitorDsl.SuperSaw(freq = IgnitorDsl.Constant(5.0)).lowpass(2000.0).adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5))
     }
     "sgpad-style composite" {
         check(

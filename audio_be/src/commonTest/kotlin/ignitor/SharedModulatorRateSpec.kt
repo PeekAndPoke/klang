@@ -242,7 +242,7 @@ class SharedModulatorRateSpec : StringSpec({
 
     "a vibrato over one source and a pitch-enveloped one runs its LFO once per block" {
         // The outer mod has two readers: the plain source, and the inner pitch envelope's product.
-        fun penv(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner = inner, semitones = c(7.0), attackSec = c(0.01), decaySec = c(0.3))
+        fun penv(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner = inner, semitones = c(7.0), attack = c(0.01), decay = c(0.3))
 
         val a = IgnitorDsl.Sine(analog = c(0.0))
         val b = IgnitorDsl.Tri(analog = c(0.0))
@@ -293,10 +293,10 @@ class SharedModulatorRateSpec : StringSpec({
         // hand the second saw the first saw's value (review round 3, the load-bearing direction).
         val tracked = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = c(0.001)),
-            attackSec = c(0.05),
-            decaySec = c(0.05),
-            sustainLevel = c(0.5),
-            releaseSec = c(0.1),
+            attack = c(0.05),
+            decay = c(0.05),
+            sustain = c(0.5),
+            release = c(0.1),
         )
         val a = IgnitorDsl.Saw(analog = c(0.0), phase = tracked)
         val b = IgnitorDsl.Saw(freq = upper, analog = c(0.0), phase = tracked)

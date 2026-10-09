@@ -78,7 +78,7 @@ class GuitarClickHuntTest : StringSpec({
     fun pickNoiseBranch(): IgnitorDsl =
         IgnitorDsl.PinkNoise()
             .highpass(3000.0)
-            .adsr(attackSec = 0.001, decaySec = 0.025, sustainLevel = 0.0, releaseSec = 0.005)
+            .adsr(attack = 0.001, decay = 0.025, sustain = 0.0, release = 0.005)
             .mulD(0.15)
 
     fun lowEndBranch(): IgnitorDsl = IgnitorDsl.SuperSaw(
@@ -108,7 +108,7 @@ class GuitarClickHuntTest : StringSpec({
     fun postHpf(): IgnitorDsl = postBrightnessLp().highpass(100.0)
 
     fun fullGuitar(): IgnitorDsl =
-        postHpf().adsr(attackSec = 0.004, decaySec = 0.15, sustainLevel = 0.8, releaseSec = 0.05)
+        postHpf().adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
 
     // ── Voice rendering ──
 
@@ -272,7 +272,7 @@ class GuitarClickHuntTest : StringSpec({
         val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).shape(distortShape, oversample = 8)
         val postLp = distorted.lowpass(freq = brightness, q = 0.9)
         val hpf = postLp.highpass(100.0)
-        return hpf.adsr(attackSec = 0.004, decaySec = 0.15, sustainLevel = 0.8, releaseSec = 0.05)
+        return hpf.adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
     }
 
     // Source sets: full minus one, full, only-one
@@ -384,7 +384,7 @@ class GuitarClickHuntTest : StringSpec({
             val withBp = sources.bandpass(freq = 1000.0, q = 0.1).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
             val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).shape(shape, oversample = 4)
-            val full = distorted.lowpass(freq = brightness, q = 0.9).highpass(100.0).adsr(attackSec = 0.004, decaySec = 0.15, sustainLevel = 0.8, releaseSec = 0.05)
+            val full = distorted.lowpass(freq = brightness, q = 0.9).highpass(100.0).adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
 
             val perNote = mutableListOf<Pair<Int, Metrics>>()
             for (m in rhythmMidis) {
@@ -416,7 +416,7 @@ class GuitarClickHuntTest : StringSpec({
             val withBp = sources.bandpass(freq = 1000.0, q = 0.1).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
             val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(d)).shape("chebyshev", oversample = 8)
-            val full = distorted.lowpass(freq = brightness, q = 0.9).highpass(100.0).adsr(attackSec = 0.004, decaySec = 0.15, sustainLevel = 0.8, releaseSec = 0.05)
+            val full = distorted.lowpass(freq = brightness, q = 0.9).highpass(100.0).adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
 
             val perNote = mutableListOf<Pair<Int, Metrics>>()
             for (m in rhythmMidis) {
@@ -458,7 +458,7 @@ class GuitarClickHuntTest : StringSpec({
                         oversampleStages = Oversampler.factorToStages(4),
                         variant = variant
                     )
-                    val full = distortedIg.lowpass(cutoffHz = brightness, q = 0.9).highpass(100.0).adsr(attackSec = 0.004, decaySec = 0.15, sustainLevel = 0.8, releaseSec = 0.05)
+                    val full = distortedIg.lowpass(cutoffHz = brightness, q = 0.9).highpass(100.0).adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
                     val out = renderVoiceFromIgnitor(full, midiToHz(m), gateMs = 250, releaseMs = 200)
                     perNote += m to analyze(out, sampleRate * 250 / 1000)
                 }
@@ -493,7 +493,7 @@ class GuitarClickHuntTest : StringSpec({
             return distortedIg
                 .lowpass(cutoffHz = brightness, q = 0.9)
                 .highpass(100.0)
-                .adsr(attackSec = 0.004, decaySec = 0.15, sustainLevel = 0.8, releaseSec = 0.05)
+                .adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
         }
 
         for (shape in listOf("soft", "chebyshev")) {

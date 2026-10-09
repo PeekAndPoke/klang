@@ -197,14 +197,14 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
             modulator = IgnitorDsl.Sine(),
             ratio = 1.4,
             depth = 300.0,
-            envAttackSec = 0.001,
-            envDecaySec = 0.5,
-            envSustainLevel = 0.0,
+            attack = 0.001,
+            decay = 0.5,
+            sustain = 0.0,
             // Non-zero on purpose: with release 0 the depth collapses to zero in ONE sample at
             // gate end — a hard frequency step that ticks on every note-off. Release 0 is raw
             // engine semantics (maintainer, 2026-08-28: "0 means 0"), so the PRESET carries the
             // ramp. Found when the per-sample depth envelope made the collapse deterministic.
-            envReleaseSec = 0.05,
+            release = 0.05,
         )
     )
 
@@ -274,7 +274,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
 //   Sine.fm(Sine, ratio=1.0, depth=500)             — harsh brass
 //   Tri.fm(Sine, ratio=3.0, depth=100)              — softer FM
 //   Sine.fm(Sine, ratio=1.4, depth=300,             — decaying FM bell
-//           envDecaySec=0.5, envSustainLevel=0.0)
+//           decay=0.5, sustain=0.0)
 //
 // ── Effects Chains ───────────────────────────────────────────────────────────
 //   SuperSaw.distort(0.4).lowpass(3000)             — heavy lead

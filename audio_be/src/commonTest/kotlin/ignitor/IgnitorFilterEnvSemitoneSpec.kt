@@ -74,7 +74,7 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
     }
 
     fun envEqualsStatic(depth: Double, expectedMul: Double, base: Double = 800.0) {
-        val env = FilterEnvDef(depth = depth, attackSec = 0.0, decaySec = 0.0, sustainLevel = 1.0, releaseSec = 0.0)
+        val env = FilterEnvDef(depth = depth, attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.0)
         val modded = render(noiseSource().lowpass(cutoffHz = base, q = 0.707, env = env))
         val static = render(noiseSource().lowpass(cutoffHz = base * expectedMul, q = 0.707))
         var maxDiff = 0.0
@@ -97,7 +97,7 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         // base 15000 * 2^(48/12) = 240 kHz, clamped to Nyquist-1: a highpass at Nyquist
         // passes (near) nothing. The row pins that the semitone law goes THROUGH the
         // shared clamp rather than around it.
-        val env = FilterEnvDef(depth = +48.0, attackSec = 0.0, decaySec = 0.0, sustainLevel = 1.0, releaseSec = 0.0)
+        val env = FilterEnvDef(depth = +48.0, attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.0)
         val out = render(noiseSource().highpass(cutoffHz = 15000.0, q = 0.707, env = env))
         var peakTail = 0.0
         for (i in out.size / 2 until out.size) {

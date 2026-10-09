@@ -55,10 +55,10 @@ class AuthoredClassicSpec : StringSpec({
     val onsetFrame = 37
 
     /** An instrument with its own envelope and a release tail (0.5 s) ten times the voice envelope's 0.05. */
-    val longTail: IgnitorDsl = IgnitorDsl.Sine().adsr(attackSec = 0.005, decaySec = 0.1, sustainLevel = 0.8, releaseSec = 0.5)
+    val longTail: IgnitorDsl = IgnitorDsl.Sine().adsr(attack = 0.005, decay = 0.1, sustain = 0.8, release = 0.5)
 
     /** An instrument whose own tail (0.02 s) is inside the voice envelope's release: nothing is stretched. */
-    val shortTail: IgnitorDsl = IgnitorDsl.Saw().adsr(attackSec = 0.005, decaySec = 0.1, sustainLevel = 0.8, releaseSec = 0.02)
+    val shortTail: IgnitorDsl = IgnitorDsl.Saw().adsr(attack = 0.005, decay = 0.1, sustain = 0.8, release = 0.02)
 
     /**
      * No envelope of its own and a level at its root: under `adsrOff` it sounds until the voice ends, so the
@@ -74,10 +74,10 @@ class AuthoredClassicSpec : StringSpec({
      */
     val modulatedRelease: IgnitorDsl = IgnitorDsl.Adsr(
         inner = IgnitorDsl.Saw(),
-        attackSec = IgnitorDsl.Constant(0.005),
-        decaySec = IgnitorDsl.Constant(0.1),
-        sustainLevel = IgnitorDsl.Constant(0.8),
-        releaseSec = IgnitorDsl.Constant(0.3).plus(IgnitorDsl.PerlinNoise().mul(IgnitorDsl.Constant(0.01))),
+        attack = IgnitorDsl.Constant(0.005),
+        decay = IgnitorDsl.Constant(0.1),
+        sustain = IgnitorDsl.Constant(0.8),
+        release = IgnitorDsl.Constant(0.3).plus(IgnitorDsl.PerlinNoise().mul(IgnitorDsl.Constant(0.01))),
     )
 
     val registry = IgnitorRegistry().apply {

@@ -103,7 +103,7 @@ Added 2026-09-27 from `ignitor-dsl-open-items.md` (archived as
 above, but the same subject.
 
 The door-shape walk of 2026-09-23 (`.claude/skills/dsl-design/door-shapes.md` (the record's section 3b)) gave `fm` a builder with
-`adsr(attackSec, decaySec, sustainLevel, releaseSec)`, but NOT `adsrCurves`, because the FM index envelope
+`adsr(attack, decay, sustain, release)`, but NOT `adsrCurves`, because the FM index envelope
 has no curve support and a knob that does nothing is not offered. The maintainer wants it later, so `fm`
 speaks the same envelope vocabulary as the chain, the four filters and the pitch envelope.
 

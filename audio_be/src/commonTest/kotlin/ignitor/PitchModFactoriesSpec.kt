@@ -110,8 +110,8 @@ class PitchModFactoriesSpec : StringSpec({
 
     "pitchEnvelopeMod: amount=0 produces all ones" {
         val mod = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", 0.1),
-            decaySec = ParamIgnitor("d", 0.1),
+            attack = ParamIgnitor("a", 0.1),
+            decay = ParamIgnitor("d", 0.1),
             semitones = ParamIgnitor("amount", 0.0),
         )
         val out = render(mod)
@@ -259,14 +259,14 @@ class PitchModFactoriesSpec : StringSpec({
         // Comparative on purpose: if the engine lost its release-ramp handling, both renders
         // collapse identically and the ratio below hits 1.0 -> red.
         val gate = 6000
-        fun renderAcrossGate(releaseSec: Double): DoubleArray {
+        fun renderAcrossGate(release: Double): DoubleArray {
             val total = gate + 2400
             val ig = fmModIgnitor(
                 modulator = Ignitors.sine(), ratio = ConstantIgnitor(1.4), depth = ConstantIgnitor(300.0),
-                envAttackSec = ConstantIgnitor(0.001),
-                envDecaySec = ConstantIgnitor(0.5),
-                envSustainLevel = ConstantIgnitor(0.0),
-                envReleaseSec = ConstantIgnitor(releaseSec),
+                attack = ConstantIgnitor(0.001),
+                decay = ConstantIgnitor(0.5),
+                sustain = ConstantIgnitor(0.0),
+                release = ConstantIgnitor(release),
             )
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
@@ -309,20 +309,20 @@ class PitchModFactoriesSpec : StringSpec({
 
     "fm env: a RELEASE-ONLY envelope is honoured, not silently dropped (hasEnv counts release)" {
         // attack 0 / decay 0 / sustain 1 / release 0.05: the exact E10 remedy shape on a sound
-        // with no other envelope shaping. A hasEnv gate that ignores envReleaseSec treats this as
+        // with no other envelope shaping. A hasEnv gate that ignores release treats this as
         // "no envelope" and drops the release silently — the depth then holds FULL through the
         // whole tail. During the gate a release-only envelope is exactly 1.0, so both renders
         // below must be bit-identical up to the gate; after it they must diverge hard.
         val gate = 6000
         val rel = 2400
-        fun render(releaseSec: Double): DoubleArray {
+        fun render(release: Double): DoubleArray {
             val total = gate + rel
             val ig = fmModIgnitor(
                 modulator = Ignitors.sine(), ratio = ConstantIgnitor(1.4), depth = ConstantIgnitor(300.0),
-                envAttackSec = ConstantIgnitor(0.0),
-                envDecaySec = ConstantIgnitor(0.0),
-                envSustainLevel = ConstantIgnitor(1.0),
-                envReleaseSec = ConstantIgnitor(releaseSec),
+                attack = ConstantIgnitor(0.0),
+                decay = ConstantIgnitor(0.0),
+                sustain = ConstantIgnitor(1.0),
+                release = ConstantIgnitor(release),
             )
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
@@ -404,10 +404,10 @@ class PitchModFactoriesSpec : StringSpec({
         fun renderFm(sustain: Double): DoubleArray {
             val ig = fmModIgnitor(
                 modulator = ConstantIgnitor(0.5), ratio = ConstantIgnitor(1.0), depth = ConstantIgnitor(depth),
-                envAttackSec = ConstantIgnitor(a),
-                envDecaySec = ConstantIgnitor(d),
-                envSustainLevel = ConstantIgnitor(sustain),
-                envReleaseSec = ConstantIgnitor(r),
+                attack = ConstantIgnitor(a),
+                decay = ConstantIgnitor(d),
+                sustain = ConstantIgnitor(sustain),
+                release = ConstantIgnitor(r),
             )
             val ctx = IgniteContext(
                 sampleRate = sr, voiceDurationFrames = gate, gateEndFrame = gate,

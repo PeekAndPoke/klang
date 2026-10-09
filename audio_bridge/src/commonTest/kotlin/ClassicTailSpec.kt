@@ -87,7 +87,7 @@ class ClassicTailSpec : StringSpec({
     "the envelope de-clicks at the strip's constant, not through a slot" {
         val adsr = tail.shouldBeInstanceOf<IgnitorDsl.Adsr>()
 
-        adsr.declickSeconds shouldBe IgnitorDsl.Constant(ENV_DECLICK_SECONDS)
+        adsr.declick shouldBe IgnitorDsl.Constant(ENV_DECLICK_SECONDS)
     }
 
     "the slot vocabulary: every name, in placement order, with the strip's untouched value as its default" {
@@ -195,12 +195,12 @@ class ClassicTailSpec : StringSpec({
         saw.classic().optimizer(0).optimizer(1).endsInClassic() shouldBe true
         // ...and it is still the ROOT only: a hint is not a stage, a stage after the hint is
         saw.classic().optimizer(0).mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
-        saw.adsr(attackSec = 0.01, decaySec = 0.1, sustainLevel = 1.0, releaseSec = 0.05).optimizer(0).endsInClassic() shouldBe false
+        saw.adsr(attack = 0.01, decay = 0.1, sustain = 1.0, release = 0.05).optimizer(0).endsInClassic() shouldBe false
     }
 
     "endsInClassic: an envelope written by hand is not the tag, unless its switch is classic()'s own slot" {
         saw.endsInClassic() shouldBe false
-        saw.adsr(attackSec = 0.01, decaySec = 0.1, sustainLevel = 1.0, releaseSec = 0.05).endsInClassic() shouldBe false
+        saw.adsr(attack = 0.01, decay = 0.1, sustain = 1.0, release = 0.05).endsInClassic() shouldBe false
         IgnitorDsl.Adsr(inner = saw, on = IgnitorDsl.Param("on", 1.0)).endsInClassic() shouldBe false
         IgnitorDsl.Adsr(inner = saw, on = IgnitorDsl.Constant(1.0)).endsInClassic() shouldBe false
         // the switch compared by NAME, as the wire codec builds a new Param: a hand-built tail of your own that

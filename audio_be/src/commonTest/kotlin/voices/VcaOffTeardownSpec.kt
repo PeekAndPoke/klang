@@ -57,10 +57,10 @@ class VcaOffTeardownSpec : StringSpec({
 
     fun env(inner: IgnitorDsl) = IgnitorDsl.Adsr(
         inner = inner,
-        attackSec = IgnitorDsl.Constant(0.010),
-        decaySec = IgnitorDsl.Constant(2.0),
-        sustainLevel = IgnitorDsl.Constant(0.0),      // decays toward silence, like the guitar
-        releaseSec = IgnitorDsl.Constant(0.050),
+        attack = IgnitorDsl.Constant(0.010),
+        decay = IgnitorDsl.Constant(2.0),
+        sustain = IgnitorDsl.Constant(0.0),      // decays toward silence, like the guitar
+        release = IgnitorDsl.Constant(0.050),
     )
 
     fun amp(inner: IgnitorDsl) = IgnitorDsl.Highpass(

@@ -76,3 +76,42 @@ Pulled ahead of the pitch pipeline, so no slot is renamed twice.
    humanization and the docs say "character amount" with the tells per unit, not "cents".
 
 Before the pitch pipeline's step 1, so its new slots are born with the final words (`penv.attack`, `fm.attack`).
+
+## Done
+
+### Step 1, the envelope words and `declick` (2026-10-09)
+
+- **What changed.** `attackSec`, `decaySec`, `sustainLevel`, `releaseSec` are `attack`, `decay`, `sustain`,
+  `release` on every `adsr` (the chain, the filter, pitch envelope and FM builders), the flat Kotlin doors, the nodes
+  `Lowpass`, `Highpass`, `Bandpass`, `Notch`, `Adsr`, `PitchEnvelope`, FM's `envAttackSec` and its siblings (Q-A: no
+  `env` prefix), `FilterKnobs`, `FilterEnvDef`, and the runtime factories and Ignitor fields (Q-B). `declickSeconds`
+  is `declick` (the slot `Slots.declick`, key `"declick"`; the node field; the doors). The frame-domain core keeps
+  `sustainLevel` (`EnvelopeCore.prepare`, `Voice.Envelope`, `EnvelopeCalc`, `VoiceFactory`), and so does the voice
+  tail's `releaseSec` in `VoiceFactory`; the constants keep their names (Q-C). The Katalyst's `attackSeconds` /
+  `releaseSeconds` are untouched (Q-E). The retired `.declickSeconds(` assertions in `StdLibIgnitorTest` stay.
+- **Found on the way.** `AdsrIgnitor` already had a member named `declick` (its `EnvelopeDeclick` state), which the
+  renamed field would have clashed with; the state is `declickFilter` now. The runtime's Adsr arm had locals named
+  `attack` ... `release`; they are `attackIgn` ... `releaseIgn`, built in the same order (inner, attack, decay,
+  sustain, release, declick: rng draw order unchanged). `Slots` stays alphabetical (`color` moved above `decay`).
+- **Wire.** `WIRE_SCHEMA_HASH` `-693111497` to `1502920473` (29 fields in 7 classes renamed; no `@WireName` changed).
+  The codec specs run green on JS (`:audio_bridge:jsTest`, 262).
+- **Corpus, bit-identical** (`tmp/naming/corpus-ep1-sn1.txt` against `corpus-ep1-before.txt`): all 16 rows
+  identical; Der Schmetterling and Kokon from HEAD's text `94dfc72ae5637e91` and `2f8d88cd2458fce2`, as recorded.
+- **Engagement control.** `classic()` with `decay = s.adsr.sustain` and `sustain = s.adsr.decay` swapped moved all
+  16 rows and both live-song rows (`corpus-ep1-sn1-ctl.txt`); restored, `cmp` clean.
+- **New door-parity row** (`KlangScriptEnvelopeDoorParitySpec`): the named arguments `attack`, `decay`, `sustain`,
+  `release`, written in reverse order, build the same node on the script door as on the Kotlin door, on the chain,
+  the four filters, the pitch envelope and FM. It pins script word = Kotlin word, not Kotlin word = node field (both
+  doors route through the same Kotlin function). The field mapping is pinned elsewhere: for the filters by
+  `KlangScriptFilterDoorParitySpec`'s literal rows, for the chain by "the Kotlin chain door: null keeps the node's
+  defaults" (a hand-built `Adsr`), for FM by its two doors building the node on separate paths, and for the pitch
+  envelope by its Kotlin side being the node constructor (review round 1, reviewer A). Mutation checks, each killed:
+  the chain's script parameter back to `attackSec`, the filter builder's `sustain` back to `sustainLevel` (red at
+  `lowpass`), FM's `release` back to `releaseSec` (red at `fm`). A row checking only that the retired names are
+  refused was dropped in review: KlangScript refuses an unknown named argument, and its own suite tests that
+  (`/review-loop`, "What deserves a test at all", 2026-10-03).
+- **Suites.** `audio_bridge` jvmTest 146 and jsTest 262, `klangscript-libs` jvmTest 823 and jsTest 602 (822 and 601 after review round 1 dropped one row), `sprudel`
+  jvmTest 3,471, `audio_be` jvmTest 2,412 and jsBrowserTest 2,308, all green; root guards `BuiltInSongsSmokeTest`,
+  `DslDocExamplesSpec`, `LexikonSpec` green. `SongBenchmarkCasesCompileSpec`'s "every case compiles" row is green;
+  its rig-anchor row is red on the maintainer's LIVE `DerSchmetterling.kt` (the anchor `.pitchEnvelope(0.5, x =` is
+  in HEAD's text and not in the live file), not on this change.

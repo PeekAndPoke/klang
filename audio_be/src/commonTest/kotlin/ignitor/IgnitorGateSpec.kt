@@ -33,21 +33,21 @@ import kotlin.random.Random
  *
  * Two different mechanisms, and the difference is the point of the row that uses this:
  *
- *  - `sustainLevel` survives BY GUARD, added 2026-09-20 in `AdsrIgnitor`'s `finiteOr`. Without it
+ *  - `sustain` survives BY GUARD, added 2026-09-20 in `AdsrIgnitor`'s `finiteOr`. Without it
  *    `coerceIn(0.0, 1.0)` is the identity on a NaN and the level multiplies every sample, so it
  *    puts NaN into the orbit mix. That mattered the moment the unity-`mul` fold landed: before it,
  *    a `pregain` at 1.0 after an envelope kept `TimesIgnitor`'s scrub and the voice went silent
  *    instead. (`expK` was the second guarded knob until step 3c removed it.)
- *  - `attackSec`, `decaySec` and `releaseSec` survive BY CONVERSION, and by accident: a time
+ *  - `attack`, `decay` and `release` survive BY CONVERSION, and by accident: a time
  *    becomes a frame count through `(seconds * sampleRate).toInt()`, and `Double.toInt()` of a NaN
- *    is 0 on both platforms, so a NaN-timed stage simply has no frames. `declickSeconds` is the
- *    same shape (`> 0.0` fails for a NaN). Nobody should rely on it: `releaseSec` was NOT safe in
+ *    is 0 on both platforms, so a NaN-timed stage simply has no frames. `declick` is the
+ *    same shape (`> 0.0` fails for a NaN). Nobody should rely on it: `release` was NOT safe in
  *    its other half, the voice's release TAIL, which is its own row below.
  *
  * So the set is all four, and the row asserts that with the reason attached rather than a number.
  */
 private val NAN_SAFE_ADSR_KNOBS: Set<String> = setOf(
-    "attackSec", "decaySec", "sustainLevel", "releaseSec",
+    "attack", "decay", "sustain", "release",
 )
 
 /**
@@ -152,8 +152,8 @@ class IgnitorGateSpec : StringSpec({
     /** The build's release-tail finding for [this], which is what voice lifetime is ranked on. */
     fun IgnitorDsl.tail(): Double? = buildExciter(random = seed(), freqHz = freqHz).releaseTailSec
 
-    val unsetRelease: IgnitorDsl = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(SLOT_UNSET))
-    val longRelease: IgnitorDsl = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(2.0))
+    val unsetRelease: IgnitorDsl = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(SLOT_UNSET))
+    val longRelease: IgnitorDsl = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(2.0))
 
     /** The oracle for every OFF row: the source with no stage on it at all. */
     val bare = render(saw).bits()
@@ -478,7 +478,7 @@ class IgnitorGateSpec : StringSpec({
 
     "a gated fm no longer counts its modulator's release tail" {
         // The FM arm counts the modulator's tail (`maxTail(carrier, modulator)`); gated, there is no modulator.
-        val longModulator = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Constant(2.0))
+        val longModulator = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), release = IgnitorDsl.Constant(2.0))
 
         fm(inner = saw, depth = IgnitorDsl.Constant(0.0), modulator = longModulator).tail() shouldBe null
 
@@ -740,7 +740,7 @@ class IgnitorGateSpec : StringSpec({
         // Inverted from the plan's sketch, and the spike is why: the voice strip's VCA ran (until it retired)
         // on EVERY voice with the voice envelope (`VOICE_ADSR_*`) when the pattern set nothing. What switches
         // the tail's envelope off is an explicit `adsrOff`, which `classic()` writes into `on`.
-        val unsetAttack = IgnitorDsl.Adsr(inner = saw, attackSec = IgnitorDsl.Constant(SLOT_UNSET))
+        val unsetAttack = IgnitorDsl.Adsr(inner = saw, attack = IgnitorDsl.Constant(SLOT_UNSET))
 
         shapeOf(build(unsetAttack)) shouldNotBe bareShape
         render(unsetAttack).bits() shouldNotBe bare
@@ -795,14 +795,14 @@ class IgnitorGateSpec : StringSpec({
         // 6's identity depends on the node doing the same: off drops the SAMPLES of the stage, not
         // the note's length. A leaf release only (see `offEnvelopeTail`).
         fun env(on: Double, release: IgnitorDsl) =
-            IgnitorDsl.Adsr(inner = saw, releaseSec = release, on = IgnitorDsl.Constant(on))
+            IgnitorDsl.Adsr(inner = saw, release = release, on = IgnitorDsl.Constant(on))
 
         env(0.0, IgnitorDsl.Constant(2.0)).tail() shouldBe 2.0
         env(0.0, IgnitorDsl.Constant(2.0)).tail() shouldBe env(1.0, IgnitorDsl.Constant(2.0)).tail()
 
         withClue("a slot release reports its WRITTEN value, as on the ON path") {
             val slotted = IgnitorDsl.Adsr(
-                inner = saw, releaseSec = IgnitorDsl.Param("release", 0.1), on = IgnitorDsl.Constant(0.0),
+                inner = saw, release = IgnitorDsl.Param("release", 0.1), on = IgnitorDsl.Constant(0.0),
             )
 
             slotted.buildExciter(ignitorParams = mapOf("release" to 3.0), random = seed(), freqHz = freqHz)
@@ -824,7 +824,7 @@ class IgnitorGateSpec : StringSpec({
 
         withClue("and the tail still competes with a sibling's like any other") {
             IgnitorDsl.Plus(
-                left = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(0.5)),
+                left = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(0.5)),
                 right = env(0.0, IgnitorDsl.Constant(2.0)),
             ).tail() shouldBe 2.0
         }
@@ -840,7 +840,7 @@ class IgnitorGateSpec : StringSpec({
 
         fun envelope(attack: IgnitorDsl?, declick: IgnitorDsl?, on: Double) = IgnitorDsl.Plus(
             left = IgnitorDsl.Adsr(inner = IgnitorDsl.Silence, on = IgnitorDsl.Constant(on)).let {
-                it.copy(attackSec = attack ?: it.attackSec, declickSeconds = declick ?: it.declickSeconds)
+                it.copy(attack = attack ?: it.attack, declick = declick ?: it.declick)
             },
             right = crackle,
         )
@@ -861,10 +861,10 @@ class IgnitorGateSpec : StringSpec({
         val unset = IgnitorDsl.Constant(SLOT_UNSET)
 
         val perKnob = mapOf(
-            "attackSec" to IgnitorDsl.Adsr(inner = saw, attackSec = unset),
-            "decaySec" to IgnitorDsl.Adsr(inner = saw, decaySec = unset),
-            "sustainLevel" to IgnitorDsl.Adsr(inner = saw, sustainLevel = unset),
-            "releaseSec" to IgnitorDsl.Adsr(inner = saw, releaseSec = unset),
+            "attack" to IgnitorDsl.Adsr(inner = saw, attack = unset),
+            "decay" to IgnitorDsl.Adsr(inner = saw, decay = unset),
+            "sustain" to IgnitorDsl.Adsr(inner = saw, sustain = unset),
+            "release" to IgnitorDsl.Adsr(inner = saw, release = unset),
         )
 
         val survives = perKnob.filterValues { tree -> render(tree).all { it.isFinite() } }.keys
@@ -873,40 +873,40 @@ class IgnitorGateSpec : StringSpec({
 
         // What the guarded knob renders, so the substitution is pinned to a VALUE and not
         // merely to "finite": the same thing the knob's own default renders.
-        withClue("a non-finite sustainLevel renders what ADSR_SUSTAIN_LEVEL renders") {
+        withClue("a non-finite sustain renders what ADSR_SUSTAIN_LEVEL renders") {
             val atDefault = render(
-                IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(ADSR_SUSTAIN_LEVEL)),
+                IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(ADSR_SUSTAIN_LEVEL)),
             ).bits()
 
-            render(IgnitorDsl.Adsr(inner = saw, sustainLevel = unset)).bits() shouldBe atDefault
+            render(IgnitorDsl.Adsr(inner = saw, sustain = unset)).bits() shouldBe atDefault
 
             // The INFINITIES pin the substitution's PLACEMENT, which a NaN cannot: `coerceIn` is
             // the identity on a NaN, so before or after the coercion ends at the same value, but
             // it has a real answer for an infinity. `+Inf` used to sustain at the 1.0 rail and
             // `-Inf` at the 0.0 rail; substituting FIRST makes both read as unset instead, which
             // is the house rule the gate one file over applies to every knob it tests.
-            render(IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(Double.POSITIVE_INFINITY)))
+            render(IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(Double.POSITIVE_INFINITY)))
                 .bits() shouldBe atDefault
-            render(IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(Double.NEGATIVE_INFINITY)))
+            render(IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(Double.NEGATIVE_INFINITY)))
                 .bits() shouldBe atDefault
 
             withClue("and the two rails are NOT what it renders, so the placement is what is pinned") {
                 atDefault shouldNotBe render(
-                    IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(1.0)),
+                    IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(1.0)),
                 ).bits()
                 atDefault shouldNotBe render(
-                    IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(0.0)),
+                    IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(0.0)),
                 ).bits()
             }
         }
 
         withClue("engagement: a DIFFERENT finite value still renders differently") {
-            render(IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(0.2))).bits() shouldNotBe
-                    render(IgnitorDsl.Adsr(inner = saw, sustainLevel = unset)).bits()
+            render(IgnitorDsl.Adsr(inner = saw, sustain = IgnitorDsl.Constant(0.2))).bits() shouldNotBe
+                    render(IgnitorDsl.Adsr(inner = saw, sustain = unset)).bits()
         }
     }
 
-    "a non-finite releaseSec cannot swallow a SIBLING's tail, in the order where it could" {
+    "a non-finite release cannot swallow a SIBLING's tail, in the order where it could" {
         // `maxTail` is `if (a >= b) a else b` and a NaN loses every comparison, so it wins ONLY as
         // the second argument: `maxTail(NaN, 2.0)` discards it, `maxTail(2.0, NaN)` returns it.
         // `buildRaw` accumulates the left operand first, so the swallowing shape is the one with
@@ -930,7 +930,7 @@ class IgnitorGateSpec : StringSpec({
         }
     }
 
-    "a non-finite releaseSec cannot swallow the INNER envelope's tail in a chain" {
+    "a non-finite release cannot swallow the INNER envelope's tail in a chain" {
         // The commoner shape, and the one a slotted tail makes: this arm builds its inner before
         // it accumulates its own release, so an outer envelope with a non-finite release lands as
         // `maxTail(2.0, NaN)` over whatever the chain below it reported.
@@ -942,14 +942,14 @@ class IgnitorGateSpec : StringSpec({
         // for `noMod()` where it should use `inner.withMod()` would silently drop the inner
         // envelope's two seconds and cut every voice of that instrument short.
         val chained = IgnitorDsl.Adsr(
-            inner = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(2.0)).lowpass(freq = 2000.0),
-            releaseSec = IgnitorDsl.Constant(SLOT_UNSET),
+            inner = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(2.0)).lowpass(freq = 2000.0),
+            release = IgnitorDsl.Constant(SLOT_UNSET),
         )
 
         chained.tail() shouldBe 2.0
 
         withClue("engagement: a finite outer release still wins when it is longer") {
-            IgnitorDsl.Adsr(inner = chained, releaseSec = IgnitorDsl.Constant(5.0)).tail() shouldBe 5.0
+            IgnitorDsl.Adsr(inner = chained, release = IgnitorDsl.Constant(5.0)).tail() shouldBe 5.0
         }
     }
 

@@ -47,14 +47,14 @@ class FilterSlotLayerFillSpec : StringSpec({
         inner = saw,
         freq = IgnitorDsl.Constant(800.0),
         env = env,
-        attackSec = attack,
-        decaySec = decay,
-        sustainLevel = sustain,
-        releaseSec = release,
+        attack = attack,
+        decay = decay,
+        sustain = sustain,
+        release = release,
     )
 
     val static: DoubleArray by lazy { renderVoiceWindows(saw.lowpass(800.0)) }
-    val filledSeven: DoubleArray by lazy { renderVoiceWindows(saw.lowpass(800.0, attackSec = FILTER_ENV_ATTACK_SEC)) }
+    val filledSeven: DoubleArray by lazy { renderVoiceWindows(saw.lowpass(800.0, attack = FILTER_ENV_ATTACK_SEC)) }
 
     fun shouldRenderStatic(clue: String, actual: DoubleArray) {
         withClue("$clue: renders the static filter") { firstBitMismatch(a = static, b = actual) shouldBe -1 }
@@ -71,30 +71,30 @@ class FilterSlotLayerFillSpec : StringSpec({
         shouldRenderStatic("no bag at all", renderVoiceWindows(slotted(), null))
     }
 
-    "attack written alone: the depth fills with the shared 7 semitones, as `lowpass(800, attackSec = x)` does" {
+    "attack written alone: the depth fills with the shared 7 semitones, as `lowpass(800, attack = x)` does" {
         shouldRenderDoor(
-            clue = "attack", door = renderVoiceWindows(saw.lowpass(800.0, attackSec = 0.05)),
+            clue = "attack", door = renderVoiceWindows(saw.lowpass(800.0, attack = 0.05)),
             actual = renderVoiceWindows(slotted(), mapOf("a" to 0.05)),
         )
     }
 
     "decay written alone: the same fill" {
         shouldRenderDoor(
-            clue = "decay", door = renderVoiceWindows(saw.lowpass(800.0, decaySec = 0.3)),
+            clue = "decay", door = renderVoiceWindows(saw.lowpass(800.0, decay = 0.3)),
             actual = renderVoiceWindows(slotted(), mapOf("d" to 0.3)),
         )
     }
 
     "sustain written alone: the same fill" {
         shouldRenderDoor(
-            clue = "sustain", door = renderVoiceWindows(saw.lowpass(800.0, sustainLevel = 0.2)),
+            clue = "sustain", door = renderVoiceWindows(saw.lowpass(800.0, sustain = 0.2)),
             actual = renderVoiceWindows(slotted(), mapOf("s" to 0.2)),
         )
     }
 
     "release written alone: the same fill" {
         shouldRenderDoor(
-            clue = "release", door = renderVoiceWindows(saw.lowpass(800.0, releaseSec = 0.2)),
+            clue = "release", door = renderVoiceWindows(saw.lowpass(800.0, release = 0.2)),
             actual = renderVoiceWindows(slotted(), mapOf("r" to 0.2)),
         )
     }
@@ -133,7 +133,7 @@ class FilterSlotLayerFillSpec : StringSpec({
     "an authored non-zero depth default stands when a stage is written: the fill only answers an unset slot" {
         shouldRenderDoor(
             clue = "authored depth 12",
-            door = renderVoiceWindows(saw.lowpass(800.0, env = 12.0, attackSec = 0.05)),
+            door = renderVoiceWindows(saw.lowpass(800.0, env = 12.0, attack = 0.05)),
             actual = renderVoiceWindows(slotted(env = IgnitorDsl.Param("e", 12.0)), mapOf("a" to 0.05)),
         )
     }
@@ -150,13 +150,13 @@ class FilterSlotLayerFillSpec : StringSpec({
             inner = saw,
             freq = IgnitorDsl.Constant(800.0),
             env = IgnitorDsl.Param("e", SLOT_UNSET),
-            decaySec = IgnitorDsl.Param("d", FILTER_ENV_DECAY_SEC),
-            sustainLevel = IgnitorDsl.Param("s", FILTER_ENV_SUSTAIN_LEVEL),
+            decay = IgnitorDsl.Param("d", FILTER_ENV_DECAY_SEC),
+            sustain = IgnitorDsl.Param("s", FILTER_ENV_SUSTAIN_LEVEL),
         )
         val actual = renderVoiceWindows(slottedHp, mapOf("s" to 0.3))
 
         withClue("highpass sustain alone") {
-            firstBitMismatch(a = renderVoiceWindows(saw.highpass(800.0, sustainLevel = 0.3)), b = actual) shouldBe -1
+            firstBitMismatch(a = renderVoiceWindows(saw.highpass(800.0, sustain = 0.3)), b = actual) shouldBe -1
             firstBitMismatch(a = renderVoiceWindows(saw.highpass(800.0)), b = actual) shouldNotBe -1
         }
     }

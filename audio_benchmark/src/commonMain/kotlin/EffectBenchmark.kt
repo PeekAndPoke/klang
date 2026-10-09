@@ -308,7 +308,7 @@ class EffectBenchmark(
                 Ignitors.sine().lowpass(
                     cutoffHz = 1000.0,
                     q = 1.0,
-                    env = FilterEnvDef(depth = 7.0 /* C3: semitones */, attackSec = 0.05, decaySec = 0.1, sustainLevel = 0.7, releaseSec = 0.5),
+                    env = FilterEnvDef(depth = 7.0 /* C3: semitones */, attack = 0.05, decay = 0.1, sustain = 0.7, release = 0.5),
                 )
             },
 

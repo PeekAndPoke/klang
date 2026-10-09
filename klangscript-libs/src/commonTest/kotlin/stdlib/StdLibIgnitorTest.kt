@@ -44,10 +44,10 @@ class StdLibIgnitorTest : StringSpec({
     }
 
     // ── The chain adsr's builder (step 3c): curves and declick live in its lambda ──
-    "Ignitor.saw().adsr(..., e => e.declick(0.001)) sets the declickSeconds knob on the Adsr node" {
+    "Ignitor.saw().adsr(..., e => e.declick(0.001)) sets the declick knob on the Adsr node" {
         val dsl = evalIgnitorDsl("Ignitor.saw().adsr(0.01, 0.1, 0.5, 0.2, e => e.declick(0.001))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
-        dsl.declickSeconds shouldBe IgnitorDsl.Constant(0.001)
+        dsl.declick shouldBe IgnitorDsl.Constant(0.001)
         dsl.inner shouldBe IgnitorDsl.Saw()
     }
 

@@ -241,10 +241,10 @@ class BlockFramingInvarianceSpec : StringSpec({
         // mid-block at every swept size and alignment.
         "adsr on DC" to IgnitorDsl.Adsr(
             inner = IgnitorDsl.Constant(1.0),
-            attackSec = IgnitorDsl.Constant(0.007),
-            decaySec = IgnitorDsl.Constant(0.031),
-            sustainLevel = IgnitorDsl.Constant(0.6),
-            releaseSec = IgnitorDsl.Constant(0.033),
+            attack = IgnitorDsl.Constant(0.007),
+            decay = IgnitorDsl.Constant(0.031),
+            sustain = IgnitorDsl.Constant(0.6),
+            release = IgnitorDsl.Constant(0.033),
         ),
         "sine" to IgnitorDsl.Sine(),
         // Ledger E1, fixed 2026-08-28: the depth envelope is per-sample now. Attack 220 frames and
@@ -253,9 +253,9 @@ class BlockFramingInvarianceSpec : StringSpec({
             modulator = IgnitorDsl.Sine(),
             ratio = 1.4,
             depth = 300.0,
-            envAttackSec = 0.005,
-            envDecaySec = 0.5,
-            envSustainLevel = 0.0,
+            attack = 0.005,
+            decay = 0.5,
+            sustain = 0.0,
         ),
         "white noise" to IgnitorDsl.WhiteNoise(),
         "pluck" to IgnitorDsl.Pluck(),
@@ -423,7 +423,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         // 128-frame chords the knee is straightened, so the sweep arrives ~a block late and the
         // early window stays dark. lengths=[1] makes every chord one sample long: the analytic
         // reference.
-        val env = FilterEnvDef(depth = 60.0, attackSec = 0.0005, decaySec = 0.05, sustainLevel = 0.0, releaseSec = 0.05)
+        val env = FilterEnvDef(depth = 60.0, attack = 0.0005, decay = 0.05, sustain = 0.0, release = 0.05)
         fun chain(): Ignitor = IgnitorDsl.Sine().toExciter(random = testRandom).lowpass(cutoffHz = 150.0, q = 0.707, env = env)
 
         fun rmsEarly(x: DoubleArray): Double {

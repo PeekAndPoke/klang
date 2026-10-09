@@ -43,10 +43,10 @@ class IgniteOnsetOffsetSpec : StringSpec({
     // A DC source with a 10 ms attack, so the rendered output IS the ignitor's envelope.
     val instrument = IgnitorDsl.Adsr(
         inner = IgnitorDsl.Constant(1.0),
-        attackSec = IgnitorDsl.Constant(0.010),
-        decaySec = IgnitorDsl.Constant(2.0),
-        sustainLevel = IgnitorDsl.Constant(1.0),
-        releaseSec = IgnitorDsl.Constant(0.05),
+        attack = IgnitorDsl.Constant(0.010),
+        decay = IgnitorDsl.Constant(2.0),
+        sustain = IgnitorDsl.Constant(1.0),
+        release = IgnitorDsl.Constant(0.05),
     )
 
     fun render(startFrameWanted: Int): DoubleArray {

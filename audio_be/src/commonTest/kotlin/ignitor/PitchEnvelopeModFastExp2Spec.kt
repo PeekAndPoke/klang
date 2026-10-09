@@ -32,15 +32,15 @@ class PitchEnvelopeModFastExp2Spec : StringSpec({
         // is the pow-based formula evaluated per sample, including the blocks after settling.
         val sampleRate = 48000
         val blockFrames = 128
-        val attackSec = 0.02
-        val decaySec = 0.05
+        val attack = 0.02
+        val decay = 0.05
         val semitones = 9.0
         val sustain = 0.25
         val mod = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", attackSec),
-            decaySec = ParamIgnitor("d", decaySec),
+            attack = ParamIgnitor("a", attack),
+            decay = ParamIgnitor("d", decay),
             semitones = ParamIgnitor("amount", semitones),
-            sustainLevel = ParamIgnitor("sustain", sustain),
+            sustain = ParamIgnitor("sustain", sustain),
             // Pinned Linear: this row is about the ratio's exp2 against pow, and its reference below
             // writes the linear stages out; the default curve is `ModEnvelopeDefaultCurveSpec`'s.
             attackCurve = AdsrCurve.Linear,
@@ -53,8 +53,8 @@ class PitchEnvelopeModFastExp2Spec : StringSpec({
             random = testRandom,
         )
         val buf = AudioBuffer(blockFrames)
-        val attackFrames = attackSec * sampleRate
-        val decayFrames = decaySec * sampleRate
+        val attackFrames = attack * sampleRate
+        val decayFrames = decay * sampleRate
         var worst = 0.0
         var settledBlocks = 0
 

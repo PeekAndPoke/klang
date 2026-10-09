@@ -91,11 +91,11 @@ class PitchEnvelopeAdsrSpec : StringSpec({
     )
 
     fun mod(e: Env) = pitchEnvelopeModIgnitor(
-        attackSec = ParamIgnitor("a", e.a),
-        decaySec = ParamIgnitor("d", e.d),
-        releaseSec = ParamIgnitor("r", e.r),
+        attack = ParamIgnitor("a", e.a),
+        decay = ParamIgnitor("d", e.d),
+        release = ParamIgnitor("r", e.r),
         semitones = ParamIgnitor("amount", e.amount),
-        sustainLevel = ParamIgnitor("s", e.s),
+        sustain = ParamIgnitor("s", e.s),
         attackCurve = e.ac,
         decayCurve = e.dc,
         releaseCurve = e.rc,
@@ -290,7 +290,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
         for (e in cases) {
             val dsl = IgnitorDsl.PitchEnvelope(
                 inner = IgnitorDsl.Sine(),
-                semitones = c(e.amount), attackSec = c(e.a), decaySec = c(e.d), sustainLevel = c(e.s), releaseSec = c(e.r),
+                semitones = c(e.amount), attack = c(e.a), decay = c(e.d), sustain = c(e.s), release = c(e.r),
                 attackCurve = AdsrCurves.knob(e.ac),
                 decayCurve = AdsrCurves.knob(e.dc),
                 releaseCurve = AdsrCurves.knob(e.rc),
@@ -306,7 +306,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
     "the pitch release does NOT extend the voice's life" {
         IgnitorDsl.PitchEnvelope(
-            inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0), releaseSec = IgnitorDsl.Constant(5.0),
+            inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0), release = IgnitorDsl.Constant(5.0),
         ).buildExciter(freqHz = 440.0, random = testRandom).releaseTailSec.shouldBeNull()
     }
 })

@@ -230,17 +230,17 @@ class EnvelopeLawSpec : StringSpec({
     "host: the Ignitor chain adsr (fractional attack, stateless release, raw sustain, amplitude floor at 0)" {
         val lin = AdsrCurve.Linear
 
-        val frac = renderNode(dc().adsr(attackSec = sec(240.5), decaySec = sec(100.0), sustainLevel = 0.5, releaseSec = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declickSeconds = 0.0), 400, gate = far / 2)
+        val frac = renderNode(dc().adsr(attack = sec(240.5), decay = sec(100.0), sustain = 0.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 400, gate = far / 2)
 
         frac[240] shouldBe (240.0 / 240.5 plusOrMinus 1e-12)
 
-        val gated = renderNode(dc().adsr(attackSec = sec(100.0), decaySec = sec(100.0), sustainLevel = 0.2, releaseSec = sec(11.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declickSeconds = 0.0), 80, gate = 50)
+        val gated = renderNode(dc().adsr(attack = sec(100.0), decay = sec(100.0), sustain = 0.2, release = sec(11.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 80, gate = 50)
 
         gated[50] shouldBe (0.5 plusOrMinus 1e-12)
         gated[60] shouldBe 0.0
 
-        renderNode(dc().adsr(attackSec = 0.0, decaySec = sec(10.0), sustainLevel = 1.5, releaseSec = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declickSeconds = 0.0), 40, gate = far / 2)[20] shouldBe 1.5
-        renderNode(dc().adsr(attackSec = 0.0, decaySec = sec(10.0), sustainLevel = -0.5, releaseSec = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declickSeconds = 0.0), 40, gate = far / 2)[20] shouldBe 0.0
+        renderNode(dc().adsr(attack = 0.0, decay = sec(10.0), sustain = 1.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 40, gate = far / 2)[20] shouldBe 1.5
+        renderNode(dc().adsr(attack = 0.0, decay = sec(10.0), sustain = -0.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 40, gate = far / 2)[20] shouldBe 0.0
     }
 
     "host: the Ignitor FM index envelope (fractional attack, raw sustain, the depth clamped to [0, 1])" {
@@ -251,10 +251,10 @@ class EnvelopeLawSpec : StringSpec({
             modulator = ParamIgnitor("m", 1.0),
             ratio = ParamIgnitor("ratio", 1.0),
             depth = ParamIgnitor("depth", 100.0),
-            envAttackSec = ParamIgnitor("a", sec(a)),
-            envDecaySec = ParamIgnitor("d", sec(d)),
-            envSustainLevel = ParamIgnitor("s", s),
-            envReleaseSec = ParamIgnitor("r", sec(r)),
+            attack = ParamIgnitor("a", sec(a)),
+            decay = ParamIgnitor("d", sec(d)),
+            sustain = ParamIgnitor("s", s),
+            release = ParamIgnitor("r", sec(r)),
             freq = FreqIgnitor,
         )
 
@@ -280,11 +280,11 @@ class EnvelopeLawSpec : StringSpec({
     "host: the Ignitor pitch envelope (fractional attack, raw sustain, the release on floor(N))" {
         // 12 semitones: the output ratio is 2^level, so log2 of it is the level.
         fun pitch(a: Double, d: Double, s: Double, r: Double): Ignitor = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", sec(a)),
-            decaySec = ParamIgnitor("d", sec(d)),
-            releaseSec = ParamIgnitor("r", sec(r)),
+            attack = ParamIgnitor("a", sec(a)),
+            decay = ParamIgnitor("d", sec(d)),
+            release = ParamIgnitor("r", sec(r)),
             semitones = ParamIgnitor("st", 12.0),
-            sustainLevel = ParamIgnitor("s", s),
+            sustain = ParamIgnitor("s", s),
             attackCurve = AdsrCurve.Linear,
             decayCurve = AdsrCurve.Linear,
             releaseCurve = AdsrCurve.Linear,
@@ -467,7 +467,7 @@ class EnvelopeLawSpec : StringSpec({
                     }
                 }
             }
-            val unnamed = FilterEnvDef(depth = depth, attackSec = sec(a), decaySec = sec(d), sustainLevel = sus, releaseSec = sec(r))
+            val unnamed = FilterEnvDef(depth = depth, attack = sec(a), decay = sec(d), sustain = sus, release = sec(r))
             val env = if (nameCurves) unnamed.copy(attackCurve = ac, decayCurve = dc, releaseCurve = rc) else unnamed
             val node = source.lowpass(cutoffHz = ParamIgnitor("f", base), q = ParamIgnitor("q", q), env = env)
             val out = renderNode(node, total, gate = gate)
@@ -527,7 +527,7 @@ class EnvelopeLawSpec : StringSpec({
 
         // And on a host: the chain adsr with a Square attack and a negative gate renders silence.
         val silent = renderNode(
-            dc().adsr(attackSec = 0.0, decaySec = sec(100.0), sustainLevel = 1.0, releaseSec = sec(200.0), attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Square, declickSeconds = 0.0),
+            dc().adsr(attack = 0.0, decay = sec(100.0), sustain = 1.0, release = sec(200.0), attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Square, declick = 0.0),
             400,
             gate = -50,
         )
@@ -555,25 +555,25 @@ class EnvelopeLawSpec : StringSpec({
 
         fun fm(t: Double): Ignitor = fmModIgnitor(
             modulator = ParamIgnitor("m", 1.0), ratio = ParamIgnitor("ratio", 1.0), depth = ParamIgnitor("depth", 100.0),
-            envAttackSec = ParamIgnitor("a", t), envDecaySec = ParamIgnitor("d", t),
-            envSustainLevel = ParamIgnitor("s", 0.5), envReleaseSec = ParamIgnitor("r", sec(12.0)),
+            attack = ParamIgnitor("a", t), decay = ParamIgnitor("d", t),
+            sustain = ParamIgnitor("s", 0.5), release = ParamIgnitor("r", sec(12.0)),
             freq = FreqIgnitor,
         )
 
         fun pitch(t: Double): Ignitor = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", t), decaySec = ParamIgnitor("d", t), releaseSec = ParamIgnitor("r", sec(12.0)),
-            semitones = ParamIgnitor("st", 12.0), sustainLevel = ParamIgnitor("s", 0.5),
+            attack = ParamIgnitor("a", t), decay = ParamIgnitor("d", t), release = ParamIgnitor("r", sec(12.0)),
+            semitones = ParamIgnitor("st", 12.0), sustain = ParamIgnitor("s", 0.5),
         )
 
         fun filter(t: Double): Ignitor {
-            val env = FilterEnvDef(depth = 24.0, attackSec = t, decaySec = t, sustainLevel = 0.5, releaseSec = sec(12.0))
+            val env = FilterEnvDef(depth = 24.0, attack = t, decay = t, sustain = 0.5, release = sec(12.0))
 
             return dc().lowpass(cutoffHz = ParamIgnitor("f", 400.0), q = ParamIgnitor("q", 0.707), env = env)
         }
 
         val hosts: List<Pair<String, (Double) -> List<Double>>> = listOf(
             "core" to { t -> EnvelopeCore().apply { prepare(attackFrames = t, decayFrames = t, sustainLevel = 0.5, releaseFrames = 12.0, gateEndPos = 20, attackCurve = lin, decayCurve = lin, releaseCurve = lin) }.let { c -> (0 until 40).map { c.at(it) } } },
-            "chain adsr" to { t -> renderNode(dc().adsr(attackSec = t, decaySec = t, sustainLevel = 0.5, releaseSec = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declickSeconds = 0.0), 40, gate = 20).toList() },
+            "chain adsr" to { t -> renderNode(dc().adsr(attack = t, decay = t, sustain = 0.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 40, gate = 20).toList() },
             "strip control-rate envelope" to { t ->
                 (0 until 40).map { calculateControlRateEnvelope(env = Voice.Envelope(attackFrames = t, decayFrames = t, sustainLevel = 0.5, releaseFrames = 12.0), blockStart = it.toDouble(), startFrame = 0.0, gateEndFrame = 20.0, core = EnvelopeCore()) }
             },

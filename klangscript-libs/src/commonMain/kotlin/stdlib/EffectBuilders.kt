@@ -34,7 +34,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 // ── Envelopes ────────────────────────────────────────────────────────────────
 
 /**
- * Builder for the chain `.adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)`, the
+ * Builder for the chain `.adsr(attack, decay, sustain, release, configure)`, the
  * amplitude envelope. Knobs: `curves`, `declick` (phase 3 step 3c, maintainer, 2026-09-25; they
  * replaced the reach-back chain methods `adsrCurves` and `declickSeconds`). `null` = not named: the
  * node keeps its default. Immutable: every knob returns a new builder.
@@ -43,11 +43,11 @@ data class AdsrBuilder(
     val attackCurve: IgnitorDsl? = null,
     val decayCurve: IgnitorDsl? = null,
     val releaseCurve: IgnitorDsl? = null,
-    val declickSeconds: IgnitorDsl? = null,
+    val declick: IgnitorDsl? = null,
 )
 
 /**
- * Builder for the `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` INSIDE a
+ * Builder for the `adsr(attack, decay, sustain, release, configure)` INSIDE a
  * modulation envelope's builder: the four filters' cutoff envelope and the pitch envelope. Knob:
  * `curves`. No `declick`: those envelopes have no de-click stage, and a knob that does nothing is
  * not offered. `null` = not named: the node keeps its default.
@@ -92,7 +92,7 @@ fun AdsrBuilder.curves(
  * off, which is this envelope's default; a gentle value is about 0.0005 to 0.001.
  */
 @KlangScript.Function
-fun AdsrBuilder.declick(seconds: IgnitorDslLike): AdsrBuilder = copy(declickSeconds = seconds.toIgnitorDsl())
+fun AdsrBuilder.declick(seconds: IgnitorDslLike): AdsrBuilder = copy(declick = seconds.toIgnitorDsl())
 
 /**
  * Shapes a modulation envelope's stages (a filter's cutoff envelope, the pitch envelope), with the
@@ -123,10 +123,10 @@ data class FilterKnobs(
     val analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
     val humanize: Boolean = false,
     val env: IgnitorDsl? = null,
-    val attackSec: IgnitorDsl? = null,
-    val decaySec: IgnitorDsl? = null,
-    val sustainLevel: IgnitorDsl? = null,
-    val releaseSec: IgnitorDsl? = null,
+    val attack: IgnitorDsl? = null,
+    val decay: IgnitorDsl? = null,
+    val sustain: IgnitorDsl? = null,
+    val release: IgnitorDsl? = null,
     val attackCurve: IgnitorDsl? = null,
     val decayCurve: IgnitorDsl? = null,
     val releaseCurve: IgnitorDsl? = null,
@@ -146,7 +146,7 @@ data class FilterKnobs(
         val curves = ModAdsrBuilder().configuredBy("adsr", configure)
 
         return copy(
-            attackSec = a.toIgnitorDsl(), decaySec = d.toIgnitorDsl(), sustainLevel = s.toIgnitorDsl(), releaseSec = r.toIgnitorDsl(),
+            attack = a.toIgnitorDsl(), decay = d.toIgnitorDsl(), sustain = s.toIgnitorDsl(), release = r.toIgnitorDsl(),
             attackCurve = curves.attackCurve, decayCurve = curves.decayCurve, releaseCurve = curves.releaseCurve,
         )
     }
@@ -211,12 +211,12 @@ fun FilterBuilder.env(semitones: IgnitorDslLike): FilterBuilder = copy(knobs = k
  */
 @KlangScript.Function
 fun FilterBuilder.adsr(
-    attackSec: IgnitorDslLike,
-    decaySec: IgnitorDslLike,
-    sustainLevel: IgnitorDslLike,
-    releaseSec: IgnitorDslLike,
+    attack: IgnitorDslLike,
+    decay: IgnitorDslLike,
+    sustain: IgnitorDslLike,
+    release: IgnitorDslLike,
     configure: ((ModAdsrBuilder) -> ModAdsrBuilder)? = null,
-): FilterBuilder = copy(knobs = knobs.adsr(attackSec, decaySec, sustainLevel, releaseSec, configure))
+): FilterBuilder = copy(knobs = knobs.adsr(attack, decay, sustain, release, configure))
 
 /**
  * The analog SATURATION is not implemented for this tap and the value does not reach it. The value
@@ -242,12 +242,12 @@ fun BandFilterBuilder.env(semitones: IgnitorDslLike): BandFilterBuilder = copy(k
  */
 @KlangScript.Function
 fun BandFilterBuilder.adsr(
-    attackSec: IgnitorDslLike,
-    decaySec: IgnitorDslLike,
-    sustainLevel: IgnitorDslLike,
-    releaseSec: IgnitorDslLike,
+    attack: IgnitorDslLike,
+    decay: IgnitorDslLike,
+    sustain: IgnitorDslLike,
+    release: IgnitorDslLike,
     configure: ((ModAdsrBuilder) -> ModAdsrBuilder)? = null,
-): BandFilterBuilder = copy(knobs = knobs.adsr(attackSec, decaySec, sustainLevel, releaseSec, configure))
+): BandFilterBuilder = copy(knobs = knobs.adsr(attack, decay, sustain, release, configure))
 
 // ── Pitch envelope ───────────────────────────────────────────────────────────
 
@@ -267,10 +267,10 @@ data class PitchEnvelopeBuilder(val node: IgnitorDsl.PitchEnvelope)
  */
 @KlangScript.Function
 fun PitchEnvelopeBuilder.adsr(
-    attackSec: IgnitorDslLike,
-    decaySec: IgnitorDslLike,
-    sustainLevel: IgnitorDslLike,
-    releaseSec: IgnitorDslLike,
+    attack: IgnitorDslLike,
+    decay: IgnitorDslLike,
+    sustain: IgnitorDslLike,
+    release: IgnitorDslLike,
     configure: ((ModAdsrBuilder) -> ModAdsrBuilder)? = null,
 ): PitchEnvelopeBuilder {
     val curves = ModAdsrBuilder().configuredBy("adsr", configure)
@@ -278,10 +278,10 @@ fun PitchEnvelopeBuilder.adsr(
 
     return copy(
         node = node.copy(
-            attackSec = attackSec.toIgnitorDsl(),
-            decaySec = decaySec.toIgnitorDsl(),
-            sustainLevel = sustainLevel.toIgnitorDsl(),
-            releaseSec = releaseSec.toIgnitorDsl(),
+            attack = attack.toIgnitorDsl(),
+            decay = decay.toIgnitorDsl(),
+            sustain = sustain.toIgnitorDsl(),
+            release = release.toIgnitorDsl(),
             attackCurve = curves.attackCurve ?: defaults.attackCurve,
             decayCurve = curves.decayCurve ?: defaults.decayCurve,
             releaseCurve = curves.releaseCurve ?: defaults.releaseCurve,
@@ -303,16 +303,16 @@ data class FmBuilder(val node: IgnitorDsl.Fm)
  */
 @KlangScript.Function
 fun FmBuilder.adsr(
-    attackSec: IgnitorDslLike,
-    decaySec: IgnitorDslLike,
-    sustainLevel: IgnitorDslLike,
-    releaseSec: IgnitorDslLike,
+    attack: IgnitorDslLike,
+    decay: IgnitorDslLike,
+    sustain: IgnitorDslLike,
+    release: IgnitorDslLike,
 ): FmBuilder = copy(
     node = node.copy(
-        envAttackSec = attackSec.toIgnitorDsl(),
-        envDecaySec = decaySec.toIgnitorDsl(),
-        envSustainLevel = sustainLevel.toIgnitorDsl(),
-        envReleaseSec = releaseSec.toIgnitorDsl(),
+        attack = attack.toIgnitorDsl(),
+        decay = decay.toIgnitorDsl(),
+        sustain = sustain.toIgnitorDsl(),
+        release = release.toIgnitorDsl(),
     ),
 )
 

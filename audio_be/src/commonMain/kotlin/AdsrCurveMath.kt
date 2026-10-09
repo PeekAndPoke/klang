@@ -76,7 +76,7 @@ internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm:
 // Dividing by N-1 lands p = 1.0 exactly on the last rendered frame, so the CURVE
 // ends on 0.0. Both endpoints are then exact: p=0 at gate end, p=1 at the final frame.
 //
-// Scope, measured: on the ignitor envelope (AdsrIgnitor, where declickSeconds defaults
+// Scope, measured: on the ignitor envelope (AdsrIgnitor, where declick defaults
 // to 0 = off) the rendered gain reaches 0.0 too, and that is the path Der Schmetterling's
 // guitars clicked on. With the de-click one-pole on (`classic()`'s envelope, as on the retired strip VCA)
 // it sits DOWNSTREAM of the curve, lagging ~47 frames at ENV_DECLICK_SECONDS, so the gain on the last

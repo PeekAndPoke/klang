@@ -133,10 +133,10 @@ class StripPitchEnvelopeParitySpec : StringSpec({
             val bare = IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(amount))
 
             return bare.copy(
-                attackSec = attack?.let { IgnitorDsl.Constant(it) } ?: bare.attackSec,
-                decaySec = decay?.let { IgnitorDsl.Constant(it) } ?: bare.decaySec,
-                sustainLevel = sustain?.let { IgnitorDsl.Constant(it) } ?: bare.sustainLevel,
-                releaseSec = release?.let { IgnitorDsl.Constant(it) } ?: bare.releaseSec,
+                attack = attack?.let { IgnitorDsl.Constant(it) } ?: bare.attack,
+                decay = decay?.let { IgnitorDsl.Constant(it) } ?: bare.decay,
+                sustain = sustain?.let { IgnitorDsl.Constant(it) } ?: bare.sustain,
+                release = release?.let { IgnitorDsl.Constant(it) } ?: bare.release,
                 attackCurve = curves?.let { AdsrCurves.knob(it.first) } ?: bare.attackCurve,
                 decayCurve = curves?.let { AdsrCurves.knob(it.second) } ?: bare.decayCurve,
                 releaseCurve = curves?.let { AdsrCurves.knob(it.third) } ?: bare.releaseCurve,

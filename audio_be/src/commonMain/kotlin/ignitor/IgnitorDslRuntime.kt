@@ -385,11 +385,11 @@ internal fun IgnitorDsl.buildIgnitor(
             // The three curves are read leaf-only (`adsrCurveKnob`) and build nothing.
             // The release is NOT reported as a tail: a pitch release never extends the voice.
             val peMod = pitchEnvelopeModIgnitor(
-                attackSec = this.attackSec.buildIgnitor(ignitorParams, cache).ignitor,
-                decaySec = this.decaySec.buildIgnitor(ignitorParams, cache).ignitor,
-                releaseSec = this.releaseSec.buildIgnitor(ignitorParams, cache).ignitor,
+                attack = this.attack.buildIgnitor(ignitorParams, cache).ignitor,
+                decay = this.decay.buildIgnitor(ignitorParams, cache).ignitor,
+                release = this.release.buildIgnitor(ignitorParams, cache).ignitor,
                 semitones = this.semitones.buildIgnitor(ignitorParams, cache).ignitor,
-                sustainLevel = this.sustainLevel.buildIgnitor(ignitorParams, cache).ignitor,
+                sustain = this.sustain.buildIgnitor(ignitorParams, cache).ignitor,
                 attackCurve = this.attackCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
                 decayCurve = this.decayCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
                 releaseCurve = this.releaseCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
@@ -415,10 +415,10 @@ internal fun IgnitorDsl.buildIgnitor(
                 modulator = modulatorBuilt.ignitor,
                 ratio = this.ratio.buildIgnitor(ignitorParams, cache).ignitor,
                 depth = this.depth.buildIgnitor(ignitorParams, cache).ignitor,
-                envAttackSec = this.envAttackSec.buildIgnitor(ignitorParams, cache).ignitor,
-                envDecaySec = this.envDecaySec.buildIgnitor(ignitorParams, cache).ignitor,
-                envSustainLevel = this.envSustainLevel.buildIgnitor(ignitorParams, cache).ignitor,
-                envReleaseSec = this.envReleaseSec.buildIgnitor(ignitorParams, cache).ignitor,
+                attack = this.attack.buildIgnitor(ignitorParams, cache).ignitor,
+                decay = this.decay.buildIgnitor(ignitorParams, cache).ignitor,
+                sustain = this.sustain.buildIgnitor(ignitorParams, cache).ignitor,
+                release = this.release.buildIgnitor(ignitorParams, cache).ignitor,
                 freq = this.freq.buildIgnitor(ignitorParams, cache).ignitor,
             )
             val carrierBuilt = carrier.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, fmMod, node = this))
@@ -653,7 +653,7 @@ private fun IgnitorDsl.gatedOffAtUnity(ignitorParams: Map<String, Double>?, cach
  *
  * **The second bullet is a claim about the ENGINE, not a hope, and it had to be made true.** Round
  * 2 of this step's review found the counter-example inside the same change: `AdsrIgnitor` is not
- * block-constant, so it folds, and a non-finite `sustainLevel` or `expK` (a knob removed in step
+ * block-constant, so it folds, and a non-finite `sustain` or `expK` (a knob removed in step
  * 3c) used to multiply NaN into every sample. Before the fold `TimesIgnitor`'s scrub turned that into silence; after it the NaN
  * would travel, and "a later stage guards it" is false for a unity `mul` placed after an envelope
  * at the END of a tail (an authored `adsr(...).mul(slot)`; `classic()` itself places no pregain, and
@@ -722,10 +722,10 @@ private fun IgnitorDsl.gatedOffWhenUnset(ignitorParams: Map<String, Double>?, ca
  */
 private fun filterEnvDef(
     env: IgnitorDsl,
-    attackSec: IgnitorDsl,
-    decaySec: IgnitorDsl,
-    sustainLevel: IgnitorDsl,
-    releaseSec: IgnitorDsl,
+    attack: IgnitorDsl,
+    decay: IgnitorDsl,
+    sustain: IgnitorDsl,
+    release: IgnitorDsl,
     attackCurve: IgnitorDsl,
     decayCurve: IgnitorDsl,
     releaseCurve: IgnitorDsl,
@@ -737,7 +737,7 @@ private fun filterEnvDef(
     // THE SLOT-LAYER FILL (phase 3 step 5, maintainer 2026-09-25): an UNSET depth slot the bag did not
     // write takes the shared depth when any of the four STAGE knobs is written, the strip's `depth ?: 7`.
     // See `writtenIn` for what "written" means, and `slotLayerDepth` for the whole rule.
-    val depth = slotLayerDepth(authoredDepth = authoredDepth, env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, ignitorParams = ignitorParams)
+    val depth = slotLayerDepth(authoredDepth = authoredDepth, env = env, attack = attack, decay = decay, sustain = sustain, release = release, ignitorParams = ignitorParams)
 
     // The depth is the switch: with no sweep the four stage knobs are inert, and not reading
     // them keeps a filter without an envelope exactly as cheap to build as it was.
@@ -747,10 +747,10 @@ private fun filterEnvDef(
 
     return FilterEnvDef(
         depth = depth,
-        attackSec = attackSec.filterEnvKnob(ignitorParams, cache, FILTER_ENV_ATTACK_SEC),
-        decaySec = decaySec.filterEnvKnob(ignitorParams, cache, FILTER_ENV_DECAY_SEC),
-        sustainLevel = sustainLevel.filterEnvKnob(ignitorParams, cache, FILTER_ENV_SUSTAIN_LEVEL),
-        releaseSec = releaseSec.filterEnvKnob(ignitorParams, cache, FILTER_ENV_RELEASE_SEC),
+        attack = attack.filterEnvKnob(ignitorParams, cache, FILTER_ENV_ATTACK_SEC),
+        decay = decay.filterEnvKnob(ignitorParams, cache, FILTER_ENV_DECAY_SEC),
+        sustain = sustain.filterEnvKnob(ignitorParams, cache, FILTER_ENV_SUSTAIN_LEVEL),
+        release = release.filterEnvKnob(ignitorParams, cache, FILTER_ENV_RELEASE_SEC),
         // Index knobs since step 3c, read the same leaf-only way: no build, no draw.
         attackCurve = attackCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
         decayCurve = decayCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
@@ -786,10 +786,10 @@ private fun filterEnvDef(
 private fun slotLayerDepth(
     authoredDepth: Double,
     env: IgnitorDsl,
-    attackSec: IgnitorDsl,
-    decaySec: IgnitorDsl,
-    sustainLevel: IgnitorDsl,
-    releaseSec: IgnitorDsl,
+    attack: IgnitorDsl,
+    decay: IgnitorDsl,
+    sustain: IgnitorDsl,
+    release: IgnitorDsl,
     ignitorParams: Map<String, Double>?,
 ): Double {
     // Only an UNSET depth slot is a question: a `Param` whose DEFAULT is the non-finite sentinel,
@@ -800,8 +800,8 @@ private fun slotLayerDepth(
         return authoredDepth
     }
 
-    val aStageIsWritten = attackSec.writtenIn(ignitorParams) || decaySec.writtenIn(ignitorParams) ||
-        sustainLevel.writtenIn(ignitorParams) || releaseSec.writtenIn(ignitorParams)
+    val aStageIsWritten = attack.writtenIn(ignitorParams) || decay.writtenIn(ignitorParams) ||
+        sustain.writtenIn(ignitorParams) || release.writtenIn(ignitorParams)
 
     return if (aStageIsWritten) FILTER_ENV_DEPTH_SEMITONES else authoredDepth
 }
@@ -1372,7 +1372,7 @@ private fun IgnitorDsl.buildRaw(
             // and hoisting it would change the memo's shape for the whole voice.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
+                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
             val n = passes.passesKnob(ignitorParams, cache)
@@ -1397,7 +1397,7 @@ private fun IgnitorDsl.buildRaw(
             // order and the same one shared lane for the whole cascade.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
+                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
             val n = passes.passesKnob(ignitorParams, cache)
@@ -1433,7 +1433,7 @@ private fun IgnitorDsl.buildRaw(
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
+                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
             built.bandpass(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
@@ -1445,7 +1445,7 @@ private fun IgnitorDsl.buildRaw(
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
+                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
             built.notch(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
@@ -1480,7 +1480,7 @@ private fun IgnitorDsl.buildRaw(
         // built BY DEFAULT, and only an explicit `adsrOff` (filled into `on` by `classic()`) switches it
         // off. See `switchedOff`.
         //
-        // OFF keeps the voice's LIFETIME: the envelope would have released over `releaseSec`, the
+        // OFF keeps the voice's LIFETIME: the envelope would have released over `release`, the
         // strip's `adsrOff` kept that lifetime (fading over the last frames of it, the teardown fade the
         // voice now appends), and step 6's identity depended on the node doing the same. So the signal skips the stage
         // but the tail is still reported, read the build-time way (see `offEnvelopeTail`). The
@@ -1489,17 +1489,17 @@ private fun IgnitorDsl.buildRaw(
         // authored static-release envelope with nothing built over it.
         is IgnitorDsl.Adsr -> if (on.switchedOff(ignitorParams, cache)) {
             val signal = inner.passThrough()
-            spineTail = maxTail(a = spineTail, b = releaseSec.offEnvelopeTail(ignitorParams, cache))
+            spineTail = maxTail(a = spineTail, b = release.offEnvelopeTail(ignitorParams, cache))
             signal
         } else {
             // Order matters and is unchanged: build order IS rng draw order (IgniteContext.random),
             // so inner / attack / decay / sustain / release / declick stay in sequence. The switch
             // and the three curves are read leaf-only and build nothing, so they draw nothing.
             val innerIgnitor = inner.withMod()
-            val attack = attackSec.noMod()
-            val decay = decaySec.noMod()
-            val sustain = sustainLevel.noMod()
-            val release = releaseSec.noMod()
+            val attackIgn = attack.noMod()
+            val decayIgn = decay.noMod()
+            val sustainIgn = sustain.noMod()
+            val releaseIgn = release.noMod()
 
             // This node's own tail. controlRateValueOrNull folds Constant/Param leaves AND pointwise
             // expressions over them, so `pRel.mul(2)` and `Ignitor.freq().recip().mul(200)` resolve
@@ -1519,7 +1519,7 @@ private fun IgnitorDsl.buildRaw(
             //   its inner before it reaches the line below.
             // The samples of a NaN-released envelope are fine (`Double.toInt()` of a NaN is 0
             // frames); its TAIL is not.
-            val ownTail = release.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() }
+            val ownTail = releaseIgn.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() }
 
             spineTail = maxTail(a = spineTail, b = ownTail)
             // It ENDS the voice only with a release of static length: a modulated or non-finite release cannot
@@ -1529,14 +1529,14 @@ private fun IgnitorDsl.buildRaw(
             builtEnvelope = ownTail != null
 
             innerIgnitor.adsr(
-                attackSec = attack, decaySec = decay, sustainLevel = sustain, releaseSec = release,
+                attack = attackIgn, decay = decayIgn, sustain = sustainIgn, release = releaseIgn,
                 // Unset curve = "exp" on every stage of every AMPLITUDE envelope, on every door
                 // (maintainer decision, 2026-08-24), as the strip's VCA did. The modulation envelopes (filter cutoff, pitch) fall back to
                 // `MOD_ENV_CURVE` instead, which decision D3 sets.
                 attackCurve = attackCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
                 decayCurve = decayCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
                 releaseCurve = releaseCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
-                declickSeconds = declickSeconds.noMod(),
+                declick = declick.noMod(),
             )
         }
 

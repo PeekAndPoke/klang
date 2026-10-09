@@ -579,10 +579,10 @@ class RealtimeVoiceSpec : StringSpec({
                 playbackId = "rt", name = "heldorgan",
                 dsl = IgnitorDsl.Adsr(
                     inner = IgnitorDsl.Sine(),
-                    attackSec = IgnitorDsl.Constant(0.001),
-                    decaySec = IgnitorDsl.Constant(0.01),
-                    sustainLevel = IgnitorDsl.Constant(1.0),
-                    releaseSec = IgnitorDsl.Constant(0.06),
+                    attack = IgnitorDsl.Constant(0.001),
+                    decay = IgnitorDsl.Constant(0.01),
+                    sustain = IgnitorDsl.Constant(1.0),
+                    release = IgnitorDsl.Constant(0.06),
                 ),
             )
         )

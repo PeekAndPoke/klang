@@ -24,7 +24,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` shape on every envelope
+ * ONE `adsr(attack, decay, sustain, release, configure)` shape on every envelope
  * (phase 3 step 3c, maintainer, 2026-09-25), door against door, looping over the family: the chain
  * `adsr`, the four filters' cutoff envelope, the pitch envelope, and fm's index envelope.
  *
@@ -80,25 +80,25 @@ class KlangScriptEnvelopeDoorParitySpec : StringSpec({
         Envelope(
             "lowpass", MOD_ENV_CURVE,
             script = { call -> "Ignitor.saw().lowpass(800, x => x.$call)" },
-            kotlin = { a, d, r -> saw.lowpass(800.0, attackSec = 0.005, decaySec = 0.3, sustainLevel = 0.2, releaseSec = 0.05, attackCurve = a, decayCurve = d, releaseCurve = r) },
+            kotlin = { a, d, r -> saw.lowpass(800.0, attack = 0.005, decay = 0.3, sustain = 0.2, release = 0.05, attackCurve = a, decayCurve = d, releaseCurve = r) },
             curves = ::filterCurves,
         ),
         Envelope(
             "highpass", MOD_ENV_CURVE,
             script = { call -> "Ignitor.saw().highpass(800, x => x.$call)" },
-            kotlin = { a, d, r -> saw.highpass(800.0, attackSec = 0.005, decaySec = 0.3, sustainLevel = 0.2, releaseSec = 0.05, attackCurve = a, decayCurve = d, releaseCurve = r) },
+            kotlin = { a, d, r -> saw.highpass(800.0, attack = 0.005, decay = 0.3, sustain = 0.2, release = 0.05, attackCurve = a, decayCurve = d, releaseCurve = r) },
             curves = ::filterCurves,
         ),
         Envelope(
             "bandpass", MOD_ENV_CURVE,
             script = { call -> "Ignitor.saw().bandpass(800, x => x.$call)" },
-            kotlin = { a, d, r -> saw.bandpass(800.0, attackSec = 0.005, decaySec = 0.3, sustainLevel = 0.2, releaseSec = 0.05, attackCurve = a, decayCurve = d, releaseCurve = r) },
+            kotlin = { a, d, r -> saw.bandpass(800.0, attack = 0.005, decay = 0.3, sustain = 0.2, release = 0.05, attackCurve = a, decayCurve = d, releaseCurve = r) },
             curves = ::filterCurves,
         ),
         Envelope(
             "notch", MOD_ENV_CURVE,
             script = { call -> "Ignitor.saw().notch(800, x => x.$call)" },
-            kotlin = { a, d, r -> saw.notch(800.0, attackSec = 0.005, decaySec = 0.3, sustainLevel = 0.2, releaseSec = 0.05, attackCurve = a, decayCurve = d, releaseCurve = r) },
+            kotlin = { a, d, r -> saw.notch(800.0, attack = 0.005, decay = 0.3, sustain = 0.2, release = 0.05, attackCurve = a, decayCurve = d, releaseCurve = r) },
             curves = ::filterCurves,
         ),
         Envelope(
@@ -107,7 +107,7 @@ class KlangScriptEnvelopeDoorParitySpec : StringSpec({
             kotlin = { a, d, r ->
                 val base = IgnitorDsl.PitchEnvelope(
                     inner = saw, semitones = c(12.0),
-                    attackSec = c(0.005), decaySec = c(0.3), sustainLevel = c(0.2), releaseSec = c(0.05),
+                    attack = c(0.005), decay = c(0.3), sustain = c(0.2), release = c(0.05),
                 )
 
                 base.copy(
@@ -166,12 +166,27 @@ class KlangScriptEnvelopeDoorParitySpec : StringSpec({
         }
     }
 
+    "every envelope: the named arguments are the Kotlin door's words, attack, decay, sustain, release (Q21)" {
+        // Written in reverse order, so only the NAMES can put each value on its stage: a door that
+        // read them by position, or kept a name another door does not use, is red on its own row.
+        val named = "adsr(release = 0.05, sustain = 0.2, decay = 0.3, attack = 0.005)"
+
+        for (env in family) {
+            withClue(env.name) { ks(env.script(named)) shouldBe env.kotlin(null, null, null) }
+        }
+
+        withClue("fm") {
+            ks("Ignitor.saw().fm(Ignitor.sine(), 1.4, 300, x => x.$named)") shouldBe
+                    saw.fm(IgnitorDsl.Sine(), 1.4, 300.0, attack = 0.005, decay = 0.3, sustain = 0.2, release = 0.05)
+        }
+    }
+
     "the chain's lambda also de-clicks; the modulation envelopes' lambdas do not offer it" {
         ks("Ignitor.saw().adsr($stages, e => e.declick(0.0005))") shouldBe
-                saw.adsr(0.005, 0.3, 0.2, 0.05, declickSeconds = 0.0005)
+                saw.adsr(0.005, 0.3, 0.2, 0.05, declick = 0.0005)
 
         ks("""Ignitor.saw().adsr($stages, e => e.curves("lin", "exp", "exp").declick(0.001))""") shouldBe
-                saw.adsr(0.005, 0.3, 0.2, 0.05, AdsrCurve.Linear, AdsrCurve.Exponential, AdsrCurve.Exponential, declickSeconds = 0.001)
+                saw.adsr(0.005, 0.3, 0.2, 0.05, AdsrCurve.Linear, AdsrCurve.Exponential, AdsrCurve.Exponential, declick = 0.001)
 
         for (env in family.filter { it.name != "chain adsr" }) {
             withClue("${env.name} has no declick") {
@@ -183,13 +198,13 @@ class KlangScriptEnvelopeDoorParitySpec : StringSpec({
 
     "the Kotlin chain door: null keeps the node's defaults, so a bare call is today's node" {
         saw.adsr(0.01, 0.1, 0.7, 0.3) shouldBe IgnitorDsl.Adsr(
-            inner = saw, attackSec = c(0.01), decaySec = c(0.1), sustainLevel = c(0.7), releaseSec = c(0.3),
+            inner = saw, attack = c(0.01), decay = c(0.1), sustain = c(0.7), release = c(0.3),
         )
     }
 
     "fm: the index envelope takes the same four stages and NO lambda yet (no curve support)" {
         ks("Ignitor.saw().fm(Ignitor.sine(), 1.4, 300, x => x.adsr($stages))") shouldBe
-                saw.fm(IgnitorDsl.Sine(), 1.4, 300.0, envAttackSec = 0.005, envDecaySec = 0.3, envSustainLevel = 0.2, envReleaseSec = 0.05)
+                saw.fm(IgnitorDsl.Sine(), 1.4, 300.0, attack = 0.005, decay = 0.3, sustain = 0.2, release = 0.05)
 
         shouldThrowAny { ks("""Ignitor.saw().fm(Ignitor.sine(), 1.4, 300, x => x.adsr($stages, e => e.curves("lin")))""") }
             .message shouldContain "too many arguments (5, expected"

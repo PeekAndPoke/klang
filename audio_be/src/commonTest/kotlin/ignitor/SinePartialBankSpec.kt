@@ -361,7 +361,7 @@ class SinePartialBankSpec : StringSpec({
     }
 
     "the pitch envelope moves every partial: bank under PitchEnvelope == tree under PitchEnvelope" {
-        fun env(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner, semitones = c(12.0), attackSec = c(0.001), decaySec = c(0.02))
+        fun env(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(inner, semitones = c(12.0), attack = c(0.001), decay = c(0.02))
         val bank = env(IgnitorDsl.Sine(harmonics = c(2.0))).toExciter(random = testRandom)
         val tree = env(IgnitorDsl.Sine() + dslPartial(k = 2.0, g = 0.5) + dslPartial(k = 3.0, g = 1.0 / 3.0)).toExciter(random = testRandom)
         val a = render(bank, 110.0)

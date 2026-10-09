@@ -114,8 +114,8 @@ class PitchModSafetyTest : StringSpec({
     "pitch envelope with extreme amount stays finite" {
         // amount = 1000 semitones — way past Float pow overflow at envLevel=1.
         val sig = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("att", 0.01),
-            decaySec = ParamIgnitor("dec", 0.1),
+            attack = ParamIgnitor("att", 0.01),
+            decay = ParamIgnitor("dec", 0.1),
             semitones = ParamIgnitor("amt", 1000.0),
         )
         val out = render(sig)
@@ -125,8 +125,8 @@ class PitchModSafetyTest : StringSpec({
 
     "pitch envelope with zero amount outputs exactly 1.0" {
         val sig = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("att", 0.01),
-            decaySec = ParamIgnitor("dec", 0.1),
+            attack = ParamIgnitor("att", 0.01),
+            decay = ParamIgnitor("dec", 0.1),
             semitones = ParamIgnitor("amt", 0.0),
         )
         val out = render(sig)

@@ -174,7 +174,7 @@ object KlangScriptIgnitorExtensions {
      *
      * The door carries the filter's musical inputs, [freq] and [q]; everything else is a knob on
      * the [FilterBuilder] the lambda receives: `passes`, `analog`, `humanize`, and the cutoff
-     * envelope as `env(semitones)` plus ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec,
+     * envelope as `env(semitones)` plus ONE `adsr(attack, decay, sustain, release,
      * configure)` call, the chain `adsr`'s shape, whose own lambda shapes the stages with `curves`.
      * `env` and `adsr` are a compound pair: naming either switches the envelope on and the other
      * fills from the constants (`fillFilterEnvelope`, after the lambda).
@@ -202,7 +202,7 @@ object KlangScriptIgnitorExtensions {
 
         return self.lowpass(
             freq.toIgnitorDsl(), q.toIgnitorDsl(), coercePasses(k.passes), k.analog,
-            k.env, k.attackSec, k.decaySec, k.sustainLevel, k.releaseSec,
+            k.env, k.attack, k.decay, k.sustain, k.release,
             k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
         )
     }
@@ -223,7 +223,7 @@ object KlangScriptIgnitorExtensions {
 
         return self.highpass(
             freq.toIgnitorDsl(), q.toIgnitorDsl(), coercePasses(k.passes), k.analog,
-            k.env, k.attackSec, k.decaySec, k.sustainLevel, k.releaseSec,
+            k.env, k.attack, k.decay, k.sustain, k.release,
             k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
         )
     }
@@ -256,7 +256,7 @@ object KlangScriptIgnitorExtensions {
 
         return self.bandpass(
             freq.toIgnitorDsl(), q.toIgnitorDsl(), k.analog,
-            k.env, k.attackSec, k.decaySec, k.sustainLevel, k.releaseSec,
+            k.env, k.attack, k.decay, k.sustain, k.release,
             k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
         )
     }
@@ -328,7 +328,7 @@ object KlangScriptIgnitorExtensions {
 
         return self.notch(
             freq.toIgnitorDsl(), q.toIgnitorDsl(), k.analog,
-            k.env, k.attackSec, k.decaySec, k.sustainLevel, k.releaseSec,
+            k.env, k.attack, k.decay, k.sustain, k.release,
             k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
         )
     }
@@ -354,17 +354,17 @@ object KlangScriptIgnitorExtensions {
     @KlangScript.Method
     fun adsr(
         self: IgnitorDsl,
-        attackSec: IgnitorDslLike,
-        decaySec: IgnitorDslLike,
-        sustainLevel: IgnitorDslLike,
-        releaseSec: IgnitorDslLike,
+        attack: IgnitorDslLike,
+        decay: IgnitorDslLike,
+        sustain: IgnitorDslLike,
+        release: IgnitorDslLike,
         configure: ((AdsrBuilder) -> AdsrBuilder)? = null,
     ): IgnitorDsl {
         val k = AdsrBuilder().configuredBy("adsr", configure)
 
         return self.adsr(
-            attackSec.toIgnitorDsl(), decaySec.toIgnitorDsl(), sustainLevel.toIgnitorDsl(), releaseSec.toIgnitorDsl(),
-            k.attackCurve, k.decayCurve, k.releaseCurve, k.declickSeconds,
+            attack.toIgnitorDsl(), decay.toIgnitorDsl(), sustain.toIgnitorDsl(), release.toIgnitorDsl(),
+            k.attackCurve, k.decayCurve, k.releaseCurve, k.declick,
         )
     }
 

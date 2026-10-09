@@ -196,9 +196,9 @@ sealed interface IgnitorDsl {
         val bipolar: IgnitorDsl = Param(name = "bipolar", default = 0.0)
         val brightness: IgnitorDsl = Param(name = "brightness", default = 0.5)
         val chaos: IgnitorDsl = Param(name = "chaos", default = 1.5)
-        val decay: IgnitorDsl = Param(name = "decay", default = 0.996)
-        val declickSeconds: IgnitorDsl = Param(name = "declickSeconds", default = 0.0)
         val color: IgnitorDsl = Param(name = "color", default = 0.0)
+        val decay: IgnitorDsl = Param(name = "decay", default = 0.996)
+        val declick: IgnitorDsl = Param(name = "declick", default = 0.0)
         val density: IgnitorDsl = Param(name = "density", default = 0.2)
         val depth: IgnitorDsl = Param(name = "depth", default = 0.02)
         val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
@@ -1393,7 +1393,7 @@ sealed interface IgnitorDsl {
     /**
      * SVF lowpass filter. Attenuates frequencies above the cutoff; [passes] cascades the stage.
      *
-     * **The cutoff envelope ([env], [attackSec], [decaySec], [sustainLevel], [releaseSec]) and
+     * **The cutoff envelope ([env], [attack], [decay], [sustain], [release]) and
      * the per-voice [humanize] lane are documented once, here**, and the other three filter nodes
      * point at this block rather than repeating it.
      */
@@ -1434,7 +1434,7 @@ sealed interface IgnitorDsl {
          * **The node's field default is `0`, the DOOR's is not.** A door call that names any of
          * the five envelope knobs fills the companions it left out, this one included, from
          * `constants/FilterEnvelopeDefaults.kt` (see `fillFilterEnvelope`), so
-         * `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` is the audible pluck that
+         * `lowpass(800, decay = 0.3, sustain = 0.2)` is the audible pluck that
          * `lpf(800, decay = 0.3, sustain = 0.2)` is, not a silent no-op. Only a call that names
          * NOTHING leaves the envelope off. A hand-built node is a value, not a call, so it gets
          * the plain `0`.
@@ -1457,13 +1457,13 @@ sealed interface IgnitorDsl {
          */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds. Inert while [env] is `0`. */
-        val attackSec: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
+        val attack: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
         /** Cutoff-envelope decay in seconds. Inert while [env] is `0`. */
-        val decaySec: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
+        val decay: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
         /** Cutoff-envelope sustain share of [env], 0 to 1. Inert while [env] is `0`. */
-        val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        val sustain: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
         /** Cutoff-envelope release in seconds. Inert while [env] is `0`. */
-        val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        val release: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
         /**
          * Curve of the cutoff envelope's attack, the same six shapes as the chain's `adsr`, as an
          * INDEX into [AdsrCurves] (phase 3 step 3c: a knob, so a slot can carry it). Read ONCE at
@@ -1499,8 +1499,8 @@ sealed interface IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
             passes.collectParams(out)
-            env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
-            sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            env.collectParams(out); attack.collectParams(out); decay.collectParams(out)
+            sustain.collectParams(out); release.collectParams(out)
             attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
@@ -1518,13 +1518,13 @@ sealed interface IgnitorDsl {
         /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds; see [Lowpass.env]. */
-        val attackSec: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
+        val attack: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
         /** Cutoff-envelope decay in seconds; see [Lowpass.env]. */
-        val decaySec: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
+        val decay: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
         /** Cutoff-envelope sustain share of [env]; see [Lowpass.env]. */
-        val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        val sustain: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
-        val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        val release: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
         /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
         val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
@@ -1537,8 +1537,8 @@ sealed interface IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
             passes.collectParams(out)
-            env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
-            sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            env.collectParams(out); attack.collectParams(out); decay.collectParams(out)
+            sustain.collectParams(out); release.collectParams(out)
             attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
@@ -1571,13 +1571,13 @@ sealed interface IgnitorDsl {
         /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds; see [Lowpass.env]. */
-        val attackSec: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
+        val attack: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
         /** Cutoff-envelope decay in seconds; see [Lowpass.env]. */
-        val decaySec: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
+        val decay: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
         /** Cutoff-envelope sustain share of [env]; see [Lowpass.env]. */
-        val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        val sustain: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
-        val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        val release: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
         /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
         val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
@@ -1593,8 +1593,8 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
-            env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
-            sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            env.collectParams(out); attack.collectParams(out); decay.collectParams(out)
+            sustain.collectParams(out); release.collectParams(out)
             attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
@@ -1610,13 +1610,13 @@ sealed interface IgnitorDsl {
         /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds; see [Lowpass.env]. */
-        val attackSec: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
+        val attack: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
         /** Cutoff-envelope decay in seconds; see [Lowpass.env]. */
-        val decaySec: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
+        val decay: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
         /** Cutoff-envelope sustain share of [env]; see [Lowpass.env]. */
-        val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        val sustain: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
-        val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        val release: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
         /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
         val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
@@ -1628,8 +1628,8 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
-            env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
-            sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            env.collectParams(out); attack.collectParams(out); decay.collectParams(out)
+            sustain.collectParams(out); release.collectParams(out)
             attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
@@ -1832,10 +1832,10 @@ sealed interface IgnitorDsl {
     @WireName("adsr")
     data class Adsr(
         val inner: IgnitorDsl,
-        val attackSec: IgnitorDsl = Constant(0.01),
-        val decaySec: IgnitorDsl = Constant(0.1),
-        val sustainLevel: IgnitorDsl = Constant(ADSR_SUSTAIN_LEVEL),
-        val releaseSec: IgnitorDsl = Constant(0.3),
+        val attack: IgnitorDsl = Constant(0.01),
+        val decay: IgnitorDsl = Constant(0.1),
+        val sustain: IgnitorDsl = Constant(ADSR_SUSTAIN_LEVEL),
+        val release: IgnitorDsl = Constant(0.3),
         /**
          * Curve of the attack, as an INDEX into [AdsrCurves] (phase 3 step 3c: a knob, so a slot can
          * carry it). Read ONCE at voice build from a [Param] or [Constant] leaf; a non-leaf, a
@@ -1848,12 +1848,12 @@ sealed interface IgnitorDsl {
         /** Curve of the release; see [attackCurve]. */
         val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(AdsrCurve.Default)),
         /**
-         * De-click smoothing on the final gain, in seconds (`Slots.declickSeconds`, default `0` = off:
+         * De-click smoothing on the final gain, in seconds (`Slots.declick`, default `0` = off:
          * this per-ignitor envelope is intentionally not de-clicked). `>0` runs a one-pole low-pass on
          * the gain that rounds the C1 corners at segment joins (attack to decay peak, gate-off, cutoff),
          * killing the low-note "plop" the same way the amp VCA does. `ignitorParam`-addressable / patternable.
          */
-        val declickSeconds: IgnitorDsl = Slots.declickSeconds,
+        val declick: IgnitorDsl = Slots.declick,
         /**
          * The envelope's ON/OFF switch, read ONCE at voice build from a [Param] or [Constant] leaf.
          * OFF is exactly `0.0`; anything else is ON, and so is UNSET (a non-finite value) and a
@@ -1876,10 +1876,10 @@ sealed interface IgnitorDsl {
         val on: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
-            sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            inner.collectParams(out); attack.collectParams(out); decay.collectParams(out)
+            sustain.collectParams(out); release.collectParams(out)
             attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
-            declickSeconds.collectParams(out); on.collectParams(out)
+            declick.collectParams(out); on.collectParams(out)
         }
     }
 
@@ -1898,10 +1898,10 @@ sealed interface IgnitorDsl {
         val modulator: IgnitorDsl,
         val ratio: IgnitorDsl = Constant(FM_RATIO),
         val depth: IgnitorDsl = Constant(0.0),
-        val envAttackSec: IgnitorDsl = Constant(0.0),
-        val envDecaySec: IgnitorDsl = Constant(0.0),
-        val envSustainLevel: IgnitorDsl = Constant(1.0),
-        val envReleaseSec: IgnitorDsl = Constant(0.0),
+        val attack: IgnitorDsl = Constant(0.0),
+        val decay: IgnitorDsl = Constant(0.0),
+        val sustain: IgnitorDsl = Constant(1.0),
+        val release: IgnitorDsl = Constant(0.0),
         /** The frequency the FM machinery runs on: the modulator is driven at `freq x ratio`
          *  and the index is `depth / freq`. Defaults to [Freq] (the note), which makes FM
          *  transpose under `detune` like any note-pitched oscillator; authored absolute
@@ -1915,7 +1915,7 @@ sealed interface IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             carrier.collectParams(out); modulator.collectParams(out); ratio.collectParams(out); depth.collectParams(out)
             freq.collectParams(out)
-            envAttackSec.collectParams(out); envDecaySec.collectParams(out); envSustainLevel.collectParams(out); envReleaseSec.collectParams(
+            attack.collectParams(out); decay.collectParams(out); sustain.collectParams(out); release.collectParams(
                 out
             )
             freq.collectParams(out)
@@ -2196,8 +2196,8 @@ sealed interface IgnitorDsl {
      * Pitch envelope: an ADSR on the pitch, the same pattern as the chain's own `adsr`, for kick
      * drum sweeps, laser effects and other transient pitch gestures.
      *
-     * The level rises from 0 to 1 over [attackSec], falls to [sustainLevel] over [decaySec],
-     * holds, and from the gate's end falls from wherever it is back to 0 over [releaseSec]. The
+     * The level rises from 0 to 1 over [attack], falls to [sustain] over [decay],
+     * holds, and from the gate's end falls from wherever it is back to 0 over [release]. The
      * pitch is `2^(semitones * level / 12)`, so a level of 0 is the note itself. The release does
      * NOT extend the voice's life: a pitch release longer than the amp envelope's is cut off with
      * the voice, and release `0` returns to the note at the gate's end.
@@ -2209,7 +2209,7 @@ sealed interface IgnitorDsl {
      *
      * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
      *   +12 sweeps from an octave up, -24 from two octaves down.
-     * @param sustainLevel the held level, a share of [semitones]; 0 (the default) returns to the
+     * @param sustain the held level, a share of [semitones]; 0 (the default) returns to the
      *   note after the decay. Not clamped: the Motor stays raw. A non-finite one reads as unset (0),
      *   the chain `adsr`'s rule.
      * @param attackCurve curve of the attack, as an INDEX into [AdsrCurves], read once at build
@@ -2224,17 +2224,17 @@ sealed interface IgnitorDsl {
     data class PitchEnvelope(
         val inner: IgnitorDsl,
         val semitones: IgnitorDsl = Constant(0.0),
-        val attackSec: IgnitorDsl = Constant(PITCH_ENV_ATTACK_SEC),
-        val decaySec: IgnitorDsl = Constant(PITCH_ENV_DECAY_SEC),
-        val sustainLevel: IgnitorDsl = Constant(PITCH_ENV_SUSTAIN_LEVEL),
-        val releaseSec: IgnitorDsl = Constant(PITCH_ENV_RELEASE_SEC),
+        val attack: IgnitorDsl = Constant(PITCH_ENV_ATTACK_SEC),
+        val decay: IgnitorDsl = Constant(PITCH_ENV_DECAY_SEC),
+        val sustain: IgnitorDsl = Constant(PITCH_ENV_SUSTAIN_LEVEL),
+        val release: IgnitorDsl = Constant(PITCH_ENV_RELEASE_SEC),
         val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         val decayCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); semitones.collectParams(out); attackSec.collectParams(out)
-            decaySec.collectParams(out); sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            inner.collectParams(out); semitones.collectParams(out); attack.collectParams(out)
+            decay.collectParams(out); sustain.collectParams(out); release.collectParams(out)
             attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
@@ -2468,10 +2468,10 @@ fun IgnitorDsl.detune(semitones: Double) = IgnitorDsl.Detune(
  */
 data class FilterEnvelopeKnobs(
     val env: IgnitorDsl,
-    val attackSec: IgnitorDsl,
-    val decaySec: IgnitorDsl,
-    val sustainLevel: IgnitorDsl,
-    val releaseSec: IgnitorDsl,
+    val attack: IgnitorDsl,
+    val decay: IgnitorDsl,
+    val sustain: IgnitorDsl,
+    val release: IgnitorDsl,
 )
 
 /**
@@ -2482,13 +2482,13 @@ data class FilterEnvelopeKnobs(
  * per param, at the door, everywhere". What THIS door does under it: the filter envelope has no
  * NAME knob, so ANY of its five knobs names the stage, and a call that names one writes every
  * companion it left out from `audio_bridge/constants/FilterEnvelopeDefaults.kt`. `env` (the DEPTH)
- * is a companion like the rest, which is what makes `lowpass(800, decaySec = 0.3,
- * sustainLevel = 0.2)` an audible pluck instead of a silent no-op.
+ * is a companion like the rest, which is what makes `lowpass(800, decay = 0.3,
+ * sustain = 0.2)` an audible pluck instead of a silent no-op.
  *
  * It exists because the sprudel door behaves that way and the two surfaces have to agree: a
  * pattern that writes ANY of the `lpf.*` envelope stage slots but no depth gets
  * [FILTER_ENV_DEPTH_SEMITONES] from the runtime's slot-layer depth fill (`slotLayerDepth` in
- * `audio_be/.../IgnitorDslRuntime.kt`). `lpf(800, decay = 0.3, sustain = 0.2)` is a pluck, so `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` has to be a pluck too, with the
+ * `audio_be/.../IgnitorDslRuntime.kt`). `lpf(800, decay = 0.3, sustain = 0.2)` is a pluck, so `lowpass(800, decay = 0.3, sustain = 0.2)` has to be a pluck too, with the
  * same depth and the same stage times, and (decision D3) the same default curve through them,
  * `MOD_ENV_CURVE`; see [IgnitorDsl.Lowpass.env].
  *
@@ -2501,22 +2501,22 @@ data class FilterEnvelopeKnobs(
  */
 fun fillFilterEnvelope(
     env: IgnitorDsl?,
-    attackSec: IgnitorDsl?,
-    decaySec: IgnitorDsl?,
-    sustainLevel: IgnitorDsl?,
-    releaseSec: IgnitorDsl?,
+    attack: IgnitorDsl?,
+    decay: IgnitorDsl?,
+    sustain: IgnitorDsl?,
+    release: IgnitorDsl?,
 ): FilterEnvelopeKnobs {
     val namesTheStage =
-        env != null || attackSec != null || decaySec != null || sustainLevel != null || releaseSec != null
+        env != null || attack != null || decay != null || sustain != null || release != null
 
     return FilterEnvelopeKnobs(
         // The depth is a companion, not a gate: only a call that names NO knob at all leaves the
         // envelope off.
         env = env ?: if (namesTheStage) IgnitorDsl.Constant(FILTER_ENV_DEPTH_SEMITONES) else IgnitorDsl.Constant(0.0),
-        attackSec = attackSec ?: IgnitorDsl.Constant(FILTER_ENV_ATTACK_SEC),
-        decaySec = decaySec ?: IgnitorDsl.Constant(FILTER_ENV_DECAY_SEC),
-        sustainLevel = sustainLevel ?: IgnitorDsl.Constant(FILTER_ENV_SUSTAIN_LEVEL),
-        releaseSec = releaseSec ?: IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC),
+        attack = attack ?: IgnitorDsl.Constant(FILTER_ENV_ATTACK_SEC),
+        decay = decay ?: IgnitorDsl.Constant(FILTER_ENV_DECAY_SEC),
+        sustain = sustain ?: IgnitorDsl.Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        release = release ?: IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC),
     )
 }
 
@@ -2543,8 +2543,8 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * what `classic()` does (a recorded two-door asymmetry, the `shape`/`distort` precedent of step 3b).
  * The five envelope knobs are a COMPOUND DOOR (`/dsl-design` section 4): `null` means the call
  * did not name that knob, and naming ANY of them fills the others from
- * `constants/FilterEnvelopeDefaults.kt`, `env` included. So `lowpass(800.0, decaySec = 0.3,
- * sustainLevel = 0.2)` is the pluck `lpf(800, decay = 0.3, sustain = 0.2)` is, and a call that
+ * `constants/FilterEnvelopeDefaults.kt`, `env` included. So `lowpass(800.0, decay = 0.3,
+ * sustain = 0.2)` is the pluck `lpf(800, decay = 0.3, sustain = 0.2)` is, and a call that
  * names none of them is the filter this door built before the knobs existed.
  *
  * @param env Cutoff-envelope DEPTH in semitones. Named alone it sweeps with the constant stage
@@ -2552,10 +2552,10 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * [FILTER_ENV_DEPTH_SEMITONES]; left out of a call that names none of the five it is `0`, which
  * is the node's "no envelope". See [IgnitorDsl.Lowpass.env], which also says which envelope law
  * this is.
- * @param attackSec Cutoff-envelope attack in seconds. Inert when the envelope is off.
- * @param decaySec Cutoff-envelope decay in seconds. Needs a [sustainLevel] below 1 to be audible.
- * @param sustainLevel Cutoff-envelope sustain share of [env], 0 to 1.
- * @param releaseSec Cutoff-envelope release in seconds. It does NOT extend the voice's lifetime,
+ * @param attack Cutoff-envelope attack in seconds. Inert when the envelope is off.
+ * @param decay Cutoff-envelope decay in seconds. Needs a [sustain] below 1 to be audible.
+ * @param sustain Cutoff-envelope sustain share of [env], 0 to 1.
+ * @param release Cutoff-envelope release in seconds. It does NOT extend the voice's lifetime,
  * on either surface: a filter release longer than the amp envelope's is cut off with the voice.
  * @param attackCurve Curve of the envelope's attack, as its [AdsrCurves] index knob (a constant or a
  * slot); `null` is `MOD_ENV_CURVE` (see [IgnitorDsl.Lowpass.attackCurve]). The scalar overload takes
@@ -2571,7 +2571,7 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * script builders, so the script door `lowpass(freq, q, configure)` collects its builder's knobs
  * and calls THIS function after the lambda, which is where the compound fill runs, once, for both
  * doors. The one asymmetry: here the four stage times can be named one at a time, while the
- * builder's `adsr(attackSec, decaySec, sustainLevel, releaseSec)` names all four at once; every
+ * builder's `adsr(attack, decay, sustain, release)` names all four at once; every
  * builder call is therefore one call of this door.
  */
 fun IgnitorDsl.lowpass(
@@ -2580,16 +2580,16 @@ fun IgnitorDsl.lowpass(
     passes: Int = 1,
     analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
     env: IgnitorDsl? = null,
-    attackSec: IgnitorDsl? = null,
-    decaySec: IgnitorDsl? = null,
-    sustainLevel: IgnitorDsl? = null,
-    releaseSec: IgnitorDsl? = null,
+    attack: IgnitorDsl? = null,
+    decay: IgnitorDsl? = null,
+    sustain: IgnitorDsl? = null,
+    release: IgnitorDsl? = null,
     attackCurve: IgnitorDsl? = null,
     decayCurve: IgnitorDsl? = null,
     releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Lowpass {
-    val envelope = fillFilterEnvelope(env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec)
+    val envelope = fillFilterEnvelope(env = env, attack = attack, decay = decay, sustain = sustain, release = release)
 
     return IgnitorDsl.Lowpass(
         inner = this,
@@ -2598,10 +2598,10 @@ fun IgnitorDsl.lowpass(
         analog = analog,
         passes = IgnitorDsl.Constant(passes.toDouble()),
         env = envelope.env,
-        attackSec = envelope.attackSec,
-        decaySec = envelope.decaySec,
-        sustainLevel = envelope.sustainLevel,
-        releaseSec = envelope.releaseSec,
+        attack = envelope.attack,
+        decay = envelope.decay,
+        sustain = envelope.sustain,
+        release = envelope.release,
         attackCurve = attackCurve ?: modEnvCurveKnob(),
         decayCurve = decayCurve ?: modEnvCurveKnob(),
         releaseCurve = releaseCurve ?: modEnvCurveKnob(),
@@ -2616,17 +2616,17 @@ fun IgnitorDsl.lowpass(
     passes: Int = 1,
     analog: Double = 0.0,
     env: Double? = null,
-    attackSec: Double? = null,
-    decaySec: Double? = null,
-    sustainLevel: Double? = null,
-    releaseSec: Double? = null,
+    attack: Double? = null,
+    decay: Double? = null,
+    sustain: Double? = null,
+    release: Double? = null,
     attackCurve: AdsrCurve? = null,
     decayCurve: AdsrCurve? = null,
     releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Lowpass = lowpass(
     freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), passes = passes, analog = IgnitorDsl.Constant(analog),
-    env = env.asKnob(), attackSec = attackSec.asKnob(), decaySec = decaySec.asKnob(), sustainLevel = sustainLevel.asKnob(), releaseSec = releaseSec.asKnob(),
+    env = env.asKnob(), attack = attack.asKnob(), decay = decay.asKnob(), sustain = sustain.asKnob(), release = release.asKnob(),
     attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), humanize = humanize,
 )
 
@@ -2641,16 +2641,16 @@ fun IgnitorDsl.highpass(
     passes: Int = 1,
     analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
     env: IgnitorDsl? = null,
-    attackSec: IgnitorDsl? = null,
-    decaySec: IgnitorDsl? = null,
-    sustainLevel: IgnitorDsl? = null,
-    releaseSec: IgnitorDsl? = null,
+    attack: IgnitorDsl? = null,
+    decay: IgnitorDsl? = null,
+    sustain: IgnitorDsl? = null,
+    release: IgnitorDsl? = null,
     attackCurve: IgnitorDsl? = null,
     decayCurve: IgnitorDsl? = null,
     releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Highpass {
-    val envelope = fillFilterEnvelope(env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec)
+    val envelope = fillFilterEnvelope(env = env, attack = attack, decay = decay, sustain = sustain, release = release)
 
     return IgnitorDsl.Highpass(
         inner = this,
@@ -2659,10 +2659,10 @@ fun IgnitorDsl.highpass(
         analog = analog,
         passes = IgnitorDsl.Constant(passes.toDouble()),
         env = envelope.env,
-        attackSec = envelope.attackSec,
-        decaySec = envelope.decaySec,
-        sustainLevel = envelope.sustainLevel,
-        releaseSec = envelope.releaseSec,
+        attack = envelope.attack,
+        decay = envelope.decay,
+        sustain = envelope.sustain,
+        release = envelope.release,
         attackCurve = attackCurve ?: modEnvCurveKnob(),
         decayCurve = decayCurve ?: modEnvCurveKnob(),
         releaseCurve = releaseCurve ?: modEnvCurveKnob(),
@@ -2677,17 +2677,17 @@ fun IgnitorDsl.highpass(
     passes: Int = 1,
     analog: Double = 0.0,
     env: Double? = null,
-    attackSec: Double? = null,
-    decaySec: Double? = null,
-    sustainLevel: Double? = null,
-    releaseSec: Double? = null,
+    attack: Double? = null,
+    decay: Double? = null,
+    sustain: Double? = null,
+    release: Double? = null,
     attackCurve: AdsrCurve? = null,
     decayCurve: AdsrCurve? = null,
     releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Highpass = highpass(
     freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), passes = passes, analog = IgnitorDsl.Constant(analog),
-    env = env.asKnob(), attackSec = attackSec.asKnob(), decaySec = decaySec.asKnob(), sustainLevel = sustainLevel.asKnob(), releaseSec = releaseSec.asKnob(),
+    env = env.asKnob(), attack = attack.asKnob(), decay = decay.asKnob(), sustain = sustain.asKnob(), release = release.asKnob(),
     attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), humanize = humanize,
 )
 
@@ -2793,16 +2793,16 @@ fun IgnitorDsl.bandpass(
     q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
     env: IgnitorDsl? = null,
-    attackSec: IgnitorDsl? = null,
-    decaySec: IgnitorDsl? = null,
-    sustainLevel: IgnitorDsl? = null,
-    releaseSec: IgnitorDsl? = null,
+    attack: IgnitorDsl? = null,
+    decay: IgnitorDsl? = null,
+    sustain: IgnitorDsl? = null,
+    release: IgnitorDsl? = null,
     attackCurve: IgnitorDsl? = null,
     decayCurve: IgnitorDsl? = null,
     releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Bandpass {
-    val envelope = fillFilterEnvelope(env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec)
+    val envelope = fillFilterEnvelope(env = env, attack = attack, decay = decay, sustain = sustain, release = release)
 
     return IgnitorDsl.Bandpass(
         inner = this,
@@ -2810,10 +2810,10 @@ fun IgnitorDsl.bandpass(
         q = q,
         analog = analog,
         env = envelope.env,
-        attackSec = envelope.attackSec,
-        decaySec = envelope.decaySec,
-        sustainLevel = envelope.sustainLevel,
-        releaseSec = envelope.releaseSec,
+        attack = envelope.attack,
+        decay = envelope.decay,
+        sustain = envelope.sustain,
+        release = envelope.release,
         attackCurve = attackCurve ?: modEnvCurveKnob(),
         decayCurve = decayCurve ?: modEnvCurveKnob(),
         releaseCurve = releaseCurve ?: modEnvCurveKnob(),
@@ -2827,17 +2827,17 @@ fun IgnitorDsl.bandpass(
     q: Double = 0.707,
     analog: Double = 0.0,
     env: Double? = null,
-    attackSec: Double? = null,
-    decaySec: Double? = null,
-    sustainLevel: Double? = null,
-    releaseSec: Double? = null,
+    attack: Double? = null,
+    decay: Double? = null,
+    sustain: Double? = null,
+    release: Double? = null,
     attackCurve: AdsrCurve? = null,
     decayCurve: AdsrCurve? = null,
     releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Bandpass = bandpass(
     freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), analog = IgnitorDsl.Constant(analog),
-    env = env.asKnob(), attackSec = attackSec.asKnob(), decaySec = decaySec.asKnob(), sustainLevel = sustainLevel.asKnob(), releaseSec = releaseSec.asKnob(),
+    env = env.asKnob(), attack = attack.asKnob(), decay = decay.asKnob(), sustain = sustain.asKnob(), release = release.asKnob(),
     attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), humanize = humanize,
 )
 
@@ -2846,16 +2846,16 @@ fun IgnitorDsl.notch(
     q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
     env: IgnitorDsl? = null,
-    attackSec: IgnitorDsl? = null,
-    decaySec: IgnitorDsl? = null,
-    sustainLevel: IgnitorDsl? = null,
-    releaseSec: IgnitorDsl? = null,
+    attack: IgnitorDsl? = null,
+    decay: IgnitorDsl? = null,
+    sustain: IgnitorDsl? = null,
+    release: IgnitorDsl? = null,
     attackCurve: IgnitorDsl? = null,
     decayCurve: IgnitorDsl? = null,
     releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Notch {
-    val envelope = fillFilterEnvelope(env = env, attackSec = attackSec, decaySec = decaySec, sustainLevel = sustainLevel, releaseSec = releaseSec)
+    val envelope = fillFilterEnvelope(env = env, attack = attack, decay = decay, sustain = sustain, release = release)
 
     return IgnitorDsl.Notch(
         inner = this,
@@ -2863,10 +2863,10 @@ fun IgnitorDsl.notch(
         q = q,
         analog = analog,
         env = envelope.env,
-        attackSec = envelope.attackSec,
-        decaySec = envelope.decaySec,
-        sustainLevel = envelope.sustainLevel,
-        releaseSec = envelope.releaseSec,
+        attack = envelope.attack,
+        decay = envelope.decay,
+        sustain = envelope.sustain,
+        release = envelope.release,
         attackCurve = attackCurve ?: modEnvCurveKnob(),
         decayCurve = decayCurve ?: modEnvCurveKnob(),
         releaseCurve = releaseCurve ?: modEnvCurveKnob(),
@@ -2880,17 +2880,17 @@ fun IgnitorDsl.notch(
     q: Double = 0.707,
     analog: Double = 0.0,
     env: Double? = null,
-    attackSec: Double? = null,
-    decaySec: Double? = null,
-    sustainLevel: Double? = null,
-    releaseSec: Double? = null,
+    attack: Double? = null,
+    decay: Double? = null,
+    sustain: Double? = null,
+    release: Double? = null,
     attackCurve: AdsrCurve? = null,
     decayCurve: AdsrCurve? = null,
     releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Notch = notch(
     freq = IgnitorDsl.Constant(freq), q = IgnitorDsl.Constant(q), analog = IgnitorDsl.Constant(analog),
-    env = env.asKnob(), attackSec = attackSec.asKnob(), decaySec = decaySec.asKnob(), sustainLevel = sustainLevel.asKnob(), releaseSec = releaseSec.asKnob(),
+    env = env.asKnob(), attack = attack.asKnob(), decay = decay.asKnob(), sustain = sustain.asKnob(), release = release.asKnob(),
     attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), humanize = humanize,
 )
 
@@ -2926,53 +2926,53 @@ fun IgnitorDsl.shape(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.S
  *   `null` keeps the node's default, [AdsrCurve.Default] (exponential).
  * @param decayCurve curve of the decay; see [attackCurve].
  * @param releaseCurve curve of the release; see [attackCurve].
- * @param declickSeconds the de-click one-pole on the gain, in seconds; `null` keeps the node's
- *   default, the `declickSeconds` slot (0 = off). See [IgnitorDsl.Adsr.declickSeconds].
+ * @param declick the de-click one-pole on the gain, in seconds; `null` keeps the node's
+ *   default, the `declick` slot (0 = off). See [IgnitorDsl.Adsr.declick].
  *
  * This flat signature is the ENGINE-LEVEL Kotlin door, the filter doors' precedent: `audio_bridge`
  * cannot see the script builders, so the script door `adsr(a, d, s, r, e => e.curves(...).declick(...))`
- * collects its builder's knobs and calls THIS function. The builder's `declick` is `declickSeconds`
- * here, the node's name: the prefix drops inside a builder only (`/dsl-design` section 2). The
+ * collects its builder's knobs and calls THIS function. The builder's `declick` is this function's
+ * `declick` and the node's: one word on every door, the unit in the KDoc (`/dsl-design` section 4). The
  * envelope's ON/OFF switch is not on either door ([IgnitorDsl.Adsr.on]).
  */
 fun IgnitorDsl.adsr(
-    attackSec: IgnitorDsl,
-    decaySec: IgnitorDsl,
-    sustainLevel: IgnitorDsl,
-    releaseSec: IgnitorDsl,
+    attack: IgnitorDsl,
+    decay: IgnitorDsl,
+    sustain: IgnitorDsl,
+    release: IgnitorDsl,
     attackCurve: IgnitorDsl? = null,
     decayCurve: IgnitorDsl? = null,
     releaseCurve: IgnitorDsl? = null,
-    declickSeconds: IgnitorDsl? = null,
+    declick: IgnitorDsl? = null,
 ): IgnitorDsl.Adsr {
     val defaults = IgnitorDsl.Adsr(inner = this)
 
     return defaults.copy(
-        attackSec = attackSec,
-        decaySec = decaySec,
-        sustainLevel = sustainLevel,
-        releaseSec = releaseSec,
+        attack = attack,
+        decay = decay,
+        sustain = sustain,
+        release = release,
         attackCurve = attackCurve ?: defaults.attackCurve,
         decayCurve = decayCurve ?: defaults.decayCurve,
         releaseCurve = releaseCurve ?: defaults.releaseCurve,
-        declickSeconds = declickSeconds ?: defaults.declickSeconds,
+        declick = declick ?: defaults.declick,
     )
 }
 
 /** Scalar convenience overload of [adsr]: the curves as [AdsrCurve]s, `null` for the default. */
 fun IgnitorDsl.adsr(
-    attackSec: Double,
-    decaySec: Double,
-    sustainLevel: Double,
-    releaseSec: Double,
+    attack: Double,
+    decay: Double,
+    sustain: Double,
+    release: Double,
     attackCurve: AdsrCurve? = null,
     decayCurve: AdsrCurve? = null,
     releaseCurve: AdsrCurve? = null,
-    declickSeconds: Double? = null,
+    declick: Double? = null,
 ): IgnitorDsl.Adsr = adsr(
-    attackSec = IgnitorDsl.Constant(attackSec), decaySec = IgnitorDsl.Constant(decaySec),
-    sustainLevel = IgnitorDsl.Constant(sustainLevel), releaseSec = IgnitorDsl.Constant(releaseSec),
-    attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), declickSeconds = declickSeconds.asKnob(),
+    attack = IgnitorDsl.Constant(attack), decay = IgnitorDsl.Constant(decay),
+    sustain = IgnitorDsl.Constant(sustain), release = IgnitorDsl.Constant(release),
+    attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), declick = declick.asKnob(),
 )
 
 // FM
@@ -2982,19 +2982,19 @@ fun IgnitorDsl.fm(
     modulator: IgnitorDsl,
     ratio: Double,
     depth: Double,
-    envAttackSec: Double = 0.0,
-    envDecaySec: Double = 0.0,
-    envSustainLevel: Double = 1.0,
-    envReleaseSec: Double = 0.0,
+    attack: Double = 0.0,
+    decay: Double = 0.0,
+    sustain: Double = 1.0,
+    release: Double = 0.0,
 ) = IgnitorDsl.Fm(
     carrier = this,
     modulator = modulator,
     ratio = IgnitorDsl.Constant(ratio),
     depth = IgnitorDsl.Constant(depth),
-    envAttackSec = IgnitorDsl.Constant(envAttackSec),
-    envDecaySec = IgnitorDsl.Constant(envDecaySec),
-    envSustainLevel = IgnitorDsl.Constant(envSustainLevel),
-    envReleaseSec = IgnitorDsl.Constant(envReleaseSec),
+    attack = IgnitorDsl.Constant(attack),
+    decay = IgnitorDsl.Constant(decay),
+    sustain = IgnitorDsl.Constant(sustain),
+    release = IgnitorDsl.Constant(release),
 )
 
 // Effects

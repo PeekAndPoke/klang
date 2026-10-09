@@ -122,11 +122,11 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         // `fastExp` and raises through `fastExp2`.
         val out = renderRuntime(
             pitchEnvelopeModIgnitor(
-                attackSec = ParamIgnitor("a", sec(a)),
-                decaySec = ParamIgnitor("d", sec(d)),
-                releaseSec = ParamIgnitor("r", sec(r)),
+                attack = ParamIgnitor("a", sec(a)),
+                decay = ParamIgnitor("d", sec(d)),
+                release = ParamIgnitor("r", sec(r)),
                 semitones = ParamIgnitor("st", 12.0),
-                sustainLevel = ParamIgnitor("s", s),
+                sustain = ParamIgnitor("s", s),
             ),
             freqHz = 220.0,
         )
@@ -137,8 +137,8 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
 
         // The node's own field defaults, through the whole build: the same as the curve named Exponential.
         val bare = IgnitorDsl.PitchEnvelope(
-            inner = saw, semitones = IgnitorDsl.Constant(12.0), attackSec = IgnitorDsl.Constant(sec(a)), decaySec = IgnitorDsl.Constant(sec(d)),
-            sustainLevel = IgnitorDsl.Constant(s), releaseSec = IgnitorDsl.Constant(sec(r)),
+            inner = saw, semitones = IgnitorDsl.Constant(12.0), attack = IgnitorDsl.Constant(sec(a)), decay = IgnitorDsl.Constant(sec(d)),
+            sustain = IgnitorDsl.Constant(s), release = IgnitorDsl.Constant(sec(r)),
         )
 
         renderDsl(bare) shouldBe renderDsl(bare.copy(attackCurve = expKnob, decayCurve = expKnob, releaseCurve = expKnob))

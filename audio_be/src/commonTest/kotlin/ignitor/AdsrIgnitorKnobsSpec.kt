@@ -21,7 +21,7 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * The opt-in de-click knob on the ignitor envelope `.adsr(...)`, `declickSeconds`, and the ONE
+ * The opt-in de-click knob on the ignitor envelope `.adsr(...)`, `declick`, and the ONE
  * curvature every exponential stage bends at since phase 3 step 3c removed the `expK` knob
  * (maintainer, 2026-09-25): `ADSR_EXP_K`.
  *
@@ -60,12 +60,12 @@ class AdsrIgnitorKnobsSpec : StringSpec({
 
     "defaults are behaviour-identical: bare adsr() == explicit declick=0" {
         val n = 22050
-        val bare = render(dc.adsr(attackSec = 0.05, decaySec = 0.2, sustainLevel = 0.4, releaseSec = 0.1), n)
-        val explicit = render(dc.adsr(attackSec = 0.05, decaySec = 0.2, sustainLevel = 0.4, releaseSec = 0.1, declickSeconds = 0.0), n)
+        val bare = render(dc.adsr(attack = 0.05, decay = 0.2, sustain = 0.4, release = 0.1), n)
+        val explicit = render(dc.adsr(attack = 0.05, decay = 0.2, sustain = 0.4, release = 0.1, declick = 0.0), n)
         for (i in 0 until n) explicit[i] shouldBe bare[i]
     }
 
-    "declickSeconds>0 rounds the attack→decay corner (lower 2nd-difference at the join)" {
+    "declick>0 rounds the attack→decay corner (lower 2nd-difference at the join)" {
         val n = 22050
         val attack = 0.1
         val join = (attack * sampleRate).toInt() // 4410 — the attack→decay slope discontinuity
@@ -80,8 +80,8 @@ class AdsrIgnitorKnobsSpec : StringSpec({
             return m
         }
 
-        val raw = render(dc.adsr(attackSec = attack, decaySec = 0.2, sustainLevel = 0.4, releaseSec = 0.1, declickSeconds = 0.0), n)
-        val smoothed = render(dc.adsr(attackSec = attack, decaySec = 0.2, sustainLevel = 0.4, releaseSec = 0.1, declickSeconds = 0.001), n)
+        val raw = render(dc.adsr(attack = attack, decay = 0.2, sustain = 0.4, release = 0.1, declick = 0.0), n)
+        val smoothed = render(dc.adsr(attack = attack, decay = 0.2, sustain = 0.4, release = 0.1, declick = 0.001), n)
         maxCornerNearJoin(smoothed) shouldBeLessThan maxCornerNearJoin(raw)
     }
 
@@ -95,10 +95,10 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         val decFrames = (decay * sampleRate).toInt()
         val dsl = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Constant(1.0),
-            attackSec = IgnitorDsl.Constant(0.0),
-            decaySec = IgnitorDsl.Constant(decay),
-            sustainLevel = IgnitorDsl.Constant(0.0),
-            releaseSec = IgnitorDsl.Constant(0.1),
+            attack = IgnitorDsl.Constant(0.0),
+            decay = IgnitorDsl.Constant(decay),
+            sustain = IgnitorDsl.Constant(0.0),
+            release = IgnitorDsl.Constant(0.1),
         )
         val buf = render(dsl.toExciter(random = testRandom), n)
 
@@ -119,10 +119,10 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         val n = 22050
         val dsl = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Sine(),
-            attackSec = IgnitorDsl.Constant(0.0),
-            decaySec = IgnitorDsl.Constant(0.4),
-            sustainLevel = IgnitorDsl.Constant(0.0),
-            releaseSec = IgnitorDsl.Constant(0.1),
+            attack = IgnitorDsl.Constant(0.0),
+            decay = IgnitorDsl.Constant(0.4),
+            sustain = IgnitorDsl.Constant(0.0),
+            release = IgnitorDsl.Constant(0.1),
         )
         val bufDefault = render(dsl.toExciter(random = testRandom), n)
         val bufOverride = render(dsl.toExciter(mapOf("expK" to 8.0), random = testRandom), n)
@@ -130,17 +130,17 @@ class AdsrIgnitorKnobsSpec : StringSpec({
     }
 
     // ── the slot bridge: ignitorParam overrides reach the new params (sprudel / custom-ignitor path) ──
-    "ignitorParam override reaches the declickSeconds slot" {
+    "ignitorParam override reaches the declick slot" {
         val n = 22050
         val dsl = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Sine(),
-            attackSec = IgnitorDsl.Constant(0.1),
-            decaySec = IgnitorDsl.Constant(0.2),
-            sustainLevel = IgnitorDsl.Constant(0.4),
-            releaseSec = IgnitorDsl.Constant(0.1),
+            attack = IgnitorDsl.Constant(0.1),
+            decay = IgnitorDsl.Constant(0.2),
+            sustain = IgnitorDsl.Constant(0.4),
+            release = IgnitorDsl.Constant(0.1),
         )
         val bufDefault = render(dsl.toExciter(random = testRandom), n)
-        val bufOverride = render(dsl.toExciter(mapOf("declickSeconds" to 0.002), random = testRandom), n)
+        val bufOverride = render(dsl.toExciter(mapOf("declick" to 0.002), random = testRandom), n)
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 })
