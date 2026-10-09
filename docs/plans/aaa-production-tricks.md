@@ -466,6 +466,10 @@ let wall = Ign.supersaw().highpass(Ign.freq())
 
 ## 9. Sources checked for the numbers that go into code first
 
+When a candidate lands, its sources go into `CREDITS.MD` and the in-app Credits page in the same change (the credits
+rule, `CLAUDE.md`, 2026-10-09): the velvet-noise papers for K2, the antiderivative anti-aliasing papers for K1's later
+CPU win, the Pultec EQP-1A for I1's low-end trick.
+
 The raw catalogues list their own sources. These four were checked by the coordinator because they shape a
 candidate directly:
 

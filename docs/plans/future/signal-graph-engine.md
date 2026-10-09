@@ -367,7 +367,7 @@ signal, the KnobGlide machinery with a duration and a shape. A plain write is a 
 the automation of 6.6 and add nothing beside it. The frontend turns a cycle-based pattern (`saw.slow(8)`) into tweens,
 and the backend never learns cycles.
 
-### 6.9 `split`: parallel branches, the twin of `through` (maintainer, 2026-10-09; names proposed below: `layer`, `superimpose`)
+### 6.9 `split`: parallel branches, the twin of `through` (maintainer, 2026-10-09; the name is open, see below)
 
 Raised while listening to the Katalyst `distort` stage on Kokon's master ("now we are distorting the hats and the bass
 drum") and asking whether people saturate only some bands. They do: multiband saturation on the master, or more
@@ -447,14 +447,13 @@ said, I do not like the pythony parallel arrays at all." B is rejected.
   `require()` them.
 - **The bands sum flat:** Linkwitz-Riley crossovers, with the phase alignment that three or more bands need.
 
-**The operator's name** (maintainer: "it needs a nicer name"). The coordinator's proposal: sprudel's own words, which
-already mean exactly this on patterns (`sprudel/.../lang_structural_layer.kt`): `layer(f, g)` applies each function to
-the input and stacks the results, and `superimpose(f, g)` does the same and keeps the original. On a signal:
-- **`x.layer(f, g, h)`** is the sum of `f(x)`, `g(x)` and `h(x)`: multiband, dry/wet;
-- **`x.superimpose(f)`** is `x + f(x)`: the exciter, parallel compression, bass harmonics.
+**Credits when it lands** (the credits rule, 2026-10-09): Linkwitz-Riley crossovers (Siegfried Linkwitz and Russ Riley,
+1976) for `bands`; SuperCollider and SuperDirt as the precedent of the general graph under the orbit convention (6.1).
 
-One word per concept across the DSLs hands over the names, and a pattern author already knows them. To decide with
-`/dsl-design`.
+**The operator's name: open** (maintainer: "it needs a nicer name"). `bands` stays as it is (maintainer, 2026-10-09:
+"bands is fine as a name"). The coordinator had proposed sprudel's `layer` and `superimpose`, which mean the same on
+patterns; rejected: "Sprudel should not be the naming source here." The name comes from the engine's own vocabulary or
+the common language of audio, to be found with `/dsl-design`.
 
 **Where it lives, and the order:**
 - On the Ignitor it is nearly free: sugar over `plus` with a shared input, plus the latency alignment.
