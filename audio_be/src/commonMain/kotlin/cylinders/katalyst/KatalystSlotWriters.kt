@@ -354,6 +354,37 @@ internal class KatalystGainWriter(
 }
 
 /**
+ * Distort: on iff the amount is finite and above 0 ([KatalystDistortEffect.configure] decides). An unset (non-finite)
+ * slot is handed over as it is, which the stage reads as OFF: the stage's identity is "no distortion", so an amount
+ * nobody set must not invent one. The holder is this writer's own, filled at [resolve] and handed over by reference
+ * ([DistortConfig] says why).
+ */
+internal class KatalystDistortWriter(
+    private val fx: KatalystDistortEffect,
+    private val amount: KatalystKnob,
+) : KatalystSlotWriter {
+
+    private val config = DistortConfig()
+
+    init {
+        fill()
+    }
+
+    override fun resolve(params: Map<String, Double>?) {
+        amount.resolve(params)
+        fill()
+    }
+
+    override fun apply() {
+        fx.configure(config)
+    }
+
+    private fun fill() {
+        config.amount = amount.value
+    }
+}
+
+/**
  * Duck: on iff the stage names a source orbit AND asks for depth. The instance is reused so the
  * envelope follower survives, and the writer holds the settings the arriving chain applies after a
  * handover (see [KatalystDuckEffect.configure]).

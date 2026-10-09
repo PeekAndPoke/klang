@@ -19,8 +19,8 @@ import io.peekandpoke.klang.audio_be.utils.copyRangeInto
  *
  * Filter state persists across round trips for inter-block continuity.
  * The work buffer is the caller's lease from [ScratchBuffers.oversample], held across both
- * halves: no per-voice allocation. [reset] exists for a future pooled-instance world; today every instance is
- * per-voice and nothing calls it (ledger W11).
+ * halves: no per-voice allocation. A voice's instance is fresh per note and never reset; the one caller of [reset]
+ * is the Katalyst `distort` stage, whose cores live as long as their chain (through `DistortionCore.reset`).
  *
  * **Filter quality (honest characterisation):**
  * The half-band FIR has the canonical half-band null at fs/4 (|H(π/2)| = 0.5)
@@ -32,10 +32,15 @@ import io.peekandpoke.klang.audio_be.utils.copyRangeInto
  * the nonlinearity dominates the spectrum anyway. It is **not** a transparent
  * resampler — don't expect spectral fidelity for clean signals.
  *
- * **Group delay** (in input samples):
- * - 2× (stages=1): ~4.0 samples (linear interp 0.5 + decimator FIR 3.5)
- * - 4× (stages=2): ~5.75 samples
- * - 8× (stages=3): ~6.625 samples
+ * **Group delay** (in input samples), exact, [groupDelaySamples]: the linear interpolation reads the
+ * previous input sample at the start of every input period, 1 sample, and each half-band stage centres
+ * its output on the stream sample 6 before it, 6 samples at that stage's input rate:
+ * - 2× (stages=1): 4.0 samples
+ * - 4× (stages=2): 5.5 samples
+ * - 8× (stages=3): 6.25 samples
+ *
+ * (The figures written here until 2026-10-09 were ~4.0, ~5.75 and ~6.625; derived from the taps and
+ * pinned by `OversamplerGroupDelaySpec`, they are the ones above.)
  *
  * **Sample-rate independence**: kernel coefficients are normalised; the
  * oversampler operates correctly at any input sample rate. Group delay is in
@@ -142,11 +147,10 @@ class Oversampler(stages: Int) {
 
     /**
      * Clears all internal filter state — every [HalfBandState] delay line and
-     * the upsampler's `lastSample`. NO callers today, and that is fine: every
-     * instance is per-voice (fresh per note-on in the Ignitor tree), so there is no reuse path and no stale tail to clear. Kept for
-     * the planned warehouse-pool world, where pooled instances WILL need it
-     * (ledger W11 — the old KDoc claimed a cleanup/retrigger lifecycle that
-     * never existed).
+     * the upsampler's `lastSample`. A voice never calls it (its instance is fresh per note-on). Since
+     * 2026-10-09 the Katalyst `distort` stage does, through `DistortionCore.reset`, when it enters Off or is
+     * cut hard: its cores live as long as their chain. (Ledger W11: the old KDoc claimed a cleanup/retrigger
+     * lifecycle that never existed.)
      */
     fun reset() {
         for (d in decimators) {
@@ -281,6 +285,20 @@ class Oversampler(stages: Int) {
 
         /** Block samples the prefix view holds: the last prefix output reads up to `s[2·12+1]`. */
         private const val HEAD = 2 * PRE_OUT
+
+        /**
+         * The round trip's group delay in INPUT samples for [stages] 2x stages: 0 without oversampling,
+         * else `1 + 6 * (1 - 2^-stages)`, the interpolation's one sample plus each half-band stage's six at
+         * its own input rate (see the class KDoc). A host that mixes the oversampled path with a dry one
+         * delays the dry by this, rounded (the Katalyst `distort` stage).
+         */
+        fun groupDelaySamples(stages: Int): Double {
+            if (stages <= 0) {
+                return 0.0
+            }
+
+            return 1.0 + 6.0 * (1.0 - 1.0 / (1 shl stages))
+        }
 
         /**
          * Converts a user-facing oversampling factor to internal stages.

@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -307,6 +308,49 @@ class MasterOutputChainSpec : StringSpec({
         run(1)
         asked shouldBe 3
         units.allocations shouldBe 1
+    }
+
+    "a master distort with an asymmetric shape holds the engine while its DC decay rings, then lets go" {
+        // Review round 2 of the Katalyst distort stage: `tube` makes DC while signal flows, and after the input stops
+        // the stage's DC blocker decays from that offset for a few hundred milliseconds. The master asked a chain for
+        // its tail only when it declared a reverb or a delay, so a stopped playback disposed the engine and cut the
+        // decay in one sample. The step is measured in `KatalystDistortEffectSpec`; here, the host asks.
+        val bus = adopted(
+            KatalystDsl.of(KatalystStageDsl.Distort(amount = c(0.5), shape = DistortionShapes.indexOf("tube").toInt())),
+            SizedBuffers.forRings(sampleRate),
+            ReverbUnits(sampleRate),
+        )
+        val onBus = StereoBuffer(blockFrames)
+
+        fun block(loud: Boolean, b: Int) {
+            if (loud) {
+                fill(onBus, b)
+            } else {
+                onBus.left.fill(0.0)
+                onBus.right.fill(0.0)
+            }
+
+            bus.process(onBus, blockFrames)
+            bus.markRendered()
+        }
+
+        for (b in 0 until 20) {
+            block(loud = true, b = b)
+        }
+
+        // Past the master's own silent grace: the decay is still there, so the bus still rings.
+        for (b in 0 until 15) {
+            block(loud = false, b = b)
+        }
+
+        bus.isRinging shouldBe true
+
+        // ...and once it has decayed (a few hundred milliseconds), it lets the engine go.
+        for (b in 0 until 400) {
+            block(loud = false, b = b)
+        }
+
+        bus.isRinging shouldBe false
     }
 
     "a limiter-only master never holds the engine: it has nothing that rings" {

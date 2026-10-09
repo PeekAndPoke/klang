@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
@@ -80,6 +81,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
                 listOf(stage.threshold, stage.ratio, stage.knee, stage.attack, stage.release)
 
             is KatalystStageDsl.Duck -> listOf(stage.orbit, stage.depth, stage.attack)
+            is KatalystStageDsl.Distort -> listOf(stage.amount)
             is KatalystStageDsl.Eq -> emptyList()
             is KatalystStageDsl.Gain -> listOf(stage.gain)
         }
@@ -267,6 +269,18 @@ class KatalystDefaultsSyncSpec : StringSpec({
         KatalystStageDsl.Phaser().center shouldBe IgnitorDsl.Constant(PHASER_CENTER_HZ)
         KatalystStageDsl.Phaser().sweep shouldBe IgnitorDsl.Constant(PHASER_SWEEP_HZ)
         KatalystStageDsl.Phaser().floor shouldBe IgnitorDsl.Constant(PHASER_FLOOR)
+        KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Constant(DISTORT_AMOUNT)
+    }
+
+    "a bare bus distort pushes as hard as a bare voice distort: one default, both hosts" {
+        // Parameter parity (`/dsl-design` §4): `distort` means the same push on a voice and on a bus. The voice's
+        // two nodes carry their default as a literal; this row is what keeps the bus constant equal to it.
+        KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Distort(inner = IgnitorDsl.Silence).amount
+        KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Drive(inner = IgnitorDsl.Silence).amount
+
+        // ...and the shape and oversampling defaults are the voice's too: `soft`, no oversampler.
+        KatalystStageDsl.Distort().shape shouldBe DistortionShapes.SOFT_INDEX
+        KatalystStageDsl.Distort().oversample shouldBe 0
     }
 
     "the phaser, the duck, the body and the vowel stay OFF bare: one knob has to name something" {
@@ -386,6 +400,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
                         orbit = freshKnob(stage.orbit), depth = freshKnob(stage.depth), attack = freshKnob(stage.attack),
                     )
 
+                    is KatalystStageDsl.Distort -> stage.copy(amount = freshKnob(stage.amount))
                     is KatalystStageDsl.Eq -> KatalystStageDsl.Eq(stage.sections.toList())
                     is KatalystStageDsl.Gain -> KatalystStageDsl.Gain(freshKnob(stage.gain))
                 }

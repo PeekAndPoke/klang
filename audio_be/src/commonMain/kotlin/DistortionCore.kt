@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.nanGuard
@@ -38,18 +39,36 @@ import kotlin.math.pow
  * The bypass belongs to the host, not here: the fused node is not built for a leaf amount at or below 0 and runs at
  * unity drive for a modulated one; the `Shape` node never bypasses.
  *
+ * A third host, the Katalyst `distort` stage (`KatalystDistortEffect`), runs one core per channel of a bus at
+ * the fused node's law, with a DC blocker of its own coefficient (see [dcBlockCoefficient]).
+ *
  * @param shape the waveshaper, resolved by the host (a name through `parseDistortionShape`, an index
  *   knob through `distortionShapeAt`).
  * @param oversampleStages 2x stages of the oversampler, 0 for none (the plain path).
+ * @param dcBlockCoefficient the DC blocker's pole. The default, `DEFAULT_DC_BLOCK_COEFF` (0.995, a knee
+ *   near 35 Hz), is the voice's law and the two Ignitor nodes keep it. A bus carries the whole low end
+ *   of a mix, where that knee takes about 2.5 dB off 40 Hz, so the Katalyst stage passes the house
+ *   stage's 0.999 (near 7 Hz, `MasterStage`).
  */
 internal class DistortionCore(
     private val shape: DistortionShape,
     oversampleStages: Int,
+    dcBlockCoefficient: Double = DEFAULT_DC_BLOCK_COEFF,
 ) {
     private val oversampler: Oversampler? =
         if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
-    private val dcBlocker = LowPassHighPassFilters.DcBlocker()
+    private val dcBlocker = LowPassHighPassFilters.DcBlocker(dcBlockCoefficient)
+
+    /**
+     * Back to a fresh core: the oversampler's filter history and the DC blocker's state cleared. For a
+     * host that keeps its core across a hard cut (the Katalyst stage's `reset`); the voice builds a new
+     * core per note and never calls it.
+     */
+    fun reset() {
+        oversampler?.reset()
+        dcBlocker.reset()
+    }
 
     /**
      * Drives, shapes and DC-blocks `buffer[offset, offset + length)` in place, at [drive] (a gain, see
@@ -86,6 +105,62 @@ internal class DistortionCore(
 
         dcBlocker.process(buffer = buffer, offset = offset, length = length)
     }
+
+    /**
+     * [process] with a drive that MOVES across the block, from [driveFrom] to [driveTo], for a host whose drive
+     * glides (the Katalyst stage's `amount`). The drive ramps linearly per sample of the stream the shaper sees (the
+     * oversampled one with an oversampler), written from the END so the last sample carries [driveTo] exactly, and it
+     * is applied where [process] applies its drive: on the shaper's input, inside the oversampler. So the
+     * oversampler's history stays in the input's own domain, and a block that glides and a block that does not meet
+     * without a seam (round 1 of `docs/tasks/katalyst-distort-stage.md`: a host that pre-multiplied the input at the
+     * base rate instead left the history one domain off at every change, a click at both ends of each glide).
+     */
+    fun processRamped(
+        buffer: AudioBuffer,
+        offset: Int,
+        length: Int,
+        driveFrom: Double,
+        driveTo: Double,
+        scratchBuffers: ScratchBuffers,
+    ) {
+        val os = oversampler
+
+        if (os != null) {
+            scratchBuffers.oversample(os.factor).use { work ->
+                val count = os.upsample(source = buffer, offset = offset, length = length, work = work)
+                val s = shape
+                val step = (driveTo - driveFrom) / count
+                val last = count - 1
+
+                // NaN-guard fused into the per-sample loop: see the Oversampler.upsample KDoc.
+                for (i in 0 until count) {
+                    work[i] = applyDistortionShape(s, work[i] * (driveTo - step * (last - i))).nanGuard()
+                }
+
+                os.decimate(work = work, target = buffer, offset = offset, length = length)
+            }
+        } else {
+            val s = shape
+            val step = (driveTo - driveFrom) / length
+            val last = length - 1
+
+            // NaN guard inline: a NaN escaping here would permanently corrupt the DC blocker's IIR state.
+            for (i in 0 until length) {
+                val k = offset + i
+
+                buffer[k] = applyDistortionShape(s, buffer[k] * (driveTo - step * (last - i))).nanGuard()
+            }
+        }
+
+        dcBlocker.process(buffer = buffer, offset = offset, length = length)
+    }
+
+    /**
+     * True while the DC blocker still carries energy above [floor]: the offset it is removing decays on its own
+     * after the input stops, about 23 ms per neper at the house pole. A host that is retired at the end of a ramp
+     * (a chain swap) asks it so as not to cut that decay to 0 in one sample (round 1 of the Katalyst stage).
+     */
+    fun dcHoldsEnergy(floor: Double): Boolean = dcBlocker.holdsEnergy(floor)
 
     companion object {
         /**

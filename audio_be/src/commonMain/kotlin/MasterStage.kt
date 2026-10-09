@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.effects.Compressor
+import io.peekandpoke.klang.audio_be.filters.HOUSE_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
@@ -97,8 +98,8 @@ class MasterStage(
     //      on onsets — measured, a limited (-1 dBFS) 55 Hz sine switched on cold comes out at
     //      -0.47 dBFS, a +0.53 dB gain decaying over ~21 ms. Downstream of the limiter that
     //      overshoot lands straight on the clip and eats most of the margin the limiter leaves.
-    private val dcBlockerL = LowPassHighPassFilters.DcBlocker(coefficient = 0.999)
-    private val dcBlockerR = LowPassHighPassFilters.DcBlocker(coefficient = 0.999)
+    private val dcBlockerL = LowPassHighPassFilters.DcBlocker(coefficient = HOUSE_DC_BLOCK_COEFF)
+    private val dcBlockerR = LowPassHighPassFilters.DcBlocker(coefficient = HOUSE_DC_BLOCK_COEFF)
 
     /**
      * Clears stateful post-chain elements (limiter envelope + DC blocker IIR state). Used at the

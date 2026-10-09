@@ -80,6 +80,7 @@ voice's pitch stage; `gain`/`pan` in its send stage.
 | `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
 | `KatalystCompressorEffect` | `Compressor`    | any of the five `compressor.*` slots set                         |
 | `KatalystDuckEffect`       | `Ducking`       | `duck.orbit` names a source and `duck.depth` above 0             |
+| `KatalystDistortEffect`    | `DistortionCore` (one per channel, the house DC pole) | `distort.amount` finite and above 0 (not in the classic chain; declared with `k.distort(...)`) |
 
 How each stage switches and glides, when an orbit may deactivate, the chain swap and the output host (`MasterBus`):
 `audio/ref/katalyst.md`.

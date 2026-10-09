@@ -53,6 +53,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 | compressor | a linear blend with dry over `KNOB_GLIDE_SECONDS`; ON fades a reset instance in; the instance is built with the effect, never on the audio thread | `threshold`, `ratio` (as its inverse), `knee` glide per sample (`Compressor.processGliding`); `attack`, `release` apply at once |
 | phaser | the wet and floor coefficients glide to identity; the cascade is dropped only on the landing | `wet`, `floor` per sample; `center`, `sweep` per block with alpha continuous across the seam (`PhaserCore.prepareBlock`); `rate` at once |
 | duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source orbit | `depth` per sample; `attack` at once; a `duck.orbit` switch has no mechanism (open: `docs/tasks/by-ear/duck-orbit-switch-click.md`) |
+| distort | the compressor's law: a linear blend with the dry mix over `KNOB_GLIDE_SECONDS`; ON fades reset cores in; with oversampling the dry is the delayed dry (2026-10-09) | `amount` glides linear in the amount over `KNOB_GLIDE_SECONDS`, the drive ramped per sample within a block; `shape` and `oversample` are fixed with the chain |
 | gain | never off | per-sample glide over `KNOB_GLIDE_SECONDS` |
 
 `KnobGlide` (`audio_be/.../KnobGlide.kt`, its KDoc is the contract) moves one knob linearly over
@@ -90,11 +91,25 @@ The glide time itself is an open question for the maintainer's ear: `docs/tasks/
 - **Lookahead**: the Katalyst `compressor` and `limiter` take a build-time `lookahead`, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` (0.05), fixed per chain; the orbit or playback runs late by it and nothing
   compensates, by the author's choice. The house limiter is not a Katalyst stage (`MasterStage`; `audio/MEMORY.md`, "House stage").
+  The `distort` stage's oversampling delays the same way, by the oversampler's group delay rounded (4 frames at 2x, 6
+  at 4x and 8x; `Oversampler.groupDelaySamples`). Both are `KatalystLatentEffect`s, and the chain sums them
+  (`KatalystChain.latencyFrames`).
 
 ## Writing a stage lifecycle: the state-machine template
 
 The plan is `docs/plans/effect-state-machines.md`; the delay (`KatalystDelayEffect`) is the template, and the
 reverb, the filter swap and the compressor copy it. What every copy must keep:
+
+- **The tail question has THREE askers, and a new stage answers all three** (2026-10-09, the `distort` stage's review,
+  two escapes): the orbit's deactivation (it scans the mix AFTER the chain, so an insert's residue is seen without
+  asking), the chain swap (`ChainSwap` retires the leaving chain at the end of its input ramp unless `hasTail()`, NO
+  scan), and the master (`MasterBus.isRinging` asks `hasTail()` only for a chain whose `declaresTail` is true). A
+  stage whose state can put audio into a SILENT input (a DC blocker's decay, a ring, a delay line) answers
+  `hasTail()` from that state in O(1) AND joins `KatalystChain.declaresTail`. The "insert, so false" argument covers
+  the first asker only.
+- **A build-time option multiplies the behaviour rows** (the same review): a stage with a structural choice (the
+  oversampling factor, a lookahead) runs every switching and gliding row at each value of it, not only at the default;
+  the `distort` stage's amount glide clicked only with oversampling on, where no row ran.
 
 - A private sealed `State` with one preallocated instance per state; `enter` is the only way in and the only place
   a state's own data is initialised. A datum belongs to a state only if it dies with that state (the tail ceiling

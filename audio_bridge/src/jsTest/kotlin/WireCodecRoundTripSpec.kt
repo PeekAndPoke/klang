@@ -122,6 +122,11 @@ class WireCodecRoundTripSpec : StringSpec({
                     orbit = IgnitorDsl.Constant(2.0), depth = IgnitorDsl.Constant(0.8),
                     attack = IgnitorDsl.Constant(0.05),
                 ),
+                // the bus distort: a slot amount and the two plain Int knobs fixed with the chain, and bare
+                KatalystStageDsl.Distort(
+                    amount = IgnitorDsl.Param("drive", 0.15), shape = DistortionShapes.indexOf("tube").toInt(), oversample = 4,
+                ),
+                KatalystStageDsl.Distort(),
                 KatalystStageDsl.Eq(
                     sections = listOf(
                         IgnitorDsl.EqSection.Bell(freq = IgnitorDsl.Constant(300.0), q = IgnitorDsl.Constant(0.8), db = IgnitorDsl.Constant(2.0)),

@@ -450,7 +450,7 @@ class MasterBus(
     /**
      * Refreshes [isRinging] — cheaply on most blocks, thoroughly now and then.
      *
-     * A chain without time-based units can never ring. While the output is audible the answer is
+     * A chain without a stage that can ring ([KatalystChain.declaresTail]: a reverb, a delay, a distort) never rings. While the output is audible the answer is
      * trivially yes. Only after a run of silent blocks is the tail question asked (does the
      * reverb/delay still hold energy?), because a delay's output is silent between echoes and an
      * output-only test would cut the rest of them. That question is [KatalystChain.hasTail], so it
