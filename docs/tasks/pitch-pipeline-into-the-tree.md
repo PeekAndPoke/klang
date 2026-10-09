@@ -163,7 +163,7 @@ one") applied; every clause not named here is kept.
 |---|---|---|---|
 | pitch envelope | built when `pEnv` finite and `!= 0`; stages `(p* ?: PITCH_ENV_*) * sampleRate`; sustain non-finite reads unset; curves `?: MOD_ENV_CURVE`; gate from the voice's limits per block; `renderPitchEnvelopeRatios` multiplying into the buffer | gate off at a leaf amount `== 0` or non-finite; the node's arm with the same constants; the same `renderPitchEnvelopeRatios` writing, combined by `Times` | **bit-identical** (one law, one mapping, `x * p == p * x`). Only a non-finite stage TIME differs (NaN and ±Infinity): the strip passed it to `EnvelopeCore` (NaN a zero-length stage, +Infinity a stage that never ends, -Infinity zero-length), while sprudel drops every non-finite value at the wire boundary, so the slot reads it as unset (the default time; review round 1 of step 1, B MINOR 2) |
 | vibrato | built when `vibratoMod > 0`; rate `vibrato ?: VIBRATO_RATE_HZ`; phase from 0, `(TWO_PI * rate) / sampleRate`, the one-subtract or full wrap; `fastExp2(fastSin(phase) * depth / 12)` | gate off at a FINITE leaf depth `<= 0` (a non-finite depth stays built and renders the default, step 0); `VibratoModIgnitor`: the same accumulator, increment, wrap pair and ratio, plus `safeOut` (the identity on a ratio up to `SAFE_MAX`, 1e15) | **bit-identical**, except at the raw edges (step 2, review round 1, B MINOR 1, measured on the full engine): a depth above about 598 semitones (`log2(1e15) * 12`) is clamped by `safeOut` where the strip ran raw (597 identical, 598 on differ); a non-finite rate (NaN, ±Infinity) played NO vibrato on the strip (the wrap pinned the phase) and now plays the slot's default 5 Hz, because sprudel drops it and the slot reads it as unset; a +Infinity depth built the strip's vibrato and silenced the voice (NaN, scrubbed), while sprudel now drops it and builds no vibrato. All of it is the house rule (a non-finite value reads as unset) or a raw-Motor extreme |
-| accelerate | built when `accelerate != 0` and `end > onset`; base = `endFrame - startFrame` (scheduled end, the release tail INCLUDED, a Double); per block `2^(octaves * rel / total)`, then `ratio *= 2^(octaves / total)` per sample | today's node: base = `voiceDurationFrames` (the GATE length, an Int) and `2^(octaves * (rel / total))` | **not identical as the node stands**: a different base and a different rounding. D2 decided for the GATE (2026-10-08): the sprudel door moves to the node's base, a sound change for Kokon's `strike` (step 3). The per-block seed keeps the known float-reassociation class (P4: 5.3e-15 across onsets, 1.7e-13 across block sizes, bounded at 1e-11) on both |
+| accelerate | built when `accelerate != 0` and `end > onset`; base = `endFrame - startFrame` (scheduled end, the release tail INCLUDED, a Double); per block `2^(octaves * rel / total)`, then `ratio *= 2^(octaves / total)` per sample | today's node: base = `voiceDurationFrames` (the GATE length, an Int) and `2^(octaves * (rel / total))` | **not identical as the node stands**: a different base and a different rounding. D2 decided for the GATE (2026-10-08): the sprudel door moves to the node's base, a sound change for Kokon's `strike` (step 3). The per-block seed keeps the known float-reassociation class (P4: 5.3e-15 across onsets, 1.7e-13 across block sizes, bounded at 1e-11) on both **Done in step 3, with the hold (D2):** the node writes `2^(octaves * (rel / total))` up to the gate and the target `2^(octaves)` from the gate frame on; the frames before the gate keep the node's bits; a gate of 0 frames (`legato(0)`) holds the target from the first frame (Q27; the strip glided over the release tail there). The hostile amounts, sprudel door, measured on the full engine (step 3 review round 1, reviewer B, against a HEAD export whose strip runs the same law, so only the clamp and the boundary differ): NaN, +Infinity and -Infinity FROZE the strip's oscillator (the wire carried them raw: a DC pulse per note shaped by its envelope, RMS -15.5 dB against the control) and now play the bare voice, bit for bit the no-door control (sprudel drops a non-finite value at the boundary, the slot reads it as unset, off); from about 598 semitones (`12 * log2(1e15)`), where the RATIO passes `SAFE_MAX`, `safeOut` clamps it at 1e15 where the strip ran raw (597 identical, 599 differs from frame 11,542, 1000 from frame 7,010); past about 12,288 semitones `2^x` overflowed on the strip and silenced the voice after its first sample, where the stage runs on at the clamped, meaningless pitch (a raw-Motor extreme, no clamp added; the sample playhead leaves its PCM after one frame on both, identical); -1e16 rounds the ratio to 0 on both and freezes the oscillator, identical |
 | FM | built when `fmh` set or `fmEnv != 0`, rendered when depth `!= 0`; modulator phase in radians, `fastSin`; depth envelope evaluated ONCE per block at the block's first frame and held (ledger E11, Class 2), release always 0; `1 + sin * ((depth * env) / freq)`; divides by the raw note, no bypass at freq 0 | the `Fm` node: depth envelope PER SAMPLE (E1's fix), `1 + (mod * depth) / safeDiv(freq)` (with an envelope `(mod * (depth * env)) / freq`), bypass at `freq <= 0`, `safeOut`; the modulator a `Sine` whose drift lane seeds from the voice rng on its first block | **not bit-identical.** See below |
 
 **What makes FM non-identical, with the expected size:**
@@ -494,8 +494,12 @@ identity table's non-finite rows). So every later step, before its record says "
   `MEMORY.md` claim the step writes: D1 (an `fm` modulator, a parameter-position oscillator), D6 (bare instruments),
   the regroupings (three or more pitch factors on one path; which end and which are for good), the restorations, and
   the non-finite reads.
-- **(b) Render NaN, +Infinity, -Infinity and one magnitude past `SAFE_MAX`** for EVERY knob of the door being moved,
-  HEAD against the tree on the full engine, and state each result in the identity table of section 3.
+- **(b) Render NaN, +Infinity, -Infinity and the first amount whose resulting RATIO or value passes `SAFE_MAX`** (for a
+  semitone door about 598 semitones, not an amount past `SAFE_MAX`) for EVERY knob of the door being moved, HEAD
+  against the tree on the full engine, and **describe what HEAD actually did, measured, not assumed**; state each
+  result in the identity table of section 3. Why this wording (step 3 review round 1, B MINOR 1): this is the third
+  recurrence of the class (step 2's B MINOR 1 named the same 598-semitone threshold for the vibrato; step 3's record
+  took "past `SAFE_MAX`" as an amount and assumed a silenced voice where HEAD froze the oscillator into a DC pulse).
 - **(c) Record the per-voice cost** against HEAD as the step's baseline: V8 production bundle pinned and unpinned,
   and the JVM, render and build, with an old-against-old control, the door isolated (not diluted by other stages).
 
@@ -517,6 +521,129 @@ release. The Ignitor node already does this; the sprudel door changes.
   (`.accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.0)`): its small detune glide now completes at the
   gate close instead of across the 3 s tail. Every other corpus song stays bit-identical (the corpus run shows it).
   Kokon gets a listening pair (before and after) for the maintainer. The Ignitor door is unchanged.
+- **The hold** (maintainer, 2026-10-09, "yes hold"; D2 above): the node as it stood rose on past the gate at the same
+  rate, so the Ignitor door changes too: the node writes its target from the gate frame on.
+
+**What was done (2026-10-09, uncommitted, for review; 47 files after review round 1).** `audio_be`: `AccelerateModIgnitor` holds: each
+block's loop splits at `voiceDurationFrames - voiceElapsedFrames`, the frames before the gate render the node's law
+unchanged (the same seed and step, the same bits), every frame at or past the gate writes `safeOut(2^(octaves))`, with
+no per-sample branch and no allocation; a gate of 0 frames holds the target from the first frame (review round 1, A1;
+decided by default, maintainer questions Q27: "at gate 0 it has arrived"; the early return that wrote 1.0 went). `AccelerateRenderer` and `Voice.Accelerate`
+gone, `buildPitchPipeline` lost `accelerate`, `startFrame` and `endFrame` (FM needs neither); the KDocs of
+`Voice.releaseGate`, `VoiceLimits`, `IgniteContext.voiceDurationFrames`, `ModBlockingIgnitor` and the held-voice horizon
+in `VoiceScheduler` (it names no strip base; it now says the far gate keeps a held voice's glide inert) say the gate
+base and the hold. `audio_bridge`: `Slots.accelerate`, flat, default 0.0 (the switch); `classic()` places
+`Accelerate(inner = pitchEnveloped, semitones = s.accelerate)` and the vibrato around it; `VoiceData` lost
+`accelerate`; the node's and the door's KDocs say gate and hold. `sprudel`: `classicSlotParams` writes `accelerate` from
+the `pitchMod` group (a non-finite value is dropped, the house rule), `toVoiceData` stops writing the field, the door's
+KDoc says it fills `classic()`'s stage and glides to the gate. The door's parameter was already `semitones`: no rename,
+no `retired-names` row. `klangscript-libs`: `Ignitor.slot.accelerate` (flat, like `onepole`) and its parity row; the
+script `classic()` KDoc. Specs: `AccelerateSemitoneLawSpec` moved from the strip to the node (`ignitor/`): 24 and 7
+semitones, a gate on a block boundary and one inside a block, the frames before the gate equal to the law written out
+bit for bit (the per-block seed, the per-frame step), the target held exactly through seven gates of tail, a gate inside
+the first window of an onset 37 frames into its block (the split's `start +` term, review round 1, A2), a gate of 0
+frames (the target from the first frame, onset offsets 0 and 37), and a downward row. The new `ClassicAccelerateSpec` is the ORACLE of the sprudel door: a real voice through `VoiceFactory`
+and the ramp probe, `2^(semitones / 12 * p / gate)` then the target, over a release tail longer than the gate (three
+amounts, Kokon's 0.05 among them, a gate inside a block, two onsets); a held realtime voice released at frame 1000 keeps
+its far base and never reaches the hold; 0 semitones and a non-finite slot value are the bare voice; the guard "an
+unwritten `accelerate` builds no stage". The block-framing accelerate row writes the slot and keeps its 1e-11 bound.
+`PitchModulationTest`'s accelerate row renders the tree node (the strip-accelerate combination row went: the vibrato
+and FM row still shows a tree mod times the strip's buffer); `SynthVoiceTest` drives its strip rows with FM, the strip's
+last door; `ClassicTailSpec` (order and vocabulary), `IgnitorRegistryTest`, `ClassicSlotParamsSpec` (an accelerate row
+and the literal map), `ClassicDoorRenderParitySpec` (an engagement row), `LangPitchParamNamesSpec` (door parity: sprudel
+word = slot = node knob), `SprudelVoiceDataSpec`, `KlangScriptClassicDoorParitySpec` and the rig `DoorFields` follow.
+Docs: `data-model.md`, `voice-synthesis.md`, `off-values.md`, `effects-mixing.md`, the two skill references, the two
+`MEMORY.md` files, the NaN task's accelerate line (dissolved).
+
+- **Wire.** `WIRE_SCHEMA_HASH` `-1897999924` to `-275171334` (`accelerate` cut). JS codec green.
+- **Corpus** (`tmp/naming/corpus-pp-s3.txt` against `corpus-pp-before.txt`): 17 of 18 rows identical; the 18th is live
+  Kokon (the maintainer's edits and this step). **Kokon from HEAD's text** (`$S/s3/kokon-head.ks`, lines 19 to 550 of
+  HEAD's `Kokon.kt`) moved, as predicted: `f0bf378664bc2077` (every step so far) to `6d22988a5668b97f`. Where and how
+  much, from the listening pair (16-bit, 202 s): the two files are identical sample for sample except in 105.01 to
+  115.13 s and 141.01 to 151.21 s, the two `landing` strikes (line 465, `landing` at line 486 inside `heavyBlock`,
+  played twice at lines 518 and 519: cycles 35 and 47, a 3 s gate, a 3 s release, the hall after it). Both strikes
+  carry exactly 0.05 semitones (the perlin term is 0 on a whole cycle). On the strip the glide spanned gate plus tail,
+  so at the gate close it had reached 2.5 cents; now it reaches 5 cents there and holds: at most 2.5 cents apart, at
+  the gate close, shrinking to 0 at the voice's end. The sample difference is large (max 0.78, diff RMS -4.7 and
+  -0.3 dB against the mix in the two windows) because an 11-voice unison a few cents apart drifts out of phase.
+- **Engagement mutant** (sprudel writes the accelerate slot under a misspelled key): exactly Kokon moved (live, and
+  HEAD's text to `a936291275d76bf2`, no glide at all), the 17 others stayed. Restored, `cmp` clean.
+- **Door matrix** (the scratch spec of steps 1 and 2 with eleven more door rows, HEAD `ee8903c5` exported against the
+  tree): 780 rows. Every row without `accelerate` is identical (the control, the penv, vib and fm rows, `accelerate(0)`).
+  Every row with an ordinary non-zero `accelerate` differs: the base moved from gate plus release tail to the gate, the
+  sound change (the matrix voices have the 0.05 s default release, the long-release row 1.5 s). The non-finite and
+  huge rows: section 3's identity table. A scratch run of the pitch product the source reads (a tracking source under
+  `Sample.classic()`) shows `classic()` groups it as the strip did: with vib, accelerate and penv written, every frame
+  equals `(V * A) * P` bit for bit (3840 frames), while `V * (A * P)` and `(V * P) * A` differ on 813 and 815 frames; an
+  own `pitchEnvelope` under vib and accelerate equals `(V * A) * own`, the strip's `own * (V * A)`. **Only the base and
+  the hold changed:** the same matrix against that gate-law HEAD export is bit-identical on every one- and two-door
+  `accelerate` row of the sine, supersaw (analog 0 and 0.5) and sample instruments, the long-release row included;
+  the three-factor rows differ by at most 1.1e-13 (about -265 dB), the export's step-2 grouping `(V * P) * A` against
+  the restored `(V * A) * P` (in the matrix; on the full engine reviewer B measured up to 7.1e-13 for the doors alone
+  and 9.7e-13 with an own vibrato, about -262 to -271 dB); `sgbell` differs by D1 (below).
+- **What is not the strip's sound** (checklist (a)): the base and the hold above, on every sprudel `accelerate` under a
+  release tail; a gate of 0 frames (`legato(0)`): the strip glided over the release tail, the stage holds the target
+  from the first frame (Q27; no corpus song writes `legato(0)` with `accelerate`, the corpus rerun below); the Ignitor
+  door: an authored `accelerate` under a release tail, from the gate on (no corpus song, the grep of the songs and the
+  frozen texts); D6, `accelerate` is lost on an instrument without `classic()`; D1, the
+  strip's accelerate bent an `fm` node's modulator and parameter-position oscillators, the stage does not (measured
+  on the full engine against a scratch HEAD export whose strip accelerate runs the node's gate law and hold, so only
+  the structure differs: `s("sgbell")` with `accelerate(3)`, `accelerate(-5)`, `accelerate(4)` with a 1.5 s release,
+  and with `penv` or `vib` beside it, -6.3 to -10.1 dB diff RMS over a 9000-frame gate, -71 to -78 dB on a held voice
+  whose far gate keeps the glide nearly inert; step 3b bends the modulator again);
+  the non-finite and huge amounts of section 3 (non-finite now plays the bare voice where the strip froze the
+  oscillator). **The regroupings of steps 1 and 2 that end here**: `vib` + `penv` + `accelerate`, all four doors
+  (`(V * A) * P` then the strip's F), an own `pitchEnvelope` + `vib` + `accelerate` (verified bit for bit above),
+  `vib` + `accelerate` + `fm` (`(V * A) * F`, by the same nesting) and `penv` + `accelerate` + `fm` (step 1's
+  `P * (A * F)`, now `(A * P) * F`, the strip's; review round 1, B NIT 1). Their size before, on the full engine:
+  up to 7.1e-13 for the doors alone, 9.7e-13 with an own vibrato (about -262 to -271 dB). **Remaining, temporary:** an
+  own pitch node + any `classic()` pitch door + sprudel `fm` reads `(doors * own) * F` where the strip gave
+  `own * (doors * F)` (one rounding, about 1e-16 relative per ratio sample; new in this step: an own node +
+  `accelerate` + `fm`, on HEAD `own * (A * F)`); it ends in step 4, when FM becomes the innermost `classic()` stage
+  (review round 1, A4). **Remaining for good:** two own pitch nodes + a door (plan section 2).
+- **Mutation checks** (one lock call each, restored, `cmp` clean): the node without the hold (red: every law row, every
+  oracle row); the hold's target off by 1e-6 (red: the same); the hold one frame late (red: the law rows on the
+  in-block gate; the oracle's 1e-9 tolerance does not see one frame of a 1e-15 difference, the law spec does); the
+  seed in the strip's rounding, `octaves * elapsed / gate` (SURVIVED the first law spec, whose 24 semitones made every
+  product exact; the 7-semitone rows were added, then red); the step off by one frame of the base (red: the
+  block-framing row and the law rows; a seed one frame late per block survived the framing row, being the same at
+  every framing, and is red on the law rows); the hold reading the moved gate (red: both held-realtime rows);
+  `classic()`'s accelerate reading `penv.semitones` (red: the oracle rows, the door parity, the render-parity
+  engagement row); accelerate nested outside the vibrato (red: `ClassicTailSpec`, `IgnitorRegistryTest`); the slot
+  defaulting to 1.0 (red: the guard, the bare row, `ClassicTailSpec`); sprudel not writing the slot (red:
+  `ClassicSlotParamsSpec`, door parity, `SprudelVoiceDataSpec`); `Ignitor.slot.accelerate` the onepole slot (red:
+  `KlangScriptClassicDoorParitySpec`); the rig not writing the slot (red: the oracle rows, the block-framing row); the
+  arm never gating (red: the guard; the 0 row stays green, being a fold). Review round 1 (`tmp/reviews/pp3-r1-A.md`,
+  `pp3-r1-B.md`, 0 MAJOR): the split counting from index 0 (`else -> framesToGate`, A's mutant A1, which survived the
+  whole suite) is red on the new first-window row; a zero gate writing 1.0 again (A's A3) is red on the zero-gate row.
+- **Cost** (checklist (c); one voice through `VoiceFactory`, reviewer B's probe of step 2, HEAD / tree / HEAD again as
+  the control, medians of 3 rounds; `$S/pp3cost/`). Off (no `accelerate`): render free on both hosts, build +100 B per
+  voice on V8 and +56 B on the JVM (one more gated node in `classic()`'s tree). On, V8 production test bundle, render
+  per 128-frame block: a saw mid-glide +8 percent pinned (1817 to 1968 ns; control 0.92) and +17 percent unpinned
+  (1814 to 2119 ns; control 0.99), about +150 to +300 ns; sgpad (two pitched sources) +21 and +22 percent (about
+  +650 to +700 ns; controls 0.99 and 1.02); a supersaw +6 to +14 percent, about +300 to +680 ns (reviewer B's two
+  focused runs at load 6.5, controls 0.985 to 1.03; my own run read +2 to +3 percent inside wider controls, 1.05 and
+  1.03); a saw past its gate (the hold) +5 and +15 percent against controls of 0.98 and 1.17, so inside the noise
+  (reviewer B: inconclusive too); render bytes
+  unchanged (the held saw's 2.1 KB per block is the release's, the same on HEAD). Build +1.8 to +1.9 KB per voice.
+  JVM: render +9 percent for the saw (987 to 1072 ns), +6 percent sgpad, +2 percent supersaw, -2 percent for the
+  hold (the hold writes a constant), allocation-free; build +1.2 KB per voice. All under 0.03 percent of a 2.67 ms
+  block. The cause is step 2's: the strip wrote one buffer per voice, the tree adds the memo and a
+  `ModApplyingIgnitor` per pitched source.
+- **Suites.** `audio_bridge` jvmTest 146 and jsTest 265; `audio_be` jvmTest 2,432 and jsBrowserTest 2,324 (2,428 before the 7-semitone law rows and round 1's two rows); `sprudel`
+  jvmTest 3,483 (486 skipped); `klangscript-libs` jvmTest 832 and jsTest 609; `BuiltInSongsSmokeTest`,
+  `SongBenchmarkCasesCompileSpec`, `DslDocExamplesSpec` green; `compileTestKotlinJs` of `audio_bridge`, `audio_be`,
+  `sprudel`, `klangscript-libs` and the root green.
+- **Listening pair:** `tmp/listening/pp-step3/` (`kokon-before.wav`, `kokon-after.wav`, `README.md`).
+- **Review round 1** (`tmp/reviews/pp3-r1-A.md`, `tmp/reviews/pp3-r1-B.md`; 0 MAJOR, clean), applied: the zero gate
+  holds the target (A1, Q27) and its law row; the first-window row (A2); `AbsoluteFreqPitchModSpec`'s KDocs name `fm`
+  as the one strip door (A3); the temporary regrouping with sprudel `fm` and `penv` + `accelerate` + `fm` among the
+  ended ones, with the full-engine sizes (A4, B NIT 1); the History lines and the `classic()` KDoc name every
+  exception (A5); section 3's accelerate row measured, not assumed, and checklist (b) reworded (B MINOR 1, the third
+  recurrence); the supersaw cost (B NIT 2); `engine-follow-ups.md` item 10b, the long-release boxing lead (B NIT 3);
+  braces on the node's `for` bodies (N1); `voice-takeover.md`'s strip list (N2). The zero gate is a render change, so
+  the corpus ran again (`tmp/naming/corpus-pp-s3b.txt`): every row identical to step 3's, live Kokon included, and
+  Kokon from HEAD's text still `6d22988a5668b97f`. `audio_be` and `sprudel` jvmTest green.
 
 #### Step 3b. The FM modulator follows the pitch (decision D1, M, a sound change for some authored trees)
 

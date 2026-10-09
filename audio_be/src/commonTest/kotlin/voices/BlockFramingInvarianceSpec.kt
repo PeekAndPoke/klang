@@ -78,7 +78,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         startFrame: Int,
         blockFrames: Int,
         pid: String = "framing",
-        /** Lets a row add pitch-door modulation (the strip's `accelerate`, the vibrato's and pitch envelope's slots). */
+        /** Lets a row add pitch-door modulation (the accelerate's, the vibrato's and the pitch envelope's slots). */
         dataMod: (VoiceData) -> VoiceData = { it },
     ): DoubleArray {
         val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", dsl.classic()) }
@@ -295,9 +295,9 @@ class BlockFramingInvarianceSpec : StringSpec({
     // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT `Voice.Fm`. The voice's own pitch
     // pipeline renderers (`voices/strip/pitch`) were therefore untouched by this harness, which is what P4 is about.
     //
-    // Only the PER-SAMPLE ones belong on a bit-identity list. The vibrato and the pitch envelope (the strip's
-    // `VibratoRenderer` and `PitchEnvelopeRenderer` until pitch pipeline steps 2 and 1, `classic()`'s stages since) and
-    // `AccelerateRenderer` all
+    // Only the PER-SAMPLE ones belong on a bit-identity list. The vibrato, the pitch envelope and accelerate (the
+    // strip's `VibratoRenderer`, `PitchEnvelopeRenderer` and `AccelerateRenderer` until pitch pipeline steps 2, 1 and 3,
+    // `classic()`'s stages since) all
     // derive their position per sample from
     // `blockStart + offset` (+ a phase accumulator, in vibrato's case, advanced once per rendered
     // sample), so they are Class 1.
@@ -322,8 +322,10 @@ class BlockFramingInvarianceSpec : StringSpec({
 
     // `accelerate` is deliberately NOT on the list above, for the same reason a modulated tremolo
     // depth is not: it reassociates the float arithmetic rather than changing the value.
-    // `AccelerateRenderer` seeds `ratio` with ONE `pow()` per block and then multiplies per sample
-    // (its KDoc says so — it is a deliberate cost trade). The mathematical result is identical, but
+    // The accelerate node (`classic()`'s stage since pitch pipeline step 3, filled through the flat `accelerate` slot;
+    // the strip's `AccelerateRenderer` before, with the same seed) seeds `ratio` with ONE `pow()` per block and then
+    // multiplies per sample up to the gate (its KDoc says so; it is a deliberate cost trade). From the gate on it holds
+    // its target, one constant, which every framing renders alike. The mathematical result is identical, but
     // the rounding accumulated since the last reseed depends on how many steps ago that was, so both
     // onset alignment and block size move the last bits.
     //
@@ -331,7 +333,7 @@ class BlockFramingInvarianceSpec : StringSpec({
     // it -250 dB. The bound below is three orders looser than that and still eleven orders tighter
     // than any logic error could hide in: a 2-semitone glide carries ratios around 1.12, so a
     // mis-seeded reseed would show up at O(0.1), not O(1e-13).
-    val accelerateData: (VoiceData) -> VoiceData = { d -> d.copy(accelerate = 2.0) }
+    val accelerateData: (VoiceData) -> VoiceData = { d -> d.withClassicSlots(DoorFields(accelerate = 2.0)) }
     val floatNoiseBound = 1e-11
 
     stripNodes.forEach { (name, mod) ->
@@ -356,7 +358,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         }
     }
 
-    "strip accelerate: block framing moves only the last bits, not the value" {
+    "classic accelerate: block framing moves only the last bits, not the value" {
         val ref = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = accelerateData)
         check(peak(ref) > 1e-3) { "accelerate reference is silent — vacuous comparison" }
 
@@ -377,7 +379,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         val bare = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128)
 
         // Without this, every row above would pass on three identical unmodulated renders.
-        (stripNodes + ("strip accelerate" to accelerateData)).forEach { (name, mod) ->
+        (stripNodes + ("classic accelerate" to accelerateData)).forEach { (name, mod) ->
             val modulated = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = mod)
             withClue(name) { (maxDiff(a = modulated, b = bare) > 1e-6) shouldBe true }
         }

@@ -29,7 +29,6 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 |--------------|-----------|-------------------------------------------|
 | `note`       | `String?` | Note name                                 |
 | `freqHz`     | `Double?` | Direct frequency in Hz                    |
-| `accelerate` | `Double?` | Pitch glide in SEMITONES over the event (12 = one octave; was octaves pre-2026-08-24) |
 
 ### Gain & Dynamics
 
@@ -56,8 +55,8 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 engine's slot names):
 
 - `classic()`'s slots, keyed `<door>.<param>` (`penv.semitones`, `penvCurves.attack`, `lpf.freq`, `lpf.q`,
-  `adsr.attack`, `adsrCurves.release`, `distort.oversample`, `tremolo.depth`, ...), plus the flat `onepole` (Hz, its
-  first amplitude stage, behind the pitch stages), declared in
+  `adsr.attack`, `adsrCurves.release`, `distort.oversample`, `tremolo.depth`, ...), plus the flat `accelerate`
+  (semitones, a pitch stage) and the flat `onepole` (Hz, its first amplitude stage, behind the pitch stages), declared in
   `IgnitorDsl.Slots` (`audio_bridge/.../IgnitorDsl.kt`, the stage slot groups in `IgnitorDslClassic.kt`); a tree without `classic()` reads none of them;
 - the sample instrument's playback slots, flat: `begin`, `end`, `speed`, `loop` (`Slots.sample`);
 - the oscillator's own generic slots (`density` on dust, `voices` and `spread` on the super
@@ -72,7 +71,13 @@ A tree without it plays as it is, and the door slots in the bag go unread.
 
 The vibrato (sprudel's `vib(rate, semitones)`) has no wire field since pitch pipeline step 2: it travels as
 `classic()`'s `vibrato.rate` and `vibrato.semitones` (the switch, 0 or unset is off) slots and fills the Ignitor
-`vibrato` stage `classic()` places outside the pitch envelope.
+`vibrato` stage `classic()` places outside the accelerate.
+
+`accelerate` (sprudel's `accelerate(semitones)`) has no wire field since pitch pipeline step 3: it travels as
+`classic()`'s flat `accelerate` slot (the switch, 0 or unset is off) and fills the Ignitor `accelerate` stage
+`classic()` places between the pitch envelope and the vibrato. The glide runs from the onset to the gate close and
+holds its target through the release (decision D2): the strip glided over the scheduled end, the release tail
+included, so a voice with a release tail changed its sound in that step.
 
 The pitch envelope (sprudel's `penv` and `penvCurves`) has no wire field since pitch pipeline step 1: it travels as
 `classic()`'s `penv.semitones` (the switch, 0 or unset is off), `penv.attack`, `penv.decay`, `penv.sustain`,

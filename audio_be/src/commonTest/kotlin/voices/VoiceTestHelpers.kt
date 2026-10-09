@@ -70,7 +70,6 @@ object VoiceTestHelpers {
         freqHz: Double = 440.0,
         signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
-        accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
 
         // Dynamics
         gain: Double = 1.0,
@@ -123,12 +122,9 @@ object VoiceTestHelpers {
 
         // The voice's stages: Pitch → Ignite (the Send stage is appended by the voice)
         val pipeline = buildPitchPipeline(
-            accelerate = accelerate,
             fm = fm,
             freqHz = freqHz,
             sampleRate = sampleRate,
-            startFrame = startFrame,
-            endFrame = endFrame,
         ) + IgniteRenderer(
             signal = instrument,
             signalCtx = signalCtx,
@@ -166,7 +162,6 @@ object VoiceTestHelpers {
         freqHz: Double = 440.0,
         signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
-        accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope? = null,
@@ -174,7 +169,7 @@ object VoiceTestHelpers {
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
-        freqHz = freqHz, signal = signal, fm = fm, accelerate = accelerate,
+        freqHz = freqHz, signal = signal, fm = fm,
         gain = gain, pan = pan,
         envelope = envelope,
         katalystParams = katalystParams,
@@ -197,7 +192,6 @@ object VoiceTestHelpers {
         isLooping: Boolean = false,
         stopFrame: Double = Double.MAX_VALUE,
         fm: Voice.Fm? = null,
-        accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope? = null,
@@ -216,7 +210,7 @@ object VoiceTestHelpers {
             sampleRate = sampleRate,
             rng = testRandom,
         ),
-        fm = fm, accelerate = accelerate,
+        fm = fm,
         gain = gain, pan = pan,
         envelope = envelope,
     )

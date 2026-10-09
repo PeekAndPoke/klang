@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.toExciter
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.vibrato
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
@@ -20,10 +21,10 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * Pitch modulation switched on and off through a real voice: the vibrato as a tree node (sprudel's `vib` is
- * `classic()`'s stage since pitch pipeline step 2), the strip's accelerate, and a tree mod combined with the strip's
- * buffer in `ModApplyingIgnitor`. The laws are pinned elsewhere: the vibrato in `ClassicVibratoSpec` and
- * `ModulatorPhaseWrapSpec`, accelerate in `AccelerateSemitoneLawSpec`, the pitch envelope in `EnvelopeLawSpec` and
+ * Pitch modulation switched on and off through a real voice: the vibrato and accelerate as tree nodes (sprudel's `vib`
+ * and `accelerate` are `classic()`'s stages since pitch pipeline steps 2 and 3), and a tree mod combined with the
+ * strip's FM buffer in `ModApplyingIgnitor`. The laws are pinned elsewhere: the vibrato in `ClassicVibratoSpec` and
+ * `ModulatorPhaseWrapSpec`, accelerate in `AccelerateSemitoneLawSpec` and `ClassicAccelerateSpec`, the pitch envelope in `EnvelopeLawSpec` and
  * `PitchEnvelopeModFastExp2Spec`.
  */
 class PitchModulationTest : StringSpec({
@@ -65,44 +66,23 @@ class PitchModulationTest : StringSpec({
         diffRms(a = realDepth, b = bare) shouldBeGreaterThan 1e-3
     }
 
-    "accelerate with 0 semitones produces no pitch change — and a real glide does" {
-        // Audit F12: `Voice.Accelerate(semitones = 0.0)` IS the helper default, so the two
-        // voices were configured identically. Positive control added.
-        fun render(accelerate: Voice.Accelerate): AudioBuffer {
-            val voice = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), accelerate = accelerate)
+    "accelerate with 0 semitones produces no pitch change, and a real glide does" {
+        // Audit F12. Accelerate is a tree node since pitch pipeline step 3 (`classic()`'s stage), so the voice renders
+        // it through the instrument: 0 semitones is gated off (the bare sine), a real glide is the positive control.
+        fun render(semitones: Double?): AudioBuffer {
+            val dsl = if (semitones == null) IgnitorDsl.Sine() else IgnitorDsl.Sine().accelerate(semitones = semitones)
+            val voice = createSynthVoice(blockFrames = bf, signal = dsl.toExciter(random = Random(1)))
             val ctx = createContext(blockFrames = bf)
             voice.render(ctx)
             return ctx.voiceBuffer
         }
 
-        val bare = render(Voice.Accelerate(0.0))
-        val zero = render(Voice.Accelerate(semitones = 0.0))
-        val glide = render(Voice.Accelerate(semitones = 12.0))
+        val bare = render(semitones = null)
+        val zero = render(semitones = 0.0)
+        val glide = render(semitones = 12.0)
 
         diffRms(a = zero, b = bare) shouldBeLessThan 1e-6
         diffRms(a = glide, b = bare) shouldBeGreaterThan 1e-3
-    }
-
-    "a tree vibrato and the strip's accelerate combine" {
-        // The vibrato is the instrument's (a tree node, pitch pipeline step 2), the accelerate still the strip's:
-        // the source reads their product (`ModApplyingIgnitor`: the tree mod times the strip's `phaseMod`).
-        val vibrato = { IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.25).toExciter(random = Random(1)) }
-        val voiceBoth = createSynthVoice(blockFrames = bf, signal = vibrato(), accelerate = Voice.Accelerate(semitones = 1.0))
-        val voiceVibratoOnly = createSynthVoice(blockFrames = bf, signal = vibrato())
-        val voiceAccelOnly = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), accelerate = Voice.Accelerate(semitones = 1.0))
-
-        val ctxBoth = createContext(blockFrames = bf)
-        val ctxVib = createContext(blockFrames = bf)
-        val ctxAcc = createContext(blockFrames = bf)
-        voiceBoth.render(ctxBoth)
-        voiceVibratoOnly.render(ctxVib)
-        voiceAccelOnly.render(ctxAcc)
-
-        // Combined should differ from vibrato-only and accelerate-only
-        val diffFromVib = diffRms(a = ctxBoth.voiceBuffer, b = ctxVib.voiceBuffer)
-        val diffFromAcc = diffRms(a = ctxBoth.voiceBuffer, b = ctxAcc.voiceBuffer)
-        (diffFromVib > 1e-4) shouldBe true
-        (diffFromAcc > 1e-4) shouldBe true
     }
 
     "a tree vibrato and the strip's FM combine: the product differs from each alone" {

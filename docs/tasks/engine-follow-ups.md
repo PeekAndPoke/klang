@@ -61,6 +61,13 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
     run the same `renderPitchEnvelopeRatios` loop over `core.at(...)`), so a typical kick sweep costs about 65 KB per
     note. Likely a double crossing a call V8 does not inline (`adsrCurveShape`, `fastExp2` or `safeOut`); not located.
     Source: `tmp/reviews/pp1-r1-B.md` (pitch pipeline step 1, review round 1, reviewer B, the NIT). S.
+10b. **A classic voice deep in a long release boxes on V8** (a lead): a saw with a 0.01 s gate and a 1000 s release,
+    measured inside the release (`saw-offrel`, no accelerate), allocates about 2.1 KB per block (2,120 to 2,137 bytes,
+    roughly one heap number per sample) on the production test bundle, pinned and unpinned, on HEAD and in pitch
+    pipeline step 3 alike; before its gate the same saw allocates about 0.1 KB. Unchecked at ordinary release lengths,
+    where the release lasts only a few hundred blocks; likely the release path of the amplitude envelope, the class of
+    10a. Locate it with the sampling heap profiler. Source: `tmp/reviews/pp3-r1-B.md` (pitch pipeline step 3, review
+    round 1, reviewer B, NIT 3). S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

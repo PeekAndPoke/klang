@@ -16,7 +16,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 //
 // The switch knobs have no entry: the pitch envelope's and accelerate's
 // `semitones` and FM's `depth` default to 0, which is "off", and a non-finite
-// one reads as off. The vibrato's depth slot (`vibrato.semitones`) defaults to 0
+// one reads as off (the slots `penv.semitones` and `accelerate` alike). The vibrato's depth slot (`vibrato.semitones`) defaults to 0
 // too. A non-finite depth on the node's own knob reads as `VIBRATO_SEMITONES`
 // (built); in the slot it reads as the slot's 0.0 (off).
 // ─────────────────────────────────────────────────────────────────────────────

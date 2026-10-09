@@ -49,7 +49,8 @@ internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
  *    values the wire used to carry); its envelope (depth, the four stages and the three curves) only
  *    when one of the five envelope knobs is set: exactly the `FilterDef` the wire used to carry;
  *  - the pitch envelope writes every field that is set; its switch `penv.semitones` only when set (a stage-only
- *    call switches nothing on); the vibrato the same, its switch `vibrato.semitones`;
+ *    call switches nothing on); the vibrato the same, its switch `vibrato.semitones`; `accelerate` under its flat
+ *    slot when set;
  *  - shapes and curves travel as their catalogue INDEX (`DistortionShapes`, `LfoShapes`, `AdsrCurves`), a
  *    flag as 1.0 or 0.0.
  *
@@ -85,10 +86,11 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
 
     // The vibrato (pitch pipeline step 2): the rate and the depth when set. `vibrato.semitones` is the switch, so a
     // rate-only call (`vib(4)`) leaves the depth at its slot default 0.0 and builds no vibrato, as on the strip.
-    // The group also carries `accelerate`, still a wire field until its step.
+    // The group's `accelerate` (step 3) is its own stage's switch, under the flat slot `accelerate`.
     pitchMod?.let { m ->
         bag.put(k.vibratoRate, m.vibrato)
         bag.put(k.vibratoSemitones, m.vibratoMod)
+        bag.put(k.accelerate, m.accelerate)
     }
 
     distortion?.let { d ->
@@ -169,6 +171,7 @@ private object ClassicSlotKeys {
 
     val vibratoRate = name(s.vibrato.rate)
     val vibratoSemitones = name(s.vibrato.semitones)
+    val accelerate = name(s.accelerate)
 
     val penvSemitones = name(s.penv.semitones)
     val penvAttack = name(s.penv.attack)

@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
  *
  * The order: the pitch envelope on the source (pitch pipeline step 1), then the strip's
  * (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 4) behind the pattern's onepole (the first
- * amplitude stage since step 10): penv, vibrato, onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
+ * amplitude stage since step 10): penv, accelerate, vibrato, onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
  * tremolo, adsr. The slot table below is the contract step 8 built
  * on (sprudel's `toVoiceData` writes exactly these keys, `classicSlotParams`), so a renamed key or a moved
  * default is a red row here before it is a silent door anywhere else. What the tail RENDERS is pinned in
@@ -46,15 +46,16 @@ class ClassicTailSpec : StringSpec({
                 is IgnitorDsl.Crush -> n.inner
                 is IgnitorDsl.PitchEnvelope -> n.inner
                 is IgnitorDsl.Vibrato -> n.inner
+                is IgnitorDsl.Accelerate -> n.inner
                 is IgnitorDsl.OnePoleLowpass -> n.inner
                 else -> return@buildList
             }
         }
     }
 
-    "the order: the pitch stages on the source, then the strip's behind the onepole: penv, vibrato, onepole, crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
+    "the order: the pitch stages on the source, then the strip's behind the onepole: penv, accelerate, vibrato, onepole, crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
         spine(tail).map { it::class.simpleName } shouldBe listOf(
-            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Vibrato", "PitchEnvelope", "Saw",
+            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Vibrato", "Accelerate", "PitchEnvelope", "Saw",
         )
         spine(tail).last() shouldBe saw
     }
@@ -110,6 +111,8 @@ class ClassicTailSpec : StringSpec({
             "penvCurves.attack" to modExp,
             "penvCurves.decay" to modExp,
             "penvCurves.release" to modExp,
+            // Accelerate (pitch pipeline step 3): the switch, 0.0, off.
+            "accelerate" to 0.0,
             // The vibrato (pitch pipeline step 2): the rate at the strip's default, the depth (the switch) at 0.0, off.
             "vibrato.rate" to 5.0,
             "vibrato.semitones" to 0.0,

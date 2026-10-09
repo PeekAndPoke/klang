@@ -513,15 +513,16 @@ private fun applyAccelerate(source: SprudelPattern, args: List<SprudelDslArg<Any
 
 /**
  * Sets the playback acceleration (pitch ramp) for each event, in SEMITONES over the event's
- * duration: `accelerate(12)` glides one octave up, `accelerate(-12)` one octave down.
+ * duration: `accelerate(12)` glides one octave up, `accelerate(-12)` one octave down. The glide
+ * runs from the onset to the end of the note (the gate) and holds its target through the release.
  *
  * A continuous pitch change during sample playback, good for pitched percussion and sweeps. With
  * no argument it reinterprets the current event value as the semitone amount. (The unit changed
  * from octaves to semitones in the pitch-param unification, 2026-08-24, so old scripts' values are
  * 12× subtler now.)
  *
- * The engine applies it in front of every instrument, `classic()` or not, from the voice's pitch strip, until
- * accelerate moves into `classic()` (`docs/tasks/pitch-pipeline-into-the-tree.md`).
+ * The door fills the accelerate stage of `classic()` (the flat `accelerate` slot), the Ignitor `accelerate` node; an
+ * instrument without `classic()` ignores it, like the other `classic()` doors.
  *
  * ```KlangScript(Playable)
  * s("cr").accelerate(24)             // crash pitches two octaves up during playback

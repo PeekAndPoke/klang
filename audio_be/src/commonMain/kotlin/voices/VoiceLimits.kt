@@ -15,8 +15,8 @@ package io.peekandpoke.klang.audio_be.voices
  * "amendment A1" bug class, a reader of a copy the writer forgot, cannot come back). The ignite stage derives the
  * voice-relative gate the ignitors read (`IgniteContext.gateEndFrame`) from it once per block.
  *
- * Not a limit and deliberately not here: the `accelerate` glide base (`AccelerateRenderer`,
- * `IgniteContext.voiceDurationFrames`), which a note-off must not move; and a cut's fade window, which only the
+ * Not a limit and deliberately not here: the `accelerate` glide base (`IgniteContext.voiceDurationFrames`, the
+ * scheduled gate length, which the accelerate node glides over and then holds), which a note-off must not move; and a cut's fade window, which only the
  * voice reads and which lives with the state that uses it, `Voice.State.Fading` (lifecycle step 5b).
  */
 class VoiceLimits(

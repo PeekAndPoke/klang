@@ -25,8 +25,9 @@ import kotlin.random.Random
  *
  * The two doors are genuinely different mechanisms and each gets its own rows:
  *  - the IGNITOR door hands modulation down through `ModApplyingIgnitor`;
- *  - the STRIP door (sprudel's `accelerate` and `fm`; `penv` and `vib` are `classic()` stages since pitch pipeline
- *    steps 1 and 2) writes `ctx.phaseMod` once for the whole graph in `IgniteRenderer`, with no wrapper involved.
+ *  - the STRIP door (sprudel's `fm`, the last one; `penv`, `vib` and `accelerate` are `classic()` stages since pitch
+ *    pipeline steps 1 to 3) writes `ctx.phaseMod` once for the whole graph in `IgniteRenderer`, with no wrapper
+ *    involved.
  */
 class AbsoluteFreqPitchModSpec : StringSpec({
 
@@ -75,7 +76,7 @@ class AbsoluteFreqPitchModSpec : StringSpec({
     val absolute = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(180.0))
     val musical = IgnitorDsl.Sine(freq = IgnitorDsl.Freq)
 
-    // ── The strip door: a phaseMod written for the whole graph (sprudel's accelerate and fm) ─────
+    // ── The strip door: a phaseMod written for the whole graph (sprudel's fm) ─────
 
     "an absolute-freq oscillator ignores a strip-level phaseMod" {
         // That guitar's soundbox thump, reduced: 180 Hz, fixed by authoring, sitting in a patch

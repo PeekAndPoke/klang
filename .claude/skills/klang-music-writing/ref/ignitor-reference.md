@@ -458,7 +458,7 @@ bell of the built-in `sgbell`.
 | `.octaveUp()`                                       | +12 semitones                              |
 | `.octaveDown()`                                     | -12 semitones                              |
 | `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
-| `.accelerate(semitones)`                            | Exponential pitch ramp over the voice (12 = one octave) |
+| `.accelerate(semitones)`                            | Exponential pitch glide from the onset to the gate close, held through the release (12 = one octave) |
 | `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); the `adsr`'s own lambda shapes it with `curves` |
 
 `pitchEnvelope` is an ADSR on the pitch, the chain `adsr`'s pattern: up to `semitones` over the attack, down to the
@@ -581,10 +581,10 @@ Ignitor.sine(5)  // fixed 5 Hz (for LFO use)
 
 ### `.classic()`: the pattern's voice doors on your instrument
 
-`.classic()` wraps a sound in the classic synth voice: the pitch envelope and the vibrato (on the source), onepole,
+`.classic()` wraps a sound in the classic synth voice: the pitch envelope, the accelerate and the vibrato (on the source), onepole,
 crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that order. The
-pattern's `penv` and `vib` reach only an instrument with `.classic()`; `accelerate` and `fm` still reach every
-instrument (they run outside the tree until each moves into `classic()`). Make it the LAST call: an instrument whose
+pattern's `penv`, `accelerate` and `vib` reach only an instrument with `.classic()`; `fm` still reaches every
+instrument (it runs outside the tree until it moves into `classic()`). Make it the LAST call: an instrument whose
 tree ends in `.classic()` is a whole voice that ends on its own envelope. `adsrOff()` switches that envelope off, and
 the voice ends on the instrument's own envelope when its `.adsr(...)` (with a fixed release) is the last thing
 built before `.classic()`; anything built after it, a stage of the instrument's own or a filter or other stage the

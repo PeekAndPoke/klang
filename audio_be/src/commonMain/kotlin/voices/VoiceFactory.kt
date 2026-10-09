@@ -124,9 +124,6 @@ class VoiceFactory(
         // Routing
         val cylinder = data.cylinder ?: 0
 
-        // Pitch / Glissando
-        val accelerate = Voice.Accelerate(semitones = data.accelerate ?: 0.0)
-
         // Silence culling: the author's `cull(...)`; a tremolo inside the tree adds its own cull-never rule at the
         // build (`treeCull`).
         val cull = data.cull
@@ -179,7 +176,7 @@ class VoiceFactory(
 
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
-                    gain = gain, accelerate = accelerate,
+                    gain = gain,
                     fm = fm, signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
@@ -301,7 +298,7 @@ class VoiceFactory(
 
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
-                    gain = gain, accelerate = accelerate,
+                    gain = gain,
                     fm = fm, signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
@@ -357,7 +354,6 @@ class VoiceFactory(
         voiceDurationFrames: Int,
         cylinder: Int,
         gain: Double,
-        accelerate: Voice.Accelerate,
         fm: Voice.Fm?,
         signal: Ignitor,
         freqHz: Double,
@@ -381,12 +377,9 @@ class VoiceFactory(
         )
 
         val pipeline = buildPitchPipeline(
-            accelerate = accelerate,
             fm = fm,
             freqHz = freqHz,
             sampleRate = sampleRate,
-            startFrame = startFrame,
-            endFrame = endFrame,
         ) + IgniteRenderer(
             signal = signal,
             signalCtx = signalCtx,

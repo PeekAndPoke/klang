@@ -29,9 +29,16 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   white leak is `leak`. The frame-domain core keeps `sustainLevel` (`EnvelopeCore.prepare`, `Voice.Envelope`)
   and the constants keep their `*_SEC` names. Old names: `docs/retired-names.md`.
 - **The pitch doors are moving into the tree** (`docs/tasks/pitch-pipeline-into-the-tree.md`): sprudel's pitch
-  envelope and vibrato are `classic()`'s `PitchEnvelope` and `Vibrato` stages, filled by the `penv.*` /
-  `penvCurves.*` (step 1) and `vibrato.*` (step 2) slots; accelerate and FM still run on the strip in
-  `voices/strip/pitch/`, and a source reads `treeMods * stripRest`.
+  envelope, accelerate and vibrato are `classic()`'s `PitchEnvelope`, `Accelerate` and `Vibrato` stages, filled by
+  the `penv.*` / `penvCurves.*` (step 1), flat `accelerate` (step 3) and `vibrato.*` (step 2) slots; FM still runs on
+  the strip in `voices/strip/pitch/`, and a source reads `treeMods * stripFm`.
+- **Accelerate glides over the GATE and holds** (decision D2, with its hold, 2026-10-09): `2^(semitones / 12 *
+  progress)` from the onset to the gate close (`IgniteContext.voiceDurationFrames`, which a note-off never moves),
+  then the target through the release, for both doors; a gate of 0 frames holds the target from the first frame
+  (Q27). The strip glided over the scheduled end (release tail
+  included), so every sprudel `accelerate` under a release tail changed in step 3 (in the corpus only Kokon's
+  `strike`); the Ignitor node rose on past the gate before the hold (an authored `accelerate` under a release tail,
+  after the gate, no corpus song).
 - **Voice lifetime** = gate end plus the tree's own release tail (`VoiceFactory.treeLifetime`, floored at 0;
   `VOICE_ADSR_RELEASE_SEC` when the tree has no static answer). `TeardownFadeRenderer` runs unless the root is a
   built amplitude envelope with a static release (`BuiltIgnitor.endsInEnvelope`). A silent release is culled: the
@@ -258,6 +265,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-09 Pitch pipeline step 3: sprudel's `accelerate` is `classic()`'s accelerate stage (the flat `accelerate`
+  slot), its wire field and the strip's `AccelerateRenderer` gone; the node holds its target from the gate on (D2):
+  a sound change for an `accelerate` under a release tail on both doors (corpus: Kokon's `strike` only, a listening
+  pair) and for a zero gate (`legato(0)`: the target from the first frame, Q27), every other corpus row and every
+  non-accelerate matrix row identical, apart from the shapes the step record names (D1, D6, a non-finite amount now
+  the bare voice where the strip froze the oscillator, the clamp from about 598 semitones, one temporary regrouping
+  with sprudel `fm`): `docs/tasks/pitch-pipeline-into-the-tree.md` step 3
 - 2026-10-09 Pitch pipeline step 2: sprudel's `vib` is `classic()`'s vibrato stage (`vibrato.*` slots), its two wire
   fields and the strip's `VibratoRenderer` gone, bit-identical on the corpus and the door matrix apart from the
   shapes the step record names (D1, D6, regroupings up to about 7.3e-13, the raw edges: a depth past about 598

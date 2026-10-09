@@ -377,7 +377,7 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.ignitorParams?.get("panSpread") shouldBe 0.3
         voiceData.ignitorParams?.get("spread") shouldBe 0.1
         voiceData.ignitorParams?.get("voices") shouldBe 3.0
-        voiceData.accelerate shouldBe 0.05
+        voiceData.ignitorParams?.get("accelerate") shouldBe 0.05
         voiceData.ignitorParams?.get("vibrato.rate") shouldBe 0.2
         voiceData.ignitorParams?.get("vibrato.semitones") shouldBe 0.4
         voiceData.ignitorParams?.get("distort.amount") shouldBe 0.3

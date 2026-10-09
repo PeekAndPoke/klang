@@ -34,7 +34,7 @@ data class VoiceData(
     /** Sound index */
     val soundIndex: Int?,
 
-    // Voice slots: classic()'s door slots (with the flat "onepole" [Hz]; sprudel's `penv` as `penv.*` / `penvCurves.*`, `vib` as `vibrato.*`), the sample's "begin"/"end"/"speed"/"loop",
+    // Voice slots: classic()'s door slots (with the flat "onepole" [Hz]; sprudel's `penv` as `penv.*` / `penvCurves.*`, `vib` as `vibrato.*`, the flat "accelerate"), the sample's "begin"/"end"/"speed"/"loop",
     // the oscillators' own ("density", "voices", "spread") and raw ignp() writes. sprudel's "panSpread" is unread.
     val ignitorParams: Map<String, Double>?,
 
@@ -64,14 +64,6 @@ data class VoiceData(
      * phase 3 step 9.
      */
     val katalystParams: Map<String, Double>? = null,
-
-    // Pitch / Glisando
-    /**
-     * Pitch glide over the event's duration, in SEMITONES (P unit unification, 2026-08-24:
-     * converted from octaves — a second wire producer must send semitones; 12 = one octave,
-     * engine law `ratio = 2^((semitones/12)·progress)`).
-     */
-    val accelerate: Double?,
 
     // FM Synthesis
     val fmh: Double?,
@@ -170,7 +162,6 @@ data class VoiceData(
             soundIndex = null,
             ignitorParams = null,
             katalystParams = null,
-            accelerate = null,
             fmh = null,
             fmAttack = null,
             fmDecay = null,

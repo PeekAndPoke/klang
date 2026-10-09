@@ -128,6 +128,8 @@ class ClassicDoorRenderParitySpec : StringSpec({
         // The vibrato (pitch pipeline step 2): the depth (the switch) alone, the rate against the depth alone.
         add(Row("vibrato.semitones", mapOf("vibrato.semitones" to 0.4)))
         add(Row("vibrato.rate", mapOf("vibrato.semitones" to 0.4, "vibrato.rate" to 9.0)))
+        // Accelerate (pitch pipeline step 3): the flat switch.
+        add(Row("accelerate", mapOf("accelerate" to 5.0)))
         add(Row("penv.semitones", penvOn))
         add(Row("penv.attack", penvOn + ("penv.attack" to 0.05)))
         add(Row("penv.decay", penvOn + ("penv.decay" to 0.03)))

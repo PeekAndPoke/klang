@@ -263,14 +263,14 @@ class SampleSlots internal constructor() {
  * order is written.
  *
  * ```
- * this -> pitchEnvelope -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
+ * this -> pitchEnvelope -> accelerate -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
  * ```
  *
  * The PITCH stages come first, directly on the instrument (pitch pipeline, `docs/tasks/pitch-pipeline-into-the-tree.md`
  * section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not
  * change the sound, and the nesting decides the grouping of the ratio product, which is the retired pitch strip's
- * (vibrato outermost, FM innermost, each placed at its final position by the step that moves it; accelerate will sit
- * between the pitch envelope and the vibrato). The amplitude
+ * (vibrato outermost, then accelerate, then the pitch envelope, FM innermost, each placed at its final position by the
+ * step that moves it). The amplitude
  * stages are the retired strip's order with the canonical filter sub-order of
  * `SprudelVoiceData.toVoiceData`, behind the pattern's `onepole`, which sat on the source in front of the
  * strip. Every knob is a slot of [IgnitorDsl.Slots] (the groups above), so a
@@ -311,6 +311,14 @@ class SampleSlots internal constructor() {
  *  - the vibrato is the Ignitor `vibrato` node (`VibratoModIgnitor`: the strip's accumulator, increment, wrap and
  *    ratio), filled by sprudel's `vib` through the `vibrato.*` slots (pitch pipeline step 2), with the same accepted
  *    differences as the pitch envelope;
+ *  - the accelerate is the Ignitor `accelerate` node, filled by sprudel's `accelerate` through the flat `accelerate`
+ *    slot (pitch pipeline step 3). NOT the strip's sound, by decision D2: the glide spans the GATE (onset to gate
+ *    close) and holds its target through the release, where the strip glided over the scheduled end, the release
+ *    tail included (a sound change for every `accelerate` voice with a release tail; in the corpus only Kokon's
+ *    `strike`), and a gate of 0 frames (`legato(0)`) holds the target from the first frame where the strip glided over
+ *    the release (Q27). A non-finite amount is dropped at sprudel's boundary and plays the bare voice, where the strip
+ *    froze the oscillator; from about 598 semitones the ratio is clamped at `SAFE_MAX`. Beyond that, the pitch
+ *    envelope's accepted differences;
  *  - the envelope evaluates the one envelope law (`EnvelopeCore`, shared with the old strip VCA since
  *    phase 3 D3), and its de-click is the constant `ENV_DECLICK_SECONDS`, not a slot: no door writes the
  *    de-click per note.
@@ -334,9 +342,11 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         decayCurve = s.penvCurves.decay,
         releaseCurve = s.penvCurves.release,
     )
-    // The vibrato OUTSIDE the pitch envelope, its final place: the outer mod is combined first, so the product groups
-    // as the strip's `(V * ...) * P` (pitch pipeline step 2).
-    val vibratoed = IgnitorDsl.Vibrato(inner = pitchEnveloped, rate = s.vibrato.rate, semitones = s.vibrato.semitones)
+    // Accelerate between the pitch envelope and the vibrato, its final place (pitch pipeline step 3).
+    val accelerated = IgnitorDsl.Accelerate(inner = pitchEnveloped, semitones = s.accelerate)
+    // The vibrato OUTSIDE, its final place: the outer mod is combined first, so the product groups as the strip's
+    // `(V * A) * P` (pitch pipeline steps 2 and 3).
+    val vibratoed = IgnitorDsl.Vibrato(inner = accelerated, rate = s.vibrato.rate, semitones = s.vibrato.semitones)
     val onepoled = IgnitorDsl.OnePoleLowpass(inner = vibratoed, freq = s.onepole)
     val crushed = IgnitorDsl.Crush(inner = onepoled, bits = s.crush.bits)
     val coarsened = IgnitorDsl.Coarse(inner = crushed, factor = s.coarse.factor)

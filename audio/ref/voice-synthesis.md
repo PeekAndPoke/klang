@@ -16,12 +16,12 @@ the composed pipeline.
 
 ```
 Pitch stage     (PitchPipelineBuilder → writes freqModBuffer)
-  1. Accelerate         : pitch ramp modulation
-  2. FM                 : frequency modulation
-  (sprudel's pitch envelope and vibrato left this stage in pitch pipeline steps 1 and 2: classic()'s pitch stages)
+  1. FM                 : frequency modulation
+  (sprudel's pitch envelope, vibrato and accelerate left this stage in pitch pipeline steps 1 to 3: classic()'s
+   pitch stages)
 
 Ignite stage    (IgniteRenderer → writes audioBuffer)
-  3. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds)
+  2. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds)
 
 Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitude envelope with a
                  static release; the one home of the rule is BuiltIgnitor.endsInEnvelope. adsrOff
@@ -63,8 +63,7 @@ not per-voice: applied on the orbit bus after all voices mix into the cylinder.
 ### Voice construction
 
 `VoiceFactory` builds each `Voice` from `VoiceData`: the instrument's tree (`IgnitorRegistry.createExciter`,
-or the sample instrument for a sample), the pitch pipeline from the typed pitch fields that are left (accelerate,
-FM), and the stages
+or the sample instrument for a sample), the pitch pipeline from the typed pitch fields that are left (FM), and the stages
 after the tree. `Voice` itself holds the lifecycle frames, `cylinderId`, `gain`, `pan`,
 `katalystParams`, `cut`, the cull window and the pipeline.
 

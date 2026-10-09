@@ -246,8 +246,16 @@ sealed interface IgnitorDsl {
         // door's word (`lpf.freq`, `crush.bits`); each group's KDoc in `IgnitorDslClassic.kt` names
         // the defaults and why.
 
-        /** The vibrato stage, outside the pitch envelope: `vibrato.rate` and `vibrato.semitones` (the switch). */
+        /** The vibrato stage, outside the accelerate: `vibrato.rate` and `vibrato.semitones` (the switch). */
         val vibrato: VibratoSlots = VibratoSlots()
+
+        /**
+         * The accelerate stage, between the pitch envelope and the vibrato: the glide in SEMITONES from the onset to the
+         * gate close, held through the release (decision D2), which sprudel's `accelerate(semitones)` writes. It is the
+         * stage's switch: default 0.0, which the gate reads as off (a non-finite value reads as unset, so off too). A
+         * flat name, like [onepole]: the door has one knob (pitch pipeline step 3; decision D4).
+         */
+        val accelerate: IgnitorDsl = Param(name = "accelerate", default = 0.0, description = "Mirrors sprudel's reader `accelerate`")
 
         /** The pitch envelope stage, `classic()`'s first: `penv.semitones` (the switch) and its four stages. */
         val penv: PitchEnvelopeSlots = PitchEnvelopeSlots()
@@ -2194,8 +2202,10 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Pitch acceleration. Continuously shifts pitch over the voice's duration using an
-     * exponential curve, by [semitones] total: `accelerate(12)` ends one octave up.
+     * Pitch acceleration: an exponential glide by [semitones] from the onset to the gate close, then held through the
+     * release: `accelerate(12)` arrives one octave up when the note ends and stays there (decision D2 of the pitch
+     * pipeline, with its hold, 2026-10-09). Sprudel's `accelerate` fills `classic()`'s accelerate stage, this node,
+     * through the flat `accelerate` slot.
      */
     @WireName("accelerate")
     data class Accelerate(
@@ -3117,7 +3127,7 @@ fun IgnitorDsl.vibrato(rate: Double, semitones: Double) = IgnitorDsl.Vibrato(
     semitones = IgnitorDsl.Constant(semitones),
 )
 
-/** Applies continuous pitch acceleration over the voice's duration. */
+/** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
 fun IgnitorDsl.accelerate(semitones: Double) = IgnitorDsl.Accelerate(
     inner = this,
     semitones = IgnitorDsl.Constant(semitones),

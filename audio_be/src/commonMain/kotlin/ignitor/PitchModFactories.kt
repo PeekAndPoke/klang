@@ -113,18 +113,34 @@ fun vibratoModIgnitor(rate: Double, semitones: Double): Ignitor =
     vibratoModIgnitor(rate = ParamIgnitor("rate", rate), semitones = ParamIgnitor("semitones", semitones))
 
 /**
- * Accelerate — exponential pitch ramp in ratio space.
+ * Accelerate: an exponential pitch glide over the GATE, then held.
  *
- * Produces `2^((semitones/12) * progress)` per sample, where progress ramps 0→1 over the
- * voice duration. At progress=0: output = 1.0. At progress=1: output = `2^(semitones/12)` —
- * `accelerate(12)` ends exactly one octave up. (Unit changed from octaves to SEMITONES in
- * the pitch-param unification, 2026-08-24; in-repo values migrated ×12.)
+ * Produces `2^((semitones / 12) * progress)` per sample, where progress runs from 0 at the onset to 1 at the gate
+ * close (`IgniteContext.voiceDurationFrames`, the gate length). From the gate frame on, through the whole release, it
+ * HOLDS the target `2^(semitones / 12)`: `accelerate(12)` arrives one octave up when the note ends and stays there
+ * (decision D2 of the pitch pipeline, "gliding to the gate close is the correct behaviour", maintainer 2026-10-08,
+ * and its hold, 2026-10-09). Sprudel's `accelerate` is this node too: it fills the accelerate stage `classic()`
+ * places, through the flat `accelerate` slot (pitch pipeline step 3). The voice strip's `AccelerateRenderer`, which
+ * glided over the scheduled end (the release tail included), retired with it. (Unit changed from octaves to
+ * SEMITONES in the pitch-param unification, 2026-08-24; in-repo values migrated x12.)
  *
- * Output is passed through [safeOut] — large values can grow `ratio`
- * past `Float.MAX_VALUE` (overflowing to `+Inf`); the safety clamp keeps the
- * oscillator phase accumulator finite. See `audio/ref/numerical-safety.md`.
+ * Until the hold (2026-10-09) the node kept rising past the gate at the same rate, so a voice with a release tail
+ * ended at `semitones * (gate + tail) / gate`. The hold changed the Ignitor door's sound only there: an authored
+ * `accelerate` under a release tail, after the gate. The frames before the gate kept their bits.
  *
- * @param semitones pitch change in SEMITONES over the full voice duration. Positive = rises.
+ * The law per block: one `pow` seeds the block's first frame, `2^(octaves * (elapsed / gate))`, then one multiply by
+ * `2^(octaves / gate)` per sample up to the gate (the per-block seed reassociates the product: block-framing P4,
+ * bounded at 1e-11 across framings); the block's frames at or past the gate take the target. The loop splits at the
+ * gate, so no frame tests it. A held realtime voice keeps its far scheduled gate as the base (a note-off never moves
+ * `voiceDurationFrames`), so its glide stays inert and never reaches the hold. A gate of zero frames (sprudel's
+ * `legato(0)`) has arrived at once: the voice holds the target from its first frame (decided by default, maintainer
+ * questions Q27, 2026-10-09); the ramp, which holds the only division by the gate, never runs then.
+ *
+ * Output is passed through [safeOut], the ramp and the hold alike: from about 598 semitones (`12 * log2(1e15)`) the
+ * ratio passes `SAFE_MAX` and is clamped there, and past about 12,288 semitones `2^x` would overflow to `+Inf`; the
+ * clamp keeps the oscillator phase accumulator finite. See `audio/ref/numerical-safety.md`.
+ *
+ * @param semitones pitch change in SEMITONES from the onset to the gate close. Positive = rises.
  */
 fun accelerateModIgnitor(semitones: Ignitor): Ignitor = AccelerateModIgnitor(semitones)
 
@@ -134,26 +150,47 @@ private class AccelerateModIgnitor(private val semitones: Ignitor) : Ignitor {
         // Raw, a NaN skips the `== 0.0` bypass and `safeOut` turns every ratio into 0: the oscillator holds
         // still. No clamp.
         val amountVal = finiteOr(value = Ignitors.readParam(semitones, freqHz, ctx), fallback = 0.0) / 12.0 // semitones -> octaves
+        val start = ctx.offset
         val end = ctx.windowEnd
 
         if (amountVal == 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0
+            for (i in start until end) {
+                buffer[i] = 1.0
+            }
+
             return
         }
 
-        val totalFrames = ctx.voiceDurationFramesD
-        if (totalFrames <= 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0
-            return
+        // The window's frames before the gate glide, the rest hold. A gate of 0 frames (or less) holds from the first
+        // frame: `framesToGate <= 0`. Int arithmetic with no overflow: the gate is at most the held-voice horizon
+        // (`Int.MAX_VALUE / 2`), the elapsed count is non-negative, and the window is at most one block.
+        val framesToGate = ctx.voiceDurationFrames - ctx.voiceElapsedFrames
+        val rampEnd = when {
+            framesToGate <= 0 -> start
+            framesToGate >= end - start -> end
+            else -> start + framesToGate
         }
 
-        val startProgress = ctx.voiceElapsedFrames.toDouble() / totalFrames
-        val step = 2.0.pow(amountVal / totalFrames)
-        var ratio = 2.0.pow(amountVal * startProgress)
+        if (rampEnd > start) {
+            // Here the gate is longer than the elapsed count, so `totalFrames` is positive.
+            val totalFrames = ctx.voiceDurationFramesD
+            val startProgress = ctx.voiceElapsedFrames.toDouble() / totalFrames
+            val step = 2.0.pow(amountVal / totalFrames)
+            var ratio = 2.0.pow(amountVal * startProgress)
 
-        for (i in ctx.offset until end) {
-            buffer[i] = safeOut(ratio)
-            ratio *= step
+            for (i in start until rampEnd) {
+                buffer[i] = safeOut(ratio)
+                ratio *= step
+            }
+        }
+
+        if (rampEnd < end) {
+            // The hold: the target from the gate frame on, through the release.
+            val target = safeOut(2.0.pow(amountVal))
+
+            for (i in rampEnd until end) {
+                buffer[i] = target
+            }
         }
     }
 }

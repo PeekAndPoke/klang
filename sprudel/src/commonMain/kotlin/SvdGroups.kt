@@ -61,10 +61,11 @@ data class SvdFilter(
 
 /**
  * Pitch modulation: glide ([accelerate]) + vibrato. [vibrato] is the rate in Hz, [vibratoMod] the depth in semitones
- * (`vib(rate, semitones)`); the wire carries them as `classic()`'s `vibrato.rate` / `vibrato.semitones` slots.
+ * (`vib(rate, semitones)`); the wire carries them as `classic()`'s `vibrato.rate` / `vibrato.semitones` slots, and
+ * [accelerate] as the flat `accelerate` slot.
  */
 data class SvdPitchMod(
-    /** Pitch glide in SEMITONES over the event (converted from octaves, 2026-08-24). */
+    /** Pitch glide in SEMITONES from the onset to the gate close, then held (converted from octaves, 2026-08-24). */
     var accelerate: Double? = null,
     var vibrato: Double? = null,
     var vibratoMod: Double? = null,

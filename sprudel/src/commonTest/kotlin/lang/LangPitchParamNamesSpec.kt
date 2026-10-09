@@ -73,4 +73,22 @@ class LangPitchParamNamesSpec : StringSpec({
         bag[(IgnitorDsl.Slots.vibrato.rate as IgnitorDsl.Param).name] shouldBe 6.0
         data.pan shouldBe 0.4
     }
+
+    "door parity: accelerate is one word on the sprudel door, the slot and the Ignitor node" {
+        // Pitch pipeline step 3 (decision D4): sprudel's `accelerate(semitones)` and its reader write and read the flat
+        // slot `accelerate`, which `classic()` hands the node's `semitones` knob.
+        var node: IgnitorDsl = IgnitorDsl.Sine().classic()
+
+        while (node !is IgnitorDsl.Accelerate) {
+            node = node.childNodes().first()
+        }
+
+        node.semitones shouldBe IgnitorDsl.Slots.accelerate
+
+        val data = firstData(SprudelPattern.compile("""note("c").accelerate(semitones = 0.6).pan(accelerate)"""))
+        val bag = data.toVoiceData().ignitorParams!!
+
+        bag[(IgnitorDsl.Slots.accelerate as IgnitorDsl.Param).name] shouldBe 0.6
+        data.pan shouldBe 0.6
+    }
 })

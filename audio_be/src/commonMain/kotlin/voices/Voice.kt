@@ -232,8 +232,9 @@ class Voice(
      * (`EnvelopeCore`, stateless), which is the level the voice would have rendered there. The release
      * SPAN is untouched: only WHEN it begins moves.
      *
-     * Deliberately untouched: `IgniteContext.voiceDurationFrames` (the `accelerate` glide base) —
-     * see its KDoc; on held realtime voices `accelerate` is inert by decision.
+     * Deliberately untouched: `IgniteContext.voiceDurationFrames`, the scheduled gate length and the `accelerate`
+     * glide base (the glide reaches its target at that gate and holds it, decision D2), see its KDoc; on held realtime
+     * voices `accelerate` is inert by decision.
      *
      * PRECONDITION: `atFrame >= startFrame` — the caller owns it (the scheduler floors at
      * `startFrame + blockFrames`, see `VoiceScheduler.releaseRealtimeVoice`). An earlier frame
@@ -582,9 +583,6 @@ class Voice(
         val envelope: Envelope,
         var modPhase: Double = 0.0,
     )
-
-    /** [semitones] = total pitch glide over the voice, in SEMITONES (12 = one octave). */
-    class Accelerate(val semitones: Double)
 
     /** A modulation envelope of the voice's pitch pipeline (the FM index), in frames. */
     class Envelope(

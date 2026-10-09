@@ -109,11 +109,19 @@ class ClassicSlotParamsSpec : StringSpec({
 
     "the vibrato alone is a voice door, and its switch travels only when set: a rate alone switches nothing on" {
         // Pitch pipeline step 2: `vib` left the typed wire fields for `classic()`'s `vibrato.*` slots. An event whose
-        // only door is the vibrato (or the accelerate, its group's other field) takes the writer path.
+        // only door is the vibrato takes the writer path.
         slots(note("c").vib(5, 0.3)) shouldBe mapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3)
         slots(note("c").vib(4)) shouldBe mapOf("vibrato.rate" to 4.0)
         slots(note("c").vibrato(semitones = 0.2)) shouldBe mapOf("vibrato.semitones" to 0.2)
-        slots(note("c").ignp("voices", 3).accelerate(2)) shouldBe mapOf("voices" to 3.0)
+    }
+
+    "accelerate alone is a voice door under its flat slot, and a non-finite one is dropped" {
+        // Pitch pipeline step 3: `accelerate` left the typed wire field for `classic()`'s flat `accelerate` slot. It
+        // shares the `pitchMod` group with the vibrato, so an event whose only door is accelerate takes the writer
+        // path and keeps its own bag.
+        slots(note("c").ignp("voices", 3).accelerate(2)) shouldBe mapOf("voices" to 3.0, "accelerate" to 2.0)
+        slots(note("c").accelerate(-12)) shouldBe mapOf("accelerate" to -12.0)
+        slots(note("c").accelerate(Double.NaN)) shouldBe emptyMap()
     }
 
     "names travel as their catalogue index, a flag as 1.0 or 0.0" {
@@ -147,7 +155,7 @@ class ClassicSlotParamsSpec : StringSpec({
                 .crush(4.1, 2).coarse(3.1, 4).distort(0.31, "tube", 8).tremolo(0.61, 4.1, "square")
                 .begin(0.11).end(0.91).speed(2.1).loop()
                 .penv(7.1, 0.061, 0.062, 0.63, 0.064).penvCurves("exponential", "linear", "square")
-                .vibrato(5.1, 0.71)
+                .vibrato(5.1, 0.71).accelerate(0.51)
         )
 
         written shouldBe mapOf(
@@ -173,6 +181,7 @@ class ClassicSlotParamsSpec : StringSpec({
             "penv.semitones" to 7.1, "penv.attack" to 0.061, "penv.decay" to 0.062, "penv.sustain" to 0.63, "penv.release" to 0.064,
             "penvCurves.attack" to 5.0, "penvCurves.decay" to 0.0, "penvCurves.release" to 1.0,
             "vibrato.rate" to 5.1, "vibrato.semitones" to 0.71,
+            "accelerate" to 0.51,
         )
 
         val placed = mutableListOf<IgnitorDsl.Param>()

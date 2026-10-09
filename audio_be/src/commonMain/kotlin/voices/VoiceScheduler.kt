@@ -390,7 +390,8 @@ class VoiceScheduler(
      * any session, small enough that every voice-relative Int frame count
      * (`voiceDurationFrames`, `IgniteContext.gateEndFrame`) stays well inside Int at ANY sample
      * rate — 36 000 s is fine at 48 kHz but overflows at 96 kHz. Sample rate is a platform
-     * variable, like block size.
+     * variable, like block size. It is also a held voice's `accelerate` glide base (the scheduled gate, which a
+     * note-off never moves), so a held voice's glide stays inert and never reaches the hold at the gate.
      */
     private fun heldGateHorizonSec(): Double =
         minOf(REALTIME_HELD_GATE_SEC, (Int.MAX_VALUE / 2).toDouble() / context.sampleRate)

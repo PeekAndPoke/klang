@@ -145,9 +145,18 @@ object KlangScriptIgnitorSlots {
     // word (`lpf.freq`, `crush.bits`, `adsr.attack`); the Kotlin door is `IgnitorDsl.Slots.lpf.freq`, the
     // same object.
 
-    /** The vibrato stage's slots: `rate`, `semitones` (the switch). A pitch stage of `classic()`, outside the pitch envelope. */
+    /** The vibrato stage's slots: `rate`, `semitones` (the switch). A pitch stage of `classic()`, outside the accelerate. */
     @KlangScript.Property
     val vibrato: KlangScriptIgnitorVibratoSlots = KlangScriptIgnitorVibratoSlots
+
+    /**
+     * The accelerate stage's slot (default 0, off): the glide in semitones from the onset to the gate close, held
+     * through the release, that the pattern's `accelerate(semitones)` writes. A pitch stage of `classic()`, between the
+     * pitch envelope and the vibrato; flat, like `onepole`: the door has one knob.
+     * Place it yourself with `accelerate(Ignitor.slot.accelerate)`. Mirrors sprudel's `accelerate`.
+     */
+    @KlangScript.Property
+    val accelerate: IgnitorDsl = IgnitorDsl.Slots.accelerate
 
     /** The pitch envelope stage's slots: `semitones` (the switch), `attack`, `decay`, `sustain`, `release`. `classic()`'s first stage. */
     @KlangScript.Property
