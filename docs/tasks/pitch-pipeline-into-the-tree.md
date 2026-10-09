@@ -686,8 +686,10 @@ shape, and for sprudel `fm` plus `vib`.
 #### Queued beside the pipeline: sprudel's `analog(amount)` becomes `analog(character)` (Q25)
 
 The maintainer, 2026-10-09: "yes rename to character". `amount` is the distort drive only (Q21), and `analog` is a
-character scale (Q22). A small rename of sprudel's door parameter, its accessor wording and KDoc, with a row in
-`docs/retired-names.md`; positional `analog(4)` is unchanged. Done between two pipeline steps, so it never shares a
+character scale (Q22). A small rename of the parameter on every `analog` door (parameter parity): sprudel's `analog(amount)`, the
+KlangScript filter builders' `analog(amount)` (`EffectBuilders.kt`) and the oscillator builders' `analog(analog)`
+(`IgnitorBuilders.kt`) all become `analog(character)`, with KDoc and a row in `docs/retired-names.md`; positional
+`analog(4)` is unchanged. Done between two pipeline steps, so it never shares a
 tree with a running worker.
 
 #### Step 4. FM (M to L, a listening pair)
