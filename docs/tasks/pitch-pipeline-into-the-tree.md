@@ -729,6 +729,12 @@ wire already; `src/jsMain/kotlin/comp/PlayerWarehouseStats.kt` shows only their 
 Add the two reverb counters beside them, with the same hover texts ("allocations that failed (out of memory)", and the
 dropped one's). UI only.
 
+**Step 3b, the maintainer's principle (2026-10-09):** "It would be good to find a general solution. If not possible we
+should report an error, when something is authored that the engine cannot process." So the FM rule must hold for
+every topology the DSL can express (fms in sequence, nested, summed, in parameters, shared nodes); a shape the engine
+cannot process correctly is reported at BUILD time as an authoring diagnostic naming the node and the reason (never an
+exception on the audio thread, never a silently wrong sound), with the voice still playing something defined.
+
 #### Step 4. FM (M to L, a listening pair)
 
 - `Slots.fm` (`fm.ratio`, `fm.depth`, `fm.attack`, `fm.decay`, `fm.sustain`, and `fm.release` with sprudel's
