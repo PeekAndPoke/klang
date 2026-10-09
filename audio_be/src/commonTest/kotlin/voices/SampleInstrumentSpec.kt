@@ -147,7 +147,12 @@ class SampleInstrumentSpec : StringSpec({
     val base = VoiceData.empty.copy(freqHz = 220.0)
     val env = DoorFilterEnv(attack = 0.01, decay = 0.1, sustain = 0.3, release = 0.1, depth = 24.0)
 
-    /** One row per `classic()` stage plus the two the built-in shape places on the source. */
+    /**
+     * One row per `classic()` amplitude stage plus the two the built-in shape places on the source. The PITCH stages
+     * have no row here, and cannot: a bent playhead reads the PCM between its frames, where the linear interpolation
+     * is not the sine, so the oracle above holds only at rate 1.0. That the pitch stages reach the sample instrument
+     * is pinned where the sample instrument IS the probe (`renderPitchRatios`, `ClassicPitchEnvelopeSpec`).
+     */
     val rows: List<Triple<String, VoiceData, DoorFields>> = listOf(
         Triple("crush", base, DoorFields(crush = 4.0)),
         Triple("coarse", base, DoorFields(coarse = 3.0)),

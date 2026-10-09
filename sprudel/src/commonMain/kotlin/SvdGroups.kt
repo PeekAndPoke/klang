@@ -67,7 +67,11 @@ data class SvdPitchMod(
     var vibratoMod: Double? = null,
 )
 
-/** Pitch envelope: `penv(amount, attack, decay, sustain, release)` and `penvCurves(attack, decay, release)`. */
+/**
+ * Pitch envelope: `penv(semitones, attack, decay, sustain, release)` and `penvCurves(attack, decay, release)`.
+ * [pEnv] is the `semitones` (the switch). The wire carries them as `classic()`'s `penv.*` and `penvCurves.*` slots
+ * (`classicSlotParams`).
+ */
 data class SvdPitchEnv(
     var pAttack: Double? = null,
     var pDecay: Double? = null,

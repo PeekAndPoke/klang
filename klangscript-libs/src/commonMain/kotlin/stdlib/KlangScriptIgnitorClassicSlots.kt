@@ -21,6 +21,52 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 // `@Object`, so it is reachable only through `Ignitor.slot` and adds no global name.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
+/** `Ignitor.slot.penv`: the pitch envelope stage's slots. */
+@KlangScript.Library(KlangScriptLibraries.STDLIB)
+@KlangScript.TypeExtensions(KlangScriptIgnitorPenvSlots::class)
+object KlangScriptIgnitorPenvSlots {
+    override fun toString(): String = "[Ignitor.slot.penv]"
+
+    /** The pitch at the envelope's peak in semitones, default 0 (off: no envelope). Mirrors sprudel's `penv.semitones`. */
+    @KlangScript.Property
+    val semitones: IgnitorDsl = IgnitorDsl.Slots.penv.semitones
+
+    /** Attack in seconds, default 0.01. Mirrors sprudel's `penv.attack`. */
+    @KlangScript.Property
+    val attack: IgnitorDsl = IgnitorDsl.Slots.penv.attack
+
+    /** Decay in seconds, default 0.1. Mirrors sprudel's `penv.decay`. */
+    @KlangScript.Property
+    val decay: IgnitorDsl = IgnitorDsl.Slots.penv.decay
+
+    /** The held share of `semitones`, default 0 (back on the note). Mirrors sprudel's `penv.sustain`. */
+    @KlangScript.Property
+    val sustain: IgnitorDsl = IgnitorDsl.Slots.penv.sustain
+
+    /** Release in seconds from the gate, default 0. Mirrors sprudel's `penv.release`. */
+    @KlangScript.Property
+    val release: IgnitorDsl = IgnitorDsl.Slots.penv.release
+}
+
+/** `Ignitor.slot.penvCurves`: the pitch envelope's curve slots. */
+@KlangScript.Library(KlangScriptLibraries.STDLIB)
+@KlangScript.TypeExtensions(KlangScriptIgnitorPenvCurvesSlots::class)
+object KlangScriptIgnitorPenvCurvesSlots {
+    override fun toString(): String = "[Ignitor.slot.penvCurves]"
+
+    /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `penvCurves(attack = ...)`. */
+    @KlangScript.Property
+    val attack: IgnitorDsl = IgnitorDsl.Slots.penvCurves.attack
+
+    /** The decay's curve, default `exp`. Mirrors sprudel's `penvCurves(decay = ...)`. */
+    @KlangScript.Property
+    val decay: IgnitorDsl = IgnitorDsl.Slots.penvCurves.decay
+
+    /** The release's curve, default `exp`. Mirrors sprudel's `penvCurves(release = ...)`. */
+    @KlangScript.Property
+    val release: IgnitorDsl = IgnitorDsl.Slots.penvCurves.release
+}
+
 /** `Ignitor.slot.crush`: the crush stage's slot, `bits` (`crush.bits`). */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorCrushSlots::class)

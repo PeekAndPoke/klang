@@ -257,7 +257,8 @@ compound param — is designed, or we just grow the debt.
 - Decided in the same place (`promoteScheduled`, where the victims are already identified) but flows the other way: pass
   `glideFromHz` into `VoiceFactory.makeVoice`.
 - New `GlideRenderer` as the first stage in `voices/strip/pitch/`, next to `VibratoRenderer` /
-  `AccelerateRenderer` / `PitchEnvelopeRenderer` / `FmRenderer`.
+  `AccelerateRenderer` / `FmRenderer` (the strip's pitch envelope moved into `classic()` in pitch pipeline step 1, and
+  the other three follow, `docs/tasks/pitch-pipeline-into-the-tree.md`; a glide may then be a tree stage too).
 - **Which victim's pitch, when a chord is taken over by one note?** Caricature answer: nearest in pitch among the most
   recent onset taken over — a guitarist slides on *the same string*, i.e. to the nearest fret. One line, musically
   right.

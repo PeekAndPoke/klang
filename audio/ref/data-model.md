@@ -55,8 +55,9 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 `sprudel/src/commonMain/kotlin/_classic_slot_params.kt`, the one place sprudel's words meet the
 engine's slot names):
 
-- `classic()`'s slots, keyed `<door>.<param>` (`lpf.freq`, `lpf.q`, `adsr.attack`, `adsrCurves.release`,
-  `distort.oversample`, `tremolo.depth`, ...), plus the flat `onepole` (Hz, its first stage), declared in
+- `classic()`'s slots, keyed `<door>.<param>` (`penv.semitones`, `penvCurves.attack`, `lpf.freq`, `lpf.q`,
+  `adsr.attack`, `adsrCurves.release`, `distort.oversample`, `tremolo.depth`, ...), plus the flat `onepole` (Hz, its
+  first amplitude stage, behind the pitch stages), declared in
   `IgnitorDsl.Slots` (`audio_bridge/.../IgnitorDsl.kt`, the stage slot groups in `IgnitorDslClassic.kt`); a tree without `classic()` reads none of them;
 - the sample instrument's playback slots, flat: `begin`, `end`, `speed`, `loop` (`Slots.sample`);
 - the oscillator's own generic slots (`density` on dust, `voices` and `spread` on the super
@@ -73,12 +74,11 @@ A tree without it plays as it is, and the door slots in the bag go unread.
 |--------------|-----------|----------------------------------|
 | `vibrato`    | `Double?` | Vibrato LFO rate in Hz           |
 | `vibratoMod` | `Double?` | Vibrato depth in SEMITONES (sprudel `vibrato(depth)`) |
-| `pAttack`    | `Double?` | Pitch envelope attack (s)        |
-| `pDecay`     | `Double?` | Pitch envelope decay (s)         |
-| `pRelease`   | `Double?` | Pitch envelope release (s)       |
-| `pEnv`       | `Double?` | Pitch envelope depth (semitones) |
-| `pSustain`   | `Double?` | Pitch envelope sustain (a share of the depth) |
-| `pAttackCurve` / `pDecayCurve` / `pReleaseCurve` | `AdsrCurve?` | Pitch envelope stage curves (unset = `MOD_ENV_CURVE`) |
+
+The pitch envelope (sprudel's `penv` and `penvCurves`) has no wire field since pitch pipeline step 1: it travels as
+`classic()`'s `penv.semitones` (the switch, 0 or unset is off), `penv.attack`, `penv.decay`, `penv.sustain`,
+`penv.release` and `penvCurves.attack|decay|release` (curve indices) slots, and fills the Ignitor `pitchEnvelope`
+stage `classic()` places on the source.
 
 ### FM Synthesis
 

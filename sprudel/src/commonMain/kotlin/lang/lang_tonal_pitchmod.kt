@@ -51,6 +51,9 @@ private fun applyVibratoDepth(source: SprudelPattern, args: List<SprudelDslArg<A
  * a mapper (`vibrato(depth = mul(2))`), and the numeric slots read back as `vibrato.rate`, `vibrato.depth`.
  * With no argument at all, the pattern's own values are reinterpreted as `rate`.
  *
+ * The engine applies it in front of every instrument, `classic()` or not, from the voice's pitch strip, until the
+ * vibrato moves into `classic()` (`docs/tasks/pitch-pipeline-into-the-tree.md`).
+ *
  * ```KlangScript(Playable)
  * note("c4 e4").s("saw").vibrato(5, 0.5)                                  // a singing vibrato
  * ```
@@ -160,14 +163,14 @@ fun PatternMapperFn.vib(rate: PatternLike? = null, depth: PatternLike? = null, c
 
 // -- penv ------------------------------------------------------------------------------------------------------------
 
-private val penvAmountMutation = voiceSetter { pEnv = it?.asDoubleOrNull() ?: pEnv }
+private val penvSemitonesMutation = voiceSetter { pEnv = it?.asDoubleOrNull() ?: pEnv }
 
-private fun applyPenvAmount(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPenvSemitones(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.pEnv }, update = penvAmountMutation)
+        return source._mapNumericField(mapper, read = { it.pEnv }, update = penvSemitonesMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, penvAmountMutation)
+    return source._liftOrReinterpretNumericalField(args, penvSemitonesMutation)
 }
 
 private val penvAttackMutation = voiceSetter { pAttack = it?.asDoubleOrNull() }
@@ -213,17 +216,20 @@ private fun applyPenvRelease(source: SprudelPattern, args: List<SprudelDslArg<An
 /**
  * The pitch envelope: its depth in semitones, and its attack, decay, sustain and release.
  *
- * The pitch rises `amount` semitones away from the note over `attack`, falls back to the `sustain`
- * share of `amount` over `decay`, holds there while the note is on, and after the note ends returns
+ * The pitch rises `semitones` away from the note over `attack`, falls back to the `sustain`
+ * share of `semitones` over `decay`, holds there while the note is on, and after the note ends returns
  * to the note over `release`. 12 is an octave up, -12 an octave down, 0 no pitch envelope at all.
  * An unwritten stage is the Ignitor `pitchEnvelope`'s default: attack 0.01, decay 0.1, sustain 0
  * (back on the note), release 0 (on the note at the note's end). Each stage bends exponentially
  * unless [penvCurves] shapes it. The release does not make the note ring longer.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`penv(attack = mul(2))`), and the slots read back as `penv.amount`, `penv.attack`,
+ * a mapper (`penv(attack = mul(2))`), and the slots read back as `penv.semitones`, `penv.attack`,
  * `penv.decay`, `penv.sustain`, `penv.release`. With no argument at all, the pattern's own values
- * are reinterpreted as `amount`.
+ * are reinterpreted as `semitones`.
+ *
+ * The door fills the pitch envelope stage of `classic()` (the `penv.*` slots), the Ignitor `pitchEnvelope` node; an
+ * instrument without `classic()` ignores it, like every voice door.
  *
  * ```KlangScript(Playable)
  * note("c2*4").s("sine").penv(24, 0.001, 0.08)                               // a kick: two octaves down onto the note
@@ -234,35 +240,35 @@ private fun applyPenvRelease(source: SprudelPattern, args: List<SprudelDslArg<An
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2*4").s("sine").penv(24, 0.001, 0.08).penv(amount = mul("1 0.5"))   // half the drop on every second hit
+ * note("c2*4").s("sine").penv(24, 0.001, 0.08).penv(semitones = mul("1 0.5"))   // half the drop on every second hit
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4*4").s("saw").penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))   // brighter with the rise
+ * note("c4*4").s("saw").penv("12 -12", 0.01, 0.2).lpf(penv.semitones.mul(100).add(2000))   // brighter with the rise
  * ```
  *
- * @param amount Depth in semitones, the pitch at the envelope's peak.
+ * @param semitones The pitch at the envelope's peak, in semitones.
  * @param attack Attack in seconds.
  * @param decay Decay in seconds.
- * @param sustain Held share of `amount` while the note is on; 0 is the note itself.
+ * @param sustain Held share of `semitones` while the note is on; 0 is the note itself.
  * @param release Release in seconds, back to the note after the note ends.
  *
  * @scope voice
  * @category tonal
- * @tags penv, amount, attack, decay, sustain, release, pitch envelope
+ * @tags penv, semitones, attack, decay, sustain, release, pitch envelope
  */
 @KlangScript.Function
 fun SprudelPattern.penv(
-    amount: PatternLike? = null,
+    semitones: PatternLike? = null,
     attack: PatternLike? = null,
     decay: PatternLike? = null,
     sustain: PatternLike? = null,
     release: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern {
-    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
-    var p = if (amount != null || !(attack != null || decay != null || sustain != null || release != null)) {
-        applyPenvAmount(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+    // A tail-only call must not touch semitones: reinterpret runs only on a fully bare call.
+    var p = if (semitones != null || !(attack != null || decay != null || sustain != null || release != null)) {
+        applyPenvSemitones(this, listOfNotNull(semitones).asSprudelDslArgs(callInfo))
     } else {
         this
     }
@@ -278,30 +284,30 @@ fun SprudelPattern.penv(
 /** Parses this string as a pattern, then applies [penv]. */
 @KlangScript.Function
 fun String.penv(
-    amount: PatternLike? = null,
+    semitones: PatternLike? = null,
     attack: PatternLike? = null,
     decay: PatternLike? = null,
     sustain: PatternLike? = null,
     release: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).penv(amount, attack, decay, sustain, release, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).penv(semitones, attack, decay, sustain, release, callInfo)
 
 /** Chains a [penv] step onto this [PatternMapperFn]. */
 @KlangScript.Function
 fun PatternMapperFn.penv(
-    amount: PatternLike? = null,
+    semitones: PatternLike? = null,
     attack: PatternLike? = null,
     decay: PatternLike? = null,
     sustain: PatternLike? = null,
     release: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    this.chain { p -> p.penv(amount, attack, decay, sustain, release, callInfo) }
+    this.chain { p -> p.penv(semitones, attack, decay, sustain, release, callInfo) }
 
 /**
  * The `penv` object: `penv(...)` sets the slots, and each slot reads back as a child,
- * `penv.amount`, `penv.attack`, `penv.decay`, `penv.sustain`, `penv.release`.
+ * `penv.semitones`, `penv.attack`, `penv.decay`, `penv.sustain`, `penv.release`.
  *
  * @scope voice
  * @category tonal
@@ -311,9 +317,9 @@ fun PatternMapperFn.penv(
 @KlangScript.Object("penv")
 object penv {
 
-    /** The amount slot of each event, as a value other setters can read. */
+    /** The semitones slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val amount: FieldAccessor = FieldAccessor { it.pEnv }
+    val semitones: FieldAccessor = FieldAccessor { it.pEnv }
 
     /** The attack slot of each event, as a value other setters can read. */
     @KlangScript.Property
@@ -334,22 +340,22 @@ object penv {
     /**
      * The setter, see [SprudelPattern.penv].
      *
-     * @param amount Depth in semitones, the pitch at the envelope's peak.
+     * @param semitones The pitch at the envelope's peak, in semitones.
      * @param attack Attack in seconds.
      * @param decay Decay in seconds.
-     * @param sustain Held share of `amount` while the note is on; 0 is the note itself.
+     * @param sustain Held share of `semitones` while the note is on; 0 is the note itself.
      * @param release Release in seconds, back to the note after the note ends.
      */
     @KlangScript.Invoke
     operator fun invoke(
-        amount: PatternLike? = null,
+        semitones: PatternLike? = null,
         attack: PatternLike? = null,
         decay: PatternLike? = null,
         sustain: PatternLike? = null,
         release: PatternLike? = null,
         callInfo: CallInfo? = null
     ): PatternMapperFn =
-        { p -> p.penv(amount, attack, decay, sustain, release, callInfo) }
+        { p -> p.penv(semitones, attack, decay, sustain, release, callInfo) }
 }
 
 /**
@@ -365,26 +371,26 @@ object penv {
  */
 @KlangScript.Function
 fun SprudelPattern.pamt(
-    amount: PatternLike? = null,
+    semitones: PatternLike? = null,
     attack: PatternLike? = null,
     decay: PatternLike? = null,
     sustain: PatternLike? = null,
     release: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    penv(amount, attack, decay, sustain, release, callInfo)
+    penv(semitones, attack, decay, sustain, release, callInfo)
 
 /** Parses this string as a pattern, then applies [pamt]. */
 @KlangScript.Function
 fun String.pamt(
-    amount: PatternLike? = null,
+    semitones: PatternLike? = null,
     attack: PatternLike? = null,
     decay: PatternLike? = null,
     sustain: PatternLike? = null,
     release: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    this.penv(amount, attack, decay, sustain, release, callInfo)
+    this.penv(semitones, attack, decay, sustain, release, callInfo)
 
 /**
  * Alias of [penv]: the same object under its short name.
@@ -399,14 +405,14 @@ val pamt: penv = penv
 /** Chains a [pamt] step onto this [PatternMapperFn] (see [SprudelPattern.pamt]). */
 @KlangScript.Function
 fun PatternMapperFn.pamt(
-    amount: PatternLike? = null,
+    semitones: PatternLike? = null,
     attack: PatternLike? = null,
     decay: PatternLike? = null,
     sustain: PatternLike? = null,
     release: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    this.penv(amount, attack, decay, sustain, release, callInfo)
+    this.penv(semitones, attack, decay, sustain, release, callInfo)
 
 // -- penvCurves ------------------------------------------------------------------------------------------------------
 
@@ -453,7 +459,7 @@ private fun applyPenvReleaseCurve(source: SprudelPattern, args: List<SprudelDslA
  * The curves are the same six as `adsrCurves`: `linear`, `square`, `cube`, `scurve`, `invsquare`,
  * `exponential`, with the same aliases. Unset, every stage is `exponential`, the default of every
  * modulation envelope on every surface (decision D3). A curve alone switches nothing on: without a
- * `penv` amount there is no pitch envelope to shape.
+ * `penv` semitones written there is no pitch envelope to shape.
  *
  * ```KlangScript(Playable)
  * note("c2*4").s("sine").penv(24, 0.001, 0.08).penvCurves(decay = "linear")   // a straight drop, the old sweep
@@ -568,6 +574,9 @@ private fun applyAccelerate(source: SprudelPattern, args: List<SprudelDslArg<Any
  * no argument it reinterprets the current event value as the semitone amount. (The unit changed
  * from octaves to semitones in the pitch-param unification, 2026-08-24, so old scripts' values are
  * 12× subtler now.)
+ *
+ * The engine applies it in front of every instrument, `classic()` or not, from the voice's pitch strip, until
+ * accelerate moves into `classic()` (`docs/tasks/pitch-pipeline-into-the-tree.md`).
  *
  * ```KlangScript(Playable)
  * s("cr").accelerate(24)             // crash pitches two octaves up during playback

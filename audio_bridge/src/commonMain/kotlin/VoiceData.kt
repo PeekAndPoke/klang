@@ -34,7 +34,7 @@ data class VoiceData(
     /** Sound index */
     val soundIndex: Int?,
 
-    // Voice slots: classic()'s door slots (with the flat "onepole" [Hz]), the sample's "begin"/"end"/"speed"/"loop",
+    // Voice slots: classic()'s door slots (with the flat "onepole" [Hz]; sprudel's `penv` as `penv.*` / `penvCurves.*`), the sample's "begin"/"end"/"speed"/"loop",
     // the oscillators' own ("density", "voices", "spread") and raw ignp() writes. sprudel's "panSpread" is unread.
     val ignitorParams: Map<String, Double>?,
 
@@ -76,18 +76,6 @@ data class VoiceData(
     // Vibrato
     val vibrato: Double?,
     val vibratoMod: Double?,
-
-    // Pitch envelope: sprudel's `penv(amount, attack, decay, sustain, release)` and `penvCurves(...)`.
-    // `pEnv` is the amount in semitones and the switch (0 or unset: none). Unset stages resolve from
-    // `constants/PitchEnvelopeDefaults.kt`, unset curves to `MOD_ENV_CURVE`, as on the Ignitor node.
-    val pAttack: Double?,
-    val pDecay: Double?,
-    val pSustain: Double?,
-    val pRelease: Double?,
-    val pEnv: Double?,
-    val pAttackCurve: AdsrCurve? = null,
-    val pDecayCurve: AdsrCurve? = null,
-    val pReleaseCurve: AdsrCurve? = null,
 
     // FM Synthesis
     val fmh: Double?,
@@ -189,11 +177,6 @@ data class VoiceData(
             accelerate = null,
             vibrato = null,
             vibratoMod = null,
-            pAttack = null,
-            pDecay = null,
-            pSustain = null,
-            pRelease = null,
-            pEnv = null,
             fmh = null,
             fmAttack = null,
             fmDecay = null,

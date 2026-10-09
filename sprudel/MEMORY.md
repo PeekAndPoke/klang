@@ -17,10 +17,10 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   folds into the receiver's own. The class KDoc of `ParamBag` has the contract.
 - `toVoiceData()` is the one boundary. The voice doors stay TYPED on this side (the query hot loop keeps its
   one allocation, `docs/plans/signal-flow-redesign.md` §4) and are written there as `classic()` slot keys
-  into `ignitorParams` by `_classic_slot_params.kt`: the filters, `adsr`, distort / crush / coarse, tremolo and
-  the sample's flat `begin` / `end` / `speed` / `loop`. The rules are in that file's KDoc; the key names are
+  into `ignitorParams` by `_classic_slot_params.kt`: the pitch envelope (`penv.*`, `penvCurves.*`), the filters,
+  `adsr`, distort / crush / coarse, tremolo and the sample's flat `begin` / `end` / `speed` / `loop`. The rules are in that file's KDoc; the key names are
   read from `IgnitorDsl.Slots`, never retyped. Guard: `ClassicSlotParamsSpec`.
-- Still typed wire fields beside the two bags: `note`, `freqHz`, `accelerate`, `vibrato`, `vibratoMod`, `sourceId`, the `penv` and
+- Still typed wire fields beside the two bags: `note`, `freqHz`, `accelerate`, `vibrato`, `vibratoMod`, `sourceId`, the
   `fm` fields, `gain`, `pan`, `legato`, `bank`, `sound`, `soundIndex` (from `n`), `cut`, `cylinder`, `solo`,
   the `master` and `katalyst` names, `control`, `tags`, `cull`. The orbit stages travel only as
   `katalystParams` slots.
@@ -190,3 +190,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 4).
 - 2026-10-07: `solo(...)` covers its rests with control events instead of a sounding sine, one id per `solo` call,
   `solo()` means 0.95 (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`).
+- 2026-10-09: `penv(semitones, attack, decay, sustain, release)` (was `amount`, also the reader `penv.semitones`) writes
+  `classic()`'s `penv.*` / `penvCurves.*` slots; its eight typed wire fields are gone
+  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 1).

@@ -147,7 +147,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("pattack", """s("bd sd").penv(attack = 0.1).penv(attack = mul(2))""", { it.pAttack }, 0.2, s("bd sd").penv(attack = 0.1).penv(attack = mul(2))),
         row("pdecay", """s("bd sd").penv(decay = 0.2).penv(decay = mul(2))""", { it.pDecay }, 0.4, s("bd sd").penv(decay = 0.2).penv(decay = mul(2))),
         row("prelease", """s("bd sd").penv(release = 0.3).penv(release = mul(2))""", { it.pRelease }, 0.6, s("bd sd").penv(release = 0.3).penv(release = mul(2))),
-        row("penv.amount", """s("bd sd").penv(12).penv(mul(2))""", { it.pEnv }, 24.0, s("bd sd").penv(12).penv(mul(2))),
+        row("penv.semitones", """s("bd sd").penv(12).penv(mul(2))""", { it.pEnv }, 24.0, s("bd sd").penv(12).penv(mul(2))),
         row("psustain", """s("bd sd").penv(sustain = 0.25).penv(sustain = mul(2))""", { it.pSustain }, 0.5, s("bd sd").penv(sustain = 0.25).penv(sustain = mul(2))),
         row("accelerate", """s("bd sd").accelerate(2).accelerate(mul(2))""", { it.accelerate }, 4.0, s("bd sd").accelerate(2).accelerate(mul(2))),
         row("notch.freq", """s("bd sd").notch(1000).notch(mul(2))""", { it.notchf }, 2000.0, s("bd sd").notch(1000).notch(mul(2))),
@@ -195,7 +195,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("pattack", """s("bd sd").penv(attack = 0.1).pan(penv.attack)""", { it.pan }, 0.1, s("bd sd").penv(attack = 0.1).pan(penv.attack)),
         row("pdecay", """s("bd sd").penv(decay = 0.2).pan(penv.decay)""", { it.pan }, 0.2, s("bd sd").penv(decay = 0.2).pan(penv.decay)),
         row("prelease", """s("bd sd").penv(release = 0.3).pan(penv.release)""", { it.pan }, 0.3, s("bd sd").penv(release = 0.3).pan(penv.release)),
-        row("penv.amount", """s("bd sd").penv(12).pan(penv.amount)""", { it.pan }, 12.0, s("bd sd").penv(12).pan(penv.amount)),
+        row("penv.semitones", """s("bd sd").penv(12).pan(penv.semitones)""", { it.pan }, 12.0, s("bd sd").penv(12).pan(penv.semitones)),
         row("psustain", """s("bd sd").penv(sustain = 0.5).pan(penv.sustain)""", { it.pan }, 0.5, s("bd sd").penv(sustain = 0.5).pan(penv.sustain)),
         row("accelerate", """s("bd sd").accelerate(2).pan(accelerate)""", { it.pan }, 2.0, s("bd sd").accelerate(2).pan(accelerate)),
         row("notch.freq", """s("bd sd").notch(1000).pan(notch.freq)""", { it.pan }, 1000.0, s("bd sd").notch(1000).pan(notch.freq)),
@@ -233,7 +233,7 @@ class LangFieldAccessorsSpec : StringSpec({
     val aliasReadsBatchThree = listOf(
         row("clip", """s("bd sd").legato(2).pan(clip)""", { it.pan }, 2.0, s("bd sd").legato(2).pan(clip)),
         row("vib", """s("bd sd").vib(2).pan(vib.rate)""", { it.pan }, 2.0, s("bd sd").vib(2).pan(vib.rate)),
-        row("pamt", """s("bd sd").pamt(2).pan(pamt.amount)""", { it.pan }, 2.0, s("bd sd").pamt(2).pan(pamt.amount)),
+        row("pamt", """s("bd sd").pamt(2).pan(pamt.semitones)""", { it.pan }, 2.0, s("bd sd").pamt(2).pan(pamt.semitones)),
     )
 
     // Batch four: the dynamics leftovers, the routing fields, the compressor threshold and fmenv.
@@ -766,7 +766,7 @@ class LangFieldAccessorsSpec : StringSpec({
         add("duck", s("bd sd").duck(attack = "0.1 0.5"), """s("bd sd").duck(attack = "0.1 0.5")""") { it.katalystParams?.get("duck.attack") }
         add("vibrato", s("bd sd").vibrato(rate = "0.1 0.5"), """s("bd sd").vibrato(rate = "0.1 0.5")""") { it.vibrato }
         add("vibrato", s("bd sd").vibrato(depth = "0.1 0.5"), """s("bd sd").vibrato(depth = "0.1 0.5")""") { it.vibratoMod }
-        add("penv", s("bd sd").penv(amount = "0.1 0.5"), """s("bd sd").penv(amount = "0.1 0.5")""") { it.pEnv }
+        add("penv", s("bd sd").penv(semitones = "0.1 0.5"), """s("bd sd").penv(semitones = "0.1 0.5")""") { it.pEnv }
         add("penv", s("bd sd").penv(attack = "0.1 0.5"), """s("bd sd").penv(attack = "0.1 0.5")""") { it.pAttack }
         add("penv", s("bd sd").penv(decay = "0.1 0.5"), """s("bd sd").penv(decay = "0.1 0.5")""") { it.pDecay }
         add("penv", s("bd sd").penv(release = "0.1 0.5"), """s("bd sd").penv(release = "0.1 0.5")""") { it.pRelease }

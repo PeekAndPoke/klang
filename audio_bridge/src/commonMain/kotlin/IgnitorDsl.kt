@@ -246,8 +246,14 @@ sealed interface IgnitorDsl {
         // door's word (`lpf.freq`, `crush.bits`); each group's KDoc in `IgnitorDslClassic.kt` names
         // the defaults and why.
 
+        /** The pitch envelope stage, `classic()`'s first: `penv.semitones` (the switch) and its four stages. */
+        val penv: PitchEnvelopeSlots = PitchEnvelopeSlots()
+
+        /** The pitch envelope's curves: `penvCurves.attack`, `penvCurves.decay`, `penvCurves.release`. */
+        val penvCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("penvCurves")
+
         /**
-         * The one-pole lowpass stage, `classic()`'s FIRST stage: the cutoff in Hz, which sprudel's
+         * The one-pole lowpass stage, `classic()`'s first AMPLITUDE stage (behind the pitch stages): the cutoff in Hz, which sprudel's
          * `onepole(hz)` writes. Default 0.0, which the gate reads as off. A flat name, not `<door>.<param>`:
          * the door has one knob, and `onepole` is the key it has always written (phase 3 step 10 moved the
          * stage from the registry into `classic()`).
@@ -285,16 +291,16 @@ sealed interface IgnitorDsl {
         val adsrCurves: AdsrCurvesSlots = AdsrCurvesSlots()
 
         /** The highpass envelope's curves: `hpfCurves.attack`, `hpfCurves.decay`, `hpfCurves.release`. */
-        val hpfCurves: FilterCurvesSlots = FilterCurvesSlots("hpfCurves")
+        val hpfCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("hpfCurves")
 
         /** The bandpass envelope's curves: `bpfCurves.attack`, `bpfCurves.decay`, `bpfCurves.release`. */
-        val bpfCurves: FilterCurvesSlots = FilterCurvesSlots("bpfCurves")
+        val bpfCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("bpfCurves")
 
         /** The notch envelope's curves: `notchCurves.attack`, `notchCurves.decay`, `notchCurves.release`. */
-        val notchCurves: FilterCurvesSlots = FilterCurvesSlots("notchCurves")
+        val notchCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("notchCurves")
 
         /** The lowpass envelope's curves: `lpfCurves.attack`, `lpfCurves.decay`, `lpfCurves.release`. */
-        val lpfCurves: FilterCurvesSlots = FilterCurvesSlots("lpfCurves")
+        val lpfCurves: ModEnvelopeCurvesSlots = ModEnvelopeCurvesSlots("lpfCurves")
 
         /** The sample instrument's playback: `begin`, `end`, `speed`, `loop` (flat names, one knob per door). */
         val sample: SampleSlots = SampleSlots()
@@ -2210,8 +2216,8 @@ sealed interface IgnitorDsl {
      *
      * The level is the engine's one envelope law (`EnvelopeCore` in `audio_be`, decision D3), the
      * chain `adsr`'s: fractional attack and decay frame counts (`seconds * sampleRate` as a Double).
-     * The voice's own pitch envelope (sprudel's `penv`) is a host of the same law with the same
-     * defaults (`constants/PitchEnvelopeDefaults.kt`), so the two sweep alike.
+     * Sprudel's `penv` IS this node: it fills the `penv.*` and `penvCurves.*` slots of the stage `classic()`
+     * places (pitch pipeline step 1), whose defaults are this node's (`constants/PitchEnvelopeDefaults.kt`).
      *
      * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
      *   +12 sweeps from an octave up, -24 from two octaves down.

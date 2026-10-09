@@ -68,8 +68,9 @@ delay, reverb, compressor and duck fields left the wire in step 5b-3). Ownership
 the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut (lifecycle step 5, `Cylinder.offer`), so all voices on an orbit SHARE these; put voices on different
 orbits for independent bus effects. Everything else is **per-voice**: `lpf`/`hpf`/`bpf`/`notch` +
 envelopes, `distort`, `crush`, `coarse`, `adsr`, `tremolo` as `classic()`'s slots in the instrument's
-Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; `vibrato`, `fm`, pitch env in the
-voice's pitch stage; `gain`/`pan` in its send stage.
+Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; the pitch envelope as `classic()`'s `penv.*`
+slots (pitch pipeline step 1); `vibrato`, `accelerate` and `fm` in the voice's pitch stage (the strip) until each
+moves into `classic()`; `gain`/`pan` in its send stage.
 
 | Katalyst effect            | Class           | Applied when                                                     |
 |----------------------------|-----------------|------------------------------------------------------------------|

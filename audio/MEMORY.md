@@ -20,16 +20,17 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   every sample voice is the same shape over `IgnitorDsl.Sample` (`IgnitorRegistry.SAMPLE_INSTRUMENT`, never
   registered under a name). An authored instrument gets the voice doors by ending in `.classic()` as its LAST call
   (`IgnitorDsl.endsInClassic()`); a tree without it plays bare: no doors, no default envelope.
-- **`classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`): onepole, crush, coarse, distort, highpass,
-  bandpass, notch, lowpass, tremolo, adsr. Its knobs are `<door>.<param>` slots the pattern fills through
+- **`classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`): the pitch envelope (on the source, the pitch stages'
+  place), onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo, adsr. Its knobs are `<door>.<param>` slots the pattern fills through
   `VoiceData.ignitorParams`, the param part the engine door's word (`adsr.attack`, `crush.bits`,
   `coarse.factor`); a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
 - **One word per knob, node to wire** (Q21, 2026-10-09): every envelope says `attack`, `decay`, `sustain`,
   `release` (the unit in the KDoc, not the name) and `declick`; the pluck's loop gain is `feedback`, brown noise's
   white leak is `leak`. The frame-domain core keeps `sustainLevel` (`EnvelopeCore.prepare`, `Voice.Envelope`)
   and the constants keep their `*_SEC` names. Old names: `docs/retired-names.md`.
-- **The pitch stage stays outside the tree**: vibrato, accelerate, pitch envelope and FM in `voices/strip/pitch/`
-  (moving in is `docs/tasks/pitch-pipeline-into-the-tree.md`).
+- **The pitch doors are moving into the tree** (`docs/tasks/pitch-pipeline-into-the-tree.md`): sprudel's pitch
+  envelope is `classic()`'s `PitchEnvelope` stage, filled by the `penv.*` / `penvCurves.*` slots (step 1); vibrato,
+  accelerate and FM still run on the strip in `voices/strip/pitch/`, and a source reads `treeMods * stripRest`.
 - **Voice lifetime** = gate end plus the tree's own release tail (`VoiceFactory.treeLifetime`, floored at 0;
   `VOICE_ADSR_RELEASE_SEC` when the tree has no static answer). `TeardownFadeRenderer` runs unless the root is a
   built amplitude envelope with a static release (`BuiltIgnitor.endsInEnvelope`). A silent release is culled: the
@@ -256,6 +257,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-09 Pitch pipeline step 1: sprudel's `penv` is `classic()`'s pitch envelope stage (`penv.*`, `penvCurves.*`
+  slots), its eight wire fields and the strip's `PitchEnvelopeRenderer` gone, bit-identical on the door matrix and
+  the corpus, apart from the accepted shapes (an fm modulator under `penv` until step 3b, three pitch factors
+  regrouped, bare instruments, D6): `docs/tasks/pitch-pipeline-into-the-tree.md` step 1
 - 2026-10-09 v0.6.0: the engine tidy-up is done (steps 1 to 13: the twins written once, `FilterDef` retired, a plain
   number at every constant door; the V8 allocation pass), bit-identical on the corpus; the open items:
   `docs/tasks/engine-follow-ups.md`; the record: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`

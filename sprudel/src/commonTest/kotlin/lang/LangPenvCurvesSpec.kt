@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
@@ -86,10 +87,10 @@ class LangPenvCurvesSpec : StringSpec({
         events.map { it.data.pAttackCurve } shouldBe listOf(null, null)
     }
 
-    "a curve alone switches no pitch envelope on: the wire carries no amount" {
-        val vd = note("c").penvCurves("linear", "linear", "linear").queryArc(0.0, 1.0)[0].data.toVoiceData()
+    "a curve alone switches no pitch envelope on: the wire carries no penv.semitones" {
+        val bag = note("c").penvCurves("linear", "linear", "linear").queryArc(0.0, 1.0)[0].data.toVoiceData().ignitorParams!!
 
-        vd.pEnv shouldBe null
-        vd.pDecayCurve shouldBe AdsrCurve.Linear
+        bag["penv.semitones"] shouldBe null
+        bag["penvCurves.decay"] shouldBe AdsrCurves.indexOf(AdsrCurve.Linear)
     }
 })

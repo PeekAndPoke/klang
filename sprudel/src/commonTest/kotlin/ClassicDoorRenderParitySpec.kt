@@ -117,7 +117,22 @@ class ClassicDoorRenderParitySpec : StringSpec({
 
     val trem = mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 5.0)
 
+    // The pitch envelope (pitch pipeline step 1): the switch alone, each stage against the switch alone, each curve
+    // against the full envelope without it. The release row writes a short decay and a sustain: with the default
+    // stages (attack 0.01 s, decay 0.1 s) the sweep ends at frame 5280, after the gate at 5000, so the release would
+    // start from the decay, not from the sustain, and the row would not see the sustain slot.
+    val penvOn = mapOf("penv.semitones" to 12.0)
+    val penvFull = penvOn + mapOf("penv.attack" to 0.03, "penv.decay" to 0.03, "penv.sustain" to 0.4, "penv.release" to 0.05)
+
     val rows: List<Row> = buildList {
+        add(Row("penv.semitones", penvOn))
+        add(Row("penv.attack", penvOn + ("penv.attack" to 0.05)))
+        add(Row("penv.decay", penvOn + ("penv.decay" to 0.03)))
+        add(Row("penv.sustain", penvOn + ("penv.sustain" to 0.4)))
+        add(Row("penv.release", penvOn + mapOf("penv.decay" to 0.03, "penv.sustain" to 0.4, "penv.release" to 0.05)))
+        add(Row("penvCurves.attack", penvFull + ("penvCurves.attack" to AdsrCurves.indexOf(AdsrCurve.Linear))))
+        add(Row("penvCurves.decay", penvFull + ("penvCurves.decay" to AdsrCurves.indexOf(AdsrCurve.SCurve))))
+        add(Row("penvCurves.release", penvFull + ("penvCurves.release" to AdsrCurves.indexOf(AdsrCurve.InvSquare))))
         add(Row("onepole", mapOf("onepole" to 900.0)))
         add(Row("crush.bits", mapOf("crush.bits" to 4.0)))
         add(Row("coarse.factor", mapOf("coarse.factor" to 3.0)))

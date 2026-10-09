@@ -11,16 +11,18 @@ package io.peekandpoke.klang.audio_bridge.constants
 //
 // They live here because they are wire defaults in the sense of the house rule
 // (`/dsl-design` section 4: defaults are the same on every surface and live in
-// ONE place). Two surfaces read them (phase 3 step 5b (c1), decision D3):
+// ONE place). Their readers (phase 3 step 5b (c1), decision D3; pitch pipeline
+// step 1):
 //
 //  - the Ignitor pitch envelope (`IgnitorDsl.PitchEnvelope`'s field defaults and
 //    `pitchEnvelopeModIgnitor` in `audio_be`, its non-finite sustain too);
-//  - the voice's own pitch envelope, sprudel's `penv(amount, attack, decay,
-//    sustain, release)`, which `VoiceFactory` resolves at note-on.
+//  - `PitchEnvelopeSlots`, the `penv.*` slot defaults of the pitch envelope stage
+//    `classic()` places, which sprudel's `penv(semitones, attack, decay, sustain,
+//    release)` fills. That stage IS the Ignitor node.
 //
 // So `penv(24)` and `pitchEnvelope(24)` sweep the same way. The CURVE is not a
 // value here: both take `MOD_ENV_CURVE` (`EnvelopeDefaults.kt`). The depth has no
-// default: `amount` / `semitones` is the envelope's switch, 0 is "no envelope".
+// default: `semitones` is the envelope's switch, 0 is "no envelope".
 //
 // The numbers are the Ignitor node's, which it has carried since the pitch
 // envelope moved onto `adsr` (step 3d(i)). The strip read an unset attack and
@@ -35,7 +37,7 @@ const val PITCH_ENV_DECAY_SEC: Double = 0.1
 
 /**
  * Pitch-envelope sustain, a share of the depth: 0 returns to the note after the decay. Also what a
- * NON-FINITE sustain reads as, on both surfaces.
+ * NON-FINITE sustain reads as, on the node and in the `penv.sustain` slot.
  */
 const val PITCH_ENV_SUSTAIN_LEVEL: Double = 0.0
 

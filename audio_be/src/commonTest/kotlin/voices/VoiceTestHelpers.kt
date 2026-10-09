@@ -72,7 +72,6 @@ object VoiceTestHelpers {
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
-        pitchEnvelope: Voice.PitchEnvelope? = null,
 
         // Dynamics
         gain: Double = 1.0,
@@ -127,7 +126,6 @@ object VoiceTestHelpers {
         val pipeline = buildPitchPipeline(
             vibrato = vibrato,
             accelerate = accelerate,
-            pitchEnvelope = pitchEnvelope,
             fm = fm,
             freqHz = freqHz,
             sampleRate = sampleRate,
@@ -172,7 +170,6 @@ object VoiceTestHelpers {
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
-        pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope? = null,
@@ -181,7 +178,7 @@ object VoiceTestHelpers {
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
         freqHz = freqHz, signal = signal, fm = fm, accelerate = accelerate,
-        vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
+        vibrato = vibrato, gain = gain, pan = pan,
         envelope = envelope,
         katalystParams = katalystParams,
     )
@@ -205,7 +202,6 @@ object VoiceTestHelpers {
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
-        pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope? = null,
@@ -225,7 +221,7 @@ object VoiceTestHelpers {
             rng = testRandom,
         ),
         fm = fm, accelerate = accelerate,
-        vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
+        vibrato = vibrato, gain = gain, pan = pan,
         envelope = envelope,
     )
 }

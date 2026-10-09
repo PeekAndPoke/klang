@@ -32,8 +32,9 @@ to use velocity in my authored instrument, but also want to expose every other k
 
 1. **It exposes the doors.** Every sprudel knob becomes a `<door>.<param>` slot the pattern fills, and a stage whose
    gating slot is unset is not built.
-2. **It places them**, all of them, in one fixed order (the retired voice strip's order: onepole, crush, coarse,
-   distort, highpass, bandpass, notch, lowpass, tremolo, adsr), as the instrument's last call.
+2. **It places them**, all of them, in one fixed order (the pitch envelope on the source since pitch pipeline step 1,
+   then the retired voice strip's order: onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo,
+   adsr), as the instrument's last call.
 
 What is already loose:
 

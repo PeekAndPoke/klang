@@ -145,9 +145,17 @@ object KlangScriptIgnitorSlots {
     // word (`lpf.freq`, `crush.bits`, `adsr.attack`); the Kotlin door is `IgnitorDsl.Slots.lpf.freq`, the
     // same object.
 
+    /** The pitch envelope stage's slots: `semitones` (the switch), `attack`, `decay`, `sustain`, `release`. `classic()`'s first stage. */
+    @KlangScript.Property
+    val penv: KlangScriptIgnitorPenvSlots = KlangScriptIgnitorPenvSlots
+
+    /** The pitch envelope's curve slots: `attack`, `decay`, `release`. */
+    @KlangScript.Property
+    val penvCurves: KlangScriptIgnitorPenvCurvesSlots = KlangScriptIgnitorPenvCurvesSlots
+
     /**
      * The one-pole lowpass stage's slot (default 0.0, off): the cutoff in Hz that the pattern's `onepole(hz)`
-     * writes. `classic()`'s first stage.
+     * writes. `classic()`'s first amplitude stage, behind the pitch stages.
      */
     @KlangScript.Property
     val onepole: IgnitorDsl = IgnitorDsl.Slots.onepole

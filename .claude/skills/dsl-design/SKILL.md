@@ -199,9 +199,10 @@ the bug.
   curve cannot be written without naming the stage; on the flat Kotlin door a curve alone still leaves
   the filter untouched. The pitch envelope's builder
   has no depth to fill (the depth is its door input), so the rule has nothing to do there. Sprudel's
-  `penv(amount, attack, decay, sustain, release)` (phase 3 step 5b (c), 2026-09-25) is a voice-side door on
-  neither closed list: `amount` is its switch and a tail-only call never invents it; its unset stages read
-  the shared `PitchEnvelopeDefaults` on both hosts. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
+  `penv(semitones, attack, decay, sustain, release)` (phase 3 step 5b (c), 2026-09-25; `semitones` was `amount`
+  until pitch pipeline step 1, 2026-10-09) is a voice-side door on
+  neither closed list: `semitones` is its switch and a tail-only call never invents it; its unset stages read
+  the shared `PitchEnvelopeDefaults` (the `penv.*` slot defaults of `classic()`'s pitch envelope stage). The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
   `lpfCurves`, ...) are setters only: a curve never switches its envelope on, and a bare call changes
   nothing. **It is adopted AT THE DOOR only, and a door fill does not survive
   SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the

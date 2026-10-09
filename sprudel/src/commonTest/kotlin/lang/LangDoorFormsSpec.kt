@@ -272,7 +272,7 @@ class LangDoorFormsSpec : StringSpec({
         k("vibrato.rate", "vibrato(%s)", { it.vibrato }, { p, c -> p.vibrato(c) }, { s, c -> s.vibrato(c) }, { c -> vibrato(c) }, { m, c -> m.vibrato(c) }, head = true),
         k("vib", "vib(%s)", { it.vibrato }, { p, c -> p.vib(c) }, { s, c -> s.vib(c) }, { c -> vib(c) }, { m, c -> m.vib(c) }, head = true),
         k("vibrato.depth", "vibrato(depth = %s)", { it.vibratoMod }, { p, c -> p.vibrato(depth = c) }, { s, c -> s.vibrato(depth = c) }, { c -> vibrato(depth = c) }, { m, c -> m.vibrato(depth = c) }),
-        k("penv.amount", "penv(%s)", { it.pEnv }, { p, c -> p.penv(c) }, { s, c -> s.penv(c) }, { c -> penv(c) }, { m, c -> m.penv(c) }, head = true),
+        k("penv.semitones", "penv(%s)", { it.pEnv }, { p, c -> p.penv(c) }, { s, c -> s.penv(c) }, { c -> penv(c) }, { m, c -> m.penv(c) }, head = true),
         k("pamt", "pamt(%s)", { it.pEnv }, { p, c -> p.pamt(c) }, { s, c -> s.pamt(c) }, { c -> pamt(c) }, { m, c -> m.pamt(c) }, head = true),
         k("penv.attack", "penv(attack = %s)", { it.pAttack }, { p, c -> p.penv(attack = c) }, { s, c -> s.penv(attack = c) }, { c -> penv(attack = c) }, { m, c -> m.penv(attack = c) }),
         k("penv.decay", "penv(decay = %s)", { it.pDecay }, { p, c -> p.penv(decay = c) }, { s, c -> s.penv(decay = c) }, { c -> penv(decay = c) }, { m, c -> m.penv(decay = c) }),

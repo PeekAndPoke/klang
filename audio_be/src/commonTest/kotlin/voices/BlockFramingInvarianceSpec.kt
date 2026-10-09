@@ -78,7 +78,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         startFrame: Int,
         blockFrames: Int,
         pid: String = "framing",
-        /** Lets a row add STRIP-door modulation (`vibrato`, `accelerate`, the pitch envelope). */
+        /** Lets a row add pitch-door modulation (the strip's `vibrato` and `accelerate`, the pitch envelope's slots). */
         dataMod: (VoiceData) -> VoiceData = { it },
     ): DoubleArray {
         val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", dsl.classic()) }
@@ -295,8 +295,9 @@ class BlockFramingInvarianceSpec : StringSpec({
     // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT `Voice.Fm`. The voice's own pitch
     // pipeline renderers (`voices/strip/pitch`) were therefore untouched by this harness, which is what P4 is about.
     //
-    // Only the PER-SAMPLE ones belong on a bit-identity list. `VibratoRenderer`,
-    // `PitchEnvelopeRenderer` and `AccelerateRenderer` all derive their position per sample from
+    // Only the PER-SAMPLE ones belong on a bit-identity list. `VibratoRenderer`, the pitch envelope (the strip's
+    // `PitchEnvelopeRenderer` until pitch pipeline step 1, `classic()`'s stage since) and `AccelerateRenderer` all
+    // derive their position per sample from
     // `blockStart + offset` (+ a phase accumulator, in vibrato's case, advanced once per rendered
     // sample), so they are Class 1.
     //
@@ -310,8 +311,10 @@ class BlockFramingInvarianceSpec : StringSpec({
         "strip vibrato" to { d -> d.copy(vibrato = 5.0, vibratoMod = 0.4) },
         // A sustain and a release inside the render: the gate at 4813 frames starts a 0.03 s release
         // (1323 frames) that ends inside the rendered tail, so the release path is framed too.
-        "strip pitch envelope" to { d ->
-            d.copy(pEnv = 3.0, pAttack = 0.011, pDecay = 0.023, pSustain = 0.4, pRelease = 0.03)
+        // Since pitch pipeline step 1 the pitch envelope is `classic()`'s stage (the probe ends in `classic()`), filled
+        // through its `penv.*` slots; its law is the Ignitor node's, per sample from `voiceElapsedFrames`.
+        "classic pitch envelope" to { d ->
+            d.withClassicSlots(DoorFields(penv = DoorPenv(semitones = 3.0, attack = 0.011, decay = 0.023, sustain = 0.4, release = 0.03)))
         },
     )
 

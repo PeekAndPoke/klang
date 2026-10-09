@@ -8,14 +8,14 @@ package io.peekandpoke.klang.audio_be.voices
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
-import io.peekandpoke.klang.audio_bridge.FilterCurvesSlots
+import io.peekandpoke.klang.audio_bridge.ModEnvelopeCurvesSlots
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.VoiceData
 
 /**
  * TEST ONLY. The voice-door settings a spec states in typed form: the shape `VoiceData` carried as typed fields until
- * phase 3 step 9 cut them (a voice door travels as `classic()` slot keys in `ignitorParams` since step 8). Specs that
+ * phase 3 step 9 cut them (the pitch envelope's until pitch pipeline step 1) (a voice door travels as `classic()` slot keys in `ignitorParams` since step 8). Specs that
  * read more clearly as "a lowpass at 900 with an envelope" than as a list of slot keys state their settings here and
  * send them through [withClassicSlots], which writes the same key names, units and on/off rules as sprudel's
  * `classicSlotParams`. Three differences are deliberate and inaudible: the rig always writes `passes` (default 1.0)
@@ -24,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
  * nothing reads.
  */
 data class DoorFields(
+    val penv: DoorPenv? = null,
     val filters: List<DoorFilter> = emptyList(),
     val adsr: DoorAdsr? = null,
     val crush: Double? = null,
@@ -38,6 +39,21 @@ data class DoorFields(
     val end: Double? = null,
     val speed: Double? = null,
     val loop: Boolean? = null,
+)
+
+/**
+ * TEST ONLY. The pitch envelope of a [DoorFields] (sprudel's `penv` and `penvCurves`): the switch [semitones], the four
+ * stages, the curves. Written as sprudel writes it: every field that is set.
+ */
+data class DoorPenv(
+    val semitones: Double? = null,
+    val attack: Double? = null,
+    val decay: Double? = null,
+    val sustain: Double? = null,
+    val release: Double? = null,
+    val attackCurve: AdsrCurve? = null,
+    val decayCurve: AdsrCurve? = null,
+    val releaseCurve: AdsrCurve? = null,
 )
 
 /** TEST ONLY. The voice envelope of a [DoorFields]: the four stages, their curves, and the `adsr.on` switch. */
@@ -90,7 +106,7 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
 
     fun putCurve(slot: IgnitorDsl, curve: AdsrCurve?) = put(slot, curve?.let { AdsrCurves.indexOf(it) })
 
-    fun putEnv(env: DoorFilterEnv?, depth: IgnitorDsl, a: IgnitorDsl, d: IgnitorDsl, su: IgnitorDsl, r: IgnitorDsl, c: FilterCurvesSlots) {
+    fun putEnv(env: DoorFilterEnv?, depth: IgnitorDsl, a: IgnitorDsl, d: IgnitorDsl, su: IgnitorDsl, r: IgnitorDsl, c: ModEnvelopeCurvesSlots) {
         if (env == null) {
             return
         }
@@ -103,6 +119,17 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
         putCurve(c.attack, env.attackCurve)
         putCurve(c.decay, env.decayCurve)
         putCurve(c.release, env.releaseCurve)
+    }
+
+    doors.penv?.let { e ->
+        put(s.penv.semitones, e.semitones)
+        put(s.penv.attack, e.attack)
+        put(s.penv.decay, e.decay)
+        put(s.penv.sustain, e.sustain)
+        put(s.penv.release, e.release)
+        putCurve(s.penvCurves.attack, e.attackCurve)
+        putCurve(s.penvCurves.decay, e.decayCurve)
+        putCurve(s.penvCurves.release, e.releaseCurve)
     }
 
     put(s.crush.bits, doors.crush)

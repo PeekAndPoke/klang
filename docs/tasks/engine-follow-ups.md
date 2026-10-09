@@ -44,6 +44,12 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
 10. **Kotlin's `isFinite()` is a stdlib call on Kotlin/JS**, left out of the stages' inlining budget. An inline
     compare helped pinned and hurt unpinned, so it was dropped; worth a second look only with a measurement that holds
     in both conditions. Source: as 2. S.
+10a. **The per-sample pitch envelope boxes on V8**: on the production bundle, pinned and unpinned, a voice whose pitch
+    envelope is in its attack or decay allocates about 2.17 KB per block (one 16-byte heap number per sample); settled
+    or gated off it allocates about 0.1 KB. HEAD and pitch pipeline step 1 alike (the strip and the `classic()` stage
+    run the same `renderPitchEnvelopeRatios` loop over `core.at(...)`), so a typical kick sweep costs about 65 KB per
+    note. Likely a double crossing a call V8 does not inline (`adsrCurveShape`, `fastExp2` or `safeOut`); not located.
+    Source: `tmp/reviews/pp1-r1-B.md` (pitch pipeline step 1, review round 1, reviewer B, the NIT). S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

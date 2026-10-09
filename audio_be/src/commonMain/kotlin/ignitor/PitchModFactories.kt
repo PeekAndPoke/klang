@@ -171,9 +171,9 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
  *
  * **The law** is [EnvelopeCore], the engine's one envelope law (fractional attack and decay frames,
  * the release on `floor(N)` frames, the release starting from the level AT the gate frame, the
- * sustain raw). The level becomes a ratio in [renderPitchEnvelopeRatios], the ONE mapping this node
- * and the voice's own pitch envelope (sprudel's `penv`, `PitchEnvelopeRenderer`) share, so the two
- * render the same numbers by construction.
+ * sustain raw). The level becomes a ratio in [renderPitchEnvelopeRatios]. Sprudel's `penv` is this node too:
+ * it fills the pitch envelope stage `classic()` places (pitch pipeline step 1; the voice strip's
+ * `PitchEnvelopeRenderer`, which shared the mapping, retired with it).
  *
  * Output is passed through [safeOut] — extreme `amount` values cannot produce
  * `+Inf` ratios that would poison the oscillator phase accumulator.
@@ -246,14 +246,14 @@ private class PitchEnvelopeModIgnitor(
             releaseCurve = releaseCurve,
         )
 
-        renderPitchEnvelopeRatios(core = core, amount = amountVal, buffer = buffer, from = ctx.offset, to = end, firstPos = ctx.voiceElapsedFrames, multiply = false)
+        renderPitchEnvelopeRatios(core = core, amount = amountVal, buffer = buffer, from = ctx.offset, to = end, firstPos = ctx.voiceElapsedFrames)
     }
 }
 
 /**
- * THE pitch envelope's level-to-ratio mapping, one copy for both hosts (phase 3 step 5b (c1)): the
- * Ignitor node ([pitchEnvelopeModIgnitor], which writes) and the voice's own pitch envelope
- * (`PitchEnvelopeRenderer`, which writes, or multiplies into a buffer an earlier pitch stage wrote).
+ * THE pitch envelope's level-to-ratio mapping (phase 3 step 5b (c1)): it served two hosts, the Ignitor node
+ * ([pitchEnvelopeModIgnitor]) and the voice strip's own pitch envelope, which multiplied into a buffer an earlier
+ * pitch stage wrote; the strip's host retired in pitch pipeline step 1, so one host is left and it always writes.
  *
  * Fills `buffer[from until to]` with `safeOut(2^(amount * level / 12))`, where `level` is [core]'s
  * law at the voice-relative frame `firstPos + (i - from)`. [core] must be prepared for this block.
@@ -266,7 +266,7 @@ private class PitchEnvelopeModIgnitor(
  *    `0 * shape(x)` for an x in 0..1, a signed zero whatever the curve, and `fastExp2` returns exactly
  *    1.0 for both +0.0 and -0.0.
  *
- * No allocation; the [multiply] branch is taken once per block, outside the loops.
+ * No allocation.
  */
 internal fun renderPitchEnvelopeRatios(
     core: EnvelopeCore,
@@ -275,7 +275,6 @@ internal fun renderPitchEnvelopeRatios(
     from: Int,
     to: Int,
     firstPos: Int,
-    multiply: Boolean,
 ) {
     val gateEndPos = core.gateEndPos
     val lastPos = firstPos + (to - 1 - from)
@@ -287,27 +286,15 @@ internal fun renderPitchEnvelopeRatios(
         val level = if (inSustain) core.sustain else core.releaseEndLevel()
         val settled = safeOut(fastExp2(amount * level / 12.0))
 
-        if (multiply) {
-            for (i in from until to) {
-                buffer[i] *= settled
-            }
-        } else {
-            for (i in from until to) {
-                buffer[i] = settled
-            }
+        for (i in from until to) {
+            buffer[i] = settled
         }
 
         return
     }
 
-    if (multiply) {
-        for (i in from until to) {
-            buffer[i] *= safeOut(fastExp2(amount * core.at(firstPos + (i - from)) / 12.0))
-        }
-    } else {
-        for (i in from until to) {
-            buffer[i] = safeOut(fastExp2(amount * core.at(firstPos + (i - from)) / 12.0))
-        }
+    for (i in from until to) {
+        buffer[i] = safeOut(fastExp2(amount * core.at(firstPos + (i - from)) / 12.0))
     }
 }
 

@@ -326,9 +326,11 @@ class IgnitorRegistryTest : StringSpec({
         registry.get(IgnitorRegistry.DEFAULT_SOUND)?.endsInClassic() shouldBe true
     }
 
-    "the built-in shape is still step 6's tree: under classic()'s crush sits the onepole on the pregained source" {
+    "the built-in shape is still step 6's tree: under classic()'s crush sits the onepole, then the pitch stages on the pregained source" {
         // Step 6 wrote it `OnePoleLowpass(source.pregain(), slot).classic()`; since step 10 the onepole is classic()'s
-        // first stage, so the same tree comes out of `source.pregain().classic()`.
+        // first stage, so the same tree comes out of `source.pregain().classic()`. Since pitch pipeline step 1 the pitch
+        // stages sit between the onepole and the source (they bubble to the source, so their place does not change
+        // the sound).
         val saw = IgnitorDsl.Saw()
         val shape = IgnitorRegistry.builtInVoice(saw)
 
@@ -349,7 +351,10 @@ class IgnitorRegistryTest : StringSpec({
                 }
             }
 
-            n.inner shouldBe IgnitorDsl.OnePoleLowpass(inner = saw.pregain(), freq = IgnitorDsl.Slots.onepole)
+            val onepole = n.inner.shouldBeInstanceOf<IgnitorDsl.OnePoleLowpass>()
+
+            onepole.freq shouldBe IgnitorDsl.Slots.onepole
+            onepole.inner.shouldBeInstanceOf<IgnitorDsl.PitchEnvelope>().inner shouldBe saw.pregain()
         }
     }
 

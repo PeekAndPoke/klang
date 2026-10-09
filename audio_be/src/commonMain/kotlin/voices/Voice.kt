@@ -593,17 +593,7 @@ class Voice(
         var phase: Double = 0.0,
     )
 
-    /**
-     * The voice's pitch envelope (sprudel's `penv`): [semitones] = pitch shift at the envelope's peak, in
-     * SEMITONES (`2^(semitones * level / 12)`), and [envelope] its stages and curves, the level law of
-     * `EnvelopeCore`, the Ignitor pitch envelope's (phase 3 step 5b (c1)). The [Fm] shape.
-     */
-    class PitchEnvelope(
-        val semitones: Double,
-        val envelope: Envelope,
-    )
-
-    /** A modulation envelope of the voice's pitch pipeline (FM index, pitch envelope), in frames. */
+    /** A modulation envelope of the voice's pitch pipeline (the FM index), in frames. */
     class Envelope(
         val attackFrames: Double,
         val decayFrames: Double,

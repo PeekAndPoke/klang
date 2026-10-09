@@ -29,6 +29,8 @@ import io.peekandpoke.klang.sprudel.lang.notch
 import io.peekandpoke.klang.sprudel.lang.notchCurves
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.ignp
+import io.peekandpoke.klang.sprudel.lang.penv
+import io.peekandpoke.klang.sprudel.lang.penvCurves
 import io.peekandpoke.klang.sprudel.lang.speed
 import io.peekandpoke.klang.sprudel.lang.tremolo
 
@@ -94,6 +96,14 @@ class ClassicSlotParamsSpec : StringSpec({
         }
     }
 
+    "the pitch envelope alone is a voice door, and its switch travels only when set: a stage-only call switches nothing on" {
+        // Pitch pipeline step 1: `penv` left the typed wire fields for `classic()`'s `penv.*` slots. An event whose
+        // only door is the pitch envelope takes the writer path (not the door-less early return).
+        slots(note("c").penv(12)) shouldBe mapOf("penv.semitones" to 12.0)
+        slots(note("c").penv(attack = 0.1, release = 0.2)) shouldBe mapOf("penv.attack" to 0.1, "penv.release" to 0.2)
+        slots(note("c").penvCurves(decay = "linear")) shouldBe mapOf("penvCurves.decay" to 0.0)
+    }
+
     "names travel as their catalogue index, a flag as 1.0 or 0.0" {
         slots(note("c").distort(0.3, "tube"))["distort.shape"] shouldBe 10.0
         slots(note("c").distort(0.3, "no-such-shape"))["distort.shape"] shouldBe 0.0
@@ -124,6 +134,7 @@ class ClassicSlotParamsSpec : StringSpec({
                 .adsr(0.051, 0.052, 0.53, 0.054).adsrCurves("invsquare", "exponential", "linear").adsrOff()
                 .crush(4.1, 2).coarse(3.1, 4).distort(0.31, "tube", 8).tremolo(0.61, 4.1, "square")
                 .begin(0.11).end(0.91).speed(2.1).loop()
+                .penv(7.1, 0.061, 0.062, 0.63, 0.064).penvCurves("exponential", "linear", "square")
         )
 
         written shouldBe mapOf(
@@ -146,6 +157,8 @@ class ClassicSlotParamsSpec : StringSpec({
             "distort.amount" to 0.31, "distort.shape" to 10.0, "distort.oversample" to 8.0,
             "tremolo.depth" to 0.61, "tremolo.rate" to 4.1, "tremolo.shape" to 2.0,
             "begin" to 0.11, "end" to 0.91, "speed" to 2.1, "loop" to 1.0,
+            "penv.semitones" to 7.1, "penv.attack" to 0.061, "penv.decay" to 0.062, "penv.sustain" to 0.63, "penv.release" to 0.064,
+            "penvCurves.attack" to 5.0, "penvCurves.decay" to 0.0, "penvCurves.release" to 1.0,
         )
 
         val placed = mutableListOf<IgnitorDsl.Param>()
