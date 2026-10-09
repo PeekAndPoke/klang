@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.sprudel.lang.parser
 
+import io.peekandpoke.klang.common.math.formatAsIntOrDouble
+
 /**
  * Serialises an [MnPattern] back to a canonical mini-notation string.
  *
@@ -86,10 +88,10 @@ object MnRenderer {
                     }
                 )
             }
-            mods.multiplier?.let { append("*${renderNumber(it)}") }
-            mods.divisor?.let { append("/${renderNumber(it)}") }
-            mods.probability?.let { append("?${renderNumber(it)}") }
-            mods.weight?.let { append("@${renderNumber(it)}") }
+            mods.multiplier?.let { append("*${it.formatAsIntOrDouble()}") }
+            mods.divisor?.let { append("/${it.formatAsIntOrDouble()}") }
+            mods.probability?.let { append("?${it.formatAsIntOrDouble()}") }
+            mods.weight?.let { append("@${it.formatAsIntOrDouble()}") }
             if (mods.tweaks.isNotEmpty()) {
                 append("{")
                 append(mods.tweaks.joinToString(" "))
@@ -97,13 +99,4 @@ object MnRenderer {
             }
         }
     }
-
-    // ── Number formatting ─────────────────────────────────────────────────
-
-    /**
-     * Renders a [Double] without a trailing `.0` when the value is a whole number.
-     * E.g. `2.0` → `"2"`, `0.5` → `"0.5"`.
-     */
-    private fun renderNumber(d: Double): String =
-        if (d == kotlin.math.floor(d) && !d.isInfinite()) d.toInt().toString() else d.toString()
 }

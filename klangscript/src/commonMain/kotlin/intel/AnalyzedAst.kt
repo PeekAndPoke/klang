@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.script.intel
 
+import io.peekandpoke.klang.common.strings.buildLineOffsets
+import io.peekandpoke.klang.common.strings.lineColToOffset
 import io.peekandpoke.klang.script.ast.Argument
 import io.peekandpoke.klang.script.ast.ArrayLiteral
 import io.peekandpoke.klang.script.ast.ArrowFunction
@@ -48,8 +50,6 @@ import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
-import io.peekandpoke.klang.script.utils.buildLineOffsets
-import io.peekandpoke.klang.script.utils.lineColToOffset
 
 /**
  * Result of parsing and analyzing a KlangScript program.

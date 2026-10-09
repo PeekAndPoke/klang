@@ -86,6 +86,16 @@ class MnRoundTripSpec : StringSpec() {
         "probability default 'bd?'" { assertRoundTrip("bd?") }
         "probability explicit 'bd?0.3'" { assertRoundTrip("bd?0.3") }
 
+        "a whole number renders without '.0', a fraction as it is: 'a*2 b@0.5'" {
+            render(parse("a*2 b@0.5")) shouldBe "a*2 b@0.5"
+        }
+
+        "a whole number above Int.MAX_VALUE keeps its value, not a clamped 2147483647: 'a@3000000000'" {
+            // the JS editor prints it as written, the JVM as 3.0E9; both read back as the same weight
+            assertRoundTrip("a@3000000000")
+            render(parse("a@3000000000")).substringAfter("@").toDouble() shouldBe 3.0e9
+        }
+
         // ── Modifiers on groups ───────────────────────────────────────────────
 
         "multiplier on group '[bd sd]*2'" { assertRoundTrip("[bd sd]*2") }

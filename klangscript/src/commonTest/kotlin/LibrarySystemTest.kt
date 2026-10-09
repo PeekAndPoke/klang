@@ -373,6 +373,33 @@ class LibrarySystemTest : StringSpec({
         result.toDisplayString() shouldContain "14"
     }
 
+    "Library not found suggests the nearest name with the house ranking (suggestNames), quoted as everywhere" {
+        val engine = klangScriptEngine {
+            registerLibrary("sprudel", "let a = 1")
+            registerLibrary("stdlib", "let b = 1")
+        }
+
+        // a transposition is ONE edit under suggestNames' osaDistance, two under plain Levenshtein
+        val exception = shouldThrow<KlangScriptImportError> {
+            engine.execute("""import * from "sprduel" """)
+        }
+
+        exception.message shouldContain "Library not found. Did you mean 'sprudel'? Available libraries: 'sprudel', 'stdlib'."
+    }
+
+    "Library not found with no near name lists the libraries only" {
+        val engine = klangScriptEngine {
+            registerLibrary("sprudel", "let a = 1")
+        }
+
+        // 4 edits from "sprudel": the old Levenshtein threshold (3) and suggestNames' (2 for 5 to 8 letters) both refuse
+        val exception = shouldThrow<KlangScriptImportError> {
+            engine.execute("""import * from "spzzzzl" """)
+        }
+
+        exception.message shouldContain "Library not found. Available libraries: 'sprudel'."
+    }
+
     "Library not found error still works" {
         val engine = klangScriptEngine()
 
