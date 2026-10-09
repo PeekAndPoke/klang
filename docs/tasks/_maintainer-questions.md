@@ -68,23 +68,6 @@ Source: §8. Step 2 of the pitch plan, recommendations as written there:
 - **D10 (pitch):** compose the pitch envelope through `adsr` only after a spike shows it matches.
 - **D11:** accelerate and FM stay nodes.
 
-## Q14. A soloed release tail beside another solo
-
-**What happens.** Protection now ends 2 s after the source's last solo event. A long release is therefore ducked
-mid-tail if another solo is live.
-
-**Example.**
-
-```
-note("c3").sound(myPad).release(5).solo()   // myPad: any instrument with a long tail
-s("bd*4").solo()
-```
-
-The pad's tail is ducked from about 2 s after its last event, measured -23.6 to -40.8 dB at 4 s. The old code let it
-ring at full level. The click is fixed (a 128-frame ramp).
-
-Should a tail stay protected until its voice ends?
-
 ## Q15. Helper merges that change behaviour
 
 Source: [`utils-home-pass.md`](utils-home-pass.md), "Left for a decision". Four small steps:
