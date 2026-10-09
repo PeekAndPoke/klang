@@ -649,7 +649,9 @@ object SongBenchmarkCases {
         },
         liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
         liveCase("rhythm: no string extras", "string", RHYTHM) {
-            swap(Regex("""    \.pitchEnvelope\(0\.5, x => x\.adsr\([^)]*\)\)\n"""), "")(
+            // the guitar's pick transient, tuned by ear (0.5, then 0.2 since 2026-10-09): any amount below one
+            // semitone, so the marimba's and the drum's own pitch envelopes (7 to 36 semitones) never match
+            swap(Regex("""    \.pitchEnvelope\(0\.[0-9]+, x => x\.adsr\([^)]*\)\)\n"""), "")(
                 swap(Regex("""    \.plus\(Ign\.crackle\([^\n]*\n"""), "")(it),
             )
         },
