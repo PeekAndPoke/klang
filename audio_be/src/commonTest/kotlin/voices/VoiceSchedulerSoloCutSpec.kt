@@ -402,6 +402,214 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         }
     }
 
+    // ── A soloed VOICE is protected for its whole life; the source's window serves between events (Q14, Q28) ───
+
+    /** A soloed pad with a 5 s release, hard left: its tail outlives the 2 s hold by far. */
+    fun pad(solo: Double? = 1.0): VoiceData = tone(sourceId = "pad", pan = 0.0, solo = solo).copy(ignitorParams = mapOf("adsr.release" to 5.0))
+
+    "solo: a soloed pad's long release plays at full level beside another live solo, until the voice ends (Q14)" {
+        // `note("c3").sound(myPad).release(5).solo()` beside `s("bd*4").solo()`: the kick (hard right) solos all
+        // the way. Reference: the same pad soloed alone, which nothing ducks. Before Q14 the pad's protection ended
+        // 2 s after its last event and the kick's live solo silenced the ringing tail from 2.5 s.
+        val rig = Rig()
+        rig.schedule(0.0, pad(), durSec = 0.5)
+        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        val reference = Rig()
+        reference.schedule(0.0, pad(), durSec = 0.5)
+
+        val blocks = blocksFor(7.0)
+        val soloed = rig.peaksPerBlock(blocks)
+        val alone = reference.peaksPerBlock(blocks)
+
+        withClue("the tail still sounds at 4 s (the row is not vacuous)") { alone[blocksFor(4.0)].first shouldBeGreaterThan 1e-3 }
+
+        for (block in 0 until blocks) {
+            withClue("block $block (${block * blockDurationSec} s): the pad at full level") {
+                soloed[block].first shouldBe (alone[block].first plusOrMinus 1e-12)
+            }
+        }
+
+        withClue("the pad's voice has ended by 7 s: only the kick is left") { rig.activeCount shouldBe 1 }
+    }
+
+    "solo: past the window a plain note of the soloed source is ducked (Q14)" {
+        val rig = Rig()
+        rig.schedule(0.0, pad(), durSec = 0.5)
+        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        rig.peaksPerBlock(blocksFor(7.0))
+
+        withClue("the pad's voice has ended") { rig.activeCount shouldBe 1 }
+
+        // the same source again, a note without solo: no entry protects it, so the kick's live solo silences it
+        rig.schedule(rig.nowSec(), pad(solo = null), durSec = 1.0)
+        val (padPeak, kickPeak) = rig.renderPeaks(blocksFor(0.5))
+
+        withClue("the kick still sounds") { kickPeak shouldBeGreaterThan 1e-3 }
+        // not exactly 0: the kick, hard right, leaks cos(pi / 2) = 6e-17 of itself into the left channel
+        withClue("the plain pad note is ducked to 1 - 1.0") { padPeak shouldBeLessThan 1e-9 }
+    }
+
+    // Only a voice that was soloed itself is protected past the window (Q28): a voice with no solo of its own, or an
+    // amount of 0, has the source's window alone, so it drops back 2 s after the source's last soloed event, even while
+    // a soloed voice of the same source still rings beside it. Round 0 kept the whole source for as long as any of its
+    // voices sounded, round 1 for as long as a soloed one did; both kept un-soloed notes at full level.
+
+    "solo: Q28's example: solo(1) on a release(5) pad, then the same text with solo(0): the solo(0) notes are ducked from the window's end, the soloed pad rings to its end" {
+        // The pad (hard left) soloed in cycle 0 (0 to 2 s), then the same pad with amount 0 in cycles 1 to 3 (the same
+        // source id), all with a 5 s release, beside a soloed kick (hard right). The solo(0) notes are read alone as the
+        // left channel minus the same render with them at gain 0; the soloed pad as the render without them.
+        fun Rig.song(zeroGain: Double?, withZeros: Boolean = true) {
+            schedule(0.0, pad(), durSec = 2.0)
+
+            if (withZeros) {
+                for (cycle in 1..3) {
+                    schedule(cycle * 2.0, pad(solo = 0.0).copy(gain = zeroGain), durSec = 2.0)
+                }
+            }
+
+            schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        }
+
+        val blocks = blocksFor(8.0)
+        val all = Rig().apply { song(zeroGain = null) }.renderLeft(blocks)
+        val withoutZeros = Rig().apply { song(zeroGain = 0.0) }.renderLeft(blocks)
+        val padOnly = Rig().apply { song(zeroGain = null, withZeros = false) }.renderLeft(blocks)
+
+        fun peak(samples: DoubleArray, sec: Double): Double {
+            val from = blocksFor(sec) * blockFrames
+
+            return (from until from + blockFrames).maxOf { abs(samples[it]) }
+        }
+
+        val zeros = DoubleArray(all.size) { all[it] - withoutZeros[it] }
+
+        withClue("the solo(0) notes sound inside the window (2.5 s, 3.5 s)") {
+            peak(zeros, 2.5) shouldBeGreaterThan 1e-3
+            peak(zeros, 3.5) shouldBeGreaterThan 1e-3
+        }
+
+        for (sec in listOf(4.5, 5.0, 6.0, 7.5)) {
+            withClue("the solo(0) notes ducked at $sec s, the soloed pad still ringing") { peak(zeros, sec) shouldBeLessThan 1e-9 }
+        }
+
+        for (block in 0 until blocks) {
+            withClue("block $block: the soloed pad unchanged by its solo(0) neighbours") {
+                val from = block * blockFrames
+
+                (from until from + blockFrames).maxOf { abs(withoutZeros[it] - padOnly[it]) } shouldBeLessThan 1e-12
+            }
+        }
+
+        withClue("the soloed pad still rings at 6.5 s, at full level") { peak(padOnly, 6.5) shouldBeGreaterThan 1e-3 }
+    }
+
+    "solo: a voice whose own solo amount is NaN is not protected past the window (the NaN guard)" {
+        // A soloed short note of "pad" (0 to 1 s) opens the window; a pad voice with amount NaN rings 5 s beside the kick.
+        val rig = Rig()
+        rig.schedule(0.0, tone(sourceId = "pad", pan = 0.0, solo = 1.0), durSec = 1.0)
+        rig.schedule(0.0, pad(solo = Double.NaN), durSec = 1.0)
+        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+
+        val peaks = rig.peaksPerBlock(blocksFor(5.0))
+
+        withClue("inside the window (2.5 s) the NaN voice sounds") { peaks[blocksFor(2.5)].first shouldBeGreaterThan 1e-3 }
+
+        for (sec in listOf(3.5, 4.5)) {
+            withClue("past the window ($sec s) the NaN voice is ducked") { peaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        }
+    }
+
+    "solo: solo(1) edited to solo(0) at the same call site: the source drops back at the window's end, its notes still sounding (Q14)" {
+        // The live edit: the soloed note (0 to 2 s), then overlapping notes of the same source with amount 0, which is
+        // what the same `solo(...)` call site sends after the edit. The kick (hard right) solos all the way.
+        val rig = Rig()
+        rig.schedule(0.0, tone(sourceId = "pad", pan = 0.0, solo = 1.0), durSec = 2.0)
+
+        for (k in 1..4) {
+            rig.schedule(k * 1.9, tone(sourceId = "pad", pan = 0.0, solo = 0.0), durSec = 2.0)
+        }
+
+        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+
+        val peaks = rig.peaksPerBlock(blocksFor(8.0))
+
+        withClue("protected at 3.5 s: the last soloed event ended at 2.0 s, plus the 2 s hold") {
+            peaks[blocksFor(3.5)].first shouldBeGreaterThan 1e-3
+        }
+
+        for (sec in listOf(4.5, 6.0, 7.5)) {
+            withClue("ducked at $sec s, a note of the source sounding") { peaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        }
+    }
+
+    "solo: solo(\"<1 0 0 0>\") protects the soloed cycles and their window, not the zeros between them (Q14)" {
+        // One note per 2 s cycle, each overlapping the next by 0.1 s; the amount is 1 in cycles 0 and 4, 0 in the rest.
+        val rig = Rig()
+
+        for (cycle in 0 until 8) {
+            val amount = if (cycle % 4 == 0) 1.0 else 0.0
+
+            rig.schedule(cycle * 2.0, tone(sourceId = "pad", pan = 0.0, solo = amount), durSec = 2.1)
+        }
+
+        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+
+        val peaks = rig.peaksPerBlock(blocksFor(16.0))
+
+        for (sec in listOf(1.0, 3.5, 9.0, 11.5)) {
+            withClue("protected at $sec s (a soloed cycle or its window)") { peaks[blocksFor(sec)].first shouldBeGreaterThan 1e-3 }
+        }
+
+        for (sec in listOf(5.0, 7.5, 13.0, 15.5)) {
+            withClue("ducked at $sec s (a zero cycle past the window)") { peaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        }
+    }
+
+    "solo: a soloed voice with no source id, or with an infinite amount, is not protected past the window (the guards)" {
+        // Each beside the kick's live solo. The voice with no source id opens no window at all (the tracker needs the
+        // id), so it is ducked once the ramp is down; the +Inf voice rings 5 s next to a soloed short note of "pad"
+        // that opens the window to 3 s, as the NaN row does.
+        val noSource = Rig()
+        noSource.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        noSource.schedule(0.0, pad().copy(sourceId = null), durSec = 1.0)
+
+        val infinite = Rig()
+        infinite.schedule(0.0, tone(sourceId = "pad", pan = 0.0, solo = 1.0), durSec = 1.0)
+        infinite.schedule(0.0, pad(solo = Double.POSITIVE_INFINITY), durSec = 1.0)
+        infinite.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+
+        val noSourcePeaks = noSource.peaksPerBlock(blocksFor(5.0))
+        val infinitePeaks = infinite.peaksPerBlock(blocksFor(5.0))
+
+        withClue("the +Inf voice sounds inside the window (2.5 s)") { infinitePeaks[blocksFor(2.5)].first shouldBeGreaterThan 1e-3 }
+
+        for (sec in listOf(3.5, 4.5)) {
+            withClue("no source id: ducked at $sec s") { noSourcePeaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+            withClue("+Inf amount: ducked at $sec s, past the window") { infinitePeaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        }
+    }
+
+    "solo: a held realtime key of the source with no solo of its own is not protected past the window (Q28)" {
+        // A soloed timeline note of "lead" from 0 to 1 s, and a realtime key of "lead" held all the time without a solo.
+        val rig = Rig()
+        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        rig.schedule(0.0, tone(sourceId = "lead", pan = 0.0, solo = 0.95), durSec = 1.0)
+        rig.engine.scheduler.startRealtimeVoice(
+            playbackId = "song",
+            voice = RealtimeVoice(liveId = 1, data = tone(sourceId = "lead", pan = 0.0), gateDurSec = null),
+        )
+
+        val peaks = rig.peaksPerBlock(blocksFor(6.0))
+
+        withClue("protected at 2.5 s: the soloed note ended at 1.0 s, plus the 2 s hold") {
+            peaks[blocksFor(2.5)].first shouldBeGreaterThan 1e-3
+        }
+
+        for (sec in listOf(3.5, 5.5)) {
+            withClue("the held key ducked at $sec s") { peaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        }
+    }
+
     // ── Solo on the realtime path: refreshed every block while a voice of the source holds its gate ───────────
 
     /** A held realtime key of the soloed "lead" source, hard left. */
@@ -509,6 +717,48 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         rig.release(liveId = 2)
 
         withClue("ended after the last note-off") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
+    }
+
+    "solo: a released realtime solo's long tail plays at full level beside another live solo, until it ends (Q14)" {
+        // The realtime key's solo lasts while its gate is open; after the note-off the 5 s tail rings on, and the
+        // kick's live solo (hard right) would silence it from 2 s after the note-off without the voice keeping it.
+        fun Rig.pressPad() {
+            engine.scheduler.startRealtimeVoice(
+                playbackId = "song",
+                voice = RealtimeVoice(liveId = 1, data = pad(solo = 0.95), gateDurSec = null),
+            )
+        }
+
+        val rig = Rig()
+        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        rig.pressPad()
+        val reference = Rig()
+        reference.pressPad()
+
+        val held = rig.peaksPerBlock(blocksFor(0.5))
+        val heldAlone = reference.peaksPerBlock(blocksFor(0.5))
+
+        rig.release(liveId = 1)
+        reference.release(liveId = 1)
+
+        val tail = rig.peaksPerBlock(blocksFor(6.0))
+        val tailAlone = reference.peaksPerBlock(blocksFor(6.0))
+
+        withClue("the tail still sounds 3.5 s after the note-off (the row is not vacuous)") {
+            tailAlone[blocksFor(3.5)].first shouldBeGreaterThan 1e-3
+        }
+
+        for ((name, pair) in listOf("held" to (held to heldAlone), "tail" to (tail to tailAlone))) {
+            val (soloed, alone) = pair
+
+            for (block in soloed.indices) {
+                withClue("$name block $block: the pad at full level") {
+                    soloed[block].first shouldBe (alone[block].first plusOrMinus 1e-12)
+                }
+            }
+        }
+
+        withClue("the pad's voice has ended: only the kick is left") { rig.activeCount shouldBe 1 }
     }
 
     "solo: a held realtime note that made no voice (its sample is not loaded) solos nothing" {

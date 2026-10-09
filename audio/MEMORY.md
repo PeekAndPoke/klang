@@ -144,7 +144,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   truncates, no upper clamp (the D7 stopgap until `docs/tasks/oversampling-regions.md`).
 - **Solo**: background gain `1 - max(live amounts)` (`solo(1.0)` is exact silence, `solo()` is 0.95); `SoloTracker` (per
   playback, fixed arrays) records "soloed at a until t" from any event, control events included; live = `end + 4 blocks >
-  now`, protected = `end + SOLO_HOLD_SEC > now`; `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`). Realtime voices have no
+  now`, protected = `end + SOLO_HOLD_SEC > now` for every voice of the source, and a voice soloed itself (its own amount
+  positive and finite, `ActiveVoice.soloed`) for its whole life (a long release beside another solo, Q14, Q28); `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`). Realtime voices have no
   control events: each one whose gate is open records its source until the block's end, so a realtime solo follows the
   held gates.
 - **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
@@ -278,6 +279,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-09 A soloed voice is protected for its whole life (`ActiveVoice.soloed`, Q14 and Q28); the window serves between events:
+  `docs/tasks-archive/2026-10/20261009-solo-protects-whole-voice.md`
 - 2026-10-09 Pitch pipeline step 3b: a pitch node means what it wraps; above an `fm` it moves the whole operator
   (`CarrierFreqMod`, the modulator reads the outer mod at the carrier's frequency, once per block). A sound change for
   authored fm trees under a pitch node and for sprudel's pitch doors over an fm instrument (the strip moved the modulator too),
