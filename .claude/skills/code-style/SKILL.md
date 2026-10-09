@@ -285,9 +285,11 @@ only; it does not protect against a non-finite carry.
 
 ### 9. Band-Limit Discontinuous Waveforms
 
-All oscillators with signal discontinuities (saw, square, pulse) must use PolyBLEP
-anti-aliasing. Triangle is exempt (aliasing at -12dB/oct from derivative discontinuity
-is acceptable).
+Oscillators with a jump in the wave (saw, square, pulse) never jump in one sample: the edge is a short finite
+slope, the saw's flyback (`resetSamples`, scaled by the frequency, capped by `shapeMax`) and the pulse's flanks
+(`flankSamples`), drawn by the shared trapezoid shape (`WaveVoiceState`). That keeps the aliasing down and is part of
+the analog character. The zawtooth is the deliberate exception (an instant reset, brighter and harsher). Triangle has
+no jump. The oscillators do not use PolyBLEP (an earlier version did; it is still credited in `CREDITS.MD`).
 
 ### 10. Wrap Oscillator Phase
 
@@ -339,7 +341,7 @@ Do not flag this as a style issue.
 
 ### 16. Algorithm Constants May Be Inline Literals
 
-Well-known algorithm tuning constants (Freeverb delay lengths, PolyBLEP thresholds, etc.)
+Well-known algorithm tuning constants (Freeverb delay lengths, filter coefficient tables, etc.)
 are acceptable as inline numeric literals **when documented with a source comment**.
 
 ```kotlin

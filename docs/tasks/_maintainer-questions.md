@@ -68,17 +68,6 @@ Source: §8. Step 2 of the pitch plan, recommendations as written there:
 - **D10 (pitch):** compose the pitch envelope through `adsr` only after a spike shows it matches.
 - **D11:** accelerate and FM stay nodes.
 
-## Q16. The oscillators do not use PolyBLEP
-
-Found in tidy-up step 1. `/code-style` §9, `CREDITS.MD` and `klang-music-writing/ref/ignitor-reference.md` say the
-oscillators use PolyBLEP. They use finite-slope flanks instead, and the unused `polyBlep` helper was deleted.
-
-**Example.** `CREDITS.MD` lists "PolyBLEP (Välimäki et al.): band-limited oscillator anti-aliasing", but the saw
-actually ramps its reset over a few samples (a finite-slope flank), with no PolyBLEP correction.
-
-The coordinator would correct the texts to say what the code does: those three, the in-app Credits page, the Zawtooth
-KDoc, and three `IgnitorsTest` row names. §9 is a rule text, so it waits for your word.
-
 ## Q17. `WarehouseStats.reverbFailures` / `reverbDropped`
 
 Found in tidy-up step 1. These are wire fields the UI never shows; the warehouse panel shows their delay-ring twins.

@@ -86,7 +86,7 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 | Method                | Description                              |
 |-----------------------|------------------------------------------|
 | `Ignitor.sine(freq?)`     | Pure sine wave; its builder adds partial banks (below) |
-| `Ignitor.saw(freq?)`      | Sawtooth, anti-aliased (PolyBLEP)        |
+| `Ignitor.saw(freq?)`      | Sawtooth, soft analog flyback            |
 | `Ignitor.square(freq?)`   | Square wave, anti-aliased                |
 | `Ignitor.tri(freq?)`      | Triangle wave                            |
 | `Ignitor.ramp(freq?)`     | Reverse sawtooth                         |

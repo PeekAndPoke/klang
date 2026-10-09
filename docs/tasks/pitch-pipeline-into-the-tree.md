@@ -701,6 +701,14 @@ conversion with one more accepted type (D10's rule: a plain number wherever a co
 is a constant"; anything else that is neither a number nor an Ignitor stays a type error. Done between two pipeline
 steps, with the `analog(character)` rename.
 
+#### Queued beside the pipeline: the PolyBLEP texts (Q16)
+
+The maintainer, 2026-10-09: "keep PolyBLEP in the credits, as once we used it. Clean up the other references where
+not needed". Done now: `/code-style` section 9 and 16, the music-writing ignitor reference. Queued (they sit in
+`audio_bridge` / `audio_be`, built by a running worker): the Zawtooth KDoc (`IgnitorDsl.kt:464`, "an instant reset,
+no flyback") and the three `IgnitorsTest` row names and comments (222, 225, 262, 268, 410) that credit PolyBLEP for
+softened peaks. `CREDITS.MD` and the in-app Credits page keep the entry.
+
 #### Step 4. FM (M to L, a listening pair)
 
 - `Slots.fm` (`fm.ratio`, `fm.depth`, `fm.attack`, `fm.decay`, `fm.sustain`, and `fm.release` with sprudel's
