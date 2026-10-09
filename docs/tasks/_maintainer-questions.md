@@ -12,41 +12,6 @@ Branch: `engine-pass-1` (from `main` at `7b04120c`, v0.5.5; merged as PR #85, v0
 
 # Part 1: Blocking (work waits on the answer)
 
-## Q26. Inharmonic partials on the sine (pulled ahead, 2026-10-09)
-
-Source: [`future/sine-inharmonic-partials.md`](future/sine-inharmonic-partials.md). Answered 2026-10-09: **a** all banks
-play, summed; **b** `fundamental` unchanged; **d** optional start phases, in the shape of c. **c** asked for a builder
-instead of two neighbouring arrays. The proposal, for your word:
-
-**One partial per call, on the sine's own builder.** `partial(ratio, gain, phase)` adds ONE partial; calling it again
-adds the next. No arrays to keep in step, and each line reads as one partial:
-
-```
-let thud = Ign.sine(x => x
-    .fundamental(0)
-    .partial(0.6571, 0.520)
-    .partial(0.7571, 0.676)
-    .partial(0.8714, 0.652, phase = 0.5)   // half a cycle: what the minus sign did before
-    .partial(1.2143, 0.410)
-)
-```
-
-- **The knobs:** `ratio` (required, a multiple of the sine's frequency), `gain` (default 1.0), `phase` (default 0, a
-  fraction of one cycle, the unit of the oscillators' existing `phase` knob). A negative gain still works and is the
-  same as `phase = 0.5`.
-- **Numbers or signals, like every other knob** (your rule from D10 the other way round: a constant is just the
-  common case). `.partial(1.5, Ign.perlin(1).range(0.2, 0.4))` lets one partial breathe. The thud passes numbers.
-  This replaces my earlier "fixed numbers only", which only made sense for arrays.
-- **The same on both doors:** the KlangScript builder above, and in Kotlin `sine { partial(ratio = 0.6571,
-  gain = 0.52) }` on the Kotlin door (two doors, one DSL).
-- **On the wire:** the `Sine` node gets a list of `Partial(ratio, gain, phase)` entries, each knob an Ignitor value as
-  everywhere else.
-- **A cap on the count,** like the unison voices (a resource count, not a tone): 256 partials. A song that adds more
-  plays the first 256.
-- **Order does not matter for the sound** (they are summed); it is kept as written, so the code reads as the list.
-
-Say yes, or what to change (a name other than `partial`, a different default gain, no signals).
-
 ---
 
 # Part 2: Decided by default, please confirm
