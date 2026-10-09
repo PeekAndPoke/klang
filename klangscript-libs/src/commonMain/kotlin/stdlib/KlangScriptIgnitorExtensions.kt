@@ -657,27 +657,27 @@ object KlangScriptIgnitorExtensions {
     // ── Composition ──────────────────────────────────────────────────────────
 
     /**
-     * Runs this signal through the stages, in the order written: `x.through(a, b, c)` is `c(b(a(x)))`.
+     * Runs this signal through the stages in series, in the order written: `x.serial(a, b, c)` is `c(b(a(x)))`.
      * A stage is any function from a signal to a signal, so a signal chain is written as the list it is,
-     * with any number of stages; a rig is a stage too. With no stage, `through()` returns the signal as it is.
+     * with any number of stages; a rig is a stage too. With no stage, `serial()` returns the signal as it is.
      *
      * ```KlangScript
      * let pedal = x => x.distort(0.4, "soft")
      * let cab   = x => x.highpass(100).lowpass(5000)
-     * let rig   = x => x.through(pedal, cab)
-     * let guitar = Ignitor.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+     * let rig   = x => x.serial(pedal, cab)
+     * let guitar = Ignitor.saw().serial(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
      * ```
      *
-     * Serial, one stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
-     * It builds what the Kotlin `IgnitorDsl.through(...)` builds, and checks every stage on the way: a stage that is
+     * One stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
+     * It builds what the Kotlin `IgnitorDsl.serial(...)` builds, and checks every stage on the way: a stage that is
      * null, returns nothing or returns something other than a signal is a script error naming the stage; a stage that is
      * not a function at all is refused at the call ("expected a function, got a number").
      *
      * @param stages functions from a signal to a signal, applied first to last.
      */
     @KlangScript.Method
-    fun through(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
-        runThroughStages("Ignitor through", self, stages, returns = "signal") { it is IgnitorDsl }
+    fun serial(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+        runSerialStages("Ignitor serial", self, stages, returns = "signal") { it is IgnitorDsl }
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 

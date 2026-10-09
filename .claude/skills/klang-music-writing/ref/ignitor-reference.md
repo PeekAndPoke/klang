@@ -528,22 +528,22 @@ a saw or a triangle, the same time; a sine lingers at its ends). Values at or be
 Ignitor.saw().lowpass(Ignitor.sine(0.2).rangex(200, 3200))
 ```
 
-### Composition: `.through(...)`
+### Composition: `.serial(...)`
 
-`x.through(a, b, c)` runs the signal through functions of a signal, in the order written: it is exactly
-`c(b(a(x)))`, the same node as the nested calls, with any number of stages (`through()` with none is `x` itself). A rig is
+`x.serial(a, b, c)` runs the signal through functions of a signal, in the order written: it is exactly
+`c(b(a(x)))`, the same node as the nested calls, with any number of stages (`serial()` with none is `x` itself). A rig is
 then a value, and a rig is a stage too:
 
 ```javascript
 let pedal  = x => x.distort(0.4, "soft")
 let cab    = x => x.highpass(100).lowpass(5000)
-let rig    = x => x.through(pedal, cab)
-let guitar = Ignitor.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+let rig    = x => x.serial(pedal, cab)
+let guitar = Ignitor.saw().serial(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
 ```
 
 Serial, one stage into the next. Do not confuse it with sprudel's `apply(f, g)`, an alias of `layer`, which runs
 each function on the pattern and STACKS the results. The Katalyst builder has the same door:
-`Katalyst(k => k.through(hall, ceiling))`.
+`Katalyst(k => k.serial(hall, ceiling))`.
 
 ---
 

@@ -43,7 +43,7 @@ internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?): B {
 }
 
 /**
- * Runs [start] through script-supplied [stages] for a `through` door, first to last, checking every stage as
+ * Runs [start] through script-supplied [stages] for a `serial` door, first to last, checking every stage as
  * [configuredBy] checks a configure lambda: a script lambda's declared return type is a promise the interpreter cannot
  * keep (a block body without `return` returns null), so each result is read as `Any?` and checked here, with an error
  * that names the door and the stage, instead of a cast failure (JVM) or a silently wrong value (JS) further on.
@@ -52,7 +52,7 @@ internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?): B {
  * message; [isResult] tests it. Not `this::class.isInstance` as in
  * [configuredBy]: an Ignitor stage hands back another node type (a `Times`, a `Lowpass`) than the one it received.
  */
-internal fun <T : Any> runThroughStages(
+internal fun <T : Any> runSerialStages(
     door: String,
     start: T,
     stages: Array<out Any?>,

@@ -152,10 +152,10 @@ let makeGuitar = (rig) => {
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
-let cleanRig  = x => x.through(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab1x12)
-let brightRig = x => x.through(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12)
-let deepRig   = x => x.through(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab4x12)
-let heavyRig  = x => x.through(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)
+let cleanRig  = x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab1x12)
+let brightRig = x => x.serial(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12)
+let deepRig   = x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab4x12)
+let heavyRig  = x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)
 
 let clean  = makeGuitar(cleanRig)
 let bright = makeGuitar(brightRig)

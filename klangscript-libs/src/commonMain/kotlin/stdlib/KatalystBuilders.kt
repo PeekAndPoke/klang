@@ -96,7 +96,7 @@ fun IgnitorDslLike.toKatalystKnob(): IgnitorDsl = when (this) {
 /**
  * Builder for a [KatalystDsl] chain, handed to the `configure` lambda of `Katalyst(...)`. Knobs:
  * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `eq`,
- * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), and `through`,
+ * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), and `serial`,
  * which runs the builder through functions of stages in order.
  */
 data class KatalystBuilder(val node: KatalystDsl) {
@@ -542,18 +542,18 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
     plus(KatalystStageDsl.Gain(gain = gain.toKatalystKnob()))
 
 /**
- * Runs the chain through [stages], in the order written: `k.through(a, b, c)` is `c(b(a(k)))`, the same
+ * Runs the chain through [stages] in series, in the order written: `k.serial(a, b, c)` is `c(b(a(k)))`, the same
  * chain as the nested calls. A stage is any function from a builder to a builder, so a group of stages
  * (a room, a bus, a mastering block) becomes a value and a chain is written as the list it is.
- * With no stage, `through()` returns the chain as it is.
+ * With no stage, `serial()` returns the chain as it is.
  *
  * ```KlangScript
  * let hall    = k => k.reverb(0.25, 7, 4500)
  * let ceiling = k => k.gain(1.4).limiter(threshold = -3.0, lookahead = 0.005)
- * Katalyst(k => k.through(hall, ceiling))
+ * Katalyst(k => k.serial(hall, ceiling))
  * ```
  *
- * Serial, one stage into the next, as `Ignitor`'s `through`. Not sprudel's `apply(f, g)`, which stacks the
+ * One stage into the next, as `Ignitor`'s `serial`. Not sprudel's `apply(f, g)`, which stacks the
  * results side by side. Every stage is checked on the way: a stage that is null, returns nothing or returns
  * something other than the builder is a script error naming the stage; a stage that is not a function at all is
  * refused at the call ("expected a function, got a number").
@@ -561,8 +561,8 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
  * @param stages functions from a builder to a builder, applied first to last.
  */
 @KlangScript.Function
-fun KatalystBuilder.through(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
-    runThroughStages("Katalyst through", this, stages, returns = "builder") { it is KatalystBuilder }
+fun KatalystBuilder.serial(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
+    runSerialStages("Katalyst serial", this, stages, returns = "builder") { it is KatalystBuilder }
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 
