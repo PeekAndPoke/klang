@@ -677,7 +677,7 @@ object KlangScriptIgnitorExtensions {
      */
     @KlangScript.Method
     fun serial(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
-        runSerialStages("Ignitor serial", self, stages, returns = "signal") { it is IgnitorDsl }
+        runSerialStages("Ignitor serial", self, stages, returns = "signal", example = "x => x.lowpass(800)") { it is IgnitorDsl }
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 

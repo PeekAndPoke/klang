@@ -160,6 +160,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz) and
   the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 4.0, 5.5,
   6.25; held as 4, 6 and 6 frames).
+- **`parallel` on the Katalyst** (`KatalystParallelEffect`, 2026-10-10): each branch is a `KatalystChain` of its own,
+  run on a copy of the bus and SUMMED; branches are aligned by latency (pad rings, the longest branch is the stage's
+  latency); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
+  hoisted to the orbit's duck. A `reverb` or `delay` in a branch carries the dry too. The doors write no stage for zero
+  branches and inline one. `through` is `serial` since the same day (`docs/retired-names.md`).
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
@@ -282,6 +287,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 `serial` (was `through`) and a `parallel` stage on the Katalyst, branches summed and aligned by latency:
+  `docs/tasks/in-progress/parallel-serial-bands.md` steps 1 and 3
 - 2026-10-10 v0.6.1: pitch pipeline steps 1 to 3b, the Katalyst `distort` stage (merged from `katalyst-distort`), a
   soloed voice protected to its end, the warehouse panel's reverb counters, `analog(character)` on every door and
   `variants` with plain numbers; the corpus identical except Kokon's two landing strikes (accelerate, at most 2.5

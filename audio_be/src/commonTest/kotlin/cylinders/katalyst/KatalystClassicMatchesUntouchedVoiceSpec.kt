@@ -101,6 +101,8 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
                 is KatalystStageDsl.Distort -> listOf(stage.amount)
                 is KatalystStageDsl.Eq -> emptyList()
                 is KatalystStageDsl.Gain -> listOf(stage.gain)
+                // The classic chain declares no parallel stage.
+                is KatalystStageDsl.Parallel -> emptyList()
             }.forEach { knob -> knob.collectParams(params) }
         }
 

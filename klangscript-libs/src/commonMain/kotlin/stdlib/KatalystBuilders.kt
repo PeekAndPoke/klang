@@ -95,9 +95,10 @@ fun IgnitorDslLike.toKatalystKnob(): IgnitorDsl = when (this) {
 
 /**
  * Builder for a [KatalystDsl] chain, handed to the `configure` lambda of `Katalyst(...)`. Knobs:
- * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `eq`,
- * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), and `serial`,
- * which runs the builder through functions of stages in order.
+ * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `distort`, `duck`, `eq`,
+ * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), `serial`,
+ * which runs the builder through functions of stages in order, and `parallel`, which runs branches side by side and
+ * sums them.
  */
 data class KatalystBuilder(val node: KatalystDsl) {
     internal fun plus(stage: KatalystStageDsl): KatalystBuilder = copy(node = KatalystDsl(node.stages + stage))
@@ -562,7 +563,51 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
  */
 @KlangScript.Function
 fun KatalystBuilder.serial(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
-    runSerialStages("Katalyst serial", this, stages, returns = "builder") { it is KatalystBuilder }
+    runSerialStages("Katalyst serial", this, stages, returns = "builder", example = "k => k.gain(0.8)") { it is KatalystBuilder }
+
+/**
+ * Runs the bus through [branches] side by side, from this position, and SUMS them: the twin of [serial]. Each branch
+ * is a function from a builder to a builder and receives an EMPTY one, the bus at this point, so a branch is the chain
+ * of stages it appends; a branch that appends nothing is the dry bus.
+ *
+ * ```KlangScript
+ * // parallel distortion: the dry bus and a distorted copy, a quarter of its level
+ * Katalyst(k => k.parallel(dry => dry, wet => wet.distort(0.5).gain(0.25)))
+ * ```
+ *
+ * The sum is plain (two identical branches are twice the level, +6 dB); a branch's own `gain` sets the blend. A `reverb`
+ * or `delay` adds its return on top of the dry it is fed, so a branch with one carries the dry as well. A branch
+ * that delays the bus (a compressor's lookahead, an oversampled distort) is matched by delaying the others, so the sum
+ * does not comb. With no branch, `parallel()` returns the chain as it is; with one, it appends that branch's stages in
+ * place, as written: a `classic()` in a branch is that branch's classic block, even next to one outside it (the
+ * at-most-once rule of [classic] holds per builder, and a branch is a builder of its own). A `duck` inside a branch is
+ * the orbit's duck, as anywhere in the chain. Every branch is checked like a stage of
+ * [serial]: one that is null, returns nothing or returns something other than the builder is a script error naming
+ * it.
+ *
+ * @param branches functions from a builder to a builder, each given an empty one.
+ */
+@KlangScript.Function
+fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+    val built = branches.mapIndexed { index, branch ->
+        runStage<KatalystBuilder, KatalystBuilder>(
+            door = "Katalyst parallel",
+            noun = "branch",
+            index = index,
+            stage = branch,
+            input = KatalystBuilder(KatalystDsl(emptyList())),
+            returns = "builder",
+            example = "b => b.distort(0.5)",
+            isResult = { it is KatalystBuilder },
+        ).node
+    }
+
+    return when (built.size) {
+        0 -> this
+        1 -> copy(node = KatalystDsl(node.stages + built[0].stages))
+        else -> plus(KatalystStageDsl.Parallel(branches = built))
+    }
+}
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 

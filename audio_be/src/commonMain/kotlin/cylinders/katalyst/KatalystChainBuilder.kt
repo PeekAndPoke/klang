@@ -285,6 +285,32 @@ object KatalystChainBuilder {
                     // constant (the wire KDoc says so).
                     writers.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain, 1.0)))
                 }
+
+                // Branches side by side, each a chain of its own built here (the same shelves, so a branch's delay and
+                // reverb rent like the chain's). An empty stage is the bus unchanged: nothing is built. A duck in a
+                // branch is the orbit's duck (its position is ignored, see the Duck arm), so it is taken out of every
+                // branch and, the last one in the order written, competes with the chain's own here.
+                is KatalystStageDsl.Parallel -> if (stage.branches.isNotEmpty()) {
+                    val branches = Array(stage.branches.size) {
+                        build(
+                            dsl = stage.branches[it].withoutDucks(),
+                            sampleRate = sampleRate,
+                            blockFrames = blockFrames,
+                            rings = rings,
+                            reverbs = reverbs,
+                        )
+                    }
+                    val fx = KatalystParallelEffect(branches = branches, blockFrames = blockFrames)
+                    pipeline.add(fx)
+                    writers.add(KatalystParallelWriter(fx = fx))
+
+                    val branchDuck = stage.lastDuck()
+
+                    if (branchDuck != null) {
+                        duck = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+                        duckStage = branchDuck
+                    }
+                }
             }
         }
 
@@ -320,6 +346,40 @@ object KatalystChainBuilder {
             duckWriter = duckWriter,
         )
     }
+
+    /** The last duck declared in this stage's branches, nested stages included, in the order written. */
+    private fun KatalystStageDsl.Parallel.lastDuck(): KatalystStageDsl.Duck? {
+        var last: KatalystStageDsl.Duck? = null
+
+        for (branch in branches) {
+            for (stage in branch.stages) {
+                // Exhaustive on purpose: a new stage kind that holds chains of its own must decide here.
+                when (stage) {
+                    is KatalystStageDsl.Duck -> last = stage
+                    is KatalystStageDsl.Parallel -> last = stage.lastDuck() ?: last
+                    is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
+                    is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,
+                    is KatalystStageDsl.Gain -> Unit
+                }
+            }
+        }
+
+        return last
+    }
+
+    /** This chain with every duck taken out, nested branches included (see the Parallel arm). */
+    private fun KatalystDsl.withoutDucks(): KatalystDsl = KatalystDsl(
+        stages.mapNotNull { stage ->
+            when (stage) {
+                is KatalystStageDsl.Duck -> null
+                is KatalystStageDsl.Parallel -> KatalystStageDsl.Parallel(branches = stage.branches.map { it.withoutDucks() })
+                // Exhaustive on purpose, as in [lastDuck].
+                is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
+                is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,
+                is KatalystStageDsl.Gain -> stage
+            }
+        }
+    )
 
     /**
      * One knob per section param, flat, in the layout [KatalystEqEffect.configure] reads: four

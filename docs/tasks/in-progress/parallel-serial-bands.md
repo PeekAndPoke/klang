@@ -1,7 +1,7 @@
 # `parallel`, `serial` and `bands`: branches side by side, and frequency bands
 
 Status: **in progress since 2026-10-10, on the branch `parallel-serial-bands` (worktree
-`klang-worktrees/parallel-serial-bands`).** Step 1 started. The design, the decisions and the reasons live in
+`klang-worktrees/parallel-serial-bands`).** Step 1 done (`serial`), step 3 built and in review, step 2 waits for the maintainer (the wire-sharing finding below). The design, the decisions and the reasons live in
 [`../../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) §6.9; this file holds the steps.
 
 ## Why
@@ -42,3 +42,27 @@ coordinator took its leans so the loop could start:
   cut, which is documented. Complementary by subtraction and linear phase stay the alternatives.
 - **The helper:** `blend`, linear law only, built last.
 - **Step 3:** built directly, not in the Motor Lab first.
+
+## Found on the way (2026-10-10): a shared subtree does not survive the wire to the browser
+
+Read in the generated codec (`audio_bridge/build/generated/ksp/js/.../WireCodecGenerated.kt`): `encode_IgnitorDsl_*`
+encodes every child as a fresh JS object and `decode_IgnitorDsl_*` builds a fresh Kotlin object per occurrence, so a
+node referenced twice in a tree (`let s = ...; s + s.shimmer()`) arrives in the worklet as TWO equal objects. The
+backend's build cache shares by identity (`IgnitorBuildCache`, `MemoizingIgnitor`), so in the browser such a `let`
+builds two instances; on the JVM (no codec) it builds one. No test, plan or memory records it.
+
+What it means:
+- Deterministic sources (an oscillator without drift or random phases) sound the same, at twice the CPU.
+- A noise, an analog drift, a supersaw's random phases, a shimmer's grain clock: two independent instances in the
+  browser, one on the JVM, so the renders the maintainer listens to (JVM) and the browser differ.
+- `parallel` on the Ignitor shares its input with every branch by construction, so `bands` with three bands would
+  build the whole instrument three times in the browser, and a split supersaw would not sum back to itself.
+
+Options, for the maintainer (stone rule: generated sources are consulted first):
+- **(a) The codec keeps sharing** (the coordinator's lean): the encoder gives a node it meets a second time a
+  back-reference (`{"#ref": n}`), the decoder keeps a table. One change in the KSP processor, for `IgnitorDsl` only, and
+  every `let` in every song behaves in the browser as on the JVM. Mandatory mutation tier (KSP).
+- **(b) A `Parallel` node that holds its input once** and hands the branches a placeholder leaf: fixes `parallel`
+  only, adds a binding mechanism to the build, the walkers and the optimizer. More machinery for less.
+- **(c) Accept it**: `parallel` and `let` fork in the browser.
+

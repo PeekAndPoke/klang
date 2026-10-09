@@ -123,12 +123,14 @@ class KatalystChain internal constructor(
      * True when this chain declares a stage that can ring on after its input stops: the reverb, the delay, and the
      * distort stage (its DC blocker decays from the offset an asymmetric shape made, `KatalystDistortEffect.hasTail`;
      * review round 2 of `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`: without it a stopped playback's master cut that decay).
+     * A `parallel` stage declares one when a branch does.
      * The master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan; [hasTail] then
      * answers whether one is there. Body, vowel and phaser may ring too; whether that is audible is
      * `docs/tasks/chain-swap-cuts-ringing-inserts.md`.
      */
     val declaresTail: Boolean = serial.any {
-        it is KatalystReverbEffect || it is KatalystDelayEffect || it is KatalystDistortEffect
+        it is KatalystReverbEffect || it is KatalystDelayEffect || it is KatalystDistortEffect ||
+                (it is KatalystParallelEffect && it.declaresTail)
     }
 
     /**
@@ -342,7 +344,7 @@ class KatalystChain internal constructor(
     /**
      * True while a stage holds a tail that can NEVER end on its own, which a stopped engine
      * releases after its hold instead of waiting for (phase 3 step 12 decision (j)). Only a delay
-     * can: at |feedback| >= 1 it recirculates without loss ([KatalystDelayEffect.sustainsItself]).
+     * can, also inside a `parallel` branch: at |feedback| >= 1 it recirculates without loss ([KatalystDelayEffect.sustainsItself]).
      * Every other stage's tail ends: the reverb's comb feedback is at most 0.98 (its size is
      * bounded to 0..1 before it reaches the unit, `Reverb.normalizeSize`), the phaser's feedback is clamped at 0.95
      * (`PhaserCore.MAX_FEEDBACK`), the body and vowel resonators are stable filters, and the
@@ -354,6 +356,10 @@ class KatalystChain internal constructor(
             val stage = stages[i]
 
             if (stage is KatalystDelayEffect && stage.sustainsItself()) {
+                return true
+            }
+
+            if (stage is KatalystParallelEffect && stage.sustainsItself()) {
                 return true
             }
         }

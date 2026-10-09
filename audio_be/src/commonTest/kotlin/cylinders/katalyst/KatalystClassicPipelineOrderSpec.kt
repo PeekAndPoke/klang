@@ -57,6 +57,8 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         is KatalystStageDsl.Gain -> "KatalystGainEffect"
         // The bus distort (2026-10-09) never had a per-voice twin either, and the classic chain does not carry it.
         is KatalystStageDsl.Distort -> "KatalystDistortEffect"
+        // Branches side by side (2026-10-10); the classic chain does not carry it either.
+        is KatalystStageDsl.Parallel -> "KatalystParallelEffect"
     }
 
     "the classic chain declares no eq, and its one gain stage is a bit-transparent unity slot" {
