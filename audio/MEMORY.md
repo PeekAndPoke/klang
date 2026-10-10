@@ -173,6 +173,12 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   latency); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
   hoisted to the orbit's duck. A `reverb` or `delay` in a branch carries the dry too. The doors write no stage for zero
   branches and inline one. `through` is `serial` since the same day (`docs/retired-names.md`).
+- **`bands` on both hosts** (2026-10-10): DSL sugar in `klangscript-libs` (`BandsBuilders.kt`) over `parallel` and
+  the EQ's existing sections, no DSP of its own. Linkwitz-Riley: band k is the high side of every cut below it (on a
+  voice a split tree, each high side shared by identity), the low side of its own, and the all-pass of every cut
+  above, one raw tap section in an EQ of its own (`x - 2 * bandpass(x)`, Q 1/sqrt(2)), so untouched bands sum to an
+  all-pass, flat within 0.001 dB (`BandsCrossoverSpec`). A band's processors get the band behind a sectionless EQ, so
+  an `eq()` tap in a band reads the band.
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
@@ -296,8 +302,8 @@ One line per step, newest first. A link to the archived task record where one ex
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
 - 2026-10-10 `serial` (was `through`), `parallel` on the Ignitor and the Katalyst (branches summed and aligned by
-  latency), and a shared node kept one node across the wire (`@WireShared`):
-  `docs/tasks/in-progress/parallel-serial-bands.md` steps 1 to 3
+  latency), `bands` (Linkwitz-Riley, flat untouched), and a shared node kept one node across the wire
+  (`@WireShared`): `docs/tasks/in-progress/parallel-serial-bands.md` steps 1 to 4
 - 2026-10-10 v0.6.1: pitch pipeline steps 1 to 3b, the Katalyst `distort` stage (merged from `katalyst-distort`), a
   soloed voice protected to its end, the warehouse panel's reverb counters, `analog(character)` on every door and
   `variants` with plain numbers; the corpus identical except Kokon's two landing strikes (accelerate, at most 2.5

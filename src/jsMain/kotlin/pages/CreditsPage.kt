@@ -296,6 +296,10 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         analog-style "diode-pair" resonance saturation that gives the filters their warmth when
                         driven (`analog > 0`). Klang's SVF topology and the way the nonlinearity is folded in are
                         its own; the *idea* of steering resonance damping from a diode-pair model comes from here.
+                        - **Linkwitz-Riley crossovers** (Siegfried Linkwitz and Russ Riley, *"Active Crossover Networks for
+                        Noncoincident Drivers"*, JAES 1976): the crossover of `bands`. Two Butterworth filters in series on
+                        each side of a cut, so the bands sum back to flat level; with three bands or more each band below a
+                        cut also passes that cut's all-pass, so the bands stay in phase with each other
                     """.trimIndent()
                 )
             }

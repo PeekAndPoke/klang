@@ -720,6 +720,28 @@ object KlangScriptIgnitorExtensions {
         }
     }
 
+    /**
+     * Splits this signal into frequency BANDS, processes each band on its own and sums them again: multiband
+     * distortion, a saturated mid range over a clean low end, an exciter on the highs. Read from the bottom up:
+     *
+     * ```KlangScript
+     * // the lows clean, the mids crunchy, the highs untouched
+     * Ignitor.saw().bands(b => b.cut(250).band(mid => mid.distort(0.4)).cut(3000))
+     * ```
+     *
+     * `band(f)` adds a processor to the band being written (two on one band are summed), `cut(freq)` closes it and
+     * starts the next one up; a band with no `band()` passes untouched, and a cut below the one before it is moved up
+     * to it. The crossover is Linkwitz-Riley: with nothing processed the bands sum to flat level, with the phase
+     * turned around each cut (the waveform changes, the balance does not). Every band reads the same signal, built
+     * once; a late band (an oversampled `distort`) is matched by delaying the others, as in `parallel`. With no
+     * `configure`, or no `cut`, it is the one band.
+     *
+     * @param configure receives the bands builder and returns it.
+     */
+    @KlangScript.Method
+    fun bands(self: IgnitorDsl, configure: ((IgnitorBandsBuilder) -> IgnitorBandsBuilder)? = null): IgnitorDsl =
+        IgnitorBandsBuilder().configuredBy("Ignitor bands", configure).split(self)
+
     // ── Arithmetic ───────────────────────────────────────────────────────────
 
     /**

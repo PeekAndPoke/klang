@@ -345,8 +345,14 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
 12. The value handed to `setOrDefault` is what this call named, never a field an earlier fill
     wrote (§4).
 
-13. A door that calls script lambdas (a `configure`, the stages of `serial`) checks what each one
-    returns, as `configuredBy` and `runSerialStages` do: null (a block body without `return`) and the
+13. A door that calls script lambdas (a `configure`, the stages of `serial`, the branches of `parallel`, the
+    processors of `bands`) checks what each one
+    returns, as `configuredBy` and `runStage` do: null (a block body without `return`) and the
     wrong type are script errors naming the door, never a cast deep inside. The error rows run on JS
     too: a null check on a value of a non-null declared type can be compiled away there and not on
     the JVM (`through`, 2026-10-02).
+
+14. A door that hands a node it BUILT to a script function (a `bands` processor, a `parallel` branch) asks, of every
+    door the receiver may call on it next, whether that door CONTINUES the node instead of wrapping it (`eq()`
+    continues an `Eq`, and a raw tap reads its `Eq`'s input). Where one does, hand a neutral wrapper, and render a
+    continuing door on the handed node in the spec (`bands`, 2026-10-10: a tap in a band read the unsplit signal).

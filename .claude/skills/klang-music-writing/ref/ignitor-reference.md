@@ -566,6 +566,28 @@ let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distor
 - The Katalyst builder has `parallel` too (branches of bus stages, each from an empty builder): see the sprudel
   reference's master line.
 
+### Composition: `.bands(...)`
+
+`x.bands(b => ...)` splits the signal into frequency bands, processes each band on its own and sums them again. It
+reads from the BOTTOM up: `band(f)` adds a processor to the band being written, `cut(hz)` closes it and starts the next
+one up.
+
+```javascript
+// a bass that stays round below 120 Hz and growls above it (multiband distortion)
+let growl = x => x.bands(b => b.cut(120).band(top => top.distort(0.5, "tube")))
+// the lows clean, the mids crunchy, the highs untouched
+let crunch = x => x.bands(b => b.cut(250).band(mid => mid.distort(0.4)).cut(3000))
+```
+
+- A band with no `band()` passes untouched; two `band()` calls on one band are summed (`parallel`).
+- The crossover is Linkwitz-Riley: untouched, the bands sum back to FLAT level, with the phase turned around each cut
+  (the waveform and its peaks change, the balance does not). Three bands or more are phase-aligned for you.
+- A cut below the one before it is moved up to it. Two equal cuts leave a narrow band between them (about an octave
+  wide, -12 dB at its peak), not an empty one. With no `cut` it is one band: `x.bands(b => b.band(f))` is `f(x)`.
+- The Katalyst has the same door on a bus or the master (each band's processor gets an empty builder, as a `parallel`
+  branch): `k.bands(b => b.cut(150).band(mid => mid.distort(0.15)).cut(5000))` glues the mids and leaves the kick and
+  the hats alone.
+
 ---
 
 ## Parameter System

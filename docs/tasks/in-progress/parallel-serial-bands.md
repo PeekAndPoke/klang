@@ -1,8 +1,8 @@
 # `parallel`, `serial` and `bands`: branches side by side, and frequency bands
 
 Status: **in progress since 2026-10-10, on the branch `parallel-serial-bands` (worktree
-`klang-worktrees/parallel-serial-bands`).** Steps 1 (`serial`) and 3 (Katalyst `parallel`) done; the wire-sharing finding below fixed (option a); step 2
-(Ignitor `parallel`) built and in review. The design, the decisions and the reasons live in
+`klang-worktrees/parallel-serial-bands`).** Steps 1 to 3 done (`serial`, `parallel` on both hosts) and the wire-sharing finding below fixed (option a);
+step 4 (`bands`) built and in review. The design, the decisions and the reasons live in
 [`../../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) §6.9; this file holds the steps.
 
 ## Why
@@ -33,6 +33,10 @@ one-liners (the plan's back-pocket table, also material for the tutorials).
    and one block buffer per branch is allocated at build. This makes "distort only the mids on the master" possible.
 4. **`bands`, on both hosts,** built on `parallel`.
 5. **Optional:** a dry/wet helper, `x.blend(wet, y => ...)`.
+   With it lands a recipe in the writing reference, next to the `bands` recipes (maintainer, 2026-10-10): a
+   "Soundgoodizer-style" master, parallel multiband compression (FL Studio's Soundgoodizer is a one-knob front end
+   for Maximus: three compressed bands blended with the dry input, per its manual), as `blend` over `bands` with a
+   compressor per band. The numbers in it are a starting point, not a tuned preset.
 
 ## Defaults taken when the work started (coordinator, 2026-10-10; the maintainer may reverse any of them)
 
@@ -91,3 +95,7 @@ sound, so it is the maintainer's call by ear; a pair can be rendered.
 - **The Katalyst sums rounded latencies** (audio review of step 2): a branch of two 4x `distort` stages reports 12
   frames for a true 11. Rare on a bus; the voice keeps exact delays since the same review.
 
+- **`bands` cost** (audio review of step 4): SETTLED in the same step. The all-pass that aligns three bands or more
+  is one existing EQ section, a raw tap at the cut with Q 1/sqrt(2) and gain -2 (`x - 2 * bandpass(x)`, found by the
+  coding review), and the Ignitor shares each high side by identity (a split tree): a 4-band voice split runs 15
+  sections per sample (12 for the three cuts, 3 all-passes), where the first build ran 30. No new section type.

@@ -97,8 +97,8 @@ fun IgnitorDslLike.toKatalystKnob(): IgnitorDsl = when (this) {
  * Builder for a [KatalystDsl] chain, handed to the `configure` lambda of `Katalyst(...)`. Knobs:
  * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `distort`, `duck`, `eq`,
  * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), `serial`,
- * which runs the builder through functions of stages in order, and `parallel`, which runs branches side by side and
- * sums them.
+ * which runs the builder through functions of stages in order, `parallel`, which runs branches side by side and
+ * sums them, and `bands`, which splits the bus into frequency bands.
  */
 data class KatalystBuilder(val node: KatalystDsl) {
     internal fun plus(stage: KatalystStageDsl): KatalystBuilder = copy(node = KatalystDsl(node.stages + stage))
@@ -608,6 +608,27 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
         else -> plus(KatalystStageDsl.Parallel(branches = built))
     }
 }
+
+/**
+ * Splits the bus into frequency BANDS from this position, processes each band on its own and sums them again: the
+ * master's distortion on the mids only, a compressor on the lows. Read from the bottom up:
+ *
+ * ```KlangScript
+ * // glue the mids, leave the kick and the hats alone
+ * Katalyst(k => k.bands(b => b.cut(150).band(mid => mid.distort(0.15)).cut(5000)).limiter())
+ * ```
+ *
+ * `band(f)` adds a processor to the band being written, a function of stages from an empty builder, as a `parallel`
+ * branch (two on one band are summed); `cut(freq)` closes the band and starts the next one up; a band with no
+ * `band()` passes untouched, and a cut below the one before it is moved up to it. The crossover is Linkwitz-Riley: with
+ * nothing processed the bands sum to flat level, with the phase turned around each cut. A late band is matched by
+ * delaying the others. With no `configure`, or no `cut`, it is the one band, its stages in place.
+ *
+ * @param configure receives the bands builder and returns it.
+ */
+@KlangScript.Function
+fun KatalystBuilder.bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBuilder)? = null): KatalystBuilder =
+    copy(node = KatalystDsl(node.stages + KatalystBandsBuilder().configuredBy("Katalyst bands", configure).split()))
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 
