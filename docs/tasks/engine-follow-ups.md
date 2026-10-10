@@ -82,6 +82,15 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
     spread is about 30), about one heap number per such wrapper per block. The JVM renders all of it allocation-free.
     A remedy would hand the pinned value on without a load V8 boxes. Source: `tmp/reviews/pp3b-r1-B.md`,
     `tmp/reviews/pp-step3b-report.md`. S.
+10d. **Sprudel's `fm` allocates on V8 per block since it became `classic()`'s FM stage** (pitch pipeline step 4,
+    review round 1, reviewer B MINOR 3). The strip's `FmRenderer` allocated nothing per block; the Ignitor `fm` node
+    hands per-block doubles to calls V8 does not inline (the modulator's `generate` at `fmFreqVal * ratioVal`, the
+    knob reads, `prepareModEnvelope`'s stage times), the class of `audio/ref/performance.md`. Measured on the
+    production test bundle, one voice through `VoiceFactory`, render bytes per block, medians of 3, HEAD / tree / HEAD
+    control, unpinned: `fm(300, 1.4)` 82 / 110 / 75, the bell envelope 117 / 162 / 110, `sgpad` 127 / 189 / 127
+    (pinned: 90 / 124 / 55, 106 / 165 / 96, 131 / 196 / 127); off unchanged. The authored `fm` node paid the same
+    before step 4. The JVM renders it allocation-free. Source: `tmp/reviews/pp4-r1-B.md`, the step 4 record in
+    `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, `tmp/reviews/pp-step4-report.md`. S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

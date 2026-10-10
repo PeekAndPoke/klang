@@ -304,7 +304,7 @@ class VoiceLifecycleTest : StringSpec({
             startFrame = 0.0,
             endFrame = 100.0,
             gateEndFrame = 200.0, // Gate ends after voice ends (shouldn't happen in practice)
-            envelope = Voice.Envelope(
+            envelope = TestEnvelope(
                 attackFrames = 0.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,

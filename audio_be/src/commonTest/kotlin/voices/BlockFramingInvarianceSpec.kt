@@ -292,22 +292,21 @@ class BlockFramingInvarianceSpec : StringSpec({
     // ── The STRIP door (block-framing P4) ────────────────────────────────────────────────────────
     //
     // Everything above drives the IGNITOR door: the rows are `IgnitorDsl` chains, and even the
-    // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT `Voice.Fm`. The voice's own pitch
+    // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT the voice strip's FM. The voice's own pitch
     // pipeline renderers (`voices/strip/pitch`) were therefore untouched by this harness, which is what P4 is about.
     //
-    // Only the PER-SAMPLE ones belong on a bit-identity list. The vibrato, the pitch envelope and accelerate (the
-    // strip's `VibratoRenderer`, `PitchEnvelopeRenderer` and `AccelerateRenderer` until pitch pipeline steps 2, 1 and 3,
-    // `classic()`'s stages since) all
+    // Only the PER-SAMPLE ones belong on a bit-identity list. The vibrato, the pitch envelope, accelerate and the FM (the
+    // strip's `VibratoRenderer`, `PitchEnvelopeRenderer`, `AccelerateRenderer` and `FmRenderer` until pitch pipeline
+    // steps 2, 1, 3 and 4, `classic()`'s stages since) all
     // derive their position per sample from
-    // `blockStart + offset` (+ a phase accumulator, in vibrato's case, advanced once per rendered
-    // sample), so they are Class 1.
+    // `blockStart + offset` (+ a phase accumulator, in the vibrato's and the FM modulator's case, advanced once per
+    // rendered sample), so they are Class 1.
     //
-    // `FmRenderer` is deliberately NOT here, and cannot be (nor could the voice strip's filter
-    // modulator, retired in phase 3 step 9): it evaluates its envelope at BLOCK granularity (once per
-    // block), so their note-relative sampling grid is a function of where the
-    // block boundaries fall. That makes them Class 2 on BOTH axes — block size and onset alignment —
-    // and Class 2 means "named, not fixed". `MidBlockOnsetControlRateSpec` pins the part of it that
-    // IS fixed: the first evaluation lands on the voice's onset, not the block's first frame.
+    // The strip's `FmRenderer` could NOT be here: it evaluated its depth envelope once per block (ledger E11, Class 2 on
+    // both axes, block size and onset alignment). Since pitch pipeline step 4 sprudel's `fm` is `classic()`'s FM stage,
+    // the Ignitor `fm` node, whose depth envelope runs per sample (E1's fix), so E11 is closed and the door joins the
+    // list, for an instrument with one pitch; over a forking `detune` (`sgpad`) it is E8, see the ledger's E11 row.
+    // (The voice strip's filter modulator, retired in phase 3 step 9, was Class 2 for the same reason.)
     val stripNodes = listOf<Pair<String, (VoiceData) -> VoiceData>>(
         // The vibrato is `classic()`'s stage since pitch pipeline step 2, filled through its `vibrato.*` slots.
         "classic vibrato" to { d -> d.withClassicSlots(DoorFields(vibratoRate = 5.0, vibratoSemitones = 0.4)) },
@@ -318,6 +317,14 @@ class BlockFramingInvarianceSpec : StringSpec({
         "classic pitch envelope" to { d ->
             d.withClassicSlots(DoorFields(penv = DoorPenv(semitones = 3.0, attack = 0.011, decay = 0.023, sustain = 0.4, release = 0.03)))
         },
+        // The FM is `classic()`'s stage since pitch pipeline step 4, filled through its `fm.*` slots (E11 closed). An
+        // attack of 220.5 frames and a decay ending mid-block everywhere, a sustain and a release inside the render
+        // (the gate at 4813 frames starts a 0.03 s release); and the envelope-free door, whose depth runs on through
+        // the release tail.
+        "classic fm with envelope" to { d ->
+            d.withClassicSlots(DoorFields(fm = DoorFm(depth = 300.0, ratio = 1.4, attack = 0.005, decay = 0.031, sustain = 0.3, release = 0.03)))
+        },
+        "classic fm, envelope-free" to { d -> d.withClassicSlots(DoorFields(fm = DoorFm(depth = 300.0, ratio = 1.4))) },
     )
 
     // `accelerate` is deliberately NOT on the list above, for the same reason a modulated tremolo

@@ -263,12 +263,13 @@ class LangDoorFormsSpec : StringSpec({
         k("notch.release", "notch(release = %s)", { it.nfrelease }, { p, c -> p.notch(release = c) }, { s, c -> s.notch(release = c) }, { c -> notch(release = c) }, { m, c -> m.notch(release = c) }),
 
         // -- fm -----------------------------------------------------------------------------------------------------------
-        k("fm.env", "fm(%s)", { it.fmEnv }, { p, c -> p.fm(c) }, { s, c -> s.fm(c) }, { c -> fm(c) }, { m, c -> m.fm(c) },
+        k("fm.depth", "fm(%s)", { it.fmEnv }, { p, c -> p.fm(c) }, { s, c -> s.fm(c) }, { c -> fm(c) }, { m, c -> m.fm(c) },
             ctrl = "100 500", expected = listOf(100.0, 500.0), head = true),
-        k("fm.h", "fm(h = %s)", { it.fmh }, { p, c -> p.fm(h = c) }, { s, c -> s.fm(h = c) }, { c -> fm(h = c) }, { m, c -> m.fm(h = c) }),
+        k("fm.ratio", "fm(ratio = %s)", { it.fmh }, { p, c -> p.fm(ratio = c) }, { s, c -> s.fm(ratio = c) }, { c -> fm(ratio = c) }, { m, c -> m.fm(ratio = c) }),
         k("fm.attack", "fm(attack = %s)", { it.fmAttack }, { p, c -> p.fm(attack = c) }, { s, c -> s.fm(attack = c) }, { c -> fm(attack = c) }, { m, c -> m.fm(attack = c) }),
         k("fm.decay", "fm(decay = %s)", { it.fmDecay }, { p, c -> p.fm(decay = c) }, { s, c -> s.fm(decay = c) }, { c -> fm(decay = c) }, { m, c -> m.fm(decay = c) }),
         k("fm.sustain", "fm(sustain = %s)", { it.fmSustain }, { p, c -> p.fm(sustain = c) }, { s, c -> s.fm(sustain = c) }, { c -> fm(sustain = c) }, { m, c -> m.fm(sustain = c) }),
+        k("fm.release", "fm(release = %s)", { it.fmRelease }, { p, c -> p.fm(release = c) }, { s, c -> s.fm(release = c) }, { c -> fm(release = c) }, { m, c -> m.fm(release = c) }),
 
         // -- vibrato and the pitch envelope, with their aliases ---------------------------------------------------------
         k("vibrato.rate", "vibrato(%s)", { it.vibrato }, { p, c -> p.vibrato(c) }, { s, c -> s.vibrato(c) }, { c -> vibrato(c) }, { m, c -> m.vibrato(c) }, head = true),
@@ -518,8 +519,8 @@ class LangDoorFormsSpec : StringSpec({
                 { it.notch(800, 2, 12, 0.1, 0.2, 0.5, 0.3) }, { it.notch(800, 2, 12, 0.1, 0.2, 0.5, 0.3) }, { notch(800, 2, 12, 0.1, 0.2, 0.5, 0.3) }, { it.notch(800, 2, 12, 0.1, 0.2, 0.5, 0.3) },
             ),
             Door(
-                "fm", """200, 2, 0.01, 0.3, 0.5""", { listOf(it.fmEnv, it.fmh, it.fmAttack, it.fmDecay, it.fmSustain) }, listOf(200.0, 2.0, 0.01, 0.3, 0.5),
-                { it.fm(200, 2, 0.01, 0.3, 0.5) }, { it.fm(200, 2, 0.01, 0.3, 0.5) }, { fm(200, 2, 0.01, 0.3, 0.5) }, { it.fm(200, 2, 0.01, 0.3, 0.5) },
+                "fm", """200, 2, 0.01, 0.3, 0.5, 0.2""", { listOf(it.fmEnv, it.fmh, it.fmAttack, it.fmDecay, it.fmSustain, it.fmRelease) }, listOf(200.0, 2.0, 0.01, 0.3, 0.5, 0.2),
+                { it.fm(200, 2, 0.01, 0.3, 0.5, 0.2) }, { it.fm(200, 2, 0.01, 0.3, 0.5, 0.2) }, { fm(200, 2, 0.01, 0.3, 0.5, 0.2) }, { it.fm(200, 2, 0.01, 0.3, 0.5, 0.2) },
             ),
             Door(
                 "vibrato", """5, 0.5""", { listOf(it.vibrato, it.vibratoMod) }, listOf(5.0, 0.5),

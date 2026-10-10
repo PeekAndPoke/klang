@@ -130,6 +130,16 @@ class ClassicDoorRenderParitySpec : StringSpec({
         add(Row("vibrato.rate", mapOf("vibrato.semitones" to 0.4, "vibrato.rate" to 9.0)))
         // Accelerate (pitch pipeline step 3): the flat switch.
         add(Row("accelerate", mapOf("accelerate" to 5.0)))
+        // The FM (pitch pipeline step 4): the depth (the switch) alone, every other knob against the depth (the decay
+        // with a sustain below 1, which it falls to; the release against the envelope-free depth, which runs on through
+        // the tail past the gate at 5000).
+        val fmOn = mapOf("fm.depth" to 200.0)
+        add(Row("fm.depth", fmOn))
+        add(Row("fm.ratio", fmOn + ("fm.ratio" to 2.5)))
+        add(Row("fm.attack", fmOn + ("fm.attack" to 0.05)))
+        add(Row("fm.decay", fmOn + mapOf("fm.sustain" to 0.4, "fm.decay" to 0.03)))
+        add(Row("fm.sustain", fmOn + ("fm.sustain" to 0.4)))
+        add(Row("fm.release", fmOn + ("fm.release" to 0.02)))
         add(Row("penv.semitones", penvOn))
         add(Row("penv.attack", penvOn + ("penv.attack" to 0.05)))
         add(Row("penv.decay", penvOn + ("penv.decay" to 0.03)))

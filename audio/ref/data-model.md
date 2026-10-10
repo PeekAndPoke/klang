@@ -54,7 +54,7 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 `sprudel/src/commonMain/kotlin/_classic_slot_params.kt`, the one place sprudel's words meet the
 engine's slot names):
 
-- `classic()`'s slots, keyed `<door>.<param>` (`penv.semitones`, `penvCurves.attack`, `lpf.freq`, `lpf.q`,
+- `classic()`'s slots, keyed `<door>.<param>` (`fm.depth`, `penv.semitones`, `penvCurves.attack`, `lpf.freq`, `lpf.q`,
   `adsr.attack`, `adsrCurves.release`, `distort.oversample`, `tremolo.depth`, ...), plus the flat `accelerate`
   (semitones, a pitch stage) and the flat `onepole` (Hz, its first amplitude stage, behind the pitch stages), declared in
   `IgnitorDsl.Slots` (`audio_bridge/.../IgnitorDsl.kt`, the stage slot groups in `IgnitorDslClassic.kt`); a tree without `classic()` reads none of them;
@@ -86,13 +86,13 @@ stage `classic()` places on the source.
 
 ### FM Synthesis
 
-| Field       | Type      | Meaning                                      |
-|-------------|-----------|----------------------------------------------|
-| `fmh`       | `Double?` | FM modulator ratio, a multiplier of the base frequency (sprudel `fm(h)`) |
-| `fmAttack`  | `Double?` | FM envelope attack (s)                       |
-| `fmDecay`   | `Double?` | FM envelope decay (s)                        |
-| `fmSustain` | `Double?` | FM envelope sustain level                    |
-| `fmEnv`     | `Double?` | FM modulation depth                          |
+The FM (sprudel's `fm(depth, ratio, attack, decay, sustain, release)`) has no wire field since pitch pipeline step 4
+(`fmh`, `fmAttack`, `fmDecay`, `fmSustain`, `fmEnv` went): it travels as `classic()`'s `fm.ratio`, `fm.depth` (the
+switch, 0 or unset is off), `fm.attack`, `fm.decay`, `fm.sustain` and `fm.release` slots and fills the Ignitor `fm`
+stage `classic()` places innermost, over a sine modulator at `analog` 0. The depth envelope runs per sample; with every
+stage at its default (attack 0, decay 0, sustain 1 or more, release 0; the node decides by value, `attack > 0 ||
+decay > 0 || sustain < 1 || release > 0`) it runs no envelope at all, so the depth holds through the release tail (the strip always ran its
+envelope with a release of 0 and collapsed the FM at the gate). `fm.release` is new with the step (decision D3).
 
 ### Routing and lifetime
 

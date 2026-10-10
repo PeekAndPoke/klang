@@ -91,4 +91,49 @@ class LangPitchParamNamesSpec : StringSpec({
         bag[(IgnitorDsl.Slots.accelerate as IgnitorDsl.Param).name] shouldBe 0.6
         data.pan shouldBe 0.6
     }
+
+    "door parity: fm's depth, ratio and envelope are one word each on the sprudel door, the slot and the Ignitor node" {
+        // Pitch pipeline step 4 (decision D4): sprudel's `fm(depth, ratio, attack, decay, sustain, release)` and its
+        // readers write and read the slots `fm.depth` ... `fm.release`, which `classic()` hands the node's knobs of the
+        // same names; `env` and `h` are retired (`docs/retired-names.md`).
+        var node: IgnitorDsl = IgnitorDsl.Sine().classic()
+
+        while (node !is IgnitorDsl.Fm) {
+            node = node.childNodes().first()
+        }
+
+        val s = IgnitorDsl.Slots.fm
+
+        node.depth shouldBe s.depth
+        node.ratio shouldBe s.ratio
+        node.attack shouldBe s.attack
+        node.decay shouldBe s.decay
+        node.sustain shouldBe s.sustain
+        node.release shouldBe s.release
+
+        val data = firstData(
+            SprudelPattern.compile(
+                """note("c").fm(depth = 310, ratio = 1.5, attack = 0.01, decay = 0.2, sustain = 0.3, release = 0.4).pan(fm.release)"""
+            )
+        )
+        val bag = data.toVoiceData().ignitorParams!!
+
+        fun key(slot: IgnitorDsl) = (slot as IgnitorDsl.Param).name
+
+        bag[key(s.depth)] shouldBe 310.0
+        bag[key(s.ratio)] shouldBe 1.5
+        bag[key(s.attack)] shouldBe 0.01
+        bag[key(s.decay)] shouldBe 0.2
+        bag[key(s.sustain)] shouldBe 0.3
+        bag[key(s.release)] shouldBe 0.4
+        data.pan shouldBe 0.4
+
+        // The Ignitor door's builder uses the same words: `x.fm(m, ratio, depth, f => f.adsr(attack, decay, sustain, release))`.
+        val engine = klangScript()
+        engine.execute("""import * from "stdlib"""")
+        val fm = engine.execute("""Ignitor.saw().fm(modulator = Ignitor.sine(), ratio = 1.5, depth = 310)""").toObjectOrNull<Any>() as IgnitorDsl.Fm
+
+        fm.ratio shouldBe IgnitorDsl.Constant(1.5)
+        fm.depth shouldBe IgnitorDsl.Constant(310.0)
+    }
 })

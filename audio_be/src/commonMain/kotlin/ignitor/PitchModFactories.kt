@@ -16,6 +16,10 @@ import io.peekandpoke.klang.audio_be.utils.fastSin
 import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
@@ -363,10 +367,10 @@ fun fmModIgnitor(
     modulator: Ignitor,
     ratio: Ignitor,
     depth: Ignitor,
-    attack: Ignitor = ParamIgnitor("attack", 0.0),
-    decay: Ignitor = ParamIgnitor("decay", 0.0),
-    sustain: Ignitor = ParamIgnitor("sustain", 1.0),
-    release: Ignitor = ParamIgnitor("release", 0.0),
+    attack: Ignitor = ParamIgnitor("attack", FM_ENV_ATTACK_SEC),
+    decay: Ignitor = ParamIgnitor("decay", FM_ENV_DECAY_SEC),
+    sustain: Ignitor = ParamIgnitor("sustain", FM_ENV_SUSTAIN_LEVEL),
+    release: Ignitor = ParamIgnitor("release", FM_ENV_RELEASE_SEC),
     freq: Ignitor = FreqIgnitor,
 ): Ignitor = FmModIgnitor(modulator = modulator, ratio = ratio, depth = depth, attack = attack, decay = decay, sustain = sustain, release = release, freq = freq, modulatorPitch = null)
 
@@ -433,13 +437,13 @@ internal class FmModIgnitor(
         // freeze a modulated envelope time. The same E2 shape, one level down.
         val attackVal = Ignitors.readParam(attack, fmFreqVal, ctx)
         val decayVal = Ignitors.readParam(decay, fmFreqVal, ctx)
-        // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default 1.0, the chain
+        // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default `FM_ENV_SUSTAIN_LEVEL` (1.0), the chain
         // `adsr`'s rule (`finiteOr`); a NaN would otherwise make the depth NaN and `safeOut` would
         // freeze the carrier at ratio 0. The sustain passes raw into the envelope law; the LEVEL is
         // clamped to [0, 1] below, the depth range, as the filter envelope clamps it. The three stage
         // times need no guard: the envelope law reads a NaN or negative time as a zero-length stage,
         // and an infinite one as a stage that never ends, never a NaN.
-        val sustainVal = finiteOr(value = Ignitors.readParam(sustain, fmFreqVal, ctx), fallback = 1.0)
+        val sustainVal = finiteOr(value = Ignitors.readParam(sustain, fmFreqVal, ctx), fallback = FM_ENV_SUSTAIN_LEVEL)
         val releaseVal = Ignitors.readParam(release, fmFreqVal, ctx)
 
         ctx.scratchBuffers.use { modBuf ->

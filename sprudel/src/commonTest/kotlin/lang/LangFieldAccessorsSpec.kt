@@ -133,10 +133,11 @@ class LangFieldAccessorsSpec : StringSpec({
         row("end", """s("bd sd").end(0.5).end(mul(2))""", { it.end }, 1.0, s("bd sd").end(0.5).end(mul(2))),
         row("speed", """s("bd sd").speed(1).speed(mul(2))""", { it.speed }, 2.0, s("bd sd").speed(1).speed(mul(2))),
         row("cut", """s("bd sd").cut(1).cut(add(1))""", { it.cut?.toDouble() }, 2.0, s("bd sd").cut(1).cut(add(1))),
-        row("fmh", """s("bd sd").fm(h = 2).fm(h = mul(2))""", { it.fmh }, 4.0, s("bd sd").fm(h = 2).fm(h = mul(2))),
+        row("fm.ratio", """s("bd sd").fm(ratio = 2).fm(ratio = mul(2))""", { it.fmh }, 4.0, s("bd sd").fm(ratio = 2).fm(ratio = mul(2))),
         row("fmattack", """s("bd sd").fm(attack = 0.1).fm(attack = mul(2))""", { it.fmAttack }, 0.2, s("bd sd").fm(attack = 0.1).fm(attack = mul(2))),
         row("fmdecay", """s("bd sd").fm(decay = 0.2).fm(decay = mul(2))""", { it.fmDecay }, 0.4, s("bd sd").fm(decay = 0.2).fm(decay = mul(2))),
         row("fmsustain", """s("bd sd").fm(sustain = 0.5).fm(sustain = mul(0.5))""", { it.fmSustain }, 0.25, s("bd sd").fm(sustain = 0.5).fm(sustain = mul(0.5))),
+        row("fm.release", """s("bd sd").fm(release = 0.3).fm(release = mul(2))""", { it.fmRelease }, 0.6, s("bd sd").fm(release = 0.3).fm(release = mul(2))),
         row("vowelWet", """s("bd sd").vowel(wet = 0.5).vowel(wet = mul(0.5))""", { it.vowelMix }, 0.25, s("bd sd").vowel(wet = 0.5).vowel(wet = mul(0.5))),
         row("vowelFloor", """s("bd sd").vowel(floor = 0.2).vowel(floor = add(0.3))""", { it.vowelFloor }, 0.5, s("bd sd").vowel(floor = 0.2).vowel(floor = add(0.3))),
         row("bodyWet", """s("bd sd").body(wet = 0.4).body(wet = mul(2))""", { it.bodyMix }, 0.8, s("bd sd").body(wet = 0.4).body(wet = mul(2))),
@@ -181,10 +182,11 @@ class LangFieldAccessorsSpec : StringSpec({
         row("end", """s("bd sd").end(0.5).pan(end)""", { it.pan }, 0.5, s("bd sd").end(0.5).pan(end)),
         row("speed", """s("bd sd").speed(1).pan(speed)""", { it.pan }, 1.0, s("bd sd").speed(1).pan(speed)),
         row("cut", """s("bd sd").cut(1).pan(cut)""", { it.pan }, 1.0, s("bd sd").cut(1).pan(cut)),
-        row("fmh", """s("bd sd").fm(h = 2).pan(fm.h)""", { it.pan }, 2.0, s("bd sd").fm(h = 2).pan(fm.h)),
+        row("fm.ratio", """s("bd sd").fm(ratio = 2).pan(fm.ratio)""", { it.pan }, 2.0, s("bd sd").fm(ratio = 2).pan(fm.ratio)),
         row("fmattack", """s("bd sd").fm(attack = 0.1).pan(fm.attack)""", { it.pan }, 0.1, s("bd sd").fm(attack = 0.1).pan(fm.attack)),
         row("fmdecay", """s("bd sd").fm(decay = 0.2).pan(fm.decay)""", { it.pan }, 0.2, s("bd sd").fm(decay = 0.2).pan(fm.decay)),
         row("fmsustain", """s("bd sd").fm(sustain = 0.5).pan(fm.sustain)""", { it.pan }, 0.5, s("bd sd").fm(sustain = 0.5).pan(fm.sustain)),
+        row("fm.release", """s("bd sd").fm(release = 0.3).pan(fm.release)""", { it.pan }, 0.3, s("bd sd").fm(release = 0.3).pan(fm.release)),
         row("vowelWet", """s("bd sd").vowel(wet = 0.5).pan(vowel.wet)""", { it.pan }, 0.5, s("bd sd").vowel(wet = 0.5).pan(vowel.wet)),
         row("vowelFloor", """s("bd sd").vowel(floor = 0.2).pan(vowel.floor)""", { it.pan }, 0.2, s("bd sd").vowel(floor = 0.2).pan(vowel.floor)),
         row("bodyWet", """s("bd sd").body(wet = 0.4).pan(body.wet)""", { it.pan }, 0.4, s("bd sd").body(wet = 0.4).pan(body.wet)),
@@ -234,7 +236,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("vib", """s("bd sd").vib(2).pan(vib.rate)""", { it.pan }, 2.0, s("bd sd").vib(2).pan(vib.rate)),
     )
 
-    // Batch four: the dynamics leftovers, the routing fields, the compressor threshold and fmenv.
+    // Batch four: the dynamics leftovers, the routing fields, the compressor threshold and fm.depth.
     val mappedBatchFour = listOf(
         row("unison.voices", """s("bd sd").unison(3).unison(mul(2))""", { it.ignitorParams?.get("voices") }, 6.0, s("bd sd").unison(3).unison(mul(2))),
         row("spread", """s("bd sd").unison(spread = 0.2).unison(spread = mul(2))""", { it.ignitorParams?.get("spread") }, 0.4, s("bd sd").unison(spread = 0.2).unison(spread = mul(2))),
@@ -245,7 +247,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("duckattack", """s("bd sd").duck(attack = 0.05).duck(attack = mul(2))""", { it.katalystParams?.get("duck.attack") }, 0.1, s("bd sd").duck(attack = 0.05).duck(attack = mul(2))),
         row("duckdepth", """s("bd sd").duck(depth = 0.5).duck(depth = mul(2))""", { it.katalystParams?.get("duck.depth") }, 1.0, s("bd sd").duck(depth = 0.5).duck(depth = mul(2))),
         row("compressor.threshold", """s("bd sd").compressor(-12).compressor(add(-6))""", { it.katalystParams?.get("compressor.threshold") }, -18.0, s("bd sd").compressor(-12).compressor(add(-6))),
-        row("fmenv", """s("bd sd").fm(200).fm(mul(2))""", { it.fmEnv }, 400.0, s("bd sd").fm(200).fm(mul(2))),
+        row("fm.depth", """s("bd sd").fm(200).fm(mul(2))""", { it.fmEnv }, 400.0, s("bd sd").fm(200).fm(mul(2))),
         row("pregain", """s("bd sd").pregain(2).pregain(mul(2))""", { it.ignitorParams?.get("pregain") }, 4.0, s("bd sd").pregain(2).pregain(mul(2))),
         row("analog", """s("bd sd").analog(2).analog(mul(2))""", { it.ignitorParams?.get("analog") }, 4.0, s("bd sd").analog(2).analog(mul(2))),
         row("duty", """s("bd sd").duty(0.25).duty(mul(2))""", { it.ignitorParams?.get("duty") }, 0.5, s("bd sd").duty(0.25).duty(mul(2))),
@@ -262,7 +264,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("duckattack", """s("bd sd").duck(attack = 0.05).pan(duck.attack)""", { it.pan }, 0.05, s("bd sd").duck(attack = 0.05).pan(duck.attack)),
         row("duckdepth", """s("bd sd").duck(depth = 0.5).pan(duck.depth)""", { it.pan }, 0.5, s("bd sd").duck(depth = 0.5).pan(duck.depth)),
         row("compressor.threshold", """s("bd sd").compressor(-12).pan(compressor.threshold)""", { it.pan }, -12.0, s("bd sd").compressor(-12).pan(compressor.threshold)),
-        row("fmenv", """s("bd sd").fm(200).pan(fm.env)""", { it.pan }, 200.0, s("bd sd").fm(200).pan(fm.env)),
+        row("fm.depth", """s("bd sd").fm(200).pan(fm.depth)""", { it.pan }, 200.0, s("bd sd").fm(200).pan(fm.depth)),
         row("pregain", """s("bd sd").pregain(2).pan(pregain)""", { it.pan }, 2.0, s("bd sd").pregain(2).pan(pregain)),
         row("analog", """s("bd sd").analog(2).pan(analog)""", { it.pan }, 2.0, s("bd sd").analog(2).pan(analog)),
         row("duty", """s("bd sd").duty(0.25).pan(duty)""", { it.pan }, 0.25, s("bd sd").duty(0.25).pan(duty)),
@@ -722,12 +724,13 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.pSustain shouldBe 0.5
                 it.pRelease shouldBe 0.3
             },
-            Case("fm(h = mul(2))", note("c e").fm(200, 2, 0.01, 0.3, 0.5).fm(h = mul(2)), """note("c e").fm(200, 2, 0.01, 0.3, 0.5).fm(h = mul(2))""") {
+            Case("fm(ratio = mul(2))", note("c e").fm(200, 2, 0.01, 0.3, 0.5, 0.2).fm(ratio = mul(2)), """note("c e").fm(200, 2, 0.01, 0.3, 0.5, 0.2).fm(ratio = mul(2))""") {
                 it.fmEnv shouldBe 200.0
                 it.fmh shouldBe 4.0
                 it.fmAttack shouldBe 0.01
                 it.fmDecay shouldBe 0.3
                 it.fmSustain shouldBe 0.5
+                it.fmRelease shouldBe 0.2
             },
             Case("vowel(wet = mul(2))", note("c e").vowel(0.4, "a", 0.2).vowel(wet = mul(2)), """note("c e").vowel(0.4, "a", 0.2).vowel(wet = mul(2))""") {
                 it.vowel shouldBe "a"
@@ -769,11 +772,12 @@ class LangFieldAccessorsSpec : StringSpec({
         add("penv", s("bd sd").penv(decay = "0.1 0.5"), """s("bd sd").penv(decay = "0.1 0.5")""") { it.pDecay }
         add("penv", s("bd sd").penv(release = "0.1 0.5"), """s("bd sd").penv(release = "0.1 0.5")""") { it.pRelease }
         add("penv", s("bd sd").penv(sustain = "0.1 0.5"), """s("bd sd").penv(sustain = "0.1 0.5")""") { it.pSustain }
-        add("fm", s("bd sd").fm(env = "0.1 0.5"), """s("bd sd").fm(env = "0.1 0.5")""") { it.fmEnv }
-        add("fm", s("bd sd").fm(h = "0.1 0.5"), """s("bd sd").fm(h = "0.1 0.5")""") { it.fmh }
+        add("fm", s("bd sd").fm(depth = "0.1 0.5"), """s("bd sd").fm(depth = "0.1 0.5")""") { it.fmEnv }
+        add("fm", s("bd sd").fm(ratio = "0.1 0.5"), """s("bd sd").fm(ratio = "0.1 0.5")""") { it.fmh }
         add("fm", s("bd sd").fm(attack = "0.1 0.5"), """s("bd sd").fm(attack = "0.1 0.5")""") { it.fmAttack }
         add("fm", s("bd sd").fm(decay = "0.1 0.5"), """s("bd sd").fm(decay = "0.1 0.5")""") { it.fmDecay }
         add("fm", s("bd sd").fm(sustain = "0.1 0.5"), """s("bd sd").fm(sustain = "0.1 0.5")""") { it.fmSustain }
+        add("fm", s("bd sd").fm(release = "0.1 0.5"), """s("bd sd").fm(release = "0.1 0.5")""") { it.fmRelease }
         add("vowel", s("bd sd").vowel(wet = "0.1 0.5"), """s("bd sd").vowel(wet = "0.1 0.5")""") { it.vowelMix }
         add("vowel", s("bd sd").vowel(floor = "0.1 0.5"), """s("bd sd").vowel(floor = "0.1 0.5")""") { it.vowelFloor }
         add("body", s("bd sd").body(wet = "0.1 0.5"), """s("bd sd").body(wet = "0.1 0.5")""") { it.bodyMix }
@@ -802,7 +806,8 @@ class LangFieldAccessorsSpec : StringSpec({
             Case("duck(depth = 4)", seq("3 4").duck(depth = 4), """seq("3 4").duck(depth = 4)""", { it.katalystParams?.get("duck.orbit") }, { it.katalystParams?.get("duck.depth") }),
             Case("vibrato(semitones = 4)", seq("3 4").vibrato(semitones = 4), """seq("3 4").vibrato(semitones = 4)""", { it.vibrato }, { it.vibratoMod }),
             Case("penv(attack = 4)", seq("3 4").penv(attack = 4), """seq("3 4").penv(attack = 4)""", { it.pEnv }, { it.pAttack }),
-            Case("fm(h = 4)", seq("3 4").fm(h = 4), """seq("3 4").fm(h = 4)""", { it.fmEnv }, { it.fmh }),
+            Case("fm(ratio = 4)", seq("3 4").fm(ratio = 4), """seq("3 4").fm(ratio = 4)""", { it.fmEnv }, { it.fmh }),
+            Case("fm(release = 4)", seq("3 4").fm(release = 4), """seq("3 4").fm(release = 4)""", { it.fmEnv }, { it.fmRelease }),
             // Since step 3d(iii) the head of `vowel` and `body` is the WET; a floor-only call leaves it
             // alone (a material-only call would FILL it, the name knob naming the stage).
             Case("vowel(floor = 4)", seq("3 4").vowel(floor = 4), """seq("3 4").vowel(floor = 4)""", { it.vowelMix }, { it.vowelFloor }),

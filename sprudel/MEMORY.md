@@ -18,10 +18,11 @@ history of a decision. Which functions exist is answered by the `lang/` files an
 - `toVoiceData()` is the one boundary. The voice doors stay TYPED on this side (the query hot loop keeps its
   one allocation, `docs/plans/signal-flow-redesign.md` §4) and are written there as `classic()` slot keys
   into `ignitorParams` by `_classic_slot_params.kt`: the pitch envelope (`penv.*`, `penvCurves.*`), the vibrato
-  (`vibrato.rate`, `vibrato.semitones`), the flat `accelerate`, the filters,
+  (`vibrato.rate`, `vibrato.semitones`), the flat `accelerate`, the fm (`fm.depth`, `fm.ratio`, `fm.attack` ...
+  `fm.release`; `SvdFm` keeps its typed fields `fmEnv`, `fmh`, ..., `fmRelease`), the filters,
   `adsr`, distort / crush / coarse, tremolo and the sample's flat `begin` / `end` / `speed` / `loop`. The rules are in that file's KDoc; the key names are
   read from `IgnitorDsl.Slots`, never retyped. Guard: `ClassicSlotParamsSpec`.
-- Still typed wire fields beside the two bags: `note`, `freqHz`, `sourceId`, the `fm` fields, `gain`, `pan`, `legato`, `bank`, `sound`, `soundIndex` (from `n`), `cut`, `cylinder`, `solo`,
+- Still typed wire fields beside the two bags: `note`, `freqHz`, `sourceId`, `gain`, `pan`, `legato`, `bank`, `sound`, `soundIndex` (from `n`), `cut`, `cylinder`, `solo`,
   the `master` and `katalyst` names, `control`, `tags`, `cull`. The orbit stages travel only as
   `katalystParams` slots.
 - An authored instrument that does not end in `classic()` plays as its bare tree: a voice door reaches it
@@ -207,3 +208,8 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 3b).
 - 2026-10-10: v0.6.1: `analog(character)` (was `amount`) on every analog door, sprudel's three forms and the mapper
   included (Q25); with the four pitch entries above. The old names are in `docs/retired-names.md`.
+- 2026-10-10: `fm(depth, ratio, attack, decay, sustain, release)` (was `env`, `h`, also the readers `fm.depth`,
+  `fm.ratio`; `release` is new, D3) writes `classic()`'s innermost FM stage through the `fm.*` slots, its five typed wire
+  fields are gone; a sound change, the node's law (every envelope stage at its default: the depth holds through the release tail;
+  the depth envelope per sample; the modulator follows `vib`, `penv`, `accelerate`); a non-finite knob is dropped
+  (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 4).

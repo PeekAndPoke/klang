@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import kotlin.math.PI
@@ -69,7 +70,6 @@ object VoiceTestHelpers {
         // Synthesis & Pitch
         freqHz: Double = 440.0,
         signal: Ignitor = TestIgnitors.constant,
-        fm: Voice.Fm? = null,
 
         // Dynamics
         gain: Double = 1.0,
@@ -79,7 +79,7 @@ object VoiceTestHelpers {
          * (the chain `adsr` over [signal], no de-click), because since phase 3 step 9 a voice has no envelope
          * of its own: the voice strip and its VCA retired, and the instrument's tree owns its amplitude.
          */
-        envelope: Voice.Envelope? = null,
+        envelope: TestEnvelope? = null,
 
         // Cut group
         cut: Int? = null,
@@ -120,12 +120,8 @@ object VoiceTestHelpers {
             )
         }
 
-        // The voice's stages: Pitch → Ignite (the Send stage is appended by the voice)
-        val pipeline = buildPitchPipeline(
-            fm = fm,
-            freqHz = freqHz,
-            sampleRate = sampleRate,
-        ) + IgniteRenderer(
+        // The voice's stages: Pitch (empty since pitch pipeline step 4) → Ignite (the Send stage is appended by the voice)
+        val pipeline = buildPitchPipeline() + IgniteRenderer(
             signal = instrument,
             signalCtx = signalCtx,
             freqHz = freqHz,
@@ -161,15 +157,14 @@ object VoiceTestHelpers {
         blockFrames: Int = 100,
         freqHz: Double = 440.0,
         signal: Ignitor = TestIgnitors.constant,
-        fm: Voice.Fm? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
-        envelope: Voice.Envelope? = null,
+        envelope: TestEnvelope? = null,
         katalystParams: Map<String, Double>? = null,
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
-        freqHz = freqHz, signal = signal, fm = fm,
+        freqHz = freqHz, signal = signal,
         gain = gain, pan = pan,
         envelope = envelope,
         katalystParams = katalystParams,
@@ -191,10 +186,9 @@ object VoiceTestHelpers {
         loopEnd: Double = -1.0,
         isLooping: Boolean = false,
         stopFrame: Double = Double.MAX_VALUE,
-        fm: Voice.Fm? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
-        envelope: Voice.Envelope? = null,
+        envelope: TestEnvelope? = null,
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
@@ -210,11 +204,25 @@ object VoiceTestHelpers {
             sampleRate = sampleRate,
             rng = testRandom,
         ),
-        fm = fm,
         gain = gain, pan = pan,
         envelope = envelope,
     )
 }
+
+/**
+ * A test instrument's amplitude envelope in FRAMES, which [VoiceTestHelpers.createVoice] puts in the tree as a chain
+ * `adsr`. It was `Voice.Envelope`, the voice strip's modulation envelope, until pitch pipeline step 4 retired its last
+ * production user (the strip's FM); the tests kept the shape.
+ */
+class TestEnvelope(
+    val attackFrames: Double,
+    val decayFrames: Double,
+    val sustainLevel: Double,
+    val releaseFrames: Double,
+    val attackCurve: AdsrCurve = AdsrCurve.Default,
+    val decayCurve: AdsrCurve = AdsrCurve.Default,
+    val releaseCurve: AdsrCurve = AdsrCurve.Default,
+)
 
 /**
  * Test sample generators.

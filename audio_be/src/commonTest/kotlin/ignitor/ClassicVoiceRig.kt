@@ -266,11 +266,13 @@ object ClassicVoiceRig {
         // ── the onepole: `classic()`'s first stage, in front of every other ──
         ClassicRow("onepole 900 with crush 5: in front of the quantizer", mapOf("onepole" to 900.0, "crush.bits" to 5.0)),
 
-        // ── pitch doors under a filtered built-in: the vibrato as classic() slots, FM from the voice's strip ──
+        // ── pitch doors under a filtered built-in: the vibrato and the FM as classic() slots ──
         ClassicRow(
-            "the vibrato stage (classic slots) and FM from the voice's pitch pipeline, under lpf env and hpf",
-            mapOf("lpf.freq" to 900.0, "lpf.env" to 12.0, "hpf.freq" to 120.0, "vibrato.rate" to 5.0, "vibrato.semitones" to 0.4),
-            voice = { copy(fmh = 2.0, fmEnv = 150.0) },
+            "the vibrato and FM stages (classic slots), under lpf env and hpf",
+            mapOf(
+                "lpf.freq" to 900.0, "lpf.env" to 12.0, "hpf.freq" to 120.0, "vibrato.rate" to 5.0, "vibrato.semitones" to 0.4,
+                "fm.ratio" to 2.0, "fm.depth" to 150.0,
+            ),
         ),
 
         // ── in combination ──

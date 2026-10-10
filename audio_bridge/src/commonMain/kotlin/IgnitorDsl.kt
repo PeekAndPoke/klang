@@ -11,6 +11,10 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
@@ -257,7 +261,13 @@ sealed interface IgnitorDsl {
          */
         val accelerate: IgnitorDsl = Param(name = "accelerate", default = 0.0, description = "Mirrors sprudel's reader `accelerate`")
 
-        /** The pitch envelope stage, `classic()`'s first: `penv.semitones` (the switch) and its four stages. */
+        /**
+         * The FM stage, `classic()`'s innermost pitch stage (pitch pipeline step 4): `fm.ratio`, `fm.depth` (the switch)
+         * and the depth envelope's `fm.attack`, `fm.decay`, `fm.sustain`, `fm.release`.
+         */
+        val fm: FmSlots = FmSlots()
+
+        /** The pitch envelope stage, around the FM: `penv.semitones` (the switch) and its four stages. */
         val penv: PitchEnvelopeSlots = PitchEnvelopeSlots()
 
         /** The pitch envelope's curves: `penvCurves.attack`, `penvCurves.decay`, `penvCurves.release`. */
@@ -1914,7 +1924,10 @@ sealed interface IgnitorDsl {
     /**
      * Frequency modulation synthesis. The modulator's output shifts the carrier's frequency
      * at audio rate, with an optional ADSR envelope controlling modulation depth over time. The
-     * envelope has no curve knob yet; its stages run `MOD_ENV_CURVE`, exponential (decision D3).
+     * envelope has no curve knob yet; its stages run `MOD_ENV_CURVE`, exponential (decision D3). With every envelope
+     * stage at its default (attack 0, decay 0, sustain 1, release 0) no envelope runs: the depth is full from the
+     * onset through the release tail. Sprudel's `fm` is this node too: it fills the FM stage `classic()` places, through
+     * the `fm.*` slots (pitch pipeline step 4; the voice strip's `FmRenderer` retired with it).
      *
      * **A pitch node means what it wraps** (decision D1, pitch pipeline step 3b; the placement rule, maintainer,
      * 2026-10-09). A pitch modulation (a `vibrato`, `pitchMod`, `pitchEnvelope`, `accelerate`, an outer `fm`, a sprudel
@@ -1936,10 +1949,10 @@ sealed interface IgnitorDsl {
         val modulator: IgnitorDsl,
         val ratio: IgnitorDsl = Constant(FM_RATIO),
         val depth: IgnitorDsl = Constant(0.0),
-        val attack: IgnitorDsl = Constant(0.0),
-        val decay: IgnitorDsl = Constant(0.0),
-        val sustain: IgnitorDsl = Constant(1.0),
-        val release: IgnitorDsl = Constant(0.0),
+        val attack: IgnitorDsl = Constant(FM_ENV_ATTACK_SEC),
+        val decay: IgnitorDsl = Constant(FM_ENV_DECAY_SEC),
+        val sustain: IgnitorDsl = Constant(FM_ENV_SUSTAIN_LEVEL),
+        val release: IgnitorDsl = Constant(FM_ENV_RELEASE_SEC),
         /** The frequency the FM machinery runs on: the modulator is driven at `freq x ratio`
          *  and the index is `depth / freq`. Defaults to [Freq] (the note), which makes FM
          *  transpose under `detune` like any note-pitched oscillator; authored absolute
@@ -3024,10 +3037,10 @@ fun IgnitorDsl.fm(
     modulator: IgnitorDsl,
     ratio: Double,
     depth: Double,
-    attack: Double = 0.0,
-    decay: Double = 0.0,
-    sustain: Double = 1.0,
-    release: Double = 0.0,
+    attack: Double = FM_ENV_ATTACK_SEC,
+    decay: Double = FM_ENV_DECAY_SEC,
+    sustain: Double = FM_ENV_SUSTAIN_LEVEL,
+    release: Double = FM_ENV_RELEASE_SEC,
 ) = IgnitorDsl.Fm(
     carrier = this,
     modulator = modulator,

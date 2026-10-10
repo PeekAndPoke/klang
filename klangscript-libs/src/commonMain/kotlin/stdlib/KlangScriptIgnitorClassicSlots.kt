@@ -36,6 +36,37 @@ object KlangScriptIgnitorVibratoSlots {
     val semitones: IgnitorDsl = IgnitorDsl.Slots.vibrato.semitones
 }
 
+/** `Ignitor.slot.fm`: the FM stage's slots. */
+@KlangScript.Library(KlangScriptLibraries.STDLIB)
+@KlangScript.TypeExtensions(KlangScriptIgnitorFmSlots::class)
+object KlangScriptIgnitorFmSlots {
+    override fun toString(): String = "[Ignitor.slot.fm]"
+
+    /** The modulator's frequency as a multiple of the note, default 1. Mirrors sprudel's `fm.ratio`. */
+    @KlangScript.Property
+    val ratio: IgnitorDsl = IgnitorDsl.Slots.fm.ratio
+
+    /** The peak modulation in Hz, default 0 (off: no FM). Mirrors sprudel's `fm.depth`. */
+    @KlangScript.Property
+    val depth: IgnitorDsl = IgnitorDsl.Slots.fm.depth
+
+    /** The depth envelope's attack in seconds, default 0. Mirrors sprudel's `fm.attack`. */
+    @KlangScript.Property
+    val attack: IgnitorDsl = IgnitorDsl.Slots.fm.attack
+
+    /** The depth envelope's decay in seconds, default 0. Mirrors sprudel's `fm.decay`. */
+    @KlangScript.Property
+    val decay: IgnitorDsl = IgnitorDsl.Slots.fm.decay
+
+    /** The depth envelope's held share of `depth`, default 1. Mirrors sprudel's `fm.sustain`. */
+    @KlangScript.Property
+    val sustain: IgnitorDsl = IgnitorDsl.Slots.fm.sustain
+
+    /** The depth envelope's release in seconds, after the gate, default 0. Mirrors sprudel's `fm.release`. */
+    @KlangScript.Property
+    val release: IgnitorDsl = IgnitorDsl.Slots.fm.release
+}
+
 /** `Ignitor.slot.penv`: the pitch envelope stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorPenvSlots::class)

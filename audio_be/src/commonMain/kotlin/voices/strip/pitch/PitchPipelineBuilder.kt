@@ -5,26 +5,13 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.pitch
 
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 
 /**
- * Builds the pitch pipeline (BlockRenderer chain) from voice parameters.
+ * The voice's pitch pipeline, the BlockRenderers in front of the ignite stage: EMPTY since pitch pipeline step 4.
  *
- * Pipeline: FM Synthesis (frequency modulation), the one stage left.
- *
- * Sprudel's pitch envelope (`penv`), vibrato (`vib`) and `accelerate` left this pipeline in pitch pipeline steps 1 to
- * 3: they are `classic()`'s pitch stages now (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`).
- *
- * Only active stages are included (e.g. FM is skipped if depth == 0).
- * Returns empty list if no pitch modulation is active.
+ * Sprudel's pitch envelope (`penv`), vibrato (`vib`), `accelerate` and `fm` left this pipeline in pitch pipeline steps 1
+ * to 4: they are `classic()`'s pitch stages now (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`). The shell
+ * stays until step 5 removes it with `BlockContext.freqModBuffer` and the bridging in `IgniteRenderer`.
  */
-fun buildPitchPipeline(
-    fm: Voice.Fm?,
-    freqHz: Double,
-    sampleRate: Int,
-): List<BlockRenderer> = buildList {
-    if (fm != null && fm.depth != 0.0) {
-        add(FmRenderer(fm, freqHz, sampleRate))
-    }
-}
+fun buildPitchPipeline(): List<BlockRenderer> = emptyList()

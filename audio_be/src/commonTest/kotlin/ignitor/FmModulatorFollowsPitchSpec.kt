@@ -22,7 +22,6 @@ import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.abs
 import kotlin.math.pow
-import kotlin.math.sin
 import kotlin.random.Random
 
 /**
@@ -48,9 +47,10 @@ import kotlin.random.Random
  *
  * The sprudel rows write the slot bag the sprudel door writes (`vib(6, 0.5)` is `vibrato.rate` 6 and
  * `vibrato.semitones` 0.5, pinned by `ClassicSlotParamsSpec` and the door-parity specs) over a `classic()` fm
- * instrument. Sprudel's own `fm` door still runs on the voice strip until step 4 (`FmRenderer`, whose modulator is a
- * sine inside the renderer that no tree pitch stage reaches); the strip's buffer is emulated here as a root
- * `phaseMod`, which every oscillator multiplies in, carrier and modulator alike.
+ * instrument. Sprudel's own `fm` door is `classic()`'s FM stage since pitch pipeline step 4 (`fm.depth`, `fm.ratio`):
+ * innermost, so over the bell it is an fm over an fm's carrier, and the bell's modulator follows it and the doors
+ * above it (until step 4 the strip's buffer was emulated here as a root `phaseMod`). The classic FM's own modulator
+ * is a plain sine the probe does not track; that it follows the doors is the oracle in `ClassicFmSpec`.
  */
 class FmModulatorFollowsPitchSpec : StringSpec({
 
@@ -100,15 +100,13 @@ class FmModulatorFollowsPitchSpec : StringSpec({
 
     /**
      * Renders [dsl] with [bag] and returns one [Lane] per frequency. A lane called twice in one block fails the row.
-     * [rootMod] emulates the strip's buffer (sprudel `fm`, still on the strip) as the root `phaseMod`; [releaseAt]
-     * moves the gate there the way a realtime note-off does, before the block that holds it (a held voice: the gate
-     * starts far).
+     * [releaseAt] moves the gate there the way a realtime note-off does, before the block that holds it (a held voice:
+     * the gate starts far).
      */
     fun render(
         dsl: IgnitorDsl,
         bag: Map<String, Double> = emptyMap(),
         emitAt: Set<Double> = emptySet(),
-        rootMod: ((Int) -> Double)? = null,
         releaseAt: Int? = null,
     ): Map<Double, Lane> {
         val probe = PitchProbe(emitAt = emitAt, emitValue = 0.7)
@@ -122,7 +120,6 @@ class FmModulatorFollowsPitchSpec : StringSpec({
         )
         val built = dsl.buildExciter(ignitorParams = bag, random = ctx.random, freqHz = noteHz, sampleRate = sampleRate, sampleSource = probe).ignitor
         val buffer = AudioBuffer(blockFrames)
-        val root = DoubleArray(blockFrames)
 
         for (b in 0 until blocks) {
             val start = b * blockFrames
@@ -134,16 +131,7 @@ class FmModulatorFollowsPitchSpec : StringSpec({
             ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
             ctx.voiceElapsedFrames = start
 
-            if (rootMod != null) {
-                for (i in 0 until blockFrames) {
-                    root[i] = rootMod(start + i)
-                }
-
-                ctx.phaseMod = root
-            }
-
             built.generate(buffer, noteHz, ctx)
-            ctx.phaseMod = null
         }
 
         val lanes = LinkedHashMap<Double, Lane>()
@@ -336,15 +324,14 @@ class FmModulatorFollowsPitchSpec : StringSpec({
         lanes.shouldBeUnbent(noteHz * 3.5)
     }
 
-    "authored: no pitch node, a strip buffer at the root: carrier and modulator read it alike (control)" {
-        render(op, rootMod = { 1.0 + 0.01 * sin(it * 0.001) }).shouldFollow(carrierHz = noteHz, ratio = 3.5)
-    }
-
     // ── The sprudel doors over a classic() fm instrument (the slot bags the doors write) ────────────────────────
 
     val vib = mapOf("vibrato.rate" to 6.0, "vibrato.semitones" to 0.5)
     val penv = mapOf("penv.semitones" to 12.0, "penv.attack" to 0.01, "penv.decay" to 0.05, "penv.sustain" to 0.0, "penv.release" to 0.1)
     val accel = mapOf("accelerate" to 7.0)
+
+    /** Sprudel's `fm(300, 1.4)`: `classic()`'s FM stage (pitch pipeline step 4), innermost, over the instrument. */
+    val sprudelFm = mapOf("fm.depth" to 300.0, "fm.ratio" to 1.4)
 
     /** The question's `bell` (`Ign.sine().fm(Ign.sine(), 3.5, 400).adsr(0.001, 1.0, 0.0, 1.0).classic()`), probed. */
     val bell = fmOp(ratio = 3.5, depth = 400.0).adsr(attack = 0.001, decay = 1.0, sustain = 0.0, release = 1.0).classic()
@@ -368,8 +355,8 @@ class FmModulatorFollowsPitchSpec : StringSpec({
             render(sgbell, bag = bag).shouldFollow(carrierHz = noteHz, ratio = 1.4)
         }
 
-        "sprudel: $name with sprudel's fm on the strip (a root buffer) over the bell: the strip multiplies in alike" {
-            render(bell, bag = bag, rootMod = { 1.0 + 0.01 * sin(it * 0.001) }).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        "sprudel: $name with sprudel's fm (classic()'s FM stage) over the bell: the bell's modulator follows both" {
+            render(bell, bag = bag + sprudelFm).shouldFollow(carrierHz = noteHz, ratio = 3.5)
         }
     }
 
@@ -387,6 +374,13 @@ class FmModulatorFollowsPitchSpec : StringSpec({
         val lanes = render(bell, bag = vib + penv, releaseAt = 2500)
 
         lanes.shouldFollow(carrierHz = noteHz, ratio = 3.5)
+    }
+
+    "sprudel: fm alone over the bell (classic()'s FM stage over an fm's carrier): the bell's modulator follows it" {
+        // Decided in step 3b: an fm over an fm's carrier is pitch modulation, so `s("sgbell").fm(...)` bends sgbell's
+        // modulator with the carrier (the strip's root buffer did too).
+        render(bell, bag = sprudelFm).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(sgbell, bag = sprudelFm).shouldFollow(carrierHz = noteHz, ratio = 1.4)
     }
 
     "sprudel: no pitch door over the bell: nothing bends either oscillator (control)" {

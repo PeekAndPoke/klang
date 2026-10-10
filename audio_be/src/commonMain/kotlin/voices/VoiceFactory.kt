@@ -21,8 +21,6 @@ import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
-import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -36,7 +34,8 @@ import kotlin.random.Random
  *
  * Every voice is ONE Ignitor tree (phase 3 step 9 retired the voice strip): a registered instrument's tree
  * (a built-in, an authored instrument, an inline one) or the sample instrument over the voice's PCM. Around
- * it the voice runs only its pitch pipeline (in front), the teardown fade when the tree's root is not a built
+ * it the voice runs only its pitch pipeline (in front; empty since pitch pipeline step 4, every pitch door is a
+ * `classic()` stage), the teardown fade when the tree's root is not a built
  * envelope, and the channel (gain, pan, the orbit's send). An authored instrument that does not end in
  * `classic()` is played as its bare tree: no voice envelope, no doors.
  */
@@ -142,25 +141,6 @@ class VoiceFactory(
         // latch it for the rest of the playback.
         val gain = data.gain?.takeIf { it.isFinite() } ?: 1.0 // NaN-guard: non-finite reads as unset
 
-        // FM Synthesis
-        val fm = if (data.fmh != null || (data.fmEnv ?: 0.0) != 0.0) {
-            val ratio = data.fmh ?: FM_RATIO
-            val depth = data.fmEnv ?: 0.0
-            // The modulation envelopes' curve, the Ignitor FM node's (decision D3).
-            val fmEnv = Voice.Envelope(
-                attackFrames = (data.fmAttack ?: 0.0) * sampleRate,
-                decayFrames = (data.fmDecay ?: 0.0) * sampleRate,
-                sustainLevel = data.fmSustain ?: 1.0,
-                releaseFrames = 0.0,
-                attackCurve = MOD_ENV_CURVE,
-                decayCurve = MOD_ENV_CURVE,
-                releaseCurve = MOD_ENV_CURVE,
-            )
-            Voice.Fm(ratio = ratio, depth = depth, envelope = fmEnv)
-        } else {
-            null
-        }
-
         return when {
             isOsci -> {
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
@@ -177,7 +157,7 @@ class VoiceFactory(
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
                     gain = gain,
-                    fm = fm, signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
+                    signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
                     treeStages = treeStages(built),
@@ -299,7 +279,7 @@ class VoiceFactory(
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
                     gain = gain,
-                    fm = fm, signal = built.ignitor, freqHz = baseSamplePitchHz,
+                    signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
@@ -354,7 +334,6 @@ class VoiceFactory(
         voiceDurationFrames: Int,
         cylinder: Int,
         gain: Double,
-        fm: Voice.Fm?,
         signal: Ignitor,
         freqHz: Double,
         /** The voice's random stream (seeded-voice-rng; same instance the exciter was built
@@ -376,11 +355,9 @@ class VoiceFactory(
             random = voiceRandom,
         )
 
-        val pipeline = buildPitchPipeline(
-            fm = fm,
-            freqHz = freqHz,
-            sampleRate = sampleRate,
-        ) + IgniteRenderer(
+        // The pitch pipeline is empty since pitch pipeline step 4 (every pitch door is a `classic()` stage); step 5
+        // removes the shell.
+        val pipeline = buildPitchPipeline() + IgniteRenderer(
             signal = signal,
             signalCtx = signalCtx,
             freqHz = freqHz,

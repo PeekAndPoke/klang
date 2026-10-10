@@ -458,7 +458,7 @@ A pitch node means what it wraps (since 2026-10-09):
 - above the fm it moves the whole operator, the note's pitch, and the timbre stays put:
   `Ignitor.sine().fm(Ignitor.sine(), 3.5, 400).vibrato(6, 0.5)`; so do sprudel's `vib`, `penv` and `accelerate` on an
   fm instrument that ends in `.classic()`, and an outer `.fm(...)` (two fms in a row: the inner modulator follows the
-  outer one); a modulator with an absolute frequency (`Ignitor.sine(330)`) stays at it;
+  outer one; sprudel's `fm` over an fm instrument is that shape, `s("sgbell").fm(...)`); a modulator with an absolute frequency (`Ignitor.sine(330)`) stays at it;
 - on the modulator it moves the modulator alone: `Ignitor.sine().fm(Ignitor.sine().vibrato(6, 0.5), 3.5, 400)`;
 - on the carrier it moves the carrier alone, so the ratio wobbles: `Ignitor.sine().vibrato(6, 0.5).fm(Ignitor.sine(), 3.5, 400)`.
 
@@ -596,10 +596,9 @@ Ignitor.sine(5)  // fixed 5 Hz (for LFO use)
 
 ### `.classic()`: the pattern's voice doors on your instrument
 
-`.classic()` wraps a sound in the classic synth voice: the pitch envelope, the accelerate and the vibrato (on the source), onepole,
-crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that order. The
-pattern's `penv`, `accelerate` and `vib` reach only an instrument with `.classic()`; `fm` still reaches every
-instrument (it runs outside the tree until it moves into `classic()`). Make it the LAST call: an instrument whose
+`.classic()` wraps a sound in the classic synth voice: the FM, the pitch envelope, the accelerate and the vibrato (on the
+source), onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that
+order. The pattern's `fm`, `penv`, `accelerate` and `vib` reach only an instrument with `.classic()`. Make it the LAST call: an instrument whose
 tree ends in `.classic()` is a whole voice that ends on its own envelope. `adsrOff()` switches that envelope off, and
 the voice ends on the instrument's own envelope when its `.adsr(...)` (with a fixed release) is the last thing
 built before `.classic()`; anything built after it, a stage of the instrument's own or a filter or other stage the
@@ -623,7 +622,9 @@ readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, 
 same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.bits`, `Ignitor.slot.coarse.factor`,
 `Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
 `Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`,
-the vibrato `Ignitor.slot.vibrato.rate|semitones` (`semitones` is the switch, unset = off), the pitch envelope
+the vibrato `Ignitor.slot.vibrato.rate|semitones` (`semitones` is the switch, unset = off), the accelerate
+`Ignitor.slot.accelerate` (flat, the switch, unset = off), the FM `Ignitor.slot.fm.ratio|depth|attack|decay|sustain|release`
+(`depth` is the switch, unset = off), the pitch envelope
 `Ignitor.slot.penv.semitones|attack|decay|sustain|release` (`semitones` is the switch, unset = off)
 and its curves `Ignitor.slot.penvCurves.attack|decay|release`, and the filter envelope curves
 `Ignitor.slot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).

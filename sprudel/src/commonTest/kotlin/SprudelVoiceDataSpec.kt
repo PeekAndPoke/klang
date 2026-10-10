@@ -134,6 +134,31 @@ class SprudelVoiceDataSpec : StringSpec({
         kept.phaserFloor shouldBe a.phaserFloor
     }
 
+    "merge() completeness has an INDEPENDENT oracle for the fm group (incl. fmRelease)" {
+        // As the phaser row: mergeFrom and merge share mergeSvdFm, so only the inputs can see a field the helper drops,
+        // swaps or takes from the wrong side. `fmRelease` is new with pitch pipeline step 4.
+        val a = populatedVoiceData(0)
+        val b = populatedVoiceData(1000)
+        val merged = a.merge(b)
+
+        merged.fmEnv shouldBe b.fmEnv
+        merged.fmh shouldBe b.fmh
+        merged.fmAttack shouldBe b.fmAttack
+        merged.fmDecay shouldBe b.fmDecay
+        merged.fmSustain shouldBe b.fmSustain
+        merged.fmRelease shouldBe b.fmRelease
+
+        // and the base side survives an over side whose fm group holds only a depth (the `?: base` half)
+        val kept = a.merge(createSprudelVoiceData { fmEnv = 5.0 })
+
+        kept.fmEnv shouldBe 5.0
+        kept.fmh shouldBe a.fmh
+        kept.fmAttack shouldBe a.fmAttack
+        kept.fmDecay shouldBe a.fmDecay
+        kept.fmSustain shouldBe a.fmSustain
+        kept.fmRelease shouldBe a.fmRelease
+    }
+
     "merge() completeness has an INDEPENDENT oracle for the pitch envelope group (sustain and the curves)" {
         // As the phaser row: mergeFrom and merge share mergeSvdPitchEnv, so only the inputs can see a field
         // the helper drops, swaps or takes from the wrong side.
@@ -397,17 +422,19 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.cut shouldBe 1
     }
 
-    "toVoiceData() carries the fm group, solo and the pattern id (as sourceId): the wire fields no door spec reads" {
+    "toVoiceData() carries the fm group as classic()'s fm.* slots, solo and the pattern id (as sourceId)" {
+        // The fm's wire fields went in pitch pipeline step 4: the door travels as the `fm.*` slots.
         val wire = createSprudelVoiceData {
-            fmh = 2.1; fmAttack = 0.011; fmDecay = 0.012; fmSustain = 0.51; fmEnv = 3.3
+            fmh = 2.1; fmAttack = 0.011; fmDecay = 0.012; fmSustain = 0.51; fmEnv = 3.3; fmRelease = 0.21
             solo = 0.7; patternId = "pid-1"
         }.toVoiceData()
 
-        wire.fmh shouldBe 2.1
-        wire.fmAttack shouldBe 0.011
-        wire.fmDecay shouldBe 0.012
-        wire.fmSustain shouldBe 0.51
-        wire.fmEnv shouldBe 3.3
+        wire.ignitorParams?.get("fm.ratio") shouldBe 2.1
+        wire.ignitorParams?.get("fm.attack") shouldBe 0.011
+        wire.ignitorParams?.get("fm.decay") shouldBe 0.012
+        wire.ignitorParams?.get("fm.sustain") shouldBe 0.51
+        wire.ignitorParams?.get("fm.depth") shouldBe 3.3
+        wire.ignitorParams?.get("fm.release") shouldBe 0.21
         wire.solo shouldBe 0.7
         wire.sourceId shouldBe "pid-1"
     }
@@ -482,7 +509,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         pAttackCurve = AdsrCurve.entries[seed % 6]
         pDecayCurve = AdsrCurve.entries[(seed + 1) % 6]
         pReleaseCurve = AdsrCurve.entries[(seed + 2) % 6]
-        fmh = b + 21; fmAttack = b + 22; fmDecay = b + 23; fmSustain = b + 24; fmEnv = b + 25
+        fmh = b + 21; fmAttack = b + 22; fmDecay = b + 23; fmSustain = b + 24; fmEnv = b + 25; fmRelease = b + 25.5
         distort = b + 26; distortShape = "ds$seed"; distortOversample = seed + 27
         coarse = b + 28; coarseOversample = seed + 29; crush = b + 30; crushOversample = seed + 31
         phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35; phaserFloor = b + 35.5

@@ -87,13 +87,17 @@ data class SvdPitchEnv(
     var pReleaseCurve: AdsrCurve? = null,
 )
 
-/** FM synthesis. */
+/**
+ * FM synthesis, `fm(depth, ratio, attack, decay, sustain, release)`: [fmEnv] is the depth in Hz, [fmh] the ratio, the
+ * rest the depth envelope's stages. The wire carries them as `classic()`'s `fm.*` slots (pitch pipeline step 4).
+ */
 data class SvdFm(
     var fmh: Double? = null,
     var fmAttack: Double? = null,
     var fmDecay: Double? = null,
     var fmSustain: Double? = null,
     var fmEnv: Double? = null,
+    var fmRelease: Double? = null,
 )
 
 /** Distortion + lo-fi (sample-rate / bit-depth reduction). */
@@ -217,6 +221,7 @@ fun mergeSvdFm(base: SvdFm?, over: SvdFm?): SvdFm? {
         fmDecay = over.fmDecay ?: base.fmDecay,
         fmSustain = over.fmSustain ?: base.fmSustain,
         fmEnv = over.fmEnv ?: base.fmEnv,
+        fmRelease = over.fmRelease ?: base.fmRelease,
     )
 }
 

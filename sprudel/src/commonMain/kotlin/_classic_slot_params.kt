@@ -50,7 +50,7 @@ internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
  *    when one of the five envelope knobs is set: exactly the `FilterDef` the wire used to carry;
  *  - the pitch envelope writes every field that is set; its switch `penv.semitones` only when set (a stage-only
  *    call switches nothing on); the vibrato the same, its switch `vibrato.semitones`; `accelerate` under its flat
- *    slot when set;
+ *    slot when set; the FM the same, its switch `fm.depth`;
  *  - shapes and curves travel as their catalogue INDEX (`DistortionShapes`, `LfoShapes`, `AdsrCurves`), a
  *    flag as 1.0 or 0.0.
  *
@@ -62,7 +62,7 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
     // The door-less event, the common case (a sample hit, a bare note): its own bag's copy, as the wire always
     // carried, with no writer and no key lookups.
     if (adsr == null && lpf == null && hpf == null && bpf == null && notch == null &&
-        distortion == null && tremolo == null && sample == null && pitchEnv == null && pitchMod == null
+        distortion == null && tremolo == null && sample == null && pitchEnv == null && pitchMod == null && fm == null
     ) {
         return ignitorParams?.toMap()
     }
@@ -91,6 +91,17 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
         bag.put(k.vibratoRate, m.vibrato)
         bag.put(k.vibratoSemitones, m.vibratoMod)
         bag.put(k.accelerate, m.accelerate)
+    }
+
+    // The FM (pitch pipeline step 4): every field that is set. `fm.depth` is the switch, so a call that writes only
+    // the ratio or the envelope (`fm(ratio = 2)`) leaves it at its slot default 0.0 and builds no FM, as on the strip.
+    fm?.let { f ->
+        bag.put(k.fmDepth, f.fmEnv)
+        bag.put(k.fmRatio, f.fmh)
+        bag.put(k.fmAttack, f.fmAttack)
+        bag.put(k.fmDecay, f.fmDecay)
+        bag.put(k.fmSustain, f.fmSustain)
+        bag.put(k.fmRelease, f.fmRelease)
     }
 
     distortion?.let { d ->
@@ -172,6 +183,13 @@ private object ClassicSlotKeys {
     val vibratoRate = name(s.vibrato.rate)
     val vibratoSemitones = name(s.vibrato.semitones)
     val accelerate = name(s.accelerate)
+
+    val fmDepth = name(s.fm.depth)
+    val fmRatio = name(s.fm.ratio)
+    val fmAttack = name(s.fm.attack)
+    val fmDecay = name(s.fm.decay)
+    val fmSustain = name(s.fm.sustain)
+    val fmRelease = name(s.fm.release)
 
     val penvSemitones = name(s.penv.semitones)
     val penvAttack = name(s.penv.attack)

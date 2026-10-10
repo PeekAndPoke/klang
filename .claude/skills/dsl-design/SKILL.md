@@ -204,7 +204,9 @@ the bug.
   neither closed list: `semitones` is its switch and a tail-only call never invents it; its unset stages read
   the shared `PitchEnvelopeDefaults` (the `penv.*` slot defaults of `classic()`'s pitch envelope stage). Sprudel's
   `vib(rate, semitones)` has the same shape (pitch pipeline step 2): `semitones` is its switch, and a rate-only call
-  (`vib(4)`) writes `vibrato.rate` and never invents the depth. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
+  (`vib(4)`) writes `vibrato.rate` and never invents the depth. Sprudel's `fm(depth, ratio, attack, decay, sustain,
+  release)` too (pitch pipeline step 4): `depth` is its switch, and `fm(ratio = 2)` or `fm(release = 0.3)` writes its
+  own slot and never invents the depth. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
   `lpfCurves`, ...) are setters only: a curve never switches its envelope on, and a bare call changes
   nothing. **It is adopted AT THE DOOR only, and a door fill does not survive
   SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the
@@ -220,7 +222,11 @@ the bug.
 - Deliberate asymmetries are RECORDED with their reason (the compressor's `lookahead` exists on the
   Katalyst doors only, `k.compressor(...)` and `k.limiter(...)`, not on sprudel's `compressor(...)`: it is
   fixed when the chain is built because it sizes a delay ring, while a sprudel door writes slots on the
-  running chain; the orbit route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`). See
+  running chain; the orbit route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`; and the FM's positional
+  order: sprudel's `fm(depth, ratio, ...)` leads with the depth, the Ignitor door `x.fm(modulator, ratio, depth, ...)`
+  leads with the modulator, its structure, and puts the ratio first; the words are the same since pitch pipeline step
+  4 (D4), and sprudel kept its order so that no positional call changed, `fm(300, 1.4)` is still depth 300, ratio
+  1.4). See
   `docs/tasks/master-dsl-followups.md` section 1 for the parity audit brief.
 
 ---

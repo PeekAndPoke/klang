@@ -158,7 +158,16 @@ object KlangScriptIgnitorSlots {
     @KlangScript.Property
     val accelerate: IgnitorDsl = IgnitorDsl.Slots.accelerate
 
-    /** The pitch envelope stage's slots: `semitones` (the switch), `attack`, `decay`, `sustain`, `release`. `classic()`'s first stage. */
+    /**
+     * The FM stage's slots: `ratio`, `depth` (the switch), `attack`, `decay`, `sustain`, `release`. A pitch stage of
+     * `classic()`, the innermost, so the other pitch stages move carrier and modulator together. Place it yourself with
+     * `fm(Ignitor.sine(x => x.analog(0)), Ignitor.slot.fm.ratio, Ignitor.slot.fm.depth, x => x.adsr(Ignitor.slot.fm.attack,
+     * Ignitor.slot.fm.decay, Ignitor.slot.fm.sustain, Ignitor.slot.fm.release))`.
+     */
+    @KlangScript.Property
+    val fm: KlangScriptIgnitorFmSlots = KlangScriptIgnitorFmSlots
+
+    /** The pitch envelope stage's slots: `semitones` (the switch), `attack`, `decay`, `sustain`, `release`. Around the FM stage. */
     @KlangScript.Property
     val penv: KlangScriptIgnitorPenvSlots = KlangScriptIgnitorPenvSlots
 

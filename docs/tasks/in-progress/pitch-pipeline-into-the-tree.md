@@ -6,7 +6,7 @@ Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lif
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.
 **Planned 2026-10-07** (design worker, read-only on code): "The plan" below, six commits (steps 0 to 5) plus the
 composition block; eleven decisions for the maintainer in plan section 8.
-**In progress since 2026-10-10** on branch `pitch-pipeline-fm`: steps 1, 2, 3 and 3b done (v0.6.1), step 4 (fm) next, then step 5.
+**In progress since 2026-10-10** on branch `pitch-pipeline-fm`: steps 1, 2, 3 and 3b done (v0.6.1), step 4 (fm) done 2026-10-10 (uncommitted, for review), then step 5.
 
 ## What it is
 
@@ -153,7 +153,12 @@ flat like `onepole`: `vibrato.rate`, `vibrato.semitones`; `accelerate`; `penv.se
 `fm.depth`, `fm.attack`, `fm.decay`, `fm.sustain` (and `fm.release`, D3). Defaults are the strip's, from the same
 constants: the switches (`vibrato.semitones`, `accelerate`, `penv.semitones`, `fm.depth`) default to 0.0, which the gate reads
 as off; `vibrato.rate` is `VIBRATO_RATE_HZ`, `fm.ratio` is `FM_RATIO`, the pitch-envelope stages are
-`PitchEnvelopeDefaults.kt`, the FM stages 0, 0, 1.0 as `VoiceFactory` reads them today.
+`PitchEnvelopeDefaults.kt`, the FM stages 0, 0, 1.0 as `VoiceFactory` reads them today, and `fm.release` 0.0. **Correction
+(step 4, 2026-10-10):** `fm.release` 0.0 is today's sound only for an ENVELOPED door. The strip always ran its envelope
+with a release of 0, so it collapsed every FM to 0 at the first block from the gate on; the node runs no envelope when
+every stage is at its default, so an envelope-free door (`fm(300, 1.4)`) keeps its full depth through the release tail.
+A sound change, the fifth non-identical cause, measured in the step 4 record (coordinator's decision (A), logged for
+the maintainer's confirmation).
 
 ### 3. Bit-identity, door by door
 
@@ -165,7 +170,7 @@ one") applied; every clause not named here is kept.
 | pitch envelope | built when `pEnv` finite and `!= 0`; stages `(p* ?: PITCH_ENV_*) * sampleRate`; sustain non-finite reads unset; curves `?: MOD_ENV_CURVE`; gate from the voice's limits per block; `renderPitchEnvelopeRatios` multiplying into the buffer | gate off at a leaf amount `== 0` or non-finite; the node's arm with the same constants; the same `renderPitchEnvelopeRatios` writing, combined by `Times` | **bit-identical** (one law, one mapping, `x * p == p * x`). Only a non-finite stage TIME differs (NaN and ±Infinity): the strip passed it to `EnvelopeCore` (NaN a zero-length stage, +Infinity a stage that never ends, -Infinity zero-length), while sprudel drops every non-finite value at the wire boundary, so the slot reads it as unset (the default time; review round 1 of step 1, B MINOR 2) |
 | vibrato | built when `vibratoMod > 0`; rate `vibrato ?: VIBRATO_RATE_HZ`; phase from 0, `(TWO_PI * rate) / sampleRate`, the one-subtract or full wrap; `fastExp2(fastSin(phase) * depth / 12)` | gate off at a FINITE leaf depth `<= 0` (a non-finite depth stays built and renders the default, step 0); `VibratoModIgnitor`: the same accumulator, increment, wrap pair and ratio, plus `safeOut` (the identity on a ratio up to `SAFE_MAX`, 1e15) | **bit-identical**, except at the raw edges (step 2, review round 1, B MINOR 1, measured on the full engine): a depth above about 598 semitones (`log2(1e15) * 12`) is clamped by `safeOut` where the strip ran raw (597 identical, 598 on differ); a non-finite rate (NaN, ±Infinity) played NO vibrato on the strip (the wrap pinned the phase) and now plays the slot's default 5 Hz, because sprudel drops it and the slot reads it as unset; a +Infinity depth built the strip's vibrato and silenced the voice (NaN, scrubbed), while sprudel now drops it and builds no vibrato. All of it is the house rule (a non-finite value reads as unset) or a raw-Motor extreme |
 | accelerate | built when `accelerate != 0` and `end > onset`; base = `endFrame - startFrame` (scheduled end, the release tail INCLUDED, a Double); per block `2^(octaves * rel / total)`, then `ratio *= 2^(octaves / total)` per sample | today's node: base = `voiceDurationFrames` (the GATE length, an Int) and `2^(octaves * (rel / total))` | **not identical as the node stands**: a different base and a different rounding. D2 decided for the GATE (2026-10-08): the sprudel door moves to the node's base, a sound change for Kokon's `strike` (step 3). The per-block seed keeps the known float-reassociation class (P4: 5.3e-15 across onsets, 1.7e-13 across block sizes, bounded at 1e-11) on both **Done in step 3, with the hold (D2):** the node writes `2^(octaves * (rel / total))` up to the gate and the target `2^(octaves)` from the gate frame on; the frames before the gate keep the node's bits; a gate of 0 frames (`legato(0)`) holds the target from the first frame (Q27; the strip glided over the release tail there). The hostile amounts, sprudel door, measured on the full engine (step 3 review round 1, reviewer B, against a HEAD export whose strip runs the same law, so only the clamp and the boundary differ): NaN, +Infinity and -Infinity FROZE the strip's oscillator (the wire carried them raw: a DC pulse per note shaped by its envelope, RMS -15.5 dB against the control) and now play the bare voice, bit for bit the no-door control (sprudel drops a non-finite value at the boundary, the slot reads it as unset, off); from about 598 semitones (`12 * log2(1e15)`), where the RATIO passes `SAFE_MAX`, `safeOut` clamps it at 1e15 where the strip ran raw (597 identical, 599 differs from frame 11,542, 1000 from frame 7,010); past about 12,288 semitones `2^x` overflowed on the strip and silenced the voice after its first sample, where the stage runs on at the clamped, meaningless pitch (a raw-Motor extreme, no clamp added; the sample playhead leaves its PCM after one frame on both, identical); -1e16 rounds the ratio to 0 on both and freezes the oscillator, identical |
-| FM | built when `fmh` set or `fmEnv != 0`, rendered when depth `!= 0`; modulator phase in radians, `fastSin`; depth envelope evaluated ONCE per block at the block's first frame and held (ledger E11, Class 2), release always 0; `1 + sin * ((depth * env) / freq)`; divides by the raw note, no bypass at freq 0 | the `Fm` node: depth envelope PER SAMPLE (E1's fix), `1 + (mod * depth) / safeDiv(freq)` (with an envelope `(mod * (depth * env)) / freq`), bypass at `freq <= 0`, `safeOut`; the modulator a `Sine` whose drift lane seeds from the voice rng on its first block | **not bit-identical.** See below |
+| FM | built when `fmh` set or `fmEnv != 0`, rendered when depth `!= 0`; modulator phase in radians, `fastSin`; depth envelope evaluated ONCE per block at the block's first frame and held (ledger E11, Class 2), release always 0; `1 + sin * ((depth * env) / freq)`; divides by the raw note, no bypass at freq 0 | the `Fm` node: depth envelope PER SAMPLE (E1's fix), `1 + (mod * depth) / safeDiv(freq)` (with an envelope `(mod * (depth * env)) / freq`), bypass at `freq <= 0`, `safeOut`; the modulator a `Sine` whose drift lane seeds from the voice rng on its first block | **not bit-identical.** See below; **done in step 4**, five causes measured in its record (the fifth: an envelope-free door keeps its depth through the release tail, where the strip, whose envelope always ran with a release of 0, collapsed it at the gate). The hostile values, sprudel door, measured on the full engine against HEAD `94aa209b`: a non-finite depth SILENCED the strip's voice (every frame 0) and now plays the bare voice, bit for bit the control; a non-finite ratio played the bare carrier on the strip (no FM) and now plays FM at the slot's ratio 1, bit for bit `fm(300, 1)`; a non-finite sustain silenced the strip's voice from the decay on and now reads 1.0; a +Infinity attack (a stage that never ended: no FM) and a +Infinity decay (never ended) now read 0; NaN and -Infinity times were zero-length stages on the strip and read as 0 now, the same; `release` (new) reads a non-finite value as 0; a depth whose term passes `SAFE_MAX` (3e17 at C4) is clamped by `safeOut` where the strip ran raw, and a ratio whose modulator passes `SAFE_MAX` Hz (3.9e12) runs far past audio rate on both; no NaN or infinite sample on either side |
 
 **What makes FM non-identical, with the expected size:**
 
@@ -183,6 +188,21 @@ one") applied; every clause not named here is kept.
 4. **A `detune` layer** (the built-in `sgpad`, or an authored overlay): the FM node's `freq` reads `Freq`, so its mod
    keeps the memo's freq key and a detuned layer renders it again at its own pitch, advancing the one modulator twice
    per block (residue 2 of the shared-modulator record). The strip ran ONE FM at the note for every layer.
+   **Measured in step 4 (review round 1, reviewer B, MAJOR 1):** not a small residue. Each layer's modulator jumps
+   forward by a whole block (`2 pi * f_m * 128 / fs`, about 3.3 rad at c3, ratio 1.5) at every block boundary, which is
+   ledger E8, so the output depends on the block size: `s("sgpad").fm(150, 1.5)` at block 128 against 64 differs by
+   +2.8 dB diff RMS (37: +2.7 dB), where `sine` and `saw` with the same fm, and `sgpad` without fm, are bit-identical
+   across block sizes. At the production block of 128 the pad loses its pitch: the strongest peaks lie on an
+   inharmonic comb of about 18.75 Hz (21, 38, 57, 75, 95, 113, 149 Hz), 131 Hz is not among the top twelve, and 95
+   percent of the 40 to 6000 Hz energy of the listening pair's "after" file lies off the f/2 grid (the "before" file:
+   2.6 percent). Kept quiet and recorded (the maintainer's 3b decision stands; a fix needs a mechanism, there is no
+   "note" leaf, so it is a maintainer question). The only built-in with a forking `detune` under `classic()` is
+   `sgpad` (checked in `builtInSources()`: `(Saw() + Saw().detune(0.1)) / 2`, then `onepole`); every other built-in
+   has one pitch, the super oscillators detune inside one source.
+5. **The envelope-free tail** (found in step 4, decision (A)): the strip always ran its depth envelope with a release
+   of 0, so it collapsed every FM at the first block from the gate on; the node runs no envelope when every stage is at
+   its default (attack 0, decay 0, sustain 1 or more, release 0), so an envelope-free door keeps its depth through the
+   release tail. Measured in the step 4 record.
 
 None of this reaches the corpus: no song writes sprudel's `fm`. The FM step is proven by listening pairs plus the
 tolerance row, and the corpus as the control that nothing else moved (decision D3).
@@ -864,17 +884,221 @@ exception on the audio thread, never a silently wrong sound), with the voice sti
 #### Step 4. FM (M to L, a listening pair)
 
 - `Slots.fm` (`fm.ratio`, `fm.depth`, `fm.attack`, `fm.decay`, `fm.sustain`, and `fm.release` with sprudel's
-  `fm(release = ...)`, decided by D3, default 0.0, today's sound; on both doors with a door-parity row); `classic()` places `Fm` innermost with a
+  `fm(release = ...)`, decided by D3, default 0.0: today's sound for an enveloped door; an envelope-free door keeps
+  its depth through the release tail, the fifth cause in the record below; on both doors with a door-parity row); `classic()` places `Fm` innermost with a
   `Sine(analog = Constant(0.0))` modulator (an unset `Sine` reads the `analog` slot and would drift). `VoiceData` loses
   `fmh`, `fmAttack`, `fmDecay`, `fmSustain`, `fmEnv`; `FmRenderer`, `Voice.Fm`, `Voice.Envelope` and `EnvelopeCalc.kt`
   go (`calculateControlRateEnvelope`, `controlRatePos`, `prepareControlRateEnvelope` have no caller left).
 - Specs: `MidBlockOnsetControlRateSpec` loses its last subject (its F3 clamp lived in `controlRatePos`) and retires;
   `ModulatorPhaseWrapSpec`'s strip rows move to the node; the block-framing ledger's E11 closes and the classic FM door
   joins the bit-identical list (per-sample envelope, like the Ignitor `fm with envelope` row).
-- Proof: not bit-identical (section 3, four causes). Listening pairs: an enveloped bell
+- Proof: not bit-identical (section 3, five causes; the fifth found in step 4). Listening pairs: an enveloped bell
   (`s("sine").fm(env = 300, h = 1.4, attack = 0.001, decay = 0.5, sustain = 0)`), a slow attack, the same door on a
   noisy or `analog > 0` instrument (the rng shift), and on `sgpad` (the detune residue). A tolerance row for the
   envelope-free case. Corpus identical (control: no song writes `fm`).
+
+**What was done (2026-10-10, uncommitted, for review).** Decision for the unpredicted tail (coordinator, 2026-10-10,
+option (A), logged for the maintainer's confirmation in `_maintainer-questions.md`): the node's law, as D3 decided.
+`audio_bridge`: `FmSlots` (`Slots.fm`: `fm.ratio` default `FM_RATIO`, `fm.depth` default 0.0, the switch,
+`fm.attack` 0.0, `fm.decay` 0.0, `fm.sustain` 1.0, `fm.release` 0.0, the node's own defaults); `classic()` places
+`Fm` innermost (`this -> fm -> pitchEnvelope -> accelerate -> vibrato -> ...`), its modulator
+`Sine(analog = Constant(0.0))`; `VoiceData` lost `fmh`, `fmAttack`, `fmDecay`, `fmSustain`, `fmEnv`; the KDocs of
+`classic()`, the `Fm` node, `PitchModDefaults` and `EnvelopeDefaults` say so. `audio_be`: `FmRenderer`,
+`EnvelopeCalc.kt` (`calculateControlRateEnvelope`, `controlRatePos`, `prepareControlRateEnvelope`), `Voice.Fm` and
+`Voice.Envelope` gone (no production caller left; the tests' amplitude-envelope helper became `TestEnvelope` in
+`VoiceTestHelpers`); `VoiceFactory` builds no FM; `buildPitchPipeline()` is an empty shell; the KDocs of
+`EnvelopeCore` and `ModBlockingIgnitor`. `sprudel`: the door is `fm(depth, ratio, attack, decay, sustain, release)`
+(`env` and `h` removed, not aliased; positional calls unchanged; a bare `fm()` reinterprets as `depth`), the readers
+`fm.depth`, `fm.ratio`, `fm.attack`, `fm.decay`, `fm.sustain`, `fm.release`; `SvdFm` keeps its typed fields and
+gains `fmRelease`; `classicSlotParams` writes the `fm.*` slots (every field that is set, a non-finite one dropped;
+`fm.depth` only when set, so `fm(ratio = 2)` switches nothing on); the door's KDoc and its recipes (the three
+envelope-free recipes now say the depth holds for the whole note, the release tail included; a fourth KDoc example
+shows `release`). `klangscript-libs`: `Ignitor.slot.fm` (`KlangScriptIgnitorFmSlots`) and the script `classic()` KDoc.
+Docs: `retired-names.md` (one row), `data-model.md`, `voice-synthesis.md`, `off-values.md` (the gated classic fm in the
+detune walk), the two `MEMORY.md` files, the two music-writing references, `tutorial-master-plan.md` and
+`sprudel-ui-tools.md` (the door words), the block-framing ledger (E11 closed, E1 and E10 rows, the P4 note, the
+header), the NaN task's section 1 (closed). No song, frozen song, tutorial or editor tool wrote `fm(env = ...)`,
+`h = ...`, `fm.env` or `fm.h` (grep of the repo; `FrozenSongs.kt:53` names `fm(env = e, h = 2)` in a dated
+migration note, history, kept).
+
+Specs: the new `ClassicFmSpec` is the ORACLE of the sprudel door: a real voice through `VoiceFactory` and the ramp
+probe (the sample instrument, so sample voices are covered), the FM law written out with the library's `sin`, `exp`
+and `pow` (the modulator phase from 0 at `220 * ratio` Hz, `1 + sin * depth * level / 220`, the level per frame on
+the exponential curve, no envelope at the defaults); rows: the envelope-free door through a 12,000-frame tail, the
+bell `fm(300, 1.4, 0.001, 0.5, 0)` (FM inside the first block), a slow attack with sustain 0.5 and release 0.2, a
+release of 0 (0 on the gate frame), a negative depth, each at onsets 0 and 37; a held realtime voice released at frame 1000 mid-decay (onsets 0 and 37); the modulator following
+`vib(6, 0.5)` against an oracle whose modulator phase advances by the vibrato's ratio (worst deviation 4.3e-8; a
+modulator that ignored the vibrato is off by more than 1e-3, the control); depth 0, a ratio or an envelope alone,
+and a NaN / ±Infinity depth are the bare voice; a NaN / ±Infinity ratio, attack, decay, sustain or release reads as
+the slot's default; the guard "an unwritten `fm.depth` builds no stage". Moved to the node: `ModulatorPhaseWrapSpec`'s
+two strip rows (the library-sine oracle now per frame on the exponential decay; the modulator past the sample rate,
+both signs); `RealtimeVoiceSpec`'s moved-gate row (the node reads the gate per block); `ModEnvelopeDefaultCurveSpec`'s
+FM row (the classic stage's level per frame on the exponential curve, gate and release included);
+`VoiceLifecycleSpec`'s gate-consumer row (the FM in the tree beside the pitch envelope). `BlockFramingInvarianceSpec`:
+`classic fm with envelope` and `classic fm, envelope-free` join the bit-identical rows (E11 closed).
+`MidBlockOnsetControlRateSpec` retired with its last subject (`controlRatePos`). `EnvelopeLawSpec` lost the strip's
+control-rate host rows. `FmModulatorFollowsPitchSpec`: the six strip-emulation rows are `classic()` `fm.*` rows now
+(`sprudel: <door> with sprudel's fm (classic()'s FM stage) over the bell: the bell's modulator follows both`), the
+root-buffer control row went, and a new row pins `fm` alone over the bell and over `sgbell` (an fm over an fm's carrier
+follows, decided in 3b). `FmSynthesisTest`, `PitchModulationTest`, `SynthVoiceTest` render the FM through the tree
+(the strip-bridge row "passes pitch modulation to signal" went: no strip door is left). `ClassicTailSpec` (order, the
+modulator at `analog` 0, vocabulary), `IgnitorRegistryTest`, `ClassicVoiceRig`. Sprudel: `ClassicSlotParamsSpec` (an fm
+row and the literal map), `ClassicDoorRenderParitySpec` (six engagement rows), `LangPitchParamNamesSpec` (door parity:
+door word = slot = node knob), `SprudelVoiceDataSpec`, `LangFieldAccessorsSpec`, `LangDoorFormsSpec`,
+`LangControlRestSpec`, `FreqAccessorIntelSpec`, `WorkletWireCodecRoundTripSpec`. `KlangScriptClassicDoorParitySpec`.
+
+- **Wire.** `WIRE_SCHEMA_HASH` `1192695015` to `1342085251` (the five fields cut). JS codec green.
+- **Corpus, bit-identical** (`tmp/naming/corpus-pp-s4.txt` against `corpus-pp-s4-before.txt`, the fresh baseline on
+  `94aa209b`, no song file modified): 18 of 18 identical. No song and no frozen song writes sprudel's `fm` (grep), so
+  no corpus row can move and no engagement mutant on the door can move one; the engagement is the spec rows (the
+  mutation checks below). The corpus is also the evidence for the gated classic fm in every `classic()` tree: noise
+  and sample voices in the songs render bit for bit (the detune walk and the memo freq key see the gated fm's `Freq`
+  readers, `off-values.md`).
+- **Not HEAD's sound** (checklist (a); one voice through `VoiceFactory`, `note("c4")`, onset 37, a 9000-frame gate,
+  the sprudel text compiled on both sides, HEAD `94aa209b` exported against the tree, 162 rows; diff RMS against
+  HEAD's own signal; scratch `$S4/specs/ZzScratchFm4MatrixSpec.kt`, `mxcmp.py`, removed from both trees):
+  1. **The envelope per sample** (E11 closed): the bell `fm(300, 1.4, 0.001, 0.5, 0)` on `sine` differs from the
+     second rendered frame (the strip held the level of the first frame, 0, for the whole first block), -17.7 dB before
+     the gate (max 0.19); a slow attack `fm(300, 1.4, 0.3, 0.2, 0.6)` -33.4 dB, a sustain `fm(200, 2, 0.01, 0.1, 0.5)`
+     -24.6 dB; `sgbell` -18.5 and -32.9 dB.
+  2. **The rounding order**, the tolerance row: the envelope-free `fm(300, 1.4)` before the gate, at most 4.4e-15 on
+     `sine` (-291 dB), 2.7e-15 for a negative depth, 7.6e-15 on `sgbell`, 3.5e-18 on the sample (the ramp's
+     playhead scaled by 1e-5, so about 3.5e-13 frames); under the 1e-11 bound.
+  3. **The modulator's rng draw**, isolated by a probe at depth 1e-9 against the same instrument without fm: on HEAD
+     every pair differs by at most 9.5e-11 (the depth itself); in the tree `sine` (5.4e-12), the sample, `sgbell`
+     and `sgpad` (at most 3.4e-11) stay put and white noise is identical (a noise-only voice never renders the
+     modulator), while a pitched voice that draws while it renders takes other random values: `analog(0.5)` -35.1 dB
+     (max 0.032), `supersaw` +5.6 dB and `pluck` +6.2 dB (other phases and other bursts, the same statistics). It is
+     the whole difference of the supersaw and pluck rows (+3 to +9 dB) and the pre-gate part of the analog rows.
+  4. **The detune residue** (`sgpad`, decided to stay quiet, but NOT small; review round 1, reviewer B, MAJOR 1):
+     one modulator for both pitches, rendered once per pitch per block, so each layer's modulator jumps a whole block
+     at every boundary (ledger E8). Against HEAD `sgpad` with `fm(300, 1.4)` differs by +0.6 dB from the first frame
+     (the rng probe shows no draw there), with an envelope -0.2 to -13.8 dB; a diff RMS cannot show what it is. B's
+     measurement: `s("sgpad").fm(150, 1.5)` is block-size dependent, block 128 against 64 +2.8 dB (37: +2.7 dB), where
+     `sine`, `saw` and `sgpad` without fm are bit-identical across block sizes; at 128 frames the pad loses its pitch,
+     the strongest peaks on an inharmonic comb of about 18.75 Hz and 131 Hz not among the top twelve, and 95 percent of
+     the listening pair's "after" energy (40 to 6000 Hz) off the f/2 grid, against 2.6 percent "before". The only
+     built-in reached this way is `sgpad` (the one built-in with a forking `detune` under `classic()`). Kept quiet
+     (the maintainer's 3b decision); the fix needs a mechanism, a question for the maintainer.
+  5. **The envelope-free tail** (the unpredicted one, decision (A)): before the gate the rounding row above; from the
+     gate on the strip's FM was 0 and the stage keeps its full depth: `sine` -2.2 dB over the default 0.05 s tail
+     (max 1.10), -1.1 dB over a 1.5 s release, `sgbell` -2.4 dB, a negative depth -12.9 dB; the sample -51 dB. HEAD
+     itself: the strip's tail against the bare carrier -19.2 dB (the carrier, phase-shifted by the FM before it). The
+     sample's figure measures the PLAYHEAD, not a sound: the matrix's sample is a ramp with a slope of 1e-5 per frame,
+     so -51 dB against its own RMS (about 0.049) is about 1.4e-4, a playhead about 14 frames apart with the full FM
+     swing on it; on a real sample the tail changes as audibly as the sine's (review round 1, B MINOR 2).
+  - **The modulator follows the other pitch doors** (D1, the sound change step 3b announced for sprudel's `fm`):
+    `vib(5, 0.4)` -7.6 dB, `penv` -7.4 dB, `accelerate` -8.0 dB, all three -9.0 dB on `sine` (`sgbell` -4.9 to
+    -8.5 dB); the held rows released at frame 3000 alike.
+  - Identical: every row without a written depth (the control, `fm(0, 2)`; `fm(ratio = 2)` exists only in the tree,
+    where it is the control bit for bit), every white-noise row. D6: an instrument without `classic()` ignores `fm`
+    now (no corpus song has one under the door). D1, structural: the strip's root buffer bent a musical oscillator in
+    a parameter position; the stage does not. The regrouping with sprudel `fm` that step 3 left (`(doors * own) * F`)
+    ended: the classic stages give `(((V * A) * P) * F) * own`, two factors against the strip's `own * (...)`, which
+    commute bit for bit; for good only two of the instrument's own pitch nodes plus a door.
+- **Hostile values** (checklist (b); the same matrix, plus reference rows on each side; within-side comparisons in
+  `within.py`). Tree: every non-finite `fm.*` value is bit for bit its reference (depth: the control; ratio:
+  `fm(300, 1)`; attack, decay: the stage at 0; sustain: unset; release: 0). HEAD, measured: a non-finite depth
+  silenced the whole voice (11,520 of 11,520 frames 0); a non-finite ratio played the bare carrier bit for bit (no
+  FM); NaN and -Infinity attack or decay were zero-length stages, bit for bit HEAD's stage at 0; a +Infinity attack
+  never ended (the bare carrier bit for bit), a +Infinity decay never ended (bit for bit a 1e300 decay); a non-finite
+  sustain silenced the voice from the decay on (10,917 of 11,520 frames 0). `SAFE_MAX`: the first depth whose term
+  passes it at C4 (3e17, the term 1.15e15) is clamped by `safeOut` in the tree where the strip ran raw (+2.9 dB
+  apart, both finite; 2e17 below it differs by the rounding order at that size, -16.8 dB before the gate); the first
+  ratio whose modulator passes `SAFE_MAX` Hz (3.9e12) and 3.7e12 below it run the modulator far past audio rate on
+  both (-49.6 and -46.0 dB apart). A sustain of 1e300 is clamped to 1 on both, but in the tree `s + (1 - s) * g` cancels
+  to 0 on the decay's first frames (-29.5 dB from sustain 1; on HEAD's block-held reads it was sustain 1 bit for bit),
+  a raw-Motor extreme. No NaN or infinite sample in any row on either side.
+- **Mutation checks** (one lock call each, restored, `cmp` clean; `$S4/mutants.py`, red rows in
+  `$S4/mutants-red-rows.txt`): FM placed outermost (red: `ClassicFmSpec` follow row, `ClassicTailSpec` order and
+  vocabulary, `IgnitorRegistryTest`); the modulator an unset `Sine` (red: `ClassicTailSpec`; `ClassicFmSpec` stays green
+  at `analog` 0, as it must); `attack` reading the decay slot (red: 6 `ClassicFmSpec` rows, door parity, the render
+  engagement row, the curve row); `fm.release` defaulting to 0.05 (red: 6 `ClassicFmSpec` rows, `ClassicTailSpec`); the
+  envelope held per block, E11 back (red: 8 `ClassicFmSpec` rows, 4 block-framing rows, the phase-wrap oracle, the curve
+  row); the modulator built under no mod (red: the follow row and `FmModulatorFollowsPitchSpec`, at least 10 rows; the runner lists ten); the modulator
+  at 1.001 times its frequency (red: at least 10 `ClassicFmSpec` rows, the phase-wrap oracle); a linear FM curve (red: the curve
+  row, 6 `ClassicFmSpec` rows, the phase-wrap oracle); the mod envelope reading the scheduled gate (red: the realtime
+  node row, the lifecycle gate-consumer row, both held rows); sprudel writing `fm.depth` from the ratio, and
+  `release` under `fm.decay` (red: `ClassicSlotParamsSpec` 2 rows, `SprudelVoiceDataSpec`, door parity); the door's
+  `release` writing the sustain field (red: 5 `LangFieldAccessorsSpec`, 3 `LangDoorFormsSpec`, 2 `ClassicSlotParamsSpec`
+  rows; `LangControlRestSpec` stays green: it pins rests, not the target field); the reader `fm.release` reading the
+  sustain (red: `LangFieldAccessorsSpec`, door parity); `Ignitor.slot.fm.release` the sustain slot (red:
+  `KlangScriptClassicDoorParitySpec`); `classic()`'s ratio a constant 1 (red: the render engagement row, at least
+  10 `ClassicFmSpec` rows, door parity); `classic()`'s depth a constant 0 (red: `PitchModulationTest`, `FmSynthesisTest`,
+  the new follow row); a NaN FM term (red: `SynthVoiceTest`'s finiteness row, 7 `ClassicFmSpec` rows, one of them a duplicate removed in review round 1); the gate never
+  off (red: the guard row; `FmSynthesisTest`'s zero row stays green, a fold); the `Param` leaf passing a non-finite
+  override through (red: the non-finite knob row; the non-finite depth row stays green, the gate reads it as off too);
+  sprudel keeping a non-finite value (red: 3 `ClassicSlotParamsSpec` rows).
+- **Cost** (checklist (c); one voice through `VoiceFactory`, a built-in with sprudel's `fm` as each side's wire
+  carries it (HEAD's five fields, the tree's `fm.*` slots), HEAD / the tree / HEAD again as the control, two
+  `git archive` exports; `$S4/cost/`). V8 production test bundle, render per 128-frame block, medians of 3 rounds,
+  pinned and unpinned: off (`sine`, no fm) free, 1.002 and 1.03 (controls 1.004 and 1.009); `fm(300, 1.4)` +20 percent
+  on both (1891 to 2262 ns, about +370 ns; controls 1.00); the bell envelope +46 percent (1860 to 2719 ns, about
+  +860 ns: the envelope per sample against one read per block; controls 1.03 and 1.01); `fm` plus `vib` +14 and +15
+  percent (3468 to 3960 ns; controls 0.99 and 1.01); `supersaw` +9 percent (about +420 ns); `sgpad` +44 percent (3191
+  to 4604 ns, about +1400 ns: two pitched sources, each with its `ModApplyingIgnitor`, and the modulator rendered once
+  per pitch, the residue). Render bytes per block on V8: +30 to +65 above HEAD's 76 to 131 when on (`fm` 82 to 110-124,
+  the bell 106 to 162-165, `sgpad` 127 to 189-196; off unchanged): heap numbers of the node's per-block double
+  hand-offs to calls V8 does not inline (the `audio/ref/performance.md` class; the authored `fm` node paid them before,
+  the strip did not); not fixed here, `engine-follow-ups.md` item 10d. Build per voice on V8: off
+  +44 to +51 bytes and time inside the noise (0.92 and 0.98, controls 1.01 and 1.02); on +4.4 KB (10.9 to 15.3 KB) and
+  +2.4 to +3.2 us (1.27 to 1.67 times, controls 0.97 to 1.12), once per note. JVM, medians of 9: render allocation-free
+  on both sides (`sgpad` 24 bytes per block on both arms of HEAD and the tree, a JIT residue of the probe); off 0.99
+  (control 0.995); `fm` +14 percent (1179 to 1340 ns), the bell +24 percent, `fm` plus `vib` +14 percent, `supersaw`
+  +6 percent, `sgpad` +41 percent (1692 to 2378 ns); build bytes off +16 bytes, on +2.0 to +2.3 KB per voice; JVM build
+  times inconclusive (ranges of 1.3 to 6.2 us on every arm). Everything under 0.06 percent of a 2.67 ms block.
+  **The census steps** (review round 1, B NIT 4): `GraphCensus` does not model the gate, so every `classic()` tree now
+  counts a gated `Fm` and its `Sine` modulator (about one pass more and 64 + 64 bytes) though nothing renders; the
+  song benchmark's census columns (`passes`, `traffic`, `bytes`) step at this date for every built-in voice, as they
+  did in phase 3, so a later `ns/s/pass` reading compares across it with care.
+- **Suites.** `audio_bridge` jvmTest 148 and jsTest 267; `audio_be` jvmTest 2,544 and jsBrowserTest 2,440; `sprudel`
+  jvmTest 3,497 (486 skipped); `klangscript-libs` jvmTest 837 and jsTest 614; `BuiltInSongsSmokeTest`,
+  `SongBenchmarkCasesCompileSpec`, `DslDocExamplesSpec` green (6); `compileTestKotlinJs` of `audio_bridge`, `audio_be`,
+  `sprudel`, `klangscript-libs` and the root green.
+- **Listening:** `tmp/listening/pp-step4/` (`README.md`): the enveloped bell (-5.0 dB diff RMS in the full mix), a slow
+  attack (-26.3 dB), a supersaw with `analog(2)` (the rng shift, +3.3 dB, two takes of one patch), `sgpad` (the
+  residue, +0.4 dB), `fm` plus `vib` (the modulator follows, -4.1 dB), and an envelope-free `fm` with a 1.5 s release
+  (decision (A): identical up to the first gate at 1.005 s, the tails differ, -7.6 dB). Not yet heard.
+- **Left for step 5:** the strip's shell. `buildPitchPipeline()` returns an empty list and stays with its call in
+  `VoiceFactory` and `VoiceTestHelpers`; `BlockContext.freqModBuffer` / `freqModBufferWritten`,
+  `Voice.RenderContext.freqModBuffer`, its allocation in `VoiceScheduler`, the `VoiceFactory` parameter and
+  `IgniteRenderer`'s bridge (it now never finds a written buffer, so `phaseMod` is null at the root already); the
+  `IgniteContext.phaseMod` KDoc ("set by IgniteRenderer only"); `Voice`'s "Pitch -> Ignite" texts and `audio/CLAUDE.md`'s
+  `voices/strip/` row; the package (D7); the published pages (`fig-two-senders.html` still lists the five fm fields).
+
+- **Review round 1** (`tmp/reviews/pp4-r1-A.md`, 0 MAJOR; `tmp/reviews/pp4-r1-B.md`, 1 MAJOR), applied. B MAJOR 1, the
+  `sgpad` residue understated: no code change (the maintainer's 3b decision stands); cause 4 in section 3 and in this
+  record, the E11 row of the block-framing ledger (bit-identical for an instrument with one pitch; the forking shape
+  is E8, block-size dependent), the listening README, `audio/MEMORY.md`, `voice-synthesis.md`, the `classic()` KDoc and
+  the diagnostic task now carry B's numbers (block 128 against 64 +2.8 dB, the ~18.75 Hz inharmonic comb, 95 percent of
+  the energy off the f/2 grid against 2.6 before). The built-ins with a forking `detune` under `classic()`, checked in
+  `builtInSources()`: `sgpad` only. B MINOR 2: the sample's dB figures say they measure the ramp's playhead. B MINOR 3:
+  `engine-follow-ups.md` item 10d (the V8 render allocation, with the numbers), the cost bullet points at it. B NIT 4:
+  the census step, in the cost bullet. A1: an independent oracle row for the fm group's merge in
+  `SprudelVoiceDataSpec` (all six from the over side; an over side with only a depth keeps the base's five);
+  A's mutant (`fmRelease = over.fmRelease`) turns it red, restored, `cmp` clean. A2: the envelope gate described by
+  VALUE (attack above 0, decay above 0, sustain below 1 or release above 0) in the sprudel door's KDoc and recipe
+  reference, the `classic()` KDoc, `data-model.md`, `sprudel/MEMORY.md` and the README. A3: `/dsl-design` section 4
+  names `fm` beside `vib` (`depth` is its switch, a tail-only call never invents it). A4: `ignitor-reference.md`'s slot
+  list has `Ignitor.slot.fm.*` and `Ignitor.slot.accelerate`. A5: the diagnostic task skips `classic()`'s own FM stage
+  (an fm whose depth is a slot), with B's finding as context. A6: the FM envelope defaults have one home,
+  `FM_ENV_ATTACK_SEC`, `FM_ENV_DECAY_SEC`, `FM_ENV_SUSTAIN_LEVEL`, `FM_ENV_RELEASE_SEC` beside `FM_RATIO`, read by the
+  `IgnitorDsl.Fm` field defaults, its Kotlin builder, `FmSlots`, `fmModIgnitor`'s defaults and the node's sustain
+  fallback (the same values: `ClassicTailSpec` and `ClassicFmSpec` green, the corpus `corpus-pp-s4-r1.txt` 18 of 18
+  identical to the baseline). A7: five causes in section 3 (item 5 added), the step 4 bullet and D3. A8: the file map
+  (`EnvelopeCalc.kt` gone, the pitch package an empty shell). A9: the positional asymmetry recorded with its reason in
+  `/dsl-design` section 4 and the sprudel door's KDoc (sprudel kept its order, `fm(300, 1.4)` is depth 300, ratio 1.4;
+  the Ignitor door leads with the modulator). A10: `RealtimeVoiceSpec` imports `Random`. A11: `ClassicFmSpec`'s
+  duplicate tail row and `SynthVoiceTest`'s narrating comment removed. Suites: `audio_be` jvmTest 2,543 (one duplicate
+  row removed), `audio_bridge` 148, `sprudel` 3,498 (486 skipped), `klangscript-libs` 837; `DslDocExamplesSpec` green;
+  `compileTestKotlinJs` of `audio_bridge`, `audio_be`, `sprudel` green (no `klangscript-libs` or root code changed).
+- **Review round 2** (`tmp/reviews/pp4-r2.md`, clean: 0 MAJOR, 1 MINOR, 1 NIT), applied by the coordinator, texts
+  only: the two remaining copies of "E11 is closed" (the `BlockFramingInvarianceSpec` comment and the P4 note of the
+  block-framing plan) name the one-pitch limit and the `sgpad` E8 shape; the music-writing sprudel reference says
+  "every stage at its default" for the envelope-free case. Open for the maintainer: Q30 (the envelope-free tail,
+  decided by default under D3) and Q31 (`s("sgpad").fm(...)` loses its pitch; the 3b call stands for now).
+
+`$S4` is the step 4 worker's scratchpad, `/tmp/claude-1001/-opt-dev-peekandpoke-klang/2b9d5146-bb91-421f-8521-3abde0cee4d4/scratchpad/s4`.
 
 #### Step 5. The strip's shell, and the package (M, bit-identical)
 
@@ -1022,9 +1246,10 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   alternative (the gate for both) changes every song's `accelerate`, Kokon's `strike` (a long release) the most.
 - **D3. FM moves onto the node's law** **DECIDED (maintainer, 2026-10-08): yes to both** (the node's law with listening
   pairs, and sprudel's `fm` gets a `release`, slot `fm.release`, default 0.0). (per-sample envelope, closing E11; the rounding order; the modulator's rng draw;
-  the detune residue) as a sound change proven by listening pairs, rather than a strip-faithful copy first.
+  the detune residue; and, found in step 4, the envelope-free tail) as a sound change proven by listening pairs, rather than a strip-faithful copy first.
   **Recommendation: yes.** With it: give sprudel's `fm` a `release` (and the `fm.release` slot, default 0.0, today's
-  sound), the surface half of E11; the Ignitor door already has it, so this closes a parity gap. Recommendation: yes.
+  sound for an ENVELOPED door; corrected in step 4: an envelope-free door keeps its depth through the release tail,
+  where the strip collapsed it at the gate, see the step 4 record), the surface half of E11; the Ignitor door already has it, so this closes a parity gap. Recommendation: yes.
 - **D4. Slot names.** **DECIDED (maintainer, 2026-10-08): align the names; keep the namespacing.** "I like the
   namespacing idea of `fm.xxx`, so the xxx parts must match the names on the Ignitors. Probably the Ignitors already
   have the more stable and better names, but worth a check for each param, so we get good and concise names." This

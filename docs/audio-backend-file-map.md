@@ -56,10 +56,10 @@ Cmd → PlaybackEngineDispatcher.handle
 - `voices/Voice.kt` — running voice + `RenderContext` (per-engine scratch + cylinders) + per-block render.
 - `voices/VoiceLimits.kt`: a voice's onset, gate end and end, their one home (the voice writes, the stages read).
 - `voices/PlaybackCtx.kt` — per-pid context inside a scheduler (epoch + ignitor fork).
-- `voices/strip/BlockContext.kt`, `BlockRenderer.kt`, `EnvelopeCalc.kt`: the per-block stage framework (the
+- `voices/strip/BlockContext.kt`, `BlockRenderer.kt`: the per-block stage framework (the
   package keeps its name; the filter/VCA strip retired in phase 3 step 9, 2026-09-27).
 - `voices/TeardownFadeRenderer.kt`: the fade after a tree for which `BuiltIgnitor.endsInEnvelope` is false.
-- `voices/strip/pitch/` — `PitchPipelineBuilder`, `Vibrato`, `Accelerate`, `Fm`, `PitchEnvelope`.
+- `voices/strip/pitch/`: `PitchPipelineBuilder`, an empty shell since pitch pipeline step 4 (every pitch door is a `classic()` stage; step 5 removes it).
 - `voices/strip/ignite/IgniteRenderer.kt` — runs the Ignitor into the buffer.
 - `voices/strip/send/SendRenderer.kt`: pans + sums the voice into its cylinder (the `Cylinders.offer` / `checkIn` routing seam).
 

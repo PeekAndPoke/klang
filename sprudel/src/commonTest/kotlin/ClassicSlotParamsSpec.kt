@@ -36,6 +36,7 @@ import io.peekandpoke.klang.sprudel.lang.tremolo
 import io.peekandpoke.klang.sprudel.lang.vib
 import io.peekandpoke.klang.sprudel.lang.vibrato
 import io.peekandpoke.klang.sprudel.lang.accelerate
+import io.peekandpoke.klang.sprudel.lang.fm
 
 /**
  * Sprudel's voice doors on the wire, as `classic()` slot keys (phase 3 step 8, `classicSlotParams`): one row per
@@ -124,6 +125,14 @@ class ClassicSlotParamsSpec : StringSpec({
         slots(note("c").accelerate(Double.NaN)) shouldBe emptyMap()
     }
 
+    "the fm alone is a voice door, and its switch travels only when set: a ratio or an envelope alone switches nothing on" {
+        // Pitch pipeline step 4: `fm` left the typed wire fields for `classic()`'s `fm.*` slots. An event whose only door
+        // is the fm takes the writer path (not the door-less early return).
+        slots(note("c").fm(300, 1.4)) shouldBe mapOf("fm.depth" to 300.0, "fm.ratio" to 1.4)
+        slots(note("c").fm(ratio = 2, release = 0.3)) shouldBe mapOf("fm.ratio" to 2.0, "fm.release" to 0.3)
+        slots(note("c").fm(Double.NaN, 2)) shouldBe mapOf("fm.ratio" to 2.0)
+    }
+
     "names travel as their catalogue index, a flag as 1.0 or 0.0" {
         slots(note("c").distort(0.3, "tube"))["distort.shape"] shouldBe 10.0
         slots(note("c").distort(0.3, "no-such-shape"))["distort.shape"] shouldBe 0.0
@@ -156,6 +165,7 @@ class ClassicSlotParamsSpec : StringSpec({
                 .begin(0.11).end(0.91).speed(2.1).loop()
                 .penv(7.1, 0.061, 0.062, 0.63, 0.064).penvCurves("exponential", "linear", "square")
                 .vibrato(5.1, 0.71).accelerate(0.51)
+                .fm(301, 1.41, 0.071, 0.072, 0.73, 0.074)
         )
 
         written shouldBe mapOf(
@@ -182,6 +192,7 @@ class ClassicSlotParamsSpec : StringSpec({
             "penvCurves.attack" to 5.0, "penvCurves.decay" to 0.0, "penvCurves.release" to 1.0,
             "vibrato.rate" to 5.1, "vibrato.semitones" to 0.71,
             "accelerate" to 0.51,
+            "fm.depth" to 301.0, "fm.ratio" to 1.41, "fm.attack" to 0.071, "fm.decay" to 0.072, "fm.sustain" to 0.73, "fm.release" to 0.074,
         )
 
         val placed = mutableListOf<IgnitorDsl.Param>()

@@ -7,15 +7,17 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.ignitor.toExciter
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.fm
+import kotlin.random.Random
 
 /**
  * Tests specific to SynthVoice implementation.
@@ -56,36 +58,6 @@ class SynthVoiceTest : StringSpec({
 
         ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
         ctx.voiceBuffer[9] shouldBe (0.9 plusOrMinus 0.01)
-    }
-
-    "SynthVoice passes pitch modulation to signal" {
-        var receivedPhaseMod: DoubleArray? = null
-
-        val trackingSignal: Ignitor = object : Ignitor {
-            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-                receivedPhaseMod = ctx.phaseMod
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) buffer[i] = 1.0
-            }
-        }
-
-        // The strip's one door left (FM; the vibrato and accelerate are `classic()` stages since pitch pipeline
-        // steps 2 and 3).
-        val voice = createSynthVoice(
-            signal = trackingSignal,
-            fm = Voice.Fm(
-                ratio = 2.0,
-                depth = 100.0,
-                envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0),
-            ),
-        )
-
-        val ctx = createContext()
-        voice.render(ctx)
-
-        // Signal should receive pitch modulation (non-null DoubleArray)
-        receivedPhaseMod.shouldNotBeNull()
-        receivedPhaseMod!!.size shouldBeGreaterThanOrEqual ctx.blockFrames
     }
 
     "SynthVoice without pitch modulation passes null to signal" {
@@ -141,7 +113,7 @@ class SynthVoiceTest : StringSpec({
         val voice = createSynthVoice(
             signal = TestIgnitors.constant,
             blockFrames = 100,
-            envelope = Voice.Envelope(
+            envelope = TestEnvelope(
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
@@ -164,15 +136,13 @@ class SynthVoiceTest : StringSpec({
     }
 
     "SynthVoice with all modulations renders correctly" {
+        // The FM in the tree, as `classic()`'s FM stage places it for sprudel's `fm` since pitch pipeline step 4.
         val voice = createSynthVoice(
-            signal = TestIgnitors.constant,
+            signal = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0))
+                .fm(modulator = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0)), ratio = 2.0, depth = 100.0)
+                .toExciter(random = Random(1)),
             freqHz = 440.0,
-            fm = Voice.Fm(
-                ratio = 2.0,
-                depth = 100.0,
-                envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)
-            ),
-            envelope = Voice.Envelope(
+            envelope = TestEnvelope(
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,

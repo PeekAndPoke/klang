@@ -14,9 +14,9 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 /**
  * `classic()`'s STRUCTURE and its SLOT VOCABULARY (phase 3 step 5), pinned where they are written.
  *
- * The order: the pitch envelope on the source (pitch pipeline step 1), then the strip's
+ * The order: the pitch stages on the source (pitch pipeline steps 1 to 4), then the strip's
  * (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 4) behind the pattern's onepole (the first
- * amplitude stage since step 10): penv, accelerate, vibrato, onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
+ * amplitude stage since step 10): fm, penv, accelerate, vibrato, onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
  * tremolo, adsr. The slot table below is the contract step 8 built
  * on (sprudel's `toVoiceData` writes exactly these keys, `classicSlotParams`), so a renamed key or a moved
  * default is a red row here before it is a silent door anywhere else. What the tail RENDERS is pinned in
@@ -48,16 +48,25 @@ class ClassicTailSpec : StringSpec({
                 is IgnitorDsl.Vibrato -> n.inner
                 is IgnitorDsl.Accelerate -> n.inner
                 is IgnitorDsl.OnePoleLowpass -> n.inner
+                is IgnitorDsl.Fm -> n.carrier
                 else -> return@buildList
             }
         }
     }
 
-    "the order: the pitch stages on the source, then the strip's behind the onepole: penv, accelerate, vibrato, onepole, crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
+    "the order: the pitch stages on the source, then the strip's behind the onepole: fm, penv, accelerate, vibrato, onepole, crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
         spine(tail).map { it::class.simpleName } shouldBe listOf(
-            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Vibrato", "Accelerate", "PitchEnvelope", "Saw",
+            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Vibrato", "Accelerate", "PitchEnvelope", "Fm", "Saw",
         )
         spine(tail).last() shouldBe saw
+    }
+
+    "the FM stage's modulator is a sine at analog 0 on the note (the strip's modulator never drifted)" {
+        val fm = spine(tail).filterIsInstance<IgnitorDsl.Fm>().single()
+
+        // An unset `Sine` would read the `analog` slot and drift with the voice's analog.
+        fm.modulator shouldBe IgnitorDsl.Sine(freq = IgnitorDsl.Freq, analog = IgnitorDsl.Constant(0.0))
+        fm.freq shouldBe IgnitorDsl.Freq
     }
 
     "the distort stage is the fused Distort node, the one that switches drive and shape off as a unit" {
@@ -101,6 +110,14 @@ class ClassicTailSpec : StringSpec({
         // literal here: Exponential, the same index as the amplitude default today, a separate decision.
         val modExp = AdsrCurves.indexOf(AdsrCurve.Exponential)
         val expected: List<Pair<String, Double>> = listOf(
+            // The FM (pitch pipeline step 4), innermost: the ratio at the strip's default, the depth (the switch) at 0.0,
+            // off, the depth envelope's stages at the Ignitor node's defaults, which run no envelope.
+            "fm.ratio" to 1.0,
+            "fm.depth" to 0.0,
+            "fm.attack" to 0.0,
+            "fm.decay" to 0.0,
+            "fm.sustain" to 1.0,
+            "fm.release" to 0.0,
             // The pitch envelope (pitch pipeline step 1): its switch defaults to 0.0 (off), its stages to the Ignitor
             // node's defaults, its curves to the modulation envelopes' curve.
             "penv.semitones" to 0.0,

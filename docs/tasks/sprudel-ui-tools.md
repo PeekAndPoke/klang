@@ -75,9 +75,9 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 
 | #  | DSL Function                               | Proposed Editor                  | Format / UI Idea                                                                                   |
 |----|--------------------------------------------|----------------------------------|----------------------------------------------------------------------------------------------------|
-| 25 | `fm(h = ...)`                                    | `SprudelFmHarmonicityEditorTool` | numeric slider with harmonic ratio presets                                                         |
-| 26 | `fm(env = ...)`                         | `SprudelFmEnvEditorTool`         | numeric slider (0–5000 Hz depth)                                                                   |
-| 27 | `fm(attack = ...)` / `fm(decay = ...)` / `fm(sustain = ...)` | reuse `SprudelNumericEditorTool` | individual ADSR component sliders                                                                  |
+| 25 | `fm(ratio = ...)`                                | `SprudelFmRatioEditorTool`       | numeric slider with harmonic ratio presets                                                         |
+| 26 | `fm(depth = ...)`                       | `SprudelFmDepthEditorTool`       | numeric slider (0–5000 Hz depth)                                                                   |
+| 27 | `fm(attack = ...)` / `fm(decay = ...)` / `fm(sustain = ...)` / `fm(release = ...)` | reuse `SprudelNumericEditorTool` | individual ADSR component sliders                                                                  |
 | 28 | `unison()` / `uni()`                       | `SprudelUnisonEditorTool`        | integer picker (1–8 voices)                                                                        |
 | 29 | ~~`detune()`~~ **OBSOLETE**                | —                                | `detune()` renamed to `unison(spread = ...)` (unison freq-spread); the freq-spread editor is now #39's sibling |
 | 30 | `transpose()`                              | `SprudelTransposeEditorTool`     | semitone slider (-24 to +24)                                                                       |

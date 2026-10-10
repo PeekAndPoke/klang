@@ -10,16 +10,16 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
+import io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.fmModIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.vibratoModIgnitor
 import io.peekandpoke.klang.audio_be.utils.TWO_PI
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
-import io.peekandpoke.klang.audio_be.voices.strip.pitch.FmRenderer
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -34,6 +34,9 @@ private val testRandom = Random(0x5EED)
  * full wrap when one increment is a whole period or more (a rate or a modulator past the sample
  * rate, raw-Motor, either sign). Before, the FM modulator wrapped at block end only, and the
  * vibrato LFOs never wrapped a negative rate at all, which the library sine tolerated.
+ *
+ * The FM rows render the Ignitor `fm` node over a sine modulator at `analog` 0, the shape `classic()`'s FM stage
+ * places for sprudel's `fm` since pitch pipeline step 4 (they rendered the voice strip's `FmRenderer` until then).
  */
 class ModulatorPhaseWrapSpec : StringSpec({
 
@@ -41,37 +44,37 @@ class ModulatorPhaseWrapSpec : StringSpec({
     val blockFrames = 128
     val freqHz = 440.0
 
-    fun stripCtx(): BlockContext = BlockContext(
-        audioBuffer = AudioBuffer(blockFrames),
-        freqModBuffer = DoubleArray(blockFrames),
-        scratchBuffers = ScratchBuffers(blockFrames),
-        sampleRate = sampleRate,
-        limits = VoiceLimits(startFrame = 0.0, gateEndFrame = 500_000.0, endFrame = 1_000_000.0),
-    )
-
-    /**
-     * Renders [blocks] blocks of the strip renderer into one array of pitch multipliers. With
-     * [multiplyIn] the buffer arrives already written (all ones), so the renderer takes its
-     * multiply-in loop instead of its write loop.
-     */
-    fun renderStrip(blocks: Int, multiplyIn: Boolean = false, render: (BlockContext) -> Unit): DoubleArray {
-        val ctx = stripCtx()
+    /** Renders [blocks] blocks of the pitch mod [mod] into one array of ratios, the gate far past the render. */
+    fun renderMod(mod: Ignitor, blocks: Int): DoubleArray {
+        val ctx = IgniteContext(
+            sampleRate = sampleRate, voiceDurationFrames = 500_000, gateEndFrame = 500_000,
+            scratchBuffers = ScratchBuffers(blockFrames),
+            random = testRandom,
+        )
+        val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(blocks * blockFrames)
 
         repeat(blocks) { b ->
-            ctx.blockStart = (b * blockFrames).toDouble()
             ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
-            ctx.freqModBufferWritten = multiplyIn
-            ctx.freqModBuffer.fill(1.0)
-            render(ctx)
+            ctx.voiceElapsedFrames = b * blockFrames
+            mod.generate(buf, freqHz, ctx)
 
             for (i in 0 until blockFrames) {
-                out[b * blockFrames + i] = ctx.freqModBuffer[i]
+                out[b * blockFrames + i] = buf[i]
             }
         }
 
         return out
     }
+
+    /** The fm node as `classic()` places it: a sine modulator at `analog` 0. */
+    fun fm(ratio: Double, depth: Double, decay: Double = 0.0, sustain: Double = 1.0): Ignitor = fmModIgnitor(
+        modulator = Ignitors.sine(analog = ParamIgnitor("analog", 0.0)),
+        ratio = ParamIgnitor("ratio", ratio),
+        depth = ParamIgnitor("depth", depth),
+        decay = ParamIgnitor("decay", decay),
+        sustain = ParamIgnitor("sustain", sustain),
+    )
 
     /**
      * Every sample finite and inside `[lo, hi]`, and the run actually MODULATES: a modulator
@@ -107,39 +110,40 @@ class ModulatorPhaseWrapSpec : StringSpec({
     "the FM modulator matches a library-sine accumulator across many blocks" {
         // A bright ratio (2 : 1 at 440 Hz gives 0.115 rad per sample, 14.7 rad per block, well
         // past the fold): without a per-sample wrap the polynomial would leave its fold inside
-        // the first block. The reference is the old formula with kotlin.math.sin.
+        // the first block. The reference is the FM law with kotlin.math.sin.
         //
         // The envelope decays from 1 to a sustain of 0.4 over the first 40 blocks, so the row also pins that the
-        // envelope's level, read at each block's start, scales the depth (the FM envelope rows of
-        // `FmSynthesisTest`, which only asked "more or less than", moved here as this exact oracle, 2026-09-27).
-        val fm = Voice.Fm(ratio = 2.0, depth = 200.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 40.0 * blockFrames, sustainLevel = 0.4, releaseFrames = 0.0))
-        val renderer = FmRenderer(fm, freqHz, sampleRate)
+        // envelope's level scales the depth PER SAMPLE (the strip held it per block until pitch pipeline step 4,
+        // ledger E11), on the exponential curve every modulation envelope has unwritten (decision D3).
+        val ratio = 2.0
+        val depth = 200.0
+        val decayFrames = 40.0 * blockFrames
+        val sustain = 0.4
         val blocks = 200
-        val out = renderStrip(blocks) { renderer.render(it) }
-        val modInc = TWO_PI * freqHz * fm.ratio / sampleRate
+        val out = renderMod(fm(ratio = ratio, depth = depth, decay = decayFrames / sampleRate, sustain = sustain), blocks)
+        val modInc = TWO_PI * freqHz * ratio / sampleRate
+
+        fun expShape(x: Double): Double = (exp(3.0 * x) - 1.0) / (exp(3.0) - 1.0)
+
         var phase = 0.0
         var worst = 0.0
 
-        repeat(blocks) { b ->
-            val level = calculateControlRateEnvelope(env = fm.envelope, blockStart = (b * blockFrames).toDouble(), startFrame = 0.0, gateEndFrame = 500_000.0, core = EnvelopeCore())
+        for (p in out.indices) {
+            val level = if (p < decayFrames) sustain + (1.0 - sustain) * expShape(1.0 - p / decayFrames) else sustain
+            val expected = 1.0 + sin(phase) * depth * level / freqHz
 
-            for (i in 0 until blockFrames) {
-                val expected = 1.0 + sin(phase) * fm.depth * level / freqHz
-
-                worst = maxOf(worst, abs(out[b * blockFrames + i] - expected))
-                phase += modInc
-            }
+            worst = maxOf(worst, abs(out[p] - expected))
+            phase += modInc
         }
 
-        withClue("worst deviation from the library-sine FM multiplier") { worst shouldBeLessThan 1e-9 }
+        withClue("worst deviation from the library-sine FM ratio") { worst shouldBeLessThan 1e-9 }
     }
 
     "an FM modulator past the sample rate stays a bounded multiplier, in either sign" {
         for (ratio in listOf(200.0, -200.0)) {
-            val fm = Voice.Fm(ratio = ratio, depth = 200.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0))
-            val renderer = FmRenderer(fm, freqHz, sampleRate)
-            val out = renderStrip(100) { renderer.render(it) }
-            val swing = fm.depth / freqHz
+            val depth = 200.0
+            val out = renderMod(fm(ratio = ratio, depth = depth), 100)
+            val swing = depth / freqHz
 
             assertModulatesWithin(out = out, lo = 1.0 - swing - 1e-9, hi = 1.0 + swing + 1e-9, spans = false, clue = "fm ratio $ratio")
         }

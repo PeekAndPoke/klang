@@ -12,7 +12,6 @@ import io.peekandpoke.klang.audio_be.utils.fadeToZero
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
-import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
@@ -576,24 +575,6 @@ class Voice(
         // Absolute backend frame — Double, see RenderClock.cursorFrame.
         var blockStart: Double = 0.0
     }
-
-    class Fm(
-        val ratio: Double,
-        val depth: Double,
-        val envelope: Envelope,
-        var modPhase: Double = 0.0,
-    )
-
-    /** A modulation envelope of the voice's pitch pipeline (the FM index), in frames. */
-    class Envelope(
-        val attackFrames: Double,
-        val decayFrames: Double,
-        val sustainLevel: Double,
-        val releaseFrames: Double,
-        val attackCurve: AdsrCurve = AdsrCurve.Default,
-        val decayCurve: AdsrCurve = AdsrCurve.Default,
-        val releaseCurve: AdsrCurve = AdsrCurve.Default,
-    )
 
     companion object {
         // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain

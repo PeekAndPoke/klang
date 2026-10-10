@@ -108,8 +108,12 @@ of gating a pitch arm, all pinned in `IgnitorGateSpec`; no corpus song writes a 
 **One qualification of "the tree without the node".** A gated arm builds nothing, but a build-time WALK over the DSL
 still sees its knobs: the detune fold predicate (`usesMusicalFreq`) reads a gated fm's `freq = Freq` and its modulator,
 so `noise.fm(Sine(), depth = 0).detune(7) + noise` forks the noise where `noise.detune(7) + noise` folds and shares it.
-Gated and ungated agree there (it is not a fold violation); reachable at scale only if a `Detune` ever sits above
-`classic()`'s fm (step 4).
+Gated and ungated agree there (it is not a fold violation). Since pitch pipeline step 4 `classic()` places an fm
+innermost on every instrument, gated off unless `fm.depth` is written, so the walk sees a `Freq` reader in every
+`classic()` tree: a tree with no pitched source (a noise or dust instrument) under an authored `Detune` above its
+`classic()` (`x.classic().detune(7) + x.classic()`) now forks where it folded before. No built-in and no corpus song
+has that shape (the built-ins end in `classic()`; the step 4 corpus run is identical). Below it, a memo over a
+non-pitched `classic()` tree keeps its freq key where it dropped it, which renders the same at one pitch.
 
 **The gate is also the NaN guardrail.** `SLOT_UNSET` is NaN and the `Param` leaf hands back its
 DEFAULT for a non-finite override, so a slot whose default IS the sentinel resolves to NaN. For a

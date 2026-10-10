@@ -454,8 +454,8 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 
 | Function           | Aliases | Description          | Example                                |
 |--------------------|---------|----------------------|----------------------------------------|
-| `fm(env, h, attack, decay, sustain)`                                   |            | FM: modulation depth in Hz, harmonicity (modulator to carrier ratio), and the modulation envelope; active once `env` and `h` are set                   | `note("c3").s("sine").fm(300, 1.4, 0.01, 0.3, 0)`                                                    |
-| `fm.env` / `fm.h` / `fm.attack` / `fm.decay` / `fm.sustain`            |            | Read an FM slot; `fm(h = mul(2))` maps one slot                                                                                                        | `p.fm(200, 2).fm(env = mul("1 3"))`                                                                  |
+| `fm(depth, ratio, attack, decay, sustain, release)`                   |            | FM: modulation depth in Hz, the modulator's ratio to the note, and the depth envelope; active once `depth` is set (not 0). With every stage at its default (attack 0, decay 0, sustain 1 or more, release 0) no envelope runs and the depth holds through the release tail. Fills `classic()`'s FM stage | `note("c3").s("sine").fm(300, 1.4, 0.01, 0.3, 0)`                                                    |
+| `fm.depth` / `fm.ratio` / `fm.attack` / `fm.decay` / `fm.sustain` / `fm.release` |            | Read an FM slot; `fm(ratio = mul(2))` maps one slot                                                                                                    | `p.fm(200, 2).fm(depth = mul("1 3"))`                                                                |
 
 ### Pitch Envelope (via pattern params)
 

@@ -595,6 +595,11 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || fm != null) fmOrNew().fmEnv = v
         }
+    var fmRelease: Double?
+        get() = fm?.fmRelease
+        set(v) {
+            if (v != null || fm != null) fmOrNew().fmRelease = v
+        }
 
     var distort: Double?
         get() = distortion?.distort
@@ -921,14 +926,9 @@ data class SprudelVoiceData(
             // and one copy here replaces the one-per-slot copies the doors used to make.
             // The voice doors travel as slot keys in this bag (`classicSlotParams`, phase 3 step 8); their typed
             // wire fields left in phase 3 step 9, the pitch envelope's in pitch pipeline step 1, the vibrato's in step 2,
-            // `accelerate` in step 3.
+            // `accelerate` in step 3, the FM's in step 4.
             ignitorParams = classicSlotParams(),
             katalystParams = katalystParams?.toMap(),
-            fmh = fmh,
-            fmAttack = fmAttack,
-            fmDecay = fmDecay,
-            fmSustain = fmSustain,
-            fmEnv = fmEnv,
             cylinder = cylinder,
             pan = pan,
             cut = cut,

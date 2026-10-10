@@ -16,8 +16,11 @@ import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ModApplyingIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.fmModIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.times
 import io.peekandpoke.klang.audio_be.voices.Voice.State
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
@@ -48,7 +51,7 @@ class VoiceLifecycleSpec : StringSpec({
         gate: Double,
         end: Double,
         cull: Double? = VOICE_CULL_NEVER,
-        envelope: Voice.Envelope? = null,
+        envelope: TestEnvelope? = null,
     ): Voice = createVoice(
         startFrame = start, gateEndFrame = gate, endFrame = end,
         sampleRate = sampleRate, blockFrames = blockFrames, cull = cull, envelope = envelope,
@@ -130,7 +133,7 @@ class VoiceLifecycleSpec : StringSpec({
 
     "culled: Done at the end of the release block that completes the cull window, never inside the gate" {
         // Silent 10 ms (480 frames) into a 1280-frame gate; the cull window is 0.008 s = 384 frames = 3 blocks.
-        val percussive = Voice.Envelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
+        val percussive = TestEnvelope(attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = 4096.0)
         val v = voice(start = 0.0, gate = 1280.0, end = 5376.0, cull = 0.008, envelope = percussive)
 
         var start = 0.0
@@ -591,11 +594,10 @@ class VoiceLifecycleSpec : StringSpec({
 
     "a realtime note-off reaches every gate consumer through the voice's limits: it renders what a voice scheduled with that gate renders" {
         // Every gate consumer at once (step 2, "amendment A1"): the ignitor door's own envelope and the tree's pitch
-        // envelope (sprudel's `penv` since pitch pipeline step 1; both read the voice-relative gate the ignite stage
-        // derives per block), the strip's FM envelope (it reads the limits through the block context), the state
-        // (Releasing) and the end (the render window). The source echoes the pitch modulation (the product of the
-        // pitch envelope and the FM multiplier), and the tree's own linear envelope scales it, so the output carries
-        // all three gate readers.
+        // envelope (sprudel's `penv` since pitch pipeline step 1) and the tree's FM index envelope (sprudel's `fm` since
+        // step 4; all three read the voice-relative gate the ignite stage derives per block), the state (Releasing)
+        // and the end (the render window). The source echoes the pitch modulation (the product of the pitch envelope
+        // and the FM ratio), and the tree's own linear envelope scales it, so the output carries all three gate readers.
         // The voice-relative gate the ignitors saw on the last generate call (both voices share the echo; the
         // released voice renders second, so after its render this is its value).
         var seenGate = -1
@@ -615,22 +617,27 @@ class VoiceLifecycleSpec : StringSpec({
         val span = 2048.0
         val gate = 1024.0
 
-        // The pitch envelope in the tree, as `classic()` places it: a mod applied to the source. A fresh one per voice.
+        // The pitch envelope and the FM in the tree, as `classic()` places them: one mod applied to the source, the
+        // pitch envelope times the FM ratio. A fresh one per voice: the modulator phase lives on it. The FM is enveloped
+        // (sustain 0.5), so it reads the gate, and its release of 0 drops the depth to 0 there.
         fun pitchEnveloped(): Ignitor = ModApplyingIgnitor(
             inner = echo,
             mod = pitchEnvelopeModIgnitor(
                 attack = ParamIgnitor("a", 0.0), decay = ParamIgnitor("d", 0.0), release = ParamIgnitor("r", 1024.0 / sampleRate),
                 semitones = ParamIgnitor("st", 12.0), sustain = ParamIgnitor("s", 1.0),
                 attackCurve = lin, decayCurve = lin, releaseCurve = lin,
+            ) * fmModIgnitor(
+                modulator = Ignitors.sine(analog = ParamIgnitor("analog", 0.0)),
+                ratio = ParamIgnitor("ratio", 1.0),
+                depth = ParamIgnitor("depth", 100.0),
+                sustain = ParamIgnitor("sustain", 0.5),
             ),
         )
 
         fun withGate(scheduledGate: Double): Voice = createVoice(
             startFrame = 0.0, gateEndFrame = scheduledGate, endFrame = scheduledGate + span,
             sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER, signal = pitchEnveloped(),
-            envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = span, attackCurve = lin, decayCurve = lin, releaseCurve = lin),
-            // A fresh FM per voice: the modulator phase lives on it.
-            fm = Voice.Fm(ratio = 1.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)),
+            envelope = TestEnvelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = span, attackCurve = lin, decayCurve = lin, releaseCurve = lin),
         )
 
         val reference = withGate(gate)

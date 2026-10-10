@@ -52,5 +52,13 @@ its one modulator serves one pitch. The shape is an fm whose carrier holds TWO p
 - **Out of scope for now:** a sprudel door over a built-in (`s("sgpad").fm(...)`, the classic FM stage above sgpad's
   detune) stays quiet; the maintainer: "one of the things we can only really decide once they happen to us outside the
   lab on a real song."
+- **Skip `classic()`'s own FM stage** (an fm whose depth is a slot, `fm.depth`; pitch pipeline step 4 review round 1,
+  A5). Since step 4 every `classic()` tree carries that fm innermost, gated off unless a pattern writes `fm.depth`, so
+  a static walk would flag every authored instrument with a forking detune that ends in `.classic()`
+  (`(x + x.detune(7)).classic()`) even when no pattern ever writes `fm`, an error the author cannot fix. The shape is
+  real when a pattern does write it (reviewer B, step 4 round 1: `s("sgpad").fm(150, 1.5)` is block-size dependent, +2.8
+  dB between blocks of 128 and 64 frames, ledger E8, and at 128 frames the pad loses its pitch: 95 percent of the
+  energy off the f/2 grid), so the build-time half is the place for it (the gate knows the written depth), not the
+  static walk; today the built-in `sgpad` is the only built-in with a forking detune under `classic()`.
 - Design the diagnostic surface once, since more will follow (the planned "declares no slot" one in
   `docs/plans/signal-flow-redesign.md`).

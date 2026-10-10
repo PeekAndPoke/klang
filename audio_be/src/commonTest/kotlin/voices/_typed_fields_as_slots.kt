@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 
 /**
  * TEST ONLY. The voice-door settings a spec states in typed form: the shape `VoiceData` carried as typed fields until
- * phase 3 step 9 cut them (the pitch envelope's until pitch pipeline step 1, the vibrato's until step 2, accelerate until step 3) (a voice door travels as `classic()` slot keys in `ignitorParams` since step 8). Specs that
+ * phase 3 step 9 cut them (the pitch envelope's until pitch pipeline step 1, the vibrato's until step 2, accelerate until step 3, the FM's until step 4) (a voice door travels as `classic()` slot keys in `ignitorParams` since step 8). Specs that
  * read more clearly as "a lowpass at 900 with an envelope" than as a list of slot keys state their settings here and
  * send them through [withClassicSlots], which writes the same key names, units and on/off rules as sprudel's
  * `classicSlotParams`. Three differences are deliberate and inaudible: the rig always writes `passes` (default 1.0)
@@ -27,6 +27,7 @@ data class DoorFields(
     val vibratoRate: Double? = null,
     val vibratoSemitones: Double? = null,
     val accelerate: Double? = null,
+    val fm: DoorFm? = null,
     val penv: DoorPenv? = null,
     val filters: List<DoorFilter> = emptyList(),
     val adsr: DoorAdsr? = null,
@@ -57,6 +58,19 @@ data class DoorPenv(
     val attackCurve: AdsrCurve? = null,
     val decayCurve: AdsrCurve? = null,
     val releaseCurve: AdsrCurve? = null,
+)
+
+/**
+ * TEST ONLY. The FM of a [DoorFields] (sprudel's `fm`): the switch [depth] in Hz, the [ratio], the depth envelope's four
+ * stages. Written as sprudel writes it: every field that is set.
+ */
+data class DoorFm(
+    val depth: Double? = null,
+    val ratio: Double? = null,
+    val attack: Double? = null,
+    val decay: Double? = null,
+    val sustain: Double? = null,
+    val release: Double? = null,
 )
 
 /** TEST ONLY. The voice envelope of a [DoorFields]: the four stages, their curves, and the `adsr.on` switch. */
@@ -127,6 +141,15 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
     put(s.vibrato.rate, doors.vibratoRate)
     put(s.vibrato.semitones, doors.vibratoSemitones)
     put(s.accelerate, doors.accelerate)
+
+    doors.fm?.let { f ->
+        put(s.fm.depth, f.depth)
+        put(s.fm.ratio, f.ratio)
+        put(s.fm.attack, f.attack)
+        put(s.fm.decay, f.decay)
+        put(s.fm.sustain, f.sustain)
+        put(s.fm.release, f.release)
+    }
 
     doors.penv?.let { e ->
         put(s.penv.semitones, e.semitones)

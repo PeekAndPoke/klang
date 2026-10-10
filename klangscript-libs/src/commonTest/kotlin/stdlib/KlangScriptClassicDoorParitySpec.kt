@@ -38,6 +38,8 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
 
     /** Every classic slot: its script path and the Kotlin object it must be. */
     val slots: List<Pair<String, IgnitorDsl>> = listOf(
+        "fm.ratio" to s.fm.ratio, "fm.depth" to s.fm.depth, "fm.attack" to s.fm.attack, "fm.decay" to s.fm.decay,
+        "fm.sustain" to s.fm.sustain, "fm.release" to s.fm.release,
         "vibrato.rate" to s.vibrato.rate, "vibrato.semitones" to s.vibrato.semitones,
         "accelerate" to s.accelerate,
         "penv.semitones" to s.penv.semitones, "penv.attack" to s.penv.attack, "penv.decay" to s.penv.decay,
