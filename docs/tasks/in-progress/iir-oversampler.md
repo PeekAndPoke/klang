@@ -19,6 +19,11 @@ samples) is what `parallel` has to pad.
 - **Low latency** matters (O7): a plain `plus` of a clean and an oversampled path should not comb.
 - **The kernel: a polyphase IIR half-band** (all-pass based), chosen over first-order ADAA alone, which at 48 kHz
   dulls the top more than today (measured: -2 dB at 10 kHz, -6 dB at 16 kHz, -11.7 dB at 20 kHz on a quiet sine).
+- **The IIR is the standard for now, other methods come later as types** (maintainer, after the measurements: 8
+  coefficients for the first 2x stage, flat to 0.00 dB, about 100 dB alias rejection, 3.1 / 4.0 / 4.4 samples of
+  latency at 2x / 4x / 8x against today's 4.0 / 5.5 / 6.25; its delay rises toward the top, 3.1 at 1 kHz to 4.7 at
+  20 kHz at 2x, so an equal-level clean branch in `parallel` or `bands` dips by about 4 dB around 16 to 20 kHz; a
+  linear-phase FIR with a constant delay is the later type for that case).
 - **ADAA later, as a "type"** of the oversample DSL (with the oversampling regions), where it pairs with oversampling.
 - **No DSL change now** (the other agent's DSL work must not be crossed): the `oversample` knobs stay as they are.
 - Files owned while this runs (agreed with the engine follow-ups coordinator, 2026-10-10): `Oversampler.kt`,
