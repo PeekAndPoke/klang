@@ -137,16 +137,16 @@ Two laws, two words (decision D8, maintainer 2026-10-09):
 | Node                     | Law, per sample                     | Unit                                     | Notes                                                                                     |
 |--------------------------|-------------------------------------|------------------------------------------|-------------------------------------------------------------------------------------------|
 | `pitchModSemitones(mod)` | `2^(mod / 12)`                      | semitones: 12 an octave up, 0 the note   | the exponential law as a primitive, any signal (pitch pipeline 7a); gated off at a literal 0 or non-finite mod |
-| `vibrato(rate, semitones)` | `2^(sin * semitones / 12)`        | semitones                                | an LFO built in; gated off at a finite leaf depth `<= 0`                                   |
+| `vibrato(rate, semitones)` | `2^((sin * max(semitones, 0)) / 12)` | semitones                             | composed since 7b: `pitchModSemitones(sine(rate, analog = 0) * max(semitones, 0))`, the depth per sample; gated off at a finite leaf depth `<= 0`; edges: `off-values.md` |
 | `accelerate(semitones)`  | `2^(semitones * progress / 12)`     | semitones                                | progress 0 at the onset, 1 at the gate, then held                                          |
 | `pitchEnvelope(semitones)` | `2^(semitones * level / 12)`      | semitones                                | the envelope law's level                                                                   |
 | `pitchMod(mod)`          | `1 + mod`                           | a deviation: 1.0 an octave up, -1.0 stops | the LINEAR law, FM's                                                                      |
 | `fm(modulator, ratio, depth)` | `1 + modulator * depth / freq` | Hz (`depth`)                             | the linear law with the index envelope                                                     |
 
-`pitchModSemitones`, `vibrato` and `pitchEnvelope` compute the ratio with `fastExp2`, `accelerate` with a `pow` seed
-per block and a multiply per sample; all four pass it through `safeOut`, so past about 598 semitones it holds at
-`SAFE_MAX`. The knobs of `vibrato`, `accelerate` and `pitchEnvelope` read a non-finite value as unset first
-(`finiteOr`). `pitchModSemitones` gates a non-finite LITERAL mod (the bare voice); a non-finite SAMPLE of a signal mod reaches
+`pitchModSemitones`, `vibrato` (through it) and `pitchEnvelope` compute the ratio with `fastExp2`, `accelerate` with
+a `pow` seed per block and a multiply per sample; all four pass it through `safeOut`, so past about 598 semitones it
+holds at `SAFE_MAX`. The knobs of `accelerate` and `pitchEnvelope` read a non-finite value as unset first
+(`finiteOr`). The vibrato's non-finite reads: the `vibrato` row of `audio/ref/off-values.md`. `pitchModSemitones` gates a non-finite LITERAL mod (the bare voice); a non-finite SAMPLE of a signal mod reaches
 `safeOut`: NaN and -Infinity read as the ratio 0 (the source holds still, a saw renders a DC, as with FM's modulator),
 +Infinity as `SAFE_MAX`
 (`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2 holds the open question for signals). `pitchMod`
@@ -163,6 +163,15 @@ Nesting composes the products: the ratio a source reads under `x.a().b()` (b out
 ratio the left factor of one multiply per level (`combineMods`: `existing * newMod`), so three levels read
 `(outer * middle) * inner`. Guards: `PitchModSemitonesSpec` (the oracle, `2^(x / 12)` computed in the spec, with
 `pitchMod` and `vibrato` above and below), `PitchModSafetyTest`, `FmModulatorFollowsPitchSpec`.
+
+**The vibrato is a composition** (pitch pipeline 7b, the tremolo's pattern): the node and its doors stay, the runtime
+arm builds `pitchModSemitones(sine(rate, analog = 0) * max(semitones, 0))` from the runtime's own pieces
+(`vibratoModIgnitor`), the LFO shielded from pitch mods like the tremolo's. Against the node it replaced: the depth is
+read PER SAMPLE where the node read it once per block (a signal depth only; sprudel's `vib` depth is a per-event
+constant), a constant depth is the old law to one rounding of the exponent (`(sin * d) / 12` against `sin * (d / 12)`,
+at most about two ulps of the ratio), and the LFO's sine draws a drift seed from the voice's random stream (next
+section). The rate is read once per block, as before. The edge rules (the floor, non-finite literals and samples, the
+dead branch): the `vibrato` row of `audio/ref/off-values.md`, their one home. Guard: `VibratoCompositionSpec`.
 
 ## FM: a pitch node means what it wraps
 
@@ -318,6 +327,12 @@ reorders the build changes songs with `analog > 0`.
   `nextDouble()` for the cutoff tolerance, then the drift lane's three draws (two doubles, one int). At `analog`
   at or below 0, or non-finite, nothing is drawn. A `passes` cascade draws once and shares the result. A second
   copy of a draw is a second reader of the stream, so `perVoiceCutoffOffsetMul` is one shared function.
+- **A composed stage adds oscillators, and a sine draws.** The sine oscillator builds its drift lane even at
+  `analog` 0 and seeds it from the stream on its first RENDERED block (three draws), so the tremolo's sine LFO and the
+  vibrato's (pitch pipeline 7b) shift every later generate-time draw of the voice: a supersaw's unison phases and
+  drift, a noise layer, any source at `analog > 0` render other dice (the same statistics). Measured on the corpus at
+  7b: from -1.0 dB (the frozen Stranger Things, a 9-voice supersaw at `analog(10)` under a 2-bit crush) to -27.7 dB
+  diff RMS; a voice without such a consumer is unchanged by it.
 - **Construction-time drawers**: `perlin`, `berlin`, `crackle` and the sample's `AnalogDrift` lane draw in a
   property initialiser; every other source captures the stream and draws when it renders. So build order reaches
   only these, and a gated-off stage (not built, `audio/ref/off-values.md`) also stops its sibling knob subtrees

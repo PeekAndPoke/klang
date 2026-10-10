@@ -613,7 +613,11 @@ object KlangScriptIgnitorExtensions {
     fun octaveDown(self: IgnitorDsl): IgnitorDsl =
         IgnitorDsl.Detune(inner = self, semitones = IgnitorDsl.Constant(-12.0))
 
-    /** Applies pitch vibrato: [rate] Hz LFO, [semitones] deep. */
+    /**
+     * Applies pitch vibrato: [rate] Hz LFO, [semitones] deep. A signal depth is followed sample by sample
+     * (`Ignitor.saw().vibrato(5, Ignitor.sine(0.5).mul(0.3).plus(0.3))` swells and fades); a depth at or below 0
+     * is no vibrato.
+     */
     @KlangScript.Method
     fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, semitones: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl())

@@ -103,6 +103,12 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
     `blockStartValue` every block): 0 to 48 bytes per block for a voice built from constants, varying per run.
     Nothing in the browser. A non-null `controlRateValue(freqHz): Double` beside `isBlockConstant` would remove it, if
     a JVM backend ever needs a render without allocation. Source: the record, "Found during tidy-up step 10". M.
+    **A second site** (pitch pipeline 7b, 2026-10-10): `binaryLadder`'s constant-operand read (`TimesIgnitor`'s
+    `b.controlRateValueOrNull`, here through `MaxIgnitor` and `ParamIgnitor`), measured with JFR as `Double.valueOf`
+    under the composed vibrato's `x * max(semitones, 0)` (the tremolo's floor has the same shape): `sgpad` plus a
+    vibrato allocated 72 to 96 bytes per block on the tree in the 9-run medians (HEAD 0 to 24), and 11.7 on average
+    in one long run of 2 million blocks on the tree; V8 none. The same remedy covers both sites
+    (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, 7b record).
 13. **The B4.5 orbit-side items**: `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
     `ScratchBuffers.oversample` looks its sub-pool up in a map per block (`getOrPut`; the first use per factor
     allocates, once per warehouse). Per orbit or per backend, not per voice. The resonators' part closed with step 12

@@ -128,7 +128,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   a lane per voice, and both endpoints are exact.
 - **Two pitch laws, two words** (decision D8, pitch pipeline 7a): `pitchModSemitones(mod)` is `2^(mod / 12)`, the law
   of `vibrato`, `accelerate` and `pitchEnvelope` as a primitive (`fastExp2`, `safeOut`); `pitchMod(mod)` is the linear
-  `1 + mod`, FM's law, raw. `pitchModSemitones` is gated at a literal 0 or non-finite mod, `pitchMod` is not
+  `1 + mod`, FM's law, raw. The `vibrato` node is composed from it since 7b (the tremolo's pattern):
+  `pitchModSemitones(sine(rate, analog = 0) * max(semitones, 0))`, the depth per sample; not bit-identical (one
+  rounding, and the sine's drift-seed draw shifts the voice's later dice); `audio/ref/voice-synthesis.md`, its edge
+  rules in the `vibrato` row of `audio/ref/off-values.md`. `pitchModSemitones` is gated at a literal 0 or non-finite mod, `pitchMod` is not
   (`audio/ref/off-values.md`); nesting multiplies, the outer ratio the left factor. The table:
   `audio/ref/voice-synthesis.md`, "The pitch nodes and their two laws".
 - **Oscillator phase** (`PhaseOffset`, `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): every periodic oscillator has a `phase`
@@ -296,6 +299,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 Pitch pipeline 7b: the `vibrato` node's runtime is a composition, `VibratoModIgnitor` gone; seven corpus
+  songs move, by the sine's rng draw (all seven), one rounding (five) and the per-sample depth (Die Kirschblüte):
+  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7b
 - 2026-10-10 Pitch pipeline 7a: `pitchModSemitones(mod)`, the exponential pitch primitive (`2^(mod / 12)`), a node on
   both doors and the wire beside the linear `pitchMod` (D8); the corpus identical:
   `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7a

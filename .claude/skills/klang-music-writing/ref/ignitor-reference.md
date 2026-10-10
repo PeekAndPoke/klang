@@ -472,7 +472,7 @@ detune, and sum them: `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
 | `.detune(semitones)`                                | Shift pitch by semitones                   |
 | `.octaveUp()`                                       | +12 semitones                              |
 | `.octaveDown()`                                     | -12 semitones                              |
-| `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
+| `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO; the depth may be a signal (followed sample by sample), at or below 0 no vibrato |
 | `.accelerate(semitones)`                            | Exponential pitch glide from the onset to the gate close, held through the release (12 = one octave) |
 | `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); the `adsr`'s own lambda shapes it with `curves` |
 | `.pitchModSemitones(mod)`                           | Pitch by any signal or number, in SEMITONES: `2^(mod / 12)` (12 = an octave up, 0 = the note) |

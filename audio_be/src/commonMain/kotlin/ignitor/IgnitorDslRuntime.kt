@@ -26,6 +26,8 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_EDGE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import kotlin.random.Random
 
@@ -392,9 +394,11 @@ internal fun IgnitorDsl.buildIgnitor(
                 return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
+            // A composition since pitch pipeline 7b (`vibratoModIgnitor`). Build order is rng draw order: rate, then
+            // semitones, as before.
             val vibMod = vibratoModIgnitor(
-                rate = this.rate.buildIgnitor(ignitorParams, cache).ignitor,
-                semitones = this.semitones.buildIgnitor(ignitorParams, cache).ignitor,
+                rate = this.rate.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RATE_HZ),
+                semitones = this.semitones.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_SEMITONES),
             )
             return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, vibMod, node = this))
         }
@@ -658,9 +662,10 @@ private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: Map<String, Double>?, c
  *
  * **Why the vibrato differs from the other four pitch arms.** The gate reads a non-finite knob as
  * unset, and for most gated stages unset IS off (`mul` and the envelope's `on` are the other two
- * exceptions, for their own reasons). The vibrato's runtime reads a non-finite
- * depth as unset too, but unset there is the node's DEFAULT depth (`VIBRATO_SEMITONES`, the
- * `finiteOr` rule in `PitchModFactories.kt`, stated once in `PitchModDefaults.kt`), not 0. So a
+ * exceptions, for their own reasons). The vibrato reads a non-finite literal
+ * depth as unset too, but unset there is the node's DEFAULT depth (`VIBRATO_SEMITONES`, stated once
+ * in `PitchModDefaults.kt`; since pitch pipeline 7b the arm substitutes it at build,
+ * [finiteLiteralOr], where the node it replaced read it per block with `finiteOr`), not 0. So a
  * non-finite depth renders a vibrato, and gating it off would change the sound instead of folding
  * a stage that writes exactly 1.0. Accelerate, the pitch envelope and FM read a non-finite switch
  * as 0, so for them [gatedOff]'s non-finite arm IS a fold. `pitchModSemitones` (7a) is off at a
@@ -677,6 +682,24 @@ private inline fun IgnitorDsl.gatedOffWhenFinite(
     val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
 
     return value.isFinite() && isOff(value)
+}
+
+/**
+ * A vibrato knob, built; a LITERAL ([IgnitorDsl.Param] or [IgnitorDsl.Constant] leaf) that is not finite builds the
+ * node's default [fallback] instead (pitch pipeline 7b). The vibrato read a non-finite rate or depth as its default
+ * before it was composed (`finiteOr`, once per block), and its gate keeps a non-finite literal depth BUILT for that
+ * reason ([gatedOffWhenFinite]); the composition reads its knobs per sample and has no such read, so the literal case
+ * keeps the default here, at build. A signal is built as it is (the edge rules: the `vibrato` row of
+ * `audio/ref/off-values.md`). Leaf-only, so asking draws nothing ([gatedOff]'s KDoc).
+ */
+private fun IgnitorDsl.finiteLiteralOr(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache, fallback: Double): Ignitor {
+    val literal = buildTimeKnobValue(ignitorParams, cache)
+
+    if (literal != null && !literal.isFinite()) {
+        return ConstantIgnitor(fallback)
+    }
+
+    return buildIgnitor(ignitorParams, cache).ignitor
 }
 
 /**

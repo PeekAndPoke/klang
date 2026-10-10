@@ -2214,9 +2214,13 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Vibrato effect. Modulates pitch with a sinusoidal LFO.
+     * Vibrato effect. Modulates pitch with a sinusoidal LFO: the ratio `2^((sin * max(semitones, 0)) / 12)` per sample.
      *
-     * @param rate LFO frequency in Hz (default 5.0)
+     * A description: the runtime composes it (pitch pipeline 7b) as `pitchModSemitones(sine(rate, analog = 0) *
+     * max(semitones, 0))`, the tremolo's pattern, so a signal depth is followed per sample. Its edge rules (a depth at or
+     * below 0, non-finite values): the `vibrato` row of `audio/ref/off-values.md`.
+     *
+     * @param rate LFO frequency in Hz (default 5.0), read once per block
      * @param semitones modulation depth in SEMITONES (default 0.25 ≈ quarter-semitone wobble).
      *   Sprudel's `vib(rate, semitones)` fills `classic()`'s vibrato stage, this node, through the `vibrato.*` slots.
      */

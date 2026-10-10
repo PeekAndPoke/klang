@@ -360,9 +360,11 @@ class SampleSlots internal constructor() {
  *    (plan section 2); three pitch factors on one path regroup the product (one rounding, about -270 dB), for good
  *    where two of the instrument's own pitch nodes meet a door; an instrument without `classic()` ignores the
  *    door (D6);
- *  - the vibrato is the Ignitor `vibrato` node (`VibratoModIgnitor`: the strip's accumulator, increment, wrap and
- *    ratio), filled by sprudel's `vib` through the `vibrato.*` slots (pitch pipeline step 2), with the same accepted
- *    differences as the pitch envelope;
+ *  - the vibrato is the Ignitor `vibrato` node, filled by sprudel's `vib` through the `vibrato.*` slots (pitch pipeline
+ *    step 2), with the same accepted differences as the pitch envelope. Since pitch pipeline 7b the node is composed:
+ *    for sprudel's per-event constant depth it is the strip's law to one rounding, but its sine's drift-seed draw gives
+ *    a voice that also draws while it renders (a supersaw, a noise layer, `analog > 0`) other dice
+ *    (`audio/ref/voice-synthesis.md`);
  *  - the accelerate is the Ignitor `accelerate` node, filled by sprudel's `accelerate` through the flat `accelerate`
  *    slot (pitch pipeline step 3). NOT the strip's sound, by decision D2: the glide spans the GATE (onset to gate
  *    close) and holds its target through the release, where the strip glided over the scheduled end, the release

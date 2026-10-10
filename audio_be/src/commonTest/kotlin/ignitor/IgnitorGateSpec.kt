@@ -302,8 +302,9 @@ class IgnitorGateSpec : StringSpec({
     }
 
     "vibrato: a NON-FINITE depth is built and renders the default depth, it is not off" {
-        // The one pitch arm whose unset is not off: the runtime reads a non-finite depth as the node's
-        // DEFAULT, VIBRATO_SEMITONES (`finiteOr`), so gating it would change the sound, not fold a stage.
+        // The one pitch arm whose unset is not off: the arm reads a non-finite literal depth as the node's
+        // DEFAULT, VIBRATO_SEMITONES (`finiteLiteralOr`, at build, since pitch pipeline 7b), so gating it would
+        // change the sound, not fold a stage.
         val atDefault = render(vibrato(inner = saw, depth = IgnitorDsl.Constant(VIBRATO_SEMITONES))).bits()
 
         atDefault shouldNotBe bare

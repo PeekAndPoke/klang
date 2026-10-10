@@ -1395,11 +1395,169 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   the LFO per sample). So 7b also moves the depth from block rate to sample rate, a sound change no corpus song hears
   (sprudel's `vib` depth is a per-event constant). The rate does not differ (both read `freq` at block start). A
   listening pair, a tolerance row and a signal-depth row; the corpus attributes each moved song to one of the causes.
+
+  **What was done (2026-10-10, uncommitted, for review).** `audio_be`: `vibratoModIgnitor(rate, semitones)` is the
+  composition, `semitonesToRatioIgnitor(ModBlockingIgnitor(Ignitors.sine(freq = rate, analog = 0)) * semitones.max(0.0))`,
+  built from the runtime's own pieces (the sine oscillator, `Times`, `Max`, 7a's primitive), no new mechanism;
+  `VibratoModIgnitor` is gone (its imports with it; the public factory and its Double overload keep their
+  signatures, so the specs that call them stay). The `Vibrato` arm keeps its gate (`gatedOffWhenFinite`, unchanged)
+  and builds each knob through `finiteLiteralOr` (new, private, 9 lines beside the gate helpers): a non-finite LITERAL
+  (`Param` or `Constant` leaf, read leaf-only like every build-time knob, so no draw moves) builds the node's default,
+  `VIBRATO_RATE_HZ` or `VIBRATO_SEMITONES`, where the replaced node read it per block with `finiteOr`. Build order is
+  unchanged (rate, then semitones). The node, both doors, the wire and `classic()`'s stage are untouched; no wire hash
+  change. Docs: the KDocs of the node, the factory, the gate helper and the script door; `PitchModDefaults.kt`,
+  `IgnitorDslClassic.kt`'s identity list; `audio/ref/voice-synthesis.md` (the table row, the non-finite paragraph, a
+  "the vibrato is a composition" paragraph, an rng bullet), `off-values.md` (the vibrato row says what folds now),
+  `numerical-safety.md`, `audio/MEMORY.md` (the laws bullet in place, one History line), the non-finite task section
+  2, `ignitor-reference.md` (the vibrato row). No outside idea, nothing to credit.
+  - **The edges, the tremolo's precedent.** The tremolo floors every depth (`depth.max(0)`, its "As built"), so the
+    vibrato does: a depth sample at or below 0 is no vibrato, exactly 1.0, per sample (the old node: 1.0 for a block
+    whose first depth was at or below 0; the composition unfloored would invert the LFO). A NaN or -Infinity depth
+    sample is floored to 0 by the same `max` (no vibrato; the tremolo's floor reads a NaN depth the same way). The
+    tremolo has no deliberate rule for a +Infinity depth sample: it passes its floor and is scrubbed downstream (by
+    reading its code, not rendered: `1 - Inf` makes its gain a NaN and its multiply turns that into silence); the
+    vibrato's passes the floor likewise, `Times` clamps it at `SAFE_MAX`, and 7a's primitive reads the ratio as
+    `SAFE_MAX` where the sine is positive and 0 where it is negative: unguarded and finite, the open section 2 of the
+    non-finite task, which gains a line. A non-finite rate sample at a block's first frame: the sine writes that frame
+    from its stale phase, then its wrap scrubs the phase to 0, so the block's other frames are 1.0 and the LFO restarts
+    at phase 0 (corrected in review round 1; the old node: the 5 Hz default). A non-finite literal
+    reads the default, as before (`finiteLiteralOr`). **For the coordinator:** the +Infinity depth sample is the one
+    edge where "the tremolo's precedent" means "unguarded, like the tremolo", not a rule the tremolo states.
+  - **What differs from the replaced node** (checklist (a)): (1) the depth per sample, for a signal depth (no corpus
+    song but Die Kirschblüte); (2) the sine's drift-seed draw (three draws from the voice's stream on its first block,
+    even at `analog = 0`), which re-rolls every later generate-time draw of the voice; (3) one rounding of the exponent,
+    `(sin * d) / 12` against `sin * (d / 12)`, at most about two ulps of the ratio up to 12 semitones (5e-15 relative
+    at 598 semitones, the exponent's own ulp); (4) the two edges above. The rate is read once per block, as before:
+    the sine reads its frequency with `readParam` at the block's first frame (`resolveFreq`), the replaced node did the
+    same, and the phase steps alike (the same increment, `fastSin`, and a wrap that matches the old one-subtract and full
+    wrap). E2 holds for a moving depth (the LFO renders every block); a BLOCK-CONSTANT depth at or below 0 is `Times`'
+    dead branch and the LFO does not render that block, harmless over `Constant` and `Param` leaves (voice constants),
+    an accepted residual for a depth written over `Freq` under a modulated `detune` or in an fm modulator whose ratio
+    moves (it can cross 0 between blocks; stated in the factory KDoc). The LFO is shielded (`ModBlockingIgnitor`, the
+    tremolo's): the old node read no `phaseMod`, and a vibrato that renders inside another source's modulated scope (a
+    vibrato'd source in a frequency knob) would otherwise run at the scope's ratio. The FM rule holds:
+    `FmModulatorFollowsPitchSpec` and `FmModulatorTopologySpec` green unchanged.
+  - **Specs.** `VibratoCompositionSpec` (new, 8 rows, `PitchModSemitonesSpec`'s probe seam, oracles with the library's
+    `sin` and `pow`): a constant depth is the replaced node's law (written in the spec) to 5e-16 relative at five
+    rates and depths, 0.012 to 12 semitones (the tolerance row); a signal depth follows `2^(lfo * depth / 12)` at each
+    frame's depth to 1e-9, and leaves the per-block oracle (more than 1e-6); a depth crossing 0 reads exactly 1.0 on
+    every frame at or below 0 and the law above; NaN and -Infinity depth samples (per sample and block-constant) read
+    1.0 on every frame; a +Infinity depth sample reads `SAFE_MAX` / 0 / 1.0 by the LFO's sign, frame by frame; a
+    non-finite rate for the whole voice (NaN, +-Infinity, block-constant) reads 1.0 on every frame; the shield row (the vibrato'd probe in the
+    frequency knob of a sine under `pitchModSemitones(12)`: the probe reads `2 * 2^(sin(2 pi 5 t) / 12)`, not the LFO at
+    10 Hz); the rate row (a rate swinging 6 +- 4 Hz at 40 Hz: the phase steps by the rate at each block's first frame,
+    to 1e-9, and leaves the per-sample-rate oracle). The non-finite literal rows that already existed carry the
+    literal case: `IgnitorGateSpec` ("a NON-FINITE depth is built and renders the default depth") and
+    `PitchModSafetyTest` ("a NaN vibrato rate / semitones reads as unset"). Note: before 7b the whole `audio_be`
+    suite (2,562) stayed green on the composition without the new rows: no row pinned the vibrato's bits.
+  - **Mutation checks** (mandatory tier, one lock call each: backed up, mutated, run, restored with `cp`, `cmp` clean;
+    `$S/p7b/mutants.log`): the floor removed red on the crossing row and the NaN/-Infinity row; the LFO at `analog 0.5`
+    red on six rows (tolerance, signal, crossing, +Infinity, shield, rate); the shield removed red on the shield row
+    only; the depth held per block (an inline hold of the block's first value) red on the signal and crossing rows; a
+    per-sample finite substitution of the depth (0.25) red on the NaN/-Infinity and +Infinity rows; the same for the
+    rate (5 Hz) red on the non-finite rate row; the exponent scaled by 1.0000001 red on five rows (tolerance among
+    them); `finiteLiteralOr` substituting nothing red on three rows (`IgnitorGateSpec`'s non-finite depth row and
+    `PitchModSafetyTest`'s NaN rate and NaN semitones rows); the rate fallback 7.0 red on the NaN rate row; the depth
+    fallback 0.3 red on the gate row and the NaN semitones row.
+  - **Corpus** (`CORPUS_LABEL=pp-7b` against `corpus-pp-7a-r1.txt`; no song file modified): 7 of 18 move, exactly the
+    predicted ones, 11 identical: the sprudel `vib` / `vibrato` users through `classic()` (Kokon, Seltsamere Dinge,
+    Remix: Echo um Echo, The Synthsale Piper's Last Rave, the frozen Stranger Things) and the two authored `vibrato`
+    nodes (Die Kirschblüte, a signal depth; The Synthsale Piper's Farewell, constant). The 16-bit hash moves for all
+    seven. **Attribution**, measured with the full mix as raw doubles (a scratch copy of the corpus spec dumping them)
+    over four builds of the tree with a temporary switch: the old node (variant 1: HEAD's hash on all seven, the
+    harness control), the old node plus the sine's draw alone, plus the rounding alone, plus the floored per-sample
+    depth alone, and the composition. dB diff RMS relative to HEAD's RMS (max abs difference in dBFS):
+
+    | song | composition | the draw alone | the rounding alone | per-sample depth alone |
+    |---|---|---|---|---|
+    | Kokon | -5.3 (-2.2) | -5.3 | -280.1 | identical |
+    | Die Kirschblüte | -7.7 (-13.4) | -7.7 | -302.9 | -39.9 (-37.8) |
+    | Seltsamere Dinge | -1.4 (+3.4) | the composition's hash | identical | identical |
+    | Remix: Echo um Echo | -8.3 (-13.5) | -8.3 | -303.9 | identical |
+    | The Synthsale Piper's Last Rave | -27.3 (-18.5) | -27.3 | -287.1 | identical |
+    | The Synthsale Piper's Farewell | -27.7 (-24.5) | -27.7 | -301.9 | identical |
+    | frozen Stranger Things | -1.0 (-1.3) | the composition's hash | identical | identical |
+
+    So the draw is the whole audible difference everywhere (other dice: Stranger Things' vibrato layer is a 9-voice
+    supersaw at `analog(10)` under a 2-bit crush, so every unison phase and drift lane re-rolls), the rounding is
+    -280 to -304 dB, and the per-sample depth moves Die Kirschblüte by -39.9 dB on its own. Engagement control (the
+    composition's depth halved, `CORPUS_LABEL=pp-7b-mut`): exactly the seven move against `pp-7b`, the eleven others
+    identical; restored, `cmp` clean.
+  - **Hostile values** (checklist (b); one voice through `VoiceFactory`, a saw at `analog 0`, c3, HEAD `e4b50cd1`
+    exported against the tree, raw doubles; scratch spec removed). Ignitor door: a NaN or +-Infinity literal rate
+    plays the 5 Hz default on both (only the rounding differs, -332.9 dB, as the control `vibrato(5, 0.5)`); a NaN or
+    +-Infinity literal depth plays the 0.25 default on both (-301.2 dB). On the full engine an `OptimizerHint` around
+    a constant is folded at registration, so those forms are literals there and read the default too. A per-sample
+    NaN or -Infinity depth (`sine(3) + NaN`): HEAD played the 0.25 default per block, the tree plays no vibrato (-1.5
+    dB); a per-sample +Infinity depth: HEAD the default, the tree the `SAFE_MAX` / 0 pitch (+3.3 dB, RMS -4.2 against
+    -4.8 dBFS); no non-finite sample on either side. 597, 598, 599 and 1000 semitones: on both a saw at an absurd
+    pitch (the ratio up to 9.5e14 at 597, clamped at `SAFE_MAX` from 598 on: 123, 543 and 8,523 of 26,496 frames), a
+    full-scale pseudo-random signal; the ratio streams agree to about 5e-15 relative, but a saw stepping about 1e12
+    cycles per sample decorrelates on any rounding (+2.7 to +4.8 dB; HEAD RMS -6.8, -3.8, -3.8, -4.8 dBFS, the tree
+    -4.7, -4.4, -5.1, -4.3): the same class, finite. A rate of 1e9 (past the sample rate): -281 dB. Signal depths on
+    the full engine: `0.5 + 0.5 sine(1 Hz)` -23.0 dB, `1 + sine(20 Hz)` -13.0 dB, `2 sine(3 Hz)` (crosses 0) -7.2 dB.
+    Sprudel door (`s("saw").analog(0)`): `vib("NaN" | "Infinity" | "-Infinity", 0.5)` plays the 5 Hz default on both
+    (the control's -275.4 dB); `vib(5, "NaN" | ...)` identical (dropped at the boundary, the slot's 0, gated);
+    `vib(5, 597 | 598 | 599)` the same chaos class (+0.5, +2.2, +4.6 dB). The classic slots fed raw
+    (`vibrato.rate` / `vibrato.semitones` in the bag, past sprudel's boundary): a non-finite rate reads the slot's 5
+    Hz (the control), a non-finite depth the slot's 0 (identical), 598 as the sprudel door.
+  - **Cost** (checklist (c); one voice through `VoiceFactory`, two fresh exports, HEAD and HEAD plus the tree's
+    `audio_be` diff, HEAD again as the control; render per 128-frame block, build per voice). V8 production test
+    bundle, medians of 3 rounds, tree/HEAD (control HEAD2/HEAD), pinned then unpinned: an authored saw with
+    `vibrato(5, 0.5)` 0.984 (0.998) and 0.965 (0.991), 2,086 against 2,121 ns; with a signal depth 1.023 (1.014) and
+    1.023 (1.009); the built-in saw with the classic slots 0.996 (0.995) and 1.008 (0.979); `sgpad` 1.011 (1.008) and
+    1.001 (1.005); render bytes per block equal within noise. Build: +2 to +9 percent, +0.6 to +0.9 KB per voice (the
+    composed graph's objects: the sine and its drift lane, the shield, the multiply, the max, the converter). JVM,
+    medians of 9: render 0.947 (1.007) for the authored saw, 0.964 signal depth, 0.967 classic saw, 0.969 `sgpad`
+    (faster: the old node's two `readParam`s and its own loop against the sine's tight loop); build +3 to +10
+    percent, +328 to +408 bytes per voice. **One JVM finding:** `sgpad` + vibrato allocates 72 to 96 bytes per block
+    on the tree in the 9-run medians (HEAD 0 to 24; the tree again, 11.7 on average in one JFR run of 2 million
+    blocks): JFR shows `Double.valueOf` in `TimesIgnitor`'s
+    constant-operand path (`controlRateValueOrNull` returns `Double?` through `MaxIgnitor` and `ParamIgnitor`), which
+    the JIT does not always eliminate in the two-source graph. The house arithmetic nodes' scalar path, the same
+    shape as the tremolo's floor; V8 shows none. Not patched in 7b: it is the second site of
+    `docs/tasks/engine-follow-ups.md` item 12 (the JVM boxes a `Double` per block-constant read), which now names it.
+  - **Listening pairs** (`tmp/listening/pp-7b/`, `README.md`, before = HEAD, after = the tree, `console/record.sh`):
+    a constant depth (`vib(5.5, 0.4)` on a saw: identical at 16 bits), a fast-moving depth (0 to 3 semitones at 23 Hz:
+    -12.2 dB, the staircase gone), a slow swell (-39.9 dB, nothing to hear), a supersaw with `vib` (other dice, +2.6
+    dB), the most-moved song, the frozen Stranger Things (64 cycles, -1.3 dB), and Die Kirschblüte (64 cycles, -8.2
+    dB, the shakuhachi from 1:00).
+  - **Suites.** `audio_bridge` jvmTest 148 and jsTest 268; `audio_be` jvmTest 2,570 and jsBrowserTest 2,466 (7a's
+    2,562 and 2,458 plus the eight rows); `sprudel` jvmTest 3,498 (486 skipped); `klangscript-libs` jvmTest 840 and
+    jsTest 617; `BuiltInSongsSmokeTest`, `SongBenchmarkCasesCompileSpec`, `DslDocExamplesSpec` green;
+    `compileTestKotlinJs` of `audio_bridge`, `audio_be`, `sprudel`, `klangscript-libs` and the root green.
+  - **For 7c** (the `range`): the composition takes it where the plan wants it, `lfo.range(from, to)` before the
+    multiply, and a literal default that builds no range node keeps 7b's bits.
+  - **Review round 1, applied** (`tmp/reviews/pp7b-r1-A.md`, 2 MINOR, 6 NIT; `pp7b-r1-B.md`, 1 MINOR, 1 NIT; 0
+    MAJOR). The +Infinity depth stays unguarded with section 2 of the non-finite task (both reviewers agree). A2: the
+    edge rules have ONE home, the `vibrato` row of `audio/ref/off-values.md` (where its gate row already lived); the
+    factory KDoc keeps the composition, the floor and the dead branch in a few lines, and `voice-synthesis.md`,
+    `audio/MEMORY.md`, `numerical-safety.md`, `IgnitorDsl.kt`, `IgnitorDslClassic.kt`, the non-finite task and the
+    spec header point there. A1: a non-finite rate at a block's first frame plays that frame from the stale phase,
+    then the block's other frames are 1.0 and the LFO restarts at phase 0 (reviewer A measured 1.0591 on the first
+    frame); corrected in the one home; the old row is renamed to what it tests (a non-finite rate for the whole
+    voice) and a mid-voice row is new (50 Hz for two blocks, NaN, 50 Hz: the stale first frame, then 1.0, then the
+    restart, against `sin` and `pow`), mutation-checked: a per-sample rate default (5 Hz) red on both rate rows, the
+    rate floored with `max(0)` (the stale phase held) red on the mid-voice row only; restored, `cmp` clean. A3: the
+    `IgnitorGateSpec` comment names `finiteLiteralOr`. A4: the factory KDoc says a non-finite literal reaches the
+    default only through the DSL arm; the factory and its Double overload take the knobs as given. A5: an
+    `OptimizerHint(Constant(NaN), on = 0)` around the depth survives to the build, is not a leaf, and renders the
+    bare voice where the plain literal renders the 0.25 default (before 7b both played the default): the class of
+    7a's gate, far-fetched, recorded in the one home, no code. A6 and B1: `engine-follow-ups.md` item 12 names the
+    second site (`binaryLadder` through `MaxIgnitor`, 72 to 96 bytes per block) and the cost bullet links it; the
+    11.7 is the tree's. A7: the spec header says which rows use the library's `sin` and `pow` and which the engine's
+    LFO. A8: for 7c (its bullet). B2: the factory KDoc and the one home say that the dead branch skips the rate
+    subtree too, and that the sine's seed draws wait for its first RENDERED block (also in `voice-synthesis.md`'s
+    rng bullet). `VibratoCompositionSpec` 9 rows; `audio_be` jvmTest 2,571 green, `compileTestKotlinJs` of `audio_be`
+    green.
 - **7c. The vibrato `range`** (S, with 7b or right after; maintainer, 2026-10-06): the script door becomes
   `vibrato(rate, semitones, v => v.range(from, to))`, the flat Kotlin door takes `rangeFrom`, `rangeTo`, the node two
   appended fields with defaults -1 and 1 (constants in `audio_bridge/constants/`, the wire golden regenerated), no
   clamp. The literal default builds NO range node (a built `range(-1, 1)` is not the identity in floating point), so
-  the default renders 7b's bits. The door-shapes table row changes from `rate, semitones | none`.
+  the default renders 7b's bits. The door-shapes table row changes from `rate, semitones | none`. Also (7b review
+  round 1, A8): the Kotlin door `IgnitorDsl.vibrato(rate: Double, semitones: Double)` has no `IgnitorDsl` overload, so
+  the signal depth the script door's KDoc advertises is script-only on the doors ("two doors, one DSL"); 7c touches
+  this door anyway.
 - **7d. Pitch envelope composed** (S to M, after a spike): `constant(amount)` shaped by the envelope law into the
   primitive. The chain `adsr` is the AMPLITUDE host (the level floors at 0), the pitch law is raw; the product
   `amount * level` and the `/ 12` match today's bits, so the spike checks whether a negative sustain is the only
