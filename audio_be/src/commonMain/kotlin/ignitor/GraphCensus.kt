@@ -75,9 +75,6 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         /** The shimmer's loop per sample: the input, the ring write, up to eight grains reading two taps each, the output. */
         private const val SHIMMER_TRAFFIC = 19
 
-        /** The half-band FIR reads nine samples of its input per output (`Oversampler.decimate2x`). */
-        private const val DECIMATOR_TAPS = 9
-
         fun of(dsl: IgnitorDsl, blockFrames: Int = 128, params: Map<String, Double> = emptyMap(), soundIndex: Int = 0): GraphCensus {
             val walker = Walker(blockFrames = blockFrames, params = params, soundIndex = soundIndex)
 
@@ -89,7 +86,12 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         /** A leaf or arithmetic over leaves that is one value per block: no pass, no traffic. */
         fun isScalar(dsl: IgnitorDsl): Boolean = Walker(blockFrames = 128, params = emptyMap(), soundIndex = 0).isScalar(dsl)
 
-        /** The buffer traffic per input sample of an [Oversampler] round trip at [factor], without the shaper's own work. */
+        /**
+         * The buffer traffic per input sample of an [Oversampler] round trip at [factor], without the shaper's own work:
+         * per 2x stage up, one read and two writes per stage input sample (and the move of its input above the first);
+         * per stage down, two reads and one write per output; the copy back. The all-pass sections run on values in
+         * hand, not on buffers, so they are not traffic.
+         */
         fun oversampleTraffic(factor: Int): Int {
             val stages = Oversampler.factorToStages(factor)
 
@@ -97,24 +99,28 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                 return 0
             }
 
-            val f = 1 shl stages
-            var traffic = 1 + f // the upsample reads one and writes f
-            var len = f
+            var traffic = 0
+            var len = 1
 
             for (stage in 0 until stages) {
-                // a decimation stage reads nine taps per output and writes half its input's length
-                traffic += DECIMATOR_TAPS * (len / 2) + len / 2
-                len /= 2
+                traffic += if (stage == 0) 3 * len else 5 * len // up: read, two writes (later stages move their input first)
+                traffic += 3 * len // down: two reads, one write
+                len *= 2
             }
 
             return traffic + 2 // the copy back
         }
 
-        /** What an [Oversampler] at [factor] holds: 13 history doubles per stage, the prefix view, the last sample. */
+        /** What an [Oversampler] at [factor] holds: per 2x stage and direction, two doubles of state per all-pass section. */
         fun oversampleBytes(factor: Int): Int {
             val stages = Oversampler.factorToStages(factor)
+            var doubles = 0
 
-            return if (stages == 0) 0 else stages * 13 * 8 + 39 * 8 + 8
+            for (stage in 0 until stages) {
+                doubles += 2 * 2 * Oversampler.sectionsOf(stage)
+            }
+
+            return doubles * 8
         }
     }
 
@@ -379,8 +385,9 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
             // binary: in place over a scalar side, a scratch render and a third stream otherwise
             is IgnitorDsl.Plus -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
-            // n branches are n - 1 sums of two signals. NOT counted, deliberately: the latency pads (a pass over the block and
-            // a ring of a few samples per padded branch), which depend on the branches' latencies, known only at build
+            // n branches are n - 1 sums of two signals. NOT counted, deliberately: the pads, which depend on what each branch
+            // holds, known only at build (a phase twin is a whole oversampler round trip per branch that lacks one, a
+            // whole-sample pad a pass and a ring of a few samples), so the census under-counts a parallel beside an oversampler
             is IgnitorDsl.Parallel -> {
                 val sums = (node.branches.size - 1).coerceAtLeast(0)
 

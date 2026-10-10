@@ -5,21 +5,31 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
+import kotlin.math.min
 
 /**
  * Branches side by side (`KatalystStageDsl.Parallel`): every branch, a [KatalystChain] of its own, runs on a copy of the
  * bus at this position, and the stage writes the SUM of the branches back into the bus.
  *
- * **Aligned by latency.** A branch that delays the bus (a compressor's lookahead, an oversampled distort) would comb
- * against the others in the sum: at a delay of 4 frames the first notch sits at `sampleRate / 8`, 6 kHz at 48 kHz. So
- * every branch is delayed to the longest one by a ring of its own ([pads]), sized here, and the stage reports the
- * longest branch's latency ([latencyFrames]). Whole frames, as every latency in the chain is.
+ * **Matched in phase.** A branch that delays the bus (a compressor's lookahead, an oversampled distort) would comb
+ * against the others in the sum: at a delay of 4 frames the first notch sits at `sampleRate / 8`, 6 kHz at 48 kHz. The
+ * two kinds of delay are matched apart ([pads]). An oversampler's IIR round trip delays the top more than the bass, so
+ * no whole-frame pad matches it above about 10 kHz: every branch gets an unshaped round trip of each oversampler it
+ * lacks against the union of the branches' oversamplers (the PHASE TWINS, `Oversampler.unionOf`), and then all hold
+ * the same all-pass cascade. What is left is pure delay (a lookahead), matched by a ring to the longest one. The stage
+ * reports the union's latency plus that longest pure delay ([latencyFrames], [oversamplers]).
  *
- * **Allocation:** one block buffer per branch and the pad rings, all here at build; [process] allocates nothing.
+ * **Allocation:** one block buffer per branch, the twins and the pad rings, all here at build; [process] allocates
+ * nothing.
  *
- * **Lifecycle:** every question the chain asks is passed to the branches. A pad ring is not reported as a tail of its
- * own: it holds what the latent branch also holds, and the branches' own tails cover its content.
+ * **Lifecycle:** every question the chain asks is passed to the branches. A ring is not reported as a tail of its own:
+ * it holds what a latent branch also holds. A twin is: its input is its branch's OUTPUT, which a lookahead holds back
+ * by up to 2400 frames after the distort stage it twins has gone quiet, so it reports a tail until
+ * [Oversampler.tailFrames] quiet frames have entered it.
  *
  * The branches' slots are resolved through [KatalystParallelWriter]; a branch reads the orbit's param state like the
  * chain around it, so a slot named in a branch is the same slot as one of that name outside it.
@@ -31,19 +41,31 @@ class KatalystParallelEffect internal constructor(
     blockFrames: Int,
 ) : KatalystEffect, KatalystLatentEffect {
 
-    /** The longest branch's latency: every other branch is padded to it. */
-    override val latencyFrames: Int = branches.maxOf { it.latencyFrames }
+    /** Every branch's oversamplers together: each branch is padded to this cascade by twins. */
+    override val oversamplers: List<Int> = Oversampler.unionOf(branches.map { it.oversamplers })
+
+    /** The longest pure delay of a branch: every other branch is padded to it by a ring. */
+    private val pureDelayFrames: Int = branches.maxOf { it.pureDelayFrames }
+
+    /** The latency of every padded branch: the union's oversamplers and the longest pure delay. */
+    override val latencyFrames: Int = oversamplers.sumOf { Oversampler.latencyFrames(it) } + pureDelayFrames
 
     /** Each branch's own bus, the copy of the input it processes in place. */
     private val contexts: Array<KatalystContext> = Array(branches.size) {
         KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
     }
 
-    /** Each branch's pad ring, or null for a branch already at [latencyFrames]. */
-    private val pads: Array<PadRing?> = Array(branches.size) {
-        val pad = latencyFrames - branches[it].latencyFrames
+    /** Each branch's pad: the twins of the oversamplers it lacks, and a ring for the pure delay it lacks. */
+    private val pads: Array<Pad> = Array(branches.size) {
+        Pad(
+            twinStages = Oversampler.missingFrom(have = branches[it].oversamplers, union = oversamplers),
+            delayFrames = pureDelayFrames - branches[it].pureDelayFrames,
+        )
+    }
 
-        if (pad > 0) PadRing(pad) else null
+    /** The twins' oversampled work buffers, one lease per factor a pad uses, built here so the audio thread never builds one. */
+    private val scratch: ScratchBuffers = ScratchBuffers(blockFrames).also { scratch ->
+        pads.flatMap { it.twinStages }.distinct().forEach { scratch.oversample(1 shl it) }
     }
 
     /** True when a branch declares a stage that can ring on, see [KatalystChain.declaresTail]. */
@@ -88,17 +110,7 @@ class KatalystParallelEffect internal constructor(
         mix.right.fill(0.0, fromIndex = 0, toIndex = frames)
 
         for (i in branches.indices) {
-            val own = contexts[i].mixBuffer
-            val pad = pads[i]
-
-            if (pad == null) {
-                for (f in 0 until frames) {
-                    mix.left[f] += own.left[f]
-                    mix.right[f] += own.right[f]
-                }
-            } else {
-                pad.addDelayed(own = own, into = mix, frames = frames)
-            }
+            pads[i].addPadded(own = contexts[i].mixBuffer, into = mix, frames = frames, scratch = scratch)
         }
     }
 
@@ -112,7 +124,7 @@ class KatalystParallelEffect internal constructor(
 
     override fun hasTail(): Boolean {
         for (i in branches.indices) {
-            if (branches[i].hasTail()) {
+            if (branches[i].hasTail() || pads[i].hasTail()) {
                 return true
             }
         }
@@ -120,7 +132,7 @@ class KatalystParallelEffect internal constructor(
         return false
     }
 
-    /** The branches hand back what they rented; the pad rings are the stage's own and only clear. */
+    /** The branches hand back what they rented; the pads are the stage's own and only clear. */
     override fun retire() {
         clearPads()
 
@@ -131,18 +143,57 @@ class KatalystParallelEffect internal constructor(
 
     private fun clearPads() {
         for (i in pads.indices) {
-            pads[i]?.clear()
+            pads[i].clear()
         }
     }
 
-    /** A fixed delay of [frames] frames on both channels, added into the sum. */
-    private class PadRing(frames: Int) {
-        private val left = DoubleArray(frames)
-        private val right = DoubleArray(frames)
+    /**
+     * One branch's pad: an unshaped round trip per entry of [twinStages] (a stage count) on both channels, in place, then
+     * a fixed delay of [delayFrames] frames, added into the sum. With neither, the branch is added as it is.
+     */
+    private class Pad(val twinStages: List<Int>, delayFrames: Int) {
+        private val twinsL = Array(twinStages.size) { Oversampler(twinStages[it]) }
+        private val twinsR = Array(twinStages.size) { Oversampler(twinStages[it]) }
+        private val left = DoubleArray(delayFrames)
+        private val right = DoubleArray(delayFrames)
         private var pos = 0
 
-        fun addDelayed(own: StereoBuffer, into: StereoBuffer, frames: Int) {
+        /** How long the twins may ring after their input goes quiet; 0 without twins. */
+        private val holdFrames = twinStages.maxOfOrNull { Oversampler.tailFrames(it) } ?: 0
+
+        /** Frames since the last block that entered the twins with a sample above [SILENCE_FLOOR], held at [holdFrames]. */
+        private var quietFrames = holdFrames
+
+        /** True while the twins may still ring out what entered them. */
+        fun hasTail(): Boolean = quietFrames < holdFrames
+
+        fun addPadded(own: StereoBuffer, into: StereoBuffer, frames: Int, scratch: ScratchBuffers) {
+            if (holdFrames > 0) {
+                countQuiet(own = own, frames = frames)
+            }
+
+            for (t in twinsL.indices) {
+                val tL = twinsL[t]
+                val tR = twinsR[t]
+
+                scratch.oversample(tL.factor).use { work ->
+                    tL.upsample(source = own.left, offset = 0, length = frames, work = work)
+                    tL.decimate(work = work, target = own.left, offset = 0, length = frames)
+                    tR.upsample(source = own.right, offset = 0, length = frames, work = work)
+                    tR.decimate(work = work, target = own.right, offset = 0, length = frames)
+                }
+            }
+
             val size = left.size
+
+            if (size == 0) {
+                for (f in 0 until frames) {
+                    into.left[f] += own.left[f]
+                    into.right[f] += own.right[f]
+                }
+
+                return
+            }
 
             for (f in 0 until frames) {
                 into.left[f] += left[pos]
@@ -158,7 +209,31 @@ class KatalystParallelEffect internal constructor(
             }
         }
 
+        private fun countQuiet(own: StereoBuffer, frames: Int) {
+            val floor = SILENCE_FLOOR
+
+            for (f in 0 until frames) {
+                val l = own.left[f]
+                val r = own.right[f]
+
+                if (l > floor || l < -floor || r > floor || r < -floor) {
+                    quietFrames = 0
+
+                    return
+                }
+            }
+
+            quietFrames = min(quietFrames + frames, holdFrames)
+        }
+
         fun clear() {
+            quietFrames = holdFrames
+
+            for (t in twinsL.indices) {
+                twinsL[t].reset()
+                twinsR[t].reset()
+            }
+
             left.fill(0.0)
             right.fill(0.0)
             pos = 0

@@ -454,9 +454,8 @@ fun KatalystBuilder.limiter(
  * @param shape the waveshaper by name, from the voice's list (`soft`, `hard`, `tube`, `softsat`,
  *   `gentle`, ...); an unknown name is `soft`. Fixed with the chain.
  * @param oversample the oversampling factor (2, 4, 8; 0 or 1 is none). Fixed with the chain. It
- *   delays this orbit (at the output, the whole playback) by 4 frames at 2x and 6 at 4x and 8x, and
- *   on a whole mix today's oversampler also dulls the top (about -2 dB at 16 kHz and -4 dB at 20 kHz
- *   at 2x), so the default is 0, as on the voice.
+ *   delays this orbit (at the output, the whole playback) by 3 frames at 2x, 4 at 4x and 5 at 8x. The
+ *   default is 0, as on the voice.
  */
 @KlangScript.Function
 fun KatalystBuilder.distort(
@@ -577,7 +576,7 @@ fun KatalystBuilder.serial(vararg stages: (KatalystBuilder) -> KatalystBuilder):
  *
  * The sum is plain (two identical branches are twice the level, +6 dB); a branch's own `gain` sets the blend. A `reverb`
  * or `delay` adds its return on top of the dry it is fed, so a branch with one carries the dry as well. A branch
- * that delays the bus (a compressor's lookahead, an oversampled distort) is matched by delaying the others, so the sum
+ * that delays the bus (a compressor's lookahead, an oversampled distort) is matched in phase by the others, so the sum
  * does not comb. With no branch, `parallel()` returns the chain as it is; with one, it appends that branch's stages in
  * place, as written: a `classic()` in a branch is that branch's classic block, even next to one outside it (the
  * at-most-once rule of [classic] holds per builder, and a branch is a builder of its own). A `duck` inside a branch is

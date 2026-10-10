@@ -16,10 +16,12 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
  * identity shaper, whose response at the base rate is the system's impulse response. Its centroid,
  * `sum(k * h[k]) / sum(h[k])`, is the group delay at DC, exactly, for any LTI response (the derivative of the phase
  * at 0); the round trip is LTI at the base rate (zero-stuffing, a filter and decimation by the same factor). The
- * Katalyst `distort` stage delays its dry by this, rounded (`KatalystDistortEffect.latencyFrames`).
+ * Katalyst `distort` stage delays its dry by this, rounded (`KatalystDistortEffect.latencyFrames`), and a voice
+ * declares it exactly (`BuiltIgnitor.latencySamples`).
  *
- * The figures the KDoc carried until 2026-10-09 (5.75 and 6.625 for 4x and 8x) were wrong; these rows are why the
- * corrected ones (5.5 and 6.25) stand.
+ * Since 2026-10-10 the kernel is an IIR half-band: its impulse response never quite ends, so the window is long (the
+ * tail beyond it is far below the tolerance) and the delay is the LOW-FREQUENCY one; it rises toward the top
+ * (`Oversampler`'s KDoc). The FIR's figures were 4.0, 5.5 and 6.25.
  */
 class OversamplerGroupDelaySpec : StringSpec({
 
@@ -49,19 +51,20 @@ class OversamplerGroupDelaySpec : StringSpec({
         return out
     }
 
-    "the group delay is 1 + 6 * (1 - 2^-stages): 4.0, 5.5 and 6.25 input samples, and 0 without oversampling" {
+    "the group delay is 3.07, 4.40, 5.06 and 5.39 input samples at 2x to 16x (the KDoc's figures), and 0 without oversampling" {
         Oversampler.groupDelaySamples(0) shouldBe 0.0
         Oversampler.groupDelaySamples(-1) shouldBe 0.0
-        Oversampler.groupDelaySamples(1) shouldBe 4.0
-        Oversampler.groupDelaySamples(2) shouldBe 5.5
-        Oversampler.groupDelaySamples(3) shouldBe 6.25
+        Oversampler.groupDelaySamples(1) shouldBe (3.07 plusOrMinus 0.005)
+        Oversampler.groupDelaySamples(2) shouldBe (4.40 plusOrMinus 0.005)
+        Oversampler.groupDelaySamples(3) shouldBe (5.06 plusOrMinus 0.005)
+        Oversampler.groupDelaySamples(4) shouldBe (5.39 plusOrMinus 0.005)
     }
 
     "the measured centroid of the round trip's impulse response IS the group delay, the impulse inside a block and across a seam" {
-        for (stages in 1..3) {
-            // 60: well inside the first block; 125: the response straddles the seam into the second block.
+        for (stages in 1..4) {
+            // 60: well inside the first block; 125: the response starts right at the seam into the second block.
             for (at in listOf(60, 125)) {
-                val h = response(stages = stages, at = at, blocks = 3)
+                val h = response(stages = stages, at = at, blocks = 12)
                 var sum = 0.0
                 var moment = 0.0
 
@@ -70,7 +73,7 @@ class OversamplerGroupDelaySpec : StringSpec({
                     moment += k * h[k]
                 }
 
-                withClue("stages $stages, impulse at $at: unity DC gain") { sum shouldBe (1.0 plusOrMinus 1e-12) }
+                withClue("stages $stages, impulse at $at: unity DC gain") { sum shouldBe (1.0 plusOrMinus 1e-9) }
                 withClue("stages $stages, impulse at $at: the centroid") {
                     (moment / sum - at) shouldBe (Oversampler.groupDelaySamples(stages) plusOrMinus 1e-9)
                 }

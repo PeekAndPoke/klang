@@ -719,7 +719,7 @@ object KlangScriptIgnitorExtensions {
      * ```
      *
      * The sum is plain (two identical branches are twice the level); a branch's own `mul` sets the blend. A branch
-     * that delays the signal (an oversampled `distort` or `shape`) is matched by delaying the others, so the sum does
+     * that delays the signal (an oversampled `distort` or `shape`) is matched in phase by the others, so the sum does
      * not comb; a plain `plus` does not do that. With no branch, `parallel()` returns the signal as it is; with one,
      * that branch's output. It builds what the Kotlin `IgnitorDsl.parallel(...)` builds, and checks every branch as
      * `serial` checks a stage.

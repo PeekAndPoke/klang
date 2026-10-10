@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.fusedDistort
 import io.peekandpoke.klang.audio_be.ignitor.shape
+import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_be.utils.nanGuard
 import kotlin.math.PI
 import kotlin.math.sin
@@ -26,18 +27,17 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * The polyphase decimator against the ring-buffer form it replaced, bit for bit.
+ * The oversampler against a plain form of itself, bit for bit.
  *
- * [RingOversampler] is the previous implementation kept as the oracle, its arithmetic unchanged: a 15-tap
- * circular delay line per stage, two pushes and one FIR evaluation per output. The new pass
- * indexes the work buffer directly and reads its first outputs from a prefix view; the ragged
- * block lengths below cross every boundary that view has (a block shorter than the history, a
- * block shorter than the prefix, a block that ends inside the in-place region, an empty block).
+ * [RingOversampler] is the IIR half-band written plainly (since 2026-10-10; until then the oracle was the FIR's ring
+ * form): a buffer per stage, nothing in place. The production pass works in place, moving each stage's input to the
+ * top of the region it fills; the ragged block lengths below cross every edge of that (one sample, a few, a full
+ * block, an empty one).
  * Samples are compared with `Double.equals`, which keeps `-0.0` and `0.0` apart where `==` would
  * not: the claim is the same bits, not the same value.
  *
  * The next rows pin the two production nodes over the oversampler, the `Shape` node (`ShapeIgnitor`) and the
- * fused `Distort` node (`FusedDistortIgnitor`), through their nodes against the same ring oracle (engine tidy-up step 2,
+ * fused `Distort` node (`FusedDistortIgnitor`), through their nodes against the same reference oracle (engine tidy-up step 2,
  * audit B4.1: the shaping loop runs between `Oversampler.upsample` and `Oversampler.decimate`). Both nodes render
  * through one `DistortionCore` since step 11 (audit B2.2), the `Shape` node at drive 1.0 with its own soft cap. The
  * windows are ragged inside a 128-frame block, as a voice sees them (a note starting mid-block, an empty window),
@@ -59,11 +59,11 @@ class OversamplerDecimatorParitySpec : StringSpec({
         return 0.8 * sin(2.0 * PI * 441.0 * i / 48000.0) + noise
     }
 
-    // Ragged: shorter than the history, shorter than the prefix, on and around both edges, full blocks.
+    // Ragged: one sample, a few, odd and even lengths, full blocks and an empty one.
     val lengths = listOf(1, 3, 5, 6, 7, 12, 13, 14, 25, 26, 27, 28, 29, 64, 128, 2, 0, 128, 128, 9, 128)
 
     for (stages in 1..3) {
-        "stages $stages: every output equals the ring form across ragged block lengths" {
+        "stages $stages: every output equals the reference form across ragged block lengths" {
             val scratch = ScratchBuffers(blockFrames)
             val fast = Oversampler(stages)
             val ring = RingOversampler(stages)
@@ -134,7 +134,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
     }
 
     /**
-     * The callers' laws on the ring oracle. [drive] null is the `Shape` node: the shape, the DC blocker, the soft cap.
+     * The callers' laws on the reference oracle. [drive] null is the `Shape` node: the shape, the DC blocker, the soft cap.
      * Otherwise the fused `Distort` node: the shape of `x * drive` inside the oversampler, the DC blocker, no cap.
      */
     fun oracle(stages: Int, shape: DistortionShape, drive: Double?): DoubleArray {
@@ -181,7 +181,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
     }
 
     for (stages in 1..4) {
-        "stages $stages: the Shape node renders every shape, oversampled, bit for bit as the ring form" {
+        "stages $stages: the Shape node renders every shape, oversampled, bit for bit as the reference form" {
             for (shape in DistortionShape.entries) {
                 val node = ArrayIgnitor(source).shape(shape, stages)
 
@@ -189,7 +189,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
             }
         }
 
-        "stages $stages: the fused Distort node renders every shape, oversampled, bit for bit as the ring form" {
+        "stages $stages: the fused Distort node renders every shape, oversampled, bit for bit as the reference form" {
             // 0.6 drives; -0.2 is a modulated-style amount at or below 0, which runs at unity drive (never a bypass).
             for (shape in DistortionShape.entries) {
                 for ((amount, drive) in listOf(0.6 to DistortionCore.drive(0.6), -0.2 to 1.0)) {
@@ -340,13 +340,59 @@ class OversamplerDecimatorParitySpec : StringSpec({
     }
 })
 
-/** The ring-buffer oversampler as it was before the polyphase pass, the oracle above. */
+/**
+ * The IIR half-band oversampler written plainly, the oracle above: every stage into a buffer of its own, nothing in
+ * place, one all-pass section object per coefficient. The same arithmetic in the same order as `Oversampler` (each
+ * section `((x - y1) * a + x1)`; the chain input sterilised; the decimator's even chain on the later sample, its odd
+ * chain on the earlier, the sum halved). It never flushes its states, which the production pass does once per block;
+ * no state of these signals sits under the flush threshold at a block's end, so that step changes no bit here (the
+ * rows hold bit for bit). Equal bits prove the production pass's in-place moves,
+ * offsets and stage order, not the coefficients (the bench `OversamplerBenchSpec` measures what those do).
+ */
 private class RingOversampler(stages: Int) {
     val stages: Int = stages.coerceAtLeast(0)
     val factor: Int = 1 shl this.stages
 
-    private val decimators = Array(this.stages) { HalfBandState() }
-    private var lastSample: Double = 0.0
+    private class Section(val a: Double) {
+        var x1 = 0.0
+        var y1 = 0.0
+
+        fun step(x: Double): Double {
+            val y = (x - y1) * a + x1
+
+            x1 = x
+            y1 = y
+
+            return y
+        }
+    }
+
+    private class Chain(coefficients: List<Double>) {
+        val sections = coefficients.map { Section(it) }
+
+        fun step(input: Double): Double = sections.fold(input) { x, section -> section.step(x) }
+    }
+
+    private class Stage(coefficients: DoubleArray) {
+        val even = coefficients.filterIndexed { k, _ -> k % 2 == 0 }
+        val odd = coefficients.filterIndexed { k, _ -> k % 2 == 1 }
+        val upEven = Chain(even)
+        val upOdd = Chain(odd)
+        val downEven = Chain(even)
+        val downOdd = Chain(odd)
+
+        fun up(input: List<Double>): List<Double> = input.flatMap { raw ->
+            val x = raw.flushState()
+
+            listOf(upEven.step(x), upOdd.step(x))
+        }
+
+        fun down(input: List<Double>): List<Double> = input.chunked(2).map { (earlier, later) ->
+            0.5 * (downEven.step(later.flushState()) + downOdd.step(earlier.flushState()))
+        }
+    }
+
+    private val chain = List(this.stages) { Stage(Oversampler.coefficientsOf(it)) }
 
     fun process(
         buffer: AudioBuffer,
@@ -359,118 +405,24 @@ private class RingOversampler(stages: Int) {
             return
         }
 
-        val oversampledLen = length * factor
+        var signal = (0 until length).map { buffer[offset + it] }
 
-        scratchBuffers.oversample(factor).use { work ->
-            upsample(buffer = buffer, offset = offset, length = length, work = work)
-            transformBlock(work, oversampledLen)
-
-            var currentLen = oversampledLen
-
-            for (stage in 0 until stages) {
-                currentLen = decimate2x(decimators[stage], work, currentLen)
-            }
-
-            work.copyInto(destination = buffer, destinationOffset = offset, startIndex = 0, endIndex = length)
+        for (stage in chain) {
+            signal = stage.up(signal)
         }
-    }
 
-    private fun upsample(buffer: AudioBuffer, offset: Int, length: Int, work: AudioBuffer) {
-        val f = factor
-        var prev = lastSample
+        val work = signal.toDoubleArray()
+
+        transformBlock(work, work.size)
+
+        signal = work.toList()
+
+        for (stage in chain.reversed()) {
+            signal = stage.down(signal)
+        }
 
         for (i in 0 until length) {
-            val curr = buffer[offset + i]
-            val base = i * f
-            val step = (curr - prev) / f
-
-            for (j in 0 until f) {
-                work[base + j] = (prev + step * j)
-            }
-
-            prev = curr
+            buffer[offset + i] = signal[i]
         }
-
-        lastSample = prev
-    }
-
-    private fun decimate2x(state: HalfBandState, work: AudioBuffer, currentLen: Int): Int {
-        val outLen = currentLen ushr 1
-        var outIdx = 0
-        var i = 0
-
-        while (i < currentLen) {
-            state.push(work[i])
-            state.push(work[i + 1])
-            work[outIdx] = state.output()
-            outIdx++
-            i += 2
-        }
-
-        return outLen
-    }
-
-    private class HalfBandState {
-        val delay = DoubleArray(TAPS)
-        var pos: Int = 0
-
-        fun push(sample: Double) {
-            delay[pos] = sample
-            pos++
-
-            if (pos >= TAPS) {
-                pos = 0
-            }
-        }
-
-        fun output(): Double {
-            var centerIdx = pos - HALF_LEN - 1
-
-            if (centerIdx < 0) {
-                centerIdx += TAPS
-            }
-
-            var sum = CENTER_TAP * delay[centerIdx]
-            var idxPlus = centerIdx + 1
-
-            if (idxPlus >= TAPS) {
-                idxPlus -= TAPS
-            }
-
-            var idxMinus = centerIdx - 1
-
-            if (idxMinus < 0) {
-                idxMinus += TAPS
-            }
-
-            for (k in KERNEL.indices) {
-                sum += KERNEL[k] * (delay[idxPlus] + delay[idxMinus])
-                idxPlus += 2
-
-                if (idxPlus >= TAPS) {
-                    idxPlus -= TAPS
-                }
-
-                idxMinus -= 2
-
-                if (idxMinus < 0) {
-                    idxMinus += TAPS
-                }
-            }
-
-            return sum
-        }
-    }
-
-    companion object {
-        private val KERNEL = doubleArrayOf(
-            0.33261825699561426,
-            -0.11553340575436945,
-            0.046063814906802995,
-            -0.013148666148047813,
-        )
-        private const val CENTER_TAP = 0.5
-        private const val TAPS = 15
-        private const val HALF_LEN = 7
     }
 }

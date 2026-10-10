@@ -28,7 +28,7 @@ import kotlin.math.pow
  *  1. every sample is DRIVEN and SHAPED in one expression, `shape(x * drive)`, and NaN-guarded. With
  *     an oversampler, that expression runs on the UPSAMPLED stream, so the drive is applied INSIDE
  *     the oversampler (driving at the base rate first and upsampling after is not the same in the last
- *     bits: linear interpolation does not round the same way);
+ *     bits: the interpolating all-pass filters do not round the same way);
  *  2. the DC blocker, on every shape, not only the asymmetric ones: at extreme drive any input
  *     asymmetry rail-locks a symmetric shaper toward +-1 and leaves a DC bias;
  *  3. NO soft cap here. The soft cap belongs to the `Shape` node. The two nodes are different laws on
@@ -83,7 +83,7 @@ internal class DistortionCore(
             scratchBuffers.oversample(os.factor).use { work ->
                 val count = os.upsample(source = buffer, offset = offset, length = length, work = work)
 
-                // NaN-guarded in the shaping loop: see the Oversampler.upsample KDoc.
+                // NaN-guarded in the shaping loop: see "NaN and state" in the Oversampler KDoc.
                 shapeRun(buffer = work, from = 0, to = count, drive = drive)
 
                 os.decimate(work = work, target = buffer, offset = offset, length = length)
@@ -119,7 +119,7 @@ internal class DistortionCore(
             scratchBuffers.oversample(os.factor).use { work ->
                 val count = os.upsample(source = buffer, offset = offset, length = length, work = work)
 
-                // NaN-guarded in the shaping loop: see the Oversampler.upsample KDoc.
+                // NaN-guarded in the shaping loop: see "NaN and state" in the Oversampler KDoc.
                 shapeRunRamped(buffer = work, offset = 0, length = count, driveFrom = driveFrom, driveTo = driveTo)
 
                 os.decimate(work = work, target = buffer, offset = offset, length = length)

@@ -81,11 +81,12 @@ data class BuiltIgnitor(
     val endsInEnvelope: Boolean = false,
     /**
      * How many samples the SIGNAL SPINE of this subtree delays the signal by, EXACT (a fraction where the delay is one):
-     * an oversampled `distort` or `shape` adds its oversampler's group delay (`Oversampler.groupDelaySamples`: 4.0,
-     * 5.5, 6.25 at 2x, 4x, 8x), a series adds them up, and a node with several signal children reports the latest of
-     * them. Read by the `parallel` node, which pads every branch to the latest one so the sum does not comb, rounding
-     * only that pad (2026-10-10, `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`): two 4x stages are 11.0 late, not
-     * the 12 two rounded stages would say, so the residual stays at half a sample or less (audio review round 1).
+     * an oversampled `distort` or `shape` adds its oversampler's low-frequency group delay
+     * (`Oversampler.groupDelaySamples`: 3.07, 4.40, 5.06 at 2x, 4x, 8x), a series adds them up, and a node with several
+     * signal children reports the latest of them, except a `parallel` that pads with phase twins: it reports the delay
+     * of the union it padded every branch to (a 2x and a 4x branch: 3.07 + 4.40). Read by the `parallel` node when it cannot pad with phase twins (see
+     * [oversamplers]); it then delays every branch to the latest one, rounding only that pad, so two 4x stages are 8.79
+     * late and pad a dry branch by 9, not by the 8 two rounded stages would say.
      *
      * Absorbed along the spine like [releaseTailSec] and carried in the cached value for the same reason. A plain sum
      * ([IgnitorDsl.Plus]) does not align its operands; it only reports the later one.
@@ -96,7 +97,35 @@ data class BuiltIgnitor(
      * padded by it. Rare (an oversampled modulator); recorded rather than built around.
      */
     val latencySamples: Double = 0.0,
+    /**
+     * The oversamplers on the SIGNAL SPINE of this subtree, as their stage counts in ascending order (a 2x stage after
+     * a 4x one: `[1, 2]`), or `null` when signal children disagree (a plain sum of a 2x and a 4x signal). A child with
+     * none does not disagree with anyone, the way a latency of 0 never wins [latencySamples]' maximum.
+     *
+     * Read by the `parallel` node. An IIR round trip delays the top more than the bass (`Oversampler`: 3.07 samples
+     * at 1 kHz, 4.74 at 20 kHz at 2x), so no whole-sample pad matches a dry branch to an oversampled one above about
+     * 10 kHz. When every branch knows its list, the node pads each branch with an unshaped round trip of every
+     * oversampler it lacks against the union of the lists (the PHASE TWINS, `phaseTwins`, `Oversampler.unionOf`): every branch then holds
+     * the same all-pass cascade, and a clean sum stays flat to 20 kHz. When a branch is `null` it falls back to the
+     * whole-sample pad by [latencySamples].
+     *
+     * Absorbed along the same edges as [latencySamples], with the same over-count (an oversampled modulator in a
+     * `mul` lists its oversampler as if the signal ran through it).
+     */
+    val oversamplers: List<Int>? = emptyList(),
 )
+
+/**
+ * The oversamplers of a node with two signal children ([BuiltIgnitor.oversamplers]): the one that has any, the shared
+ * list when both have the same, and `null` (unknown) when they differ or either is unknown.
+ */
+internal fun mergeOversamplers(a: List<Int>?, b: List<Int>?): List<Int>? = when {
+    a == null || b == null -> null
+    a.isEmpty() -> b
+    b.isEmpty() -> a
+    a == b -> a
+    else -> null
+}
 
 /** Null-tolerant max: `null` means "no tail", so it loses to any actual value. */
 internal fun maxTail(a: Double?, b: Double?): Double? = when {
@@ -104,3 +133,4 @@ internal fun maxTail(a: Double?, b: Double?): Double? = when {
     b == null -> a
     else -> if (a >= b) a else b
 }
+

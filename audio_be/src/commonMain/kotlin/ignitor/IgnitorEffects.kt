@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.CrushCore
 import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
@@ -797,8 +798,33 @@ private class DcBlockIgnitor(
 }
 
 /**
+ * This signal through an unshaped round trip of an [Oversampler] per entry of [stages] (its stage count): the PHASE
+ * TWINS a `parallel` node puts on a branch that lacks those oversamplers (see [BuiltIgnitor.oversamplers]). A round
+ * trip is flat in level (an all-pass), so a twin changes only the phase, by exactly what the oversampler does to a
+ * branch that runs through it. The oversamplers are allocated here, at build; with no stages the signal is returned as
+ * it is.
+ */
+internal fun Ignitor.phaseTwins(stages: List<Int>): Ignitor = stages.fold(this) { upstream, s -> PhaseTwinIgnitor(upstream = upstream, stages = s) }
+
+private class PhaseTwinIgnitor(
+    private val upstream: Ignitor,
+    stages: Int,
+) : Ignitor {
+    private val oversampler = Oversampler(stages)
+
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        upstream.generate(buffer, freqHz, ctx)
+
+        ctx.scratchBuffers.oversample(oversampler.factor).use { work ->
+            oversampler.upsample(source = buffer, offset = ctx.offset, length = ctx.length, work = work)
+            oversampler.decimate(work = work, target = buffer, offset = ctx.offset, length = ctx.length)
+        }
+    }
+}
+
+/**
  * This signal [frames] samples later: the pad a `parallel` node puts on a branch that is earlier than its latest one
- * (see [BuiltIgnitor.latencySamples]). Silence for the first [frames] samples of the voice, then the input, exactly.
+ * when it cannot use phase twins (see [BuiltIgnitor.latencySamples]). Silence for the first [frames] samples of the voice, then the input, exactly.
  * The ring is allocated here, at build; at 0 frames the signal is returned as it is.
  */
 internal fun Ignitor.delayedBy(frames: Int): Ignitor = if (frames <= 0) this else LatencyPadIgnitor(upstream = this, frames = frames)

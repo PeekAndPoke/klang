@@ -7,51 +7,53 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.audio_be.utils.flushState
+import kotlin.math.ceil
+import kotlin.math.ln
 import kotlin.math.roundToInt
 
 /**
- * N-times oversampler for anti-aliased nonlinear processing.
+ * N-times oversampler for anti-aliased nonlinear processing: a cascade of 2x stages, each a POLYPHASE IIR HALF-BAND
+ * (two parallel chains of first-order all-pass sections in z^2), up and down.
  *
  * **How it works:**
- * 1. [upsample] upsamples by `2^stages` using **linear interpolation** (direct-to-target).
+ * 1. [upsample] runs the cascade up, `2^stages` times the rate: per input sample each stage's two all-pass chains give
+ *    the two output samples (the even and the odd phase of the interpolated stream).
  * 2. The caller shapes the oversampled block in place, in its own loop between the two halves.
- * 3. [decimate] runs the cascaded 2× decimation via a 15-tap half-band FIR (one stage per 2×),
- *    polyphase and indexed straight into the work buffer (see [decimate2x]), and writes back.
+ * 3. [decimate] runs the cascade down, highest stage first: per pair of input samples each stage sums its two chains
+ *    (the later sample through the even chain, the earlier through the odd one) and halves.
  *
- * Filter state persists across round trips for inter-block continuity.
- * The work buffer is the caller's lease from [ScratchBuffers.oversample], held across both
- * halves: no per-voice allocation. A voice's instance is fresh per note and never reset; the one caller of [reset]
- * is the Katalyst `distort` stage, whose cores live as long as their chain (through `DistortionCore.reset`).
+ * Filter state persists across round trips for inter-block continuity. The work buffer is the caller's lease from
+ * [ScratchBuffers.oversample], held across both halves: no per-voice allocation. A voice's instance is fresh per note and
+ * never reset; the one caller of [reset] is the Katalyst `distort` stage (through `DistortionCore.reset`).
  *
- * **Filter quality (honest characterisation):**
- * The half-band FIR has the canonical half-band null at fs/4 (|H(π/2)| = 0.5)
- * and unity DC gain, but is a truncated/windowed design, **not** an equiripple
- * 60 dB-stopband filter. Stopband attenuation is ~−14 dB at 0.55π, ~−20 dB at
- * 0.7π, deepening to −∞ at Nyquist. Combined with the linear-interpolation
- * upsampler (sinc² ≈ −26 dB image rejection), this is a **cheap-and-cheerful
- * anti-aliasing** stage, well-suited for clip/distort/crush waveshaping where
- * the nonlinearity dominates the spectrum anyway. It is **not** a transparent
- * resampler — don't expect spectral fidelity for clean signals.
+ * **The design** (2026-10-10, `docs/tasks/in-progress/iir-oversampler.md`; the maintainer: "we make the iir the
+ * standard for now and add other methods later"): the elliptic half-band as two all-pass branches (Valenzuela and
+ * Constantinides, IEE Proceedings, 1983; Krukowski and Kale, ISCAS 2001), the coefficients from the standard closed form
+ * as in Laurent de Soras' HIIR library (WTFPL), computed offline and written below: [FIRST_STAGE] for the stage at
+ * the base rate (8 coefficients, transition 0.04), [LATER_STAGE] for every stage above it (6 coefficients, transition
+ * 0.08: its input is already band-limited, so only what would fold into the audible band must go).
  *
- * **Group delay** (in input samples), exact, [groupDelaySamples]: the linear interpolation reads the
- * previous input sample at the start of every input period, 1 sample, and each half-band stage centres
- * its output on the stream sample 6 before it, 6 samples at that stage's input rate:
- * - 2× (stages=1): 4.0 samples
- * - 4× (stages=2): 5.5 samples
- * - 8× (stages=3): 6.25 samples
+ * **Quality, measured at 48 kHz** (the bench `OversamplerBenchSpec`): the round trip is FLAT, an all-pass in level at
+ * every audible frequency (0.00 dB from 20 Hz to 20 kHz), and the alias and image rejection is about 95 to 100 dB. The
+ * FIR this replaced lost 2 dB at 16 kHz and rejected about 20 dB.
  *
- * (The figures written here until 2026-10-09 were ~4.0, ~5.75 and ~6.625; derived from the taps and
- * pinned by `OversamplerGroupDelaySpec`, they are the ones above.)
+ * **Latency, and its one catch**: the delay is lower than the FIR's but NOT the same at every frequency (an IIR's phase
+ * is not linear). [groupDelaySamples] declares the low-frequency delay, exact from the coefficients: 3.07, 4.40, 5.06,
+ * 5.39 input samples at 2x, 4x, 8x, 16x (the FIR: 4.0, 5.5, 6.25). Toward the top it rises (at 2x: 3.07 at 1 kHz, 3.33 at
+ * 10 kHz, 3.89 at 16 kHz, 4.74 at 20 kHz), so a whole-sample pad on a dry path beside an oversampled one NOTCHES the top
+ * of their sum (-28.5 dB at 18.25 kHz at 2x). A host that sums the two pads the dry path with a PHASE TWIN instead, an
+ * unshaped round trip of the same oversampler (the `parallel` nodes and the Katalyst `distort` stage's dry path,
+ * [unionOf]); the two then match at every frequency. A linear-phase kernel with a constant delay is a later type.
  *
- * **Sample-rate independence**: kernel coefficients are normalised; the
- * oversampler operates correctly at any input sample rate. Group delay is in
- * input samples, not seconds.
+ * **NaN and state**: an IIR keeps what it is fed. Every sample entering a chain is sterilised with [flushState] (NaN,
+ * infinity and denormal to 0), so one bad sample can never silence a voice for good; the stored states are flushed of
+ * denormals once per block.
  *
- * **`stages = 0` semantics**: [upsample] and [decimate] are no-ops (zero work, no state
- * change), used by callers that may receive `oversample = 1` from a DSL.
+ * **`stages = 0`**: [upsample] and [decimate] are no-ops (zero work, no state change), for callers that may receive
+ * `oversample = 1` from a DSL.
  *
- * @param stages Number of 2× stages. 1 = 2×, 2 = 4×, 3 = 8×. Negative values
- * are coerced to 0 (no oversampling).
+ * @param stages Number of 2x stages. 1 = 2x, 2 = 4x, 3 = 8x. Negative values are coerced to 0 (no oversampling).
  */
 class Oversampler(stages: Int) {
 
@@ -59,20 +61,16 @@ class Oversampler(stages: Int) {
 
     val factor: Int = 1 shl this.stages
 
-    private val decimators = Array(this.stages) { HalfBandState() }
+    /** The up half per stage, stage 0 at the base rate. */
+    private val ups = Array(this.stages) { HalfBand(chainsOf(it)) }
+
+    /** The down half per stage, stage 0 at the base rate (run highest first). */
+    private val downs = Array(this.stages) { HalfBand(chainsOf(it)) }
 
     /**
-     * The prefix view one decimation pass reads its first outputs from: the [HIST] samples before
-     * the block, then the block's first [HEAD]. One per instance, the stages run one after the other.
-     */
-    private val prefix = DoubleArray(HIST + HEAD)
-    private var lastSample: Double = 0.0
-
-    /**
-     * The FIRST HALF of a round trip: upsamples `source[offset, offset + length)` into [work] (linear
-     * interpolation, direct to the target rate) and returns the oversampled count, `length * factor`.
-     * The caller shapes `work[0 until count]` in place, in its own loop, and closes the round trip
-     * with [decimate]. [work] is the caller's lease from `ScratchBuffers.oversample(factor)`, held
+     * The FIRST HALF of a round trip: upsamples `source[offset, offset + length)` into [work] and returns the
+     * oversampled count, `length * factor`. The caller shapes `work[0 until count]` in place, in its own loop, and
+     * closes the round trip with [decimate]. [work] is the caller's lease from `ScratchBuffers.oversample(factor)`, held
      * across both halves:
      *
      * ```
@@ -87,59 +85,51 @@ class Oversampler(stages: Int) {
      * }
      * ```
      *
-     * The loop between the halves is the caller's and runs inline, so no function value crosses the
-     * audio path (`use` is inline too). The round trip used to be one call taking the loop as a
-     * lambda, and a capturing lambda there was a new closure object per block (engine tidy-up step 2,
-     * audit B4.1).
+     * The loop between the halves is the caller's and runs inline, so no function value crosses the audio path (engine
+     * tidy-up step 2, audit B4.1).
      *
-     * **Caller contract, NaN guard**: the caller's loop MUST sterilise NaN samples (e.g. with
-     * `.nanGuard()`) before [decimate] reads them. A single NaN entering a stage poisons every output
-     * whose taps reach it, up to 8 per stage (1 when it sits on an even, centre-only sample), and it
-     * lives on in the stage's history into the next block. Fusing the guard into the caller's
-     * per-sample expression gives a single pass over the work buffer; a defensive second sweep here
-     * would force a two-pass loop and measurably slow the path on V8.
+     * In place, stage by stage: the first stage reads [source] and writes `work[0, 2 * length)`; every later stage first
+     * moves its input to the upper half of the region it fills, `[len, 2 * len)`, and writes `[0, 2 * len)` front to
+     * back, which never overwrites an input sample it has not read yet (output `2i + 1` < input `len + i + 1`).
      *
-     * When [stages] is 0 this writes nothing and returns 0, and [decimate] writes nothing: no
-     * oversampling and no state change.
+     * When [stages] is 0 this writes nothing and returns 0, and [decimate] writes nothing.
      */
     fun upsample(source: AudioBuffer, offset: Int, length: Int, work: AudioBuffer): Int {
         if (stages == 0) {
             return 0
         }
 
-        val f = factor
-        var prev = lastSample
+        ups[0].interpolate(source = source, from = offset, length = length, target = work)
 
-        for (i in 0 until length) {
-            val curr = source[offset + i]
-            val base = i * f
-            val step = (curr - prev) / f
-            for (j in 0 until f) {
-                work[base + j] = (prev + step * j)
+        var len = 2 * length
+
+        for (stage in 1 until stages) {
+            for (i in 0 until len) {
+                work[len + i] = work[i]
             }
-            prev = curr
+
+            ups[stage].interpolate(source = work, from = len, length = len, target = work)
+            len *= 2
         }
 
-        lastSample = prev
-
-        return length * f
+        return len
     }
 
     /**
-     * The SECOND HALF of a round trip (see [upsample]): decimates `work[0 until length * factor)` back
-     * to the base rate through the cascaded half-band stages, in place in [work], and writes the
-     * result into `target[offset, offset + length)`. [offset] and [length] are the ones the
-     * [upsample] of this round trip took.
+     * The SECOND HALF of a round trip (see [upsample]): decimates `work[0 until length * factor)` back to the base rate,
+     * the highest stage first, in place in [work], and writes the result into `target[offset, offset + length)`.
+     * [offset] and [length] are the ones the [upsample] of this round trip took.
      */
     fun decimate(work: AudioBuffer, target: AudioBuffer, offset: Int, length: Int) {
         if (stages == 0) {
             return
         }
 
-        var currentLen = length * factor
+        var len = length * factor
 
-        for (stage in 0 until stages) {
-            currentLen = decimate2x(decimators[stage], work, currentLen)
+        for (stage in stages - 1 downTo 0) {
+            downs[stage].decimate(buffer = work, length = len)
+            len /= 2
         }
 
         // Back into the caller's buffer, without `copyInto`'s typed-array view on JS (see `copyRangeInto`).
@@ -147,165 +137,328 @@ class Oversampler(stages: Int) {
     }
 
     /**
-     * Clears all internal filter state — every [HalfBandState] delay line and
-     * the upsampler's `lastSample`. A voice never calls it (its instance is fresh per note-on). Since
-     * 2026-10-09 the Katalyst `distort` stage does, through `DistortionCore.reset`, when it enters Off or is
-     * cut hard: its cores live as long as their chain. (Ledger W11: the old KDoc claimed a cleanup/retrigger
-     * lifecycle that never existed.)
+     * Clears all filter state. A voice never calls it (its instance is fresh per note-on); the Katalyst `distort` stage
+     * does, through `DistortionCore.reset`, when it enters Off or is cut hard: its cores live as long as their chain.
      */
     fun reset() {
-        for (d in decimators) {
-            d.hist.fill(0.0)
+        for (stage in 0 until stages) {
+            ups[stage].reset()
+            downs[stage].reset()
         }
-        lastSample = 0.0
     }
 
-    // ── 2x decimation with half-band FIR ────────────────────────────────────────
-
-    /**
-     * One half-band pass, in place: `work[0 until currentLen]` in, `work[0 until currentLen / 2]`
-     * out. Output `m` is the 15-tap FIR centred on stream sample `2m - 6`:
-     *
-     * ```
-     * y[m] = 0.5 · s[2m-6] + k1 · (s[2m-5] + s[2m-7]) + k3 · (s[2m-3] + s[2m-9])
-     *                      + k5 · (s[2m-1] + s[2m-11]) + k7 · (s[2m+1] + s[2m-13])
-     * ```
-     *
-     * so it reads `s[2m-13 .. 2m+1]`, and the samples before the block come from the stage's
-     * [HalfBandState.hist]. The taps index the buffer directly (polyphase: the centre is an even
-     * sample, the four pairs are odd ones), nothing is pushed through a ring. Writing `y[m]` into
-     * `work[m]` is safe once `2m - 13 >= m`, i.e. from output [PRE_OUT] on; the outputs before
-     * that read the [prefix] view, which is filled before anything is overwritten.
-     */
-    private fun decimate2x(state: HalfBandState, work: AudioBuffer, currentLen: Int): Int {
-        val n = currentLen
-
-        if (n == 0) {
-            return 0
-        }
-
-        // n is always even: length · factor, and factor is a power of two. An odd n would shift the
-        // polyphase alignment of every later block, silently.
-        val outLen = n ushr 1
-        val hist = state.hist
-        val pre = prefix
-        val headLen = if (n < HEAD) n else HEAD
-
-        // The prefix view: history, then the head of the block, both still untouched. Plain loops:
-        // `copyInto` allocates a typed-array view per call on JS, and these move 13 to 26 doubles.
-        for (i in 0 until HIST) {
-            pre[i] = hist[i]
-        }
-
-        for (i in 0 until headLen) {
-            pre[HIST + i] = work[i]
-        }
-
-        // The next pass's history, taken from the block before any output lands in it.
-        if (n >= HIST) {
-            val from = n - HIST
-
-            for (i in 0 until HIST) {
-                hist[i] = work[from + i]
-            }
-        } else {
-            for (i in 0 until HIST - n) {
-                hist[i] = hist[i + n]
-            }
-
-            for (i in 0 until n) {
-                hist[HIST - n + i] = work[i]
-            }
-        }
-
-        val preOut = if (outLen < PRE_OUT) outLen else PRE_OUT
-
-        for (m in 0 until preOut) {
-            work[m] = tap(pre, HIST + 2 * m)
-        }
-
-        for (m in preOut until outLen) {
-            work[m] = tap(work, 2 * m)
-        }
-
-        return outLen
-    }
-
-    /** The FIR at `base = 2m` in [src]; the summation order is the one the ring version had. */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun tap(src: DoubleArray, base: Int): Double {
-        var sum = CENTER_TAP * src[base - 6]
-
-        sum += K1 * (src[base - 5] + src[base - 7])
-        sum += K3 * (src[base - 3] + src[base - 9])
-        sum += K5 * (src[base - 1] + src[base - 11])
-        sum += K7 * (src[base + 1] + src[base - 13])
-
-        return sum
+    /** A design's coefficients split into its two all-pass chains: the even-indexed ones, then the odd-indexed. */
+    private class Chains(coefficients: DoubleArray) {
+        val even = DoubleArray((coefficients.size + 1) / 2) { coefficients[2 * it] }
+        val odd = DoubleArray(coefficients.size / 2) { coefficients[2 * it + 1] }
     }
 
     /**
-     * Persistent state for one half-band decimation stage: the last [HIST] input samples of the
-     * stream, oldest first. Survives across round trips for filter continuity at block
-     * boundaries.
+     * One 2x stage of one direction: the two all-pass chains of a half-band, the even-indexed coefficients in one, the
+     * odd-indexed in the other. Each section is `y = (x - y1) * a + x1`, an all-pass in z^2 run at the LOW rate of the
+     * stage, unrolled for the two designs the stages use. Stateful, one per stage and direction; the states are flushed
+     * of denormals once per block ([settle]).
      */
-    private class HalfBandState {
-        val hist = DoubleArray(HIST)
+    private class HalfBand(chains: Chains) {
+        private val even = chains.even
+        private val odd = chains.odd
+        private val evenX = DoubleArray(even.size)
+        private val evenY = DoubleArray(even.size)
+        private val oddX = DoubleArray(odd.size)
+        private val oddY = DoubleArray(odd.size)
+
+        /** True for the base-rate design (4 + 4 sections), false for the one above it (3 + 3): which unrolled loop runs. */
+        private val wide = even.size == 4
+
+        init {
+            // An internal invariant, not user input: the loops below are written for exactly these two designs.
+            require((even.size == 4 && odd.size == 4) || (even.size == 3 && odd.size == 3)) {
+                "an oversampler stage has 8 or 6 coefficients, got ${even.size + odd.size}"
+            }
+        }
+
+        /** Upsamples `source[from, from + length)` into `target[0, 2 * length)`: the even phase, then the odd. */
+        fun interpolate(source: AudioBuffer, from: Int, length: Int, target: AudioBuffer) {
+            if (wide) {
+                interpolate44(source = source, from = from, length = length, target = target)
+            } else {
+                interpolate33(source = source, from = from, length = length, target = target)
+            }
+        }
+
+        /** Decimates `buffer[0, length)` into `buffer[0, length / 2)`, in place (output `m` is written after `2m + 1` is read). */
+        fun decimate(buffer: AudioBuffer, length: Int) {
+            if (wide) {
+                decimate44(buffer = buffer, length = length)
+            } else {
+                decimate33(buffer = buffer, length = length)
+            }
+        }
+
+        // ── The two designs, unrolled ────────────────────────────────────────────────────────────────────────────────
+        //
+        // Each section is `y = (x - y1) * a + x1`, run sample by sample through the chain; pinned bit for bit against a
+        // plain reference that loops over arrays (`OversamplerDecimatorParitySpec`). Every state and coefficient is a
+        // local for the block, which the JIT keeps in registers instead of loading and storing arrays per sample:
+        // measured 2026-10-10 on the JVM, a 128-frame round trip with a soft shaper went from 4.45 to 3.32 us at 2x and
+        // from 8.54 to 5.03 us at 4x (the FIR it replaced: 2.97 and 3.77).
+
+        /** [interpolate] for 4 + 4 sections (the base-rate stage). */
+        private fun interpolate44(source: AudioBuffer, from: Int, length: Int, target: AudioBuffer) {
+            val a0 = even[0]; val a1 = even[1]; val a2 = even[2]; val a3 = even[3]
+            val b0 = odd[0]; val b1 = odd[1]; val b2 = odd[2]; val b3 = odd[3]
+            var ex0 = evenX[0]; var ex1 = evenX[1]; var ex2 = evenX[2]; var ex3 = evenX[3]
+            var ey0 = evenY[0]; var ey1 = evenY[1]; var ey2 = evenY[2]; var ey3 = evenY[3]
+            var ox0 = oddX[0]; var ox1 = oddX[1]; var ox2 = oddX[2]; var ox3 = oddX[3]
+            var oy0 = oddY[0]; var oy1 = oddY[1]; var oy2 = oddY[2]; var oy3 = oddY[3]
+
+            for (i in 0 until length) {
+                val x = source[from + i].flushState()
+
+                var y = (x - ey0) * a0 + ex0; ex0 = x; ey0 = y
+                var z = (y - ey1) * a1 + ex1; ex1 = y; ey1 = z
+                y = (z - ey2) * a2 + ex2; ex2 = z; ey2 = y
+                z = (y - ey3) * a3 + ex3; ex3 = y; ey3 = z
+                target[2 * i] = z
+
+                y = (x - oy0) * b0 + ox0; ox0 = x; oy0 = y
+                z = (y - oy1) * b1 + ox1; ox1 = y; oy1 = z
+                y = (z - oy2) * b2 + ox2; ox2 = z; oy2 = y
+                z = (y - oy3) * b3 + ox3; ox3 = y; oy3 = z
+                target[2 * i + 1] = z
+            }
+
+            evenX[0] = ex0; evenX[1] = ex1; evenX[2] = ex2; evenX[3] = ex3
+            evenY[0] = ey0; evenY[1] = ey1; evenY[2] = ey2; evenY[3] = ey3
+            oddX[0] = ox0; oddX[1] = ox1; oddX[2] = ox2; oddX[3] = ox3
+            oddY[0] = oy0; oddY[1] = oy1; oddY[2] = oy2; oddY[3] = oy3
+
+            settle()
+        }
+
+        /** [decimate] for 4 + 4 sections. */
+        private fun decimate44(buffer: AudioBuffer, length: Int) {
+            val a0 = even[0]; val a1 = even[1]; val a2 = even[2]; val a3 = even[3]
+            val b0 = odd[0]; val b1 = odd[1]; val b2 = odd[2]; val b3 = odd[3]
+            var ex0 = evenX[0]; var ex1 = evenX[1]; var ex2 = evenX[2]; var ex3 = evenX[3]
+            var ey0 = evenY[0]; var ey1 = evenY[1]; var ey2 = evenY[2]; var ey3 = evenY[3]
+            var ox0 = oddX[0]; var ox1 = oddX[1]; var ox2 = oddX[2]; var ox3 = oddX[3]
+            var oy0 = oddY[0]; var oy1 = oddY[1]; var oy2 = oddY[2]; var oy3 = oddY[3]
+
+            for (m in 0 until length / 2) {
+                // NaN-guard on the signal entering the IIR, as in [interpolate].
+                val later = buffer[2 * m + 1].flushState()
+                val earlier = buffer[2 * m].flushState()
+
+                var y = (later - ey0) * a0 + ex0; ex0 = later; ey0 = y
+                var z = (y - ey1) * a1 + ex1; ex1 = y; ey1 = z
+                y = (z - ey2) * a2 + ex2; ex2 = z; ey2 = y
+                z = (y - ey3) * a3 + ex3; ex3 = y; ey3 = z
+                val e = z
+
+                y = (earlier - oy0) * b0 + ox0; ox0 = earlier; oy0 = y
+                z = (y - oy1) * b1 + ox1; ox1 = y; oy1 = z
+                y = (z - oy2) * b2 + ox2; ox2 = z; oy2 = y
+                z = (y - oy3) * b3 + ox3; ox3 = y; oy3 = z
+
+                buffer[m] = 0.5 * (e + z)
+            }
+
+            evenX[0] = ex0; evenX[1] = ex1; evenX[2] = ex2; evenX[3] = ex3
+            evenY[0] = ey0; evenY[1] = ey1; evenY[2] = ey2; evenY[3] = ey3
+            oddX[0] = ox0; oddX[1] = ox1; oddX[2] = ox2; oddX[3] = ox3
+            oddY[0] = oy0; oddY[1] = oy1; oddY[2] = oy2; oddY[3] = oy3
+
+            settle()
+        }
+
+        /** [interpolate] for 3 + 3 sections (every stage above the first). */
+        private fun interpolate33(source: AudioBuffer, from: Int, length: Int, target: AudioBuffer) {
+            val a0 = even[0]; val a1 = even[1]; val a2 = even[2]
+            val b0 = odd[0]; val b1 = odd[1]; val b2 = odd[2]
+            var ex0 = evenX[0]; var ex1 = evenX[1]; var ex2 = evenX[2]
+            var ey0 = evenY[0]; var ey1 = evenY[1]; var ey2 = evenY[2]
+            var ox0 = oddX[0]; var ox1 = oddX[1]; var ox2 = oddX[2]
+            var oy0 = oddY[0]; var oy1 = oddY[1]; var oy2 = oddY[2]
+
+            for (i in 0 until length) {
+                // NaN-guard on the signal entering the IIR, as in [interpolate].
+                val x = source[from + i].flushState()
+
+                var y = (x - ey0) * a0 + ex0; ex0 = x; ey0 = y
+                var z = (y - ey1) * a1 + ex1; ex1 = y; ey1 = z
+                y = (z - ey2) * a2 + ex2; ex2 = z; ey2 = y
+                target[2 * i] = y
+
+                y = (x - oy0) * b0 + ox0; ox0 = x; oy0 = y
+                z = (y - oy1) * b1 + ox1; ox1 = y; oy1 = z
+                y = (z - oy2) * b2 + ox2; ox2 = z; oy2 = y
+                target[2 * i + 1] = y
+            }
+
+            evenX[0] = ex0; evenX[1] = ex1; evenX[2] = ex2
+            evenY[0] = ey0; evenY[1] = ey1; evenY[2] = ey2
+            oddX[0] = ox0; oddX[1] = ox1; oddX[2] = ox2
+            oddY[0] = oy0; oddY[1] = oy1; oddY[2] = oy2
+
+            settle()
+        }
+
+        /** [decimate] for 3 + 3 sections. */
+        private fun decimate33(buffer: AudioBuffer, length: Int) {
+            val a0 = even[0]; val a1 = even[1]; val a2 = even[2]
+            val b0 = odd[0]; val b1 = odd[1]; val b2 = odd[2]
+            var ex0 = evenX[0]; var ex1 = evenX[1]; var ex2 = evenX[2]
+            var ey0 = evenY[0]; var ey1 = evenY[1]; var ey2 = evenY[2]
+            var ox0 = oddX[0]; var ox1 = oddX[1]; var ox2 = oddX[2]
+            var oy0 = oddY[0]; var oy1 = oddY[1]; var oy2 = oddY[2]
+
+            for (m in 0 until length / 2) {
+                // NaN-guard on the signal entering the IIR, as in [interpolate].
+                val later = buffer[2 * m + 1].flushState()
+                val earlier = buffer[2 * m].flushState()
+
+                var y = (later - ey0) * a0 + ex0; ex0 = later; ey0 = y
+                var z = (y - ey1) * a1 + ex1; ex1 = y; ey1 = z
+                y = (z - ey2) * a2 + ex2; ex2 = z; ey2 = y
+                val e = y
+
+                y = (earlier - oy0) * b0 + ox0; ox0 = earlier; oy0 = y
+                z = (y - oy1) * b1 + ox1; ox1 = y; oy1 = z
+                y = (z - oy2) * b2 + ox2; ox2 = z; oy2 = y
+
+                buffer[m] = 0.5 * (e + y)
+            }
+
+            evenX[0] = ex0; evenX[1] = ex1; evenX[2] = ex2
+            evenY[0] = ey0; evenY[1] = ey1; evenY[2] = ey2
+            oddX[0] = ox0; oddX[1] = ox1; oddX[2] = ox2
+            oddY[0] = oy0; oddY[1] = oy1; oddY[2] = oy2
+
+            settle()
+        }
+
+        fun reset() {
+            evenX.fill(0.0)
+            evenY.fill(0.0)
+            oddX.fill(0.0)
+            oddY.fill(0.0)
+        }
+
+        /**
+         * The stored states sterilised once per pass ([flushState]: a denormal to 0). Once per BLOCK, not per sample: the
+         * input is already guarded per sample, so no NaN or infinity can reach a state, and a denormal costs time only,
+         * never a wrong value, while it lives for less than a block. Per sample this check was most of the kernel's
+         * cost (measured 2026-10-10 on the JVM).
+         */
+        private fun settle() {
+            for (k in evenX.indices) {
+                evenX[k] = evenX[k].flushState()
+                evenY[k] = evenY[k].flushState()
+            }
+
+            for (k in oddX.indices) {
+                oddX[k] = oddX[k].flushState()
+                oddY[k] = oddY[k].flushState()
+            }
+        }
     }
 
     companion object {
-        // 15-tap half-band FIR, the non-zero taps on one side (symmetric), at odd offsets ±1, ±3,
-        // ±5, ±7 from the center tap. Half-band property: even-offset taps (except the center 0.5)
-        // are zero, so `tap` costs 4 symmetric MACs + 1 center multiply per output sample. The
-        // offsets in `tap`, HIST and PRE_OUT are all written for TAPS = 15: the unit moves together
-        // or not at all. Quality is truncated half-band, not equiripple (see the class KDoc for
-        // the honest stopband characterisation).
-        private const val K1 = 0.33261825699561426
-        private const val K3 = -0.11553340575436945
-        private const val K5 = 0.046063814906802995
-        private const val K7 = -0.013148666148047813
-
-        /** Center tap (canonical half-band: 0.5). */
-        private const val CENTER_TAP = 0.5
-
-        /** Total FIR length. */
-        private const val TAPS = 15
-
         /**
-         * Stream samples before the block that a pass reads: output 0 reaches back to `s[-13]`,
-         * the FIR's span minus the two samples of its own pair.
+         * The half-band of the stage at the base rate: 8 all-pass coefficients, transition 0.04 of its high rate (flat
+         * to about 20 kHz at a 48 kHz base, rejection about 100 dB). Designed offline with the standard closed form (see
+         * the class KDoc); the bench pins what they do, not the digits.
          */
-        private const val HIST = TAPS - 2
+        private val FIRST_STAGE = doubleArrayOf(
+            0.04063346092419326, 0.1505051290226746, 0.3007570559918741, 0.4607745049614506,
+            0.6095243148961883, 0.7385038411188573, 0.8492238103920661, 0.9497427837050002,
+        )
+
+        /** The half-band of every stage above the first: 6 coefficients, transition 0.08 (rejection about 95 dB where it matters). */
+        private val LATER_STAGE = doubleArrayOf(
+            0.04536216434896102, 0.16808748123450207, 0.33714968797907374,
+            0.5223778543083537, 0.7080641363635384, 0.8974455911727738,
+        )
+
+        /** The coefficients of 2x stage [stage], 0 at the base rate. */
+        internal fun coefficientsOf(stage: Int): DoubleArray = if (stage == 0) FIRST_STAGE else LATER_STAGE
+
+        /** Each design split into its two chains once, shared by every instance (read only). */
+        private val FIRST_CHAINS = Chains(FIRST_STAGE)
+        private val LATER_CHAINS = Chains(LATER_STAGE)
+
+        private fun chainsOf(stage: Int): Chains = if (stage == 0) FIRST_CHAINS else LATER_CHAINS
+
+        /** How many all-pass sections one direction of 2x stage [stage] runs (for the census). */
+        internal fun sectionsOf(stage: Int): Int = coefficientsOf(stage).size
 
         /**
-         * The first output that can be written in place: output `m` reads down to `s[2m-13]`,
-         * and it may overwrite `work[m]` only once nothing after it reads below `m`, which is
-         * `2m - HIST >= m`.
-         */
-        private const val PRE_OUT = HIST
-
-        /** Block samples the prefix view holds: the last prefix output reads up to `s[2·12+1]`. */
-        private const val HEAD = 2 * PRE_OUT
-
-        /**
-         * The round trip's group delay in INPUT samples for [stages] 2x stages: 0 without oversampling,
-         * else `1 + 6 * (1 - 2^-stages)`, the interpolation's one sample plus each half-band stage's six at
-         * its own input rate (see the class KDoc). A host that mixes the oversampled path with a dry one
-         * delays the dry by this, rounded (the Katalyst `distort` stage).
+         * The round trip's LOW-FREQUENCY group delay in INPUT samples for [stages] 2x stages, 0 without oversampling.
+         * Exact from the coefficients: a first-order all-pass `y = (x - y1) a + x1`, run at a stage's low rate, delays DC
+         * by `(1 - a) / (1 + a)` samples of that rate; a stage's round trip delays DC by the MEAN of its two chains' sums
+         * (a half-band at DC is the average of its two branches), scaled to input samples by `2^-stage`. 3.07, 4.40,
+         * 5.06, 5.39 at 2x to 16x; the measured centroid of the impulse response agrees to 1e-12
+         * (`OversamplerGroupDelaySpec`). Toward the top the delay rises (see the class KDoc).
          */
         fun groupDelaySamples(stages: Int): Double {
-            if (stages <= 0) {
-                return 0.0
+            var delay = 0.0
+
+            for (stage in 0 until stages) {
+                val coefficients = coefficientsOf(stage)
+                var sum = 0.0
+
+                for (a in coefficients) {
+                    sum += (1.0 - a) / (1.0 + a)
+                }
+
+                // the even chain's sum plus the odd chain's, halved: the mean of the two (each section counts 2(1-a)/(1+a)
+                // at the stage's high rate, (1-a)/(1+a) at its low rate)
+                delay += sum / (1 shl stage)
             }
 
-            return 1.0 + 6.0 * (1.0 - 1.0 / (1 shl stages))
+            return delay
         }
 
         /**
-         * [groupDelaySamples] in whole frames, rounded (4, 6, 6 at 2x, 4x, 8x): the latency a bus stage reports
+         * How many input frames the round trip may still ring after its input stops, down to about 120 dB under the
+         * input: its slowest pole decays by the largest coefficient of the base-rate stage per input frame, so
+         * `ln(1e-6) / ln(max a)`: 268 frames with any oversampling, 0 without. At 2x the ring is under 1e-6 by frame 254;
+         * at 4x and 8x the cascade meets that pole twice and stays above 1e-6 to about frame 300, under -114 dB past
+         * 268 (audio review, round 2). A host that must not cut a tail asks this (the Katalyst `distort` stage's hold,
+         * the `parallel` stage's twins).
+         */
+        fun tailFrames(stages: Int): Int {
+            if (stages <= 0) {
+                return 0
+            }
+
+            return ceil(ln(1e-6) / ln(FIRST_STAGE.max())).toInt()
+        }
+
+        /**
+         * [groupDelaySamples] in whole frames, rounded (3, 4, 5 at 2x, 4x, 8x): the latency a bus stage reports
          * (`KatalystDistortEffect`). A voice keeps the exact delay and rounds only its pad (`BuiltIgnitor.latencySamples`).
          */
         fun latencyFrames(stages: Int): Int = groupDelaySamples(stages).roundToInt()
+
+        /**
+         * The oversamplers a `parallel` stage pads its branches to, each branch listing its own as stage counts: every
+         * stage count as often as the branch that holds it most often, ascending (`[1]` and `[2, 2]` give `[1, 2, 2]`).
+         * A branch that lacks some of them gets an unshaped round trip of each ([missingFrom]), a phase twin, so every
+         * branch holds the same all-pass cascade (the class KDoc's dispersion).
+         */
+        fun unionOf(lists: List<List<Int>>): List<Int> =
+            lists.flatten().distinct().sorted().flatMap { stages ->
+                List(lists.maxOf { list -> list.count { it == stages } }) { stages }
+            }
+
+        /** What [union] holds that [have] does not, counted per stage count: `[1, 2, 2]` minus `[2]` is `[1, 2]`. */
+        fun missingFrom(have: List<Int>, union: List<Int>): List<Int> {
+            val left = have.toMutableList()
+
+            return union.filter { stages -> !left.remove(stages) }
+        }
 
         /**
          * Converts a user-facing oversampling factor to internal stages.

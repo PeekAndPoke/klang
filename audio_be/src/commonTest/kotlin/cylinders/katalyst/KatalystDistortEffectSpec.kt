@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.distortionShapeAt
+import io.peekandpoke.klang.audio_be.roundTrip
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
@@ -37,7 +38,8 @@ import kotlin.math.sqrt
  * state.
  *
  * **The oracles are BARE [DistortionCore]s driven by hand and the input's own definition**, never the stage under
- * test: settled, the stage is two cores at the drive of its amount; off, it is the input (delayed by its latency);
+ * test: settled, the stage is two cores at the drive of its amount; off, it is the input (with oversampling, through an
+ * unshaped round trip of a bare [Oversampler] per channel, the phase twin of the cores' kernel);
  * switching, it is `dry + w * (distorted - dry)` with `w` the linear fade of [KNOB_GLIDE_SECONDS]. The oracle cores
  * carry the house DC pole as the LITERAL 0.999, so a stage that slid back to the voice's pole goes red here.
  */
@@ -95,6 +97,33 @@ class KatalystDistortEffectSpec : StringSpec({
             for (i in 0 until blockFrames) {
                 outL[base + i] = ctx.mixBuffer.left[i]
                 outR[base + i] = ctx.mixBuffer.right[i]
+            }
+        }
+
+        return Out(outL, outR)
+    }
+
+    /**
+     * The dry mix a stage at [factor] plays against: the input itself, or with oversampling the input through an
+     * unshaped round trip of a bare [Oversampler] per channel, block by block from block 0.
+     */
+    fun dry(factor: Int, blocks: Int): Out {
+        val stages = Oversampler.factorToStages(factor)
+        val outL = DoubleArray(blocks * blockFrames) { inputL(it) }
+        val outR = DoubleArray(blocks * blockFrames) { inputR(it) }
+
+        if (stages == 0) {
+            return Out(outL, outR)
+        }
+
+        val scratch = ScratchBuffers(blockFrames)
+
+        for ((os, out) in listOf(Oversampler(stages) to outL, Oversampler(stages) to outR)) {
+            for (b in 0 until blocks) {
+                val block = AudioBuffer(blockFrames) { out[b * blockFrames + it] }
+
+                os.roundTrip(buffer = block, offset = 0, length = blockFrames, scratch = scratch) { _, _ -> }
+                block.copyInto(destination = out, destinationOffset = b * blockFrames)
             }
         }
 
@@ -183,8 +212,9 @@ class KatalystDistortEffectSpec : StringSpec({
         }
     }
 
-    "oversampling delays the orbit by the rounded group delay, and OFF is that delay exactly" {
-        mapOf(0 to 0, 1 to 0, 2 to 4, 3 to 4, 4 to 6, 8 to 6).forEach { (factor, latency) ->
+    "oversampling delays the orbit by the rounded group delay, and OFF is EXACTLY the unshaped round trip" {
+        // The IIR half-band's low-frequency delay, rounded: 3.07, 4.40, 5.06 at 2x, 4x, 8x.
+        mapOf(0 to 0, 1 to 0, 2 to 3, 3 to 3, 4 to 4, 8 to 5).forEach { (factor, latency) ->
             withClue("factor $factor") {
                 KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = factor).latencyFrames shouldBe latency
             }
@@ -198,12 +228,14 @@ class KatalystDistortEffectSpec : StringSpec({
             abs(latency - Oversampler.groupDelaySamples(stages)) shouldBeLessThan 0.51
         }
 
-        // Off, with a 4-frame latency: out[k] = in[k - 4], across the block seams.
+        // Off at 2x: the phase twins' round trip, bit for bit, across the block seams; in the bass and the mids that
+        // is the input 3 frames late, to within the group delay's 0.07 frame.
         val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = 2)
         val out = run(fx, 3) { 0.0 }
+        val expected = dry(factor = 2, blocks = 3)
 
-        out.left.toList() shouldBe List(3 * blockFrames) { if (it < 4) 0.0 else inputL(it - 4) }
-        out.right.toList() shouldBe List(3 * blockFrames) { if (it < 4) 0.0 else inputR(it - 4) }
+        out.left.toList() shouldBe expected.left.toList()
+        out.right.toList() shouldBe expected.right.toList()
     }
 
     "a chain sums the stage's latency with a compressor's lookahead" {
@@ -216,27 +248,28 @@ class KatalystDistortEffectSpec : StringSpec({
         )
 
         chain(KatalystStageDsl.Distort()).latencyFrames shouldBe 0
-        chain(KatalystStageDsl.Distort(oversample = 2)).latencyFrames shouldBe 4
-        chain(KatalystStageDsl.Distort(oversample = 8)).latencyFrames shouldBe 6
+        chain(KatalystStageDsl.Distort(oversample = 2)).latencyFrames shouldBe 3
+        chain(KatalystStageDsl.Distort(oversample = 8)).latencyFrames shouldBe 5
 
         val lookahead = KatalystStageDsl.Compressor(lookahead = 0.005)
         val lookaheadFrames = chain(lookahead).latencyFrames
 
-        chain(KatalystStageDsl.Distort(oversample = 2), lookahead).latencyFrames shouldBe lookaheadFrames + 4
+        chain(KatalystStageDsl.Distort(oversample = 2), lookahead).latencyFrames shouldBe lookaheadFrames + 3
     }
 
     "ON after a life fades in from the dry over the glide: the first sample is dry, the end is the distorted mix" {
         listOf(0, 2).forEach { factor ->
             val blocks = 2 + (fadeLen / blockFrames) + 3
             val k0 = 2 * blockFrames
-            val latency = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = factor).latencyFrames
             val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = tube, oversampleFactor = factor)
             // Two blocks off (the stage is no longer fresh), then on.
             val out = run(fx, blocks) { b -> if (b < 2) 0.0 else 0.3 }
             val wet = oracle(shape = tube, amount = 0.3, factor = factor, blocks = blocks, fromBlock = 2)
 
-            fun dryL(k: Int) = if (k < latency) 0.0 else inputL(k - latency)
-            fun dryR(k: Int) = if (k < latency) 0.0 else inputR(k - latency)
+            val twin = dry(factor = factor, blocks = blocks)
+
+            fun dryL(k: Int) = twin.left[k]
+            fun dryR(k: Int) = twin.right[k]
 
             withClue("oversample $factor") {
                 for (k in k0 until blocks * blockFrames) {
@@ -253,20 +286,21 @@ class KatalystDistortEffectSpec : StringSpec({
         }
     }
 
-    "OFF fades out to EXACTLY the dry mix, and the stage then rests in Off; with oversampling, the delayed dry" {
-        // The oversampled case is the one that proves the dry ring keeps running while the stage is engaged: the
-        // fade out blends against a dry that must be the input exactly `latency` frames ago.
+    "OFF fades out to EXACTLY the dry mix, and the stage then rests in Off; with oversampling, the twins' dry" {
+        // The oversampled case is the one that proves the phase twins keep running while the stage is engaged: the
+        // fade out blends against a dry that must be the input's unbroken round trip since block 0.
         listOf(0, 2).forEach { factor ->
             val offBlock = 3
             val blocks = offBlock + (fadeLen / blockFrames) + 3
             val k0 = offBlock * blockFrames
             val fx = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, shapeIndex = soft, oversampleFactor = factor)
-            val latency = fx.latencyFrames
             val out = run(fx, blocks) { b -> if (b < offBlock) 0.4 else 0.0 }
             val wet = oracle(shape = soft, amount = 0.4, factor = factor, blocks = blocks)
 
-            fun dryL(k: Int) = if (k < latency) 0.0 else inputL(k - latency)
-            fun dryR(k: Int) = if (k < latency) 0.0 else inputR(k - latency)
+            val twin = dry(factor = factor, blocks = blocks)
+
+            fun dryL(k: Int) = twin.left[k]
+            fun dryR(k: Int) = twin.right[k]
 
             withClue("oversample $factor") {
                 for (k in k0 until blocks * blockFrames) {
@@ -385,7 +419,7 @@ class KatalystDistortEffectSpec : StringSpec({
         out.left.toList() shouldBe expected.left.toList()
     }
 
-    "with oversampling the stage holds a tail while the ring and the decimators may still hold audio" {
+    "with oversampling the stage holds a tail while the twins and the decimators may still ring" {
         val loud = { k: Int -> inputL(k) }
         val silent = { _: Int -> 0.0 }
 
@@ -397,10 +431,12 @@ class KatalystDistortEffectSpec : StringSpec({
         run(latent, 200, inL = silent, inR = silent) { 0.3 }
         latent.hasTail() shouldBe false
 
-        // OFF, the cores are reset and hold nothing, but the dry ring still holds the last frames: a tail until one
-        // quiet block has pushed them out.
+        // OFF, the cores are reset and hold nothing, but the phase twins still ring: a tail until their slowest pole
+        // has decayed 120 dB, 268 frames at 2x (0.9497 per frame), so two quiet blocks are not enough and three are.
         val off = KatalystDistortEffect(sampleRate = sampleRate, blockFrames = blockFrames, oversampleFactor = 2)
         run(off, 1, inL = loud, inR = loud) { 0.0 }
+        off.hasTail() shouldBe true
+        run(off, 2, inL = silent, inR = silent) { 0.0 }
         off.hasTail() shouldBe true
         run(off, 1, inL = silent, inR = silent) { 0.0 }
         off.hasTail() shouldBe false
