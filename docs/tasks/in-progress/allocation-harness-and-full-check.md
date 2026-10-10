@@ -1,6 +1,6 @@
 # The allocation harness in the repo, and one full check
 
-Status: **decided (maintainer, 2026-10-10), queued right after engine follow-ups 8 and 12; not started.**
+Status: **in progress (2026-10-10): the design phase; the design and the case list go to the maintainer before the build.**
 
 ## Why
 
