@@ -4,6 +4,16 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-10) Lighter still, and a cleaner top ... v0.6.3
+
+- every moving envelope boxed each sample on V8 (the chain adsr, classic()'s envelope, the pitch and FM envelopes, about 2.1 KB per block each) ... now about nothing, bit for bit
+- every knob read boxed one number per voice and block on V8, through one shared helper the browser never inlined ... inline now: a classic saw from about 80 to 21 bytes per block, a unison stack from about 90 to 0
+- with a new note every 16 blocks the engine allocated 26.3 KB per block at v0.6.2 ... about 1 KB now, most of it the voice build
+- the JVM boxes nothing per block anymore, the vibrato included: a knob's control-rate value is a plain number now, and the "constant, but no value" fallback is gone (maintainer)
+- the oversampler is a polyphase IIR half-band: flat to 20 kHz where the old one lost 4 dB, aliases about 100 dB down instead of 20 ... a dry path beside an oversampled one runs through its phase twin, so a clean plus no longer notches the top; Kokon renders about 25 % slower, accepted, a shared oversampling DSL will win it back
+- next: the allocation harness moves into the repo, scores on a scoreboard and one full check before a release ... the design waits for the maintainer
+- the corpus rendered bit for bit the same through every engine step ... the oversampler's sound change is the one we meant
+
 ### (2026-10-10) Lighter on the phone ... v0.6.2
 
 - fm moved into the tree as classic()'s innermost stage: fm(depth, ratio, attack, decay, sustain, release), the envelope runs per sample, the modulator follows vib, penv and accelerate ... the pitch strip is gone, voices/strip/ with it
