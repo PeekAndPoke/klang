@@ -308,6 +308,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 Engine follow-up 3: no noise box reproduces; the house limiter's per-sample `lookaheadStep`, never
+  inlined by V8, boxed about 2 KB per block whenever anything sounded and 4 KB from its first reduction on (the
+  likely cause of the old figure, unproven), now about 0; it is `inline`, bit for bit, corpus identical:
+  `docs/tasks/engine-follow-ups.md` item 3
 - 2026-10-10 Engine follow-up 9: `DistortionCore` dispatches its shape once per block to one loop per shape; the
   per-sample `when` boxed every shaped sample on V8 (2 to 33 KB per block, now about 0), bit for bit, corpus
   identical: `docs/tasks/engine-follow-ups.md` item 9

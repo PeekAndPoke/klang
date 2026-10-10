@@ -260,6 +260,17 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   (`ResonatorConfig`, like the EQ's `DoubleArray`), handed over by reference; and a method that Kotlin's `inline`
   makes large can leave V8 without the budget to inline its small callees (`ResonatorBank.install` boxed the wet/dry
   law's doubles until its per-band and blend halves became methods of their own). The JVM boxes none of this.
+  **A per-sample helper past V8's bytecode limit for inlining (460 bytes) is never inlined**, however warm:
+  `--trace-turbo-inlining` prints "Cannot consider ... for inlining (reason: 5)". Make it a Kotlin `inline` function,
+  then check with the same flag that V8 still inlines the small helpers it calls (the caution above; here
+  `gainReductionDb`, 70 bytes, stays inlined). Engine follow-up item 3, 2026-10-10: the house limiter's
+  `Compressor.lookaheadStep`, 974 bytes, boxed its level argument per sample whenever anything sounded, and its gain
+  result per sample from its first reduction on (the release settles a few ulps below 1.0, never exactly 1.0, so
+  the result stayed non-integral until `MasterStage.reset()`): about 2 and 4 KB per block at the master. It is the
+  likely cause, unproven, of the V8 pass's "a noise voice allocates" (noise plus saw is loud enough to engage the
+  limiter; no noise box reproduces on either bundle). The realtime master stage runs in `PlaybackEngineDispatcher`
+  and the offline one in `KlangAudioRenderer`, not in `PlaybackEngine`, so a probe that stops at `PlaybackEngine` or
+  at one voice does not see it.
   The delay, reverb and phaser were located in the V8 allocation pass (2026-10-08). Run with ten times V8's inlining
   budgets (`--max-inlined-bytecode-size-cumulative=9200 --max-inlined-bytecode-size=4600`) the delay and the phaser
   allocate nothing and the reverb about 5 bytes per block (5.2 on the production bundle, 3.9 on the development one),

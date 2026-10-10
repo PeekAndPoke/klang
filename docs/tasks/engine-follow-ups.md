@@ -22,7 +22,8 @@ Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
 
 ## 1. Allocation on V8 (the worklet)
 
-The JVM allocates nothing per block in steady state; these are V8 only. The method and the rules learned are in
+These are V8 only. The JVM allocates nothing per block in steady state except item 12's `Double` per
+block-constant param read (0 to 48 bytes per block). The method and the rules learned are in
 `audio/ref/performance.md`.
 
 1. **The stages still allocate** (delay, reverb, phaser). After the V8 pass, bytes per block at engine level,
@@ -32,8 +33,71 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
 2. **A new param map's resolve costs about 1,130 bytes** on the classic chain after S1; the profiler attributes it to
    `KatalystKnob.resolve` on both bundles, whose code (two field stores) does not explain it. A `.katp` burst pays it
    per block. Source: the record, "Found during the V8 allocation pass". M.
-3. **A noise voice allocates about 2 KB per block** at engine level (the probe's noise-plus-saw sound). Not located.
-   Source: as 2. S to M.
+3. **DONE (2026-10-10): no noise box reproduces; the house limiter boxed per sample.** Reported as about 2 KB per
+   block for a noise voice at engine level (the V8 pass's noise-plus-saw sound). Source: as 2. No noise box
+   reproduces on either bundle, at voice level or through the dispatcher (reviewer A rebuilt the development bundle:
+   `white` 0.8, `noisesaw` 15.8, `E-noisesaw-sus` 41.4 B per block on the tree). The limiter boxes found on the way
+   are the likely cause of the old figure, unproven: the pass's probe ran through `PlaybackEngine`, which has no
+   master stage, and it is gone (an orbit compressor with a lookahead runs the same `lookaheadStep`, unmeasured then).
+   **Measured on the production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22): one voice
+   through `VoiceFactory` allocates nothing per sample with any noise. White, pink and brown alone, white with a
+   color, noise plus saw, the `whitenoise`, `pinknoise`, `brownnoise`, `dust` and `crackle` built-ins and noise plus
+   saw under `classic()` all read 0 to 90 bytes per block, the saw's band, pinned and unpinned, alone and under a
+   mixed profile: V8 inlines the per-sample `rng.nextDouble()`. Through the whole engine (`PlaybackEngineDispatcher`,
+   where the realtime master stage runs; offline it is `KlangAudioRenderer`) every sounding voice took about 2.1 KB per block, a saw alone too, and noise plus saw
+   about 4.1 KB. **Cause** (sampling heap profiler, `--trace-turbo-inlining`): the house limiter's per-sample
+   `Compressor.lookaheadStep`, a plain function of 974 bytes of bytecode, past V8's inlining limit (460), so V8
+   never inlined it. Its level argument was a heap number per sample whenever anything sounded, and its gain result
+   one more per sample from the first time the limiter reduced on (its release settles a few ulps below 1.0, never
+   exactly 1.0, so the box stayed until `MasterStage.reset()`): noise plus saw is loud enough to engage it (-1 dB),
+   a saw or a white noise alone is not. The rule in `audio/ref/performance.md` (a double handed to a function that is not
+   inlined). **Fix**: `lookaheadStep` is a Kotlin `inline` function, in the same form as the class's `envelopeStep`,
+   `followEnvelope` and `gainFor` (`@Suppress("NOTHING_TO_INLINE") private inline fun`); V8 still inlines the
+   plain `gainReductionDb` it calls (reviewer B, `--trace-turbo-inlining`); the KDoc at the site is the guard. It reaches the authored
+   `compressor` and `limiter` with a lookahead too. Bit for bit: raw doubles of the probe, HEAD against the tree, 28
+   of 28 cases on V8 and on the JVM (13 voice cases, 15 engine cases through the limiter, engaged in the loud ones);
+   the corpus 18 of 18 (`tmp/naming/corpus-e3.txt` against `corpus-e9.txt`). Render bytes and ns per block, medians
+   of 3, HEAD / tree / HEAD again (the bytes are the difference of two processes, so a few bytes either way, even
+   below zero, is the noise band):
+
+   | case | V8 unpinned | V8 pinned (`taskset -c 11`) |
+   |---|---|---|
+   | voice: saw (control) | 20 / 20 / 10 B, 801 / 696 / 707 ns | 16 / 32 / 21 B, 859 / 891 / 895 ns |
+   | voice: white | -5 / 5 / -5 B, 1,120 / 1,137 / 1,227 ns | 0 / 0 / 5 B, 1,450 / 1,372 / 1,302 ns |
+   | voice: pink | 5 / 4 / 0 B, 1,665 / 1,687 / 1,673 ns | -5 / 5 / -10 B, 2,079 / 1,993 / 2,285 ns |
+   | voice: brown | -1 / 6 / 1 B, 1,161 / 1,172 / 1,152 ns | 15 / -10 / -5 B, 1,400 / 1,435 / 1,393 ns |
+   | voice: noise + saw | 20 / 21 / 21 B, 1,551 / 1,585 / 1,577 ns | 16 / 11 / 16 B, 1,843 / 2,112 / 1,847 ns |
+   | voice: `saw` built-in, `classic()` (control) | 83 / 83 / 77 B, 1,384 / 1,620 / 1,724 ns | 57 / 72 / 93 B, 1,644 / 1,751 / 1,768 ns |
+   | voice: `whitenoise` built-in, `classic()` | 63 / 63 / 67 B, 2,163 / 2,117 / 2,138 ns | 52 / 67 / 77 B, 2,061 / 2,014 / 2,010 ns |
+   | voice: noise + saw, `classic()` | 77 / 77 / 77 B, 2,676 / 2,688 / 2,856 ns | 88 / 72 / 88 B, 2,749 / 2,705 / 2,698 ns |
+   | engine: saw | 2,093 / 10 / 2,099 B, 7,160 / 6,320 / 7,381 ns | 2,072 / 21 / 2,072 B, 7,099 / 6,182 / 7,349 ns |
+   | engine: noise + saw | 4,108 / 56 / 4,149 B, 10,814 / 8,783 / 10,714 ns | 4,119 / 47 / 4,108 B, 10,767 / 7,374 / 8,862 ns |
+   | engine: `saw` built-in | 2,134 / 118 / 2,134 B, 8,279 / 6,880 / 8,375 ns | 2,124 / 83 / 2,160 B, 6,507 / 5,678 / 6,715 ns |
+   | engine: `whitenoise` built-in | 2,150 / 99 / 2,145 B, 9,060 / 7,893 / 9,122 ns | 2,113 / 62 / 2,124 B, 7,883 / 7,230 / 8,124 ns |
+   | engine: noise + saw, `classic()` | 4,176 / 78 / 4,170 B, 11,046 / 10,107 / 11,600 ns | 4,191 / 83 / 4,186 B, 13,412 / 9,871 / 13,305 ns |
+   | engine: `saw` built-in, body `wood` | 4,176 / 83 / 4,175 B, 19,744 / 17,773 / 19,880 ns | 4,186 / 78 / 4,196 B, 20,543 / 18,681 / 20,283 ns |
+   | engine: noise + saw, `classic()`, body `wood` | 4,170 / 119 / 4,212 B, 21,635 / 19,554 / 21,022 ns | 4,206 / 88 / 4,186 B, 23,270 / 19,778 / 23,060 ns |
+   | engine: noise + saw, `classic()`, a new note every 16 blocks | 8,946 / 4,854 / 8,951 B, 18,117 / 16,985 / 18,315 ns | 8,954 / 4,850 / 8,953 B, 17,965 / 17,120 / 20,921 ns |
+
+   One heap number per sample is 2 KB per block on node (16 bytes) and about 1.5 KB in Chrome (12 bytes, pointer
+   compression); the count is the same. The engine rows run 0.81 to 0.94 of HEAD's time unpinned and 0.68 to 0.95
+   pinned (the low end is the pinned noise-plus-saw row, whose HEAD-again run read 8,862, so it is noisy); the voice
+   rows do not move beyond their noise. What is left
+   with a new note every 16 blocks, about 4.85 KB per block, is the voice build, about 78 KB per note on V8 (item 11).
+   JVM (`ThreadMXBean`, 9 rounds of 20k warm-up plus 16k blocks, medians): 0 bytes per block on both sides for every
+   sustained case but the white noise with a constant color (24 B on every side, item 12's read) (the note-every-16-blocks rows 114 to 335 bytes per block on both sides alike, the voice build);
+   render time unchanged within the run's drift (the tree 0.89 to 1.18 of the first HEAD, the widest spread on voice
+   rows the change does not touch; HEAD again 0.73 to 0.85 across the board). Report: `tmp/reviews/e3-report.md`.
+   Reviewer B's own probe (production bundle, HEAD / tree, medians of 3): the house limiter driven directly, loud
+   (input 1.6, out peak 0.917), 4,093 / -6 B unpinned and 4,103 / 16 B pinned, 0.75 and 0.74 of HEAD's time; quiet
+   (0.05) 2,046 / -5 B; the authored lookahead compressor, loud, 4,098 / 16 B unpinned and 4,093 / -5 B pinned;
+   `processGliding` does not box (26 / 11 B loud, 26 / 25 B quiet, the trace shows `gainReductionDb` inlined). Under a
+   mixed profile (quiet warm-up, then loud) HEAD 4,109 B, the tree 5 B; raw doubles 10 of 10 identical.
+   **Review round 1, applied** (`tmp/reviews/e3-r1-A.md`, `e3-r1-B.md`, 0 MAJOR, 3 MINOR, 4 NIT): the attribution to
+   the old figure hedged and the development bundle named (A1); the gain box ran from the first reduction on, not
+   only while reducing (A2); the master stage's two hosts (A3, B2); the rule asks for a check that the helper's own
+   callees stay inlined (A4); the `@Suppress` precedent as form, not reason (A5); the JVM line names `whitecolor` and
+   item 12, and the section header points at item 12 (B1); B's rows added. Records and KDoc only.
 4. **The superpluck allocates per block**: 450 to 700 bytes with 8 voices and drift, the pluck about 65, before and
    after the pass alike. Not located. Source: as 2. S to M.
 5. **The PWM loop boxes one heap number per sample** on the development bundle under a mixed profile (about 2 KB per
