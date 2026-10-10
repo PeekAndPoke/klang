@@ -82,6 +82,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
   `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`; an empty one is silence everywhere, so as a
   Katalyst bus knob it reads 0.0, not the knob's default). Fields: `audio/ref/data-model.md`.
+- **A shared node stays one node across the wire** (`@WireShared` on `IgnitorDsl`, 2026-10-10): the generated codec
+  encodes and decodes each instance once per message, and `postMessage`'s structured clone keeps the sharing, so a
+  `let` used twice is built once in the browser as on the JVM (the build cache keys by identity). Before, the browser
+  built it twice (Kokon's and Der Schmetterling's Screamer pedal: two strings). Equal but distinct nodes stay two.
 
 ## Laws and constants in force
 
@@ -160,6 +164,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz) and
   the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 4.0, 5.5,
   6.25; held as 4, 6 and 6 frames).
+- **`parallel` on the Ignitor** (`IgnitorDsl.Parallel`, 2026-10-10): the branches summed, every branch reading one
+  input instance; `BuiltIgnitor.latencyFrames` is collected along the signal spine (an oversampled `distort` or
+  `shape` adds `Oversampler.latencyFrames`: 4, 6, 6), and the node pads every earlier branch to the latest
+  (`delayedBy`). A plain `plus` stays unaligned.
 - **`parallel` on the Katalyst** (`KatalystParallelEffect`, 2026-10-10): each branch is a `KatalystChain` of its own,
   run on a copy of the bus and SUMMED; branches are aligned by latency (pad rings, the longest branch is the stage's
   latency); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
@@ -287,8 +295,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
-- 2026-10-10 `serial` (was `through`) and a `parallel` stage on the Katalyst, branches summed and aligned by latency:
-  `docs/tasks/in-progress/parallel-serial-bands.md` steps 1 and 3
+- 2026-10-10 `serial` (was `through`), `parallel` on the Ignitor and the Katalyst (branches summed and aligned by
+  latency), and a shared node kept one node across the wire (`@WireShared`):
+  `docs/tasks/in-progress/parallel-serial-bands.md` steps 1 to 3
 - 2026-10-10 v0.6.1: pitch pipeline steps 1 to 3b, the Katalyst `distort` stage (merged from `katalyst-distort`), a
   soloed voice protected to its end, the warehouse panel's reverb counters, `analog(character)` on every door and
   `variants` with plain numbers; the corpus identical except Kokon's two landing strikes (accelerate, at most 2.5

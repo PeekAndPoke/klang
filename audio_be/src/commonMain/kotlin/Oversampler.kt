@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import kotlin.math.roundToInt
 
 /**
  * N-times oversampler for anti-aliased nonlinear processing.
@@ -299,6 +300,12 @@ class Oversampler(stages: Int) {
 
             return 1.0 + 6.0 * (1.0 - 1.0 / (1 shl stages))
         }
+
+        /**
+         * [groupDelaySamples] in whole frames, rounded (4, 6, 6 at 2x, 4x, 8x): the latency a bus stage reports
+         * (`KatalystDistortEffect`). A voice keeps the exact delay and rounds only its pad (`BuiltIgnitor.latencySamples`).
+         */
+        fun latencyFrames(stages: Int): Int = groupDelaySamples(stages).roundToInt()
 
         /**
          * Converts a user-facing oversampling factor to internal stages.

@@ -21,7 +21,6 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.ceil
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 /**
  * The bus distortion, an insert: the voice's distort at the bus position (`KatalystStageDsl.Distort`,
@@ -111,7 +110,7 @@ class KatalystDistortEffect(
     private val scratch: ScratchBuffers = ScratchBuffers(blockFrames).also { it.oversample(1 shl stages) }
 
     /** Frames this stage delays the orbit by, in every state: the oversampler's group delay, rounded; 0 without. */
-    override val latencyFrames: Int = Oversampler.groupDelaySamples(stages).roundToInt()
+    override val latencyFrames: Int = Oversampler.latencyFrames(stages)
 
     /** True with oversampling: the dry mix then runs through the delay rings. */
     private val latent: Boolean = latencyFrames > 0

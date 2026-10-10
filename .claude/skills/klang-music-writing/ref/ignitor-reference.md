@@ -545,6 +545,27 @@ Serial, one stage into the next. Do not confuse it with sprudel's `apply(f, g)`,
 each function on the pattern and STACKS the results. The Katalyst builder has the same door:
 `Katalyst(k => k.serial(hall, ceiling))`.
 
+### Composition: `.parallel(...)`
+
+`x.parallel(a, b, c)` is the twin of `serial`: every branch gets the SAME signal `x` and the results are SUMMED,
+`a(x) + b(x) + c(x)`. `x` is one instance, built once, so a noise, a drift or a supersaw's random phases are the same
+in every branch (a hand-written `x.plus(f(x))` shares `x` the same way). The exception is a pitch node in a branch
+(`vibrato`, `detune`, `accelerate`, ...): it forks `x` into a second instance, as `n + n.vibrato(...)` always has. With no
+branch it is `x`; with one, that branch.
+
+```javascript
+// parallel distortion: the clean string and a screaming copy of its highs, a little under it
+let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6))
+```
+
+- The sum is plain: `x.parallel(y => y, y => y)` is twice `x` (+6 dB). Blend with a `mul` inside a branch.
+- A branch that is LATE (an oversampled `distort` or `shape`: 4 samples at 2x, 6 at 4x and 8x) is matched by delaying
+  the others, so the clean and the dirty copy do not comb. A plain `plus` does NOT do that: `x.plus(x.distort(0.35,
+  "soft", 2))` sums them 4 samples apart, a comb with its first notch near 6 kHz. Prefer `parallel` for wet/dry
+  splits.
+- The Katalyst builder has `parallel` too (branches of bus stages, each from an empty builder): see the sprudel
+  reference's master line.
+
 ---
 
 ## Parameter System

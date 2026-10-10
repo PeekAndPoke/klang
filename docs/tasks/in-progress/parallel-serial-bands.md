@@ -1,7 +1,8 @@
 # `parallel`, `serial` and `bands`: branches side by side, and frequency bands
 
 Status: **in progress since 2026-10-10, on the branch `parallel-serial-bands` (worktree
-`klang-worktrees/parallel-serial-bands`).** Step 1 done (`serial`), step 3 built and in review, step 2 waits for the maintainer (the wire-sharing finding below). The design, the decisions and the reasons live in
+`klang-worktrees/parallel-serial-bands`).** Steps 1 (`serial`) and 3 (Katalyst `parallel`) done; the wire-sharing finding below fixed (option a); step 2
+(Ignitor `parallel`) built and in review. The design, the decisions and the reasons live in
 [`../../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) §6.9; this file holds the steps.
 
 ## Why
@@ -65,4 +66,28 @@ Options, for the maintainer (stone rule: generated sources are consulted first):
 - **(b) A `Parallel` node that holds its input once** and hands the branches a placeholder leaf: fixes `parallel`
   only, adds a binding mechanism to the build, the walkers and the optimizer. More machinery for less.
 - **(c) Accept it**: `parallel` and `let` fork in the browser.
+
+**Decided (maintainer, 2026-10-10):** consulted with an example (Kokon's Screamer), "no preference", so the
+coordinator's lean (a) was taken. Built as `@WireShared` (`audio_bridge/.../WireShared.kt`): the codec of every
+`@WireFormat` root opens a per-message identity scope, the codec of a `@WireShared` type encodes and decodes each
+instance once per scope, and the structured clone of `postMessage` keeps the shared references, so the message format
+is unchanged (an explicit `$ref` would be needed only for a JSON transport). Guard: `WireSharedSpec` (JS). The
+processor refuses a field typed as a subtype of a `@WireShared` type. Kokon's and Der Schmetterling's heavy guitar now
+play in the browser as the JVM renders them (one string through the Screamer, not two).
+
+**Listening, for the maintainer:** Kokon's Screamer sums its clean and its 2x-oversampled dirty path with a plain
+`plus`, 4 samples apart (a comb, first notch near 6 kHz). `parallel` would align them. Migrating the pedal changes the
+sound, so it is the maintainer's call by ear; a pair can be rendered.
+
+## Open, found in the reviews (2026-10-10)
+
+- **Shared nodes make structural walks grow with the paths, not the nodes** (audio review of step 2, MINOR). A data
+  class's `hashCode`, `toString` and `collectParams` walk every path through a tree, so k nested two-branch
+  `parallel`s reach the bottom input 2^k times. `IgnitorDsl.uniqueId()` hashes the whole tree per scheduled event that
+  carries an inline instrument (`KlangPatternScheduler`). True of `let` sharing before; `parallel` makes it idiomatic.
+  `bands` nests one level (linear). Watch it if songs nest parallels deeply; a cached hash on the node is the fix.
+- **Latency over-count through parameter operands** (both reviews, MINOR): an oversampled modulator in a branch's `mul`
+  makes the branch report a delay its signal does not have. Recorded in `BuiltIgnitor.latencySamples`.
+- **The Katalyst sums rounded latencies** (audio review of step 2): a branch of two 4x `distort` stages reports 12
+  frames for a true 11. Rare on a bus; the voice keeps exact delays since the same review.
 

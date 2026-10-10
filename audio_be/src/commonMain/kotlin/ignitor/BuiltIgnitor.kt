@@ -79,6 +79,23 @@ data class BuiltIgnitor(
      * true, the envelope ends the voice and a fade on top would change its last frames.
      */
     val endsInEnvelope: Boolean = false,
+    /**
+     * How many samples the SIGNAL SPINE of this subtree delays the signal by, EXACT (a fraction where the delay is one):
+     * an oversampled `distort` or `shape` adds its oversampler's group delay (`Oversampler.groupDelaySamples`: 4.0,
+     * 5.5, 6.25 at 2x, 4x, 8x), a series adds them up, and a node with several signal children reports the latest of
+     * them. Read by the `parallel` node, which pads every branch to the latest one so the sum does not comb, rounding
+     * only that pad (2026-10-10, `docs/tasks/in-progress/parallel-serial-bands.md`): two 4x stages are 11.0 late, not
+     * the 12 two rounded stages would say, so the residual stays at half a sample or less (audio review round 1).
+     *
+     * Absorbed along the spine like [releaseTailSec] and carried in the cached value for the same reason. A plain sum
+     * ([IgnitorDsl.Plus]) does not align its operands; it only reports the later one.
+     *
+     * The same seven arms that over-count the tail over-count here (see `buildRaw`: a parameter operand such as
+     * `Times.right` or `Lerp.t` is built as a signal edge). For latency that is not harmless: an oversampled LFO in a
+     * branch's `mul` makes the branch report its delay although the signal is not late, and the other branches are
+     * padded by it. Rare (an oversampled modulator); recorded rather than built around.
+     */
+    val latencySamples: Double = 0.0,
 )
 
 /** Null-tolerant max: `null` means "no tail", so it loses to any actual value. */

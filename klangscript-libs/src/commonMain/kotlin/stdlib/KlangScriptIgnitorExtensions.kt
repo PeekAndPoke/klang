@@ -679,6 +679,47 @@ object KlangScriptIgnitorExtensions {
     fun serial(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
         runSerialStages("Ignitor serial", self, stages, returns = "signal", example = "x => x.lowpass(800)") { it is IgnitorDsl }
 
+    /**
+     * Runs this signal through the branches side by side and SUMS them, the twin of `serial`: `x.parallel(a, b)` is
+     * `a(x) + b(x)`, and every branch reads the same `x`, built once (a pitch node in a branch, a `vibrato` or a
+     * `detune`, forks it into a second instance, as it forks any shared signal).
+     *
+     * ```KlangScript
+     * // parallel distortion: the clean signal and a screaming copy of its highs, a little under it
+     * let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35).mul(0.6))
+     * let guitar = Ignitor.saw().serial(screamer).adsr(0.005, 0.8, 0.0, 0.05).classic()
+     * ```
+     *
+     * The sum is plain (two identical branches are twice the level); a branch's own `mul` sets the blend. A branch
+     * that delays the signal (an oversampled `distort` or `shape`) is matched by delaying the others, so the sum does
+     * not comb; a plain `plus` does not do that. With no branch, `parallel()` returns the signal as it is; with one,
+     * that branch's output. It builds what the Kotlin `IgnitorDsl.parallel(...)` builds, and checks every branch as
+     * `serial` checks a stage.
+     *
+     * @param branches functions from a signal to a signal, each given this signal.
+     */
+    @KlangScript.Method
+    fun parallel(self: IgnitorDsl, vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+        val built = branches.mapIndexed { index, branch ->
+            runStage<IgnitorDsl, IgnitorDsl>(
+                door = "Ignitor parallel",
+                noun = "branch",
+                index = index,
+                stage = branch,
+                input = self,
+                returns = "signal",
+                example = "x => x.lowpass(800)",
+                isResult = { it is IgnitorDsl },
+            )
+        }
+
+        return when (built.size) {
+            0 -> self
+            1 -> built[0]
+            else -> IgnitorDsl.Parallel(branches = built)
+        }
+    }
+
     // ── Arithmetic ───────────────────────────────────────────────────────────
 
     /**
