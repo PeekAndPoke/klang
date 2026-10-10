@@ -455,13 +455,14 @@ fun KatalystBuilder.limiter(
  *   `gentle`, ...); an unknown name is `soft`. Fixed with the chain.
  * @param oversample the oversampling factor (2, 4, 8; 0 or 1 is none). Fixed with the chain. It
  *   delays this orbit (at the output, the whole playback) by 3 frames at 2x, 4 at 4x and 5 at 8x. The
- *   default is 0, as on the voice.
+ *   default is 2x, unlike the voice's 0: a bus bends the whole mix, so its aliasing lands on every note.
+ *   `oversample = 1` keeps the raw aliased character.
  */
 @KlangScript.Function
 fun KatalystBuilder.distort(
     amount: IgnitorDslLike? = null,
     shape: String = "soft",
-    oversample: Int = 0,
+    oversample: Int = 2,
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Distort()
 

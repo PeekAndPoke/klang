@@ -190,7 +190,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 3.07, 4.40,
   5.06; held as 3, 4 and 5 frames). Its dry path runs through the phase twins (an unshaped round trip of the same
   oversampler per channel), so a fade between dry and distorted cannot notch; its tail hold is `Oversampler.tailFrames`.
-- **The oversampler is an IIR half-band** (2026-10-10, `docs/tasks/in-progress/iir-oversampler.md`): two all-pass
+  It oversamples at 2x unless the author names a factor (`DISTORT_OVERSAMPLE`, 2026-10-10); the voice's stays at 0.
+- **The oversampler is an IIR half-band** (2026-10-10, `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`): two all-pass
   chains per 2x stage, 8 coefficients at the base-rate stage and 6 above; the round trip is flat (0.00 dB to 20 kHz),
   aliases and images about 95 to 100 dB down, latency 3.07, 4.40, 5.06 samples at 2x, 4x, 8x, rising toward the top
   (3.9 at 16 kHz at 2x), so a host that sums a dry path with an oversampled one pads the dry with a PHASE TWIN, an
@@ -340,8 +341,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 The bus `distort` oversamples at 2x by default (maintainer; the voice's stays at 0): step 5 of
+  `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`
 - 2026-10-10 The oversampler is a polyphase IIR half-band (flat to 20 kHz, about 100 dB of rejection, 3.07 samples at
-  2x), and every dry path beside an oversampled one runs through its phase twin: `docs/tasks/in-progress/iir-oversampler.md`
+  2x), and every dry path beside an oversampled one runs through its phase twin: `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`
 - 2026-10-10 Engine follow-ups 8 and 12: `Ignitors.readParam` is Kotlin `inline` (one shared helper was one
   megamorphic site that boxed every knob read on V8, 60 to 100 B per classic voice block), and the scalar is the
   primitive `Ignitor.controlRateValue`, read only when `isBlockConstant` (the nullable view is the extension

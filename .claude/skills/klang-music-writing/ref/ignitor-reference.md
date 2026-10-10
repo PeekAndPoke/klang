@@ -574,9 +574,10 @@ let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distor
 ```
 
 - The sum is plain: `x.parallel(y => y, y => y)` is twice `x` (+6 dB). Blend with a `mul` inside a branch.
-- A branch that is LATE (an oversampled `distort` or `shape`: 4 samples at 2x, 6 at 4x and 8x) is matched by delaying
-  the others, so the clean and the dirty copy do not comb. A plain `plus` does NOT do that: `x.plus(x.distort(0.35,
-  "soft", 2))` sums them 4 samples apart, a comb with its first notch near 6 kHz. Prefer `parallel` for wet/dry
+- A branch that is LATE (an oversampled `distort` or `shape`: about 3 samples at 2x, 4 at 4x, 5 at 8x) is matched in
+  phase: the others run through an unshaped round trip of the same oversampler, so the clean and the dirty copy do not
+  comb. A plain `plus` does NOT do that: `x.plus(x.distort(0.35, "soft", 2))` sums them about 3 samples apart, a comb
+  with its first notch near 8 kHz. Prefer `parallel` for wet/dry
   splits.
 - The Katalyst builder has `parallel` too (branches of bus stages, each from an empty builder): see the sprudel
   reference's master line.

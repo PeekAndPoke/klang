@@ -280,9 +280,9 @@ class KatalystDefaultsSyncSpec : StringSpec({
         KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Distort(inner = IgnitorDsl.Silence).amount
         KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Drive(inner = IgnitorDsl.Silence).amount
 
-        // ...and the shape and oversampling defaults are the voice's too: `soft`, no oversampler.
+        // ...and the shape default is the voice's too: `soft`. The oversampling default is NOT (2x on a bus, 0 on a
+        // voice), a recorded asymmetry (`DISTORT_OVERSAMPLE`); `KatalystDistortEffectSpec` renders its latency.
         KatalystStageDsl.Distort().shape shouldBe DistortionShapes.SOFT_INDEX
-        KatalystStageDsl.Distort().oversample shouldBe 0
     }
 
     "the phaser, the duck, the body and the vowel stay OFF bare: one knob has to name something" {

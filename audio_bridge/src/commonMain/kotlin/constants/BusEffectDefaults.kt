@@ -172,6 +172,16 @@ const val VOWEL_FLOOR: Double = 0.2
  */
 const val DISTORT_AMOUNT: Double = 0.5
 
+/**
+ * Oversampling factor of a Katalyst `distort` stage that names none: 2x (maintainer, 2026-10-10,
+ * `docs/tasks-archive/2026-10/20261010-iir-oversampler.md` step 5). A bus bends the whole mix, so
+ * its aliasing lands on every note at once; the IIR half-band is flat to 20 kHz, so oversampling no
+ * longer dulls the mix as the FIR did. It costs 3 frames of latency on that bus and a round trip per
+ * channel per block. A deliberate asymmetry with the voice, whose `distort` stays at 0 (a per-note
+ * cost, opted into per sound). The script door bakes the same literal (`KatalystBuilder.distort`).
+ */
+const val DISTORT_OVERSAMPLE: Int = 2
+
 // ── Knob glide ───────────────────────────────────────────────────────────────
 
 /**

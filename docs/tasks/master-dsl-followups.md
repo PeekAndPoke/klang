@@ -157,6 +157,15 @@ defect (a ceiling that is never reached is a valid ceiling), but the song carrie
 may believe is shaping it. The maintainer's call, by ear: keep it as a safety ceiling, drop it, or push
 the song's gain into it.
 
+## 8. The offline render does not count the master chain's latency (found 2026-10-10, review of the bus distort default)
+
+`KlangOfflineRenderer` renders past the musical end by `KlangAudioRenderer.latencyFrames`, which is
+`MasterStage.latencyFrames`, the house limiter's lookahead only. A per-playback `master(Katalyst(...))` chain that
+delays (a compressor's lookahead, an oversampled `distort`) is not counted, so at `tailSec = 0` its last frames can
+stay in the chain when the loop stops. Since the bus `distort` oversamples at 2x by default, any
+`master(Katalyst(k => k.distort(...)))` adds 3 uncounted frames (about 0.06 ms at 48 kHz, barely audible). The fix:
+add the master chain's `latencyFrames` to the render's run-out.
+
 ## Links
 
 - Shipped plan + full review history: [

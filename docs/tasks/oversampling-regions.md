@@ -132,7 +132,7 @@ more than one place per effect, the factoring is not done.
 ## 6. Carried from the 2026-07-04 draft (still valid)
 
 - **The resampler's quality becomes the sound lever.** DONE for the kernel itself 2026-10-10: the IIR half-band
-  replaced the FIR everywhere (`docs/tasks/in-progress/iir-oversampler.md`); what follows describes the FIR it
+  replaced the FIR everywhere (`docs/tasks-archive/2026-10/20261010-iir-oversampler.md`); what follows describes the FIR it
   replaced. The kernel was built cheap for waveshapers:
   linear-interpolation upsampling and a 15-tap truncated half-band decimator, about -14 dB at 0.55 pi
   (`Oversampler`'s KDoc). Once a region can hold a filter or anything clean, its top-end droop is
@@ -200,7 +200,7 @@ and 6.25 input samples).
 
 ## 8b. Found 2026-10-10: `parallel` and `bands` align by the oversampler's delay
 
-**Resolved 2026-10-10 by the phase twins** (`docs/tasks/in-progress/iir-oversampler.md`): a branch that lacks an
+**Resolved 2026-10-10 by the phase twins** (`docs/tasks-archive/2026-10/20261010-iir-oversampler.md`): a branch that lacks an
 oversampler now runs through an unshaped round trip of it, on both hosts (`BuiltIgnitor.oversamplers`,
 `KatalystLatentEffect.oversamplers`); whole-sample pads remain for a lookahead and for a voice branch that mixes two
 oversamplers in a plain `plus`. A new oversampler type must list itself there, or report its delay as before. What

@@ -247,7 +247,9 @@ class KatalystDistortEffectSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        chain(KatalystStageDsl.Distort()).latencyFrames shouldBe 0
+        // A bare bus distort oversamples at 2x (`DISTORT_OVERSAMPLE`): 3 frames.
+        chain(KatalystStageDsl.Distort()).latencyFrames shouldBe 3
+        chain(KatalystStageDsl.Distort(oversample = 1)).latencyFrames shouldBe 0
         chain(KatalystStageDsl.Distort(oversample = 2)).latencyFrames shouldBe 3
         chain(KatalystStageDsl.Distort(oversample = 8)).latencyFrames shouldBe 5
 

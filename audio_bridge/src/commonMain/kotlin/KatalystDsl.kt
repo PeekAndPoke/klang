@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
+import io.peekandpoke.klang.audio_bridge.constants.DISTORT_OVERSAMPLE
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
@@ -460,15 +461,14 @@ sealed interface KatalystStageDsl {
      *   floored), the voice's knob and law (`Oversampler.factorOf`). A plain number fixed with the
      *   chain: it sizes the oversampler. Oversampling delays the bus by the oversampler's group delay
      *   (3 frames at 2x, 4 at 4x, 5 at 8x, rounded), in every state, and nothing compensates, as with the
-     *   compressor's lookahead. Default 0, the voice's default. (Until 2026-10-10 the oversampler also dulled a
-     *   whole mix, -2 dB at 16 kHz at 2x; its IIR half-band is flat, so whether a bus should oversample by
-     *   default is open: `docs/tasks/in-progress/iir-oversampler.md` step 5.)
+     *   compressor's lookahead. Default [DISTORT_OVERSAMPLE], 2x, unlike the voice's 0 (the reason is
+     *   on the constant). 0 or 1 turns it off.
      */
     @WireName("distort")
     data class Distort(
         val amount: IgnitorDsl = IgnitorDsl.Constant(DISTORT_AMOUNT),
         val shape: Int = DistortionShapes.SOFT_INDEX,
-        val oversample: Int = 0,
+        val oversample: Int = DISTORT_OVERSAMPLE,
     ) : KatalystStageDsl
 
     /**

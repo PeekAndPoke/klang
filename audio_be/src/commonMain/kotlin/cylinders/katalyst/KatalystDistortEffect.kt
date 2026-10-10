@@ -60,7 +60,8 @@ import kotlin.math.min
  * rises toward the top, so an integer delay ring matched only the bass and the mids: at the middle of a fade the old
  * ring notched near 18 kHz). [latencyFrames] reports the delay rounded, for the chain (3, 4, 5 at 2x, 4x, 8x).
  * Nothing compensates the latency, as with the compressor's lookahead: the
- * orbit, and at the output the playback, runs late by it. Without oversampling (the default) there is none.
+ * orbit, and at the output the playback, runs late by it. Without oversampling there is none (this constructor's
+ * default; a stage built from the DSL oversamples at 2x unless it names a factor, `DISTORT_OVERSAMPLE`).
  *
  * The lifecycle is a state machine (`docs/plans/effect-state-machines.md`), the shape of
  * [KatalystCompressorEffect]; the table on [State] is authoritative for its edges.
