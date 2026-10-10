@@ -4,6 +4,17 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-10) Lighter on the phone ... v0.6.2
+
+- fm moved into the tree as classic()'s innermost stage: fm(depth, ratio, attack, decay, sustain, release), the envelope runs per sample, the modulator follows vib, penv and accelerate ... the pitch strip is gone, voices/strip/ with it
+- pitchModSemitones, the exponential twin of pitchMod ... the vibrato is composed from it and a sine now, and it got range(from, to) and phase, on sprudel too
+- the pitch envelope and accelerate stay nodes for now: composed, they cost about twice as much once a note has settled ... a question for the maintainer
+- explicit partials on the sine, partial(ratio, gain, phase), up to 256 ... the snare thud of Kokon and Der Schmetterling is one sine instead of thirteen, a quarter of the memory per hit, and an envelope on a partial's gain plays from its first sample
+- the shaper boxed every shaped sample on V8 (2 to 33 KB per block, the fused distort too) ... one loop per shape, now about nothing, bit for bit, and up to half faster
+- the house limiter boxed about 2 KB per block whenever anything sounded, one function too big for V8 to inline ... inline now, about nothing, bit for bit
+- serial, parallel and bands arrived from the other side of the house, Kokon's master distorts the mids only, and a shared let stays one sound in the browser
+- the listening round for the pitch steps is still to come
+
 ### (2026-10-10) The pitch moves into the tree ... v0.6.1
 
 - the pitch envelope, the vibrato and accelerate are classic() stages now ... three of the strip's four pitch arms are in the Ignitor tree, fm is next

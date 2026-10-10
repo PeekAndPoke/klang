@@ -280,7 +280,7 @@ class PitchEnvelopeSlots internal constructor() {
  * values the strip read for an unwritten stage. With all four envelope stages at their defaults the node runs NO envelope: the depth is full
  * from the onset through the whole release tail. The strip always ran its envelope with a release of 0, so its FM
  * collapsed to 0 at the first block from the gate on (block-framing ledger E10, E11); the stage does not (the fifth
- * non-identical cause of step 4, `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`).
+ * non-identical cause of step 4, `docs/tasks/pitch-pipeline-into-the-tree.md`).
  */
 class FmSlots internal constructor() {
     val ratio: IgnitorDsl = slot(door = "fm", param = "ratio", default = FM_RATIO)
@@ -319,7 +319,7 @@ class SampleSlots internal constructor() {
  * this -> fm -> pitchEnvelope -> accelerate -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
  * ```
  *
- * The PITCH stages come first, directly on the instrument (pitch pipeline, `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`
+ * The PITCH stages come first, directly on the instrument (pitch pipeline, `docs/tasks/pitch-pipeline-into-the-tree.md`
  * section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not
  * change the sound, and the nesting decides the grouping of the ratio product, which is the retired pitch strip's
  * (vibrato outermost, then accelerate, then the pitch envelope, FM innermost: `((V * A) * P) * F`). The amplitude

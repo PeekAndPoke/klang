@@ -210,7 +210,7 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     control, unpinned: `fm(300, 1.4)` 82 / 110 / 75, the bell envelope 117 / 162 / 110, `sgpad` 127 / 189 / 127
     (pinned: 90 / 124 / 55, 106 / 165 / 96, 131 / 196 / 127); off unchanged. The authored `fm` node paid the same
     before step 4. The JVM renders it allocation-free. Source: `tmp/reviews/pp4-r1-B.md`, the step 4 record in
-    `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, `tmp/reviews/pp-step4-report.md`. S.
+    `docs/tasks/pitch-pipeline-into-the-tree.md`, `tmp/reviews/pp-step4-report.md`. S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 
@@ -228,7 +228,7 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     under the composed vibrato's `x * max(semitones, 0)` (the tremolo's floor has the same shape): `sgpad` plus a
     vibrato allocated 72 to 96 bytes per block on the tree in the 9-run medians (HEAD 0 to 24), and 11.7 on average
     in one long run of 2 million blocks on the tree; V8 none. The same remedy covers both sites
-    (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, 7b record). **Possibly a third** (7c, 2026-10-10, not
+    (`docs/tasks/pitch-pipeline-into-the-tree.md`, 7b record). **Possibly a third** (7c, 2026-10-10, not
     profiled): `RangeIgnitor`'s constant-bound path reads both bounds with `controlRateValueOrNull` every block; in the
     worker's run a vibrato with a constant `range(0, 1)` allocated 24 bytes per block on the JVM where the unranged one
     allocated 0 (9-run medians), but in reviewer B's run HEAD's plain vibrato allocated 72 and the ranged one 0, so the
@@ -274,7 +274,7 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     its arm predates the composition (pitch pipeline 7b: the sine LFO, the floor, the multiply, the converter) and the
     7c range pass (a constant one in place, a signal one reading two bounds) and phase input (a moving phase read per
     sample), so a song benchmark's `work` column under-counts a vibrato. The tremolo's arm is the pattern (it counts
-    only what runs). Source: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
+    only what runs). Source: `docs/tasks/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
 
 ## 6. The audit's later steps and its open decisions
 
@@ -284,7 +284,7 @@ and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound c
 Each was checked against the code: none is done (item 21's package dissolve aside).
 
 21. **Step 15, planned work in its own order:** after the pitch pipeline
-    ([`pitch-pipeline-into-the-tree.md`](in-progress/pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` (done
+    ([`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` (done
     in its step 5, 2026-10-10: the package is `voices/`) and fold the contexts (B3.1, B3.2; `SendRenderer` loses the "send" word with it, A2.5); then
     [`future/one-chain-host.md`](future/one-chain-host.md), extended by the two tail polls of one law (A2.10) and the
     host plumbing's package move (B3.8).

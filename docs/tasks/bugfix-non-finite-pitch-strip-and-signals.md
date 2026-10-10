@@ -17,7 +17,7 @@ their own `finiteOr`.
 - `vib` (the vibrato rate): dissolved in step 2 (the default 5 Hz).
 - `fm` (step 4): every `fm.*` slot reads a non-finite value as its default: `fm.depth` 0 (no FM), `fm.ratio` 1,
   `fm.attack` / `fm.decay` / `fm.release` 0, `fm.sustain` 1. What HEAD's strip did, measured on the full engine
-  (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, step 4 record): a non-finite depth silenced the whole voice
+  (`docs/tasks/pitch-pipeline-into-the-tree.md`, step 4 record): a non-finite depth silenced the whole voice
   (every frame 0), a non-finite ratio played the bare carrier (no FM), a non-finite sustain silenced the voice from the
   decay on, a +Infinity attack never ended (no FM), a +Infinity decay never ended; NaN and -Infinity times were
   zero-length stages. No NaN sample reached the output on either side.

@@ -18,7 +18,7 @@ Item ids (A1, B12, ...) are referenced by the cleanup order at the end.
 Planned work that already removes items, so they are not counted twice (marked **[planned: ...]**):
 
 - `docs/tasks/voice-lifecycle-state-machine.md` steps 5 to 7 (the lease per state; takeover; optimisation);
-- `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` (the pitch strip `be/voices/strip/pitch/`, `Voice.Vibrato` /
+- `docs/tasks/pitch-pipeline-into-the-tree.md` (the pitch strip `be/voices/strip/pitch/`, `Voice.Vibrato` /
   `Fm` / `Accelerate` / `PitchEnvelope` / `Envelope`, `BlockContext.freqModBuffer` and the `phaseMod` feed,
   `EnvelopeCalc.kt`, the pitch wire fields, and the natural moment to dissolve `voices/strip/`);
 - `docs/tasks/code-style-named-args-pass.md` (every swappable positional call, e.g. `VoiceFactory.buildVoice`'s

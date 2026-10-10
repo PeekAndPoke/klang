@@ -2,14 +2,14 @@
 
 Status: **DONE 2026-10-06, archived.** Built on branch `oscillator-phase` (on top of `signals-range`), commit
 `1207ed50`; review round 1 (blind pair) and round 2 (reviewer-high, clean) applied. The sprudel tremolo `range` is
-decided (decision 4: not in sprudel yet); the vibrato's `range` moved to `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`;
+decided (decision 4: not in sprudel yet); the vibrato's `range` moved to `docs/tasks/pitch-pipeline-into-the-tree.md`;
 the shared-modulator defect found in review is `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`.
 
 ## Decided at the start (maintainer, 2026-10-06)
 
 1. **The name is `phase`** (not `phaseShift`): `Ignitor.sine(4, x => x.phase(0.25))`.
 2. **The tremolo gets its `range` knob in this task; the vibrato's waits** for
-   `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`. Today the vibrato is built twice (sprudel's strip
+   `docs/tasks/pitch-pipeline-into-the-tree.md`. Today the vibrato is built twice (sprudel's strip
    `VibratoRenderer` and the Ignitor's own `vibrato` node); once it is composed from `Ignitor.sine`, `range` comes with
    it, built once.
 3. **Branch** `oscillator-phase` on top of `signals-range`, merged after it.
@@ -40,7 +40,7 @@ through sine partials and a phase offset would be even better."
    autocorrelation", IEEE Trans. Inf. Theory 16(1), 1970), which flatten a multitone's peak much further. Measure
    before claiming: crest of the thud with the best sign pattern against Schroeder phases. See also
    `docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`, where a partials node would want per-partial phases.
-3. **Vibrato and other LFOs** (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`): composing the vibrato from
+3. **Vibrato and other LFOs** (`docs/tasks/pitch-pipeline-into-the-tree.md`): composing the vibrato from
    `Ignitor.sine` needs a defined start point, the same question as the tremolo.
 4. **Stereo pairs**: two LFOs at 0 and 0.5 are an auto-pan or a stereo tremolo, composed.
 

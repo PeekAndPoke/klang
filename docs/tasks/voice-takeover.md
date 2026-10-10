@@ -258,7 +258,7 @@ compound param — is designed, or we just grow the debt.
   `glideFromHz` into `VoiceFactory.makeVoice`.
 - A glide is a tree stage: the voice has no pitch stage of its own any more (the pitch envelope, vibrato, accelerate
   and FM moved into `classic()` in pitch pipeline steps 1 to 4, and step 5 removed the strip's pitch pipeline,
-  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`), so a `classic()` glide stage beside the other pitch
+  `docs/tasks/pitch-pipeline-into-the-tree.md`), so a `classic()` glide stage beside the other pitch
   stages, fed by `glideFromHz`, is the likely shape.
 - **Which victim's pitch, when a chord is taken over by one note?** Caricature answer: nearest in pitch among the most
   recent onset taken over — a guitarist slides on *the same string*, i.e. to the nearest fret. One line, musically
