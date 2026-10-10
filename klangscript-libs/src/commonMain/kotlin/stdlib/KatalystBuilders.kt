@@ -95,9 +95,10 @@ fun IgnitorDslLike.toKatalystKnob(): IgnitorDsl = when (this) {
 
 /**
  * Builder for a [KatalystDsl] chain, handed to the `configure` lambda of `Katalyst(...)`. Knobs:
- * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `eq`,
- * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), and `through`,
- * which runs the builder through functions of stages in order.
+ * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `distort`, `duck`, `eq`,
+ * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), `serial`,
+ * which runs the builder through functions of stages in order, `parallel`, which runs branches side by side and
+ * sums them, and `bands`, which splits the bus into frequency bands.
  */
 data class KatalystBuilder(val node: KatalystDsl) {
     internal fun plus(stage: KatalystStageDsl): KatalystBuilder = copy(node = KatalystDsl(node.stages + stage))
@@ -542,18 +543,18 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
     plus(KatalystStageDsl.Gain(gain = gain.toKatalystKnob()))
 
 /**
- * Runs the chain through [stages], in the order written: `k.through(a, b, c)` is `c(b(a(k)))`, the same
+ * Runs the chain through [stages] in series, in the order written: `k.serial(a, b, c)` is `c(b(a(k)))`, the same
  * chain as the nested calls. A stage is any function from a builder to a builder, so a group of stages
  * (a room, a bus, a mastering block) becomes a value and a chain is written as the list it is.
- * With no stage, `through()` returns the chain as it is.
+ * With no stage, `serial()` returns the chain as it is.
  *
  * ```KlangScript
  * let hall    = k => k.reverb(0.25, 7, 4500)
  * let ceiling = k => k.gain(1.4).limiter(threshold = -3.0, lookahead = 0.005)
- * Katalyst(k => k.through(hall, ceiling))
+ * Katalyst(k => k.serial(hall, ceiling))
  * ```
  *
- * Serial, one stage into the next, as `Ignitor`'s `through`. Not sprudel's `apply(f, g)`, which stacks the
+ * One stage into the next, as `Ignitor`'s `serial`. Not sprudel's `apply(f, g)`, which stacks the
  * results side by side. Every stage is checked on the way: a stage that is null, returns nothing or returns
  * something other than the builder is a script error naming the stage; a stage that is not a function at all is
  * refused at the call ("expected a function, got a number").
@@ -561,8 +562,125 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
  * @param stages functions from a builder to a builder, applied first to last.
  */
 @KlangScript.Function
-fun KatalystBuilder.through(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
-    runThroughStages("Katalyst through", this, stages, returns = "builder") { it is KatalystBuilder }
+fun KatalystBuilder.serial(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
+    runSerialStages("Katalyst serial", this, stages, returns = "builder", example = "k => k.gain(0.8)") { it is KatalystBuilder }
+
+/**
+ * Runs the bus through [branches] side by side, from this position, and SUMS them: the twin of [serial]. Each branch
+ * is a function from a builder to a builder and receives an EMPTY one, the bus at this point, so a branch is the chain
+ * of stages it appends; a branch that appends nothing is the dry bus.
+ *
+ * ```KlangScript
+ * // parallel distortion: the dry bus and a distorted copy, a quarter of its level
+ * Katalyst(k => k.parallel(dry => dry, wet => wet.distort(0.5).gain(0.25)))
+ * ```
+ *
+ * The sum is plain (two identical branches are twice the level, +6 dB); a branch's own `gain` sets the blend. A `reverb`
+ * or `delay` adds its return on top of the dry it is fed, so a branch with one carries the dry as well. A branch
+ * that delays the bus (a compressor's lookahead, an oversampled distort) is matched by delaying the others, so the sum
+ * does not comb. With no branch, `parallel()` returns the chain as it is; with one, it appends that branch's stages in
+ * place, as written: a `classic()` in a branch is that branch's classic block, even next to one outside it (the
+ * at-most-once rule of [classic] holds per builder, and a branch is a builder of its own). A `duck` inside a branch is
+ * the orbit's duck, as anywhere in the chain. Every branch is checked like a stage of
+ * [serial]: one that is null, returns nothing or returns something other than the builder is a script error naming
+ * it.
+ *
+ * @param branches functions from a builder to a builder, each given an empty one.
+ */
+@KlangScript.Function
+fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+    val built = branches.mapIndexed { index, branch ->
+        runStage<KatalystBuilder, KatalystBuilder>(
+            door = "Katalyst parallel",
+            noun = "branch",
+            index = index,
+            stage = branch,
+            input = KatalystBuilder(KatalystDsl(emptyList())),
+            returns = "builder",
+            example = "b => b.distort(0.5)",
+            isResult = { it is KatalystBuilder },
+        ).node
+    }
+
+    return when (built.size) {
+        0 -> this
+        1 -> copy(node = KatalystDsl(node.stages + built[0].stages))
+        else -> plus(KatalystStageDsl.Parallel(branches = built))
+    }
+}
+
+/**
+ * A dry/wet blend of the bus, the linear law: `k.blend(wet, f)` sums the bus times `1 - wet` with [branch]'s stages
+ * times `wet` (a `parallel` of two). The branch receives an empty builder, the bus at this position, as a `parallel`
+ * branch does. `wet` comes first, as on every door with one.
+ *
+ * ```KlangScript
+ * // a third of a crushed copy of the bus under the clean one
+ * Katalyst(k => k.blend(0.3, b => b.distort(0.6, "hard")))
+ * ```
+ *
+ * Linear is right for a branch correlated with the dry (distortion, compression, filters). A `reverb` or `delay` in the
+ * branch carries the dry as well (it adds its return on top), so `blend(w, b => b.reverb(1, 7))` is the dry plus `w`
+ * of the room. [wet] is a plain number here, where the Ignitor's may be a slot or a signal: `1 - wet` needs arithmetic,
+ * which a Katalyst param does not have (recorded asymmetry). A number that is not finite reads as 0.
+ *
+ * @param wet the share of the branch, 0 to 1.
+ * @param branch a function from a builder to a builder, given an empty one.
+ */
+@KlangScript.Function
+fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+    val number = when (wet) {
+        is Number -> wet.toDouble()
+        is IgnitorDsl.Constant -> wet.value
+        else -> throw KlangScriptTypeError(
+            message = "wet is a plain number here (1 - wet needs arithmetic, which a Katalyst param or a signal does not " +
+                    "have); got ${wet::class.simpleName}",
+            operation = "Katalyst blend",
+        )
+    }
+    // NaN-guard on a value the author can write: an unset blend is no blend.
+    val share = if (number.isFinite()) number else 0.0
+    val processed = runStage<KatalystBuilder, KatalystBuilder>(
+        door = "Katalyst blend",
+        noun = "branch",
+        index = 0,
+        stage = branch,
+        input = KatalystBuilder(KatalystDsl(emptyList())),
+        returns = "builder",
+        example = "b => b.distort(0.5)",
+        isResult = { it is KatalystBuilder },
+    )
+
+    return plus(
+        KatalystStageDsl.Parallel(
+            branches = listOf(
+                KatalystDsl.of(KatalystStageDsl.Gain(gain = (1.0 - share).toKatalystKnob())),
+                processed.gain(share).node,
+            ),
+        ),
+    )
+}
+
+/**
+ * Splits the bus into frequency BANDS from this position, processes each band on its own and sums them again: the
+ * master's distortion on the mids only, a compressor on the lows. Read from the bottom up:
+ *
+ * ```KlangScript
+ * // glue the mids, leave the kick and the hats alone
+ * Katalyst(k => k.bands(b => b.cut(150).band(mid => mid.distort(0.15)).cut(5000)).limiter())
+ * ```
+ *
+ * `band(f)` adds a processor to the band being written, a function of stages from an empty builder, as a `parallel`
+ * branch (two on one band are summed); `cut(freq)` closes the band and starts the next one up; a band with no
+ * `band()` passes untouched, and a cut below the one before it is moved up to it. The crossover is Linkwitz-Riley: with
+ * nothing processed the bands sum to flat level, with the phase turned around each cut. A late band is matched by
+ * delaying the others. With no `configure`, or no `cut`, it is the one band, its stages in place.
+ *
+ * @param configure receives the bands builder and returns it.
+ */
+@KlangScript.Function
+fun KatalystBuilder.bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBuilder)? = null): KatalystBuilder =
+    copy(node = KatalystDsl(node.stages + KatalystBandsBuilder().configuredBy("Katalyst bands", configure).split()))
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 

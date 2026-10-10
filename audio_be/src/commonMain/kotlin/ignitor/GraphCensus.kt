@@ -379,6 +379,13 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
             // binary: in place over a scalar side, a scratch render and a third stream otherwise
             is IgnitorDsl.Plus -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            // n branches are n - 1 sums of two signals. NOT counted, deliberately: the latency pads (a pass over the block and
+            // a ring of a few samples per padded branch), which depend on the branches' latencies, known only at build
+            is IgnitorDsl.Parallel -> {
+                val sums = (node.branches.size - 1).coerceAtLeast(0)
+
+                GraphCensus(passes = sums, traffic = 3 * sums, bytes = 0)
+            }
             is IgnitorDsl.Minus -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
             is IgnitorDsl.Times -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
             is IgnitorDsl.Div -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)

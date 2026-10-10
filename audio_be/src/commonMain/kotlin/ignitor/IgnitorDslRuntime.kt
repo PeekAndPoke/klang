@@ -32,6 +32,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
@@ -1146,13 +1147,22 @@ private fun IgnitorDsl.buildRaw(
     // The last child `withMod` built, so a pass-through can hand its answer on.
     var lastChildEndsInEnvelope = false
 
-    fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor {
+    // How late the signal spine is, exact (see [BuiltIgnitor.latencySamples]): the latest of the signal children,
+    // absorbed along the same edges as the tail, plus what THIS node adds ([ownLatency], set by the oversampled arms).
+    var spineLatency = 0.0
+    var ownLatency = 0.0
+
+    /** [withMod] with the child's whole answer, for an arm that needs more than its signal (the `Parallel` arm). */
+    fun IgnitorDsl.withModBuilt(mod: Ignitor? = accumulatedMod): BuiltIgnitor {
         val built = buildIgnitor(ignitorParams, cache, mod)
         spineTail = maxTail(a = spineTail, b = built.releaseTailSec)
         spineGatesOutput = spineGatesOutput || built.gatesOutput
         lastChildEndsInEnvelope = built.endsInEnvelope
-        return built.ignitor
+        spineLatency = maxOf(spineLatency, built.latencySamples)
+        return built
     }
+
+    fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor = withModBuilt(mod).ignitor
 
     /** A gated-off stage: the node is not built and IS its inner, [BuiltIgnitor.endsInEnvelope] included. */
     fun IgnitorDsl.passThrough(): Ignitor {
@@ -1368,6 +1378,19 @@ private fun IgnitorDsl.buildRaw(
         // ── Arithmetic: pass mod to both children ──
 
         is IgnitorDsl.Plus -> left.withMod() + right.withMod()
+
+        // Branches side by side, summed, every earlier branch delayed to the latest one, so an oversampled branch
+        // does not comb against a dry one. The branches share their input by identity (the door hands every branch
+        // the same node), so the build cache builds it once. Latest = [spineLatency] after the branches, which is
+        // also what this node reports. An empty list (the doors never write one) is silence, as an empty sum is.
+        is IgnitorDsl.Parallel -> {
+            val built = branches.map { it.withModBuilt() }
+            val latest = spineLatency
+            // Rounded here and only here: the pad is whole samples, the latencies it compares are exact.
+            val padded = built.map { it.ignitor.delayedBy((latest - it.latencySamples).roundToInt()) }
+
+            if (padded.isEmpty()) Ignitors.silence() else padded.reduce { sum, next -> sum + next }
+        }
 
         // GATE ROW `mul`: a factor of EXACTLY 1.0 over a SIGNAL is not built, and the signal is
         // returned (unset is deliberately NOT off here, and a control-rate survivor never folds;
@@ -1694,11 +1717,14 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Distort -> if (amount.gatedOff(ignitorParams, cache) { it <= 0.0 }) {
             inner.passThrough()
         } else {
-            inner.withMod().fusedDistort(
-                amount.noMod(),
-                shape.distortionShapeKnob(ignitorParams, cache),
-                oversample.oversampleStagesKnob(ignitorParams, cache),
-            )
+            // In the order these were always built (inner, amount, shape, oversample): build order is draw order.
+            val signal = inner.withMod()
+            val drive = amount.noMod()
+            val shaper = shape.distortionShapeKnob(ignitorParams, cache)
+            val stages = oversample.oversampleStagesKnob(ignitorParams, cache)
+            ownLatency = Oversampler.groupDelaySamples(stages)
+
+            signal.fusedDistort(drive, shaper, stages)
         }
 
         // GATE ROW `drive`: at or below 0.0, or unset. THE row the authoring doors reach, because
@@ -1723,10 +1749,15 @@ private fun IgnitorDsl.buildRaw(
 
         // NOT gated (no amount knob, see the `drive` row). Its shape and oversampling factor are knobs
         // read once, here, at voice build (phase 3 step 3b; the factor is decision D7's stopgap).
-        is IgnitorDsl.Shape -> inner.withMod().shape(
-            shape.distortionShapeKnob(ignitorParams, cache),
-            oversample.oversampleStagesKnob(ignitorParams, cache),
-        )
+        is IgnitorDsl.Shape -> {
+            // In the order these were always built (inner, shape, oversample): build order is draw order.
+            val signal = inner.withMod()
+            val shaper = shape.distortionShapeKnob(ignitorParams, cache)
+            val stages = oversample.oversampleStagesKnob(ignitorParams, cache)
+            ownLatency = Oversampler.groupDelaySamples(stages)
+
+            signal.shape(shaper, stages)
+        }
 
         // GATE ROW `crush`: BELOW 1.0, or unset, and NOT 0. `CrushIgnitor` itself bypasses below two
         // levels (`CrushCore.halfLevels`, bits below 1), and `Ignitor.crush(Double)` returns the
@@ -1801,5 +1832,11 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet = wet.noMod(), feedback = feedback.noMod(), tone = tone.noMod(), pitches = pitches, floor = floor.noMod())
     }
 
-    return BuiltIgnitor(ignitor = ignitor, releaseTailSec = spineTail, gatesOutput = spineGatesOutput, endsInEnvelope = builtEnvelope)
+    return BuiltIgnitor(
+        ignitor = ignitor,
+        releaseTailSec = spineTail,
+        gatesOutput = spineGatesOutput,
+        endsInEnvelope = builtEnvelope,
+        latencySamples = spineLatency + ownLatency,
+    )
 }

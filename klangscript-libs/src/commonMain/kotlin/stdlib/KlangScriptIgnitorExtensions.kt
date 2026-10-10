@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
+import io.peekandpoke.klang.audio_bridge.blend
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
@@ -684,27 +685,122 @@ object KlangScriptIgnitorExtensions {
     // ── Composition ──────────────────────────────────────────────────────────
 
     /**
-     * Runs this signal through the stages, in the order written: `x.through(a, b, c)` is `c(b(a(x)))`.
+     * Runs this signal through the stages in series, in the order written: `x.serial(a, b, c)` is `c(b(a(x)))`.
      * A stage is any function from a signal to a signal, so a signal chain is written as the list it is,
-     * with any number of stages; a rig is a stage too. With no stage, `through()` returns the signal as it is.
+     * with any number of stages; a rig is a stage too. With no stage, `serial()` returns the signal as it is.
      *
      * ```KlangScript
      * let pedal = x => x.distort(0.4, "soft")
      * let cab   = x => x.highpass(100).lowpass(5000)
-     * let rig   = x => x.through(pedal, cab)
-     * let guitar = Ignitor.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+     * let rig   = x => x.serial(pedal, cab)
+     * let guitar = Ignitor.saw().serial(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
      * ```
      *
-     * Serial, one stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
-     * It builds what the Kotlin `IgnitorDsl.through(...)` builds, and checks every stage on the way: a stage that is
+     * One stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
+     * It builds what the Kotlin `IgnitorDsl.serial(...)` builds, and checks every stage on the way: a stage that is
      * null, returns nothing or returns something other than a signal is a script error naming the stage; a stage that is
      * not a function at all is refused at the call ("expected a function, got a number").
      *
      * @param stages functions from a signal to a signal, applied first to last.
      */
     @KlangScript.Method
-    fun through(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
-        runThroughStages("Ignitor through", self, stages, returns = "signal") { it is IgnitorDsl }
+    fun serial(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+        runSerialStages("Ignitor serial", self, stages, returns = "signal", example = "x => x.lowpass(800)") { it is IgnitorDsl }
+
+    /**
+     * Runs this signal through the branches side by side and SUMS them, the twin of `serial`: `x.parallel(a, b)` is
+     * `a(x) + b(x)`, and every branch reads the same `x`, built once (a pitch node in a branch, a `vibrato` or a
+     * `detune`, forks it into a second instance, as it forks any shared signal).
+     *
+     * ```KlangScript
+     * // parallel distortion: the clean signal and a screaming copy of its highs, a little under it
+     * let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35).mul(0.6))
+     * let guitar = Ignitor.saw().serial(screamer).adsr(0.005, 0.8, 0.0, 0.05).classic()
+     * ```
+     *
+     * The sum is plain (two identical branches are twice the level); a branch's own `mul` sets the blend. A branch
+     * that delays the signal (an oversampled `distort` or `shape`) is matched by delaying the others, so the sum does
+     * not comb; a plain `plus` does not do that. With no branch, `parallel()` returns the signal as it is; with one,
+     * that branch's output. It builds what the Kotlin `IgnitorDsl.parallel(...)` builds, and checks every branch as
+     * `serial` checks a stage.
+     *
+     * @param branches functions from a signal to a signal, each given this signal.
+     */
+    @KlangScript.Method
+    fun parallel(self: IgnitorDsl, vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+        val built = branches.mapIndexed { index, branch ->
+            runStage<IgnitorDsl, IgnitorDsl>(
+                door = "Ignitor parallel",
+                noun = "branch",
+                index = index,
+                stage = branch,
+                input = self,
+                returns = "signal",
+                example = "x => x.lowpass(800)",
+                isResult = { it is IgnitorDsl },
+            )
+        }
+
+        return when (built.size) {
+            0 -> self
+            1 -> built[0]
+            else -> IgnitorDsl.Parallel(branches = built)
+        }
+    }
+
+    /**
+     * A dry/wet blend, the linear law: `x.blend(wet, f)` is `x.parallel(d => d.mul(1 - wet), w => f(w).mul(wet))`, so 0 is
+     * the dry signal and 1 is the branch alone. `wet` comes first, as on every door with one.
+     *
+     * ```KlangScript
+     * // a quarter of a hard distortion under the clean string
+     * let edge = x => x.blend(0.25, y => y.distort(0.6, "hard"))
+     * ```
+     *
+     * Linear is right for a branch that stays correlated with the dry (distortion, filters). [wet] may be a number, a
+     * slot or a signal (an LFO moves the blend); a number that is not finite reads as 0. The branch is checked as a
+     * `parallel` branch is, and a late branch is aligned the same way.
+     *
+     * @param wet the share of the branch, 0 to 1.
+     * @param branch a function from the signal to a signal.
+     */
+    @KlangScript.Method
+    fun blend(self: IgnitorDsl, wet: IgnitorDslLike, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+        return self.blend(wet = wet.toIgnitorDsl()) { signal ->
+            runStage<IgnitorDsl, IgnitorDsl>(
+                door = "Ignitor blend",
+                noun = "branch",
+                index = 0,
+                stage = branch,
+                input = signal,
+                returns = "signal",
+                example = "x => x.distort(0.5)",
+                isResult = { it is IgnitorDsl },
+            )
+        }
+    }
+
+    /**
+     * Splits this signal into frequency BANDS, processes each band on its own and sums them again: multiband
+     * distortion, a saturated mid range over a clean low end, an exciter on the highs. Read from the bottom up:
+     *
+     * ```KlangScript
+     * // the lows clean, the mids crunchy, the highs untouched
+     * Ignitor.saw().bands(b => b.cut(250).band(mid => mid.distort(0.4)).cut(3000))
+     * ```
+     *
+     * `band(f)` adds a processor to the band being written (two on one band are summed), `cut(freq)` closes it and
+     * starts the next one up; a band with no `band()` passes untouched, and a cut below the one before it is moved up
+     * to it. The crossover is Linkwitz-Riley: with nothing processed the bands sum to flat level, with the phase
+     * turned around each cut (the waveform changes, the balance does not). Every band reads the same signal, built
+     * once; a late band (an oversampled `distort`) is matched by delaying the others, as in `parallel`. With no
+     * `configure`, or no `cut`, it is the one band.
+     *
+     * @param configure receives the bands builder and returns it.
+     */
+    @KlangScript.Method
+    fun bands(self: IgnitorDsl, configure: ((IgnitorBandsBuilder) -> IgnitorBandsBuilder)? = null): IgnitorDsl =
+        IgnitorBandsBuilder().configuredBy("Ignitor bands", configure).split(self)
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 

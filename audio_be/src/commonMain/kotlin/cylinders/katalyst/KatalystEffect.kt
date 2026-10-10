@@ -69,7 +69,8 @@ interface KatalystEffect {
 /**
  * A stage that delays the orbit it runs on: [latencyFrames] frames, in every state, fixed when the stage is built.
  * The chain sums them (`KatalystChain.latencyFrames`), and a chain swap places two chains' weights by that sum
- * (`ChainSwap`). Two stages delay today: the compressor with a lookahead and the distort stage with oversampling.
+ * (`ChainSwap`). Three stages delay today: the compressor with a lookahead, the distort stage with oversampling, and a
+ * `parallel` stage by its longest branch.
  */
 interface KatalystLatentEffect {
     /** Frames this stage delays the orbit by; 0 when it does not. */

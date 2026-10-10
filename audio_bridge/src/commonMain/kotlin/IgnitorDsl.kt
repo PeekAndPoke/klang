@@ -120,9 +120,11 @@ internal fun nextNoiseUid(): Int = noiseUidCounter++
  *
  * Each subtype represents a primitive oscillator, noise source, effect, filter, envelope,
  * or arithmetic combinator. Subtrees are composed declaratively and serialized across the
- * audio bridge boundary for rendering in the audio worklet.
+ * audio bridge boundary for rendering in the audio worklet. A node referenced twice (a `let` used twice) crosses
+ * that boundary as one object ([WireShared]), so the worklet builds it once, as the JVM does.
  */
 @WireFormat
+@WireShared
 sealed interface IgnitorDsl {
 
     /** Recursively collects all [Param] leaf nodes in this DSL subtree into [out]. */
@@ -1132,6 +1134,24 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
     // Arithmetic Composition
     // ═════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Branches side by side, SUMMED: the twin of a series of stages (`serial`), built by the `parallel` door as
+     * `x.parallel(a, b)` = `a(x) + b(x)` with every branch reading the SAME `x` (one instance, built once; a pitch node
+     * in a branch forks it, as it forks any shared node).
+     *
+     * **Aligned by latency.** A branch that delays the signal (an oversampled `distort` or `shape`, 4 to 6 samples)
+     * would comb against the others in the sum, so the build delays every shorter branch to the longest one. A plain
+     * [Plus] is raw arithmetic and does not align (`docs/plans/future/signal-graph-engine.md` §6.9).
+     *
+     * The doors build it for two branches or more (none is the signal unchanged, one is that branch).
+     */
+    @WireName("parallel")
+    data class Parallel(val branches: List<IgnitorDsl>) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            branches.forEach { it.collectParams(out) }
+        }
+    }
 
     /** Additive combinator. Sums two ignitor signals sample-by-sample. */
     @WireName("plus")
@@ -2584,15 +2604,50 @@ fun IgnitorDsl.select(whenTrue: Double, whenFalse: Double) =
 // Composition
 
 /**
- * Runs this signal through [stages], in the order written: `x.through(a, b, c)` is `c(b(a(x)))`, the same
- * node as the nested calls. A stage is any function from a signal to a signal (a pickup, a pedal, an amp,
+ * Runs this signal through [stages] in series, in the order written: `x.serial(a, b, c)` is `c(b(a(x)))`, the
+ * same node as the nested calls. A stage is any function from a signal to a signal (a pickup, a pedal, an amp,
  * a cab), so a signal chain is written as the list it is, with no fixed number of slots. With no stage,
- * `through()` returns the signal as it is.
+ * `serial()` returns the signal as it is.
  *
- * Serial, one stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
+ * One stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
  */
-fun IgnitorDsl.through(vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+fun IgnitorDsl.serial(vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
     stages.fold(this) { signal, stage -> stage(signal) }
+
+/**
+ * Runs this signal through [branches] side by side and SUMS them, the twin of [serial]: `x.parallel(a, b)` is
+ * `a(x) + b(x)`, every branch reading the same `x` (one instance, built once; a pitch node in a branch forks it). A
+ * branch that delays the signal (an oversampled `distort` or `shape`) is matched by delaying the others, so the sum
+ * does not comb ([IgnitorDsl.Parallel]).
+ * The sum is plain: `x.parallel({ it }, { it })` is twice `x`; a branch's own `mul` sets the blend.
+ *
+ * With no branch, `parallel()` returns the signal as it is; with one, that branch's output.
+ */
+fun IgnitorDsl.parallel(vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl = when (branches.size) {
+    0 -> this
+    1 -> branches[0](this)
+    else -> IgnitorDsl.Parallel(branches = branches.map { it(this) })
+}
+
+/**
+ * A dry/wet blend, the linear law: `x.blend(wet, f)` is `x.parallel({ it.mul(1 - wet) }, { f(it).mul(wet) })`, so 0
+ * is the dry signal and 1 is [branch]'s output alone (the dry/wet helper of `docs/plans/future/signal-graph-engine.md`
+ * §6.9; the linear law only, the default taken 2026-10-10 in `docs/tasks/in-progress/parallel-serial-bands.md`). Linear
+ * is right for correlated branches (distortion, filters); a decorrelated one (a room) loses about 3 dB in the middle,
+ * which a song can lift with the branch's own `mul`. [wet] may be a slot or a signal (a moving blend); a constant that
+ * is not finite reads as 0, the dry signal. The branch is aligned by latency as in [parallel].
+ */
+fun IgnitorDsl.blend(wet: IgnitorDsl, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+    // NaN-guard on a value the author can write: an unset blend is no blend. The one guard, for both doors.
+    val share = if (wet is IgnitorDsl.Constant && !wet.value.isFinite()) IgnitorDsl.Constant(0.0) else wet
+    val dry = if (share is IgnitorDsl.Constant) IgnitorDsl.Constant(1.0 - share.value) else IgnitorDsl.Constant(1.0).minus(share)
+
+    return parallel({ it.mul(dry) }, { branch(it).mul(share) })
+}
+
+/** [blend] with a number. */
+fun IgnitorDsl.blend(wet: Double, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+    blend(wet = IgnitorDsl.Constant(wet), branch = branch)
 
 // Frequency
 

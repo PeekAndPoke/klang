@@ -32,6 +32,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Silence" { check(IgnitorDsl.Silence) }
     "Sample" { check(IgnitorDsl.Sample) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
+    "Parallel" { check(IgnitorDsl.Sine().parallel({ it }, { it.lowpass(800.0) }, { it.mul(0.5) })) }
 
     // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where
     // it gets used; every field non-default so a dropped one shows up.

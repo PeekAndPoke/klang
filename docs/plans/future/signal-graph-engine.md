@@ -483,7 +483,8 @@ quarter as well (the back-pocket table above). The credits land with the code th
 Out of scope: the Motor routing, sprudel pattern doors, removing the stages' own `wet` knobs (to reconsider once
 `parallel` has proven itself), moving cuts, a better oversampler.
 
-**Open before building:**
+**Open before building** (taken as the coordinator's leans when the work started, 2026-10-10, reversible by the
+maintainer; the task: `docs/tasks/in-progress/parallel-serial-bands.md`):
 - **The crossover of `bands`.** With Linkwitz-Riley crossovers, a `bands` with nothing processed is an ALL-PASS, not the
   input: flat in level, the phase turned around each cut, so the waveform and its peaks change. The alternatives:
   complementary by subtraction (`high = x - low`, the sum is exactly the input, but the upper band's slope is soft and

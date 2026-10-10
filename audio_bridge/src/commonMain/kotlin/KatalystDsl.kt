@@ -559,4 +559,33 @@ sealed interface KatalystStageDsl {
     data class Gain(
         val gain: IgnitorDsl = IgnitorDsl.Constant(1.0),
     ) : KatalystStageDsl
+
+    /**
+     * Branches side by side: every branch runs on its own copy of the bus at this position, and the
+     * stage's output is the SUM of the branches (`docs/plans/future/signal-graph-engine.md` §6.9).
+     * A branch is a chain of its own, so `parallel` is the twin of a chain's series. An empty branch
+     * is the dry signal: `parallel(distorted, empty)` is parallel distortion. The doors write a
+     * stage only for two branches or more (none is the bus unchanged, one is that branch's stages
+     * in place).
+     *
+     * **Aligned:** a branch that delays the bus (a compressor's lookahead, an oversampled distort)
+     * would comb against the others in the sum, so every shorter branch is delayed to the longest
+     * one, and the stage delays the bus by that longest branch's latency.
+     *
+     * **The sum is plain:** two identical branches are twice the level (+6 dB), as two faders up on
+     * a desk; a branch scales itself (`gain`) where the author wants a blend. A `delay` or `reverb`
+     * adds its return on top of the dry at its position, so a branch holding one carries the dry too:
+     * `parallel(empty, reverb)` is the dry twice plus the room. Parallel distortion and compression,
+     * which change the signal itself, do not have this.
+     *
+     * **A `duck` in a branch is the orbit's duck**: the duck runs outside the list after every orbit
+     * and its position is ignored ([Duck]), so a branch is no different; the last declared duck,
+     * branches included in the order written, wins.
+     *
+     * @param branches the chains that run side by side, each from the bus at this position.
+     */
+    @WireName("parallel")
+    data class Parallel(
+        val branches: List<KatalystDsl>,
+    ) : KatalystStageDsl
 }

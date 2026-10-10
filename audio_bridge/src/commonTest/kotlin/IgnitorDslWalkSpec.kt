@@ -26,7 +26,7 @@ class IgnitorDslWalkSpec : StringSpec({
 
     // Distinct, order-revealing markers. PARAM-backed, not Constant, and that is load-bearing:
     // Constant.collectParams is a no-op, so with Constant markers the collectParams cross-check
-    // below would compare emptySet() against emptySet() for all 78 non-Param rows and guard
+    // below would compare emptySet() against emptySet() for all 79 non-Param rows and guard
     // exactly nothing. The name carries the slot index so a swapped pair is visible.
     fun m(i: Int): IgnitorDsl = IgnitorDsl.Param("p$i", 100.0 + i)
 
@@ -203,6 +203,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("SuperSquare", IgnitorDsl.SuperSquare(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5, phase = m(5)), 6),
         Triple("SuperTri", IgnitorDsl.SuperTri(freq = m(0), voices = m(1), spread = m(2), analog = m(3), analogSpread = m(4), spreadPower = 7.5, sideAtten = 7.5, gainJitter = 7.5, centerJitterScale = 7.5, phasePool = 7.5, drawTries = 7.5, kMin = 7.5, kMax = 7.5, poolSize = 7.5, refreshEvery = 7.5, selection = "random", warmup = 7.5, phase = m(5)), 6),
         Triple("Tanh", IgnitorDsl.Tanh(inner = m(0)), 1),
+        Triple("Parallel", IgnitorDsl.Parallel(listOf(m(0), m(1), m(2))), 3),
         Triple("Times", IgnitorDsl.Times(left = m(0), right = m(1)), 2),
         Triple("Tremolo", IgnitorDsl.Tremolo(inner = m(0), rate = m(1), depth = m(2), shape = m(3), rangeFrom = m(4), rangeTo = m(5)), 6),
         Triple("Tri", IgnitorDsl.Tri(freq = m(0), analog = m(1), phase = m(2)), 3),
@@ -215,8 +216,8 @@ class IgnitorDslWalkSpec : StringSpec({
 
     "the corpus covers every IgnitorDsl node type" {
         // Bump this together with a new node's walker arms and its corpus entry.
-        corpus.size shouldBe 79
-        corpus.map { it.first }.toSet().size shouldBe 79
+        corpus.size shouldBe 80
+        corpus.map { it.first }.toSet().size shouldBe 80
     }
 
     "every node reports exactly the declared number of children" {

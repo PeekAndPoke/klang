@@ -152,10 +152,10 @@ let makeGuitar = (rig) => {
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
-let cleanRig  = x => x.through(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab1x12)
-let brightRig = x => x.through(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12)
-let deepRig   = x => x.through(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab4x12)
-let heavyRig  = x => x.through(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)
+let cleanRig  = x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab1x12)
+let brightRig = x => x.serial(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12)
+let deepRig   = x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab4x12)
+let heavyRig  = x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)
 
 let clean  = makeGuitar(cleanRig)
 let bright = makeGuitar(brightRig)
@@ -529,7 +529,7 @@ export song = stack(
   , master(Katalyst(k => k
     .reverb(0.20, 7, 7000)                         // the hall: one room for the whole band, about 2 s, warm
     .gain(1.00)                                    // the house level, -14 LUFS
-    .distort(0.15, "soft", 4)
+    .bands(b => b.cut(150).band(mid => mid.distort(0.15, "soft", 4)).cut(5000)) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
 )

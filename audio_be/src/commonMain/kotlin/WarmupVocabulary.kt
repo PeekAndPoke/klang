@@ -39,6 +39,7 @@ import io.peekandpoke.klang.audio_bridge.neg
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimizer
+import io.peekandpoke.klang.audio_bridge.parallel
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.pitchMod
 import io.peekandpoke.klang.audio_bridge.pitchModSemitones
@@ -221,6 +222,7 @@ object WarmupVocabulary {
         .shape("soft")
         .distort(0.5, "hard", oversample = 4) // = Drive + Shape (oversampled)
         .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3), oversample = Constant(2.0)) } // the gated drive+shape unit
+        .parallel({ it }, { it.distort(0.3, "soft", oversample = 2) }) // branches summed, the dry one padded to the late one
         .crush(6.0)
         .coarse(3.0)
         .phaser(wet = 0.5, rate = 0.7, center = 800.0)

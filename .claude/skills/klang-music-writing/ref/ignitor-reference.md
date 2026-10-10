@@ -543,22 +543,101 @@ a saw or a triangle, the same time; a sine lingers at its ends). Values at or be
 Ignitor.saw().lowpass(Ignitor.sine(0.2).rangex(200, 3200))
 ```
 
-### Composition: `.through(...)`
+### Composition: `.serial(...)`
 
-`x.through(a, b, c)` runs the signal through functions of a signal, in the order written: it is exactly
-`c(b(a(x)))`, the same node as the nested calls, with any number of stages (`through()` with none is `x` itself). A rig is
+`x.serial(a, b, c)` runs the signal through functions of a signal, in the order written: it is exactly
+`c(b(a(x)))`, the same node as the nested calls, with any number of stages (`serial()` with none is `x` itself). A rig is
 then a value, and a rig is a stage too:
 
 ```javascript
 let pedal  = x => x.distort(0.4, "soft")
 let cab    = x => x.highpass(100).lowpass(5000)
-let rig    = x => x.through(pedal, cab)
-let guitar = Ignitor.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+let rig    = x => x.serial(pedal, cab)
+let guitar = Ignitor.saw().serial(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
 ```
 
 Serial, one stage into the next. Do not confuse it with sprudel's `apply(f, g)`, an alias of `layer`, which runs
 each function on the pattern and STACKS the results. The Katalyst builder has the same door:
-`Katalyst(k => k.through(hall, ceiling))`.
+`Katalyst(k => k.serial(hall, ceiling))`.
+
+### Composition: `.parallel(...)`
+
+`x.parallel(a, b, c)` is the twin of `serial`: every branch gets the SAME signal `x` and the results are SUMMED,
+`a(x) + b(x) + c(x)`. `x` is one instance, built once, so a noise, a drift or a supersaw's random phases are the same
+in every branch (a hand-written `x.plus(f(x))` shares `x` the same way). The exception is a pitch node in a branch
+(`vibrato`, `detune`, `accelerate`, ...): it forks `x` into a second instance, as `n + n.vibrato(...)` always has. With no
+branch it is `x`; with one, that branch.
+
+```javascript
+// parallel distortion: the clean string and a screaming copy of its highs, a little under it
+let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6))
+```
+
+- The sum is plain: `x.parallel(y => y, y => y)` is twice `x` (+6 dB). Blend with a `mul` inside a branch.
+- A branch that is LATE (an oversampled `distort` or `shape`: 4 samples at 2x, 6 at 4x and 8x) is matched by delaying
+  the others, so the clean and the dirty copy do not comb. A plain `plus` does NOT do that: `x.plus(x.distort(0.35,
+  "soft", 2))` sums them 4 samples apart, a comb with its first notch near 6 kHz. Prefer `parallel` for wet/dry
+  splits.
+- The Katalyst builder has `parallel` too (branches of bus stages, each from an empty builder): see the sprudel
+  reference's master line.
+
+### Composition: `.bands(...)`
+
+`x.bands(b => ...)` splits the signal into frequency bands, processes each band on its own and sums them again. It
+reads from the BOTTOM up: `band(f)` adds a processor to the band being written, `cut(hz)` closes it and starts the next
+one up.
+
+```javascript
+// a bass that stays round below 120 Hz and growls above it (multiband distortion)
+let growl = x => x.bands(b => b.cut(120).band(top => top.distort(0.5, "tube")))
+// the lows clean, the mids crunchy, the highs untouched
+let crunch = x => x.bands(b => b.cut(250).band(mid => mid.distort(0.4)).cut(3000))
+```
+
+- A band with no `band()` passes untouched; two `band()` calls on one band are summed (`parallel`).
+- The crossover is Linkwitz-Riley: untouched, the bands sum back to FLAT level, with the phase turned around each cut
+  (the waveform and its peaks change, the balance does not). Three bands or more are phase-aligned for you.
+- A cut below the one before it is moved up to it. Two equal cuts leave a narrow band between them (about an octave
+  wide, -12 dB at its peak), not an empty one. With no `cut` it is one band: `x.bands(b => b.band(f))` is `f(x)`.
+- The Katalyst has the same door on a bus or the master (each band's processor gets an empty builder, as a `parallel`
+  branch): `k.bands(b => b.cut(150).band(mid => mid.distort(0.15)).cut(5000))` glues the mids and leaves the kick and
+  the hats alone.
+
+### Composition: `.blend(wet, ...)`
+
+`x.blend(wet, f)` is a dry/wet blend, the linear law: the signal times `1 - wet` plus `f(x)` times `wet`, built as a
+`parallel` of two. `wet` comes first, as on every door with one.
+
+```javascript
+// a quarter of a hard distortion under the clean string
+let edge = x => x.blend(0.25, y => y.distort(0.6, "hard"))
+// a moving blend: wet may be a slot or a signal on the Ignitor
+let breathe = x => x.blend(Ignitor.sine(0.25).range(0.1, 0.5), y => y.distort(0.6, "hard"))
+```
+
+- Linear is right for a branch correlated with the dry (distortion, compression, filters).
+- On the Katalyst, `wet` is a plain number (`1 - wet` needs arithmetic a Katalyst param does not have), and the branch
+  gets an empty builder: `k.blend(0.3, b => b.distort(0.6, "hard"))`. A `reverb` or `delay` in the branch carries
+  the dry as well, so `k.blend(w, b => b.reverb(1, 7))` is the dry plus `w` of the room.
+
+### Recipe: a "Soundgoodizer-style" master (parallel multiband compression)
+
+FL Studio's Soundgoodizer is a one-knob front end for Maximus: three bands, each compressed, blended with the dry
+input (per its manual; maintainer's request, 2026-10-10). In Klang that is `blend` over `bands`:
+
+```javascript
+// Three compressed bands under the dry bus. A starting point, not a tuned preset: set each band's threshold by ear on
+// the song, then the blend. The gain after each compressor is that band's make-up level.
+let goodize = k => k.blend(0.5, wet => wet.bands(b => b
+  .band(low  => low.compressor(-24, 4).gain(1.4))  .cut(200)
+  .band(mid  => mid.compressor(-20, 3).gain(1.3))  .cut(4000)
+  .band(high => high.compressor(-22, 4).gain(1.4))
+))
+
+master(Katalyst(k => k.serial(goodize).limiter()))
+```
+
+More blend is louder and denser; the limiter after it keeps the peaks.
 
 ---
 

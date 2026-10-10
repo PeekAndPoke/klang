@@ -795,3 +795,37 @@ private class DcBlockIgnitor(
         }
     }
 }
+
+/**
+ * This signal [frames] samples later: the pad a `parallel` node puts on a branch that is earlier than its latest one
+ * (see [BuiltIgnitor.latencySamples]). Silence for the first [frames] samples of the voice, then the input, exactly.
+ * The ring is allocated here, at build; at 0 frames the signal is returned as it is.
+ */
+internal fun Ignitor.delayedBy(frames: Int): Ignitor = if (frames <= 0) this else LatencyPadIgnitor(upstream = this, frames = frames)
+
+private class LatencyPadIgnitor(
+    private val upstream: Ignitor,
+    frames: Int,
+) : Ignitor {
+    private val ring = DoubleArray(frames)
+    private var pos = 0
+
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        upstream.generate(buffer, freqHz, ctx)
+
+        val end = ctx.windowEnd
+        val size = ring.size
+
+        for (i in ctx.offset until end) {
+            val x = buffer[i]
+
+            buffer[i] = ring[pos]
+            ring[pos] = x
+            pos++
+
+            if (pos == size) {
+                pos = 0
+            }
+        }
+    }
+}

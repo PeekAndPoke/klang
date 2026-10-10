@@ -441,3 +441,30 @@ internal class KatalystDuckWriter(
         )
     }
 }
+
+/**
+ * Parallel: no knob of its own; it hands the orbit's param state to every branch chain, so a branch's stages resolve
+ * and apply exactly as the chain's own do (each branch keeps its own identity gate, [KatalystChain.resolveParams]).
+ * Holds the state between the two halves and drops it on a resolve from null, as every chain does
+ * ([KatalystChain.reset] forgets through that path).
+ */
+internal class KatalystParallelWriter(
+    private val fx: KatalystParallelEffect,
+) : KatalystSlotWriter {
+
+    private var params: Map<String, Double>? = null
+
+    override fun resolve(params: Map<String, Double>?) {
+        this.params = params
+
+        for (i in fx.branches.indices) {
+            fx.branches[i].resolveParams(params)
+        }
+    }
+
+    override fun apply() {
+        for (i in fx.branches.indices) {
+            fx.branches[i].applyParams(params)
+        }
+    }
+}

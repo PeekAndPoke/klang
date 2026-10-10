@@ -55,6 +55,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 | duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source orbit | `depth` per sample; `attack` at once; a `duck.orbit` switch has no mechanism (open: `docs/tasks/by-ear/duck-orbit-switch-click.md`) |
 | distort | the compressor's law: a linear blend with the dry mix over `KNOB_GLIDE_SECONDS`; ON fades reset cores in; with oversampling the dry is the delayed dry (2026-10-09) | `amount` glides linear in the amount over `KNOB_GLIDE_SECONDS`, the drive ramped per sample within a block; `shape` and `oversample` are fixed with the chain |
 | gain | never off | per-sample glide over `KNOB_GLIDE_SECONDS` |
+| parallel | none of its own: each branch is a chain whose stages switch as above | none of its own: the orbit's param state reaches every branch's stages (`KatalystParallelWriter`) |
 
 `KnobGlide` (`audio_be/.../KnobGlide.kt`, its KDoc is the contract) moves one knob linearly over
 `KNOB_GLIDE_SECONDS` (0.05) in whole 128-frame blocks, lands bit-exactly, restarts from where the knob stands on a
@@ -93,7 +94,8 @@ The glide time itself is an open question for the maintainer's ear: `docs/tasks/
   compensates, by the author's choice. The house limiter is not a Katalyst stage (`MasterStage`; `audio/MEMORY.md`, "House stage").
   The `distort` stage's oversampling delays the same way, by the oversampler's group delay rounded (4 frames at 2x, 6
   at 4x and 8x; `Oversampler.groupDelaySamples`). Both are `KatalystLatentEffect`s, and the chain sums them
-  (`KatalystChain.latencyFrames`).
+  (`KatalystChain.latencyFrames`). A `parallel` stage (2026-10-10, `KatalystParallelEffect`) pads every branch to its
+  longest one with a ring of its own, so the sum does not comb, and reports that longest latency as its own.
 
 ## Writing a stage lifecycle: the state-machine template
 
