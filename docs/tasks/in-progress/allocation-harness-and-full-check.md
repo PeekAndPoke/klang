@@ -1,6 +1,6 @@
 # The allocation harness in the repo, and one full check
 
-Status: **in progress (2026-10-10): the design phase; the design and the case list go to the maintainer before the build.**
+Status: **in progress (2026-10-10): the design is decided (see "Decided" at the end), the build phase.**
 
 ## Why
 
@@ -295,3 +295,21 @@ Each step is its own `console/with-build-lock.sh` call, so a waiting agent waits
 9. **The JVM's mixed profile is process-dependent.** The records show one process reading 0 B and another 72 B on
    the same case (item 12, before step 2). A future regression of that kind could breach in one run and not the
    next. The median of 9 rounds damps this, but does not remove it.
+
+### Decided (maintainer, 2026-10-10: "Yes, build it", with the coordinator's answers)
+
+1. **Node:** the system node, its version in every row. `KLANG_NODE` points at another one.
+2. **V8 resolution:** accepted as it is, with the 200,000-block window. The V8 budgets catch one heap number per
+   sample or per knob read; the JVM catches a single box.
+3. **The bundle switch:** cross-check three cases on both bundles in the build phase, then confirm every budget
+   against the harness's first run before it is committed.
+4. **Frequency:** middle C, 261.63 Hz, for every case. The scoreboard starts fresh, so the old 220 Hz records are not
+   the reference.
+5. **Two scoreboard rows per run** (V8 and JVM).
+6. **Every alloc run writes its rows**, a dirty tree marked dirty, as the ledger does.
+7. **The corpus check** runs under `runSongBenchmark` (no new task). Its first reference is taken on a commit where
+   the scratch spec still confirms the accepted sound (v0.6.3: `tmp/naming/corpus-merge063.txt`); the coordinator
+   then retires the scratch spec.
+8. **Tests:** Gradle skips test tasks whose inputs did not change; `full-check.sh --fresh` forces every test task to
+   run.
+9. **The JVM's process-dependent profile:** accepted and noted in the budget file's header.
