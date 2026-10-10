@@ -1,6 +1,6 @@
 # Inharmonic partials on the sine: one node for a cluster
 
-Status: **designed (maintainer, 2026-10-09, Q26), queued after the pitch pipeline; not started.** Asked for by the maintainer 2026-09-30, after Der Schmetterling's
+Status: **designed (maintainer, 2026-10-09, Q26); in progress since 2026-10-10 on branch `sine-partials` (stacked on `pitch-composition`).** Asked for by the maintainer 2026-09-30, after Der Schmetterling's
 snare got its thud as a cluster of 13 hand-rolled sines (commit `20d74bb8`): "the memory consumption would
 hurt on the Fairphone 4 again, so that partials config would be good ... we would also need to clarify
 what happens if this is in conjunction with harmonics."
@@ -61,7 +61,7 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
   | `suboctaves(n, r)` | 1/2, 1/4, 1/8, ... | `m ^ -r` |
   | `fundamental(g)` | 1 | `g` |
   | `partials(ratios, gains)` | any | any |
-  | `noiseBand(...)` ([`sine-noise-band.md`](sine-noise-band.md)) | a geometric grid | a colour law |
+  | `noiseBand(...)` ([`sine-noise-band.md`](../future/sine-noise-band.md)) | a geometric grid | a colour law |
 
   So what does `Ignitor.sine(x => x.harmonics(7).partials(...))` play? The maintainer's two options:
   1. **the last bank wins**: every bank sets the one partial list, so the `partials` replace the
@@ -87,7 +87,7 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
 - **The phase knob.** Per partial here, and for the plain oscillators (the tremolo note): one word, one
   scale (turns or radians) on every surface. For a noise band, a sign per partial is enough: alternating
   signs come within 1.8 dB of the best pattern, and free (Schroeder) phases gained nothing in the study
-  ([`sine-noise-band.md`](sine-noise-band.md)).
+  ([`sine-noise-band.md`](../future/sine-noise-band.md)).
 - **Drift.** How `analog` and `analogSpread` act on inharmonic partials (the banks drift as one
   oscillator at spread 0 and each partial on its own at 1; `docs/plans/sine-partial-banks.md` section 2).
 - **Decided 2026-10-02: it gets built**: the maintainer decided to build the partials knob on the sine in any case (in
@@ -124,5 +124,5 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
 
 ## Follow-ups
 
-- [`sine-noise-band.md`](sine-noise-band.md): a noise band as one more generator of partials, with the
+- [`sine-noise-band.md`](../future/sine-noise-band.md): a noise band as one more generator of partials, with the
   maths for the grid, the colour and the signs.
