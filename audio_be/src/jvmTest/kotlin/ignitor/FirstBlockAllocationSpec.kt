@@ -20,14 +20,13 @@ import kotlin.random.Random
  * A node is built (not measured), then its first block is measured against the blocks after it, by the bytes this
  * thread allocates (`com.sun.management.ThreadMXBean`).
  *
- * **Signals for every knob, a cached box for every count.** A block-constant knob answers
- * `Ignitor.controlRateValueOrNull`, a `Double?` the JVM boxes (24 bytes) wherever the JIT does not inline it away, and
- * how often it does differs from run to run, so a block of a [ConstantIgnitor]-built voice costs 0, 24 or 48 bytes,
- * and its first block, which reads `analog` once more, one box more. Kotlin/JS has no box there. So the nodes here
- * are built from the Kotlin factories with every knob a [Hold] (a constant the build cannot read, which every reader
- * renders) and every count a [Count] (block-constant, so the build sizes the node from it, answering with one box
- * made up front). Nothing is boxed, and a node that allocates nothing after its build takes exactly 0 bytes, its
- * first block included.
+ * **Signals for every knob, a [Count] for every count.** Written when a block-constant knob answered
+ * `Ignitor.controlRateValueOrNull`, a `Double?` the JVM boxed (24 bytes) wherever the JIT did not inline it away, so a
+ * block of a [ConstantIgnitor]-built voice cost 0, 24 or 48 bytes from run to run. Since engine follow-ups 8 and 12
+ * (step 2, 2026-10-10) the scalar is a primitive `Ignitor.controlRateValue`, but the rows keep their shape: the nodes
+ * here are built from the Kotlin factories with every knob a [Hold] (a constant the build cannot read, which every
+ * reader renders) and every count a [Count] (block-constant, so the build sizes the node from it). A node that
+ * allocates nothing after its build takes exactly 0 bytes, its first block included.
  *
  * Not covered, because they still allocate at render (recorded in `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 10): a count
  * signal's, or a count that reads the note's frequency, first rise past what the build sized (the rows with [Steps] start at their maximum, which the first block
@@ -197,17 +196,6 @@ class FirstBlockAllocationSpec : StringSpec({
             partials = List(13) { i -> Ignitors.SinePartial(ratio = Hold(0.66 + 0.21 * i), gain = Hold(0.5), phase = Hold(0.5 * (i % 2))) },
         )
 
-        // Their per-block reader is code the JIT has not seen yet in this spec: on a cold JIT the first twelve notes of
-        // it take 144 bytes per block (whatever the partial count, with drift or without), and none once it is
-        // compiled (a scratch probe, 2026-10-10). One unmeasured pass first, so the row measures the node, not the JIT.
-        repeat(12) { note ->
-            val voice = Voice(ignitor = explicit(drift), random = Random(300 + note), scratch = scratch)
-
-            repeat(65) {
-                voice.render()
-            }
-        }
-
         allocatesNothingAfterBuild("sine explicit partials") { explicit(drift) }
         allocatesNothingAfterBuild("sine explicit partials, no drift") { explicit(off) }
         changesWithinMaxAllocateNothing("sine partials") { count, _ ->
@@ -304,22 +292,15 @@ class FirstBlockAllocationSpec : StringSpec({
     }
 })
 
-/**
- * A block-constant count the build can read, which answers [controlRateValueOrNull] with ONE box made here: a read
- * returns that box and allocates nothing (a [ConstantIgnitor] boxes per read on the JVM, see the class KDoc).
- */
-private class Count(value: Double) : Ignitor {
-    private val boxed: Double? = value
-
+/** A block-constant count the build can read: its scalar is a primitive, so a render-path read allocates nothing. */
+private class Count(private val value: Double) : Ignitor {
     override val isBlockConstant: Boolean = true
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? = boxed
+    override fun controlRateValue(freqHz: Double): Double = value
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val v = boxed ?: 0.0
-
         for (i in ctx.offset until ctx.windowEnd) {
-            buffer[i] = v
+            buffer[i] = value
         }
     }
 }

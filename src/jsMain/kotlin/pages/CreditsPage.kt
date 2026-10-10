@@ -303,6 +303,12 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         Noncoincident Drivers"*, JAES 1976): the crossover of `bands`. Two Butterworth filters in series on
                         each side of a cut, so the bands sum back to flat level; with three bands or more each band below a
                         cut also passes that cut's all-pass, so the bands stay in phase with each other
+                        - **Polyphase IIR half-band filters** (R. A. Valenzuela and A. G. Constantinides, *"Digital signal
+                        processing schemes for efficient interpolation and decimation"*, IEE Proceedings, 1983; Artur Krukowski
+                        and Izzet Kale, *"The design of arbitrary-band multi-path polyphase IIR filters"*, ISCAS 2001): the
+                        oversampler. A half-band built from two chains of all-pass sections, flat in level and steep, at a few
+                        samples of latency. Its coefficients follow the closed form of Laurent de Soras' free
+                        [HIIR](http://ldesoras.free.fr/prod.html) library (WTFPL)
                     """.trimIndent()
                 )
             }

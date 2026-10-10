@@ -32,13 +32,21 @@ interface Ignitor {
     fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext)
 
     /**
-     * The block-constant scalar value of this signal, or `null` if it varies within the block.
+     * The block-constant scalar value of this signal. READ ONLY WHEN [isBlockConstant] IS TRUE: then it is the
+     * node's value for this block; otherwise it is unspecified (the default is NaN, a combinator over a varying
+     * child computes from that child's unspecified value) and no reader may use it. The nullable view for the cold
+     * readers (the build, the Katalyst slots) is the extension [controlRateValueOrNull], which gates on the flag.
      *
      * Block-constant leaves ([ConstantIgnitor], [ParamIgnitor], [FreqIgnitor]) and pure pointwise
      * combinators (`plus`/`times`/… folding block-constant children) return their value here; everything
-     * else (oscillators, filters, envelopes, LFOs) returns `null` (the default). Lets control-rate readers
+     * else (oscillators, filters, envelopes, LFOs) keeps the default and a false flag. Lets control-rate readers
      * take the scalar directly instead of rendering a scratch buffer, and lets the pulse `duty` path pick
      * the bake-once render over per-sample PWM.
+     *
+     * A primitive `Double` ON PURPOSE (engine follow-ups 8 and 12, step 2, maintainer's decision 2026-10-10): the
+     * nullable `Double?` this used to return boxed on the JVM wherever C2 could not inline the call (a megamorphic
+     * read site, the constant-fold ladder over a composite constant), and "a true flag with a null value" (the
+     * old contract breach) can no longer be written, so no reader carries a degrade path for it.
      *
      * NO RENDER CONTEXT ON PURPOSE — the query is a pure function of the graph and [freqHz]. Every
      * implementation either ignores the block or forwards to its children, so the [IgniteContext]
@@ -52,26 +60,31 @@ interface Ignitor {
      * which is the safe direction — a nullable one would fail silently.
      *
      * CONTRACT (load-bearing since the constant-fold in `plus`/`times` consumes this on the
-     * AUDIO path, not just for control-rate reads): an override MUST
+     * AUDIO path, not just for control-rate reads): an override whose node reports [isBlockConstant] MUST
      *  1. be pure — no state advanced, no side effects; callable any number of times per block,
      *     including zero;
      *  2. be bit-identical to the node's own [generate] output for every sample in
      *     `[offset, offset+length)` of the same block.
-     * A node that is merely *slowly varying* must return `null` — a non-null value here turns
+     * A node that is merely *slowly varying* must report a false flag: a true one turns
      * `x * node` into a stepped per-block multiply with no spec failing loudly.
      */
-    fun controlRateValueOrNull(freqHz: Double): Double? = null
+    fun controlRateValue(freqHz: Double): Double = Double.NaN
 
     /**
-     * Structural block-constancy: `true` iff [controlRateValueOrNull] returns non-null for every
-     * block (the VALUE may still change between blocks, e.g. [FreqIgnitor] under detune). Purely
-     * structural, so implementations compute it ONCE at construction — letting hot paths gate
-     * their fold branches without paying a per-block subtree walk and a boxed `Double?` per query
-     * on the non-folding side (the JVM boxes the nullable return; so does V8 when the call is not inlined and the
-     * value is non-integral, a heap number per query: measured through [blockStartValue] in the unison stacks on
-     * the development bundle under a mixed profile, about 18 bytes per block; V8 allocation pass,
-     * `audio/ref/performance.md`).
-     * Must agree with [controlRateValueOrNull]'s nullability — the scalar-parity specs pin both.
+     * Structural block-constancy: `true` iff [controlRateValue] is this node's value in every block (the VALUE may
+     * still change between blocks, e.g. [FreqIgnitor] under detune). It is the gate every reader of
+     * [controlRateValue] checks first: a false flag means the scalar is not read. Purely structural, so
+     * implementations compute it ONCE at construction, letting hot paths gate their fold branches without paying a
+     * per-block subtree walk. An override that sets it true must override [controlRateValue] with a real value. No
+     * fallback catches a forgotten one: every reader then reads the NaN default (a silent or wrong sound). The only
+     * detector is the closed table in `ControlRateScalarParitySpec` section 4, so a new node with a true flag joins
+     * that table.
+     *
+     * On V8 a scalar read boxes where its call is not inlined (the return of a non-inlined call is a heap number
+     * whenever it is not a small integer; `Double?` and `Double` are the same JS number there). The shared
+     * `Ignitors.readParam` was such a call for every knob read of the engine (one megamorphic call site, never
+     * inlined); it is Kotlin `inline` now, gated on this flag, so each reader owns its own site and V8 inlines the
+     * scalar into it (engine follow-ups 8 and 12, 2026-10-10; `audio/ref/performance.md`).
      */
     val isBlockConstant: Boolean get() = false
 
@@ -79,23 +92,34 @@ interface Ignitor {
      * The signal's value at block start ([IgniteContext.offset]) — for callers that need a single
      * control-rate value (oscillator freq / analog / duty params, detune amount, unison spread).
      *
-     * Uses [controlRateValueOrNull] when available; otherwise renders a scratch buffer and reads one
-     * sample, which for stateful nodes advances their phase by one block (the original `readParam`
-     * fallback). Not meant to be overridden.
+     * A block-constant node ([isBlockConstant]) answers its [controlRateValue]; any other node renders a scratch
+     * buffer and reads one sample, which for stateful nodes advances their phase by one block (the original
+     * `readParam` fallback). The flag decides alone: a node with a false flag is rendered, whatever its scalar
+     * would say. Not meant to be overridden.
      *
      * A ZERO-LENGTH window (reachable: `legato` can clip a gate to 0 frames and `Voice.render`
-     * still runs the pipeline) returns 0.0 deterministically: `generate` writes nothing there, so
-     * the scratch read would otherwise hand back whatever a previous node left in the pool — an
+     * still runs the pipeline) returns 0.0 deterministically for a node that renders: `generate` writes nothing
+     * there, so the scratch read would otherwise hand back whatever a previous node left in the pool: an
      * arbitrary, run-to-run nondeterministic value (block-framing ledger E5).
      */
     fun blockStartValue(freqHz: Double, ctx: IgniteContext): Double =
-        controlRateValueOrNull(freqHz)
-            ?: if (ctx.length == 0) {
-                0.0
-            } else {
-                ctx.scratchBuffers.use { tmp -> generate(tmp, freqHz, ctx); tmp[ctx.offset] }
-            }
+        if (isBlockConstant) {
+            controlRateValue(freqHz)
+        } else if (ctx.length == 0) {
+            0.0
+        } else {
+            ctx.scratchBuffers.use { tmp -> generate(tmp, freqHz, ctx); tmp[ctx.offset] }
+        }
 }
+
+/**
+ * The scalar as a nullable view, for the cold readers that ask a question rather than read a knob (the ignitor
+ * build at note-on, the Katalyst slots, the build's sizing reads): [Ignitor.controlRateValue] when
+ * [Ignitor.isBlockConstant], `null` otherwise. Not for a per-block path: there the flag and the primitive scalar
+ * are read directly (a `Double?` boxes on the JVM wherever the call is not inlined).
+ */
+fun Ignitor.controlRateValueOrNull(freqHz: Double): Double? =
+    if (isBlockConstant) controlRateValue(freqHz) else null
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Arithmetic Composition
@@ -112,7 +136,7 @@ interface Ignitor {
 // CONSTANT-FOLD POLICY: binary ops (and the const-heavy ternary slots, Clamp/Range bounds and
 // Lerp t) carry fold branches in `generate()` (the ladder). UNARY ops (`neg()` is a multiply by
 // -1 since 2026-09-15, so it is not one) deliberately do NOT: they override
-// `controlRateValueOrNull`/`isBlockConstant`, so a constant unary subtree folds AT ITS PARENT,
+// `controlRateValue`/`isBlockConstant`, so a constant unary subtree folds AT ITS PARENT,
 // which never calls the unary's `generate` at all. An internal fill branch would be near-dead
 // code that still costs a parity case, a liveness probe and a mutation check each. Residual
 // cost: in the few non-folding parent slots (Lerp a/b under a varying t, Select branches) a
@@ -149,9 +173,9 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
         law = { x, y -> plusLaw(a = x, b = y) },
     )
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = a.controlRateValueOrNull(freqHz) ?: return null
-        val y = b.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = a.controlRateValue(freqHz)
+        val y = b.controlRateValue(freqHz)
 
         return plusLaw(a = x, b = y)
     }
@@ -195,9 +219,9 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
         law = { x, y -> timesLaw(a = x, b = y) },
     )
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = a.controlRateValueOrNull(freqHz) ?: return null
-        val y = b.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = a.controlRateValue(freqHz)
+        val y = b.controlRateValue(freqHz)
 
         return timesLaw(a = x, b = y)
     }
@@ -236,44 +260,34 @@ internal class AffineIgnitor(
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         if (coefficientsConst) {
-            val kp = pre.controlRateValueOrNull(freqHz)
-            val km = mul.controlRateValueOrNull(freqHz)
-            val ka = add.controlRateValueOrNull(freqHz)
+            val kp = pre.controlRateValue(freqHz)
+            val km = mul.controlRateValue(freqHz)
+            val ka = add.controlRateValue(freqHz)
 
-            if (kp != null && km != null && ka != null) {
-                if (innerConst) {
-                    val kx = inner.controlRateValueOrNull(freqHz)
-
-                    if (kx != null) {
-                        buffer.fill(safeOut(km * (kx + kp)) + ka, ctx.offset, ctx.windowEnd)
-
-                        return
-                    }
-                }
-
-                // a multiplier of exactly zero is a dead branch, as in TimesIgnitor: the inner
-                // renders nothing and the block is the add alone
-                if (km == 0.0) {
-                    buffer.fill(0.0 + ka, ctx.offset, ctx.windowEnd)
-
-                    return
-                }
-
-                inner.generate(buffer, freqHz, ctx)
-
-                // the window is read AFTER the child render, like every sibling combinator
-                val end = ctx.windowEnd
-
-                for (i in ctx.offset until end) {
-                    buffer[i] = safeOut(km * (buffer[i] + kp)) + ka
-                }
+            if (innerConst) {
+                buffer.fill(safeOut(km * (inner.controlRateValue(freqHz) + kp)) + ka, ctx.offset, ctx.windowEnd)
 
                 return
             }
 
-            // A block-constant coefficient whose scalar came back null is a contract breach; the
-            // scratch path below is correct for any child: degrade, never throw on the render
-            // thread (the Plus policy).
+            // a multiplier of exactly zero is a dead branch, as in TimesIgnitor: the inner
+            // renders nothing and the block is the add alone
+            if (km == 0.0) {
+                buffer.fill(0.0 + ka, ctx.offset, ctx.windowEnd)
+
+                return
+            }
+
+            inner.generate(buffer, freqHz, ctx)
+
+            // the window is read AFTER the child render, like every sibling combinator
+            val end = ctx.windowEnd
+
+            for (i in ctx.offset until end) {
+                buffer[i] = safeOut(km * (buffer[i] + kp)) + ka
+            }
+
+            return
         }
 
         // A modulated coefficient: per sample, all three through scratch.
@@ -298,11 +312,11 @@ internal class AffineIgnitor(
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = inner.controlRateValueOrNull(freqHz) ?: return null
-        val p = pre.controlRateValueOrNull(freqHz) ?: return null
-        val m = mul.controlRateValueOrNull(freqHz) ?: return null
-        val a = add.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = inner.controlRateValue(freqHz)
+        val p = pre.controlRateValue(freqHz)
+        val m = mul.controlRateValue(freqHz)
+        val a = add.controlRateValue(freqHz)
 
         return safeOut(m * (x + p)) + a
     }
@@ -338,8 +352,8 @@ private class MulConstIgnitor(private val upstream: Ignitor, private val factor:
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = upstream.controlRateValue(freqHz)
 
         return timesLaw(a = x, b = factor)
     }
@@ -380,9 +394,9 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         law = { x, y -> divLaw(a = x, b = y) },
     )
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = a.controlRateValueOrNull(freqHz) ?: return null
-        val y = b.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = a.controlRateValue(freqHz)
+        val y = b.controlRateValue(freqHz)
 
         return divLaw(a = x, b = y)
     }
@@ -431,9 +445,9 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
         law = { x, y -> minusLaw(a = x, b = y) },
     )
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = a.controlRateValueOrNull(freqHz) ?: return null
-        val y = b.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = a.controlRateValue(freqHz)
+        val y = b.controlRateValue(freqHz)
 
         return minusLaw(a = x, b = y)
     }
@@ -454,8 +468,8 @@ private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> absLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return absLaw(v)
     }
@@ -494,9 +508,9 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
         law = { x, y -> powLaw(a = x, b = y) },
     )
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = base.controlRateValueOrNull(freqHz) ?: return null
-        val y = exp.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = base.controlRateValue(freqHz)
+        val y = exp.controlRateValue(freqHz)
 
         return powLaw(a = x, b = y)
     }
@@ -533,9 +547,9 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         law = { x, y -> minLaw(a = x, b = y) },
     )
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = a.controlRateValueOrNull(freqHz) ?: return null
-        val y = b.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = a.controlRateValue(freqHz)
+        val y = b.controlRateValue(freqHz)
 
         return minLaw(a = x, b = y)
     }
@@ -572,9 +586,9 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         law = { x, y -> maxLaw(a = x, b = y) },
     )
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = a.controlRateValueOrNull(freqHz) ?: return null
-        val y = b.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = a.controlRateValue(freqHz)
+        val y = b.controlRateValue(freqHz)
 
         return maxLaw(a = x, b = y)
     }
@@ -597,24 +611,23 @@ private class ClampIgnitor(
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         // Partial fold: block-constant bounds (the dominant `clamp(-1, 1)` shape) skip BOTH
-        // scratch renders. Same breach policy as PlusIgnitor (null despite flag -> scratch path).
+        // scratch renders.
         if (boundsConst) {
-            val kl = lo.controlRateValueOrNull(freqHz)
-            val kh = hi.controlRateValueOrNull(freqHz)
-            if (kl != null && kh != null) {
-                upstream.generate(buffer, freqHz, ctx)
-                val end = ctx.windowEnd
-                for (i in ctx.offset until end) {
-                    val v = buffer[i]
-                    buffer[i] = when {
-                        v < kl -> kl
-                        v > kh -> kh
-                        else -> v
-                    }
-                }
+            val kl = lo.controlRateValue(freqHz)
+            val kh = hi.controlRateValue(freqHz)
 
-                return
+            upstream.generate(buffer, freqHz, ctx)
+            val end = ctx.windowEnd
+            for (i in ctx.offset until end) {
+                val v = buffer[i]
+                buffer[i] = when {
+                    v < kl -> kl
+                    v > kh -> kh
+                    else -> v
+                }
             }
+
+            return
         }
 
         upstream.generate(buffer, freqHz, ctx)
@@ -637,10 +650,10 @@ private class ClampIgnitor(
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
-        val l = lo.controlRateValueOrNull(freqHz) ?: return null
-        val h = hi.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
+        val l = lo.controlRateValue(freqHz)
+        val h = hi.controlRateValue(freqHz)
 
         return when {
             v < l -> l
@@ -659,8 +672,8 @@ private class ExpIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> expLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return expLaw(v)
     }
@@ -680,8 +693,8 @@ private class LogIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> logLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return logLaw(v)
     }
@@ -696,8 +709,8 @@ private class SqrtIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> sqrtLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return sqrtLaw(v)
     }
@@ -712,8 +725,8 @@ private class SignIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> signLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return signLaw(v)
     }
@@ -728,8 +741,8 @@ private class TanhIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> tanhLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return tanhLaw(v)
     }
@@ -768,10 +781,10 @@ private class LerpIgnitor(
     override val isBlockConstant: Boolean =
         from.isBlockConstant && to.isBlockConstant && weightConst
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = from.controlRateValueOrNull(freqHz) ?: return null
-        val y = to.controlRateValueOrNull(freqHz) ?: return null
-        val w = weight.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = from.controlRateValue(freqHz)
+        val y = to.controlRateValue(freqHz)
+        val w = weight.controlRateValue(freqHz)
 
         return x * (1.0 - w) + y * w
     }
@@ -781,30 +794,26 @@ private class LerpIgnitor(
         // scratch render. Folding constant from/to too would be combinatorial for a rare shape —
         // deliberately not done; a fully-constant Lerp folds at a FOLDING parent via the
         // overrides above (non-folding slots still run this loop — reachable, just rare).
-        // Same breach policy as PlusIgnitor (null despite flag -> scratch path below).
         if (weightConst) {
-            val kw = weight.controlRateValueOrNull(freqHz)
+            val kw = weight.controlRateValue(freqHz)
+            // `1 − kw` is loop-invariant, hoisted NOT because the JIT would miss it (C2 and
+            // TurboFan both hoist a loop-invariant on a local) but because the baseline tiers
+            // run first and a short voice can be gone before the loop ever tiers up.
+            // Bit-identical either way.
+            val end = ctx.windowEnd
+            val kwInv = 1.0 - kw
 
-            if (kw != null) {
-                // `1 − kw` is loop-invariant, hoisted NOT because the JIT would miss it (C2 and
-                // TurboFan both hoist a loop-invariant on a local) but because the baseline tiers
-                // run first and a short voice can be gone before the loop ever tiers up.
-                // Bit-identical either way.
-                val end = ctx.windowEnd
-                val kwInv = 1.0 - kw
+            from.generate(buffer, freqHz, ctx)
 
-                from.generate(buffer, freqHz, ctx)
+            ctx.scratchBuffers.use { toBuf ->
+                to.generate(toBuf, freqHz, ctx)
 
-                ctx.scratchBuffers.use { toBuf ->
-                    to.generate(toBuf, freqHz, ctx)
-
-                    for (i in ctx.offset until end) {
-                        buffer[i] = buffer[i] * kwInv + toBuf[i] * kw
-                    }
+                for (i in ctx.offset until end) {
+                    buffer[i] = buffer[i] * kwInv + toBuf[i] * kw
                 }
-
-                return
             }
+
+            return
         }
 
         from.generate(buffer, freqHz, ctx)
@@ -846,10 +855,10 @@ private class RangeIgnitor(
 
     override val isBlockConstant: Boolean = upstream.isBlockConstant && boundsConst
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
-        val f = from.controlRateValueOrNull(freqHz) ?: return null
-        val t = to.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
+        val f = from.controlRateValue(freqHz)
+        val t = to.controlRateValue(freqHz)
 
         return f + (v + 1.0) * 0.5 * (t - f)
     }
@@ -857,27 +866,23 @@ private class RangeIgnitor(
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         // Partial fold: block-constant bounds (the dominant `range(200, 4000)` shape) skip BOTH
         // scratch renders. Single-const-bound combinatorics deliberately not done — rare shape.
-        // Same breach policy as PlusIgnitor (null despite flag -> scratch path below).
         if (boundsConst) {
-            val kFrom = from.controlRateValueOrNull(freqHz)
-            val kTo = to.controlRateValueOrNull(freqHz)
+            val kFrom = from.controlRateValue(freqHz)
+            val kTo = to.controlRateValue(freqHz)
+            // Half the span, hoisted for the same reason as `LerpIgnitor`'s `kwInv`. The
+            // re-association is safe: scaling by 0.5 is exact, so `((x+1)·0.5)·span` and
+            // `(x+1)·(span·0.5)` are both ONE rounding of the same real product, and
+            // `ConstantFoldParitySpec` pins this loop against the audio-rate one below.
+            val end = ctx.windowEnd
+            val halfSpan = 0.5 * (kTo - kFrom)
 
-            if (kFrom != null && kTo != null) {
-                // Half the span, hoisted for the same reason as `LerpIgnitor`'s `kwInv`. The
-                // re-association is safe: scaling by 0.5 is exact, so `((x+1)·0.5)·span` and
-                // `(x+1)·(span·0.5)` are both ONE rounding of the same real product, and
-                // `ConstantFoldParitySpec` pins this loop against the audio-rate one below.
-                val end = ctx.windowEnd
-                val halfSpan = 0.5 * (kTo - kFrom)
+            upstream.generate(buffer, freqHz, ctx)
 
-                upstream.generate(buffer, freqHz, ctx)
-
-                for (i in ctx.offset until end) {
-                    buffer[i] = kFrom + (buffer[i] + 1.0) * halfSpan
-                }
-
-                return
+            for (i in ctx.offset until end) {
+                buffer[i] = kFrom + (buffer[i] + 1.0) * halfSpan
             }
+
+            return
         }
 
         upstream.generate(buffer, freqHz, ctx)
@@ -891,7 +896,7 @@ private class RangeIgnitor(
                 to.generate(toBuf, freqHz, ctx)
 
                 // `t − f` is per-sample here, not invariant: both bounds are audio-rate signals.
-                // The form stays unfactored to match `controlRateValueOrNull` bit-for-bit
+                // The form stays unfactored to match `controlRateValue` bit-for-bit
                 // (ControlRateScalarParitySpec renders this path as the scalar's oracle).
                 for (i in ctx.offset until end) {
                     val f = fromBuf[i]
@@ -913,8 +918,8 @@ private class FloorIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> floorLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return floorLaw(v)
     }
@@ -929,8 +934,8 @@ private class CeilIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> ceilLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return ceilLaw(v)
     }
@@ -945,8 +950,8 @@ private class RoundIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> roundLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return roundLaw(v)
     }
@@ -961,8 +966,8 @@ private class FracIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> fracLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return fracLaw(v)
     }
@@ -1002,9 +1007,9 @@ private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         law = { x, y -> modLaw(a = x, b = y) },
     )
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = a.controlRateValueOrNull(freqHz) ?: return null
-        val y = b.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val x = a.controlRateValue(freqHz)
+        val y = b.controlRateValue(freqHz)
 
         return modLaw(a = x, b = y)
     }
@@ -1024,8 +1029,8 @@ private class RecipIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> recipLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return recipLaw(v)
     }
@@ -1040,8 +1045,8 @@ private class SqIgnitor(private val upstream: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) =
         unaryMap(upstream = upstream, buffer = buffer, freqHz = freqHz, ctx = ctx) { v -> sqLaw(v) }
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        val v = upstream.controlRateValue(freqHz)
 
         return sqLaw(v)
     }
@@ -1068,13 +1073,13 @@ private class SelectIgnitor(
     override val isBlockConstant: Boolean =
         cond.isBlockConstant && whenTrue.isBlockConstant && whenFalse.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        // Resolve ALL THREE children before returning (the MinIgnitor pattern): generate
-        // renders both branches unconditionally so their state advances; a short-circuit on
-        // the condition would let an untaken stateful branch fall behind the render path.
-        val c = cond.controlRateValueOrNull(freqHz) ?: return null
-        val tv = whenTrue.controlRateValueOrNull(freqHz) ?: return null
-        val fv = whenFalse.controlRateValueOrNull(freqHz) ?: return null
+    override fun controlRateValue(freqHz: Double): Double {
+        // Reads all three children. This runs only under a true flag, so all three are
+        // block-constant and stateless: a short-circuit on the condition would be harmless,
+        // and the plain form keeps one shape with the other combinators.
+        val c = cond.controlRateValue(freqHz)
+        val tv = whenTrue.controlRateValue(freqHz)
+        val fv = whenFalse.controlRateValue(freqHz)
 
         return if (c > 0.0) tv else fv
     }
@@ -1110,7 +1115,7 @@ private class SelectIgnitor(
 /** Shift frequency by [semitones] from an audio-rate exciter. Reads the first sample per block for the detune value. */
 fun Ignitor.detune(semitones: Ignitor): Ignitor = DetuneIgnitor(upstream = this, semitones = semitones)
 
-// Detune (both forms) deliberately has NO controlRateValueOrNull/isBlockConstant override:
+// Detune (both forms) deliberately has NO controlRateValue/isBlockConstant override:
 // it is a PITCH node — it changes the freqHz its upstream sees, not a pointwise value — so
 // "block-constant" is not a meaningful property of its output. Do not "complete" the set.
 private class DetuneIgnitor(
@@ -1118,7 +1123,7 @@ private class DetuneIgnitor(
     private val semitones: Ignitor,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val s = semitones.blockStartValue(freqHz, ctx)
+        val s = Ignitors.readParam(semitones, freqHz, ctx)
         val ratio = s.semitones()
         upstream.generate(buffer, freqHz * ratio, ctx)
     }

@@ -63,16 +63,16 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
     private var cache: AudioBuffer = AudioBuffer(0)
 
     /**
-     * Pure delegation. Every node that reports non-null here is stateless (Constant/Param/Freq
+     * Pure delegation, the flag with it. Every node that reports [isBlockConstant] is stateless (Constant/Param/Freq
      * leaves and pointwise combinators over them), so bypassing the block cache for the scalar
      * read has no side effects and equals the cached buffer's samples bit-for-bit. Without this
      * override, the wrapper that [buildIgnitor] puts around every identity-cached non-leaf node
-     * (Variants and the pitch-mod nodes dissolve instead of being wrapped) reported `null` and
-     * forced composite constant subtrees (e.g. `Times(Freq, Param)`) onto the scratch-render
-     * fallback in [Ignitor.blockStartValue].
+     * (Variants and the pitch-mod nodes dissolve instead of being wrapped) would answer the NaN
+     * default under a true flag, so every reader of a wrapped composite constant subtree (e.g.
+     * `Times(Freq, Param)`) would read NaN. The parity table's `memoizing` row guards it.
      */
-    override fun controlRateValueOrNull(freqHz: Double): Double? =
-        inner.controlRateValueOrNull(freqHz)
+    override fun controlRateValue(freqHz: Double): Double =
+        inner.controlRateValue(freqHz)
 
     override val isBlockConstant: Boolean = inner.isBlockConstant
 

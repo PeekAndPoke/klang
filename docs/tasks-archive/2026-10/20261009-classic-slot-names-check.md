@@ -12,7 +12,7 @@
 > The red rig-anchor row of `SongBenchmarkCasesCompileSpec` the steps mention was fixed by `662aa8db`.
 
 Status before archiving: **decided (maintainer, 2026-10-08, Q21), pulled ahead: it runs after the engine tidy-up and BEFORE pitch
-pipeline step 1** ([`pitch-pipeline-into-the-tree.md`](../../tasks/in-progress/pitch-pipeline-into-the-tree.md)). All decided (Q21, Q22).
+pipeline step 1** ([`pitch-pipeline-into-the-tree.md`](../../tasks/pitch-pipeline-into-the-tree.md)). All decided (Q21, Q22).
 
 ## What it is
 

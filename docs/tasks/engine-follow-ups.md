@@ -23,7 +23,7 @@ Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
 ## 1. Allocation on V8 (the worklet)
 
 These are V8 only. The JVM allocates nothing per block in steady state except item 12's `Double` per
-block-constant param read (0 to 48 bytes per block). The method and the rules learned are in
+block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: see items 8 and 12). The method and the rules learned are in
 `audio/ref/performance.md`.
 
 1. **The stages still allocate** (delay, reverb, phaser). After the V8 pass, bytes per block at engine level,
@@ -109,9 +109,89 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
 7. **A drifting stack's ramp can box twice per voice per block**: `DriftLanes.startOf` and `endOf` return a double,
    and where V8 does not inline `blendOf` (some mixed-profile processes, both bundles) that is 221 to 515 bytes per
    block. A holder for the ramp is the shape. Source: as 2. S.
-8. **`ConstantIgnitor.controlRateValueOrNull` is a heap number per read** when the call is not inlined and the
-   constant is not integral: about 18 bytes per block through `blockStartValue` in the unison stacks (development,
-   mixed profile). It is the interface's shape (`Double?`); the same root as item 12. Source: as 2. M.
+8. **DONE (2026-10-10, with item 12): every knob read boxed on V8, through the shared `readParam`.**
+   Reported as `ConstantIgnitor.controlRateValueOrNull` boxing, about 18 bytes per block through `blockStartValue` in
+   the unison stacks (development, mixed profile), blamed on the interface's shape (`Double?`). Source: as 2.
+   **Cause** (measured, `tmp/reviews/e8-proposal.md`): not the type, on JS `Double?` and `Double` are the same number.
+   Every knob read of the engine went through one shared one-line function, `Ignitors.readParam`, so its
+   `blockStartValue` call was ONE call site for the whole engine: megamorphic, never inlined, and its double result a
+   heap number per read whenever it was not a small integer. **Fix** (candidate (d) of the proposal): `readParam` is
+   Kotlin `inline`, gated on `isBlockConstant` (step 1 still fell back to the member on a contract breach; step 2
+   below dropped that path, so the flag decides alone), so every caller owns its own site and V8 inlines the scalar into it; the five direct `blockStartValue` callers
+   (the white noise color, the brown leak, the dust tail and bipolar reads, `DetuneIgnitor`) read through it too. The
+   KDoc at `readParam` is the guard; the rule is in `audio/ref/performance.md` ("a shared one-line forwarding helper
+   is one megamorphic call site"). A new row in `ControlRateValueSpec` pins that `readParam` reads what
+   `blockStartValue` reads (in step 1 for all four pairings of flag and scalar, the breach included; step 2
+   rewrote it for the new contract, where the flag alone decides and a false flag renders, see step 2 below).
+   Bit for bit: raw
+   doubles of the probe, HEAD against the tree, 18 of 18 cases identical on V8, none silent; the corpus 18 of 18
+   (`tmp/naming/corpus-e8.txt` against `corpus-e10.txt`). Measured on the BUILT production bundle (the proposal had
+   only a hand-edited one), node 22, 20,000 warm-up and 200,000 measured blocks, bytes and ns per block, medians of
+   3, HEAD / tree / HEAD again (a byte copy of HEAD, the control); `c4:` is the same case at 261.63 Hz, where a
+   frequency is not a small integer:
+
+   | case | unpinned | pinned (`taskset -c 11`) | time, tree / HEAD (unpinned, pinned) |
+   |---|---|---|---|
+   | `saw` (authored, the control) | 16 / 20 / 16 B | 25 / 16 / 21 B | 1.00, 1.00 |
+   | `sawC` (classic, sustain) | 77 / 21 / 82 B | 93 / 21 / 83 B | 0.96, 0.99 |
+   | `C-offrel` (classic, releasing) | 67 / 21 / 67 B | 77 / 16 / 57 B | 0.99, 1.00 |
+   | `super7` (unison stack) | 83 / -5 / 82 B | 88 / 0 / 83 B | 0.99, 0.98 |
+   | `super7a` (unison, analog) | 98 / 0 / 97 B | 94 / 0 / 98 B | 0.97, 0.98 |
+   | `whitecolor` | 0 / 0 / 0 B | -5 / -26 / 0 B | 1.01, 1.01 |
+   | `sgpad-vib` (vibrato voice) | 113 / 47 / 108 B | 129 / 47 / 108 B | 1.00, 0.98 |
+   | `sawC-vibr` | 77 / 21 / 82 B | 77 / -5 / 77 B | 0.99, 0.98 |
+   | `c4:sawC` | 93 / 31 / 97 B | 114 / 46 / 92 B | 0.97, 0.97 |
+   | `c4:super7a` | 114 / 16 / 113 B | 109 / 6 / 119 B | 0.99, 0.97 |
+   | `c4:sgpad-vib` | 129 / 67 / 128 B | 144 / 67 / 124 B | 0.99, 0.98 |
+   | engine `sawC` sus | 134 / 26 / 134 B | 103 / 72 / 92 B | 0.98, 0.99 |
+   | engine n16 (a classic note every 16 blocks) | 1,846 / 1,062 / 1,844 B | 1,800 / 1,062 / 1,794 B | 0.98, 0.99 |
+   | engine `super7` sus | 129 / 47 / 129 B | 134 / 16 / 119 B | 0.99, 1.00 |
+   | engine `sgpad-vib` sus | 160 / 93 / 159 B | 145 / 78 / 155 B | 0.99, 1.00 |
+
+   So 60 to 100 B per classic or unison voice block go (4 to 6 heap numbers), about 780 B per block on the n16 row,
+   pinned and unpinned, at 0.96 to 1.01 of HEAD's time; the HEAD-again control stays at HEAD. The pinned engine `sawC`
+   row is the noisy one (HEAD 72 to 134 B across its three rounds, the tree 41 to 73). `--trace-turbo-inlining`,
+   classic saw: on HEAD `AdsrIgnitor.generate` inlines `readParam` five times but keeps the five `blockStartValue`
+   calls inside it as candidates it never inlines; on the tree it inlines `isBlockConstant` and the scalar five times
+   each, and no `blockStartValue` candidate is left in the trace (the unison stack the same). The heap profile of the
+   tree has no knob read left; what remains is the classes this list already names (`WaveIgnitor`'s `dt`, item 6; the
+   voice's stages; the build on the n16 row, item 11), plus at 261.63 Hz about one heap number per block in
+   `AdsrIgnitor.generate` that is not a knob read (likely the frequency handed on to the upstream node, the class of
+   10c; not located further), and the vibrato LFO's `SineIgnitor.generate`, about 44 B per block (HEAD 48), not a knob read: `resolveFreq`,
+   inlined by hand at its seven sites in a copy of the tree's bundle, moved nothing (`sgpad-vib` 46.7 / 46.6 B,
+   `c4:sgpad-vib` 62.1 / 61.8, the other rows within noise, bit for bit the same), so it stays a plain function. **JVM, step 1 alone:** the probe's `ThreadMXBean` harness (9 rounds, every case in
+   one process) read it unchanged (0 B per block in every steady case, the vibrato cases 0 with max 72 on both
+   sides, n16 357.5 on both), **but a megamorphic read site boxed on the JVM where HEAD did not**, found by
+   `FirstBlockAllocationSpec` ("sine explicit partials": 144 B per block, HEAD 0): the inline body called the
+   nullable scalar at each site, and a site C2 could not reduce to an inlined fresh box (three or more node classes,
+   production ones among them: `ConstantIgnitor`, `ParamIgnitor`, a `times` and a `plus` over constants, rotating
+   per note in a scratch probe: 72 B per block, HEAD 0 by note 139) returned its `Double?` as a box per read.
+   **Step 2 (item 12) closed it**, by the maintainer's decision of 2026-10-10: the scalar is the primitive
+   `controlRateValue(freqHz): Double`, read only when `isBlockConstant`. Then:
+   - The same scratch probe reads 0 B per block (one note at 5 B in 400, warm-up), `FirstBlockAllocationSpec` is
+     green with every row as it was, and its explicit-partials warm-up pass is gone: it absorbed the JIT's cold
+     `ConstantIgnitor` boxes, which a primitive return does not make (the row passed without it, twice, before it
+     was removed).
+   - The harness, every case in one process (three processes on step 2): the vibrato cases read 0 B per block with
+     max 0 in every round (HEAD 0 with max 72, the proposal's second process 72 in all 9 rounds). JFR over a whole
+     harness run: about 98.8 MB of `Double`s on HEAD, 7.35 MB on step 2, and none of them on the render path.
+   - **Left on the JVM, cold:** the n16 row reads 377 B per block in the mixed profile (HEAD 357.5; 357.5 on step
+     2 in a process running n16 alone, twice). The difference is the voice BUILD (item 11): its nullable reads,
+     `buildTimeKnobValue` and the release tail in `IgnitorDslRuntime.kt` (lines 665 and 1674) and the sizing reads
+     of `Ignitors.sizingValueOrNull`, now box through the `controlRateValueOrNull` extension, about 13 more `Double`s
+     per note there. An `inline` extension measured the same (377). Reading the flag and the primitive scalar there
+     would remove them: in `IgnitorDslRuntime.kt` a textual edit in an ADAA-owned file, not made; in
+     `sizingValueOrNull` (`Ignitors.kt`, four callers) left on purpose so both build-side halves move together, after
+     the ADAA session reports.
+
+   **Step 2 on V8**, the same bundle method, HEAD / tree / HEAD again, medians of 3, unpinned: bit for bit (18 of 18
+   dumps), and the bytes as step 1's (`sawC` 82 / 21 / 78, `C-offrel` 62 / 21 / 63, `super7` 82 / 0 / 82, `super7a`
+   94 / 0 / 98, `sgpad-vib` 113 / 48 / 119, `sawC-vibr` 88 / 16 / 77, `c4:sawC` 92 / 30 / 98, `c4:super7a` 109 / 16
+   / 113, `c4:sgpad-vib` 129 / 62 / 135, engine `sawC` sus 129 / 68 / 124, n16 1,850 / 1,045 / 1,838, engine
+   `super7` sus 134 / 52 / 124, engine `sgpad-vib` sus 134 / 93 / 160, `saw` 16 / 16 / 15, `whitecolor` 0 / 0 / 11),
+   time 0.97 to 1.00 of HEAD (`whitecolor` 1.05 in that run, 1.01 over 5 rounds unpinned and 0.99 pinned: noise).
+   Tests: `:audio_be:jvmTest` 2,645 of 2,645 and `:audio_be:jsBrowserTest` 2,541 of 2,541 green; the corpus 18 of
+   18 (`tmp/naming/corpus-e8b.txt` against `corpus-e8.txt`). Report: `tmp/reviews/e8-impl-report.md`.
 9. **DONE (2026-10-10): the Shape node allocated, and so did the fused `Distort`.** Reported as about 4 KB per block
    at stage 0 in the development JS build (52 scavenges per 105,000 blocks), 835 scavenges at stage 4 (16x). Source:
    the record, "Found during tidy-up step 11" (`tmp/reviews/tidy11-r1-B.md`, "Outside this change").
@@ -175,19 +255,113 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
 10. **Kotlin's `isFinite()` is a stdlib call on Kotlin/JS**, left out of the stages' inlining budget. An inline
     compare helped pinned and hurt unpinned, so it was dropped; worth a second look only with a measurement that holds
     in both conditions. Source: as 2. S.
-10a. **The per-sample pitch envelope boxes on V8**: on the production bundle, pinned and unpinned, a voice whose pitch
-    envelope is in its attack or decay allocates about 2.17 KB per block (one 16-byte heap number per sample); settled
-    or gated off it allocates about 0.1 KB. HEAD and pitch pipeline step 1 alike (the strip and the `classic()` stage
-    run the same `renderPitchEnvelopeRatios` loop over `core.at(...)`), so a typical kick sweep costs about 65 KB per
-    note. Likely a double crossing a call V8 does not inline (`adsrCurveShape`, `fastExp2` or `safeOut`); not located.
-    Source: `tmp/reviews/pp1-r1-B.md` (pitch pipeline step 1, review round 1, reviewer B, the NIT). S.
-10b. **A classic voice deep in a long release boxes on V8** (a lead): a saw with a 0.01 s gate and a 1000 s release,
-    measured inside the release (`saw-offrel`, no accelerate), allocates about 2.1 KB per block (2,120 to 2,137 bytes,
-    roughly one heap number per sample) on the production test bundle, pinned and unpinned, on HEAD and in pitch
-    pipeline step 3 alike; before its gate the same saw allocates about 0.1 KB. Unchecked at ordinary release lengths,
-    where the release lasts only a few hundred blocks; likely the release path of the amplitude envelope, the class of
-    10a. Locate it with the sampling heap profiler. Source: `tmp/reviews/pp3-r1-B.md` (pitch pipeline step 3, review
-    round 1, reviewer B, NIT 3). S.
+10a. **DONE (2026-10-10, with 10b): every per-sample envelope boxed on V8, through the curve `when`.** Reported as
+    about 2.17 KB per block for a voice whose pitch envelope is in its attack or decay (one 16-byte heap number per
+    sample), about 65 KB per kick sweep; a double crossing a call V8 does not inline was suspected (`adsrCurveShape`,
+    `fastExp2` or `safeOut`). Source: `tmp/reviews/pp1-r1-B.md` (pitch pipeline step 1, review round 1, reviewer B,
+    the NIT). **Measured on the production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22), one
+    voice through `VoiceFactory` and the whole engine through `PlaybackEngineDispatcher`: not the pitch envelope alone.
+    Every host of the envelope law that reads it per sample paid one heap number per sample while its envelope moved,
+    about 2.1 KB per block (2,077 to 2,206 B) on every row, pinned and unpinned, alone or through the engine: the chain
+    `adsr` and `classic()`'s envelope in attack, decay and release (10b), on every curve (linear, square, cube,
+    scurve, invsquare, exponential), the pitch envelope (`penv`) in attack and decay, and the FM index envelope (the
+    envelope part of 10d); about 6.2 KB per block with all three moving. In the sustain no curve is evaluated (the
+    level is the sustain itself), and a settled or released pitch envelope writes one ratio per block, so nothing
+    boxed there.
+    **Cause** (sampling heap profiler, HEAD against a bundle that differs only in the helper): the exhaustive `when` of
+    `adsrCurveShape` (`AdsrCurveMath.kt`), inlined three times into each per-sample loop (`AdsrIgnitor.generate`,
+    `renderPitchEnvelopeRatios`, `FmModIgnitor.generate`): Kotlin/JS leaves its result unassigned in the `default`
+    arm, so V8 carries it tagged around the loop, item 9's rule (`audio/ref/performance.md`). The profiler put 2,083 to
+    2,090 B per block at each of the three functions on HEAD and nothing per sample on the tree. `fastExp2` and
+    `safeOut` are Kotlin `inline` and box nothing; the classic envelope's de-click (`EnvelopeDeclick.next`, a plain
+    method) boxes nothing either (V8 inlines it). What is left is per block: the knob reads (`blockStartValue`,
+    item 8 on V8; item 12 on the JVM) and, in the fm, 10d's per-block calls. The only other `when` left in a sample loop in the bundle
+    (`UnisonStackIgnitor`'s per-voice dispatch) produces no value. **Fix**: the statement form in the shared inline
+    helper, one change for every host (an initialized `var y = 0.0`, a statement `when` that assigns it, `return y`);
+    the KDoc at the site is the guard. Chosen over the hoist by measurement: a hand-edited copy of the tree's bundle
+    with every curve switch deleted from the three loops (the exponential arm only, a perfect hoist's upper bound, valid
+    for the all-exponential rows) ran 0.98 to 1.01 of the statement form's time, pinned and unpinned (medians of 5);
+    with the linear arm kept (reviewer B), 0.92 to 0.96 on a bare linear `adsr` and 0.99 to 1.00 inside `classic()`.
+    So a hoist buys about 2 percent on the exponential (default) rows and 4 to 8 percent on a bare linear envelope,
+    not enough for a table of loops in three hosts; the envelope's loop is dominated by its arithmetic, not
+    by the switch (the shaper's tighter loop gained 12 to 25 percent from its hoist, item 9). Bit for bit: raw doubles
+    of the probe, HEAD / tree / HEAD again, 77 of 77 cases on V8 and 77 of 77 on the JVM (every curve through every
+    stage, the chain and `classic()`, the pitch and FM envelopes, the engine rows); the corpus 18 of 18
+    (`tmp/naming/corpus-e10.txt` against `corpus-e10-before.txt`). The guard row: `EnvelopeLawSpec` "each stage takes
+    its own curve" renders every arm against its oracle; mutation-checked, each of the six arms with its assignment
+    dropped turns it red (and "a fractional release counts floor(N) frames" with it). Render bytes and ns per block,
+    medians of 3, HEAD / tree / HEAD again (a few bytes either way is the noise band; one heap number is 16 bytes on
+    node and 12 in Chrome, the count the same):
+
+    | case | V8 unpinned | V8 pinned (`taskset -c 11`) |
+    |---|---|---|
+    | voice: saw (control) | 10 / 21 / 21 B, 720 / 717 / 728 ns | 21 / 5 / 10 B, 752 / 728 / 726 ns |
+    | voice: `saw` built-in, `classic()` (control) | 78 / 72 / 79 B, 1,344 / 1,342 / 1,371 ns | 83 / 88 / 72 B, 1,368 / 1,368 / 1,363 ns |
+    | voice: chain `adsr` in sustain (control) | 78 / 82 / 77 B, 1,244 / 1,223 / 1,236 ns | 83 / 88 / 72 B, 1,163 / 1,133 / 1,142 ns |
+    | voice: chain `adsr`, attack, linear | 2,098 / 62 / 2,093 B, 1,381 / 1,132 / 1,370 ns | 2,093 / 67 / 2,103 B, 1,377 / 1,163 / 1,375 ns |
+    | voice: chain `adsr`, attack, exponential | 2,165 / 134 / 2,160 B, 2,232 / 1,911 / 2,247 ns | 2,129 / 140 / 2,160 B, 2,210 / 1,905 / 2,222 ns |
+    | voice: chain `adsr`, decay, linear | 2,093 / 42 / 2,093 B, 1,479 / 1,257 / 1,486 ns | 2,083 / 31 / 2,103 B, 1,464 / 1,237 / 1,444 ns |
+    | voice: chain `adsr`, decay, exponential | 2,094 / 52 / 2,098 B, 2,401 / 2,154 / 2,450 ns | 2,093 / 57 / 2,067 B, 2,437 / 2,157 / 2,397 ns |
+    | voice: chain `adsr`, release, linear | 2,118 / 62 / 2,114 B, 1,628 / 1,375 / 1,604 ns | 2,109 / 62 / 2,129 B, 1,598 / 1,357 / 1,581 ns |
+    | voice: chain `adsr`, release, exponential | 2,119 / 67 / 2,108 B, 2,671 / 2,385 / 2,743 ns | 2,135 / 47 / 2,119 B, 2,699 / 2,334 / 2,699 ns |
+    | voice: `classic()` in sustain (control) | 98 / 93 / 98 B, 1,441 / 1,360 / 1,376 ns | 98 / 108 / 88 B, 1,377 / 1,371 / 1,352 ns |
+    | voice: `classic()`, attack, exponential | 2,171 / 134 / 2,171 B, 2,275 / 1,992 / 2,287 ns | 2,165 / 93 / 2,145 B, 2,310 / 2,000 / 2,319 ns |
+    | voice: `classic()`, decay, exponential | 2,109 / 62 / 2,109 B, 2,512 / 2,263 / 2,534 ns | 2,108 / 67 / 2,114 B, 2,508 / 2,242 / 2,536 ns |
+    | voice: `penv` 24, attack | 2,181 / 156 / 2,175 B, 4,366 / 3,978 / 4,355 ns | 2,139 / 98 / 2,114 B, 4,316 / 3,925 / 4,334 ns |
+    | voice: `penv` 24, decay, exponential | 2,124 / 77 / 2,134 B, 4,649 / 4,197 / 4,642 ns | 2,124 / 93 / 2,129 B, 4,569 / 4,219 / 4,568 ns |
+    | voice: `penv` 24, decay, linear | 2,129 / 83 / 2,124 B, 3,377 / 3,219 / 3,334 ns | 2,124 / 88 / 2,129 B, 3,341 / 3,218 / 3,341 ns |
+    | voice: `fm(300, 1.4)`, depth envelope in decay | 2,155 / 103 / 2,155 B, 4,284 / 4,111 / 4,307 ns | 2,155 / 160 / 2,139 B, 4,291 / 4,102 / 4,284 ns |
+    | voice: `sgbell`, settled (control) | 134 / 119 / 134 B, 3,051 / 2,979 / 3,092 ns | 145 / 129 / 150 B, 2,993 / 2,985 / 3,001 ns |
+    | voice: `sgbell` in its 0.5 s FM decay, 128 voices, per voice block | 2,621 / 136 / 2,621 B, 5,277 / 5,180 / 5,316 ns | 2,620 / 135 / 2,620 B, 5,799 / 5,714 / 5,858 ns |
+    | voice: `classic()` with all three in decay | 6,242 / 93 / 6,233 B, 8,807 / 7,979 / 8,853 ns | 6,227 / 114 / 6,248 B, 8,826 / 7,961 / 8,901 ns |
+    | engine: `saw` built-in (control) | 94 / 113 / 114 B, 5,835 / 5,803 / 5,821 ns | 83 / 77 / 88 B, 5,788 / 5,793 / 5,826 ns |
+    | engine: `classic()` in sustain (control) | 134 / 134 / 129 B, 5,880 / 5,809 / 5,863 ns | 134 / 103 / 93 B, 5,820 / 5,796 / 5,857 ns |
+    | engine: `classic()`, attack, exponential | 2,176 / 154 / 2,201 B, 6,779 / 6,647 / 6,856 ns | 2,175 / 93 / 2,139 B, 7,086 / 6,444 / 6,745 ns |
+    | engine: `classic()`, decay, exponential | 2,150 / 109 / 2,150 B, 7,039 / 6,771 / 7,006 ns | 2,165 / 42 / 2,124 B, 7,034 / 6,730 / 6,974 ns |
+    | engine: `penv` 24, decay | 2,165 / 114 / 2,160 B, 9,081 / 8,762 / 9,079 ns | 2,145 / 98 / 2,155 B, 9,030 / 8,693 / 9,082 ns |
+    | engine: `fm`, depth envelope in decay | 2,186 / 145 / 2,202 B, 8,793 / 8,630 / 8,926 ns | 2,206 / 134 / 2,170 B, 8,762 / 8,572 / 8,693 ns |
+    | engine: `classic()` with all three in decay | 6,247 / 130 / 6,263 B, 13,258 / 12,408 / 13,404 ns | 6,268 / 108 / 6,294 B, 13,340 / 12,522 / 13,322 ns |
+
+    The square, cube, scurve and invsquare rows (chain `adsr`, every stage; `classic()`'s release, 10b) read the same:
+    HEAD 2,077 to 2,155 B, the tree 26 to 108 B. Time: the voice rows run 0.79 to 0.98 of HEAD's unpinned and 0.82 to
+    0.99 pinned (the plain curves about 0.82 to 0.86, the exponential ones 0.86 to 0.90, the pitch and FM rows 0.90 to
+    0.96, where the oscillator dominates), the engine rows 0.88 to 0.98; HEAD again 0.95 to 1.04, the controls 0.94
+    to 1.00. JVM (`ThreadMXBean`, 7 rounds of 20k warm-up plus 16k blocks, medians): 0 bytes per block on every side
+    for every case but the note-every-16-blocks row (357.5 B on every side, the voice build, item 11); render time
+    unchanged (a second run in the reverse order, tree / HEAD / tree, read 0.96 to 1.02 of HEAD on 13 rows; the first,
+    HEAD / tree / HEAD, had the tree 1.06 to 1.14 on every row, the envelope-free saw included, so drift). Report:
+    `tmp/reviews/e10-report.md`. S.
+    **Review round 1, applied** (`tmp/reviews/e10-r1-A.md`, `e10-r1-B.md`, 0 MAJOR, 2 MINOR, 2 NIT): the helper's
+    KDoc names the three hosts that call it per sample, not every host (A1); 10b's note-every-16-blocks residue split
+    by reviewer B's profile, the voice build about 13 KB per note on V8, not 29 (B1); the hoist bound with the linear
+    arm, 4 to 8 percent on a bare linear envelope, the decision unchanged (B2); the V8 knob reads are item 8 (B3).
+    Records and KDoc only.
+10b. **DONE (2026-10-10, with 10a): the release boxed through the curve `when`, at every release length.** Reported
+    as about 2.1 KB per block for a saw with a 0.01 s gate and a 1000 s release, measured inside the release
+    (`saw-offrel`), about 0.1 KB before its gate; unchecked at ordinary release lengths. Source: `tmp/reviews/pp3-r1-B.md`
+    (pitch pipeline step 3, review round 1, reviewer B, NIT 3). It is 10a's cause: the release arm of `adsrCurveShape`
+    in `AdsrIgnitor.generate` (`classic()`'s envelope is that node), on every curve, and the same fix. Before the
+    gate the saw sat in its sustain, a constant level, so nothing boxed there. An ordinary release boxes the same: 0.5
+    s, measured over its blocks 5 to 175 on 128 voices at once, with the window bracketed by forced collections (a
+    difference of two processes is too noisy for a window that short). Production bundle, one voice through
+    `VoiceFactory` and through the engine, medians of 3, HEAD / tree / HEAD again:
+
+    | case | V8 unpinned | V8 pinned (`taskset -c 11`) |
+    |---|---|---|
+    | voice: `saw-offrel`, exponential (the default) | 2,113 / 67 / 2,108 B, 2,777 / 2,467 / 2,801 ns | 2,114 / 88 / 2,109 B, 2,751 / 2,408 / 2,754 ns |
+    | voice: `saw-offrel`, linear | 2,113 / 67 / 2,109 B, 1,714 / 1,498 / 1,696 ns | 2,114 / 67 / 2,093 B, 1,757 / 1,500 / 1,695 ns |
+    | voice: `saw-offrel`, scurve | 2,155 / 98 / 2,150 B, 1,798 / 1,537 / 1,836 ns | 2,155 / 88 / 2,129 B, 1,802 / 1,569 / 1,792 ns |
+    | voice: a 0.5 s release, 128 voices, per voice block | 2,144 / 96 / 2,144 B, 3,314 / 3,101 / 3,375 ns | 2,150 / 102 / 2,150 B, 4,132 / 3,850 / 4,204 ns |
+    | engine: `saw-offrel` | 2,150 / 98 / 2,145 B, 7,114 / 6,737 / 7,034 ns | 2,155 / 72 / 2,124 B, 7,143 / 6,717 / 7,093 ns |
+    | engine: a 0.5 s release, a new note every 16 blocks (about 12 voices releasing) | 26,260 / 1,805 / 26,311 B, 40,280 / 35,251 / 40,254 ns | 26,225 / 1,801 / 26,266 B, 40,217 / 35,485 / 40,229 ns |
+
+    What is left on the last row, about 1.8 KB per block, is not all the voice build (reviewer B, the sampling heap
+    profiler over the tree's row, 1,910 B per block): voice build and scheduling 831 B (about 13 KB per note on V8,
+    item 11), the knob reads (`blockStartValue` in `Voice.render`) 764 B, about 12 live voices at about 64 B (item 8,
+    it grows with the sounding voices), `WaveIgnitor.generate` 195 B (item 6's `dt`), other about 120 B. The JVM's
+    357.5 B per block (about 5.7 KB per note) is the build alone: its knob reads do not box. The controls, the JVM,
+    bit-identity, the guard row and the corpus are 10a's. Report: `tmp/reviews/e10-report.md`. S.
+    **Review round 1, applied**: see 10a (B1 corrected the residue above).
 10c. **An fm whose modulator reads a freq-keyed mod allocates a heap number per block on V8** (fixed for
     freq-invariant mods, open for freq-keyed ones). The site (pitch pipeline step 3b, review round 1, reviewer B
     MINOR 1): `CarrierFreqMod.generate` hands the pinned carrier frequency, a double loaded from a field, to
@@ -210,7 +384,20 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     control, unpinned: `fm(300, 1.4)` 82 / 110 / 75, the bell envelope 117 / 162 / 110, `sgpad` 127 / 189 / 127
     (pinned: 90 / 124 / 55, 106 / 165 / 96, 131 / 196 / 127); off unchanged. The authored `fm` node paid the same
     before step 4. The JVM renders it allocation-free. Source: `tmp/reviews/pp4-r1-B.md`, the step 4 record in
-    `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, `tmp/reviews/pp-step4-report.md`. S.
+    `docs/tasks/pitch-pipeline-into-the-tree.md`, `tmp/reviews/pp-step4-report.md`. S.
+    **The envelope part is DONE (2026-10-10, with 10a), and it was per sample, not per block.** While the depth
+    envelope moves, the fm boxed one heap number per sample (about 2.1 KB per block, `fm(300, 1.4)` with its envelope
+    in decay; the bell in its 0.5 s decay 2.6 KB per voice block with the amplitude decay), through the same curve
+    `when`; the figures above did not show it because the bell's envelope settles at sustain 0 after 0.5 s, a constant
+    level. Fixed by 10a (the tree reads 103 and 136 B). What this item names is still open: the per-block doubles, the
+    modulator's `generate` at `fmFreqVal * ratioVal` (about 50 B per block on the tree, attributed to the modulator's
+    sine, `SineIgnitor.generate`, called from `FmModIgnitor.generate`) and the knob reads (`Ignitors.readParam`, about
+    65 B per block, item 8 on V8; item 12 on the JVM).
+
+29. **The filter-envelope cutoff chain allocates on V8** (numbered after the last item, added 2026-10-10): a full
+    `classic()` voice (filter, filter envelope, tremolo, analog) still allocates about 130 + 65 + 32 B per block in
+    its cutoff chain, the same on HEAD and after items 8 and 12, so not a knob read. Not located further. Source:
+    `tmp/reviews/e8-r1-B.md` (items 8 and 12, review round 1, reviewer B's heap profile). S to M.
 
 ## 2. Allocation on the JVM, at build and per orbit
 
@@ -219,8 +406,8 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     the render callback and allocates the whole voice. No allocation in the callback at all means building voices
     outside it, or pools per sound with a reset contract on every node. L to XL; decide with the Zig port. Source: the
     record, "Found during tidy-up steps 7 to 9".
-12. **The JVM boxes a `Double` per block-constant param read** (`controlRateValueOrNull` returns `Double?`, read by
-    `blockStartValue` every block): 0 to 48 bytes per block for a voice built from constants, varying per run.
+12. **DONE (2026-10-10, with item 8): the JVM boxed a `Double` per block-constant param read**
+    (`controlRateValueOrNull` returned `Double?`, read by `blockStartValue` every block): 0 to 48 bytes per block for a voice built from constants, varying per run.
     Nothing in the browser. A non-null `controlRateValue(freqHz): Double` beside `isBlockConstant` would remove it, if
     a JVM backend ever needs a render without allocation. Source: the record, "Found during tidy-up step 10". M.
     **A second site** (pitch pipeline 7b, 2026-10-10): `binaryLadder`'s constant-operand read (`TimesIgnitor`'s
@@ -228,11 +415,33 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     under the composed vibrato's `x * max(semitones, 0)` (the tremolo's floor has the same shape): `sgpad` plus a
     vibrato allocated 72 to 96 bytes per block on the tree in the 9-run medians (HEAD 0 to 24), and 11.7 on average
     in one long run of 2 million blocks on the tree; V8 none. The same remedy covers both sites
-    (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, 7b record). **Possibly a third** (7c, 2026-10-10, not
+    (`docs/tasks/pitch-pipeline-into-the-tree.md`, 7b record). **Possibly a third** (7c, 2026-10-10, not
     profiled): `RangeIgnitor`'s constant-bound path reads both bounds with `controlRateValueOrNull` every block; in the
     worker's run a vibrato with a constant `range(0, 1)` allocated 24 bytes per block on the JVM where the unranged one
     allocated 0 (9-run medians), but in reviewer B's run HEAD's plain vibrato allocated 72 and the ranged one 0, so the
     24 B sit inside this item's own noise band; a JFR profile would decide. The same remedy either way.
+    **Measured and split in two steps (2026-10-10, `tmp/reviews/e8-proposal.md`).** JFR located the steady JVM boxes
+    in the second site only: the ladder over the vibrato's `max(semitones, 0)` (`TimesIgnitor` < `MaxIgnitor` <
+    `ParamIgnitor` and `ConstantIgnitor`), three `Double`s, 72 B per vibrato voice block, in one process in all 9
+    rounds and in another in 1 of 9. The first site (a voice built from constants, e3's 24 B on `whitecolor`) and the
+    third (the vibrato's `range`, 7c's 24 B) did NOT reproduce in either process: no white-noise or `RangeIgnitor`
+    frame in the census, and the ranged vibrato read the same 72 B as the plain one.
+    - **Step 1 (V8), with item 8:** `readParam` inline, gated on `isBlockConstant`. It does not reach the ladder, and
+      alone it opened a JVM cost of its own at megamorphic read sites (item 8).
+    - **Step 2 (JVM), maintainer's decision of 2026-10-10:** the interface member is the primitive
+      `controlRateValue(freqHz): Double` (NaN by default, unspecified and unread unless `isBlockConstant`), and
+      `blockStartValue`, `readParam`, the ladder, `Affine`, `Clamp`, `Lerp`, `Range`, the phase offset and the pulse
+      duty gate on the flag and read the primitive. The nullable view stays as the extension
+      `Ignitor.controlRateValueOrNull` (the flag, then the value, else null) for the cold readers, so
+      `IgnitorDslRuntime.kt` (ADAA-owned) compiles unchanged; `KatalystSlots.kt` imports it. **The "contract breach"
+      path is dropped** (a true flag with a null value can no longer be written): the degrade branches in
+      `binaryLadder`, `AffineIgnitor`, `ClampIgnitor`, `LerpIgnitor`, `RangeIgnitor` and the pulse duty, the
+      phase offset's per-block `perSample` unfold and the impulse's `bookkeeping` shift, and the two breach specs in
+      `OscillatorPhaseSpec` (`BreachingConstant`, `SometimesBreaching`). `ControlRateScalarParitySpec` pins that a
+      true flag always comes with a real value (not NaN) for every combinator in every child slot, and
+      `ControlRateValueSpec` that the flag alone decides what `readParam` and `blockStartValue` read
+      (mutation-checked). Result on the JVM: the ladder's 72 B per vibrato voice block and step 1's
+      megamorphic-site boxes are gone (item 8); bit for bit, the corpus 18 of 18.
 13. **The B4.5 orbit-side items**: `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
     `ScratchBuffers.oversample` looks its sub-pool up in a map per block (`getOrPut`; the first use per factor
     allocates, once per warehouse). Per orbit or per backend, not per voice. The resonators' part closed with step 12
@@ -274,7 +483,7 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     its arm predates the composition (pitch pipeline 7b: the sine LFO, the floor, the multiply, the converter) and the
     7c range pass (a constant one in place, a signal one reading two bounds) and phase input (a moving phase read per
     sample), so a song benchmark's `work` column under-counts a vibrato. The tremolo's arm is the pattern (it counts
-    only what runs). Source: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
+    only what runs). Source: `docs/tasks/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
 
 ## 6. The audit's later steps and its open decisions
 
@@ -284,7 +493,7 @@ and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound c
 Each was checked against the code: none is done (item 21's package dissolve aside).
 
 21. **Step 15, planned work in its own order:** after the pitch pipeline
-    ([`pitch-pipeline-into-the-tree.md`](in-progress/pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` (done
+    ([`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` (done
     in its step 5, 2026-10-10: the package is `voices/`) and fold the contexts (B3.1, B3.2; `SendRenderer` loses the "send" word with it, A2.5); then
     [`future/one-chain-host.md`](future/one-chain-host.md), extended by the two tail polls of one law (A2.10) and the
     host plumbing's package move (B3.8).

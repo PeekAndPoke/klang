@@ -193,26 +193,26 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   `solo()` means 0.95 (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`).
 - 2026-10-09: `penv(semitones, attack, decay, sustain, release)` (was `amount`, also the reader `penv.semitones`) writes
   `classic()`'s `penv.*` / `penvCurves.*` slots; its eight typed wire fields are gone
-  (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 1).
+  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 1).
 - 2026-10-09: `vibrato(rate, semitones)` / `vib` (was `depth`, also the reader `vibrato.semitones`) writes `classic()`'s
-  `vibrato.*` slots, its two typed wire fields are gone; `pamt` retired (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`
+  `vibrato.*` slots, its two typed wire fields are gone; `pamt` retired (`docs/tasks/pitch-pipeline-into-the-tree.md`
   step 2).
 - 2026-10-09: `accelerate(semitones)` writes `classic()`'s flat `accelerate` slot, its typed wire field is gone; the glide
   ends at the gate close and holds through the release (decision D2), a sound change for an `accelerate` under a
   release tail and for `legato(0)` (the target from the first frame); the other shapes are named in the step record
   (D6: lost without `classic()`; D1: an `fm` instrument's modulator; a non-finite amount is now dropped, the bare
-  voice) (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 3).
+  voice) (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3).
 - 2026-10-09: `vib`, `penv` and `accelerate` over an fm instrument that ends in `classic()` (`sgbell`, an authored bell)
   move the whole operator again, modulator with carrier, as on the strip (pitch pipeline step 3b, decision D1). Sprudel's
   own `fm` door still runs on the strip until step 4, where no tree pitch stage reaches its modulator
-  (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 3b).
+  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3b).
 - 2026-10-10: v0.6.1: `analog(character)` (was `amount`) on every analog door, sprudel's three forms and the mapper
   included (Q25); with the four pitch entries above. The old names are in `docs/retired-names.md`.
 - 2026-10-10: `fm(depth, ratio, attack, decay, sustain, release)` (was `env`, `h`, also the readers `fm.depth`,
   `fm.ratio`; `release` is new, D3) writes `classic()`'s innermost FM stage through the `fm.*` slots, its five typed wire
   fields are gone; a sound change, the node's law (every envelope stage at its default: the depth holds through the release tail;
   the depth envelope per sample; the modulator follows `vib`, `penv`, `accelerate`); a non-finite knob is dropped
-  (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 4).
+  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 4).
 - 2026-10-10: `vibrato` / `vib` gain `rangeFrom`, `rangeTo` and `phase` (the Ignitor vibrato's `range(from, to)` and
   `phase`, decision D9), written as the `vibrato.rangeFrom|rangeTo|phase` slots and read back by the readers of the same
-  names; not companions, nothing filled (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7c).
+  names; not companions, nothing filled (`docs/tasks/pitch-pipeline-into-the-tree.md` section 7c).

@@ -24,14 +24,14 @@ import kotlin.math.tanh
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Engine tidy-up step 11 (d1), audit B4.8 and B2.15. The 8 binary and 12 unary arithmetic nodes (`PlusIgnitor` to
-// `SqIgnitor`, in `Ignitor.kt`) each wrote their law twice, in `generate` and in `controlRateValueOrNull`, and the
+// `SqIgnitor`, in `Ignitor.kt`) each wrote their law twice, in `generate` and in their scalar, and the
 // signed pow five times. Each law is now one inline function here, and every node calls it on both paths: through
 // [binaryLadder] or [unaryMap] when it renders, directly for its scalar.
 //
 // One class per op stays on purpose (review round 1 of step 11): a single shared node class made the scalar path one
 // recursive method that neither the JVM nor V8 inlines through, so a block-constant subtree boxed its scalars
 // (960 bytes per block on the JVM for 20 nodes of the optimizer's `x.affine(mul = 1.div(param))`, 0 before). With a
-// class per op every `controlRateValueOrNull` is a small method of its own, as before the step.
+// class per op every scalar (`controlRateValue`) is a small method of its own, as before the step.
 //
 // The clamps per op, on purpose and each one load-bearing (`audio/ref/numerical-safety.md`):
 //  - `Plus` and `Minus` are bare: clamp-free by contract. Clamping one arm only would break bit-identity between the
@@ -131,9 +131,9 @@ internal inline fun sqLaw(v: Double): Double = safeOut(v * v)
  *
  * Every arm computes the same law on the same IEEE operands as the scratch arm would (`tmp[i] == k` for a
  * block-constant operand), so the arms are bit-identical. A block-constant operand is stateless, so skipping its
- * render advances nothing. A null scalar despite a true [Ignitor.isBlockConstant] ([aConst], [bConst]) is a contract
- * breach: the ladder falls through to the next arm, and the scratch arm is correct for every operand (degrade, never
- * throw on the render thread: an exception kills the whole worklet processor, not one voice).
+ * render advances nothing. A true [Ignitor.isBlockConstant] ([aConst], [bConst]) requires a real scalar by contract (the
+ * non-null [Ignitor.controlRateValue], engine follow-ups 8 and 12, step 2), so a constant arm always applies; the
+ * "null despite the flag" breach and its fall-through are gone with the nullable return (maintainer, 2026-10-10).
  *
  * **Dead branches** ([deadOnRight], [deadOnLeft]; maintainer, 2026-09-15): an op whose constant side makes the block
  * zero fills `+0.0`, and the other side renders nothing and draws nothing (a noise node takes nothing from the
@@ -161,62 +161,56 @@ internal inline fun binaryLadder(
     law: (x: Double, y: Double) -> Double,
 ) {
     if (aConst && bConst) {
-        val ka = a.controlRateValueOrNull(freqHz)
-        val kb = b.controlRateValueOrNull(freqHz)
+        val ka = a.controlRateValue(freqHz)
+        val kb = b.controlRateValue(freqHz)
 
-        if (ka != null && kb != null) {
-            buffer.fill(law(ka, kb), ctx.offset, ctx.windowEnd)
+        buffer.fill(law(ka, kb), ctx.offset, ctx.windowEnd)
 
-            return
-        }
+        return
     }
 
     if (bConst) {
-        val kb = b.controlRateValueOrNull(freqHz)
+        val kb = b.controlRateValue(freqHz)
 
-        if (kb != null) {
-            if (deadOnRight(kb)) {
-                buffer.fill(0.0, ctx.offset, ctx.windowEnd)
-
-                return
-            }
-
-            val k: Double = prepareRight(kb)
-
-            a.generate(buffer, freqHz, ctx)
-
-            val end = ctx.windowEnd
-
-            for (i in ctx.offset until end) {
-                buffer[i] = lawRight(buffer[i], k)
-            }
+        if (deadOnRight(kb)) {
+            buffer.fill(0.0, ctx.offset, ctx.windowEnd)
 
             return
         }
+
+        val k: Double = prepareRight(kb)
+
+        a.generate(buffer, freqHz, ctx)
+
+        val end = ctx.windowEnd
+
+        for (i in ctx.offset until end) {
+            buffer[i] = lawRight(buffer[i], k)
+        }
+
+        return
     }
 
     if (aConst) {
-        val ka = a.controlRateValueOrNull(freqHz)
+        val ka = a.controlRateValue(freqHz)
 
-        if (ka != null) {
-            if (deadOnLeft(ka)) {
-                buffer.fill(0.0, ctx.offset, ctx.windowEnd)
-
-                return
-            }
-
-            val k: Double = ka
-
-            b.generate(buffer, freqHz, ctx)
-
-            val end = ctx.windowEnd
-
-            for (i in ctx.offset until end) {
-                buffer[i] = law(k, buffer[i])
-            }
+        if (deadOnLeft(ka)) {
+            buffer.fill(0.0, ctx.offset, ctx.windowEnd)
 
             return
         }
+
+        val k: Double = ka
+
+        b.generate(buffer, freqHz, ctx)
+
+        val end = ctx.windowEnd
+
+        for (i in ctx.offset until end) {
+            buffer[i] = law(k, buffer[i])
+        }
+
+        return
     }
 
     a.generate(buffer, freqHz, ctx)
@@ -234,7 +228,7 @@ internal inline fun binaryLadder(
 
 /**
  * A unary node's render: [upstream] into [buffer], then [law] in place over the window, the window end read after the
- * render. No fold branch on purpose: a constant unary subtree answers `controlRateValueOrNull` and folds AT ITS
+ * render. No fold branch on purpose: a constant unary subtree answers `controlRateValue` and folds AT ITS
  * PARENT, which never calls the unary's `generate` (see the policy at the top of `Ignitor.kt`'s arithmetic section).
  */
 internal inline fun unaryMap(upstream: Ignitor, buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext, law: (v: Double) -> Double) {

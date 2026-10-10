@@ -201,9 +201,9 @@ class SinePartialBankSpec : StringSpec({
     // ── knobs are signals, read per block ────────────────────────────────────────
 
     "a per-block count signal adds and removes partials at block boundaries, keeping surviving phases" {
+        // A signal (not block-constant): the bank renders it and reads one sample per block.
         val count = object : Ignitor {
             var value = 0.0
-            override fun controlRateValueOrNull(freqHz: Double): Double = value
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = buffer.fill(value)
         }
         val bank = Ignitors.sinePartials(harmonics = count)
@@ -237,9 +237,8 @@ class SinePartialBankSpec : StringSpec({
         assertBits(a = buf.copyOf(), b = ref.copyOf())
     }
 
-    /** A count signal the test drives per block. */
+    /** A count signal the test drives per block: not block-constant, so the bank renders it and reads one sample. */
     class CountSignal(var value: Double) : Ignitor {
-        override fun controlRateValueOrNull(freqHz: Double): Double = value
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = buffer.fill(value)
     }
 

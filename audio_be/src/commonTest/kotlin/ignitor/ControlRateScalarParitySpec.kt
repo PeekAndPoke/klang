@@ -24,7 +24,8 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * Bit-exact guards for the `controlRateValueOrNull` contract (unified-eq plan, D1a step 1):
+ * Bit-exact guards for the `controlRateValue` contract (unified-eq plan, D1a step 1; the scalar is a primitive since
+ * engine follow-ups 8 and 12, step 2, read through `controlRateValueOrNull` here, which gates on the flag):
  *
  * 1. Every pointwise combinator's scalar is `toRawBits()`-equal to the SCRATCH-path render of
  *    the same expression. For every FOLDING op (as of D1b: ALL binary ops, plus the Clamp/
@@ -34,11 +35,12 @@ private val testRandom = Random(0x5EED)
  * 2. The safety guards on the scalar path actually ENGAGE at extreme values (safeOut clamps,
  *    safeDiv substitution, the log arms) — a scalar-vs-own-render comparison alone would stay
  *    green if a guard were deleted from both sides at once.
- * 3. [MemoizingIgnitor] delegates the scalar (composite constant subtrees fold through the
+ * 3. [MemoizingIgnitor] delegates the scalar and the flag (composite constant subtrees fold through the
  *    wrapper) and stays `null` for stateful inners; the shared-consumer cache path re-renders
  *    identically when a fold has skipped its refresh.
- * 4. [Ignitor.isBlockConstant] agrees with the scalar's nullability (the structural flag gates
- *    the audio-path folds).
+ * 4. [Ignitor.isBlockConstant] agrees with the scalar: a true flag always comes with a real value (not NaN) from
+ *    every combinator, in every child slot, and a stateful child forces the flag false (the structural flag gates
+ *    the audio-path folds; since step 2 no reader has a fallback for a true flag without a value).
  * 5. The pulze `duty` path uses the scalar as a BRANCH SELECTOR (bake-once hoisted loop vs
  *    per-sample PWM rebake). Both branches must agree bit-exactly INCLUDING their rebake timing
  *    under per-block frequency changes (dt moves) and freq-tracking duties (d and dt move).
@@ -333,14 +335,14 @@ class ControlRateScalarParitySpec : StringSpec({
         }
     }
 
-    // ── 4. isBlockConstant agrees with the scalar's nullability ──────────────────
+    // ── 4. isBlockConstant agrees with the scalar: a true flag has a real value ──
 
-    "isBlockConstant agrees with controlRateValueOrNull nullability for every combinator slot" {
+    "isBlockConstant agrees with the scalar for every combinator slot: a true flag has a real value" {
         // Table over every combinator with the probe operand x placed in EACH child slot
-        // (remaining slots constant). Built twice per entry: x constant (flag must be true,
-        // scalar non-null) and x stateful (flag false, scalar null). Kills the formula-typo
-        // class where one slot's term is dropped from either override — which would otherwise
-        // surface only as a contract breach at runtime.
+        // (remaining slots constant). Built twice per entry: x constant (flag must be true, the
+        // scalar a real value) and x stateful (flag false, so nothing reads the scalar). Kills the
+        // formula-typo class where one slot's term is dropped from the flag: the node would then
+        // claim block-constancy over a stateful child and its readers would read an unspecified scalar.
         val cases: List<Pair<String, (Ignitor) -> Ignitor>> = listOf(
             "plus a" to { x -> x + ConstantIgnitor(0.5) },
             "plus b" to { x -> ConstantIgnitor(0.5) + x },
@@ -395,6 +397,7 @@ class ControlRateScalarParitySpec : StringSpec({
             withClue(name) {
                 val constant = build(ConstantIgnitor(0.5))
                 constant.isBlockConstant.shouldBeTrue()
+                constant.controlRateValue(220.0).isNaN().shouldBeFalse()
                 constant.controlRateValueOrNull(220.0).shouldNotBeNull()
 
                 val stateful = build(Ignitors.sine())

@@ -1152,6 +1152,11 @@ private fun IgnitorDsl.buildRaw(
     var spineLatency = 0.0
     var ownLatency = 0.0
 
+    // Which oversamplers the signal spine ran through (see [BuiltIgnitor.oversamplers]): merged from the same signal
+    // children, plus THIS node's own ([ownOversampler], its stage count, set by the oversampled arms; 0 for none).
+    var spineOversamplers: List<Int>? = emptyList()
+    var ownOversampler = 0
+
     /** [withMod] with the child's whole answer, for an arm that needs more than its signal (the `Parallel` arm). */
     fun IgnitorDsl.withModBuilt(mod: Ignitor? = accumulatedMod): BuiltIgnitor {
         val built = buildIgnitor(ignitorParams, cache, mod)
@@ -1159,6 +1164,7 @@ private fun IgnitorDsl.buildRaw(
         spineGatesOutput = spineGatesOutput || built.gatesOutput
         lastChildEndsInEnvelope = built.endsInEnvelope
         spineLatency = maxOf(spineLatency, built.latencySamples)
+        spineOversamplers = mergeOversamplers(a = spineOversamplers, b = built.oversamplers)
         return built
     }
 
@@ -1379,15 +1385,28 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Plus -> left.withMod() + right.withMod()
 
-        // Branches side by side, summed, every earlier branch delayed to the latest one, so an oversampled branch
-        // does not comb against a dry one. The branches share their input by identity (the door hands every branch
-        // the same node), so the build cache builds it once. Latest = [spineLatency] after the branches, which is
-        // also what this node reports. An empty list (the doors never write one) is silence, as an empty sum is.
+        // Branches side by side, summed, every branch matched in phase to the others, so an oversampled branch does not
+        // comb against a dry one. The branches share their input by identity (the door hands every branch the same
+        // node), so the build cache builds it once. When every branch knows its oversamplers, each one gets an unshaped
+        // round trip of every oversampler it lacks against their union (the phase twins, see
+        // [BuiltIgnitor.oversamplers]), and the node reports that union and its delay. Otherwise every earlier branch
+        // is delayed by whole samples to the latest one ([spineLatency] after the branches), which matches the bass
+        // and the mids only. An empty list (the doors never write one) is silence, as an empty sum is.
         is IgnitorDsl.Parallel -> {
             val built = branches.map { it.withModBuilt() }
-            val latest = spineLatency
-            // Rounded here and only here: the pad is whole samples, the latencies it compares are exact.
-            val padded = built.map { it.ignitor.delayedBy((latest - it.latencySamples).roundToInt()) }
+            val lists = built.mapNotNull { it.oversamplers }
+            val union = if (lists.size == built.size) Oversampler.unionOf(lists) else null
+
+            val padded = if (union != null) {
+                spineOversamplers = union
+                spineLatency = union.sumOf { Oversampler.groupDelaySamples(it) }
+
+                built.map { it.ignitor.phaseTwins(stages = Oversampler.missingFrom(have = it.oversamplers.orEmpty(), union = union)) }
+            } else {
+                val latest = spineLatency
+                // Rounded here and only here: the pad is whole samples, the latencies it compares are exact.
+                built.map { it.ignitor.delayedBy((latest - it.latencySamples).roundToInt()) }
+            }
 
             if (padded.isEmpty()) Ignitors.silence() else padded.reduce { sum, next -> sum + next }
         }
@@ -1723,6 +1742,7 @@ private fun IgnitorDsl.buildRaw(
             val shaper = shape.distortionShapeKnob(ignitorParams, cache)
             val stages = oversample.oversampleStagesKnob(ignitorParams, cache)
             ownLatency = Oversampler.groupDelaySamples(stages)
+            ownOversampler = stages
 
             signal.fusedDistort(drive, shaper, stages)
         }
@@ -1755,6 +1775,7 @@ private fun IgnitorDsl.buildRaw(
             val shaper = shape.distortionShapeKnob(ignitorParams, cache)
             val stages = oversample.oversampleStagesKnob(ignitorParams, cache)
             ownLatency = Oversampler.groupDelaySamples(stages)
+            ownOversampler = stages
 
             signal.shape(shaper, stages)
         }
@@ -1838,5 +1859,6 @@ private fun IgnitorDsl.buildRaw(
         gatesOutput = spineGatesOutput,
         endsInEnvelope = builtEnvelope,
         latencySamples = spineLatency + ownLatency,
+        oversamplers = if (ownOversampler > 0) spineOversamplers?.plus(ownOversampler)?.sorted() else spineOversamplers,
     )
 }

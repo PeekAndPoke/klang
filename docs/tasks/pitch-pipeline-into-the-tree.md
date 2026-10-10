@@ -1,12 +1,12 @@
 # The pitch pipeline moves into the Ignitor tree
 
-Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lifecycle (`../../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and
+Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and
 `code-style-named-args-pass.md`. Was: future, not planned. Named "its own later item" by the phase 3 spike (2026-09-20); opened as a file
 2026-09-28 when the phase 3 record was archived (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md`,
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.
 **Planned 2026-10-07** (design worker, read-only on code): "The plan" below, six commits (steps 0 to 5) plus the
 composition block; eleven decisions for the maintainer in plan section 8.
-**In progress since 2026-10-10** on branch `pitch-pipeline-fm`: steps 0 to 5 done (0 to 3b released by v0.6.1; step 4, fm, committed 2026-10-10; step 5, the strip's shell and the package, committed 2026-10-10 as `64253272`). Left: the listening round before the branch merges, then the composition block (section 7). The composition block runs on branch `pitch-composition`, stacked on `pitch-pipeline-fm`, so `pitch-pipeline-fm` can merge after its own listening round (`tmp/listening/pp-step4/`, six pairs) without it.
+**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (`tmp/listening/pp-step4/`, `tmp/listening/pp-7b/`), Q30 and Q31 (decided by default, confirm), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
 
 ## What it is
 
@@ -56,7 +56,7 @@ Read for it: `IgnitorDslClassic.kt`, `IgnitorDslRuntime.kt` (the pitch-mod arms,
 `PitchModFactories.kt`, `ModApplyingIgnitor`, `ModBlockingIgnitor`, the four strip renderers,
 `PitchPipelineBuilder`, `EnvelopeCalc`, `IgniteRenderer`, `IgniteContext`, `VoiceFactory`, `VoiceData`, sprudel's
 `_classic_slot_params.kt` and the pitch doors, the block-framing plan (P4, E1, E11, W13), the NaN task, the
-shared-modulator record (`../../tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`) and the realtime note-off
+shared-modulator record (`../tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`) and the realtime note-off
 record. Every claim below was checked against the code on `engine-pass-1` that day.
 
 ### 1. How the strip and the tree compose today
@@ -786,7 +786,7 @@ per block, N fms are N + 1 oscillator renders.
   identity node, `pitchMod(0)`, changes the output by -21.5 dB diff RMS under a vibrato on the note and -3.4 dB under
   an outer fm; nothing under a constant vibrato or any sprudel door; a RESIDUE row of `FmModulatorTopologySpec` pins
   it). The author rule covers both: "define the FM on both x and x.detune() and sum both", written
-  `x.fm(m1) + x.fm(m2).detune(7)`; the diagnostic is `../../tasks/fm-above-forking-detune-diagnostic.md`. Unchanged: a modulator with an absolute `freq` (`Ign.sine(330)`),
+  `x.fm(m1) + x.fm(m2).detune(7)`; the diagnostic is `../tasks/fm-above-forking-detune-diagnostic.md`. Unchanged: a modulator with an absolute `freq` (`Ign.sine(330)`),
   shielded like every absolute oscillator (B NIT); sprudel's own `fm` door, whose modulator lives in
   the strip's `FmRenderer` and follows nothing until step 4; a musical oscillator in a parameter position (the
   placement rule: it is not under the pitch node); the regrouping with sprudel `fm` (step 3's, ends in step 4).
@@ -1252,7 +1252,7 @@ Sixteen fields of `audio_bridge/.../VoiceData.kt` (and its `empty`): `accelerate
 ### 7. The second step: composing the tree's own nodes from primitives
 
 After step 5. The doors and the nodes stay as descriptions; the runtime arms compose, the tremolo's pattern
-(`../../tasks-archive/2026-10/20261002-tremolo-as-composition.md`).
+(`../tasks-archive/2026-10/20261002-tremolo-as-composition.md`).
 
 - **7a. One exponential pitch primitive, in semitones** (ratio `2^(x/12)`), a new node on both doors with a door-parity
   spec and an oracle law spec (M). The existing `pitchMod` stays: it is LINEAR (deviation, `value + 1`), which is FM's
@@ -1711,7 +1711,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   growing on after it ("then one can build effects that only sound in the release tail"); accelerate clamps it at 1
   internally for its hold. The maintainer: "it also opens the door to tweening-like functions or general curves,
   other than adsr curves". A tween is a 0-to-1 ramp shaped by a curve, the same object as the signal-graph plan's
-  tween (`../../plans/future/signal-graph-engine.md` 6.8: one automation write with a duration and a curve), so one
+  tween (`../plans/future/signal-graph-engine.md` 6.8: one automation write with a duration and a curve), so one
   curve vocabulary should serve the `adsr` stages (`AdsrCurves`: linear, square, cube, scurve, invsquare,
   exponential), `progress()` and later tweens. Open before it is designed (`_maintainer-questions.md` Q13):
   - after the gate, does progress count in gate lengths (as asked) and/or is there a seconds-based `sinceGate()`
@@ -1795,7 +1795,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   entry in `docs/retired-names.md`. Positional calls are unchanged. `pamt`, `penv`'s short alias, is retired too (maintainer,
   2026-10-09: "drop pamt"; it abbreviates the retired "amount"). **The older `classic()` slots** (`lpf.freq`,
   `tremolo.depth`, `crush.amount`, ...) get the same check as its own step AFTER this pipeline, because a renamed slot
-  also changes `ignp("...")` calls in songs (`../../tasks-archive/2026-10/20261009-classic-slot-names-check.md`, done 2026-10-09, pulled ahead of this pipeline). The question as it
+  also changes `ignp("...")` calls in songs (`../tasks-archive/2026-10/20261009-classic-slot-names-check.md`, done 2026-10-09, pulled ahead of this pipeline). The question as it
   was put: slot names follow sprudel's readers, so the FM slots say `h` and `env` where the node says `ratio` and
   `depth`, and the vibrato slot says `depth` where the node says `semitones`. A naming asymmetry that already exists
   between the doors. **Recommendation: keep the readers' names (the `classic()` rule) and record the asymmetry**; a

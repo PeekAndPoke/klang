@@ -122,7 +122,7 @@ class SineExplicitPartialsSpec : StringSpec({
     class Knob(var value: Double) : Ignitor {
         override val isBlockConstant: Boolean = true
 
-        override fun controlRateValueOrNull(freqHz: Double): Double = value
+        override fun controlRateValue(freqHz: Double): Double = value
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = buffer.fill(value)
     }

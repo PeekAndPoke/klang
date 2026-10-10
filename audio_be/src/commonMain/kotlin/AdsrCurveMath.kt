@@ -53,15 +53,31 @@ internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (
  * curvature and its [adsrExpNorm].
  *
  * `Linear` returns [x] itself, bit for bit.
+ *
+ * **The statement form, on purpose** (engine follow-ups 10a and 10b, 2026-10-10): three of its hosts call this per
+ * sample (the chain `adsr`, the pitch and the FM index envelopes; the filter envelope, [EnvelopeCore.prepare] and
+ * [EnvelopeCore.releaseEndLevel] once per block), and on V8 the expression form of an exhaustive `when` boxes its
+ * double result in a sample loop, one heap number per sample
+ * (`audio/ref/performance.md`, the rule on the exhaustive `when` in a sample loop; the stated exception to
+ * `/code-style` section 19). The `when` stays exhaustive, so a new curve without an arm does not compile, but the
+ * compiler does not check that an arm ASSIGNS `y`: `EnvelopeLawSpec` ("each stage takes its own curve") renders
+ * every arm against its oracle and is the guard. Do not fold it back into an expression.
  */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm: Double): Double = when (curve) {
-    AdsrCurve.Linear -> x
-    AdsrCurve.Square -> x * x
-    AdsrCurve.Cube -> x * x * x
-    AdsrCurve.SCurve -> if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
-    AdsrCurve.InvSquare -> x * (2.0 - x)
-    AdsrCurve.Exponential -> adsrExpShape(x = x, k = k, norm = norm)
+internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm: Double): Double {
+    // Initialized, so no path leaves it unassigned (the statement form; the KDoc says why).
+    var y = 0.0
+
+    when (curve) {
+        AdsrCurve.Linear -> y = x
+        AdsrCurve.Square -> y = x * x
+        AdsrCurve.Cube -> y = x * x * x
+        AdsrCurve.SCurve -> y = if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
+        AdsrCurve.InvSquare -> y = x * (2.0 - x)
+        AdsrCurve.Exponential -> y = adsrExpShape(x = x, k = k, norm = norm)
+    }
+
+    return y
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@ private val testRandom = Random(0x5EED)
  * 2026-08-27 (spotted by the maintainer while reviewing the envelope-ownership work).
  *
  * Both are pitch nodes: they change the `freqHz` their UPSTREAM sees rather than transforming
- * samples, which is why [DetuneIgnitor] deliberately carries no `controlRateValueOrNull`. So the
+ * samples, which is why [DetuneIgnitor] deliberately carries no `controlRateValue`. So the
  * probe here is [FreqIgnitor], whose whole job is to report the frequency handed to it.
  *
  * Not to be confused with the klangscript `octaveUp`/`octaveDown` at
