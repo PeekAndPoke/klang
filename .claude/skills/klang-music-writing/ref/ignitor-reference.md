@@ -144,8 +144,15 @@ Ignitor.sine(x => x.phase(Ignitor.sine(5).mul(0.2)))     // phase modulation by 
 of sine partials at multiples of ITS OWN frequency, rendered in one pass: `harmonics(count, rolloff = 1)` adds
 `count` partials at `2f, 3f, 4f ...`, `octaves(count, rolloff = 1)` at `2f, 4f, 8f ...`, `suboctaves(count,
 rolloff = 1)` at `f/2, f/4 ...`. An added partial at `m * f` or at `f / m` has gain `m ^ -rolloff` of its bank:
-rolloff 1 is the sawtooth law, 2 is triangle-soft, 0 is flat. `fundamental(gain)`
-levels the sine itself (0 = overtones only). `analogSpread(0..1)` sets whether the partials drift as one
+rolloff 1 is the sawtooth law, 2 is triangle-soft, 0 is flat. `partial(ratio, gain = 1, phase = 0)` adds ONE
+partial at any ratio per call, in the order written: an inharmonic cluster (a drum's thud, a bell) in one node.
+`phase` is a fraction of one cycle (0.5 inverts the partial; a negative gain is the same thing), and in a cluster the
+start phases set how peaky the onset is. KlangScript calls are all positional or all named:
+`partial(0.87, 0.65, 0.5)` or `partial(ratio = 0.87, gain = 0.65, phase = 0.5)`, never `partial(0.87, 0.65, phase =
+0.5)`. At most 256 per sine. Every argument takes a signal; a signal `gain` plays every sample, so each partial can
+have its own envelope (`partial(2.76, Ignitor.constant(0.5).adsr(0.001, 0.3, 0, 0.1))`, a bell mode), while a moving
+ratio steps per block and a moving phase glides per block. Everything sums raw: a partial at ratio 1 doubles the fundamental. `fundamental(gain)`
+levels the sine itself (0 = overtones only, or a pure cluster). `analogSpread(0..1)` sets whether the partials drift as one
 oscillator (0) or each on its own lane (1, default) under `analog`; it is the same knob the super
 oscillators carry, over partials instead of voices. Every knob is a signal read once per block.
 Partials at or above Nyquist stay silent; there is no lower limit. Multiples follow the door's `freq`, so
@@ -159,6 +166,8 @@ Ignitor.sine(x => x.harmonics(7).fundamental(0)).mul(0.5)  // the overtones only
 Ignitor.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
 Ignitor.sine(Ignitor.freq().mul(2), x => x.octaves(5)).mul(1/2) // 2f .. 64f at 1/2 .. 1/64: an octave stack over a saw
 Ignitor.sine(x => x.harmonics(12, Ignitor.param("rolloff", 1))) // brightness from the pattern
+Ignitor.sine(x => x.fundamental(0).partial(0.66, 0.52).partial(0.87, 0.65, 0.5).partial(1.25, 1.0, 0.5))
+  .adsr(0.0005, 0.05, 0.0, 0.02)                           // a thud: three inharmonic partials, two started inverted
 ```
 
 **Builder knobs of the super oscillators** (each returns the builder): `voices(x)` (default 8), `spread(x)`
@@ -458,7 +467,7 @@ A pitch node means what it wraps (since 2026-10-09):
 - above the fm it moves the whole operator, the note's pitch, and the timbre stays put:
   `Ignitor.sine().fm(Ignitor.sine(), 3.5, 400).vibrato(6, 0.5)`; so do sprudel's `vib`, `penv` and `accelerate` on an
   fm instrument that ends in `.classic()`, and an outer `.fm(...)` (two fms in a row: the inner modulator follows the
-  outer one); a modulator with an absolute frequency (`Ignitor.sine(330)`) stays at it;
+  outer one; sprudel's `fm` over an fm instrument is that shape, `s("sgbell").fm(...)`); a modulator with an absolute frequency (`Ignitor.sine(330)`) stays at it;
 - on the modulator it moves the modulator alone: `Ignitor.sine().fm(Ignitor.sine().vibrato(6, 0.5), 3.5, 400)`;
 - on the carrier it moves the carrier alone, so the ratio wobbles: `Ignitor.sine().vibrato(6, 0.5).fm(Ignitor.sine(), 3.5, 400)`.
 
@@ -472,9 +481,15 @@ detune, and sum them: `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
 | `.detune(semitones)`                                | Shift pitch by semitones                   |
 | `.octaveUp()`                                       | +12 semitones                              |
 | `.octaveDown()`                                     | -12 semitones                              |
-| `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
+| `.vibrato(rate, semitones, v => v.range(from, to).phase(x))` | Sinusoidal pitch LFO; the depth may be a signal (followed sample by sample), at or below 0 no vibrato. `range(from, to)` places the swing in the -1..1 language of `range`, scaled by the depth: default `range(-1, 1)`, both ways around the note; `range(0, 1)` only upward (a guitar's vibrato), `range(-1, 0)` only downward; raw, no clamp. `phase(x)` is where the wobble starts, a fraction of one cycle: 0 the middle of the swing rising (the note only for the default range), 0.25 the top, 0.5 the middle falling, 0.75 the bottom. A guitar's vibrato from the note: `v => v.range(0, 1).phase(0.75)` (`range(-1, 0)` with `phase(0.25)`) |
 | `.accelerate(semitones)`                            | Exponential pitch glide from the onset to the gate close, held through the release (12 = one octave) |
 | `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); the `adsr`'s own lambda shapes it with `curves` |
+| `.pitchModSemitones(mod)`                           | Pitch by any signal or number, in SEMITONES: `2^(mod / 12)` (12 = an octave up, 0 = the note) |
+| `.pitchMod(mod)`                                    | Pitch by any signal, LINEAR: `1 + mod` (1.0 = an octave up, -1.0 stops the oscillator; FM's law) |
+
+`pitchModSemitones` is the vibrato's law for any signal: `Ignitor.saw().pitchModSemitones(Ignitor.sine(5).mul(0.5))`
+wobbles half a semitone either way at 5 Hz. `pitchMod` is linear, so a symmetric swing bends further down than up
+(a swing of 0.5 is 7 semitones up and 12 down); reach for it to write FM by hand.
 
 `pitchEnvelope` is an ADSR on the pitch, the chain `adsr`'s pattern: up to `semitones` over the attack, down to the
 sustain (a share of `semitones`, usually 0 = the note) over the decay, and from the gate's end back to the note over
@@ -528,22 +543,101 @@ a saw or a triangle, the same time; a sine lingers at its ends). Values at or be
 Ignitor.saw().lowpass(Ignitor.sine(0.2).rangex(200, 3200))
 ```
 
-### Composition: `.through(...)`
+### Composition: `.serial(...)`
 
-`x.through(a, b, c)` runs the signal through functions of a signal, in the order written: it is exactly
-`c(b(a(x)))`, the same node as the nested calls, with any number of stages (`through()` with none is `x` itself). A rig is
+`x.serial(a, b, c)` runs the signal through functions of a signal, in the order written: it is exactly
+`c(b(a(x)))`, the same node as the nested calls, with any number of stages (`serial()` with none is `x` itself). A rig is
 then a value, and a rig is a stage too:
 
 ```javascript
 let pedal  = x => x.distort(0.4, "soft")
 let cab    = x => x.highpass(100).lowpass(5000)
-let rig    = x => x.through(pedal, cab)
-let guitar = Ignitor.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+let rig    = x => x.serial(pedal, cab)
+let guitar = Ignitor.saw().serial(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
 ```
 
 Serial, one stage into the next. Do not confuse it with sprudel's `apply(f, g)`, an alias of `layer`, which runs
 each function on the pattern and STACKS the results. The Katalyst builder has the same door:
-`Katalyst(k => k.through(hall, ceiling))`.
+`Katalyst(k => k.serial(hall, ceiling))`.
+
+### Composition: `.parallel(...)`
+
+`x.parallel(a, b, c)` is the twin of `serial`: every branch gets the SAME signal `x` and the results are SUMMED,
+`a(x) + b(x) + c(x)`. `x` is one instance, built once, so a noise, a drift or a supersaw's random phases are the same
+in every branch (a hand-written `x.plus(f(x))` shares `x` the same way). The exception is a pitch node in a branch
+(`vibrato`, `detune`, `accelerate`, ...): it forks `x` into a second instance, as `n + n.vibrato(...)` always has. With no
+branch it is `x`; with one, that branch.
+
+```javascript
+// parallel distortion: the clean string and a screaming copy of its highs, a little under it
+let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6))
+```
+
+- The sum is plain: `x.parallel(y => y, y => y)` is twice `x` (+6 dB). Blend with a `mul` inside a branch.
+- A branch that is LATE (an oversampled `distort` or `shape`: 4 samples at 2x, 6 at 4x and 8x) is matched by delaying
+  the others, so the clean and the dirty copy do not comb. A plain `plus` does NOT do that: `x.plus(x.distort(0.35,
+  "soft", 2))` sums them 4 samples apart, a comb with its first notch near 6 kHz. Prefer `parallel` for wet/dry
+  splits.
+- The Katalyst builder has `parallel` too (branches of bus stages, each from an empty builder): see the sprudel
+  reference's master line.
+
+### Composition: `.bands(...)`
+
+`x.bands(b => ...)` splits the signal into frequency bands, processes each band on its own and sums them again. It
+reads from the BOTTOM up: `band(f)` adds a processor to the band being written, `cut(hz)` closes it and starts the next
+one up.
+
+```javascript
+// a bass that stays round below 120 Hz and growls above it (multiband distortion)
+let growl = x => x.bands(b => b.cut(120).band(top => top.distort(0.5, "tube")))
+// the lows clean, the mids crunchy, the highs untouched
+let crunch = x => x.bands(b => b.cut(250).band(mid => mid.distort(0.4)).cut(3000))
+```
+
+- A band with no `band()` passes untouched; two `band()` calls on one band are summed (`parallel`).
+- The crossover is Linkwitz-Riley: untouched, the bands sum back to FLAT level, with the phase turned around each cut
+  (the waveform and its peaks change, the balance does not). Three bands or more are phase-aligned for you.
+- A cut below the one before it is moved up to it. Two equal cuts leave a narrow band between them (about an octave
+  wide, -12 dB at its peak), not an empty one. With no `cut` it is one band: `x.bands(b => b.band(f))` is `f(x)`.
+- The Katalyst has the same door on a bus or the master (each band's processor gets an empty builder, as a `parallel`
+  branch): `k.bands(b => b.cut(150).band(mid => mid.distort(0.15)).cut(5000))` glues the mids and leaves the kick and
+  the hats alone.
+
+### Composition: `.blend(wet, ...)`
+
+`x.blend(wet, f)` is a dry/wet blend, the linear law: the signal times `1 - wet` plus `f(x)` times `wet`, built as a
+`parallel` of two. `wet` comes first, as on every door with one.
+
+```javascript
+// a quarter of a hard distortion under the clean string
+let edge = x => x.blend(0.25, y => y.distort(0.6, "hard"))
+// a moving blend: wet may be a slot or a signal on the Ignitor
+let breathe = x => x.blend(Ignitor.sine(0.25).range(0.1, 0.5), y => y.distort(0.6, "hard"))
+```
+
+- Linear is right for a branch correlated with the dry (distortion, compression, filters).
+- On the Katalyst, `wet` is a plain number (`1 - wet` needs arithmetic a Katalyst param does not have), and the branch
+  gets an empty builder: `k.blend(0.3, b => b.distort(0.6, "hard"))`. A `reverb` or `delay` in the branch carries
+  the dry as well, so `k.blend(w, b => b.reverb(1, 7))` is the dry plus `w` of the room.
+
+### Recipe: a "Soundgoodizer-style" master (parallel multiband compression)
+
+FL Studio's Soundgoodizer is a one-knob front end for Maximus: three bands, each compressed, blended with the dry
+input (per its manual; maintainer's request, 2026-10-10). In Klang that is `blend` over `bands`:
+
+```javascript
+// Three compressed bands under the dry bus. A starting point, not a tuned preset: set each band's threshold by ear on
+// the song, then the blend. The gain after each compressor is that band's make-up level.
+let goodize = k => k.blend(0.5, wet => wet.bands(b => b
+  .band(low  => low.compressor(-24, 4).gain(1.4))  .cut(200)
+  .band(mid  => mid.compressor(-20, 3).gain(1.3))  .cut(4000)
+  .band(high => high.compressor(-22, 4).gain(1.4))
+))
+
+master(Katalyst(k => k.serial(goodize).limiter()))
+```
+
+More blend is louder and denser; the limiter after it keeps the peaks.
 
 ---
 
@@ -596,10 +690,9 @@ Ignitor.sine(5)  // fixed 5 Hz (for LFO use)
 
 ### `.classic()`: the pattern's voice doors on your instrument
 
-`.classic()` wraps a sound in the classic synth voice: the pitch envelope, the accelerate and the vibrato (on the source), onepole,
-crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that order. The
-pattern's `penv`, `accelerate` and `vib` reach only an instrument with `.classic()`; `fm` still reaches every
-instrument (it runs outside the tree until it moves into `classic()`). Make it the LAST call: an instrument whose
+`.classic()` wraps a sound in the classic synth voice: the FM, the pitch envelope, the accelerate and the vibrato (on the
+source), onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that
+order. The pattern's `fm`, `penv`, `accelerate` and `vib` reach only an instrument with `.classic()`. Make it the LAST call: an instrument whose
 tree ends in `.classic()` is a whole voice that ends on its own envelope. `adsrOff()` switches that envelope off, and
 the voice ends on the instrument's own envelope when its `.adsr(...)` (with a fixed release) is the last thing
 built before `.classic()`; anything built after it, a stage of the instrument's own or a filter or other stage the
@@ -623,7 +716,9 @@ readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, 
 same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.bits`, `Ignitor.slot.coarse.factor`,
 `Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
 `Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`,
-the vibrato `Ignitor.slot.vibrato.rate|semitones` (`semitones` is the switch, unset = off), the pitch envelope
+the vibrato `Ignitor.slot.vibrato.rate|semitones|rangeFrom|rangeTo|phase` (`semitones` is the switch, unset = off), the accelerate
+`Ignitor.slot.accelerate` (flat, the switch, unset = off), the FM `Ignitor.slot.fm.ratio|depth|attack|decay|sustain|release`
+(`depth` is the switch, unset = off), the pitch envelope
 `Ignitor.slot.penv.semitones|attack|decay|sustain|release` (`semitones` is the switch, unset = off)
 and its curves `Ignitor.slot.penvCurves.attack|decay|release`, and the filter envelope curves
 `Ignitor.slot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).

@@ -38,7 +38,7 @@ record), and put the narrative in the task record, which gets archived. The full
   a local shadows a global for the checker and the param tools alike. `ref/intel-analyzer.md`.
 - **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
   on immutable oscillator builder wrappers (`IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
-  `octaves`, `suboctaves`, `fundamental` (a gain), `analog` and `analogSpread`, and the six super builders
+  `octaves`, `suboctaves`, `partial` (one explicit partial per call), `fundamental` (a gain), `analog` and `analogSpread`, and the six super builders
   carry `analogSpread` (0 to 1, 1 is a drift lane per voice). Door shapes follow `/dsl-design` §2.
 - **Number methods** on `KlangScriptNumberExtensions`: `pow abs sqrt round floor ceil min max clamp rem mod
   log2 log10 ln exp sign semitones cents toSemitones db toDb`, and `toRatio()` on strings (via `Interval.get`

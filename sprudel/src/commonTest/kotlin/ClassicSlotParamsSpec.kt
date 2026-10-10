@@ -36,6 +36,7 @@ import io.peekandpoke.klang.sprudel.lang.tremolo
 import io.peekandpoke.klang.sprudel.lang.vib
 import io.peekandpoke.klang.sprudel.lang.vibrato
 import io.peekandpoke.klang.sprudel.lang.accelerate
+import io.peekandpoke.klang.sprudel.lang.fm
 
 /**
  * Sprudel's voice doors on the wire, as `classic()` slot keys (phase 3 step 8, `classicSlotParams`): one row per
@@ -115,6 +116,28 @@ class ClassicSlotParamsSpec : StringSpec({
         slots(note("c").vibrato(semitones = 0.2)) shouldBe mapOf("vibrato.semitones" to 0.2)
     }
 
+    "the vibrato's range and phase travel when set, and never invent the switch (pitch pipeline 7c)" {
+        // Not compound-filled: an unset range or phase reads its slot default (-1, 1, 0) in the engine, so the door
+        // writes only what the call named, and a range- or phase-only call switches nothing on (`/dsl-design` section 4).
+        slots(note("c").vib(5, 0.3, 0, 1, 0.25)) shouldBe mapOf(
+            "vibrato.rate" to 5.0, "vibrato.semitones" to 0.3, "vibrato.rangeFrom" to 0.0, "vibrato.rangeTo" to 1.0, "vibrato.phase" to 0.25,
+        )
+        slots(note("c").vib(rangeFrom = 0)) shouldBe mapOf("vibrato.rangeFrom" to 0.0)
+        slots(note("c").vib(rangeTo = 0.5)) shouldBe mapOf("vibrato.rangeTo" to 0.5)
+        slots(note("c").vibrato(phase = 0.75)) shouldBe mapOf("vibrato.phase" to 0.75)
+        slots(note("c").vib(5, 0.3).vib(rangeFrom = 0)) shouldBe mapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3, "vibrato.rangeFrom" to 0.0)
+        // A later call that names the knob overwrites it; an earlier one is kept when the later call does not name it.
+        slots(note("c").vib(5, 0.3, 0, 1).vib(rangeFrom = -0.5)) shouldBe mapOf(
+            "vibrato.rate" to 5.0, "vibrato.semitones" to 0.3, "vibrato.rangeFrom" to -0.5, "vibrato.rangeTo" to 1.0,
+        )
+    }
+
+    "a non-finite range or phase is dropped at sprudel's boundary: nothing travels" {
+        for (v in listOf("NaN", "Infinity", "-Infinity")) {
+            slots(note("c").vib(5, 0.3, v, v, v)) shouldBe mapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3)
+        }
+    }
+
     "accelerate alone is a voice door under its flat slot, and a non-finite one is dropped" {
         // Pitch pipeline step 3: `accelerate` left the typed wire field for `classic()`'s flat `accelerate` slot. It
         // shares the `pitchMod` group with the vibrato, so an event whose only door is accelerate takes the writer
@@ -122,6 +145,14 @@ class ClassicSlotParamsSpec : StringSpec({
         slots(note("c").ignp("voices", 3).accelerate(2)) shouldBe mapOf("voices" to 3.0, "accelerate" to 2.0)
         slots(note("c").accelerate(-12)) shouldBe mapOf("accelerate" to -12.0)
         slots(note("c").accelerate(Double.NaN)) shouldBe emptyMap()
+    }
+
+    "the fm alone is a voice door, and its switch travels only when set: a ratio or an envelope alone switches nothing on" {
+        // Pitch pipeline step 4: `fm` left the typed wire fields for `classic()`'s `fm.*` slots. An event whose only door
+        // is the fm takes the writer path (not the door-less early return).
+        slots(note("c").fm(300, 1.4)) shouldBe mapOf("fm.depth" to 300.0, "fm.ratio" to 1.4)
+        slots(note("c").fm(ratio = 2, release = 0.3)) shouldBe mapOf("fm.ratio" to 2.0, "fm.release" to 0.3)
+        slots(note("c").fm(Double.NaN, 2)) shouldBe mapOf("fm.ratio" to 2.0)
     }
 
     "names travel as their catalogue index, a flag as 1.0 or 0.0" {
@@ -156,6 +187,7 @@ class ClassicSlotParamsSpec : StringSpec({
                 .begin(0.11).end(0.91).speed(2.1).loop()
                 .penv(7.1, 0.061, 0.062, 0.63, 0.064).penvCurves("exponential", "linear", "square")
                 .vibrato(5.1, 0.71).accelerate(0.51)
+                .fm(301, 1.41, 0.071, 0.072, 0.73, 0.074)
         )
 
         written shouldBe mapOf(
@@ -182,6 +214,7 @@ class ClassicSlotParamsSpec : StringSpec({
             "penvCurves.attack" to 5.0, "penvCurves.decay" to 0.0, "penvCurves.release" to 1.0,
             "vibrato.rate" to 5.1, "vibrato.semitones" to 0.71,
             "accelerate" to 0.51,
+            "fm.depth" to 301.0, "fm.ratio" to 1.41, "fm.attack" to 0.071, "fm.decay" to 0.072, "fm.sustain" to 0.73, "fm.release" to 0.074,
         )
 
         val placed = mutableListOf<IgnitorDsl.Param>()

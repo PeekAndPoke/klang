@@ -12,10 +12,11 @@ import io.peekandpoke.klang.audio_bridge.DistortionShapes
  * Ignitor nodes carry its index in `DistortionShapes`; both map here via [parseDistortionShape]
  * and [distortionShapeAt]. **The entry order is the catalogue's**, append only.
  *
- * Dispatch at the audio-rate per-sample loop uses [applyDistortionShape], which
- * is `inline` so each `when` case expands to a literal `ShapingFuncs.foo(x)`
- * call — letting the inline shape functions in `ShapingFuncs.kt` actually
- * inline. Storing a `(Double) -> Double` function reference would defeat that.
+ * [applyDistortionShape] is the shape table for one sample, `inline` so each `when` case expands to a literal
+ * `ShapingFuncs.foo(x)` call, letting the inline shape functions in `ShapingFuncs.kt` actually inline. Storing a
+ * `(Double) -> Double` function reference would defeat that. The audio-rate loops (`DistortionCore`) do NOT call it per
+ * sample: they dispatch once per block to one loop per shape (engine follow-up item 9, the reason in
+ * `DistortionCore.shapeRun`), and their tables are pinned against this one.
  */
 internal enum class DistortionShape {
     SOFT, HARD, GENTLE, CUBIC, DIODE, FOLD, CHEBYSHEV, RECTIFY, EXP,
@@ -39,13 +40,16 @@ internal fun parseDistortionShape(shape: String): DistortionShape = distortionSh
 internal fun distortionShapeAt(index: Double): DistortionShape = DistortionShape.entries[DistortionShapes.indexAt(index)]
 
 /**
- * Applies the shape to a single sample. `inline` is load-bearing: it expands
- * the `when` at the call site and inlines each `ShapingFuncs.foo(x)`. Holding
- * a `(Double) -> Double` function reference instead would force a virtual
- * Function1 dispatch + Double boxing per sample on Kotlin/JS.
+ * Applies the shape to a single sample: the shape table, and the oracle the specs pin `DistortionCore`'s loops
+ * against. `inline` expands the `when` at the call site and inlines each `ShapingFuncs.foo(x)`; a
+ * `(Double) -> Double` function reference instead would force a virtual Function1 dispatch and Double boxing.
  *
- * The legacy `outputGain` (2.0 for `gentle`, 1.0 for everything else) is baked
- * into the gentle case — no separate field to track.
+ * **Do not call it per sample in an audio loop.** On V8 its `when` result is then carried tagged from sample to
+ * sample and every shaped sample becomes a heap number (engine follow-up item 9, `audio/ref/performance.md`). A
+ * shaping loop dispatches once per block to one loop per shape, as `DistortionCore.shapeRun` does.
+ *
+ * The legacy `outputGain` (2.0 for `gentle`, 1.0 for everything else) is baked into the gentle case, so there is no
+ * separate field to track.
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun applyDistortionShape(shape: DistortionShape, x: Double): Double = when (shape) {

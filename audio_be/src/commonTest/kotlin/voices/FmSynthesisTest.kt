@@ -8,20 +8,20 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
-import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors
-import io.peekandpoke.klang.audio_be.utils.TWO_PI
-import io.peekandpoke.klang.audio_be.utils.wrapPhase
+import io.peekandpoke.klang.audio_be.ignitor.toExciter
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
-import kotlin.math.abs
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
- * The voice's FM ([Voice.Fm], the strip pitch pipeline's `FmRenderer`) through a real voice: when it is built,
- * and how far its modulator's phase moves. Its law (the multiplier per sample against the ratio, the depth and
- * the envelope level) is pinned in `ModulatorPhaseWrapSpec`, the control-rate envelope in `EnvelopeLawSpec`.
+ * Sprudel's FM through a real voice: `classic()`'s FM stage, filled through the `fm.*` slots (pitch pipeline step 4;
+ * the strip's `FmRenderer` and `Voice.Fm` retired), and when it is built. Its law (the ratio per sample against the
+ * modulator's phase, the depth and the envelope level, the release tail) is the oracle in `ClassicFmSpec`, the node's
+ * phase wrap in `ModulatorPhaseWrapSpec`, the envelope in `EnvelopeLawSpec`.
  */
 class FmSynthesisTest : StringSpec({
 
@@ -47,60 +47,29 @@ class FmSynthesisTest : StringSpec({
     }
 
     "FM at depth 0 is the unmodulated carrier, and a real depth is not" {
-        // Audit F12, two tests merged into one because they were the same claim. "FM with
-        // depth 0 produces no modulation" compared depth-0 against null — identical by
-        // construction, since the pipeline gate builds no FmRenderer in either case — and
-        // "FM with null is disabled" only asserted the voice made SOME sound, which its name
-        // does not promise. Neither could be falsified.
-        //
-        // The three-way is what has teeth: null and depth-0 must agree (either one applying
-        // modulation breaks it), and a real depth must NOT agree with them (which is what
-        // makes the first half mean something).
-        fun render(fm: Voice.Fm?): AudioBuffer {
-            val voice = createSynthVoice(blockFrames = bf, freqHz = 440.0, signal = Ignitors.sine(), fm = fm)
+        // Audit F12. The three-way is what has teeth: unwritten and depth 0 must agree (either one applying
+        // modulation breaks it), and a real depth must NOT agree with them (which is what makes the first half mean
+        // something). A ratio alone switches nothing on: `fm.depth` is the stage's switch.
+        fun render(bag: Map<String, Double>): AudioBuffer {
+            val instrument = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0)).classic()
+            val voice = createSynthVoice(blockFrames = bf, freqHz = 440.0, signal = instrument.toExciter(ignitorParams = bag, random = Random(1)))
             val ctx = createContext(blockFrames = bf)
             voice.render(ctx)
             return ctx.voiceBuffer
         }
 
-        val env = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)
-        val none = render(null)
-        val zeroDepth = render(Voice.Fm(ratio = 2.0, depth = 0.0, envelope = env))
-        val realDepth = render(Voice.Fm(ratio = 2.0, depth = 100.0, envelope = env))
-        val negativeDepth = render(Voice.Fm(ratio = 2.0, depth = -100.0, envelope = env))
+        val none = render(emptyMap())
+        val zeroDepth = render(mapOf("fm.ratio" to 2.0, "fm.depth" to 0.0))
+        val ratioOnly = render(mapOf("fm.ratio" to 2.0))
+        val realDepth = render(mapOf("fm.ratio" to 2.0, "fm.depth" to 100.0))
+        val negativeDepth = render(mapOf("fm.ratio" to 2.0, "fm.depth" to -100.0))
 
         diffRms(a = zeroDepth, b = none) shouldBeLessThan 1e-6
+        diffRms(a = ratioOnly, b = none) shouldBeLessThan 1e-6
         diffRms(a = realDepth, b = none) shouldBeGreaterThan 1e-3
-        // A negative depth is a raw value like any other: the pitch pipeline builds the modulator for any depth but 0.
+        // A negative depth is a raw value like any other: the stage is built for any finite depth but 0.
         diffRms(a = negativeDepth, b = none) shouldBeGreaterThan 1e-3
         // and the carrier is actually sounding, so the comparisons are not all-silence
         rms(none) shouldBeGreaterThan 0.0
-    }
-
-    "FM modulator phase advances by the EXPECTED amount, not merely upward" {
-        // Audit F11, re-confirmed 2026-08-31 against the current tree: the assertion was
-        // `afterPhase > initialPhase` — the phase moved by SOME positive amount. Multiplying
-        // `modInc` by 0.001 in FmRenderer (a modulator running 1000x too slow: a different
-        // instrument, not a detuned patch) leaves the WHOLE audio_be suite green. The
-        // quantity IS the behaviour.
-        val ratio = 1.0
-        val freqHz = 440.0
-        val frames = 100
-        val sampleRate = 44100
-
-        val fm = Voice.Fm(ratio = ratio, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0))
-        val voice = createSynthVoice(freqHz = freqHz, fm = fm, sampleRate = sampleRate)
-
-        fm.modPhase shouldBe 0.0
-
-        val ctx = createContext(blockFrames = frames)
-        voice.render(ctx)
-
-        // Derived from the DEFINITION of an FM modulator rather than from the renderer: the
-        // modulator runs at freq x ratio, so its phase advances TWO_PI x modFreq / sr per
-        // sample, and the renderer wraps once at the end of the block.
-        val expected = (frames * TWO_PI * (freqHz * ratio) / sampleRate).wrapPhase(TWO_PI)
-
-        abs(fm.modPhase - expected) shouldBeLessThan 1e-9
     }
 })

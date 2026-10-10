@@ -95,7 +95,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "duck" to listOf("orbit", "depth", "attack"),
             "vibrato" to listOf("rate", "semitones"),
             "penv" to listOf("semitones", "attack", "decay", "sustain", "release"),
-            "fm" to listOf("env", "h", "attack", "decay", "sustain")).forEach { (name, slots) ->
+            "fm" to listOf("depth", "ratio", "attack", "decay", "sustain", "release")).forEach { (name, slots) ->
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe name

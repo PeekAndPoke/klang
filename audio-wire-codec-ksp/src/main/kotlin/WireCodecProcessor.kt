@@ -29,6 +29,11 @@ import com.google.devtools.ksp.validate
  * `List<T>`, `Set<T>` (as a JS array; decode rebuilds a LinkedHashSet), `Map<String,Double>`, and nullability of
  * any of those.
  *
+ * **Identity.** The codec of a `@WireFormat` root opens an identity scope (`wireScoped`) for the call, and the codec of a
+ * `@WireShared` type encodes or decodes each instance once per scope (`wireEncodeShared` / `wireDecodeShared`), so a
+ * value referenced twice in one message arrives as one object (see `WireShared`). A type with neither marker emits
+ * exactly what it did before.
+ *
  * Anything else (e.g. other typed arrays, `Map` with non-String/Double, a type with no primary constructor) is an
  * ERROR: the processor reports it via `logger.error` (failing the build) with the exact field/subtype path. It never
  * silently skips a type — that would drop data from the wire protocol. To add a wire type, extend the emitter here.
@@ -49,6 +54,8 @@ class WireCodecProcessor(
     companion object {
         private const val ANN_WIRE_FORMAT = "io.peekandpoke.klang.audio_bridge.WireFormat"
         private const val ANN_WIRE_NAME = "io.peekandpoke.klang.audio_bridge.WireName"
+        private const val ANN_WIRE_FORMAT_SHORT = "WireFormat"
+        private const val ANN_WIRE_SHARED = "WireShared"
         private const val GEN_PKG = "io.peekandpoke.klang.audio_bridge.wire"
 
         /**
@@ -154,6 +161,16 @@ class WireCodecProcessor(
         }
         if (decl.classKind != ClassKind.CLASS && decl.classKind != ClassKind.INTERFACE) {
             errors += "unsupported declaration kind ${decl.classKind} for '$qn' at $ctx"
+            return false
+        }
+
+        // A field typed as a SUBTYPE of a `@WireShared` type would call the subtype's codec directly and skip the identity
+        // table (annotations are not inherited), so a value shared through it would arrive twice: refuse it.
+        val sharedAncestor = sharedSupertypeOf(decl)
+
+        if (sharedAncestor != null && !isShared(decl)) {
+            errors += "'$qn' at $ctx is a subtype of @WireShared '${fqn(sharedAncestor)}'; type the field as " +
+                    "'${sharedAncestor.simpleName.asString()}' so its instances keep their identity on the wire"
             return false
         }
 
@@ -267,26 +284,74 @@ class WireCodecProcessor(
         }
     }
 
+    /** True for a `@WireFormat` root: its codec opens the identity scope. */
+    private fun isRoot(decl: KSClassDeclaration): Boolean =
+        decl.annotations.any { it.shortName.asString() == ANN_WIRE_FORMAT_SHORT }
+
+    /** True for a `@WireShared` type: its codec encodes and decodes each instance once per scope. */
+    private fun isShared(decl: KSClassDeclaration): Boolean =
+        decl.annotations.any { it.shortName.asString() == ANN_WIRE_SHARED }
+
+    /** The nearest supertype of [decl] marked `@WireShared`, or null. */
+    private fun sharedSupertypeOf(decl: KSClassDeclaration): KSClassDeclaration? {
+        for (ref in decl.superTypes) {
+            val sup = ref.resolve().declaration as? KSClassDeclaration ?: continue
+
+            if (isShared(sup)) {
+                return sup
+            }
+
+            val further = sharedSupertypeOf(sup)
+
+            if (further != null) {
+                return further
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * The wrappers around a codec body, outermost first: the scope for a root, the identity table for a shared type.
+     * Empty for every other type, which then emits exactly what it did before the identity markers existed.
+     */
+    private fun encWrappers(decl: KSClassDeclaration): List<String> =
+        listOfNotNull(if (isRoot(decl)) "wireScoped {" else null, if (isShared(decl)) "wireEncodeShared(v) {" else null)
+
+    private fun decWrappers(decl: KSClassDeclaration): List<String> =
+        listOfNotNull(if (isRoot(decl)) "wireScoped {" else null, if (isShared(decl)) "wireDecodeShared(o) {" else null)
+
     private fun emitClass(decl: KSClassDeclaration, sb: StringBuilder) {
         val params = decl.primaryConstructor!!.parameters
         val qn = fqn(decl)
+        val enc = encWrappers(decl)
+        val dec = decWrappers(decl)
 
-        sb.appendLine("fun ${encName(decl)}(v: $qn): dynamic {")
+        if (enc.isEmpty()) {
+            sb.appendLine("fun ${encName(decl)}(v: $qn): dynamic {")
+        } else {
+            sb.appendLine("fun ${encName(decl)}(v: $qn): dynamic = ${enc.joinToString(" ")}")
+        }
         sb.appendLine("    val o: dynamic = wireObj()")
         for (p in params) {
             val n = p.name!!.asString()
             sb.appendLine("    o.$n = ${encExpr("v.$n", p.type.resolve())}")
         }
-        sb.appendLine("    return o")
-        sb.appendLine("}")
+        if (enc.isEmpty()) {
+            sb.appendLine("    return o")
+            sb.appendLine("}")
+        } else {
+            sb.appendLine("    o")
+            sb.appendLine("}".repeat(enc.size))
+        }
         sb.appendLine()
 
-        sb.appendLine("fun ${decName(decl)}(o: dynamic): $qn = $qn(")
+        sb.appendLine("fun ${decName(decl)}(o: dynamic): $qn = ${dec.joinToString(" ")}${if (dec.isEmpty()) "" else " "}$qn(")
         for (p in params) {
             val n = p.name!!.asString()
             sb.appendLine("    $n = ${decExpr("o.$n", p.type.resolve())},")
         }
-        sb.appendLine(")")
+        sb.appendLine(")" + "}".repeat(dec.size))
         sb.appendLine()
     }
 
@@ -303,7 +368,12 @@ class WireCodecProcessor(
         // Discriminator key is a NON-identifier (`#t`) on purpose: a data-class field can never be named `#t`,
         // so the sealed type-tag can't clobber a real field. (`IgnitorDsl.Lerp.t` would collide with a plain
         // `t` key — the tag would overwrite the weight and silently corrupt the wire.) See WIRE_TAG.
-        sb.appendLine("fun ${encName(decl)}(v: $qn): dynamic = when (v) {")
+        val enc = encWrappers(decl)
+        val dec = decWrappers(decl)
+        val encOpen = enc.joinToString("") { "$it " }
+        val decOpen = dec.joinToString("") { "$it " }
+
+        sb.appendLine("fun ${encName(decl)}(v: $qn): dynamic = ${encOpen}when (v) {")
         subs.forEach { s ->
             val tag = wireName(s)
             // `data object` subtypes have no fields → just the tag; otherwise delegate to the subtype encoder.
@@ -313,10 +383,10 @@ class WireCodecProcessor(
                 sb.appendLine("    is ${fqn(s)} -> { val o = ${encName(s)}(v); o[$WIRE_TAG] = \"$tag\"; o }")
             }
         }
-        sb.appendLine("}")
+        sb.appendLine("}" + "}".repeat(enc.size))
         sb.appendLine()
 
-        sb.appendLine("fun ${decName(decl)}(o: dynamic): $qn = when (o[$WIRE_TAG].unsafeCast<String>()) {")
+        sb.appendLine("fun ${decName(decl)}(o: dynamic): $qn = ${decOpen}when (o[$WIRE_TAG].unsafeCast<String>()) {")
         subs.forEach { s ->
             val tag = wireName(s)
             if (s.classKind == ClassKind.OBJECT) {
@@ -326,7 +396,7 @@ class WireCodecProcessor(
             }
         }
         sb.appendLine("    else -> throw IllegalStateException(\"wire-codec: unknown ${codecId(decl)} tag \" + o[$WIRE_TAG])")
-        sb.appendLine("}")
+        sb.appendLine("}" + "}".repeat(dec.size))
         sb.appendLine()
     }
 

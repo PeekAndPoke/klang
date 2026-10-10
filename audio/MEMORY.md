@@ -15,25 +15,32 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `VoiceScheduler` serves its engine's one playback: one `PlaybackCtx`, made by the first voice, dropped by
   `cleanup`, nothing filtered by id. File map:
   `docs/audio-backend-file-map.md`; data flow and isolation: `audio/ref/architecture.md`.
-- **Instrument = the voice's Ignitor tree** (phase 3, done 2026-09-28). `Voice` runs Pitch, Ignite, (teardown
-  fade), Send. Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
+- **Instrument = the voice's Ignitor tree** (phase 3, done 2026-09-28; its pitch modulations too since pitch pipeline
+  steps 1 to 4, the last, `fm`, 2026-10-10; step 5 removed the empty shell in front of it). `Voice` runs Ignite, (teardown fade), Send; the stages and `BlockContext` live in `voices/`. Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
   every sample voice is the same shape over `IgnitorDsl.Sample` (`IgnitorRegistry.SAMPLE_INSTRUMENT`, never
   registered under a name). An authored instrument gets the voice doors by ending in `.classic()` as its LAST call
   (`IgnitorDsl.endsInClassic()`); a tree without it plays bare: no doors, no default envelope.
-- **`classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`): the pitch envelope and the vibrato (on the source, the
-  pitch stages' place), onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo, adsr. Its knobs are `<door>.<param>` slots the pattern fills through
+- **`classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`): fm, pitch envelope, accelerate, vibrato (on the source, the
+  pitch stages' place, FM innermost), onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo, adsr. Its knobs are `<door>.<param>` slots the pattern fills through
   `VoiceData.ignitorParams`, the param part the engine door's word (`adsr.attack`, `crush.bits`,
   `coarse.factor`); a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
 - **One word per knob, node to wire** (Q21, 2026-10-09): every envelope says `attack`, `decay`, `sustain`,
   `release` (the unit in the KDoc, not the name) and `declick`; the pluck's loop gain is `feedback`, brown noise's
-  white leak is `leak`. The frame-domain core keeps `sustainLevel` (`EnvelopeCore.prepare`, `Voice.Envelope`)
+  white leak is `leak`. The frame-domain core keeps `sustainLevel` (`EnvelopeCore.prepare`)
   and the constants keep their `*_SEC` names. Old names: `docs/retired-names.md`.
-- **The pitch doors are moving into the tree** (`docs/tasks/pitch-pipeline-into-the-tree.md`): sprudel's pitch
-  envelope, accelerate and vibrato are `classic()`'s `PitchEnvelope`, `Accelerate` and `Vibrato` stages, filled by
-  the `penv.*` / `penvCurves.*` (step 1), flat `accelerate` (step 3) and `vibrato.*` (step 2) slots; FM still runs on
-  the strip in `voices/strip/pitch/`, and a source reads `treeMods * stripFm`. An `fm` node in the instrument moves as
-  one operator under them (step 3b, "FM: a pitch node means what it wraps" below); the strip's FM modulator does not
-  until step 4.
+- **The pitch doors are in the tree** (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, steps 1 to 4): sprudel's
+  pitch envelope, accelerate, vibrato and fm are `classic()`'s `PitchEnvelope`, `Accelerate`, `Vibrato` and `Fm`
+  stages, filled by the `penv.*` / `penvCurves.*` (step 1), `vibrato.*` (step 2), flat `accelerate` (step 3) and
+  `fm.*` (step 4) slots; nothing runs in front of the tree (step 5): the root's `IgniteContext.phaseMod` is null, and
+  `ModApplyingIgnitor` is the one source of a non-null `phaseMod` (`ModBlockingIgnitor` only clears and restores it). FM is innermost, so the other
+  classic pitch stages move its modulator with the carrier (step 3b's rule), and an `fm` in the instrument sits inside
+  its carrier and follows it (`s("sgbell").fm(...)`). The classic FM is the node's law, NOT the strip's sound (decision
+  D3): the depth envelope per sample (ledger E11 closed), an envelope-free door keeps its depth through the release
+  tail (the strip collapsed it at the gate), the rounding order (at most 7.6e-15 at the output before the gate), the
+  modulator sine's rng draw (a pitched voice that also draws while it renders, a supersaw, a pluck, `analog > 0`,
+  takes other random values; a noise-only voice is untouched), the modulator following `vib` / `penv` / `accelerate`, and over `sgpad`'s forking detune one
+  modulator for both pitches, block-size dependent (ledger E8: at 128 frames the pad loses its pitch; recorded, kept
+  quiet, `sgpad` the only built-in with that shape).
 - **Accelerate glides over the GATE and holds** (decision D2, with its hold, 2026-10-09): `2^(semitones / 12 *
   progress)` from the onset to the gate close (`IgniteContext.voiceDurationFrames`, which a note-off never moves),
   then the target through the release, for both doors; a gate of 0 frames holds the target from the first frame
@@ -82,6 +89,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
   `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`; an empty one is silence everywhere, so as a
   Katalyst bus knob it reads 0.0, not the knob's default). Fields: `audio/ref/data-model.md`.
+- **A shared node stays one node across the wire** (`@WireShared` on `IgnitorDsl`, 2026-10-10): the generated codec
+  encodes and decodes each instance once per message, and `postMessage`'s structured clone keeps the sharing, so a
+  `let` used twice is built once in the browser as on the JVM (the build cache keys by identity). Before, the browser
+  built it twice (Kokon's and Der Schmetterling's Screamer pedal: two strings). Equal but distinct nodes stay two.
 
 ## Laws and constants in force
 
@@ -91,7 +102,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   are index knobs with the reader's default, both Exponential; `ADSR_EXP_K` 3.0; de-click `ENV_DECLICK_SECONDS`
   1 ms on `classic()`. Knobs and `Adsr.on`: `audio/ref/voice-synthesis.md`.
 - **The gate**: a stage whose gating knob is a leaf at its off value (or unset, except where the table says
-  otherwise) is not built; since 2026-10-07 the four pitch arms too (vibrato, accelerate, pitch envelope, fm). The
+  otherwise) is not built; since 2026-10-07 the pitch arms too, five now (vibrato, accelerate, pitch envelope, fm, and
+  `pitchModSemitones` at a literal mod since 7a). The
   rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
   at most `MAX_DRAIN_SECONDS` 20 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
@@ -118,6 +130,16 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   Every lane steps once per block and ramps across it.
 - **`DriftLanes`** gives every multi-voice oscillator its drift; `analogSpread` 0 is one shared walk, 1 (default)
   a lane per voice, and both endpoints are exact.
+- **Two pitch laws, two words** (decision D8, pitch pipeline 7a): `pitchModSemitones(mod)` is `2^(mod / 12)`, the law
+  of `vibrato`, `accelerate` and `pitchEnvelope` as a primitive (`fastExp2`, `safeOut`); `pitchMod(mod)` is the linear
+  `1 + mod`, FM's law, raw. The `vibrato` node is composed from it since 7b (the tremolo's pattern):
+  `pitchModSemitones(sine(rate, analog = 0) * max(semitones, 0))`, the depth per sample; not bit-identical (one
+  rounding, and the sine's drift-seed draw shifts the voice's later dice); `audio/ref/voice-synthesis.md`, its edge
+  rules in the `vibrato` row of `audio/ref/off-values.md`. Since 7c the LFO takes `range(from, to)` before the depth
+  and the sine's own `phase`; literals at the defaults `(-1, 1)` and 0 build neither (`classic()`'s slots included),
+  so the default keeps 7b's bits. `pitchModSemitones` is gated at a literal 0 or non-finite mod, `pitchMod` is not
+  (`audio/ref/off-values.md`); nesting multiplies, the outer ratio the left factor. The table:
+  `audio/ref/voice-synthesis.md`, "The pitch nodes and their two laws".
 - **Oscillator phase** (`PhaseOffset`, `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): every periodic oscillator has a `phase`
   input in cycles, wrapped to `[0, 1)`, no clamp. The literal 0 builds no input (the default renders as before, bit for
   bit); a block-constant one moves the accumulator by its change once per block (the per-sample loops untouched); a
@@ -148,8 +170,15 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   positive and finite, `ActiveVoice.soloed`) for its whole life (a long release beside another solo, Q14, Q28); `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`). Realtime voices have no
   control events: each one whose gate is open records its source until the block's end, so a realtime solo follows the
   held gates.
-- **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
-  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0), both in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
+- **Resource counts are capped, tones are not**: `coercePasses` (1 to 16), `coerceUnisonVoices` (0 to
+  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0) and `coerceSinePartials` (a sine plays its first
+  `SINE_MAX_PARTIALS` = 256 explicit partials, the rest are not built), all in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
+- **The sine's partials** (`Ignitors.sinePartials`, `docs/plans/sine-partial-banks.md`): the fundamental and four banks,
+  `harmonics`, `octaves`, `suboctaves` and the explicit `partials` (`IgnitorDsl.Sine.Partial(ratio, gain, phase)`,
+  2026-10-10), summed raw, one loop per partial, every knob read once per block (an explicit partial's signal gain
+  per sample, its moving phase gliding across the block), a partial whose frequency's MAGNITUDE is at or above
+  Nyquist silent (one gate for the node; a non-finite frequency silent too), drift lanes in `DriftLanes` blended by
+  `analogSpread`. The explicit list is fixed per note, so its storage and lanes are built with the node.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -160,6 +189,23 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz) and
   the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 4.0, 5.5,
   6.25; held as 4, 6 and 6 frames).
+- **`parallel` on the Ignitor** (`IgnitorDsl.Parallel`, 2026-10-10): the branches summed, every branch reading one
+  input instance; `BuiltIgnitor.latencyFrames` is collected along the signal spine (an oversampled `distort` or
+  `shape` adds `Oversampler.latencyFrames`: 4, 6, 6), and the node pads every earlier branch to the latest
+  (`delayedBy`). A plain `plus` stays unaligned.
+- **`parallel` on the Katalyst** (`KatalystParallelEffect`, 2026-10-10): each branch is a `KatalystChain` of its own,
+  run on a copy of the bus and SUMMED; branches are aligned by latency (pad rings, the longest branch is the stage's
+  latency); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
+  hoisted to the orbit's duck. A `reverb` or `delay` in a branch carries the dry too. The doors write no stage for zero
+  branches and inline one. `through` is `serial` since the same day (`docs/retired-names.md`).
+- **`bands` on both hosts** (2026-10-10): DSL sugar in `klangscript-libs` (`BandsBuilders.kt`) over `parallel` and
+  the EQ's existing sections, no DSP of its own. Linkwitz-Riley: band k is the high side of every cut below it (on a
+  voice a split tree, each high side shared by identity), the low side of its own, and the all-pass of every cut
+  above, one raw tap section in an EQ of its own (`x - 2 * bandpass(x)`, Q 1/sqrt(2)), so untouched bands sum to an
+  all-pass, flat within 0.001 dB (`BandsCrossoverSpec`). A band's processors get the band behind a sectionless EQ, so
+  an `eq()` tap in a band reads the band.
+- **`blend` on both hosts** (2026-10-10): `x.blend(wet, f)` is `parallel(dry * (1 - wet), f * wet)`, the linear
+  law; `wet` a slot or a signal on the Ignitor, a plain number on the Katalyst (no param arithmetic there).
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
@@ -216,8 +262,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   renders once per pitch; build it once per layer. The predicate is the detune fold's
   (`IgnitorBuildCache.usesMusicalFreq`): a node that consumed the freq ARGUMENT without a `Freq` leaf would break
   both. Guard: `SharedModulatorRateSpec`.
-- **One pitch mod per pitch-mod node** (`combineMods`): the mod a vibrato, fm, pitch envelope, accelerate or
-  `pitchMod` hands to the pitched sources under it sits behind one memo that always caches per block, so its LFO or
+- **One pitch mod per pitch-mod node** (`combineMods`): the mod a vibrato, fm, pitch envelope, accelerate,
+  `pitchMod` or `pitchModSemitones` hands to the pitched sources under it sits behind one memo that always caches per block, so its LFO or
   modulator advances once per block for every source at one pitch (it ran once per source until 2026-10-07; Sakura and
   Irish Lament were retuned to keep their sound). Except: a source detuned under a mod that keeps its freq key (an
   `fm`, or a mod whose knobs read `Freq`) renders the whole mod again. Guard: the B-1 rows of `SharedModulatorRateSpec`.
@@ -252,7 +298,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   read, the phase-pool order, the audit's later steps and open decisions).
 - **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
   §4, the cut-group fade, done by lifecycle step 4), `docs/tasks/svf-coefficient-cache-never-engages.md`,
-  `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (the sprudel strip's raw pitch amounts, two NaN signals),
+  `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (two NaN signal paths; its strip half closed with pitch
+  pipeline step 4),
   `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md` (two residues, both an author rule today: a shared modulator that reads
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
   the mod again); the build-time diagnostic for the second, an fm above a forking detune:
@@ -264,7 +311,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md` (all in
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
-- **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
+- **Voice and instruments, V1 high priority**: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
 - **Voice and instruments, future**: `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
 - **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
@@ -282,6 +329,35 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 Engine follow-up 3: no noise box reproduces; the house limiter's per-sample `lookaheadStep`, never
+  inlined by V8, boxed about 2 KB per block whenever anything sounded and 4 KB from its first reduction on (the
+  likely cause of the old figure, unproven), now about 0; it is `inline`, bit for bit, corpus identical:
+  `docs/tasks/engine-follow-ups.md` item 3
+- 2026-10-10 Engine follow-up 9: `DistortionCore` dispatches its shape once per block to one loop per shape; the
+  per-sample `when` boxed every shaped sample on V8 (2 to 33 KB per block, now about 0), bit for bit, corpus
+  identical: `docs/tasks/engine-follow-ups.md` item 9
+- 2026-10-10 The sine's explicit partials, `partial(ratio, gain, phase)` (a fourth bank, wire `Sine.partials`, cap
+  256, both doors), corpus identical: `docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`
+- 2026-10-10 Pitch pipeline 7c: the vibrato's `range(from, to)` and `phase` (node fields, both doors, `classic()`
+  slots `vibrato.rangeFrom|rangeTo|phase`); the default builds neither, corpus 18 of 18 identical:
+  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7c
+- 2026-10-10 Pitch pipeline 7b: the `vibrato` node's runtime is a composition, `VibratoModIgnitor` gone; seven corpus
+  songs move, by the sine's rng draw (all seven), one rounding (five) and the per-sample depth (Die Kirschblüte):
+  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7b
+- 2026-10-10 Pitch pipeline 7a: `pitchModSemitones(mod)`, the exponential pitch primitive (`2^(mod / 12)`), a node on
+  both doors and the wire beside the linear `pitchMod` (D8); the corpus identical:
+  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7a
+- 2026-10-10 Pitch pipeline step 5: the strip's shell goes (`PitchPipelineBuilder`, `BlockContext.freqModBuffer`,
+  `Voice.RenderContext.freqModBuffer`, `IgniteRenderer`'s bridge) and `voices/strip/` dissolves into `voices/` (D7);
+  a pure removal, the corpus identical: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 5
+- 2026-10-10 Pitch pipeline step 4: sprudel's `fm(depth, ratio, attack, decay, sustain, release)` is `classic()`'s
+  innermost FM stage (`fm.*` slots), its five wire fields, `FmRenderer`, `Voice.Fm`, `Voice.Envelope` and
+  `EnvelopeCalc` gone; the node's law (per-sample envelope, E11 closed; full depth through the tail without an envelope;
+  the modulator follows the other pitch doors; the rng shift); the corpus identical:
+  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 4
+- 2026-10-10 `serial` (was `through`), `parallel` on the Ignitor and the Katalyst (branches summed and aligned by
+  latency), `bands` (Linkwitz-Riley, flat untouched), `blend` (linear dry/wet), and a shared node kept one node
+  across the wire (`@WireShared`): `docs/tasks/in-progress/parallel-serial-bands.md` steps 1 to 5
 - 2026-10-10 v0.6.1: pitch pipeline steps 1 to 3b, the Katalyst `distort` stage (merged from `katalyst-distort`), a
   soloed voice protected to its end, the warehouse panel's reverb counters, `analog(character)` on every door and
   `variants` with plain numbers; the corpus identical except Kokon's two landing strikes (accelerate, at most 2.5
@@ -294,22 +370,22 @@ One line per step, newest first. A link to the archived task record where one ex
   (`CarrierFreqMod`, the modulator reads the outer mod at the carrier's frequency, once per block). A sound change for
   authored fm trees under a pitch node and for sprudel's pitch doors over an fm instrument (the strip moved the modulator too),
   and for two shared-modulator shapes that rendered one modulator at two pitches; the corpus identical; one author rule
-  (an fm above a forking detune): `docs/tasks/pitch-pipeline-into-the-tree.md` step 3b
+  (an fm above a forking detune): `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 3b
 - 2026-10-09 Pitch pipeline step 3: sprudel's `accelerate` is `classic()`'s accelerate stage (the flat `accelerate`
   slot), its wire field and the strip's `AccelerateRenderer` gone; the node holds its target from the gate on (D2):
   a sound change for an `accelerate` under a release tail on both doors (corpus: Kokon's `strike` only, a listening
   pair) and for a zero gate (`legato(0)`: the target from the first frame, Q27), every other corpus row and every
   non-accelerate matrix row identical, apart from the shapes the step record names (D1, D6, a non-finite amount now
   the bare voice where the strip froze the oscillator, the clamp from about 598 semitones, one temporary regrouping
-  with sprudel `fm`): `docs/tasks/pitch-pipeline-into-the-tree.md` step 3
+  with sprudel `fm`): `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 3
 - 2026-10-09 Pitch pipeline step 2: sprudel's `vib` is `classic()`'s vibrato stage (`vibrato.*` slots), its two wire
   fields and the strip's `VibratoRenderer` gone, bit-identical on the corpus and the door matrix apart from the
   shapes the step record names (D1, D6, regroupings up to about 7.3e-13, the raw edges: a depth past about 598
-  semitones, non-finite rates, a +Infinity depth): `docs/tasks/pitch-pipeline-into-the-tree.md` step 2
+  semitones, non-finite rates, a +Infinity depth): `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 2
 - 2026-10-09 Pitch pipeline step 1: sprudel's `penv` is `classic()`'s pitch envelope stage (`penv.*`, `penvCurves.*`
   slots), its eight wire fields and the strip's `PitchEnvelopeRenderer` gone, bit-identical on the door matrix and
   the corpus, apart from the accepted shapes (an fm modulator under `penv` until step 3b, three pitch factors
-  regrouped, bare instruments, D6): `docs/tasks/pitch-pipeline-into-the-tree.md` step 1
+  regrouped, bare instruments, D6): `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 1
 - 2026-10-09 v0.6.0: the engine tidy-up is done (steps 1 to 13: the twins written once, `FilterDef` retired, a plain
   number at every constant door; the V8 allocation pass), bit-identical on the corpus; the open items:
   `docs/tasks/engine-follow-ups.md`; the record: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`
@@ -340,7 +416,7 @@ One line per step, newest first. A link to the archived task record where one ex
 - 2026-10-07 The oversampler is two halves, `upsample` and `decimate`, with the caller's shaping loop between
   them inline (no closure per block, no `copyInto` view on JS): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 2
 - 2026-10-07 The gate covers the four pitch arms, a fold (a non-finite vibrato depth stays built, its default);
-  a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/pitch-pipeline-into-the-tree.md` step 0
+  a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 0
 - 2026-10-07 Solo is engine state per source: the rest fillers are control-only events, `SoloTracker` records from any
   event before the control drop and the late guard, the others play at `1 - amount`; `ActiveVoice.soloAmount` gone,
   audit B4.2 closed: `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`

@@ -116,7 +116,7 @@ class IgnitorGateSpec : StringSpec({
     fun render(
         dsl: IgnitorDsl,
         params: Map<String, Double>? = null,
-        stripPhaseMod: DoubleArray? = null,
+        upstreamPhaseMod: DoubleArray? = null,
         sample: ((Random) -> Ignitor)? = null,
     ): DoubleArray {
         val rng = seed()
@@ -128,8 +128,9 @@ class IgnitorGateSpec : StringSpec({
         val context = ctx(rng)
 
         for (b in 0 until blocks) {
-            // The voice strip's pitch ratios, handed to the whole tree at the root as `IgniteRenderer` does.
-            context.phaseMod = stripPhaseMod
+            // An UPSTREAM phaseMod, set on the context for the whole tree: what an enclosing `ModApplyingIgnitor`
+            // hands a pitch node inside the source it wraps (a voice's root carries none since pitch pipeline step 5).
+            context.phaseMod = upstreamPhaseMod
             ignitor.generate(buffer, freqHz, context)
 
             for (i in 0 until blockFrames) {
@@ -301,8 +302,9 @@ class IgnitorGateSpec : StringSpec({
     }
 
     "vibrato: a NON-FINITE depth is built and renders the default depth, it is not off" {
-        // The one pitch arm whose unset is not off: the runtime reads a non-finite depth as the node's
-        // DEFAULT, VIBRATO_SEMITONES (`finiteOr`), so gating it would change the sound, not fold a stage.
+        // The one pitch arm whose unset is not off: the arm reads a non-finite literal depth as the node's
+        // DEFAULT, VIBRATO_SEMITONES (`finiteLiteralOr`, at build, since pitch pipeline 7b), so gating it would
+        // change the sound, not fold a stage.
         val atDefault = render(vibrato(inner = saw, depth = IgnitorDsl.Constant(VIBRATO_SEMITONES))).bits()
 
         atDefault shouldNotBe bare
@@ -419,19 +421,19 @@ class IgnitorGateSpec : StringSpec({
         }
     }
 
-    "the fold holds under the strip's own ratios, which the tree's mods multiply into" {
-        // `ModApplyingIgnitor` writes `treeMod * phaseMod`: at a tree mod of 1.0, the strip's ratio itself.
-        val strip = DoubleArray(blockFrames) { 1.0 + 0.01 * sin(it * 0.05) }
-        val bareUnderStrip = render(saw, stripPhaseMod = strip).bits()
+    "the fold holds under an upstream phaseMod, which the tree's mods multiply into" {
+        // `ModApplyingIgnitor` writes `treeMod * phaseMod`: at a tree mod of 1.0, the upstream ratio itself.
+        val upstream = DoubleArray(blockFrames) { 1.0 + 0.01 * sin(it * 0.05) }
+        val bareUnderUpstream = render(saw, upstreamPhaseMod = upstream).bits()
 
-        withClue("engagement: the strip's ratios move the saw") {
-            bareUnderStrip shouldNotBe bare
+        withClue("engagement: the upstream ratios move the saw") {
+            bareUnderUpstream shouldNotBe bare
         }
 
         for ((name, arm) in pitchArms) {
-            withClue("$name under the strip") {
-                render(arm(saw, ungated(0.0)), stripPhaseMod = strip).bits() shouldBe bareUnderStrip
-                render(arm(saw, IgnitorDsl.Constant(0.0)), stripPhaseMod = strip).bits() shouldBe bareUnderStrip
+            withClue("$name under the upstream phaseMod") {
+                render(arm(saw, ungated(0.0)), upstreamPhaseMod = upstream).bits() shouldBe bareUnderUpstream
+                render(arm(saw, IgnitorDsl.Constant(0.0)), upstreamPhaseMod = upstream).bits() shouldBe bareUnderUpstream
             }
         }
     }

@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import kotlin.random.Random
 
 /**
@@ -70,9 +69,13 @@ class IgniteContext(
      * Per-sample phase-increment multipliers (1.0 = no change), or null.
      * MUST be at least (offset + length) elements long when non-null.
      *
-     * **Set by IgniteRenderer only** (the voice's pitch pipeline bridged from [BlockContext.freqModBuffer]).
-     * Ignitor DSL-level pitch mods (vibrato, accelerate, pitchEnvelope, FM) are resolved at
-     * build time via [ModApplyingIgnitor] and do NOT use this field.
+     * **[ModApplyingIgnitor] is the one source of a non-null value** (in the engine): it sets it around the source it
+     * wraps and restores it after; [ModBlockingIgnitor] only clears it around an absolute-frequency source, and
+     * restores it too. Null at the root of a
+     * voice's tree: since pitch pipeline step 5 the voice hands the tree no pitch modulation (`IgniteRenderer` never
+     * writes it); every pitch modulation (vibrato, accelerate, pitchEnvelope, FM, pitchMod, the `classic()` pitch
+     * stages) is a node of the tree, resolved at build time into the [ModApplyingIgnitor] that sets this field for
+     * its source.
      */
     var phaseMod: DoubleArray? = null,
 ) {

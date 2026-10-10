@@ -7,7 +7,6 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.voices.DoorAdsr
 import io.peekandpoke.klang.audio_be.voices.DoorFields
-import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -15,10 +14,11 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.pitch.FmRenderer
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.fmModIgnitor
+import io.peekandpoke.klang.audio_be.voices.TestEnvelope
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
@@ -26,6 +26,7 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlin.math.abs
+import kotlin.random.Random
 
 /**
  * **The realtime path: [KlangCommLink.Cmd.StartRealtimeVoice] promotes straight to active.**
@@ -226,7 +227,7 @@ class RealtimeVoiceSpec : StringSpec({
                 endFrame = 100_000.0,
                 gateEndFrame = 90_000.0,
                 blockFrames = 100,
-                envelope = Voice.Envelope(
+                envelope = TestEnvelope(
                     attackFrames = 50.0,
                     decayFrames = 100.0,
                     sustainLevel = 0.8,
@@ -535,39 +536,38 @@ class RealtimeVoiceSpec : StringSpec({
         renderBlocks(d, 14.0 * blockFrames, 10).drop(3).any { hasAudio(it) }.shouldBeFalse()
     }
 
-    //  MOVED-GATE STRIP UNITS //////////////////////////////////////////////////////////////////////////////////
+    //  MOVED-GATE UNITS //////////////////////////////////////////////////////////////////////////////////////////
 
-    // Minimal BlockContext for the two rows below: the strip's gate must be read from the ctx's
-    // limits PER RENDER CALL: a re-baked constructor copy is the regression class BlockContext's
-    // KDoc warns about, and these rows are what kill it.
-    fun stripCtx(gateEndFrame: Double): BlockContext = BlockContext(
-        audioBuffer = AudioBuffer(blockFrames),
-        freqModBuffer = DoubleArray(blockFrames),
-        scratchBuffers = ScratchBuffers(blockFrames),
-        sampleRate = sampleRate,
-        limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = 1_000_000.0),
-    ).apply {
-        updateOffsetAndLength(offset = 0, length = blockFrames)
-        blockStart = 0.0
-    }
-
-    "FmRenderer follows a gate moved between blocks (ctx read, not a baked copy)" {
-        val fm = Voice.Fm(
-            ratio = 1.0,
-            depth = 50.0,
-            envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0),
+    "the FM node follows a gate moved between blocks (ctx read, not a baked copy)" {
+        // Sprudel's `fm` is `classic()`'s FM stage since pitch pipeline step 4 (the strip's `FmRenderer`, which this
+        // row guarded, retired). The node reads the voice-relative gate off its context per block; `IgniteRenderer`
+        // derives that per block from the voice's limits (the "amendment A1" row below guards the derivation).
+        // The modulator is a constant 1.0, so the ratio is `1 + depth * env / freq`.
+        val fm = fmModIgnitor(
+            modulator = ParamIgnitor("m", 1.0),
+            ratio = ParamIgnitor("ratio", 1.0),
+            depth = ParamIgnitor("depth", 50.0),
+            sustain = ParamIgnitor("sustain", 0.5),
         )
-        val renderer = FmRenderer(fm = fm, freqHz = 440.0, sampleRate = sampleRate)
-        val ctx = stripCtx(gateEndFrame = 100_000.0)
+        val ctx = IgniteContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = 100_000,
+            gateEndFrame = 100_000,
+            scratchBuffers = ScratchBuffers(blockFrames),
+            random = Random(1),
+        )
+        val buffer = DoubleArray(blockFrames)
 
-        renderer.render(ctx)
-        ctx.freqModBuffer.any { it != 1.0 }.shouldBeTrue() // sustain: fm depth modulates pitch
+        ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
+        ctx.voiceElapsedFrames = 0
+        fm.generate(buffer, 440.0, ctx)
+        buffer.all { it == 1.0 + 50.0 * 0.5 / 440.0 }.shouldBeTrue() // sustain: half the depth
 
-        ctx.limits.gateEndFrame = 64.0 // inside the first block, after the onset (a gate AT the onset has its own rule)
-        ctx.blockStart = blockFrames.toDouble()
-        ctx.freqModBufferWritten = false
-        renderer.render(ctx)
-        ctx.freqModBuffer.all { it == 1.0 }.shouldBeTrue() // released: depth collapses to 0
+        // A note-off inside the first block, after the onset (a gate AT the onset has its own rule), read on the next.
+        ctx.gateEndFrame = 64
+        ctx.voiceElapsedFrames = blockFrames
+        fm.generate(buffer, 440.0, ctx)
+        buffer.all { it == 1.0 }.shouldBeTrue() // released: a release of 0 takes the depth to 0 at the gate
     }
 
     "a bare tree with its own envelope: note-off ramps that envelope down, not sustain-then-cliff (amendment A1)" {

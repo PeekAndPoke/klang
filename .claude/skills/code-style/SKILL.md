@@ -405,6 +405,10 @@ Over a sealed class or enum, write `when` as an expression so the compiler check
 that do nothing are written out (`is Foo -> Unit` or `{}`); never a bare non-exhaustive
 statement `when` that silently skips a new variant.
 
+Exception (2026-10-10, provisional): inside a per-sample loop, or an inline function called in one, a `when` producing a double may be an exhaustive statement `when`
+assigning an initialized `var` (V8 boxes the expression form's result there); see `audio/ref/performance.md`, the rule
+on the exhaustive `when` in a sample loop.
+
 ### 20. Annotate NaN Guards
 
 A self-comparison NaN check is not obvious to the next reader. Always mark it:

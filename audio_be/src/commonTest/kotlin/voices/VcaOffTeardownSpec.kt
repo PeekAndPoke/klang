@@ -14,7 +14,6 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.toExciter
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -93,7 +92,7 @@ class VcaOffTeardownSpec : StringSpec({
         val block = AudioBuffer(blockFrames)
         val renderer = TeardownFadeRenderer
         val ctx = BlockContext(
-            audioBuffer = block, freqModBuffer = DoubleArray(blockFrames),
+            audioBuffer = block,
             scratchBuffers = ScratchBuffers(blockFrames), sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = endFrame),
         )
@@ -125,7 +124,6 @@ class VcaOffTeardownSpec : StringSpec({
         val renderer = TeardownFadeRenderer
         val ctx = BlockContext(
             audioBuffer = block,
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateFrames.toDouble(), endFrame = totalFrames.toDouble()),
@@ -263,7 +261,6 @@ class VcaOffTeardownSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = AudioBuffer(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val voice = factory.makeVoice(

@@ -526,8 +526,18 @@ class Compressor(
      * emerging from the delay ring lies inside the hold window of **every** tap the smoother is
      * averaging. An average is >= its minimum, so the smoothed gain is <= what that sample requires.
      * Derivation in `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md` §2.3.
+     *
+     * **Inline on purpose** (engine follow-up item 3, 2026-10-10): called per sample, and its
+     * bytecode is past V8's inlining limit, so as a plain function its level argument and its gain
+     * result crossed a call V8 never inlines: one heap number per sample for the level whenever
+     * anything sounds, one more for the gain from the first time the limiter reduces on, since its
+     * release settles a few ulps below 1.0 and never returns to exactly 1.0 (about 2 and 4 KB per
+     * block at the master on the production bundle). Inlined, nothing crosses. Its two callers each carry a
+     * copy: the loop of [processLookahead] and the one-off pass of [reseedFromRing].
+     * `audio/ref/performance.md`, the rule on a double handed to a function that is not inlined.
      */
-    private fun lookaheadStep(inputLevel: Double): Double {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun lookaheadStep(inputLevel: Double): Double {
         // NaN-guard, and non-finite generally. NaN would poison the deque ordering (every
         // comparison false); +Infinity is worse — it drives `required` to 0, pins the gain there for
         // the whole window, and the master then fades the entire mix back in over ~450 ms. Reachable

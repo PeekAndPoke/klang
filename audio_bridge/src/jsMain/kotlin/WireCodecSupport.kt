@@ -66,3 +66,64 @@ fun wireDecodeStringDoubleMap(o: dynamic): Map<String, Double> {
     for (k in keys) out[k] = o[k].unsafeCast<Double>()
     return out
 }
+
+// ── Identity across the wire (`@WireShared`) ───────────────────────────────────────────────────────────────────
+
+/** How many root codec calls are running now; the identity table lives while this is above 0. */
+@PublishedApi
+internal var wireScopeDepth: Int = 0
+
+/**
+ * The identity table of the running root call, a JS `Map`, or null until a `@WireShared` value is met. One call runs
+ * one direction, so one table serves both: Kotlin instance to JS object while encoding, JS object to Kotlin instance
+ * while decoding. A JS `Map` compares keys by identity, never by `equals`.
+ */
+@PublishedApi
+internal var wireSeen: dynamic = null
+
+/**
+ * Runs the codec of a `@WireFormat` root: opens the identity table's lifetime at the outermost call and drops the table
+ * when it ends, so nothing is remembered from one message to the next.
+ */
+inline fun <T> wireScoped(block: () -> T): T {
+    wireScopeDepth++
+
+    try {
+        return block()
+    } finally {
+        wireScopeDepth--
+
+        if (wireScopeDepth == 0) {
+            wireSeen = null
+        }
+    }
+}
+
+/** Encodes a `@WireShared` value once per root call: a second reference to [v] gets the same JS object. */
+inline fun wireEncodeShared(v: Any, enc: () -> dynamic): dynamic = wireShared(key = v, make = enc)
+
+/** Decodes a `@WireShared` value once per root call: a second reference to [o] gets the same Kotlin object. */
+inline fun <T> wireDecodeShared(o: dynamic, dec: () -> T): T = wireShared(key = o, make = dec).unsafeCast<T>()
+
+@PublishedApi
+internal inline fun wireShared(key: Any?, make: () -> Any?): dynamic {
+    if (wireScopeDepth == 0) {
+        return make()
+    }
+
+    if (wireSeen == null) {
+        wireSeen = js("new Map()")
+    }
+
+    val seen = wireSeen
+    val hit = seen.get(key)
+
+    if (jsTypeOf(hit) != "undefined") {
+        return hit
+    }
+
+    val made = make()
+    seen.set(key, made)
+
+    return made
+}

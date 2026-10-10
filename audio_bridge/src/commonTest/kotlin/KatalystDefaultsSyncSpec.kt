@@ -84,6 +84,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
             is KatalystStageDsl.Distort -> listOf(stage.amount)
             is KatalystStageDsl.Eq -> emptyList()
             is KatalystStageDsl.Gain -> listOf(stage.gain)
+            // The classic chain declares no parallel stage.
+            is KatalystStageDsl.Parallel -> emptyList()
         }
 
         return knobs.filterIsInstance<IgnitorDsl.Param>().map { it.name to it.default }
@@ -403,6 +405,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
                     is KatalystStageDsl.Distort -> stage.copy(amount = freshKnob(stage.amount))
                     is KatalystStageDsl.Eq -> KatalystStageDsl.Eq(stage.sections.toList())
                     is KatalystStageDsl.Gain -> KatalystStageDsl.Gain(freshKnob(stage.gain))
+                    // The classic chain declares no parallel stage; the arm keeps the `when` exhaustive.
+                    is KatalystStageDsl.Parallel -> KatalystStageDsl.Parallel(stage.branches.toList())
                 }
             }
         )

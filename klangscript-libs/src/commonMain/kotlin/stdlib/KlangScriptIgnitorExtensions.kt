@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
+import io.peekandpoke.klang.audio_bridge.blend
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
@@ -371,9 +372,9 @@ object KlangScriptIgnitorExtensions {
     // ── The classic tail ─────────────────────────────────────────────────────
 
     /**
-     * Wraps this sound in the classic synth voice: the pitch envelope, the accelerate and the vibrato on the source, then the
+     * Wraps this sound in the classic synth voice: the FM, the pitch envelope, the accelerate and the vibrato on the source, then the
      * pattern's one-pole lowpass, crush, coarse, distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that
-     * order, every one of them driven by a slot the pattern's doors fill (`Ignitor.slot.penv.semitones`,
+     * order, every one of them driven by a slot the pattern's doors fill (`Ignitor.slot.fm.depth`, `Ignitor.slot.penv.semitones`,
      * `Ignitor.slot.accelerate`, `Ignitor.slot.vibrato.semitones`,
      * `Ignitor.slot.onepole`, `Ignitor.slot.lpf.freq`, `Ignitor.slot.adsr.attack`, ...). A stage the note does not write is not built, so an untouched
      * `classic()` costs one envelope and nothing else.
@@ -381,19 +382,20 @@ object KlangScriptIgnitorExtensions {
      * Make it the LAST call (an `.optimizer(...)` hint after it is fine, it is not a stage). An instrument that ends
      * in `classic()` is the whole voice: the voice doors (`onepole(...)`, `lpf(...)`, `adsr(...)`, ...) reach its
      * slots, and nothing runs after it but the channel (`gain`, `pan`). Every built-in sound (`sound("saw")`) IS a
-     * source with this tail. Every instrument is played as its tree. Around it the engine adds only the pitch doors
-     * that still run outside the tree, in front (`fm`, until it moves into `classic()`),
+     * source with this tail. Every instrument is played as its tree. Around it the engine adds only
      * the teardown fade when the tree does not end in its own envelope (`BuiltIgnitor.endsInEnvelope`), and the
      * channel after (`gain`, `pan`); so without `classic()` the doors of `classic()` reach only the slots the tree
-     * places itself. The pattern's pitch envelope (`penv`), `accelerate` and vibrato (`vib`) are `classic()` stages: an
-     * instrument without `classic()` ignores them, as it ignores `lpf` or `adsr`. A pattern also reaches the slots by name:
+     * places itself. The pattern's FM (`fm`), pitch envelope (`penv`), `accelerate` and vibrato (`vib`) are `classic()`
+     * stages: an instrument without `classic()` ignores them, as it ignores `lpf` or `adsr`. A pattern also reaches the slots by name:
      * `ignp("lpf.freq", 1800)`.
      *
      * Want another order? Write your own tail from the same `Ignitor.slot` slots, as far as a door takes them: every
      * filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs, the pitch envelope's
      * `penv.*` and `penvCurves.*` (`pitchEnvelope(Ignitor.slot.penv.semitones, ...)`), the flat `accelerate`
      * (`accelerate(Ignitor.slot.accelerate)`), the vibrato's `vibrato.*`
-     * (`vibrato(Ignitor.slot.vibrato.rate, Ignitor.slot.vibrato.semitones)`) and the envelope's stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
+     * (`vibrato(Ignitor.slot.vibrato.rate, Ignitor.slot.vibrato.semitones, v => v.range(Ignitor.slot.vibrato.rangeFrom,
+     * Ignitor.slot.vibrato.rangeTo).phase(Ignitor.slot.vibrato.phase))`), the FM's `fm.*`
+     * (`fm(Ignitor.sine(x => x.analog(0)), Ignitor.slot.fm.ratio, Ignitor.slot.fm.depth, ...)`) and the envelope's stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
      * around the instrument. Three groups only `classic()` can place: `lpf.passes` / `hpf.passes` (the filter
      * builder's `passes(n)` takes a number), `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
      * builds a drive into a shaper that always runs and caps its output; `classic()` uses the one distort node that
@@ -613,10 +615,24 @@ object KlangScriptIgnitorExtensions {
     fun octaveDown(self: IgnitorDsl): IgnitorDsl =
         IgnitorDsl.Detune(inner = self, semitones = IgnitorDsl.Constant(-12.0))
 
-    /** Applies pitch vibrato: [rate] Hz LFO, [semitones] deep. */
+    /**
+     * Applies pitch vibrato: [rate] Hz LFO, [semitones] deep. A signal depth is followed sample by sample
+     * (`Ignitor.saw().vibrato(5, Ignitor.sine(0.5).mul(0.3).plus(0.3))` swells and fades); a depth at or below 0
+     * is no vibrato. Where the swing sits and where the LFO starts are knobs on the [VibratoBuilder]:
+     * `.vibrato(5, 0.5, v => v.range(0, 1).phase(0.75))` swings only upward from the note (a guitar's vibrato; phase 0
+     * is the middle of the swing), `.vibrato(5, 0.5, v => v.phase(0.25))` starts every note at the top of the wobble. The pattern door is `vib(rate, semitones, rangeFrom, rangeTo, phase)`.
+     *
+     * @param configure receives the [VibratoBuilder] (knobs: `range`, `phase`) and returns it.
+     */
     @KlangScript.Method
-    fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, semitones: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl())
+    fun vibrato(
+        self: IgnitorDsl,
+        rate: IgnitorDslLike,
+        semitones: IgnitorDslLike,
+        configure: ((VibratoBuilder) -> VibratoBuilder)? = null,
+    ): IgnitorDsl = VibratoBuilder(
+        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl()),
+    ).configuredBy("vibrato", configure).node
 
     /** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
     @KlangScript.Method
@@ -624,12 +640,24 @@ object KlangScriptIgnitorExtensions {
         IgnitorDsl.Accelerate(inner = self, semitones = semitones.toIgnitorDsl())
 
     /**
-     * Applies a custom pitch modulation from any Ignitor signal.
-     * The mod signal uses deviation space: 0.0 = no change, positive = higher, negative = lower.
+     * Pitch modulation by any signal, the LINEAR law: the frequency is multiplied by `1 + mod`, per sample. [mod] is
+     * a deviation, unitless: 0 is no change, 1.0 an octave up, -0.5 an octave down, -1.0 stops the oscillator. FM's
+     * law: `Ignitor.sine().pitchMod(Ignitor.sine(5).mul(0.01))` swings the pitch 1 % either way. In semitones:
+     * `pitchModSemitones`.
      */
     @KlangScript.Method
     fun pitchMod(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.PitchMod(inner = self, mod = mod.toIgnitorDsl())
+
+    /**
+     * Pitch modulation by any signal, in SEMITONES: the frequency is multiplied by `2^(mod / 12)`, per sample. 12 is
+     * an octave up, 7 a fifth, -12 an octave down, 0 the note. `Ignitor.saw().pitchModSemitones(Ignitor.sine(5).mul(0.5))`
+     * is a vibrato half a semitone deep; `pitchModSemitones(7)` plays a fifth up. The pitch law of `vibrato`,
+     * `accelerate` and `pitchEnvelope`, for any signal. The linear law (`1 + mod`, FM's): `pitchMod`.
+     */
+    @KlangScript.Method
+    fun pitchModSemitones(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.PitchModSemitones(inner = self, mod = mod.toIgnitorDsl())
 
     /**
      * Applies a pitch envelope (pitch sweep over time). [semitones] is the shift at the envelope
@@ -657,27 +685,122 @@ object KlangScriptIgnitorExtensions {
     // ── Composition ──────────────────────────────────────────────────────────
 
     /**
-     * Runs this signal through the stages, in the order written: `x.through(a, b, c)` is `c(b(a(x)))`.
+     * Runs this signal through the stages in series, in the order written: `x.serial(a, b, c)` is `c(b(a(x)))`.
      * A stage is any function from a signal to a signal, so a signal chain is written as the list it is,
-     * with any number of stages; a rig is a stage too. With no stage, `through()` returns the signal as it is.
+     * with any number of stages; a rig is a stage too. With no stage, `serial()` returns the signal as it is.
      *
      * ```KlangScript
      * let pedal = x => x.distort(0.4, "soft")
      * let cab   = x => x.highpass(100).lowpass(5000)
-     * let rig   = x => x.through(pedal, cab)
-     * let guitar = Ignitor.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+     * let rig   = x => x.serial(pedal, cab)
+     * let guitar = Ignitor.saw().serial(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
      * ```
      *
-     * Serial, one stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
-     * It builds what the Kotlin `IgnitorDsl.through(...)` builds, and checks every stage on the way: a stage that is
+     * One stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
+     * It builds what the Kotlin `IgnitorDsl.serial(...)` builds, and checks every stage on the way: a stage that is
      * null, returns nothing or returns something other than a signal is a script error naming the stage; a stage that is
      * not a function at all is refused at the call ("expected a function, got a number").
      *
      * @param stages functions from a signal to a signal, applied first to last.
      */
     @KlangScript.Method
-    fun through(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
-        runThroughStages("Ignitor through", self, stages, returns = "signal") { it is IgnitorDsl }
+    fun serial(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+        runSerialStages("Ignitor serial", self, stages, returns = "signal", example = "x => x.lowpass(800)") { it is IgnitorDsl }
+
+    /**
+     * Runs this signal through the branches side by side and SUMS them, the twin of `serial`: `x.parallel(a, b)` is
+     * `a(x) + b(x)`, and every branch reads the same `x`, built once (a pitch node in a branch, a `vibrato` or a
+     * `detune`, forks it into a second instance, as it forks any shared signal).
+     *
+     * ```KlangScript
+     * // parallel distortion: the clean signal and a screaming copy of its highs, a little under it
+     * let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35).mul(0.6))
+     * let guitar = Ignitor.saw().serial(screamer).adsr(0.005, 0.8, 0.0, 0.05).classic()
+     * ```
+     *
+     * The sum is plain (two identical branches are twice the level); a branch's own `mul` sets the blend. A branch
+     * that delays the signal (an oversampled `distort` or `shape`) is matched by delaying the others, so the sum does
+     * not comb; a plain `plus` does not do that. With no branch, `parallel()` returns the signal as it is; with one,
+     * that branch's output. It builds what the Kotlin `IgnitorDsl.parallel(...)` builds, and checks every branch as
+     * `serial` checks a stage.
+     *
+     * @param branches functions from a signal to a signal, each given this signal.
+     */
+    @KlangScript.Method
+    fun parallel(self: IgnitorDsl, vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+        val built = branches.mapIndexed { index, branch ->
+            runStage<IgnitorDsl, IgnitorDsl>(
+                door = "Ignitor parallel",
+                noun = "branch",
+                index = index,
+                stage = branch,
+                input = self,
+                returns = "signal",
+                example = "x => x.lowpass(800)",
+                isResult = { it is IgnitorDsl },
+            )
+        }
+
+        return when (built.size) {
+            0 -> self
+            1 -> built[0]
+            else -> IgnitorDsl.Parallel(branches = built)
+        }
+    }
+
+    /**
+     * A dry/wet blend, the linear law: `x.blend(wet, f)` is `x.parallel(d => d.mul(1 - wet), w => f(w).mul(wet))`, so 0 is
+     * the dry signal and 1 is the branch alone. `wet` comes first, as on every door with one.
+     *
+     * ```KlangScript
+     * // a quarter of a hard distortion under the clean string
+     * let edge = x => x.blend(0.25, y => y.distort(0.6, "hard"))
+     * ```
+     *
+     * Linear is right for a branch that stays correlated with the dry (distortion, filters). [wet] may be a number, a
+     * slot or a signal (an LFO moves the blend); a number that is not finite reads as 0. The branch is checked as a
+     * `parallel` branch is, and a late branch is aligned the same way.
+     *
+     * @param wet the share of the branch, 0 to 1.
+     * @param branch a function from the signal to a signal.
+     */
+    @KlangScript.Method
+    fun blend(self: IgnitorDsl, wet: IgnitorDslLike, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+        return self.blend(wet = wet.toIgnitorDsl()) { signal ->
+            runStage<IgnitorDsl, IgnitorDsl>(
+                door = "Ignitor blend",
+                noun = "branch",
+                index = 0,
+                stage = branch,
+                input = signal,
+                returns = "signal",
+                example = "x => x.distort(0.5)",
+                isResult = { it is IgnitorDsl },
+            )
+        }
+    }
+
+    /**
+     * Splits this signal into frequency BANDS, processes each band on its own and sums them again: multiband
+     * distortion, a saturated mid range over a clean low end, an exciter on the highs. Read from the bottom up:
+     *
+     * ```KlangScript
+     * // the lows clean, the mids crunchy, the highs untouched
+     * Ignitor.saw().bands(b => b.cut(250).band(mid => mid.distort(0.4)).cut(3000))
+     * ```
+     *
+     * `band(f)` adds a processor to the band being written (two on one band are summed), `cut(freq)` closes it and
+     * starts the next one up; a band with no `band()` passes untouched, and a cut below the one before it is moved up
+     * to it. The crossover is Linkwitz-Riley: with nothing processed the bands sum to flat level, with the phase
+     * turned around each cut (the waveform changes, the balance does not). Every band reads the same signal, built
+     * once; a late band (an oversampled `distort`) is matched by delaying the others, as in `parallel`. With no
+     * `configure`, or no `cut`, it is the one band.
+     *
+     * @param configure receives the bands builder and returns it.
+     */
+    @KlangScript.Method
+    fun bands(self: IgnitorDsl, configure: ((IgnitorBandsBuilder) -> IgnitorBandsBuilder)? = null): IgnitorDsl =
+        IgnitorBandsBuilder().configuredBy("Ignitor bands", configure).split(self)
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 

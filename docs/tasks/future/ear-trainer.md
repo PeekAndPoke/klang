@@ -65,6 +65,6 @@ order ("what does each step add?").
 
 - In the app (part of the tutorials, a page or a lesson type) or a separate page; how the clips are produced and
   shipped (rendered at build time, or rendered live in the worklet).
-- How a stage of a real chain is tapped for the "what does each step add?" mode (`through` makes a rig a list, so a
+- How a stage of a real chain is tapped for the "what does each step add?" mode (`serial` makes a rig a list, so a
   prefix of it is a tap).
 - Whether the quiz keeps a learner's progress (per viewer, private).

@@ -60,15 +60,20 @@ data class SvdFilter(
 )
 
 /**
- * Pitch modulation: glide ([accelerate]) + vibrato. [vibrato] is the rate in Hz, [vibratoMod] the depth in semitones
- * (`vib(rate, semitones)`); the wire carries them as `classic()`'s `vibrato.rate` / `vibrato.semitones` slots, and
- * [accelerate] as the flat `accelerate` slot.
+ * Pitch modulation: glide ([accelerate]) + vibrato. [vibrato] is the rate in Hz, [vibratoMod] the depth in semitones,
+ * [vibratoRangeFrom] / [vibratoRangeTo] where the swing sits and [vibratoPhase] the LFO's phase in cycles
+ * (`vib(rate, semitones, rangeFrom, rangeTo, phase)`); the wire carries them as `classic()`'s `vibrato.rate`,
+ * `vibrato.semitones`, `vibrato.rangeFrom`, `vibrato.rangeTo` and `vibrato.phase` slots, and [accelerate] as the flat
+ * `accelerate` slot.
  */
 data class SvdPitchMod(
     /** Pitch glide in SEMITONES from the onset to the gate close, then held (converted from octaves, 2026-08-24). */
     var accelerate: Double? = null,
     var vibrato: Double? = null,
     var vibratoMod: Double? = null,
+    var vibratoRangeFrom: Double? = null,
+    var vibratoRangeTo: Double? = null,
+    var vibratoPhase: Double? = null,
 )
 
 /**
@@ -87,13 +92,17 @@ data class SvdPitchEnv(
     var pReleaseCurve: AdsrCurve? = null,
 )
 
-/** FM synthesis. */
+/**
+ * FM synthesis, `fm(depth, ratio, attack, decay, sustain, release)`: [fmEnv] is the depth in Hz, [fmh] the ratio, the
+ * rest the depth envelope's stages. The wire carries them as `classic()`'s `fm.*` slots (pitch pipeline step 4).
+ */
 data class SvdFm(
     var fmh: Double? = null,
     var fmAttack: Double? = null,
     var fmDecay: Double? = null,
     var fmSustain: Double? = null,
     var fmEnv: Double? = null,
+    var fmRelease: Double? = null,
 )
 
 /** Distortion + lo-fi (sample-rate / bit-depth reduction). */
@@ -190,6 +199,9 @@ fun mergeSvdPitchMod(base: SvdPitchMod?, over: SvdPitchMod?): SvdPitchMod? {
         accelerate = over.accelerate ?: base.accelerate,
         vibrato = over.vibrato ?: base.vibrato,
         vibratoMod = over.vibratoMod ?: base.vibratoMod,
+        vibratoRangeFrom = over.vibratoRangeFrom ?: base.vibratoRangeFrom,
+        vibratoRangeTo = over.vibratoRangeTo ?: base.vibratoRangeTo,
+        vibratoPhase = over.vibratoPhase ?: base.vibratoPhase,
     )
 }
 
@@ -217,6 +229,7 @@ fun mergeSvdFm(base: SvdFm?, over: SvdFm?): SvdFm? {
         fmDecay = over.fmDecay ?: base.fmDecay,
         fmSustain = over.fmSustain ?: base.fmSustain,
         fmEnv = over.fmEnv ?: base.fmEnv,
+        fmRelease = over.fmRelease ?: base.fmRelease,
     )
 }
 

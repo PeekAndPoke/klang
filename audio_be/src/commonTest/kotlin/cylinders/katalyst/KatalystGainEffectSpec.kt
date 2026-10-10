@@ -429,7 +429,6 @@ class KatalystGainEffectSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = AudioBuffer(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 

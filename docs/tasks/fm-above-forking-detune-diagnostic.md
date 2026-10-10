@@ -5,7 +5,7 @@ diagnostic of its kind.
 
 ## What it is
 
-Pitch pipeline step 3b made every fm topology follow the pitch exactly (`pitch-pipeline-into-the-tree.md`, step 3b),
+Pitch pipeline step 3b made every fm topology follow the pitch exactly (`in-progress/pitch-pipeline-into-the-tree.md`, step 3b),
 with one exception the engine cannot process: an fm (or any pitch mod keyed by frequency) above a `detune` that forks
 the note into two pitches:
 
@@ -28,7 +28,7 @@ its one modulator serves one pitch. The shape is an fm whose carrier holds TWO p
 
 - A static walk over an instrument's `IgnitorDsl` at registration, on the editor side, never on the audio thread and
   never an exception: flag a frequency-keyed pitch mod (an `fm` with its default `freq`, or a vibrato, `pitchMod`,
-  `pitchEnvelope` or `accelerate` whose knobs read `Ignitor.freq()`) whose BENT CHILD (the fm's carrier, the inner of
+  `pitchModSemitones`, `pitchEnvelope` or `accelerate` whose knobs read `Ignitor.freq()`) whose BENT CHILD (the fm's carrier, the inner of
   a vibrato and the like), followed along signal edges only, reaches the note at two pitches: a forking `Detune` (its
   inner reads `Freq`) on that walk, beside another path to a pitched source that does not pass through that detune
   (or passes through a detune of another amount). The walk does not enter a nested fm's modulator or a parameter
@@ -52,5 +52,13 @@ its one modulator serves one pitch. The shape is an fm whose carrier holds TWO p
 - **Out of scope for now:** a sprudel door over a built-in (`s("sgpad").fm(...)`, the classic FM stage above sgpad's
   detune) stays quiet; the maintainer: "one of the things we can only really decide once they happen to us outside the
   lab on a real song."
+- **Skip `classic()`'s own FM stage** (an fm whose depth is a slot, `fm.depth`; pitch pipeline step 4 review round 1,
+  A5). Since step 4 every `classic()` tree carries that fm innermost, gated off unless a pattern writes `fm.depth`, so
+  a static walk would flag every authored instrument with a forking detune that ends in `.classic()`
+  (`(x + x.detune(7)).classic()`) even when no pattern ever writes `fm`, an error the author cannot fix. The shape is
+  real when a pattern does write it (reviewer B, step 4 round 1: `s("sgpad").fm(150, 1.5)` is block-size dependent, +2.8
+  dB between blocks of 128 and 64 frames, ledger E8, and at 128 frames the pad loses its pitch: 95 percent of the
+  energy off the f/2 grid), so the build-time half is the place for it (the gate knows the written depth), not the
+  static walk; today the built-in `sgpad` is the only built-in with a forking detune under `classic()`.
 - Design the diagnostic surface once, since more will follow (the planned "declares no slot" one in
   `docs/plans/signal-flow-redesign.md`).

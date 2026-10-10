@@ -115,6 +115,14 @@ reads to take the lock.
   wraps the whole critical section in ONE lock call (back up the file, mutate, build and run, restore with `cp`,
   verify with `cmp`, never with git) and reports the mutant and its verdict. Round-1 pairs run in parallel and take
   the lock in turn: a reviewer that waits for the lock is not stalled.
+- **Counting tests: clear old results with `find`, never `rm -rf`** (2026-10-10: the pitch step 4 and step 5
+  workers each ran `rm -rf <module>/build/test-results/<task>` to get a clean count, against their brief). The safe
+  form: `find <module>/build/test-results/<task> -name '*.xml' -delete`, or count only the XML files newer than the
+  run's start. Put this line in every brief that asks for test counts.
+- **Cleanup names the worker's OWN folder, never the scratchpad root** (2026-10-10: the partials worker ran
+  `find <scratchpad> -type f -delete` on the session scratchpad and emptied every earlier agent's harness, the
+  review snapshots and the V8 cost bundles; nothing in the repo was lost). Give each worker its own subfolder in the
+  brief (`<scratchpad>/<task>/`) and say: delete only inside it.
 
 ## Concurrency & fan-out safety
 

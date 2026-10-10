@@ -131,7 +131,7 @@ grouping, `<>` alternation
 | L9  | Advanced Picking             | Advanced | `inhabit()`, `pickSqueeze()`      | **Salsa**       | Section switching (montuno→mambo→coro) = `inhabit()`. Conducting a Latin band |
 | L11 | Squeeze and Bite             | Advanced | `squeeze()`, `bite()`, `press()`  | **Glitch**      | Autechre-style time fracturing. These functions ARE glitch tools              |
 | A1  | Ignitor DSL                  | Pro      | Ignitor tree, Param/Const/Freq    | **Synthwave**   | Building a Juno-106 in code. Synth worship as design goal                     |
-| A2  | FM Synthesis                 | Pro      | `fm(env = ...)`, `fm(h = ...)`, FM theory     | **80s Pop**     | DX7 = 80s pop. "THAT'S how you make that electric piano!"                     |
+| A2  | FM Synthesis                 | Pro      | `fm(depth = ...)`, `fm(ratio = ...)`, FM theory | **80s Pop**     | DX7 = 80s pop. "THAT'S how you make that electric piano!"                     |
 | A3  | Super-Oscillator Masterclass | Advanced | SuperSaw, voices, freqSpread      | **Trance**      | JP-8000 supersaw IS trance. Every euphoric breakdown for a decade             |
 | A4  | Physical Modeling            | Advanced | Pluck, SuperPluck, Karplus-Strong | **Bluegrass**   | KS simulates plucked strings. Banjo, guitar, mandolin — can it sound real?    |
 

@@ -20,7 +20,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 /*
  * Builders for the wrappers that carry secondary knobs: the four filters, the equalizer's
  * sections, the pitch envelope, fm's index envelope, the envelopes' own `adsr` builders, the dry
- * floor of phaser and shimmer, and the tremolo's LFO knobs. Same
+ * floor of phaser and shimmer, and the tremolo's and the vibrato's LFO knobs. Same
  * shape as the oscillator builders (`IgnitorBuilders.kt`): immutable values, one knob = one
  * `@KlangScript.Function` extension. The door keeps the stage's musical inputs, the builder the
  * rest (`/dsl-design` section 2).
@@ -418,6 +418,41 @@ fun TremoloBuilder.range(from: IgnitorDslLike, to: IgnitorDslLike): TremoloBuild
 @KlangScript.Function
 fun TremoloBuilder.shape(name: IgnitorDslLike): TremoloBuilder =
     copy(node = node.copy(shape = catalogueIndex(name, node.shape, LfoShapes::indexOf)))
+
+// ── Vibrato ──────────────────────────────────────────────────────────────────
+
+/** Builder for [IgnitorDsl.Vibrato], handed to the `configure` lambda of `.vibrato(...)`. Knobs: `range`, `phase`. */
+data class VibratoBuilder(val node: IgnitorDsl.Vibrato)
+
+/**
+ * Where the vibrato's swing sits, in the -1..1 language of the Ignitor `range`: the LFO's -1 maps to [from], its +1
+ * to [to], and the depth on the door (in semitones) scales that, so it stays the musical knob. The default
+ * `range(-1, 1)` swings both ways around the note, the vibrato as it always was. `range(0, 1)` swings only upward, as a
+ * guitarist bends a fretted string; `range(-1, 0)` only downward; `range(1, -1)` turns the LFO upside down. Raw, no
+ * clamp. Both values are signals, read like the depth. The LFO starts in the middle of the swing (`phase` 0), so an
+ * upward-only vibrato starts on the note with `phase(0.75)`, a downward-only one with `phase(0.25)`.
+ *
+ * ```KlangScript
+ * Ignitor.saw().vibrato(5, 0.5, v => v.range(0, 1).phase(0.75))   // from the note up to half a semitone, never below
+ * ```
+ */
+@KlangScript.Function
+fun VibratoBuilder.range(from: IgnitorDslLike, to: IgnitorDslLike): VibratoBuilder =
+    copy(node = node.copy(rangeFrom = from.toIgnitorDsl(), rangeTo = to.toIgnitorDsl()))
+
+/**
+ * Where in its cycle the vibrato's LFO runs: a fraction of one cycle added to its phase every sample (default 0), the
+ * oscillators' `phase` knob. Phase 0 starts the wobble in the middle of its swing, rising (on the note for the default
+ * `range(-1, 1)`; a quarter of the depth sharp for `range(0, 1)`); 0.25 starts it at its top, 0.5 in the middle,
+ * falling, 0.75 at its bottom (the note for `range(0, 1)`). It wraps: 1 is 0, 1.25 is 0.25, -0.25 is 0.75. A number is
+ * the start phase; a signal moves the phase while the note plays (a jump is a jump in pitch).
+ *
+ * ```KlangScript
+ * Ignitor.saw().vibrato(5, 0.5, v => v.phase(0.25))   // every note starts at the top of its wobble
+ * ```
+ */
+@KlangScript.Function
+fun VibratoBuilder.phase(phase: IgnitorDslLike): VibratoBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
 // ── Shimmer ──────────────────────────────────────────────────────────────────
 

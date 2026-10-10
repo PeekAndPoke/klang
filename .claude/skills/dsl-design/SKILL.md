@@ -203,8 +203,12 @@ the bug.
   until pitch pipeline step 1, 2026-10-09) is a voice-side door on
   neither closed list: `semitones` is its switch and a tail-only call never invents it; its unset stages read
   the shared `PitchEnvelopeDefaults` (the `penv.*` slot defaults of `classic()`'s pitch envelope stage). Sprudel's
-  `vib(rate, semitones)` has the same shape (pitch pipeline step 2): `semitones` is its switch, and a rate-only call
-  (`vib(4)`) writes `vibrato.rate` and never invents the depth. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
+  `vib(rate, semitones, rangeFrom, rangeTo, phase)` has the same shape (pitch pipeline step 2, the range and the
+  phase since 7c): `semitones` is its switch, and a rate-only call (`vib(4)`) or a range- or phase-only call
+  (`vib(rangeFrom = 0)`) writes its own slots and never invents the depth; an unset rate, range or phase reads its
+  `vibrato.*` slot default (`PitchModDefaults.kt`), so nothing is filled at the door. Sprudel's `fm(depth, ratio, attack, decay, sustain,
+  release)` too (pitch pipeline step 4): `depth` is its switch, and `fm(ratio = 2)` or `fm(release = 0.3)` writes its
+  own slot and never invents the depth. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
   `lpfCurves`, ...) are setters only: a curve never switches its envelope on, and a bare call changes
   nothing. **It is adopted AT THE DOOR only, and a door fill does not survive
   SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the
@@ -220,7 +224,11 @@ the bug.
 - Deliberate asymmetries are RECORDED with their reason (the compressor's `lookahead` exists on the
   Katalyst doors only, `k.compressor(...)` and `k.limiter(...)`, not on sprudel's `compressor(...)`: it is
   fixed when the chain is built because it sizes a delay ring, while a sprudel door writes slots on the
-  running chain; the orbit route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`). See
+  running chain; the orbit route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`; and the FM's positional
+  order: sprudel's `fm(depth, ratio, ...)` leads with the depth, the Ignitor door `x.fm(modulator, ratio, depth, ...)`
+  leads with the modulator, its structure, and puts the ratio first; the words are the same since pitch pipeline step
+  4 (D4), and sprudel kept its order so that no positional call changed, `fm(300, 1.4)` is still depth 300, ratio
+  1.4). See
   `docs/tasks/master-dsl-followups.md` section 1 for the parity audit brief.
 
 ---
@@ -345,8 +353,14 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
 12. The value handed to `setOrDefault` is what this call named, never a field an earlier fill
     wrote (§4).
 
-13. A door that calls script lambdas (a `configure`, the stages of `through`) checks what each one
-    returns, as `configuredBy` and `runThroughStages` do: null (a block body without `return`) and the
+13. A door that calls script lambdas (a `configure`, the stages of `serial`, the branches of `parallel`, the
+    processors of `bands`) checks what each one
+    returns, as `configuredBy` and `runStage` do: null (a block body without `return`) and the
     wrong type are script errors naming the door, never a cast deep inside. The error rows run on JS
     too: a null check on a value of a non-null declared type can be compiled away there and not on
     the JVM (`through`, 2026-10-02).
+
+14. A door that hands a node it BUILT to a script function (a `bands` processor, a `parallel` branch) asks, of every
+    door the receiver may call on it next, whether that door CONTINUES the node instead of wrapping it (`eq()`
+    continues an `Eq`, and a raw tap reads its `Eq`'s input). Where one does, hand a neutral wrapper, and render a
+    continuing door on the handed node in the spec (`bands`, 2026-10-10: a tap in a band read the unsplit signal).

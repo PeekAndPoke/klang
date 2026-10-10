@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.voices.DoorAdsr
 import io.peekandpoke.klang.audio_be.voices.DoorFields
+import io.peekandpoke.klang.audio_be.voices.DoorFm
 import io.peekandpoke.klang.audio_be.voices.DoorPenv
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -38,7 +39,7 @@ private val testRandom = Random(0x5EED)
  * **Every modulation envelope defaults to the house EXPONENTIAL curve** (decision D3 (b), 2026-09-25): an
  * envelope whose author writes no curve bends every stage by `g(x) = (e^(3x) - 1) / (e^3 - 1)`, the curve
  * of the chain `adsr`, on every host that has one. This spec holds the pitch envelope (the Ignitor node, alone
- * and as `classic()`'s stage, which sprudel's `penv` fills) and the voice's FM envelope. The Ignitor FM index envelope and the four
+ * and as `classic()`'s stage, which sprudel's `penv` fills) and `classic()`'s FM stage, which sprudel's `fm` fills. The Ignitor FM index envelope and the four
  * Ignitor filter envelopes are pinned elsewhere (2026-09-27): their unwritten curve against a written-out
  * Exponential oracle, stage by stage, in `EnvelopeLawSpec` (the FM and filter host rows), and the filter nodes'
  * constructor defaults in `EnvelopeCurveKnobSpec`.
@@ -47,9 +48,9 @@ private val testRandom = Random(0x5EED)
  * plain arithmetic, and the DSL rows compare against the curve NAMED as the enum literal. A default that
  * moved back to linear, or a host that stopped reading the default, is red in its own row.
  *
- * The level is compared frame by frame: the pitch node's ratio is `2^level` at 12 semitones, the strip FM's
- * multiplier is read off the voice's frequency-modulation buffer against a flat reference, and the classic
- * stage's ratio is `2^level` at 12 semitones, read off the ramp-sample probe.
+ * The level is compared frame by frame: the pitch node's ratio is `2^level` at 12 semitones, the classic FM stage's
+ * deviation is read off the ramp-sample probe against a flat reference, and the classic pitch envelope stage's ratio is
+ * `2^level` at 12 semitones, read off the same probe.
  */
 class ModEnvelopeDefaultCurveSpec : StringSpec({
 
@@ -149,73 +150,37 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         }
     }
 
-    "the strip's FM envelope: an unwritten curve (the wire has none) is the exponential curve" {
-        // The multiplier FmRenderer writes is `1 + sin(phase) * depth * level / freq`, held per block at the
-        // level of the block's first frame. Against a reference voice whose envelope is flat at 1 (attack 0,
-        // decay 0, sustain 1) and whose modulator runs the same phases, the ratio of the two deviations is
-        // the level itself. The strip FM has no release (the wire carries none); the gate is past the render.
-        fun multipliers(attack: Double, decay: Double, sustain: Double): List<DoubleArray> {
-            val registry = IgnitorRegistry().apply { registerDefaults() }
-            val voiceBuffer = DoubleArray(blockFrames)
-            val freqModBuffer = DoubleArray(blockFrames)
-            val factory = VoiceFactory(
-                sampleRate = sampleRate,
-                blockFrames = blockFrames,
-                voiceBuffer = voiceBuffer,
-                freqModBuffer = freqModBuffer,
-                scratchBuffers = ScratchBuffers(blockFrames),
-            )
-            val voice = factory.makeVoice(
-                scheduled = ScheduledVoice(
-                    playbackId = "fm",
-                    data = VoiceData.empty.copy(
-                        freqHz = 220.0, sound = "sine",
-                        fmh = 1.0, fmEnv = 100.0, fmAttack = attack, fmDecay = decay, fmSustain = sustain,
-                    ).withClassicSlots(DoorFields(adsr = DoorAdsr(on = false))),
-                    startTime = 0.0,
-                    gateEndTime = 1.0,
-                    playbackStartTime = 0.0,
-                ),
-                backendStartTimeSec = 0.0,
-                playbackCtx = PlaybackCtx(playbackId = "fm", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
-                getSample = { null },
-            ) ?: error("makeVoice returned null")
-            val rc = Voice.RenderContext(
-                cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
-                sampleRate = sampleRate,
-                blockFrames = blockFrames,
-                voiceBuffer = voiceBuffer,
-                freqModBuffer = DoubleArray(blockFrames),
-                scratchBuffers = ScratchBuffers(blockFrames),
-            )
+    "classic()'s FM stage (sprudel's fm): an unwritten curve (no door names one) is the exponential curve" {
+        // Through the real VoiceFactory and the `fm.*` slots (pitch pipeline step 4). The ratio the voice applies is
+        // `1 + sin(phase) * depth * level / freq`, read off the ramp-sample probe; against a reference voice with no
+        // envelope (every stage at its default: the depth is full on every frame, the release tail included) whose
+        // modulator runs the same phases, the ratio of the two deviations is the level itself, PER FRAME (the strip
+        // held it per block until step 4, ledger E11), gate and release included.
+        fun ratios(attack: Double?, decay: Double?, sustain: Double?, release: Double?): DoubleArray = renderPitchRatios(
+            doors = DoorFields(
+                fm = DoorFm(depth = 100.0, ratio = 1.0, attack = attack, decay = decay, sustain = sustain, release = release),
+                adsr = DoorAdsr(release = 1.0),
+            ),
+            frames = total,
+            gateFrames = gate,
+        )
 
-            return (0 until gate / blockFrames).map { b ->
-                voiceBuffer.fill(0.0)
-                rc.blockStart = (b * blockFrames).toDouble()
-                voice.render(rc)
-                freqModBuffer.copyOf()
-            }
-        }
-
-        val shaped = multipliers(attack = sec(a), decay = sec(d), sustain = s)
-        val flat = multipliers(attack = 0.0, decay = 0.0, sustain = 1.0)
+        val shaped = ratios(attack = sec(a), decay = sec(d), sustain = s, release = sec(r))
+        val flat = ratios(attack = null, decay = null, sustain = null, release = null)
         var compared = 0
 
-        for (b in shaped.indices) {
-            for (i in 0 until blockFrames) {
-                val reference = flat[b][i] - 1.0
+        for (pos in 0 until total) {
+            val reference = flat[pos] - 1.0
 
-                // Frames where the modulator crosses zero carry no level; skip them.
-                if (abs(reference) > 1e-3) {
-                    compared++
-                    withClue("block $b frame $i") {
-                        (shaped[b][i] - 1.0) / reference shouldBe (oracleLevel(b * blockFrames) plusOrMinus 1e-9)
-                    }
-                }
+            // Frames where the modulator crosses zero carry no level; skip them (the probe reads the ratio to about
+            // 1e-11, so a reference above 0.05 keeps the quotient's error under 1e-9).
+            if (abs(reference) > 0.05) {
+                compared++
+                withClue("frame $pos") { (shaped[pos] - 1.0) / reference shouldBe (oracleLevel(pos) plusOrMinus 1e-9) }
             }
         }
 
-        withClue("anti-vacuous: the modulator moved the buffer") { (compared > gate / 2) shouldBe true }
+        withClue("anti-vacuous: the modulator moved the ratio on most frames") { (compared > total / 2) shouldBe true }
     }
 
     "classic()'s pitch envelope stage (sprudel's penv): an unwritten curve slot sweeps on the exponential curve" {

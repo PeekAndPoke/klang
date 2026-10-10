@@ -9,7 +9,8 @@ module memories). The three open points of section 7 were decided on 2026-09-07:
 Nyquist (maintainer's explicit yes), raw sum, `analogSpread` default 1. Still open for the
 maintainer: the by-ear checks of section 8 and the gated 5.3 fast path. Earlier draft of the same
 day proposed two separate doors (`Ignitor.harmonics()`, `Ignitor.octaves()`); superseded by the knob form
-below, decided in discussion with the maintainer.
+below, decided in discussion with the maintainer. The fourth bank, explicit partials at any ratio, landed
+2026-10-10 (section 9).
 
 ## 1. Why this exists
 
@@ -59,6 +60,7 @@ Every partial is a multiple of **this sine's** frequency. The sine itself is par
 | `octaves(count, rolloff=1)`     | `count` partials at `2f, 4f, 8f ...`       | `m ^ -rolloff`                             |
 | `suboctaves(count, rolloff=1)`  | `count` partials at `f/2, f/4, f/8 ...`    | `m ^ -rolloff` for the partial at `f/m`    |
 | `fundamental(gain=1)`           | nothing; scales the sine's own partial     | `gain`                                     |
+| `partial(ratio, gain=1, phase=0)` (2026-10-10, section 9) | one partial at `ratio * f` per call | `gain`, start `phase` |
 | `analogSpread(amount=1)`        | nothing; how much the partials drift apart | see below                                  |
 
 One gain law for all three banks: `m ^ -rolloff`, where `m` is the multiple measured away from the
@@ -383,6 +385,42 @@ Done 2026-09-07; numbers in 5.2, the lesson (loop shape) in `audio/ref/performan
 - **Plucks and samples:** a sine with `harmonics(6, 2)` under a thin pluck for body; sample voices
   with a known note are the case where the pitch-aware bank beats the signal-derived wrapper (no
   intermodulation).
+
+## 9. The fourth bank: explicit partials (2026-10-10)
+
+Decided by the maintainer on 2026-10-09 (Q26, `docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`), built
+2026-10-10 for Der Schmetterling's snare thud, a cluster of 13 inharmonic sines that was 13 hand-rolled trees.
+
+- **Surface.** `partial(ratio, gain = 1, phase = 0)` on `OscSineBuilder`, both doors; each call adds ONE partial,
+  kept in the order written. `ratio` is any number; `gain` linear and raw; `phase` a fraction of one cycle (the
+  oscillators' unit); every knob a number or a signal. A negative gain is the same partial at `phase + 0.5`.
+- **With the other banks**: all of them play, summed raw (section 2's rule; a partial at ratio 1 doubles the
+  fundamental, a pure cluster writes `fundamental(0)`). `fundamental` is unchanged.
+- **Wire**: `Sine.partials: List<Sine.Partial>`, a plain data class `Partial(ratio, gain, phase)` (not a node and not
+  a sealed leaf, so no tag); `isPlainSine()` also asks for an empty list. The walk enumerates three children per
+  partial after the eleven fields.
+- **Engine**: a fourth `Bank` in `PartialBankIgnitor` whose count is the list's, fixed for the note, so its arrays and
+  its drift lanes are built with the node (sized from the list; nothing grows at render). Per block, as every bank
+  knob: the ratio and the phase are read once; the first block's phase is the start phase (the accumulator starts
+  there), a later change glides across its block as a frequency offset, the short way round the cycle (review round
+  1, B2: no jump; exact without drift and phase modulation). A block-constant gain (a number, a slot) is read once
+  per block; a SIGNAL gain renders its block and is read per sample, in a loop of its own (review round 1, B1: an
+  envelope on a partial's gain had lost its first block and entered with a step; now a partial with an `adsr` gain
+  renders bit for bit what the same partial as its own sine under the same `adsr` renders, and a constant gain renders
+  as before, through the unchanged loop). A partial is silent while `|ratio * f|` is at or above Nyquist or not
+  finite (a NaN ratio included); it freezes its phase meanwhile and resumes where it stopped (the banks' gate, a step
+  of up to its gain). A non-finite gain (a gain signal's sample included) reads as 0, a non-finite phase as 0.
+- **One Nyquist law per node** (review round 1, B3, 2026-10-10): the fundamental and all four banks judge the
+  frequency's MAGNITUDE (`gate`: `|f| < sampleRate / 2`, a NaN frequency silent). Before, the fundamental and the three
+  banks judged the signed frequency, so under a negative base frequency every partial passed the gate and aliased.
+  No song has a negative frequency: the corpus stayed identical. Lanes: after the three banks' at the first block, in list order; `analogSpread`
+  blends them as for the banks. The sine's own `phase` moves every explicit partial too.
+- **Resource cap**: `SINE_MAX_PARTIALS` = 256 (`coerceSinePartials`, `_resource_bounds.kt`): the engine builds the
+  first 256 and nothing of the rest, their knob subtrees included. Not on the doors, as for the unison voices.
+- **Measured** (the thud as written against one sine with 13 partials; the record's numbers are in the task file):
+  the optimized tree drops from 53 inner nodes to 3, the voice build allocates 26 percent (JVM) and 29 percent (V8)
+  of what it did, and a block renders in about 0.8 (JVM) to 0.85 (V8) of the time. `sin()` still dominates; the phasor maths for inharmonic ratios is
+  not built.
 
 ## What we built
 

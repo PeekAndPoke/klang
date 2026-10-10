@@ -1,7 +1,7 @@
 # A noise band from sines: `noiseBand(low, high, partials)`
 
 Status: **future, idea, not started.** Asked for by the maintainer 2026-10-02. A follow-up to
-[`sine-inharmonic-partials.md`](sine-inharmonic-partials.md): a noise band is one more generator of partials, so it
+[`sine-inharmonic-partials.md`](../../tasks-archive/2026-10/20261010-sine-inharmonic-partials.md): a noise band is one more generator of partials, so it
 needs the partials bank first, or composes the sines by hand until it exists.
 
 ## Why
@@ -68,7 +68,7 @@ extra here.
 
 ## Shape of the idea
 
-A bank on the sine builder, next to `harmonics`, `octaves`, `suboctaves` and the future `partials`:
+A bank on the sine builder, next to `harmonics`, `octaves`, `suboctaves` and the explicit `partial` (2026-10-10):
 
 ```javascript
 Ignitor.sine(x => x.fundamental(0).noiseBand(low = 140, high = 700, partials = 13))
@@ -76,7 +76,8 @@ Ignitor.sine(x => x.fundamental(0).noiseBand(low = 140, high = 700, partials = 1
 ```
 
 Frequencies on the geometric grid, gains `1 / sqrt(N)` tilted by the colour, alternating signs, all fixed at build:
-no randomness, the same on every note. Until the partials bank exists, the same can be composed from plain sines.
+no randomness, the same on every note. Until it exists, the same can be written as `partial(ratio, gain)` calls,
+one per grid point (the signs as `phase = 0.5`), on one sine.
 
 ## To decide before implementing
 

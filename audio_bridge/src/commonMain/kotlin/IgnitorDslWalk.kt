@@ -28,7 +28,7 @@ package io.peekandpoke.klang.audio_bridge
  *
  * **Child order is part of the contract** — [withChildNodes] re-reads the list positionally, so
  * the order here must match constructor order for every node, and both functions must agree.
- * `IgnitorDslWalkSpec` pins round-tripping for every type, sections included.
+ * `IgnitorDslWalkSpec` pins round-tripping for every type, sections and sine partials included.
  *
  * Naming note: these are `childNodes`/`withChildNodes`, NOT `children`, because
  * [IgnitorDsl.Variants] already has a `children` PROPERTY that a function of the same name
@@ -91,6 +91,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
             inner, semitones, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.PitchMod -> listOf(inner, mod)
+        is IgnitorDsl.PitchModSemitones -> listOf(inner, mod)
         is IgnitorDsl.Pluck -> listOf(freq, feedback, brightness, pickPosition, stiffness, analog)
         is IgnitorDsl.Plus -> listOf(left, right)
         is IgnitorDsl.Pow -> listOf(base, exp)
@@ -110,7 +111,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Sine -> listOf(
             freq, analog, fundamental, harmonics, harmonicsRolloff, octaves, octavesRolloff,
             suboctaves, suboctavesRolloff, analogSpread, phase,
-        )
+        ) + partials.flatMap { listOf(it.ratio, it.gain, it.phase) }
         is IgnitorDsl.Sq -> listOf(inner)
         is IgnitorDsl.Sqrt -> listOf(inner)
         is IgnitorDsl.Square -> listOf(freq, analog, phase)
@@ -127,7 +128,8 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Tremolo -> listOf(inner, rate, depth, shape, rangeFrom, rangeTo)
         is IgnitorDsl.Tri -> listOf(freq, analog, phase)
         is IgnitorDsl.Variants -> children
-        is IgnitorDsl.Vibrato -> listOf(inner, rate, semitones)
+        is IgnitorDsl.Parallel -> branches
+        is IgnitorDsl.Vibrato -> listOf(inner, rate, semitones, rangeFrom, rangeTo, phase)
         is IgnitorDsl.WhiteNoise -> listOf(color)
         is IgnitorDsl.Zamp -> listOf(freq, analog, phase)
         is IgnitorDsl.Zawtooth -> listOf(freq, analog, phase)
@@ -256,6 +258,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             releaseCurve = new[8],
         )
         is IgnitorDsl.PitchMod -> copy(inner = new[0], mod = new[1])
+        is IgnitorDsl.PitchModSemitones -> copy(inner = new[0], mod = new[1])
         is IgnitorDsl.Pluck -> copy(
             freq = new[0],
             feedback = new[1],
@@ -283,6 +286,12 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             freq = new[0], analog = new[1], fundamental = new[2], harmonics = new[3], harmonicsRolloff = new[4],
             octaves = new[5], octavesRolloff = new[6], suboctaves = new[7], suboctavesRolloff = new[8],
             analogSpread = new[9], phase = new[10],
+            // three children per partial, in list order, after the eleven fields
+            partials = partials.mapIndexed { i, p ->
+                val at = 11 + 3 * i
+
+                p.copy(ratio = new[at], gain = new[at + 1], phase = new[at + 2])
+            },
         )
         is IgnitorDsl.Sq -> copy(inner = new[0])
         is IgnitorDsl.Sqrt -> copy(inner = new[0])
@@ -320,7 +329,8 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         )
         is IgnitorDsl.Tri -> copy(freq = new[0], analog = new[1], phase = new[2])
         is IgnitorDsl.Variants -> copy(children = new)
-        is IgnitorDsl.Vibrato -> copy(inner = new[0], rate = new[1], semitones = new[2])
+        is IgnitorDsl.Parallel -> copy(branches = new)
+        is IgnitorDsl.Vibrato -> copy(inner = new[0], rate = new[1], semitones = new[2], rangeFrom = new[3], rangeTo = new[4], phase = new[5])
         is IgnitorDsl.WhiteNoise -> copy(color = new[0])
         is IgnitorDsl.Zamp -> copy(freq = new[0], analog = new[1], phase = new[2])
         is IgnitorDsl.Zawtooth -> copy(freq = new[0], analog = new[1], phase = new[2])

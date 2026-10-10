@@ -14,6 +14,28 @@ Branch: `pitch-pipeline` (from `main` at `662aa8db`, v0.6.0; `katalyst-distort` 
 
 ---
 
+## Q33. Accelerate: compose it as D11 says, or keep the node (composition 7e)
+
+Your D11 (2026-10-09): "if we can represent them through other primitives, they should leave, same as the tremolo
+node did", so accelerate was to become `pitchModSemitones(semitones * progress)`. The spike
+(`tmp/reviews/pp-7e-report.md`) built it and measured it against today's node:
+
+```
+note("c3").s("saw").accelerate(12).release(1)
+// sound: the same apart from a rounding of about 8e-8 cents (Kokon's strike moves at -148 dB)
+// cost:  about +0.7 us per accelerate voice per block, while gliding AND while holding the target
+//        (1.2 to 1.5x on V8, 1.4 to 2x on the JVM); today one multiply per frame, composed three passes per frame
+```
+
+Two smaller differences, only for a script-door accelerate with a SIGNAL amount: the amount is read per sample (like
+the vibrato after 7b), and an infinite sample pushes the pitch to the ceiling or freezes the source where today it
+plays no glide. Options: (a) keep the node for now, as the pitch envelope did (Q32; the work stops here until you
+say); (b) compose it and accept the cost (about 0.03 % of a block per voice) and the infinite-sample clause. The
+pitch envelope and accelerate are the same question, so one answer can cover both. Recommendation: (a), revisit if a
+cheaper "settled block" path ever exists for other reasons.
+
+---
+
 # Part 2: Decided by default, please confirm
 
 Work went ahead with the conservative choice. A "no" here means a small follow-up change.
@@ -40,6 +62,61 @@ code now does them:
 3. A ringing soloed voice of the WEAKER of two solos plays at full level, like every protected voice.
 
 Say if any of these should be different.
+
+## Q30. Sprudel `fm` without an envelope keeps its depth through the release tail (pitch step 4)
+
+Source: the step 4 worker, before any code changed (`tmp/reviews/pp-step4-report.md`). The plan said the new
+`fm.release` slot at 0.0 is "today's sound". That holds for an enveloped `fm`, not for one without an envelope.
+Decided by default under D3 ("FM moves onto the node's law, proven by listening pairs"):
+
+```
+note("c3").s("sine").fm(300, 1.4).release(0.5)
+// before: the FM depth drops to 0 at the first block after the gate; the 0.5 s tail is the plain sine (-19.2 dB diff)
+// after:  the FM depth stays full through the tail, as the Ignitor door's fm always did
+```
+
+The strip ran its FM envelope on every voice with the release fixed at 0, so the modulation stopped at the gate (the
+block-framing ledger's E10/E11 defect). The node runs an envelope only when one is written. An enveloped `fm` with
+release 0 still stops at the gate, now exactly on the gate frame, and the new `fm(release = ...)` can ramp it. No
+song uses sprudel's `fm`. A listening pair joins `tmp/listening/pp-step4/`. A "no" means a law change on the `Fm` node
+for every envelope-free fm, or a switch only `classic()` sets.
+
+## Q31. `s("sgpad").fm(...)` loses its pitch (pitch step 4; your 3b call, now with numbers)
+
+Your 3b decision: the one shape the engine cannot process (an fm above a forking `detune`) "stays quiet and recorded"
+for `s("sgpad").fm(...)`, decided when it happens on a real song. Step 4 kept that. Review round 1 measured how it
+sounds, and it is worse than the earlier +0.6 dB suggested:
+
+```
+note("c3").s("sgpad").fm(150, 1.5)
+// before (v0.6.1): one FM for both saw layers, the pad's pitch intact (2.6 % of the energy off the harmonic grid)
+// after:  one modulator serves both layers and jumps a block of phase at every block boundary:
+//         95 % of the energy off the grid, an inharmonic comb about 18.75 Hz apart, the pitch is gone,
+//         and the output depends on the block size (+2.8 dB between blocks of 128 and 64)
+```
+
+`sgpad` is the only built-in with this shape (`(Saw() + Saw().detune(0.1)) / 2`); no song uses sprudel's `fm`. A
+listening pair is in `tmp/listening/pp-step4/`. Options: (a) keep it as decided, recorded; (b) rebuild `sgpad` so it
+reads one pitch per FM (the author rule, `x.fm(...) + x.fm(...).detune(...)`, does not fit a slot-fed classic stage, so
+this would need a look); (c) the build-time diagnostic task (`fm-above-forking-detune-diagnostic.md`) also covers a
+sprudel door over a built-in. Recommendation: (a) for now, and decide when a song wants it.
+
+## Q32. The pitch envelope stays a node (composition 7d, D10's fallback)
+
+Your D10: compose the pitch envelope the tremolo's way, "the spike confirms the same sound and cost first". The spike
+(`tmp/reviews/pp-7d-report.md`) did not confirm the cost, so the node stays, by D10's own rule:
+
+```
+s("saw").penv(12, 0.01, 0.1, 0)        // the sound: identical when composed (with an adsr that may go below 0)
+// the cost once the envelope has settled (most of every note): today one ratio per block,
+// composed one envelope step and one exponential per sample: about 2x on V8 (+1 us per voice per block),
+// 1.7 to 2.6x on the JVM
+```
+
+A script-door penv with SIGNAL knobs would also sound different composed (a moving amount read per sample, like the
+vibrato after 7b). Options: (a) keep the node (decided by default); (b) compose it anyway and accept about 1 us per
+settled penv voice per block (0.04 % of a block per voice); (c) compose it and move the node's two "settled" shortcuts
+into the envelope host (the code moves rather than goes). Recommendation: (a). Say if you prefer (b) or (c).
 
 ---
 

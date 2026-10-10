@@ -14,15 +14,9 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
-import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -36,15 +30,15 @@ import kotlin.random.Random
  *
  * Every voice is ONE Ignitor tree (phase 3 step 9 retired the voice strip): a registered instrument's tree
  * (a built-in, an authored instrument, an inline one) or the sample instrument over the voice's PCM. Around
- * it the voice runs only its pitch pipeline (in front), the teardown fade when the tree's root is not a built
- * envelope, and the channel (gain, pan, the orbit's send). An authored instrument that does not end in
- * `classic()` is played as its bare tree: no voice envelope, no doors.
+ * it the voice runs only the teardown fade (when the tree's root is not a built envelope) and the channel (gain,
+ * pan, the orbit's send); nothing runs in front of it since pitch pipeline step 5 (every pitch door is a `classic()`
+ * stage). An authored instrument that does not end in `classic()` is played as its bare tree: no voice envelope,
+ * no doors.
  */
 class VoiceFactory(
     private val sampleRate: Int,
     private val blockFrames: Int,
     private val voiceBuffer: AudioBuffer,
-    private val freqModBuffer: DoubleArray,
     private val scratchBuffers: ScratchBuffers,
 ) {
 
@@ -142,25 +136,6 @@ class VoiceFactory(
         // latch it for the rest of the playback.
         val gain = data.gain?.takeIf { it.isFinite() } ?: 1.0 // NaN-guard: non-finite reads as unset
 
-        // FM Synthesis
-        val fm = if (data.fmh != null || (data.fmEnv ?: 0.0) != 0.0) {
-            val ratio = data.fmh ?: FM_RATIO
-            val depth = data.fmEnv ?: 0.0
-            // The modulation envelopes' curve, the Ignitor FM node's (decision D3).
-            val fmEnv = Voice.Envelope(
-                attackFrames = (data.fmAttack ?: 0.0) * sampleRate,
-                decayFrames = (data.fmDecay ?: 0.0) * sampleRate,
-                sustainLevel = data.fmSustain ?: 1.0,
-                releaseFrames = 0.0,
-                attackCurve = MOD_ENV_CURVE,
-                decayCurve = MOD_ENV_CURVE,
-                releaseCurve = MOD_ENV_CURVE,
-            )
-            Voice.Fm(ratio = ratio, depth = depth, envelope = fmEnv)
-        } else {
-            null
-        }
-
         return when {
             isOsci -> {
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
@@ -177,7 +152,7 @@ class VoiceFactory(
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
                     gain = gain,
-                    fm = fm, signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
+                    signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
                     treeStages = treeStages(built),
@@ -299,7 +274,7 @@ class VoiceFactory(
                 buildVoice(
                     data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
                     gain = gain,
-                    fm = fm, signal = built.ignitor, freqHz = baseSamplePitchHz,
+                    signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull(cull, built),
@@ -354,7 +329,6 @@ class VoiceFactory(
         voiceDurationFrames: Int,
         cylinder: Int,
         gain: Double,
-        fm: Voice.Fm?,
         signal: Ignitor,
         freqHz: Double,
         /** The voice's random stream (seeded-voice-rng; same instance the exciter was built
@@ -376,19 +350,10 @@ class VoiceFactory(
             random = voiceRandom,
         )
 
-        val pipeline = buildPitchPipeline(
-            fm = fm,
-            freqHz = freqHz,
-            sampleRate = sampleRate,
-        ) + IgniteRenderer(
-            signal = signal,
-            signalCtx = signalCtx,
-            freqHz = freqHz,
-        ) + treeStages
+        val pipeline = listOf(IgniteRenderer(signal = signal, signalCtx = signalCtx, freqHz = freqHz)) + treeStages
 
         val blockCtx = BlockContext(
             audioBuffer = voiceBuffer,
-            freqModBuffer = freqModBuffer,
             scratchBuffers = scratchBuffers,
             sampleRate = sampleRate,
             // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.

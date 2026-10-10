@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.coerceSinePartials
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
@@ -26,7 +27,12 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_EDGE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
@@ -52,9 +58,9 @@ import kotlin.random.Random
  * **Pitch-mod bubbling:**
  *
  * Pitch-mod DSL nodes ([IgnitorDsl.Vibrato], [IgnitorDsl.Accelerate], [IgnitorDsl.PitchEnvelope],
- * [IgnitorDsl.Fm]) do not become Ignitor wrappers. Instead, they produce a mod Ignitor (ratio-space,
- * 1.0 = no change) that is accumulated and passed down to the source oscillator via
- * [ModApplyingIgnitor]. Insert effects and binary ops pass the mod through transparently.
+ * [IgnitorDsl.Fm], [IgnitorDsl.PitchMod], [IgnitorDsl.PitchModSemitones]) do not become Ignitor wrappers. Instead,
+ * they produce a mod Ignitor (ratio-space, 1.0 = no change) that is accumulated and passed down to the source
+ * oscillator via [ModApplyingIgnitor]. Insert effects and binary ops pass the mod through transparently.
  */
 fun IgnitorDsl.buildExciter(
     ignitorParams: Map<String, Double>? = null,
@@ -380,9 +386,10 @@ internal fun IgnitorDsl.buildIgnitor(
     }
 
     // ── Pitch-mod nodes: absorb into mod, descend. No cache entry for this node itself; its mod is memoized (`combineMods`).
-    //    The four with a switch knob are GATED first (pitch pipeline step 0): off, the walk descends with the UNCHANGED
-    //    mod and builds nothing of the node (see `gatedOff`, "a gated PITCH arm"; a build-time walk over the DSL, the
-    //    detune fold predicate, still sees its knobs). `PitchMod` has no switch. ──
+    //    The five with a switch knob are GATED first (pitch pipeline step 0; `pitchModSemitones` at a literal mod, 7a):
+    //    off, the walk descends with the UNCHANGED mod and builds nothing of the node (see `gatedOff`, "a gated PITCH
+    //    arm"; a build-time walk over the DSL, the detune fold predicate, still sees its knobs). `PitchMod` is not
+    //    gated (`audio/ref/off-values.md`). ──
     when (this) {
         is IgnitorDsl.Vibrato -> {
             // GATE ROW `vibrato` (audio/ref/off-values.md): off at a FINITE leaf depth <= 0 only. A non-finite
@@ -391,9 +398,15 @@ internal fun IgnitorDsl.buildIgnitor(
                 return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
+            // A composition since pitch pipeline 7b (`vibratoModIgnitor`). Build order is rng draw order: rate, then
+            // semitones, as before; then the range and the phase (7c), which build nothing at their literal defaults.
+            val ranged = hasBuiltRange(ignitorParams = ignitorParams, cache = cache)
             val vibMod = vibratoModIgnitor(
-                rate = this.rate.buildIgnitor(ignitorParams, cache).ignitor,
-                semitones = this.semitones.buildIgnitor(ignitorParams, cache).ignitor,
+                rate = this.rate.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RATE_HZ),
+                semitones = this.semitones.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_SEMITONES),
+                rangeFrom = if (ranged) rangeFrom.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RANGE_FROM) else null,
+                rangeTo = if (ranged) rangeTo.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RANGE_TO) else null,
+                phase = vibratoPhase(ignitorParams = ignitorParams, cache = cache),
             )
             return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, vibMod, node = this))
         }
@@ -434,6 +447,18 @@ internal fun IgnitorDsl.buildIgnitor(
         is IgnitorDsl.PitchMod -> {
             val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
             val ratioMod = deviationToRatioIgnitor(userMod)
+            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, ratioMod, node = this))
+        }
+
+        is IgnitorDsl.PitchModSemitones -> {
+            // GATE ROW `pitchModSemitones`: off at a leaf mod == 0, or non-finite (the bare voice, as accelerate and
+            // the pitch envelope read theirs). A signal mod is never gated; its NaN sample reads as ratio 0.
+            if (mod.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+                return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
+            }
+
+            val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
+            val ratioMod = semitonesToRatioIgnitor(userMod)
             return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, ratioMod, node = this))
         }
 
@@ -643,15 +668,19 @@ private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: Map<String, Double>?, c
 /**
  * The `vibrato` row of the gate: off at a FINITE off value only; a non-finite knob keeps the stage.
  *
- * **Why the vibrato differs from the other three pitch arms.** The gate reads a non-finite knob as
+ * **Why the vibrato differs from the other four pitch arms.** The gate reads a non-finite knob as
  * unset, and for most gated stages unset IS off (`mul` and the envelope's `on` are the other two
- * exceptions, for their own reasons). The vibrato's runtime reads a non-finite
- * depth as unset too, but unset there is the node's DEFAULT depth (`VIBRATO_SEMITONES`, the
- * `finiteOr` rule in `PitchModFactories.kt`, stated once in `PitchModDefaults.kt`), not 0. So a
+ * exceptions, for their own reasons). The vibrato reads a non-finite literal
+ * depth as unset too, but unset there is the node's DEFAULT depth (`VIBRATO_SEMITONES`, stated once
+ * in `PitchModDefaults.kt`; since pitch pipeline 7b the arm substitutes it at build,
+ * [finiteLiteralOr], where the node it replaced read it per block with `finiteOr`), not 0. So a
  * non-finite depth renders a vibrato, and gating it off would change the sound instead of folding
  * a stage that writes exactly 1.0. Accelerate, the pitch envelope and FM read a non-finite switch
- * as 0, so for them [gatedOff]'s non-finite arm IS a fold. There is no NaN hazard to guard here
- * either: the runtime already substitutes. Decided 2026-10-07 (coordinator, pitch pipeline step 0).
+ * as 0, so for them [gatedOff]'s non-finite arm IS a fold. `pitchModSemitones` (7a) is off at a
+ * non-finite literal too, but there the gate is NOT a fold: built, NaN and -Infinity read as the
+ * ratio 0 and +Infinity as `SAFE_MAX` (its row in `audio/ref/off-values.md`). There is no NaN hazard
+ * to guard here either: the runtime already substitutes. Decided 2026-10-07 (coordinator, pitch
+ * pipeline step 0).
  */
 private inline fun IgnitorDsl.gatedOffWhenFinite(
     ignitorParams: Map<String, Double>?,
@@ -661,6 +690,56 @@ private inline fun IgnitorDsl.gatedOffWhenFinite(
     val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
 
     return value.isFinite() && isOff(value)
+}
+
+/**
+ * A vibrato knob, built; a LITERAL ([IgnitorDsl.Param] or [IgnitorDsl.Constant] leaf) that is not finite builds the
+ * node's default [fallback] instead (pitch pipeline 7b). The vibrato read a non-finite rate or depth as its default
+ * before it was composed (`finiteOr`, once per block), and its gate keeps a non-finite literal depth BUILT for that
+ * reason ([gatedOffWhenFinite]); the composition reads its knobs per sample and has no such read, so the literal case
+ * keeps the default here, at build. A signal is built as it is (the edge rules: the `vibrato` row of
+ * `audio/ref/off-values.md`). Leaf-only, so asking draws nothing ([gatedOff]'s KDoc).
+ */
+private fun IgnitorDsl.finiteLiteralOr(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache, fallback: Double): Ignitor {
+    val literal = buildTimeKnobValue(ignitorParams, cache)
+
+    if (literal != null && !literal.isFinite()) {
+        return ConstantIgnitor(fallback)
+    }
+
+    return buildIgnitor(ignitorParams, cache).ignitor
+}
+
+/**
+ * True when the vibrato builds its `range(from, to)` (pitch pipeline 7c); false at the default swing, which builds NO
+ * range: both knobs LITERALS ([IgnitorDsl.Param] or [IgnitorDsl.Constant] leaves, a `classic()` slot included) that read
+ * `VIBRATO_RANGE_FROM` and `VIBRATO_RANGE_TO` once a non-finite literal has taken its default. A built `range(-1, 1)` is
+ * not the identity in floating point (`-1 + (x + 1) * 1` rounds), so this is what keeps the default on the unranged
+ * vibrato's bits. When built, a non-finite literal bound reads as its default ([finiteLiteralOr], the vibrato's rule for
+ * its other knobs); a signal is built as it is (the edge rules: the `vibrato` row of `audio/ref/off-values.md`).
+ * Leaf-only, so asking draws nothing.
+ */
+private fun IgnitorDsl.Vibrato.hasBuiltRange(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean {
+    val from = rangeFrom.buildTimeKnobValue(ignitorParams, cache)?.let { if (it.isFinite()) it else VIBRATO_RANGE_FROM }
+    val to = rangeTo.buildTimeKnobValue(ignitorParams, cache)?.let { if (it.isFinite()) it else VIBRATO_RANGE_TO }
+
+    return !(from == VIBRATO_RANGE_FROM && to == VIBRATO_RANGE_TO)
+}
+
+/**
+ * The vibrato LFO's `phase` input (pitch pipeline 7c), built; null for a LITERAL ([IgnitorDsl.Param] or
+ * [IgnitorDsl.Constant] leaf, a `classic()` slot included) of 0 or a non-finite one, which builds no input, so the
+ * sine renders exactly as without the knob (the oscillators' `phase` reads a non-finite offset as 0 too, `PhaseOffset`).
+ * Any other value or a signal is the sine's own `phase` input: the oscillators' unit and law, one word per concept.
+ */
+private fun IgnitorDsl.Vibrato.vibratoPhase(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Ignitor? {
+    val literal = phase.buildTimeKnobValue(ignitorParams, cache)
+
+    if (literal != null && (literal == 0.0 || !literal.isFinite())) {
+        return null
+    }
+
+    return phase.buildIgnitor(ignitorParams, cache).ignitor
 }
 
 /**
@@ -1068,13 +1147,22 @@ private fun IgnitorDsl.buildRaw(
     // The last child `withMod` built, so a pass-through can hand its answer on.
     var lastChildEndsInEnvelope = false
 
-    fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor {
+    // How late the signal spine is, exact (see [BuiltIgnitor.latencySamples]): the latest of the signal children,
+    // absorbed along the same edges as the tail, plus what THIS node adds ([ownLatency], set by the oversampled arms).
+    var spineLatency = 0.0
+    var ownLatency = 0.0
+
+    /** [withMod] with the child's whole answer, for an arm that needs more than its signal (the `Parallel` arm). */
+    fun IgnitorDsl.withModBuilt(mod: Ignitor? = accumulatedMod): BuiltIgnitor {
         val built = buildIgnitor(ignitorParams, cache, mod)
         spineTail = maxTail(a = spineTail, b = built.releaseTailSec)
         spineGatesOutput = spineGatesOutput || built.gatesOutput
         lastChildEndsInEnvelope = built.endsInEnvelope
-        return built.ignitor
+        spineLatency = maxOf(spineLatency, built.latencySamples)
+        return built
     }
+
+    fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor = withModBuilt(mod).ignitor
 
     /** A gated-off stage: the node is not built and IS its inner, [BuiltIgnitor.endsInEnvelope] included. */
     fun IgnitorDsl.passThrough(): Ignitor {
@@ -1118,7 +1206,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Param, is IgnitorDsl.Constant, is IgnitorDsl.Freq ->
             error("Leaf DSL nodes must be built in buildIgnitor, not buildRaw")
 
-        is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.Fm, is IgnitorDsl.PitchMod ->
+        is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.Fm, is IgnitorDsl.PitchMod,
+        is IgnitorDsl.PitchModSemitones ->
             error("Pitch-mod DSL nodes must be absorbed in buildIgnitor, not buildRaw")
 
         is IgnitorDsl.Variants ->
@@ -1141,6 +1230,10 @@ private fun IgnitorDsl.buildRaw(
                     harmonics = harmonics.noMod(), harmonicsRolloff = harmonicsRolloff.noMod(), octaves = octaves.noMod(), octavesRolloff = octavesRolloff.noMod(),
                     suboctaves = suboctaves.noMod(), suboctavesRolloff = suboctavesRolloff.noMod(), analogSpread = analogSpread.noMod(), phase = phase.phaseInput(),
                     countsAtBuild = !cache.usesMusicalFreq(harmonics) && !cache.usesMusicalFreq(octaves) && !cache.usesMusicalFreq(suboctaves),
+                    // the first SINE_MAX_PARTIALS in list order; the rest are not built, their knob subtrees included
+                    partials = partials.take(coerceSinePartials(partials.size)).map { p ->
+                        Ignitors.SinePartial(ratio = p.ratio.noMod(), gain = p.gain.noMod(), phase = p.phase.noMod())
+                    },
                 ),
             )
         }
@@ -1285,6 +1378,19 @@ private fun IgnitorDsl.buildRaw(
         // ── Arithmetic: pass mod to both children ──
 
         is IgnitorDsl.Plus -> left.withMod() + right.withMod()
+
+        // Branches side by side, summed, every earlier branch delayed to the latest one, so an oversampled branch
+        // does not comb against a dry one. The branches share their input by identity (the door hands every branch
+        // the same node), so the build cache builds it once. Latest = [spineLatency] after the branches, which is
+        // also what this node reports. An empty list (the doors never write one) is silence, as an empty sum is.
+        is IgnitorDsl.Parallel -> {
+            val built = branches.map { it.withModBuilt() }
+            val latest = spineLatency
+            // Rounded here and only here: the pad is whole samples, the latencies it compares are exact.
+            val padded = built.map { it.ignitor.delayedBy((latest - it.latencySamples).roundToInt()) }
+
+            if (padded.isEmpty()) Ignitors.silence() else padded.reduce { sum, next -> sum + next }
+        }
 
         // GATE ROW `mul`: a factor of EXACTLY 1.0 over a SIGNAL is not built, and the signal is
         // returned (unset is deliberately NOT off here, and a control-rate survivor never folds;
@@ -1611,11 +1717,14 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Distort -> if (amount.gatedOff(ignitorParams, cache) { it <= 0.0 }) {
             inner.passThrough()
         } else {
-            inner.withMod().fusedDistort(
-                amount.noMod(),
-                shape.distortionShapeKnob(ignitorParams, cache),
-                oversample.oversampleStagesKnob(ignitorParams, cache),
-            )
+            // In the order these were always built (inner, amount, shape, oversample): build order is draw order.
+            val signal = inner.withMod()
+            val drive = amount.noMod()
+            val shaper = shape.distortionShapeKnob(ignitorParams, cache)
+            val stages = oversample.oversampleStagesKnob(ignitorParams, cache)
+            ownLatency = Oversampler.groupDelaySamples(stages)
+
+            signal.fusedDistort(drive, shaper, stages)
         }
 
         // GATE ROW `drive`: at or below 0.0, or unset. THE row the authoring doors reach, because
@@ -1640,10 +1749,15 @@ private fun IgnitorDsl.buildRaw(
 
         // NOT gated (no amount knob, see the `drive` row). Its shape and oversampling factor are knobs
         // read once, here, at voice build (phase 3 step 3b; the factor is decision D7's stopgap).
-        is IgnitorDsl.Shape -> inner.withMod().shape(
-            shape.distortionShapeKnob(ignitorParams, cache),
-            oversample.oversampleStagesKnob(ignitorParams, cache),
-        )
+        is IgnitorDsl.Shape -> {
+            // In the order these were always built (inner, shape, oversample): build order is draw order.
+            val signal = inner.withMod()
+            val shaper = shape.distortionShapeKnob(ignitorParams, cache)
+            val stages = oversample.oversampleStagesKnob(ignitorParams, cache)
+            ownLatency = Oversampler.groupDelaySamples(stages)
+
+            signal.shape(shaper, stages)
+        }
 
         // GATE ROW `crush`: BELOW 1.0, or unset, and NOT 0. `CrushIgnitor` itself bypasses below two
         // levels (`CrushCore.halfLevels`, bits below 1), and `Ignitor.crush(Double)` returns the
@@ -1718,5 +1832,11 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet = wet.noMod(), feedback = feedback.noMod(), tone = tone.noMod(), pitches = pitches, floor = floor.noMod())
     }
 
-    return BuiltIgnitor(ignitor = ignitor, releaseTailSec = spineTail, gatesOutput = spineGatesOutput, endsInEnvelope = builtEnvelope)
+    return BuiltIgnitor(
+        ignitor = ignitor,
+        releaseTailSec = spineTail,
+        gatesOutput = spineGatesOutput,
+        endsInEnvelope = builtEnvelope,
+        latencySamples = spineLatency + ownLatency,
+    )
 }

@@ -604,11 +604,11 @@ object SongBenchmarkCases {
     }
 
     private const val RHYTHM_RIG =
-        "let rhythmRig = x => x.through(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)"
+        "let rhythmRig = x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)"
 
     /** The rhythm rig with five of its stages replaced; the snare cut between the power amp and the cab stays. */
     private fun rhythmRig(pickup: String, pedal: String, preamp: String, power: String, cab: String): String =
-        "let rhythmRig = x => x.through($pickup, $pedal, $preamp, $power, snareCut, $cab)"
+        "let rhythmRig = x => x.serial($pickup, $pedal, $preamp, $power, snareCut, $cab)"
 
     private const val BAND = ".analog(feel).transpose(transposition)"
     private const val RHYTHM = "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange))$BAND"

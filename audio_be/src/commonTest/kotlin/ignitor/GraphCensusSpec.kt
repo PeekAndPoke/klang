@@ -27,6 +27,17 @@ class GraphCensusSpec : StringSpec({
     fun c(v: Double) = IgnitorDsl.Constant(v)
     val saw = IgnitorDsl.Saw()
 
+    "a sine's explicit partials count up to the cap: the knobs of a 257th and later are not built, so not counted" {
+        // every gain a signal (a 3 Hz sine), so each built partial's knob is one more source pass
+        fun sine(n: Int) = IgnitorDsl.Sine(
+            fundamental = c(0.0),
+            partials = List(n) { IgnitorDsl.Sine.Partial(ratio = c(0.5 + 0.01 * it), gain = IgnitorDsl.Sine(freq = c(3.0 + it))) },
+        )
+
+        GraphCensus.of(sine(300)) shouldBe GraphCensus.of(sine(256))
+        GraphCensus.of(sine(255)).passes shouldBe GraphCensus.of(sine(256)).passes - 1
+    }
+
     "a source is one pass that writes the block" {
         val census = GraphCensus.of(saw)
 

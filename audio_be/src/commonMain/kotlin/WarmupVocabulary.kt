@@ -39,8 +39,10 @@ import io.peekandpoke.klang.audio_bridge.neg
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimizer
+import io.peekandpoke.klang.audio_bridge.parallel
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.pitchMod
+import io.peekandpoke.klang.audio_bridge.pitchModSemitones
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.pow
 import io.peekandpoke.klang.audio_bridge.range
@@ -118,6 +120,17 @@ object WarmupVocabulary {
         IgnitorDsl.SuperTri(voices = Constant(5.0)),
         IgnitorDsl.SuperRamp(voices = Constant(5.0)),
         IgnitorDsl.Sine(harmonics = Constant(7.0), octaves = Constant(2.0), suboctaves = Constant(1.0)),
+        // the explicit partials: the per-block reader (a start phase), the per-sample gain loop (an envelope) and the
+        // phase glide (a moving phase)
+        IgnitorDsl.Sine(
+            fundamental = Constant(0.0),
+            partials = listOf(
+                IgnitorDsl.Sine.Partial(ratio = Constant(0.66), gain = Constant(0.5)),
+                IgnitorDsl.Sine.Partial(ratio = Constant(1.25), gain = Constant(0.5), phase = Constant(0.5)),
+                IgnitorDsl.Sine.Partial(ratio = Constant(2.19), gain = Constant(0.6).adsr(attack = 0.001, decay = 0.3, sustain = 0.2, release = 0.1)),
+                IgnitorDsl.Sine.Partial(ratio = Constant(2.76), gain = Constant(0.3), phase = slowPhase()),
+            ),
+        ),
         IgnitorDsl.Pluck(),
         IgnitorDsl.SuperPluck(voices = Constant(3.0)),
         // the stacks' and the bank's `phase` paths: a constant shift and the phased voice loops
@@ -209,6 +222,7 @@ object WarmupVocabulary {
         .shape("soft")
         .distort(0.5, "hard", oversample = 4) // = Drive + Shape (oversampled)
         .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3), oversample = Constant(2.0)) } // the gated drive+shape unit
+        .parallel({ it }, { it.distort(0.3, "soft", oversample = 2) }) // branches summed, the dry one padded to the late one
         .crush(6.0)
         .coarse(3.0)
         .phaser(wet = 0.5, rate = 0.7, center = 800.0)
@@ -219,6 +233,7 @@ object WarmupVocabulary {
         .vibrato(rate = 5.0, semitones = 0.2)
         .accelerate(1.0)
         .pitchMod(IgnitorDsl.Sine(freq = Constant(3.0)).mul(Constant(0.1)))
+        .pitchModSemitones(IgnitorDsl.Sine(freq = Constant(4.0)).mul(Constant(0.3)))
         .let { IgnitorDsl.PitchEnvelope(inner = it, semitones = Constant(12.0), decay = Constant(0.1)) }
         .mul(Constant(0.4))
 

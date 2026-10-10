@@ -148,9 +148,10 @@ The release-defining set, regardless of when they're sequenced:
     - **NICE, parked:** `svf-resonator-class-collapse` (dead sweep code in the resonators' SVF classes) is DONE by
       engine tidy-up step 12 (a), 2026-10-08 (`../tasks-archive/2026-10/20261008-svf-resonator-class-collapse.md`).
       **Promoted to V1, high priority, 2026-10-07:**
-      [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md) (vibrato, accelerate, `penv`, `fm` still
-      outside the tree; `_v1-scope.md` Layer 2). Steps 1 to 3b done 2026-10-09 (v0.6.1): only `fm` and the strip's
-      shell are left.
+      [`pitch-pipeline-into-the-tree.md`](in-progress/pitch-pipeline-into-the-tree.md) (vibrato, accelerate, `penv`, `fm`
+      into the tree; `_v1-scope.md` Layer 2). Steps 1 to 3b done 2026-10-09 (v0.6.1), steps 4 (`fm`) and 5 (the strip's
+      shell, `voices/strip/` dissolved) 2026-10-10: left are the listening round before the branch merges, then the
+      composition block (section 7).
     - Existing homes: [`future/envelope-shape-followups.md`](future/envelope-shape-followups.md) sections 4 to 6 (FM
       curves, a per-curve bend, the in-block corner), [`future/one-chain-host.md`](future/one-chain-host.md),
       [`future/onepole-highpass-door.md`](future/onepole-highpass-door.md),

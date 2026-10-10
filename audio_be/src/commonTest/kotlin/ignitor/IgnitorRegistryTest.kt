@@ -355,7 +355,7 @@ class IgnitorRegistryTest : StringSpec({
 
             onepole.freq shouldBe IgnitorDsl.Slots.onepole
             onepole.inner.shouldBeInstanceOf<IgnitorDsl.Vibrato>().inner.shouldBeInstanceOf<IgnitorDsl.Accelerate>()
-                .inner.shouldBeInstanceOf<IgnitorDsl.PitchEnvelope>().inner shouldBe saw.pregain()
+                .inner.shouldBeInstanceOf<IgnitorDsl.PitchEnvelope>().inner.shouldBeInstanceOf<IgnitorDsl.Fm>().carrier shouldBe saw.pregain()
         }
     }
 

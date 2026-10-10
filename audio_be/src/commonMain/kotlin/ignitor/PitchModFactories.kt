@@ -10,20 +10,20 @@ import io.peekandpoke.klang.audio_be.utils.safeOut
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.EnvelopeCore
-import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import io.peekandpoke.klang.audio_be.utils.fastExp2
-import io.peekandpoke.klang.audio_be.utils.fastSin
-import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
-import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
-import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 import kotlin.math.pow
-import kotlin.math.abs
 
 /**
  * Mod-factory functions for the build-time pitch-mod approach.
@@ -35,9 +35,9 @@ import kotlin.math.abs
  * (using the existing [Ignitor.times] operator). [ModApplyingIgnitor] uses the ratio directly
  * as a phase-increment multiplier.
  *
- * The user-facing `pitchMod()` DSL extension accepts **deviation space** (0 = no change) and
- * converts to ratio internally by adding 1.0. This is handled at the DSL/buildIgnitor boundary,
- * not in these factories.
+ * The two signal doors convert here: `pitchMod` takes a deviation (0 = no change) and
+ * [deviationToRatioIgnitor] adds 1.0; `pitchModSemitones` takes semitones and
+ * [semitonesToRatioIgnitor] writes `2^(mod / 12)`.
  */
 
 /**
@@ -55,59 +55,71 @@ private class DeviationToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
 }
 
 /**
- * Vibrato — sinusoidal pitch LFO in ratio space.
+ * Converts a SEMITONE mod Ignitor (0.0 = no change, 12.0 = an octave up) to ratio space, `2^(mod / 12)` per sample.
+ * Used by the [IgnitorDsl.PitchModSemitones] handler (pitch pipeline 7a, decision D8).
  *
- * Produces `2^(sin(lfoPhase) * depthSemitones / 12)` per sample.
- * At depth=0: output = 1.0 (no change). At depth=1, ±1 semitone wobble.
- *
- * Output is passed through [safeOut] — extreme `depthSemitones` values cannot
- * produce `+Inf` ratios that would poison the oscillator phase accumulator.
- * See `audio/ref/numerical-safety.md`.
- *
- * @param rate LFO frequency in Hz
- * @param semitones modulation depth in SEMITONES
+ * The ratio is [fastExp2] of the semitones over 12, through [safeOut], the vibrato's formula. So from about 598
+ * semitones (`12 * log2(1e15)`) it holds at `SAFE_MAX`; no clamp below that. A literal 0 or non-finite mod never
+ * gets here (the runtime arm's gate); a non-finite SAMPLE of a signal does, and there +Infinity reads as `SAFE_MAX`
+ * and NaN and -Infinity as the ratio 0, which holds the source still, as `pitchMod`'s raw NaN and FM's modulator do.
+ * No per-sample finite guard: `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2. A signal at 0
+ * writes exactly 1.0 (`fastExp2(0.0)` is 1).
  */
-private class VibratoModIgnitor(
-    private val rate: Ignitor,
-    private val semitones: Ignitor,
-) : Ignitor {
-    private var lfoPhase: Double = 0.0
+fun semitonesToRatioIgnitor(userMod: Ignitor): Ignitor = SemitonesToRatioIgnitor(userMod)
 
+private class SemitonesToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // NaN-guard: a non-finite rate or depth reads as UNSET and takes the node's default, the chain
-        // `adsr`'s rule (`finiteOr`). Raw, a NaN depth skips the `<= 0.0` bypass and `safeOut` turns every
-        // ratio into 0 (the oscillator holds still), and a NaN rate pins the LFO at phase 0 (no vibrato).
-        // No clamp: every finite value passes raw.
-        val rateVal = finiteOr(value = Ignitors.readParam(rate, freqHz, ctx), fallback = VIBRATO_RATE_HZ)
-        val depthSemitones = finiteOr(value = Ignitors.readParam(semitones, freqHz, ctx), fallback = VIBRATO_SEMITONES)
+        userMod.generate(buffer, freqHz, ctx)
         val end = ctx.windowEnd
-        val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
-        val depthOctaves = depthSemitones / 12.0
-        // The one-subtract wrap holds while |inc| < 2π; a rate past the sample rate (raw-Motor,
-        // either sign) takes the full wrap. NaN and infinite inc take it too.
-        val safeWrap = !(abs(lfoInc) < TWO_PI)
 
-        if (depthSemitones <= 0.0) {
-            // The LFO still ADVANCES: state moves once per rendered sample, whatever the output
-            // (block-framing contract). The old early return froze the phase for the whole block,
-            // so a modulated depth passing through zero resumed the LFO from a phase stale by a
-            // block-size-dependent amount (block-framing ledger E2).
-            for (i in ctx.offset until end) {
-                buffer[i] = 1.0
-                lfoPhase += lfoInc
-                lfoPhase = lfoPhase.wrapPhaseFastOrSafe(period = TWO_PI, safe = safeWrap)
-            }
-            return
-        }
         for (i in ctx.offset until end) {
-            buffer[i] = safeOut(fastExp2(fastSin(lfoPhase) * depthOctaves))
-            lfoPhase += lfoInc
-            lfoPhase = lfoPhase.wrapPhaseFastOrSafe(period = TWO_PI, safe = safeWrap)
+            buffer[i] = safeOut(fastExp2(buffer[i] / 12.0))
         }
     }
 }
 
-fun vibratoModIgnitor(rate: Ignitor, semitones: Ignitor): Ignitor = VibratoModIgnitor(rate = rate, semitones = semitones)
+/**
+ * Vibrato, composed (pitch pipeline 7b, the tremolo's pattern): `pitchModSemitones(sine(rate, analog = 0) *
+ * max(semitones, 0))` from the runtime's own pieces, the ratio `2^((sin * max(semitones, 0)) / 12)` per sample. The
+ * rate is the sine's frequency, read at each block's first frame; the depth multiplies per sample, floored at 0, so a
+ * depth at or below 0 is no vibrato (exactly 1.0). The LFO reads no pitch mod ([ModBlockingIgnitor], as the
+ * tremolo's), and its sine seeds a drift lane from the voice's random stream on its first RENDERED block (three
+ * draws, even at analog 0). A block-constant depth at or below 0 is the multiply's dead branch: the LFO and its rate
+ * subtree do not render that block, so the seed draws wait too.
+ *
+ * The edge rules (non-finite literals and samples, the floor, the dead branch's E2 residual) have one home: the
+ * `vibrato` row of `audio/ref/off-values.md`. A non-finite literal reaches the default only through the DSL arm
+ * (`finiteLiteralOr`); this factory, and its Double overload, take the knobs as given.
+ *
+ * The range and the phase (pitch pipeline 7c): with [rangeFrom] or [rangeTo] given, the LFO is laid onto from..to
+ * (`range`, the LFO's -1 to `from`, +1 to `to`; a missing one is its default, -1 or 1) before the depth scales it, so
+ * the ratio is `2^((range(sin, from, to) * max(semitones, 0)) / 12)`; the bounds read like the depth, per sample,
+ * outside the LFO's shield. With neither, no range is built (the DSL arm passes none at the default `(-1, 1)`). [phase]
+ * is the sine's own `phase` input (cycles; null builds none, the start at `sin(0)`), inside the shield with the rate.
+ *
+ * @param rate LFO frequency in Hz
+ * @param semitones modulation depth in SEMITONES
+ * @param rangeFrom where the LFO's -1 lands, or null
+ * @param rangeTo where the LFO's +1 lands, or null
+ * @param phase the LFO's phase offset in cycles, or null for none
+ */
+fun vibratoModIgnitor(
+    rate: Ignitor,
+    semitones: Ignitor,
+    rangeFrom: Ignitor? = null,
+    rangeTo: Ignitor? = null,
+    phase: Ignitor? = null,
+): Ignitor {
+    val lfo = ModBlockingIgnitor(Ignitors.sine(freq = rate, analog = ConstantIgnitor(0.0), phase = phase))
+
+    val swing = if (rangeFrom != null || rangeTo != null) {
+        lfo.range(from = rangeFrom ?: ConstantIgnitor(VIBRATO_RANGE_FROM), to = rangeTo ?: ConstantIgnitor(VIBRATO_RANGE_TO))
+    } else {
+        lfo
+    }
+
+    return semitonesToRatioIgnitor(swing * semitones.max(0.0))
+}
 
 fun vibratoModIgnitor(rate: Double, semitones: Double): Ignitor =
     vibratoModIgnitor(rate = ParamIgnitor("rate", rate), semitones = ParamIgnitor("semitones", semitones))
@@ -363,10 +375,10 @@ fun fmModIgnitor(
     modulator: Ignitor,
     ratio: Ignitor,
     depth: Ignitor,
-    attack: Ignitor = ParamIgnitor("attack", 0.0),
-    decay: Ignitor = ParamIgnitor("decay", 0.0),
-    sustain: Ignitor = ParamIgnitor("sustain", 1.0),
-    release: Ignitor = ParamIgnitor("release", 0.0),
+    attack: Ignitor = ParamIgnitor("attack", FM_ENV_ATTACK_SEC),
+    decay: Ignitor = ParamIgnitor("decay", FM_ENV_DECAY_SEC),
+    sustain: Ignitor = ParamIgnitor("sustain", FM_ENV_SUSTAIN_LEVEL),
+    release: Ignitor = ParamIgnitor("release", FM_ENV_RELEASE_SEC),
     freq: Ignitor = FreqIgnitor,
 ): Ignitor = FmModIgnitor(modulator = modulator, ratio = ratio, depth = depth, attack = attack, decay = decay, sustain = sustain, release = release, freq = freq, modulatorPitch = null)
 
@@ -433,13 +445,13 @@ internal class FmModIgnitor(
         // freeze a modulated envelope time. The same E2 shape, one level down.
         val attackVal = Ignitors.readParam(attack, fmFreqVal, ctx)
         val decayVal = Ignitors.readParam(decay, fmFreqVal, ctx)
-        // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default 1.0, the chain
+        // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default `FM_ENV_SUSTAIN_LEVEL` (1.0), the chain
         // `adsr`'s rule (`finiteOr`); a NaN would otherwise make the depth NaN and `safeOut` would
         // freeze the carrier at ratio 0. The sustain passes raw into the envelope law; the LEVEL is
         // clamped to [0, 1] below, the depth range, as the filter envelope clamps it. The three stage
         // times need no guard: the envelope law reads a NaN or negative time as a zero-length stage,
         // and an infinite one as a stage that never ends, never a NaN.
-        val sustainVal = finiteOr(value = Ignitors.readParam(sustain, fmFreqVal, ctx), fallback = 1.0)
+        val sustainVal = finiteOr(value = Ignitors.readParam(sustain, fmFreqVal, ctx), fallback = FM_ENV_SUSTAIN_LEVEL)
         val releaseVal = Ignitors.readParam(release, fmFreqVal, ctx)
 
         ctx.scratchBuffers.use { modBuf ->

@@ -9,10 +9,6 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.fadeToZero
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
-import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
@@ -21,9 +17,9 @@ import kotlin.math.ceil
 /**
  * A voice in the audio engine.
  *
- * Runs a composable [BlockRenderer] pipeline: **Pitch → Ignite → (teardown fade) → Send**. The Ignitor tree the
- * ignite stage renders IS the instrument, envelope and filters included; the voice strip that used to run after
- * it retired in phase 3 step 9.
+ * Runs a composable [BlockRenderer] pipeline: **Ignite → (teardown fade) → Send**. The Ignitor tree the ignite
+ * stage renders IS the instrument, pitch stages, envelope and filters included; the voice strip that used to run
+ * after it retired in phase 3 step 9, the pitch pipeline in front of it in pitch pipeline step 5.
  *
  * **Lifecycle.** The voice is a state machine ([state], [State]). [render] advances the state at the start of
  * every block (the time-driven transitions, [advance]) and then dispatches on it; the cull may end it at the
@@ -99,7 +95,7 @@ class Voice(
     cull: Double? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Pipeline: Pitch → Ignite → (teardown fade) (Send is appended in init)
+    // Pipeline: Ignite → (teardown fade) (Send is appended in init)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     pipeline: List<BlockRenderer>,
 
@@ -126,7 +122,7 @@ class Voice(
     /** Frame where release begins. Moves earlier on a realtime note-off ([releaseGate]). */
     private val gateEndFrame: Double get() = limits.gateEndFrame
 
-    // The stages before the send: Pitch → Ignite → (teardown fade). A cut's fade runs between them and the send.
+    // The stages before the send: Ignite → (teardown fade). A cut's fade runs between them and the send.
     // An array with an index loop: a `List` loop makes an iterator per voice per block on Kotlin/JS.
     private val stages: Array<BlockRenderer> = pipeline.toTypedArray()
 
@@ -326,9 +322,9 @@ class Voice(
      * Renders the voice into the context's buffers.
      *
      * Advances the [state] for this block, then dispatches on it: `Pending` renders nothing,
-     * `Sounding` and `Releasing` run the BlockRenderer pipeline (Pitch → Ignite → (teardown fade) →
-     * Send), `Fading` runs it with the cut's ramp before the send, `Done` returns false. A releasing
-     * voice that the cull ends in its block returns false at once.
+     * `Sounding` and `Releasing` run the BlockRenderer pipeline (Ignite → (teardown fade) → Send), `Fading`
+     * runs it with the cut's ramp before the send, `Done` returns false. A releasing voice that the cull ends in
+     * its block returns false at once.
      *
      * @return true if the voice is still active, false if it has finished (`Done`)
      */
@@ -406,7 +402,6 @@ class Voice(
         blockCtx.updateOffsetAndLength(offset = offset, length = length)
         blockCtx.blockStart = ctx.blockStart
         blockCtx.renderContext = ctx
-        blockCtx.freqModBufferWritten = false
 
         // Silence culling reads the output peak only on a cullable voice, and only while it is
         // needed: until the voice has been heard (the [heard] latch), then in the release. A heard
@@ -415,7 +410,7 @@ class Voice(
         blockCtx.measurePeak = measure
         blockCtx.voiceOutputPeak = 0.0 // never a stale read from the previous block
 
-        // ── Pitch → Ignite → (teardown fade) → Send ───────────────────────────────
+        // ── Ignite → (teardown fade) → Send ───────────────────────────────────────
 
         for (i in 0 until stages.size) {
             stages[i].render(blockCtx)
@@ -570,30 +565,11 @@ class Voice(
         val sampleRate: Int,
         val blockFrames: Int,
         val voiceBuffer: AudioBuffer,
-        val freqModBuffer: DoubleArray,
         val scratchBuffers: ScratchBuffers,
     ) {
         // Absolute backend frame — Double, see RenderClock.cursorFrame.
         var blockStart: Double = 0.0
     }
-
-    class Fm(
-        val ratio: Double,
-        val depth: Double,
-        val envelope: Envelope,
-        var modPhase: Double = 0.0,
-    )
-
-    /** A modulation envelope of the voice's pitch pipeline (the FM index), in frames. */
-    class Envelope(
-        val attackFrames: Double,
-        val decayFrames: Double,
-        val sustainLevel: Double,
-        val releaseFrames: Double,
-        val attackCurve: AdsrCurve = AdsrCurve.Default,
-        val decayCurve: AdsrCurve = AdsrCurve.Default,
-        val releaseCurve: AdsrCurve = AdsrCurve.Default,
-    )
 
     companion object {
         // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain

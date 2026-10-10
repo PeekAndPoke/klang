@@ -11,6 +11,10 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
@@ -87,6 +91,9 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_FROM
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_TO
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_PHASE
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 
@@ -113,9 +120,11 @@ internal fun nextNoiseUid(): Int = noiseUidCounter++
  *
  * Each subtype represents a primitive oscillator, noise source, effect, filter, envelope,
  * or arithmetic combinator. Subtrees are composed declaratively and serialized across the
- * audio bridge boundary for rendering in the audio worklet.
+ * audio bridge boundary for rendering in the audio worklet. A node referenced twice (a `let` used twice) crosses
+ * that boundary as one object ([WireShared]), so the worklet builds it once, as the JVM does.
  */
 @WireFormat
+@WireShared
 sealed interface IgnitorDsl {
 
     /** Recursively collects all [Param] leaf nodes in this DSL subtree into [out]. */
@@ -257,7 +266,13 @@ sealed interface IgnitorDsl {
          */
         val accelerate: IgnitorDsl = Param(name = "accelerate", default = 0.0, description = "Mirrors sprudel's reader `accelerate`")
 
-        /** The pitch envelope stage, `classic()`'s first: `penv.semitones` (the switch) and its four stages. */
+        /**
+         * The FM stage, `classic()`'s innermost pitch stage (pitch pipeline step 4): `fm.ratio`, `fm.depth` (the switch)
+         * and the depth envelope's `fm.attack`, `fm.decay`, `fm.sustain`, `fm.release`.
+         */
+        val fm: FmSlots = FmSlots()
+
+        /** The pitch envelope stage, around the FM: `penv.semitones` (the switch) and its four stages. */
         val penv: PitchEnvelopeSlots = PitchEnvelopeSlots()
 
         /** The pitch envelope's curves: `penvCurves.attack`, `penvCurves.decay`, `penvCurves.release`. */
@@ -332,9 +347,15 @@ sealed interface IgnitorDsl {
      * `m ^ -rolloff` of its bank (the distance from the fundamental is `m` either way). Banks
      * sum without deduplication. With the literal defaults (fundamental 1, every count 0) the
      * engine builds the plain sine, bit-identical to before the banks existed; anything else, a
-     * `Param` included, builds the partial bank. Every knob is a signal read once per block.
-     * Partials at or above Nyquist are silent (decided 2026-09-07). [analogSpread] blends the
+     * `Param` included, builds the partial bank. Every knob is a signal read once per block (an
+     * explicit partial's signal gain per sample). Partials whose frequency's magnitude is at or above
+     * Nyquist are silent (decided 2026-09-07; by magnitude since 2026-10-10). [analogSpread] blends the
      * drift lanes: 0 = one shared walk for the whole bank, 1 = one walk per partial.
+     *
+     * [partials] is the fourth bank (`docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`, Q26): explicit
+     * [Partial]s at any ratio of this sine's frequency, each with its own gain and start phase, played in the
+     * order written and summed raw with the fundamental and the other banks. The engine plays the first
+     * [SINE_MAX_PARTIALS] of them.
      */
     @WireName("sine")
     data class Sine(
@@ -362,6 +383,8 @@ sealed interface IgnitorDsl {
          * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
          */
         val phase: IgnitorDsl = Constant(0.0),
+        /** Explicit partials at any ratio, in the order written; empty = none. See [Partial]. */
+        val partials: List<Partial> = emptyList(),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out); fundamental.collectParams(out)
@@ -369,12 +392,42 @@ sealed interface IgnitorDsl {
             octaves.collectParams(out); octavesRolloff.collectParams(out)
             suboctaves.collectParams(out); suboctavesRolloff.collectParams(out)
             analogSpread.collectParams(out); phase.collectParams(out)
+
+            for (p in partials) {
+                p.collectParams(out)
+            }
         }
 
-        /** True when every bank knob is its literal default: the engine builds the plain sine. */
+        /** True when every bank knob is its literal default and no partial is listed: the engine builds the plain sine. */
         fun isPlainSine(): Boolean =
             fundamental == Constant(1.0) && harmonics == Constant(0.0) &&
-                octaves == Constant(0.0) && suboctaves == Constant(0.0)
+                octaves == Constant(0.0) && suboctaves == Constant(0.0) && partials.isEmpty()
+
+        /**
+         * One explicit partial of the sine: a sine at [ratio] times the sine's own frequency, scaled by [gain],
+         * starting [phase] into its cycle. Not a node: it lives only in [Sine.partials].
+         *
+         * - [ratio]: any number, no integer rule. A ratio of 1 is the sine's own frequency again, summed with the
+         *   [Sine.fundamental] (a pure cluster writes `fundamental(0)`). The partial at `ratio * f` follows the
+         *   door's `freq` and every pitch modulation over the sine, like the other banks.
+         * - [gain]: linear, raw (no normalisation); a negative gain is the same partial at `phase + 0.5`.
+         * - [phase]: a fraction of one cycle, the oscillators' unit, wrapped (1.25 is 0.25); 0 starts on the upward
+         *   zero crossing.
+         *
+         * Every knob is a number or a signal. The ratio and the phase are read once per block like the other bank
+         * knobs: a moving ratio steps at block boundaries, a moving phase glides to its new value across the block. A
+         * gain that is a signal (an envelope, a tremolo) is read per sample; a number or a slot once per block. A
+         * partial whose frequency's magnitude is at or above Nyquist, or not finite, is silent for that block.
+         */
+        data class Partial(
+            val ratio: IgnitorDsl,
+            val gain: IgnitorDsl = Constant(1.0),
+            val phase: IgnitorDsl = Constant(0.0),
+        ) {
+            fun collectParams(out: MutableList<Param>) {
+                ratio.collectParams(out); gain.collectParams(out); phase.collectParams(out)
+            }
+        }
     }
 
     /** Sawtooth wave oscillator, a rising ramp (`Ignitor.saw`). */
@@ -1081,6 +1134,24 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
     // Arithmetic Composition
     // ═════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Branches side by side, SUMMED: the twin of a series of stages (`serial`), built by the `parallel` door as
+     * `x.parallel(a, b)` = `a(x) + b(x)` with every branch reading the SAME `x` (one instance, built once; a pitch node
+     * in a branch forks it, as it forks any shared node).
+     *
+     * **Aligned by latency.** A branch that delays the signal (an oversampled `distort` or `shape`, 4 to 6 samples)
+     * would comb against the others in the sum, so the build delays every shorter branch to the longest one. A plain
+     * [Plus] is raw arithmetic and does not align (`docs/plans/future/signal-graph-engine.md` §6.9).
+     *
+     * The doors build it for two branches or more (none is the signal unchanged, one is that branch).
+     */
+    @WireName("parallel")
+    data class Parallel(val branches: List<IgnitorDsl>) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            branches.forEach { it.collectParams(out) }
+        }
+    }
 
     /** Additive combinator. Sums two ignitor signals sample-by-sample. */
     @WireName("plus")
@@ -1914,7 +1985,10 @@ sealed interface IgnitorDsl {
     /**
      * Frequency modulation synthesis. The modulator's output shifts the carrier's frequency
      * at audio rate, with an optional ADSR envelope controlling modulation depth over time. The
-     * envelope has no curve knob yet; its stages run `MOD_ENV_CURVE`, exponential (decision D3).
+     * envelope has no curve knob yet; its stages run `MOD_ENV_CURVE`, exponential (decision D3). With every envelope
+     * stage at its default (attack 0, decay 0, sustain 1, release 0) no envelope runs: the depth is full from the
+     * onset through the release tail. Sprudel's `fm` is this node too: it fills the FM stage `classic()` places, through
+     * the `fm.*` slots (pitch pipeline step 4; the voice strip's `FmRenderer` retired with it).
      *
      * **A pitch node means what it wraps** (decision D1, pitch pipeline step 3b; the placement rule, maintainer,
      * 2026-10-09). A pitch modulation (a `vibrato`, `pitchMod`, `pitchEnvelope`, `accelerate`, an outer `fm`, a sprudel
@@ -1936,10 +2010,10 @@ sealed interface IgnitorDsl {
         val modulator: IgnitorDsl,
         val ratio: IgnitorDsl = Constant(FM_RATIO),
         val depth: IgnitorDsl = Constant(0.0),
-        val attack: IgnitorDsl = Constant(0.0),
-        val decay: IgnitorDsl = Constant(0.0),
-        val sustain: IgnitorDsl = Constant(1.0),
-        val release: IgnitorDsl = Constant(0.0),
+        val attack: IgnitorDsl = Constant(FM_ENV_ATTACK_SEC),
+        val decay: IgnitorDsl = Constant(FM_ENV_DECAY_SEC),
+        val sustain: IgnitorDsl = Constant(FM_ENV_SUSTAIN_LEVEL),
+        val release: IgnitorDsl = Constant(FM_ENV_RELEASE_SEC),
         /** The frequency the FM machinery runs on: the modulator is driven at `freq x ratio`
          *  and the index is `depth / freq`. Defaults to [Freq] (the note), which makes FM
          *  transpose under `detune` like any note-pitched oscillator; authored absolute
@@ -2201,20 +2275,42 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Vibrato effect. Modulates pitch with a sinusoidal LFO.
+     * Vibrato effect. Modulates pitch with a sinusoidal LFO: the ratio `2^((sin * max(semitones, 0)) / 12)` per sample.
      *
-     * @param rate LFO frequency in Hz (default 5.0)
+     * A description: the runtime composes it (pitch pipeline 7b) as `pitchModSemitones(sine(rate, analog = 0) *
+     * max(semitones, 0))`, the tremolo's pattern, so a signal depth is followed per sample. Its edge rules (a depth at or
+     * below 0, non-finite values): the `vibrato` row of `audio/ref/off-values.md`.
+     *
+     * @param rate LFO frequency in Hz (default 5.0), read once per block
      * @param semitones modulation depth in SEMITONES (default 0.25 ≈ quarter-semitone wobble).
-     *   Sprudel's `vib(rate, semitones)` fills `classic()`'s vibrato stage, this node, through the `vibrato.*` slots.
+     *   Sprudel's `vib(rate, semitones, rangeFrom, rangeTo, phase)` fills `classic()`'s vibrato stage, this node,
+     *   through the `vibrato.*` slots.
+     * @param rangeFrom with [rangeTo], where the LFO's swing sits, in the -1..1 language of the Ignitor `range` (pitch
+     *   pipeline 7c): the LFO's -1 maps to [rangeFrom], its +1 to [rangeTo], and the result is scaled by [semitones],
+     *   so the ratio is `2^((range(sin, from, to) * max(semitones, 0)) / 12)`. The default `(-1, 1)` swings both ways,
+     *   the vibrato as it always was (a literal `(-1, 1)` builds no range, so it renders those bits exactly); `(0, 1)`
+     *   swings only upward from the note (a guitar's vibrato), `(-1, 0)` only downward, `(1, -1)` inverts the LFO.
+     *   Raw: no clamp, and the depth floor still applies. Signals, read per sample. The script door's builder knob is
+     *   `range(from, to)`.
+     * @param rangeTo see [rangeFrom].
+     * @param phase the LFO's phase as a fraction of one cycle, the oscillators' `phase` knob (7c, decision D9): 0 (the
+     *   default) starts the sine at `sin(0)`, rising, which is the MIDDLE of the swing (the note only for a range centred
+     *   on 0: `range(0, 1)` starts a quarter of the depth sharp and is on the note at 0.75, `range(-1, 0)` at 0.25), 0.25
+     *   at its peak, 0.5 falling through the middle; wrapped (1.25 is 0.25), a non-finite value reads as 0. A constant
+     *   is the start phase; a moving signal is phase modulation of the LFO.
      */
     @WireName("vibrato")
     data class Vibrato(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(VIBRATO_RATE_HZ),
         val semitones: IgnitorDsl = Constant(VIBRATO_SEMITONES),
+        val rangeFrom: IgnitorDsl = Constant(VIBRATO_RANGE_FROM),
+        val rangeTo: IgnitorDsl = Constant(VIBRATO_RANGE_TO),
+        val phase: IgnitorDsl = Constant(VIBRATO_PHASE),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); semitones.collectParams(out)
+            rangeFrom.collectParams(out); rangeTo.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -2282,16 +2378,39 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * General-purpose pitch modulation. The [mod] Ignitor produces per-sample phase-deviation
-     * values (0.0 = no change, positive = higher pitch, negative = lower). At runtime, the
-     * build-time walker converts to ratio space (`value + 1.0`) and bubbles the mod to the
-     * source oscillator.
-     *
-     * This is the general primitive underlying `.vibrato()`, `.accelerate()`, `.fm()`, and
-     * `.pitchEnvelope()`. Use it for custom pitch modulation from any Ignitor source.
+     * Pitch modulation by any signal, the LINEAR law: the frequency of every pitched source under [inner] is multiplied
+     * by `1 + mod`, per sample. [mod] is a deviation, unitless: 0 is no change, 1.0 is an octave up, 0.5 a just fifth
+     * (`x 1.5`), -0.5 an octave down, and -1.0 stops the oscillator (ratio 0). The law of FM: a modulator's swing
+     * around the carrier. For a modulation in SEMITONES (the exponential law, `2^(mod / 12)`) see [PitchModSemitones].
+     * No switch and no clamp: the ratio passes raw, a NaN sample of [mod] included
+     * (`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2).
      */
     @WireName("pitch-mod")
     data class PitchMod(
+        val inner: IgnitorDsl,
+        val mod: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); mod.collectParams(out)
+        }
+    }
+
+    /**
+     * Pitch modulation by any signal, in SEMITONES, the exponential law: the frequency of every pitched source under
+     * [inner] is multiplied by `2^(mod / 12)`, per sample. 12 is an octave up, 7 a fifth, -12 an octave down, 0 the
+     * note; `Ignitor.sine(5).mul(0.5)` as [mod] is a vibrato half a semitone deep. The pitch law of `vibrato`,
+     * `accelerate` and `pitchEnvelope`, as a primitive (pitch pipeline 7a, decision D8, maintainer 2026-10-09). For
+     * the LINEAR law (`1 + mod`, FM's) see [PitchMod].
+     *
+     * Gated at build: a literal [mod] (a `Constant` or `Param` leaf) of 0, or non-finite, builds no node, so the voice
+     * is the bare [inner] (`audio/ref/off-values.md`, row `pitchModSemitones`, with what that means for a shared inner).
+     * A signal [mod] is always built. The ratio passes through `safeOut`, no clamp below it: past about 598 semitones it
+     * holds at `SAFE_MAX`. A non-finite SAMPLE of a signal: +Infinity reads as `SAFE_MAX`, NaN or -Infinity as the
+     * ratio 0, which holds the source still, as `pitchMod`'s raw NaN and FM's modulator do
+     * (`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2).
+     */
+    @WireName("pitch-mod-semitones")
+    data class PitchModSemitones(
         val inner: IgnitorDsl,
         val mod: IgnitorDsl,
     ) : IgnitorDsl {
@@ -2485,15 +2604,50 @@ fun IgnitorDsl.select(whenTrue: Double, whenFalse: Double) =
 // Composition
 
 /**
- * Runs this signal through [stages], in the order written: `x.through(a, b, c)` is `c(b(a(x)))`, the same
- * node as the nested calls. A stage is any function from a signal to a signal (a pickup, a pedal, an amp,
+ * Runs this signal through [stages] in series, in the order written: `x.serial(a, b, c)` is `c(b(a(x)))`, the
+ * same node as the nested calls. A stage is any function from a signal to a signal (a pickup, a pedal, an amp,
  * a cab), so a signal chain is written as the list it is, with no fixed number of slots. With no stage,
- * `through()` returns the signal as it is.
+ * `serial()` returns the signal as it is.
  *
- * Serial, one stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
+ * One stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
  */
-fun IgnitorDsl.through(vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+fun IgnitorDsl.serial(vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
     stages.fold(this) { signal, stage -> stage(signal) }
+
+/**
+ * Runs this signal through [branches] side by side and SUMS them, the twin of [serial]: `x.parallel(a, b)` is
+ * `a(x) + b(x)`, every branch reading the same `x` (one instance, built once; a pitch node in a branch forks it). A
+ * branch that delays the signal (an oversampled `distort` or `shape`) is matched by delaying the others, so the sum
+ * does not comb ([IgnitorDsl.Parallel]).
+ * The sum is plain: `x.parallel({ it }, { it })` is twice `x`; a branch's own `mul` sets the blend.
+ *
+ * With no branch, `parallel()` returns the signal as it is; with one, that branch's output.
+ */
+fun IgnitorDsl.parallel(vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl = when (branches.size) {
+    0 -> this
+    1 -> branches[0](this)
+    else -> IgnitorDsl.Parallel(branches = branches.map { it(this) })
+}
+
+/**
+ * A dry/wet blend, the linear law: `x.blend(wet, f)` is `x.parallel({ it.mul(1 - wet) }, { f(it).mul(wet) })`, so 0
+ * is the dry signal and 1 is [branch]'s output alone (the dry/wet helper of `docs/plans/future/signal-graph-engine.md`
+ * §6.9; the linear law only, the default taken 2026-10-10 in `docs/tasks/in-progress/parallel-serial-bands.md`). Linear
+ * is right for correlated branches (distortion, filters); a decorrelated one (a room) loses about 3 dB in the middle,
+ * which a song can lift with the branch's own `mul`. [wet] may be a slot or a signal (a moving blend); a constant that
+ * is not finite reads as 0, the dry signal. The branch is aligned by latency as in [parallel].
+ */
+fun IgnitorDsl.blend(wet: IgnitorDsl, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+    // NaN-guard on a value the author can write: an unset blend is no blend. The one guard, for both doors.
+    val share = if (wet is IgnitorDsl.Constant && !wet.value.isFinite()) IgnitorDsl.Constant(0.0) else wet
+    val dry = if (share is IgnitorDsl.Constant) IgnitorDsl.Constant(1.0 - share.value) else IgnitorDsl.Constant(1.0).minus(share)
+
+    return parallel({ it.mul(dry) }, { branch(it).mul(share) })
+}
+
+/** [blend] with a number. */
+fun IgnitorDsl.blend(wet: Double, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+    blend(wet = IgnitorDsl.Constant(wet), branch = branch)
 
 // Frequency
 
@@ -3024,10 +3178,10 @@ fun IgnitorDsl.fm(
     modulator: IgnitorDsl,
     ratio: Double,
     depth: Double,
-    attack: Double = 0.0,
-    decay: Double = 0.0,
-    sustain: Double = 1.0,
-    release: Double = 0.0,
+    attack: Double = FM_ENV_ATTACK_SEC,
+    decay: Double = FM_ENV_DECAY_SEC,
+    sustain: Double = FM_ENV_SUSTAIN_LEVEL,
+    release: Double = FM_ENV_RELEASE_SEC,
 ) = IgnitorDsl.Fm(
     carrier = this,
     modulator = modulator,
@@ -3137,11 +3291,46 @@ fun IgnitorDsl.shimmer(
 
 // Pitch modulation
 
-/** Applies vibrato (pitch modulation) at the given LFO [rate], [semitones] deep. */
-fun IgnitorDsl.vibrato(rate: Double, semitones: Double) = IgnitorDsl.Vibrato(
-    inner = this,
+/**
+ * Applies vibrato (pitch modulation) at the given LFO [rate] in Hz, [semitones] deep, its swing placed by [rangeFrom] and
+ * [rangeTo] (default `(-1, 1)`, both ways; `(0, 1)` only upward) and its LFO starting at [phase] (a fraction of one
+ * cycle, default 0). See [IgnitorDsl.Vibrato].
+ *
+ * FLAT, where the script door is `vibrato(rate, semitones, configure)` with `range(from, to)` and `phase` on a builder:
+ * the tremolo's recorded two-door asymmetry (`audio_bridge` cannot see the script builders; the flat door is a superset
+ * of the builder). Every knob also takes a signal through the [IgnitorDsl] overload.
+ */
+fun IgnitorDsl.vibrato(
+    rate: Double,
+    semitones: Double,
+    rangeFrom: Double = VIBRATO_RANGE_FROM,
+    rangeTo: Double = VIBRATO_RANGE_TO,
+    phase: Double = VIBRATO_PHASE,
+) = vibrato(
     rate = IgnitorDsl.Constant(rate),
     semitones = IgnitorDsl.Constant(semitones),
+    rangeFrom = IgnitorDsl.Constant(rangeFrom),
+    rangeTo = IgnitorDsl.Constant(rangeTo),
+    phase = IgnitorDsl.Constant(phase),
+)
+
+/**
+ * [vibrato] with signals: any knob may be a number ([IgnitorDsl.Constant]), a slot or a moving signal, as on the script
+ * door (`x.vibrato(5.0, Ignitor.sine(0.5) ...)` swells the depth). A signal depth is read per sample.
+ */
+fun IgnitorDsl.vibrato(
+    rate: IgnitorDsl,
+    semitones: IgnitorDsl,
+    rangeFrom: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_RANGE_FROM),
+    rangeTo: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_RANGE_TO),
+    phase: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_PHASE),
+) = IgnitorDsl.Vibrato(
+    inner = this,
+    rate = rate,
+    semitones = semitones,
+    rangeFrom = rangeFrom,
+    rangeTo = rangeTo,
+    phase = phase,
 )
 
 /** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
@@ -3151,12 +3340,22 @@ fun IgnitorDsl.accelerate(semitones: Double) = IgnitorDsl.Accelerate(
 )
 
 /**
- * Applies a custom pitch modulation from any Ignitor signal.
- *
- * The [mod] signal uses deviation space: 0.0 = no change, positive = higher, negative = lower.
- * At build time, the runtime converts to ratio space and bubbles the mod to the source oscillator.
+ * Pitch modulation by any signal, the LINEAR law: the frequency times `1 + mod` (0 = no change, 1.0 = an octave up,
+ * -1.0 stops the oscillator). In semitones: [pitchModSemitones].
  */
 fun IgnitorDsl.pitchMod(mod: IgnitorDsl) = IgnitorDsl.PitchMod(inner = this, mod = mod)
+
+/** [pitchMod] by a constant deviation [mod], the script door's `x.pitchMod(0.5)`. */
+fun IgnitorDsl.pitchMod(mod: Double) = pitchMod(IgnitorDsl.Constant(mod))
+
+/**
+ * Pitch modulation by any signal, in SEMITONES: the frequency times `2^(mod / 12)` (0 = no change, 12 = an octave up).
+ * The linear law: [pitchMod].
+ */
+fun IgnitorDsl.pitchModSemitones(mod: IgnitorDsl) = IgnitorDsl.PitchModSemitones(inner = this, mod = mod)
+
+/** [pitchModSemitones] by a constant [mod] in SEMITONES, the script door's `x.pitchModSemitones(7)`. */
+fun IgnitorDsl.pitchModSemitones(mod: Double) = pitchModSemitones(IgnitorDsl.Constant(mod))
 
 // ═════════════════════════════════════════════════════════════════════════════════
 // Discovery

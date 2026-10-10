@@ -10,10 +10,10 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.toExciter
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.accelerate
+import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.vibrato
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
@@ -22,8 +22,8 @@ import kotlin.random.Random
 
 /**
  * Pitch modulation switched on and off through a real voice: the vibrato and accelerate as tree nodes (sprudel's `vib`
- * and `accelerate` are `classic()`'s stages since pitch pipeline steps 2 and 3), and a tree mod combined with the
- * strip's FM buffer in `ModApplyingIgnitor`. The laws are pinned elsewhere: the vibrato in `ClassicVibratoSpec` and
+ * and `accelerate` are `classic()`'s stages since pitch pipeline steps 2 and 3), and the classic vibrato and FM stages
+ * together (sprudel's `fm` since step 4). The laws are pinned elsewhere: the vibrato in `ClassicVibratoSpec` and
  * `ModulatorPhaseWrapSpec`, accelerate in `AccelerateSemitoneLawSpec` and `ClassicAccelerateSpec`, the pitch envelope in `EnvelopeLawSpec` and
  * `PitchEnvelopeModFastExp2Spec`.
  */
@@ -85,25 +85,26 @@ class PitchModulationTest : StringSpec({
         diffRms(a = glide, b = bare) shouldBeGreaterThan 1e-3
     }
 
-    "a tree vibrato and the strip's FM combine: the product differs from each alone" {
-        val fm = { Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)) }
-        val voiceWithVib = createSynthVoice(
-            blockFrames = bf,
-            signal = IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.5).toExciter(random = Random(1)),
-            fm = fm(),
-        )
-        val voiceNoVib = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), fm = fm())
-        val voiceNoFm = createSynthVoice(blockFrames = bf, signal = IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.5).toExciter(random = Random(1)))
+    "the classic vibrato and FM stages combine: the product differs from each alone" {
+        // Sprudel's `vib` and `fm` as `classic()`'s stages (pitch pipeline steps 2 and 4), written as the slots the
+        // doors write: both reach the source.
+        val vib = mapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.5)
+        val fm = mapOf("fm.ratio" to 2.0, "fm.depth" to 100.0)
 
-        val ctxWithVib = createContext(blockFrames = bf)
-        val ctxNoVib = createContext(blockFrames = bf)
-        val ctxNoFm = createContext(blockFrames = bf)
-        voiceWithVib.render(ctxWithVib)
-        voiceNoVib.render(ctxNoVib)
-        voiceNoFm.render(ctxNoFm)
+        fun render(bag: Map<String, Double>): AudioBuffer {
+            val instrument = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0)).classic()
+            val voice = createSynthVoice(blockFrames = bf, signal = instrument.toExciter(ignitorParams = bag, random = Random(1)))
+            val ctx = createContext(blockFrames = bf)
+            voice.render(ctx)
+            return ctx.voiceBuffer
+        }
+
+        val both = render(vib + fm)
+        val noVib = render(fm)
+        val noFm = render(vib)
 
         // Both reach the source: without the vibrato, and without the FM, the voice is something else.
-        (diffRms(a = ctxWithVib.voiceBuffer, b = ctxNoVib.voiceBuffer) > 1e-4) shouldBe true
-        (diffRms(a = ctxWithVib.voiceBuffer, b = ctxNoFm.voiceBuffer) > 1e-4) shouldBe true
+        (diffRms(a = both, b = noVib) > 1e-4) shouldBe true
+        (diffRms(a = both, b = noFm) > 1e-4) shouldBe true
     }
 })

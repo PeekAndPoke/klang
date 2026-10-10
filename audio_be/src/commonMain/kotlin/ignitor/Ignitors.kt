@@ -309,7 +309,7 @@ object Ignitors {
      *
      * Drift: [analog] is the depth for every lane, latched at the first block like the plain sine.
      * [analogSpread] blends per partial between one SHARED walk (0: the bank wobbles as one physical
-     * oscillator, the spectrum stays exactly harmonic) and the partial's OWN walk (1: independent
+     * oscillator, the ratios stay exact) and the partial's OWN walk (1: independent
      * lanes, the beating of the hand-rolled stack), with constant-power weights `sqrt(1 - s)` and
      * `sqrt(s)` so the depth stays [analog] at every setting. The lanes live in one [DriftLanes]
      * and are drawn in a fixed order: one int for the shared lane's SEED at the first block, then
@@ -324,6 +324,19 @@ object Ignitors {
      * part: the bank takes one extra int from the voice rng at its first block (its shared lane's
      * seed, taken whether or not the spread ever drops below 1), so its fundamental lane seeds from
      * a different point in the stream than the plain sine's lane does.
+     *
+     * [partials] is the fourth bank, explicit partials at any ratio (`docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`):
+     * its length is fixed for the note, so its storage and its drift lanes are built with the node and nothing grows
+     * at render. Per block each partial reads its ratio and phase once (the bank knobs' rule): the frequency is
+     * `ratio` times the sine's, and the partial is silent while its frequency's magnitude is at or above Nyquist, or
+     * not finite; its phase is frozen meanwhile and it resumes where it stopped, at a step of up to its gain, the banks'
+     * gate. A block-constant gain (a number, a slot) is read once per block, raw (a non-finite one reads as 0, as the
+     * fundamental's does); a SIGNAL gain (an envelope, a tremolo) renders its block and is read per sample, so the
+     * partial with an `adsr` gain renders what its own sine under the same `adsr` renders. The phase is a fraction of
+     * one cycle: at the first block it is the start phase (the accumulator starts there); later a change glides
+     * across its block, taken the short way round the cycle, as a frequency offset (no jump). Lanes: the explicit
+     * partials take theirs after the three banks' at the first block, in list order. The caller passes at most
+     * `SINE_MAX_PARTIALS` (`IgnitorDslRuntime` coerces the list).
      */
     fun sinePartials(
         freq: Ignitor = FreqIgnitor,
@@ -338,11 +351,16 @@ object Ignitors {
         analogSpread: Ignitor = ConstantIgnitor(1.0),
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
+        partials: List<SinePartial> = emptyList(),
     ): Ignitor = PartialBankIgnitor(
         freq = freq, analog = analog, fundamental = fundamental,
         harmonics = harmonics, harmonicsRolloff = harmonicsRolloff, octaves = octaves, octavesRolloff = octavesRolloff, suboctaves = suboctaves, suboctavesRolloff = suboctavesRolloff,
         analogSpread = analogSpread, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
+        partials = partials.toTypedArray(),
     )
+
+    /** One explicit partial's built knobs for [sinePartials]: the runtime twin of `IgnitorDsl.Sine.Partial`. */
+    class SinePartial(val ratio: Ignitor, val gain: Ignitor, val phase: Ignitor)
 
     private class PartialBankIgnitor(
         private val freq: Ignitor,
@@ -357,6 +375,7 @@ object Ignitors {
         private val analogSpread: Ignitor,
         private val phaseIn: PhaseOffset?,
         countsAtBuild: Boolean,
+        private val partials: Array<SinePartial>,
     ) : Ignitor {
         /**
          * One bank's partial state: growth-only arrays, a live [count], (re)activated partials restart at the applied
@@ -411,7 +430,26 @@ object Ignitors {
         private val harmonicsBank = Bank(capacity = partialCapacity(count = harmonics, countsAtBuild = countsAtBuild))
         private val octavesBank = Bank(capacity = partialCapacity(count = octaves, countsAtBuild = countsAtBuild))
         private val suboctavesBank = Bank(capacity = partialCapacity(count = suboctaves, countsAtBuild = countsAtBuild))
-        private val banks = arrayOf(harmonicsBank, octavesBank, suboctavesBank)
+
+        /** The explicit partials: a bank whose count is the list's, fixed for the note, so it is built at its size. */
+        private val partialsBank = Bank(capacity = partials.size)
+
+        /** Each explicit partial's phase knob already folded into its accumulator, in cycles, wrapped (0 before the first block). */
+        private val partialApplied = DoubleArray(partials.size)
+
+        /**
+         * Each explicit partial's gain when it is a SIGNAL (not block-constant: an envelope, a tremolo), else null. A
+         * signal gain renders its block once per block and is read per sample ([renderPartialGained]), so an envelope
+         * keeps its attack and a tremolo stays smooth; a block-constant gain is read once per block like every bank knob.
+         */
+        private val gainSignals: Array<Ignitor?> = Array(partials.size) { i -> partials[i].gain.takeIf { !it.isBlockConstant } }
+
+        /** False until the first block has read the explicit partials (that block's phase change is the start phase, a jump). */
+        private var explicitStarted: Boolean = false
+        private val banks = arrayOf(harmonicsBank, octavesBank, suboctavesBank, partialsBank)
+
+        /** The banks [renderPartials] walks generically; the explicit bank renders in its own loop after them. */
+        private val countedBanks = arrayOf(harmonicsBank, octavesBank, suboctavesBank)
 
         /** Drift depth, latched at the first block like the plain sine; a NaN read latches as inactive. */
         private var analogAmt: Double = 0.0
@@ -425,7 +463,7 @@ object Ignitors {
         private val builtLanes: DriftLanes? = buildDriftLanes(
             analog = analog,
             analogSpread = analogSpread,
-            lanes = 1 + harmonicsBank.phase.size + octavesBank.phase.size + suboctavesBank.phase.size,
+            lanes = 1 + harmonicsBank.phase.size + octavesBank.phase.size + suboctavesBank.phase.size + partialsBank.phase.size,
         )
         private var drift: DriftLanes? = null
 
@@ -439,9 +477,13 @@ object Ignitors {
             return g.finiteOrZero()
         }
 
-        /** Gain of a partial at [partialFreq]: [g], or 0 at or above Nyquist. */
+        /**
+         * Gain of a partial at [partialFreq], the one Nyquist law of the node (the fundamental and all four banks): [g]
+         * while the frequency's MAGNITUDE is below Nyquist, else 0. A negative frequency (a negative base, a negative
+         * ratio) aliases like a positive one, and the comparison is written so a NaN frequency fails it: silent, never NaN.
+         */
         private fun gate(partialFreq: Double, g: Double, ctx: IgniteContext): Double =
-            if (partialFreq >= ctx.sampleRateD * 0.5) 0.0 else g
+            if (abs(partialFreq) < ctx.sampleRateD * 0.5) g else 0.0
 
         /**
          * Renders one partial into [buffer] (writes when [first], adds otherwise) and returns its new
@@ -531,6 +573,60 @@ object Ignitors {
             return ph
         }
 
+        /**
+         * [renderPartial] and [renderPartialPhased] for explicit partial [index] whose gain is a signal: the gain is read
+         * per sample from [gains] (this block's render of it; a non-finite sample reads as 0). The phase advances exactly
+         * as in the two loops above, so a gain that holds a constant value renders what they render. The phase is read from
+         * and written back to the bank's arrays, the increment read from them, not handed over as doubles: on V8 a double
+         * argument or result of a call it does not inline is a heap number (audio/ref/performance.md).
+         */
+        private fun renderPartialGained(
+            buffer: AudioBuffer, off: Int, end: Int, first: Boolean, index: Int, gains: AudioBuffer,
+            pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer?,
+        ) {
+            val bank = partialsBank
+            val d = bank.inc[index]
+            val lane = bank.laneIdx[index]
+            // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop boxes it (audio/ref/performance.md).
+            var ph = bank.phase[index] * 1.0
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(lane)
+                // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
+                m = drift.startOf(lane) * 1.0
+                dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
+            }
+
+            for (i in off until end) {
+                var p = ph
+
+                if (offsets != null) {
+                    p = ph + offsets[i].wrapToUnitCycle() * TWO_PI
+
+                    if (p >= TWO_PI) {
+                        p -= TWO_PI
+                    }
+                }
+
+                // NaN-guard: a non-finite gain sample reads as 0 (finiteOrZero), as a block-constant gain does.
+                val s = gains[i].finiteOrZero() * fastSin(p)
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var step = d * m
+
+                if (pm != null) {
+                    step *= pm[i]
+                }
+
+                m += dm
+                ph = (ph + step).wrapPhase(TWO_PI)
+            }
+
+            bank.phase[index] = ph
+        }
+
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
@@ -558,6 +654,8 @@ object Ignitors {
             harmonicsBank.resize(h, lanes, startPhase)
             octavesBank.resize(o, lanes, startPhase)
             suboctavesBank.resize(sub, lanes, startPhase)
+            // The explicit partials activate at the first block, after the banks (their lanes follow the banks'), and never change count.
+            partialsBank.resize(partials.size, lanes, startPhase)
 
             val baseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val fund = readParam(fundamental, actualFreq, ctx)
@@ -592,6 +690,8 @@ object Ignitors {
                 suboctavesBank.inc[i] = TWO_PI * partialFreq / ctx.sampleRateD
             }
 
+            readExplicitPartials(actualFreq = actualFreq, ctx = ctx)
+
             val pm = ctx.phaseMod
             val off = ctx.offset
             val end = ctx.windowEnd
@@ -614,14 +714,64 @@ object Ignitors {
                 if (phaseIn.perSample) {
                     ctx.scratchBuffers.use { offsets ->
                         phaseIn.render(offsets, actualFreq, ctx)
-                        renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = offsets)
+                        renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = offsets, actualFreq = actualFreq, ctx = ctx)
                     }
 
                     return
                 }
             }
 
-            renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = null)
+            renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = null, actualFreq = actualFreq, ctx = ctx)
+        }
+
+        /**
+         * Reads every explicit partial's three knobs for this block: its gain and increment, and its phase change folded
+         * into its accumulator (moved even while the partial is silent, so the phase it resumes at is the one written).
+         */
+        private fun readExplicitPartials(actualFreq: Double, ctx: IgniteContext) {
+            val bank = partialsBank
+
+            val frames = ctx.windowEnd - ctx.offset
+            // The first block's phase change is the start phase, a jump of the accumulator; later changes glide (below).
+            val glide = explicitStarted && frames > 0
+
+            explicitStarted = true
+
+            for (i in partials.indices) {
+                val p = partials[i]
+                val partialFreq = readParam(p.ratio, actualFreq, ctx) * actualFreq
+                // NaN-guard: a non-finite gain reads as 0, as the fundamental's does. A signal gain is not read here: it
+                // renders its block in renderPartials and is read per sample; 1 only marks it as sounding.
+                val g = if (gainSignals[i] == null) readParam(p.gain, actualFreq, ctx).finiteOrZero() else 1.0
+                // A non-finite phase reads as 0 (wrapToUnitCycle).
+                val ph = readParam(p.phase, actualFreq, ctx).wrapToUnitCycle()
+                var delta = ph - partialApplied[i]
+                var inc = TWO_PI * partialFreq / ctx.sampleRateD
+                val gain = gate(partialFreq = partialFreq, g = g, ctx = ctx)
+
+                if (delta != 0.0) {
+                    partialApplied[i] = ph
+
+                    // A silent partial does not render, so its change is a jump (inaudible), not a glide it would lose.
+                    if (glide && gain != 0.0) {
+                        // A moving phase: the change, taken the short way round the cycle, is spread over this block as a
+                        // frequency offset, so the partial arrives at the new phase at the block's end without a jump
+                        // (exact without drift and phase modulation, which scale the glide as they scale the increment).
+                        if (delta > 0.5) {
+                            delta -= 1.0
+                        } else if (delta <= -0.5) {
+                            delta += 1.0
+                        }
+
+                        inc += delta * TWO_PI / frames
+                    } else {
+                        bank.phase[i] = (bank.phase[i] + delta * TWO_PI).wrapPhase(TWO_PI)
+                    }
+                }
+
+                bank.gain[i] = gain
+                bank.inc[i] = inc
+            }
         }
 
         /** Moves every live accumulator by a block-constant phase change of [shift] cycles (0: nothing moves). */
@@ -644,6 +794,7 @@ object Ignitors {
         /** Renders the fundamental and every bank; [offsets] is a moving `phase` signal's block, or null. */
         private fun renderPartials(
             buffer: AudioBuffer, off: Int, end: Int, pm: DoubleArray?, lanes: DriftLanes?, offsets: AudioBuffer?,
+            actualFreq: Double, ctx: IgniteContext,
         ) {
             var first = true
 
@@ -656,7 +807,7 @@ object Ignitors {
                 first = false
             }
 
-            for (bank in banks) {
+            for (bank in countedBanks) {
                 for (i in 0 until bank.count) {
                     val g = bank.gain[i]
 
@@ -672,6 +823,40 @@ object Ignitors {
                         )
                     }
                     first = false
+                }
+            }
+
+            val pb = partialsBank
+
+            for (i in 0 until pb.count) {
+                val g = pb.gain[i]
+                val gainSignal = gainSignals[i]
+
+                if (gainSignal == null) {
+                    if (g == 0.0) {
+                        continue // silent (a gain of 0, or Nyquist): nothing to add, nothing to advance
+                    }
+
+                    pb.phase[i] = if (offsets == null) {
+                        renderPartial(buffer = buffer, off = off, end = end, first = first, phaseIn = pb.phase[i], d = pb.inc[i], g = g, pm = pm, drift = lanes, lane = pb.laneIdx[i])
+                    } else {
+                        renderPartialPhased(
+                            buffer = buffer, off = off, end = end, first = first, phaseIn = pb.phase[i], d = pb.inc[i], g = g, pm = pm, drift = lanes, lane = pb.laneIdx[i], offsets = offsets,
+                        )
+                    }
+                    first = false
+
+                    continue
+                }
+
+                // A signal gain renders its block every block, sounding or not (a modulated subtree advances once per block).
+                ctx.scratchBuffers.use { gains ->
+                    gainSignal.generate(gains, actualFreq, ctx)
+
+                    if (g != 0.0) {
+                        renderPartialGained(buffer = buffer, off = off, end = end, first = first, index = i, gains = gains, pm = pm, drift = lanes, offsets = offsets)
+                        first = false
+                    }
                 }
             }
 

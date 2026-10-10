@@ -54,8 +54,8 @@ same slot, or velocity is applied as the square of itself.
   doors they placed. Explicit, small; `classic()` stays the one preset.
 - **(B) Doors as building blocks, `classic()` the default order of them.** Each door is a plain function `x => x` that
   reads its own slots (`door.lowpass`, `door.adsr`, `door.velocity`, ...), and `classic()` is
-  `through(door.onepole, ..., door.adsr, door.velocity)`. An author writes any subset in any order, with their own
-  stages in between: `x.through(door.distort, cab, door.lowpass, door.adsr)`. It uses the `through()` that Kokon
+  `serial(door.onepole, ..., door.adsr, door.velocity)`. An author writes any subset in any order, with their own
+  stages in between: `x.serial(door.distort, cab, door.lowpass, door.adsr)`. It uses the `serial()` that Kokon
   already uses. It must carry what `classic()` does beyond reading slots: the gate, the filter envelope's slot-layer
   fill, and the compound-door fill rule.
 - **(C) B as the foundation, A as sugar** over it.
@@ -124,7 +124,7 @@ pitch doors -> instrument -> [post-instrument stage] -> channel -> bus (Katalyst
   its own filter and envelope. Double placement becomes a choice, never an accident.
 - **The pitch doors are the exception.** Vibrato, the pitch envelope, fm and accelerate must reach the oscillators
   inside the instrument, so they wrap it, not follow it. This ties in with
-  [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md).
+  [`pitch-pipeline-into-the-tree.md`](in-progress/pitch-pipeline-into-the-tree.md).
 
 **Why it is not the retired Pipeline DSL** (`docs/retired-names.md`, 2026-09-27). That was a second DSL with its own
 renderers and 30 `VoiceData` fields. The post-instrument stage is an Ignitor tree written as a function `x => x...`,

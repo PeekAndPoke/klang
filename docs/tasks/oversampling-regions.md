@@ -63,8 +63,7 @@ three differently factored sets of effects, is the outcome this task exists to p
 
 The deliverable is a table with one row per effect, across every host that exists when the task
 starts: the Ignitor nodes (`audio_be/.../ignitor/`), the Katalyst stages (`cylinders/katalyst/`), the
-master stages, and the voice strip renderers (`voices/strip/filter/`) if phase 3 has not yet retired
-them. Per row:
+master stages (the voice strip's renderers retired in phase 3 step 9, so they are no host any more). Per row:
 
 - **the DSP core** and every host wrapper around it, with file and line;
 - **duplication**: code that computes the same thing in two places, and above all where the copies
@@ -193,6 +192,16 @@ oversampling. A transparent oversampler for buses (a longer half-band, or an int
 linear one) belongs to this task's factoring. The alternative for the soft shapes is antiderivative anti-aliasing (no
 resampling, no latency). The group delay figures were corrected the same day (`Oversampler.groupDelaySamples`: 4.0, 5.5
 and 6.25 input samples).
+
+## 8b. Found 2026-10-10: `parallel` and `bands` align by the oversampler's delay
+
+`parallel` (both hosts, and `bands` on top of it) pads every earlier branch to the latest one, and the delays it
+compares are DECLARED, not measured: an oversampled `distort` or `shape` reports `Oversampler.groupDelaySamples` (the
+voice adds them up exactly, `BuiltIgnitor.latencySamples`; the bus reports `Oversampler.latencyFrames`, rounded, as a
+`KatalystLatentEffect`). A new oversampler, or any new stage with a pure delay, must report its own delay there, or a
+`parallel` beside it combs again (`IgnitorParallelSpec`, `KatalystParallelEffectSpec` render the alignment). An
+oversampler without latency (antiderivative anti-aliasing) reports 0 and needs no pad. Maintainer, 2026-10-10: "we
+will anyway change the way how oversampling works in the future so we need to keep this in mind."
 
 ## 9. Open decisions, for the maintainer when the task starts
 

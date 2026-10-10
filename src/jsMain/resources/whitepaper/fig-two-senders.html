@@ -342,7 +342,7 @@
 
     <section class="vd" aria-labelledby="hv">
         <h2 id="hv">VoiceData: what to play</h2>
-        <p class="sub">The payload both messages carry: 35 fields, every one optional. Here is what each sender fills in for one c3.</p>
+        <p class="sub">The payload both messages carry: 19 fields, every one optional. Here is what each sender fills in for one c3.</p>
         <div class="who">
             <div><i class="dd s" aria-hidden="true">S</i></div>
             <div><b>sprudel</b>, for the line of section 5: <code>note("c3").sound("supersaw").lpf(800).gain(0.4).pan(0.3).orbit(1).reverb(0.3, 5)</code></div>
@@ -351,9 +351,9 @@
         </div>
         <div id="chips"><!--R:chips--><div class="grp"><h3>Filled by both (3)</h3><div class="chips"><button type="button" class="chip both" data-f="freqHz" aria-pressed="false"><span class="fn">freqHz</span><span class="fv"><i class="dd s">S</i>130.81<i class="dd k">K</i>130.81</span></button><button type="button" class="chip both" data-f="gain" aria-pressed="false"><span class="fn">gain</span><span class="fv"><i class="dd s">S</i>0.4<i class="dd k">K</i>0.787</span></button><button type="button" class="chip both" data-f="sound" aria-pressed="false"><span class="fn">sound</span><span class="fv"><i class="dd s">S</i>&quot;supersaw&quot;<i class="dd k">K</i>&quot;supersaw&quot;</span></button></div></div><div class="grp"><h3>Filled by sprudel only (6)</h3><div class="chips"><button type="button" class="chip sp" data-f="note" aria-pressed="false"><span class="fn">note</span><span class="fv"><i class="dd s">S</i>&quot;c3&quot;</span></button><button type="button" class="chip sp" data-f="ignitorParams" aria-pressed="false"><span class="fn">ignitorParams</span><span class="fv"><i class="dd s">S</i>{ lpf.freq: 800 }</span></button><button type="button" class="chip sp" data-f="katalystParams" aria-pressed="false"><span class="fn">katalystParams</span><span class="fv"><i class="dd s">S</i>{ reverb.wet: 0.3, reverb.size: 5 }</span></button><button type="button" class="chip sp" data-f="cylinder" aria-pressed="false"><span class="fn">cylinder</span><span class="fv"><i class="dd s">S</i>1</span></button><button type="button" class="chip sp" data-f="pan" aria-pressed="false"><span class="fn">pan</span><span class="fv"><i class="dd s">S</i>0.3</span></button><button type="button" class="chip sp" data-f="sourceId" aria-pressed="false"><span class="fn">sourceId</span><span class="fv"><i class="dd s">S</i>&quot;loc_…&quot;</span></button></div></div><!--/R:chips--></div>
         <details class="unset" id="unset">
-            <summary id="unset-sum">26 more fields, unset for this note</summary>
+            <summary id="unset-sum">10 more fields, unset for this note</summary>
             <p class="unset-note">Neither sender writes these, so the engine reads its own default for each.</p>
-            <div class="chips"><!--R:unset--><span class="chip none">legato</span><span class="chip none">bank</span><span class="chip none">soundIndex</span><span class="chip none">accelerate</span><span class="chip none">vibrato</span><span class="chip none">vibratoMod</span><span class="chip none">pAttack</span><span class="chip none">pDecay</span><span class="chip none">pSustain</span><span class="chip none">pRelease</span><span class="chip none">pEnv</span><span class="chip none">pAttackCurve</span><span class="chip none">pDecayCurve</span><span class="chip none">pReleaseCurve</span><span class="chip none">fmh</span><span class="chip none">fmAttack</span><span class="chip none">fmDecay</span><span class="chip none">fmSustain</span><span class="chip none">fmEnv</span><span class="chip none">cut</span><span class="chip none">solo</span><span class="chip none">master</span><span class="chip none">katalyst</span><span class="chip none">control</span><span class="chip none">tags</span><span class="chip none">cull</span><!--/R:unset--></div>
+            <div class="chips"><!--R:unset--><span class="chip none">legato</span><span class="chip none">bank</span><span class="chip none">soundIndex</span><span class="chip none">cut</span><span class="chip none">solo</span><span class="chip none">master</span><span class="chip none">katalyst</span><span class="chip none">control</span><span class="chip none">tags</span><span class="chip none">cull</span><!--/R:unset--></div>
         </details>
         <p class="readout" id="readout" aria-live="polite">Select one of the filled fields to read what it means and where each side gets its value.</p>
     </section>
@@ -373,8 +373,6 @@
     // The fields of VoiceData, in declaration order (audio_bridge/.../VoiceData.kt, constructor).
     var FIELDS = [
         "note", "freqHz", "gain", "legato", "bank", "sound", "soundIndex", "ignitorParams", "katalystParams",
-        "accelerate", "vibrato", "vibratoMod", "pAttack", "pDecay", "pSustain", "pRelease", "pEnv",
-        "pAttackCurve", "pDecayCurve", "pReleaseCurve", "fmh", "fmAttack", "fmDecay", "fmSustain", "fmEnv",
         "cylinder", "pan", "cut", "solo", "sourceId", "master", "katalyst", "control", "tags", "cull"
     ];
 

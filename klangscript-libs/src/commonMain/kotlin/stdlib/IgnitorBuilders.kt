@@ -34,8 +34,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
  * Builder for [IgnitorDsl.Sine], handed to the `configure` lambda of `Ignitor.sine(...)`.
- * Knobs: `analog`, `phase`, and the partial banks `harmonics`, `octaves`, `suboctaves` with `fundamental` and
- * `analogSpread` (`docs/plans/sine-partial-banks.md`). Immutable: every knob returns a new builder.
+ * Knobs: `analog`, `phase`, and the partial banks `harmonics`, `octaves`, `suboctaves`, the explicit `partial` with
+ * `fundamental` and `analogSpread` (`docs/plans/sine-partial-banks.md`). Immutable: every knob returns a new builder.
  * `node` is the configured oscillator.
  */
 data class OscSineBuilder(val node: IgnitorDsl.Sine)
@@ -122,9 +122,38 @@ fun OscSineBuilder.suboctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1
     copy(node = node.copy(suboctaves = count.toIgnitorDsl(), suboctavesRolloff = rolloff.toIgnitorDsl()))
 
 /**
+ * Adds ONE sine partial at `ratio` times THIS sine's frequency, at `gain`, starting `phase` into its cycle; every call
+ * adds one more, kept in the order written. Any ratio, no integer rule, so a cluster of inharmonic partials is one
+ * sine (a drum's thud, a bell, a metal plate). `gain` is linear and raw (default 1), and a negative gain is the same
+ * partial at `phase + 0.5`. `phase` is a fraction of one cycle like the oscillators' `phase` (default 0, the upward zero
+ * crossing; 0.5 is the inverted partial, 0.25 starts on its peak); in a cluster the start phases decide how peaky the
+ * onset is. The partials sum raw with the sine's own partial and the other banks: a ratio of 1 doubles the
+ * fundamental, so a pure cluster writes `fundamental(0)`. A partial at or above Nyquist stays silent. Every argument is
+ * a number or a signal: a signal `gain` plays every sample, so each mode of a bell can have its own envelope
+ * (`partial(2.76, Ignitor.constant(0.5).adsr(0.001, 0.8, 0, 0.1))`, the same as that partial as its own sine under the
+ * same `adsr`); the ratio and the phase are read once per block (a moving ratio steps, a moving phase glides across the
+ * block). `analog` drifts every partial, `analogSpread` says whether they drift as one or each on its own. At most
+ * 256 per sine; a song that adds more plays the first 256.
+ *
+ * ```KlangScript
+ * Ignitor.sine(x => x.fundamental(0).partial(0.6571, 0.52).partial(0.8714, 0.652, 0.5))   // two partials of a thud
+ * Ignitor.sine(x => x.partial(ratio = 2.76, gain = 0.5, phase = 0.25))   // the sine and a bell-like overtone
+ * Ignitor.sine(x => x.fundamental(0).partial(1, Ignitor.constant(1).adsr(0.001, 0.8, 0, 0.1))
+ *   .partial(2.76, Ignitor.constant(0.5).adsr(0.001, 0.3, 0, 0.1)))    // a bell: each mode with its own decay
+ * ```
+ */
+@KlangScript.Function
+fun OscSineBuilder.partial(ratio: IgnitorDslLike, gain: IgnitorDslLike = 1.0, phase: IgnitorDslLike = 0.0): OscSineBuilder =
+    copy(
+        node = node.copy(
+            partials = node.partials + IgnitorDsl.Sine.Partial(ratio = ratio.toIgnitorDsl(), gain = gain.toIgnitorDsl(), phase = phase.toIgnitorDsl()),
+        ),
+    )
+
+/**
  * How much the partials drift against each other under `analog`, 0 to 1. `1` (default): every partial walks on
  * its own lane, the slow beating of a hand-stacked set of sines. `0`: one shared walk, the bank wobbles as a
- * single physical oscillator and its spectrum stays exactly harmonic. Between is a blend. Nothing happens while
+ * single physical oscillator and its ratios stay exact. Between is a blend. Nothing happens while
  * `analog` is 0. Named apart from the supersaw's `spread`, which is static unison detune.
  *
  * ```KlangScript

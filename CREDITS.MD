@@ -54,6 +54,10 @@ Klang's filters stand on the shoulders of the virtual-analog filter community:
   analog-style "diode-pair" resonance saturation that gives the filters their warmth when
   driven (`analog > 0`). Klang's SVF topology and the way the nonlinearity is folded in are
   its own; the *idea* of steering resonance damping from a diode-pair model comes from here.
+- **Linkwitz-Riley crossovers** (Siegfried Linkwitz and Russ Riley, *"Active Crossover Networks for Noncoincident
+  Drivers"*, JAES 1976): the crossover of `bands`. Two Butterworth filters in series on each side of a cut, so the bands
+  sum back to flat level; with three bands or more each band below a cut also passes that cut's all-pass, so the bands
+  stay in phase with each other
 
 ## DSP Algorithms & Techniques
 
@@ -88,9 +92,12 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 - **The missing fundamental**: the bass trick of Kokon and Der Schmetterling, a sine sub plus partials at 2f to 8f,
   which a small speaker can play and the ear folds back into the fundamental it cannot reproduce. The psychoacoustics is
   Jan F. Schouten's residue pitch (*"The residue, a new component in subjective sound analysis"*, 1940); the production
-  precedent is psychoacoustic bass enhancement (Waves MaxxBass). Klang builds it additively, from its own sine partials
+  precedent is psychoacoustic bass enhancement. Klang builds it additively, from its own sine partials
 - **Loudness, ITU-R BS.1770 and EBU R 128**: the LUFS measure behind the songs' house level (-14 LUFS) and the
   loudness-matched listening pairs that judge an engine change by ear
+- **Parallel and multiband compression**: long-standing studio techniques, a compressed copy blended under the dry
+  signal and a compressor per frequency band; together the writing reference's parallel multiband compression recipe,
+  built in Klang from `bands` and `blend`
 
 ## Hardware Inspirations
 
@@ -167,6 +174,9 @@ The performance and the richness of APIs available today are nothing short of am
   and visualizations
 - **[Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API)** — parallel processing without
   blocking the UI
+- **[The structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)**
+  (the HTML standard behind `postMessage`): it copies an object graph with its shared references intact, which is how a
+  sound used twice in a song reaches the audio thread as one sound (`@WireShared`)
 
 ## Graphics & Rendering
 

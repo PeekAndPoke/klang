@@ -135,6 +135,14 @@ class WireCodecRoundTripSpec : StringSpec({
                 ),
                 KatalystStageDsl.Eq(),
                 KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.4)),
+                // A chain inside a stage: an empty branch, a branch of two, and a parallel nested in a branch.
+                KatalystStageDsl.Parallel(
+                    branches = listOf(
+                        KatalystDsl(emptyList()),
+                        KatalystDsl.of(KatalystStageDsl.Distort(), KatalystStageDsl.Gain(gain = IgnitorDsl.Param("g", 0.25))),
+                        KatalystDsl.of(KatalystStageDsl.Parallel(branches = listOf(KatalystDsl.of(KatalystStageDsl.Duck())))),
+                    ),
+                ),
             ),
         ).forEach { decode_KatalystDsl(encode_KatalystDsl(it)) shouldBe it }
     }

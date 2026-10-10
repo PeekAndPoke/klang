@@ -64,7 +64,6 @@ class SamplePlayheadStartSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = voiceBuffer,
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val voice = factory.makeVoice(
@@ -89,7 +88,6 @@ class SamplePlayheadStartSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = voiceBuffer,
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = DoubleArray(blocks * blockFrames)

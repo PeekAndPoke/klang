@@ -40,20 +40,60 @@ private fun applyVibratoSemitones(source: SprudelPattern, args: List<SprudelDslA
     return source._liftOrReinterpretNumericalField(args, vibratoSemitonesMutation)
 }
 
+private val vibratoRangeFromMutation = voiceSetter { vibratoRangeFrom = it?.asDoubleOrNull() }
+
+private fun applyVibratoRangeFrom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.vibratoRangeFrom }, update = vibratoRangeFromMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, vibratoRangeFromMutation)
+}
+
+private val vibratoRangeToMutation = voiceSetter { vibratoRangeTo = it?.asDoubleOrNull() }
+
+private fun applyVibratoRangeTo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.vibratoRangeTo }, update = vibratoRangeToMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, vibratoRangeToMutation)
+}
+
+private val vibratoPhaseMutation = voiceSetter { vibratoPhase = it?.asDoubleOrNull() }
+
+private fun applyVibratoPhase(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.vibratoPhase }, update = vibratoPhaseMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, vibratoPhaseMutation)
+}
+
 /**
- * Vibrato: LFO rate in Hz and depth in semitones.
+ * Vibrato: LFO rate in Hz, depth in semitones, where the swing sits, and where the LFO starts.
  *
  * A pitch wobble on the note [per voice](/manuals/lexikon/voice): the rate is how fast, the depth
  * how far. A rate of 3 Hz is gentle, 5 standard, 7 nervous; a depth of 0.2 semitones is subtle,
  * 0.5 expressive, 1 a wide wobble.
  *
- * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`vibrato(semitones = mul(2))`), and the numeric slots read back as `vibrato.rate`, `vibrato.semitones`.
- * With no argument at all, the pattern's own values are reinterpreted as `rate`.
+ * `rangeFrom` and `rangeTo` place the swing, in the -1..1 language of `range`: the LFO's -1 lands on `rangeFrom`, its
+ * +1 on `rangeTo`, and the depth scales that. Unset, they are -1 and 1, a wobble both ways around the note;
+ * `rangeFrom = 0, rangeTo = 1` swings only upward, as a guitarist bends a fretted string. Raw, no clamp: `rangeTo = 2`
+ * swings twice the depth upward, `rangeFrom = 1, rangeTo = -1` turns the wobble upside down. `phase` is where in its
+ * cycle the wobble starts, a fraction of one cycle: 0 (unset) in the middle of the swing, rising, which is the note
+ * only for a swing centred on it (the default); 0.25 at its top; 0.5 in the middle, falling; 0.75 at its bottom. So an
+ * upward-only vibrato starts on the note at `phase = 0.75` (at 0 it would start a quarter of its depth sharp), a
+ * downward-only one at 0.25. It wraps (1.25 is 0.25).
  *
- * The door fills the vibrato stage of `classic()` (the `vibrato.*` slots), the Ignitor `vibrato` node; an instrument
- * without `classic()` ignores it, like the other `classic()` doors. A rate alone (`vib(4)`) switches nothing on: the
- * depth is the switch.
+ * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
+ * a mapper (`vibrato(semitones = mul(2))`), and the numeric slots read back as `vibrato.rate`, `vibrato.semitones`,
+ * `vibrato.rangeFrom`, `vibrato.rangeTo`, `vibrato.phase`. With no argument at all, the pattern's own values are
+ * reinterpreted as `rate`.
+ *
+ * The door fills the vibrato stage of `classic()` (the `vibrato.*` slots), the Ignitor `vibrato` node, whose
+ * `range(from, to)` and `phase` builder knobs these are; an instrument without `classic()` ignores it, like the other
+ * `classic()` doors. The depth is the switch: a call without it (`vib(4)`, `vib(rangeFrom = 0)`) switches nothing on.
  *
  * ```KlangScript(Playable)
  * note("c4 e4").s("saw").vibrato(5, 0.5)                                  // a singing vibrato
@@ -64,41 +104,103 @@ private fun applyVibratoSemitones(source: SprudelPattern, args: List<SprudelDslA
  * ```
  *
  * ```KlangScript(Playable)
+ * note("c4 e4").s("saw").vibrato(rate = 5, semitones = 0.5, rangeFrom = 0, rangeTo = 1, phase = 0.75)   // a guitar's vibrato: from the note, only ever up
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c4 e4").s("saw").vibrato(rate = 4, semitones = 0.7, phase = "0 0.5")   // the second note starts its wobble falling
+ * ```
+ *
+ * ```KlangScript(Playable)
  * note("c4 e4").s("saw").vibrato("3 7", 0.5).penv(vibrato.rate)           // an onset blip as many semitones wide as the rate
  * ```
  *
  * @param rate LFO rate in Hz.
  * @param semitones Depth in semitones.
+ * @param rangeFrom Where the LFO's -1 lands, in the -1..1 language of `range`, raw (default -1).
+ * @param rangeTo Where the LFO's +1 lands, in the -1..1 language of `range`, raw (default 1).
+ * @param phase Where the wobble starts, a fraction of one cycle; 0 is mid-swing, rising (default 0).
  *
  * @scope voice
  * @category tonal
- * @tags vibrato, rate, semitones
+ * @tags vibrato, rate, semitones, range, phase
  */
 @KlangScript.Function
-fun SprudelPattern.vibrato(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.vibrato(
+    rate: PatternLike? = null,
+    semitones: PatternLike? = null,
+    rangeFrom: PatternLike? = null,
+    rangeTo: PatternLike? = null,
+    phase: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern {
     // A tail-only call must not touch rate: reinterpret runs only on a fully bare call.
-    var p = if (rate != null || !(semitones != null)) {
+    var p = if (rate != null || !(semitones != null || rangeFrom != null || rangeTo != null || phase != null)) {
         applyVibratoRate(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
     } else {
         this
     }
+
     if (semitones != null) p = applyVibratoSemitones(p, listOf<Any?>(semitones).asSprudelDslArgs(callInfo?.forParam(1)))
+
+    if (rangeFrom != null) {
+        p = applyVibratoRangeFrom(p, listOf<Any?>(rangeFrom).asSprudelDslArgs(callInfo?.forParam(2)))
+    }
+
+    if (rangeTo != null) {
+        p = applyVibratoRangeTo(p, listOf<Any?>(rangeTo).asSprudelDslArgs(callInfo?.forParam(3)))
+    }
+
+    if (phase != null) {
+        p = applyVibratoPhase(p, listOf<Any?>(phase).asSprudelDslArgs(callInfo?.forParam(4)))
+    }
+
     return p
 }
 
 /** Parses this string as a pattern, then applies [vibrato]. */
 @KlangScript.Function
-fun String.vibrato(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(rate, semitones, callInfo)
+fun String.vibrato(
+    rate: PatternLike? = null,
+    semitones: PatternLike? = null,
+    rangeFrom: PatternLike? = null,
+    rangeTo: PatternLike? = null,
+    phase: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(
+        rate = rate,
+        semitones = semitones,
+        rangeFrom = rangeFrom,
+        rangeTo = rangeTo,
+        phase = phase,
+        callInfo = callInfo,
+    )
 
 /** Chains a [vibrato] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.vibrato(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vibrato(rate, semitones, callInfo) }
+fun PatternMapperFn.vibrato(
+    rate: PatternLike? = null,
+    semitones: PatternLike? = null,
+    rangeFrom: PatternLike? = null,
+    rangeTo: PatternLike? = null,
+    phase: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.chain { p ->
+        p.vibrato(
+            rate = rate,
+            semitones = semitones,
+            rangeFrom = rangeFrom,
+            rangeTo = rangeTo,
+            phase = phase,
+            callInfo = callInfo,
+        )
+    }
 
 /**
  * The `vibrato` object: `vibrato(...)` sets the slots, and each numeric slot reads back as a child,
- * `vibrato.rate`, `vibrato.semitones`.
+ * `vibrato.rate`, `vibrato.semitones`, `vibrato.rangeFrom`, `vibrato.rangeTo`, `vibrato.phase`.
  *
  * @scope voice
  * @category tonal
@@ -116,15 +218,46 @@ object vibrato {
     @KlangScript.Property
     val semitones: FieldAccessor = FieldAccessor { it.vibratoMod }
 
+    /** The rangeFrom slot (where the LFO's -1 lands) of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val rangeFrom: FieldAccessor = FieldAccessor { it.vibratoRangeFrom }
+
+    /** The rangeTo slot (where the LFO's +1 lands) of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val rangeTo: FieldAccessor = FieldAccessor { it.vibratoRangeTo }
+
+    /** The phase slot (where the wobble starts, in cycles) of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val phase: FieldAccessor = FieldAccessor { it.vibratoPhase }
+
     /**
      * The setter, see [SprudelPattern.vibrato].
      *
      * @param rate LFO rate in Hz.
      * @param semitones Depth in semitones.
+     * @param rangeFrom Where the LFO's -1 lands, in the -1..1 language of `range`, raw (default -1).
+     * @param rangeTo Where the LFO's +1 lands, in the -1..1 language of `range`, raw (default 1).
+     * @param phase Where the wobble starts, a fraction of one cycle; 0 is mid-swing, rising (default 0).
      */
     @KlangScript.Invoke
-    operator fun invoke(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.vibrato(rate, semitones, callInfo) }
+    operator fun invoke(
+        rate: PatternLike? = null,
+        semitones: PatternLike? = null,
+        rangeFrom: PatternLike? = null,
+        rangeTo: PatternLike? = null,
+        phase: PatternLike? = null,
+        callInfo: CallInfo? = null,
+    ): PatternMapperFn =
+        { p ->
+            p.vibrato(
+                rate = rate,
+                semitones = semitones,
+                rangeFrom = rangeFrom,
+                rangeTo = rangeTo,
+                phase = phase,
+                callInfo = callInfo,
+            )
+        }
 }
 
 /**
@@ -134,18 +267,52 @@ object vibrato {
  * note("c4 e4").s("saw").vib(5, 0.5)
  * ```
  *
+ * @param rate LFO rate in Hz.
+ * @param semitones Depth in semitones.
+ * @param rangeFrom Where the LFO's -1 lands, in the -1..1 language of `range`, raw (default -1).
+ * @param rangeTo Where the LFO's +1 lands, in the -1..1 language of `range`, raw (default 1).
+ * @param phase Where the wobble starts, a fraction of one cycle; 0 is mid-swing, rising (default 0).
+ *
  * @scope voice
  * @category tonal
  * @tags vib, vibrato
  */
 @KlangScript.Function
-fun SprudelPattern.vib(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    vibrato(rate, semitones, callInfo)
+fun SprudelPattern.vib(
+    rate: PatternLike? = null,
+    semitones: PatternLike? = null,
+    rangeFrom: PatternLike? = null,
+    rangeTo: PatternLike? = null,
+    phase: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    vibrato(
+        rate = rate,
+        semitones = semitones,
+        rangeFrom = rangeFrom,
+        rangeTo = rangeTo,
+        phase = phase,
+        callInfo = callInfo,
+    )
 
 /** Parses this string as a pattern, then applies [vib]. */
 @KlangScript.Function
-fun String.vib(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.vibrato(rate, semitones, callInfo)
+fun String.vib(
+    rate: PatternLike? = null,
+    semitones: PatternLike? = null,
+    rangeFrom: PatternLike? = null,
+    rangeTo: PatternLike? = null,
+    phase: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.vibrato(
+        rate = rate,
+        semitones = semitones,
+        rangeFrom = rangeFrom,
+        rangeTo = rangeTo,
+        phase = phase,
+        callInfo = callInfo,
+    )
 
 /**
  * Alias of [vibrato]: the same object under its short name.
@@ -159,8 +326,22 @@ val vib: vibrato = vibrato
 
 /** Chains a [vib] step onto this [PatternMapperFn] (see [SprudelPattern.vib]). */
 @KlangScript.Function
-fun PatternMapperFn.vib(rate: PatternLike? = null, semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.vibrato(rate, semitones, callInfo)
+fun PatternMapperFn.vib(
+    rate: PatternLike? = null,
+    semitones: PatternLike? = null,
+    rangeFrom: PatternLike? = null,
+    rangeTo: PatternLike? = null,
+    phase: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.vibrato(
+        rate = rate,
+        semitones = semitones,
+        rangeFrom = rangeFrom,
+        rangeTo = rangeTo,
+        phase = phase,
+        callInfo = callInfo,
+    )
 
 // -- penv ------------------------------------------------------------------------------------------------------------
 

@@ -24,8 +24,6 @@ import io.peekandpoke.klang.audio_be.ignitor.fmModIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
 import io.peekandpoke.klang.audio_be.utils.flushState
-import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import kotlin.math.PI
 import kotlin.math.abs
@@ -42,9 +40,9 @@ private val testRandom = Random(0x5EED)
 /**
  * THE envelope law ([EnvelopeCore], phase 3 decision D3), pinned against ORACLES written out in this
  * file, on the core and then on every host that can show its level: the Ignitor chain `adsr`, the Ignitor FM
- * index envelope, the Ignitor pitch envelope (sprudel's `penv` too, through `classic()`) and the voice's
- * control-rate (FM) envelope. (The voice strip's VCA and filter envelope were hosts too until the strip retired,
- * phase 3 step 9, its pitch envelope until pitch pipeline step 1.)
+ * index envelope (sprudel's `fm` too, through `classic()`) and the Ignitor pitch envelope (sprudel's `penv` too).
+ * (The voice strip's VCA and filter envelope were hosts too until the strip retired, phase 3 step 9, its pitch
+ * envelope until pitch pipeline step 1, the voice's control-rate FM envelope until step 4.)
  *
  * Why oracles and not a parity spec: the hosts share one core, so a mutation INSIDE it moves every host
  * together and a host-against-host comparison stays green (step 4's lesson, `StripLawCoresSpec`). Each
@@ -423,25 +421,6 @@ class EnvelopeLawSpec : StringSpec({
         check(sus = 0.3, ac = AdsrCurve.Exponential, dc = AdsrCurve.Exponential, rc = AdsrCurve.Exponential, nameCurves = false)
     }
 
-    "host: the strip's control-rate envelope (the offset on a zero release, the level clamped to [0, 1])" {
-        val lin = AdsrCurve.Linear
-
-        fun level(env: Voice.Envelope, blockStart: Double, gate: Double): Double =
-            calculateControlRateEnvelope(env = env, blockStart = blockStart, startFrame = 0.0, gateEndFrame = gate, core = EnvelopeCore())
-
-        level(env = Voice.Envelope(attackFrames = 240.5, decayFrames = 100.0, sustainLevel = 0.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), blockStart = 240.0, gate = far.toDouble()) shouldBe
-            (240.0 / 240.5 plusOrMinus 1e-12)
-        level(env = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), blockStart = 128.0, gate = 128.0) shouldBe 0.0
-        level(env = Voice.Envelope(attackFrames = 0.0, decayFrames = 10.0, sustainLevel = 1.5, releaseFrames = 12.0, attackCurve = lin, decayCurve = lin, releaseCurve = lin), blockStart = 5.0, gate = far.toDouble()) shouldBe 1.0
-
-        // Each stage takes its own curve: a Square decay and a Cube release, a quarter into each
-        // (g at a quarter is 0.0625 for Square, 0.015625 for Cube).
-        val shaped = Voice.Envelope(attackFrames = 0.0, decayFrames = 100.0, sustainLevel = 0.2, releaseFrames = 101.0, attackCurve = lin, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube)
-
-        level(env = shaped, blockStart = 75.0, gate = far.toDouble()) shouldBe (0.2 + 0.8 * 0.0625 plusOrMinus 1e-15)
-        level(env = shaped, blockStart = 275.0, gate = 200.0) shouldBe (0.2 * 0.015625 plusOrMinus 1e-15)
-    }
-
     "a gate at or before the onset releases from exactly 0.0, for every curve, with and without an attack" {
         // Oracle: the voice was never open, so the envelope is 0.0 on every frame. Written out, the
         // unguarded law would release from the attack curve extrapolated to the gate: a Square attack of 0
@@ -516,9 +495,6 @@ class EnvelopeLawSpec : StringSpec({
         val hosts: List<Pair<String, (Double) -> List<Double>>> = listOf(
             "core" to { t -> EnvelopeCore().apply { prepare(attackFrames = t, decayFrames = t, sustainLevel = 0.5, releaseFrames = 12.0, gateEndPos = 20, attackCurve = lin, decayCurve = lin, releaseCurve = lin) }.let { c -> (0 until 40).map { c.at(it) } } },
             "chain adsr" to { t -> renderNode(dc().adsr(attack = t, decay = t, sustain = 0.5, release = sec(12.0), attackCurve = lin, decayCurve = lin, releaseCurve = lin, declick = 0.0), 40, gate = 20).toList() },
-            "strip control-rate envelope" to { t ->
-                (0 until 40).map { calculateControlRateEnvelope(env = Voice.Envelope(attackFrames = t, decayFrames = t, sustainLevel = 0.5, releaseFrames = 12.0), blockStart = it.toDouble(), startFrame = 0.0, gateEndFrame = 20.0, core = EnvelopeCore()) }
-            },
             "FM index envelope" to { t -> renderNode(fm(t), 40, gate = 20).toList() },
             "pitch envelope" to { t -> renderNode(pitch(t), 40, gate = 20).toList() },
             "filter envelope" to { t -> renderNode(filter(t), 400, gate = 200).toList() },

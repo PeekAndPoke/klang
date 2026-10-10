@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.coerceSinePartials
 import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 
 /**
@@ -173,6 +174,14 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                 }
 
                 return listOf(node.children[soundIndex.mod(node.children.size)])
+            }
+
+            // A sine renders its first SINE_MAX_PARTIALS explicit partials; the knobs of the rest are never built.
+            if (node is IgnitorDsl.Sine && node.partials.size > coerceSinePartials(node.partials.size)) {
+                val kids = node.childNodes()
+                val fields = kids.size - 3 * node.partials.size
+
+                return kids.subList(0, fields + 3 * coerceSinePartials(node.partials.size))
             }
 
             return node.childNodes()
@@ -341,7 +350,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Sine -> {
                 val partials = ((node.harmonics as? IgnitorDsl.Constant)?.value ?: 0.0) +
                         ((node.octaves as? IgnitorDsl.Constant)?.value ?: 0.0) +
-                        ((node.suboctaves as? IgnitorDsl.Constant)?.value ?: 0.0)
+                        ((node.suboctaves as? IgnitorDsl.Constant)?.value ?: 0.0) +
+                        coerceSinePartials(node.partials.size)
 
                 // coarse on purpose, as the bank's own one pass: every partial's loop reads a moving phase's block, but
                 // the bank is charged one read (a partial count would rank phase-modulated banks against stacks)
@@ -369,6 +379,13 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
             // binary: in place over a scalar side, a scratch render and a third stream otherwise
             is IgnitorDsl.Plus -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
+            // n branches are n - 1 sums of two signals. NOT counted, deliberately: the latency pads (a pass over the block and
+            // a ring of a few samples per padded branch), which depend on the branches' latencies, known only at build
+            is IgnitorDsl.Parallel -> {
+                val sums = (node.branches.size - 1).coerceAtLeast(0)
+
+                GraphCensus(passes = sums, traffic = 3 * sums, bytes = 0)
+            }
             is IgnitorDsl.Minus -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
             is IgnitorDsl.Times -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
             is IgnitorDsl.Div -> GraphCensus(passes = 1, traffic = 1 + signals(node.left, node.right), bytes = 0)
@@ -437,7 +454,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // pitch modulation: the mod renders a block (1 write), the ratio loop reads it and writes
             // the ratios (2), and the source reads the ratio per sample (1); a detune is a constant
             // factor folded into the source's increment
-            is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod ->
+            is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod,
+            is IgnitorDsl.PitchModSemitones ->
                 GraphCensus(passes = 1, traffic = 4, bytes = 64)
 
             is IgnitorDsl.Detune -> NONE

@@ -54,7 +54,7 @@ class IgniteOnsetOffsetSpec : StringSpec({
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
             sampleRate = sampleRate, blockFrames = blockFrames,
-            voiceBuffer = voiceBuffer, freqModBuffer = DoubleArray(blockFrames),
+            voiceBuffer = voiceBuffer,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val startTime = startFrameWanted.toDouble() / sampleRate
@@ -73,7 +73,7 @@ class IgniteOnsetOffsetSpec : StringSpec({
         val rc = Voice.RenderContext(
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate, blockFrames = blockFrames, voiceBuffer = voiceBuffer,
-            freqModBuffer = DoubleArray(blockFrames), scratchBuffers = ScratchBuffers(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = ArrayList<Double>()
         var b = 0.0

@@ -32,6 +32,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Silence" { check(IgnitorDsl.Silence) }
     "Sample" { check(IgnitorDsl.Sample) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
+    "Parallel" { check(IgnitorDsl.Sine().parallel({ it }, { it.lowpass(800.0) }, { it.mul(0.5) })) }
 
     // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where
     // it gets used; every field non-default so a dropped one shows up.
@@ -51,6 +52,20 @@ class IgnitorDslWireCodecSpec : StringSpec({
                 octaves = IgnitorDsl.Param("oct", 3.0), octavesRolloff = IgnitorDsl.Constant(0.5),
                 suboctaves = IgnitorDsl.Constant(1.0), suboctavesRolloff = IgnitorDsl.Constant(0.0),
                 analogSpread = IgnitorDsl.Constant(0.25),
+            )
+        )
+    }
+    // The explicit partials: a list of plain (untagged) objects, order kept, every field non-default and a signal among
+    // them, so a dropped field, a dropped or reordered entry shows up.
+    "Sine with explicit partials" {
+        check(
+            IgnitorDsl.Sine(
+                fundamental = IgnitorDsl.Constant(0.0),
+                partials = listOf(
+                    IgnitorDsl.Sine.Partial(ratio = IgnitorDsl.Constant(0.6571), gain = IgnitorDsl.Constant(0.52), phase = IgnitorDsl.Constant(0.5)),
+                    IgnitorDsl.Sine.Partial(ratio = IgnitorDsl.Param("r", 1.25), gain = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(2.0)), phase = IgnitorDsl.Constant(0.25)),
+                    IgnitorDsl.Sine.Partial(ratio = IgnitorDsl.Constant(3.3905)),
+                ),
             )
         )
     }
@@ -307,6 +322,17 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- pitch modulation -----------------------------------------------------------------------------------
     "Vibrato" { check(IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.02)) }
+    "Vibrato with a range and a phase (7c), a signal bound" {
+        check(
+            IgnitorDsl.Sine().vibrato(
+                rate = IgnitorDsl.Constant(5.0),
+                semitones = IgnitorDsl.Constant(0.5),
+                rangeFrom = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(1.0)).mul(0.5),
+                rangeTo = IgnitorDsl.Constant(1.0),
+                phase = IgnitorDsl.Constant(0.25),
+            )
+        )
+    }
     "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0)) }
     "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0))) }
     "PitchEnvelope (every ADSR field and curve non-default)" {
@@ -325,6 +351,8 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
     }
     "PitchMod" { check(IgnitorDsl.Sine().pitchMod(IgnitorDsl.Sine())) }
+    // Its own tag: a decode into `PitchMod` (the same two fields) would be equal in shape and wrong in law.
+    "PitchModSemitones" { check(IgnitorDsl.Sine().pitchModSemitones(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(5.0)).mul(7.0))) }
 
     // --- dispatch / deep composites -------------------------------------------------------------------------
     "Variants (primitive children)" {

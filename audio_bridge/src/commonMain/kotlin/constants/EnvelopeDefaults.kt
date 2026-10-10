@@ -32,9 +32,9 @@ const val ADSR_EXP_K: Double = 3.0
  * `curves` (`x => x.adsr(a, d, s, r, e => e.curves(...))`): the Ignitor filter nodes' cutoff
  * envelope (`IgnitorDsl.Lowpass` and its three siblings), the Ignitor pitch envelope
  * (`IgnitorDsl.PitchEnvelope`) and the Ignitor FM index envelope (`IgnitorDsl.Fm`, which has no
- * curve knob yet), and the voice's own FM envelope (sprudel's `fm`). Sprudel's `penv` fills `classic()`'s pitch
- * envelope stage, so a curve the pattern named with `penvCurves` arrives as a `penvCurves.*` slot; the
- * voice FM envelope has no curve door and always takes this one. The Ignitor curve knobs default to this curve's `AdsrCurves` index, and so
+ * curve knob yet, so sprudel's `fm`, which fills `classic()`'s FM stage since pitch pipeline step 4, always takes
+ * this one). Sprudel's `penv` fills `classic()`'s pitch envelope stage, so a curve the pattern named with
+ * `penvCurves` arrives as a `penvCurves.*` slot. The Ignitor curve knobs default to this curve's `AdsrCurves` index, and so
  * do `classic()`'s modulation-envelope curve slots (`ModEnvelopeCurvesSlots`); a knob that cannot be read at build,
  * or reads as a bad index, falls back to it too.
  *
