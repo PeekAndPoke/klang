@@ -13,6 +13,7 @@ import java.io.File
 import java.util.Locale
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.system.exitProcess
 
 /**
  * Song-level CPU benchmark runner.
@@ -24,10 +25,18 @@ import java.time.format.DateTimeFormatter
  * texts in `KLANG_SNAPSHOT_DIR`, one engine), `ledger` (appends to
  * `docs/benchmarks/ledger.md`), `all` (default).
  *
+ * Not a benchmark, but started here so it needs no task of its own: `corpus` checks the corpus against
+ * `docs/benchmarks/corpus-reference.md` and exits 1 on a sound change, `corpus-accept` rewrites the reference
+ * ([CorpusCheck]).
+ *
  * Prints a table per suite (with ladder deltas) and saves a markdown report to docs/benchmarks/.
  */
 fun main(args: Array<String>) {
     val suite = args.firstOrNull()?.lowercase() ?: "all"
+
+    if (suite == "corpus" || suite == "corpus-accept") {
+        exitProcess(CorpusCheck.run(accept = suite == "corpus-accept"))
+    }
 
     println("=== Klang Song CPU Benchmark (JVM) ===")
     println("Runtime: ${System.getProperty("java.vm.name")} ${System.getProperty("java.vm.version")}")

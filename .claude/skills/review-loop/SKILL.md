@@ -301,6 +301,9 @@ reader.
   `rm -rf`, a git write), check every script you already wrote for the same action before you run it again. Pitch
   step 3b's audio reviewer had an `rm -rf` refused, then ran an older runner script that still held it; nothing
   existed to delete, but a refused action went ahead. Clear output with `find ... -delete` on a named folder.
+  Nor a reduced or rephrased form of it (2026-10-10: the harness worker had a combined build-and-snapshot lock call
+  refused, then ran the snapshot part alone; harmless, but the refusal was meant to reach the coordinator). Stop and
+  report the refusal; the coordinator takes it to the maintainer.
 - **Gradle: never run two builds concurrently** — corrupts the sprudel KSP cache; recover with
   `:sprudel:clean`.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards

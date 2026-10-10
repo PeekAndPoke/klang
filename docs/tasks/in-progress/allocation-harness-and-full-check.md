@@ -1,6 +1,8 @@
 # The allocation harness in the repo, and one full check
 
-Status: **in progress (2026-10-10): the design is decided (see "Decided" at the end), the build phase.**
+Status: **done (2026-10-10): built, proven and reviewed in three rounds, the third clean (0 MAJOR). Archive with the
+next housekeeping pass.** Run it: `console/full-check.sh` (`--fresh` forces every test task); the allocation step
+alone is in `audio_benchmark/README.md`.
 
 ## Why
 
@@ -313,3 +315,240 @@ Each step is its own `console/with-build-lock.sh` call, so a waiting agent waits
 8. **Tests:** Gradle skips test tasks whose inputs did not change; `full-check.sh --fresh` forces every test task to
    run.
 9. **The JVM's process-dependent profile:** accepted and noted in the budget file's header.
+
+## Built (worker, 2026-10-10, branch `alloc-harness` at `d7a455e4`, uncommitted)
+
+### What is in the tree
+
+| file | what |
+|---|---|
+| `audio_benchmark/src/commonMain/kotlin/AllocationCases.kt` | the 14 cases (the design's names), middle C (261.6255653 Hz), the voice rig and the engine rig, public API only |
+| `audio_benchmark/src/jsMain/kotlin/allocation_mode.kt`, `main.kt` | the JS alloc mode: `KLANG_ALLOC_CASE`, `KLANG_ALLOC_WARM`, `KLANG_ALLOC_COUNT` from the environment, prints `NS <ns per block>` |
+| `audio_benchmark/src/jvmMain/kotlin/AllocationCheck.kt`, `main.kt` | the driver, `KLANG_BENCH_MODE=alloc`: JVM in-process (9 rounds), V8 by spawning node (3 interleaved rounds, two processes), the budgets, the scoreboard, `OVER` lines, exit 1 |
+| `audio_benchmark/alloc-budgets.txt` | the 28 budgets, set by hand from the first run; the header notes decisions 2 and 9 |
+| `docs/benchmarks/alloc-scoreboard.md` | the scoreboard, two rows per run |
+| `src/jvmMain/kotlin/CorpusCheck.kt` (+ a branch in `SongBenchmarkMain.kt`) | the tracked corpus check, `runSongBenchmark --args=corpus` and `--args=corpus-accept`, through `KlangOfflineRenderer`, no reflection |
+| `docs/benchmarks/corpus-reference.md` | the first reference, 18 songs |
+| `console/full-check.sh` | the four steps, each in its own lock call, `--fresh`, the tree guard, the summary, exit 0 or 1 |
+| `audio/ref/performance.md` ("Measuring allocations"), `audio_benchmark/README.md` | how to measure, and how to locate a box after a breach |
+
+No Gradle task, no plugin, nothing wired into `check`, `jvmTest` or `allTests`.
+
+### The bundle cross-check (decision 3)
+
+`sawC`, `super7a` and `E-C-rel05-n16` on `audio_be`'s production TEST bundle (the e8-r1B probe, its `c4:` cases,
+installed and removed again under the lock) and on the harness bundle, the e8 method, node 22.12, 3 interleaved
+rounds, unpinned, the median:
+
+| case | test bundle | harness bundle |
+|---|---|---|
+| `sawC` | 30.6 B, 1,288 ns | 31.0 B, 1,292 ns |
+| `super7a` | 15.9 B, 3,983 ns | 14.4 B, 4,014 ns |
+| `E-C-rel05-n16` | 1,318 B, 33,730 ns | 1,293 B, 33,748 ns |
+
+The two bundles agree inside the noise band (2 B on the voices, 25 B or 2 percent on the n16 row).
+
+### The first run (the budgets were set from it)
+
+Node 22.12.0, JVM 17.0.17, unpinned, median bytes per block (the max beside it) and µs per block:
+
+| case | V8 B (max) | V8 µs | V8 budget | JVM B (max) | JVM µs | JVM budget (12 until review round 1) |
+|---|---|---|---|---|---|---|
+| `saw` | 30 (36) | 0.73 | 72 | 0 (0) | 0.25 | 6 |
+| `sawC` | 42 (43) | 1.39 | 80 | 0 (0) | 0.77 | 6 |
+| `C-offrel` | 31 (32) | 2.38 | 72 | 0 (0) | 1.30 | 6 |
+| `C-env3` | 61 (72) | 7.66 | 160 | 0 (0) | 4.69 | 6 |
+| `super7` | 17 (26) | 3.17 | 64 | 0 (0) | 1.68 | 6 |
+| `super7a` | 21 (27) | 4.09 | 64 | 0 (0) | 2.13 | 6 |
+| `sgpad-vib` | 67 (68) | 4.82 | 112 | 0 (0) | 2.51 | 6 |
+| `whitecolor` | 17 (20) | 1.15 | 64 | 0 (0) | 0.41 | 6 |
+| `C-dist` | 51 (56) | 1.90 | 96 | 0 (0) | 1.11 | 6 |
+| `tube4x` | 72 (83) | 5.64 | 160 | 0 (0) | 3.40 | 6 |
+| `C-full` | 253 (259) | 7.67 | 320 | 0 (0) | 5.77 | 6 |
+| `E-sawC-sus` | 83 (83) | 5.78 | 160 | 0 (0) | 3.07 | 6 |
+| `E-noisesaw-sus` | 77 (83) | 7.48 | 160 | 0 (0) | 4.07 | 6 |
+| `E-C-rel05-n16` | 1,293 (1,320) | 34.70 | 1,500 | 409 (414) | 18.56 | 450 |
+
+At middle C the voice rows read about 10 to 25 B more on V8 than the 220 Hz records (the `saw` control 30 B against
+16 B), as the records predicted. Across the five runs of this build phase the V8 medians moved by up to about 15 B on
+a voice row (`sawC` 26 to 42, `saw` 24 to 41). `C-full` moves the most: about 90 B, medians 164 to 253 across
+the build phase and review round 1, single rounds 139 to 273 (reviewer B); its budget of 320 still holds. The JVM
+did not move.
+
+### The harness's own mutation check
+
+Each in ONE lock call: back up with `cp`, mutate, build, run the check, restore with `cp`, verify with `cmp`. The
+scoreboard was backed up and restored too, so a mutant's rows are not in the record.
+
+1. **Item 8 regression** (`Ignitors.readParam` a plain function again): **RED, exit 1**, 7 of 28 over budget, all
+   on V8: `sawC` 93 B (budget 80), `C-offrel` 82 (72), `super7` 77 (64), `super7a` 91 (64), `sgpad-vib` 145 (112),
+   `C-dist` 123 (96), `E-C-rel05-n16` 2,055 (1,500). As designed, `E-sawC-sus` (145, budget 160) and `C-full`
+   (304, budget 320) guard the per-sample class only and stayed under. Restored, `cmp` identical.
+2. **A per-block `Double` box** planted in `WhiteNoiseIgnitor.generate` (a field of type `Any?` written once per
+   block): **RED, exit 1**, `whitecolor` jvm 24 B (budget 12) and `E-noisesaw-sus` jvm 24 B (budget 12), exactly the
+   two cases with white noise. V8 read `whitecolor` 35 B, inside its budget: the V8 limit of decision 2, as said.
+   Restored, `cmp` identical.
+3. **The budget file:** the `sawC v8` line deleted and a line for an unknown case added: **RED, exit 1**,
+   `MISSING budget: sawC v8 ...` and `UNKNOWN case in budget: ... "nosuchcase" ...`. Restored, `cmp` identical.
+
+The JFR recipe of `audio/ref/performance.md` was tried on mutant 2 (same lock discipline): the recording's
+`java.lang.Double` stacks named `WhiteNoiseIgnitor.generate`, the planted line. The heap profiler snippet was run on
+the harness bundle as written.
+
+### The corpus
+
+- **v0.6.3's sound first:** the scratch spec (`CORPUS_LABEL=harness-base`) on this tree: `tmp/naming/corpus-harness-base.txt`
+  is byte-identical to `tmp/naming/corpus-merge063.txt`, 18 of 18.
+- **`corpus-accept`**, then **`corpus` three times:** 18 of 18 identical each time (175, 176, 175 s inside the
+  JVM, about 177 s wall).
+- **A finding:** the tracked hashes are not new, against open question 7's expectation. They equal the scratch
+  spec's `raw` column, 18 of 18 (hash and peak). The master stage processes the mix in place (DC blockers, limiter)
+  and only then clips into the output, so the private `mix` the scratch spec read was already the post-master signal,
+  and no song's peak reaches the clip. A song that clips would differ.
+- Each of the 4 render workers owns its own `Samples`: its caches are plain maps, and the scratch spec's mutex is not
+  reachable inside `KlangOfflineRenderer`.
+
+### Run times (this machine)
+
+| what | wall |
+|---|---|
+| the allocation step (bundle up to date, JVM half and V8 half) | 1 min 38 s; 2 min 18 s to 2 min 30 s with a rebuild after a mutation |
+| the corpus check | 3 to 4 min (175 s of render here, 221 to 224 s on reviewer B's runs) |
+| the scratch corpus spec | about 3 min 13 s |
+| the cross-check (3 cases, 2 bundles, 3 rounds) | 1 min 7 s |
+
+### The full check, on the final tree
+
+`console/full-check.sh --fresh` (every test task ran again: all 1,475 test XML files were newer than the start),
+exit 0:
+
+```
+Klang full check, 2026-10-10 20:12, d7a455e4-dirty, --fresh
+  logs    build/full-check/2026-10-10_201258
+  tests   GREEN  17,372 tests, 0 failed                             3m 48s
+  corpus  GREEN  18 of 18 songs identical to the reference          5m 15s
+  timing  DONE   docs/benchmarks/2026-10-10_202201_compare.md       1m 20s
+          information: the JVM is slower than node on 3 of the compare file's rows
+  alloc   GREEN  28 of 28 within budget                             1m 47s
+GREEN. Total 12m 10s.
+```
+
+The corpus step's 5 min 15 s includes recompiling the root module and `audio_be` after the mutation checks; its
+render is 3 to 4 min. The run left its timing files (`docs/benchmarks/2026-10-10_202201_*.md`) and its two
+scoreboard rows; whether they are committed is the coordinator's call.
+
+### Choices and doubts for the coordinator
+
+- **The frequency** is middle C to the double (`261.6255653005986`), the value of the records' `c4:` cases; the
+  docs say 261.63 Hz.
+- **The tree guard** hashes `git status --porcelain` together with each listed file's content (`git hash-object`),
+  so an edit to a file that was already dirty also counts, and it leaves `docs/benchmarks/` out, where the run writes
+  its own scoreboard row and timing files.
+- **A failed timing step** (it could not get the lock, or it crashed) turns the run red; its numbers never do.
+- **Budgets near item 8's class:** `sawC` sits at 80 with today's medians between 26 and 42 and the mutant at 93, so
+  the margins are about 40 B below and 13 B above. The mutant proved it; a noisier machine may want a look.
+
+### Review round 1 (2026-10-10): what changed
+
+Reviews `tmp/reviews/alloc-r1-A.md` (0 MAJOR, 8 MINOR, 6 NIT) and `tmp/reviews/alloc-r1-B.md` (1 MAJOR, 3 MINOR,
+5 NIT). Fixed:
+
+- **A measurement that saw nothing is red, never 0 B** (B1, A5). A node window with no `allocated=` lines, or no
+  more bytes than its base, or no `NS` line, or an `NS` of 0, is a `FAIL <case> v8` naming the cause, with the tail
+  of the node's output. A JVM without thread allocation accounting (or a -1 read) is a `FAIL jvm`. Proven with
+  reviewer B's wrapper (`allocated=` renamed): 14 `FAIL ... no allocated= lines` and `RESULT RED`, exit 1.
+- **A stale bundle is refused** (A6, B2): the bundle must be newer than every `commonMain`, `jsMain` and `main`
+  source of `audio_benchmark`'s compile closure (14 modules, read from the build scripts). A touch alone leaves
+  Gradle's bundle as it was, so the build command is `compileProductionExecutableKotlinJs --rerun` (a relink, about
+  15 s), which `full-check.sh` now uses too. Proven: a touched `IgnitorDefaults.kt` gave `FAIL v8: the bundle is
+  older than ...`, exit 1.
+- **A timeout on every node process** (A7, B N4): 600 s, then the child is killed and the case is a `FAIL`. Proven
+  with a node that sleeps and the bound cut to 5 s by a mutation: 14 `FAIL ... timeout`, exit 1, no process left.
+- **`full-check.sh`:** `alloc` and `corpus` are green only with their own `RESULT GREEN` or `CORPUS GREEN` line
+  (A8); the test XML is read inside the tests step's lock call, the tree state before inside the first lock call and
+  after inside the last one (A1, A4); the XML is searched only in the root's and the top-level modules' build dirs,
+  never in `.claude/worktrees/` or a top-level folder holding a `.git` (A2); the tree guard leaves out only the
+  scoreboard and the timing step's dated files, so `corpus-reference.md` is guarded (A3); paths are read with
+  `--porcelain -z` (A NIT 1); an empty "What got worse" points at the logs (A NIT 6); the header says it needs Linux
+  tools (B N5).
+- **The corpus check without samples** (B3): the default loader below the disk cache notes every file it could not
+  fetch; any such file makes the run red with `CORPUS RED: N sample files could not load (no ./cache and no
+  network?), so no song was compared`, before any comparison, and an accept is refused. Proven with no cache and no
+  network (`unshare -rn`): exactly that line, 7 files, exit 1.
+- **The JVM budgets are 6 B** where the first run read 0 (B N1): a box every other block (12 B) is caught.
+- **Guard texts** (B N2): the n16 V8 line names item 3, the limiter; `super7a jvm` says item 7's drift ramp is V8
+  only.
+- **NITs:** braces on the corpus `when` arms, one environment reader in `jsMain`, `phasePoolSeed = 1` in the engine
+  rig.
+
+**The JVM's limit, recorded (decision 9):** reviewer B routed the ladder's constant reads through a nullable read
+(item 12's class). The JVM read 0 B: C2 optimised the box away, while V8 read one more heap number on `sgpad-vib`
+(under its budget). So the JVM half has not been shown to see item 12's process-dependent box. That is the accepted
+limit of decision 9, now also said in the budget file's header.
+
+**The full check after round 1** (`console/full-check.sh`, not `--fresh`: every test task was up to date, the counts
+read inside the tests step's lock call), exit 0:
+
+```
+Klang full check, 2026-10-10 21:13, d7a455e4-dirty
+  logs    build/full-check/2026-10-10_211305
+  tests   GREEN  17,372 tests, 0 failed                             0m 12s
+  corpus  GREEN  18 of 18 songs identical to the reference          3m 42s
+  timing  DONE   docs/benchmarks/2026-10-10_211659_compare.md       1m 19s
+          information: the JVM is slower than node on 1 of the compare file's rows
+  alloc   GREEN  28 of 28 within budget                             1m 59s
+GREEN. Total 7m 12s.
+```
+
+`tree.before` and `tree.after` were identical. The run left its timing files (`docs/benchmarks/2026-10-10_211659_*.md`)
+and two scoreboard rows (the scoreboard now holds three runs: the first, the `--fresh` full check, this one).
+
+### Review round 2 (2026-10-10): what changed
+
+Review `tmp/reviews/alloc-r2.md` (1 MAJOR, 2 MINOR, 4 NIT). Fixed:
+
+- **MAJOR 1, a true 0 B read as a failure:** round 1's `window <= base` clause is gone; the per-process noise is
+  larger than the window's bytes when a case allocates about 0, so the window's sum falls below the base's about
+  half the time. The "no `allocated=` lines" check now applies to the base process too. Proven: at 220 Hz (the
+  reviewer's mutant A) the check is GREEN, with rounds reading -11 to +6 B on `super7`, `super7a` and `whitecolor`;
+  reviewer B's renaming wrapper is still RED (`FAIL saw v8: no allocated= lines in the base process's ...`).
+- **MINOR 1, a case gone silent:** each rig reports its last block's peak (the voice rig keeps its cylinder's mix
+  until the next block, the engine rig its output). V8 prints `PEAK` beside `NS`; the JVM reads it after each
+  window. A peak below 1e-4 (or NaN) is `FAIL <case> <platform>: silent, it rendered nothing in its window`. The
+  quietest case sounding is `C-offrel` at the end of the V8 window (587 s into its 1000 s release): peak 0.091, so
+  the floor sits about 59 dB below it; `whitecolor` reads 0.72. Proven with the reviewer's mutant B (the n16 notes
+  scheduled two blocks in the past): `FAIL E-C-rel05-n16 jvm: silent ...` and `FAIL E-C-rel05-n16 v8: silent ...`,
+  exit 1.
+- **MINOR 2, bounded runs:** a failed base process skips its window and the case's later rounds; a timeout, or a
+  failure of the first case (other than silent), stops the V8 half with one line (`FAIL v8: stopped after ...`);
+  `node --version` and `git describe` are bounded at 10 s; a timeout kills the whole process tree
+  (`ProcessHandle.descendants()` first); the node bound is 120 s. The JVM half runs on a watched daemon thread: a
+  case that runs past 120 s in one round stops the check (`FAIL <case> jvm: timeout ...`, the V8 half not run),
+  because a thread cannot be killed. Proven: a node hanging on `--version` (`FAIL v8: not run, ... gave no answer
+  within 10 s`), a node hanging in a pipeline with the bound cut to 5 s (`FAIL saw v8: timeout ...`, `FAIL v8:
+  stopped after saw's timeout`, no process left), the JVM bound cut to 0 s (`FAIL sgpad-vib jvm: timeout ...`).
+- **NITs:** a crashed node's `FAIL` keeps its first error-like line (not an `at` frame) and its last line; a
+  non-finite or negative budget is a `BAD` line; the stale-bundle list's limits are said in the KDoc and the README.
+
+### Review round 3 (2026-10-10): clean
+
+Review `tmp/reviews/alloc-r3.md` (0 MAJOR, 1 MINOR, 3 NIT): no round 2 fix broken, no combination of the early stop,
+the silence check and the timeouts reads green without measuring or red on a healthy tree. Fixed by the coordinator:
+- **MINOR 1:** a crashed node's `FAIL` showed the throw site's source line, which node prints before the message. It
+  now prefers node's `Name: message` line. Proven in one lock call: a `saw` rig that throws reads `FAIL saw v8: node
+  exit 1, no NS line; it said: IllegalStateException: probe: saw is broken / Node.js v22.12.0`.
+- **NIT 3:** one JVM case's exception costs that case only, as on V8 (the same probe: `FAIL saw jvm: ...`, the other
+  JVM cases measured), and the JVM timeout path keeps the problems found before it.
+- **NIT 1:** `console/with-build-lock.sh`'s release truncate cannot mask the command's status (`|| true`). The
+  coordinator's fix to that script rides with this change: it opens the lock file for append, so a waiting agent no
+  longer wipes the holder's record, and blanks the record by path (`: >&9` truncated nothing). Reviewed in round 3,
+  eight cases on a private lock file.
+- **NIT 2**, a negative V8 median printing as `-6 B`: left. It is honest noise and reads green.
+
+The healthy tree stayed green in the same lock call (`RESULT GREEN: 28 of 28 within budget`).
+
+**Found, not fixed** (outside this harness):
+- `DiskUrlCache.getOrPut` writes every concurrent miss of one URL through the same `<key>.<ext>.tmp` name, so on a
+  cold cache two of the corpus check's four workers can tear a sample file, and its song reads CHANGED once, on the
+  first run of a fresh clone (reviewer of round 2, `tmp/reviews/alloc-r2.md` NIT 3). A unique tmp name would fix it.
+

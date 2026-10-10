@@ -161,6 +161,8 @@ Before merging a new Ignitor / effect / filter:
 |---------------------------------------------------------------|------------------------------------------------------------------|
 | `./gradlew :audio_be:jvmTest`                                 | Correctness — equivalence tests, NaN safety, IIR stability       |
 | `./console/run-dsp-benchmarks.sh`                             | RTF (render-time / audio-time) on JVM + JS for each effect       |
+| `KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`   | Bytes per block on JVM + V8 against budgets: "Measuring allocations" |
+| `./console/full-check.sh`                                     | Every test, the corpus, the timing and the allocation check      |
 | `audio_benchmark/src/commonMain/kotlin/EffectBenchmark.kt`    | Add a benchmark case here when introducing a new hot DSP unit    |
 | Browser DevTools profiler on `:klang:jsBrowserDevelopmentRun` | The actual deployment target — check sample-recorded hot methods |
 | `./gradlew :klang:jvmRun` listening pass                      | Final sanity check — perf changes can hide subtle math bugs      |
@@ -397,6 +399,71 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   built, set or not.
 - **`KLANG_BENCH_FILTER=guitar-rig`** runs only the `guitar-rig*` rows of `audio_benchmark`'s `IgnitorBenchmark`.
 - A timing claim needs interleaved runs and a control row: `audio/ref/verification.md`.
+- **`console/full-check.sh`** runs everything before a merge or a release: every test, the corpus check
+  (`./gradlew runSongBenchmark --args=corpus`, against `docs/benchmarks/corpus-reference.md`), the timing benchmarks
+  and the allocation check, each step in its own build lock, then one summary and exit 0 or 1. `--fresh` makes every
+  test task run again.
+
+### Measuring allocations
+
+- **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
+  `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
+  sources is refused; the `alloc` step of `console/full-check.sh`)
+  measures the bytes per block of 14 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
+  `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
+  breach. How it measures and the cases: `audio_benchmark/README.md`. The JVM guards in `jvmTest`
+  (`FirstBlockAllocationSpec`, `KatalystResonatorAllocationSpec`) stay where they are.
+- **What it can see.** On V8 the method's noise (about 25 B per block) is larger than one heap number (16 B on
+  node): a budget catches a heap number per sample or per knob read, not one new box per block. The JVM catches a
+  single `Double` per block (24 B), or one every other block (its budgets are 6 B). A box usually shows on both,
+  but it can be on one only: a V8 box comes from a megamorphic call site or a boxed expression result, a JVM box
+  from a failed escape analysis, and the JVM can optimise away a box V8 keeps (review round 1 of the harness).
+- **It names the case, not the box.** After an `OVER` line, locate the box by hand, on the case it names:
+  1. **V8, which function allocates:** the sampling heap profiler, with the collected objects included (node's
+     `--heap-prof` keeps only what is alive at exit, which misses every box). A preload file:
+
+     ```js
+     // heap-sample.js: node -r ./heap-sample.js klang-engine-audio_benchmark.js
+     const s = new (require('inspector').Session)();
+     s.connect();
+     s.post('HeapProfiler.enable');
+     s.post('HeapProfiler.startSampling', { samplingInterval: 128,
+       includeObjectsCollectedByMinorGC: true, includeObjectsCollectedByMajorGC: true });
+     process.on('exit', () => s.post('HeapProfiler.stopSampling', (e, { profile }) => {
+       const bytes = new Map();
+       const walk = (n) => {
+         const f = n.callFrame, k = `${f.functionName} ${f.url.split('/').pop()}:${f.lineNumber + 1}`;
+         bytes.set(k, (bytes.get(k) || 0) + n.selfSize);
+         n.children.forEach(walk);
+       };
+       walk(profile.head);
+       [...bytes].sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([k, v]) =>
+         console.log((v / process.env.KLANG_ALLOC_COUNT).toFixed(1), 'B/block', k));
+     }));
+     ```
+
+     Run it in `audio_benchmark/build/compileSync/js/main/productionExecutable/kotlin/` with
+     `KLANG_ALLOC_CASE=<case> KLANG_ALLOC_WARM=20000 KLANG_ALLOC_COUNT=200000`. The names are the bundle's
+     (`protoOf.u2i` is a member); the line leads to the Kotlin through the bundle's source map. The profiler slows the
+     run and inflates the bytes: read it for where, not for how much.
+  2. **V8, why it boxes:** `node --trace-turbo-inlining` (and `--trace-deopt`) on the same case shows whether the
+     callee of the allocating function was inlined. A double that crosses a call that was not inlined becomes a heap
+     number: the knob reads of item 8 and the limiter of item 3 were found this way.
+  3. **JVM:** a flight recording of the check. `JAVA_TOOL_OPTIONS` reaches the JVM `jvmRun` starts; give it a
+     directory, so each JVM (Gradle's client too) writes its own file:
+
+     ```bash
+     JAVA_TOOL_OPTIONS="-XX:StartFlightRecording=filename=/tmp/alloc-jfr/,settings=profile" \
+       KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun
+     for f in /tmp/alloc-jfr/*.jfr; do
+       jfr print --events jdk.ObjectAllocationSample --stack-depth 8 "$f" | grep -A 12 'objectClass = java.lang.Double'
+     done
+     ```
+
+     The check's own JVM is the file whose stacks are the engine's; read where the `java.lang.Double` (or another
+     box) comes from. The warm-ups and voice builds are in the recording too. Tried on a planted box
+     (2026-10-10): the stack named the planted line.
 
 ## Adjacent rules (linked, not duplicated here)
 

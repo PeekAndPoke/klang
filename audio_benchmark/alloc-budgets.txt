@@ -1,0 +1,54 @@
+# The allocation budgets of the allocation check (KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun,
+# the alloc step of console/full-check.sh): bytes per block, the most a case may allocate.
+#
+# One line per case and platform: case, platform (v8 or jvm), budget, and what the budget guards (the item numbers
+# are docs/tasks/engine-follow-ups.md's). A case without a line, or a line naming an unknown case, turns the run red.
+# Fixed numbers, set by hand, never by a run. They were set on 2026-10-10 from the harness's first run at middle C
+# (docs/benchmarks/alloc-scoreboard.md, the first two rows):
+# - V8: about 40 B or more above that run's median, and below the regression the case guards: one heap number per
+#   sample (about 2 KB per voice and block, items 3, 9, 10) or one per knob read (60 to 100 B per voice and block,
+#   item 8). Where today's figure and item 8's old one overlap (C-full, E-sawC-sus, E-noisesaw-sus) the budget
+#   guards the per-sample class only, and the voice rows guard item 8.
+# - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
+#   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
+#
+# Two limits, said plainly:
+# - V8 resolution (maintainer decision 2, 2026-10-10): the method's noise (about 25 B per block either way) is larger
+#   than one heap number (16 B on node). The V8 budgets tell "about 0" from a heap number per sample or per knob read,
+#   not from a single new heap number per block. Only the JVM sees that one.
+# - The JVM's mixed profile is process-dependent (maintainer decision 9): every case runs in one process, which is
+#   what finds the megamorphic boxes, and the records show one process reading 0 B and another 72 B on the same case
+#   (item 12, before its step 2). A future regression of that kind can breach in one run and not the next. The median
+#   of 9 rounds damps this; it does not remove it.
+#   The JVM can also optimise a box away: review round 1 routed the ladder's constant reads through a nullable read
+#   (item 12's class) and the JVM read 0 B, while V8 read one more heap number.
+#
+# case             platform  budget  guards
+saw                v8        72      the control (a jump means the method or the bundle changed)
+saw                jvm       6       the control
+sawC               v8        80      item 8, the knob reads
+sawC               jvm       6       item 12, a Double per knob read
+C-offrel           v8        72      item 10b, the release arm; item 8
+C-offrel           jvm       6       item 10b, the release arm
+C-env3             v8        160     items 10a, 10b, 10d, the envelopes in all three hosts
+C-env3             jvm       6       items 10a, 10b, 10d, the envelopes
+super7             v8        64      item 8, the unison stack
+super7             jvm       6       item 8, the unison stack
+super7a            v8        64      item 8 and item 7's drift ramp
+super7a            jvm       6       item 8, the unison stack (item 7's drift ramp is V8 only)
+sgpad-vib          v8        112     item 8, the vibrato's knob reads
+sgpad-vib          jvm       6       item 12, the ladder
+whitecolor         v8        64      item 3, the noise stays clean
+whitecolor         jvm       6       item 12's first JVM site
+C-dist             v8        96      item 8; item 9, the fused distort
+C-dist             jvm       6       item 9, the fused distort
+tube4x             v8        160     item 9, the Shape node oversampled
+tube4x             jvm       6       item 9, the Shape node oversampled
+C-full             v8        320     the per-sample class only (item 29's open residue overlaps item 8)
+C-full             jvm       6       item 12 step 2
+E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample class only)
+E-sawC-sus         jvm       6       item 3, the limiter's level; item 8
+E-noisesaw-sus     v8        160     item 3, the limiter's gain (the per-sample class only)
+E-noisesaw-sus     jvm       6       item 3, the limiter's gain
+E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
+E-C-rel05-n16      jvm       450     item 11, the voice build
