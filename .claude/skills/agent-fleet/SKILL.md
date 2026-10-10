@@ -119,6 +119,10 @@ reads to take the lock.
   workers each ran `rm -rf <module>/build/test-results/<task>` to get a clean count, against their brief). The safe
   form: `find <module>/build/test-results/<task> -name '*.xml' -delete`, or count only the XML files newer than the
   run's start. Put this line in every brief that asks for test counts.
+- **Cleanup names the worker's OWN folder, never the scratchpad root** (2026-10-10: the partials worker ran
+  `find <scratchpad> -type f -delete` on the session scratchpad and emptied every earlier agent's harness, the
+  review snapshots and the V8 cost bundles; nothing in the repo was lost). Give each worker its own subfolder in the
+  brief (`<scratchpad>/<task>/`) and say: delete only inside it.
 
 ## Concurrency & fan-out safety
 
