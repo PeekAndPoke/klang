@@ -92,12 +92,12 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 - **The missing fundamental**: the bass trick of Kokon and Der Schmetterling, a sine sub plus partials at 2f to 8f,
   which a small speaker can play and the ear folds back into the fundamental it cannot reproduce. The psychoacoustics is
   Jan F. Schouten's residue pitch (*"The residue, a new component in subjective sound analysis"*, 1940); the production
-  precedent is psychoacoustic bass enhancement (Waves MaxxBass). Klang builds it additively, from its own sine partials
+  precedent is psychoacoustic bass enhancement. Klang builds it additively, from its own sine partials
 - **Loudness, ITU-R BS.1770 and EBU R 128**: the LUFS measure behind the songs' house level (-14 LUFS) and the
   loudness-matched listening pairs that judge an engine change by ear
-- **Soundgoodizer and Maximus** (Image-Line, FL Studio): the one-knob idea behind the writing reference's
-  "Soundgoodizer-style" recipe, three compressed bands blended with the dry signal, built in Klang from `bands` and
-  `blend`
+- **Parallel and multiband compression**: long-standing studio techniques, a compressed copy blended under the dry
+  signal and a compressor per frequency band; together the writing reference's parallel multiband compression recipe,
+  built in Klang from `bands` and `blend`
 
 ## Hardware Inspirations
 
