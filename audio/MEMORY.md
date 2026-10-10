@@ -329,6 +329,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 Engine follow-ups 10a and 10b: `adsrCurveShape` is a statement `when`; its expression form boxed
+  every sample of a moving envelope on V8 (the chain `adsr`, `classic()`'s envelope, the pitch and FM envelopes,
+  about 2.1 KB per block each, now about 0), bit for bit, corpus identical: `docs/tasks/engine-follow-ups.md` items
+  10a and 10b
 - 2026-10-10 Engine follow-up 3: no noise box reproduces; the house limiter's per-sample `lookaheadStep`, never
   inlined by V8, boxed about 2 KB per block whenever anything sounded and 4 KB from its first reduction on (the
   likely cause of the old figure, unproven), now about 0; it is `inline`, bit for bit, corpus identical:

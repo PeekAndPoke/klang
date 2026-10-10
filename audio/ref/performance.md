@@ -324,8 +324,16 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
     percent faster again than the statement form (both reviewers of item 9), and about 15 to 50 percent faster than HEAD.
     The shaper keeps it for that speed; it costs a table per loop form.
   No test can pin the boxes: the KDoc at the site is the guard. Find candidates by grepping the production bundle
-  for `noWhenBranchMatchedException` inside a `do { ... } while` loop (likely: the envelope curve sites, items 10a
-  and 10b in `docs/tasks/engine-follow-ups.md`).
+  for `noWhenBranchMatchedException` inside a `do { ... } while` loop. The envelope curve was the second site
+  (engine follow-ups 10a and 10b, 2026-10-10): `adsrCurveShape`, inlined three times into every per-sample envelope
+  loop (the chain `adsr` and so `classic()`'s envelope, the pitch envelope, the FM index envelope), boxed one heap
+  number per sample while an envelope moved, on every curve and at every release length (about 2.1 KB per block per
+  envelope, 6.2 KB with all three). The statement form in the shared helper removed them all and runs 2 to 21 percent
+  faster than HEAD. **Measure the hoist's upper bound before writing it**: a copy of the bundle with every switch
+  deleted from those loops by hand (the one arm the rows use) ran within about 2 percent of the statement form on
+  the exponential (default) rows and 4 to 8 percent faster on a bare linear envelope (0.99 to 1.00 inside
+  `classic()`), so the envelope keeps the three-line form; the hoist pays where the switch is a large share of a tight loop (the shaper).
+  After it, that grep finds no other `when` yielding a double in a sample loop of `audio_be`'s production bundle.
 - **On V8, `x ?: field` with a nullable map value and a double field boxes the field's value** (V8 allocation pass,
   `KatalystKnob.resolve`): the merge is a tagged value, so an absent knob with a non-integral default became a heap
   number. Two branches store the same values without it: about 180 of the about 1,310 bytes a new param map cost on

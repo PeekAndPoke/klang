@@ -175,19 +175,113 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
 10. **Kotlin's `isFinite()` is a stdlib call on Kotlin/JS**, left out of the stages' inlining budget. An inline
     compare helped pinned and hurt unpinned, so it was dropped; worth a second look only with a measurement that holds
     in both conditions. Source: as 2. S.
-10a. **The per-sample pitch envelope boxes on V8**: on the production bundle, pinned and unpinned, a voice whose pitch
-    envelope is in its attack or decay allocates about 2.17 KB per block (one 16-byte heap number per sample); settled
-    or gated off it allocates about 0.1 KB. HEAD and pitch pipeline step 1 alike (the strip and the `classic()` stage
-    run the same `renderPitchEnvelopeRatios` loop over `core.at(...)`), so a typical kick sweep costs about 65 KB per
-    note. Likely a double crossing a call V8 does not inline (`adsrCurveShape`, `fastExp2` or `safeOut`); not located.
-    Source: `tmp/reviews/pp1-r1-B.md` (pitch pipeline step 1, review round 1, reviewer B, the NIT). S.
-10b. **A classic voice deep in a long release boxes on V8** (a lead): a saw with a 0.01 s gate and a 1000 s release,
-    measured inside the release (`saw-offrel`, no accelerate), allocates about 2.1 KB per block (2,120 to 2,137 bytes,
-    roughly one heap number per sample) on the production test bundle, pinned and unpinned, on HEAD and in pitch
-    pipeline step 3 alike; before its gate the same saw allocates about 0.1 KB. Unchecked at ordinary release lengths,
-    where the release lasts only a few hundred blocks; likely the release path of the amplitude envelope, the class of
-    10a. Locate it with the sampling heap profiler. Source: `tmp/reviews/pp3-r1-B.md` (pitch pipeline step 3, review
-    round 1, reviewer B, NIT 3). S.
+10a. **DONE (2026-10-10, with 10b): every per-sample envelope boxed on V8, through the curve `when`.** Reported as
+    about 2.17 KB per block for a voice whose pitch envelope is in its attack or decay (one 16-byte heap number per
+    sample), about 65 KB per kick sweep; a double crossing a call V8 does not inline was suspected (`adsrCurveShape`,
+    `fastExp2` or `safeOut`). Source: `tmp/reviews/pp1-r1-B.md` (pitch pipeline step 1, review round 1, reviewer B,
+    the NIT). **Measured on the production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22), one
+    voice through `VoiceFactory` and the whole engine through `PlaybackEngineDispatcher`: not the pitch envelope alone.
+    Every host of the envelope law that reads it per sample paid one heap number per sample while its envelope moved,
+    about 2.1 KB per block (2,077 to 2,206 B) on every row, pinned and unpinned, alone or through the engine: the chain
+    `adsr` and `classic()`'s envelope in attack, decay and release (10b), on every curve (linear, square, cube,
+    scurve, invsquare, exponential), the pitch envelope (`penv`) in attack and decay, and the FM index envelope (the
+    envelope part of 10d); about 6.2 KB per block with all three moving. In the sustain no curve is evaluated (the
+    level is the sustain itself), and a settled or released pitch envelope writes one ratio per block, so nothing
+    boxed there.
+    **Cause** (sampling heap profiler, HEAD against a bundle that differs only in the helper): the exhaustive `when` of
+    `adsrCurveShape` (`AdsrCurveMath.kt`), inlined three times into each per-sample loop (`AdsrIgnitor.generate`,
+    `renderPitchEnvelopeRatios`, `FmModIgnitor.generate`): Kotlin/JS leaves its result unassigned in the `default`
+    arm, so V8 carries it tagged around the loop, item 9's rule (`audio/ref/performance.md`). The profiler put 2,083 to
+    2,090 B per block at each of the three functions on HEAD and nothing per sample on the tree. `fastExp2` and
+    `safeOut` are Kotlin `inline` and box nothing; the classic envelope's de-click (`EnvelopeDeclick.next`, a plain
+    method) boxes nothing either (V8 inlines it). What is left is per block: the knob reads (`blockStartValue`,
+    item 8 on V8; item 12 on the JVM) and, in the fm, 10d's per-block calls. The only other `when` left in a sample loop in the bundle
+    (`UnisonStackIgnitor`'s per-voice dispatch) produces no value. **Fix**: the statement form in the shared inline
+    helper, one change for every host (an initialized `var y = 0.0`, a statement `when` that assigns it, `return y`);
+    the KDoc at the site is the guard. Chosen over the hoist by measurement: a hand-edited copy of the tree's bundle
+    with every curve switch deleted from the three loops (the exponential arm only, a perfect hoist's upper bound, valid
+    for the all-exponential rows) ran 0.98 to 1.01 of the statement form's time, pinned and unpinned (medians of 5);
+    with the linear arm kept (reviewer B), 0.92 to 0.96 on a bare linear `adsr` and 0.99 to 1.00 inside `classic()`.
+    So a hoist buys about 2 percent on the exponential (default) rows and 4 to 8 percent on a bare linear envelope,
+    not enough for a table of loops in three hosts; the envelope's loop is dominated by its arithmetic, not
+    by the switch (the shaper's tighter loop gained 12 to 25 percent from its hoist, item 9). Bit for bit: raw doubles
+    of the probe, HEAD / tree / HEAD again, 77 of 77 cases on V8 and 77 of 77 on the JVM (every curve through every
+    stage, the chain and `classic()`, the pitch and FM envelopes, the engine rows); the corpus 18 of 18
+    (`tmp/naming/corpus-e10.txt` against `corpus-e10-before.txt`). The guard row: `EnvelopeLawSpec` "each stage takes
+    its own curve" renders every arm against its oracle; mutation-checked, each of the six arms with its assignment
+    dropped turns it red (and "a fractional release counts floor(N) frames" with it). Render bytes and ns per block,
+    medians of 3, HEAD / tree / HEAD again (a few bytes either way is the noise band; one heap number is 16 bytes on
+    node and 12 in Chrome, the count the same):
+
+    | case | V8 unpinned | V8 pinned (`taskset -c 11`) |
+    |---|---|---|
+    | voice: saw (control) | 10 / 21 / 21 B, 720 / 717 / 728 ns | 21 / 5 / 10 B, 752 / 728 / 726 ns |
+    | voice: `saw` built-in, `classic()` (control) | 78 / 72 / 79 B, 1,344 / 1,342 / 1,371 ns | 83 / 88 / 72 B, 1,368 / 1,368 / 1,363 ns |
+    | voice: chain `adsr` in sustain (control) | 78 / 82 / 77 B, 1,244 / 1,223 / 1,236 ns | 83 / 88 / 72 B, 1,163 / 1,133 / 1,142 ns |
+    | voice: chain `adsr`, attack, linear | 2,098 / 62 / 2,093 B, 1,381 / 1,132 / 1,370 ns | 2,093 / 67 / 2,103 B, 1,377 / 1,163 / 1,375 ns |
+    | voice: chain `adsr`, attack, exponential | 2,165 / 134 / 2,160 B, 2,232 / 1,911 / 2,247 ns | 2,129 / 140 / 2,160 B, 2,210 / 1,905 / 2,222 ns |
+    | voice: chain `adsr`, decay, linear | 2,093 / 42 / 2,093 B, 1,479 / 1,257 / 1,486 ns | 2,083 / 31 / 2,103 B, 1,464 / 1,237 / 1,444 ns |
+    | voice: chain `adsr`, decay, exponential | 2,094 / 52 / 2,098 B, 2,401 / 2,154 / 2,450 ns | 2,093 / 57 / 2,067 B, 2,437 / 2,157 / 2,397 ns |
+    | voice: chain `adsr`, release, linear | 2,118 / 62 / 2,114 B, 1,628 / 1,375 / 1,604 ns | 2,109 / 62 / 2,129 B, 1,598 / 1,357 / 1,581 ns |
+    | voice: chain `adsr`, release, exponential | 2,119 / 67 / 2,108 B, 2,671 / 2,385 / 2,743 ns | 2,135 / 47 / 2,119 B, 2,699 / 2,334 / 2,699 ns |
+    | voice: `classic()` in sustain (control) | 98 / 93 / 98 B, 1,441 / 1,360 / 1,376 ns | 98 / 108 / 88 B, 1,377 / 1,371 / 1,352 ns |
+    | voice: `classic()`, attack, exponential | 2,171 / 134 / 2,171 B, 2,275 / 1,992 / 2,287 ns | 2,165 / 93 / 2,145 B, 2,310 / 2,000 / 2,319 ns |
+    | voice: `classic()`, decay, exponential | 2,109 / 62 / 2,109 B, 2,512 / 2,263 / 2,534 ns | 2,108 / 67 / 2,114 B, 2,508 / 2,242 / 2,536 ns |
+    | voice: `penv` 24, attack | 2,181 / 156 / 2,175 B, 4,366 / 3,978 / 4,355 ns | 2,139 / 98 / 2,114 B, 4,316 / 3,925 / 4,334 ns |
+    | voice: `penv` 24, decay, exponential | 2,124 / 77 / 2,134 B, 4,649 / 4,197 / 4,642 ns | 2,124 / 93 / 2,129 B, 4,569 / 4,219 / 4,568 ns |
+    | voice: `penv` 24, decay, linear | 2,129 / 83 / 2,124 B, 3,377 / 3,219 / 3,334 ns | 2,124 / 88 / 2,129 B, 3,341 / 3,218 / 3,341 ns |
+    | voice: `fm(300, 1.4)`, depth envelope in decay | 2,155 / 103 / 2,155 B, 4,284 / 4,111 / 4,307 ns | 2,155 / 160 / 2,139 B, 4,291 / 4,102 / 4,284 ns |
+    | voice: `sgbell`, settled (control) | 134 / 119 / 134 B, 3,051 / 2,979 / 3,092 ns | 145 / 129 / 150 B, 2,993 / 2,985 / 3,001 ns |
+    | voice: `sgbell` in its 0.5 s FM decay, 128 voices, per voice block | 2,621 / 136 / 2,621 B, 5,277 / 5,180 / 5,316 ns | 2,620 / 135 / 2,620 B, 5,799 / 5,714 / 5,858 ns |
+    | voice: `classic()` with all three in decay | 6,242 / 93 / 6,233 B, 8,807 / 7,979 / 8,853 ns | 6,227 / 114 / 6,248 B, 8,826 / 7,961 / 8,901 ns |
+    | engine: `saw` built-in (control) | 94 / 113 / 114 B, 5,835 / 5,803 / 5,821 ns | 83 / 77 / 88 B, 5,788 / 5,793 / 5,826 ns |
+    | engine: `classic()` in sustain (control) | 134 / 134 / 129 B, 5,880 / 5,809 / 5,863 ns | 134 / 103 / 93 B, 5,820 / 5,796 / 5,857 ns |
+    | engine: `classic()`, attack, exponential | 2,176 / 154 / 2,201 B, 6,779 / 6,647 / 6,856 ns | 2,175 / 93 / 2,139 B, 7,086 / 6,444 / 6,745 ns |
+    | engine: `classic()`, decay, exponential | 2,150 / 109 / 2,150 B, 7,039 / 6,771 / 7,006 ns | 2,165 / 42 / 2,124 B, 7,034 / 6,730 / 6,974 ns |
+    | engine: `penv` 24, decay | 2,165 / 114 / 2,160 B, 9,081 / 8,762 / 9,079 ns | 2,145 / 98 / 2,155 B, 9,030 / 8,693 / 9,082 ns |
+    | engine: `fm`, depth envelope in decay | 2,186 / 145 / 2,202 B, 8,793 / 8,630 / 8,926 ns | 2,206 / 134 / 2,170 B, 8,762 / 8,572 / 8,693 ns |
+    | engine: `classic()` with all three in decay | 6,247 / 130 / 6,263 B, 13,258 / 12,408 / 13,404 ns | 6,268 / 108 / 6,294 B, 13,340 / 12,522 / 13,322 ns |
+
+    The square, cube, scurve and invsquare rows (chain `adsr`, every stage; `classic()`'s release, 10b) read the same:
+    HEAD 2,077 to 2,155 B, the tree 26 to 108 B. Time: the voice rows run 0.79 to 0.98 of HEAD's unpinned and 0.82 to
+    0.99 pinned (the plain curves about 0.82 to 0.86, the exponential ones 0.86 to 0.90, the pitch and FM rows 0.90 to
+    0.96, where the oscillator dominates), the engine rows 0.88 to 0.98; HEAD again 0.95 to 1.04, the controls 0.94
+    to 1.00. JVM (`ThreadMXBean`, 7 rounds of 20k warm-up plus 16k blocks, medians): 0 bytes per block on every side
+    for every case but the note-every-16-blocks row (357.5 B on every side, the voice build, item 11); render time
+    unchanged (a second run in the reverse order, tree / HEAD / tree, read 0.96 to 1.02 of HEAD on 13 rows; the first,
+    HEAD / tree / HEAD, had the tree 1.06 to 1.14 on every row, the envelope-free saw included, so drift). Report:
+    `tmp/reviews/e10-report.md`. S.
+    **Review round 1, applied** (`tmp/reviews/e10-r1-A.md`, `e10-r1-B.md`, 0 MAJOR, 2 MINOR, 2 NIT): the helper's
+    KDoc names the three hosts that call it per sample, not every host (A1); 10b's note-every-16-blocks residue split
+    by reviewer B's profile, the voice build about 13 KB per note on V8, not 29 (B1); the hoist bound with the linear
+    arm, 4 to 8 percent on a bare linear envelope, the decision unchanged (B2); the V8 knob reads are item 8 (B3).
+    Records and KDoc only.
+10b. **DONE (2026-10-10, with 10a): the release boxed through the curve `when`, at every release length.** Reported
+    as about 2.1 KB per block for a saw with a 0.01 s gate and a 1000 s release, measured inside the release
+    (`saw-offrel`), about 0.1 KB before its gate; unchecked at ordinary release lengths. Source: `tmp/reviews/pp3-r1-B.md`
+    (pitch pipeline step 3, review round 1, reviewer B, NIT 3). It is 10a's cause: the release arm of `adsrCurveShape`
+    in `AdsrIgnitor.generate` (`classic()`'s envelope is that node), on every curve, and the same fix. Before the
+    gate the saw sat in its sustain, a constant level, so nothing boxed there. An ordinary release boxes the same: 0.5
+    s, measured over its blocks 5 to 175 on 128 voices at once, with the window bracketed by forced collections (a
+    difference of two processes is too noisy for a window that short). Production bundle, one voice through
+    `VoiceFactory` and through the engine, medians of 3, HEAD / tree / HEAD again:
+
+    | case | V8 unpinned | V8 pinned (`taskset -c 11`) |
+    |---|---|---|
+    | voice: `saw-offrel`, exponential (the default) | 2,113 / 67 / 2,108 B, 2,777 / 2,467 / 2,801 ns | 2,114 / 88 / 2,109 B, 2,751 / 2,408 / 2,754 ns |
+    | voice: `saw-offrel`, linear | 2,113 / 67 / 2,109 B, 1,714 / 1,498 / 1,696 ns | 2,114 / 67 / 2,093 B, 1,757 / 1,500 / 1,695 ns |
+    | voice: `saw-offrel`, scurve | 2,155 / 98 / 2,150 B, 1,798 / 1,537 / 1,836 ns | 2,155 / 88 / 2,129 B, 1,802 / 1,569 / 1,792 ns |
+    | voice: a 0.5 s release, 128 voices, per voice block | 2,144 / 96 / 2,144 B, 3,314 / 3,101 / 3,375 ns | 2,150 / 102 / 2,150 B, 4,132 / 3,850 / 4,204 ns |
+    | engine: `saw-offrel` | 2,150 / 98 / 2,145 B, 7,114 / 6,737 / 7,034 ns | 2,155 / 72 / 2,124 B, 7,143 / 6,717 / 7,093 ns |
+    | engine: a 0.5 s release, a new note every 16 blocks (about 12 voices releasing) | 26,260 / 1,805 / 26,311 B, 40,280 / 35,251 / 40,254 ns | 26,225 / 1,801 / 26,266 B, 40,217 / 35,485 / 40,229 ns |
+
+    What is left on the last row, about 1.8 KB per block, is not all the voice build (reviewer B, the sampling heap
+    profiler over the tree's row, 1,910 B per block): voice build and scheduling 831 B (about 13 KB per note on V8,
+    item 11), the knob reads (`blockStartValue` in `Voice.render`) 764 B, about 12 live voices at about 64 B (item 8,
+    it grows with the sounding voices), `WaveIgnitor.generate` 195 B (item 6's `dt`), other about 120 B. The JVM's
+    357.5 B per block (about 5.7 KB per note) is the build alone: its knob reads do not box. The controls, the JVM,
+    bit-identity, the guard row and the corpus are 10a's. Report: `tmp/reviews/e10-report.md`. S.
+    **Review round 1, applied**: see 10a (B1 corrected the residue above).
 10c. **An fm whose modulator reads a freq-keyed mod allocates a heap number per block on V8** (fixed for
     freq-invariant mods, open for freq-keyed ones). The site (pitch pipeline step 3b, review round 1, reviewer B
     MINOR 1): `CarrierFreqMod.generate` hands the pinned carrier frequency, a double loaded from a field, to
@@ -211,6 +305,14 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     (pinned: 90 / 124 / 55, 106 / 165 / 96, 131 / 196 / 127); off unchanged. The authored `fm` node paid the same
     before step 4. The JVM renders it allocation-free. Source: `tmp/reviews/pp4-r1-B.md`, the step 4 record in
     `docs/tasks/pitch-pipeline-into-the-tree.md`, `tmp/reviews/pp-step4-report.md`. S.
+    **The envelope part is DONE (2026-10-10, with 10a), and it was per sample, not per block.** While the depth
+    envelope moves, the fm boxed one heap number per sample (about 2.1 KB per block, `fm(300, 1.4)` with its envelope
+    in decay; the bell in its 0.5 s decay 2.6 KB per voice block with the amplitude decay), through the same curve
+    `when`; the figures above did not show it because the bell's envelope settles at sustain 0 after 0.5 s, a constant
+    level. Fixed by 10a (the tree reads 103 and 136 B). What this item names is still open: the per-block doubles, the
+    modulator's `generate` at `fmFreqVal * ratioVal` (about 50 B per block on the tree, attributed to the modulator's
+    sine, `SineIgnitor.generate`, called from `FmModIgnitor.generate`) and the knob reads (`Ignitors.readParam`, about
+    65 B per block, item 8 on V8; item 12 on the JVM).
 
 ## 2. Allocation on the JVM, at build and per orbit
 
