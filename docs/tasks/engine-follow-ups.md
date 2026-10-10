@@ -103,9 +103,90 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 5. **The PWM loop boxes one heap number per sample** on the development bundle under a mixed profile (about 2 KB per
    block, `pulze` with a duty signal): the per-sample `setPulseShape(duty = ...)` call (`Ignitors.kt`). Not seen on the
    production bundle in isolation. Source: as 2. S.
-6. **The plain wave oscillators box `dt`**: `WaveIgnitor` hands its non-integral `dt` to its loop methods, about 16
-   bytes per block per oscillator on the production bundle, pinned. The same argument class as the stages. Source: as
-   2. S.
+6. **DONE (2026-10-10): the plain wave oscillators boxed `dt`, one heap number per block per oscillator.** Reported
+   as about 16 bytes per block per oscillator on the production bundle, pinned: `WaveIgnitor` hands its non-integral
+   `dt` to its loop methods. Source: as 2. **Measured on the production bundle**
+   (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22, one voice through `VoiceFactory` at 220 Hz, no
+   drift unless named): one heap number per block in every oscillator of the family (saw, ramp, square, tri, `pulze`,
+   and so `zawtooth`, `zamp` and `classic()`'s oscillator), about 16 B, pinned and unpinned; two on the phased PWM
+   path. **Cause** (sampling heap profiler,
+   `--trace-turbo-inlining`): `renderHoisted`, the loop every block-constant wave renders through, is 474 bytes of
+   bytecode, just past V8's inlining limit (460: "Cannot consider renderHoisted for inlining (reason: 5)"), so `dt`,
+   its one double argument, crossed a call V8 does not inline and became a heap number in the caller (the profiler put
+   about 18.6 B per block in `WaveIgnitor.generate` on HEAD, none on the tree). `renderPhased` took `dt` too, and on
+   the PWM path also `floor = flankSamples * dt`. The rule in `audio/ref/performance.md` (a non-integral double handed
+   to a function that is not inlined). **Fix** (`audio_be/.../ignitor/Ignitors.kt`): a holder, the oscillator's own
+   `WaveVoiceState.dt`, the field the unison stacks already read their increment from (the mono oscillator left it at
+   0.0 until now): `generate` writes `voice.dt = dt` once per block (line 930), `renderHoisted` (line 1045) and
+   `renderPhased` (line 1092) read it, and `renderPhased` computes the floor itself from it (line 1093, the same
+   expression the PWM loop uses). `renderHoisted` is still not inlined (485 bytes in this form): nothing double
+   crosses the call any more. The comment at the write and the KDoc of `WaveVoiceState.dt` are the guard; no test can
+   pin it. (The first form was a second field, `blockDt`, beside it; review round 1 asked for the one holder.) Kotlin
+   `inline` was not chosen: each loop method has two or three call sites in a `generate` that is already large, and
+   item 3's caution (a method `inline` makes large can leave V8 without the budget for its small callees) applies.
+   The unison stacks do not share the cause (their loops read `dt` from their voices' `WaveVoiceState`, the same
+   holder: super7 0 B on both sides); the sine and the impulse render their plain loops inside `generate` and are not
+   affected.
+   Bit for bit: raw doubles of the probe, HEAD against the tree, 600 blocks per case, 16 of 16 cases identical on V8
+   and 16 of 16 on the JVM, none silent (saw, square, tri, ramp, `zawtooth`, `pulze` at duty 0.3, the saw with drift,
+   the phased saw and square, PWM plain and phased, sine, `classic()` saw, the unison stack, and two engine rows); the
+   corpus 18 of 18 against `docs/benchmarks/corpus-reference.md`. Render bytes and ns per block, 20,000 warm-up and
+   200,000 measured blocks, medians of 3, HEAD / tree / HEAD again (a byte copy of HEAD, the control); a few bytes
+   either way, even below zero, is the noise band:
+
+   | case | V8 unpinned | V8 pinned (`taskset -c 11`) |
+   |---|---|---|
+   | saw | 15.6 / 0.4 / 15.9 B, 796 / 751 / 802 ns | 36.3 / -0.1 / 10.7 B, 783 / 710 / 758 ns |
+   | square | 15.1 / 0.2 / 15.2 B, 911 / 757 / 861 ns | 15.7 / 0.2 / 10.5 B, 816 / 754 / 850 ns |
+   | tri | 16.1 / -0.1 / 20.2 B, 853 / 754 / 852 ns | 26.2 / 0.2 / 5.3 B, 841 / 787 / 814 ns |
+   | ramp | 10.9 / -0.3 / 15.6 B, 766 / 664 / 787 ns | 15.7 / -10.5 / 25.9 B, 784 / 689 / 759 ns |
+   | `pulze`, duty 0.3 | 15.5 / -0.2 / 15.6 B, 881 / 756 / 865 ns | 15.6 / 0.3 / 26.1 B, 837 / 698 / 848 ns |
+   | saw, drift 0.3 | 15.7 / 0.4 / 21.3 B, 892 / 907 / 906 ns | 21.0 / -20.5 / 26.1 B, 901 / 821 / 882 ns |
+   | saw, moving phase | 5.2 / 4.4 / 21.2 B, 1,871 / 1,828 / 1,856 ns | 20.7 / -5.2 / 0.0 B, 1,814 / 1,881 / 1,902 ns |
+   | PWM, moving phase | 72.0 / 31.1 / 67.0 B, 3,449 / 2,947 / 3,371 ns | 67.6 / 15.5 / 62.0 B, 3,430 / 2,858 / 3,371 ns |
+   | `saw` built-in, `classic()` | 15.5 / 0.2 / 15.8 B, 1,444 / 1,332 / 1,427 ns | 5.0 / 5.0 / 41.4 B, 1,441 / 1,305 / 1,413 ns |
+   | unison stack, 7 voices (control) | -0.3 / 0.0 / -4.8 B, 3,435 / 3,485 / 3,498 ns | -5.1 / -10.3 / -5.6 B, 3,468 / 3,387 / 3,520 ns |
+   | sine (control) | -5.3 / 0.3 / -5.4 B, 953 / 932 / 951 ns | 5.0 / -0.1 / 4.9 B, 1,024 / 936 / 920 ns |
+
+   The table is the first form (`blockDt`). The final form (`WaveVoiceState.dt`), re-measured unpinned, HEAD / tree /
+   HEAD again, medians of 3: saw 15.7 / -5.7 / 15.7 B, 828 / 695 / 799 ns; square 21.0 / -0.5 / 15.8 B, 864 / 796 /
+   859 ns; tri 21.3 / -0.5 / 15.6 B, 843 / 770 / 845 ns; PWM with a moving phase 71.0 / 30.8 / 66.6 B, 3,515 / 2,896
+   / 3,437 ns; `classic()` saw 15.4 / 0.0 / 19.9 B, 1,531 / 1,353 / 1,433 ns; sine (control) 5.5 / -4.8 / -0.2 B,
+   951 / 961 / 906 ns. The same bytes and the same time (0.83 to 0.92 of HEAD).
+   One heap number is 16 bytes on node and 12 in Chrome (pointer compression), the count the same. The phased saw
+   is inside its noise (its phase LFO allocates beside it); its profile showed the box on HEAD. Time: the plain waves
+   run 0.85 to 0.94 of HEAD's unpinned and 0.83 to 0.95 pinned, the phased PWM 0.86 and 0.84, the drifting and phased
+   saws 0.92 to 1.01, the controls 0.96 to 1.01; HEAD again stays at HEAD in every row, so the gain is not order,
+   warm-up or heat, and the inlining decision is the same on both sides (`renderHoisted` refused on size, reason 5,
+   474 bytes on HEAD and 485 on the tree; `renderPhased` too), so it is not an inlining change either. The gain is
+   larger than one allocation per block would explain: measured, not explained (reviewer B reproduced it, 0.83 to
+   0.93). **The allocation harness** (`KLANG_BENCH_MODE=alloc`, middle C, 3 runs each,
+   HEAD's and the tree's interleaved), V8 bytes per block HEAD / tree, medians: `saw` 31 / 16 (runs 31, 31, 35 against
+   16, 11, 16), `sawC` 31 / 15, `C-offrel` 36 / 16, `C-env3` 84 / 63, `sgpad-vib` 67 / 31, `C-dist` 47 / 31, `tube4x`
+   77 / 57, `E-sawC-sus` 83 / 62, `E-C-rel05-n16` 1,301 / 1,103 (about 12 sounding voices), `super7` 16 / 17 (the
+   control); every run green; the time 0.90 of HEAD on `saw`, 0.92 on `sawC`, 0.95 on n16, 0.94 to 1.00 elsewhere.
+   JVM: 0 B per block on both sides in every steady case (n16 409 / 410, the voice build, item 11), time unchanged.
+   What is left on the `saw` case, about 16 B per block, is not the oscillator: the voice's own frequency handed to the
+   root `generate`, one heap number per voice block at a non-integral pitch, item 30 (reviewer B located it; the
+   probe at 220 Hz does not show it, the harness at middle C does).
+   **The budgets moved with it** (review round 1). The fix took about 16 B off every wave voice, so item 8's regression
+   (the `readParam` mutant, `Ignitors.readParam` a plain function again) read under the old budgets: reviewer B's
+   mutant runs, medians of 3, `sawC` 83 and 82 against the old 80 (a margin of 2 to 3 B, inside the noise),
+   `C-offrel` 66 and 62 against the old 72 (green: the guard was gone), `sgpad-vib` 114 and 113 against the old 112
+   (two of six rounds already under it). The V8 budgets were re-set from this change's runs by the file's rule (about
+   40 B above the median): `saw`, `sawC` and `C-offrel` 56 (tree medians 16, 15, 16 B), `sgpad-vib` 80 (31 to 36 B);
+   the mutant reads red against the three item 8 lines (`sgpad-vib`'s lowest round 107.4), and `saw`, the control,
+   stays green under it. `sawC` is the item 8 line on the plain voice, `C-offrel` guards the release arm (item 10b).
+   Review round 2 added `C-dist` (96 to 72: healthy 47 to 31 B, the mutant's rounds 108 to 114, a margin below the
+   method's noise against 96). The header of `audio_benchmark/alloc-budgets.txt` records the re-set. Healthy runs: no single round came within
+   24 B of 56 (worst 25.9, 31.5, 25.9 over 16 to 18 rounds). On the final form, three alloc checks GREEN, 28 of 28
+   (`saw` 15 / 21 / 16, `sawC` 19 / 15 / 15, `C-offrel` 21 / 15 / 21, `sgpad-vib` 36 / 30 / 31 B), and the mutant
+   once RED, 7 of 28 over: `sawC` 93, `C-offrel` 62, `sgpad-vib` 114, `super7` 84, `super7a` 98, `C-dist` 114,
+   n16 1,873 B. Reviewer B's first healthy run went red once with "no PEAK line": Kotlin/JS `println` is two writes,
+   and a GC trace line that fell between the text and its newline was glued onto `PEAK`; the alloc mode now prints
+   `NS` and `PEAK` in one `process.stdout.write`. Tests: `:audio_be:jvmTest` 2,661 of 2,661 and
+   `:audio_be:jsBrowserTest` 2,557 of 2,557 green, on both forms. Reports: `tmp/reviews/e6-report.md`,
+   `tmp/reviews/e6-r1-A.md`, `tmp/reviews/e6-r1-B.md`.
 7. **A drifting stack's ramp can box twice per voice per block**: `DriftLanes.startOf` and `endOf` return a double,
    and where V8 does not inline `blendOf` (some mixed-profile processes, both bundles) that is 221 to 515 bytes per
    block. A holder for the ramp is the shape. Source: as 2. S.
@@ -398,6 +479,21 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     `classic()` voice (filter, filter envelope, tremolo, analog) still allocates about 130 + 65 + 32 B per block in
     its cutoff chain, the same on HEAD and after items 8 and 12, so not a knob read. Not located further. Source:
     `tmp/reviews/e8-r1-B.md` (items 8 and 12, review round 1, reviewer B's heap profile). S to M.
+30. **Every voice boxes its own frequency once per block on V8** (numbered after the last item, added 2026-10-10):
+    `IgniteRenderer.render` (`voices/IgniteRenderer.kt`) hands the voice's `freqHz`, a double field, to the root
+    Ignitor's `generate`, a call V8 never inlines, so a non-integral note frequency (almost every real note; middle C
+    in the allocation harness) is one heap number per voice per block. The children receive it already tagged, so it
+    is one box per voice, not per node; an integral frequency (220 Hz, a Smi) does not box. About 16 B per sounding
+    voice per block, about 190 B per block on the harness's n16 row (about 12 voices): the same order as item 6's win,
+    and inside the V8 noise of a single-voice budget, so no budget catches it. It is what is left on the harness's
+    `saw` case after item 6. **Proof** (reviewer B, scratch copies of the tree's harness bundle, nothing in the repo
+    touched): the sampled heap profile books it in `Voice.renderStages` (`IgniteRenderer.render` is inlined there);
+    with the constant `261.6255653005986` handed to the root `generate` in place of the field, the GC-trace bytes
+    read, medians of 3, tree against the copy, `saw` 13.6 / -3.3, `sawC` 10.8 / -0.7, `super7` 15.8 / 1.6 B per
+    block (a pan `coerceIn` in `SendRenderer` replaced by `Math.min`/`max`, the other suspect, moved nothing). The
+    remedy class is the holder of `audio/ref/performance.md` (for example the frequency on the `IgniteContext` the
+    root already receives), but it touches the `Ignitor.generate` signature or the voice's render entry, so it is a
+    design call, not a one-liner. Source: `tmp/reviews/e6-r1-B.md`, MINOR 4. S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

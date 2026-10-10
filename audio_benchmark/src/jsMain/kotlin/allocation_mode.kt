@@ -32,8 +32,19 @@ fun runAllocationCase(name: String, warm: Int, count: Int) {
     val t1 = nowMs()
     val ns = if (count > 0) (t1 - t0) * 1.0e6 / count else 0.0
 
-    println("NS $ns")
-    println("PEAK ${rig.peak()}")
+    writeStdout("NS $ns\nPEAK ${rig.peak()}\n")
+}
+
+/**
+ * Writes [text] to stdout in ONE write. Kotlin/JS `println` is two writes (the text, then its newline), and a
+ * scavenge that falls between them prints its `--trace-gc-nvp` line in the gap: the GC line is glued onto `NS ...` or
+ * `PEAK ...`, the driver counts it as a GC line, and the run went red with "no PEAK line" on a healthy tree (engine
+ * follow-up 6, review round 1). The driver sends stdout to a FILE, where node writes synchronously, and V8 prints a GC
+ * trace line on the main thread inside its GC pause, so one write leaves a GC line only before or after it. On a pipe
+ * node's stdout is an asynchronous stream, and this reasoning would need checking again.
+ */
+private fun writeStdout(text: String) {
+    js("process.stdout.write(text)")
 }
 
 private fun nowMs(): Double = js("performance.now()").unsafeCast<Double>()

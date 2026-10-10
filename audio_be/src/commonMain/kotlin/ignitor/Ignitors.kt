@@ -924,6 +924,10 @@ object Ignitors {
             }
 
             val dt = actualFreq / ctx.sampleRateD
+            // The loop methods read `dt` from the holder, never as an argument: both are past V8's 460-byte inlining
+            // limit, and a non-integral double handed to a call V8 does not inline is a heap number per call, one per
+            // block per oscillator (audio/ref/performance.md, engine follow-up 6). No test can pin it: this is the guard.
+            voice.dt = dt
             val pm = ctx.phaseMod
             // Same hoist as the unison stacks (see UnisonStackIgnitor.trapezoidLoop): the
             // one-subtract wrap holds only while |inc| < 1. Past that a positive dt parks the
@@ -955,9 +959,9 @@ object Ignitors {
                 }
 
                 if (phased != null) {
-                    renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = null, floor = 0.0)
+                    renderPhased(buffer = buffer, off = off, end = end, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = null)
                 } else {
-                    renderHoisted(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap)
+                    renderHoisted(buffer = buffer, off = off, end = end, pm = pm, safeWrap = safeWrap)
                 }
 
                 return
@@ -974,9 +978,9 @@ object Ignitors {
                 }
 
                 if (phased != null) {
-                    renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = null, floor = 0.0)
+                    renderPhased(buffer = buffer, off = off, end = end, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = null)
                 } else {
-                    renderHoisted(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap)
+                    renderHoisted(buffer = buffer, off = off, end = end, pm = pm, safeWrap = safeWrap)
                 }
             } else {
                 if (dt != lastDt) {
@@ -989,7 +993,7 @@ object Ignitors {
                     duty.generate(dutyBuf, actualFreq, ctx)
 
                     if (phased != null) {
-                        renderPhased(buffer = buffer, off = off, end = end, dt = dt, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = dutyBuf, floor = floor)
+                        renderPhased(buffer = buffer, off = off, end = end, pm = pm, safeWrap = safeWrap, phaseIn = phased, actualFreq = actualFreq, ctx = ctx, dutyBuf = dutyBuf)
 
                         return
                     }
@@ -1034,10 +1038,11 @@ object Ignitors {
             }
         }
 
-        /** Tight loop with the shape hoisted into locals (constant within the block). */
+        /** Tight loop with the shape hoisted into locals (constant within the block); `dt` is the holder's [WaveVoiceState.dt]. */
         private fun renderHoisted(
-            buffer: AudioBuffer, off: Int, end: Int, dt: Double, pm: DoubleArray?, safeWrap: Boolean,
+            buffer: AudioBuffer, off: Int, end: Int, pm: DoubleArray?, safeWrap: Boolean,
         ) {
+            val dt = voice.dt
             var phase = voice.phase
             val drift = voice.drift
             val pol = polarity
@@ -1076,13 +1081,17 @@ object Ignitors {
 
         /**
          * The phased loop (a moving `phase` signal): reads the trapezoid at `phase + offset`, advances `phase` as
-         * [renderHoisted] and the PWM loop do. [dutyBuf] is the PWM block (the shape rebaked per sample, [floor] the
-         * flank floor), or null for the shape already baked for this block.
+         * [renderHoisted] and the PWM loop do; `dt` is the holder's [WaveVoiceState.dt]. [dutyBuf] is the PWM block (the
+         * shape rebaked per sample on the flank floor `flankSamples * dt`, as the PWM loop does), or null for the shape
+         * already baked for this block. The floor is computed here, not handed in, for the holder's reason (see `generate`).
          */
         private fun renderPhased(
-            buffer: AudioBuffer, off: Int, end: Int, dt: Double, pm: DoubleArray?, safeWrap: Boolean,
-            phaseIn: PhaseOffset, actualFreq: Double, ctx: IgniteContext, dutyBuf: AudioBuffer?, floor: Double,
+            buffer: AudioBuffer, off: Int, end: Int, pm: DoubleArray?, safeWrap: Boolean,
+            phaseIn: PhaseOffset, actualFreq: Double, ctx: IgniteContext, dutyBuf: AudioBuffer?,
         ) {
+            val dt = voice.dt
+            val floor = flankSamples * dt
+
             ctx.scratchBuffers.use { offsets ->
                 phaseIn.render(offsets, actualFreq, ctx)
 
