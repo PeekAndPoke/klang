@@ -144,8 +144,15 @@ Ignitor.sine(x => x.phase(Ignitor.sine(5).mul(0.2)))     // phase modulation by 
 of sine partials at multiples of ITS OWN frequency, rendered in one pass: `harmonics(count, rolloff = 1)` adds
 `count` partials at `2f, 3f, 4f ...`, `octaves(count, rolloff = 1)` at `2f, 4f, 8f ...`, `suboctaves(count,
 rolloff = 1)` at `f/2, f/4 ...`. An added partial at `m * f` or at `f / m` has gain `m ^ -rolloff` of its bank:
-rolloff 1 is the sawtooth law, 2 is triangle-soft, 0 is flat. `fundamental(gain)`
-levels the sine itself (0 = overtones only). `analogSpread(0..1)` sets whether the partials drift as one
+rolloff 1 is the sawtooth law, 2 is triangle-soft, 0 is flat. `partial(ratio, gain = 1, phase = 0)` adds ONE
+partial at any ratio per call, in the order written: an inharmonic cluster (a drum's thud, a bell) in one node.
+`phase` is a fraction of one cycle (0.5 inverts the partial; a negative gain is the same thing), and in a cluster the
+start phases set how peaky the onset is. KlangScript calls are all positional or all named:
+`partial(0.87, 0.65, 0.5)` or `partial(ratio = 0.87, gain = 0.65, phase = 0.5)`, never `partial(0.87, 0.65, phase =
+0.5)`. At most 256 per sine. Every argument takes a signal; a signal `gain` plays every sample, so each partial can
+have its own envelope (`partial(2.76, Ignitor.constant(0.5).adsr(0.001, 0.3, 0, 0.1))`, a bell mode), while a moving
+ratio steps per block and a moving phase glides per block. Everything sums raw: a partial at ratio 1 doubles the fundamental. `fundamental(gain)`
+levels the sine itself (0 = overtones only, or a pure cluster). `analogSpread(0..1)` sets whether the partials drift as one
 oscillator (0) or each on its own lane (1, default) under `analog`; it is the same knob the super
 oscillators carry, over partials instead of voices. Every knob is a signal read once per block.
 Partials at or above Nyquist stay silent; there is no lower limit. Multiples follow the door's `freq`, so
@@ -159,6 +166,8 @@ Ignitor.sine(x => x.harmonics(7).fundamental(0)).mul(0.5)  // the overtones only
 Ignitor.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
 Ignitor.sine(Ignitor.freq().mul(2), x => x.octaves(5)).mul(1/2) // 2f .. 64f at 1/2 .. 1/64: an octave stack over a saw
 Ignitor.sine(x => x.harmonics(12, Ignitor.param("rolloff", 1))) // brightness from the pattern
+Ignitor.sine(x => x.fundamental(0).partial(0.66, 0.52).partial(0.87, 0.65, 0.5).partial(1.25, 1.0, 0.5))
+  .adsr(0.0005, 0.05, 0.0, 0.02)                           // a thud: three inharmonic partials, two started inverted
 ```
 
 **Builder knobs of the super oscillators** (each returns the builder): `voices(x)` (default 8), `spread(x)`

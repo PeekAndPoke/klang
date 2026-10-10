@@ -175,8 +175,13 @@ class IgnitorDslWalkSpec : StringSpec({
                 freq = m(0), analog = m(1), fundamental = m(2), harmonics = m(3), harmonicsRolloff = m(4),
                 octaves = m(5), octavesRolloff = m(6), suboctaves = m(7), suboctavesRolloff = m(8), analogSpread = m(9),
                 phase = m(10),
+                // two partials: three children each, chunked across the sub-objects like the Eq's sections
+                partials = listOf(
+                    IgnitorDsl.Sine.Partial(ratio = m(11), gain = m(12), phase = m(13)),
+                    IgnitorDsl.Sine.Partial(ratio = m(14), gain = m(15), phase = m(16)),
+                ),
             ),
-            11,
+            17,
         ),
         Triple("Sq", IgnitorDsl.Sq(inner = m(0)), 1),
         Triple("Sqrt", IgnitorDsl.Sqrt(inner = m(0)), 1),

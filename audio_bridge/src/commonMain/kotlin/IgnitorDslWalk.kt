@@ -28,7 +28,7 @@ package io.peekandpoke.klang.audio_bridge
  *
  * **Child order is part of the contract** — [withChildNodes] re-reads the list positionally, so
  * the order here must match constructor order for every node, and both functions must agree.
- * `IgnitorDslWalkSpec` pins round-tripping for every type, sections included.
+ * `IgnitorDslWalkSpec` pins round-tripping for every type, sections and sine partials included.
  *
  * Naming note: these are `childNodes`/`withChildNodes`, NOT `children`, because
  * [IgnitorDsl.Variants] already has a `children` PROPERTY that a function of the same name
@@ -111,7 +111,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Sine -> listOf(
             freq, analog, fundamental, harmonics, harmonicsRolloff, octaves, octavesRolloff,
             suboctaves, suboctavesRolloff, analogSpread, phase,
-        )
+        ) + partials.flatMap { listOf(it.ratio, it.gain, it.phase) }
         is IgnitorDsl.Sq -> listOf(inner)
         is IgnitorDsl.Sqrt -> listOf(inner)
         is IgnitorDsl.Square -> listOf(freq, analog, phase)
@@ -285,6 +285,12 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             freq = new[0], analog = new[1], fundamental = new[2], harmonics = new[3], harmonicsRolloff = new[4],
             octaves = new[5], octavesRolloff = new[6], suboctaves = new[7], suboctavesRolloff = new[8],
             analogSpread = new[9], phase = new[10],
+            // three children per partial, in list order, after the eleven fields
+            partials = partials.mapIndexed { i, p ->
+                val at = 11 + 3 * i
+
+                p.copy(ratio = new[at], gain = new[at + 1], phase = new[at + 2])
+            },
         )
         is IgnitorDsl.Sq -> copy(inner = new[0])
         is IgnitorDsl.Sqrt -> copy(inner = new[0])

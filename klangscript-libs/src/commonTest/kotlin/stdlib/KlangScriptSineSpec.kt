@@ -111,6 +111,59 @@ class KlangScriptSineSpec : StringSpec({
             KlangScriptIgnitor.sine(configure = { it.harmonics(7.0, 0.5).fundamental(0.0) })
     }
 
+    // ── the explicit partials (Q26): one partial per call, in the order written ──
+
+    fun p(ratio: Double, gain: Double = 1.0, phase: Double = 0.0) = IgnitorDsl.Sine.Partial(ratio = c(ratio), gain = c(gain), phase = c(phase))
+
+    "partial(ratio): gain defaults to 1, phase to 0" {
+        ks("Ignitor.sine(x => x.partial(1.5))") shouldBe node().copy(partials = listOf(p(1.5)))
+    }
+
+    "partial(ratio, gain, phase): positional and named" {
+        ks("Ignitor.sine(x => x.partial(0.8714, 0.652, 0.5))") shouldBe node().copy(partials = listOf(p(0.8714, 0.652, 0.5)))
+        ks("Ignitor.sine(x => x.partial(ratio = 0.8714, gain = 0.652, phase = 0.5))") shouldBe node().copy(partials = listOf(p(0.8714, 0.652, 0.5)))
+        ks("Ignitor.sine(x => x.partial(ratio = 2, phase = 0.25))") shouldBe node().copy(partials = listOf(p(2.0, 1.0, 0.25)))
+    }
+
+    "each call adds one partial, kept in the order written, next to the other knobs" {
+        ks("Ignitor.sine(x => x.fundamental(0).partial(0.6571, 0.52).harmonics(2).partial(0.8714, 0.652, 0.5))") shouldBe
+            node().copy(
+                fundamental = c(0.0),
+                harmonics = c(2.0), harmonicsRolloff = c(1.0),
+                partials = listOf(p(0.6571, 0.52), p(0.8714, 0.652, 0.5)),
+            )
+    }
+
+    "every partial knob accepts a signal" {
+        ks("""Ignitor.sine(x => x.partial(Ignitor.param("r", 1.5), Ignitor.sine(0.5), Ignitor.sine(2)))""") shouldBe
+            node().copy(
+                partials = listOf(
+                    IgnitorDsl.Sine.Partial(ratio = IgnitorDsl.Param("r", 1.5), gain = IgnitorDsl.Sine(freq = c(0.5)), phase = IgnitorDsl.Sine(freq = c(2.0))),
+                ),
+            )
+    }
+
+    "a partial flips isPlainSine" {
+        (ks("Ignitor.sine(x => x.partial(1))") as IgnitorDsl.Sine).isPlainSine() shouldBe false
+    }
+
+    "the Kotlin door: the same chain builds the same partials, and the builder is immutable" {
+        ks("Ignitor.sine(x => x.fundamental(0).partial(0.6571, 0.52).partial(0.8714, 0.652, 0.5))") shouldBe
+            KlangScriptIgnitor.sine(configure = {
+                it.fundamental(0.0)
+                    .partial(ratio = 0.6571, gain = 0.52)
+                    .partial(ratio = 0.8714, gain = 0.652, phase = 0.5)
+            })
+
+        val base = OscSineBuilder(node())
+        val one = base.partial(ratio = 1.5)
+
+        base.node.partials shouldBe emptyList()
+        one.node.partials shouldBe listOf(p(1.5))
+        one.partial(ratio = 2.0).node.partials shouldBe listOf(p(1.5), p(2.0))
+        one.node.partials shouldBe listOf(p(1.5))
+    }
+
     "the even series: multiples follow the door's freq" {
         ks("Ignitor.sine(Ignitor.freq().mul(2), x => x.harmonics(3))") shouldBe
             node().copy(freq = IgnitorDsl.Times(IgnitorDsl.Freq, c(2.0)), harmonics = c(3.0), harmonicsRolloff = c(1.0))

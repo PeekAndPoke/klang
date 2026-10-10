@@ -191,6 +191,25 @@ class FirstBlockAllocationSpec : StringSpec({
                 octaves = Count(1.0), octavesRolloff = one, suboctaves = Count(2.0), suboctavesRolloff = one, analogSpread = one,
             )
         }
+        // The explicit partials: a fixed list, so every array and lane is built with the node, at its size.
+        fun explicit(analog: Ignitor) = Ignitors.sinePartials(
+            freq = freq, analog = analog, fundamental = off, analogSpread = one,
+            partials = List(13) { i -> Ignitors.SinePartial(ratio = Hold(0.66 + 0.21 * i), gain = Hold(0.5), phase = Hold(0.5 * (i % 2))) },
+        )
+
+        // Their per-block reader is code the JIT has not seen yet in this spec: on a cold JIT the first twelve notes of
+        // it take 144 bytes per block (whatever the partial count, with drift or without), and none once it is
+        // compiled (a scratch probe, 2026-10-10). One unmeasured pass first, so the row measures the node, not the JIT.
+        repeat(12) { note ->
+            val voice = Voice(ignitor = explicit(drift), random = Random(300 + note), scratch = scratch)
+
+            repeat(65) {
+                voice.render()
+            }
+        }
+
+        allocatesNothingAfterBuild("sine explicit partials") { explicit(drift) }
+        allocatesNothingAfterBuild("sine explicit partials, no drift") { explicit(off) }
         changesWithinMaxAllocateNothing("sine partials") { count, _ ->
             Ignitors.sinePartials(
                 countsAtBuild = true,

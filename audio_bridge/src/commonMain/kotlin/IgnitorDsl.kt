@@ -345,9 +345,15 @@ sealed interface IgnitorDsl {
      * `m ^ -rolloff` of its bank (the distance from the fundamental is `m` either way). Banks
      * sum without deduplication. With the literal defaults (fundamental 1, every count 0) the
      * engine builds the plain sine, bit-identical to before the banks existed; anything else, a
-     * `Param` included, builds the partial bank. Every knob is a signal read once per block.
-     * Partials at or above Nyquist are silent (decided 2026-09-07). [analogSpread] blends the
+     * `Param` included, builds the partial bank. Every knob is a signal read once per block (an
+     * explicit partial's signal gain per sample). Partials whose frequency's magnitude is at or above
+     * Nyquist are silent (decided 2026-09-07; by magnitude since 2026-10-10). [analogSpread] blends the
      * drift lanes: 0 = one shared walk for the whole bank, 1 = one walk per partial.
+     *
+     * [partials] is the fourth bank (`docs/tasks/in-progress/sine-inharmonic-partials.md`, Q26): explicit
+     * [Partial]s at any ratio of this sine's frequency, each with its own gain and start phase, played in the
+     * order written and summed raw with the fundamental and the other banks. The engine plays the first
+     * [SINE_MAX_PARTIALS] of them.
      */
     @WireName("sine")
     data class Sine(
@@ -375,6 +381,8 @@ sealed interface IgnitorDsl {
          * 0.25, -0.25 is 0.75). A constant shifts the start; a moving signal is phase modulation.
          */
         val phase: IgnitorDsl = Constant(0.0),
+        /** Explicit partials at any ratio, in the order written; empty = none. See [Partial]. */
+        val partials: List<Partial> = emptyList(),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out); fundamental.collectParams(out)
@@ -382,12 +390,42 @@ sealed interface IgnitorDsl {
             octaves.collectParams(out); octavesRolloff.collectParams(out)
             suboctaves.collectParams(out); suboctavesRolloff.collectParams(out)
             analogSpread.collectParams(out); phase.collectParams(out)
+
+            for (p in partials) {
+                p.collectParams(out)
+            }
         }
 
-        /** True when every bank knob is its literal default: the engine builds the plain sine. */
+        /** True when every bank knob is its literal default and no partial is listed: the engine builds the plain sine. */
         fun isPlainSine(): Boolean =
             fundamental == Constant(1.0) && harmonics == Constant(0.0) &&
-                octaves == Constant(0.0) && suboctaves == Constant(0.0)
+                octaves == Constant(0.0) && suboctaves == Constant(0.0) && partials.isEmpty()
+
+        /**
+         * One explicit partial of the sine: a sine at [ratio] times the sine's own frequency, scaled by [gain],
+         * starting [phase] into its cycle. Not a node: it lives only in [Sine.partials].
+         *
+         * - [ratio]: any number, no integer rule. A ratio of 1 is the sine's own frequency again, summed with the
+         *   [Sine.fundamental] (a pure cluster writes `fundamental(0)`). The partial at `ratio * f` follows the
+         *   door's `freq` and every pitch modulation over the sine, like the other banks.
+         * - [gain]: linear, raw (no normalisation); a negative gain is the same partial at `phase + 0.5`.
+         * - [phase]: a fraction of one cycle, the oscillators' unit, wrapped (1.25 is 0.25); 0 starts on the upward
+         *   zero crossing.
+         *
+         * Every knob is a number or a signal. The ratio and the phase are read once per block like the other bank
+         * knobs: a moving ratio steps at block boundaries, a moving phase glides to its new value across the block. A
+         * gain that is a signal (an envelope, a tremolo) is read per sample; a number or a slot once per block. A
+         * partial whose frequency's magnitude is at or above Nyquist, or not finite, is silent for that block.
+         */
+        data class Partial(
+            val ratio: IgnitorDsl,
+            val gain: IgnitorDsl = Constant(1.0),
+            val phase: IgnitorDsl = Constant(0.0),
+        ) {
+            fun collectParams(out: MutableList<Param>) {
+                ratio.collectParams(out); gain.collectParams(out); phase.collectParams(out)
+            }
+        }
     }
 
     /** Sawtooth wave oscillator, a rising ramp (`Ignitor.saw`). */

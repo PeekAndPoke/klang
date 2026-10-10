@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.coerceSinePartials
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
@@ -1219,6 +1220,10 @@ private fun IgnitorDsl.buildRaw(
                     harmonics = harmonics.noMod(), harmonicsRolloff = harmonicsRolloff.noMod(), octaves = octaves.noMod(), octavesRolloff = octavesRolloff.noMod(),
                     suboctaves = suboctaves.noMod(), suboctavesRolloff = suboctavesRolloff.noMod(), analogSpread = analogSpread.noMod(), phase = phase.phaseInput(),
                     countsAtBuild = !cache.usesMusicalFreq(harmonics) && !cache.usesMusicalFreq(octaves) && !cache.usesMusicalFreq(suboctaves),
+                    // the first SINE_MAX_PARTIALS in list order; the rest are not built, their knob subtrees included
+                    partials = partials.take(coerceSinePartials(partials.size)).map { p ->
+                        Ignitors.SinePartial(ratio = p.ratio.noMod(), gain = p.gain.noMod(), phase = p.phase.noMod())
+                    },
                 ),
             )
         }

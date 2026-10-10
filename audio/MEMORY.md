@@ -166,8 +166,15 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   positive and finite, `ActiveVoice.soloed`) for its whole life (a long release beside another solo, Q14, Q28); `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`). Realtime voices have no
   control events: each one whose gate is open records its source until the block's end, so a realtime solo follows the
   held gates.
-- **Resource counts are capped, tones are not**: `coercePasses` (1 to 16) and `coerceUnisonVoices` (0 to
-  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0), both in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
+- **Resource counts are capped, tones are not**: `coercePasses` (1 to 16), `coerceUnisonVoices` (0 to
+  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0) and `coerceSinePartials` (a sine plays its first
+  `SINE_MAX_PARTIALS` = 256 explicit partials, the rest are not built), all in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
+- **The sine's partials** (`Ignitors.sinePartials`, `docs/plans/sine-partial-banks.md`): the fundamental and four banks,
+  `harmonics`, `octaves`, `suboctaves` and the explicit `partials` (`IgnitorDsl.Sine.Partial(ratio, gain, phase)`,
+  2026-10-10), summed raw, one loop per partial, every knob read once per block (an explicit partial's signal gain
+  per sample, its moving phase gliding across the block), a partial whose frequency's MAGNITUDE is at or above
+  Nyquist silent (one gate for the node; a non-finite frequency silent too), drift lanes in `DriftLanes` blended by
+  `analogSpread`. The explicit list is fixed per note, so its storage and lanes are built with the node.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -301,6 +308,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 The sine's explicit partials, `partial(ratio, gain, phase)` (a fourth bank, wire `Sine.partials`, cap
+  256, both doors), corpus identical: `docs/tasks/in-progress/sine-inharmonic-partials.md`
 - 2026-10-10 Pitch pipeline 7c: the vibrato's `range(from, to)` and `phase` (node fields, both doors, `classic()`
   slots `vibrato.rangeFrom|rangeTo|phase`); the default builds neither, corpus 18 of 18 identical:
   `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7c

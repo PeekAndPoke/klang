@@ -119,6 +119,17 @@ object WarmupVocabulary {
         IgnitorDsl.SuperTri(voices = Constant(5.0)),
         IgnitorDsl.SuperRamp(voices = Constant(5.0)),
         IgnitorDsl.Sine(harmonics = Constant(7.0), octaves = Constant(2.0), suboctaves = Constant(1.0)),
+        // the explicit partials: the per-block reader (a start phase), the per-sample gain loop (an envelope) and the
+        // phase glide (a moving phase)
+        IgnitorDsl.Sine(
+            fundamental = Constant(0.0),
+            partials = listOf(
+                IgnitorDsl.Sine.Partial(ratio = Constant(0.66), gain = Constant(0.5)),
+                IgnitorDsl.Sine.Partial(ratio = Constant(1.25), gain = Constant(0.5), phase = Constant(0.5)),
+                IgnitorDsl.Sine.Partial(ratio = Constant(2.19), gain = Constant(0.6).adsr(attack = 0.001, decay = 0.3, sustain = 0.2, release = 0.1)),
+                IgnitorDsl.Sine.Partial(ratio = Constant(2.76), gain = Constant(0.3), phase = slowPhase()),
+            ),
+        ),
         IgnitorDsl.Pluck(),
         IgnitorDsl.SuperPluck(voices = Constant(3.0)),
         // the stacks' and the bank's `phase` paths: a constant shift and the phased voice loops

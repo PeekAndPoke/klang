@@ -75,3 +75,17 @@ fun coerceUnisonVoices(value: Double): Int {
 
     return value.toInt().coerceIn(0, UNISON_MAX_VOICES)
 }
+
+/**
+ * Upper bound for the explicit partials of one sine (`IgnitorDsl.Sine.partials`, maintainer, 2026-10-09, Q26). A
+ * RESOURCE count like [UNISON_MAX_VOICES]: each partial sizes a phase, a gain, an increment and a drift lane at
+ * note-on on the render thread. A song that lists more plays the first 256 (coerced, never refused); the rest are not
+ * built at all, their knob subtrees included.
+ */
+const val SINE_MAX_PARTIALS = 256
+
+/**
+ * The ONE place the explicit partial count is coerced: the engine's build and the graph census, so the census counts
+ * what renders. Not on the doors, as for the unison voices: the wire can carry any list.
+ */
+fun coerceSinePartials(count: Int): Int = count.coerceIn(0, SINE_MAX_PARTIALS)

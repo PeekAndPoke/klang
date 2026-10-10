@@ -64,18 +64,20 @@ object KlangScriptIgnitor {
     /**
      * Creates a sine wave oscillator. The builder can add banks of sine PARTIALS at multiples of the sine's own
      * frequency, rendered in one pass: `harmonics(count, rolloff)` at `2f, 3f, 4f ...`, `octaves(count, rolloff)` at
-     * `2f, 4f, 8f ...`, `suboctaves(count, rolloff)` at `f/2, f/4 ...`; `fundamental(gain)` levels the sine itself
-     * and `analogSpread(0..1)` sets whether the partials drift as one oscillator or on their own. With no bank
-     * knob set this is the plain sine it always was. The multiples follow the door's `freq`, so
+     * `2f, 4f, 8f ...`, `suboctaves(count, rolloff)` at `f/2, f/4 ...`, and `partial(ratio, gain, phase)` adds one
+     * partial at any ratio per call (an inharmonic cluster); `fundamental(gain)` levels the sine itself and
+     * `analogSpread(0..1)` sets whether the partials drift as one oscillator or on their own. Everything sums raw.
+     * With no bank knob set this is the plain sine it always was. The multiples follow the door's `freq`, so
      * `Ignitor.sine(Ignitor.freq().mul(2), x => x.harmonics(3))` is the even series `2f, 4f, 6f, 8f`.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency (e.g. 5 for a 5 Hz LFO).
-     * @param configure receives the [OscSineBuilder] (knobs: `analog`, `fundamental`, `harmonics`, `octaves`, `suboctaves`, `analogSpread`, `phase`) and returns it.
+     * @param configure receives the [OscSineBuilder] (knobs: `analog`, `fundamental`, `harmonics`, `octaves`, `suboctaves`, `partial`, `analogSpread`, `phase`) and returns it.
      *
      * ```KlangScript
      * Ignitor.sine(x => x.analog(3)).lowpass(2000)
      * Ignitor.sine(x => x.harmonics(7))                  // a bass the ear rebuilds on small speakers: f plus 2f .. 8f
      * Ignitor.sine(x => x.suboctaves(1, 0))              // the classic sub oscillator, f and f/2 at equal level
+     * Ignitor.sine(x => x.fundamental(0).partial(0.66, 0.5).partial(0.87, 0.65, 0.5).partial(1.25, 1))   // an inharmonic cluster
      * ```
      */
     @KlangScript.Method

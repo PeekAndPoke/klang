@@ -54,6 +54,20 @@ class IgnitorDslWireCodecSpec : StringSpec({
             )
         )
     }
+    // The explicit partials: a list of plain (untagged) objects, order kept, every field non-default and a signal among
+    // them, so a dropped field, a dropped or reordered entry shows up.
+    "Sine with explicit partials" {
+        check(
+            IgnitorDsl.Sine(
+                fundamental = IgnitorDsl.Constant(0.0),
+                partials = listOf(
+                    IgnitorDsl.Sine.Partial(ratio = IgnitorDsl.Constant(0.6571), gain = IgnitorDsl.Constant(0.52), phase = IgnitorDsl.Constant(0.5)),
+                    IgnitorDsl.Sine.Partial(ratio = IgnitorDsl.Param("r", 1.25), gain = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(2.0)), phase = IgnitorDsl.Constant(0.25)),
+                    IgnitorDsl.Sine.Partial(ratio = IgnitorDsl.Constant(3.3905)),
+                ),
+            )
+        )
+    }
     // the oscillators' phase input, a constant and a signal, non-default so a dropped field shows up
     "Sine with a phase" { check(IgnitorDsl.Sine(phase = IgnitorDsl.Constant(0.25))) }
     "Pulze with a moving phase" { check(IgnitorDsl.Pulze(phase = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)))) }

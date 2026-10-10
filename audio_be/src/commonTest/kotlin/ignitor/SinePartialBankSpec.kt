@@ -115,6 +115,7 @@ class SinePartialBankSpec : StringSpec({
         IgnitorDsl.Sine(suboctaves = c(1.0)).isPlainSine() shouldBe false
         IgnitorDsl.Sine(fundamental = c(0.5)).isPlainSine() shouldBe false
         IgnitorDsl.Sine(harmonics = IgnitorDsl.Param("h", 0.0)).isPlainSine() shouldBe false
+        IgnitorDsl.Sine(partials = listOf(IgnitorDsl.Sine.Partial(ratio = c(1.0)))).isPlainSine() shouldBe false
     }
 
     // ── the banks are the hand-rolled stacks ─────────────────────────────────────
@@ -470,6 +471,64 @@ class SinePartialBankSpec : StringSpec({
         (maxDiff(a = locked, b = free) > 1e-6) shouldBe true
         (maxDiff(a = locked, b = mid) > 1e-6) shouldBe true
         (maxDiff(a = mid, b = free) > 1e-6) shouldBe true
+    }
+
+    // ── drift of the explicit partials (Q26 e): the banks' lanes and blend, a lane per partial in the order written ──
+
+    fun driftCluster(spread: Double, ratios: DoubleArray, gains: DoubleArray): Ignitor = Ignitors.sinePartials(
+        analog = const(20.0),
+        analogSpread = const(spread),
+        partials = ratios.indices.map { Ignitors.SinePartial(ratio = const(ratios[it]), gain = const(gains[it]), phase = const(0.0)) },
+    )
+
+    val clusterRatios = doubleArrayOf(0.6571, 1.2524)
+    val clusterGains = doubleArrayOf(0.52, 0.9)
+
+    "explicit partials, analogSpread 0: the fundamental and the cluster follow the one shared walk" {
+        assertClose(
+            a = render(driftCluster(spread = 0.0, ratios = clusterRatios, gains = clusterGains), 220.0, random = Random(11)),
+            b = driftReference(seed = 11, analog = 20.0, spread = 0.0, multiples = doubleArrayOf(1.0, 0.6571, 1.2524), gains = doubleArrayOf(1.0, 0.52, 0.9), freqHz = 220.0),
+            tol = 1e-9,
+        )
+    }
+
+    "explicit partials, analogSpread 1: each partial walks its own lane, handed out in the order written" {
+        val written = render(driftCluster(spread = 1.0, ratios = clusterRatios, gains = clusterGains), 220.0, random = Random(11))
+        val swapped = render(driftCluster(spread = 1.0, ratios = clusterRatios.reversedArray(), gains = clusterGains.reversedArray()), 220.0, random = Random(11))
+
+        assertClose(
+            a = written,
+            b = driftReference(seed = 11, analog = 20.0, spread = 1.0, multiples = doubleArrayOf(1.0, 0.6571, 1.2524), gains = doubleArrayOf(1.0, 0.52, 0.9), freqHz = 220.0),
+            tol = 1e-9,
+        )
+        assertClose(
+            a = swapped,
+            b = driftReference(seed = 11, analog = 20.0, spread = 1.0, multiples = doubleArrayOf(1.0, 1.2524, 0.6571), gains = doubleArrayOf(1.0, 0.9, 0.52), freqHz = 220.0),
+            tol = 1e-9,
+        )
+
+        // the order is audible with drift: the same partials, other lanes
+        var d = 0.0
+        for (i in written.indices) d = maxOf(d, abs(written[i] - swapped[i]))
+        (d > 1e-6) shouldBe true
+    }
+
+    "explicit partials take their lanes after the banks': harmonics(1) and two partials at spread 1, lanes [f, 2f, r1, r2]" {
+        val bank = Ignitors.sinePartials(
+            analog = const(20.0),
+            analogSpread = const(1.0),
+            harmonics = const(1.0),
+            partials = clusterRatios.indices.map { Ignitors.SinePartial(ratio = const(clusterRatios[it]), gain = const(clusterGains[it]), phase = const(0.0)) },
+        )
+
+        assertClose(
+            a = render(bank, 220.0, random = Random(11)),
+            b = driftReference(
+                seed = 11, analog = 20.0, spread = 1.0,
+                multiples = doubleArrayOf(1.0, 2.0, 0.6571, 1.2524), gains = doubleArrayOf(1.0, 0.5, 0.52, 0.9), freqHz = 220.0,
+            ),
+            tol = 1e-9,
+        )
     }
 
     "same seed, same render: the bank with drift is reproducible" {

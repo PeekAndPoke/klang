@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.coerceSinePartials
 import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 
 /**
@@ -173,6 +174,14 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                 }
 
                 return listOf(node.children[soundIndex.mod(node.children.size)])
+            }
+
+            // A sine renders its first SINE_MAX_PARTIALS explicit partials; the knobs of the rest are never built.
+            if (node is IgnitorDsl.Sine && node.partials.size > coerceSinePartials(node.partials.size)) {
+                val kids = node.childNodes()
+                val fields = kids.size - 3 * node.partials.size
+
+                return kids.subList(0, fields + 3 * coerceSinePartials(node.partials.size))
             }
 
             return node.childNodes()
@@ -341,7 +350,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Sine -> {
                 val partials = ((node.harmonics as? IgnitorDsl.Constant)?.value ?: 0.0) +
                         ((node.octaves as? IgnitorDsl.Constant)?.value ?: 0.0) +
-                        ((node.suboctaves as? IgnitorDsl.Constant)?.value ?: 0.0)
+                        ((node.suboctaves as? IgnitorDsl.Constant)?.value ?: 0.0) +
+                        coerceSinePartials(node.partials.size)
 
                 // coarse on purpose, as the bank's own one pass: every partial's loop reads a moving phase's block, but
                 // the bank is charged one read (a partial count would rank phase-modulated banks against stacks)

@@ -26,6 +26,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.ultra.common.toFixed
+import kotlin.math.abs
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
@@ -209,6 +210,32 @@ class IgnitorBenchmark(
             d.doors()
         }.toVoiceData()
 
+        /** Der Schmetterling's snare thud (`metalSnare`, 2026-09-30): 13 ratios of the head's frequency. */
+        private val THUD_RATIOS = doubleArrayOf(0.6571, 0.7571, 0.8714, 0.9476, 1.0857, 1.2524, 1.4333, 1.6524, 1.8952, 2.1952, 2.5333, 2.9381, 3.3905)
+
+        /** Its gains as the song writes them: the sign is the start phase. */
+        private val THUD_GAINS = doubleArrayOf(0.520, 0.676, -0.652, 0.826, 0.938, -1.000, 0.839, 0.746, -0.692, -0.591, 0.494, 0.474, -0.358)
+
+        /** The thud as Der Schmetterling wrote it on 2026-09-30: 13 hand-rolled sines, each `Ign.sine(Ign.freq().mul(r)).mul(g)`, summed with `.plus`. */
+        private fun thudSines(): IgnitorDsl {
+            fun sine(i: Int): IgnitorDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(THUD_RATIOS[i])).mul(THUD_GAINS[i])
+
+            return (1 until THUD_RATIOS.size).fold(sine(0)) { acc, i -> acc.plus(sine(i)) }
+                .adsr(attack = 0.0005, decay = 0.050, sustain = 0.0, release = 0.02).mul(1.245)
+        }
+
+        /** The same thud as ONE sine with 13 explicit partials: the same ratios, the gains' magnitudes, the signs as phase 0.5. */
+        private fun thudPartials(): IgnitorDsl = IgnitorDsl.Sine(
+            fundamental = IgnitorDsl.Constant(0.0),
+            partials = THUD_RATIOS.indices.map { i ->
+                IgnitorDsl.Sine.Partial(
+                    ratio = IgnitorDsl.Constant(THUD_RATIOS[i]),
+                    gain = IgnitorDsl.Constant(abs(THUD_GAINS[i])),
+                    phase = IgnitorDsl.Constant(if (THUD_GAINS[i] < 0.0) 0.5 else 0.0),
+                )
+            },
+        ).adsr(attack = 0.0005, decay = 0.050, sustain = 0.0, release = 0.02).mul(1.245)
+
         /**
          * Standard set of benchmark cases covering individual oscillators, super oscillators,
          * physical models, noise, and common compositions.
@@ -297,6 +324,10 @@ class IgnitorBenchmark(
                         },
                     ),
                 ),
+
+                // ── Explicit partials vs the hand-rolled cluster they replace (Der Schmetterling's snare thud) ──
+                Case("thud-13-sines", voiceData = voice("thud-13-sines", freqHz = 210.0), sounds = mapOf("thud-13-sines" to thudSines())),
+                Case("thud-13-partials", voiceData = voice("thud-13-partials", freqHz = 210.0), sounds = mapOf("thud-13-partials" to thudPartials())),
 
                 // ── Physical models ───────────────────────────────────────────
                 Case("pluck", voiceData = voice("pluck")),
