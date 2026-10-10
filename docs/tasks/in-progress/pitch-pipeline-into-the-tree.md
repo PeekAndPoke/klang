@@ -6,7 +6,7 @@ Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lif
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.
 **Planned 2026-10-07** (design worker, read-only on code): "The plan" below, six commits (steps 0 to 5) plus the
 composition block; eleven decisions for the maintainer in plan section 8.
-**In progress since 2026-10-10** on branch `pitch-pipeline-fm`: steps 0 to 5 done (0 to 3b released by v0.6.1; step 4, fm, committed 2026-10-10; step 5, the strip's shell and the package, done 2026-10-10, uncommitted, for review). Left: the listening round before the branch merges, then the composition block (section 7).
+**In progress since 2026-10-10** on branch `pitch-pipeline-fm`: steps 0 to 5 done (0 to 3b released by v0.6.1; step 4, fm, committed 2026-10-10; step 5, the strip's shell and the package, committed 2026-10-10 as `64253272`). Left: the listening round before the branch merges, then the composition block (section 7). The composition block runs on branch `pitch-composition`, stacked on `pitch-pipeline-fm`, so `pitch-pipeline-fm` can merge after its own listening round (`tmp/listening/pp-step4/`, six pairs) without it.
 
 ## What it is
 
