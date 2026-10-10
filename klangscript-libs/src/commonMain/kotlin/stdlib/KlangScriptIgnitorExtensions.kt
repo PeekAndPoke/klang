@@ -624,12 +624,24 @@ object KlangScriptIgnitorExtensions {
         IgnitorDsl.Accelerate(inner = self, semitones = semitones.toIgnitorDsl())
 
     /**
-     * Applies a custom pitch modulation from any Ignitor signal.
-     * The mod signal uses deviation space: 0.0 = no change, positive = higher, negative = lower.
+     * Pitch modulation by any signal, the LINEAR law: the frequency is multiplied by `1 + mod`, per sample. [mod] is
+     * a deviation, unitless: 0 is no change, 1.0 an octave up, -0.5 an octave down, -1.0 stops the oscillator. FM's
+     * law: `Ignitor.sine().pitchMod(Ignitor.sine(5).mul(0.01))` swings the pitch 1 % either way. In semitones:
+     * `pitchModSemitones`.
      */
     @KlangScript.Method
     fun pitchMod(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.PitchMod(inner = self, mod = mod.toIgnitorDsl())
+
+    /**
+     * Pitch modulation by any signal, in SEMITONES: the frequency is multiplied by `2^(mod / 12)`, per sample. 12 is
+     * an octave up, 7 a fifth, -12 an octave down, 0 the note. `Ignitor.saw().pitchModSemitones(Ignitor.sine(5).mul(0.5))`
+     * is a vibrato half a semitone deep; `pitchModSemitones(7)` plays a fifth up. The pitch law of `vibrato`,
+     * `accelerate` and `pitchEnvelope`, for any signal. The linear law (`1 + mod`, FM's): `pitchMod`.
+     */
+    @KlangScript.Method
+    fun pitchModSemitones(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.PitchModSemitones(inner = self, mod = mod.toIgnitorDsl())
 
     /**
      * Applies a pitch envelope (pitch sweep over time). [semitones] is the shift at the envelope

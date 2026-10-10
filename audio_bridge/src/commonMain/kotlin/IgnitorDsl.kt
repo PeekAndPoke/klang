@@ -2295,16 +2295,39 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * General-purpose pitch modulation. The [mod] Ignitor produces per-sample phase-deviation
-     * values (0.0 = no change, positive = higher pitch, negative = lower). At runtime, the
-     * build-time walker converts to ratio space (`value + 1.0`) and bubbles the mod to the
-     * source oscillator.
-     *
-     * This is the general primitive underlying `.vibrato()`, `.accelerate()`, `.fm()`, and
-     * `.pitchEnvelope()`. Use it for custom pitch modulation from any Ignitor source.
+     * Pitch modulation by any signal, the LINEAR law: the frequency of every pitched source under [inner] is multiplied
+     * by `1 + mod`, per sample. [mod] is a deviation, unitless: 0 is no change, 1.0 is an octave up, 0.5 a just fifth
+     * (`x 1.5`), -0.5 an octave down, and -1.0 stops the oscillator (ratio 0). The law of FM: a modulator's swing
+     * around the carrier. For a modulation in SEMITONES (the exponential law, `2^(mod / 12)`) see [PitchModSemitones].
+     * No switch and no clamp: the ratio passes raw, a NaN sample of [mod] included
+     * (`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2).
      */
     @WireName("pitch-mod")
     data class PitchMod(
+        val inner: IgnitorDsl,
+        val mod: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); mod.collectParams(out)
+        }
+    }
+
+    /**
+     * Pitch modulation by any signal, in SEMITONES, the exponential law: the frequency of every pitched source under
+     * [inner] is multiplied by `2^(mod / 12)`, per sample. 12 is an octave up, 7 a fifth, -12 an octave down, 0 the
+     * note; `Ignitor.sine(5).mul(0.5)` as [mod] is a vibrato half a semitone deep. The pitch law of `vibrato`,
+     * `accelerate` and `pitchEnvelope`, as a primitive (pitch pipeline 7a, decision D8, maintainer 2026-10-09). For
+     * the LINEAR law (`1 + mod`, FM's) see [PitchMod].
+     *
+     * Gated at build: a literal [mod] (a `Constant` or `Param` leaf) of 0, or non-finite, builds no node, so the voice
+     * is the bare [inner] (`audio/ref/off-values.md`, row `pitchModSemitones`, with what that means for a shared inner).
+     * A signal [mod] is always built. The ratio passes through `safeOut`, no clamp below it: past about 598 semitones it
+     * holds at `SAFE_MAX`. A non-finite SAMPLE of a signal: +Infinity reads as `SAFE_MAX`, NaN or -Infinity as the
+     * ratio 0, which holds the source still, as `pitchMod`'s raw NaN and FM's modulator do
+     * (`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2).
+     */
+    @WireName("pitch-mod-semitones")
+    data class PitchModSemitones(
         val inner: IgnitorDsl,
         val mod: IgnitorDsl,
     ) : IgnitorDsl {
@@ -3164,12 +3187,22 @@ fun IgnitorDsl.accelerate(semitones: Double) = IgnitorDsl.Accelerate(
 )
 
 /**
- * Applies a custom pitch modulation from any Ignitor signal.
- *
- * The [mod] signal uses deviation space: 0.0 = no change, positive = higher, negative = lower.
- * At build time, the runtime converts to ratio space and bubbles the mod to the source oscillator.
+ * Pitch modulation by any signal, the LINEAR law: the frequency times `1 + mod` (0 = no change, 1.0 = an octave up,
+ * -1.0 stops the oscillator). In semitones: [pitchModSemitones].
  */
 fun IgnitorDsl.pitchMod(mod: IgnitorDsl) = IgnitorDsl.PitchMod(inner = this, mod = mod)
+
+/** [pitchMod] by a constant deviation [mod], the script door's `x.pitchMod(0.5)`. */
+fun IgnitorDsl.pitchMod(mod: Double) = pitchMod(IgnitorDsl.Constant(mod))
+
+/**
+ * Pitch modulation by any signal, in SEMITONES: the frequency times `2^(mod / 12)` (0 = no change, 12 = an octave up).
+ * The linear law: [pitchMod].
+ */
+fun IgnitorDsl.pitchModSemitones(mod: IgnitorDsl) = IgnitorDsl.PitchModSemitones(inner = this, mod = mod)
+
+/** [pitchModSemitones] by a constant [mod] in SEMITONES, the script door's `x.pitchModSemitones(7)`. */
+fun IgnitorDsl.pitchModSemitones(mod: Double) = pitchModSemitones(IgnitorDsl.Constant(mod))
 
 // ═════════════════════════════════════════════════════════════════════════════════
 // Discovery

@@ -128,10 +128,46 @@ registered in `ignitor/IgnitorDefaults.kt` / `IgnitorRegistry.kt`. (There is no 
 Per-oscillator character constants live in `ignitor/OscillatorTuning.kt`
 (`SAW_*`, `PULSE_*`, `SUPERSAW_*`, `SUPER{RAMP,SQUARE,TRI,SINE}_*`).
 
+## The pitch nodes and their two laws
+
+A pitch node is not a wrapper at runtime: it hands a ratio stream (1.0 = the note) down to every pitched source under
+it, which multiplies its phase increment by it per sample (`ModApplyingIgnitor`; an absolute oscillator is shielded).
+Two laws, two words (decision D8, maintainer 2026-10-09):
+
+| Node                     | Law, per sample                     | Unit                                     | Notes                                                                                     |
+|--------------------------|-------------------------------------|------------------------------------------|-------------------------------------------------------------------------------------------|
+| `pitchModSemitones(mod)` | `2^(mod / 12)`                      | semitones: 12 an octave up, 0 the note   | the exponential law as a primitive, any signal (pitch pipeline 7a); gated off at a literal 0 or non-finite mod |
+| `vibrato(rate, semitones)` | `2^(sin * semitones / 12)`        | semitones                                | an LFO built in; gated off at a finite leaf depth `<= 0`                                   |
+| `accelerate(semitones)`  | `2^(semitones * progress / 12)`     | semitones                                | progress 0 at the onset, 1 at the gate, then held                                          |
+| `pitchEnvelope(semitones)` | `2^(semitones * level / 12)`      | semitones                                | the envelope law's level                                                                   |
+| `pitchMod(mod)`          | `1 + mod`                           | a deviation: 1.0 an octave up, -1.0 stops | the LINEAR law, FM's                                                                      |
+| `fm(modulator, ratio, depth)` | `1 + modulator * depth / freq` | Hz (`depth`)                             | the linear law with the index envelope                                                     |
+
+`pitchModSemitones`, `vibrato` and `pitchEnvelope` compute the ratio with `fastExp2`, `accelerate` with a `pow` seed
+per block and a multiply per sample; all four pass it through `safeOut`, so past about 598 semitones it holds at
+`SAFE_MAX`. The knobs of `vibrato`, `accelerate` and `pitchEnvelope` read a non-finite value as unset first
+(`finiteOr`). `pitchModSemitones` gates a non-finite LITERAL mod (the bare voice); a non-finite SAMPLE of a signal mod reaches
+`safeOut`: NaN and -Infinity read as the ratio 0 (the source holds still, a saw renders a DC, as with FM's modulator),
++Infinity as `SAFE_MAX`
+(`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2 holds the open question for signals). `pitchMod`
+has no `safeOut`: its ratio passes raw.
+
+A literal `pitchModSemitones` of 0, or a non-finite literal, is gated: no node is built and the voice is the bare
+source, bit for bit, at no cost; at 0 the inner shares with the same node elsewhere (`s + s.pitchModSemitones(0)` is
+`s + s`), the gate's pitch-arm consequence (`audio/ref/off-values.md`, rows `pitchModSemitones` and `pitchMod`). A
+signal mod is always built and writes exactly 1.0 where it is 0. `pitchMod` is not gated: `pitchMod(0)` is built and
+writes 1.0, so a source referenced once renders its bare bits, but its inner is its own instance. Whole octaves are
+exact: `fastExp2` is exact at every integer and `12 * k / 12` is `k`.
+
+Nesting composes the products: the ratio a source reads under `x.a().b()` (b outermost) is `b * a`, the outer node's
+ratio the left factor of one multiply per level (`combineMods`: `existing * newMod`), so three levels read
+`(outer * middle) * inner`. Guards: `PitchModSemitonesSpec` (the oracle, `2^(x / 12)` computed in the spec, with
+`pitchMod` and `vibrato` above and below), `PitchModSafetyTest`, `FmModulatorFollowsPitchSpec`.
+
 ## FM: a pitch node means what it wraps
 
 Pitch pipeline step 3b (decision D1, the placement rule of 2026-10-09). A pitch modulation (a `vibrato`, `pitchMod`,
-`pitchEnvelope`, `accelerate`, an outer `fm`, a `classic()` pitch stage) above an `fm` node moves the whole operator,
+`pitchModSemitones`, `pitchEnvelope`, `accelerate`, an outer `fm`, a `classic()` pitch stage) above an `fm` node moves the whole operator,
 the note's pitch: the modulator follows the carrier and the ratio stays exact (a modulator with an absolute `freq`,
 `Ign.sine(330)`, stays at its frequency, shielded like every absolute oscillator). On the modulator it moves the modulator
 alone; on the carrier (`x.vibrato(...).fm(m, ...)`) the carrier alone. Sprudel's own `fm` door is `classic()`'s FM

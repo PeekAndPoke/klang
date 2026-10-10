@@ -475,6 +475,12 @@ detune, and sum them: `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
 | `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
 | `.accelerate(semitones)`                            | Exponential pitch glide from the onset to the gate close, held through the release (12 = one octave) |
 | `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); the `adsr`'s own lambda shapes it with `curves` |
+| `.pitchModSemitones(mod)`                           | Pitch by any signal or number, in SEMITONES: `2^(mod / 12)` (12 = an octave up, 0 = the note) |
+| `.pitchMod(mod)`                                    | Pitch by any signal, LINEAR: `1 + mod` (1.0 = an octave up, -1.0 stops the oscillator; FM's law) |
+
+`pitchModSemitones` is the vibrato's law for any signal: `Ignitor.saw().pitchModSemitones(Ignitor.sine(5).mul(0.5))`
+wobbles half a semitone either way at 5 Hz. `pitchMod` is linear, so a symmetric swing bends further down than up
+(a swing of 0.5 is 7 semitones up and 12 down); reach for it to write FM by hand.
 
 `pitchEnvelope` is an ADSR on the pitch, the chain `adsr`'s pattern: up to `semitones` over the attack, down to the
 sustain (a share of `semitones`, usually 0 = the note) over the decay, and from the gate's end back to the note over

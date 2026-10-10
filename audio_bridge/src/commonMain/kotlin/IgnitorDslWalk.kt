@@ -91,6 +91,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
             inner, semitones, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.PitchMod -> listOf(inner, mod)
+        is IgnitorDsl.PitchModSemitones -> listOf(inner, mod)
         is IgnitorDsl.Pluck -> listOf(freq, feedback, brightness, pickPosition, stiffness, analog)
         is IgnitorDsl.Plus -> listOf(left, right)
         is IgnitorDsl.Pow -> listOf(base, exp)
@@ -256,6 +257,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             releaseCurve = new[8],
         )
         is IgnitorDsl.PitchMod -> copy(inner = new[0], mod = new[1])
+        is IgnitorDsl.PitchModSemitones -> copy(inner = new[0], mod = new[1])
         is IgnitorDsl.Pluck -> copy(
             freq = new[0],
             feedback = new[1],

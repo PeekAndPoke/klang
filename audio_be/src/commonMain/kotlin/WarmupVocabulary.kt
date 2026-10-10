@@ -41,6 +41,7 @@ import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.pitchMod
+import io.peekandpoke.klang.audio_bridge.pitchModSemitones
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.pow
 import io.peekandpoke.klang.audio_bridge.range
@@ -219,6 +220,7 @@ object WarmupVocabulary {
         .vibrato(rate = 5.0, semitones = 0.2)
         .accelerate(1.0)
         .pitchMod(IgnitorDsl.Sine(freq = Constant(3.0)).mul(Constant(0.1)))
+        .pitchModSemitones(IgnitorDsl.Sine(freq = Constant(4.0)).mul(Constant(0.3)))
         .let { IgnitorDsl.PitchEnvelope(inner = it, semitones = Constant(12.0), decay = Constant(0.1)) }
         .mul(Constant(0.4))
 

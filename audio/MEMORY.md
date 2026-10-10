@@ -98,7 +98,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   are index knobs with the reader's default, both Exponential; `ADSR_EXP_K` 3.0; de-click `ENV_DECLICK_SECONDS`
   1 ms on `classic()`. Knobs and `Adsr.on`: `audio/ref/voice-synthesis.md`.
 - **The gate**: a stage whose gating knob is a leaf at its off value (or unset, except where the table says
-  otherwise) is not built; since 2026-10-07 the four pitch arms too (vibrato, accelerate, pitch envelope, fm). The
+  otherwise) is not built; since 2026-10-07 the pitch arms too, five now (vibrato, accelerate, pitch envelope, fm, and
+  `pitchModSemitones` at a literal mod since 7a). The
   rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
   at most `MAX_DRAIN_SECONDS` 20 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
@@ -125,6 +126,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   Every lane steps once per block and ramps across it.
 - **`DriftLanes`** gives every multi-voice oscillator its drift; `analogSpread` 0 is one shared walk, 1 (default)
   a lane per voice, and both endpoints are exact.
+- **Two pitch laws, two words** (decision D8, pitch pipeline 7a): `pitchModSemitones(mod)` is `2^(mod / 12)`, the law
+  of `vibrato`, `accelerate` and `pitchEnvelope` as a primitive (`fastExp2`, `safeOut`); `pitchMod(mod)` is the linear
+  `1 + mod`, FM's law, raw. `pitchModSemitones` is gated at a literal 0 or non-finite mod, `pitchMod` is not
+  (`audio/ref/off-values.md`); nesting multiplies, the outer ratio the left factor. The table:
+  `audio/ref/voice-synthesis.md`, "The pitch nodes and their two laws".
 - **Oscillator phase** (`PhaseOffset`, `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): every periodic oscillator has a `phase`
   input in cycles, wrapped to `[0, 1)`, no clamp. The literal 0 builds no input (the default renders as before, bit for
   bit); a block-constant one moves the accumulator by its change once per block (the per-sample loops untouched); a
@@ -223,8 +229,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   renders once per pitch; build it once per layer. The predicate is the detune fold's
   (`IgnitorBuildCache.usesMusicalFreq`): a node that consumed the freq ARGUMENT without a `Freq` leaf would break
   both. Guard: `SharedModulatorRateSpec`.
-- **One pitch mod per pitch-mod node** (`combineMods`): the mod a vibrato, fm, pitch envelope, accelerate or
-  `pitchMod` hands to the pitched sources under it sits behind one memo that always caches per block, so its LFO or
+- **One pitch mod per pitch-mod node** (`combineMods`): the mod a vibrato, fm, pitch envelope, accelerate,
+  `pitchMod` or `pitchModSemitones` hands to the pitched sources under it sits behind one memo that always caches per block, so its LFO or
   modulator advances once per block for every source at one pitch (it ran once per source until 2026-10-07; Sakura and
   Irish Lament were retuned to keep their sound). Except: a source detuned under a mod that keeps its freq key (an
   `fm`, or a mod whose knobs read `Freq`) renders the whole mod again. Guard: the B-1 rows of `SharedModulatorRateSpec`.
@@ -290,6 +296,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 Pitch pipeline 7a: `pitchModSemitones(mod)`, the exponential pitch primitive (`2^(mod / 12)`), a node on
+  both doors and the wire beside the linear `pitchMod` (D8); the corpus identical:
+  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7a
 - 2026-10-10 Pitch pipeline step 5: the strip's shell goes (`PitchPipelineBuilder`, `BlockContext.freqModBuffer`,
   `Voice.RenderContext.freqModBuffer`, `IgniteRenderer`'s bridge) and `voices/strip/` dissolves into `voices/` (D7);
   a pure removal, the corpus identical: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 5

@@ -437,7 +437,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // pitch modulation: the mod renders a block (1 write), the ratio loop reads it and writes
             // the ratios (2), and the source reads the ratio per sample (1); a detune is a constant
             // factor folded into the source's increment
-            is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod ->
+            is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod,
+            is IgnitorDsl.PitchModSemitones ->
                 GraphCensus(passes = 1, traffic = 4, bytes = 64)
 
             is IgnitorDsl.Detune -> NONE

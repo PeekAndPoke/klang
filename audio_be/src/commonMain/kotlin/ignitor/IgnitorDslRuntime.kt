@@ -52,9 +52,9 @@ import kotlin.random.Random
  * **Pitch-mod bubbling:**
  *
  * Pitch-mod DSL nodes ([IgnitorDsl.Vibrato], [IgnitorDsl.Accelerate], [IgnitorDsl.PitchEnvelope],
- * [IgnitorDsl.Fm]) do not become Ignitor wrappers. Instead, they produce a mod Ignitor (ratio-space,
- * 1.0 = no change) that is accumulated and passed down to the source oscillator via
- * [ModApplyingIgnitor]. Insert effects and binary ops pass the mod through transparently.
+ * [IgnitorDsl.Fm], [IgnitorDsl.PitchMod], [IgnitorDsl.PitchModSemitones]) do not become Ignitor wrappers. Instead,
+ * they produce a mod Ignitor (ratio-space, 1.0 = no change) that is accumulated and passed down to the source
+ * oscillator via [ModApplyingIgnitor]. Insert effects and binary ops pass the mod through transparently.
  */
 fun IgnitorDsl.buildExciter(
     ignitorParams: Map<String, Double>? = null,
@@ -380,9 +380,10 @@ internal fun IgnitorDsl.buildIgnitor(
     }
 
     // ── Pitch-mod nodes: absorb into mod, descend. No cache entry for this node itself; its mod is memoized (`combineMods`).
-    //    The four with a switch knob are GATED first (pitch pipeline step 0): off, the walk descends with the UNCHANGED
-    //    mod and builds nothing of the node (see `gatedOff`, "a gated PITCH arm"; a build-time walk over the DSL, the
-    //    detune fold predicate, still sees its knobs). `PitchMod` has no switch. ──
+    //    The five with a switch knob are GATED first (pitch pipeline step 0; `pitchModSemitones` at a literal mod, 7a):
+    //    off, the walk descends with the UNCHANGED mod and builds nothing of the node (see `gatedOff`, "a gated PITCH
+    //    arm"; a build-time walk over the DSL, the detune fold predicate, still sees its knobs). `PitchMod` is not
+    //    gated (`audio/ref/off-values.md`). ──
     when (this) {
         is IgnitorDsl.Vibrato -> {
             // GATE ROW `vibrato` (audio/ref/off-values.md): off at a FINITE leaf depth <= 0 only. A non-finite
@@ -434,6 +435,18 @@ internal fun IgnitorDsl.buildIgnitor(
         is IgnitorDsl.PitchMod -> {
             val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
             val ratioMod = deviationToRatioIgnitor(userMod)
+            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, ratioMod, node = this))
+        }
+
+        is IgnitorDsl.PitchModSemitones -> {
+            // GATE ROW `pitchModSemitones`: off at a leaf mod == 0, or non-finite (the bare voice, as accelerate and
+            // the pitch envelope read theirs). A signal mod is never gated; its NaN sample reads as ratio 0.
+            if (mod.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+                return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
+            }
+
+            val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
+            val ratioMod = semitonesToRatioIgnitor(userMod)
             return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, ratioMod, node = this))
         }
 
@@ -643,15 +656,18 @@ private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: Map<String, Double>?, c
 /**
  * The `vibrato` row of the gate: off at a FINITE off value only; a non-finite knob keeps the stage.
  *
- * **Why the vibrato differs from the other three pitch arms.** The gate reads a non-finite knob as
+ * **Why the vibrato differs from the other four pitch arms.** The gate reads a non-finite knob as
  * unset, and for most gated stages unset IS off (`mul` and the envelope's `on` are the other two
  * exceptions, for their own reasons). The vibrato's runtime reads a non-finite
  * depth as unset too, but unset there is the node's DEFAULT depth (`VIBRATO_SEMITONES`, the
  * `finiteOr` rule in `PitchModFactories.kt`, stated once in `PitchModDefaults.kt`), not 0. So a
  * non-finite depth renders a vibrato, and gating it off would change the sound instead of folding
  * a stage that writes exactly 1.0. Accelerate, the pitch envelope and FM read a non-finite switch
- * as 0, so for them [gatedOff]'s non-finite arm IS a fold. There is no NaN hazard to guard here
- * either: the runtime already substitutes. Decided 2026-10-07 (coordinator, pitch pipeline step 0).
+ * as 0, so for them [gatedOff]'s non-finite arm IS a fold. `pitchModSemitones` (7a) is off at a
+ * non-finite literal too, but there the gate is NOT a fold: built, NaN and -Infinity read as the
+ * ratio 0 and +Infinity as `SAFE_MAX` (its row in `audio/ref/off-values.md`). There is no NaN hazard
+ * to guard here either: the runtime already substitutes. Decided 2026-10-07 (coordinator, pitch
+ * pipeline step 0).
  */
 private inline fun IgnitorDsl.gatedOffWhenFinite(
     ignitorParams: Map<String, Double>?,
@@ -1118,7 +1134,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Param, is IgnitorDsl.Constant, is IgnitorDsl.Freq ->
             error("Leaf DSL nodes must be built in buildIgnitor, not buildRaw")
 
-        is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.Fm, is IgnitorDsl.PitchMod ->
+        is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.Fm, is IgnitorDsl.PitchMod,
+        is IgnitorDsl.PitchModSemitones ->
             error("Pitch-mod DSL nodes must be absorbed in buildIgnitor, not buildRaw")
 
         is IgnitorDsl.Variants ->

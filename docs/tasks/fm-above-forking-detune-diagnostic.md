@@ -28,7 +28,7 @@ its one modulator serves one pitch. The shape is an fm whose carrier holds TWO p
 
 - A static walk over an instrument's `IgnitorDsl` at registration, on the editor side, never on the audio thread and
   never an exception: flag a frequency-keyed pitch mod (an `fm` with its default `freq`, or a vibrato, `pitchMod`,
-  `pitchEnvelope` or `accelerate` whose knobs read `Ignitor.freq()`) whose BENT CHILD (the fm's carrier, the inner of
+  `pitchModSemitones`, `pitchEnvelope` or `accelerate` whose knobs read `Ignitor.freq()`) whose BENT CHILD (the fm's carrier, the inner of
   a vibrato and the like), followed along signal edges only, reaches the note at two pitches: a forking `Detune` (its
   inner reads `Freq`) on that walk, beside another path to a pitched source that does not pass through that detune
   (or passes through a detune of another amount). The walk does not enter a nested fm's modulator or a parameter

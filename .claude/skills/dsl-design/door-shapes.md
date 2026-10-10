@@ -32,7 +32,7 @@ defaulted knob is temporary stays flat. A knob that nothing reads is removed, no
 | `duck` (Katalyst) | `orbit, depth, attack` | none | flat and all optional, like the compressor (a dynamics stage); identical to sprudel's |
 | `distort` (Katalyst, 2026-10-09) | `amount, shape = "soft", oversample = 0` | none | the voice's flat door position for position (one shape per concept); every parameter optional, an omitted `amount` is the bare stage's `DISTORT_AMOUNT`, the voice nodes' 0.5. No `wet` in version 1, so the wet-first rule has nothing to place. Recorded asymmetry: `shape` takes a NAME and `oversample` an Int on BOTH doors here (the Kotlin doors' precedent below), never a number or a slot, because both are fixed when the chain is built, as the compressor's `lookahead` is. No sprudel twin: sprudel's `distort(...)` is the voice's door, and a bus door on a note is the open Motor question (`docs/plans/future/signal-graph-engine.md` §6) |
 
-Not walked, nothing to decide: `onepole`, `crush`, `coarse`, `detune`, `accelerate` (no defaults), the
+Not walked, nothing to decide: `onepole`, `crush`, `coarse`, `detune`, `accelerate`, `pitchMod`, `pitchModSemitones` (no defaults), the
 oscillators (already `(freq, configure)`).
 
 **The envelopes, walked 2026-09-25 for step 3c (maintainer):**

@@ -145,6 +145,7 @@ class IgnitorDslWalkSpec : StringSpec({
                 releaseCurve = m(8),
             ), 9),
         Triple("PitchMod", IgnitorDsl.PitchMod(inner = m(0), mod = m(1)), 2),
+        Triple("PitchModSemitones", IgnitorDsl.PitchModSemitones(inner = m(0), mod = m(1)), 2),
         Triple("Pluck", IgnitorDsl.Pluck(
                 freq = m(0),
                 feedback = m(1),
@@ -209,8 +210,8 @@ class IgnitorDslWalkSpec : StringSpec({
 
     "the corpus covers every IgnitorDsl node type" {
         // Bump this together with a new node's walker arms and its corpus entry.
-        corpus.size shouldBe 78
-        corpus.map { it.first }.toSet().size shouldBe 78
+        corpus.size shouldBe 79
+        corpus.map { it.first }.toSet().size shouldBe 79
     }
 
     "every node reports exactly the declared number of children" {

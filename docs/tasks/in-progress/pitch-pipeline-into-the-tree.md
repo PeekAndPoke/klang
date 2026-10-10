@@ -1257,13 +1257,144 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
 - **7a. One exponential pitch primitive, in semitones** (ratio `2^(x/12)`), a new node on both doors with a door-parity
   spec and an oracle law spec (M). The existing `pitchMod` stays: it is LINEAR (deviation, `value + 1`), which is FM's
   natural law, so the two are two concepts, not two words for one (D8 names it).
+
+  **What was done (2026-10-10, uncommitted, for review).** `audio_bridge`: the node `IgnitorDsl.PitchModSemitones(inner,
+  mod)` (`@WireName("pitch-mod-semitones")`), its walk arms (`childNodes`, `withChildNodes`: `inner` first, so
+  `combineMods` reads `mod` as the knob for the freq key), the Kotlin door `x.pitchModSemitones(mod: IgnitorDsl)` and its
+  Double overload (a constant anywhere a constant is accepted); the `PitchMod` KDoc rewritten (it called itself the
+  primitive under `vibrato`, `accelerate`, `fm` and `pitchEnvelope`, which it is not; now: the LINEAR law, 1.0 an octave
+  up, -1.0 stops the oscillator, raw, pointing to `pitchModSemitones`). `audio_be`: `semitonesToRatioIgnitor`
+  (`safeOut(fastExp2(mod / 12.0))` per sample, the vibrato's formula), the runtime arm (the `PitchMod` arm's shape:
+  build the mod, wrap it, `combineMods`, descend; gated at a literal 0 or non-finite mod since review round 1), the exhaustive `buildRaw` and
+  `GraphCensus` arms, `WarmupVocabulary` (its spec asks every node kind). `klangscript-libs`: the script door
+  `pitchModSemitones(mod)` (`IgnitorDslLike`, so a number or a signal) and the `pitchMod` door's KDoc (its law, its unit,
+  the other word). The parameter is `mod` on both nodes and every door, mirroring `pitchMod`; the unit lives in the
+  door's name (D8) and in the KDoc. Docs: `audio/ref/voice-synthesis.md` (a new section, "The pitch nodes and their two
+  laws": the six pitch nodes, their laws and units, the non-finite reads, the identity, the grouping; the FM section's
+  list), `ignitor-reference.md` (two rows and a paragraph), `audio/MEMORY.md` (a laws bullet, the combineMods bullet in
+  place, one History line), `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2 (the node's NaN path
+  joins the list), `dsl-design/door-shapes.md` (the two doors in the "nothing to decide" line). No outside idea, nothing
+  to credit.
+  - **The law** (`PitchModSemitonesSpec`, new, 18 rows since review round 1; the seam is FM's: the `Sample` leaf over a probe that records
+    the ratio stream it reads, `ctx.phaseMod`, and counts its calls, one per block; the oracle is `2.0.pow(x / 12.0)`
+    in the spec, relative tolerance 1e-9 against `fastExp2`'s bound of 1e-10): 7 semitones reads `2^(7/12)` on every
+    frame, -7 reads `2^(-7/12)`; a signal (a 40 Hz sine times 3, both signs) reads `2^(lfo / 12)` frame by frame
+    against the same LFO rendered alone (so the mod advances once per block); 7 inside 5 is the octave; above and
+    below `pitchMod(0.25)` the product `2^(7/12) * 1.25`; above and below `vibrato(6, 0.5)` the vibrato's own stream
+    times `2^(7/12)`, frame by frame. **The grouping**: a source under `x.a().b()` reads `b * a`, the outer node's ratio
+    the left factor (`combineMods`: `existing * newMod`), three levels `(outer * middle) * inner`, as for every pitch
+    node; the rows pin the product to 1e-9, the grouping is read from the code. The FM rule: one row in
+    `FmModulatorFollowsPitchSpec` (`op.pitchModSemitones(sine(5) * 0.5)` above the fm: the modulator reads the
+    carrier's ratio stream frame for frame). The runtime needed no line for it: the arm hands its mod down through
+    `combineMods` like `pitchMod`, the `Fm` arm builds its modulator under whatever `accumulatedMod` arrives, and
+    `combineMods`' freq-key logic reads every child but the first, here `mod`.
+  - **0 and the gate** (since review round 1): a LITERAL mod (`Constant` or `Param`) of 0 builds no node, the
+    accelerate and pitch-envelope precedent (`mod.gatedOff { it == 0.0 }`; row `pitchModSemitones` in
+    `audio/ref/off-values.md`): the voice is the bare source at no cost, and the inner shares with the same node
+    elsewhere (`s + s.pitchModSemitones(0)` is `s + s`, the gate's documented pitch-arm consequence). A non-zero
+    literal is built. A SIGNAL at 0 is built and writes exactly 1.0 (`fastExp2(0.0)` is 1); a sine with its drift, a
+    saw, a supersaw and a pluck under it render bit for bit what they render without the node (the sources multiply
+    their increment by 1.0, which is exact; a probe beside each source, under the same node, proves the node is built).
+    `pitchMod` stays ungated (its "NOT gated" row: `pitchMod(0)` is built, so its inner is its own instance).
+  - **Non-finite and huge amounts** (checklist (b), `safeOut` on the ratio, no clamp below it): a non-finite LITERAL
+    builds no node (the bare voice, bit for bit; built, NaN and -Infinity read the ratio 0 and froze the source into a
+    full-scale DC per note, the freeze step 3 fixed for accelerate, and +Infinity ran at 1e15; review round 1 B2). The
+    gate's pitch-arm consequences (the inner shares, the inner mods lose an outer freq key) hold at a gated
+    non-finite literal as at 0. A non-finite SAMPLE of a signal mod reaches `safeOut`:
+    NaN and -Infinity read as the ratio 0 on every frame (the source holds still: a saw renders one finite value, a
+    DC, as FM's modulator and `pitchMod`'s raw NaN do), +Infinity as 1e15 (`SAFE_MAX`); a per-sample guard is section
+    2 of the non-finite task, open. 598 semitones, the first whole amount past 1e15 (`12 * log2(1e15)` is about
+    597.95), holds at 1e15, 597 passes raw (`2^(597/12)`, about 9.4e14).
+  - **Door parity** (`KlangScriptPitchModDoorParitySpec`, new, 3 rows): `Ign.saw().pitchModSemitones(7)`, by name
+    `mod = 7`, the Kotlin `pitchModSemitones(7.0)` and `pitchModSemitones(Constant(7.0))` are one node; the same for a
+    signal; `pitchMod(0.5)` builds the linear node on both doors and is not `pitchModSemitones(0.5)`.
+  - **Wire.** `WIRE_SCHEMA_HASH` `1342085251` to `-2146573257` (one node). There is no golden file: the hash is the
+    golden, and the codec round trip (`IgnitorDslWireCodecSpec`, a `PitchModSemitones` row with a signal mod) is JS
+    green.
+  - **Corpus** (`CORPUS_LABEL=pp-7a`, no song file modified): `tmp/naming/corpus-pp-7a.txt` against
+    `corpus-pp-s5.txt`, 18 of 18 identical.
+  - **Cost** (one voice through `VoiceFactory`, an authored `Saw(analog = 0)` under each node, mods at 5 Hz; render per
+    128-frame block). JVM, medians of 9 rounds: bare saw 214 ns, `pitchMod(lfo * 0.03)` 704, `pitchModSemitones(lfo *
+    0.5)` 1193, `vibrato(5, 0.5)` 1265; constants: `pitchMod(0)` 305, `pitchModSemitones(0)` 787 before the gate and
+    203 after it (the bare saw's 210: no node); no arm allocates.
+    V8 production test bundle, medians of 3 rounds, pinned and unpinned: bare 538 and 542 ns, `pitchMod` 1461 and
+    1518, `pitchModSemitones` 2129 and 2136, `vibrato` 2142 and 2094; bytes per block 35 and 24 for the new node, the
+    bare saw's 31 (the probe's floor), the vibrato's 55 and 45. So the new node costs about what the vibrato costs
+    (its LFO and the `mul` are separate nodes, the vibrato's are inside it), about +490 ns (JVM) and +620 to +670 ns
+    (V8) per block above `pitchMod`: `fastExp2` and a division per sample where `pitchMod` adds 1.0. A non-zero
+    constant mod pays the same per-sample exponential (no block-constant shortcut; `detune` is the cheap way to
+    transpose).
+  - **Mutation checks** (mandatory tier, one lock call each, the file backed up, mutated, run, restored with `cp`,
+    `cmp` clean): `/ 12.0` to `/ 11.0` red on the seven law rows; `safeOut` dropped red on the NaN/Infinity row and the
+    598 row; a NaN sample read as 1.0 red on the NaN/Infinity row and the DC row; the linear law `1 + x / 12` red on
+    eight rows; `fastExp2((x + 1e-12) / 12)` red on the five identity rows; the arm passing `accumulatedMod` (the node
+    drops its mod) red on nine rows; the arm wrapping `deviationToRatioIgnitor` red on eight; the mod rendered twice per
+    block red on the signal row only; the `Fm` arm building its modulator without the outer mod (narrowed to a
+    `Sample` carrier) red on the new FM row (and 38 others); `childNodes` without `mod` red on four walk rows; the script
+    door building `PitchMod` red on all three parity rows; the Double overload passing `mod / 12` red on the constant
+    parity row; the warmup line removed red on `WarmupVocabularySpec`'s kinds row. The codec row has no compiling
+    mutant at the node: the duplicate tag `pitch-mod` is refused by the KSP processor ("duplicate @WireName"), and
+    the codec is otherwise generated from the fields.
+  - **For 7b** (scratch, removed): `Sample.vibrato(rate, semitones)` against
+    `Sample.pitchModSemitones(Sine(rate, analog = 0).mul(semitones))` on the probe, 51,200 frames: the LFO's phase
+    steps alike (the same increment, wrap and `fastSin`), but `(sin * semitones) / 12` rounds differently from the
+    vibrato's `sin * (semitones / 12)`: 6 to 4,234 frames differ (7 Hz 0.012 st: 6; 5 Hz 0.25: 157; 6 Hz 0.5: 256;
+    4.5 Hz 1: 561; 5 Hz 12: 4,234), worst relative 2.2e-16 to 3.3e-16 (one ulp, 1.5 at 12 st). No grouping of the
+    primitive fixes it (`x * (1 / 12)` rounds differently again). So the vibrato cannot be composed bit for bit, as
+    the plan says; besides the ulp and the sine's drift-seed draw (it draws from the voice rng at `analog = 0` too,
+    `AnalogDrift.seed`), the composition differs at the edges: the vibrato reads a non-finite rate or depth as its
+    default (`finiteOr`), and writes 1.0 for a block whose first depth is `<= 0`, where the composed form inverts the
+    LFO for a negative depth and leaves a NaN to `mul`'s `safeOut` (0, no vibrato). **The third and biggest cause**
+    (review round 1, B1, reviewer B's measurement, now in the 7b bullet): the vibrato reads its depth once per block
+    (`readParam`), the composition per sample; with a signal depth 50,773 to 50,976 of 51,200 frames differ, worst
+    0.79, 33.0 and 200 cents (`0.5 + 0.5 * sine(1 Hz)`, `1 + sine(20 Hz)`, `2 * sine(3 Hz)`).
+  - **Suites** (before review round 1). `audio_bridge` jvmTest 148 and jsTest 268; `audio_be` jvmTest 2,558 and
+    jsBrowserTest 2,454 (step 5's 2,543 and 2,439 plus the 14 law rows and the FM row); `klangscript-libs` jvmTest 840
+    and jsTest 617; `sprudel` jvmTest 3,498 (486 skipped); `DslDocExamplesSpec` green; `compileTestKotlinJs` of
+    `audio_bridge`, `audio_be`, `sprudel`, `klangscript-libs` and the root green. No failure anywhere.
+  - **Review round 1, applied** (`tmp/reviews/pp7a-r1-A.md`, `pp7a-r1-B.md`, 0 MAJOR). B2 and A1, decided by the
+    coordinator (the three semitone siblings' precedent and step 3's fix of the same freeze): the arm gates a literal
+    mod at 0 or non-finite (`mod.gatedOff { it == 0.0 }`); `off-values.md` gains a `pitchModSemitones` row and a
+    "NOT gated" `pitchMod` row with its sharing note; every "0 is the identity" text says what is true now (node and
+    factory KDocs, `voice-synthesis.md`, `audio/MEMORY.md`, this record); the KDocs no longer call the NaN path "the
+    vibrato's treatment" (a signal's NaN reads as ratio 0, as `pitchMod`'s and FM's modulator's do). Constant-0 cost
+    after the gate: 203 ns per block on the JVM, the bare saw's 210 (787 before). A2: the probe records whether a
+    pitch mod reached the source; the identity rows split into "a literal 0 builds no node" (a `Constant` and a
+    `Param`), "a non-zero literal is built", "a signal at 0 is built and writes 1.0" and the four bit-for-bit rows on
+    a signal 0 with a probe beside the source; the non-finite rows split into "a non-finite literal builds no node",
+    "renders the bare saw" and the signal-sample rows (a leaf behind an `OptimizerHint`). 18 rows. A3:
+    `pitchModSemitones` joins the list in `fm-above-forking-detune-diagnostic.md`. A4: the Kotlin `pitchMod(mod:
+    Double)` overload, with parity rows (script by name, Kotlin Double). A5: the `PitchModFactories.kt` file KDoc names
+    both converters. A6: "no clamp below `SAFE_MAX`". B1: the 7b bullet and the 7b note above. B3: the 7e bullet's
+    bound (corrected in round 2: it names `AccelerateSemitoneLawSpec`, not P4). Mutation checks (one lock call each, `cp` restore, `cmp` clean): the gate removed red on the three
+    literal-gate rows; gating at 7.0 red on six rows (the constant, nested, built-literal and nesting rows and the
+    0 row); `gatedOffWhenFinite` in place of `gatedOff` red on the two non-finite-literal rows; `fastExp2((x + 1e-12) /
+    12)` red on the signal-0 row and the four bit-for-bit rows; `safeOut` dropped red on the signal-sample row and the
+    598 row; a NaN sample read as 1.0 red on the signal-sample row and the DC row; `pitchMod(Double)` building the
+    semitone node red on the parity row. Suites after it: `audio_bridge` jvmTest 148 and jsTest 268; `audio_be` jvmTest 2,562 and
+    jsBrowserTest 2,458 (four rows more); `klangscript-libs` jvmTest 840 and jsTest 617; `compileTestKotlinJs` of
+    `audio_bridge`, `audio_be`, `sprudel`, `klangscript-libs` and the root green. Corpus (`CORPUS_LABEL=pp-7a-r1`):
+    18 of 18 identical to `corpus-pp-s5.txt`.
+  - **Review round 2, applied** (`tmp/reviews/pp7a-r2.md`, 0 MAJOR; texts only): the 7e bound names
+    `AccelerateSemitoneLawSpec` (P4 would hold bit for bit), the gated pitch arms are counted as five with
+    `pitchModSemitones`' non-finite gate named as not a fold (`gatedOffWhenFinite` KDoc, `off-values.md`,
+    `audio/MEMORY.md`; grep for "three/four pitch arms": the rest are step 0's own records and spec headers), and its
+    row says +Infinity ran at 1e15 and the consequences hold at any gated literal; `:audio_be:compileKotlinJvm` green.
 - **7b. Vibrato composed** (M): `Ignitors.sine(rate, analog = 0)` times the depth into the primitive; the gate stays
-  (depth leaf `<= 0`); `VibratoModIgnitor` goes. Not bit-identical, for two reasons: the LFO sine draws its drift seed
+  (depth leaf `<= 0`); `VibratoModIgnitor` goes. Not bit-identical, for three reasons: the LFO sine draws its drift seed
   from the voice rng on its first block, the first time a pitched source renders the mod (other random values in a
   voice that also draws at generate time: a noise layer beside a pitched one, drift lanes at `analog > 0`; a
-  noise-only voice never renders the mod and is untouched), and `(sin * depth) / 12` rounds once differently from
-  `sin * (depth / 12)` (about 1e-16 in the ratio). A listening pair plus a tolerance row; the corpus attributes each
-  moved song to one of the two causes.
+  noise-only voice never renders the mod and is untouched); `(sin * depth) / 12` rounds once differently from
+  `sin * (depth / 12)` (about 1e-16 in the ratio; measured in 7a: 6 to 4,234 of 51,200 frames, one ulp); and, the
+  biggest where it applies (7a review round 1, B1), **the vibrato reads its depth once per block** (`readParam`, the
+  block's first value, and its `<= 0` bypass on that value: a block whose first depth is `<= 0` writes 1.0), where the
+  composed `sine.mul(depth)` multiplies per sample. With a constant or `Param` depth (every corpus song) the two agree
+  to the ulp; with a SIGNAL depth they part (reviewer B, `Sample.vibrato(5, depth)` against the composition, 51,200
+  frames): `0.5 + 0.5 * sine(1 Hz)` 50,794 frames differ, worst 0.79 cents; `1 + sine(20 Hz)` 50,773, worst 33.0
+  cents; `2 * sine(3 Hz)` (crosses 0) 50,976, worst 200 cents (the node writes 1.0 per block, the composition inverts
+  the LFO per sample). So 7b also moves the depth from block rate to sample rate, a sound change no corpus song hears
+  (sprudel's `vib` depth is a per-event constant). The rate does not differ (both read `freq` at block start). A
+  listening pair, a tolerance row and a signal-depth row; the corpus attributes each moved song to one of the causes.
 - **7c. The vibrato `range`** (S, with 7b or right after; maintainer, 2026-10-06): the script door becomes
   `vibrato(rate, semitones, v => v.range(from, to))`, the flat Kotlin door takes `rangeFrom`, `rangeTo`, the node two
   appended fields with defaults -1 and 1 (constants in `audio_bridge/constants/`, the wire golden regenerated), no
@@ -1289,7 +1420,13 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
 - **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and
   `pitchModSemitones`; FM keeps its node for D1). The original reasoning: Accelerate's law is a per-block seed with per-sample stepping and one
   reader; a `progress` primitive would be a node for one use. FM is already a composition (any modulator tree), and its
-  law (linear deviation, the index envelope, the freq bypass) has no second reader.
+  law (linear deviation, the index envelope, the freq bypass) has no second reader. **Bound** (7a review rounds 1 and
+  2, B3): through `pitchModSemitones` accelerate's ratio becomes `fastExp2` per sample from the frame alone, worst
+  4.7e-11 relative (reviewer B, over +-48 semitones). That error is the same at every framing, so accelerate becomes
+  framing-invariant and would JOIN block-framing P4's bit-identity list (P4's 1e-11 compares accelerate with itself).
+  What it breaks is `AccelerateSemitoneLawSpec`: the row "the frames before the gate keep the law's bits" (bit for bit
+  against the `pow`-seed law) and the half-glide row at 1e-12 (`fastExp2(7 * 0.5 / 12)` is 5.7e-11 off `2^(7/24)`).
+  So 7e moves those rows to their own bound (inaudible, about 8e-8 cents) or keeps an exact `pow`.
 - **The start phase**: no `phase` knob on the vibrato for now (D9).
 
 ### 8. Decisions for the maintainer

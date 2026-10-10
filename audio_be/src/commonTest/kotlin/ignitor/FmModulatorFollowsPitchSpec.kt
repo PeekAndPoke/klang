@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.pitchMod
+import io.peekandpoke.klang.audio_bridge.pitchModSemitones
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.abs
@@ -211,6 +212,10 @@ class FmModulatorFollowsPitchSpec : StringSpec({
 
     "authored: a pitchMod above the fm (an LFO at a fixed rate) bends the modulator with the carrier" {
         render(op.pitchMod(sine(freq = c(5.0)).mul(0.03))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+    }
+
+    "authored: a pitchModSemitones above the fm (an LFO in semitones) bends the modulator with the carrier" {
+        render(op.pitchModSemitones(sine(freq = c(5.0)).mul(0.5))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: a pitch envelope above the fm bends the modulator with the carrier" {

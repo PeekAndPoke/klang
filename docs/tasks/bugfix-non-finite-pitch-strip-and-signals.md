@@ -28,11 +28,15 @@ or release in the bag reads as the slot's default"; red when the `Param` leaf pa
 and `ClassicSlotParamsSpec` (sprudel drops a NaN depth; red when the boundary keeps a non-finite value). A non-finite
 depth stays green under the first mutant: the fm gate reads it as off too.
 
-## 2. Two per-sample signal paths carry a NaN to the oscillator's phase (decide, do not just guard)
+## 2. Three per-sample signal paths carry a NaN to the oscillator's phase (decide, do not just guard)
 
 - `DeviationToRatioIgnitor` (`pitchMod`) passes a NaN sample of the user's signal through.
 - FM's MODULATOR output: `safeOut(1.0 + mod * depth / freq)` turns a NaN modulator sample into ratio 0, a DC hold
   (review round 1 measured `Fm(sine, modulator = NaN)` as exact silence).
+- `SemitonesToRatioIgnitor` (`pitchModSemitones`, pitch pipeline 7a, 2026-10-10): `safeOut(fastExp2(mod / 12))`
+  turns a NaN or -Infinity SAMPLE of a signal mod into ratio 0 (a saw renders one constant value, a DC), as FM's
+  modulator does, and +Infinity into `SAFE_MAX`; pinned by `PitchModSemitonesSpec`. A literal (leaf) non-finite mod
+  never reaches it: the build gate reads it as off, the bare voice (review round 1).
 
 These are signals, not amount knobs, and a per-sample guard is a hot-path cost decision (the `DelayLine` precedent: a
-per-sample `isFinite` cost about +30 %). Decide whether either needs one, and measure it first.
+per-sample `isFinite` cost about +30 %). Decide whether any needs one, and measure it first.

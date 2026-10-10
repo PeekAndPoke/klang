@@ -39,9 +39,9 @@ import kotlin.math.abs
  * (using the existing [Ignitor.times] operator). [ModApplyingIgnitor] uses the ratio directly
  * as a phase-increment multiplier.
  *
- * The user-facing `pitchMod()` DSL extension accepts **deviation space** (0 = no change) and
- * converts to ratio internally by adding 1.0. This is handled at the DSL/buildIgnitor boundary,
- * not in these factories.
+ * The two signal doors convert here: `pitchMod` takes a deviation (0 = no change) and
+ * [deviationToRatioIgnitor] adds 1.0; `pitchModSemitones` takes semitones and
+ * [semitonesToRatioIgnitor] writes `2^(mod / 12)`.
  */
 
 /**
@@ -55,6 +55,30 @@ private class DeviationToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
         userMod.generate(buffer, freqHz, ctx)
         val end = ctx.windowEnd
         for (i in ctx.offset until end) buffer[i] = buffer[i] + 1.0
+    }
+}
+
+/**
+ * Converts a SEMITONE mod Ignitor (0.0 = no change, 12.0 = an octave up) to ratio space, `2^(mod / 12)` per sample.
+ * Used by the [IgnitorDsl.PitchModSemitones] handler (pitch pipeline 7a, decision D8).
+ *
+ * The ratio is [fastExp2] of the semitones over 12, through [safeOut], the vibrato's formula. So from about 598
+ * semitones (`12 * log2(1e15)`) it holds at `SAFE_MAX`; no clamp below that. A literal 0 or non-finite mod never
+ * gets here (the runtime arm's gate); a non-finite SAMPLE of a signal does, and there +Infinity reads as `SAFE_MAX`
+ * and NaN and -Infinity as the ratio 0, which holds the source still, as `pitchMod`'s raw NaN and FM's modulator do.
+ * No per-sample finite guard: `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2. A signal at 0
+ * writes exactly 1.0 (`fastExp2(0.0)` is 1).
+ */
+fun semitonesToRatioIgnitor(userMod: Ignitor): Ignitor = SemitonesToRatioIgnitor(userMod)
+
+private class SemitonesToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        userMod.generate(buffer, freqHz, ctx)
+        val end = ctx.windowEnd
+
+        for (i in ctx.offset until end) {
+            buffer[i] = safeOut(fastExp2(buffer[i] / 12.0))
+        }
     }
 }
 

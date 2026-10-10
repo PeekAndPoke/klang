@@ -325,6 +325,8 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
     }
     "PitchMod" { check(IgnitorDsl.Sine().pitchMod(IgnitorDsl.Sine())) }
+    // Its own tag: a decode into `PitchMod` (the same two fields) would be equal in shape and wrong in law.
+    "PitchModSemitones" { check(IgnitorDsl.Sine().pitchModSemitones(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(5.0)).mul(7.0))) }
 
     // --- dispatch / deep composites -------------------------------------------------------------------------
     "Variants (primitive children)" {
