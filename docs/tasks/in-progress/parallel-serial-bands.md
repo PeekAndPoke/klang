@@ -1,8 +1,9 @@
 # `parallel`, `serial` and `bands`: branches side by side, and frequency bands
 
-Status: **in progress since 2026-10-10, on the branch `parallel-serial-bands` (worktree
-`klang-worktrees/parallel-serial-bands`).** Steps 1 to 3 done (`serial`, `parallel` on both hosts) and the wire-sharing finding below fixed (option a);
-step 4 (`bands`) built and in review. The design, the decisions and the reasons live in
+Status: **built, all five steps, on the branch `parallel-serial-bands` (2026-10-10); waiting for the maintainer's ear
+and the open decisions below before it is archived.** The corpus renders bit-identical to the branch point on the JVM
+(18 rows: raw, pcm and edge hashes). In the browser a `let` used twice now builds once (`@WireShared`), as on the JVM.
+The design, the decisions and the reasons live in
 [`../../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) §6.9; this file holds the steps.
 
 ## Why

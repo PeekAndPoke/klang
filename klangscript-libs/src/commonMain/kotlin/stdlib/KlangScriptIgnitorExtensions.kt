@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
+import io.peekandpoke.klang.audio_bridge.blend
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
@@ -717,6 +718,38 @@ object KlangScriptIgnitorExtensions {
             0 -> self
             1 -> built[0]
             else -> IgnitorDsl.Parallel(branches = built)
+        }
+    }
+
+    /**
+     * A dry/wet blend, the linear law: `x.blend(wet, f)` is `x.parallel(d => d.mul(1 - wet), w => f(w).mul(wet))`, so 0 is
+     * the dry signal and 1 is the branch alone. `wet` comes first, as on every door with one.
+     *
+     * ```KlangScript
+     * // a quarter of a hard distortion under the clean string
+     * let edge = x => x.blend(0.25, y => y.distort(0.6, "hard"))
+     * ```
+     *
+     * Linear is right for a branch that stays correlated with the dry (distortion, filters). [wet] may be a number, a
+     * slot or a signal (an LFO moves the blend); a number that is not finite reads as 0. The branch is checked as a
+     * `parallel` branch is, and a late branch is aligned the same way.
+     *
+     * @param wet the share of the branch, 0 to 1.
+     * @param branch a function from the signal to a signal.
+     */
+    @KlangScript.Method
+    fun blend(self: IgnitorDsl, wet: IgnitorDslLike, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+        return self.blend(wet = wet.toIgnitorDsl()) { signal ->
+            runStage<IgnitorDsl, IgnitorDsl>(
+                door = "Ignitor blend",
+                noun = "branch",
+                index = 0,
+                stage = branch,
+                input = signal,
+                returns = "signal",
+                example = "x => x.distort(0.5)",
+                isResult = { it is IgnitorDsl },
+            )
         }
     }
 

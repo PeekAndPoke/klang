@@ -2530,6 +2530,26 @@ fun IgnitorDsl.parallel(vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl
     else -> IgnitorDsl.Parallel(branches = branches.map { it(this) })
 }
 
+/**
+ * A dry/wet blend, the linear law: `x.blend(wet, f)` is `x.parallel({ it.mul(1 - wet) }, { f(it).mul(wet) })`, so 0
+ * is the dry signal and 1 is [branch]'s output alone (the dry/wet helper of `docs/plans/future/signal-graph-engine.md`
+ * §6.9; the linear law only, the default taken 2026-10-10 in `docs/tasks/in-progress/parallel-serial-bands.md`). Linear
+ * is right for correlated branches (distortion, filters); a decorrelated one (a room) loses about 3 dB in the middle,
+ * which a song can lift with the branch's own `mul`. [wet] may be a slot or a signal (a moving blend); a constant that
+ * is not finite reads as 0, the dry signal. The branch is aligned by latency as in [parallel].
+ */
+fun IgnitorDsl.blend(wet: IgnitorDsl, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
+    // NaN-guard on a value the author can write: an unset blend is no blend. The one guard, for both doors.
+    val share = if (wet is IgnitorDsl.Constant && !wet.value.isFinite()) IgnitorDsl.Constant(0.0) else wet
+    val dry = if (share is IgnitorDsl.Constant) IgnitorDsl.Constant(1.0 - share.value) else IgnitorDsl.Constant(1.0).minus(share)
+
+    return parallel({ it.mul(dry) }, { branch(it).mul(share) })
+}
+
+/** [blend] with a number. */
+fun IgnitorDsl.blend(wet: Double, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+    blend(wet = IgnitorDsl.Constant(wet), branch = branch)
+
 // Frequency
 
 /** Shifts pitch by the given number of [semitones]. */

@@ -588,6 +588,42 @@ let crunch = x => x.bands(b => b.cut(250).band(mid => mid.distort(0.4)).cut(3000
   branch): `k.bands(b => b.cut(150).band(mid => mid.distort(0.15)).cut(5000))` glues the mids and leaves the kick and
   the hats alone.
 
+### Composition: `.blend(wet, ...)`
+
+`x.blend(wet, f)` is a dry/wet blend, the linear law: the signal times `1 - wet` plus `f(x)` times `wet`, built as a
+`parallel` of two. `wet` comes first, as on every door with one.
+
+```javascript
+// a quarter of a hard distortion under the clean string
+let edge = x => x.blend(0.25, y => y.distort(0.6, "hard"))
+// a moving blend: wet may be a slot or a signal on the Ignitor
+let breathe = x => x.blend(Ignitor.sine(0.25).range(0.1, 0.5), y => y.distort(0.6, "hard"))
+```
+
+- Linear is right for a branch correlated with the dry (distortion, compression, filters).
+- On the Katalyst, `wet` is a plain number (`1 - wet` needs arithmetic a Katalyst param does not have), and the branch
+  gets an empty builder: `k.blend(0.3, b => b.distort(0.6, "hard"))`. A `reverb` or `delay` in the branch carries
+  the dry as well, so `k.blend(w, b => b.reverb(1, 7))` is the dry plus `w` of the room.
+
+### Recipe: a "Soundgoodizer-style" master (parallel multiband compression)
+
+FL Studio's Soundgoodizer is a one-knob front end for Maximus: three bands, each compressed, blended with the dry
+input (per its manual; maintainer's request, 2026-10-10). In Klang that is `blend` over `bands`:
+
+```javascript
+// Three compressed bands under the dry bus. A starting point, not a tuned preset: set each band's threshold by ear on
+// the song, then the blend. The gain after each compressor is that band's make-up level.
+let goodize = k => k.blend(0.5, wet => wet.bands(b => b
+  .band(low  => low.compressor(-24, 4).gain(1.4))  .cut(200)
+  .band(mid  => mid.compressor(-20, 3).gain(1.3))  .cut(4000)
+  .band(high => high.compressor(-22, 4).gain(1.4))
+))
+
+master(Katalyst(k => k.serial(goodize).limiter()))
+```
+
+More blend is louder and denser; the limiter after it keeps the peaks.
+
 ---
 
 ## Parameter System

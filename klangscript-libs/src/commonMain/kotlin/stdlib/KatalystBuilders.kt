@@ -610,6 +610,58 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
 }
 
 /**
+ * A dry/wet blend of the bus, the linear law: `k.blend(wet, f)` sums the bus times `1 - wet` with [branch]'s stages
+ * times `wet` (a `parallel` of two). The branch receives an empty builder, the bus at this position, as a `parallel`
+ * branch does. `wet` comes first, as on every door with one.
+ *
+ * ```KlangScript
+ * // a third of a crushed copy of the bus under the clean one
+ * Katalyst(k => k.blend(0.3, b => b.distort(0.6, "hard")))
+ * ```
+ *
+ * Linear is right for a branch correlated with the dry (distortion, compression, filters). A `reverb` or `delay` in the
+ * branch carries the dry as well (it adds its return on top), so `blend(w, b => b.reverb(1, 7))` is the dry plus `w`
+ * of the room. [wet] is a plain number here, where the Ignitor's may be a slot or a signal: `1 - wet` needs arithmetic,
+ * which a Katalyst param does not have (recorded asymmetry). A number that is not finite reads as 0.
+ *
+ * @param wet the share of the branch, 0 to 1.
+ * @param branch a function from a builder to a builder, given an empty one.
+ */
+@KlangScript.Function
+fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+    val number = when (wet) {
+        is Number -> wet.toDouble()
+        is IgnitorDsl.Constant -> wet.value
+        else -> throw KlangScriptTypeError(
+            message = "wet is a plain number here (1 - wet needs arithmetic, which a Katalyst param or a signal does not " +
+                    "have); got ${wet::class.simpleName}",
+            operation = "Katalyst blend",
+        )
+    }
+    // NaN-guard on a value the author can write: an unset blend is no blend.
+    val share = if (number.isFinite()) number else 0.0
+    val processed = runStage<KatalystBuilder, KatalystBuilder>(
+        door = "Katalyst blend",
+        noun = "branch",
+        index = 0,
+        stage = branch,
+        input = KatalystBuilder(KatalystDsl(emptyList())),
+        returns = "builder",
+        example = "b => b.distort(0.5)",
+        isResult = { it is KatalystBuilder },
+    )
+
+    return plus(
+        KatalystStageDsl.Parallel(
+            branches = listOf(
+                KatalystDsl.of(KatalystStageDsl.Gain(gain = (1.0 - share).toKatalystKnob())),
+                processed.gain(share).node,
+            ),
+        ),
+    )
+}
+
+/**
  * Splits the bus into frequency BANDS from this position, processes each band on its own and sums them again: the
  * master's distortion on the mids only, a compressor on the lows. Read from the bottom up:
  *
