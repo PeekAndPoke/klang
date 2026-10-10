@@ -309,7 +309,7 @@ One line per step, newest first. A link to the archived task record where one ex
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
 - 2026-10-10 The sine's explicit partials, `partial(ratio, gain, phase)` (a fourth bank, wire `Sine.partials`, cap
-  256, both doors), corpus identical: `docs/tasks/in-progress/sine-inharmonic-partials.md`
+  256, both doors), corpus identical: `docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`
 - 2026-10-10 Pitch pipeline 7c: the vibrato's `range(from, to)` and `phase` (node fields, both doors, `classic()`
   slots `vibrato.rangeFrom|rangeTo|phase`); the default builds neither, corpus 18 of 18 identical:
   `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7c

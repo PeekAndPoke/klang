@@ -1,7 +1,7 @@
 # A noise band from sines: `noiseBand(low, high, partials)`
 
 Status: **future, idea, not started.** Asked for by the maintainer 2026-10-02. A follow-up to
-[`sine-inharmonic-partials.md`](../in-progress/sine-inharmonic-partials.md): a noise band is one more generator of partials, so it
+[`sine-inharmonic-partials.md`](../../tasks-archive/2026-10/20261010-sine-inharmonic-partials.md): a noise band is one more generator of partials, so it
 needs the partials bank first, or composes the sines by hand until it exists.
 
 ## Why

@@ -39,7 +39,7 @@ through sine partials and a phase offset would be even better."
    (phi_k = pi * k^2 / N, M. R. Schroeder, "Synthesis of low-peak-factor signals and binary sequences with low
    autocorrelation", IEEE Trans. Inf. Theory 16(1), 1970), which flatten a multitone's peak much further. Measure
    before claiming: crest of the thud with the best sign pattern against Schroeder phases. See also
-   `docs/tasks/in-progress/sine-inharmonic-partials.md`, where a partials node would want per-partial phases.
+   `docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`, where a partials node would want per-partial phases.
 3. **Vibrato and other LFOs** (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`): composing the vibrato from
    `Ignitor.sine` needs a defined start point, the same question as the tremolo.
 4. **Stereo pairs**: two LFOs at 0 and 0.5 are an auto-pan or a stereo tremolo, composed.

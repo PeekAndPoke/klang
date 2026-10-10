@@ -350,7 +350,7 @@ sealed interface IgnitorDsl {
      * Nyquist are silent (decided 2026-09-07; by magnitude since 2026-10-10). [analogSpread] blends the
      * drift lanes: 0 = one shared walk for the whole bank, 1 = one walk per partial.
      *
-     * [partials] is the fourth bank (`docs/tasks/in-progress/sine-inharmonic-partials.md`, Q26): explicit
+     * [partials] is the fourth bank (`docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`, Q26): explicit
      * [Partial]s at any ratio of this sine's frequency, each with its own gain and start phase, played in the
      * order written and summed raw with the fundamental and the other banks. The engine plays the first
      * [SINE_MAX_PARTIALS] of them.

@@ -388,7 +388,7 @@ Done 2026-09-07; numbers in 5.2, the lesson (loop shape) in `audio/ref/performan
 
 ## 9. The fourth bank: explicit partials (2026-10-10)
 
-Decided by the maintainer on 2026-10-09 (Q26, `docs/tasks/in-progress/sine-inharmonic-partials.md`), built
+Decided by the maintainer on 2026-10-09 (Q26, `docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`), built
 2026-10-10 for Der Schmetterling's snare thud, a cluster of 13 inharmonic sines that was 13 hand-rolled trees.
 
 - **Surface.** `partial(ratio, gain = 1, phase = 0)` on `OscSineBuilder`, both doors; each call adds ONE partial,

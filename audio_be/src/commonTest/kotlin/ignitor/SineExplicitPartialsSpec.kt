@@ -22,7 +22,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * The explicit partials on the sine (`docs/tasks/in-progress/sine-inharmonic-partials.md`, Q26):
+ * The explicit partials on the sine (`docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`, Q26):
  * `IgnitorDsl.Sine.partials`, rendered by `Ignitors.sinePartials` as the fourth bank.
  *
  * The oracle is written here, from the definition: a partial `(r, g, p)` on a sine at `f` is

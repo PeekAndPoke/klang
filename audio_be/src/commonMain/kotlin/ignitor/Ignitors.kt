@@ -325,7 +325,7 @@ object Ignitors {
      * seed, taken whether or not the spread ever drops below 1), so its fundamental lane seeds from
      * a different point in the stream than the plain sine's lane does.
      *
-     * [partials] is the fourth bank, explicit partials at any ratio (`docs/tasks/in-progress/sine-inharmonic-partials.md`):
+     * [partials] is the fourth bank, explicit partials at any ratio (`docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`):
      * its length is fixed for the note, so its storage and its drift lanes are built with the node and nothing grows
      * at render. Per block each partial reads its ratio and phase once (the bank knobs' rule): the frequency is
      * `ratio` times the sine's, and the partial is silent while its frequency's magnitude is at or above Nyquist, or
