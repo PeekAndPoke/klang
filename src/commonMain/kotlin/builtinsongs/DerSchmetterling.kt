@@ -58,7 +58,7 @@ let pedalStock = x => x
 
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
 let pedalScreamer = x => x
-  .plus(x.highpass(720).distort(0.35, "soft", 2).mul(0.6)) // the clipper only ever sees the mids, and the clean bass carries
+  .parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6)) // the clipper only ever sees the mids, the clean bass carries, both aligned
   .lowpass(3000)                                   // the tone knob, half way
   .mul(0.5)                                        // level
 

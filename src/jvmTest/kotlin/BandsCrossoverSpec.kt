@@ -39,7 +39,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * `bands` (`docs/tasks/in-progress/parallel-serial-bands.md` step 4), rendered on both hosts: the Linkwitz-Riley split
+ * `bands` (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 4), rendered on both hosts: the Linkwitz-Riley split
  * of untouched bands sums to FLAT level (an all-pass), with three or more bands too (the all-pass alignment), and a
  * processed band acts on its range only.
  *

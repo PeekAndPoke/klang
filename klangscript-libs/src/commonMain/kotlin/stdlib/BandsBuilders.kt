@@ -15,7 +15,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import kotlin.math.sqrt
 
 // `bands`: a signal split into frequency bands, each band processed on its own, the bands summed again
-// (`docs/plans/future/signal-graph-engine.md` §6.9, `docs/tasks/in-progress/parallel-serial-bands.md` step 4). Built on
+// (`docs/plans/future/signal-graph-engine.md` §6.9, `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 4). Built on
 // `parallel`, on both hosts, from the EQ's existing sections: no DSP of its own.
 //
 // The crossover is Linkwitz-Riley (Siegfried Linkwitz and Russ Riley, 1976): each side of a cut is two Butterworth

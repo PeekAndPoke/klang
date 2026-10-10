@@ -357,7 +357,7 @@ One line per step, newest first. A link to the archived task record where one ex
   `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 4
 - 2026-10-10 `serial` (was `through`), `parallel` on the Ignitor and the Katalyst (branches summed and aligned by
   latency), `bands` (Linkwitz-Riley, flat untouched), `blend` (linear dry/wet), and a shared node kept one node
-  across the wire (`@WireShared`): `docs/tasks/in-progress/parallel-serial-bands.md` steps 1 to 5
+  across the wire (`@WireShared`): `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` steps 1 to 5
 - 2026-10-10 v0.6.1: pitch pipeline steps 1 to 3b, the Katalyst `distort` stage (merged from `katalyst-distort`), a
   soloed voice protected to its end, the warehouse panel's reverb counters, `analog(character)` on every door and
   `variants` with plain numbers; the corpus identical except Kokon's two landing strikes (accelerate, at most 2.5

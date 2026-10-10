@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * `parallel(...)` on both DSLs, both doors (`docs/tasks/in-progress/parallel-serial-bands.md`): the script door and the Kotlin
+ * `parallel(...)` on both DSLs, both doors (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`): the script door and the Kotlin
  * door build the same value; no branch is the receiver itself, one branch is its stages in place, two or more are one
  * `Parallel` stage holding the branches in the order written; every branch starts from an empty builder; and a broken
  * branch is a script error that names it.

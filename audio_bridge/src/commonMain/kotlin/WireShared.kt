@@ -12,7 +12,7 @@ package io.peekandpoke.klang.audio_bridge
  * It matters where the receiver shares by identity. The backend builds an [IgnitorDsl] tree through an identity-keyed
  * cache, so `let s = ...; s + s.shimmer()` is one instance on the JVM; without this marker the browser received two
  * equal objects and built two instances (two random phase sets, two drifts, twice the CPU). Found 2026-10-10
- * (`docs/tasks/in-progress/parallel-serial-bands.md`), decided with the maintainer the same day.
+ * (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`), decided with the maintainer the same day.
  *
  * How the generated codec keeps it: while a `@WireFormat` root is encoded or decoded, the codec of a marked type
  * remembers what it made per instance, so a second reference to the same instance gets the same JS object on encode

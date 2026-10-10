@@ -53,7 +53,7 @@ let pickupHumbucker = x => x
 let pedalStock = x => x
 
 let pedalScreamer = x => x
-  .plus(x.highpass(720).distort(0.35, "soft", 2).mul(0.6))
+  .parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6)) // the clean and the dirt aligned
   .lowpass(3000)
   .mul(0.5)
 

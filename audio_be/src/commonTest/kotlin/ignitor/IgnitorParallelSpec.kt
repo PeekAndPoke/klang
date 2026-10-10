@@ -18,7 +18,7 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * The Ignitor `parallel` node (`docs/tasks/in-progress/parallel-serial-bands.md` step 2): the branches SUMMED, the input
+ * The Ignitor `parallel` node (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 2): the branches SUMMED, the input
  * built once for all of them, and every earlier branch delayed to the latest one ([BuiltIgnitor.latencySamples]).
  *
  * **The oracles are separate renders of the parts.** A source without draws renders the same samples in every build,

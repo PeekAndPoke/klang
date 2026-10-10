@@ -1,8 +1,9 @@
 # `parallel`, `serial` and `bands`: branches side by side, and frequency bands
 
-Status: **built, all five steps, on the branch `parallel-serial-bands` (2026-10-10); waiting for the maintainer's ear
-and the open decisions below before it is archived.** The corpus renders bit-identical to the branch point on the JVM
-(18 rows: raw, pcm and edge hashes). In the browser a `let` used twice now builds once (`@WireShared`), as on the JVM.
+Status: **done and archived 2026-10-10.** All five steps built on the branch `parallel-serial-bands`, merged into main
+through PR #87 (with `engine-follow-ups-v8`). The corpus rendered bit-identical to the branch point on the JVM (18
+rows); Kokon's master and the two songs' Screamer pedal changed afterwards by the maintainer's ear (below). In the
+browser a `let` used twice now builds once (`@WireShared`), as on the JVM.
 The design, the decisions and the reasons live in
 [`../../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) §6.9; this file holds the steps.
 
@@ -100,3 +101,18 @@ sound, so it is the maintainer's call by ear; a pair can be rendered.
   is one existing EQ section, a raw tap at the cut with Q 1/sqrt(2) and gain -2 (`x - 2 * bandpass(x)`, found by the
   coding review), and the Ignitor shares each high side by identity (a split tree): a 4-band voice split runs 15
   sections per sample (12 for the three cuts, 3 all-passes), where the first build ran 30. No new section type.
+
+## Closed (maintainer, 2026-10-10)
+
+- **Kokon's master:** the distortion moved into `bands`, mids only (150 Hz to 5 kHz), after the loudness-matched pair:
+  "the mid distortion on kokon sounds nice, the hats are back and the bassdrum is crisp".
+- **The Screamer pedal** of Kokon and Der Schmetterling moved from `plus` to `parallel`: the clean and the 2x-oversampled
+  dirty path are aligned now (the 4-sample comb is gone). The frozen songs and pieces keep their old pedal.
+- **Naming:** `band` stays in both `bands` and the EQ builder (a frequency region given its own treatment, a bell
+  there, any processor here); `cut` keeps its three meanings, scoped by receiver.
+- **Equal cuts** keep the narrow band between them (documented), its processors included.
+- **Credits:** no commercial products; the rule is in `CLAUDE.md`'s credits row.
+- Still open and homed above: the structural walks over shared nodes (cached hash if songs nest deeply), the latency
+  over-count through an oversampled modulator, the Katalyst's rounded latency sum, and the oversampler rework's duty
+  to keep reporting its delay (`docs/tasks/oversampling-regions.md` §8b).
+

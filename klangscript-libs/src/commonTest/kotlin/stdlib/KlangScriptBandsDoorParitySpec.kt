@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * `bands(...)` on both DSLs, both doors (`docs/tasks/in-progress/parallel-serial-bands.md` step 4): the script door and
+ * `bands(...)` on both DSLs, both doors (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 4): the script door and
  * the Kotlin door build the same value, and the shape of the split: no cut is the one band in place, one `band()` is
  * its processor, two on one band are summed, an untouched band is only its crossover, and a broken processor is named.
  * What the split SOUNDS like (flat when untouched, a band acting on its range) is `BandsCrossoverSpec`.

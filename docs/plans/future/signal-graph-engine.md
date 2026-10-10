@@ -369,6 +369,9 @@ and the backend never learns cycles.
 
 ### 6.9 `parallel` and `serial`: branches side by side, the twin of a chain (maintainer, 2026-10-09)
 
+**BUILT 2026-10-10**, all five steps (`serial`, `parallel` on both hosts, `bands`, `blend`), merged through PR #87:
+`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`. The text below is the design as decided.
+
 Raised while listening to the Katalyst `distort` stage on Kokon's master ("now we are distorting the hats and the bass
 drum") and asking whether people saturate only some bands. They do: multiband saturation on the master, or more
 often saturation per group. The maintainer's operator:
@@ -484,7 +487,7 @@ Out of scope: the Motor routing, sprudel pattern doors, removing the stages' own
 `parallel` has proven itself), moving cuts, a better oversampler.
 
 **Open before building** (taken as the coordinator's leans when the work started, 2026-10-10, reversible by the
-maintainer; the task: `docs/tasks/in-progress/parallel-serial-bands.md`):
+maintainer; the task: `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`):
 - **The crossover of `bands`.** With Linkwitz-Riley crossovers, a `bands` with nothing processed is an ALL-PASS, not the
   input: flat in level, the phase turned around each cut, so the waveform and its peaks change. The alternatives:
   complementary by subtraction (`high = x - low`, the sum is exactly the input, but the upper band's slope is soft and

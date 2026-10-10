@@ -29,7 +29,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * The Katalyst `parallel` stage ([KatalystParallelEffect], `docs/tasks/in-progress/parallel-serial-bands.md` step 3):
+ * The Katalyst `parallel` stage ([KatalystParallelEffect], `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 3):
  * branches side by side, summed, aligned by latency, and every lifecycle question passed to the branches.
  *
  * **The oracles are the input's own definition**: a gain branch is the input times its factor, an empty branch is the

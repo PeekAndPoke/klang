@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
 
 /**
  * [WireShared] on [IgnitorDsl]: a node referenced twice in one message crosses the worklet wire as ONE object
- * (`docs/tasks/in-progress/parallel-serial-bands.md`, 2026-10-10). The backend builds a tree through an identity-keyed
+ * (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`, 2026-10-10). The backend builds a tree through an identity-keyed
  * cache, so without this the browser built a shared `let` twice while the JVM built it once.
  *
  * The hop between the two ends is `postMessage`'s structured clone, which keeps shared references within one message;

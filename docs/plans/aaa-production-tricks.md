@@ -408,7 +408,8 @@ on Kokon and Der Schmetterling, the songs that started this.
 1. **I1, shelf and tilt sections.** Small, both hosts, and the Pultec trick and the air band follow at once.
 2. **K1, `saturate`.** The clip-to-limit master, tape glue, exciter and bass harmonics on a bus. BUILT 2026-10-09 as
    the Katalyst `distort` stage (`docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`), without the band;
-   the band follows as `bands` on `parallel` (`docs/plans/future/signal-graph-engine.md` §6.9).
+   the band BUILT 2026-10-10 as `bands` on `parallel` (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`):
+   Kokon's master distorts its mids only.
 3. **K3a, the reverb's pre-delay, feed filter and self-duck.** The fastest route from "too sterile" to "expensive",
    ahead of the full reverb-models round.
 4. **K2, `width`** with `monoBelow` and the decorrelator. Wide, mono-safe masters without stereo voices.

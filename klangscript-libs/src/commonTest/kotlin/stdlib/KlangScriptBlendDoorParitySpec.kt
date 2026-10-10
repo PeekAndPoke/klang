@@ -19,7 +19,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * `blend(wet, branch)` on both DSLs, both doors (`docs/tasks/in-progress/parallel-serial-bands.md` step 5): a
+ * `blend(wet, branch)` on both DSLs, both doors (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 5): a
  * `parallel` of the dry times `1 - wet` and the branch times `wet`, the linear law, with the same value from the script
  * door and the Kotlin door. The sum itself is `parallel`'s, rendered in `IgnitorParallelSpec` and
  * `KatalystParallelEffectSpec`; this spec pins the shape the door writes.

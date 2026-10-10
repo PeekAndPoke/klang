@@ -84,7 +84,7 @@ data class BuiltIgnitor(
      * an oversampled `distort` or `shape` adds its oversampler's group delay (`Oversampler.groupDelaySamples`: 4.0,
      * 5.5, 6.25 at 2x, 4x, 8x), a series adds them up, and a node with several signal children reports the latest of
      * them. Read by the `parallel` node, which pads every branch to the latest one so the sum does not comb, rounding
-     * only that pad (2026-10-10, `docs/tasks/in-progress/parallel-serial-bands.md`): two 4x stages are 11.0 late, not
+     * only that pad (2026-10-10, `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`): two 4x stages are 11.0 late, not
      * the 12 two rounded stages would say, so the residual stays at half a sample or less (audio review round 1).
      *
      * Absorbed along the spine like [releaseTailSec] and carried in the cached value for the same reason. A plain sum
