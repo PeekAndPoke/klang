@@ -23,7 +23,7 @@ Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
 ## 1. Allocation on V8 (the worklet)
 
 These are V8 only. The JVM allocates nothing per block in steady state except item 12's `Double` per
-block-constant param read (0 to 48 bytes per block). The method and the rules learned are in
+block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: see items 8 and 12). The method and the rules learned are in
 `audio/ref/performance.md`.
 
 1. **The stages still allocate** (delay, reverb, phaser). After the V8 pass, bytes per block at engine level,
@@ -109,9 +109,89 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
 7. **A drifting stack's ramp can box twice per voice per block**: `DriftLanes.startOf` and `endOf` return a double,
    and where V8 does not inline `blendOf` (some mixed-profile processes, both bundles) that is 221 to 515 bytes per
    block. A holder for the ramp is the shape. Source: as 2. S.
-8. **`ConstantIgnitor.controlRateValueOrNull` is a heap number per read** when the call is not inlined and the
-   constant is not integral: about 18 bytes per block through `blockStartValue` in the unison stacks (development,
-   mixed profile). It is the interface's shape (`Double?`); the same root as item 12. Source: as 2. M.
+8. **DONE (2026-10-10, with item 12): every knob read boxed on V8, through the shared `readParam`.**
+   Reported as `ConstantIgnitor.controlRateValueOrNull` boxing, about 18 bytes per block through `blockStartValue` in
+   the unison stacks (development, mixed profile), blamed on the interface's shape (`Double?`). Source: as 2.
+   **Cause** (measured, `tmp/reviews/e8-proposal.md`): not the type, on JS `Double?` and `Double` are the same number.
+   Every knob read of the engine went through one shared one-line function, `Ignitors.readParam`, so its
+   `blockStartValue` call was ONE call site for the whole engine: megamorphic, never inlined, and its double result a
+   heap number per read whenever it was not a small integer. **Fix** (candidate (d) of the proposal): `readParam` is
+   Kotlin `inline`, gated on `isBlockConstant` (step 1 still fell back to the member on a contract breach; step 2
+   below dropped that path, so the flag decides alone), so every caller owns its own site and V8 inlines the scalar into it; the five direct `blockStartValue` callers
+   (the white noise color, the brown leak, the dust tail and bipolar reads, `DetuneIgnitor`) read through it too. The
+   KDoc at `readParam` is the guard; the rule is in `audio/ref/performance.md` ("a shared one-line forwarding helper
+   is one megamorphic call site"). A new row in `ControlRateValueSpec` pins that `readParam` reads what
+   `blockStartValue` reads (in step 1 for all four pairings of flag and scalar, the breach included; step 2
+   rewrote it for the new contract, where the flag alone decides and a false flag renders, see step 2 below).
+   Bit for bit: raw
+   doubles of the probe, HEAD against the tree, 18 of 18 cases identical on V8, none silent; the corpus 18 of 18
+   (`tmp/naming/corpus-e8.txt` against `corpus-e10.txt`). Measured on the BUILT production bundle (the proposal had
+   only a hand-edited one), node 22, 20,000 warm-up and 200,000 measured blocks, bytes and ns per block, medians of
+   3, HEAD / tree / HEAD again (a byte copy of HEAD, the control); `c4:` is the same case at 261.63 Hz, where a
+   frequency is not a small integer:
+
+   | case | unpinned | pinned (`taskset -c 11`) | time, tree / HEAD (unpinned, pinned) |
+   |---|---|---|---|
+   | `saw` (authored, the control) | 16 / 20 / 16 B | 25 / 16 / 21 B | 1.00, 1.00 |
+   | `sawC` (classic, sustain) | 77 / 21 / 82 B | 93 / 21 / 83 B | 0.96, 0.99 |
+   | `C-offrel` (classic, releasing) | 67 / 21 / 67 B | 77 / 16 / 57 B | 0.99, 1.00 |
+   | `super7` (unison stack) | 83 / -5 / 82 B | 88 / 0 / 83 B | 0.99, 0.98 |
+   | `super7a` (unison, analog) | 98 / 0 / 97 B | 94 / 0 / 98 B | 0.97, 0.98 |
+   | `whitecolor` | 0 / 0 / 0 B | -5 / -26 / 0 B | 1.01, 1.01 |
+   | `sgpad-vib` (vibrato voice) | 113 / 47 / 108 B | 129 / 47 / 108 B | 1.00, 0.98 |
+   | `sawC-vibr` | 77 / 21 / 82 B | 77 / -5 / 77 B | 0.99, 0.98 |
+   | `c4:sawC` | 93 / 31 / 97 B | 114 / 46 / 92 B | 0.97, 0.97 |
+   | `c4:super7a` | 114 / 16 / 113 B | 109 / 6 / 119 B | 0.99, 0.97 |
+   | `c4:sgpad-vib` | 129 / 67 / 128 B | 144 / 67 / 124 B | 0.99, 0.98 |
+   | engine `sawC` sus | 134 / 26 / 134 B | 103 / 72 / 92 B | 0.98, 0.99 |
+   | engine n16 (a classic note every 16 blocks) | 1,846 / 1,062 / 1,844 B | 1,800 / 1,062 / 1,794 B | 0.98, 0.99 |
+   | engine `super7` sus | 129 / 47 / 129 B | 134 / 16 / 119 B | 0.99, 1.00 |
+   | engine `sgpad-vib` sus | 160 / 93 / 159 B | 145 / 78 / 155 B | 0.99, 1.00 |
+
+   So 60 to 100 B per classic or unison voice block go (4 to 6 heap numbers), about 780 B per block on the n16 row,
+   pinned and unpinned, at 0.96 to 1.01 of HEAD's time; the HEAD-again control stays at HEAD. The pinned engine `sawC`
+   row is the noisy one (HEAD 72 to 134 B across its three rounds, the tree 41 to 73). `--trace-turbo-inlining`,
+   classic saw: on HEAD `AdsrIgnitor.generate` inlines `readParam` five times but keeps the five `blockStartValue`
+   calls inside it as candidates it never inlines; on the tree it inlines `isBlockConstant` and the scalar five times
+   each, and no `blockStartValue` candidate is left in the trace (the unison stack the same). The heap profile of the
+   tree has no knob read left; what remains is the classes this list already names (`WaveIgnitor`'s `dt`, item 6; the
+   voice's stages; the build on the n16 row, item 11), plus at 261.63 Hz about one heap number per block in
+   `AdsrIgnitor.generate` that is not a knob read (likely the frequency handed on to the upstream node, the class of
+   10c; not located further), and the vibrato LFO's `SineIgnitor.generate`, about 44 B per block (HEAD 48), not a knob read: `resolveFreq`,
+   inlined by hand at its seven sites in a copy of the tree's bundle, moved nothing (`sgpad-vib` 46.7 / 46.6 B,
+   `c4:sgpad-vib` 62.1 / 61.8, the other rows within noise, bit for bit the same), so it stays a plain function. **JVM, step 1 alone:** the probe's `ThreadMXBean` harness (9 rounds, every case in
+   one process) read it unchanged (0 B per block in every steady case, the vibrato cases 0 with max 72 on both
+   sides, n16 357.5 on both), **but a megamorphic read site boxed on the JVM where HEAD did not**, found by
+   `FirstBlockAllocationSpec` ("sine explicit partials": 144 B per block, HEAD 0): the inline body called the
+   nullable scalar at each site, and a site C2 could not reduce to an inlined fresh box (three or more node classes,
+   production ones among them: `ConstantIgnitor`, `ParamIgnitor`, a `times` and a `plus` over constants, rotating
+   per note in a scratch probe: 72 B per block, HEAD 0 by note 139) returned its `Double?` as a box per read.
+   **Step 2 (item 12) closed it**, by the maintainer's decision of 2026-10-10: the scalar is the primitive
+   `controlRateValue(freqHz): Double`, read only when `isBlockConstant`. Then:
+   - The same scratch probe reads 0 B per block (one note at 5 B in 400, warm-up), `FirstBlockAllocationSpec` is
+     green with every row as it was, and its explicit-partials warm-up pass is gone: it absorbed the JIT's cold
+     `ConstantIgnitor` boxes, which a primitive return does not make (the row passed without it, twice, before it
+     was removed).
+   - The harness, every case in one process (three processes on step 2): the vibrato cases read 0 B per block with
+     max 0 in every round (HEAD 0 with max 72, the proposal's second process 72 in all 9 rounds). JFR over a whole
+     harness run: about 98.8 MB of `Double`s on HEAD, 7.35 MB on step 2, and none of them on the render path.
+   - **Left on the JVM, cold:** the n16 row reads 377 B per block in the mixed profile (HEAD 357.5; 357.5 on step
+     2 in a process running n16 alone, twice). The difference is the voice BUILD (item 11): its nullable reads,
+     `buildTimeKnobValue` and the release tail in `IgnitorDslRuntime.kt` (lines 665 and 1674) and the sizing reads
+     of `Ignitors.sizingValueOrNull`, now box through the `controlRateValueOrNull` extension, about 13 more `Double`s
+     per note there. An `inline` extension measured the same (377). Reading the flag and the primitive scalar there
+     would remove them: in `IgnitorDslRuntime.kt` a textual edit in an ADAA-owned file, not made; in
+     `sizingValueOrNull` (`Ignitors.kt`, four callers) left on purpose so both build-side halves move together, after
+     the ADAA session reports.
+
+   **Step 2 on V8**, the same bundle method, HEAD / tree / HEAD again, medians of 3, unpinned: bit for bit (18 of 18
+   dumps), and the bytes as step 1's (`sawC` 82 / 21 / 78, `C-offrel` 62 / 21 / 63, `super7` 82 / 0 / 82, `super7a`
+   94 / 0 / 98, `sgpad-vib` 113 / 48 / 119, `sawC-vibr` 88 / 16 / 77, `c4:sawC` 92 / 30 / 98, `c4:super7a` 109 / 16
+   / 113, `c4:sgpad-vib` 129 / 62 / 135, engine `sawC` sus 129 / 68 / 124, n16 1,850 / 1,045 / 1,838, engine
+   `super7` sus 134 / 52 / 124, engine `sgpad-vib` sus 134 / 93 / 160, `saw` 16 / 16 / 15, `whitecolor` 0 / 0 / 11),
+   time 0.97 to 1.00 of HEAD (`whitecolor` 1.05 in that run, 1.01 over 5 rounds unpinned and 0.99 pinned: noise).
+   Tests: `:audio_be:jvmTest` 2,645 of 2,645 and `:audio_be:jsBrowserTest` 2,541 of 2,541 green; the corpus 18 of
+   18 (`tmp/naming/corpus-e8b.txt` against `corpus-e8.txt`). Report: `tmp/reviews/e8-impl-report.md`.
 9. **DONE (2026-10-10): the Shape node allocated, and so did the fused `Distort`.** Reported as about 4 KB per block
    at stage 0 in the development JS build (52 scavenges per 105,000 blocks), 835 scavenges at stage 4 (16x). Source:
    the record, "Found during tidy-up step 11" (`tmp/reviews/tidy11-r1-B.md`, "Outside this change").
@@ -314,6 +394,11 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     sine, `SineIgnitor.generate`, called from `FmModIgnitor.generate`) and the knob reads (`Ignitors.readParam`, about
     65 B per block, item 8 on V8; item 12 on the JVM).
 
+29. **The filter-envelope cutoff chain allocates on V8** (numbered after the last item, added 2026-10-10): a full
+    `classic()` voice (filter, filter envelope, tremolo, analog) still allocates about 130 + 65 + 32 B per block in
+    its cutoff chain, the same on HEAD and after items 8 and 12, so not a knob read. Not located further. Source:
+    `tmp/reviews/e8-r1-B.md` (items 8 and 12, review round 1, reviewer B's heap profile). S to M.
+
 ## 2. Allocation on the JVM, at build and per orbit
 
 11. **`Voice` copies its stage list into an `Array` per voice start** (`pipeline.toTypedArray()`), one small
@@ -321,8 +406,8 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     the render callback and allocates the whole voice. No allocation in the callback at all means building voices
     outside it, or pools per sound with a reset contract on every node. L to XL; decide with the Zig port. Source: the
     record, "Found during tidy-up steps 7 to 9".
-12. **The JVM boxes a `Double` per block-constant param read** (`controlRateValueOrNull` returns `Double?`, read by
-    `blockStartValue` every block): 0 to 48 bytes per block for a voice built from constants, varying per run.
+12. **DONE (2026-10-10, with item 8): the JVM boxed a `Double` per block-constant param read**
+    (`controlRateValueOrNull` returned `Double?`, read by `blockStartValue` every block): 0 to 48 bytes per block for a voice built from constants, varying per run.
     Nothing in the browser. A non-null `controlRateValue(freqHz): Double` beside `isBlockConstant` would remove it, if
     a JVM backend ever needs a render without allocation. Source: the record, "Found during tidy-up step 10". M.
     **A second site** (pitch pipeline 7b, 2026-10-10): `binaryLadder`'s constant-operand read (`TimesIgnitor`'s
@@ -335,6 +420,28 @@ block-constant param read (0 to 48 bytes per block). The method and the rules le
     worker's run a vibrato with a constant `range(0, 1)` allocated 24 bytes per block on the JVM where the unranged one
     allocated 0 (9-run medians), but in reviewer B's run HEAD's plain vibrato allocated 72 and the ranged one 0, so the
     24 B sit inside this item's own noise band; a JFR profile would decide. The same remedy either way.
+    **Measured and split in two steps (2026-10-10, `tmp/reviews/e8-proposal.md`).** JFR located the steady JVM boxes
+    in the second site only: the ladder over the vibrato's `max(semitones, 0)` (`TimesIgnitor` < `MaxIgnitor` <
+    `ParamIgnitor` and `ConstantIgnitor`), three `Double`s, 72 B per vibrato voice block, in one process in all 9
+    rounds and in another in 1 of 9. The first site (a voice built from constants, e3's 24 B on `whitecolor`) and the
+    third (the vibrato's `range`, 7c's 24 B) did NOT reproduce in either process: no white-noise or `RangeIgnitor`
+    frame in the census, and the ranged vibrato read the same 72 B as the plain one.
+    - **Step 1 (V8), with item 8:** `readParam` inline, gated on `isBlockConstant`. It does not reach the ladder, and
+      alone it opened a JVM cost of its own at megamorphic read sites (item 8).
+    - **Step 2 (JVM), maintainer's decision of 2026-10-10:** the interface member is the primitive
+      `controlRateValue(freqHz): Double` (NaN by default, unspecified and unread unless `isBlockConstant`), and
+      `blockStartValue`, `readParam`, the ladder, `Affine`, `Clamp`, `Lerp`, `Range`, the phase offset and the pulse
+      duty gate on the flag and read the primitive. The nullable view stays as the extension
+      `Ignitor.controlRateValueOrNull` (the flag, then the value, else null) for the cold readers, so
+      `IgnitorDslRuntime.kt` (ADAA-owned) compiles unchanged; `KatalystSlots.kt` imports it. **The "contract breach"
+      path is dropped** (a true flag with a null value can no longer be written): the degrade branches in
+      `binaryLadder`, `AffineIgnitor`, `ClampIgnitor`, `LerpIgnitor`, `RangeIgnitor` and the pulse duty, the
+      phase offset's per-block `perSample` unfold and the impulse's `bookkeeping` shift, and the two breach specs in
+      `OscillatorPhaseSpec` (`BreachingConstant`, `SometimesBreaching`). `ControlRateScalarParitySpec` pins that a
+      true flag always comes with a real value (not NaN) for every combinator in every child slot, and
+      `ControlRateValueSpec` that the flag alone decides what `readParam` and `blockStartValue` read
+      (mutation-checked). Result on the JVM: the ladder's 72 B per vibrato voice block and step 1's
+      megamorphic-site boxes are gone (item 8); bit for bit, the corpus 18 of 18.
 13. **The B4.5 orbit-side items**: `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
     `ScratchBuffers.oversample` looks its sub-pool up in a map per block (`getOrPut`; the first use per factor
     allocates, once per warehouse). Per orbit or per backend, not per voice. The resonators' part closed with step 12

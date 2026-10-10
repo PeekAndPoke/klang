@@ -178,7 +178,7 @@ object Ignitors {
                     }
                 }
 
-                if (phaseIn.perSample) {
+                if (phaseIn.isSignal) {
                     renderPhased(buffer = buffer, actualFreq = actualFreq, ctx = ctx, d = d, phaseInc = phaseInc, phaseIn = phaseIn)
 
                     return
@@ -711,7 +711,7 @@ object Ignitors {
                     shiftPartials(phaseIn.blockDelta(actualFreq))
                 }
 
-                if (phaseIn.perSample) {
+                if (phaseIn.isSignal) {
                     ctx.scratchBuffers.use { offsets ->
                         phaseIn.render(offsets, actualFreq, ctx)
                         renderPartials(buffer = buffer, off = off, end = end, pm = pm, lanes = lanes, offsets = offsets, actualFreq = actualFreq, ctx = ctx)
@@ -940,7 +940,7 @@ object Ignitors {
                 }
             }
 
-            val phased = phaseIn?.takeIf { it.perSample }
+            val phased = phaseIn?.takeIf { it.isSignal }
 
             if (kind == WaveKind.SAW) {
                 if (dt != lastDt) {
@@ -964,13 +964,9 @@ object Ignitors {
             }
 
             // PULSE — block-constant duty: bake once + hoist; audio-rate duty (PWM): rebake per
-            // sample. Gated on the structural flag first so the PWM path pays one boolean read
-            // instead of a boxed Double? query per block; a null scalar despite a true flag
-            // (contract breach) falls through to PWM — the always-correct branch.
-            val dutyConst = if (duty.isBlockConstant) duty.controlRateValueOrNull(actualFreq) else null
-
-            if (dutyConst != null) {
-                val d = dutyConst
+            // sample. The structural flag selects the branch, so the PWM path pays one boolean read per block.
+            if (duty.isBlockConstant) {
+                val d = duty.controlRateValue(actualFreq)
 
                 if (d != lastDuty || dt != lastDt) {
                     lastDuty = d; lastDt = dt
@@ -1200,7 +1196,7 @@ object Ignitors {
             // The REAL freqHz on purpose (ledger O6): 0.0 made Ignitor.freq() inside noise params read
             // 0 Hz, and split the MemoizingIgnitor key for a node shared with the signal spine
             // (the shared node then ran twice per block).
-            val c = color.blockStartValue(freqHz, ctx).coerceIn(-1.0, 1.0)
+            val c = readParam(color, freqHz, ctx).coerceIn(-1.0, 1.0)
             val end = ctx.windowEnd
 
             if (c == 0.0) {
@@ -1299,10 +1295,10 @@ object Ignitors {
                 if (!phaseIn.isSignal) {
                     val shift = phaseIn.blockDelta(actualFreq)
 
-                    shiftBy(shift, bookkeeping = phaseIn.perSample)
+                    shiftBy(shift)
                 }
 
-                if (phaseIn.perSample) {
+                if (phaseIn.isSignal) {
                     renderPhased(buffer = buffer, actualFreq = actualFreq, ctx = ctx, d = d, phaseInc = phaseInc, phaseIn = phaseIn)
 
                     return
@@ -1359,22 +1355,14 @@ object Ignitors {
          * then judged by the phased loop's own rule, so both paths agree: it spikes when the heard phase dropped by
          * more than half a cycle since the last sample (a forward pass through 0, the natural wrap and the step
          * together); a step back of less than half a cycle spikes nothing. At the very first block nothing has been
-         * crossed yet: a start phase other than 0 does not spike. A [bookkeeping] change (a breach unfolding the
-         * offset, so the phased loop can read it per sample) moves no heard phase: the accumulator moves, and
-         * `lastPhase`, the last sample's heard phase, stays as it is. The first answered block after a breach folds
-         * the offset back in with an ordinary change: `lastPhase` then holds the phased loop's heard phase, the same
-         * frame as the folded accumulator, so the drop rule judges it like any other step.
+         * crossed yet: a start phase other than 0 does not spike.
          */
-        private fun shiftBy(shift: Double, bookkeeping: Boolean) {
+        private fun shiftBy(shift: Double) {
             if (shift == 0.0) {
                 return
             }
 
             phase = (phase + shift * TWO_PI).wrapPhase(TWO_PI)
-
-            if (bookkeeping) {
-                return
-            }
 
             if (!started) {
                 lastPhase = phase
@@ -1470,7 +1458,7 @@ object Ignitors {
         private var out: Double = 0.0
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val k = leak.blockStartValue(freqHz, ctx).coerceAtLeast(0.0)   // real freqHz: ledger O6
+            val k = readParam(leak, freqHz, ctx).coerceAtLeast(0.0)   // real freqHz: ledger O6
             val denom = 1.0 + k
             val end = ctx.windowEnd
 
@@ -1608,8 +1596,8 @@ object Ignitors {
             val rateHz = d * maxRateHz
             val p = (rateHz / ctx.sampleRateD).coerceIn(0.0, 1.0)
             // control-rate knobs (no buffer fill for Constant/Param) — read once per block
-            val k = tail.blockStartValue(freqHz, ctx).coerceAtLeast(0.0)
-            val bip = bipolar.blockStartValue(freqHz, ctx) > 0.5
+            val k = readParam(tail, freqHz, ctx).coerceAtLeast(0.0)
+            val bip = readParam(bipolar, freqHz, ctx) > 0.5
             val end = ctx.windowEnd
 
             if (!bip && k == 1.0) {
@@ -1980,7 +1968,7 @@ object Ignitors {
                     }
                 }
 
-                if (phaseIn.perSample) {
+                if (phaseIn.isSignal) {
                     ctx.scratchBuffers.use { offsets ->
                         phaseIn.render(offsets, actualFreq, ctx)
 
@@ -2786,11 +2774,27 @@ object Ignitors {
 
     /**
      * Read a control-rate parameter once per block: the scalar directly when the param is block-constant
-     * (FreqIgnitor / ParamIgnitor / ConstantIgnitor and pointwise combinators over them — no scratch
-     * buffer), otherwise one rendered sample. See [Ignitor.blockStartValue].
+     * (FreqIgnitor / ParamIgnitor / ConstantIgnitor and pointwise combinators over them, no scratch
+     * buffer), otherwise one rendered sample. See [Ignitor.blockStartValue]. Reads exactly what
+     * [Ignitor.blockStartValue] reads, for every node: the flag ([Ignitor.isBlockConstant]) decides alone, a true
+     * one reads the primitive [Ignitor.controlRateValue], a false one renders through the member.
+     *
+     * Kotlin `inline` ON PURPOSE (engine follow-ups 8 and 12, 2026-10-10; `audio/ref/performance.md`, "a shared
+     * one-line forwarding helper is one megamorphic call site"). As a plain function its one call into the node was
+     * ONE call site for every knob read of the whole engine: on V8 it went megamorphic, was never inlined, and its
+     * double result became a heap number per read whenever it was not a small integer (4 to 6 per classic voice
+     * block, about 60 to 100 bytes). Inline, every caller owns its own call site for the scalar, monomorphic in
+     * practice, which V8 inlines into the caller, so the double never crosses a call. No test can pin it (the sound
+     * is the same either way): this KDoc is the guard. Do not turn it back into a plain function, and read a knob
+     * through this, not through [Ignitor.blockStartValue] directly.
      */
-    internal fun readParam(param: Ignitor, freqHz: Double, ctx: IgniteContext): Double =
-        param.blockStartValue(freqHz, ctx)
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun readParam(param: Ignitor, freqHz: Double, ctx: IgniteContext): Double =
+        if (param.isBlockConstant) {
+            param.controlRateValue(freqHz)
+        } else {
+            param.blockStartValue(freqHz, ctx)
+        }
 
     /** Resolve the effective oscillator frequency ([readParam] over [freq]; [FreqIgnitor] → the voice note). */
     internal fun resolveFreq(freq: Ignitor, voiceFreqHz: Double, ctx: IgniteContext): Double =

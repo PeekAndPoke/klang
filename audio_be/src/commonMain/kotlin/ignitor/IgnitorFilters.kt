@@ -351,7 +351,7 @@ fun Ignitor.svf(
  * fused and the chained door bit-identical: a literal folds into the value on both sides
  * (no `safeOut` on either), and anything else goes through [times] on both sides (so both
  * get the same block-constant fold, the same `safeOut` scrubbing and the same
- * `controlRateValueOrNull` contract). Folding a [ParamIgnitor]'s value here instead would skip
+ * `controlRateValue` contract). Folding a [ParamIgnitor]'s value here instead would skip
  * the `safeOut` the fused door applies, so a non-finite q would land on the SVF's Butterworth
  * 0.7071 fallback on one door and on the scrubbed value's clamp on the other: the 0.1 floor for
  * NaN and -Inf, the 200 ceiling for +Inf (safeOut clamps an infinity to a finite SAFE_MAX). Same

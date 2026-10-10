@@ -8,8 +8,8 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.AudioBuffer
 
 /**
- * Test helper: forces the non-scalar path. Delegates rendering but inherits the `null` default
- * of [Ignitor.controlRateValueOrNull] and the `false` default of [Ignitor.isBlockConstant] —
+ * Test helper: forces the non-scalar path. Delegates rendering but inherits the `false` default of
+ * [Ignitor.isBlockConstant] (so its scalar, the NaN default of [Ignitor.controlRateValue], is never read):
  * the reference behavior a foldable node had before the constant-fold work. Parity specs wrap
  * one operand in this to keep the SCRATCH path as the oracle the fold path is compared against.
  *
@@ -32,8 +32,8 @@ internal class RenderCountProbe(private val inner: Ignitor) : Ignitor {
 
     override val isBlockConstant: Boolean get() = inner.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double): Double? =
-        inner.controlRateValueOrNull(freqHz)
+    override fun controlRateValue(freqHz: Double): Double =
+        inner.controlRateValue(freqHz)
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         generateCalls++

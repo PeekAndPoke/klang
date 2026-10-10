@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -105,4 +106,46 @@ class ControlRateValueSpec : StringSpec({
         // A stateful node (sine) has no control-rate value, so this takes the scratch fallback.
         Ignitors.sine().blockStartValue(440.0, ctx0) shouldBe 0.0
     }
+
+    // ── the flag decides alone: readParam and blockStartValue read the scalar only when it is true ──────
+
+    "readParam reads exactly what blockStartValue reads, and the flag decides alone which path" {
+        // Each fake renders a value its scalar does not answer, so the path taken shows in the result. A true flag
+        // reads the scalar; a false one renders and never reads the scalar (the scalar is unspecified then; this fake
+        // answers a real number on purpose, so a reader that ignored the flag would read it).
+        val expected = linkedMapOf(
+            FlagAndScalar(flag = true, scalar = 0.25, rendered = 0.75) to 0.25,
+            FlagAndScalar(flag = false, scalar = 0.25, rendered = 0.75) to 0.75,
+        )
+
+        for ((node, value) in expected) {
+            withClue("flag ${node.isBlockConstant}") {
+                Ignitors.readParam(node, 440.0, ctx()) shouldBe value
+                node.blockStartValue(440.0, ctx()) shouldBe value
+                node.controlRateValueOrNull(440.0) shouldBe if (node.isBlockConstant) 0.25 else null
+            }
+        }
+    }
+
+    // Not a restatement: `ControlRateScalarParitySpec` section 4 detects a forgotten scalar under a true flag only
+    // because the default is NaN. This row keeps that detector working (a default of 0.0 turns only this row red).
+    "a node that is not block-constant keeps the NaN default scalar" {
+        Ignitors.sine().controlRateValue(440.0).isNaN() shouldBe true
+        OpaqueIgnitor(ConstantIgnitor(2.0)).controlRateValue(440.0).isNaN() shouldBe true
+    }
 })
+
+/** TEST ONLY. A node whose flag, scalar and rendered value are set apart (the scalar unread when the flag is false). */
+private class FlagAndScalar(
+    private val flag: Boolean,
+    private val scalar: Double,
+    private val rendered: Double,
+) : Ignitor {
+    override val isBlockConstant: Boolean get() = flag
+
+    override fun controlRateValue(freqHz: Double): Double = scalar
+
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        buffer.fill(rendered, ctx.offset, ctx.windowEnd)
+    }
+}

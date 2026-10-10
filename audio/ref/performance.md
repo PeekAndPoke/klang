@@ -339,6 +339,38 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   number. Two branches store the same values without it: about 180 of the about 1,310 bytes a new param map cost on
   the classic chain, on both bundles, pinned and unpinned. The rest is still attributed to that function by the
   profiler and is not explained.
+- **On V8, a shared one-line forwarding helper is one megamorphic call site: make it Kotlin `inline`** (2026-10-10,
+  engine follow-ups 8 and 12). V8 keeps its type feedback per call site in the bytecode, not per caller, so a
+  small plain function that every caller goes through to make one call (`Ignitors.readParam` was
+  `param.blockStartValue(freqHz, ctx)`, one line) puts every caller's receiver on ONE site: it goes megamorphic, the
+  callee is never inlined, and its double result crosses a call, a heap number per call whenever it is not a small
+  integer (the rule above). The `Double?` of `controlRateValueOrNull` was blamed first; it was not the cause: on JS
+  `Double?` and `Double` are the same number. Measured: every knob read of the engine boxed so, 4 to 6 heap numbers
+  per classic voice block (about 60 to 100 bytes), about 770 bytes per block on a row with a dozen releasing classic
+  voices. **Remedy:** make the helper Kotlin `inline` (`@Suppress("NOTHING_TO_INLINE")`, a KDoc that says why), so
+  each caller owns its own site, monomorphic in practice, and V8 inlines the small callee into the caller; keep the
+  inlined body small (here a flag gate, `isBlockConstant`, then the primitive scalar, else the member). A plain
+  function per site is not always enough inside a large caller: in a hand-edited bundle, per-site helpers that carried
+  the whole fallback body stayed un-inlined in `AdsrIgnitor.generate` (its budget used up) and three of them still
+  boxed. Measured on the production bundle (HEAD / inline / HEAD again, medians of
+  3, unpinned): classic saw 77 / 21 / 82 bytes per block, unison stack 98 / 0 / 97, the dozen releasing voices
+  1,846 / 1,062 / 1,844, bit for bit the same sound, at 0.96 to 1.01 of HEAD's time; pinned alike (the record:
+  `docs/tasks/engine-follow-ups.md`, items 8 and 12). No test can pin it: the KDoc at the helper is the guard.
+  **How to check:** the sampling heap profiler puts the box in the helper or in its callee; `--trace-turbo-inlining`
+  then shows the callee as a candidate the caller never inlines (`blockStartValue` from `AdsrIgnitor`'s `generate`,
+  five times on HEAD), and after the change the small callees inlined into the caller instead (`isBlockConstant` and
+  the scalar, five times each, no `blockStartValue` candidate left). Grep for other shared helpers whose body is one
+  call returning a double before writing a new one. **Check the JVM with a megamorphic profile too, and return a primitive:**
+  inlining the helper moves the call each site makes. With step 1 alone the body called the nullable
+  `controlRateValueOrNull` at the site, and on the JVM a site C2 could not reduce to an inlined fresh box (three or
+  more node classes, production ones among them) boxed a `Double` per read where HEAD's shared `blockStartValue`, a
+  primitive return, settled to none (a scratch probe on the partial bank's count reads: 72 B per block, HEAD 0;
+  `FirstBlockAllocationSpec` caught it, the single-profile harness did not). Step 2 (maintainer, 2026-10-10) made
+  the scalar a primitive, `controlRateValue(freqHz): Double`, read only when the flag is true: the probe reads 0,
+  and the constant-fold ladder's boxes under a vibrato went with it (72 B per vibrato voice block in some
+  processes before, 0 in every round after; about 95 MB of `Double`s over the harness run, now none on the render
+  path). A nullable scalar on a hot read is a box on the JVM wherever the call is not inlined; keep the nullable
+  view (`controlRateValueOrNull`, an extension) for the cold readers only.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per

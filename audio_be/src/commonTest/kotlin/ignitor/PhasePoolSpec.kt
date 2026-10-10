@@ -326,8 +326,11 @@ class PhasePoolSpec : StringSpec({
     // discontinuity (click). The added voices get plain random phases (doc §6).
 
     "phasePool on - mid-note voice-count change keeps ringing voices' phases (no re-selection click)" {
+        // A voices slot whose value the test changes mid-note: block-constant, the value changed between blocks.
         class VoicesParam(var value: Double) : Ignitor {
-            override fun controlRateValueOrNull(freqHz: Double): Double = value
+            override val isBlockConstant: Boolean = true
+
+            override fun controlRateValue(freqHz: Double): Double = value
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 buffer.fill(value, ctx.offset, ctx.windowEnd)
             }

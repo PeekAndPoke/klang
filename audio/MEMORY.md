@@ -294,8 +294,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 - **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
   `duck-orbit-switch-click.md`, and the owed rounds listed there.
-- **Engine pass 1 follow-ups**: `docs/tasks/engine-follow-ups.md` (the V8 residues, the JVM box per block-constant
-  read, the phase-pool order, the audit's later steps and open decisions).
+- **Engine pass 1 follow-ups**: `docs/tasks/engine-follow-ups.md` (the V8 residues, the phase-pool order, the
+  audit's later steps and open decisions).
 - **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
   §4, the cut-group fade, done by lifecycle step 4), `docs/tasks/svf-coefficient-cache-never-engages.md`,
   `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (two NaN signal paths; its strip half closed with pitch
@@ -329,6 +329,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 Engine follow-ups 8 and 12: `Ignitors.readParam` is Kotlin `inline` (one shared helper was one
+  megamorphic site that boxed every knob read on V8, 60 to 100 B per classic voice block), and the scalar is the
+  primitive `Ignitor.controlRateValue`, read only when `isBlockConstant` (the nullable view is the extension
+  `controlRateValueOrNull`; the "true flag, null value" breach path is dropped, maintainer); bit for bit, corpus
+  identical: `docs/tasks/engine-follow-ups.md` items 8 and 12
 - 2026-10-10 Engine follow-ups 10a and 10b: `adsrCurveShape` is a statement `when`; its expression form boxed
   every sample of a moving envelope on V8 (the chain `adsr`, `classic()`'s envelope, the pitch and FM envelopes,
   about 2.1 KB per block each, now about 0), bit for bit, corpus identical: `docs/tasks/engine-follow-ups.md` items

@@ -24,31 +24,7 @@ import kotlin.random.Random
 private class SteppedConstant(var value: Double) : Ignitor {
     override val isBlockConstant: Boolean get() = true
 
-    override fun controlRateValueOrNull(freqHz: Double): Double = value
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        buffer.fill(value, ctx.offset, ctx.windowEnd)
-    }
-}
-
-/** TEST ONLY. A block-constant [value] that answers no value while [breach] is set (an intermittent contract breach). */
-private class SometimesBreaching(private val value: Double) : Ignitor {
-    var breach: Boolean = false
-
-    override val isBlockConstant: Boolean get() = true
-
-    override fun controlRateValueOrNull(freqHz: Double): Double? = if (breach) null else value
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        buffer.fill(value, ctx.offset, ctx.windowEnd)
-    }
-}
-
-/** TEST ONLY. Claims to be block-constant but answers no value, rendering [value] (a breach of the contract). */
-private class BreachingConstant(private val value: Double) : Ignitor {
-    override val isBlockConstant: Boolean get() = true
-
-    override fun controlRateValueOrNull(freqHz: Double): Double? = null
+    override fun controlRateValue(freqHz: Double): Double = value
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         buffer.fill(value, ctx.offset, ctx.windowEnd)
@@ -534,61 +510,6 @@ class OscillatorPhaseSpec : StringSpec({
         }
 
         worst shouldBeLessThan 1e-12
-    }
-
-    "a block-constant input that answers no value (a contract breach) is read per sample, not dropped" {
-        val factories: Map<String, (Ignitor?) -> Ignitor> = linkedMapOf(
-            "sine" to { p -> Ignitors.sine(phase = p) },
-            "sawtooth" to { p -> Ignitors.saw(phase = p) },
-            "impulse" to { p -> Ignitors.impulse(phase = p) },
-            "sine with banks" to { p -> Ignitors.sinePartials(harmonics = ConstantIgnitor(3.0), phase = p) },
-            "supersaw" to { p -> Ignitors.superSaw(voices = ConstantIgnitor(3.0), rng = Random(3), phase = p) },
-        )
-
-        for ((name, make) in factories) {
-            withClue(name) {
-                val breaching = render(make(BreachingConstant(0.3)), 220.0)
-
-                bits(breaching) shouldBe bits(render(make(ArrayIgnitor(DoubleArray(4000) { 0.3 })), 220.0))
-                bits(breaching) shouldNotBe bits(render(make(null), 220.0))
-            }
-        }
-    }
-
-    "the impulse through a breach on one middle block: the same spikes as the constant that never breaches" {
-        fun spikesThrough(value: Double, breachBlock: Int?): List<Int> {
-            val input = SometimesBreaching(value)
-            val imp = Ignitors.impulse(phase = input)
-            val cc = ctx()
-            val buffer = AudioBuffer(blockFrames)
-            val out = ArrayList<Int>()
-
-            for (block in 0 until 6) {
-                input.breach = block == breachBlock
-                cc.updateOffsetAndLength(offset = 0, length = 100)
-                imp.generate(buffer, exactHz, cc)
-
-                for (i in 0 until 100) {
-                    if (buffer[i] == 1.0) {
-                        out.add(block * 100 + i)
-                    }
-                }
-            }
-
-            return out
-        }
-
-        // 0.7: the unfold on block 2 would carry the unfolded accumulator past 2 pi; 0.3: the refold on block 3 would
-        // read as a natural wrap. Neither moves the heard phase, so neither spikes.
-        for (value in listOf(0.7, 0.3)) {
-            withClue("phase $value") {
-                val reference = spikesThrough(value, null)
-
-                spikesThrough(value, 2) shouldBe reference
-                // one spike a cycle (64 samples) over 600, none at 0: a start phase other than 0
-                reference shouldBe if (value == 0.7) List(10) { 20 + 64 * it } else List(9) { 45 + 64 * it }
-            }
-        }
     }
 
     // ── THE IMPULSE ─────────────────────────────────────────────────────────────────────────────

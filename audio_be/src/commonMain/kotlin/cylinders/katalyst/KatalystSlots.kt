@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
+import io.peekandpoke.klang.audio_be.ignitor.controlRateValueOrNull
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.random.Random
@@ -88,7 +89,7 @@ internal object KatalystSlots {
      * the engine's own scrubbing (`Times` runs its product through `safeOut`, so NaN came back as
      * a finite 0.0 and read as "delay off").
      *
-     * The graph is built ONCE and read twice: [Ignitor.controlRateValueOrNull] is a pure
+     * The graph is built ONCE and read twice: [controlRateValueOrNull] is a pure
      * structural read by contract, so the second query cannot advance any state the first one saw.
      *
      * The try/catch is the audio-thread guard, not a diagnostic: [resolve] runs at chain-install

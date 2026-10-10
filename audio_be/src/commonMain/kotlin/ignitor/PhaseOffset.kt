@@ -24,19 +24,11 @@ import io.peekandpoke.klang.audio_be.utils.wrapToUnitCycle
  * null check per block. A jumping offset clicks: raw by design. A fast-moving offset also adds to the instantaneous
  * frequency, so it squeezes the soft edges of the saw and square family (sized from the note's own increment), which
  * then alias as their raw twins do.
- *
- * A block-constant input that answers no value for a block (a breach of [Ignitor.controlRateValueOrNull]'s contract)
- * is not dropped: [blockDelta] unfolds the offset applied so far and the block renders through the phased loop, as
- * the pulse oscillator's `duty` falls through to its per-sample path.
  */
 internal class PhaseOffset(private val input: Ignitor) {
 
-    /** True when the input moves within a block, structural and fixed for the note. */
+    /** True when the input moves within a block, structural and fixed for the note: the block then reads it per sample. */
     val isSignal: Boolean = !input.isBlockConstant
-
-    /** True when THIS block reads the offset per sample: always for a signal, for a block-constant input only on a breach. */
-    var perSample: Boolean = isSignal
-        private set
 
     /** The wrapped offset already folded into the accumulator (block-constant path), in cycles. */
     var applied: Double = 0.0
@@ -44,15 +36,12 @@ internal class PhaseOffset(private val input: Ignitor) {
 
     /**
      * Block-constant path: the change of the wrapped offset since the last block, in cycles, in `(-1, 1)`, and 0.0
-     * when nothing changed. A non-finite value reads as 0. On a contract breach (no value) it returns the change that
-     * takes the applied offset back out and sets [perSample] for this block.
+     * when nothing changed. A non-finite value reads as 0. Called only when not [isSignal], so the input's scalar is
+     * its value (the "no value despite the flag" breach this used to unfold is gone with the nullable scalar,
+     * maintainer, 2026-10-10).
      */
     fun blockDelta(freqHz: Double): Double {
-        val value = input.controlRateValueOrNull(freqHz)
-
-        perSample = value == null
-
-        val o = value?.wrapToUnitCycle() ?: 0.0
+        val o = input.controlRateValue(freqHz).wrapToUnitCycle()
         val d = o - applied
 
         applied = o
