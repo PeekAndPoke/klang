@@ -21,6 +21,8 @@ import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 import kotlin.math.pow
 
 /**
@@ -89,13 +91,34 @@ private class SemitonesToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
  * `vibrato` row of `audio/ref/off-values.md`. A non-finite literal reaches the default only through the DSL arm
  * (`finiteLiteralOr`); this factory, and its Double overload, take the knobs as given.
  *
+ * The range and the phase (pitch pipeline 7c): with [rangeFrom] or [rangeTo] given, the LFO is laid onto from..to
+ * (`range`, the LFO's -1 to `from`, +1 to `to`; a missing one is its default, -1 or 1) before the depth scales it, so
+ * the ratio is `2^((range(sin, from, to) * max(semitones, 0)) / 12)`; the bounds read like the depth, per sample,
+ * outside the LFO's shield. With neither, no range is built (the DSL arm passes none at the default `(-1, 1)`). [phase]
+ * is the sine's own `phase` input (cycles; null builds none, the start at `sin(0)`), inside the shield with the rate.
+ *
  * @param rate LFO frequency in Hz
  * @param semitones modulation depth in SEMITONES
+ * @param rangeFrom where the LFO's -1 lands, or null
+ * @param rangeTo where the LFO's +1 lands, or null
+ * @param phase the LFO's phase offset in cycles, or null for none
  */
-fun vibratoModIgnitor(rate: Ignitor, semitones: Ignitor): Ignitor {
-    val lfo = ModBlockingIgnitor(Ignitors.sine(freq = rate, analog = ConstantIgnitor(0.0)))
+fun vibratoModIgnitor(
+    rate: Ignitor,
+    semitones: Ignitor,
+    rangeFrom: Ignitor? = null,
+    rangeTo: Ignitor? = null,
+    phase: Ignitor? = null,
+): Ignitor {
+    val lfo = ModBlockingIgnitor(Ignitors.sine(freq = rate, analog = ConstantIgnitor(0.0), phase = phase))
 
-    return semitonesToRatioIgnitor(lfo * semitones.max(0.0))
+    val swing = if (rangeFrom != null || rangeTo != null) {
+        lfo.range(from = rangeFrom ?: ConstantIgnitor(VIBRATO_RANGE_FROM), to = rangeTo ?: ConstantIgnitor(VIBRATO_RANGE_TO))
+    } else {
+        lfo
+    }
+
+    return semitonesToRatioIgnitor(swing * semitones.max(0.0))
 }
 
 fun vibratoModIgnitor(rate: Double, semitones: Double): Ignitor =

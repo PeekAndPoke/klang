@@ -288,7 +288,7 @@ with limiter defaults, so it works on an orbit too.
 | `rootNotes()`           |         | Extract chord root notes      | `chord("Am C").rootNotes()`                     |
 | `freq(hz)`              |         | Set frequency in Hz           | `freq("440 880")`                               |
 | `accelerate(semitones)` |         | Pitch glide to the end of the note, held through the release (SEMITONES; 12 = one octave) | `s("cr").accelerate(24)`                        |
-| `vibrato(rate, semitones)`                                             | `vib`      | Vibrato LFO rate in Hz and depth in semitones (`classic()`'s stage; a rate alone is no vibrato); readers `vibrato.rate`, `.semitones`                   | `note("c4").s("saw").vibrato(5, 0.5)`                                                                |
+| `vibrato(rate, semitones, rangeFrom, rangeTo, phase)`                  | `vib`      | Vibrato LFO rate in Hz and depth in semitones (`classic()`'s stage; a rate alone is no vibrato); `rangeFrom`/`rangeTo` place the swing (-1..1, default -1 and 1; `0, 1` only upward), `phase` where it starts (cycles, default 0, the middle of the swing; `0, 1, 0.75` starts an upward-only vibrato on the note); readers `vibrato.rate`, `.semitones`, `.rangeFrom`, `.rangeTo`, `.phase` | `note("c4").s("saw").vibrato(5, 0.5, 0, 1, 0.75)`                                                    |
 
 #### Scale degrees: two things that are easy to get wrong
 

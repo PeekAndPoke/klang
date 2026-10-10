@@ -392,7 +392,8 @@ object KlangScriptIgnitorExtensions {
      * filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs, the pitch envelope's
      * `penv.*` and `penvCurves.*` (`pitchEnvelope(Ignitor.slot.penv.semitones, ...)`), the flat `accelerate`
      * (`accelerate(Ignitor.slot.accelerate)`), the vibrato's `vibrato.*`
-     * (`vibrato(Ignitor.slot.vibrato.rate, Ignitor.slot.vibrato.semitones)`), the FM's `fm.*`
+     * (`vibrato(Ignitor.slot.vibrato.rate, Ignitor.slot.vibrato.semitones, v => v.range(Ignitor.slot.vibrato.rangeFrom,
+     * Ignitor.slot.vibrato.rangeTo).phase(Ignitor.slot.vibrato.phase))`), the FM's `fm.*`
      * (`fm(Ignitor.sine(x => x.analog(0)), Ignitor.slot.fm.ratio, Ignitor.slot.fm.depth, ...)`) and the envelope's stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
      * around the instrument. Three groups only `classic()` can place: `lpf.passes` / `hpf.passes` (the filter
      * builder's `passes(n)` takes a number), `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
@@ -616,11 +617,21 @@ object KlangScriptIgnitorExtensions {
     /**
      * Applies pitch vibrato: [rate] Hz LFO, [semitones] deep. A signal depth is followed sample by sample
      * (`Ignitor.saw().vibrato(5, Ignitor.sine(0.5).mul(0.3).plus(0.3))` swells and fades); a depth at or below 0
-     * is no vibrato.
+     * is no vibrato. Where the swing sits and where the LFO starts are knobs on the [VibratoBuilder]:
+     * `.vibrato(5, 0.5, v => v.range(0, 1).phase(0.75))` swings only upward from the note (a guitar's vibrato; phase 0
+     * is the middle of the swing), `.vibrato(5, 0.5, v => v.phase(0.25))` starts every note at the top of the wobble. The pattern door is `vib(rate, semitones, rangeFrom, rangeTo, phase)`.
+     *
+     * @param configure receives the [VibratoBuilder] (knobs: `range`, `phase`) and returns it.
      */
     @KlangScript.Method
-    fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, semitones: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl())
+    fun vibrato(
+        self: IgnitorDsl,
+        rate: IgnitorDslLike,
+        semitones: IgnitorDslLike,
+        configure: ((VibratoBuilder) -> VibratoBuilder)? = null,
+    ): IgnitorDsl = VibratoBuilder(
+        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl()),
+    ).configuredBy("vibrato", configure).node
 
     /** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
     @KlangScript.Method

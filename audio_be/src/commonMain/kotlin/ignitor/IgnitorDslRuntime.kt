@@ -26,6 +26,8 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_EDGE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
@@ -395,10 +397,14 @@ internal fun IgnitorDsl.buildIgnitor(
             }
 
             // A composition since pitch pipeline 7b (`vibratoModIgnitor`). Build order is rng draw order: rate, then
-            // semitones, as before.
+            // semitones, as before; then the range and the phase (7c), which build nothing at their literal defaults.
+            val ranged = hasBuiltRange(ignitorParams = ignitorParams, cache = cache)
             val vibMod = vibratoModIgnitor(
                 rate = this.rate.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RATE_HZ),
                 semitones = this.semitones.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_SEMITONES),
+                rangeFrom = if (ranged) rangeFrom.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RANGE_FROM) else null,
+                rangeTo = if (ranged) rangeTo.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RANGE_TO) else null,
+                phase = vibratoPhase(ignitorParams = ignitorParams, cache = cache),
             )
             return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, vibMod, node = this))
         }
@@ -700,6 +706,38 @@ private fun IgnitorDsl.finiteLiteralOr(ignitorParams: Map<String, Double>?, cach
     }
 
     return buildIgnitor(ignitorParams, cache).ignitor
+}
+
+/**
+ * True when the vibrato builds its `range(from, to)` (pitch pipeline 7c); false at the default swing, which builds NO
+ * range: both knobs LITERALS ([IgnitorDsl.Param] or [IgnitorDsl.Constant] leaves, a `classic()` slot included) that read
+ * `VIBRATO_RANGE_FROM` and `VIBRATO_RANGE_TO` once a non-finite literal has taken its default. A built `range(-1, 1)` is
+ * not the identity in floating point (`-1 + (x + 1) * 1` rounds), so this is what keeps the default on the unranged
+ * vibrato's bits. When built, a non-finite literal bound reads as its default ([finiteLiteralOr], the vibrato's rule for
+ * its other knobs); a signal is built as it is (the edge rules: the `vibrato` row of `audio/ref/off-values.md`).
+ * Leaf-only, so asking draws nothing.
+ */
+private fun IgnitorDsl.Vibrato.hasBuiltRange(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean {
+    val from = rangeFrom.buildTimeKnobValue(ignitorParams, cache)?.let { if (it.isFinite()) it else VIBRATO_RANGE_FROM }
+    val to = rangeTo.buildTimeKnobValue(ignitorParams, cache)?.let { if (it.isFinite()) it else VIBRATO_RANGE_TO }
+
+    return !(from == VIBRATO_RANGE_FROM && to == VIBRATO_RANGE_TO)
+}
+
+/**
+ * The vibrato LFO's `phase` input (pitch pipeline 7c), built; null for a LITERAL ([IgnitorDsl.Param] or
+ * [IgnitorDsl.Constant] leaf, a `classic()` slot included) of 0 or a non-finite one, which builds no input, so the
+ * sine renders exactly as without the knob (the oscillators' `phase` reads a non-finite offset as 0 too, `PhaseOffset`).
+ * Any other value or a signal is the sine's own `phase` input: the oscillators' unit and law, one word per concept.
+ */
+private fun IgnitorDsl.Vibrato.vibratoPhase(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Ignitor? {
+    val literal = phase.buildTimeKnobValue(ignitorParams, cache)
+
+    if (literal != null && (literal == 0.0 || !literal.isFinite())) {
+        return null
+    }
+
+    return phase.buildIgnitor(ignitorParams, cache).ignitor
 }
 
 /**

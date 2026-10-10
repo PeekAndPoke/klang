@@ -108,7 +108,11 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
     under the composed vibrato's `x * max(semitones, 0)` (the tremolo's floor has the same shape): `sgpad` plus a
     vibrato allocated 72 to 96 bytes per block on the tree in the 9-run medians (HEAD 0 to 24), and 11.7 on average
     in one long run of 2 million blocks on the tree; V8 none. The same remedy covers both sites
-    (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, 7b record).
+    (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, 7b record). **Possibly a third** (7c, 2026-10-10, not
+    profiled): `RangeIgnitor`'s constant-bound path reads both bounds with `controlRateValueOrNull` every block; in the
+    worker's run a vibrato with a constant `range(0, 1)` allocated 24 bytes per block on the JVM where the unranged one
+    allocated 0 (9-run medians), but in reviewer B's run HEAD's plain vibrato allocated 72 and the ranged one 0, so the
+    24 B sit inside this item's own noise band; a JFR profile would decide. The same remedy either way.
 13. **The B4.5 orbit-side items**: `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
     `ScratchBuffers.oversample` looks its sub-pool up in a map per block (`getOrPut`; the first use per factor
     allocates, once per warehouse). Per orbit or per backend, not per voice. The resonators' part closed with step 12
@@ -146,6 +150,11 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
     `Ducking.process(input, sidechain, blockSize)`, `Phaser.process(buffer, frames)`, `Reverb.hasTail` and
     `DelayLine.hasTail`; move the specs onto the production entry points. The audit's other test-only seams (`*ForTest`,
     `currentState`, `installed*`) are the same question (the record, "Decided", D10). S.
+28. **`GraphCensus` still counts the vibrato as one pitch node** (numbered after the last item, added 2026-10-10):
+    its arm predates the composition (pitch pipeline 7b: the sine LFO, the floor, the multiply, the converter) and the
+    7c range pass (a constant one in place, a signal one reading two bounds) and phase input (a moving phase read per
+    sample), so a song benchmark's `work` column under-counts a vibrato. The tremolo's arm is the pattern (it counts
+    only what runs). Source: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
 
 ## 6. The audit's later steps and its open decisions
 

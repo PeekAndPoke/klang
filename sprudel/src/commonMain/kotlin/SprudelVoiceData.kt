@@ -528,6 +528,21 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || pitchMod != null) pitchModOrNew().vibratoMod = v
         }
+    var vibratoRangeFrom: Double?
+        get() = pitchMod?.vibratoRangeFrom
+        set(v) {
+            if (v != null || pitchMod != null) pitchModOrNew().vibratoRangeFrom = v
+        }
+    var vibratoRangeTo: Double?
+        get() = pitchMod?.vibratoRangeTo
+        set(v) {
+            if (v != null || pitchMod != null) pitchModOrNew().vibratoRangeTo = v
+        }
+    var vibratoPhase: Double?
+        get() = pitchMod?.vibratoPhase
+        set(v) {
+            if (v != null || pitchMod != null) pitchModOrNew().vibratoPhase = v
+        }
 
     var pAttack: Double?
         get() = pitchEnv?.pAttack

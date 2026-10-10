@@ -202,7 +202,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("Tremolo", IgnitorDsl.Tremolo(inner = m(0), rate = m(1), depth = m(2), shape = m(3), rangeFrom = m(4), rangeTo = m(5)), 6),
         Triple("Tri", IgnitorDsl.Tri(freq = m(0), analog = m(1), phase = m(2)), 3),
         Triple("Variants", IgnitorDsl.Variants(listOf(m(0), m(1), m(2))), 3),
-        Triple("Vibrato", IgnitorDsl.Vibrato(inner = m(0), rate = m(1), semitones = m(2)), 3),
+        Triple("Vibrato", IgnitorDsl.Vibrato(inner = m(0), rate = m(1), semitones = m(2), rangeFrom = m(3), rangeTo = m(4), phase = m(5)), 6),
         Triple("WhiteNoise", IgnitorDsl.WhiteNoise(color = m(0)), 1),
         Triple("Zamp", IgnitorDsl.Zamp(freq = m(0), analog = m(1), phase = m(2)), 3),
         Triple("Zawtooth", IgnitorDsl.Zawtooth(freq = m(0), analog = m(1), phase = m(2)), 3),

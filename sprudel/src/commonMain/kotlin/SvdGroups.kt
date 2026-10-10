@@ -60,15 +60,20 @@ data class SvdFilter(
 )
 
 /**
- * Pitch modulation: glide ([accelerate]) + vibrato. [vibrato] is the rate in Hz, [vibratoMod] the depth in semitones
- * (`vib(rate, semitones)`); the wire carries them as `classic()`'s `vibrato.rate` / `vibrato.semitones` slots, and
- * [accelerate] as the flat `accelerate` slot.
+ * Pitch modulation: glide ([accelerate]) + vibrato. [vibrato] is the rate in Hz, [vibratoMod] the depth in semitones,
+ * [vibratoRangeFrom] / [vibratoRangeTo] where the swing sits and [vibratoPhase] the LFO's phase in cycles
+ * (`vib(rate, semitones, rangeFrom, rangeTo, phase)`); the wire carries them as `classic()`'s `vibrato.rate`,
+ * `vibrato.semitones`, `vibrato.rangeFrom`, `vibrato.rangeTo` and `vibrato.phase` slots, and [accelerate] as the flat
+ * `accelerate` slot.
  */
 data class SvdPitchMod(
     /** Pitch glide in SEMITONES from the onset to the gate close, then held (converted from octaves, 2026-08-24). */
     var accelerate: Double? = null,
     var vibrato: Double? = null,
     var vibratoMod: Double? = null,
+    var vibratoRangeFrom: Double? = null,
+    var vibratoRangeTo: Double? = null,
+    var vibratoPhase: Double? = null,
 )
 
 /**
@@ -194,6 +199,9 @@ fun mergeSvdPitchMod(base: SvdPitchMod?, over: SvdPitchMod?): SvdPitchMod? {
         accelerate = over.accelerate ?: base.accelerate,
         vibrato = over.vibrato ?: base.vibrato,
         vibratoMod = over.vibratoMod ?: base.vibratoMod,
+        vibratoRangeFrom = over.vibratoRangeFrom ?: base.vibratoRangeFrom,
+        vibratoRangeTo = over.vibratoRangeTo ?: base.vibratoRangeTo,
+        vibratoPhase = over.vibratoPhase ?: base.vibratoPhase,
     )
 }
 

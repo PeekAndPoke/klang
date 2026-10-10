@@ -472,7 +472,7 @@ detune, and sum them: `x.fm(m1, ...) + x.fm(m2, ...).detune(7)`.
 | `.detune(semitones)`                                | Shift pitch by semitones                   |
 | `.octaveUp()`                                       | +12 semitones                              |
 | `.octaveDown()`                                     | -12 semitones                              |
-| `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO; the depth may be a signal (followed sample by sample), at or below 0 no vibrato |
+| `.vibrato(rate, semitones, v => v.range(from, to).phase(x))` | Sinusoidal pitch LFO; the depth may be a signal (followed sample by sample), at or below 0 no vibrato. `range(from, to)` places the swing in the -1..1 language of `range`, scaled by the depth: default `range(-1, 1)`, both ways around the note; `range(0, 1)` only upward (a guitar's vibrato), `range(-1, 0)` only downward; raw, no clamp. `phase(x)` is where the wobble starts, a fraction of one cycle: 0 the middle of the swing rising (the note only for the default range), 0.25 the top, 0.5 the middle falling, 0.75 the bottom. A guitar's vibrato from the note: `v => v.range(0, 1).phase(0.75)` (`range(-1, 0)` with `phase(0.25)`) |
 | `.accelerate(semitones)`                            | Exponential pitch glide from the onset to the gate close, held through the release (12 = one octave) |
 | `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); the `adsr`'s own lambda shapes it with `curves` |
 | `.pitchModSemitones(mod)`                           | Pitch by any signal or number, in SEMITONES: `2^(mod / 12)` (12 = an octave up, 0 = the note) |
@@ -628,7 +628,7 @@ readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, 
 same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.bits`, `Ignitor.slot.coarse.factor`,
 `Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
 `Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`,
-the vibrato `Ignitor.slot.vibrato.rate|semitones` (`semitones` is the switch, unset = off), the accelerate
+the vibrato `Ignitor.slot.vibrato.rate|semitones|rangeFrom|rangeTo|phase` (`semitones` is the switch, unset = off), the accelerate
 `Ignitor.slot.accelerate` (flat, the switch, unset = off), the FM `Ignitor.slot.fm.ratio|depth|attack|decay|sustain|release`
 (`depth` is the switch, unset = off), the pitch envelope
 `Ignitor.slot.penv.semitones|attack|decay|sustain|release` (`semitones` is the switch, unset = off)

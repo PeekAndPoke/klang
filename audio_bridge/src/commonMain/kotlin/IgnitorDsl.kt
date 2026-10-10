@@ -91,6 +91,9 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_FROM
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_TO
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_PHASE
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 
@@ -2222,16 +2225,34 @@ sealed interface IgnitorDsl {
      *
      * @param rate LFO frequency in Hz (default 5.0), read once per block
      * @param semitones modulation depth in SEMITONES (default 0.25 ≈ quarter-semitone wobble).
-     *   Sprudel's `vib(rate, semitones)` fills `classic()`'s vibrato stage, this node, through the `vibrato.*` slots.
+     *   Sprudel's `vib(rate, semitones, rangeFrom, rangeTo, phase)` fills `classic()`'s vibrato stage, this node,
+     *   through the `vibrato.*` slots.
+     * @param rangeFrom with [rangeTo], where the LFO's swing sits, in the -1..1 language of the Ignitor `range` (pitch
+     *   pipeline 7c): the LFO's -1 maps to [rangeFrom], its +1 to [rangeTo], and the result is scaled by [semitones],
+     *   so the ratio is `2^((range(sin, from, to) * max(semitones, 0)) / 12)`. The default `(-1, 1)` swings both ways,
+     *   the vibrato as it always was (a literal `(-1, 1)` builds no range, so it renders those bits exactly); `(0, 1)`
+     *   swings only upward from the note (a guitar's vibrato), `(-1, 0)` only downward, `(1, -1)` inverts the LFO.
+     *   Raw: no clamp, and the depth floor still applies. Signals, read per sample. The script door's builder knob is
+     *   `range(from, to)`.
+     * @param rangeTo see [rangeFrom].
+     * @param phase the LFO's phase as a fraction of one cycle, the oscillators' `phase` knob (7c, decision D9): 0 (the
+     *   default) starts the sine at `sin(0)`, rising, which is the MIDDLE of the swing (the note only for a range centred
+     *   on 0: `range(0, 1)` starts a quarter of the depth sharp and is on the note at 0.75, `range(-1, 0)` at 0.25), 0.25
+     *   at its peak, 0.5 falling through the middle; wrapped (1.25 is 0.25), a non-finite value reads as 0. A constant
+     *   is the start phase; a moving signal is phase modulation of the LFO.
      */
     @WireName("vibrato")
     data class Vibrato(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(VIBRATO_RATE_HZ),
         val semitones: IgnitorDsl = Constant(VIBRATO_SEMITONES),
+        val rangeFrom: IgnitorDsl = Constant(VIBRATO_RANGE_FROM),
+        val rangeTo: IgnitorDsl = Constant(VIBRATO_RANGE_TO),
+        val phase: IgnitorDsl = Constant(VIBRATO_PHASE),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); semitones.collectParams(out)
+            rangeFrom.collectParams(out); rangeTo.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -3177,11 +3198,46 @@ fun IgnitorDsl.shimmer(
 
 // Pitch modulation
 
-/** Applies vibrato (pitch modulation) at the given LFO [rate], [semitones] deep. */
-fun IgnitorDsl.vibrato(rate: Double, semitones: Double) = IgnitorDsl.Vibrato(
-    inner = this,
+/**
+ * Applies vibrato (pitch modulation) at the given LFO [rate] in Hz, [semitones] deep, its swing placed by [rangeFrom] and
+ * [rangeTo] (default `(-1, 1)`, both ways; `(0, 1)` only upward) and its LFO starting at [phase] (a fraction of one
+ * cycle, default 0). See [IgnitorDsl.Vibrato].
+ *
+ * FLAT, where the script door is `vibrato(rate, semitones, configure)` with `range(from, to)` and `phase` on a builder:
+ * the tremolo's recorded two-door asymmetry (`audio_bridge` cannot see the script builders; the flat door is a superset
+ * of the builder). Every knob also takes a signal through the [IgnitorDsl] overload.
+ */
+fun IgnitorDsl.vibrato(
+    rate: Double,
+    semitones: Double,
+    rangeFrom: Double = VIBRATO_RANGE_FROM,
+    rangeTo: Double = VIBRATO_RANGE_TO,
+    phase: Double = VIBRATO_PHASE,
+) = vibrato(
     rate = IgnitorDsl.Constant(rate),
     semitones = IgnitorDsl.Constant(semitones),
+    rangeFrom = IgnitorDsl.Constant(rangeFrom),
+    rangeTo = IgnitorDsl.Constant(rangeTo),
+    phase = IgnitorDsl.Constant(phase),
+)
+
+/**
+ * [vibrato] with signals: any knob may be a number ([IgnitorDsl.Constant]), a slot or a moving signal, as on the script
+ * door (`x.vibrato(5.0, Ignitor.sine(0.5) ...)` swells the depth). A signal depth is read per sample.
+ */
+fun IgnitorDsl.vibrato(
+    rate: IgnitorDsl,
+    semitones: IgnitorDsl,
+    rangeFrom: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_RANGE_FROM),
+    rangeTo: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_RANGE_TO),
+    phase: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_PHASE),
+) = IgnitorDsl.Vibrato(
+    inner = this,
+    rate = rate,
+    semitones = semitones,
+    rangeFrom = rangeFrom,
+    rangeTo = rangeTo,
+    phase = phase,
 )
 
 /** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */

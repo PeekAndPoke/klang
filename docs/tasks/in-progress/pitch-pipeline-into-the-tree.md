@@ -1558,6 +1558,132 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   round 1, A8): the Kotlin door `IgnitorDsl.vibrato(rate: Double, semitones: Double)` has no `IgnitorDsl` overload, so
   the signal depth the script door's KDoc advertises is script-only on the doors ("two doors, one DSL"); 7c touches
   this door anyway.
+
+  **What was done (2026-10-10, uncommitted, for review), with D9 (the phase and the sprudel twins).** The shapes, each
+  by its precedent, so nothing was stopped for a decision: the script door `vibrato(rate, semitones, configure)` with
+  `range(from, to)` and `phase(x)` on a new `VibratoBuilder` (secondary knobs on the builder; `phase` is the
+  oscillators' builder knob, one word per concept); the flat Kotlin door `vibrato(rate, semitones, rangeFrom = -1,
+  rangeTo = 1, phase = 0)` (the tremolo's recorded flat-door asymmetry, `rangeFrom` / `rangeTo` its words) and its
+  `IgnitorDsl` overload with the same five knobs (A8); the node's three appended fields `rangeFrom`, `rangeTo`, `phase`
+  (constants `VIBRATO_RANGE_FROM` -1, `VIBRATO_RANGE_TO` 1, `VIBRATO_PHASE` 0 in `PitchModDefaults.kt`, the one home
+  for the node, the Kotlin door and the slots); the slots `vibrato.rangeFrom`, `vibrato.rangeTo`, `vibrato.phase` (the
+  slot rule: the param part is the engine door's word, and for a two-value builder knob the only single-param words
+  are the flat door's and the node's); sprudel's `vibrato` / `vib(rate, semitones, rangeFrom, rangeTo, phase)` with
+  the readers of the same names (a flat door's two-value knob as two parameters, the words of the flat Kotlin door).
+  **The compound-door rule:** neither closed list (both are bus doors). The range and the phase are like the rate:
+  not companions and not switches; a call that writes only them writes its own slots and never invents the depth, and
+  an unset one reads its slot default, so the door fills nothing (the `vib` sentence in `/dsl-design` section 4, the
+  one home, says so now). **"Small" held:** sprudel took three `SvdPitchMod` fields, their merge and accessors, the
+  door's three parameters and three readers, three slot keys.
+  - **The runtime** (`IgnitorDslRuntime.kt`, `PitchModFactories.kt`): `vibratoModIgnitor(rate, semitones, rangeFrom,
+    rangeTo, phase)` lays the shielded sine onto `range(from, to)` before `* max(semitones, 0)` and hands `phase` to
+    the sine's own `phase` input; with neither range bound given it builds no range. The arm reads the knobs at build,
+    leaf-only (`buildTimeKnobValue`): `hasBuiltRange` is false when both bounds are literals (`Constant` or `Param`,
+    `classic()`'s slots included) reading `(-1, 1)` after a non-finite literal took its default, and `vibratoPhase` is
+    null for a literal 0 or a non-finite literal. So the default, written or unwritten, through a `Constant` or a slot,
+    renders 7b's bits; a built `range(-1, 1)` (`-1 + (x + 1) * 1`) would not. When built, a non-finite literal bound
+    reads its default (`finiteLiteralOr`, the vibrato's rule for its rate and depth). The bounds are read per sample
+    outside the LFO's shield, like the depth; the phase inside it, with the rate. Build order: rate, semitones, from,
+    to, phase. No clamp. The edge rules joined the one home, the `vibrato` row of `audio/ref/off-values.md`, items 7
+    to 11.
+  - **Wire.** `WIRE_SCHEMA_HASH` `-2146573257` to `-1124275580` (three fields). Codec row with a signal bound and a
+    phase in `IgnitorDslWireCodecSpec`, JS green.
+  - **Corpus** (`CORPUS_LABEL=pp-7c` against `corpus-pp-7b.txt`, no song file modified): 18 of 18 identical.
+    **Engagement controls** (restored, `cmp` clean): the range built at the default (`hasBuiltRange` always true)
+    moves five of the seven vibrato songs (Kokon, Die Kirschblüte, Remix: Echo um Echo, The Synthsale Piper's Last
+    Rave, The Synthsale Piper's Farewell); the two others (Seltsamere Dinge and the frozen Stranger Things, whose
+    vibrato layer sits under a 2-bit crush) keep their raw bits at that rounding; a second mutant, the default built as
+    `range(-1, 0.999)`, moves exactly the seven, the eleven others identical.
+  - **Specs.** `VibratoRangePhaseSpec` (new, 20 rows; `VibratoCompositionSpec`'s probe seam, the oracle
+    `2^((from + (sin(2 pi (rate n / sr + phase)) + 1) / 2 * (to - from)) * semitones / 12)` with the library's `sin`
+    and `pow`, 1e-9 relative, 9,216 frames, past one whole cycle): the default and the bare node are bit for bit the
+    unranged composition written as plain DSL (`pitchModSemitones(sine * semitones)`); a built `range(-1, 1)` behind a
+    non-leaf follows the law and leaves those bits; `range(0, 1)`, `(-1, 0)`, `(1, -1)` inverted and `(0, 2)` follow
+    the law and span `2^(from d / 12) .. 2^(to d / 12)`; `(0, 1)` never below the note, `(-1, 0)` never above; a
+    signal `from` (2 Hz, half deep) per sample; the phase at 0, 0.25, 0.5, 0.75 on the law; the first frames (0 on the
+    note rising, 0.25 the top, 0.5 the note falling, 0.75 the bottom); the wrap (1.25 is 0.25, -0.25 is 0.75); range
+    and phase together; the slots unwritten, written at the defaults (the unranged bits), written (the law), only
+    `rangeFrom` written (`rangeTo` the slot's 1); the hostile rows below. `KlangScriptVibratoDoorParitySpec` (new, 7
+    rows): every form (positional, named, the builder from Kotlin, both flat overloads) builds the node written out;
+    range, phase, both in either order, signals for every knob, the slots (an own tail is `classic()`'s vibrato node),
+    a configure lambda returning nothing (checklist 13). Rows added to `ClassicSlotParamsSpec` (the door writes what it
+    names and never the switch; a later call overwrites, an earlier value stays; non-finite strings dropped),
+    `ClassicDoorRenderParitySpec` (three engagement rows), `LangPitchParamNamesSpec` (one word on the sprudel door, the
+    slot and the node, positional and named, the readers), `LangDoorFormsSpec`, `LangFieldAccessorsSpec`,
+    `SprudelVoiceDataSpec` (a merge oracle for the pitch mod group), `WorkletWireCodecRoundTripSpec`; the walk,
+    vocabulary and slot-list rows of `IgnitorDslWalkSpec`, `ClassicTailSpec`, `KlangScriptClassicDoorParitySpec`.
+  - **Hostile values** (checklist (b); HEAD had no such knobs, so every row is what the tree does, all finite). A
+    non-finite LITERAL `from`, `to` or `phase`, from either door (they build the same node): the default, nothing
+    built, the unranged bits (a non-finite `from` beside `to = 0.5` is `range(-1, 0.5)`). A non-finite SIGNAL bound:
+    NaN `from` or `to` and +-Infinity `from` read 1.0 on every frame (no vibrato), `to` +Infinity reads `SAFE_MAX` on
+    every frame (a saw at an absurd pitch, finite, the class of 7b's +Infinity depth), `to` -Infinity reads 0 (the
+    source holds still). A non-finite phase signal (block-constant or per sample) reads as 0: the unranged bits. The
+    slots fed raw (NaN, +-Infinity past sprudel's boundary): the slot defaults, nothing built. Sprudel's door: `vib(5,
+    0.3, "NaN" | "Infinity" | "-Infinity", ...)` drops the values at its boundary, nothing travels.
+  - **Cost** (checklist (c); JVM, one voice through `VoiceFactory`, an authored `Saw(analog = 0)`, medians of 9
+    interleaved rounds; scratch spec removed). Render ns per 128-frame block, bytes per block, build ns and bytes per
+    voice: bare saw 210 / 0 / 233 / 1,552; vibrato default 1,221 / 0 / 380 / 3,496; `range(0, 1)` 1,199 / 24 / 437 /
+    3,752; phase 0.25 1,202 / 0 / 396 / 3,584; a signal `from` (a 1 Hz sine) 1,630 / 0 / 666 / 4,808; the classic saw
+    with the vibrato slots 1,703 / 0 / 1,232 / 6,656, with range and phase written 1,697 / 24 / 1,332 / 7,000. So the
+    default is free at render (no node, the same graph; at build see review round 1, B2), a constant range or phase
+    costs nothing measurable per block and about
+    16 to 60 ns and 90 to 260 bytes per voice to build. The 24 bytes per block of a constant range on the JVM are
+    possibly `RangeIgnitor`'s constant-bound read boxing a `Double` (`controlRateValueOrNull`), possibly a third site of
+    `docs/tasks/engine-follow-ups.md` item 12 (not profiled; review round 1, B2).
+  - **Mutation checks** (one lock call each: backed up, mutated, run, restored with `cp`, `cmp` clean): the range
+    always built red on five rows (the default, the slots, the non-finite slot, literal and phase rows); never built
+    red on eleven; the bounds swapped in the factory red on ten; the default test without its finite substitution red
+    on the non-finite literal row; a non-finite literal bound built raw red on the same row; the phase not handed to
+    the sine red on seven; the phase negated red on six (0 and 0.5 stay green, as they must); a guard `min(1e3)` on
+    the upper bound red on the hostile signal row; the builder's `range` swapping `from` and `to` red on four parity
+    rows; the builder's `phase` writing `rangeFrom` red on four; the flat Double door dropping the phase red on two;
+    the `IgnitorDsl` overload ignoring `rangeFrom` red on three; the script door ignoring `configure` red on six;
+    `Ignitor.slot.vibrato.phase` the `rangeTo` slot red on two; `classic()` handing `rangeTo` the `rangeFrom` slot red
+    in `ClassicTailSpec`, `LangPitchParamNamesSpec`, `KlangScriptClassicDoorParitySpec` and the parity slots row;
+    `childNodes` without `phase` red on four walk rows; the `rangeTo` slot defaulting to 0 red in `ClassicTailSpec`
+    and two slot rows; sprudel writing `rangeFrom` under the `rangeTo` key red on two; the door's `rangeTo` writing
+    `rangeFrom` red on eight; a phase-only call reinterpreting the rate red on the tail-only row; the merge taking the
+    base's phase red on the merge oracle; the reader `vibrato.phase` reading `rangeTo` red on two; `classic()` placing
+    a literal phase red on the `vibrato.phase` engagement row; the runtime ignoring a `rangeTo` slot red on its
+    engagement row. **Two equivalent mutants**, kept as they are: building the phase input at a literal 0, or at a
+    non-finite literal, renders the same bits (`PhaseOffset` moves the accumulator by a delta of 0, and reads a
+    non-finite offset as 0), so the null there is a cost saving no row can see.
+  - **Suites.** `audio_bridge` jvmTest 148 and jsTest 269; `audio_be` jvmTest 2,591 and jsBrowserTest 2,487 (7b's
+    2,571 and 2,467 plus the 20 rows); `sprudel` jvmTest 3,505 (486 skipped); `klangscript-libs` jvmTest 847 and
+    jsTest 624; `DslDocExamplesSpec` green (two new playable examples, all named arguments: a script call does not
+    mix positional and named); `compileTestKotlinJs` of `audio_bridge`, `audio_be`, `sprudel`, `klangscript-libs` and
+    the root green. Docs: the KDocs, `door-shapes.md` (the row and the tremolo asymmetry's pointer), the `vib` sentence
+    of `/dsl-design` section 4, `audio/ref/voice-synthesis.md` (the table row, a paragraph, the slot list),
+    `off-values.md` (items 7 to 11 of the vibrato row), `data-model.md`, the non-finite task section 2,
+    `engine-follow-ups.md` item 12, `ignitor-reference.md`, `sprudel-reference.md`, `audio/MEMORY.md` and
+    `sprudel/MEMORY.md` (in place, one History line each). No outside idea (the guitar's upward vibrato is the
+    maintainer's), nothing to credit. Not touched: `GraphCensus` still counts the vibrato as one pitch node, as after
+    7b.
+  - **Review round 1, applied** (`tmp/reviews/pp7c-r1-A.md`, 2 MINOR, 4 NIT; `pp7c-r1-B.md`, 2 MINOR; 0 MAJOR).
+    B1: the law stays (7b's bits, the oscillator phase knob's meaning); the texts said phase 0 starts "at the note",
+    which holds only for a range centred on 0: phase 0 is the middle of the swing, rising, so `range(0, 1)` starts a
+    quarter of the depth sharp (+25 cents at 0.5 semitones) and is on the note at 0.75 (`range(-1, 0)` at 0.25). Fixed
+    in the sprudel KDoc (prose, `@param`s, the guitar example now `phase = 0.75`), `EffectBuilders.kt` (both knobs,
+    the example `v.range(0, 1).phase(0.75)`), the script door's KDoc, the node and constant KDocs, `door-shapes.md`,
+    `ignitor-reference.md`, `sprudel-reference.md` and `voice-synthesis.md`; a new row in `VibratoRangePhaseSpec`
+    ("under range(0, 1) phase 0 starts mid-swing ... phase 0.75 on the note, rising"), red under the phase not handed
+    to the sine and under the bounds swapped; the default-range first-frames row's title now says "(the default
+    range)". B2: reviewer B's V8 rows and build numbers are in `voice-synthesis.md` (free at render, V8 1.011 / 0.982
+    authored and 1.004 / 1.005 classic against controls 1.002 / 0.990 and 1.003 / 1.024; at build about 0.2 to 0.6 KB
+    more per vibrato voice, V8 +414 B authored and +568 to +629 B classic, JVM +240 B and +164 B, +19 % JVM build time
+    for an authored vibrato and +4.9 % classic, the reason the one-place leaf rule: `buildTimeKnobValue` builds each
+    leaf to read it, three more per voice; a constant range V8 1.022 / 1.026, phase 0.998 / 1.014); the 24 B per block
+    are "possibly a third site" in item 12 (B saw HEAD's plain vibrato at 72 B and the ranged one at 0). A1: a
+    `vibrato(rangeTo = 4)` tail-only `Case` in `LangFieldAccessorsSpec`, red under A's mutant (the guard without
+    `rangeTo != null`). A2: the six forwarding calls in `lang_tonal_pitchmod.kt` name their arguments. A3: the three
+    new one-line `if`s are braced; the file's older ones (114 such lines across `sprudel/.../lang/`) are left for a
+    sweep, out of scope. A4: the sprudel `@param`s say raw, the LFO's -1 / +1 rather than "low / high point" (the
+    readers too), the `voice-synthesis.md` row label and composition text match the law, the cost paragraph is
+    rewritten with the measured numbers. A5: one line in the vibrato row of `off-values.md` on why `hasBuiltRange`
+    (per note, `Param` leaves) differs from the tremolo's structural `hasClassicRange`, with the consequence; the
+    tremolo is unchanged. A6: item 28 of `engine-follow-ups.md`, the vibrato's `GraphCensus` arm. Suites: `audio_bridge`
+    jvmTest 148, `audio_be` jvmTest 2,592, `klangscript-libs` jvmTest 847, `sprudel` jvmTest 3,505, `DslDocExamplesSpec`
+    green, `compileTestKotlinJs` of `audio_bridge`, `audio_be`, `sprudel`, `klangscript-libs` and the root green.
 - **7d. Pitch envelope composed** (S to M, after a spike): `constant(amount)` shaped by the envelope law into the
   primitive. The chain `adsr` is the AMPLITUDE host (the level floors at 0), the pitch law is raw; the product
   `amount * level` and the `/ 12` match today's bits, so the spike checks whether a negative sustain is the only
@@ -1585,7 +1711,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   What it breaks is `AccelerateSemitoneLawSpec`: the row "the frames before the gate keep the law's bits" (bit for bit
   against the `pow`-seed law) and the half-glide row at 1e-12 (`fastExp2(7 * 0.5 / 12)` is 5.7e-11 off `2^(7/24)`).
   So 7e moves those rows to their own bound (inaudible, about 8e-8 cents) or keeps an exact `pow`.
-- **The start phase**: no `phase` knob on the vibrato for now (D9).
+- **The start phase**: the vibrato's `phase` knob landed with 7c (D9, decided 2026-10-09).
 
 ### 8. Decisions for the maintainer
 

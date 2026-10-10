@@ -50,7 +50,8 @@ classic stage never bends a musical oscillator in a parameter position, such as 
 FM is the Ignitor `fm` node over a sine modulator at `analog` 0, filled by the `fm.*` slots (sprudel's `fm`); the
 pitch envelope is the Ignitor `pitchEnvelope` node, filled by the `penv.*` and `penvCurves.*` slots (sprudel's `penv`,
 `penvCurves`); accelerate is the Ignitor `accelerate` node, filled by the flat `accelerate` slot; the vibrato is the
-Ignitor `vibrato` node, filled by `vibrato.rate` and `vibrato.semitones` (sprudel's `vib`).
+Ignitor `vibrato` node, filled by `vibrato.rate`, `vibrato.semitones`, `vibrato.rangeFrom`, `vibrato.rangeTo` and
+`vibrato.phase` (sprudel's `vib`).
 
 Every knob is a slot (`<door>.<param>`) that the pattern fills through `VoiceData.ignitorParams`, and a stage
 whose slot is at its off value is not built. Every built-in sound is `source.pregain().classic()`, every
@@ -137,7 +138,7 @@ Two laws, two words (decision D8, maintainer 2026-10-09):
 | Node                     | Law, per sample                     | Unit                                     | Notes                                                                                     |
 |--------------------------|-------------------------------------|------------------------------------------|-------------------------------------------------------------------------------------------|
 | `pitchModSemitones(mod)` | `2^(mod / 12)`                      | semitones: 12 an octave up, 0 the note   | the exponential law as a primitive, any signal (pitch pipeline 7a); gated off at a literal 0 or non-finite mod |
-| `vibrato(rate, semitones)` | `2^((sin * max(semitones, 0)) / 12)` | semitones                             | composed since 7b: `pitchModSemitones(sine(rate, analog = 0) * max(semitones, 0))`, the depth per sample; gated off at a finite leaf depth `<= 0`; edges: `off-values.md` |
+| `vibrato(rate, semitones, v => v.range(from, to).phase(p))` | `2^((range(sin, from, to) * max(semitones, 0)) / 12)` | semitones | composed since 7b, `pitchModSemitones(range(sine(rate, analog = 0, phase), from, to) * max(semitones, 0))` since 7c: the depth per sample; the range (default -1, 1: none built) and the LFO's `phase` (cycles, default 0, none built: the middle of the swing) since 7c; gated off at a finite leaf depth `<= 0`; edges: `off-values.md` |
 | `accelerate(semitones)`  | `2^(semitones * progress / 12)`     | semitones                                | progress 0 at the onset, 1 at the gate, then held                                          |
 | `pitchEnvelope(semitones)` | `2^(semitones * level / 12)`      | semitones                                | the envelope law's level                                                                   |
 | `pitchMod(mod)`          | `1 + mod`                           | a deviation: 1.0 an octave up, -1.0 stops | the LINEAR law, FM's                                                                      |
@@ -172,6 +173,26 @@ constant), a constant depth is the old law to one rounding of the exponent (`(si
 at most about two ulps of the ratio), and the LFO's sine draws a drift seed from the voice's random stream (next
 section). The rate is read once per block, as before. The edge rules (the floor, non-finite literals and samples, the
 dead branch): the `vibrato` row of `audio/ref/off-values.md`, their one home. Guard: `VibratoCompositionSpec`.
+
+**The vibrato's range and phase** (pitch pipeline 7c; the range asked for 2026-10-06, the guitar's upward vibrato; the
+phase and sprudel's twin decision D9): the LFO is laid onto `from..to` (`range`, its -1 to `from`, its +1 to `to`)
+before the depth scales it, and the composed sine's own `phase` input (the oscillators' knob, a fraction of one cycle,
+wrapped) sets where it starts. `range(0, 1)` swings only upward from the note, `range(-1, 0)` only downward, `range(1,
+-1)` inverts. Phase 0 is the sine's `sin(0)`, rising, which the range maps to the MIDDLE of the swing: on the note for
+the default `(-1, 1)`, a quarter of the depth sharp for `range(0, 1)` (+25 cents at 0.5 semitones); an upward-only
+vibrato starts on the note at phase 0.75, a downward-only one at 0.25, and 0.25 is always the top. The default builds
+NEITHER: the arm reads the two range knobs and the phase at build, leaf-only, and builds no range at literals `(-1, 1)`
+and no phase input at a literal 0 (a built `range(-1, 1)` is `-1 + (x + 1) * 1`, not the identity in floating point),
+so every vibrato that does not write them, `classic()`'s slots included, renders 7b's bits. **Cost** (one voice through
+`VoiceFactory`; 7c review round 1, reviewer B, HEAD against the tree with a HEAD control): the default is free at
+render (V8 1.011 / 0.982 pinned / unpinned for an authored vibrato, controls 1.002 / 0.990; the classic saw with the
+slots 1.004 / 1.005), but not at build: about 0.2 to 0.6 KB more per vibrato voice (V8 +414 B authored, +568 to +629 B
+classic; JVM +240 B and +164 B) and +19 % build time on the JVM for an authored vibrato (+4.9 % classic; V8 inside its
+noise). The reason is the one-place leaf rule: the default test asks `buildTimeKnobValue`, which builds each leaf to
+read it, three more per voice, kept so the unset and non-finite rules have one home. A constant range or phase costs no
+measurable render time (V8 `range(0, 1)` 1.022 / 1.026 against HEAD's plain vibrato, phase 0.998 / 1.014; JVM within
+noise); a constant range folds to one multiply-add per sample, a constant phase moves the accumulator once per block; a
+signal bound renders its own oscillator. Guard: `VibratoRangePhaseSpec`; door parity `KlangScriptVibratoDoorParitySpec`.
 
 ## FM: a pitch node means what it wraps
 

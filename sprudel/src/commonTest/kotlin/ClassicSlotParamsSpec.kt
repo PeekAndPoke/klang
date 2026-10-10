@@ -116,6 +116,28 @@ class ClassicSlotParamsSpec : StringSpec({
         slots(note("c").vibrato(semitones = 0.2)) shouldBe mapOf("vibrato.semitones" to 0.2)
     }
 
+    "the vibrato's range and phase travel when set, and never invent the switch (pitch pipeline 7c)" {
+        // Not compound-filled: an unset range or phase reads its slot default (-1, 1, 0) in the engine, so the door
+        // writes only what the call named, and a range- or phase-only call switches nothing on (`/dsl-design` section 4).
+        slots(note("c").vib(5, 0.3, 0, 1, 0.25)) shouldBe mapOf(
+            "vibrato.rate" to 5.0, "vibrato.semitones" to 0.3, "vibrato.rangeFrom" to 0.0, "vibrato.rangeTo" to 1.0, "vibrato.phase" to 0.25,
+        )
+        slots(note("c").vib(rangeFrom = 0)) shouldBe mapOf("vibrato.rangeFrom" to 0.0)
+        slots(note("c").vib(rangeTo = 0.5)) shouldBe mapOf("vibrato.rangeTo" to 0.5)
+        slots(note("c").vibrato(phase = 0.75)) shouldBe mapOf("vibrato.phase" to 0.75)
+        slots(note("c").vib(5, 0.3).vib(rangeFrom = 0)) shouldBe mapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3, "vibrato.rangeFrom" to 0.0)
+        // A later call that names the knob overwrites it; an earlier one is kept when the later call does not name it.
+        slots(note("c").vib(5, 0.3, 0, 1).vib(rangeFrom = -0.5)) shouldBe mapOf(
+            "vibrato.rate" to 5.0, "vibrato.semitones" to 0.3, "vibrato.rangeFrom" to -0.5, "vibrato.rangeTo" to 1.0,
+        )
+    }
+
+    "a non-finite range or phase is dropped at sprudel's boundary: nothing travels" {
+        for (v in listOf("NaN", "Infinity", "-Infinity")) {
+            slots(note("c").vib(5, 0.3, v, v, v)) shouldBe mapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3)
+        }
+    }
+
     "accelerate alone is a voice door under its flat slot, and a non-finite one is dropped" {
         // Pitch pipeline step 3: `accelerate` left the typed wire field for `classic()`'s flat `accelerate` slot. It
         // shares the `pitchMod` group with the vibrato, so an event whose only door is accelerate takes the writer

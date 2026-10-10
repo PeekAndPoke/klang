@@ -307,6 +307,17 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- pitch modulation -----------------------------------------------------------------------------------
     "Vibrato" { check(IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.02)) }
+    "Vibrato with a range and a phase (7c), a signal bound" {
+        check(
+            IgnitorDsl.Sine().vibrato(
+                rate = IgnitorDsl.Constant(5.0),
+                semitones = IgnitorDsl.Constant(0.5),
+                rangeFrom = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(1.0)).mul(0.5),
+                rangeTo = IgnitorDsl.Constant(1.0),
+                phase = IgnitorDsl.Constant(0.25),
+            )
+        )
+    }
     "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0)) }
     "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0))) }
     "PitchEnvelope (every ADSR field and curve non-default)" {

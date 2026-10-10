@@ -69,8 +69,9 @@ A tree without it plays as it is, and the door slots in the bag go unread.
 
 ### Pitch Modulation
 
-The vibrato (sprudel's `vib(rate, semitones)`) has no wire field since pitch pipeline step 2: it travels as
-`classic()`'s `vibrato.rate` and `vibrato.semitones` (the switch, 0 or unset is off) slots and fills the Ignitor
+The vibrato (sprudel's `vib(rate, semitones, rangeFrom, rangeTo, phase)`) has no wire field since pitch pipeline step
+2: it travels as `classic()`'s `vibrato.rate`, `vibrato.semitones` (the switch, 0 or unset is off), `vibrato.rangeFrom`,
+`vibrato.rangeTo` and `vibrato.phase` (7c; unset -1, 1 and 0, which build no range and no phase input) slots and fills the Ignitor
 `vibrato` stage `classic()` places outside the accelerate.
 
 `accelerate` (sprudel's `accelerate(semitones)`) has no wire field since pitch pipeline step 3: it travels as

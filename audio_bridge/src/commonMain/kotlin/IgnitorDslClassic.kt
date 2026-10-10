@@ -21,6 +21,9 @@ import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_PHASE
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
@@ -204,8 +207,10 @@ class ModEnvelopeCurvesSlots internal constructor(door: String) {
 }
 
 /**
- * The slots of the vibrato stage (`Slots.vibrato`), mirroring sprudel's `vibrato(rate, semitones)` (alias `vib`) and
- * its readers `vibrato.rate`, `vibrato.semitones` (pitch pipeline step 2; the names are decision D4).
+ * The slots of the vibrato stage (`Slots.vibrato`), mirroring sprudel's `vibrato(rate, semitones, rangeFrom, rangeTo,
+ * phase)` (alias `vib`) and its readers `vibrato.rate`, `vibrato.semitones`, `vibrato.rangeFrom`, `vibrato.rangeTo`,
+ * `vibrato.phase` (pitch pipeline step 2, the range and the phase since 7c, decision D9; the names are decision D4, the
+ * param part the Ignitor door's word).
  *
  * @property rate the LFO rate in Hz; mirrors `vibrato.rate`. Default `VIBRATO_RATE_HZ`, what the strip read for an
  *   unwritten rate.
@@ -214,10 +219,22 @@ class ModEnvelopeCurvesSlots internal constructor(door: String) {
  *   default to that safe literal, never to `SLOT_UNSET`:** the vibrato's gate keeps a NON-FINITE depth built (the
  *   runtime reads it as the node's default, `VIBRATO_SEMITONES`), so an unset default would give every voice of every
  *   song a vibrato (the shape of `mul`'s "must default to a safe literal", pitch pipeline step 0).
+ * @property rangeFrom with [rangeTo], where the LFO's swing sits (the node's `rangeFrom`); mirrors `vibrato.rangeFrom`.
+ *   Default `VIBRATO_RANGE_FROM` (-1). At the defaults `(-1, 1)` the runtime builds no range (it reads the two leaves at
+ *   build), so an unwritten range renders the unranged vibrato's bits.
+ * @property rangeTo see [rangeFrom]; mirrors `vibrato.rangeTo`. Default `VIBRATO_RANGE_TO` (1).
+ * @property phase the LFO's phase in cycles (the node's `phase`); mirrors `vibrato.phase`. Default `VIBRATO_PHASE`
+ *   (0), at which the runtime builds no phase input.
+ *
+ * The range and the phase are not switches: a call that writes only them (`vib(rangeFrom = 0)`) switches nothing on,
+ * like a rate alone (`/dsl-design` section 4).
  */
 class VibratoSlots internal constructor() {
     val rate: IgnitorDsl = slot(door = "vibrato", param = "rate", default = VIBRATO_RATE_HZ)
     val semitones: IgnitorDsl = slot(door = "vibrato", param = "semitones", default = 0.0)
+    val rangeFrom: IgnitorDsl = slot(door = "vibrato", param = "rangeFrom", default = VIBRATO_RANGE_FROM)
+    val rangeTo: IgnitorDsl = slot(door = "vibrato", param = "rangeTo", default = VIBRATO_RANGE_TO)
+    val phase: IgnitorDsl = slot(door = "vibrato", param = "phase", default = VIBRATO_PHASE)
 }
 
 /**
@@ -412,7 +429,14 @@ fun IgnitorDsl.classic(): IgnitorDsl {
     val accelerated = IgnitorDsl.Accelerate(inner = pitchEnveloped, semitones = s.accelerate)
     // The vibrato OUTSIDE, its final place: the outer mod is combined first, so the product groups as the strip's
     // `(V * A) * P` (pitch pipeline steps 2 and 3).
-    val vibratoed = IgnitorDsl.Vibrato(inner = accelerated, rate = s.vibrato.rate, semitones = s.vibrato.semitones)
+    val vibratoed = IgnitorDsl.Vibrato(
+        inner = accelerated,
+        rate = s.vibrato.rate,
+        semitones = s.vibrato.semitones,
+        rangeFrom = s.vibrato.rangeFrom,
+        rangeTo = s.vibrato.rangeTo,
+        phase = s.vibrato.phase,
+    )
     val onepoled = IgnitorDsl.OnePoleLowpass(inner = vibratoed, freq = s.onepole)
     val crushed = IgnitorDsl.Crush(inner = onepoled, bits = s.crush.bits)
     val coarsened = IgnitorDsl.Coarse(inner = crushed, factor = s.coarse.factor)

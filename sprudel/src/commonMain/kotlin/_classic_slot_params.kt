@@ -49,8 +49,8 @@ internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
  *    values the wire used to carry); its envelope (depth, the four stages and the three curves) only
  *    when one of the five envelope knobs is set: exactly the `FilterDef` the wire used to carry;
  *  - the pitch envelope writes every field that is set; its switch `penv.semitones` only when set (a stage-only
- *    call switches nothing on); the vibrato the same, its switch `vibrato.semitones`; `accelerate` under its flat
- *    slot when set; the FM the same, its switch `fm.depth`;
+ *    call switches nothing on); the vibrato the same (its range and phase included), its switch
+ *    `vibrato.semitones`; `accelerate` under its flat slot when set; the FM the same, its switch `fm.depth`;
  *  - shapes and curves travel as their catalogue INDEX (`DistortionShapes`, `LfoShapes`, `AdsrCurves`), a
  *    flag as 1.0 or 0.0.
  *
@@ -84,12 +84,16 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
         bag.putCurve(k.penvCurveRelease, e.pReleaseCurve)
     }
 
-    // The vibrato (pitch pipeline step 2): the rate and the depth when set. `vibrato.semitones` is the switch, so a
-    // rate-only call (`vib(4)`) leaves the depth at its slot default 0.0 and builds no vibrato, as on the strip.
+    // The vibrato (pitch pipeline step 2; the range and the phase since 7c): every field that is set.
+    // `vibrato.semitones` is the switch, so a call without it (`vib(4)`, `vib(rangeFrom = 0)`) leaves the depth at its
+    // slot default 0.0 and builds no vibrato, as on the strip. An unset range or phase reads its slot default.
     // The group's `accelerate` (step 3) is its own stage's switch, under the flat slot `accelerate`.
     pitchMod?.let { m ->
         bag.put(k.vibratoRate, m.vibrato)
         bag.put(k.vibratoSemitones, m.vibratoMod)
+        bag.put(k.vibratoRangeFrom, m.vibratoRangeFrom)
+        bag.put(k.vibratoRangeTo, m.vibratoRangeTo)
+        bag.put(k.vibratoPhase, m.vibratoPhase)
         bag.put(k.accelerate, m.accelerate)
     }
 
@@ -182,6 +186,9 @@ private object ClassicSlotKeys {
 
     val vibratoRate = name(s.vibrato.rate)
     val vibratoSemitones = name(s.vibrato.semitones)
+    val vibratoRangeFrom = name(s.vibrato.rangeFrom)
+    val vibratoRangeTo = name(s.vibrato.rangeTo)
+    val vibratoPhase = name(s.vibrato.phase)
     val accelerate = name(s.accelerate)
 
     val fmDepth = name(s.fm.depth)

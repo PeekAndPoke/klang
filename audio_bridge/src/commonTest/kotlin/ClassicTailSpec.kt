@@ -130,9 +130,13 @@ class ClassicTailSpec : StringSpec({
             "penvCurves.release" to modExp,
             // Accelerate (pitch pipeline step 3): the switch, 0.0, off.
             "accelerate" to 0.0,
-            // The vibrato (pitch pipeline step 2): the rate at the strip's default, the depth (the switch) at 0.0, off.
+            // The vibrato (pitch pipeline step 2): the rate at the strip's default, the depth (the switch) at 0.0, off;
+            // the range at (-1, 1) and the phase at 0 (7c), where the runtime builds neither.
             "vibrato.rate" to 5.0,
             "vibrato.semitones" to 0.0,
+            "vibrato.rangeFrom" to -1.0,
+            "vibrato.rangeTo" to 1.0,
+            "vibrato.phase" to 0.0,
             "onepole" to 0.0,
             "crush.bits" to 0.0,
             "coarse.factor" to 0.0,

@@ -12,9 +12,11 @@ package io.peekandpoke.klang.audio_bridge.constants
 // default (FM: the chain `adsr`'s `finiteOr` rule in `PitchModFactories.kt`;
 // the composed vibrato: a non-finite LITERAL knob, `finiteLiteralOr` in
 // `IgnitorDslRuntime.kt`, since pitch pipeline 7b), the
-// `vibrato.rate` slot of `classic()`'s vibrato stage (`VibratoSlots`, which
-// sprudel's `vib` fills; `vib` without a rate), and the `fm.ratio` slot of its
-// FM stage (`FmSlots`, which sprudel's `fm` fills; `fm` without a ratio).
+// `vibrato.rate`, `vibrato.rangeFrom`, `vibrato.rangeTo` and `vibrato.phase`
+// slots of `classic()`'s vibrato stage (`VibratoSlots`, which sprudel's `vib`
+// fills; `vib` without them), the Kotlin `vibrato` door's defaults, and the
+// `fm.ratio` slot of its FM stage (`FmSlots`, which sprudel's `fm` fills; `fm`
+// without a ratio).
 //
 // The switch knobs have no entry: the pitch envelope's and accelerate's
 // `semitones` and FM's `depth` default to 0, which is "off", and a non-finite
@@ -28,6 +30,29 @@ const val VIBRATO_RATE_HZ: Double = 5.0
 
 /** Vibrato depth in semitones, a quarter-semitone wobble. */
 const val VIBRATO_SEMITONES: Double = 0.25
+
+/**
+ * Where the vibrato's LFO swing sits by default, in the -1..1 language of the Ignitor `range` (`IgnitorDsl.Vibrato`'s
+ * `rangeFrom` / `rangeTo`, the script builder's `range(from, to)`, the `vibrato.rangeFrom` / `vibrato.rangeTo` slots of
+ * `classic()`, sprudel's `vib(rangeFrom = ..., rangeTo = ...)`): the LFO's -1 maps to `from`, its +1 to `to`, and the
+ * result is scaled by the depth in semitones. `(-1, 1)` is the vibrato as it always was, swinging both ways; the engine
+ * builds NO range at a literal `(-1, 1)` (a built one is not the identity in floating point), so the default renders
+ * the bits of the unranged vibrato. `(0, 1)` swings only upward (the guitar's vibrato, maintainer 2026-10-05). Pitch
+ * pipeline 7c.
+ */
+const val VIBRATO_RANGE_FROM: Double = -1.0
+
+/** See [VIBRATO_RANGE_FROM]. */
+const val VIBRATO_RANGE_TO: Double = 1.0
+
+/**
+ * The vibrato LFO's phase, as a fraction of one cycle (the oscillators' `phase` knob, wrapped into `[0, 1)`): 0 starts
+ * the sine at `sin(0)`, rising, where the vibrato always started, the middle of the swing (the note only for a range
+ * centred on 0); 0.25 starts at its peak, 0.5 falling through the middle, 0.75 at its bottom. The
+ * engine builds no phase input at a literal 0, so the default renders the bits of the vibrato without the knob. Pitch
+ * pipeline 7c (decision D9).
+ */
+const val VIBRATO_PHASE: Double = 0.0
 
 /** FM modulator frequency as a ratio of the fm frequency: 1 drives the modulator at the note. */
 const val FM_RATIO: Double = 1.0

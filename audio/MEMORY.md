@@ -131,7 +131,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `1 + mod`, FM's law, raw. The `vibrato` node is composed from it since 7b (the tremolo's pattern):
   `pitchModSemitones(sine(rate, analog = 0) * max(semitones, 0))`, the depth per sample; not bit-identical (one
   rounding, and the sine's drift-seed draw shifts the voice's later dice); `audio/ref/voice-synthesis.md`, its edge
-  rules in the `vibrato` row of `audio/ref/off-values.md`. `pitchModSemitones` is gated at a literal 0 or non-finite mod, `pitchMod` is not
+  rules in the `vibrato` row of `audio/ref/off-values.md`. Since 7c the LFO takes `range(from, to)` before the depth
+  and the sine's own `phase`; literals at the defaults `(-1, 1)` and 0 build neither (`classic()`'s slots included),
+  so the default keeps 7b's bits. `pitchModSemitones` is gated at a literal 0 or non-finite mod, `pitchMod` is not
   (`audio/ref/off-values.md`); nesting multiplies, the outer ratio the left factor. The table:
   `audio/ref/voice-synthesis.md`, "The pitch nodes and their two laws".
 - **Oscillator phase** (`PhaseOffset`, `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): every periodic oscillator has a `phase`
@@ -299,6 +301,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 Pitch pipeline 7c: the vibrato's `range(from, to)` and `phase` (node fields, both doors, `classic()`
+  slots `vibrato.rangeFrom|rangeTo|phase`); the default builds neither, corpus 18 of 18 identical:
+  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7c
 - 2026-10-10 Pitch pipeline 7b: the `vibrato` node's runtime is a composition, `VibratoModIgnitor` gone; seven corpus
   songs move, by the sine's rng draw (all seven), one rounding (five) and the per-sample depth (Die Kirschblüte):
   `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` section 7b

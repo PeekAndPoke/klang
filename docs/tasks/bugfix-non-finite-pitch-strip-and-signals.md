@@ -38,7 +38,9 @@ depth stays green under the first mutant: the fm gate reads it as off too.
   modulator does, and +Infinity into `SAFE_MAX`; pinned by `PitchModSemitonesSpec`. A literal (leaf) non-finite mod
   never reaches it: the build gate reads it as off, the bare voice (review round 1).
 - The composed vibrato (pitch pipeline 7b) reaches that path with a +Infinity depth sample (unguarded, finite, kept
-  with this section by review round 1); its edge rules: the `vibrato` row of `audio/ref/off-values.md`.
+  with this section by review round 1); its edge rules: the `vibrato` row of `audio/ref/off-values.md`. Since 7c a
+  non-finite SIGNAL range bound reaches it too (a NaN bound or an infinite `from` reads as 1.0, a `to` of +Infinity
+  as `SAFE_MAX`, of -Infinity as 0; the same row).
 
 These are signals, not amount knobs, and a per-sample guard is a hot-path cost decision (the `DelayLine` precedent: a
 per-sample `isFinite` cost about +30 %). Decide whether any needs one, and measure it first.

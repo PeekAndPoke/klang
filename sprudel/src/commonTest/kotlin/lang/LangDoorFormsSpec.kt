@@ -275,6 +275,9 @@ class LangDoorFormsSpec : StringSpec({
         k("vibrato.rate", "vibrato(%s)", { it.vibrato }, { p, c -> p.vibrato(c) }, { s, c -> s.vibrato(c) }, { c -> vibrato(c) }, { m, c -> m.vibrato(c) }, head = true),
         k("vib", "vib(%s)", { it.vibrato }, { p, c -> p.vib(c) }, { s, c -> s.vib(c) }, { c -> vib(c) }, { m, c -> m.vib(c) }, head = true),
         k("vibrato.semitones", "vibrato(semitones = %s)", { it.vibratoMod }, { p, c -> p.vibrato(semitones = c) }, { s, c -> s.vibrato(semitones = c) }, { c -> vibrato(semitones = c) }, { m, c -> m.vibrato(semitones = c) }),
+        k("vibrato.rangeFrom", "vibrato(rangeFrom = %s)", { it.vibratoRangeFrom }, { p, c -> p.vibrato(rangeFrom = c) }, { s, c -> s.vibrato(rangeFrom = c) }, { c -> vibrato(rangeFrom = c) }, { m, c -> m.vibrato(rangeFrom = c) }),
+        k("vibrato.rangeTo", "vibrato(rangeTo = %s)", { it.vibratoRangeTo }, { p, c -> p.vibrato(rangeTo = c) }, { s, c -> s.vibrato(rangeTo = c) }, { c -> vibrato(rangeTo = c) }, { m, c -> m.vibrato(rangeTo = c) }),
+        k("vibrato.phase", "vibrato(phase = %s)", { it.vibratoPhase }, { p, c -> p.vibrato(phase = c) }, { s, c -> s.vibrato(phase = c) }, { c -> vibrato(phase = c) }, { m, c -> m.vibrato(phase = c) }),
         k("penv.semitones", "penv(%s)", { it.pEnv }, { p, c -> p.penv(c) }, { s, c -> s.penv(c) }, { c -> penv(c) }, { m, c -> m.penv(c) }, head = true),
         k("penv.attack", "penv(attack = %s)", { it.pAttack }, { p, c -> p.penv(attack = c) }, { s, c -> s.penv(attack = c) }, { c -> penv(attack = c) }, { m, c -> m.penv(attack = c) }),
         k("penv.decay", "penv(decay = %s)", { it.pDecay }, { p, c -> p.penv(decay = c) }, { s, c -> s.penv(decay = c) }, { c -> penv(decay = c) }, { m, c -> m.penv(decay = c) }),
@@ -523,12 +526,12 @@ class LangDoorFormsSpec : StringSpec({
                 { it.fm(200, 2, 0.01, 0.3, 0.5, 0.2) }, { it.fm(200, 2, 0.01, 0.3, 0.5, 0.2) }, { fm(200, 2, 0.01, 0.3, 0.5, 0.2) }, { it.fm(200, 2, 0.01, 0.3, 0.5, 0.2) },
             ),
             Door(
-                "vibrato", """5, 0.5""", { listOf(it.vibrato, it.vibratoMod) }, listOf(5.0, 0.5),
-                { it.vibrato(5, 0.5) }, { it.vibrato(5, 0.5) }, { vibrato(5, 0.5) }, { it.vibrato(5, 0.5) },
+                "vibrato", """5, 0.5, 0, 1, 0.25""", { listOf(it.vibrato, it.vibratoMod, it.vibratoRangeFrom, it.vibratoRangeTo, it.vibratoPhase) }, listOf(5.0, 0.5, 0.0, 1.0, 0.25),
+                { it.vibrato(5, 0.5, 0, 1, 0.25) }, { it.vibrato(5, 0.5, 0, 1, 0.25) }, { vibrato(5, 0.5, 0, 1, 0.25) }, { it.vibrato(5, 0.5, 0, 1, 0.25) },
             ),
             Door(
-                "vib", """5, 0.5""", { listOf(it.vibrato, it.vibratoMod) }, listOf(5.0, 0.5),
-                { it.vib(5, 0.5) }, { it.vib(5, 0.5) }, { vib(5, 0.5) }, { it.vib(5, 0.5) },
+                "vib", """5, 0.5, 0, 1, 0.25""", { listOf(it.vibrato, it.vibratoMod, it.vibratoRangeFrom, it.vibratoRangeTo, it.vibratoPhase) }, listOf(5.0, 0.5, 0.0, 1.0, 0.25),
+                { it.vib(5, 0.5, 0, 1, 0.25) }, { it.vib(5, 0.5, 0, 1, 0.25) }, { vib(5, 0.5, 0, 1, 0.25) }, { it.vib(5, 0.5, 0, 1, 0.25) },
             ),
             Door(
                 "penv", """12, 0.01, 0.2, 0.25, 0.3""", { listOf(it.pEnv, it.pAttack, it.pDecay, it.pSustain, it.pRelease) }, listOf(12.0, 0.01, 0.2, 0.25, 0.3),

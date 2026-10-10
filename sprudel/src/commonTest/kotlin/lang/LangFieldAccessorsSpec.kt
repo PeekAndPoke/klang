@@ -145,6 +145,9 @@ class LangFieldAccessorsSpec : StringSpec({
         row("legato", """s("bd sd").legato(0.8).legato(mul(2))""", { it.legato }, 1.6, s("bd sd").legato(0.8).legato(mul(2))),
         row("vibrato.rate", """s("bd sd").vibrato(5).vibrato(mul(2))""", { it.vibrato }, 10.0, s("bd sd").vibrato(5).vibrato(mul(2))),
         row("vibratoMod", """s("bd sd").vibrato(semitones = 0.3).vibrato(semitones = mul(2))""", { it.vibratoMod }, 0.6, s("bd sd").vibrato(semitones = 0.3).vibrato(semitones = mul(2))),
+        row("vibrato.rangeFrom", """s("bd sd").vibrato(rangeFrom = 0.3).vibrato(rangeFrom = mul(2))""", { it.vibratoRangeFrom }, 0.6, s("bd sd").vibrato(rangeFrom = 0.3).vibrato(rangeFrom = mul(2))),
+        row("vibrato.rangeTo", """s("bd sd").vibrato(rangeTo = 0.3).vibrato(rangeTo = mul(2))""", { it.vibratoRangeTo }, 0.6, s("bd sd").vibrato(rangeTo = 0.3).vibrato(rangeTo = mul(2))),
+        row("vibrato.phase", """s("bd sd").vibrato(phase = 0.3).vibrato(phase = mul(2))""", { it.vibratoPhase }, 0.6, s("bd sd").vibrato(phase = 0.3).vibrato(phase = mul(2))),
         row("pattack", """s("bd sd").penv(attack = 0.1).penv(attack = mul(2))""", { it.pAttack }, 0.2, s("bd sd").penv(attack = 0.1).penv(attack = mul(2))),
         row("pdecay", """s("bd sd").penv(decay = 0.2).penv(decay = mul(2))""", { it.pDecay }, 0.4, s("bd sd").penv(decay = 0.2).penv(decay = mul(2))),
         row("prelease", """s("bd sd").penv(release = 0.3).penv(release = mul(2))""", { it.pRelease }, 0.6, s("bd sd").penv(release = 0.3).penv(release = mul(2))),
@@ -194,6 +197,9 @@ class LangFieldAccessorsSpec : StringSpec({
         row("legato", """s("bd sd").legato(0.8).pan(legato)""", { it.pan }, 0.8, s("bd sd").legato(0.8).pan(legato)),
         row("vibrato.rate", """s("bd sd").vibrato(5).pan(vibrato.rate)""", { it.pan }, 5.0, s("bd sd").vibrato(5).pan(vibrato.rate)),
         row("vibratoMod", """s("bd sd").vibrato(semitones = 0.3).pan(vibrato.semitones)""", { it.pan }, 0.3, s("bd sd").vibrato(semitones = 0.3).pan(vibrato.semitones)),
+        row("vibrato.rangeFrom", """s("bd sd").vibrato(rangeFrom = 0.3).pan(vibrato.rangeFrom)""", { it.pan }, 0.3, s("bd sd").vibrato(rangeFrom = 0.3).pan(vibrato.rangeFrom)),
+        row("vibrato.rangeTo", """s("bd sd").vibrato(rangeTo = 0.3).pan(vibrato.rangeTo)""", { it.pan }, 0.3, s("bd sd").vibrato(rangeTo = 0.3).pan(vibrato.rangeTo)),
+        row("vibrato.phase", """s("bd sd").vibrato(phase = 0.3).pan(vibrato.phase)""", { it.pan }, 0.3, s("bd sd").vibrato(phase = 0.3).pan(vibrato.phase)),
         row("pattack", """s("bd sd").penv(attack = 0.1).pan(penv.attack)""", { it.pan }, 0.1, s("bd sd").penv(attack = 0.1).pan(penv.attack)),
         row("pdecay", """s("bd sd").penv(decay = 0.2).pan(penv.decay)""", { it.pan }, 0.2, s("bd sd").penv(decay = 0.2).pan(penv.decay)),
         row("prelease", """s("bd sd").penv(release = 0.3).pan(penv.release)""", { it.pan }, 0.3, s("bd sd").penv(release = 0.3).pan(penv.release)),
@@ -767,6 +773,9 @@ class LangFieldAccessorsSpec : StringSpec({
         add("duck", s("bd sd").duck(attack = "0.1 0.5"), """s("bd sd").duck(attack = "0.1 0.5")""") { it.katalystParams?.get("duck.attack") }
         add("vibrato", s("bd sd").vibrato(rate = "0.1 0.5"), """s("bd sd").vibrato(rate = "0.1 0.5")""") { it.vibrato }
         add("vibrato", s("bd sd").vibrato(semitones = "0.1 0.5"), """s("bd sd").vibrato(semitones = "0.1 0.5")""") { it.vibratoMod }
+        add("vibrato", s("bd sd").vibrato(rangeFrom = "0.1 0.5"), """s("bd sd").vibrato(rangeFrom = "0.1 0.5")""") { it.vibratoRangeFrom }
+        add("vibrato", s("bd sd").vibrato(rangeTo = "0.1 0.5"), """s("bd sd").vibrato(rangeTo = "0.1 0.5")""") { it.vibratoRangeTo }
+        add("vibrato", s("bd sd").vibrato(phase = "0.1 0.5"), """s("bd sd").vibrato(phase = "0.1 0.5")""") { it.vibratoPhase }
         add("penv", s("bd sd").penv(semitones = "0.1 0.5"), """s("bd sd").penv(semitones = "0.1 0.5")""") { it.pEnv }
         add("penv", s("bd sd").penv(attack = "0.1 0.5"), """s("bd sd").penv(attack = "0.1 0.5")""") { it.pAttack }
         add("penv", s("bd sd").penv(decay = "0.1 0.5"), """s("bd sd").penv(decay = "0.1 0.5")""") { it.pDecay }
@@ -805,6 +814,9 @@ class LangFieldAccessorsSpec : StringSpec({
             Case("unison(spread = 4)", seq("3 4").unison(spread = 4), """seq("3 4").unison(spread = 4)""", { it.ignitorParams?.get("voices") }, { it.ignitorParams?.get("spread") }),
             Case("duck(depth = 4)", seq("3 4").duck(depth = 4), """seq("3 4").duck(depth = 4)""", { it.katalystParams?.get("duck.orbit") }, { it.katalystParams?.get("duck.depth") }),
             Case("vibrato(semitones = 4)", seq("3 4").vibrato(semitones = 4), """seq("3 4").vibrato(semitones = 4)""", { it.vibrato }, { it.vibratoMod }),
+            Case("vibrato(rangeFrom = 4)", seq("3 4").vibrato(rangeFrom = 4), """seq("3 4").vibrato(rangeFrom = 4)""", { it.vibrato }, { it.vibratoRangeFrom }),
+            Case("vibrato(rangeTo = 4)", seq("3 4").vibrato(rangeTo = 4), """seq("3 4").vibrato(rangeTo = 4)""", { it.vibrato }, { it.vibratoRangeTo }),
+            Case("vibrato(phase = 4)", seq("3 4").vibrato(phase = 4), """seq("3 4").vibrato(phase = 4)""", { it.vibrato }, { it.vibratoPhase }),
             Case("penv(attack = 4)", seq("3 4").penv(attack = 4), """seq("3 4").penv(attack = 4)""", { it.pEnv }, { it.pAttack }),
             Case("fm(ratio = 4)", seq("3 4").fm(ratio = 4), """seq("3 4").fm(ratio = 4)""", { it.fmEnv }, { it.fmh }),
             Case("fm(release = 4)", seq("3 4").fm(release = 4), """seq("3 4").fm(release = 4)""", { it.fmEnv }, { it.fmRelease }),

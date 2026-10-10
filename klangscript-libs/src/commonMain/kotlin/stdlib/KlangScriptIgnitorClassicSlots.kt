@@ -34,6 +34,18 @@ object KlangScriptIgnitorVibratoSlots {
     /** The depth in semitones, default 0 (off: no vibrato). Mirrors sprudel's `vibrato.semitones`. */
     @KlangScript.Property
     val semitones: IgnitorDsl = IgnitorDsl.Slots.vibrato.semitones
+
+    /** Where the LFO's low point lands, default -1 (both ways with `rangeTo` 1). Mirrors sprudel's `vibrato.rangeFrom`. */
+    @KlangScript.Property
+    val rangeFrom: IgnitorDsl = IgnitorDsl.Slots.vibrato.rangeFrom
+
+    /** Where the LFO's high point lands, default 1. Mirrors sprudel's `vibrato.rangeTo`. */
+    @KlangScript.Property
+    val rangeTo: IgnitorDsl = IgnitorDsl.Slots.vibrato.rangeTo
+
+    /** The LFO's phase as a fraction of one cycle, default 0. Mirrors sprudel's `vibrato.phase`. */
+    @KlangScript.Property
+    val phase: IgnitorDsl = IgnitorDsl.Slots.vibrato.phase
 }
 
 /** `Ignitor.slot.fm`: the FM stage's slots. */

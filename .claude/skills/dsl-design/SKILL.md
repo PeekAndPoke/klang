@@ -203,8 +203,10 @@ the bug.
   until pitch pipeline step 1, 2026-10-09) is a voice-side door on
   neither closed list: `semitones` is its switch and a tail-only call never invents it; its unset stages read
   the shared `PitchEnvelopeDefaults` (the `penv.*` slot defaults of `classic()`'s pitch envelope stage). Sprudel's
-  `vib(rate, semitones)` has the same shape (pitch pipeline step 2): `semitones` is its switch, and a rate-only call
-  (`vib(4)`) writes `vibrato.rate` and never invents the depth. Sprudel's `fm(depth, ratio, attack, decay, sustain,
+  `vib(rate, semitones, rangeFrom, rangeTo, phase)` has the same shape (pitch pipeline step 2, the range and the
+  phase since 7c): `semitones` is its switch, and a rate-only call (`vib(4)`) or a range- or phase-only call
+  (`vib(rangeFrom = 0)`) writes its own slots and never invents the depth; an unset rate, range or phase reads its
+  `vibrato.*` slot default (`PitchModDefaults.kt`), so nothing is filled at the door. Sprudel's `fm(depth, ratio, attack, decay, sustain,
   release)` too (pitch pipeline step 4): `depth` is its switch, and `fm(ratio = 2)` or `fm(release = 0.3)` writes its
   own slot and never invents the depth. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
   `lpfCurves`, ...) are setters only: a curve never switches its envelope on, and a bare call changes

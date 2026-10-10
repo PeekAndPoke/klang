@@ -41,6 +41,7 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
         "fm.ratio" to s.fm.ratio, "fm.depth" to s.fm.depth, "fm.attack" to s.fm.attack, "fm.decay" to s.fm.decay,
         "fm.sustain" to s.fm.sustain, "fm.release" to s.fm.release,
         "vibrato.rate" to s.vibrato.rate, "vibrato.semitones" to s.vibrato.semitones,
+        "vibrato.rangeFrom" to s.vibrato.rangeFrom, "vibrato.rangeTo" to s.vibrato.rangeTo, "vibrato.phase" to s.vibrato.phase,
         "accelerate" to s.accelerate,
         "penv.semitones" to s.penv.semitones, "penv.attack" to s.penv.attack, "penv.decay" to s.penv.decay,
         "penv.sustain" to s.penv.sustain, "penv.release" to s.penv.release,

@@ -159,6 +159,31 @@ class SprudelVoiceDataSpec : StringSpec({
         kept.fmRelease shouldBe a.fmRelease
     }
 
+    "merge() completeness has an INDEPENDENT oracle for the pitch mod group (incl. the vibrato's range and phase)" {
+        // As the fm row: mergeFrom and merge share mergeSvdPitchMod, so only the inputs can see a field the helper drops,
+        // swaps or takes from the wrong side. The range and the phase are new with pitch pipeline 7c.
+        val a = populatedVoiceData(0)
+        val b = populatedVoiceData(1000)
+        val merged = a.merge(b)
+
+        merged.vibrato shouldBe b.vibrato
+        merged.vibratoMod shouldBe b.vibratoMod
+        merged.vibratoRangeFrom shouldBe b.vibratoRangeFrom
+        merged.vibratoRangeTo shouldBe b.vibratoRangeTo
+        merged.vibratoPhase shouldBe b.vibratoPhase
+        merged.accelerate shouldBe b.accelerate
+
+        // and the base side survives an over side whose group holds only a depth (the `?: base` half)
+        val kept = a.merge(createSprudelVoiceData { vibratoMod = 5.0 })
+
+        kept.vibratoMod shouldBe 5.0
+        kept.vibrato shouldBe a.vibrato
+        kept.vibratoRangeFrom shouldBe a.vibratoRangeFrom
+        kept.vibratoRangeTo shouldBe a.vibratoRangeTo
+        kept.vibratoPhase shouldBe a.vibratoPhase
+        kept.accelerate shouldBe a.accelerate
+    }
+
     "merge() completeness has an INDEPENDENT oracle for the pitch envelope group (sustain and the curves)" {
         // As the phaser row: mergeFrom and merge share mergeSvdPitchEnv, so only the inputs can see a field
         // the helper drops, swaps or takes from the wrong side.
@@ -503,6 +528,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         releaseCurve = AdsrCurve.entries[(seed + 11) % 6]
             adsrOn = false
         accelerate = b + 12; vibrato = b + 13; vibratoMod = b + 14
+        vibratoRangeFrom = b + 14.2; vibratoRangeTo = b + 14.4; vibratoPhase = b + 14.6
         pAttack = b + 15; pDecay = b + 16; pRelease = b + 17; pEnv = b + 18; pSustain = b + 19
         // Picked from the seed, so the two sides of a merge row differ in every curve (seed 0: Linear, Square,
         // Cube; seed 1000: InvSquare, Exponential, Linear) and a dropped or swapped curve merge shows.
