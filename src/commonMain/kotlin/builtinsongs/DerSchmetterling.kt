@@ -423,25 +423,27 @@ let metalSnare = (() => {
   // (a dense cluster, not a tone, kept above 140 Hz and out of the mud band), and the shell around 800 Hz
   let head  = Ign.sine().pitchEnvelope(7, x => x.adsr(0.0003, 0.015, 0, 0)).adsr(0.0005, 0.15, 0.0, 0.03).mul(3.0)
   let deep  = Ign.sine(Ign.freq().mul(0.75)).adsr(0.0005, 0.080, 0.0, 0.02).mul(2.5)
-  // The thud: 13 inharmonic sines from 138 to 712 Hz, a little over two semitones apart, weighted to the spectrum of the
-  // pink noise band it replaces (2026-09-30). The noise band was about 230 Hz wide and 50 ms long, so every hit rolled
-  // new dice: 6 dB of hit-to-hit loudness, 7.5 dB of peak. The cluster is the same on every hit. The flipped signs are the
-  // start phases: all positive, the sines rise together and the hit spikes 20 dB over its level; this pattern, the
-  // calmest of all 8192, leaves 12 dB, less than the noise had.
-  let thud  = Ign.sine(Ign.freq().mul(0.6571)).mul(0.520)
-    .plus(Ign.sine(Ign.freq().mul(0.7571)).mul(0.676))
-    .plus(Ign.sine(Ign.freq().mul(0.8714)).mul(-0.652))
-    .plus(Ign.sine(Ign.freq().mul(0.9476)).mul(0.826))
-    .plus(Ign.sine(Ign.freq().mul(1.0857)).mul(0.938))
-    .plus(Ign.sine(Ign.freq().mul(1.2524)).mul(-1.000))
-    .plus(Ign.sine(Ign.freq().mul(1.4333)).mul(0.839))
-    .plus(Ign.sine(Ign.freq().mul(1.6524)).mul(0.746))
-    .plus(Ign.sine(Ign.freq().mul(1.8952)).mul(-0.692))
-    .plus(Ign.sine(Ign.freq().mul(2.1952)).mul(-0.591))
-    .plus(Ign.sine(Ign.freq().mul(2.5333)).mul(0.494))
-    .plus(Ign.sine(Ign.freq().mul(2.9381)).mul(0.474))
-    .plus(Ign.sine(Ign.freq().mul(3.3905)).mul(-0.358))
-    .adsr(0.0005, 0.050, 0.0, 0.02).mul(1.245)
+  // The thud: 13 inharmonic partials from 138 to 712 Hz, a little over two semitones apart, weighted to the spectrum of
+  // the pink noise band it replaces (2026-09-30). The noise band was about 230 Hz wide and 50 ms long, so every hit rolled
+  // new dice: 6 dB of hit-to-hit loudness, 7.5 dB of peak. The cluster is the same on every hit. The phases of 0.5 are the
+  // flipped start phases: all at 0, the partials rise together and the hit spikes 20 dB over its level; this pattern, the
+  // calmest of all 8192, leaves 12 dB, less than the noise had. One sine with 13 partials since 2026-10-10: the same
+  // sound as 13 sines, about a quarter of the memory per hit.
+  let thud  = Ign.sine(x => x.fundamental(0)
+      .partial(0.6571, 0.520)
+      .partial(0.7571, 0.676)
+      .partial(0.8714, 0.652, 0.5)
+      .partial(0.9476, 0.826)
+      .partial(1.0857, 0.938)
+      .partial(1.2524, 1.000, 0.5)
+      .partial(1.4333, 0.839)
+      .partial(1.6524, 0.746)
+      .partial(1.8952, 0.692, 0.5)
+      .partial(2.1952, 0.591, 0.5)
+      .partial(2.5333, 0.494)
+      .partial(2.9381, 0.474)
+      .partial(3.3905, 0.358, 0.5)
+    ).adsr(0.0005, 0.050, 0.0, 0.02).mul(1.245)
   let shell = Ign.whitenoise().bandpass(800, 0.7).adsr(0.0005, 0.050, 0.0, 0.02).mul(2.0)
   let m2    = Ign.sine(Ign.freq().mul(1.59)).adsr(0.0005, 0.035, 0.0, 0.02).mul(0.8)
   let m3    = Ign.sine(Ign.freq().mul(2.14)).adsr(0.0005, 0.020, 0.0, 0.02).mul(0.8)
