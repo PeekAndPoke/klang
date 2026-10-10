@@ -79,6 +79,23 @@ reads one pitch per FM (the author rule, `x.fm(...) + x.fm(...).detune(...)`, do
 this would need a look); (c) the build-time diagnostic task (`fm-above-forking-detune-diagnostic.md`) also covers a
 sprudel door over a built-in. Recommendation: (a) for now, and decide when a song wants it.
 
+## Q32. The pitch envelope stays a node (composition 7d, D10's fallback)
+
+Your D10: compose the pitch envelope the tremolo's way, "the spike confirms the same sound and cost first". The spike
+(`tmp/reviews/pp-7d-report.md`) did not confirm the cost, so the node stays, by D10's own rule:
+
+```
+s("saw").penv(12, 0.01, 0.1, 0)        // the sound: identical when composed (with an adsr that may go below 0)
+// the cost once the envelope has settled (most of every note): today one ratio per block,
+// composed one envelope step and one exponential per sample: about 2x on V8 (+1 us per voice per block),
+// 1.7 to 2.6x on the JVM
+```
+
+A script-door penv with SIGNAL knobs would also sound different composed (a moving amount read per sample, like the
+vibrato after 7b). Options: (a) keep the node (decided by default); (b) compose it anyway and accept about 1 us per
+settled penv voice per block (0.04 % of a block per voice); (c) compose it and move the node's two "settled" shortcuts
+into the envelope host (the code moves rather than goes). Recommendation: (a). Say if you prefer (b) or (c).
+
 ---
 
 # Part 3: For later (not blocking anything now)

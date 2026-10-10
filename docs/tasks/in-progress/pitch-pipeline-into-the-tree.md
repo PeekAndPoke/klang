@@ -1688,6 +1688,24 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   primitive. The chain `adsr` is the AMPLITUDE host (the level floors at 0), the pitch law is raw; the product
   `amount * level` and the `/ 12` match today's bits, so the spike checks whether a negative sustain is the only
   difference, and whether the amplitude host's shortcuts keep `renderPitchEnvelopeRatios`' settled-block cost (D10).
+  **Spiked 2026-10-10, the node KEPT by D10's rule** (report `tmp/reviews/pp-7d-report.md`, scratch `p7d/` in the
+  coordinator's scratchpad; no production code changed). Compared: today's node, the composition on the chain `adsr`
+  as it is, and the composition on an `adsr` host with a pitch mode (no floor at 0, a non-finite sustain falling back
+  to `PITCH_ENV_SUSTAIN_LEVEL` 0.0). **Literal knobs** (every sprudel and corpus shape): with the pitch mode, 0 of
+  46,080 grid frames, 0 of 1,296 curve combinations and 0 of 240 realtime rows differ, the full-engine door matrix
+  414 of 414 rows and the corpus 18 of 18 identical; without it, exactly the negative level (floored to 1.0) and the
+  non-finite sustain (0.7 against 0.0). **Signal knobs** (script door only) differ beyond the negative sustain, and no
+  host switch removes it: a moving amount is read per sample instead of per block (16,640 of 19,840 frames, up to
+  0.145 in the ratio), a NaN or +Infinity amount sample reaches its frame, the node's per-block bypass at amount 0
+  skips reading the other knobs (E2) where the composition reads them, and the `adsr` reads sustain before release,
+  so two first-render seed draws swap. **Cost, the stop:** the amplitude host has no settled-block shortcut
+  (`AdsrIgnitor` runs `core.at` per sample, the converter `fastExp2` per sample), where the node writes one ratio for
+  a block wholly in sustain or released: the settled block costs 1.6 to 2.1 times the node on V8 (about +950 to
+  +1,000 ns per block per voice) and 1.7 to 2.6 times on the JVM; a converter that reuses its last ratio while the
+  input repeats (bit for bit the same) recovers about half. The two other routes, for the maintainer
+  (`_maintainer-questions.md` Q32): move the node's settled shortcuts into the `adsr` host's pitch mode (moves code,
+  does not remove it), or accept the cost (about 1 us per settled penv voice per block) with the signal differences
+  recorded.
 - **7f. `progress()` as a public signal, and curves on it** (maintainer, 2026-10-09; design open). The primitive under
   the composed accelerate is offered to authors, and it does NOT stop at 1: 0 at the onset, 1.0 at the gate close,
   growing on after it ("then one can build effects that only sound in the release tail"); accelerate clamps it at 1
