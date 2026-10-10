@@ -48,10 +48,66 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
 8. **`ConstantIgnitor.controlRateValueOrNull` is a heap number per read** when the call is not inlined and the
    constant is not integral: about 18 bytes per block through `blockStartValue` in the unison stacks (development,
    mixed profile). It is the interface's shape (`Double?`); the same root as item 12. Source: as 2. M.
-9. **The Shape node allocates**: about 4 KB per block at stage 0 in the development JS build (52 scavenges per
-   105,000 blocks), 835 scavenges per 105,000 blocks at stage 4, before and after step 11 alike. It needs its own
-   probe on the production bundle before anything changes. Source: the record, "Found during tidy-up step 11"
-   (`tmp/reviews/tidy11-r1-B.md`, "Outside this change"). M.
+9. **DONE (2026-10-10): the Shape node allocated, and so did the fused `Distort`.** Reported as about 4 KB per block
+   at stage 0 in the development JS build (52 scavenges per 105,000 blocks), 835 scavenges at stage 4 (16x). Source:
+   the record, "Found during tidy-up step 11" (`tmp/reviews/tidy11-r1-B.md`, "Outside this change").
+   **Measured on the production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22, one voice
+   through `VoiceFactory`, a saw at 220 Hz, drive 0.5): one heap number per shaped sample whose value is not a small
+   integer, at every oversampling factor, in the shared `DistortionCore`, so the fused `Distort` node (`classic()`'s
+   stage) paid the same. The probe's knob is the oversample FACTOR (`distort(amount, shape, factor)`, as the songs
+   write it): `soft` 1.56 KB per block at factor 0 (its clamped samples, `±1`, travel as Smis), `tube` 2.06 KB;
+   factor 4 (4x, stage 2) 6.2 and 8.2 KB; factor 16 (16x, stage 4, the item's "stage 4") 24.8 and 32.8 KB (reviewer B,
+   `tube` at factors 0, 1, 2, 3, 4, 8, 16: 2,068 / 2,066 / 4,162 / 4,151 / 8,241 / 16,436 / 32,828 B, 128 x 16 B
+   times the oversampling). **Cause** (located with the sampling heap profiler, proven on hand-edited bundles): the
+   per-sample exhaustive `when` of `applyDistortionShape`; Kotlin/JS leaves its result unassigned in the `default`
+   arm, so V8 carries it tagged around the loop (the rule is in `audio/ref/performance.md`). **Fix**:
+   `DistortionCore` dispatches once per block to one loop per shape (`shapeRun`, `shapeRunRamped`, an inline loop
+   helper per form; worked example 1's shape), the KDoc at the site the guard. The cheaper statement form (an
+   initialized `var` assigned in a statement `when`) removes the boxes too, but the hoisted loops are 12 to 25 percent
+   faster again (both reviewers measured it), so the shaper keeps the hoist for its speed. Bit for bit: raw doubles of
+   the probe, HEAD against the tree, every shape on both nodes at factors 0, 1 and 4 (stages 0 and 2; 96 of 96 on V8,
+   10 of 10 on the JVM) and at stages 1, 3 and 4 (reviewer B, 96 of 96 on V8), so every stage 0 to 4; the corpus 18
+   of 18 (`tmp/naming/corpus-e9.txt` against `corpus-partials-r1.txt`). A new row in
+   `OversamplerDecimatorParitySpec` pins the ramped table against the constant one (mutation-checked); the existing
+   rows pin the constant table. Render bytes and ns per block, medians of 3, HEAD / tree / HEAD again:
+
+   | case | V8 unpinned | V8 pinned (`taskset -c 11`) |
+   |---|---|---|
+   | saw (control) | 14 / 17 / 17 B, 837 / 829 / 789 ns | 24 / 24 / 14 B, 992 / 1,005 / 935 ns |
+   | saw + `drive` (control) | 31 / 34 / 38 B, 1,012 / 982 / 1,043 ns | 37 / 31 / 31 B, 1,612 / 1,608 / 1,196 ns |
+   | `distort(0.5, "soft", 0)` | 1,564 / 35 / 1,564 B, 2,386 / 1,809 / 2,522 ns | 1,550 / 31 / 1,557 B, 3,142 / 2,433 / 3,307 ns |
+   | `distort(0.5, "soft", 4)`, 4x | 6,244 / 73 / 6,254 B, 7,447 / 4,971 / 8,360 ns | 6,241 / 76 / 6,254 B, 11,882 / 5,360 / 7,994 ns |
+   | `distort(0.5, "tube", 0)` | 2,065 / 35 / 2,065 B, 3,031 / 1,760 / 2,796 ns | 2,055 / 41 / 2,072 B, 2,827 / 1,949 / 3,306 ns |
+   | `distort(0.5, "tube", 4)`, 4x | 8,247 / 72 / 8,251 B, 7,960 / 4,607 / 7,452 ns | 8,241 / 72 / 8,251 B, 11,581 / 5,103 / 10,821 ns |
+   | `distort(0.5, "asym", 4)`, 4x | 2,131 / 76 / 2,124 B, 6,694 / 4,861 / 6,387 ns | 2,142 / 65 / 2,124 B, 7,304 / 5,769 / 7,266 ns |
+   | fused `Distort` soft, 0 | 1,577 / 45 / 1,580 B, 2,067 / 1,781 / 2,390 ns | 1,584 / 48 / 1,584 B, 2,253 / 1,848 / 2,253 ns |
+   | fused `Distort` soft, 4x | 6,268 / 86 / 6,268 B, 7,980 / 4,695 / 8,417 ns | 6,261 / 79 / 6,258 B, 10,774 / 6,193 / 7,050 ns |
+   | fused `Distort` tube, 4x | 8,261 / 86 / 8,264 B, 8,911 / 4,397 / 7,915 ns | 8,261 / 93 / 8,265 B, 7,338 / 4,740 / 9,271 ns |
+
+   At 16x (stage 4), reviewer B, HEAD / tree, medians of 3:
+
+   | case | V8 unpinned | V8 pinned |
+   |---|---|---|
+   | `distort(0.5, "tube", 16)` | 32,825 / 72 B, 19,975 / 11,545 ns | 32,830 / 93 B, 19,693 / 11,297 ns |
+   | `distort(0.5, "soft", 16)` | 24,815 / 67 B, 17,490 / 11,152 ns | 24,835 / 52 B, 17,792 / 11,049 ns |
+   | fused `Distort` tube, 16x | 32,840 / 94 B, 19,640 / 11,247 ns | 32,844 / 88 B, 19,485 / 11,089 ns |
+   | `drive` (control) | 36 / 31 B, 881 / 877 ns | 36 / 31 B, 885 / 887 ns |
+
+   The bytes are far outside the noise band in both conditions; a heap number is 16 bytes on node and 12 in Chrome
+   (pointer compression), the count the same. The pinned times at 4x are noisy (V8's compiler shares the core), the
+   unpinned ones say about 15 to 40 percent faster per node; at 16x 36 to 43 percent, pinned and unpinned agreeing.
+   What is left oversampled, about 40 bytes per block, is `ScratchBuffers.oversample`'s map lookup (item 13), the same
+   on HEAD. JVM (9 rounds, `ThreadMXBean`): 0 bytes per block on both sides; render time at factor 4 0.76 to 0.80 of
+   HEAD (`asym` 0.64), factor 0 unchanged (the HEAD-again run was 1.44 times slower across the board, the saw
+   included, so it is read relative to its saw). Report: `tmp/reviews/e9-report.md`.
+   **Review round 1, applied** (`tmp/reviews/e9-r1-A.md`, `e9-r1-B.md`): the probe's "stage 4" relabelled as factor
+   4 and the 16x rows added (B1); the statement form named beside the hoist in the rule, with its `/code-style` §19
+   exception, and speed given as the reason to keep the hoist (A1, B2); `applyDistortionShape`'s KDoc warns against
+   calling it per sample (A2); the heap number's size per engine (B3). Records and KDocs only, no code change.
+   **Review round 2** (`tmp/reviews/e9-r2.md`, clean: 0 MAJOR, 1 MINOR, 2 NIT), applied by the coordinator, texts
+   only: the statement form's rule says the compiler checks that every arm exists, not that it assigns (a spec that
+   renders every arm is the guard); the `/code-style` §19 exception covers an inline function called per sample; the
+   speed-up "about 15 to 50 percent".
 10. **Kotlin's `isFinite()` is a stdlib call on Kotlin/JS**, left out of the stages' inlining budget. An inline
     compare helped pinned and hurt unpinned, so it was dropped; worth a second look only with a measurement that holds
     in both conditions. Source: as 2. S.

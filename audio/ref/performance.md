@@ -291,6 +291,30 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   at the default semi-space one run read 0 and the next 20.7 bytes per block for the same code. Locate with the
   sampling heap profiler (`HeapProfiler.startSampling` with `includeObjectsCollectedByMinorGC`), started and stopped
   around the measured window only: the warm-up runs in the interpreter, which boxes every double.
+- **On V8, an exhaustive `when` whose result is a double boxes that result inside a sample loop** (2026-10-10,
+  engine follow-up item 9). Kotlin/JS compiles it into a `switch` whose `default` arm calls
+  `noWhenBranchMatchedException()` and leaves the result variable unassigned. The variable is a function-scoped
+  `var`, so on that path it holds the previous sample's value: V8 cannot see that the call throws, keeps the variable
+  live around the loop seeded with `undefined`, holds it tagged, and every result that is not a small integer becomes
+  a heap number (16 bytes on node, 12 in Chrome with pointer compression, the count the same; a `±1.0` clamp travels
+  as a Smi and does not). The expression form triggers it, an inlined one too (an inline `fun f(x) = when (...)`
+  called per sample), and by the same JS shape (inferred, not measured) a `val y: Double` assigned in a statement
+  `when`. Measured on the shaper (`DistortionCore`, production bundle, pinned and unpinned): one heap number per
+  shaped sample at every oversampling factor, about 2 KB per block without oversampling, 8 KB at 4x, 33 KB at 16x
+  (`tube`). Two remedies, both measured there:
+  - **The statement form** removes the boxes alone: `var y = 0.0; when (x) { A -> y = ...; B -> y = ... }; return y`.
+    The variable is initialized, so no path leaves it undefined (the `default` arm stays, harmless). Three lines,
+    and the right fix where the loop is not worth splitting. It is a stated exception to `/code-style` §19, which asks
+    for the expression form: the `when` stays exhaustive (no `else`), the compiler checks that every arm EXISTS but not
+    that it assigns `y` (the initializer hides a missing assignment, so a spec that renders every arm is the guard), and a
+    comment at the site names this rule (it also answers the redundant-initializer warning).
+  - **The hoist** takes the `when` out of the loop, one loop per arm through an inline loop helper and a lambda
+    (worked example 1's shape). It removes the boxes AND runs a smaller, switch-free loop: on the shaper 12 to 25
+    percent faster again than the statement form (both reviewers of item 9), and about 15 to 50 percent faster than HEAD.
+    The shaper keeps it for that speed; it costs a table per loop form.
+  No test can pin the boxes: the KDoc at the site is the guard. Find candidates by grepping the production bundle
+  for `noWhenBranchMatchedException` inside a `do { ... } while` loop (likely: the envelope curve sites, items 10a
+  and 10b in `docs/tasks/engine-follow-ups.md`).
 - **On V8, `x ?: field` with a nullable map value and a double field boxes the field's value** (V8 allocation pass,
   `KatalystKnob.resolve`): the merge is a tagged value, so an absent knob with a non-integral default became a heap
   number. Two branches store the same values without it: about 180 of the about 1,310 bytes a new param map cost on

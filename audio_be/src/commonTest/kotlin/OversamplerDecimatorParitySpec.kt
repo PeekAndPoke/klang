@@ -41,8 +41,9 @@ private val testRandom = Random(0x5EED)
  * audit B4.1: the shaping loop runs between `Oversampler.upsample` and `Oversampler.decimate`). Both nodes render
  * through one `DistortionCore` since step 11 (audit B2.2), the `Shape` node at drive 1.0 with its own soft cap. The
  * windows are ragged inside a 128-frame block, as a voice sees them (a note starting mid-block, an empty window),
- * and the source carries NaN samples, so the offsets, loop bounds and NaN guards are part of the pin. The last rows
- * pin stage 0, the plain path, on a hostile source (NaN, both infinities, 1e300, a denormal, -0.0).
+ * and the source carries NaN samples, so the offsets, loop bounds and NaN guards are part of the pin. The next rows
+ * pin stage 0, the plain path, on a hostile source (NaN, both infinities, 1e300, a denormal, -0.0); the last pins the
+ * core's ramped shape table against its constant one.
  */
 class OversamplerDecimatorParitySpec : StringSpec({
 
@@ -288,6 +289,52 @@ class OversamplerDecimatorParitySpec : StringSpec({
                     expected = plainOracle(shape, drive),
                     clue = "$shape at $amount",
                 )
+            }
+        }
+    }
+
+    // ── The ramped shaping table (engine follow-up item 9) ──────────────────────────────────────────
+
+    /**
+     * `DistortionCore` writes its shape table twice, once per loop form (one loop per shape, see its `shapeRun`).
+     * The rows above pin the constant-drive table against [applyDistortionShape]; this pins the ramped one against
+     * it: a ramp from a drive to the same drive steps by exactly 0, so every sample is driven by exactly that drive,
+     * and `processRamped` must render `process`'s bits, shape by shape, on the plain path and oversampled.
+     */
+    "processRamped at a constant drive renders process's bits for every shape, stages 0 to 4" {
+        val drive = DistortionCore.drive(0.5)
+
+        for (stages in 0..4) {
+            for (shape in DistortionShape.entries) {
+                val constant = DistortionCore(shape = shape, oversampleStages = stages)
+                val ramped = DistortionCore(shape = shape, oversampleStages = stages)
+                val scratch = ScratchBuffers(blockFrames)
+                val a = AudioBuffer(blockFrames)
+                val b = AudioBuffer(blockFrames)
+                val outA = DoubleArray(total)
+                val outB = DoubleArray(total)
+                var at = 0
+
+                for ((offset, length) in windows) {
+                    for (i in 0 until length) {
+                        a[offset + i] = hostile[at + i]
+                        b[offset + i] = hostile[at + i]
+                    }
+
+                    constant.process(buffer = a, offset = offset, length = length, drive = drive, scratchBuffers = scratch)
+                    ramped.processRamped(
+                        buffer = b, offset = offset, length = length, driveFrom = drive, driveTo = drive, scratchBuffers = scratch,
+                    )
+
+                    for (i in 0 until length) {
+                        outA[at + i] = a[offset + i]
+                        outB[at + i] = b[offset + i]
+                    }
+
+                    at += length
+                }
+
+                sameBits(actual = outB, expected = outA, clue = "$shape at stages $stages")
             }
         }
     }
