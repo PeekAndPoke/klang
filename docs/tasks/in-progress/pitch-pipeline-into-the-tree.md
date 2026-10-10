@@ -1729,6 +1729,19 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   What it breaks is `AccelerateSemitoneLawSpec`: the row "the frames before the gate keep the law's bits" (bit for bit
   against the `pow`-seed law) and the half-glide row at 1e-12 (`fastExp2(7 * 0.5 / 12)` is 5.7e-11 off `2^(7/24)`).
   So 7e moves those rows to their own bound (inaudible, about 8e-8 cents) or keeps an exact `pow`.
+  **Spiked 2026-10-10, stopped; the node stays until the maintainer decides** (Q33; report `tmp/reviews/pp-7e-report.md`,
+  scratch `p7e/`; no production code changed). The candidate `pitchModSemitones(semitones * progress)` with a 25-line
+  internal progress piece (0 at the onset, 1.0 from the gate frame on). **Sound:** literal amounts differ by the
+  `fastExp2` rounding only (worst 4.7e-11 relative, about 8e-8 cents; the full engine -154 to -288 dB; the zero gate
+  holds on both); the corpus moves Kokon alone (`strike`, -148.1 dB relative from 105.01 s); a signal amount is read
+  per sample instead of per block (up to 196 cents for `7 + 3 sin(40 Hz)`); and a third clause the stop rule did not
+  name: an infinite signal sample reads `SAFE_MAX` (+Infinity) or ratio 0 (-Infinity) where the node reads it as
+  unset (no glide). **Cost:** slower in both phases, the glide +625 to +715 ns per block per voice on V8 (1.22 to 1.48
+  times) and +580 to +600 on the JVM, the hold +705 to +765 on V8 (1.16 to 1.27 times); the node does one multiply per
+  frame while gliding and one constant fill in the hold, the composition three passes per frame for the voice's whole
+  life. 7d's repeat-reuse converter recovers two thirds of the hold but worsens the glide and adds about 5 percent to
+  every vibrato on V8. A block-constant hold path would need a new context-aware hook in the core `Ignitor` interface
+  for one user. The progress piece could serve 7f once Q13 is answered.
 - **The start phase**: the vibrato's `phase` knob landed with 7c (D9, decided 2026-10-09).
 
 ### 8. Decisions for the maintainer

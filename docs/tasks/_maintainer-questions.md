@@ -14,6 +14,28 @@ Branch: `pitch-pipeline` (from `main` at `662aa8db`, v0.6.0; `katalyst-distort` 
 
 ---
 
+## Q33. Accelerate: compose it as D11 says, or keep the node (composition 7e)
+
+Your D11 (2026-10-09): "if we can represent them through other primitives, they should leave, same as the tremolo
+node did", so accelerate was to become `pitchModSemitones(semitones * progress)`. The spike
+(`tmp/reviews/pp-7e-report.md`) built it and measured it against today's node:
+
+```
+note("c3").s("saw").accelerate(12).release(1)
+// sound: the same apart from a rounding of about 8e-8 cents (Kokon's strike moves at -148 dB)
+// cost:  about +0.7 us per accelerate voice per block, while gliding AND while holding the target
+//        (1.2 to 1.5x on V8, 1.4 to 2x on the JVM); today one multiply per frame, composed three passes per frame
+```
+
+Two smaller differences, only for a script-door accelerate with a SIGNAL amount: the amount is read per sample (like
+the vibrato after 7b), and an infinite sample pushes the pitch to the ceiling or freezes the source where today it
+plays no glide. Options: (a) keep the node for now, as the pitch envelope did (Q32; the work stops here until you
+say); (b) compose it and accept the cost (about 0.03 % of a block per voice) and the infinite-sample clause. The
+pitch envelope and accelerate are the same question, so one answer can cover both. Recommendation: (a), revisit if a
+cheaper "settled block" path ever exists for other reasons.
+
+---
+
 # Part 2: Decided by default, please confirm
 
 Work went ahead with the conservative choice. A "no" here means a small follow-up change.
