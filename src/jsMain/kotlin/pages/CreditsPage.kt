@@ -178,6 +178,9 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         - **[AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet)** — high-performance audio processing on a dedicated thread
                         - **[Canvas API](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)** — rendering oscilloscopes, waveforms, and visualizations
                         - **[Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API)** — parallel processing without blocking the UI
+                        - **[The structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)**
+                        (the HTML standard behind `postMessage`): it copies an object graph with its shared references intact,
+                        which is how a sound used twice in a song reaches the audio thread as one sound (`@WireShared`)
                     """.trimIndent()
                 )
             }
@@ -368,6 +371,9 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         enhancement (Waves MaxxBass). Klang builds it additively, from its own sine partials
                         - **Loudness, ITU-R BS.1770 and EBU R 128**: the LUFS measure behind the songs' house level
                         (-14 LUFS) and the loudness-matched listening pairs that judge an engine change by ear
+                        - **Soundgoodizer and Maximus** (Image-Line, FL Studio): the one-knob idea behind the writing
+                        reference's "Soundgoodizer-style" recipe, three compressed bands blended with the dry signal, built in
+                        Klang from `bands` and `blend`
                     """.trimIndent()
                 )
             }
