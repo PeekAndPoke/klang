@@ -92,10 +92,11 @@ The glide time itself is an open question for the maintainer's ear: `docs/tasks/
 - **Lookahead**: the Katalyst `compressor` and `limiter` take a build-time `lookahead`, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` (0.05), fixed per chain; the orbit or playback runs late by it and nothing
   compensates, by the author's choice. The house limiter is not a Katalyst stage (`MasterStage`; `audio/MEMORY.md`, "House stage").
-  The `distort` stage's oversampling delays the same way, by the oversampler's group delay rounded (4 frames at 2x, 6
-  at 4x and 8x; `Oversampler.groupDelaySamples`). Both are `KatalystLatentEffect`s, and the chain sums them
-  (`KatalystChain.latencyFrames`). A `parallel` stage (2026-10-10, `KatalystParallelEffect`) pads every branch to its
-  longest one with a ring of its own, so the sum does not comb, and reports that longest latency as its own.
+  The `distort` stage's oversampling delays the same way, by the oversampler's group delay rounded (3 frames at 2x, 4
+  at 4x, 5 at 8x; `Oversampler.groupDelaySamples`, the IIR half-band's low-frequency delay since 2026-10-10). Both are `KatalystLatentEffect`s, and the chain sums them
+  (`KatalystChain.latencyFrames`). A `parallel` stage (2026-10-10, `KatalystParallelEffect`) matches its branches in phase, so the sum does not comb:
+  each branch gets an unshaped round trip of every oversampler it lacks (a phase twin) and a ring for the lookahead it
+  lacks; the stage reports the union of the oversamplers plus the longest lookahead as its latency.
 
 ## Writing a stage lifecycle: the state-machine template
 

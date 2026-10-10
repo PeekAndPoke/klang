@@ -459,10 +459,10 @@ sealed interface KatalystStageDsl {
      * @param oversample the oversampling FACTOR (2, 4, 8; 0 or 1 is none; a non-power of two is
      *   floored), the voice's knob and law (`Oversampler.factorOf`). A plain number fixed with the
      *   chain: it sizes the oversampler. Oversampling delays the bus by the oversampler's group delay
-     *   (4 frames at 2x, 6 at 4x and 8x, rounded), in every state, and nothing compensates, as with the
-     *   compressor's lookahead. Default 0: the voice's default, and on a whole mix today's oversampler
-     *   also dulls the top (measured 2026-10-09 at 48 kHz and 2x: -0.7 dB at 10 kHz, -2 dB at 16 kHz, -4 dB at
-     *   20 kHz), so it is the author's opt-in.
+     *   (3 frames at 2x, 4 at 4x, 5 at 8x, rounded), in every state, and nothing compensates, as with the
+     *   compressor's lookahead. Default 0, the voice's default. (Until 2026-10-10 the oversampler also dulled a
+     *   whole mix, -2 dB at 16 kHz at 2x; its IIR half-band is flat, so whether a bus should oversample by
+     *   default is open: `docs/tasks/in-progress/iir-oversampler.md` step 5.)
      */
     @WireName("distort")
     data class Distort(
@@ -568,9 +568,10 @@ sealed interface KatalystStageDsl {
      * stage only for two branches or more (none is the bus unchanged, one is that branch's stages
      * in place).
      *
-     * **Aligned:** a branch that delays the bus (a compressor's lookahead, an oversampled distort)
-     * would comb against the others in the sum, so every shorter branch is delayed to the longest
-     * one, and the stage delays the bus by that longest branch's latency.
+     * **Matched in phase:** a branch that delays the bus (a compressor's lookahead, an oversampled
+     * distort) would comb against the others in the sum, so every branch gets an unshaped round trip
+     * of each oversampler it lacks (a phase twin) and a delay for the lookahead it lacks. The stage
+     * delays the bus by all the branches' oversamplers and the longest lookahead.
      *
      * **The sum is plain:** two identical branches are twice the level (+6 dB), as two faders up on
      * a desk; a branch scales itself (`gain`) where the author wants a blend. A `delay` or `reverb`

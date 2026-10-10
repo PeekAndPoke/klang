@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 
 /**
@@ -140,6 +141,12 @@ class KatalystChain internal constructor(
      * chains' latencies (`ChainSwap.begin`).
      */
     val latencyFrames: Int = serial.sumOf { (it as? KatalystLatentEffect)?.latencyFrames ?: 0 }
+
+    /** The oversamplers inside [latencyFrames] ([KatalystLatentEffect.oversamplers]), ascending, for a `parallel` stage. */
+    val oversamplers: List<Int> = serial.flatMap { (it as? KatalystLatentEffect)?.oversamplers.orEmpty() }.sorted()
+
+    /** The part of [latencyFrames] that is a pure delay (a compressor's lookahead): what the oversamplers leave. */
+    val pureDelayFrames: Int = latencyFrames - oversamplers.sumOf { Oversampler.latencyFrames(it) }
 
     /** Rents the warehouse refused any stage of this chain, for the diagnostics feedback. */
     val deniedRents: Int

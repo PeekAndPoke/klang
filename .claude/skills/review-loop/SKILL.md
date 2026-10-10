@@ -106,7 +106,14 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   1 ms frames over noise) mixes other voices and noise statistics into it. The implementer measures the changed
   voice soloed and names the metric and its resolution; the coordinator relays the audio reviewer's verified numbers,
   never the implementer's first ones, and a listening note says what changed (a texture, other dice), not a number
-  nobody checked.
+  nobody checked. **A claim about a frequency response is a sweep, never a few points** (2026-10-10, ledger, a
+  recurrence): "an equal-level clean `parallel` dips by about 4 dB" was measured at 16 and 20 kHz only, and a dense
+  sweep found notches of -28 to -38 dB between them, after the maintainer had chosen on the wrong figure. Sweep a grid
+  fine enough to see a notch (or derive the response analytically) and state the grid with the number.
+- **A figure the maintainer approved is part of the decision** (2026-10-10, ledger): a change that moves it (a
+  latency, a cost, a level) goes back to the maintainer before it lands, even when the change looks like a refinement.
+  The IIR oversampler's upper stages moved from 4 to 6 coefficients after the maintainer had approved the 4-coefficient
+  latencies, and the figures were only corrected afterwards.
 - **A decision that REPLACES an expression lists every clause of the old one** (2026-09-26, ledger, a
   recurrence of 2026-09-25): when a brief or an approved plan swaps one evaluator, lifetime source, default or
   formula for another (state for a stateless law, `max(tail ?: 0, release)` for "the tree alone"), it first

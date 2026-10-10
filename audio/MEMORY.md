@@ -187,15 +187,26 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `shape` doors build `Shape(Drive(...))`, bounded to +-1 by `ShapingFuncs.softCap`. `CrushCore` floors. Guard for
   both laws: `StripLawCoresSpec`. The Katalyst `distort` stage (`KatalystDistortEffect`, 2026-10-09) runs the fused law
   on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz) and
-  the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 4.0, 5.5,
-  6.25; held as 4, 6 and 6 frames).
+  the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 3.07, 4.40,
+  5.06; held as 3, 4 and 5 frames). Its dry path runs through the phase twins (an unshaped round trip of the same
+  oversampler per channel), so a fade between dry and distorted cannot notch; its tail hold is `Oversampler.tailFrames`.
+- **The oversampler is an IIR half-band** (2026-10-10, `docs/tasks/in-progress/iir-oversampler.md`): two all-pass
+  chains per 2x stage, 8 coefficients at the base-rate stage and 6 above; the round trip is flat (0.00 dB to 20 kHz),
+  aliases and images about 95 to 100 dB down, latency 3.07, 4.40, 5.06 samples at 2x, 4x, 8x, rising toward the top
+  (3.9 at 16 kHz at 2x), so a host that sums a dry path with an oversampled one pads the dry with a PHASE TWIN, an
+  unshaped round trip of the same oversampler, never whole samples (those notch the top: -28.5 dB at 18.25 kHz at
+  2x). Every input sample is sterilised (`flushState`: an IIR keeps a NaN for good), the states are flushed of
+  denormals once per block. Guard: `OversamplerBenchSpec`, `OversamplerGroupDelaySpec`, `OversamplerDecimatorParitySpec`.
 - **`parallel` on the Ignitor** (`IgnitorDsl.Parallel`, 2026-10-10): the branches summed, every branch reading one
-  input instance; `BuiltIgnitor.latencyFrames` is collected along the signal spine (an oversampled `distort` or
-  `shape` adds `Oversampler.latencyFrames`: 4, 6, 6), and the node pads every earlier branch to the latest
-  (`delayedBy`). A plain `plus` stays unaligned.
+  input instance; `BuiltIgnitor.latencySamples` is collected exactly along the signal spine (an oversampled `distort`
+  or `shape` adds `Oversampler.groupDelaySamples`: 3.07, 4.40, 5.06), and so is `BuiltIgnitor.oversamplers`. The node
+  gives every branch the phase twins of the oversamplers it lacks against their union (`phaseTwins`,
+  `Oversampler.unionOf`); a branch that mixes two in a plain `plus` lists none (`null`), and then every earlier branch
+  is padded by whole samples to the latest (`delayedBy`). A plain `plus` stays unaligned.
 - **`parallel` on the Katalyst** (`KatalystParallelEffect`, 2026-10-10): each branch is a `KatalystChain` of its own,
-  run on a copy of the bus and SUMMED; branches are aligned by latency (pad rings, the longest branch is the stage's
-  latency); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
+  run on a copy of the bus and SUMMED; branches are matched in phase (the twins of the oversamplers a branch lacks,
+  `KatalystLatentEffect.oversamplers`, and a ring for the lookahead it lacks; the stage's latency is the union's plus
+  the longest lookahead); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
   hoisted to the orbit's duck. A `reverb` or `delay` in a branch carries the dry too. The doors write no stage for zero
   branches and inline one. `through` is `serial` since the same day (`docs/retired-names.md`).
 - **`bands` on both hosts** (2026-10-10): DSL sugar in `klangscript-libs` (`BandsBuilders.kt`) over `parallel` and
@@ -329,6 +340,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 The oversampler is a polyphase IIR half-band (flat to 20 kHz, about 100 dB of rejection, 3.07 samples at
+  2x), and every dry path beside an oversampled one runs through its phase twin: `docs/tasks/in-progress/iir-oversampler.md`
 - 2026-10-10 Engine follow-ups 8 and 12: `Ignitors.readParam` is Kotlin `inline` (one shared helper was one
   megamorphic site that boxed every knob read on V8, 60 to 100 B per classic voice block), and the scalar is the
   primitive `Ignitor.controlRateValue`, read only when `isBlockConstant` (the nullable view is the extension

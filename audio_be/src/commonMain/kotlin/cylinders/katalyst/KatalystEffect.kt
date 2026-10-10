@@ -70,9 +70,17 @@ interface KatalystEffect {
  * A stage that delays the orbit it runs on: [latencyFrames] frames, in every state, fixed when the stage is built.
  * The chain sums them (`KatalystChain.latencyFrames`), and a chain swap places two chains' weights by that sum
  * (`ChainSwap`). Three stages delay today: the compressor with a lookahead, the distort stage with oversampling, and a
- * `parallel` stage by its longest branch.
+ * `parallel` stage by the union of its branches' oversamplers plus their longest lookahead.
  */
 interface KatalystLatentEffect {
     /** Frames this stage delays the orbit by; 0 when it does not. */
     val latencyFrames: Int
+
+    /**
+     * The oversamplers inside [latencyFrames], as their stage counts in ascending order, each counting
+     * `Oversampler.latencyFrames` of it; the rest is a pure delay. Empty for a stage without one. An oversampler's IIR
+     * round trip delays the top of the band more than the bass, so a `parallel` stage matches a branch that lacks one
+     * with an unshaped round trip of it (a phase twin) rather than with whole frames.
+     */
+    val oversamplers: List<Int> get() = emptyList()
 }

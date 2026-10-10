@@ -1140,9 +1140,12 @@ sealed interface IgnitorDsl {
      * `x.parallel(a, b)` = `a(x) + b(x)` with every branch reading the SAME `x` (one instance, built once; a pitch node
      * in a branch forks it, as it forks any shared node).
      *
-     * **Aligned by latency.** A branch that delays the signal (an oversampled `distort` or `shape`, 4 to 6 samples)
-     * would comb against the others in the sum, so the build delays every shorter branch to the longest one. A plain
-     * [Plus] is raw arithmetic and does not align (`docs/plans/future/signal-graph-engine.md` §6.9).
+     * **Matched in phase.** A branch that delays the signal (an oversampled `distort` or `shape`, 3 to 5 samples)
+     * would comb against the others in the sum, so the build gives every branch an unshaped round trip of each
+     * oversampler it lacks (a phase twin), and all branches then share the same delay at every frequency. A branch
+     * that mixes two oversamplers in a plain [Plus] falls back to a whole-sample delay, which matches the bass and
+     * the mids only. A plain [Plus] is raw arithmetic and does not align (`docs/plans/future/signal-graph-engine.md`
+     * §6.9).
      *
      * The doors build it for two branches or more (none is the signal unchanged, one is that branch).
      */
@@ -2617,8 +2620,8 @@ fun IgnitorDsl.serial(vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
 /**
  * Runs this signal through [branches] side by side and SUMS them, the twin of [serial]: `x.parallel(a, b)` is
  * `a(x) + b(x)`, every branch reading the same `x` (one instance, built once; a pitch node in a branch forks it). A
- * branch that delays the signal (an oversampled `distort` or `shape`) is matched by delaying the others, so the sum
- * does not comb ([IgnitorDsl.Parallel]).
+ * branch that delays the signal (an oversampled `distort` or `shape`) is matched in phase by the others, each running
+ * through an unshaped round trip of the oversampler it lacks, so the sum does not comb ([IgnitorDsl.Parallel]).
  * The sum is plain: `x.parallel({ it }, { it })` is twice `x`; a branch's own `mul` sets the blend.
  *
  * With no branch, `parallel()` returns the signal as it is; with one, that branch's output.
@@ -2635,7 +2638,7 @@ fun IgnitorDsl.parallel(vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl
  * §6.9; the linear law only, the default taken 2026-10-10 in `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`). Linear
  * is right for correlated branches (distortion, filters); a decorrelated one (a room) loses about 3 dB in the middle,
  * which a song can lift with the branch's own `mul`. [wet] may be a slot or a signal (a moving blend); a constant that
- * is not finite reads as 0, the dry signal. The branch is aligned by latency as in [parallel].
+ * is not finite reads as 0, the dry signal. The branch is matched in phase as in [parallel].
  */
 fun IgnitorDsl.blend(wet: IgnitorDsl, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
     // NaN-guard on a value the author can write: an unset blend is no blend. The one guard, for both doors.

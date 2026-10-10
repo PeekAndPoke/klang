@@ -48,8 +48,8 @@ three differently factored sets of effects, is the outcome this task exists to p
   the way phase 3 step 2's gate reads a knob (`buildTimeKnobValue` in `IgnitorDslRuntime.kt`). It never
   changes while a voice runs, so an instrument can expose it as a "quality" slot that a pattern sets per
   note. Changing it mid-note is ruled out, not deferred: every stateful node in the region holds state
-  computed for the old rate, and the resampler's group delay differs per factor (4.0 input samples at
-  2x, 5.5 at 4x; corrected 2026-10-09, `Oversampler.groupDelaySamples`), which shifts the whole signal, a click. This replaces the draft's "structural,
+  computed for the old rate, and the resampler's group delay differs per factor (3.07 input samples at
+  2x, 4.40 at 4x since the IIR half-band of 2026-10-10, `Oversampler.groupDelaySamples`), which shifts the whole signal, a click. This replaces the draft's "structural,
   compile-time only" and keeps its reason: the factor defines the timeline the region's signals are
   drawn on.
 - **Factor 1 builds no region.** Bit-identical and free; one more row in the off-value table
@@ -131,7 +131,9 @@ more than one place per effect, the factoring is not done.
 
 ## 6. Carried from the 2026-07-04 draft (still valid)
 
-- **The resampler's quality becomes the sound lever.** Today's kernel was built cheap for waveshapers:
+- **The resampler's quality becomes the sound lever.** DONE for the kernel itself 2026-10-10: the IIR half-band
+  replaced the FIR everywhere (`docs/tasks/in-progress/iir-oversampler.md`); what follows describes the FIR it
+  replaced. The kernel was built cheap for waveshapers:
   linear-interpolation upsampling and a 15-tap truncated half-band decimator, about -14 dB at 0.55 pi
   (`Oversampler`'s KDoc). Once a region can hold a filter or anything clean, its top-end droop is
   audible: by arithmetic, not measured, the interpolator alone costs about 1 dB at 10 kHz and 3 dB at
@@ -184,6 +186,9 @@ more than one place per effect, the factoring is not done.
 
 ## 8a. Found 2026-10-09: the oversampler is not clean enough for a whole mix
 
+**Resolved 2026-10-10:** the IIR half-band replaced this kernel (flat to 20 kHz, about 100 dB of rejection, latency
+3.07, 4.40, 5.06 samples). The record of the old kernel follows.
+
 Measured while building the Katalyst `distort` stage (`docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`):
 on a clean signal the round trip (the linear-interpolation upsampler and the 15-tap half-band decimator) loses, at
 48 kHz and 2x, 0.7 dB at 10 kHz, 2 dB at 16 kHz and 4 dB at 20 kHz (4x and 8x a little more). On a distorted voice that
@@ -194,6 +199,12 @@ resampling, no latency). The group delay figures were corrected the same day (`O
 and 6.25 input samples).
 
 ## 8b. Found 2026-10-10: `parallel` and `bands` align by the oversampler's delay
+
+**Resolved 2026-10-10 by the phase twins** (`docs/tasks/in-progress/iir-oversampler.md`): a branch that lacks an
+oversampler now runs through an unshaped round trip of it, on both hosts (`BuiltIgnitor.oversamplers`,
+`KatalystLatentEffect.oversamplers`); whole-sample pads remain for a lookahead and for a voice branch that mixes two
+oversamplers in a plain `plus`. A new oversampler type must list itself there, or report its delay as before. What
+follows is the record as found.
 
 `parallel` (both hosts, and `bands` on top of it) pads every earlier branch to the latest one, and the delays it
 compares are DECLARED, not measured: an oversampled `distort` or `shape` reports `Oversampler.groupDelaySamples` (the

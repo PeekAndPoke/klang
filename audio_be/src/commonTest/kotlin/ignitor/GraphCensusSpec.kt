@@ -121,11 +121,15 @@ class GraphCensusSpec : StringSpec({
 
     "an oversampled shaper counts its round trip: upsample, shaper loop, decimation stages, copy back" {
         // distort(0.5, soft, 4) lowers to Drive then Shape at 4x: the drive is one pass in place;
-        // the shape reads one and writes four, shapes eight, decimates 4 -> 2 (two outputs, nine
-        // taps read each, two written) and 2 -> 1 (one output, nine taps, one written), copies back
-        // two, then the DC blocker and the soft cap
-        GraphCensus.oversampleTraffic(4) shouldBe (1 + 4) + (9 * 2 + 2) + (9 * 1 + 1) + 2
+        // the IIR half-band round trip (2026-10-10): the first stage up reads one and writes two, the second moves its
+        // two inputs (read and write), reads them and writes four; down, each output reads two and writes one (2 at the
+        // second stage, 1 at the first); the copy back two. Then the DC blocker and the soft cap.
+        GraphCensus.oversampleTraffic(4) shouldBe (1 + 2) + (2 + 2 + 2 + 4) + (2 * 3) + (1 * 3) + 2
         GraphCensus.oversampleTraffic(1) shouldBe 0
+        // The state at 4x: two directions, two doubles (x1, y1) per all-pass section, 8 sections at the base-rate stage
+        // and 6 above it, 8 bytes each.
+        GraphCensus.oversampleBytes(4) shouldBe 2 * 2 * (8 + 6) * 8
+        GraphCensus.oversampleBytes(1) shouldBe 0
 
         val census = GraphCensus.of(saw.distort(0.5, "soft", 4))
 

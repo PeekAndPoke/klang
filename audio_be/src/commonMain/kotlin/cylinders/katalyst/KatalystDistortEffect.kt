@@ -19,7 +19,6 @@ import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
-import kotlin.math.ceil
 import kotlin.math.min
 
 /**
@@ -54,23 +53,24 @@ import kotlin.math.min
  * fixed with the chain.
  *
  * **Latency.** With oversampling the distorted path runs late by the oversampler's group delay
- * ([Oversampler.groupDelaySamples]: 4.0 frames at 2x, 5.5 at 4x, 6.25 at 8x), and the stage delays the orbit by
- * that, rounded, in EVERY state ([latencyFrames]: 4, 6, 6): Off passes the dry mix through a delay ring of that
- * length, and a fade blends against the delayed dry, so switching never moves the orbit in time. The rounding
- * leaves the dry up to half a frame off the distorted path at 4x and 8x (none at 2x), which only a fade hears: at
- * the middle of a 50 ms fade the blend of two copies half a frame apart is `|cos(w / 4)|`, about -1.25 dB at
- * 16 kHz and -3 dB at the Nyquist frequency at 48 kHz. Nothing compensates the latency, as with the compressor's lookahead: the
+ * ([Oversampler.groupDelaySamples]: 3.07 frames at 2x, 4.40 at 4x, 5.06 at 8x, the IIR half-band's low-frequency
+ * delay), and the stage delays the orbit by that in EVERY state: Off passes the dry mix through PHASE TWINS, an
+ * unshaped round trip of the same kernel per channel, and a fade blends against that twin, so switching never moves
+ * the orbit in time and the two paths share their phase at every frequency, the top octave included (the IIR's delay
+ * rises toward the top, so an integer delay ring matched only the bass and the mids: at the middle of a fade the old
+ * ring notched near 18 kHz). [latencyFrames] reports the delay rounded, for the chain (3, 4, 5 at 2x, 4x, 8x).
+ * Nothing compensates the latency, as with the compressor's lookahead: the
  * orbit, and at the output the playback, runs late by it. Without oversampling (the default) there is none.
  *
  * The lifecycle is a state machine (`docs/plans/effect-state-machines.md`), the shape of
  * [KatalystCompressorEffect]; the table on [State] is authoritative for its edges.
  *
  * **The four questions of the plan:**
- * 1. *What outlives its states:* the two cores, the amount glide, the dry scratch buffers, the dry delay rings and
- *    their position, the snap flag [fresh], and the tail count [quietFrames].
+ * 1. *What outlives its states:* the two cores, the amount glide, the dry scratch buffers, the phase twins, the snap
+ *    flag [fresh], and the tail count [quietFrames].
  * 2. *The record of a finished life:* the cores' filter memories and the amount glide, forgotten in [Off.enter].
  *    The next life starts from reset cores and its amount snaps.
- * 3. *The Off precondition:* the output is the dry mix (the delayed dry mix with oversampling). [Off] is entered
+ * 3. *The Off precondition:* the output is the dry mix (through the phase twins with oversampling). [Off] is entered
  *    only from a fade whose weight has landed on exactly 0, by [reset] (the host guarantees silence), or while
  *    [fresh].
  * 4. *References and who drops them:* none. The cores are built once with the effect.
@@ -112,26 +112,32 @@ class KatalystDistortEffect(
     /** Frames this stage delays the orbit by, in every state: the oversampler's group delay, rounded; 0 without. */
     override val latencyFrames: Int = Oversampler.latencyFrames(stages)
 
-    /** True with oversampling: the dry mix then runs through the delay rings. */
-    private val latent: Boolean = latencyFrames > 0
+    /** The cores' oversampler, the whole of [latencyFrames]; empty without. */
+    override val oversamplers: List<Int> = if (stages > 0) listOf(stages) else emptyList()
+
+    /** True with oversampling: the dry mix then runs through the phase twins. */
+    private val latent: Boolean = stages > 0
 
     /**
-     * How long a quiet input may still leave audio inside the stage, in input frames: the reach of the distorted
-     * path, which is longer than the dry ring's [latencyFrames]. The interpolation holds one input sample and each
-     * half-band stage reaches 13 samples back at its own input rate, so `1 + 13 * (1 - 2^-stages)`: 7.5, 10.75 and
-     * 12.375 frames at 2x, 4x and 8x, rounded up (the tail rule of `audio/ref/katalyst.md`: err towards holding
-     * longer). 0 without oversampling. At the pinned 128-frame block any value up to a block holds exactly one quiet
-     * block ([countQuiet] adds whole blocks); the reach is the bound for a shorter block, not a tuning.
+     * How long a quiet input may still leave audio inside the stage, in input frames: the ring-out of the IIR
+     * half-band, in the distorted path and in the dry twin alike, down to 120 dB under the input
+     * ([Oversampler.tailFrames], 268 frames with oversampling; the tail rule of `audio/ref/katalyst.md`: err towards
+     * holding longer). 0 without oversampling.
      */
-    private val holdFrames: Int = if (stages == 0) 0 else ceil(1.0 + 13.0 * (1.0 - 1.0 / (1 shl stages))).toInt()
+    private val holdFrames: Int = Oversampler.tailFrames(stages)
 
     /** Frames since the last input block with a sample above [SILENCE_FLOOR], held at [holdFrames]. */
     private var quietFrames: Int = holdFrames
 
-    /** The dry delay rings, one per channel, [latencyFrames] long; empty without oversampling. */
-    private val ringL = DoubleArray(latencyFrames)
-    private val ringR = DoubleArray(latencyFrames)
-    private var ringPos: Int = 0
+    /**
+     * The PHASE TWINS of the cores' oversamplers, one per channel, null without oversampling: the dry mix runs through
+     * an unshaped round trip of the same kernel, so dry and distorted share their phase at every frequency and a fade
+     * between them cannot notch (2026-10-10, the maintainer's choice: "IIR + phase-matched pads"; an integer delay ring
+     * matched only the low-frequency delay, and the IIR's delay rises toward the top). Running in every state, as the
+     * rings did, so the dry is continuous whenever a state needs it.
+     */
+    private val twinL: Oversampler? = if (stages > 0) Oversampler(stages) else null
+    private val twinR: Oversampler? = if (stages > 0) Oversampler(stages) else null
 
     private val amountGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
 
@@ -373,44 +379,33 @@ class KatalystDistortEffect(
     }
 
     /**
-     * Fills [dryL] / [dryR] with this block's dry mix: the input itself, or with oversampling the input
-     * [latencyFrames] ago through the rings. The rings run in every state, so the dry is continuous whenever a
-     * state needs it.
+     * Fills [dryL] / [dryR] with this block's dry mix: the input itself, or with oversampling the input through the
+     * phase twins (an unshaped round trip of the cores' kernel). The twins run in every state, so the dry is continuous
+     * whenever a state needs it.
      */
     private fun captureDry(n: Int, left: AudioBuffer, right: AudioBuffer) {
         val dL = dryL
         val dR = dryR
 
-        if (!latent) {
-            // Without the rings the dry is only read by a fade.
-            if (state !== fading) {
-                return
-            }
-
-            left.copyRangeInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
-            right.copyRangeInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
-
+        if (!latent && state !== fading) {
+            // Without oversampling the dry is only read by a fade.
             return
         }
 
-        val rL = ringL
-        val rR = ringR
-        val len = latencyFrames
-        var p = ringPos
+        left.copyRangeInto(destination = dL, destinationOffset = 0, startIndex = 0, endIndex = n)
+        right.copyRangeInto(destination = dR, destinationOffset = 0, startIndex = 0, endIndex = n)
 
-        for (i in 0 until n) {
-            dL[i] = rL[p]
-            dR[i] = rR[p]
-            rL[p] = left[i]
-            rR[p] = right[i]
-            p++
+        val tL = twinL
+        val tR = twinR
 
-            if (p == len) {
-                p = 0
+        if (tL != null && tR != null) {
+            scratch.oversample(tL.factor).use { work ->
+                tL.upsample(source = dL, offset = 0, length = n, work = work)
+                tL.decimate(work = work, target = dL, offset = 0, length = n)
+                tR.upsample(source = dR, offset = 0, length = n, work = work)
+                tR.decimate(work = work, target = dR, offset = 0, length = n)
             }
         }
-
-        ringPos = p
     }
 
     /** Updates [quietFrames] from the block about to enter the stage. */
@@ -441,7 +436,7 @@ class KatalystDistortEffect(
 
     /**
      * True while the stage can still put audio into a silent input:
-     * - with oversampling, while the dry ring or the decimators may hold audio the orbit has not heard ([holdFrames]);
+     * - with oversampling, while the twins or the cores' oversamplers may still ring out ([holdFrames]);
      * - while it distorts, while a core's DC blocker still holds the offset it was removing. An asymmetric shape
      *   (`tube`, `rectify`, ...) makes DC while signal flows, and after the input stops the blocker's output decays
      *   from that offset over tens of milliseconds. The cylinder's deactivation would see it in the mix anyway, but
@@ -457,12 +452,11 @@ class KatalystDistortEffect(
         return state !== off && (coreL.dcHoldsEnergy(SILENCE_FLOOR) || coreR.dcHoldsEnergy(SILENCE_FLOOR))
     }
 
-    /** A HARD cut to [Off]: the cores and the rings cleared, and the next switch snaps again. */
+    /** A HARD cut to [Off]: the cores and the twins cleared, and the next switch snaps again. */
     override fun reset() {
         off.enter()
-        ringL.fill(0.0)
-        ringR.fill(0.0)
-        ringPos = 0
+        twinL?.reset()
+        twinR?.reset()
         quietFrames = holdFrames
         fresh = true
     }
