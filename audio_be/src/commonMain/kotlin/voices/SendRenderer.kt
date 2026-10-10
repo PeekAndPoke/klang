@@ -3,12 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.audio_be.voices.strip.send
+package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos

@@ -146,11 +146,11 @@ The JVM allocates nothing per block in steady state; these are V8 only. The meth
 The tidy-up ran the audit's order (section D of
 [`../audio-audit/2026-10-07-engine-tidy-audit.md`](../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
 and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound changes; each needs the maintainer.
-Each was checked against the code: none is done.
+Each was checked against the code: none is done (item 21's package dissolve aside).
 
 21. **Step 15, planned work in its own order:** after the pitch pipeline
-    ([`pitch-pipeline-into-the-tree.md`](in-progress/pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` and fold the
-    contexts (B3.1, B3.2; `SendRenderer` loses the "send" word with it, A2.5); then
+    ([`pitch-pipeline-into-the-tree.md`](in-progress/pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` (done
+    in its step 5, 2026-10-10: the package is `voices/`) and fold the contexts (B3.1, B3.2; `SendRenderer` loses the "send" word with it, A2.5); then
     [`future/one-chain-host.md`](future/one-chain-host.md), extended by the two tail polls of one law (A2.10) and the
     host plumbing's package move (B3.8).
 22. **Step 16, the duck's "attack" renamed** to what it is, a release (A2.7; `Ducking.kt` still says "named

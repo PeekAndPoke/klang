@@ -15,8 +15,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `VoiceScheduler` serves its engine's one playback: one `PlaybackCtx`, made by the first voice, dropped by
   `cleanup`, nothing filtered by id. File map:
   `docs/audio-backend-file-map.md`; data flow and isolation: `audio/ref/architecture.md`.
-- **Instrument = the voice's Ignitor tree** (phase 3, done 2026-09-28). `Voice` runs Pitch (empty since pitch
-  pipeline step 4; its shell goes in step 5), Ignite, (teardown fade), Send. Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
+- **Instrument = the voice's Ignitor tree** (phase 3, done 2026-09-28; its pitch modulations too since pitch pipeline
+  steps 1 to 4, the last, `fm`, 2026-10-10; step 5 removed the empty shell in front of it). `Voice` runs Ignite, (teardown fade), Send; the stages and `BlockContext` live in `voices/`. Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
   every sample voice is the same shape over `IgnitorDsl.Sample` (`IgnitorRegistry.SAMPLE_INSTRUMENT`, never
   registered under a name). An authored instrument gets the voice doors by ending in `.classic()` as its LAST call
   (`IgnitorDsl.endsInClassic()`); a tree without it plays bare: no doors, no default envelope.
@@ -31,7 +31,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The pitch doors are in the tree** (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, steps 1 to 4): sprudel's
   pitch envelope, accelerate, vibrato and fm are `classic()`'s `PitchEnvelope`, `Accelerate`, `Vibrato` and `Fm`
   stages, filled by the `penv.*` / `penvCurves.*` (step 1), `vibrato.*` (step 2), flat `accelerate` (step 3) and
-  `fm.*` (step 4) slots; the voice's pitch pipeline is an empty shell until step 5. FM is innermost, so the other
+  `fm.*` (step 4) slots; nothing runs in front of the tree (step 5): the root's `IgniteContext.phaseMod` is null, and
+  `ModApplyingIgnitor` is the one source of a non-null `phaseMod` (`ModBlockingIgnitor` only clears and restores it). FM is innermost, so the other
   classic pitch stages move its modulator with the carrier (step 3b's rule), and an `fm` in the instrument sits inside
   its carrier and follows it (`s("sgbell").fm(...)`). The classic FM is the node's law, NOT the strip's sound (decision
   D3): the depth envelope per sample (ledger E11 closed), an envelope-free door keeps its depth through the release
@@ -289,6 +290,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-10 Pitch pipeline step 5: the strip's shell goes (`PitchPipelineBuilder`, `BlockContext.freqModBuffer`,
+  `Voice.RenderContext.freqModBuffer`, `IgniteRenderer`'s bridge) and `voices/strip/` dissolves into `voices/` (D7);
+  a pure removal, the corpus identical: `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md` step 5
 - 2026-10-10 Pitch pipeline step 4: sprudel's `fm(depth, ratio, attack, decay, sustain, release)` is `classic()`'s
   innermost FM stage (`fm.*` slots), its five wire fields, `FmRenderer`, `Voice.Fm`, `Voice.Envelope` and
   `EnvelopeCalc` gone; the node's law (per-sample envelope, E11 closed; full depth through the tail without an envelope;

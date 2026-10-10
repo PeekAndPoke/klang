@@ -28,11 +28,10 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.mul
 import kotlin.random.Random
 
-/** One row of the `classic()` voice table: its slots, and the voice-level fields it carries ([voice]: the pitch pipeline, not a `classic()` stage). */
+/** One row of the `classic()` voice table: its title and its slots. */
 class ClassicRow(
     val title: String,
     val bag: Map<String, Double>,
-    val voice: VoiceData.() -> VoiceData = { this },
 )
 
 /**
@@ -105,7 +104,6 @@ object ClassicVoiceRig {
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = DoubleArray(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val noSamples: (SampleRequest) -> SampleStore.SampleEntry.Complete? = { null }
@@ -146,8 +144,7 @@ object ClassicVoiceRig {
         bag: Map<String, Double>,
         sampleRate: Int,
         sound: String = "saw",
-        voice: VoiceData.() -> VoiceData = { this },
-    ): DoubleArray = render(base.copy(sound = sound, ignitorParams = bag.takeIf { it.isNotEmpty() }).voice(), sampleRate)
+    ): DoubleArray = render(base.copy(sound = sound, ignitorParams = bag.takeIf { it.isNotEmpty() }), sampleRate)
 
     fun firstMismatch(a: DoubleArray, b: DoubleArray): Int = a.indices.firstOrNull { a[it].toRawBits() != b[it].toRawBits() } ?: -1
 

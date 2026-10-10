@@ -23,11 +23,13 @@ import kotlin.random.Random
  * bent along with the note. A built-in song of the time had one: a nylon guitar whose 180 Hz
  * soundbox thump was commented "fixed-pitch" and was being pitch-enveloped by 0.4 semitones.
  *
- * The two doors are genuinely different mechanisms and each gets its own rows:
- *  - the IGNITOR door hands modulation down through `ModApplyingIgnitor`;
- *  - the STRIP door (sprudel's `fm`, the last one; `penv`, `vib` and `accelerate` are `classic()` stages since pitch
- *    pipeline steps 1 to 3) writes `ctx.phaseMod` once for the whole graph in `IgniteRenderer`, with no wrapper
- *    involved.
+ * Two kinds of rows:
+ *  - the IGNITOR door hands modulation down through `ModApplyingIgnitor`, the one source of a non-null
+ *    `ctx.phaseMod` (the shield only clears and restores it);
+ *  - an UPSTREAM phaseMod set straight onto the ctx for the whole graph. That was the strip door (sprudel's pitch
+ *    doors, written in `IgniteRenderer`) until the pitch pipeline moved them into `classic()` (steps 1 to 4) and step 5
+ *    removed the bridge; the rows stay as the shape of a shield reached with a phaseMod already set, as inside a
+ *    modulated source's parameter subtree.
  */
 class AbsoluteFreqPitchModSpec : StringSpec({
 
@@ -35,7 +37,7 @@ class AbsoluteFreqPitchModSpec : StringSpec({
     val blockFrames = 128
     val blocks = 6
 
-    /** Renders [dsl]; [phaseMod] is the STRIP door — a ratio array set straight onto the ctx. */
+    /** Renders [dsl]; [phaseMod] is an UPSTREAM phaseMod: a ratio array set straight onto the ctx. */
     fun render(dsl: IgnitorDsl, freqHz: Double = 220.0, phaseMod: Double? = null): DoubleArray {
         val rng = Random(7)
         val ignitor = dsl.buildExciter(soundIndex = 0, random = rng, freqHz = freqHz).ignitor
@@ -76,15 +78,15 @@ class AbsoluteFreqPitchModSpec : StringSpec({
     val absolute = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(180.0))
     val musical = IgnitorDsl.Sine(freq = IgnitorDsl.Freq)
 
-    // ── The strip door: a phaseMod written for the whole graph (sprudel's fm) ─────
+    // ── An upstream phaseMod written for the whole graph (the retired strip door's shape) ─────
 
-    "an absolute-freq oscillator ignores a strip-level phaseMod" {
+    "an absolute-freq oscillator ignores an upstream phaseMod" {
         // That guitar's soundbox thump, reduced: 180 Hz, fixed by authoring, sitting in a patch
-        // whose pitch envelope writes ctx.phaseMod for the whole graph.
+        // whose pitch envelope wrote ctx.phaseMod for the whole graph (the strip door of its day).
         maxDiff(a = render(absolute, phaseMod = 1.05), b = render(absolute)) shouldBe 0.0
     }
 
-    "a musical oscillator still follows a strip-level phaseMod" {
+    "a musical oscillator still follows an upstream phaseMod" {
         // The control. Without it the row above passes for a renderer that ignores phaseMod
         // altogether, which would break every vibrato in the engine.
         (maxDiff(a = render(musical, phaseMod = 1.05), b = render(musical)) > 0.1) shouldBe true
@@ -133,7 +135,7 @@ class AbsoluteFreqPitchModSpec : StringSpec({
         // TWO things have to line up for a missing restore to be visible, and the campaign had
         // to find both. (1) ORDER: the absolute half must render FIRST, so there is still a
         // sibling left to damage — the mixed row above renders the musical half first and is
-        // blind. (2) DOOR: it must be the STRIP door. On the ignitor door `ctx.phaseMod` is
+        // blind. (2) An UPSTREAM phaseMod. On the ignitor door at the root `ctx.phaseMod` is
         // null on entry (only ModApplyingIgnitor sets it, and only around its own inner call),
         // so the barrier saves null and restores null and dropping the restore changes
         // nothing. Only an upstream-set phaseMod makes the restore observable.

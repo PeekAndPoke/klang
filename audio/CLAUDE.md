@@ -37,9 +37,9 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 |-----------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
 | `src/commonMain/kotlin/PlaybackEngineDispatcher.kt` | Routes each `Cmd` by `playbackId` → its own `PlaybackEngine` (own scheduler + cylinders); see `ref/architecture.md` |
 | `src/commonMain/kotlin/KlangAudioRenderer.kt`       | Main render loop driver + master limiter                                                                            |
-| `src/commonMain/kotlin/voices/Voice.kt`             | `Voice`: runs Pitch → Ignite → (teardown fade) → Send per note; the Ignitor tree is the whole instrument            |
+| `src/commonMain/kotlin/voices/Voice.kt`             | `Voice`: runs Ignite → (teardown fade) → Send per note; the Ignitor tree is the whole instrument                    |
 | `src/commonMain/kotlin/voices/VoiceFactory.kt`      | Builds a `Voice` (the instrument's Ignitor tree, the sample instrument for samples) from `VoiceData`                  |
-| `src/commonMain/kotlin/voices/strip/`               | Per-block voice stages: `pitch/`, `ignite/`, `send/` (the old filter/VCA strip retired in phase 3 step 9)           |
+| `src/commonMain/kotlin/voices/BlockRenderer.kt`     | Per-block voice stages (`BlockContext`): `IgniteRenderer`, `TeardownFadeRenderer`, `SendRenderer`, all in `voices/` |
 | `src/commonMain/kotlin/voices/VoiceScheduler.kt`    | Voice lifecycle management                                                                                          |
 | `src/commonMain/kotlin/cylinders/Cylinders.kt`      | Effect bus manager                                                                                                  |
 | `src/commonMain/kotlin/cylinders/Cylinder.kt`       | Single effect bus (delay/reverb/phaser/…)                                                                           |

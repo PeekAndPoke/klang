@@ -19,12 +19,11 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * counts as pitch. They agree now: both move Freq-derived pitches and leave LFOs, drones and
  * fixed-pitch resonances alone.
  *
- * Blocking at the READ rather than at the wrap is what made this cover BOTH doors. The ignitor
- * door hands modulation down through [ModApplyingIgnitor]; sprudel's pitch doors used to run on the
- * voice's strip, which wrote `ctx.phaseMod` once for the whole graph in `IgniteRenderer`, with no
- * [ModApplyingIgnitor] anywhere, and nulling the context was the only thing that stopped both. Since
- * pitch pipeline step 4 every sprudel pitch door (`penv`, `vib`, `accelerate`, `fm`) is a `classic()`
- * stage, so [ModApplyingIgnitor] is the one writer left; the strip's bridge goes in step 5.
+ * It blocks at the READ, in the context, rather than at the wrap: every pitch modulation reaches a source through
+ * `ctx.phaseMod`, which [ModApplyingIgnitor] writes, and nulling it is what stops it. That is one door since pitch
+ * pipeline step 4: sprudel's pitch doors (`penv`, `vib`, `accelerate`, `fm`) are `classic()` stages, so they reach a
+ * source the same way as an authored pitch node. Before it there were two (sprudel's doors ran on the voice's strip,
+ * which wrote `ctx.phaseMod` once for the whole graph in `IgniteRenderer`); step 5 removed the strip's unused bridge.
  *
  * Cost is two field writes per `generate` call and nothing per sample; the shielded oscillator then
  * takes its own `phaseMod == null` fast loop, which is the cheaper of the two it already had.

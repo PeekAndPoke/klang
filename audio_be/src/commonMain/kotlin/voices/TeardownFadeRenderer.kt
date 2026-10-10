@@ -6,8 +6,6 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.utils.fadeToZero
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_bridge.constants.TEARDOWN_FADE_SECONDS
 import kotlin.math.ceil
 import kotlin.math.floor

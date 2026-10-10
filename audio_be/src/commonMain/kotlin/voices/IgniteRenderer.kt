@@ -3,18 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.audio_be.voices.strip.ignite
+package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 
 /**
  * Wraps a [Ignitor] as a [BlockRenderer].
  *
- * Reads pitch modulation from [BlockContext.freqModBuffer] (if [BlockContext.freqModBufferWritten])
- * and generates the raw waveform into [BlockContext.audioBuffer].
+ * Generates the tree's output into [BlockContext.audioBuffer]. It hands the tree no pitch modulation: the root
+ * [IgniteContext.phaseMod] stays null, every pitch modulation is a node of the tree (pitch pipeline step 5).
  *
  * Output bounding is the responsibility of the per-stage soft cap inside
  * `Ignitor.distort()` and `Ignitor.shape()` — see those for the C¹ piecewise
@@ -46,7 +44,6 @@ class IgniteRenderer(
         // then a jump to 0.0222 in one sample. offset is non-zero ONLY on a voice's first block, so
         // this term changes nothing anywhere else.
         signalCtx.voiceElapsedFrames = (ctx.blockStart + ctx.offset - startFrame).toInt()
-        signalCtx.phaseMod = if (ctx.freqModBufferWritten) ctx.freqModBuffer else null
 
         signal.generate(ctx.audioBuffer, freqHz, signalCtx)
     }

@@ -9,18 +9,16 @@ All types in `audio_be/src/commonMain/kotlin/voices/`.
 ### Processing Order
 
 Since phase 3 step 9 (2026-09-27) every voice is an Ignitor tree, and the tree IS the instrument,
-envelope and filters included. `Voice` runs its stages in sequence: **Pitch → Ignite → (teardown
-fade) → Send**. Each stage is a list of `BlockRenderer`s (the interface and the pitch, ignite and send renderers
-live in `voices/strip/`, `TeardownFadeRenderer` in `voices/`); `Voice.render()` iterates
-the composed pipeline.
+envelope and filters included; its pitch modulations too since pitch pipeline steps 1 to 4 (the last, `fm`,
+2026-10-10), and step 5 removed the empty pitch pipeline in front of it. `Voice` runs its stages in sequence: **Ignite → (teardown fade) → Send**. Each stage is a `BlockRenderer` (the interface, its
+`BlockContext` and the three renderers live in `voices/`); `Voice.render()` iterates the composed pipeline.
 
 ```
-Pitch stage     (PitchPipelineBuilder): EMPTY since pitch pipeline step 4
-  (sprudel's pitch envelope, vibrato, accelerate and fm left this stage in pitch pipeline steps 1 to 4: classic()'s
-   pitch stages; the shell, BlockContext.freqModBuffer and IgniteRenderer's bridge go in step 5)
-
 Ignite stage    (IgniteRenderer → writes audioBuffer)
-  2. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds)
+  1. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds, the pitch
+     stages included: sprudel's penv, vib, accelerate and fm are classic() stages since pitch
+     pipeline steps 1 to 4). The tree's root gets no pitch modulation (IgniteContext.phaseMod is
+     null there); a pitch node hands its own to its sources through ModApplyingIgnitor.
 
 Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitude envelope with a
                  static release; the one home of the rule is BuiltIgnitor.endsInEnvelope. adsrOff
@@ -30,7 +28,7 @@ Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitu
                  pattern wrote; otherwise the fade does)
 
 Send stage      (SendRenderer → mixes to cylinder)
-  4. pan + gain → cylinder mix
+  2. pan + gain → cylinder mix
 ```
 
 **The voice chain is `classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`), a tail of slotted
@@ -66,8 +64,7 @@ not per-voice: applied on the orbit bus after all voices mix into the cylinder.
 ### Voice construction
 
 `VoiceFactory` builds each `Voice` from `VoiceData`: the instrument's tree (`IgnitorRegistry.createExciter`,
-or the sample instrument for a sample), the pitch pipeline (empty since pitch pipeline step 4), and the stages
-after the tree. `Voice` itself holds the lifecycle frames, `cylinderId`, `gain`, `pan`,
+or the sample instrument for a sample), the ignite stage that renders it, and the stages after the tree. `Voice` itself holds the lifecycle frames, `cylinderId`, `gain`, `pan`,
 `katalystParams`, `cut`, the cull window and the pipeline.
 
 **`Voice.gain` is stored, not guarded.** `Voice` keeps whatever it is constructed with, including
@@ -82,12 +79,14 @@ Passed to `Voice.render()` every block:
 
 ```kotlin
 class RenderContext(
-    val voiceBuffer: FloatArray,     // write output here (length = blockFrames)
-    val freqModBuffer: FloatArray,   // shared per-block frequency modulation accumulator
-    val orbits: Cylinders,              // reference for mixing and ducking
+    val cylinders: Cylinders,            // the orbits the send mixes into
     val sampleRate: Int,
     val blockFrames: Int,
-)
+    val voiceBuffer: AudioBuffer,        // the voice renders here (length = blockFrames)
+    val scratchBuffers: ScratchBuffers,  // the shared scratch pool
+) {
+    var blockStart: Double = 0.0         // absolute backend frame of the block
+}
 ```
 
 ## Samples

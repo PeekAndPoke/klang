@@ -87,7 +87,6 @@ class BlockFramingInvarianceSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = voiceBuffer,
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         // +0.25 frames keeps every floor() stable against 1-ulp time wobble without moving a frame.
@@ -114,7 +113,6 @@ class BlockFramingInvarianceSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = voiceBuffer,
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = ArrayList<Double>(startFrame + gateFrames + relFrames + blockFrames)
@@ -148,7 +146,6 @@ class BlockFramingInvarianceSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = voiceBuffer,
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val voice = factory.makeVoice(
@@ -176,7 +173,6 @@ class BlockFramingInvarianceSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = voiceBuffer,
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = ArrayList<Double>(startFrame + gateFrames + relFrames + blockFrames)
@@ -293,7 +289,8 @@ class BlockFramingInvarianceSpec : StringSpec({
     //
     // Everything above drives the IGNITOR door: the rows are `IgnitorDsl` chains, and even the
     // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT the voice strip's FM. The voice's own pitch
-    // pipeline renderers (`voices/strip/pitch`) were therefore untouched by this harness, which is what P4 is about.
+    // pipeline renderers (removed in pitch pipeline step 5) were therefore untouched by this harness, which is what P4
+    // is about.
     //
     // Only the PER-SAMPLE ones belong on a bit-identity list. The vibrato, the pitch envelope, accelerate and the FM (the
     // strip's `VibratoRenderer`, `PitchEnvelopeRenderer`, `AccelerateRenderer` and `FmRenderer` until pitch pipeline

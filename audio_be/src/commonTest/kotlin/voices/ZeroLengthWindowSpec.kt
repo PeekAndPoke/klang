@@ -40,7 +40,7 @@ class ZeroLengthWindowSpec : StringSpec({
         val registry = IgnitorRegistry().apply { registerDefaults() }
         val factory = VoiceFactory(
             sampleRate = sampleRate, blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames), freqModBuffer = DoubleArray(blockFrames),
+            voiceBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val voice = factory.makeVoice(
@@ -75,7 +75,7 @@ class ZeroLengthWindowSpec : StringSpec({
         val rc = Voice.RenderContext(
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate, blockFrames = blockFrames, voiceBuffer = DoubleArray(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames), scratchBuffers = ScratchBuffers(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         )
         var b = 0.0
         while (b < 10_000) {

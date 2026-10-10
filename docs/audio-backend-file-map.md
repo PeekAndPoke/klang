@@ -10,7 +10,7 @@ mark files created/modified by the per-playback-engine work (D1 + D2 — see
 ```
 Cmd → PlaybackEngineDispatcher.handle
     → per-pid PlaybackEngine { VoiceScheduler → VoiceFactory builds Voice
-        → Voice render (Pitch → Ignite → (teardown fade) → Send) → Cylinder mix
+        → Voice render (Ignite → (teardown fade) → Send) → Cylinder mix
     → Cylinders.processAndMix (per orbit: its Katalyst chain, swapped through ChainSwap)
     → MasterBus.process (the Katalyst chain at the output; skipped while it is off) }
     → accumulate into the shared mix
@@ -51,17 +51,17 @@ Cmd → PlaybackEngineDispatcher.handle
 
 - `voices/VoiceScheduler.kt` **[changed]** — scheduled heap, active voices, solo/mute, epoch, promote loop, diagnostics
   emit.
-- `voices/VoiceFactory.kt` **[changed]**: builds a `Voice` (the instrument's Ignitor tree, the pitch stage, the
-  stages after the tree) from `VoiceData`.
+- `voices/VoiceFactory.kt` **[changed]**: builds a `Voice` (the instrument's Ignitor tree and the stages after it)
+  from `VoiceData`.
 - `voices/Voice.kt` — running voice + `RenderContext` (per-engine scratch + cylinders) + per-block render.
 - `voices/VoiceLimits.kt`: a voice's onset, gate end and end, their one home (the voice writes, the stages read).
 - `voices/PlaybackCtx.kt` — per-pid context inside a scheduler (epoch + ignitor fork).
-- `voices/strip/BlockContext.kt`, `BlockRenderer.kt`: the per-block stage framework (the
-  package keeps its name; the filter/VCA strip retired in phase 3 step 9, 2026-09-27).
+- `voices/BlockContext.kt`, `BlockRenderer.kt`: the per-block stage framework (the filter/VCA strip retired in
+  phase 3 step 9, 2026-09-27; the pitch stage in pitch pipeline step 5, 2026-10-10, which also dissolved the
+  `voices/strip/` package into `voices/`).
+- `voices/IgniteRenderer.kt`: runs the Ignitor tree into the buffer (every pitch door is a `classic()` stage of it).
 - `voices/TeardownFadeRenderer.kt`: the fade after a tree for which `BuiltIgnitor.endsInEnvelope` is false.
-- `voices/strip/pitch/`: `PitchPipelineBuilder`, an empty shell since pitch pipeline step 4 (every pitch door is a `classic()` stage; step 5 removes it).
-- `voices/strip/ignite/IgniteRenderer.kt` — runs the Ignitor into the buffer.
-- `voices/strip/send/SendRenderer.kt`: pans + sums the voice into its cylinder (the `Cylinders.offer` / `checkIn` routing seam).
+- `voices/SendRenderer.kt`: pans + sums the voice into its cylinder (the `Cylinders.offer` / `checkIn` routing seam).
 
 ## Cylinders and the master: the Katalyst hosts
 

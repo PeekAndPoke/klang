@@ -1552,11 +1552,11 @@
 
             <p>
                 <b>The voice.</b> Once promoted, a voice is a running instance of its instrument, and in each block
-                it runs its steps in order. The pitch stage comes first: vibrato, pitch glide
-                (<code>accelerate</code>), pitch envelope and FM (frequency modulation) move the note's frequency.
-                Then the instrument computes the block's sound. An instrument is an <b>Ignitor</b>, a small graph of
-                oscillators, filters and envelopes (<a href="#s6">§6</a> builds them). Last comes the channel, which applies the
-                voice's gain and pan and sends the result to its orbit.
+                it runs its steps in order. First the instrument computes the block's sound. An instrument is an
+                <b>Ignitor</b>, a small graph of oscillators, filters and envelopes (<a href="#s6">§6</a> builds them). The
+                stages that move the note's frequency live in that graph too: vibrato, pitch glide
+                (<code>accelerate</code>), pitch envelope and FM (frequency modulation). Last comes the channel, which
+                applies the voice's gain and pan and sends the result to its orbit.
             </p>
 
             <p>
@@ -1672,13 +1672,10 @@
                     <rect x="380" y="170" width="500" height="66" class="bx"/>
                     <text x="396" y="190" class="t">Voice &nbsp;<tspan class="t-sm">per note, per block: the instrument, then the channel</tspan>
                     </text>
-                    <rect x="396" y="200" width="80" height="24" class="bx-eng"/>
-                    <text x="408" y="216" class="t-sm">PITCH</text>
-                    <rect x="488" y="200" width="190" height="24" class="bx-eng"/>
-                    <text x="500" y="216" class="t-sm">IGNITE · the Ignitor tree</text>
+                    <rect x="396" y="200" width="282" height="24" class="bx-eng"/>
+                    <text x="408" y="216" class="t-sm">IGNITE · the Ignitor tree, pitch stages included</text>
                     <rect x="690" y="200" width="174" height="24" class="bx-eng"/>
                     <text x="702" y="216" class="t-sm">CHANNEL · gain, pan → orbit</text>
-                    <path class="arw" d="M476,212 L486,212"/>
                     <path class="arw" d="M678,212 L688,212"/>
 
                     <path class="arw" d="M630,236 L630,258"/>
@@ -1730,9 +1727,9 @@
                 each owner has one way of being set. The <b>instrument</b> is an Ignitor tree. The <b>channel</b> is
                 three numbers. The <b>bus</b> is a Katalyst chain, once per orbit and once more at the output, where
                 it is called the master. A pattern runs no effects of its own: it carries values, and the owners read
-                them. Pitch is handled apart from the three: the engine runs the pitch calls (<code>vibrato</code>,
-                <code>penv</code>, <code>fm</code>, <code>accelerate</code>) in front of every instrument, whatever
-                its tree says.
+                them. The pitch calls (<code>vibrato</code>, <code>penv</code>, <code>fm</code>,
+                <code>accelerate</code>) land with the instrument as well: like <code>lpf</code>, each fills a stage of
+                its tree.
             </p>
 
             <p>
@@ -1839,10 +1836,12 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
             <p>
                 Both instruments above end in <code>.classic()</code>, and so does every built-in sound and every
                 instrument in this paper. It appends a ready-made set of finishing stages to the tree, in this order:
-                a one-pole filter, crush, coarse, distort, high-pass, band-pass, notch, low-pass, tremolo and the
-                amplitude envelope (<a href="#s7">§7</a> says what each one does). Every knob of these stages is a slot, named after
+                the pitch stages (FM, pitch envelope, pitch glide, vibrato), a one-pole filter, crush, coarse, distort,
+                high-pass, band-pass, notch, low-pass, tremolo and the amplitude envelope (<a href="#s7">§7</a> says what each
+                one does). Every knob of these stages is a slot, named after
                 the pattern call that fills it: <code>lpf.freq</code>, <code>adsr.attack</code> and so on. The
-                pattern's per-note calls (<code>onepole</code>, <code>lpf</code>, <code>hpf</code>,
+                pattern's per-note calls (<code>fm</code>, <code>penv</code>, <code>accelerate</code>,
+                <code>vibrato</code>, <code>onepole</code>, <code>lpf</code>, <code>hpf</code>,
                 <code>bpf</code>, <code>notch</code>, <code>crush</code>, <code>coarse</code>,
                 <code>distort</code>, <code>tremolo</code>, <code>adsr</code>) write those slots, so
                 <code>.lpf(800)</code> on the pattern reaches the low-pass stage of whichever instrument plays. A
@@ -1851,7 +1850,7 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
             </p>
 
             <figure class="klang-figure">
-                <iframe src="whitepaper/fig-classic-stages.html" title="The classic stages: click a call to build its stage, or switch classic() off" loading="lazy" style="height: 880px"></iframe>
+                <iframe src="whitepaper/fig-classic-stages.html" title="The classic stages: click a call to build its stage, or switch classic() off" loading="lazy" style="height: 1080px"></iframe>
                 <figcaption>The stages <code>.classic()</code> adds, in the order the engine builds them. Click a call to write its slot and the stage appears; switch <code>.classic()</code> off to see the tree alone.</figcaption>
             </figure>
 
@@ -1863,9 +1862,9 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
             </p>
 
             <p>
-                Leave <code>.classic()</code> out and the tree plays as you built it. The pitch stage still runs in
-                front of it and the channel still follows, but the pattern's <code>lpf</code>,
-                <code>crush</code>, <code>adsr</code> and the rest have no stages to fill, except the slots the tree
+                Leave <code>.classic()</code> out and the tree plays as you built it. The channel still follows, but
+                the pattern's <code>lpf</code>, <code>vibrato</code>, <code>adsr</code> and the rest have no stages
+                to fill, except the slots the tree
                 places itself, and there is no default envelope. The tree is the voice, in the order you composed
                 it.
             </p>
@@ -2128,7 +2127,8 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 wavefold, which folds the wave back on itself, optionally oversampled to tame aliasing), bitcrush
                 (fewer bits), sample-rate reduction (<code>coarse</code>), tremolo (a wobbling level), vibrato, FM (one
                 oscillator moving another's pitch fast enough to make new overtones), pitch envelopes (a pitch that
-                moves over the length of a note, like the kick's drop), and per-voice analog drift (a slow, small
+                moves over the length of a note, like the kick's drop), a pitch glide (<code>accelerate</code>, a note
+                that slides by a set number of semitones while it is held), and per-voice analog drift (a slow, small
                 wander of pitch, like a real analog oscillator's).
             </p>
         </div>

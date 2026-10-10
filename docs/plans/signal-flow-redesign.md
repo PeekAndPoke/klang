@@ -189,7 +189,9 @@ Ignitor.register("supersaw", Ignitor.supersaw().classic())
   section 4's minimum gains a pitch row for phase 3, and moving that pipeline into the tree is its
   own later item (`../tasks/in-progress/pitch-pipeline-into-the-tree.md`). Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
   `BlockContext.freqModBuffer`, the ignitor reads it as `phaseMod`, and the tree's own pitch mods
-  compose with it on every Der Schmetterling voice today.
+  compose with it on every Der Schmetterling voice today. **Done since (2026-10-10):** the pitch pipeline's steps 1 to
+  5 moved the four doors into `classic()` stages and cut their wire fields; step 5 removed `buildPitchPipeline`,
+  `BlockContext.freqModBuffer` and the bridge to `phaseMod`, so the tree is the whole instrument.
 - **The order `classic()` must have** is today's strip order with the canonical filter sub-order of
   `SprudelVoiceData.toVoiceData`: crush, coarse, distort, highpass, bandpass, notch, lowpass,
   tremolo, adsr (since step 10, 2026-09-26, preceded by `onepole`, which the strip ran on the source). The sketch above had the lowpass first, which would change every song with both a

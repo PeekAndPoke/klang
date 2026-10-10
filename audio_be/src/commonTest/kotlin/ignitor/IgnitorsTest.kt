@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_CHAOS_MAX
+import io.peekandpoke.klang.audio_be.voices.BlockContext
+import io.peekandpoke.klang.audio_be.voices.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 
 import io.kotest.core.spec.style.StringSpec
@@ -1175,11 +1177,10 @@ class ExcitersTest : StringSpec({
     }
 
     "shape soft direct output is finite and stays in the documented envelope" {
-        // Direct call (no IgniteRenderer wrapper): the clip stage itself does
-        // shape + DC-block. The DC-blocker's 2× edge transient on rail-to-rail
-        // signals lifts peaks toward ±2 — the IgniteRenderer wrap is what bounds
-        // them to ±1 in the live engine. See `clip via IgniteRenderer wrap …`
-        // below for the bound-to-±1 invariant.
+        // Direct call (no IgniteRenderer): the clip stage itself does shape + DC-block, and the
+        // bound here is a loose envelope. IgniteRenderer adds no clipping of its own (its KDoc):
+        // the shape stage's per-stage soft cap is what bounds the output. See `shape via
+        // IgniteRenderer …` below for the in-engine bound.
         val buf = generate(Ignitors.sine().drive(1.0).shape("soft"), freqHz = 440.0)
         buf.peakAmplitude() shouldBeLessThan 2.5
         buf.any { it != 0.0 } shouldBe true
@@ -1194,20 +1195,19 @@ class ExcitersTest : StringSpec({
     }
 
     "shape via IgniteRenderer wrap bounds output to within ±1 (the in-engine invariant)" {
-        // The IgniteRenderer applies a single fastTanh wrap to the entire ignitor
-        // output. This is what bounds heavy-distort/clip chains to ±1 in the live
-        // engine (per-stage clip/distort no longer caps — see IgnitorEffects.kt).
+        // IgniteRenderer applies no wrap or clip of its own: it hands the tree's output on as
+        // produced. The bound comes from the per-stage soft cap inside `shape()` and `distort()`
+        // (IgnitorEffects.kt); this row pins it through the ignite stage the engine runs.
         val signal = Ignitors.sine().drive(1.0).shape("soft")
-        val ctx = io.peekandpoke.klang.audio_be.voices.strip.BlockContext(
+        val ctx = BlockContext(
             audioBuffer = AudioBuffer(defaultBlockFrames),
-            freqModBuffer = DoubleArray(defaultBlockFrames),
             scratchBuffers = ScratchBuffers(defaultBlockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = 0.0, gateEndFrame = defaultBlockFrames.toDouble(), endFrame = defaultBlockFrames.toDouble()),
         ).apply {
             updateOffsetAndLength(offset = 0, length = defaultBlockFrames); blockStart = 0.0
         }
-        val renderer = io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer(
+        val renderer = IgniteRenderer(
             signal = signal,
             signalCtx = IgniteContext(
                 sampleRate = sampleRate,

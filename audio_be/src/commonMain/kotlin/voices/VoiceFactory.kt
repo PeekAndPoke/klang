@@ -14,10 +14,6 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -34,16 +30,15 @@ import kotlin.random.Random
  *
  * Every voice is ONE Ignitor tree (phase 3 step 9 retired the voice strip): a registered instrument's tree
  * (a built-in, an authored instrument, an inline one) or the sample instrument over the voice's PCM. Around
- * it the voice runs only its pitch pipeline (in front; empty since pitch pipeline step 4, every pitch door is a
- * `classic()` stage), the teardown fade when the tree's root is not a built
- * envelope, and the channel (gain, pan, the orbit's send). An authored instrument that does not end in
- * `classic()` is played as its bare tree: no voice envelope, no doors.
+ * it the voice runs only the teardown fade (when the tree's root is not a built envelope) and the channel (gain,
+ * pan, the orbit's send); nothing runs in front of it since pitch pipeline step 5 (every pitch door is a `classic()`
+ * stage). An authored instrument that does not end in `classic()` is played as its bare tree: no voice envelope,
+ * no doors.
  */
 class VoiceFactory(
     private val sampleRate: Int,
     private val blockFrames: Int,
     private val voiceBuffer: AudioBuffer,
-    private val freqModBuffer: DoubleArray,
     private val scratchBuffers: ScratchBuffers,
 ) {
 
@@ -355,17 +350,10 @@ class VoiceFactory(
             random = voiceRandom,
         )
 
-        // The pitch pipeline is empty since pitch pipeline step 4 (every pitch door is a `classic()` stage); step 5
-        // removes the shell.
-        val pipeline = buildPitchPipeline() + IgniteRenderer(
-            signal = signal,
-            signalCtx = signalCtx,
-            freqHz = freqHz,
-        ) + treeStages
+        val pipeline = listOf(IgniteRenderer(signal = signal, signalCtx = signalCtx, freqHz = freqHz)) + treeStages
 
         val blockCtx = BlockContext(
             audioBuffer = voiceBuffer,
-            freqModBuffer = freqModBuffer,
             scratchBuffers = scratchBuffers,
             sampleRate = sampleRate,
             // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.

@@ -132,7 +132,6 @@ class VoiceScheduler(
 
     // Scratch buffers — pre-allocated to avoid per-block heap allocation on the audio thread
     private val voiceBuffer = AudioBuffer(context.blockFrames)
-    private val freqModBuffer = DoubleArray(context.blockFrames)
     // The ONE shared scratch pool (resource warehouse, step 2a). Engines render sequentially within a
     // block, so one pool serves every playback, and its depth — reached once, kept forever — is
     // never paid again by the next playback or the one after warmup.
@@ -147,7 +146,6 @@ class VoiceScheduler(
         sampleRate = context.sampleRate,
         blockFrames = context.blockFrames,
         voiceBuffer = voiceBuffer,
-        freqModBuffer = freqModBuffer,
         scratchBuffers = scratchBuffers,
     )
 
@@ -156,7 +154,6 @@ class VoiceScheduler(
         sampleRate = context.sampleRate,
         blockFrames = context.blockFrames,
         voiceBuffer = voiceBuffer,
-        freqModBuffer = freqModBuffer,
         scratchBuffers = scratchBuffers,
     )
 

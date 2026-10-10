@@ -3,12 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.audio_be.voices.strip
+package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 
 /**
  * Shared context for all [BlockRenderer] stages in the voice pipeline.
@@ -16,24 +14,21 @@ import io.peekandpoke.klang.audio_be.voices.VoiceLimits
  * Created once per voice at construction time. Mutable fields are updated per block
  * before the pipeline runs. No allocations in the hot path.
  *
- * Stages read/write the shared buffers:
- * - **Pitch** stages write to [freqModBuffer] (frequency multipliers)
- * - **Ignite** stages write to [audioBuffer] (raw waveform)
- * - **Filter** stages read/write [audioBuffer] (sculpt the waveform)
- * - **Send** stage reads [audioBuffer] and routes to cylinder mixer
+ * Stages read/write the shared buffer:
+ * - the **Ignite** stage writes [audioBuffer] (the Ignitor tree's output: the whole instrument, pitch stages included)
+ * - the **teardown fade** reads/writes [audioBuffer]
+ * - the **Send** stage reads [audioBuffer] and routes it to the cylinder mixer
  *
  * **Threading assumption:** Voices render sequentially within a block.
- * The shared buffers ([audioBuffer], [freqModBuffer]) are not thread-safe.
+ * The shared buffer ([audioBuffer]) is not thread-safe.
  */
 class BlockContext(
     // ═══════════════════════════════════════════════════════════════════════════
     // Shared buffers
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /** Main audio signal buffer (Ignite writes, Filter reads/writes). Updated per block. */
+    /** Main audio signal buffer (Ignite writes, the teardown fade reads/writes, Send reads). Updated per block. */
     var audioBuffer: AudioBuffer,
-    /** Pitch modulation multipliers (Pitch writes, Excite reads via IgniteContext.phaseMod) */
-    val freqModBuffer: DoubleArray,
     /** Shared scratch buffer pool for Ignitor composition operators */
     val scratchBuffers: ScratchBuffers,
 
@@ -107,9 +102,6 @@ class BlockContext(
 
     /** Pre-computed sample rate as Double */
     val sampleRateD: Double = sampleRate.toDouble()
-
-    /** Whether any Pitch renderer has written to [freqModBuffer] this block. Reset per block. */
-    var freqModBufferWritten: Boolean = false
 
     /**
      * Set per block by `Voice.render` BEFORE the stages run: true only when the block's output

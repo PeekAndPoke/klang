@@ -63,7 +63,6 @@ class BareTreeVoiceSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = DoubleArray(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val voice = factory.makeVoice(

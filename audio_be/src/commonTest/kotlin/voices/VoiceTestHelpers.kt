@@ -13,10 +13,6 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.adsr
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -48,7 +44,6 @@ object VoiceTestHelpers {
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = AudioBuffer(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             this.blockStart = blockStart
@@ -120,16 +115,11 @@ object VoiceTestHelpers {
             )
         }
 
-        // The voice's stages: Pitch (empty since pitch pipeline step 4) → Ignite (the Send stage is appended by the voice)
-        val pipeline = buildPitchPipeline() + IgniteRenderer(
-            signal = instrument,
-            signalCtx = signalCtx,
-            freqHz = freqHz,
-        ) + treeStages
+        // The voice's stages: Ignite, then the tree stages (the Send stage is appended by the voice)
+        val pipeline = listOf(IgniteRenderer(signal = instrument, signalCtx = signalCtx, freqHz = freqHz)) + treeStages
 
         val blockCtx = BlockContext(
             audioBuffer = AudioBuffer(blockFrames), // placeholder, updated per block
-            freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
             limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),

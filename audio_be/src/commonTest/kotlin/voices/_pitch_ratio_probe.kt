@@ -52,7 +52,6 @@ fun renderPitchRatios(
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         voiceBuffer = voiceBuffer,
-        freqModBuffer = DoubleArray(blockFrames),
         scratchBuffers = ScratchBuffers(blockFrames),
     )
     // +0.25 frames keeps every floor() stable against 1-ulp time wobble without moving a frame.
@@ -79,7 +78,6 @@ fun renderPitchRatios(
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         voiceBuffer = voiceBuffer,
-        freqModBuffer = DoubleArray(blockFrames),
         scratchBuffers = ScratchBuffers(blockFrames),
     )
     val out = DoubleArray(total + blockFrames)

@@ -143,8 +143,9 @@ class GuitarClickHuntTest : StringSpec({
         renderVoiceFromIgnitor(ig = dsl.toExciter(random = testRandom), freqHz = freqHz, gateMs = gateMs, releaseMs = releaseMs)
 
     /**
-     * Renders the ignitor through the engine's `IgniteRenderer` wrapper (which hard-clips
-     * to ±1 per output sample). Use this to verify the in-engine ±1 invariant.
+     * Renders the ignitor and hard-clips each output sample to ±1 HERE, in the helper. The engine's
+     * `IgniteRenderer` applies no clip of its own (its KDoc); the bound in the engine is the per-stage
+     * soft cap of `shape()` and `distort()`. Kept as the click hunt's clipped variant.
      */
     fun renderVoiceThroughWrapper(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): AudioBuffer {
         val out = renderVoiceFromIgnitor(ig = dsl.toExciter(random = testRandom), freqHz = freqHz, gateMs = gateMs, releaseMs = releaseMs)

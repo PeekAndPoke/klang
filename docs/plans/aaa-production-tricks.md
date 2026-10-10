@@ -62,8 +62,8 @@ facts; the few that would go into code first were checked against a source and a
 - **Envelope:** `adsr` with curves.
 - **Nonlinear:** `drive`, `shape` (16 shapes, oversampling), the fused `distort`, `crush`, `coarse`.
 - **Modulation effects:** `phaser`, `tremolo` (shape, range), `shimmer` (a granular pitch cloud).
-- **Pitch:** vibrato, accelerate, pitch envelope, fm, `pitchMod`. These are still outside the tree:
-  `docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`.
+- **Pitch:** vibrato, accelerate, pitch envelope, fm, `pitchMod`. All are tree nodes; sprudel's doors fill them as
+  `classic()` stages since the pitch pipeline (`docs/tasks/in-progress/pitch-pipeline-into-the-tree.md`, steps 1 to 5).
 - **The send:** equal-power `pan` and `gain`, constant per voice.
 
 **Katalyst, per orbit and on the master. Stereo.**
