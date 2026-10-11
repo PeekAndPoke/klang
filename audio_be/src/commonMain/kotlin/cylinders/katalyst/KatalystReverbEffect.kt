@@ -245,14 +245,9 @@ class KatalystReverbEffect(
             wetGlide.advanceScaled(into = feed, source = ctx.mixBuffer, frames = frames)
 
             // Same shape as the delay's: the feed peak feeds a ceiling on the combs' content,
-            // decaying by the comb feedback once per longest-comb revolution (TailCeiling).
-            activeTail.observe(
-                inputPeak = TailCeiling.peakOf(feed, frames),
-                frames = frames,
-                windowSamples = unit.tailWindowSamples,
-                feedback = unit.tailFeedback,
-                lapsPerWindow = unit.tailLapsPerWindow,
-            )
+            // decaying by the comb feedback once per longest-comb revolution (TailCeiling). One call that takes no
+            // double (engine follow-up 1, `Reverb.observeTail` says why).
+            unit.observeTail(ceiling = activeTail, input = feed, frames = frames)
             unit.process(input = feed, output = ctx.mixBuffer, length = frames)
         }
 

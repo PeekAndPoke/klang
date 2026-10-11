@@ -39,13 +39,21 @@ class SvfCoeffSweepSpec : StringSpec({
     fun startOf(s: SvfCoeffSweep) = doubleArrayOf(s.start.a1, s.start.a2, s.start.a3, s.start.k, s.start.g)
     fun stepsOf(s: SvfCoeffSweep) = doubleArrayOf(s.a1Step, s.a2Step, s.a3Step, s.kStep, s.gStep)
 
+    /** The host's side of [SvfCoeffSweep.prepare]: it writes the block's cutoffs and q, then prepares. */
+    fun SvfCoeffSweep.prepareBlock(cutoffStartHz: Double, cutoffEndHz: Double, q: Double, frames: Int) {
+        this.cutoffStartHz = cutoffStartHz
+        this.cutoffEndHz = cutoffEndHz
+        this.q = q
+        prepare(sampleRate = sr, frames = frames)
+    }
+
     fun relClose(actual: Double, expected: Double, tol: Double) =
         abs(actual - expected) <= tol * maxOf(abs(expected), 1e-300)
 
     "the start coefficients are the start cutoff's, and each step is (end - start) / frames" {
         val sweep = SvfCoeffSweep()
 
-        sweep.prepare(cutoffStartHz = 800.0, cutoffEndHz = 3200.0, q = 2.0, sampleRate = sr, frames = 128)
+        sweep.prepareBlock(cutoffStartHz = 800.0, cutoffEndHz = 3200.0, q = 2.0, frames = 128)
 
         val s = oracle(fc = 800.0, q = 2.0)
         val e = oracle(fc = 3200.0, q = 2.0)
@@ -67,7 +75,7 @@ class SvfCoeffSweepSpec : StringSpec({
     "the steps carry the start coefficients to the end cutoff's in exactly `frames` samples" {
         val sweep = SvfCoeffSweep()
 
-        sweep.prepare(cutoffStartHz = 12000.0, cutoffEndHz = 150.0, q = 0.707, sampleRate = sr, frames = 91)
+        sweep.prepareBlock(cutoffStartHz = 12000.0, cutoffEndHz = 150.0, q = 0.707, frames = 91)
 
         val acc = startOf(sweep)
         val steps = stepsOf(sweep)
@@ -88,8 +96,8 @@ class SvfCoeffSweepSpec : StringSpec({
     "equal ends step nothing, even right after a sweep that moved" {
         val sweep = SvfCoeffSweep()
 
-        sweep.prepare(cutoffStartHz = 500.0, cutoffEndHz = 4000.0, q = 1.0, sampleRate = sr, frames = 128)
-        sweep.prepare(cutoffStartHz = 900.0, cutoffEndHz = 900.0, q = 1.0, sampleRate = sr, frames = 128)
+        sweep.prepareBlock(cutoffStartHz = 500.0, cutoffEndHz = 4000.0, q = 1.0, frames = 128)
+        sweep.prepareBlock(cutoffStartHz = 900.0, cutoffEndHz = 900.0, q = 1.0, frames = 128)
 
         val s = oracle(fc = 900.0, q = 1.0)
 
@@ -100,7 +108,7 @@ class SvfCoeffSweepSpec : StringSpec({
     "a sweep of no frames is a snap to the start cutoff" {
         val sweep = SvfCoeffSweep()
 
-        sweep.prepare(cutoffStartHz = 500.0, cutoffEndHz = 4000.0, q = 1.0, sampleRate = sr, frames = 0)
+        sweep.prepareBlock(cutoffStartHz = 500.0, cutoffEndHz = 4000.0, q = 1.0, frames = 0)
 
         stepsOf(sweep).toList() shouldBe listOf(0.0, 0.0, 0.0, 0.0, 0.0)
         relClose(actual = sweep.start.g, expected = oracle(fc = 500.0, q = 1.0)[4], tol = 1e-14) shouldBe true

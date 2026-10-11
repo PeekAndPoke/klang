@@ -576,6 +576,74 @@ class KatalystPhaserEffectSpec : StringSpec({
         fx.center shouldBe 700.0
     }
 
+    "a reset under an owner whose knobs stand: the SAME config is applied again, not skipped as unchanged" {
+        // The stage skips a config equal to the last one it applied (engine follow-up 1, review round 1); a reset
+        // puts the kernel and the glides back at their defaults, so that memory must go with it, or the same owner's
+        // next block would leave the phaser at the defaults: off, at rate 0.
+        val fx = stage()
+        val ctx = KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
+
+        repeat(3) {
+            fx.configure(depth = 0.6, rate = 2.0, center = 700.0, sweep = 300.0, floor = 0.5)
+            fx.process(ctx)
+        }
+
+        fx.reset()
+        fx.phaser.depth shouldBe 0.0
+
+        fx.configure(depth = 0.6, rate = 2.0, center = 700.0, sweep = 300.0, floor = 0.5)
+
+        fx.phaser.depth shouldBe 0.6
+        fx.phaser.rate shouldBe 2.0
+        fx.phaser.floor shouldBe 0.5
+        fx.center shouldBe 700.0
+        fx.sweep shouldBe 300.0
+        abs(fx.wetCoeff - sinPow2(0.6)) shouldBeLessThanOrEqual 1e-12
+    }
+
+    "the skip sees a change of the sweep alone: the other four knobs standing do not hide it" {
+        // The unchanged-config skip compares all five knobs (engine follow-up 1, review round 2): a `phaser.sweep`
+        // pattern under a standing depth, rate, center and floor must still reach the breakpoint.
+        val fx = stage()
+        val ctx = KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
+
+        repeat(3) {
+            fx.configure(depth = 0.6, rate = 2.0, center = 700.0, sweep = 300.0, floor = 1.0)
+            fx.process(ctx)
+        }
+
+        fx.sweep shouldBe 300.0
+
+        repeat(glideBlocks + 1) {
+            fx.configure(depth = 0.6, rate = 2.0, center = 700.0, sweep = 900.0, floor = 1.0)
+            fx.process(ctx)
+        }
+
+        fx.sweep shouldBe 900.0
+    }
+
+    "an unset knob (NaN) followed by a set one is a change: the skip does not take NaN for any value" {
+        // The writer hands rate, center and sweep through raw, and an unset slot is NaN (`SLOT_UNSET`), so a stored
+        // NaN is reachable: it may match only another NaN (engine follow-up 1, review round 2).
+        val fx = stage()
+        val ctx = KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
+
+        repeat(3) {
+            fx.configure(depth = 0.6, rate = 2.0, center = Double.NaN, sweep = 300.0, floor = 1.0)
+            fx.process(ctx)
+        }
+
+        // An unset center reads as the default breakpoint.
+        fx.center shouldBe 1000.0
+
+        repeat(glideBlocks + 1) {
+            fx.configure(depth = 0.6, rate = 2.0, center = 700.0, sweep = 300.0, floor = 1.0)
+            fx.process(ctx)
+        }
+
+        fx.center shouldBe 700.0
+    }
+
     "below the gate the stage is the dry mix, and above it the phaser runs" {
         val src = source(4)
 

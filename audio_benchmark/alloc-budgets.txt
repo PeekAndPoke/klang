@@ -1,0 +1,83 @@
+# The allocation budgets of the allocation check (KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun,
+# the alloc step of console/full-check.sh): bytes per block, the most a case may allocate.
+#
+# One line per case and platform: case, platform (v8 or jvm), budget, and what the budget guards (the item numbers
+# are docs/tasks/engine-follow-ups.md's). A case without a line, or a line naming an unknown case, turns the run red.
+# Fixed numbers, set by hand, never by a run. They were set on 2026-10-10 from the harness's first run at middle C
+# (docs/benchmarks/alloc-scoreboard.md, the first two rows):
+# - V8: about 40 B or more above that run's median, and below the regression the case guards: one heap number per
+#   sample (about 2 KB per voice and block, items 3, 9, 10) or one per knob read (60 to 100 B per voice and block,
+#   item 8). Where today's figure and item 8's old one overlap (E-sawC-sus, E-noisesaw-sus) the budget guards the
+#   per-sample class only, and the voice rows guard item 8 (E-stages caught the item 8 mutant once, 108 B against
+#   96, but it is not an item 8 line either).
+# - Re-set: saw, sawC, C-offrel, sgpad-vib and C-dist on V8 were re-set at engine follow-up 6 (2026-10-10) from that
+#   change's runs (tree medians 16, 15, 16, 31 to 36 and 31 to 36 B), by the same rule: its fix took about 16 B per wave oscillator off,
+#   enough that item 8's regression read under the old budgets (docs/tasks/engine-follow-ups.md, item 6).
+#   C-full on V8 was re-set at engine follow-up 29 (2026-10-11) from that change's runs (tree medians 26 to 67 B,
+#   healthy rounds 21 to 71 B): its fix took about 150 B off, so the line now guards item 8 as well. 112 is 41 B
+#   above the worst healthy round and below the item 8 mutant's lowest round (154.8 B) and item 29's revert (165 B).
+#   spluck-a was added at engine follow-up 7 (2026-10-11), with its two lines set by the same rule from that change's
+#   runs: V8 healthy rounds 1 to 53 B (median about 31), HEAD's code (the old double-returning ramp) 407 to 566 B. About
+#   1 round in 30 on the healthy tree reads 300 to 460 B (the drift path, not located: docs/tasks/engine-follow-ups.md,
+#   item 7); the median of 3 rounds absorbs one such round. A spluck-a breach whose rounds are not all high, and that
+#   does not repeat on a second run, is that tail; a breach that repeats is a regression. HEAD's code read high in
+#   every round of every run, the item 8 mutant in every round of its one run.
+#   E-delay and E-stages were added at engine follow-up 1 (2026-10-11), with their lines set by the same rule from
+#   that change's runs (3 runs of 3 rounds): E-delay healthy rounds 30 to 71 B (medians 62 to 67), HEAD's code 125
+#   to 171 (medians 160 to 171). Each part of the delay's fix is about one heap number per block, under the V8
+#   resolution (a revert of the glide alone read 61 B, review round 1), so the line guards the delay's sites as a
+#   whole. E-stages was set at 176 first and re-set to 96 in review round 1, after the phaser stage learned to skip
+#   an unchanged config: healthy rounds 10 to 57 B (medians 11 to 51, 6 runs of 3 rounds), HEAD's code 203 to 346
+#   (medians 217 to 259). It guards a revert of everything, the delay's sites with all three stages running, and the
+#   per-sample class in the reverb and the phaser (it is the only case that runs them). The reverb's and the phaser's
+#   per-block sites it sees only in part: a revert of their five files read medians 128, 129, 129 and 93 B in four
+#   runs (rounds 92 to 222), so one run in four stays under the line; those parts are guarded by their KDocs.
+# - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
+#   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
+#
+# Two limits, said plainly:
+# - V8 resolution (maintainer decision 2, 2026-10-10): the method's noise (about 25 B per block either way) is larger
+#   than one heap number (16 B on node). The V8 budgets tell "about 0" from a heap number per sample or per knob read,
+#   not from a single new heap number per block. Only the JVM sees that one.
+# - The JVM's mixed profile is process-dependent (maintainer decision 9): every case runs in one process, which is
+#   what finds the megamorphic boxes, and the records show one process reading 0 B and another 72 B on the same case
+#   (item 12, before its step 2). A future regression of that kind can breach in one run and not the next. The median
+#   of 9 rounds damps this; it does not remove it.
+#   The JVM can also optimise a box away: review round 1 routed the ladder's constant reads through a nullable read
+#   (item 12's class) and the JVM read 0 B, while V8 read one more heap number.
+#
+# case             platform  budget  guards
+saw                v8        56      the control (a jump means the method or the bundle changed)
+saw                jvm       6       the control
+sawC               v8        56      item 8, the knob reads
+sawC               jvm       6       item 12, a Double per knob read
+C-offrel           v8        56      item 10b, the release arm (sawC is the item 8 line)
+C-offrel           jvm       6       item 10b, the release arm
+C-env3             v8        160     items 10a, 10b, 10d, the envelopes in all three hosts
+C-env3             jvm       6       items 10a, 10b, 10d, the envelopes
+super7             v8        64      item 8, the unison stack
+super7             jvm       6       item 8, the unison stack
+super7a            v8        64      item 8, the unison stack with drift (its drift ramp never boxed: item 7, spluck-a)
+super7a            jvm       6       item 8, the unison stack with drift
+spluck-a           v8        96      item 7, the drift ramp's holder (the superpluck's generate never inlined the old blend)
+spluck-a           jvm       6       item 7, the superpluck with drift
+sgpad-vib          v8        80      item 8, the vibrato's knob reads (the only line on the vibrato path)
+sgpad-vib          jvm       6       item 12, the ladder
+whitecolor         v8        64      item 3, the noise stays clean
+whitecolor         jvm       6       item 12's first JVM site
+C-dist             v8        72      item 8; item 9, the fused distort
+C-dist             jvm       6       item 9, the fused distort
+tube4x             v8        160     item 9, the Shape node oversampled
+tube4x             jvm       6       item 9, the Shape node oversampled
+C-full             v8        112     item 8, the knob reads; item 29's SVF setup as a whole (its parts: the KDocs)
+C-full             jvm       6       item 12 step 2
+E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample class only)
+E-sawC-sus         jvm       6       item 3, the limiter's level; item 8
+E-noisesaw-sus     v8        160     item 3, the limiter's gain (the per-sample class only)
+E-noisesaw-sus     jvm       6       item 3, the limiter's gain
+E-delay            v8        112     item 1, the orbit delay's sites as a whole (its parts: the KDocs)
+E-delay            jvm       6       item 1, the orbit delay
+E-stages           v8        96      item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
+E-stages           jvm       6       item 1, the three orbit stages
+E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
+E-C-rel05-n16      jvm       450     item 11, the voice build

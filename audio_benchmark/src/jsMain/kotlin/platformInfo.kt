@@ -14,12 +14,4 @@ actual fun platformInfo(): String {
     }
 }
 
-actual fun benchmarkCaseFilter(): String? {
-    val raw = try {
-        js("(typeof process !== 'undefined' && process.env && process.env.KLANG_BENCH_FILTER) || null") as? String
-    } catch (_: Throwable) {
-        null
-    }
-
-    return raw?.trim()?.takeIf { it.isNotEmpty() }
-}
+actual fun benchmarkCaseFilter(): String? = envVar("KLANG_BENCH_FILTER")

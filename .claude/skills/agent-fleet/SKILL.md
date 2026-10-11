@@ -123,6 +123,9 @@ reads to take the lock.
   `find <scratchpad> -type f -delete` on the session scratchpad and emptied every earlier agent's harness, the
   review snapshots and the V8 cost bundles; nothing in the repo was lost). Give each worker its own subfolder in the
   brief (`<scratchpad>/<task>/`) and say: delete only inside it.
+- **Deletes name literal paths, never a variable** (2026-10-10: the harness worker ran an `rm -f` through a variable
+  path inside its own folder). A variable that is empty or wrong turns a delete into one on the wrong folder, and a
+  literal path is what the reader of the command can check.
 
 ## Concurrency & fan-out safety
 

@@ -38,7 +38,8 @@ fi
 
 mkdir -p "$(dirname "$LOCK_FILE")"
 
-exec 9>"$LOCK_FILE"
+# Open for APPEND: `>` would truncate on open, so every waiting agent would wipe the holder's record.
+exec 9>>"$LOCK_FILE"
 
 if ! flock --exclusive --wait "$TIMEOUT" 9; then
     echo "BUILD LOCK: could not acquire $LOCK_FILE within ${TIMEOUT}s." >&2
@@ -48,15 +49,16 @@ if ! flock --exclusive --wait "$TIMEOUT" 9; then
 fi
 
 # Record who holds it, so a human looking at a stuck build can see what is running.
-# Truncate first: the fd is shared, and a shorter record must not leave the old tail behind.
-: >&9
+# Truncate first, by path: `: >&9` writes nothing and truncates nothing on an open fd, and a
+# shorter record must not leave the old tail behind. The fd appends, so it writes from 0.
+truncate -s 0 "$LOCK_FILE"
 printf 'pid=%s\nsince=%s\ncmd=%s\n' "$$" "$(date -Iseconds)" "$*" >&9
 
 status=0
 "$@" || status=$?
 
 # The lock releases when fd 9 closes on exit. Blank the record so a stale holder line
-# does not mislead the next reader of the file.
-: >&9
+# does not mislead the next reader of the file. Never let a failed blank mask the command's status.
+truncate -s 0 "$LOCK_FILE" || true
 
 exit "$status"

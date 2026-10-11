@@ -19,7 +19,12 @@ internal class WaveVoiceState {
     /** Normalised phase, `0..1`. */
     var phase: Double = 0.0
 
-    /** Base normalised phase increment per sample (pre-phaseMod, pre-drift). */
+    /**
+     * Base normalised phase increment per sample (pre-phaseMod, pre-drift): the per-block holder the loops read, for
+     * the unison stacks and for the mono oscillator (`WaveIgnitor` writes it once per block). A holder, not an argument:
+     * a non-integral double handed to a loop method V8 does not inline is a heap number per call
+     * (`audio/ref/performance.md`, engine follow-up 6).
+     */
     var dt: Double = 0.0
 
     /** Output gain (used by the unison super stack; mono ignitors leave it unused). */

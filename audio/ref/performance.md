@@ -161,6 +161,8 @@ Before merging a new Ignitor / effect / filter:
 |---------------------------------------------------------------|------------------------------------------------------------------|
 | `./gradlew :audio_be:jvmTest`                                 | Correctness — equivalence tests, NaN safety, IIR stability       |
 | `./console/run-dsp-benchmarks.sh`                             | RTF (render-time / audio-time) on JVM + JS for each effect       |
+| `KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`   | Bytes per block on JVM + V8 against budgets: "Measuring allocations" |
+| `./console/full-check.sh`                                     | Every test, the corpus, the timing and the allocation check      |
 | `audio_benchmark/src/commonMain/kotlin/EffectBenchmark.kt`    | Add a benchmark case here when introducing a new hot DSP unit    |
 | Browser DevTools profiler on `:klang:jsBrowserDevelopmentRun` | The actual deployment target — check sample-recorded hot methods |
 | `./gradlew :klang:jvmRun` listening pass                      | Final sanity check — perf changes can hide subtle math bugs      |
@@ -252,6 +254,14 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   and others). On the development bundle that is confirmed: 2 of 3 processes before and 0 of 3 after in review (4
   of 8 and 0 of 7 in the pass). On the production bundle it was seen in 2 of 3 processes in one sample and in 0 of
   3 in another, so it is not reproduced there; the seeds cost nothing and stay by rule.
+  Engine follow-up 5 (2026-10-11) applied the rule to every field seed of an OSCILLATOR loop too: the phase of the
+  wave loops (`WaveIgnitor`'s PWM loop, `renderHoisted`, `renderPhased`) and of the unison stacks' four loops, the
+  sample's playhead, the Karplus string's filter state. The PWM loop's phase seed boxed per sample on the
+  development bundle under a mixed profile (about 2 KB per block, 64 B after), where `voice.phase` compiles to a
+  getter call that V8 did not inline into that `generate` in one traced process (a call result under this rule);
+  production loads the field directly and never showed it, and the others boxed on neither bundle. The oscillator
+  scope is a choice: the filter and effect loops were not swept (candidates: the SVF coefficient ramps in
+  `IgnitorFilters.kt`, `DcBlocker.process`; no box measured).
 - **On V8, a non-integral double handed to a function that is not inlined is a heap number per call** (2026-10-08,
   engine tidy-up step 12 (a)). The calling convention is tagged, so a double argument or a double result of a call
   V8 does not inline is boxed; an integral value in Smi range (a mix of 1.0, a floor of 0) travels as a Smi and is
@@ -260,6 +270,18 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   (`ResonatorConfig`, like the EQ's `DoubleArray`), handed over by reference; and a method that Kotlin's `inline`
   makes large can leave V8 without the budget to inline its small callees (`ResonatorBank.install` boxed the wet/dry
   law's doubles until its per-band and blend halves became methods of their own). The JVM boxes none of this.
+  **A holder of double fields can still box; an array element access in optimized code never allocates** (engine follow-up 7,
+  2026-10-11; a value read from it can still box further on, into a call or a field, hence the `* 1.0`):
+  `DriftLanes` first held the drift ramp in two double fields written per voice, and in a single-case process V8
+  stored them as fresh heap numbers inside the superpluck's `generate`, as many as the double returns they replaced
+  (gone only under a
+  mixed profile; a field initialized at 1.5 instead of 1.0 boxed the same; the fields ended as Double representation
+  in `--trace-generalization`, like `AnalogDrift`'s, which do not box, so representation is ruled out; in that form V8
+  inlined `advanceLane` into the superpluck's `generate`: measured, not explained). The holder is a
+  `DoubleArray(2)` (a `Float64Array` on Kotlin/JS, whose elements are raw doubles), read through `inline` properties,
+  and the box is gone in the processes measured (a rare tail of about 1 process in 30 on the superpluck's drift
+  path, 300 to 460 B, not located, is recorded in item 7). Measure a new field holder with `--predictable` in a
+  single-case process too. Item 29's field holders were checked so and do not box (item 31).
   **A per-sample helper past V8's bytecode limit for inlining (460 bytes) is never inlined**, however warm:
   `--trace-turbo-inlining` prints "Cannot consider ... for inlining (reason: 5)". Make it a Kotlin `inline` function,
   then check with the same flag that V8 still inlines the small helpers it calls (the caution above; here
@@ -280,12 +302,29 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   now hand a holder (`DelayConfig`, `ReverbConfig`, `PhaserConfig`) and the phaser stage hands `Phaser.process` a
   `PhaserBlock`. Measured and dropped: an inline finiteness compare in place of `isFinite()` (better pinned to one
   core, worse unpinned on the phaser and on all three stages together), a Unit-returning glide step (within noise),
-  and the resonator's split remedy on the delay (worse). **The stages are not clean after the pass** (open: `docs/tasks/engine-follow-ups.md`, section 1). At engine level
-  (one note through `PlaybackEngine`), bytes per block on the production bundle: pinned (medians of 3 to 6 runs,
-  ranges in brackets), delay 82 (34 to 98; HEAD 81), reverb 22 (HEAD 21), phaser 144 (144 to 192; HEAD 176), with a
-  floor of 0.5 192 (160 to 192; HEAD 240), all three 197 (HEAD 277); unpinned (median of three), 98, 38, 112, 128,
-  149 (HEAD 229). On the development bundle (single runs pinned): pinned 131, 102, 96, 128, 276 (HEAD 356); unpinned
-  131, 103, 112, 144, 260 (HEAD 356). Four cautions for this class of box:
+  and the resonator's split remedy on the delay (worse). After the pass, at engine level, the production bundle read (pinned, medians) delay 82, reverb 22, phaser 144
+  (192 with a floor of 0.5), all three 197 bytes per block (HEAD 277). **After engine follow-up 1 (2026-10-11) every box
+  located in the stages' block processing is gone** (an off phaser's call into `Phaser.process`, about one heap number
+  per block in single-case processes, is located, not removed) (`docs/tasks/engine-follow-ups.md`, item 1): the doubles that crossed were
+  `KnobGlide.advance`'s result (now Kotlin `inline`), the delay's and the reverb's tail step (`TailCeiling.observe`,
+  `peakOf` and the units' window and laps getters; now `DelayLine.observeTail` and `Reverb.observeTail`, one call that
+  takes no double, with the helpers `inline`), the delay loops' per-block arguments (`DelayLine.blockArgs`, a
+  `DoubleArray` holder), the phaser's `alphaAt` (now `inline`) and two configure calls (the depth's `coerceIn` written
+  out, the constant feedback no longer rewritten per block). In six shuffled mixed processes the delay and the reverb
+  read exactly what the engine without them reads, all three together what the phaser alone reads (before its
+  `configure` was fixed, below).
+  **The per-block `configure` is a class of its own**: a writer re-applies the resolved knobs every block
+  (`KatalystChain.applyParams`), and in some processes V8 compiles the stage's `configure` with nothing inlined but
+  `isFinite` (a mixed profile, where most orbits take the off arm, leaves the active arm cold), so every setter,
+  `KnobGlide.retarget` and the phaser's wet/dry law take their doubles across calls; in single-case processes the
+  phaser's `WetDryMix.dryCoeff` and `wetCoeff` were left out of the writer's budget. The remedy is no call on the steady
+  path: the house pattern of an unchanged config (the EQ's `unchanged`, the resonator's, the compressor's), now in the
+  phaser stage too (`KatalystPhaserEffect.applied`, review round 1 of follow-up 1), after which every stage case read
+  the engine without a stage in every mixed process measured but one pinned process (the delay, one heap number). The delay's and the reverb's `configure` are item 32.
+  **A `Math.ceil` handed to a call that is not inlined boxes even when it is a whole number:** V8 cannot rule out -0,
+  so it cannot travel as a small integer (the `toInt()` inside the delay's `framesFor(time)`, run every block until
+  follow-up 1 kept the conversion off the steady path).
+  Four cautions for this class of box:
   - **Measure pinned AND unpinned.** `taskset` to one core puts V8's concurrent compiler on the core of the measured
     code, which changes the tier-up history and so which calls are left out. A single bundle varies by up to five
     heap numbers per block between unpinned processes (and pinned ones vary too while the sibling threads are busy);
@@ -371,6 +410,33 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   processes before, 0 in every round after; about 95 MB of `Double`s over the harness run, now none on the render
   path). A nullable scalar on a hot read is a box on the JVM wherever the call is not inlined; keep the nullable
   view (`controlRateValueOrNull`, an extension) for the cold readers only.
+- **On V8, one node class is one compiled body with one inlining budget, shared by every instance: measure the
+  whole voice, not the stage** (2026-10-11, engine follow-up 29). TurboFan inlines a method's callees in order of
+  call frequency until a cumulative budget (920 bytes of bytecode by default) is spent. When two instances of one
+  class take different branches (`classic()`'s lowpass with a cutoff envelope and its highpass without one, both
+  `SvfIgnitor.generate`), each branch's callees run at half the frequency and are the first left out. So helpers
+  that a one-filter probe sees inlined (`prepareModEnvelope`, 56 bytes; Kotlin's `coerceIn` and `isFinite`, stdlib
+  calls on Kotlin/JS) stayed calls in the full voice, and their doubles crossed as heap numbers: about 8 per block on
+  the lowpass and 4 on the highpass, the sweep's arguments included; alone, the lowpass with `env` and `analog`
+  boxed only the sweep's three arguments (47 to 88 B on HEAD) and the highpass with `analog` nothing measurable.
+  Remedy: move the branch's per-block setup into a method of its own that takes no doubles (the node's own fields
+  hold the block's reads) and returns none (the results land in a holder), so it spends its own budget
+  (`SvfIgnitor.prepareEnvelopeSweep`, larger than the 460-byte limit, so never inlined back); a callee past that
+  limit takes its doubles from a holder (`SvfCoeffSweep`'s cutoffs and q); a per-block step returns nothing and the
+  caller reads a field (`FilterHumanization.stepDrift`, then `driftMul`). A small setup method can still be inlined
+  back where the voice is simpler, and then ITS callees compete for the caller's budget again: the static path's
+  `computeStaticCoeffs` is a call in a two-filter voice but inlined in a one-filter one, where Kotlin's `coerceIn`
+  was left out (about 2 heap numbers per block more than before, measured) until it was written out as two
+  comparisons (`clampSvfRange`). The `isFinite` guard beside it is still a 23-byte stdlib call (item 10): V8
+  inlined it in both shapes, but it is the next one out if `generate` grows. So a split is checked on both shapes.
+  Two placements measured worse and were dropped: the static path in place (boxes in the two-filter voice) and
+  both paths in one method (boxes in the one-filter voice, not explained). A box can also move instead of going: on
+  HEAD V8 inlined `blockDriftMultiplier` into `generate` and left the `nextMultiplier()` it called out; with
+  `nextMultiplier` folded into the lane's step, the two-filter voice left `blockDriftMultiplier` itself out, and its
+  double result crossed instead, one level up (seen in the trace). Inlining an outer method does not inline what it
+  calls, and a double return is a box wherever the call stays: hence the step that returns nothing. `C-full` went
+  from about 190 to about 40 bytes per block. A probe that renders one stage alone does not reproduce this class:
+  build the voice the songs build, then narrow it.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per
@@ -397,6 +463,71 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   built, set or not.
 - **`KLANG_BENCH_FILTER=guitar-rig`** runs only the `guitar-rig*` rows of `audio_benchmark`'s `IgnitorBenchmark`.
 - A timing claim needs interleaved runs and a control row: `audio/ref/verification.md`.
+- **`console/full-check.sh`** runs everything before a merge or a release: every test, the corpus check
+  (`./gradlew runSongBenchmark --args=corpus`, against `docs/benchmarks/corpus-reference.md`), the timing benchmarks
+  and the allocation check, each step in its own build lock, then one summary and exit 0 or 1. `--fresh` makes every
+  test task run again.
+
+### Measuring allocations
+
+- **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
+  `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
+  sources is refused; the `alloc` step of `console/full-check.sh`)
+  measures the bytes per block of 17 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
+  `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
+  breach. How it measures and the cases: `audio_benchmark/README.md`. The JVM guards in `jvmTest`
+  (`FirstBlockAllocationSpec`, `KatalystResonatorAllocationSpec`) stay where they are.
+- **What it can see.** On V8 the method's noise (about 25 B per block) is larger than one heap number (16 B on
+  node): a budget catches a heap number per sample or per knob read, not one new box per block. The JVM catches a
+  single `Double` per block (24 B), or one every other block (its budgets are 6 B). A box usually shows on both,
+  but it can be on one only: a V8 box comes from a megamorphic call site or a boxed expression result, a JVM box
+  from a failed escape analysis, and the JVM can optimise away a box V8 keeps (review round 1 of the harness).
+- **It names the case, not the box.** After an `OVER` line, locate the box by hand, on the case it names:
+  1. **V8, which function allocates:** the sampling heap profiler, with the collected objects included (node's
+     `--heap-prof` keeps only what is alive at exit, which misses every box). A preload file:
+
+     ```js
+     // heap-sample.js: node -r ./heap-sample.js klang-engine-audio_benchmark.js
+     const s = new (require('inspector').Session)();
+     s.connect();
+     s.post('HeapProfiler.enable');
+     s.post('HeapProfiler.startSampling', { samplingInterval: 128,
+       includeObjectsCollectedByMinorGC: true, includeObjectsCollectedByMajorGC: true });
+     process.on('exit', () => s.post('HeapProfiler.stopSampling', (e, { profile }) => {
+       const bytes = new Map();
+       const walk = (n) => {
+         const f = n.callFrame, k = `${f.functionName} ${f.url.split('/').pop()}:${f.lineNumber + 1}`;
+         bytes.set(k, (bytes.get(k) || 0) + n.selfSize);
+         n.children.forEach(walk);
+       };
+       walk(profile.head);
+       [...bytes].sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([k, v]) =>
+         console.log((v / process.env.KLANG_ALLOC_COUNT).toFixed(1), 'B/block', k));
+     }));
+     ```
+
+     Run it in `audio_benchmark/build/compileSync/js/main/productionExecutable/kotlin/` with
+     `KLANG_ALLOC_CASE=<case> KLANG_ALLOC_WARM=20000 KLANG_ALLOC_COUNT=200000`. The names are the bundle's
+     (`protoOf.u2i` is a member); the line leads to the Kotlin through the bundle's source map. The profiler slows the
+     run and inflates the bytes: read it for where, not for how much.
+  2. **V8, why it boxes:** `node --trace-turbo-inlining` (and `--trace-deopt`) on the same case shows whether the
+     callee of the allocating function was inlined. A double that crosses a call that was not inlined becomes a heap
+     number: the knob reads of item 8 and the limiter of item 3 were found this way.
+  3. **JVM:** a flight recording of the check. `JAVA_TOOL_OPTIONS` reaches the JVM `jvmRun` starts; give it a
+     directory, so each JVM (Gradle's client too) writes its own file:
+
+     ```bash
+     JAVA_TOOL_OPTIONS="-XX:StartFlightRecording=filename=/tmp/alloc-jfr/,settings=profile" \
+       KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun
+     for f in /tmp/alloc-jfr/*.jfr; do
+       jfr print --events jdk.ObjectAllocationSample --stack-depth 8 "$f" | grep -A 12 'objectClass = java.lang.Double'
+     done
+     ```
+
+     The check's own JVM is the file whose stacks are the engine's; read where the `java.lang.Double` (or another
+     box) comes from. The warm-ups and voice builds are in the recording too. Tried on a planted box
+     (2026-10-10): the stack named the planted line.
 
 ## Adjacent rules (linked, not duplicated here)
 

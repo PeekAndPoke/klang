@@ -67,7 +67,7 @@ class AnalogDriftSpec : StringSpec({
         fun start(lane: Int): Double {
             lanes.advanceLane(lane)
 
-            return lanes.startOf(lane)
+            return lanes.blockStart
         }
 
         // The shared lane first: at spread 0 it is the only walk the whole stack hears.

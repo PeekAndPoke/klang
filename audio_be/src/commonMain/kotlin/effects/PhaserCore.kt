@@ -144,7 +144,14 @@ internal class PhaserCore(
         lfoPhase = newPhase
     }
 
-    private fun alphaAt(phase: Double): Double {
+    /**
+     * The all-pass coefficient at LFO [phase]. Kotlin `inline`, on purpose (engine follow-up 1, 2026-10-11): it runs
+     * twice per core per block inside [prepareBlock], and in the orbit phaser's `Phaser.process`, pinned to one core,
+     * V8 left it out, so its phase and its result crossed the call as heap numbers, about five per block for the
+     * stereo pair (`audio/ref/performance.md`). Inline, they never cross. No test can pin it; this KDoc is the guard.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun alphaAt(phase: Double): Double {
         val lfoValue = (sin(phase) + 1.0) * 0.5
         var modFreq = center + (lfoValue - 0.5) * sweep
         if (modFreq < MIN_MOD_FREQ_HZ) {

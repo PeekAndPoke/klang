@@ -455,10 +455,12 @@ class DelayLineSpec : StringSpec({
     fun run(l: DelayLine, block: Int): StereoBuffer =
         StereoBuffer(xfBlock).also { l.process(input = xfInput(block), output = it, length = xfBlock) }
 
+    // Fractional taps (445.41, 895.23 and 1353.87 samples at 44.1 kHz), so both taps' fractions are not 0 and the
+    // crossfade's holder slots for them (`DelayLine.blockArgs`) are pinned: a stale fraction reads the wrong place.
     "a time change crossfades from the old tap to the new one, per sample, and then IS the new tap" {
-        val underTest = line(0.01)
-        val old = line(0.01)
-        val new = line(0.02)
+        val underTest = line(0.0101)
+        val old = line(0.0101)
+        val new = line(0.0203)
         val change = 20
 
         for (block in 0 until change) {
@@ -471,7 +473,7 @@ class DelayLineSpec : StringSpec({
             }
         }
 
-        underTest.time = 0.02
+        underTest.time = 0.0203
 
         var jumpGap = 0.0
 
@@ -503,10 +505,10 @@ class DelayLineSpec : StringSpec({
     }
 
     "a time change that arrives mid-crossfade is PARKED: the running fade finishes, then the next one starts" {
-        val underTest = line(0.01)
-        val a = line(0.01)
-        val b = line(0.02)
-        val c = line(0.03)
+        val underTest = line(0.0101)
+        val a = line(0.0101)
+        val b = line(0.0203)
+        val c = line(0.0307)
         val change = 20
 
         for (block in 0 until change) {
@@ -516,7 +518,7 @@ class DelayLineSpec : StringSpec({
             run(c, block)
         }
 
-        underTest.time = 0.02
+        underTest.time = 0.0203
 
         // The first fade spans 2205 samples, so it ends inside the 18th block after the change; the
         // next block is where a parked time starts its own fade (fades start on block boundaries).
@@ -524,7 +526,7 @@ class DelayLineSpec : StringSpec({
 
         for (block in change until change + 60) {
             if (block == change + 5) {
-                underTest.time = 0.03
+                underTest.time = 0.0307
             }
 
             val out = run(underTest, block)
@@ -535,7 +537,7 @@ class DelayLineSpec : StringSpec({
             for (i in 0 until xfBlock) {
                 val j = (block - change) * xfBlock + i + 1
                 val expected = if (block < secondFadeBlock) {
-                    // Still the first fade (or its landed tail): old 0.01 to 0.02, untouched by 0.03.
+                    // Still the first fade (or its landed tail): old 0.0101 to 0.0203, untouched by 0.0307.
                     val g = if (j >= fadeSamples) 1.0 else j.toDouble() / fadeSamples
                     oa.left[i] * (1.0 - g) + ob.left[i] * g
                 } else {

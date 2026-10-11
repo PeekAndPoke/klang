@@ -136,6 +136,26 @@ class LazyRingSpec : StringSpec({
         alloc.asked shouldBe listOf(base, 2 * base)
     }
 
+    "an installed ring keeps serving up to exactly its class, and grows one frame past it" {
+        // The steady check on an INSTALLED ring (engine follow-up 1 compares it in doubles, `framesNeeded`): exactly
+        // 0.5 s needs `base` frames, margin included, and is no new rent; one frame more grows to class 1.
+        val (rings, alloc) = shelf()
+        val fx = effect(rings)
+
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0, wet = 1.0)
+        alloc.asked shouldBe listOf(base)
+
+        val installed = fx.delayLine.shouldNotBeNull()
+
+        fx.configure(time = 0.5, feedback = 0.0, cap = 1.0, wet = 1.0)
+        alloc.asked shouldBe listOf(base)
+        fx.delayLine shouldBeSameInstanceAs installed
+
+        fx.configure(time = 0.5 + 1.0 / sampleRate, feedback = 0.0, cap = 1.0, wet = 1.0)
+        alloc.asked shouldBe listOf(base, 2 * base)
+        fx.delayLine.shouldNotBeNull().capacityFrames shouldBe 2 * base
+    }
+
     "a 20 s time is a real 20 s echo: the ring holds it, no ceiling" {
         // Moved from the master's ring spec in phase 3 step 12 C3 (the output runs this stage now).
         // Between warehouse steps 2b and 2e one bus had a 10 s ceiling and the other none, so

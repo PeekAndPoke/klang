@@ -26,10 +26,163 @@ These are V8 only. The JVM allocates nothing per block in steady state except it
 block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: see items 8 and 12). The method and the rules learned are in
 `audio/ref/performance.md`.
 
-1. **The stages still allocate** (delay, reverb, phaser). After the V8 pass, bytes per block at engine level,
-   production bundle pinned: delay 82, reverb 22, phaser 144 (192 with floor 0.5), all three 197; development pinned:
-   131, 102, 96 (128), 276. The boxing sites are not located. Source: the record, "The V8 allocation pass" (the
-   result table) and "Found during tidy-up step 12". M.
+1. **DONE (2026-10-11): every box located in the stages' block processing is gone, and the phaser's per-block
+   `configure` skips an unchanged config (review round 1); the delay's and the reverb's `configure` is item 32.** Reported as: after the V8 pass, bytes per block at engine level, production bundle pinned: delay 82, reverb
+   22, phaser 144 (192 with floor 0.5), all three 197; development pinned: 131, 102, 96 (128), 276. The boxing sites
+   were not located. Source: the record, "The V8 allocation pass" (the result table) and "Found during tidy-up step
+   12". **Measured on the production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22), one
+   sustained note through `PlaybackEngineDispatcher` (the master stage runs too) with the stage's `katalystParams` on
+   the classic orbit chain: a sine at middle C with the delay (wet 0.3, time 0.25, feedback 0.5; and time 0.2501,
+   feedback 0.45, a fractional tap), the reverb (wet 0.3, size 5; and size 6.3 with a lowpass), the phaser (wet 0.5,
+   rate 0.5, sweep 800; and floor 0.5), all three, the same on the classic saw, on `C-full`'s voice and on a 7-voice
+   supersaw; single-case and mixed (every case warmed round-robin in one process, then each measured between two
+   forced GCs, whole heap numbers; e7's method), pinned and unpinned. Reproduced first (HEAD, mixed, 4 processes,
+   bytes over the same engine without a stage): delay 17 to 97, fractional delay 65 to 177, reverb 5 to 21, phaser 32
+   to 64, with floor 48 to 96, all three 69 to 149, all three fractional with floor 149 to 293.
+   **Sites** (sampling heap profiler, `--trace-turbo-inlining`, `--no-concurrent-recompilation` traces per compile,
+   single-case and mixed), each a double crossing a call V8 did not inline:
+   - `KnobGlide.advance()`'s result (111 bytes), left out of the delay's and the reverb's `process` (the settled glide
+     of the feedback and the size, its result discarded and still boxed in the callee): one per block each.
+   - The delay's and the reverb's tail step: `DelayLine.reachSamples` and `shortestSamples` (88 bytes each) behind
+     `tailWindowSamples` and `tailLapsPerWindow`, left out (one each when the tap is fractional), and in some compiles
+     `TailCeiling.observe` itself (358 bytes, three doubles), its `fresh`, `currentDelaySamples` and `isFinite`.
+   - `DelayLine.processInternal` (past the 460-byte limit, reason 5) took the tap's fraction, the feedback, its step
+     and the cap as arguments, twice per block: one or two per block, in every process.
+   - The delay's ring check in `configure`, every block: the `toInt()` inside `framesFor(time)`, a stdlib call
+     (`numberToInt`, 28 bytes) V8 left out, handed a `Math.ceil` that V8 cannot rule out as -0, so even a whole
+     frame count crossed as a heap number.
+   - The phaser: `PhaserCore.alphaAt` (twice per core per block, its phase and result) left out of `Phaser.process`
+     when pinned, about five per block; in `configure` the depth's `coerceIn` (a stdlib call), the per-block rewrite
+     of the constant feedback 0.5 (`PhaserCore`'s setter left out), the rate setter and the wet/dry law
+     (`Phaser.dryCoeff`/`wetCoeff` through `WetDryMix`).
+   With ten times V8's inlining budgets the stages add 1 to 7 bytes per block (one process of three; the other two
+   then boxed per sample elsewhere), as the pass found: all are budget boxes.
+   **Fix** (remedies the rules name, no ADAA file edited):
+   - `KnobGlide.advance` is Kotlin `inline` (`audio_be/.../KnobGlide.kt`; the state it reads is `internal`).
+   - `DelayLine.observeTail(ceiling, input, frames)` and `Reverb.observeTail(...)`: one call that takes no double and
+     returns none; `TailCeiling.observe`, `fresh`, `saturate` and `peakOf` are Kotlin `inline` (the ceiling's state
+     `internal`), and so are `DelayLine.currentDelaySamples`, `reachSamples`, `shortestSamples` and the reverb's
+     `effectiveFeedback` and `feedbackFor`. `DelayLine.tailWindowSamples` and `tailLapsPerWindow` are gone (their KDoc
+     moved to `observeTail`), the reverb's two are private. `fresh`'s loop seed takes the `* 1.0` of the seed rule.
+   - `DelayLine.blockArgs`, a `DoubleArray` holder for the loops' per-block doubles (an array, item 7's lesson).
+   - `KatalystDelayEffect.ensureRing` compares the ring's capacity with `framesNeeded(time)` in doubles, so the
+     `toInt()` runs only when a ring is rented or grown (the same decision for every time).
+   - `PhaserCore.alphaAt` Kotlin `inline`; `Phaser.depth`'s clamp written out (item 29's precedent); the phaser
+     stage's `configure` no longer rewrites the constant feedback (set where the cores are made and in
+     `resetForReuse`, written nowhere else).
+   The KDoc at each site is the guard.
+   **Bit for bit:** raw doubles of the probe, 600 blocks, both channels, HEAD against the tree, 30 of 30 cases
+   identical on V8 and 30 of 30 on the JVM, every last block sounding: every stage case above, an owner-change case
+   (the delay crossfades to a new tap, the feedback, size and phaser knobs glide, then the delay and the reverb
+   drain), four at 220 Hz, the engine saw and `C-full`, and the harness's voice cases. The corpus 18 of 18
+   (`CORPUS GREEN`). `:audio_be:jvmTest` 2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of 2,558.
+   **Bytes per block, HEAD / tree / HEAD again (a byte copy), mixed, one value per process** (unpinned 6 shuffled
+   processes, pinned `taskset -c 11` 3), ranges over the processes; the engine without a stage reads 16 to 48:
+
+   | case | mixed unpinned | mixed pinned | single-case unpinned (medians of 3) | single-case pinned |
+   |---|---|---|---|---|
+   | engine, no stage (control) | 16-48 / 16-48 / 16-48 | 16-48 / 16 / 16 | 62 / 67 / 66 | 41 / 52 / 16 |
+   | delay | 65-145 / 16-48 / 65-145 | 65-176 / 16-96 / 81-145 | 104 / 67 / 93 | 58 / 46 / 92 |
+   | delay, fractional tap | 113-209 / 16-48 / 129-257 | 160-241 / 16-96 / 129-209 | 166 / 67 / 165 | 151 / 31 / 119 |
+   | reverb | 21-69 / 16-48 / 21-84 | 37-53 / 16 / 21-69 | 57 / 67 / 82 | 51 / 31 / 42 |
+   | phaser | 80-112 / 48-96 / 80-112 | 80-112 / 64-80 / 48-80 | 98 / 77 / 108 | 176 / 68 / 196 |
+   | phaser, floor 0.5 | 96-144 / 80-112 / 96-144 | 96-144 / 80-112 / 64-96 | 124 / 114 / 123 | 166 / 82 / 176 |
+   | all three | 133-197 / 48-96 / 133-213 | 149-245 / 64-160 / 133-229 | 134 / 88 / 171 | 207 / 63 / 232 |
+   | all three, fractional, floor 0.5 | 213-293 / 80-112 / 213-357 | 229-341 / 80-192 / 197-309 | 222 / 113 / 217 | 279 / 92 / 284 |
+   | `C-full`'s voice, all three | 245-341 / 112-144 / 245-389 | 277-373 / 128-224 / 245-357 | 263 / 139 / 279 | 357 / 129 / 335 |
+
+   Unpinned and mixed, the delay and the reverb read exactly the engine without them in every process, and all three
+   read what the phaser alone reads; `--predictable` single-case (medians of 2, HEAD / tree): fractional delay 176 /
+   83, reverb 52 / 36, phaser with floor 206 / 129, all three 377 / 176 (control 36 / 36). The voice cases are
+   unchanged (`spluck-a` read 288 in one tree process, item 7's tail). One heap number is 16 bytes on node and 12 in
+   Chrome. **Time** (mixed unpinned, medians): delay 8,917 / 8,468 / 8,994 ns, fractional 8,933 / 8,517 / 8,824,
+   reverb 17,232 / 17,117 / 17,362, phaser 8,942 / 8,793 / 9,090, all three 21,929 / 21,440 / 21,440, `C-full` with
+   all three 28,517 / 28,338 / 28,469, the control 6,698 / 6,604 / 6,649: 0.95 to 1.00 of HEAD. **JVM** (`ThreadMXBean`,
+   7 rounds, every case in one process): 0 B per block on both sides in all 26 cases, time 0.88 to 1.04 of HEAD.
+   **What is left, and why:**
+   - **The per-block `configure`** (the first form's residue). A writer re-applies the resolved knobs every block
+     (`KatalystChain.applyParams`), and in a mixed profile, where most orbits take the off arm, V8 can compile a
+     stage's `configure` with nothing inlined but `isFinite` (a trace of such a process: the delay's setters, both
+     `KnobGlide.retarget`s and `ensureRing` left out), so every knob crosses a call: the phaser 2 to 4 heap numbers per
+     block in every process, the delay and the reverb up to 5 in some processes (two of three pinned mixed processes,
+     rarely unpinned). In single-case processes the phaser's residue was `WetDryMix.dryCoeff` and `wetCoeff`, left out
+     of the writer's budget (reviewer B, round 1). The phaser's half is fixed in review round 1 (below); the delay's and
+     the reverb's is item 32.
+   - **An off phaser's call** (`KatalystPhaserEffect.process` into `Phaser.process` while bypassed) costs about one
+     heap number per block in single-case processes, not in mixed ones; a guard around the call removes it, an early
+     return inside does not. Not explained, inside the noise band. (So "every box located": this one is located, not
+     removed.)
+   - Outside the stages, in every engine case: item 30's root frequency (16 B at middle C) and about 16 to 32 B in
+     `PlaybackEngine.renderBlock` (its per-block seconds handed to calls; not located further).
+   - The development bundle was not measured (the fixes are the same source on both bundles).
+   - **Two compiled forms in ADAA-owned files change, unmeasured:** `KnobGlide.advance` is now inlined into the orbit
+     distort stage (`KatalystDistortEffect`'s `amountGlide.advance()`); bit for bit by construction, but no case and no
+     probe runs that stage, so its bytes are not measured (a note for the ADAA session). `PhaserCore.alphaAt` inlines
+     only into `PhaserCore.prepareBlock`, so the voice phaser in `IgnitorEffects.kt` compiles as before (reviewer A).
+   **The harness guards it with two cases** (`AllocationCases.kt`): `E-delay` (the classic saw, the fractional delay)
+   and `E-stages` (all three, the phaser with floor 0.5). Budgets by the file's rule from this change's runs (3 runs
+   each side, interleaved): `E-delay` V8 112 (tree rounds 30 to 71, medians 62 to 67; HEAD's code 125 to 171, medians
+   160 to 171), `E-stages` V8 176 (tree 77 to 130, medians 92 to 102; HEAD's code 203 to 346, medians 217 to 259), JVM
+   6 for both (0 B). HEAD's code (the nine source files at HEAD, the new cases kept) read RED in 3 of 3 runs, both
+   cases over (over the first lines, 120 and 200, and every median above the final ones); the tree GREEN 3 of 3, 34 of
+   34, and once more on the first lines, 112 and 176 (`E-delay` 32, `E-stages` 109 B, the first form). The item 8 mutant (`readParam` a plain function) against the full budget set, one lock call: RED, 10 of 34
+   over (`sawC` 78, `C-offrel` 67, `super7` 78, `super7a` 94, `spluck-a` 381, `sgpad-vib` 114, `C-dist` 114, `C-full`
+   180, `E-delay` 128, n16 1,860 B); `E-stages` read 164, under its 176. The case list changed, so the driver starts
+   a new scoreboard table at its next run; no row written. Report: `tmp/reviews/e1-report.md`.
+   **Review round 1, applied** (`tmp/reviews/e1-r1-A.md`, `e1-r1-B.md`; 1 MAJOR, 7 MINOR, 6 NIT; the code bit for bit
+   in every path, the numbers reproduced):
+   - B1 (MAJOR) and B MINOR 1, 2: `E-stages`'s first guard text claimed the reverb's and the phaser's sites; a revert of
+     their five files read 130 B, green under 176 (reviewer B). The texts now say what each line guards (the budget
+     file, its header, this item, the harness task doc): `E-delay` the delay's sites as a whole (a revert of the glide
+     alone read 61 B); `E-stages` a revert of everything, the delay's sites with all three running, the per-sample
+     class in the reverb and the phaser, and their per-block sites only in part.
+   - B MINOR 3, built: the phaser stage skips an unchanged config (`KatalystPhaserEffect.applied`, the house pattern
+     of the EQ, the resonator and the compressor): the five raw knobs compared with the last ones applied, NaN-aware
+     and with -0.0 told apart, in a `DoubleArray`; `reset` invalidates it. Exact, because every write of `configure` is
+     a function of the five knobs and of state only `configure` and `reset` change. The delay's and the reverb's half
+     is item 32 (a skip is not exact there without more work). Bit for bit: 30 of 30 dumps on V8 and on the JVM, HEAD
+     against the tree, the owner-change case among them; the corpus 18 of 18. Bytes, HEAD / tree (round 1 form),
+     one value per process:
+
+     | case | mixed unpinned (6) | mixed pinned (3) | single-case unpinned / pinned (medians of 3; first form between) |
+     |---|---|---|---|
+     | engine, no stage (control) | 16-48 / 16-48 | 16-48 / 16 | 63 / 67 / 62, 21 / 68 / 72 |
+     | delay, fractional tap | 97-209 / 16-48 | 129-193 / 16-32 | 160 / 67 / 62, 139 / 36 / 17 |
+     | reverb | 21-69 / 16-48 | 21-101 / 16 | 83 / 62 / 31, 37 / 42 / 73 |
+     | phaser | 64-112 / 16-48 | 64-112 / 16 | 139 / 93 / 46, 165 / 47 / 26 |
+     | phaser, floor 0.5 | 80-144 / 16-48 | 96-144 / 16 | 119 / 108 / 46, 191 / 72 / 11 |
+     | all three | 101-197 / 16-48 | 133-245 / 16-32 | 180 / 73 / 51, 216 / 67 / 10 |
+     | all three, fractional, floor 0.5 | 165-309 / 16-48 | 213-325 / 16-32 | 232 / 109 / 47, 304 / 73 / 11 |
+     | `C-full`'s voice, all three | 197-357 / 64-96 | 261-357 / 64 | 283 / 144 / 83, 330 / 129 / 52 |
+
+     In every mixed process every stage case now reads what the engine without a stage reads, but for one pinned
+     process with the delay one heap number above it. The time column of that run is within HEAD's (all three 25,922
+     against 26,422 ns, in a run where the machine was busier). The allocation harness on the round 1 form, 6 tree
+     runs: GREEN every time, `E-stages` 11 to 51 B (medians; rounds 10 to 57), `E-delay` 62 to 67.
+   - The `E-stages` line re-set from 176 to 96 by the file's rule (45 B above the highest healthy median, 39 above the
+     worst round). It catches a revert of everything (HEAD's code 217 to 259), and the item 8 mutant now too (one lock
+     call: RED, 11 of 34 over, `E-stages` 108, `E-delay` 128, `C-full` 171, `sawC` 77, n16 1,867 B). A revert of the
+     reverb's and the phaser's five files (each run in one lock call, restored and checked with `cmp`): medians 128,
+     129, 129 B in three runs and 93 in a fourth (rounds 92 to 222), so it reads red in three runs of four, not always.
+   - A MINOR 1: `DelayLineSpec`'s two crossfade rows take fractional taps (0.0101, 0.0203, 0.0307 s), so the holder's
+     crossfade slots are pinned (mutation: the `ARG_TO_ALPHA` write dropped, RED, 2 of 19; green on the old times).
+     A MINOR 2: a `LazyRingSpec` row, "an installed ring keeps serving up to exactly its class, and grows one frame
+     past it" (mutations `>=` to `>` and the margin dropped from the steady compare: RED, 1 of 21 each). A new
+     `KatalystPhaserEffectSpec` row pins the skip's invalidation ("a reset under an owner whose knobs stand": the
+     invalidation dropped, RED; a compare that leaves out the floor is red on an existing row). Each mutation in one
+     lock call, restored with `cp` and checked with `cmp`. `:audio_be:jvmTest` 2,664 of 2,664, `:audio_be:jsBrowserTest`
+     2,560 of 2,560.
+   - A MINOR 3 and the NITs: the History line says "unpinned"; the `KnobGlide` comment; "the `toInt()` inside
+     `framesFor(time)`"; `TailCeiling`'s "How" names `observeTail`; the phaser stage's comment says it no longer forces
+     0.5 onto the `Phaser` it is handed; this item's headline scoped. B MINOR 4: the ADAA bullet above.
+   **Review round 2** (`tmp/reviews/e1-r2/review.md`, clean: 0 MAJOR, 2 MINOR, 2 NIT; a revert of the reverb's and the
+   phaser's five files red in 4 of 5 runs across the worker and the reviewer). MINOR 1, applied: two
+   `KatalystPhaserEffectSpec` rows pin the skip's sweep term and its NaN arm (the writer hands rate, center and sweep
+   raw, and an unset slot is NaN): "the skip sees a change of the sweep alone" (the sweep left out of the compare: RED)
+   and "an unset knob (NaN) followed by a set one is a change" (the NaN arm matching any value: RED); both mutants had
+   passed the whole suite. MINOR 2 and NIT 1: `audio/MEMORY.md` and `audio/ref/performance.md` take this item's
+   wording (every box located; the off phaser's call located, not removed; one pinned process one heap number above),
+   and the first lines' readings above are labelled as such.
 2. **A new param map's resolve costs about 1,130 bytes** on the classic chain after S1; the profiler attributes it to
    `KatalystKnob.resolve` on both bundles, whose code (two field stores) does not explain it. A `.katp` burst pays it
    per block. Source: the record, "Found during the V8 allocation pass". M.
@@ -99,16 +252,275 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    callees stay inlined (A4); the `@Suppress` precedent as form, not reason (A5); the JVM line names `whitecolor` and
    item 12, and the section header points at item 12 (B1); B's rows added. Records and KDoc only.
 4. **The superpluck allocates per block**: 450 to 700 bytes with 8 voices and drift, the pluck about 65, before and
-   after the pass alike. Not located. Source: as 2. S to M.
-5. **The PWM loop boxes one heap number per sample** on the development bundle under a mixed profile (about 2 KB per
-   block, `pulze` with a duty signal): the per-sample `setPulseShape(duty = ...)` call (`Ignitors.kt`). Not seen on the
-   production bundle in isolation. Source: as 2. S.
-6. **The plain wave oscillators box `dt`**: `WaveIgnitor` hands its non-integral `dt` to its loop methods, about 16
-   bytes per block per oscillator on the production bundle, pinned. The same argument class as the stages. Source: as
-   2. S.
-7. **A drifting stack's ramp can box twice per voice per block**: `DriftLanes.startOf` and `endOf` return a double,
-   and where V8 does not inline `blendOf` (some mixed-profile processes, both bundles) that is 221 to 515 bytes per
-   block. A holder for the ramp is the shape. Source: as 2. S.
+   after the pass alike. Not located. Source: as 2. S to M. **Measured at item 7 (2026-10-11):** the superpluck with
+   drift now reads 32 B per block (48 at `analogSpread` 0.5) in every process the item 7 probe measured, from 288 to
+   688; two of its boxes were the drift ramp (item 7's fix) and `getUnisonDetune`'s result, one per string, which V8
+   inlined in every process traced. What is left there is item 30's root frequency and one more heap number. But on
+   the harness bundle about 1 process in 30 still reads 300 to 460 B on the drift path, not located (item 7's tail).
+   The pluck was not measured. **Item 4 stays open while that tail is unlocated**; closing it needs the tail and a
+   look at the pluck.
+   **Found at item 5 (2026-10-11), development bundle only, not followed up:** on
+   `compileTestDevelopmentExecutableKotlinJs` the superpluck with drift (`spluck-a`'s voice) reads 288 to 416 B per
+   block in every mixed process measured (21 of 21, before and after item 5 alike), the size of item 7's regression;
+   production reads 32. Item 7 measured production only.
+5. **DONE (2026-10-11): not reproduced on production; the development-bundle box was the PWM loop's phase seed, fixed
+   by the seed rule, which now covers every field seed of an oscillator loop.** Reported as one heap number per sample
+   on the development bundle under a mixed profile (about 2 KB per block, `pulze` with a duty signal), blamed on the
+   per-sample `setPulseShape(duty = ...)` call (`Ignitors.kt`); not seen on the production bundle in isolation.
+   Source: as 2. S. **Measured** (node 22, `:audio_be:compileTestProductionExecutableKotlinJs` and
+   `compileTestDevelopmentExecutableKotlinJs`, one voice through `VoiceFactory` at middle C; e7's method: every case
+   built and warmed round-robin in one process, then each measured between two forced GCs, so a window reads in whole
+   heap numbers). Cases: the rounded pulse with a duty of `0.5 + 0.3 * sine(0.7 Hz)`, with `analog` 0.3, with a 37 Hz
+   duty, the raw pulse, with a moving phase, inside `classic()` and inside `C-full`'s chain, an engine row, beside
+   the harness's cases as the other voices.
+   - **Production: no per-sample box in any process.** PWM voices 16 to 32 B per block (`C-full`'s chain 64 to 80,
+     the engine row 32 to 64), the constant-duty pulse 16 to 32: single-case, mixed in 7 shuffled processes, pinned
+     (`taskset -c 11`, 3), `--predictable` (2). Also on the harness's own bundle (four cases added there for one
+     build, then removed): 4 to 72 B per block in 5 processes per case. JVM (`ThreadMXBean`, 7 rounds): 0 B in every
+     case.
+   - **Development: reproduced in every mixed process (12 of 12)**, 2,080 to 2,136 B per block on every PWM voice
+     but the phased one (32 B); single-case 16 B. The profiler books it in `WaveIgnitor.generate`.
+   - **The cause is not the `setPulseShape` call**: V8 inlines it (152 bytes) into `generate` on both bundles
+     (`--trace-turbo-inlining`); a hand-edited development bundle with the call written out in place still read
+     2,096 B, as did the development bundle at ten times V8's inlining budgets, and one with the `lastDuty` field
+     kept in a local. It is the PWM loop's phase seed, `var phase = voice.phase`, a field read that seeded the
+     loop-carried phase without the arithmetic operation of the `* 1.0` rule (`audio/ref/performance.md`; the loop's
+     drift seed had it, the phase seed did not). Why only on the development bundle: there `voice.phase` compiles to
+     a getter call (`get_phase_...()`), and in one traced mixed process V8's later re-optimizations of
+     `WaveIgnitor.generate` did not inline it (reviewer B, `--trace-turbo-inlining`), so the seed is a call result
+     under the rule; `renderHoisted`, `renderPhased` and the stack loops inlined the same getter, and production
+     loads the field directly. One trace: a strong pointer, not a full proof.
+   - **Production's margin** (not this box): with V8's cumulative inlining budget cut from 920 to 600 the production
+     PWM voices still read 16 to 32 B; at 500 the drifting one boxes per sample (2,080 B) with or without the `* 1.0`,
+     so that box is another one, not located (it does not occur at V8's real budgets).
+
+   **Fix** (coordinator's decision, 2026-10-11: the development bundle is what the dev server runs; the rule applied
+   by its text to the oscillator loops). `* 1.0` with the rule's comment on every loop-carried double of an
+   oscillator loop seeded straight from a field:
+   - `audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt:1003`, `WaveIgnitor.generate`'s PWM loop, the phase (the
+     box; its comment names this item);
+   - `Ignitors.kt:1049` `renderHoisted` and `Ignitors.kt:1102` `renderPhased`, the phase;
+   - `Ignitors.kt:2040` `trapezoidLoop`, `Ignitors.kt:2097` `trapezoidLoopPhased`, `Ignitors.kt:2149` `sineLoop`,
+     `Ignitors.kt:2190` `sineLoopPhased` (the unison stacks), the voice's phase;
+   - `audio_be/src/commonMain/kotlin/ignitor/SampleIgnitor.kt:50`, the playhead;
+   - `audio_be/src/commonMain/kotlin/ignitor/KarplusString.kt:117` to `119`, the string's lowpass and allpass state
+     (`lpState`, `apPrevIn`, `apPrevOut`; the pluck and the superpluck).
+
+   The oscillator scope is a choice, not the rule's letter (which covers every loop). Not swept, candidates with no
+   box measured: the SVF coefficient ramps seeded from fields in `IgnitorFilters.kt` (`a1`, `a2`, `a3`, `k`, `g`, lines
+   208, 216, 219) and `DcBlocker.process` (`filters/LowPassHighPassFilters.kt:454` and `471`, `xp` and `yc`; `C-dist`
+   and `tube4x` read the same on both bundles under the mixed profile).
+   Checked and left, with the reason: the sine (`SineIgnitor`) and the impulse carry their phase in a field updated per
+   sample, no local seed; the noises (white, pink, brown, dust, crackle, Perlin) carry their state in fields too; the
+   partial bank's three loops already seed `* 1.0` (`renderPartial`, `renderPartialPhased`, `renderPartialGained`);
+   `Ignitors.kt:261` and `1431` (`var inc = phaseInc`) and `Ignitors.kt:603` (`var p = ph`) are set fresh every sample,
+   not loop-carried; the partial-apply loop at `Ignitors.kt:748` runs over partials, once per block, not over samples;
+   the Karplus `writePos` and `AnalogDrift`'s `rngState` are `Int`s; the accelerate ramp
+   (`PitchModFactories.kt:191`, `var ratio = 2.0.pow(...)`) is a pitch modulator, outside the scope (its seed is a
+   `Math.pow` in place; whether V8 treats it as a call result was not measured). Every drift seed (`m`) already had it.
+
+   **Proof.** Raw doubles, HEAD against the tree, 600 blocks, 35 of 35 cases identical on V8 and 35 of 35 on the JVM,
+   every last block sounding: the PWM cases (plain, drift, 37 Hz, raw, phased, in `classic()`, in `C-full`'s chain,
+   three at 220 Hz, two engine rows), every touched loop (the saw plain, with drift and phased; the constant-duty
+   pulse and square; the supersaw plain and phased, `super7a`; the supersine with drift plain and phased; the pluck
+   with stiffness and with drift, `spluck-a`; a looping sample plain and with drift) and the harness's voice cases.
+   The corpus 18 of 18 (`CORPUS GREEN`). `:audio_be:jvmTest` 2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of
+   2,558. Bytes per block, mixed, 3 shuffled processes each, HEAD / tree:
+
+   | case | development | production |
+   |---|---|---|
+   | `pwm` | 2,096 / 64 B, 2,452 / 2,010 ns | 32 / 32 B |
+   | `pwm`, `analog` 0.3 | 2,128 / 96 B, 2,595 / 2,319 ns | 32 / 32 B |
+   | `pwm`, 37 Hz duty | 2,080 / 48 B | 16 / 16 B |
+   | raw pulse, PWM | 2,096 / 64 B | 32 / 32 B |
+   | `pwm` in `classic()` | 2,096 / 64 B, 3,317 / 2,979 ns | 32 / 32 B |
+   | `pwm` in `C-full`'s chain | 2,128 / 96 B | 64 to 80 / 80 B |
+   | engine `pwm` | 2,096 to 2,134 / 64 to 102 B | 32 to 64 / 48 to 64 B |
+   | phased PWM, saw, phased saw, stacks, pluck, sample | unchanged (16 to 48 B) | unchanged (16 to 32 B) |
+
+   Time on production, mixed, 6 shuffled processes, medians, HEAD / tree / HEAD again (a byte copy): `pwm` 2,120 /
+   2,042 / 2,060 ns, `pwm` with drift 2,198 / 2,205 / 2,241, the phased saw 1,653 / 1,608 / 1,609, the saw with drift
+   870 / 880 / 904, `super7` 3,600 / 3,656 / 3,650, the phased supersaw 4,874 / 4,863 / 4,923, the supersine with
+   drift 6,508 / 6,220 / 6,405, phased 7,890 / 7,979 / 7,701, the pluck with stiffness 2,408 / 2,361 / 2,382, with
+   drift 2,147 / 2,180 / 2,111, the sample 547 / 549 / 544, with drift 626 / 633 / 619, `spluck-a` 10,446 / 10,483 /
+   10,708: within HEAD against HEAD. Bytes on production unchanged in every row. **The allocation harness**, one run on
+   the tree: GREEN, 30 of 30 (V8 medians `saw` 21, `super7` 11, `super7a` 15, `spluck-a` 37, `C-full` 32, n16 1,115
+   B; JVM 0, n16 409); one `spluck-a` round read 304 B, item 7's recorded tail (a per-process coin on both sides:
+   pooled over the production mixed processes of this item and its review, 288 B in 2 of 26 on HEAD and 3 of 20 on
+   the tree). **Nothing automated guards the development-bundle box; the comment at each seed is the only guard.**
+   Two reasons: the allocation check runs the production bundle, and its V8 half measures each case in its own
+   process, while this box needs other voices warmed in the same process (single-case on the development bundle:
+   16 B). No test either: the sound is bit-identical either way. The cheap guard, named and not built: an alloc-mode
+   option that builds and warms the other cases round-robin in the same process before measuring (the probe's
+   method), run on the development bundle (`:audio_benchmark:compileDevelopmentExecutableKotlinJs`) with a `pwm`
+   case and a budget of about 200 B (the box is about 2 KB, about 80 times the method's 25 B noise). Item 6's PWM
+   row with a moving phase (71 / 31 B) was the phased path and its `dt`: it reads 32 B. Review round 1
+   (`tmp/reviews/e5-r1-A.md`, `e5-r1-B.md`, 0 MAJOR, 4 MINOR, 5 NIT) applied, records only. Report:
+   `tmp/reviews/e5-report.md`.
+6. **DONE (2026-10-10): the plain wave oscillators boxed `dt`, one heap number per block per oscillator.** Reported
+   as about 16 bytes per block per oscillator on the production bundle, pinned: `WaveIgnitor` hands its non-integral
+   `dt` to its loop methods. Source: as 2. **Measured on the production bundle**
+   (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22, one voice through `VoiceFactory` at 220 Hz, no
+   drift unless named): one heap number per block in every oscillator of the family (saw, ramp, square, tri, `pulze`,
+   and so `zawtooth`, `zamp` and `classic()`'s oscillator), about 16 B, pinned and unpinned; two on the phased PWM
+   path. **Cause** (sampling heap profiler,
+   `--trace-turbo-inlining`): `renderHoisted`, the loop every block-constant wave renders through, is 474 bytes of
+   bytecode, just past V8's inlining limit (460: "Cannot consider renderHoisted for inlining (reason: 5)"), so `dt`,
+   its one double argument, crossed a call V8 does not inline and became a heap number in the caller (the profiler put
+   about 18.6 B per block in `WaveIgnitor.generate` on HEAD, none on the tree). `renderPhased` took `dt` too, and on
+   the PWM path also `floor = flankSamples * dt`. The rule in `audio/ref/performance.md` (a non-integral double handed
+   to a function that is not inlined). **Fix** (`audio_be/.../ignitor/Ignitors.kt`): a holder, the oscillator's own
+   `WaveVoiceState.dt`, the field the unison stacks already read their increment from (the mono oscillator left it at
+   0.0 until now): `generate` writes `voice.dt = dt` once per block (line 930), `renderHoisted` (line 1045) and
+   `renderPhased` (line 1092) read it, and `renderPhased` computes the floor itself from it (line 1093, the same
+   expression the PWM loop uses). `renderHoisted` is still not inlined (485 bytes in this form): nothing double
+   crosses the call any more. The comment at the write and the KDoc of `WaveVoiceState.dt` are the guard; no test can
+   pin it. (The first form was a second field, `blockDt`, beside it; review round 1 asked for the one holder.) Kotlin
+   `inline` was not chosen: each loop method has two or three call sites in a `generate` that is already large, and
+   item 3's caution (a method `inline` makes large can leave V8 without the budget for its small callees) applies.
+   The unison stacks do not share the cause (their loops read `dt` from their voices' `WaveVoiceState`, the same
+   holder: super7 0 B on both sides); the sine and the impulse render their plain loops inside `generate` and are not
+   affected.
+   Bit for bit: raw doubles of the probe, HEAD against the tree, 600 blocks per case, 16 of 16 cases identical on V8
+   and 16 of 16 on the JVM, none silent (saw, square, tri, ramp, `zawtooth`, `pulze` at duty 0.3, the saw with drift,
+   the phased saw and square, PWM plain and phased, sine, `classic()` saw, the unison stack, and two engine rows); the
+   corpus 18 of 18 against `docs/benchmarks/corpus-reference.md`. Render bytes and ns per block, 20,000 warm-up and
+   200,000 measured blocks, medians of 3, HEAD / tree / HEAD again (a byte copy of HEAD, the control); a few bytes
+   either way, even below zero, is the noise band:
+
+   | case | V8 unpinned | V8 pinned (`taskset -c 11`) |
+   |---|---|---|
+   | saw | 15.6 / 0.4 / 15.9 B, 796 / 751 / 802 ns | 36.3 / -0.1 / 10.7 B, 783 / 710 / 758 ns |
+   | square | 15.1 / 0.2 / 15.2 B, 911 / 757 / 861 ns | 15.7 / 0.2 / 10.5 B, 816 / 754 / 850 ns |
+   | tri | 16.1 / -0.1 / 20.2 B, 853 / 754 / 852 ns | 26.2 / 0.2 / 5.3 B, 841 / 787 / 814 ns |
+   | ramp | 10.9 / -0.3 / 15.6 B, 766 / 664 / 787 ns | 15.7 / -10.5 / 25.9 B, 784 / 689 / 759 ns |
+   | `pulze`, duty 0.3 | 15.5 / -0.2 / 15.6 B, 881 / 756 / 865 ns | 15.6 / 0.3 / 26.1 B, 837 / 698 / 848 ns |
+   | saw, drift 0.3 | 15.7 / 0.4 / 21.3 B, 892 / 907 / 906 ns | 21.0 / -20.5 / 26.1 B, 901 / 821 / 882 ns |
+   | saw, moving phase | 5.2 / 4.4 / 21.2 B, 1,871 / 1,828 / 1,856 ns | 20.7 / -5.2 / 0.0 B, 1,814 / 1,881 / 1,902 ns |
+   | PWM, moving phase | 72.0 / 31.1 / 67.0 B, 3,449 / 2,947 / 3,371 ns | 67.6 / 15.5 / 62.0 B, 3,430 / 2,858 / 3,371 ns |
+   | `saw` built-in, `classic()` | 15.5 / 0.2 / 15.8 B, 1,444 / 1,332 / 1,427 ns | 5.0 / 5.0 / 41.4 B, 1,441 / 1,305 / 1,413 ns |
+   | unison stack, 7 voices (control) | -0.3 / 0.0 / -4.8 B, 3,435 / 3,485 / 3,498 ns | -5.1 / -10.3 / -5.6 B, 3,468 / 3,387 / 3,520 ns |
+   | sine (control) | -5.3 / 0.3 / -5.4 B, 953 / 932 / 951 ns | 5.0 / -0.1 / 4.9 B, 1,024 / 936 / 920 ns |
+
+   The table is the first form (`blockDt`). The final form (`WaveVoiceState.dt`), re-measured unpinned, HEAD / tree /
+   HEAD again, medians of 3: saw 15.7 / -5.7 / 15.7 B, 828 / 695 / 799 ns; square 21.0 / -0.5 / 15.8 B, 864 / 796 /
+   859 ns; tri 21.3 / -0.5 / 15.6 B, 843 / 770 / 845 ns; PWM with a moving phase 71.0 / 30.8 / 66.6 B, 3,515 / 2,896
+   / 3,437 ns; `classic()` saw 15.4 / 0.0 / 19.9 B, 1,531 / 1,353 / 1,433 ns; sine (control) 5.5 / -4.8 / -0.2 B,
+   951 / 961 / 906 ns. The same bytes and the same time (0.83 to 0.92 of HEAD).
+   One heap number is 16 bytes on node and 12 in Chrome (pointer compression), the count the same. The phased saw
+   is inside its noise (its phase LFO allocates beside it); its profile showed the box on HEAD. Time: the plain waves
+   run 0.85 to 0.94 of HEAD's unpinned and 0.83 to 0.95 pinned, the phased PWM 0.86 and 0.84, the drifting and phased
+   saws 0.92 to 1.01, the controls 0.96 to 1.01; HEAD again stays at HEAD in every row, so the gain is not order,
+   warm-up or heat, and the inlining decision is the same on both sides (`renderHoisted` refused on size, reason 5,
+   474 bytes on HEAD and 485 on the tree; `renderPhased` too), so it is not an inlining change either. The gain is
+   larger than one allocation per block would explain: measured, not explained (reviewer B reproduced it, 0.83 to
+   0.93). **The allocation harness** (`KLANG_BENCH_MODE=alloc`, middle C, 3 runs each,
+   HEAD's and the tree's interleaved), V8 bytes per block HEAD / tree, medians: `saw` 31 / 16 (runs 31, 31, 35 against
+   16, 11, 16), `sawC` 31 / 15, `C-offrel` 36 / 16, `C-env3` 84 / 63, `sgpad-vib` 67 / 31, `C-dist` 47 / 31, `tube4x`
+   77 / 57, `E-sawC-sus` 83 / 62, `E-C-rel05-n16` 1,301 / 1,103 (about 12 sounding voices), `super7` 16 / 17 (the
+   control); every run green; the time 0.90 of HEAD on `saw`, 0.92 on `sawC`, 0.95 on n16, 0.94 to 1.00 elsewhere.
+   JVM: 0 B per block on both sides in every steady case (n16 409 / 410, the voice build, item 11), time unchanged.
+   What is left on the `saw` case, about 16 B per block, is not the oscillator: the voice's own frequency handed to the
+   root `generate`, one heap number per voice block at a non-integral pitch, item 30 (reviewer B located it; the
+   probe at 220 Hz does not show it, the harness at middle C does).
+   **The budgets moved with it** (review round 1). The fix took about 16 B off every wave voice, so item 8's regression
+   (the `readParam` mutant, `Ignitors.readParam` a plain function again) read under the old budgets: reviewer B's
+   mutant runs, medians of 3, `sawC` 83 and 82 against the old 80 (a margin of 2 to 3 B, inside the noise),
+   `C-offrel` 66 and 62 against the old 72 (green: the guard was gone), `sgpad-vib` 114 and 113 against the old 112
+   (two of six rounds already under it). The V8 budgets were re-set from this change's runs by the file's rule (about
+   40 B above the median): `saw`, `sawC` and `C-offrel` 56 (tree medians 16, 15, 16 B), `sgpad-vib` 80 (31 to 36 B);
+   the mutant reads red against the three item 8 lines (`sgpad-vib`'s lowest round 107.4), and `saw`, the control,
+   stays green under it. `sawC` is the item 8 line on the plain voice, `C-offrel` guards the release arm (item 10b).
+   Review round 2 added `C-dist` (96 to 72: healthy 47 to 31 B, the mutant's rounds 108 to 114, a margin below the
+   method's noise against 96). The header of `audio_benchmark/alloc-budgets.txt` records the re-set. Healthy runs: no single round came within
+   24 B of 56 (worst 25.9, 31.5, 25.9 over 16 to 18 rounds). On the final form, three alloc checks GREEN, 28 of 28
+   (`saw` 15 / 21 / 16, `sawC` 19 / 15 / 15, `C-offrel` 21 / 15 / 21, `sgpad-vib` 36 / 30 / 31 B), and the mutant
+   once RED, 7 of 28 over: `sawC` 93, `C-offrel` 62, `sgpad-vib` 114, `super7` 84, `super7a` 98, `C-dist` 114,
+   n16 1,873 B. Reviewer B's first healthy run went red once with "no PEAK line": Kotlin/JS `println` is two writes,
+   and a GC trace line that fell between the text and its newline was glued onto `PEAK`; the alloc mode now prints
+   `NS` and `PEAK` in one `process.stdout.write`. Tests: `:audio_be:jvmTest` 2,661 of 2,661 and
+   `:audio_be:jsBrowserTest` 2,557 of 2,557 green, on both forms. Reports: `tmp/reviews/e6-report.md`,
+   `tmp/reviews/e6-r1-A.md`, `tmp/reviews/e6-r1-B.md`.
+7. **DONE (2026-10-11): the drift ramp boxed twice per voice per block in the superpluck; not reproduced in the
+   unison stacks.** Reported as "a drifting stack's ramp can box twice per voice per block": `DriftLanes.startOf` and
+   `endOf` return a double, and where V8 does not inline `blendOf` (some mixed-profile processes, both bundles) that
+   is 221 to 515 bytes per block. Source: as 2. **Measured on the production bundle**
+   (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22, one voice through `VoiceFactory` at middle C; the
+   bytes are those allocated between two forced GCs around the measured window, `--expose-gc --trace-gc-nvp` at a
+   1 MB semi-space, so a window reads in whole heap numbers): every `DriftLanes` adopter with drift (the five unison
+   stacks, 7 and 16 voices, with a vibrato, a moving phase, `analogSpread` 0.5 and 0; the partial bank, plain, phased,
+   with a signal gain, at spread 0.5; the superpluck with 8 strings, at spread 1 and 0.5), alone, under a mixed profile
+   (every case built and warmed round-robin in one process, then each measured; 15 processes in shuffled orders) and
+   with `--predictable`. **The stacks did not box the ramp in any process**: 16 B per block everywhere (item 30's root
+   frequency), and `--trace-turbo-inlining` shows `blendOf` inlined twice into `trapezoidLoop` and into
+   `renderPartial`. **The superpluck did**, in every process, alone or mixed: `SuperKarplusStrongIgnitor.generate`,
+   past the 460-byte limit itself, inlines `startOf` and `endOf` but never `blendOf` (144 bytes), so both results
+   crossed the call, 2 heap numbers per string per block (the sampling heap profiler, `--predictable`: 257 B per block
+   in `blendOf`). The rule in `audio/ref/performance.md` (a double result of a call V8 does not inline).
+   **Fix** (`audio_be/.../ignitor/DriftLanes.kt`): `advanceLane(lane)` steps the lane and leaves the voice's ramp in a
+   holder, `ramp`, a `DoubleArray(2)`, and returns nothing; `blockStart` and `blockEnd` are `inline` properties that
+   read it, so a read is an element load at the caller. `startOf`, `endOf` and `blendOf` are gone; the eight adopter
+   sites in `Ignitors.kt` read `blockStart` and `blockEnd` after their `advanceLane` (the partial bank's three loops,
+   the stacks' four, the superpluck's one). The KDoc of `ramp` is the guard. **The first form, two double fields,
+   only moved the boxes:** in a single-case process V8 stored them as fresh heap numbers inside the superpluck's
+   `generate` (the profiler, `--predictable`: 273 B per block there, about the HEAD count), and they went only under a
+   mixed profile; a hand-edited copy of that bundle with the fields replaced by a `Float64Array` read 32 B in 8 of 8
+   processes, so the holder is an array (measured, not explained: a field initialized at 1.5 instead of 1.0 boxed
+   the same). In the final form V8 does not inline `advanceLane` (274 bytes) into the superpluck's `generate`; it
+   returns nothing, and no double crosses. The stacks and the partial bank inline it (trace).
+   Bit for bit: raw doubles of the probe, HEAD against the tree, 600 blocks, 30 of 30 cases identical on V8 and 30 of
+   30 on the JVM, every last block sounding (every adopter above, the classic saw, `C-full`, `sgpad-vib`, three at 220
+   Hz, three engine rows); the corpus 18 of 18 against `docs/benchmarks/corpus-reference.md`. Bytes per block, one
+   value per process, HEAD / tree / HEAD again (a byte copy of HEAD; the single-case column HEAD / tree):
+
+   | case | single-case, unpinned (8 processes) | mixed, unpinned (5) | mixed, pinned `taskset -c 11` (3) | `--predictable` (2) |
+   |---|---|---|---|---|
+   | superpluck, analog 0.3 | 416 to 544 / 32 (all) | 288 / 32 / 288 (all) | 288 to 416 / 32 / 416 | 416 / 32 / 416 |
+   | the same, `analogSpread` 0.5 | 432 to 688 / 48 (all) | 304 / 48 / 304 (all) | 304 to 432 / 48 / 432 | 432 / 48 / 432 |
+   | superpluck, no drift (control) | | 32 / 32 / 32 | 32 to 160 / 32 / 160 | 32 / 32 / 32 |
+   | supersaw 7, analog 0.3 (`super7a`) | | 16 / 16 / 16 | 16 / 16 / 16 | 16 / 16 / 16 |
+   | the 22 other cases | | unchanged within one heap number | unchanged within one heap number | |
+
+   The superpluck's other box, `getUnisonDetune`'s double result, one per string (the 128-byte steps of HEAD's
+   spread), is gone with it: V8 now inlines it into `generate` in every process traced (item 4). The e8 method
+   (two processes, the GC-trace difference, 20,000 warm-up and 200,000 measured blocks, the mixed profile, medians
+   of 3, HEAD / tree / HEAD again): superpluck 401 / 72 / 401 B, at spread 0.5 445 / 36 / 385, without drift 159 / 5
+   / 160, the stacks, the partial bank and the controls within the method's noise. Time per block (mixed, 8
+   processes, medians): superpluck 10,124 / 9,845 / 9,836 ns, `super7a` 4,893 / 4,901 / 4,900, `super16a` 9,595 /
+   9,648 / 9,615, the partial bank 4,455 / 4,544 / 4,459, the classic saw (control) 1,438 / 1,522 / 1,499: within
+   the noise of HEAD against HEAD (0.97 to 1.03; single processes on every bundle ran up to 2.5 times the median).
+   **JVM**
+   (`ThreadMXBean`, 7 rounds, every case in one process): 0 B per block on both sides in all 27 cases, time 0.96 to
+   1.08 of HEAD (the rows that do not touch the drift as spread as the rows that do). **The allocation harness**
+   (`KLANG_BENCH_MODE=alloc`, 3 runs each, the tree's and HEAD's interleaved): every case unchanged within noise
+   (`super7a` 15 / 16, `super7` 21 / 16, n16 1,094 / 1,094 B), every run green 28 of 28, JVM 0 B on both sides (n16
+   409). No existing budget moves: the fix takes nothing off a harness case, so no regression reads under a budget it
+   read over before. **The harness guards it with a new case** (coordinator, 2026-10-11): `spluck-a`, the built-in
+   superpluck at middle C, 8 voices, `analog` 0.3, feedback 1 (at the default 0.996 the strings are silent long before
+   the window ends, which the check refuses: the last block's peak reads 0; with feedback 1 it reads 0.006). Budgets
+   by the file's rule: V8 96 (healthy rounds 1 to 53 B, median about 31; HEAD's code 407 to 566 B), JVM 6 (0 B on
+   both sides). With the item 7 source change reverted (HEAD's `DriftLanes.kt`, `Ignitors.kt` and the two specs, in
+   one lock call, restored and checked with `cmp`), the check is RED three times out of three, 1 of 30 over:
+   `spluck-a` 553, 546, 552 B (rounds 407 to 566); the tree GREEN three times, 30 of 30 (`spluck-a` 21, 40, 15). The
+   item 8 mutant (`readParam` a plain function) against the full budget set: RED, 9 of 30 over, `spluck-a` 381 B.
+   The case list changed, so the driver starts a new table in `docs/benchmarks/alloc-scoreboard.md` at its next run
+   (it compares the last table's header with today's case list). **A rare tail, not located:** about 1 window process
+   in 30 reads 300 to 460 B on `spluck-a`, the size of HEAD's regression (pooled over this change and review round 1,
+   9 of 292 rounds and process pairs, 295 to 459 B; 0 of 50 with `analog` 0, so it is on the drift path); the profiler
+   did not catch one in 110 processes (it perturbs the compile). The median of 3 rounds absorbs one such round; a
+   false red needs two of three, about 0.3 percent of runs (reviewer B; at most about 1 percent). A breach whose rounds
+   are not all high, and that does not repeat on a second run, is the tail; a breach that repeats is a regression.
+   HEAD's code read high in every round of every run, the item 8 mutant in every round of its one run. In the first form V8 inlined `advanceLane` into the superpluck's `generate`, and the
+   two fields ended as Double representation (`--trace-generalization`, reviewer B), like `AnalogDrift`'s, which do
+   not box: representation is ruled out, the cause is not located. `super7a`'s guard
+   text no longer names item 7: the stacks never boxed on the ramp. Tests: the specs read the holder
+   (`DriftLanesSpec`, `AnalogDriftSpec`); `DriftLanesSpec`'s "a retired index is nobody's lane" row now advances a
+   live lane first, so a retired index must overwrite the holder, not inherit the previous lane's ramp
+   (mutation-checked: the holder left unwritten for a voice with neither walk is red on that row and was green on
+   the old order; reading the holder before `advanceLane` is red on existing rows in all four adopter families,
+   8, 2, 8 and 1 failures). `:audio_be:jvmTest` 2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of 2,558 green.
+   Report: `tmp/reviews/e7-report.md`.
+   The development bundle's superpluck (found at item 5): see item 4.
 8. **DONE (2026-10-10, with item 12): every knob read boxed on V8, through the shared `readParam`.**
    Reported as `ConstantIgnitor.controlRateValueOrNull` boxing, about 18 bytes per block through `blockStartValue` in
    the unison stacks (development, mixed profile), blamed on the interface's shape (`Double?`). Source: as 2.
@@ -254,7 +666,9 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    speed-up "about 15 to 50 percent".
 10. **Kotlin's `isFinite()` is a stdlib call on Kotlin/JS**, left out of the stages' inlining budget. An inline
     compare helped pinned and hurt unpinned, so it was dropped; worth a second look only with a measurement that holds
-    in both conditions. Source: as 2. S.
+    in both conditions. Also in the SVF clamps (`clampSvfCutoff`, `clampSvfQ`): item 29 wrote their `coerceIn` out
+    as comparisons (`clampSvfRange`) and kept `isFinite`, a 23-byte stdlib call that V8 inlined in both voice shapes
+    measured there, the next one to be left out if `SvfIgnitor.generate` grows. Source: as 2. S.
 10a. **DONE (2026-10-10, with 10b): every per-sample envelope boxed on V8, through the curve `when`.** Reported as
     about 2.17 KB per block for a voice whose pitch envelope is in its attack or decay (one 16-byte heap number per
     sample), about 65 KB per kick sweep; a double crossing a call V8 does not inline was suspected (`adsrCurveShape`,
@@ -394,10 +808,220 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     sine, `SineIgnitor.generate`, called from `FmModIgnitor.generate`) and the knob reads (`Ignitors.readParam`, about
     65 B per block, item 8 on V8; item 12 on the JVM).
 
-29. **The filter-envelope cutoff chain allocates on V8** (numbered after the last item, added 2026-10-10): a full
-    `classic()` voice (filter, filter envelope, tremolo, analog) still allocates about 130 + 65 + 32 B per block in
-    its cutoff chain, the same on HEAD and after items 8 and 12, so not a knob read. Not located further. Source:
-    `tmp/reviews/e8-r1-B.md` (items 8 and 12, review round 1, reviewer B's heap profile). S to M.
+29. **DONE (2026-10-11): the SVF node's per-block setup boxed on V8 in a full `classic()` voice, and so did the
+    filter drift.** Reported as about 130 + 65 + 32 B per block in the cutoff chain of a full `classic()` voice
+    (filter, filter envelope, tremolo, analog), the same on HEAD and after items 8 and 12, so not a knob read; the
+    harness case `C-full` read about 200 to 250 B per block. Source: `tmp/reviews/e8-r1-B.md`. **Measured on the
+    production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22, one voice through
+    `VoiceFactory`, classic saw at middle C and at 220 Hz; narrow cases built from `C-full`'s slots): the three sites
+    are the lowpass (`lpf` 1200 Hz, q 1.3, `env` 12, `analog` 0.2), about 8 heap numbers per block, the highpass
+    (`hpf` 80 Hz, `analog`), about 4, and the two filters' drift lanes, one each. Every one is a double crossing a
+    call V8 did not inline. **Cause** (sampling heap profiler, `--trace-turbo-inlining` on a copy of the bundle with
+    every method named): `SvfIgnitor.generate` is one compiled body with one inlining budget for every SVF node, and
+    in this voice its two instances take different branches (the envelope path, the static path), so each branch's
+    callees run at half the frequency and are the last in line for the budget. They were left out: on the envelope
+    path `prepareModEnvelope` (its stage times, 0.01 and 0.1 s, crossed as heap numbers) and the level's `coerceIn`,
+    on the static path the clamps of `computeSvfCoeffs` (Kotlin's `isFinite` and `coerceIn`, stdlib calls on
+    Kotlin/JS; the drifted cutoff and the q 0.707). `SvfCoeffSweep.prepare` is past the 460-byte limit (reason 5) and
+    is never inlined, so both cutoffs and the q 1.3 crossed it every block. And `FilterHumanization` stepped its lane
+    through `AnalogDrift.nextMultiplier()`, which V8 left out, so its result crossed. Alone, the lowpass with `env`
+    and `analog` read 47 to 88 B on HEAD (the sweep's arguments, about 3) and the highpass with `analog` 5 to 46 (the
+    noise band): the rest appears only in the full voice, which runs out of budget. The class is new to
+    `audio/ref/performance.md` ("one node class is one compiled body with one inlining budget"). **Fix** (no ADAA
+    file touched):
+    - `SvfIgnitor` reads its cutoff, q and drift into fields of its own (a holder) and runs the envelope path's
+      setup in `prepareEnvelopeSweep` (`IgnitorFilters.kt`), a method that takes the context only, returns nothing,
+      and is too large to be inlined back; the static path's setup in `computeStaticCoeffs`, the same shape.
+    - `SvfCoeffSweep.prepare(sampleRate, frames)` reads the cutoffs and q its host wrote into its fields
+      (`cutoffStartHz`, `cutoffEndHz`, `q`) instead of taking them as arguments (`SvfCoeffSweepSpec` follows).
+    - `clampSvfCutoff` and `clampSvfQ` (`LowPassHighPassFilters.kt`) clamp through `clampSvfRange`, `coerceIn`
+      written out as two comparisons (the same value for every input with lo at most hi; the `isFinite` guard
+      stays a stdlib call, item 10). Needed for the one-filter voice: there V8 inlines `computeStaticCoeffs` into
+      `generate` (238 bytes in the final form; 211 in the intermediate shape with the stdlib clamps), and the stdlib
+      `coerceIn` was then left out (a lowpass with `analog` alone read about 46 to 56 B against HEAD's 0 to 26 with
+      the split alone).
+    - The filter drift is a step that returns nothing and a field: `FilterHumanization.stepDrift(ctx)` (replaces
+      `blockDriftMultiplier`) steps the lane with `beginBlock()` and leaves the multiplier in `driftMul`, which
+      `SvfIgnitor.generate` reads (through an `if`, not an elvis, which would merge the double with null). And
+      `AnalogDrift`'s step is a private Kotlin `inline` function that `beginBlock` runs in place, so the lane's
+      step has no double-returning call either. The first form (review round 1, B1) kept a double-returning
+      `blockDriftMultiplier`: in the two-filter voice V8 then left IT out of `generate`, and the box moved one level
+      up instead of going (the trace showed it).
+    The KDoc at each site is the guard; no test can pin a box. Two other placements were measured and dropped: the
+    static path left in `generate` (the highpass's clamps boxed again in the full voice, `C-full` 77 to 87 B) and
+    both paths in one method (the one-filter voice boxed, 72 to 88 B, not explained).
+    Bit for bit: raw doubles of the probe, HEAD against the tree, 600 blocks, 38 of 38 cases identical on V8 and 38
+    of 38 on the JVM, none silent (every narrow case, `C-full` and its sustain-0.5, moving-decay and release
+    variants, each at middle C and at 220 Hz, and two engine rows); the corpus 18 of 18 against
+    `docs/benchmarks/corpus-reference.md`. Render bytes and ns per block, 20,000 warm-up and 200,000 measured
+    blocks, medians of 3, HEAD / tree / HEAD again (a byte copy of HEAD), unpinned; a few bytes either way, even
+    below zero, is the noise band:
+
+    | case | V8 unpinned |
+    |---|---|
+    | `C-full` (middle C) | 226 / 41 / 186 B, 8,361 / 8,261 / 8,382 ns |
+    | `C-full` at 220 Hz | 201 / 16 / 196 B, 8,378 / 8,189 / 8,326 ns |
+    | `C-full` without the distort | 212 / 72 / 196 B, 7,682 / 7,668 / 7,707 ns |
+    | `C-full`, `lpf.sustain` 0.5 | 263 / 52 / 253 B, 8,429 / 8,300 / 8,417 ns |
+    | `C-full`, the cutoff envelope in its decay | 237 / 47 / 223 B, 8,509 / 8,793 / 8,513 ns (5 rounds: 8,492 / 8,434 / 8,527) |
+    | `C-full`, filter and amplitude in their release | 248 / 41 / 232 B, 9,555 / 9,373 / 9,739 ns |
+    | `lpf` + `env` | 37 / 15 / 31 B, 2,294 / 2,240 / 2,251 ns |
+    | `lpf` + `env` + `analog` | 67 / 6 / 61 B, 4,142 / 4,118 / 4,235 ns |
+    | `lpf` + `env`, sustain 0.5 | 98 / 31 / 124 B, 2,239 / 2,221 / 2,304 ns |
+    | `lpf` + `analog` | 40 / 21 / 26 B, 4,115 / 4,148 / 4,257 ns |
+    | `hpf` + `analog` | 46 / 21 / 47 B, 4,147 / 4,112 / 4,103 ns |
+    | tremolo alone (control) | 16 / 31 / 36 B, 2,178 / 2,503 / 2,242 ns (5 rounds: 2,173 / 2,221 / 2,234) |
+    | `lpf` alone (control) | 16 / 16 / 21 B, 2,162 / 2,200 / 2,151 ns |
+    | classic saw, `analog` (control, oscillator drift) | 10 / 20 / 16 B, 1,563 / 1,573 / 1,560 ns |
+    | `C-dist` (control) | 36 / 31 / 31 B, 1,975 / 1,979 / 2,018 ns |
+    | classic saw (control) | 21 / 20 / 15 B, 1,376 / 1,345 / 1,364 ns |
+    | engine, `C-full` sustained | 205 / 103 / 253 B, 13,603 / 13,805 / 13,715 ns |
+    | engine, classic saw (control) | 67 / 62 / 72 B, 6,330 / 6,466 / 6,153 ns |
+
+    Pinned (`taskset -c 11`, medians of 3): `C-full` 279 / 36 / 243 B, 8,269 / 8,460 / 8,392 ns; the one-filter rows
+    are noisy pinned on both sides (`hpf` + `analog` 42 / 52 B, `lpf` + `analog` 57 / -10, medians of 5, single
+    rounds from -26 to 108). One heap number is 16 bytes on node and 12 in Chrome (pointer compression), the count the
+    same. Time: within the noise of HEAD and HEAD again (`C-full` 0.99, the others 0.97 to 1.03; the tremolo row's
+    first run had one 4.7 µs outlier round, 5 rounds read 1.02). What is left on `C-full`: item 30 (about 16 B at
+    middle C, gone at 220 Hz), and the residues item 31 lists (the tremolo's depth ladder, the fused distort,
+    `EnvelopeCore.prepare`'s arguments), all inside the GC trace's noise band on `C-full`. The table above is the
+    first form (the drift's box moved, not removed); the final form's rows are under "Review round 1" below. **JVM**
+    (`ThreadMXBean`, 7 rounds of 20,000 warm-up plus 16,000 blocks, every case in one process): 0 B per block on both
+    sides in every case, time 0.97 to 1.04 of HEAD. **The allocation harness** (`KLANG_BENCH_MODE=alloc`, 3 runs
+    each, HEAD's and the tree's interleaved): V8 `C-full` 186 / 42 B per block (runs 186, 190, 169 against 42, 47,
+    41), every other case unchanged within noise, every run green 28 of 28; time 0.97 to 1.03 of HEAD; JVM 0 B on
+    both sides (n16 409, the voice build). Tests: `:audio_be:jvmTest` 2,661 of 2,661 and `:audio_be:jsBrowserTest`
+    2,557 of 2,557 green. Report: `tmp/reviews/e29-report.md`. S to M.
+    **Review round 1, applied** (`tmp/reviews/e29-r1-A.md`, `e29-r1-B.md`, 2 MAJOR, 4 MINOR, 3 NIT; the code was
+    correct and bit for bit):
+    - B1: the filter drift's box had moved, not gone. In the two-filter voice V8 left the double-returning
+      `blockDriftMultiplier` out of `generate`. It is now `stepDrift`, which returns nothing, plus a field the node
+      reads (the fix bullet above). The trace of `C-full` shows `FilterHumanization.stepDrift` as a call that
+      returns nothing, with `beginBlock` and its step inlined into it, so no double crosses.
+    - A1: the static path's KDoc and the rule said the clamps need no inlining. `isFinite` is still a stdlib call:
+      both texts now say what holds, and `computeStaticCoeffs` is 238 bytes (211 was the intermediate shape).
+      Item 10 records it.
+    - B2 and B3: `C-full v8` re-set from 320 to 112, with guards that do not overclaim and a re-set clause in the
+      header of `audio_benchmark/alloc-budgets.txt`.
+    - B4: the residues moved to a new open item, 31.
+    - B5: the rule's "about 0 in either filter alone" is corrected.
+    - A3 and B6: `nextMultiplier` is marked as the tests' reference.
+
+    Bit for bit: 38 of 38 dumps on V8 and on the JVM, HEAD against the tree; the corpus 18 of 18. Render bytes and
+    ns per block, unpinned, medians of 3, HEAD / first form / final form / HEAD again:
+
+    | case | B per block | ns per block |
+    |---|---|---|
+    | `C-full` | 201 / 41 / 26 / 176 | 8,393 / 8,322 / 8,240 / 8,395 |
+    | `C-full` at 220 Hz | 176 / 11 / 17 / 181 | |
+    | `lpf` + `analog` | 47 / 16 / 15 / 11 | |
+    | `hpf` + `analog` | 42 / 15 / 21 / 30 | |
+
+    The allocation harness on the final form with budget 112, 3 runs: `C-full` 36, 52, 51 B (rounds 16 to 62),
+    every run green, 28 of 28. The item 8 mutant against it: RED, 8 of 28 over; `C-full` read 175 (rounds 169,
+    186, 175). Tests: `:audio_be:jvmTest` 2,661 of 2,661 and `:audio_be:jsBrowserTest` 2,557 of 2,557.
+    **Review round 2** (`tmp/reviews/e29-r2.md`, clean: 0 MAJOR, 1 MINOR, 2 NIT). MINOR 1, applied: the node's use of
+    the drift had no unit guard (a lost field read or a read before the step stayed green). A new row in
+    `IgnitorFilterKnobsSpec`, "the drift reaches the COEFFICIENTS in the block it was stepped for", renders a
+    lane-only humanization against the same lowpass whose cutoff is set per block to `800 * twin.nextMultiplier()`,
+    exact bits. Mutation-checked: `blockDriftMul = 1.0` red, the read moved before `stepDrift` red, the restored
+    tree green. NIT 3, applied: the clamp bullet gives 238 bytes for the final form. Tests: `:audio_be:jvmTest`
+    2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of 2,558.
+30. **WON'T IMPLEMENT (maintainer, 2026-10-11), the ready fix written down below. Every voice boxes its own
+    frequency once per block on V8** (numbered after the last item, added 2026-10-10):
+    `IgniteRenderer.render` (`voices/IgniteRenderer.kt`) hands the voice's `freqHz`, a double field, to the root
+    Ignitor's `generate`, a call V8 never inlines, so a non-integral note frequency (almost every real note; middle C
+    in the allocation harness) is one heap number per voice per block. The children receive it already tagged, so it
+    is one box per voice, not per node; an integral frequency (220 Hz, a Smi) does not box. About 16 B per sounding
+    voice per block, about 190 B per block on the harness's n16 row (about 12 voices): the same order as item 6's win,
+    and inside the V8 noise of a single-voice budget, so no budget catches it. It is what is left on the harness's
+    `saw` case after item 6. **Proof** (reviewer B, scratch copies of the tree's harness bundle, nothing in the repo
+    touched): the sampled heap profile books it in `Voice.renderStages` (`IgniteRenderer.render` is inlined there);
+    with the constant `261.6255653005986` handed to the root `generate` in place of the field, the GC-trace bytes
+    read, medians of 3, tree against the copy, `saw` 13.6 / -3.3, `sawC` 10.8 / -0.7, `super7` 15.8 / 1.6 B per
+    block (a pan `coerceIn` in `SendRenderer` replaced by `Math.min`/`max`, the other suspect, moved nothing). The
+    remedy class is the holder of `audio/ref/performance.md` (for example the frequency on the `IgniteContext` the
+    root already receives), but it touches the `Ignitor.generate` signature or the voice's render entry, so it is a
+    design call, not a one-liner. Source: `tmp/reviews/e6-r1-B.md`, MINOR 4. S.
+    **The design call (2026-10-11).** Four options were measured on scratch copies of the production bundle
+    (`tmp/reviews/e30-proposal.md`, data in `tmp/reviews/e30-design/`):
+    - **A, a plain holder for the root: does not work.** The frequency already sits in a plain double field
+      (`IgniteRenderer.freqHz`); loading it to pass it is what boxes, so the box only moves.
+    - **B, a tagged cell in `IgniteRenderer` (S, one file): the ready fix.** A field typed `Any?`, written `null`
+      first and then the frequency, read with `as Double`: V8 keeps the field tagged, so the box is made once per
+      voice, not per block. Hand-edited bundle: `saw` 16 to -5, `sawC` 15 to -2, `super7` 21 to -1, n16 1,096 to
+      920 B per block, time unchanged, last-block peaks identical in all 14 cases; on the JVM one `Double` per voice
+      build. Guard: the n16 V8 budget re-set from 1500 to about 960, mutation-checked.
+    - **C, the frequency off `generate` onto `IgniteContext` (L):** 73 `generate` overrides, ADAA-owned
+      `IgnitorEffects.kt`, about 277 test calls; removes the root box and `DetuneIgnitor`'s, but can add boxes where
+      the frequency is passed into a call V8 does not inline (`controlRateValue` at polymorphic sites,
+      `resolveFreq`), so its net effect is unknown without a prototype.
+    - **D, leave it: chosen.** About 12 B per voice block in Chrome, bytes only, no measured speed behind it; B is a V8
+      trick in plain sight, weighed against the stone rule "Complexity is the enemy". If the phone ever needs it, B
+      is the fix to build.
+    Found on the way: `DetuneIgnitor` (`freqHz * ratio`) boxes once per detune node per block (`sgpad-vib` 15.5
+    against -0.2 B); pitch envelopes, vibrato, accelerate and FM's carrier work through `IgniteContext.phaseMod` and
+    box nothing. `controlRateValue(freqHz)` keeps its argument: the build, the sizing reads and the Katalyst slots
+    call it with no render context.
+
+31. **What item 29 left on a full `classic()` voice on V8** (numbered after the last item, added 2026-10-11): sites
+    item 29 located and did not fix, each about one heap number per block (16 B on node, 12 in Chrome), inside the
+    harness's V8 noise on `C-full`, so no budget catches them. Source: item 29, `tmp/reviews/e29-report.md`,
+    `tmp/reviews/e29-r1-B.md` (MINOR 4). S each.
+    - **`EnvelopeCore.prepare`'s arguments.** It is past V8's 460-byte limit (reason 5), never inlined, and takes
+      six doubles (the attack, decay and release frame counts, the sustain, `k`, `norm`). Every envelope host (the
+      chain `adsr` and `classic()`'s envelope, the FM, pitch and filter envelopes) calls it per block, so a
+      non-integral frame count or sustain is a heap number per block per host. `C-full`'s defaults travel as small
+      integers (0.01 and 0.1 s at 48 kHz are 480 and 4,800 frames, sustain 1.0); `lpf.sustain` 0.5 shows one more
+      (in `SvfIgnitor.prepareEnvelopeSweep`). Smallest remedy: a holder, fields on `EnvelopeCore` the host writes
+      and a `prepare()` that reads them: an interface change across every envelope host.
+    - **The tremolo's depth ladder.** `1 - max(depth, 0)` is block-constant; the `MinusIgnitor` scalar path calls
+      `b.controlRateValue` at one shared, polymorphic site that V8 does not inline, so `MaxIgnitor`'s non-integral
+      result is boxed (seen as `MaxIgnitor.controlRateValue` under the tremolo's `TimesIgnitor`). Smallest remedy:
+      a build-time fold of a block-constant subtree whose leaves are voice constants into one scalar: a new
+      mechanism, or a change in `IgnitorDslRuntime.kt` (ADAA-owned).
+    - **The fused distort** (`FusedDistortIgnitor.generate`, `IgnitorEffects.kt`, ADAA-owned): about one heap number
+      per block on `C-full` and `C-dist` (`DcBlocker` is a candidate it does not inline). Not located further.
+    - **Note, the SVF's `saturate` test** (`mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS` in
+      `SvfIgnitor.generate`) is a constant per node but runs per block, and in the two-filter voice it spends about
+      200 bytes of `generate`'s inlining budget on two enum `getInstance` / `initEntries` calls (reviewer B, round 1
+      of item 29). A constructor `val` would free that budget; not a box today, so left for a measured change.
+    The filter drift that item 29's first form only moved is fixed (item 29, review round 1).
+    - **Checked at item 7 (2026-10-11): item 29's double-field holders do not box.** Item 7 found two double fields
+      boxing in a single-case process where an array did not, so item 29's holders were measured in `--predictable`
+      single-case processes on HEAD (`338e520d`; item 29's probe bundle, whose engine module is byte-identical):
+      `C-full` 46 B per block, `lpf` + `env` + `analog` 21, `lpf` + `analog` 31, `hpf` + `analog` 46, classic saw
+      with `analog` 16, classic saw 16 (e8 method, medians of 2). A hand-edited copy with the SVF node's cutoff, q and drift fields
+      and `FilterHumanization.driftMul` replaced by `Float64Array`s read the same (`C-full` 46, `hpf` + `analog` 46),
+      so the fields are not the box. What the one-filter voices with `analog` keep, one or two heap numbers above the
+      classic saw, the profiler books in `SvfIgnitor.generate`; writing out the `coerceAtLeast` of the analog read
+      there moved `hpf` + `analog` from 46 to 37 B and `lpf` + `analog` from 31 to 37 (within a heap number, not
+      conclusive). Not located further; inside the harness's noise band.
+
+32. **What item 1 left: the delay's and the reverb's per-block `configure`** (numbered after the last item, added
+    2026-10-11). Source: item 1 and its review round 1 (`tmp/reviews/e1-r1-B.md`, MINOR 3). The chain's writers
+    re-apply their resolved knobs on every block (`KatalystChain.applyParams`). On V8 a stage's `configure` can then be
+    a cold compile in a mixed profile, where most orbits take the off arm: a trace of one such process (item 1) shows
+    the delay's `configure` with nothing inlined but `isFinite`, its setters (`time`, `feedback`, `cap`), both
+    `KnobGlide.retarget`s and `ensureRing` left out, so every knob crosses a call, up to 5 heap numbers per block. In
+    single-case processes (the allocation check's shape) the phaser's residue was its wet/dry law instead,
+    `WetDryMix.dryCoeff` and `wetCoeff` left out of the writer's budget (reviewer B's trace). **The phaser is done**
+    (item 1, round 1): it skips an unchanged config, the house pattern (the EQ's `unchanged`, the resonator's, the
+    compressor's by reference; the writers' comment `KatalystSlotWriters.kt`, "the effect short-circuits an unchanged
+    config"), comparing the raw knobs NaN-aware and with -0.0 told apart (the cached-config rule: a NaN never defeats
+    the compare), invalidated by `reset`. After it no residue was measured on the delay or the reverb either: in 6
+    unpinned and 3 pinned mixed processes every stage case read the engine without a stage, but for one pinned
+    process with the delay one heap number above it (item 1, round 1). So what is left is a risk, not a measured
+    cost: a later compile history can bring the cold `configure` back. **Not built for the delay and the reverb,
+    because a skip is not exact there without more work:** the delay's `configure` writes the feedback target into
+    the line every block and `advanceGlide` overwrites it with the glide's value before the block, so between the two
+    a reader (`Active.sustainsItself`) sees the target; skipping would leave the glide's
+    last value there mid-glide. And a refused ring grow consults the shelf again on every `configure` (the latched
+    retry), which a skip would stop. The reverb writes its size target the same way (`advanceGlide` overwrites it
+    while the size glides). The remedy, when a case shows the cost again: the same skip with those two writes kept on
+    the steady path (the glide targets compared, the line's knobs rewritten only when they move, the latched retry
+    exempt), proven bit for bit with the owner-change dumps of item 1. Related: item 10 (`isFinite`, the call that
+    stays). S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

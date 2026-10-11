@@ -232,9 +232,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **The resonator stage is handed its config in a holder, not as double arguments** (`ResonatorConfig`, tidy-up step
   12 (a)): passing them made a steady body allocate about 40 bytes per block on V8, where a non-integral double
   crossing a call V8 does not inline is a heap number. The delay, reverb and phaser writers do the same since the V8
-  allocation pass (`DelayConfig`, `ReverbConfig`, `PhaserConfig`, the phaser's `PhaserBlock`). The stages still
-  allocate on V8 (production, engine level: delay 82, reverb 22, phaser 144 bytes per block), an open probe:
-  `docs/tasks/engine-follow-ups.md` section 1. `audio/ref/performance.md`.
+  allocation pass (`DelayConfig`, `ReverbConfig`, `PhaserConfig`, the phaser's `PhaserBlock`). Since engine follow-up
+  1 every box located in their block processing is gone (a tail step that takes no double, `DelayLine.observeTail`; a holder for the
+  delay loops, `DelayLine.blockArgs`; `KnobGlide.advance`, `TailCeiling.observe` and `PhaserCore.alphaAt` Kotlin
+  `inline`), and the phaser stage skips an unchanged config (`KatalystPhaserEffect.applied`, the EQ's pattern); the
+  delay's and the reverb's per-block `configure` can still box in a cold compile, and an off phaser's call into
+  `Phaser.process` is located, not removed: `docs/tasks/engine-follow-ups.md`
+  items 1 and 32, `audio/ref/performance.md`.
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
   which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
   summation order, so changing it changes bits.
@@ -340,6 +344,34 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 1: the orbit stages' boxes on V8 located and the block processing's removed (the glide's
+  result, the delay's and the reverb's tail step, the delay loops' arguments, the ring check's `toInt()`, the phaser's
+  `alphaAt`, the depth clamp, the constant feedback rewrite) and the phaser's `configure` skips an unchanged config
+  (review round 1); in unpinned mixed processes every stage case now reads what the engine without a stage reads,
+  bit for bit, corpus identical; the delay's and the reverb's `configure` is item 32; two alloc cases, `E-delay`
+  (V8 112) and `E-stages` (V8 96): `docs/tasks/engine-follow-ups.md` items 1 and 32
+- 2026-10-11 Engine follow-up 5: the PWM loop boxed its phase per sample on the development bundle only (about 2 KB per
+  block, mixed profile; the production bundle never), from its phase seed, not `setPulseShape`. The `* 1.0` seed rule
+  now covers the field seeds of every oscillator loop (the wave loops, the stacks, the sample, the Karplus string),
+  bit for bit, corpus identical: `docs/tasks/engine-follow-ups.md` item 5
+- 2026-10-11 Engine follow-up 7: the drift ramp's `DriftLanes.startOf`/`endOf` returned doubles through a `blendOf`
+  that the superpluck's `generate` never inlined on V8 (2 heap numbers per string per block); the unison stacks and
+  the partial bank inline it and did not box. `advanceLane` now leaves the ramp in a `DoubleArray(2)` holder read
+  through `inline` `blockStart`/`blockEnd` (two double fields only moved the boxes). Superpluck with drift from 288
+  to 688 B per block to 32 to 48 (a rare tail, about 1 process in 30, not located), bit for bit, corpus identical; a
+  new alloc case `spluck-a` guards it (V8 96, JVM 6):
+  `docs/tasks/engine-follow-ups.md` item 7
+- 2026-10-11 Engine follow-up 29: in a full `classic()` voice the SVF node's one shared `generate` ran out of V8's
+  inlining budget, and its per-block setup boxed (about 8 heap numbers per block on the lowpass, 4 on the highpass,
+  one per filter drift lane); the setup moved into methods of their own reading a holder, `SvfCoeffSweep` takes its
+  cutoffs and q as fields, the SVF clamps' `coerceIn` is written out, and the filter drift is a step that returns
+  nothing (`FilterHumanization.stepDrift`) plus a field the node reads. `C-full` about 190 to 36 to 52 B per block,
+  bit for bit, corpus identical, its V8 budget re-set to 112; what is left is item 31:
+  `docs/tasks/engine-follow-ups.md` items 29 and 31
+- 2026-10-10 Engine follow-up 6: `WaveIgnitor` hands its `dt` to its loop methods (past V8's inlining limit) in its
+  `WaveVoiceState.dt` holder, no longer as an argument; it boxed one heap number per block per wave oscillator on V8
+  (about 16 B, now about 0), bit for bit, corpus identical; four V8 alloc budgets re-set with it:
+  `docs/tasks/engine-follow-ups.md` item 6
 - 2026-10-10 The oversampler is a polyphase IIR half-band (flat to 20 kHz, about 100 dB of rejection, 3.07 samples at
   2x), and every dry path beside an oversampled one runs through its phase twin: `docs/tasks/in-progress/iir-oversampler.md`
 - 2026-10-10 Engine follow-ups 8 and 12: `Ignitors.readParam` is Kotlin `inline` (one shared helper was one

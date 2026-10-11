@@ -40,9 +40,9 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * `drainSamplesUntilSilent` uses for the Draining state — and with sub-threshold input it
  * converges to the true steady floor `input / (1 − fb)` instead of pretending the unit is empty.
  *
- * **How.** The owner calls [observe] once per block with the block's input peak (`peakOf` on the
- * unit's feed, O(block) and unavoidable: it replaces the silence test) and the unit's current
- * window and feedback. Everything else is O(1). [hasTail] is two compares. A never-fed unit has
+ * **How.** The owner calls [observe] (through the unit's `observeTail`) once per block with the
+ * block's input peak (`peakOf` on the unit's feed, O(block) and unavoidable: it replaces the
+ * silence test) and the unit's current window and feedback. Everything else is O(1). [hasTail] is two compares. A never-fed unit has
  * ceiling 0: no tail, no cost. A parameter change needs no invalidation: the next window decays by
  * the feedback in force when the content actually recirculates, which is what the ring does too.
  * |feedback| ≥ 1 never decays and pins the orbit until the owner turns it off — the raw engine's
@@ -78,24 +78,27 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * audio. The scans stay as test oracles for exactly that claim.
  */
 class TailCeiling {
-    private var previous = 0.0
-    private var current = 0.0
+    // The state [observe] reads and writes is `internal`, not private, because [observe] is an `internal inline`
+    // function (see its KDoc): an inline body may only touch what its own visibility can see.
+
+    internal var previous = 0.0
+    internal var current = 0.0
 
     /** The largest input peak seen in the current window. */
-    private var inputPeakInWindow = 0.0
+    internal var inputPeakInWindow = 0.0
 
     /**
      * The largest |feedback| any block of the current window ran at, both terms' coefficient.
      * Tracked like [inputPeakInWindow], so a feedback that FALLS inside a running window cannot
      * lower the ceiling below what the window's cells were written with (Katalyst 5c-5).
      */
-    private var feedbackInWindow = 0.0
+    internal var feedbackInWindow = 0.0
 
     /** The |feedback| the last observed block ended on: where the unit's per-sample ramp starts. */
-    private var lastFeedback = 0.0
+    internal var lastFeedback = 0.0
 
     /** Samples into the current window. */
-    private var elapsed = 0.0
+    internal var elapsed = 0.0
 
     /** True while the unit can still contribute audio. O(1). */
     val hasTail: Boolean get() = previous > SILENCE_FLOOR || current > SILENCE_FLOOR
@@ -111,11 +114,18 @@ class TailCeiling {
      *
      * @param inputPeak the block's largest |sample| going INTO the unit (after any send scaling)
      * @param frames the block's length in samples
-     * @param windowSamples one recirculation plus the read's reach (see the unit's `tailWindowSamples`)
+     * @param windowSamples one recirculation plus the read's reach (see the unit's `observeTail`)
      * @param feedback the feedback in force right now (signed; only |feedback| matters)
      * @param lapsPerWindow how many times a sample can pass the shortest path within one window
+     *
+     * **Kotlin `inline`, on purpose** (engine follow-up 1, 2026-10-11): it runs once per block in a delay's or a
+     * reverb's tail step (`DelayLine.observeTail`, `Reverb.observeTail`), and its three doubles and its helpers'
+     * results crossed calls V8 did not always inline (358 bytes of bytecode, left out of the delay stage in a
+     * mixed-profile process), each a heap number per block (`audio/ref/performance.md`). Inline, nothing double
+     * crosses a call between the unit and the ceiling. No test can pin it; this KDoc is the guard.
      */
-    fun observe(inputPeak: Double, frames: Int, windowSamples: Double, feedback: Double, lapsPerWindow: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun observe(inputPeak: Double, frames: Int, windowSamples: Double, feedback: Double, lapsPerWindow: Int) {
         val fbEnd = if (feedback < 0.0) -feedback else feedback
         // The block runs from the feedback the last one ended on to this one (`DelayLine` ramps
         // per sample), so it is credited with the larger of the two. Steady, both are [fbEnd].
@@ -209,8 +219,9 @@ class TailCeiling {
         }
     }
 
-    /** Keeps the ceiling finite: |feedback| > 1 grows it without bound, and Inf arithmetic breeds NaN. */
-    private fun saturate(value: Double): Double = if (value <= CEILING_MAX) value else CEILING_MAX
+    /** Keeps the ceiling finite: |feedback| > 1 grows it without bound, and Inf arithmetic breeds NaN. Inline: see [observe]. */
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun saturate(value: Double): Double = if (value <= CEILING_MAX) value else CEILING_MAX
 
     /** The unit was reset: it holds nothing. */
     fun reset() {
@@ -222,10 +233,17 @@ class TailCeiling {
         elapsed = 0.0
     }
 
-    /** `peak · (1 + fb + … + fb^(laps−1))`: what one window's input can pile up through the shortest path. */
-    private fun fresh(peak: Double, fb: Double, laps: Int): Double {
+    /**
+     * `peak · (1 + fb + … + fb^(laps−1))`: what one window's input can pile up through the shortest path. Inline: see
+     * [observe].
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun fresh(peak: Double, fb: Double, laps: Int): Double {
         var sum = 0.0
-        var term = peak
+        // `* 1.0`: the loop-carried seed passes through an arithmetic operation first, the V8 seed rule of
+        // `audio/ref/performance.md` (here a field read, the window's input peak, seeds it); exact for every value
+        // but a NaN's payload, and the peak is never NaN ([observe] and [remeasure] clamp it first).
+        var term = peak * 1.0
         for (i in 0 until laps) {
             sum += term
             term *= fb
@@ -242,8 +260,14 @@ class TailCeiling {
         const val CEILING_MAX: Double = 1.0e6
 
 
-        /** The largest |sample| in the first [frames] of [buffer], both channels. O(frames). */
-        fun peakOf(buffer: StereoBuffer, frames: Int): Double {
+        /**
+         * The largest |sample| in the first [frames] of [buffer], both channels. O(frames).
+         *
+         * Kotlin `inline` for the reason [observe] is: its double result fed the ceiling across a call V8 did not
+         * always inline (engine follow-up 1).
+         */
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun peakOf(buffer: StereoBuffer, frames: Int): Double {
             val left = buffer.left
             val right = buffer.right
             var peak = 0.0

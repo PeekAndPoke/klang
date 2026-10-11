@@ -5,7 +5,14 @@
 
 package io.peekandpoke.klang.audio_benchmark
 
+import kotlin.system.exitProcess
+
 fun main() {
+    // `KLANG_BENCH_MODE=alloc`: the allocation check against the budgets, instead of the timing benchmark.
+    if (System.getenv("KLANG_BENCH_MODE")?.trim() == "alloc") {
+        exitProcess(AllocationCheck.run())
+    }
+
     println("=== Klang Audio Benchmark (JVM) ===")
     println()
     runBenchmark()
