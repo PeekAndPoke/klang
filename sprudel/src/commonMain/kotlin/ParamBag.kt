@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.sprudel
 
+import io.peekandpoke.klang.common.infra.KlangMap
+
 /**
  * The slot storage of ONE event, `<name>` to `Double`, and the one method the fill rule is
  * expressed through.
@@ -43,9 +45,16 @@ package io.peekandpoke.klang.sprudel
  * `ParamBagSpec` alone; it stays because it is the shape of the rule. (The voice-side doors keep their
  * typed fields, decided 2026-09-27: they reach the wire's slots in `toVoiceData`, not through this method.)
  */
-class ParamBag {
+class ParamBag private constructor(
+    /**
+     * The storage, a [KlangMap]: on Kotlin/JS a `HashMap` write or lookup allocates 40 bytes inside the stdlib's
+     * hashing, and every door write, fill, copy and merge of an event goes through here (engine follow-up 2, step 2).
+     */
+    private val values: KlangMap<Double>,
+) {
 
-    private val values: MutableMap<String, Double> = mutableMapOf()
+    /** An empty bag. */
+    constructor() : this(KlangMap())
 
     /** How many names the bag holds. */
     val size: Int get() = values.size
@@ -91,7 +100,7 @@ class ParamBag {
      * A bag with the same entries and nothing shared, the per-event deep copy [SprudelVoiceData.clone]
      * makes: writing into the copy must never reach the original.
      */
-    fun copy(): ParamBag = ParamBag().also { it.values.putAll(values) }
+    fun copy(): ParamBag = ParamBag(values.copy())
 
     /**
      * Folds [other] into this bag in place, last writer wins per name: [other]'s entries overwrite,
@@ -99,7 +108,7 @@ class ParamBag {
      * [SprudelVoiceData.mergeFrom].
      */
     fun mergeFrom(other: ParamBag) {
-        values.putAll(other.values)
+        values.setAll(other.values)
     }
 
     /**
@@ -109,14 +118,15 @@ class ParamBag {
      * re-resolve on the map's IDENTITY, so a map sprudel could still write into would move an
      * orbit's settings with nothing to notice it.
      */
-    fun toMap(): Map<String, Double> = values.toMap()
+    fun toMap(): Map<String, Double> = values.copy()
 
     /**
-     * The wire boundary's writable twin of [toMap]: a fresh COPY a caller may add to (`classicSlotParams`), sized
-     * for [extraCapacity] more names so the caller's writes do not grow it.
+     * The wire boundary's writable twin of [toMap]: a fresh COPY a caller may add to (`classicSlotParams`). Its JVM
+     * table starts at the bag's size plus [extraCapacity] slots, the size this copy always had (a JS `Map` takes no
+     * size; see `KlangMap(capacityHint)`).
      */
-    internal fun toMutableMap(extraCapacity: Int): MutableMap<String, Double> =
-        LinkedHashMap<String, Double>(values.size + extraCapacity).also { it.putAll(values) }
+    internal fun toKlangMap(extraCapacity: Int): KlangMap<Double> =
+        KlangMap<Double>(values.size + extraCapacity).also { it.setAll(values) }
 
     override fun equals(other: Any?): Boolean = this === other || (other is ParamBag && values == other.values)
 

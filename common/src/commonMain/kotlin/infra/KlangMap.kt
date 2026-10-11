@@ -28,15 +28,22 @@ package io.peekandpoke.klang.common.infra
  * - Not thread-safe, and not to be written while it is being iterated: on JS a live iterator does not see
  *   a key added after its last `next()`; on the JVM it throws `ConcurrentModificationException`.
  *
- * **Read it by key; never walk it on a hot path.** A lookup allocates nothing, but iterating a `KlangMap` on JS
- * allocates per entry (the JS iterator's results and one entry object: about 110 bytes per entry on node, where a
- * `LinkedHashMap` walk is free once optimized). Copies and the wire encoder walk it, once per event.
+ * **Read it by key; walk it with [forEachEntry].** A lookup allocates nothing, but iterating [entries], [keys] or
+ * [values] on JS allocates per entry (the JS iterator's results and one entry object: about 110 bytes per entry on
+ * node, where a `LinkedHashMap` walk is free once optimized). [copy], [setAll] from a `KlangMap`, [forEachEntry] and
+ * the wire encoder walk without that.
  *
  * The values are stored as they come: on JS a `Double` stays the JS number it was, so a read returns it without a
  * box.
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class KlangMap<V>() : Map<String, V> {
+    /**
+     * An empty map whose JVM table starts at [capacityHint] slots (`LinkedHashMap(capacityHint)`, which still grows
+     * once it is 75 percent full); ignored on JS, whose `Map` takes no size. A negative hint counts as 0.
+     */
+    constructor(capacityHint: Int)
+
     override val size: Int
     override val keys: Set<String>
     override val values: Collection<V>
@@ -58,6 +65,12 @@ expect class KlangMap<V>() : Map<String, V> {
 
     /** A new map with the same entries in the same order; writes to either never reach the other. */
     fun copy(): KlangMap<V>
+
+    /**
+     * Calls [action] for every entry, in insertion order: the walk that allocates nothing per entry (on JS the JS
+     * `Map`'s own `forEach`, where iterating [entries] makes objects per entry). Not to be written during it.
+     */
+    fun forEachEntry(action: (key: String, value: V) -> Unit)
 }
 
 /** A [KlangMap] holding [entries], in their order (a later duplicate key overwrites in place, as [KlangMap.set]). */

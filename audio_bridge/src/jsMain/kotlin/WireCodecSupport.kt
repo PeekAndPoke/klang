@@ -54,9 +54,19 @@ inline fun <T> wireDecodeSet(arr: dynamic, dec: (dynamic) -> T): Set<T> {
     return out
 }
 
-/** Map<String, Double> → JS object. */
+/**
+ * Map<String, Double> → JS object. A [KlangMap] (sprudel's slot maps) is walked with its own walk, which allocates
+ * nothing per entry, where iterating its entries would allocate per entry (`KlangMap`'s KDoc).
+ */
 fun wireEncodeStringDoubleMap(m: Map<String, Double>): dynamic {
     val o = wireObj()
+
+    if (m is KlangMap<Double>) {
+        m.forEachEntry { k, v -> o[k] = v }
+
+        return o
+    }
+
     for ((k, v) in m) o[k] = v
     return o
 }

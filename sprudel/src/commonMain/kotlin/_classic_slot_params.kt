@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.PassFilterSlots
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.common.infra.KlangMap
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 // Sprudel's voice doors as slots on the wire (phase 3 step 8)
@@ -239,17 +240,19 @@ private object ClassicSlotKeys {
     val loop = name(s.sample.loop)
 }
 
-/** The bag being written: a copy of the event's own bag, sized once, made at the first field that is set. */
+/**
+ * The bag being written: a copy of the event's own bag, sized once, made at the first field that is set (a
+ * [KlangMap], as [ParamBag]'s storage).
+ */
 private class ClassicSlotParams(private val own: ParamBag?) {
-    private var out: MutableMap<String, Double>? = null
+    private var out: KlangMap<Double>? = null
 
     fun put(name: String, value: Double?) {
         if (value == null || !value.isFinite()) { // NaN-guard: a non-finite field reads as unset
             return
         }
 
-        val target = out
-            ?: (own?.toMutableMap(EXPECTED_SLOTS) ?: LinkedHashMap<String, Double>(EXPECTED_SLOTS)).also { out = it }
+        val target = out ?: (own?.toKlangMap(EXPECTED_SLOTS) ?: KlangMap(EXPECTED_SLOTS)).also { out = it }
 
         target[name] = value
     }

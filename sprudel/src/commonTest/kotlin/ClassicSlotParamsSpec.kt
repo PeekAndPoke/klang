@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.adsrCurves
 import io.peekandpoke.klang.sprudel.lang.adsrOff
@@ -56,6 +57,28 @@ class ClassicSlotParamsSpec : StringSpec({
     "only a FINITE value is written: a non-finite door value leaves the slot unset" {
         createSprudelVoiceData { crush = Double.NaN; release = Double.POSITIVE_INFINITY; cutoff = 800.0; resonance = Double.NaN }
             .toVoiceData().ignitorParams shouldBe mapOf("lpf.freq" to 800.0)
+    }
+
+    "the voice doors are written into a copy: the event's own bag stays as it was, and a second conversion is the same" {
+        val data = createSprudelVoiceData { cutoff = 800.0 }.also { it.ignitorParamsOrNew().set("voices", 3.0) }
+        val first = data.toVoiceData().ignitorParams
+
+        first shouldBe mapOf("voices" to 3.0, "lpf.freq" to 800.0)
+        data.ignitorParams shouldBe paramBagOf("voices" to 3.0)
+        data.toVoiceData().ignitorParams shouldBe first
+    }
+
+    "toVoiceData hands both slot maps over as KlangMaps, with a voice door and without one" {
+        // The type the wire encoder and the engine read fastest on Kotlin/JS (engine follow-up 2, step 2).
+        val withDoor = createSprudelVoiceData { cutoff = 800.0 }.also {
+            it.ignitorParamsOrNew().set("voices", 3.0)
+            it.katalystParamsOrNew().set("reverb.wet", 0.3)
+        }.toVoiceData()
+        val withoutDoor = createSprudelVoiceData { }.also { it.ignitorParamsOrNew().set("voices", 3.0) }.toVoiceData()
+
+        (withDoor.ignitorParams is KlangMap<*>) shouldBe true
+        (withDoor.katalystParams is KlangMap<*>) shouldBe true
+        (withoutDoor.ignitorParams is KlangMap<*>) shouldBe true
     }
 
     "the typed door wins over an ignp of the same key, in either order" {

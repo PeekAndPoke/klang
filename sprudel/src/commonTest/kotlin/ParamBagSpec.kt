@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
  * The slot storage of one event, and the one METHOD the compound-door fill rule is expressed
@@ -159,6 +160,18 @@ class ParamBagSpec : StringSpec({
         bag.set("reverb.wet", 0.5)
 
         wire shouldBe mapOf("room" to 2.0)
+    }
+
+    "toMap hands a KlangMap over, written and copied" {
+        // On Kotlin/JS a HashMap write or lookup allocates 40 bytes inside the stdlib's hashing (engine follow-up 2,
+        // step 2): this pins the type, the bytes are the probe's and the KDoc's.
+        val bag = paramBagOf("reverb.wet" to 0.3)
+
+        bag.setOrDefault("reverb.size", null, 5.0)
+
+        (bag.toMap() is KlangMap<*>) shouldBe true
+        (bag.copy().toMap() is KlangMap<*>) shouldBe true
+        (ParamBag().also { it.mergeFrom(bag) }.toMap() is KlangMap<*>) shouldBe true
     }
 
     "an empty bag is empty, and two bags with the same names are equal" {

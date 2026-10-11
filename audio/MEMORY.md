@@ -251,7 +251,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   every Kotlin/JS `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte function context on V8 inside
   the stdlib's `hashCode` (27 per new orbit map on the classic chain, 24 to 76 per classic voice build). The decoder,
   the warm-up and the sample-envelope merge make `KlangMap`s; the steady block path makes no lookup at all. Read it
-  by key, never walk it on a hot path (about 110 B per entry on JS): `audio/ref/performance.md`.
+  by key, and walk it with `forEachEntry` (or `copy`/`setAll`), never through `entries` (about 110 B per entry on JS):
+  `audio/ref/performance.md`. Sprudel's `ParamBag` keeps its storage in one too.
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
   which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
   summation order, so changing it changes bits.
@@ -357,6 +358,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 2, step 2: sprudel's `ParamBag` on a `KlangMap`; `KlangMap.forEachEntry` and a
+  `capacityHint`, the JS copy and merge through the JS `Map`'s own walk, the wire encoder walks a `KlangMap` with it;
+  the engine bit for bit, corpus identical: `docs/tasks/engine-follow-ups.md` item 2
 - 2026-10-11 Engine follow-up 2, step 1: a new param map cost about 1,100 B on V8, 27 `HashMap` lookups at 40 B each
   inside the Kotlin/JS stdlib's `hashCode`; the new multiplatform `KlangMap` (`common/infra`, a JS `Map` on JS, a
   `LinkedHashMap` on the JVM) is what the worklet's decoder, the warm-up and the sample-envelope merge make, no wire or

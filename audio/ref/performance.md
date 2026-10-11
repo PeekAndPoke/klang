@@ -391,15 +391,30 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   a `LinkedHashMap` on the JVM): its lookup allocates nothing (a new orbit map about 16 B; `C-remap` 2.03 to 2.16 us
   per block against 2.80 to 3.11 with the decoder reverted, about 0.9 us per new map). The worklet's decoder
   (`wireDecodeStringDoubleMap`), the warm-up and the sample-envelope merge make them; the allocation check's
-  `C-remap` guards the decoder. **Read a `KlangMap` by key; never walk it on a hot path:** iterating one on JS
-  allocates about 110 B per entry (the JS iterator's results and an entry object; 666 B per walk of 6 entries on
-  node), where a `LinkedHashMap` walk is free once V8 inlines the whole loop. That inlining is not reliable either:
-  a lookup written out as a scan over a `LinkedHashMap`'s entries was rejected, because its iterator escaped wherever
-  V8 did not inline the loop (1,554 B on a one-entry map), and on the JVM it made an iterator per knob. The one walk
-  per event is the sample-envelope merge's `klangMapOf(own)` on a decoded map, still cheaper than before (a 6-entry
-  copy 1,160 B and 317 ns against HEAD's `toMutableMap()` 1,290 B and 549 ns; through the JS `Map`'s own `forEach` it
-  read 592 B but 473 ns, not taken; `new Map(source)` 1,385 B). The steady block path makes no lookup at all
-  (counted). Still on the per-voice path, 8 stdlib hashes per note (320 B on node): the sound-name `contains` and
+  `C-remap` guards the decoder. **Read a `KlangMap` by key, and walk it with its own walk, never through
+  `entries`:** iterating `entries`, `keys` or `values` on JS allocates about 110 B per entry (the JS iterator's results
+  and an entry object; 666 B per walk of 6 entries on node), where a `LinkedHashMap` walk is free once V8 inlines the
+  whole loop. That inlining is not reliable either: a lookup written out as a scan over a `LinkedHashMap`'s entries
+  was rejected, because its iterator escaped wherever V8 did not inline the loop (1,554 B on a one-entry map), and on
+  the JVM it made an iterator per knob. `KlangMap.forEachEntry`, `copy` and `setAll` from a `KlangMap` walk through the
+  JS `Map`'s own `forEach` (engine follow-up 2, step 2): a 6-entry copy 592 B, against 1,160 B through `entries`,
+  1,385 B through `new Map(source)` (which goes through the iterator protocol, a `[key, value]` array per entry) and
+  1,290 B for a `LinkedHashMap`'s `toMutableMap()`; the wire encoder walks a `KlangMap` with `forEachEntry`. Measured at
+  event level, that walk is what made sprudel's param bags pay off (below). The steady block path makes no lookup
+  at all (counted).
+  **Sprudel's param bags (step 2)**: `ParamBag` (both slot maps of an event) and `classicSlotParams`' copy are a
+  `KlangMap`. Per event, querying a cycle and converting with `toVoiceData` plus the wire encode, production bundle,
+  mixed profile, 3 processes: three bus doors 17.1 to 12.4 KB and 7.8 to 4.3 us, many doors 45.3 to 31.7 KB and 24.5
+  to 12.5 us, a patterned control 16.3 to 13.5 KB, six voice doors 19.0 to 17.6 KB, a plain note unchanged (no bag).
+  With `copy` through `new Map(source)` and the walks through `entries` (the first form) the saving was about 40 percent as large
+  (three bus doors 15.1 KB, many 40.1). The stdlib hashed 64 times per event with three bus doors and 143 with many,
+  and those hashes were not the only cost: a Kotlin/JS `LinkedHashMap` copy and growth allocate more than a JS `Map`.
+  The JVM: `KlangMap` is a wrapper there, +0 to +168 B per event depending on the shape, up to about 2.4 percent on
+  small events (review round 1 read +2.0 and +2.4 percent), time within HEAD's spread. The slot copy keeps HEAD's
+  presizing (`KlangMap(capacityHint)`, the JVM's initial table size); without it the worker's probe read its two
+  voice-door shapes 6 to 8 percent slower in 3 runs each, and review round 1 found no such effect on six shapes, so
+  the hint is kept as parity with HEAD, not for a measured gain. Comparing or printing a param map on JS walks
+  `entries` (`==` about 1.8 times HEAD's bytes, `toString` 10 to 30 percent more); nothing does it per event. Still on the per-voice path, 8 stdlib hashes per note (320 B on node): the sound-name `contains` and
   `get` of the build and the dispatcher's prefetch `contains` each hash twice (the playback's registry is a fork that
   asks its parent), and `engineFor`'s two lookups by playback id (`docs/tasks/engine-follow-ups.md` item 2, a
   candidate). Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,

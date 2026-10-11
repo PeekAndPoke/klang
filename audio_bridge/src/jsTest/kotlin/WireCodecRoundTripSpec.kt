@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
 import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * Round-trip guard for the KSP-generated worklet wire codec (JS-only — the codec uses `dynamic`).
@@ -198,6 +199,21 @@ class WireCodecRoundTripSpec : StringSpec({
         katalyst["delay.wet"]!!.isNaN() shouldBe true
         katalyst["reverb.wet"] shouldBe 0.3
         katalyst["gain.gain"] shouldBe null
+    }
+
+    "KlangMap slot maps (sprudel's) encode every entry, in order, and round-trip" {
+        // Pins that every entry of a KlangMap reaches the wire, in order. Which walk the encoder takes (its
+        // `forEachEntry` branch or the generic iteration) changes only the bytes, so no row can see it: its KDoc.
+        val data = VoiceData.empty.copy(
+            ignitorParams = klangMapOf("lpf.freq" to 1000.0, "analog" to 0.2),
+            katalystParams = klangMapOf("reverb.wet" to 0.3, "delay.wet" to SLOT_UNSET, "body.material" to 2.0),
+        )
+        val decoded = decode_ScheduledVoice(encode_ScheduledVoice(ScheduledVoice("pb-1", data, 0.0, 1.0, 0.0))).data
+
+        decoded shouldBe data
+        decoded.ignitorParams!!.keys.toList() shouldBe listOf("lpf.freq", "analog")
+        decoded.katalystParams!!.keys.toList() shouldBe listOf("reverb.wet", "delay.wet", "body.material")
+        decoded.katalystParams!!["delay.wet"]!!.isNaN() shouldBe true
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {

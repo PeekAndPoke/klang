@@ -14,7 +14,10 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   classes of `SvdGroups.kt`, and `ignitorParams` / `katalystParams` are `ParamBag`s (`ParamBag.kt`): a door
   writes one name in place, the bag is allocated on the first write (`ignitorParamsOrNew()` /
   `katalystParamsOrNew()`), copied once per event by `clone()`, `merge` builds a fresh one, `mergeFrom`
-  folds into the receiver's own. The class KDoc of `ParamBag` has the contract.
+  folds into the receiver's own. The class KDoc of `ParamBag` has the contract. Its storage is a `KlangMap`
+  (`common/infra`): on Kotlin/JS a `HashMap` write or lookup allocates 40 bytes inside the stdlib's hashing, and a
+  `KlangMap` walk through its entries about 110 per entry, so the bag copies and merges through `KlangMap`'s own walk
+  (`copy`, `setAll`, `forEachEntry`) and never iterates `entries` per event (engine follow-up 2, step 2).
 - `toVoiceData()` is the one boundary. The voice doors stay TYPED on this side (the query hot loop keeps its
   one allocation, `docs/plans/signal-flow-redesign.md` §4) and are written there as `classic()` slot keys
   into `ignitorParams` by `_classic_slot_params.kt`: the pitch envelope (`penv.*`, `penvCurves.*`), the vibrato
@@ -216,3 +219,8 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-10: `vibrato` / `vib` gain `rangeFrom`, `rangeTo` and `phase` (the Ignitor vibrato's `range(from, to)` and
   `phase`, decision D9), written as the `vibrato.rangeFrom|rangeTo|phase` slots and read back by the readers of the same
   names; not companions, nothing filled (`docs/tasks/pitch-pipeline-into-the-tree.md` section 7c).
+- 2026-10-11: `ParamBag`'s storage and `classicSlotParams`' copy are a `KlangMap`, public API unchanged; on V8 an event
+  with three bus doors went from about 17.1 to 12.4 KB and 7.8 to 4.3 us, with many doors 45 to 32 KB and 24.5 to
+  12.5 us (the wire encode included); the JVM +0 to +168 B per event (up to about 2.4 percent on small events), its
+  time within HEAD's spread
+  (`docs/tasks/engine-follow-ups.md` item 2, step 2).

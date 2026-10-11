@@ -189,6 +189,50 @@ class KlangMapSpec : StringSpec({
         klangMapOf(linkedMapOf("q" to 1.0, "p" to 2.0)).keys.toList() shouldBe listOf("q", "p")
     }
 
+    "forEachEntry visits every entry once, in insertion order, as the entries view does" {
+        val map = klangMapOf("delay.wet" to 0.3, "reverb.size" to 6.3, "gain.gain" to 1.0)
+
+        map["delay.wet"] = 0.5
+
+        val seen = mutableListOf<Pair<String, Double>>()
+
+        map.forEachEntry { key, value -> seen.add(key to value) }
+
+        seen shouldBe listOf("delay.wet" to 0.5, "reverb.size" to 6.3, "gain.gain" to 1.0)
+        seen shouldBe map.entries.map { it.key to it.value }
+
+        val none = mutableListOf<String>()
+
+        KlangMap<Double>().forEachEntry { key, _ -> none.add(key) }
+
+        none shouldBe emptyList()
+    }
+
+    "setAll from another KlangMap overwrites in place, appends new keys in order, and shares nothing" {
+        val target = klangMapOf("b" to 2.0, "a" to 1.0)
+        val source = klangMapOf("c" to 4.0, "a" to 5.0)
+
+        target.setAll(source)
+
+        target.keys.toList() shouldBe listOf("b", "a", "c")
+        target shouldBe mapOf("b" to 2.0, "a" to 5.0, "c" to 4.0)
+
+        source["d"] = 6.0
+
+        target.containsKey("d") shouldBe false
+        source.keys.toList() shouldBe listOf("c", "a", "d")
+    }
+
+    "two KlangMaps compare by content, both ways" {
+        val a = klangMapOf("x" to 1.0, "y" to 2.0)
+
+        (a == klangMapOf("y" to 2.0, "x" to 1.0)) shouldBe true
+        (a == klangMapOf("x" to 1.0, "y" to 2.5)) shouldBe false
+        (klangMapOf("x" to 1.0, "y" to 2.5) == a) shouldBe false
+        (a == klangMapOf("x" to 1.0)) shouldBe false
+        a.hashCode() shouldBe klangMapOf("y" to 2.0, "x" to 1.0).hashCode()
+    }
+
     "a null value is stored, contained and read as null" {
         val map = KlangMap<Double?>()
 

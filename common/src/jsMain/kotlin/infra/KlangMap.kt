@@ -16,6 +16,10 @@ package io.peekandpoke.klang.common.infra
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class KlangMap<V> actual constructor() : AbstractMap<String, V>() {
 
+    /** A JS `Map` takes no size, so the hint is ignored. */
+    @Suppress("UNUSED_PARAMETER")
+    actual constructor(capacityHint: Int) : this()
+
     /** The native JS `Map`, string keys to values. */
     private var native: dynamic = js("new Map()")
 
@@ -46,18 +50,32 @@ actual class KlangMap<V> actual constructor() : AbstractMap<String, V>() {
     }
 
     actual fun setAll(from: Map<String, V>) {
+        // From a KlangMap: the JS `Map`'s own walk, no iterator results and no entry objects.
+        if (from is KlangMap<*>) {
+            val target = native
+
+            from.native.forEach { value: dynamic, key: dynamic -> target.set(key, value) }
+
+            return
+        }
+
         for ((key, value) in from) {
             native.set(key, value)
         }
     }
 
     actual fun copy(): KlangMap<V> {
-        val source = native
+        // Through `setAll`'s native walk: `new Map(source)` goes through the iterator protocol, a `[key, value]`
+        // array per entry (measured: 1,385 bytes for 6 entries against 592).
         val result = KlangMap<V>()
 
-        result.native = js("new Map(source)")
+        result.setAll(this)
 
         return result
+    }
+
+    actual fun forEachEntry(action: (key: String, value: V) -> Unit) {
+        native.forEach { value: dynamic, key: dynamic -> action(key.unsafeCast<String>(), value.unsafeCast<V>()) }
     }
 
     /** The entries, a live read-only view in insertion order. */

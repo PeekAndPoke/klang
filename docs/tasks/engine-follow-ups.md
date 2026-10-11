@@ -183,8 +183,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    passed the whole suite. MINOR 2 and NIT 1: `audio/MEMORY.md` and `audio/ref/performance.md` take this item's
    wording (every box located; the off phaser's call located, not removed; one pinned process one heap number above),
    and the first lines' readings above are labelled as such.
-2. **Step 1 DONE (2026-10-11): every Kotlin/JS `HashMap` lookup allocated 40 bytes on V8; the worklet's slot maps are
-   a `KlangMap` now. Step 2 (sprudel) open.** Reported as: a new param map's resolve costs about 1,130 bytes on the
+2. **DONE (2026-10-11), in two steps: every Kotlin/JS `HashMap` lookup allocated 40 bytes on V8; the worklet's slot
+   maps (step 1) and sprudel's param bags (step 2) are a `KlangMap` now.** Reported as: a new param map's resolve costs about 1,130 bytes on the
    classic chain after S1, attributed to `KatalystKnob.resolve`, whose code does not explain it. **The cause**
    (production bundle, node 22.12, a probe with the lookups alone, the knobs alone, the chain, two voices taking turns
    as the orbit's owner; mixed and single-case, pinned and unpinned): the stdlib's generic `hashCode(dynamic)`, which
@@ -237,12 +237,49 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    `prefetchSampleSound`, and `IgnitorRegistry.get` from the build, each twice (the playback's registry is a fork that
    misses and asks its parent), and `engineFor`'s two `HashMap` lookups by playback id. With a `LinkedHashMap` slot
    map the same note hashed 32 times.
-   **Step 2, open: sprudel's `ParamBag`** (`sprudel/src/commonMain/kotlin/ParamBag.kt`) backs onto a `KlangMap` (and
-   `ClassicSlotParams.out`); its public API stays. Every door write hashes once, a companion fill twice, `clone()`,
-   the merges and `toVoiceData` once per entry. Measure first: a probe on sprudel's production test bundle that builds
-   one event with about a dozen door writes, clones it, merges it and calls `toVoiceData`, bytes and time per event,
-   `LinkedHashMap` against `KlangMap`, mixed profile, pinned and unpinned (estimate: 1.6 to 2 KB per event on node, on
-   the main thread). S.
+   **Step 2 DONE (2026-10-11): sprudel's `ParamBag` and `classicSlotParams`' copy are a `KlangMap`, public API
+   unchanged.** Measured first (probe `tmp/reviews/e2/s2/probe/`, sprudel's production test bundle, node 22.12): each
+   case queries one cycle of a pattern per step and converts every event with `toVoiceData`, on JS plus the wire
+   encode (`encode_ScheduledVoice`, the browser's next step); the cases: a plain note, three bus doors, six voice doors,
+   many doors of both kinds, a patterned control, and the bag's own operations. HEAD hashed through the stdlib 0, 64,
+   14, 143 and 29 times per event. **The first form** (the bag on a `KlangMap`, `copy` through `new Map(source)`, the
+   merges and the encoder walking `entries`) cut the time by about a third or more but saved only about a tenth of the bytes, and the JVM got
+   worse (+200 to +460 B per event: the read-only wrapper made per map, and walks through it). **The final form**:
+   `KlangMap` gains `forEachEntry` and a `capacityHint` constructor; on JS `copy` and `setAll` from a `KlangMap` walk
+   the JS `Map`'s own `forEach`, and the wire encoder walks a `KlangMap` with `forEachEntry`; on the JVM the read-only
+   wrapper is made only when a view is asked for, `setAll` and `equals` take a `KlangMap`'s backing map directly, and
+   `classicSlotParams` presizes its copy as HEAD did (`toKlangMap(EXPECTED_SLOTS)`; `capacityHint` is the JVM's initial
+   table size, parity with HEAD's `LinkedHashMap(size + extraCapacity)`). V8, bytes per
+   event, mixed profile, HEAD / tree, medians of 3 processes (pinned alike): plain 2,772 / 2,783 (no bag; time 838 /
+   812 ns), three bus doors 17,128 / 12,418 (7.8 / 4.3 us), six voice doors 19,026 / 17,607 (7.6 / 6.2 us), many doors
+   45,334 / 31,727 (24.5 / 12.5 us), patterned 16,254 / 13,470 (6.0 / 4.8 us), the bag alone 9,793 / 3,355 (5.9 / 1.4
+   us); without the encode the same shape (three bus doors 16.1 / 11.3 KB). JVM (`ThreadMXBean`, 7 rounds, 5 HEAD and
+   3 tree runs interleaved): +0 to +168 B per event depending on the shape (plain 634 / 634, three bus doors 5,402 /
+   5,474, many 14,614 / 14,782; up to about 2.4 percent on small events, review round 1 read +2.0 and +2.4 percent; the
+   wrapper object per map), time within HEAD's spread (six voice doors 1,686 to 1,764 / 1,634 to 1,755 ns). Without the
+   presized copy the worker's probe read `p-voice6` and `p-many` 6 to 8 percent slower in 3 runs each; review round 1
+   found no such effect on six shapes, a 24-slot event among them, so the hint is kept as parity with HEAD. **Bit for bit:** the probe's converted events (64 cycles, every case, the maps
+   printed in their order) identical HEAD against the tree on V8 and on the JVM; the engine dumps (HEAD's `KlangMap`
+   and encoder against the tree, every voice through the wire codec on V8) 18 of 18 on V8 and 18 of 18 on the JVM; the
+   corpus 18 of 18. Tests: `:common` 131 (JVM) and 133 (JS), `:audio_bridge` 148 and 281, `:sprudel:jvmTest` 3,508,
+   `:sprudel:jsBrowserTest` 2,997, `:audio_be:jvmTest` 2,675, `:audio_be:jsBrowserTest` 2,571, green; the alloc check
+   GREEN, 36 of 36 (`C-remap` 83 B). New rows: `KlangMapSpec` (`forEachEntry`; `setAll` from a `KlangMap`; two
+   `KlangMap`s compare by content), `WireCodecRoundTripSpec` (`KlangMap` slot maps encode every entry in order), and
+   `ClassicSlotParamsSpec` ("the voice doors are written into a copy: the event's own bag stays as it was", a gap the
+   mutation check found: `toKlangMap` handing out the bag's own storage was green on all of sprudel's 3,505 JVM
+   tests). Mutants, each in one lock call: 11 of 11 RED (the JS `forEachEntry` with key and value swapped, the JS and
+   JVM `setAll` fast paths doing nothing, the JVM `equals` fast path always true, the JVM `forEachEntry` doing
+   nothing, the encoder writing 0.0, `ParamBag.copy` and `toMap` sharing the storage, `mergeFrom` doing nothing,
+   `toKlangMap` sharing it). Review round 1 added type rows (`ParamBagSpec`: the bag's `toMap` hands a `KlangMap`;
+   `ClassicSlotParamsSpec`: `toVoiceData`'s two maps are `KlangMap`s), which catch a revert to HEAD's `ParamBag`; they do not see the bag's
+   storage (review round 2: the storage on `mutableMapOf` with `toMap` still handing a `KlangMap` stayed green on all
+   3,508 JVM tests). **Guarded by their KDocs only:** the bag's storage, the encoder's `KlangMap` branch and the JS
+   `setAll`/`copy` fast paths through the native `forEach` (each changes only bytes, and no test sees bytes). **Open, for the maintainer:** whether sprudel gets an
+   allocation case of its own (the engine's harness does not run sprudel). Comparing or printing a param map on JS
+   walks `entries` (`==` about 1.8 times HEAD's bytes, `toString` 10 to 30 percent more); nothing does it per event.
+   The engine's own copies (the sample-envelope merge, the warm-up) now take the native `forEach` copy on the
+   worklet: 600 B and 161 to 164 ns for 6 entries against step 1's `entries` loop at 1,160 B and 167 to 172 ns (review
+   round 2, this tree's production bundle; step 1's 473 ns for that copy did not reproduce). Report: `tmp/reviews/e2-step2-report.md`.
    **A note for upstream:** the stdlib's `hashCode(dynamic)` closure makes every Kotlin/JS `HashMap`/`HashSet`
    operation allocate on V8; a statement-form `throw` there would remove it everywhere. Not filed from here.
 3. **DONE (2026-10-10): no noise box reproduces; the house limiter boxed per sample.** Reported as about 2 KB per
