@@ -1,6 +1,7 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **open, decided** (D1 to D4, maintainer, 2026-10-11). Not started.
+Status: **open, planned** (D1 to D4 decided by the maintainer, 2026-10-11; the plan below, with Q2, Q3, Q8 and Q12
+put to the maintainer). Not started.
 
 ## Why
 
@@ -29,7 +30,7 @@ DSLs, maintainer 2026-10-11): the Katalyst gets its own knob vocabulary, it does
 1. **Expressions over `Kat.param` that listen.** `k.gain(Kat.param("fader", 1).times(0.5))`,
    `k.delay(time = Kat.param("beat", 0.5).div(4))`: the expression is evaluated at least once per block, from the
    orbit's current `katp` state, so a pattern that moves the slot moves the knob.
-2. **The Katalyst's own modulators.** `Kat.sine(rate)`, and the other shapes D3 settles, usable on any knob that
+2. **The Katalyst's own modulators.** `Kat.sine(freq)`, and the other shapes D3 settles, usable on any knob that
    takes a `Kat.param` today: `k.phaser(center = Kat.sine(0.1).range(400, 1600))`. A bus LFO, owned by the orbit's
    chain.
 
@@ -44,7 +45,8 @@ modulators), evaluated by the chain per block.
   parameter words: `sine`, `saw`, `square`, `tri`, `ramp`, `perlin`, `berlin` (`KlangScriptIgnitor.kt`). The three
   audio-rate noises (`whitenoise`, `brownnoise`, `pinknoise`) are not on the list: read once per block they are a
   random step per block, not a modulator. The implementer confirms each door's parameters against the Ignitor's
-  before building.
+  before building. (Correction from the plan: the Ignitor's word for `sine`, `saw`, `square`, `tri` and `ramp` is
+  `freq`, in Hz; `perlin` and `berlin` take `rate`, which is NOT Hz, see Q12.)
 - **D4:** "yes same": the arithmetic words, laws and clamps of the stages, plus `range(lo, hi)`.
 
 ## The questions as they were put
@@ -77,9 +79,95 @@ modulators), evaluated by the chain per block.
   `div`, `pow`, `min`, `max` with the clamp crossing, `neg`, `abs`) plus the scalers a modulator needs (`range(lo,
   hi)`). One word per concept: the same words, laws and clamps as the Ignitor's arithmetic, evaluated on a scalar.
   Which knobs take an expression: every knob that takes a `Kat.param` today; not the build-time ones (the
-  compressor's `lookahead`, the catalogue names of `body` and `vowel`).
+  compressor's `lookahead`; correction from the plan: the build-time knobs are `lookahead`, `distort`'s `shape` and
+  `oversample`, while `body.material` and `vowel.vowel` are runtime index slots, only the name-to-index conversion
+  at the door is build-time).
 
-## Steps
+## The plan (read-only planning pass, 2026-10-11)
+
+**Size.** 35 `IgnitorDsl` knob fields on 17 stage types, plus 14 on the EQ sections shared with the voice. 33
+`KatalystKnob` sites in the chain builder, 10 slot writers, 16 `KnobGlide`s in 9 stages, about 30 door parameters,
+about 70 test files with about 600 knob-construction lines. No editor or UI reader. The KSP wire codec needs no change
+(recursive sealed types and equal simple names across hierarchies already work).
+
+**What breaks.** No song, tutorial or Klangbuch entry hands an Ignitor node to a Katalyst knob (verified: the builtin
+songs use `master(Katalyst(...))` with numbers only). The coercion rows of `KatalystSlotResolverSpec` go with
+`coerce`; in `KlangScriptKatalystDoorParitySpec` the refusal of `Kat.param("room", 5).mul(2)` flips to accepted.
+
+**The hard parts found.**
+1. An orbit chain is configured only while it has an owner (`Cylinder.commitOwner` returns early otherwise), but it
+   processes while active. Modulators are therefore ticked at the top of `KatalystChain.process`, which also covers
+   the master, the leaving chain of a swap and `parallel` branches.
+2. The compressor's and the duck's writers allocate a settings object per resolve; a modulated knob would make that
+   per block. Both become preallocated holders compared by value first (a behaviour-identical step).
+3. `body`, `vowel` and `eq` install a new bank from zero state on any change (20 ms swap, parked during a fade): a
+   modulated `body.wet` would restart the resonance every 20 ms. Broken sound, not cost (Q8).
+4. The EQ sections are `IgnitorDsl.EqSection`, shared with the voice and with `bands`; §6.10 names the EQ sections a
+   shared DSP law (Q2).
+5. A modulated knob changes every block, which defeats the V8 steady-path fixes (`configure` returning early on an
+   unchanged config); heap numbers per block may come back on the moving paths. Measured in step 6 (Q15).
+6. An unset slot (NaN) inside arithmetic: `Times` scrubs NaN to 0, so `Kat.slot.body.wet.times(2)` would read as a
+   SET 0, the opposite of "unset means the constant" (Q5).
+
+**The evaluator.** Compiled once per knob at chain build into flat arrays (op codes, register indices, a register
+`DoubleArray`, modulator state in arrays), constant subtrees folded at compile, evaluated by one loop whose `when`
+arms are statements storing into the registers (no double crosses a non-inlined call, no lambda per block). A
+slot-only expression evaluates only on a map change, so it costs nothing per block. The laws are the Ignitor's own
+backend functions (one law, two hosts, the wire types stay apart): `_arithmetic_laws.kt` (a `rangeLaw` hoisted from
+`RangeIgnitor`), `fastSin`, `waveTrapezoid` with `WaveVoiceState`'s shapes, `PerlinNoise.fbm`/`BerlinNoise.fbm`.
+Sampled once per block, so not bit-identical to an Ignitor LFO: the same law at block resolution.
+
+**D2 in practice.** `KnobGlide` gets a span chosen at construction: today's for a slot-only knob, one block for a
+modulated one, which is D2's linear ramp across the block. Per knob, not per stage. Rates above about half the block
+rate (about 187 Hz at 48 kHz) alias; no clamp (raw Motor), documented. Per stage: gain, arithmetic, distort amount,
+delay wet and feedback, reverb wet and size, phaser center, sweep, wet and floor, compressor threshold, ratio and knee,
+duck depth glide over one block; attack, release, phaser rate, delay cap and reverb lowpass apply per block; a
+modulated delay time steps through its 50 ms tap crossfade (Q9); a modulated duck orbit switches with no mechanism;
+body and vowel material/vowel indices step through the bank swap (the morph was rejected by ear, 2026-09).
+
+**Steps** (one commit each, mandatory mutation tier):
+1. Laws hoisted, behaviour-identical (`rangeLaw`, the perlin step and octave cap to one internal home).
+2. The compressor's and the duck's settings in preallocated holders, behaviour-identical.
+3. D1: the wire type with `Constant` and `Param` only, the full migration, renders identical in raw doubles for the
+   master-chain songs and one classic-chain `katp` song (a scaffolding fixture, removed in step 7). `KatalystParam`
+   retired (Q1), `coerce` deleted, an Ignitor node on a knob a type error.
+4. Expressions over slots (D4): the arithmetic, `neg`, `abs`, `range`, both doors, the evaluator, the unset rule (Q5).
+5. Modulators (D3) and the per-block path (D2), probably split: 5a nodes, doors and evaluator; 5b the chain hook and
+   the stages; 5c the bank stages per Q8.
+6. Measured in the harness: a slot expression, a modulated gain and phaser center, a perlin; time and bytes per
+   block, JVM and V8.
+7. Records, and the render fixture removed.
+
+**Questions.** For the maintainer: Q2, Q3, Q8, Q12. The rest the coordinator takes at the lean, recorded here, and
+any of them can be reopened.
+- **Q1** `KatalystParam` retired, `Kat.param` returns `KatalystKnobDsl.Param`, `KatalystDsl.Slots.*` are the wire
+  nodes; `katp` refuses an expression ("an expression is not a slot"). Lean: yes.
+- **Q2** the EQ sections: (E2) keep `IgnitorDsl.EqSection` with a constant or a `Kat.param` only, an expression on an
+  EQ knob a type error and a recorded asymmetry; or (E1) a Katalyst section hierarchy, with `eq` and `bands` split
+  per host. Lean: E2 now, E1 as its own task when a song wants a swept bus EQ.
+- **Q3** the modulator clock: the phase advances over the blocks the chain processed (it pauses while the orbit
+  sleeps, `reset` does not rewind), or it follows engine time. Lean: processed blocks.
+- **Q4** a draining leaving chain keeps its modulators running. Lean: yes.
+- **Q5** any non-finite slot leaf makes the whole knob unset. Lean: yes.
+- **Q6** an expression mixing a slot and a modulator glides over one block, so a `katp` jump on it steps over 2.7 ms.
+  Lean: accept.
+- **Q7** the "was it asked for" gates count a modulated knob as asked for; the threshold gates (delay time, reverb
+  size, phaser depth, distort amount) read the per-block value and switch with their click-free mechanisms. Lean: yes.
+- **Q8** `body`/`vowel` wet and floor: (a) an in-place per-sample blend in `ResonatorBank` (a DSP change), (b) accept
+  20 ms zero-state steps, (c) refuse modulators there. Lean: (a); the index knobs step through the swap.
+- **Q9** a modulated delay time steps through the 50 ms crossfade, "not a chorus"; a tape-style tap is future work.
+  Lean: yes.
+- **Q10** `freq`, required, on the periodic modulators (the Ignitor's word). Lean: yes.
+- **Q11** builder knobs `phase` on all and `duty` on `square`; no `analog`, no flank or reset knobs (sample-level
+  edges): recorded asymmetries. Lean: yes.
+- **Q12** `perlin`/`berlin`: one fixed seed; and their `rate` is the Ignitor's 0.003 noise units per SAMPLE, so its
+  speed depends on the sample rate (about 144 units/s at 48 kHz, 132 at 44.1 kHz). Inherit it for parity, or make the
+  Katalyst's per second. Lean: one seed, inherit, and an Ignitor follow-up for the sample-rate dependence.
+- **Q13** no `rangex` or `clamp` now. **Q14** lifting `blend(wet)`'s plain-number asymmetry: a follow-up. **Q15** the V8
+  cost on moving paths: decided on step 6's numbers. **Q16** `carryOver` across spans clamps: accept. **Q17** no
+  `@WireShared` on the knob type.
+
+## Steps (as first written)
 
 1. The knob language: the wire type (D1), the evaluator (per block, allocation-free, no boxing on V8), the codec rows.
 2. The doors: `Kat.param(...)` gains the arithmetic, `Kat.sine(...)` and the rest of D3, both doors, door-parity
