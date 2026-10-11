@@ -512,6 +512,31 @@ the common language of audio, to be found with `/dsl-design`.
 - Proposed order: try `split` and `bands` in the Motor Lab first, then the Ignitor, then the Katalyst as the first
   real piece of the Motor. A `distort(..., band(...))` option would then never need to exist.
 
+### 6.10 The Ignitor and the Katalyst stay two DSLs (maintainer, 2026-10-11)
+
+Considered while asking for the Ignitor's arithmetic on the Katalyst (`docs/tasks/katalyst-arithmetic.md`). The
+maintainer's sketch: an Ignitor as a special Katalyst that also sees the note, either as `interface Ignitor :
+Katalyst` or as one generic root, `Dsp<T: DspContext>`, with `Katalyst : Dsp<KatalystContext>` and
+`Ignitor : Dsp<IgnContext>`. Every operator would be written once, an Ignitor could be plugged into a Katalyst knob,
+and the Katalyst stages would be lifted into the Ignitor.
+
+What the walk found:
+- **The subtyping runs the other way.** A node that needs less context runs in more places: a bus node (signal in,
+  signal out, no note) runs inside a voice, but an Ignitor that reads the note's frequency, gate or lifetime cannot
+  run on a bus. With a generic root that is a contravariant context (`Dsp<in C>`, `IgnContext : BusContext`).
+- **The coordinator's alternative:** one vocabulary, a Katalyst as an Ignitor tree with an `Input` leaf (the bus at
+  that position), the voice-only nodes flagged and checked when the chain is built.
+- **The hard parts of either:** stereo (an Ignitor is mono, the bus is stereo, and the reverb, a linked compressor and
+  the stereo delay cannot run as two mono copies), a bus effect inside a voice costing memory and setup per note
+  (the allocation rule), tails (a live `hasTail()` on the bus against a tail computed once per voice), and where a
+  slot reads from (the voice's bag or `katp`).
+
+**Decision:** set aside. "Maybe it is the better approach to treat ignitors and katalyst individually, even if that
+means we need to duplicate the dsls and backend functionalities. More code but less complex." The two DSLs keep
+their own nodes, builders and optimizers; what they share is the DSP law per effect (`DistortionCore`,
+`EnvelopeCore`, the EQ sections, `_arithmetic_laws.kt`), so one effect is one sound on every host, and the parity
+rules and specs keep the two surfaces from drifting.
+
 ## Links
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).
