@@ -264,9 +264,9 @@ class StdlibDocsInferenceTest : StringSpec({
         reg.register(sprudelAbs)
 
         val symbol = reg.get("abs")!!
-        // stdlib contributes Math.abs (Number), IgnitorDsl.abs (signal) and Number.abs (the method on a
-        // number, since 2026-09-08); sprudel adds a top-level.
-        symbol.variants.size shouldBe 4
+        // stdlib contributes Math.abs (Number), IgnitorDsl.abs (signal), Number.abs (the method on a
+        // number, since 2026-09-08) and KatalystBuilder.abs (the bus stage, since 2026-10-11); sprudel adds a top-level.
+        symbol.variants.size shouldBe 5
 
         // Receiver-aware lookup distinguishes them
         val mathAbs = reg.getCallable("abs", KlangType("Math"))

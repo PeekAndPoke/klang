@@ -1,7 +1,7 @@
 # Arithmetic on the Katalyst: the Ignitor's operators as bus stages, and a small optimizer
 
-Status: **not started.** Direction decided by the maintainer on 2026-10-11; the decisions under "Decide before
-implementing" are open.
+Status: **steps 1, 2 and 4 built 2026-10-11** on the branch `bus-distort-default`. Step 3, the optimizer, is not
+built: D5 measured it and it does not pay (the numbers below); it waits for the maintainer's word.
 
 ## Why
 
@@ -62,7 +62,36 @@ Each call is a stage. Per channel, the same operand on left and right. Memoryles
 - The `min`/`max` doors are clamps on every surface: `a.max(b)` is "a, at most b", so the `max` door builds the `Min`
   node (the guardrail in `CLAUDE.md`, guarded by `StdLibIgnitorTest`). The Katalyst doors follow the same crossing.
 
-## Decide before implementing
+## Decided while building (2026-10-11)
+
+The maintainer, while step 1 was being written: "yes these should be per sample operations like in the ignitors",
+and "I would expect them to behave all identical to the ignitor arithmetic". That settled D2, D3 and D6 against the
+coordinator's leans:
+
+- **D1:** one wire stage per operator (`Plus`, `Minus`, `Times`, `Div`, `Pow`, `Min`, `Max`, `Abs`), one runtime
+  class over them (`KatalystArithmeticEffect`, each operator's law inlined into its own loop).
+- **D2:** `times`/`mul` build their own `Times` stage on `timesLaw`, clamp included, NOT the fader: `gain` stays the
+  tone-neutral level (no clamp, unity skipped, the `gain.gain` slot). `neg`/`negate` are `Times(-1)`, as the
+  Ignitor's runtime `neg` is `mul(-1)`.
+- **D3:** `plus`/`add` and `minus`/`sub` are offered, option (b): the door's KDoc says a constant offset keeps its
+  orbit from ever going silent.
+- **D4:** every operand glides per sample over `KNOB_GLIDE_SECONDS` (the fader's ramp), and each sample takes the law
+  with the operand at that sample. A divisor glides as its RECIPROCAL, the level, and divides again once settled: the
+  first build glided the divisor itself, and both round 1 reviewers found the glide inventing divisors near zero (from
+  `div(0)` to `div(1)` it opened at about +67 dB; from `div(-1)` to `div(1)` at 48 kHz one sample landed on the
+  `safeDiv` floor, a gain of about +300 dB, while at 44.1 kHz the ramp hit an exact zero and peaked near +61 dB). A non-finite operand is unset: the operator's identity (0 for plus and minus, 1
+  for times, div and pow), reached by a glide; a cap or a floor has none, so an unset `Min`/`Max` passes the bus and
+  its first operand after that arrives at once. These two are the only differences from the Ignitor, both because
+  this is an orbit knob.
+- **D5, measured** (JVM, 48 kHz, 128 frames, a timing loop that includes refilling the block): one `times` stage 232
+  ns per block, `times` + `plus` + `min` 331 ns, so one cheap stage is about 50 ns; a `pow` 3,359 ns (a reference
+  compressor 2,696 ns, a reference reverb 4,572 ns). The block budget is 2,666,667 ns. Folding three cheap stages into
+  one would save about 100 ns per orbit per block, about 0.004 %, and a `pow` cannot be folded away. Lean: no
+  optimizer; revisit if the editor or a song ever builds long runs of arithmetic.
+- **D6:** the set above with the Ignitor's aliases (`add`, `sub`, `mul`, `power`, `negate`) and parameter names
+  (`other`, `exp`).
+
+## Decide before implementing (as written before the build)
 
 - **D1, the wire shape.** One sealed `@WireName` stage per operator (`Mul(operand)`, `Abs`, ...), mirroring the
   Ignitor's one node per op, or one stage with an op field. The house rule (wire types over enums, `/dsl-design` §7)

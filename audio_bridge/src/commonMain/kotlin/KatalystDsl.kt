@@ -560,6 +560,62 @@ sealed interface KatalystStageDsl {
         val gain: IgnitorDsl = IgnitorDsl.Constant(1.0),
     ) : KatalystStageDsl
 
+    // ── Arithmetic: the Ignitor's operators on the bus signal ───────────────────────────────────
+
+    /*
+     * The arithmetic stages (`docs/tasks/katalyst-arithmetic.md`): each applies its Ignitor twin's per-sample law
+     * (`_arithmetic_laws.kt` in `audio_be`, one function per operator) to every sample of both channels, so a bus
+     * sample and a voice sample that meet the same numbers come out the same, clamps included (bit for bit against
+     * the authored node; an optimized voice divides by multiplying with the reciprocal, one rounding apart). The
+     * operand is a knob like every other: a `Constant` or a `Param`, read once per block. Two differences from the
+     * Ignitor, both because this is an orbit knob and not a voice's: a moving operand GLIDES per sample over
+     * `KNOB_GLIDE_SECONDS` (a divisor as its reciprocal, so a move never passes a huge gain), and a non-finite one
+     * reads as unset (the operator's identity; for `Min` and `Max` the stage passes the bus).
+     * Memoryless: no latency, no tail.
+     */
+
+    /** Adds [other] to every sample (the Ignitor's `Plus`, bare: no clamp). A constant offset is DC on the bus. */
+    @WireName("plus")
+    data class Plus(val other: IgnitorDsl) : KatalystStageDsl
+
+    /** Subtracts [other] from every sample (the Ignitor's `Minus`, bare: no clamp). */
+    @WireName("minus")
+    data class Minus(val other: IgnitorDsl) : KatalystStageDsl
+
+    /**
+     * Multiplies every sample by [other] (the Ignitor's `Times`, the output clamped by `safeOut`). Not the fader:
+     * [Gain] is the tone-neutral level, which does not clamp, skips unity and is the `gain.gain` slot of the classic
+     * chain; this is the arithmetic, identical to the voice's. A polarity flip is `Times(-1)`.
+     */
+    @WireName("times")
+    data class Times(val other: IgnitorDsl) : KatalystStageDsl
+
+    /** Divides every sample by [other] (the Ignitor's `Div`: a divisor of exactly zero gives zero, the output clamped). */
+    @WireName("div")
+    data class Div(val other: IgnitorDsl) : KatalystStageDsl
+
+    /** Raises every sample to [exp] (the Ignitor's `Pow`, signed magnitude: a negative sample keeps its sign). */
+    @WireName("pow")
+    data class Pow(val exp: IgnitorDsl) : KatalystStageDsl
+
+    /**
+     * The per-sample MINIMUM of the bus and [other]: a cap. Mathematical, like the Ignitor's `Min` node; the doors are
+     * clamps, so the `max` door ("at most") builds this one. Do not "correct" the crossing.
+     */
+    @WireName("min")
+    data class Min(val other: IgnitorDsl) : KatalystStageDsl
+
+    /**
+     * The per-sample MAXIMUM of the bus and [other]: a floor. Mathematical, like the Ignitor's `Max` node; the `min`
+     * door ("at least") builds this one.
+     */
+    @WireName("max")
+    data class Max(val other: IgnitorDsl) : KatalystStageDsl
+
+    /** The absolute value of every sample: full-wave rectification (the Ignitor's `Abs`). No knob. */
+    @WireName("abs")
+    data object Abs : KatalystStageDsl
+
     /**
      * Branches side by side: every branch runs on its own copy of the bus at this position, and the
      * stage's output is the SUM of the branches (`docs/plans/future/signal-graph-engine.md` §6.9).

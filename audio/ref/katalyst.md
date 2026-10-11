@@ -55,6 +55,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 | duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source orbit | `depth` per sample; `attack` at once; a `duck.orbit` switch has no mechanism (open: `docs/tasks/by-ear/duck-orbit-switch-click.md`) |
 | distort | the compressor's law: a linear blend with the dry mix over `KNOB_GLIDE_SECONDS`; ON fades reset cores in; with oversampling the dry runs through the phase twins, an unshaped round trip of the same oversampler (2026-10-10); oversampling is 2x unless the author names a factor | `amount` glides linear in the amount over `KNOB_GLIDE_SECONDS`, the drive ramped per sample within a block; `shape` and `oversample` are fixed with the chain |
 | gain | never off | per-sample glide over `KNOB_GLIDE_SECONDS` |
+| arithmetic (`plus`, `minus`, `times`, `div`, `pow`, `min`, `max`, `abs`; 2026-10-11) | never off, memoryless: the Ignitor's per-sample law (`_arithmetic_laws.kt`) on every sample; an unset operand is the operator's identity, an unset cap or floor passes the bus | the operand glides per sample over `KNOB_GLIDE_SECONDS`, the law taken with the operand at each sample; a divisor glides as its reciprocal (a level) and divides again once settled; a cap's or a floor's first operand after unset arrives at once, and a cleared one lets go at the next block (`KatalystArithmeticEffect`) |
 | parallel | none of its own: each branch is a chain whose stages switch as above | none of its own: the orbit's param state reaches every branch's stages (`KatalystParallelWriter`) |
 
 `KnobGlide` (`audio_be/.../KnobGlide.kt`, its KDoc is the contract) moves one knob linearly over
@@ -113,6 +114,13 @@ reverb, the filter swap and the compressor copy it. What every copy must keep:
 - **A build-time option multiplies the behaviour rows** (the same review): a stage with a structural choice (the
   oversampling factor, a lookahead) runs every switching and gliding row at each value of it, not only at the default;
   the `distort` stage's amount glide clicked only with oversampling on, where no row ran.
+- **A glide is linear in what it holds, so the output must lie between its endpoints' outputs** (2026-10-11, the
+  arithmetic stages' review, a CRITICAL): a knob whose law has a pole or a jump (a divisor: `x / v` near `v = 0`, and
+  the house's `div(0)` is silence) invents values the author never wrote when it glides linearly, up to a gain of
+  about +300 dB on a flip from -1 to 1 at 48 kHz (a sample on the `safeDiv` floor). Glide the quantity the output IS
+  linear or monotonic in (for a divisor its reciprocal, the level), and give each such knob a row that glides through
+  and into the pole, bounds the output AND proves the move is a glide (a neighbour-step bound, a hand-computed ramp
+  value): a bound alone is passed by a one-block step (round 2).
 
 - A private sealed `State` with one preallocated instance per state; `enter` is the only way in and the only place
   a state's own data is initialised. A datum belongs to a state only if it dies with that state (the tail ceiling

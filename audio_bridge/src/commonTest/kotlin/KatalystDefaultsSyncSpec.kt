@@ -86,6 +86,15 @@ class KatalystDefaultsSyncSpec : StringSpec({
             is KatalystStageDsl.Gain -> listOf(stage.gain)
             // The classic chain declares no parallel stage.
             is KatalystStageDsl.Parallel -> emptyList()
+            // Nor any arithmetic stage.
+            is KatalystStageDsl.Plus -> listOf(stage.other)
+            is KatalystStageDsl.Minus -> listOf(stage.other)
+            is KatalystStageDsl.Times -> listOf(stage.other)
+            is KatalystStageDsl.Div -> listOf(stage.other)
+            is KatalystStageDsl.Pow -> listOf(stage.exp)
+            is KatalystStageDsl.Min -> listOf(stage.other)
+            is KatalystStageDsl.Max -> listOf(stage.other)
+            is KatalystStageDsl.Abs -> emptyList()
         }
 
         return knobs.filterIsInstance<IgnitorDsl.Param>().map { it.name to it.default }
@@ -407,6 +416,15 @@ class KatalystDefaultsSyncSpec : StringSpec({
                     is KatalystStageDsl.Gain -> KatalystStageDsl.Gain(freshKnob(stage.gain))
                     // The classic chain declares no parallel stage; the arm keeps the `when` exhaustive.
                     is KatalystStageDsl.Parallel -> KatalystStageDsl.Parallel(stage.branches.toList())
+                    // Nor any arithmetic stage; the arms keep the `when` exhaustive.
+                    is KatalystStageDsl.Plus -> KatalystStageDsl.Plus(freshKnob(stage.other))
+                    is KatalystStageDsl.Minus -> KatalystStageDsl.Minus(freshKnob(stage.other))
+                    is KatalystStageDsl.Times -> KatalystStageDsl.Times(freshKnob(stage.other))
+                    is KatalystStageDsl.Div -> KatalystStageDsl.Div(freshKnob(stage.other))
+                    is KatalystStageDsl.Pow -> KatalystStageDsl.Pow(freshKnob(stage.exp))
+                    is KatalystStageDsl.Min -> KatalystStageDsl.Min(freshKnob(stage.other))
+                    is KatalystStageDsl.Max -> KatalystStageDsl.Max(freshKnob(stage.other))
+                    is KatalystStageDsl.Abs -> stage
                 }
             }
         )

@@ -218,6 +218,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   an `eq()` tap in a band reads the band.
 - **`blend` on both hosts** (2026-10-10): `x.blend(wet, f)` is `parallel(dry * (1 - wet), f * wet)`, the linear
   law; `wet` a slot or a signal on the Ignitor, a plain number on the Katalyst (no param arithmetic there).
+- **Arithmetic on the Katalyst** (`KatalystArithmeticEffect`, 2026-10-11): `plus`, `minus`, `times`, `div`, `pow`,
+  `min`, `max`, `abs` (and the Ignitor's aliases) are stages that run the Ignitor's per-sample law on the bus, so the
+  same numbers give the same sample (`KatalystArithmeticEffectSpec` renders against the Ignitor runtime). The operand
+  is a number or a `Kat.param`, glides per sample, and reads non-finite as unset. `times` is not the fader. No
+  optimizer: one cheap stage costs about 50 ns per block (`docs/tasks/katalyst-arithmetic.md`, D5).
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
@@ -341,6 +346,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 The Ignitor's arithmetic as Katalyst stages, the same per-sample laws: `docs/tasks/katalyst-arithmetic.md`
 - 2026-10-10 The bus `distort` oversamples at 2x by default (maintainer; the voice's stays at 0): step 5 of
   `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`
 - 2026-10-10 The oversampler is a polyphase IIR half-band (flat to 20 kHz, about 100 dB of rejection, 3.07 samples at

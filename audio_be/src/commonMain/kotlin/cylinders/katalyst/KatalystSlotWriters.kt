@@ -354,6 +354,24 @@ internal class KatalystGainWriter(
 }
 
 /**
+ * An arithmetic stage's operand, handed on as read: the stage itself decides what a non-finite one means (its
+ * identity, or "pass the bus" for a cap or a floor), so the rule has one home ([KatalystArithmeticEffect]).
+ */
+internal class KatalystArithmeticWriter(
+    private val fx: KatalystArithmeticEffect,
+    private val operand: KatalystKnob,
+) : KatalystSlotWriter {
+
+    override fun resolve(params: Map<String, Double>?) {
+        operand.resolve(params)
+    }
+
+    override fun apply() {
+        fx.configure(operand.value)
+    }
+}
+
+/**
  * Distort: on iff the amount is finite and above 0 ([KatalystDistortEffect.configure] decides). An unset (non-finite)
  * slot is handed over as it is, which the stage reads as OFF: the stage's identity is "no distortion", so an amount
  * nobody set must not invent one. The holder is this writer's own, filled at [resolve] and handed over by reference
