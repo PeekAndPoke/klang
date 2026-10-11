@@ -34,7 +34,7 @@ KLANG_BENCH_FILTER=guitar-rig ./gradlew :audio_benchmark:jsNodeProductionRun
 
 ### The allocation check (bytes per block)
 
-Beside the timing (real-time factor) there is an allocation mode: 18 fixed cases (`AllocationCases.kt`, common
+Beside the timing (real-time factor) there is an allocation mode: 19 fixed cases (`AllocationCases.kt`, common
 code, middle C), measured on the JVM in-process and on V8 in node, and compared with the budget file
 `alloc-budgets.txt`. One case, `C-remap`, takes its voices through `receivedByEngine` (`engine_inbox.kt`): on JS the
 generated wire codec, the path every voice takes into the worklet, so a change of the decoder's map type shows in

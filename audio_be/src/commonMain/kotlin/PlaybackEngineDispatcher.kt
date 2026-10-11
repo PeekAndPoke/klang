@@ -72,22 +72,30 @@ class PlaybackEngineDispatcher(
     }
 
     private fun engineFor(playbackId: String): PlaybackEngine {
-        engines[playbackId]?.let { scheduledAgain(it) }
+        // One lookup per call: on Kotlin/JS every `HashMap` lookup allocates 40 bytes inside the stdlib's hashing, and
+        // every scheduled voice comes through here (engine follow-up 2, step 3).
+        val attached = engines[playbackId] ?: return createEngine(playbackId)
+        val staysAttached = scheduledAgain(attached)
 
-        return engines[playbackId] ?: createEngine(playbackId)
+        if (staysAttached) {
+            return attached
+        }
+
+        return createEngine(playbackId)
     }
 
     /**
      * [engine]'s playback is scheduled again. A stopped one resumes, which cancels its pending disposal (e.g. a
-     * resume after a pause); a releasing one is detached, and the id gets a fresh engine ([engineFor]).
+     * resume after a pause); a releasing one is detached, and the id gets a fresh engine ([engineFor]). True when
+     * [engine] stays filed under its id.
      */
-    private fun scheduledAgain(engine: PlaybackEngine): Unit = when (engine.phase) {
-        Phase.Playing, Phase.Disposed -> Unit
+    private fun scheduledAgain(engine: PlaybackEngine): Boolean = when (engine.phase) {
+        Phase.Playing, Phase.Disposed -> true
 
         Phase.Stopped -> {
             engine.resume()
             ending.remove(engine)
-            Unit
+            true
         }
 
         Phase.Releasing, Phase.Released -> {
@@ -96,6 +104,7 @@ class PlaybackEngineDispatcher(
             rendering.add(engine)
             ending.remove(engine)
             ending.add(0, engine)
+            false
         }
     }
 

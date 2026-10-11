@@ -414,10 +414,19 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   presizing (`KlangMap(capacityHint)`, the JVM's initial table size); without it the worker's probe read its two
   voice-door shapes 6 to 8 percent slower in 3 runs each, and review round 1 found no such effect on six shapes, so
   the hint is kept as parity with HEAD, not for a measured gain. Comparing or printing a param map on JS walks
-  `entries` (`==` about 1.8 times HEAD's bytes, `toString` 10 to 30 percent more); nothing does it per event. Still on the per-voice path, 8 stdlib hashes per note (320 B on node): the sound-name `contains` and
-  `get` of the build and the dispatcher's prefetch `contains` each hash twice (the playback's registry is a fork that
-  asks its parent), and `engineFor`'s two lookups by playback id (`docs/tasks/engine-follow-ups.md` item 2, a
-  candidate). Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,
+  `entries` (`==` about 1.8 times HEAD's bytes, `toString` 10 to 30 percent more); nothing does it per event. **The per-note lookups (step 3):** the sound registry's two maps are `KlangMap`s and
+  `engineFor` looks the playback id up once, so a synth note now hashes once (the dispatcher's `engines` map, 40 B),
+  where it hashed 8 times. **On V8, `toLowerCase` allocates a fresh string even when nothing changes**: 23.9 B per
+  call in a node loop from 1 to 8 characters (`"b"` to `"supersaw"`), 32 B from 9; in the engine's own path a
+  2-character `"bd"` paid it too. A reviewer's probe read nothing for `"bd"` because that name missed its map, unlike
+  its others (review round 2): measure in the real path. The registry lowercased the sound name at every level of its fork chain, 7 copies per
+  synth note. Its lookups now lowercase only when the name has a character that could change (`lowerKey`: an index
+  loop; any ASCII capital or any character above 127 takes `lowercase()`), once per call. The worker's probe (a synth
+  note per block through the dispatcher, single-case): 13,257 B per block at HEAD, 12,806 now; a sample note 1,033 to
+  737 (`"snare"`). The allocation check's `E-C-n1` reads 12,982 to 13,036 B (healthy rounds) against HEAD's code's
+  13,435 to 13,476, under a line of 13,100: it catches the registry back on `HashMap` and the lowercasing back at
+  every level, not `engineFor`'s second lookup (40 B) nor a lowercase on every call (about 72 B per synth note, 25 B
+  under the line); those two are guarded by the comments at their sites. Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,
   `toMap`, `getOrPut` and `in` on a set before it lands: all of them make or read a stdlib map. The stdlib site is
   worth an upstream report.
   **Measured, not removed:** in single-case processes three writers' `resolve` box one heap number each per new map
@@ -518,7 +527,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
   `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
   sources is refused; the `alloc` step of `console/full-check.sh`)
-  measures the bytes per block of 18 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  measures the bytes per block of 19 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
   node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
   `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
   breach. How it measures and the cases: `audio_benchmark/README.md`. The JVM guards in `jvmTest`

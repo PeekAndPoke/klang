@@ -151,6 +151,9 @@ object AllocationCases {
         Case(name = "E-noisesaw-sus", engine = true, sound = AUTHORED, dsl = saw() + IgnitorDsl.WhiteNoise()),
         Case(name = "E-delay", engine = true, sound = "saw", katalyst = delay),
         Case(name = "E-stages", engine = true, sound = "saw", katalyst = stages),
+        // A short classic saw note every block through the dispatcher: the per-note lookups (the registry's sound name,
+        // the dispatcher's playback id), engine follow-up 2, step 3.
+        Case(name = "E-C-n1", engine = true, sound = "saw", gateSec = 0.01, newNoteEveryBlocks = 1),
         Case(
             name = "E-C-rel05-n16",
             engine = true,

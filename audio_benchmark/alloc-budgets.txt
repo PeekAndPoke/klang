@@ -43,6 +43,19 @@
 #   (documented as a box per resolve), so 36 tells that one box from two. Adding the case moved E-C-rel05-n16 on the
 #   JVM from 409 to 414 B (5 of 5 runs; 409 again with only C-remap taken out, review round 1): the shared process's
 #   mixed profile, not a cost of the change, under its 450.
+#   E-C-n1 was added at engine follow-up 2, step 3 (2026-10-11): a short classic saw note every block through the
+#   dispatcher, so every block pays one voice build and the per-note lookups (the registry's sound name through the
+#   playback's fork, the dispatcher's playback id). Healthy rounds 12,982 to 13,036 B (about 30 rounds: the worker's 7
+#   runs and review round 1's); the HEAD code (the registry on HashMaps, the name lowercased at every level, engineFor
+#   looking up twice) 13,435 to 13,476 B. The V8 line is 64 B above the worst healthy round and 335 below HEAD's
+#   lowest. It catches the registry back on a HashMap (about 240 B per note; mutant read 13,235 to 13,254, RED) and the
+#   lowercasing back at every level (about 168 B; 13,153 to 13,184, RED). It does not catch engineFor's second lookup
+#   (40 B; 13,024 to 13,048, green) nor a lowercase on every call where none is needed (about 72 B per synth note;
+#   13,059 to 13,075, green, 25 B under the line): the comments at those two sites guard them. The case is a voice
+#   build per block, so any change to the voice build moves it: re-set it by this rule when one does. Its JVM line is
+#   6,628, 12 B above the reading (6,616 in every process on two case mixes, HEAD the same; one process 6,520): it tells
+#   none from one Double per note (a mutant with one box per voice build read 6,640, RED), as C-remap's 36 does for its
+#   24. Item 2 allocates nothing on the JVM; the line guards the voice build's bytes there.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -92,5 +105,7 @@ E-delay            v8        112     item 1, the orbit delay's sites as a whole 
 E-delay            jvm       6       item 1, the orbit delay
 E-stages           v8        96      item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
 E-stages           jvm       6       item 1, the three orbit stages
+E-C-n1             v8        13100   item 2 step 3: the registry and the sound name per note (not engineFor's lookup nor a needless lowercase: their comments)
+E-C-n1             jvm       6628    the voice build per note; one Double per note (item 2 allocates nothing on the JVM)
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build

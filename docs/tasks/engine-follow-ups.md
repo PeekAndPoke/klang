@@ -232,11 +232,44 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    box one heap number each per new map: the body's and the vowel's, whose `fill` V8 leaves out and which hands the
    unset index (NaN) to `ResonatorTables.at`, and the delay writer's (fully inlined; not explained). `C-remap` reads
    77 to 93 B (medians) with them, the mixed probe 32 to 48 B.
-   **A candidate after step 2** (review round 1, reviewer B): per note, 8 stdlib hashes (320 B on node) are still on
-   the per-voice path: `IgnitorRegistry.contains` from `VoiceFactory.makeVoice` and from the dispatcher's
-   `prefetchSampleSound`, and `IgnitorRegistry.get` from the build, each twice (the playback's registry is a fork that
-   misses and asks its parent), and `engineFor`'s two `HashMap` lookups by playback id. With a `LinkedHashMap` slot
-   map the same note hashed 32 times.
+   **Step 3 DONE (2026-10-11): the per-note lookups.** Located (probe cases `reg-*` and `N-saw`, a short saw note per
+   block through the dispatcher; a counting copy of the bundle: 8 stdlib hashes per note, 6 on `saw`, 2 on the
+   playback id): the registry's `contains` from the scheduler's prefetch and from `VoiceFactory`, and its `optimized`
+   from `createExciter`, each hashing on the playback's fork and again on its root, and `engineFor`'s two lookups. A
+   second cost turned up: V8's `toLowerCase` allocates a fresh string even when nothing changes (23.9 B per call in a
+   node loop at every length measured, 1 to 8 characters; in the engine's path a 2-character `"bd"` paid it too), and
+   the registry lowercased the name at every level of the fork chain, 7 times per synth note. HEAD: 128 B per registry
+   lookup on V8, about 488 B per synth note. Fixed with the smallest changes: the registry's two maps are `KlangMap`s
+   (String keys, never removed from); its lookups ask for `lowerKey(name)` once per call and hand it down the chain
+   (the fork before its parent); `lowerKey` is exactly `name.lowercase()` but returns the name itself when no
+   character could change (an index loop; any ASCII capital or any character above 127 takes `lowercase()`; review
+   round 1, after round 0 tried the name as given and lowercased on a miss); `engineFor` looks the id up once
+   (`scheduledAgain` returns whether the engine stays attached). The dispatcher's `engines` map stays a
+   `LinkedHashMap` (it is removed from and walked, and `KlangMap` has no `remove`): one hash per scheduled voice, 40 B,
+   is left. V8 now (the worker's probe, single-case): a registry lookup about 1 B, hit or miss (a mixed-case name 24 B,
+   its lowercased copy); a synth note per block 13,257 / 12,806 B per block (HEAD / tree), a sample note 1,033 / 737
+   (`"snare"`) and 1,066 / 773 (`"bd"`). JVM: 0 B per lookup on both sides (a mixed-case name 48 B, both sides).
+   **Bit for bit:** the engine dumps (HEAD's registry and dispatcher against the tree, 600
+   blocks, every voice through the wire codec on V8, a note per block among them) 19 of 19 on V8 and 19 of 19 on the
+   JVM; the corpus 18 of 18. `:audio_be:jvmTest` 2,678 and `:audio_be:jsBrowserTest` 2,574, green (after review round 2). A new
+   `IgnitorRegistryTest` row: a mixed-case name finds the lowercase registration through a fork, the fork's own before
+   its parent's, for `get`, `optimized`, `contains` and `createExciter`; review round 1 added a non-ASCII row (`Ärger`,
+   `ölbass`). Mutants, round 0 (each in one lock call, unfiltered): the lookups without their lowercase retry RED;
+   `scheduledAgain` detaching a stopped engine RED, keeping a releasing one RED. Round 1 (the reviewers' list): the
+   parent asked before the fork in `authoredAt` and `optimizedAt` RED (2, 1), the parent arm of `containsAt` dropped
+   RED (133), `register` storing the name as given RED (3), `createExciter` without lowercasing RED (1), `Playing`
+   detaching RED (41), `Disposed` detaching GREEN (unreachable: a disposed engine is never filed), `lowerKey` never
+   lowercasing RED (3). **The harness guards it with a new case**, `E-C-n1` (in `AllocationCases.kt`; README): a short
+   classic saw note every block through the dispatcher. Healthy rounds 12,982 to 13,036 B (about 30 rounds, the
+   worker's 7 runs and review round 1's), JVM 6,616 B; the HEAD code 13,435 to 13,476 B, RED against the line, the only
+   line over. Budgets by the file's rule: V8 13,100 (64 B above the worst healthy round, 335 below HEAD's lowest), JVM
+   6,628 (12 B above the reading: one `Double` per note reads 6,640, RED). It catches the registry back on a HashMap
+   (13,235 to 13,254) and the lowercasing back at every level (13,153 to 13,184); it does not catch `engineFor`'s second
+   lookup (40 B, 13,024 to 13,048) nor a lowercase on every call (about 72 B per synth note, 13,059 to 13,075, 25 B
+   under the line): the comments at those sites guard them. A voice build per block, so any change to the voice build
+   moves it. A first JVM probe run read 24 B on the engine cases of the tree; the repeat read
+   24 B on HEAD's and 0 on the tree's (the JVM's process-dependent profile), and the alloc check read 0 on every
+   engine line. Report: `tmp/reviews/e2-step3-report.md`.
    **Step 2 DONE (2026-10-11): sprudel's `ParamBag` and `classicSlotParams`' copy are a `KlangMap`, public API
    unchanged.** Measured first (probe `tmp/reviews/e2/s2/probe/`, sprudel's production test bundle, node 22.12): each
    case queries one cycle of a pattern per step and converts every event with `toVoiceData`, on JS plus the wire

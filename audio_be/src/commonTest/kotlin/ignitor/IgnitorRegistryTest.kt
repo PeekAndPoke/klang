@@ -111,6 +111,67 @@ class IgnitorRegistryTest : StringSpec({
         registry.contains("sInE") shouldBe true
     }
 
+    "a mixed-case name finds the lowercase registration through a fork, the fork's own before its parent's" {
+        // The lookups lowercase a name only when a character could change (`lowerKey`, engine follow-up 2, step 3); the
+        // answer must be the lowercased name's, at every level of the fork chain, for get, optimized, contains and
+        // createExciter.
+        val parent = IgnitorRegistry()
+        parent.register("lead", IgnitorDsl.Sine())
+
+        val child = parent.fork()
+
+        child.contains("LEAD") shouldBe true
+        child.get("Lead") shouldBe IgnitorDsl.Sine()
+        child.optimized("LeAd") shouldBe parent.optimized("lead")
+
+        child.register("Lead", IgnitorDsl.Square())
+
+        child.get("LEAD") shouldBe IgnitorDsl.Square()
+        child.get("lead") shouldBe IgnitorDsl.Square()
+        child.optimized("LEAD") shouldBe child.optimized("lead")
+        (child.optimized("LEAD") == parent.optimized("lead")) shouldBe false
+        parent.get("LEAD") shouldBe IgnitorDsl.Sine()
+        child.contains("MISSING") shouldBe false
+        child.optimized("Missing") shouldBe null
+        child.createExciter("LEAD", VoiceData.empty, 440.0, random = Random(1)) shouldNotBe null
+        child.createExciter("Missing", VoiceData.empty, 440.0, random = Random(1)) shouldBe null
+    }
+
+    "a capital anywhere in a name is found, the first letter after A and the last before Z included" {
+        // The edges of `lowerKey`'s ASCII range (65 to 90) and its loop: a capital in the middle and in the last place.
+        val registry = IgnitorRegistry()
+
+        registry.register("pad", IgnitorDsl.Sine())
+        registry.register("buzz", IgnitorDsl.Saw())
+
+        val child = registry.fork()
+
+        child.get("pAd") shouldBe IgnitorDsl.Sine()
+        child.contains("pAd") shouldBe true
+        child.get("buzZ") shouldBe IgnitorDsl.Saw()
+        child.contains("buzZ") shouldBe true
+        child.optimized("buzZ") shouldBe registry.optimized("buzz")
+    }
+
+    "a non-ASCII name is case-insensitive too: the lookup lowercases it as register does" {
+        // Only an ASCII name outside A to Z skips `lowercase()`; any character above 127 takes it (engine follow-up 2,
+        // step 3), so a non-ASCII capital finds its lowercase registration and a non-ASCII lowercase name its own.
+        val registry = IgnitorRegistry()
+
+        registry.register("Ärger", IgnitorDsl.Square())
+        registry.register("ölbass", IgnitorDsl.Saw())
+
+        val child = registry.fork()
+
+        child.get("ÄRGER") shouldBe IgnitorDsl.Square()
+        child.get("ärger") shouldBe IgnitorDsl.Square()
+        child.contains("ÄrGeR") shouldBe true
+        child.optimized("ÖLBASS") shouldBe registry.optimized("ölbass")
+        child.contains("Ölbass") shouldBe true
+        child.contains("ölbas") shouldBe false
+        registry.names() shouldBe setOf("ärger", "ölbass")
+    }
+
     "get returns null for unknown name" {
         val registry = IgnitorRegistry()
         registry.get("unknown") shouldBe null
