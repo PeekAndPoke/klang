@@ -1022,11 +1022,59 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     the steady path (the glide targets compared, the line's knobs rewritten only when they move, the latched retry
     exempt), proven bit for bit with the owner-change dumps of item 1. Related: item 10 (`isFinite`, the call that
     stays). S.
-33. **`KatalystParallelEffect.process` copies the bus into each branch with `copyInto`** (numbered after the last
-    item, added 2026-10-11), which on Kotlin/JS makes a typed-array view per call: about 350 B per block in
-    `E-parallel`, the largest site in the sampling profiler (`subarray`). An experiment with `copyRangeInto`, restored,
-    read `E-parallel` 206 to 243 B and `E-bands` 223 to 270 against about 590 and 820. A fix re-sets both budget lines
-    in `audio_benchmark/alloc-budgets.txt`. Source: `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
+33. **DONE (2026-10-11): `KatalystParallelEffect.process` copied the bus into each branch with `copyInto`, a
+    typed-array view per call on V8.** Reported (numbered after the last item, added 2026-10-11) as about 350 B per
+    block in `E-parallel`, the largest site in the sampling profiler (`subarray`); an experiment with `copyRangeInto`
+    read `E-parallel` 206 to 243 B and `E-bands` 223 to 270 against about 590 and 820. Source:
+    `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". **Cause:** Kotlin/JS's `copyInto` on
+    a typed array runs the stdlib's `arrayCopy`, `destination.set(source.subarray(startIndex, endIndex), offset)`, and
+    the view is a new object on every call: two per branch and block, four in `E-parallel`, six in `E-bands`. **Fix**
+    (`audio_be/.../cylinders/katalyst/KatalystParallelEffect.kt`): the house helper `copyRangeInto`
+    (`utils/buffer_copy.kt`; the rule in `audio/MEMORY.md`, "Guardrails", and `audio/ref/performance.md`), a plain
+    loop, so the same samples arrive and the copy no longer allocates on V8. What `process` still allocates there is
+    the distorted branch's oversampled path and its phase twins (`Pad.addPadded`), item 34's.
+    `KatalystParallelEffectSpec` (20), `KatalystEqEffectSpec` (20), `KatalystChainBuilderSpec` (12) and
+    `KatalystClassicPipelineOrderSpec` (7) green on the JVM and in the audio_be JS suite (2,571 of 2,571),
+    `BandsCrossoverSpec` 8 of 8 on the JVM; the corpus 18 of 18 identical (its songs run no authored Katalyst chain, so
+    for the stage itself the specs are the proof).
+    **The sweep** (every `copyInto` in `audio_be`'s main sources):
+    - `KatalystEqEffect.configure` copied the arriving scalars with `copyInto` twice, into `parkedValues` while a fade
+      runs and into `current` before an install. Not per block in a steady chain (an unchanged curve returns before
+      either), but on the audio thread on every block a knob moves during a fade, and the `parkedValues` KDoc says
+      parking "allocates nothing". Fixed the same way in this change; no allocation case runs it (`E-eq` installs once).
+      `KatalystEqEffectSpec` binds both copies: a mutant that copies nothing into `parkedValues` fails 1 test ("a curve
+      change on every block"), into `current` 13 (one lock call, restored, `cmp`).
+    - Left as they are, not on a per-block path: `PhasePool.drawBandedInto` (`target.copyInto(scratch)`,
+      `scratch.copyInto(target)`), a note-on path that redraws one entry every N notes and allocates a new entry while
+      the pool grows anyway; `SampleStore` (`msg.data.copyInto(...)`), once per sample chunk arriving, where the range
+      check is wanted (a malformed chunk throws on the JVM instead of writing past the end).
+    - Every other copy in `audio_be` already used `copyRangeInto` (`ChainSwap`, `Oversampler`, `KatalystFilterSwap`,
+      `KatalystCompressorEffect`, `KatalystDistortEffect`, `EqCore`, `Compressor`, `MemoizingIgnitor`).
+    **Measured** (the allocation check, unpinned; 4 full runs of 3 rounds on the tree, the last after the budgets were
+    re-set, and 15 single-case rounds per case by the driver's method; HEAD's code from the stage measurements' 3 runs
+    and the mutant below; bytes and µs per block):
+
+    | case | V8 HEAD | V8 tree | JVM HEAD / tree | V8 µs, the mutant's run / tree |
+    |---|---|---|---|---|
+    | `E-parallel` | medians 571 to 619 (rounds 568 to 624) | medians 185 to 228 (rounds 176 to 253) | 0 / 0 | 19.0 / 18.0 to 18.1 |
+    | `E-bands` | medians 809 to 840 (rounds 794 to 861) | medians 227 to 273 (rounds up to 279) | 0 / 0 | 32.7 / 31.1 to 31.5 |
+
+    (The stage measurements' rows read 21 and 36 µs; the whole machine read slower then, so only the same day's
+    mutant is compared.) What is left, about 150 B (`E-parallel`) and 200 B (`E-bands`) above the engine without a
+    stage (`E-sawC-sus`, about 60), is most likely the distorted branch's oversampled path (item 34; `E-distort` alone
+    reads about 100 above) and its phase twins, which take their work buffers the same way; not located further.
+    **The guard:** `alloc-budgets.txt`, `E-parallel` v8 664 to 268 and `E-bands` v8 896 to 320, by the file's rule (40
+    and 47 B above the highest healthy median; `E-parallel` set at 272 first and lowered in review round 1, where it
+    sat on the single-view mutant's lowest round). Mutants (one lock call, restored, `cmp`; their scoreboard rows taken
+    out with the backup): HEAD's two files, `E-parallel` 619 B and `E-bands` 809 over
+    their lines (the full check RED); a single view per block put back (one channel of the first branch), single-case
+    rounds `E-parallel` 272 to 319 (median 299) and `E-bands` 330 to 373 (median 331), both over.
+    **Found on the way:** `E-arith` on V8 has a second mode. With the tree's bundle (one link for the first three
+    runs, a fresh one for the fourth) it read medians 46, 175 (rounds 160, 175, 190: the second run RED against its 96, the row in the scoreboard), 52 and
+    52, with single rounds of 139 and 160 in the green runs; the HEAD mutant read 30 (rounds 15 to 63). The chain runs
+    no `parallel` and no `eq`, so not this change; not located. Like `spluck-a`'s tail (item 7), a breach that does not
+    repeat on a second run is that mode. HEAD's code also read `E-arith-glide` 511 B once (its line 500); filed as item
+    36. S.
 34. **The bus distort's oversampled path allocates about 120 B per block on V8** (numbered after the last item, added
     2026-10-11): `E-distort` at the default 2x reads 155 to 191 B, at `oversample = 0` 46 to 73 B. The profiler names
     `DistortionCore.shapeRun`, the oversampler's `interpolate44` and `decimate44`, and a map lookup (likely
@@ -1124,6 +1172,19 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     moving branch is `timesLaw` over a per-sample ramp (`applyLaw`'s ramp loop), while the `times` row, a constant
     operand, runs the plain loop at about 0.3 µs, so no row times the ramp loop on its own. Source:
     `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
+
+36. **`E-arith` has a second mode on V8** (numbered after the last item, added 2026-10-11): one full run of the
+    allocation check read it at a median of 175 B (rounds 160 to 190) against its line of 96, the other runs 46 to 52
+    with single rounds of 139 and 160; `E-arith-glide` once read 511 against its 500. The chain runs only the
+    arithmetic stages, so no item 33 site. Not located. Like `spluck-a`'s tail (item 7), a breach that does not repeat
+    on a second run is that mode; if it repeats it turns the check red at random, and then either the site is found or
+    the line follows item 7's rule. Source: item 33, "Found on the way". S.
+37. **The Ignitor's `perlin` and `berlin` move per SAMPLE** (numbered after the last item, added 2026-10-11): their
+    `rate` is 0.003 noise units per sample (`PERLIN_STEP`), so the same number runs about 9 % faster at 48 kHz than at
+    44.1 kHz (about 144 units per second against 132). Seconds are the house unit. The Katalyst's `Kat.perlin` and
+    `Kat.berlin` inherit the law for parity (maintainer, 2026-10-11, Q12 of `docs/tasks/katalyst-knob-expressions.md`),
+    so both hosts change together: a rate per second, which moves the sound of every song that uses them at one of the
+    two rates. S.
 
 ## 6. The audit's later steps and its open decisions
 

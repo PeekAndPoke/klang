@@ -350,6 +350,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 33: `parallel`'s per-branch copy and the Katalyst EQ's scalar copies are `copyRangeInto`
+  (no `subarray` view per call on V8); `E-parallel` about 600 to about 220 B per block, `E-bands` about 820 to about
+  250, their V8 lines 268 and 320: `docs/tasks/engine-follow-ups.md` item 33
 - 2026-10-11 Katalyst stage measurements: ten alloc cases run an authored Katalyst chain (every stage family; the
   arithmetic constant and gliding), timing rows for the arithmetic stages; on V8 the bus distort's oversampled path and
   `parallel`'s per-branch `copyInto` allocate per block (budgeted as they are, open):
