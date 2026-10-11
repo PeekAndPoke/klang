@@ -85,7 +85,7 @@ modulators), evaluated by the chain per block.
 2. The doors: `Kat.param(...)` gains the arithmetic, `Kat.sine(...)` and the rest of D3, both doors, door-parity
    spec.
 3. The stages read their knob per block (D2); the slot writers resolve an expression from the orbit's state.
-4. Measured in the harness (`docs/tasks/katalyst-stage-measurements.md`): one expression knob and one modulated knob,
+4. Measured in the harness (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`): one expression knob and one modulated knob,
    time and bytes per block, JVM and V8.
 5. Records: `audio/ref/katalyst.md`, `audio/MEMORY.md`, `.claude/skills/dsl-design/door-shapes.md`, the music-writing
    reference.

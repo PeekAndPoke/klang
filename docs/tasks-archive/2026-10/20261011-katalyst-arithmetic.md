@@ -147,7 +147,7 @@ coordinator's leans:
 
 The first two are taken up by `docs/tasks/katalyst-knob-expressions.md` (maintainer, 2026-10-11: a `Kat.param`
 expression is evaluated at least once per block, and the Katalyst gets its own `Kat.sine()` and the rest rather than
-Ignitor nodes); the cost of the stages goes into the harness with `docs/tasks/katalyst-stage-measurements.md`.
+Ignitor nodes); the cost of the stages goes into the harness with `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`.
 
 - **Knob expressions** that follow `katp` live (`gain(Kat.param("fader").mul(0.5))`). An expression over a param is
   still folded once when the chain is built (`KatalystBuilders.kt`, the header KDoc), and `blend`'s `wet` stays a

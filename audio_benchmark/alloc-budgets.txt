@@ -32,6 +32,20 @@
 #   per-sample class in the reverb and the phaser (it is the only case that runs them). The reverb's and the phaser's
 #   per-block sites it sees only in part: a revert of their five files read medians 128, 129, 129 and 93 B in four
 #   runs (rounds 92 to 222), so one run in four stays under the line; those parts are guarded by their KDocs.
+#   E-arith to E-body-vowel were added by the Katalyst stage measurements (2026-10-11,
+#   docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md), with their lines set by the same rule from that change's runs (4 runs of
+#   3 rounds, the healthy medians in brackets): E-arith 96 (10 to 52), E-arith-glide 500 (450 to 456), E-distort 232
+#   (155 to 185), E-comp, E-eq, E-gain, E-duck and E-body-vowel 96 (15 to 57), E-parallel 664 (571 to 604), E-bands 896
+#   (809 to 840). They guard the per-sample class in their stages, and E-arith the once-per-block class as well (a
+#   small array per block in one stage breached it on both platforms; a single box per block only on the JVM; applyLaw
+#   made a plain function read about 49 KB on V8 and 0 on the JVM, which inlines it there, and E-arith-glide caught it
+#   on both, 11 KB on the JVM). Three
+#   lines carry an open V8 allocation, budgeted as it stands: the bus distort's oversampled path (about 120 B per block;
+#   at oversample 0 the case read about 60) and, in E-parallel and E-bands, `KatalystParallelEffect`'s per-branch
+#   `copyInto` (a typed-array view per call; `copyRangeInto` took E-parallel to about 230 B and E-bands to about 250 in
+#   an experiment). A fix re-sets those lines. E-arith-glide's figure is mostly its note path (a new voice every 32
+#   blocks: the same notes with constant operands read the same 205 B on the JVM and 439 on V8), which is why its JVM
+#   line is 6 B above 205, not above 0: the JVM reads that note path the same in every run.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -79,5 +93,25 @@ E-delay            v8        112     item 1, the orbit delay's sites as a whole 
 E-delay            jvm       6       item 1, the orbit delay
 E-stages           v8        96      item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
 E-stages           jvm       6       item 1, the three orbit stages
+E-arith            v8        96      the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw)
+E-arith            jvm       6       the eight arithmetic stages, constant operands
+E-arith-glide      v8        500     the arithmetic glide: the per-sample ramp, div's reciprocal, an unset cap arriving at once (with the note path)
+E-arith-glide      jvm       211     the arithmetic glide; 205 B of it is the note path, the same in every run
+E-distort          v8        232     the bus distort, 2x: the per-sample class (its oversampled path's per-block boxes are open)
+E-distort          jvm       6       the bus distort, 2x
+E-comp             v8        96      the orbit compressor and a lookahead limiter
+E-comp             jvm       6       the orbit compressor and a lookahead limiter
+E-eq               v8        96      the orbit eq: two bells and a tap
+E-eq               jvm       6       the orbit eq
+E-gain             v8        96      the group fader off unity
+E-gain             jvm       6       the group fader off unity
+E-duck             v8        96      the duck with a sounding sidechain
+E-duck             jvm       6       the duck with a sounding sidechain
+E-parallel         v8        664     parallel, a distorted branch and its phase twin: the per-sample class (the per-branch copyInto is open)
+E-parallel         jvm       6       parallel, a distorted branch and its phase twin
+E-bands            v8        896     bands, three with the mids distorted: the per-sample class (the per-branch copyInto is open)
+E-bands            jvm       6       bands, three with the mids distorted
+E-body-vowel       v8        96      the body and the vowel on an orbit (V8; the JVM's guard is KatalystResonatorAllocationSpec)
+E-body-vowel       jvm       6       the body and the vowel on an orbit
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build

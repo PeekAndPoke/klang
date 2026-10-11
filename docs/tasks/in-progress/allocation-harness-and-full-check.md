@@ -118,6 +118,9 @@ that change's (`docs/tasks/engine-follow-ups.md`, item 7). The other rows are as
 `audio_benchmark/alloc-budgets.txt`.
 Added 2026-10-11 (engine follow-up 1): `E-delay` and `E-stages`, the sixteenth and seventeenth cases; their numbers are
 that change's harness medians (`docs/tasks/engine-follow-ups.md`, item 1); `E-stages` as re-set in its review round 1.
+Added 2026-10-11 (Katalyst stage measurements): ten engine cases with an authored Katalyst chain, `E-arith` to
+`E-body-vowel`, 27 cases in all; what each builds, guards and reads:
+`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`.
 
 "V8 now" and "V8 before" are bytes per block, from the latest record of each fix (e3, e9, e10, e8 and its review,
 mostly unpinned). The V8 times are in the detail file (0.7 µs for `saw` up to 35 µs for the n16 row). JVM times

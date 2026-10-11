@@ -1022,6 +1022,16 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     the steady path (the glide targets compared, the line's knobs rewritten only when they move, the latched retry
     exempt), proven bit for bit with the owner-change dumps of item 1. Related: item 10 (`isFinite`, the call that
     stays). S.
+33. **`KatalystParallelEffect.process` copies the bus into each branch with `copyInto`** (numbered after the last
+    item, added 2026-10-11), which on Kotlin/JS makes a typed-array view per call: about 350 B per block in
+    `E-parallel`, the largest site in the sampling profiler (`subarray`). An experiment with `copyRangeInto`, restored,
+    read `E-parallel` 206 to 243 B and `E-bands` 223 to 270 against about 590 and 820. A fix re-sets both budget lines
+    in `audio_benchmark/alloc-budgets.txt`. Source: `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
+34. **The bus distort's oversampled path allocates about 120 B per block on V8** (numbered after the last item, added
+    2026-10-11): `E-distort` at the default 2x reads 155 to 191 B, at `oversample = 0` 46 to 73 B. The profiler names
+    `DistortionCore.shapeRun`, the oversampler's `interpolate44` and `decimate44`, and a map lookup (likely
+    `ScratchBuffers.oversample`'s `getOrPut` by factor); not located further. A fix re-sets the `E-distort` line.
+    Source: `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 
@@ -1108,6 +1118,12 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     7c range pass (a constant one in place, a signal one reading two bounds) and phase input (a moving phase read per
     sample), so a song benchmark's `work` column under-counts a vibrato. The tremolo's arm is the pattern (it counts
     only what runs). Source: `docs/tasks/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
+35. **A gliding `div` stage is slow on the JVM** (numbered after the last item, added 2026-10-11): the timing row
+    "`div` gliding" read 1.8 to 3.7 µs per block on the JVM in every run against 0.39 to 0.47 on node, about eight
+    cheap stages against one (the full check's compare file flags it, JVM 3.88x slower than node). Not explained; the
+    moving branch is `timesLaw` over a per-sample ramp (`applyLaw`'s ramp loop), while the `times` row, a constant
+    operand, runs the plain loop at about 0.3 µs, so no row times the ramp loop on its own. Source:
+    `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
 
 ## 6. The audit's later steps and its open decisions
 

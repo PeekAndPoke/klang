@@ -19,24 +19,51 @@ import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.script.stdlib.IgnitorDslLike
+import io.peekandpoke.klang.script.stdlib.KatalystBuilder
+import io.peekandpoke.klang.script.stdlib.abs
+import io.peekandpoke.klang.script.stdlib.band
+import io.peekandpoke.klang.script.stdlib.bands
+import io.peekandpoke.klang.script.stdlib.body
+import io.peekandpoke.klang.script.stdlib.compressor
+import io.peekandpoke.klang.script.stdlib.cut
+import io.peekandpoke.klang.script.stdlib.distort
+import io.peekandpoke.klang.script.stdlib.div
+import io.peekandpoke.klang.script.stdlib.duck
+import io.peekandpoke.klang.script.stdlib.eq
+import io.peekandpoke.klang.script.stdlib.gain
+import io.peekandpoke.klang.script.stdlib.limiter
+import io.peekandpoke.klang.script.stdlib.max
+import io.peekandpoke.klang.script.stdlib.min
+import io.peekandpoke.klang.script.stdlib.minus
+import io.peekandpoke.klang.script.stdlib.parallel
+import io.peekandpoke.klang.script.stdlib.plus
+import io.peekandpoke.klang.script.stdlib.pow
+import io.peekandpoke.klang.script.stdlib.tap
+import io.peekandpoke.klang.script.stdlib.times
+import io.peekandpoke.klang.script.stdlib.vowel
 import kotlin.math.abs
 import kotlin.random.Random
 
 /**
  * The fixed case list of the allocation check (`KLANG_BENCH_MODE=alloc`, `console/full-check.sh`), the same on
- * both platforms. Each case guards one fix of `docs/tasks/engine-follow-ups.md` against a regression that brings a
- * heap number per sample or per knob read back; the budgets and what each one guards are in
- * `audio_benchmark/alloc-budgets.txt`.
+ * both platforms. Each voice case and the first engine cases guard one fix of `docs/tasks/engine-follow-ups.md`
+ * against a regression that brings a heap number per sample or per knob read back; the cases with an authored
+ * Katalyst chain guard its stages (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`). The
+ * budgets and what each one guards are in `audio_benchmark/alloc-budgets.txt`.
  *
  * Every case renders at 48 kHz in 128-frame blocks at middle C (261.63 Hz, not an integer, so a frequency read that
  * boxes shows). A "voice" case is one voice through [VoiceFactory], offered to its cylinder and committed each
  * block. An "engine" case runs [PlaybackEngineDispatcher], so the master stage (DC blockers, the house limiter, the
- * clip) runs too.
+ * clip) runs too. An engine case with a [Case.chain] runs an authored Katalyst on its orbit, registered and referenced
+ * as a song's is (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`).
  *
  * The list is fixed and learnable: no random cases. A change to it starts a new scoreboard table.
  */
@@ -57,15 +84,25 @@ object AllocationCases {
     /** The name an authored case's tree is registered under. */
     private const val AUTHORED: String = "zzalloc"
 
+    /** The name an authored case's Katalyst chain is registered under. */
+    private const val CHAIN: String = "zzallocbus"
+
+    /** The orbit of the trigger voice a [Case.duckTrigger] case adds, which its duck listens to. */
+    private const val TRIGGER_ORBIT: Int = 1
+
     private const val PLAYBACK_ID: String = "alloc"
 
     /**
      * One case.
      *
-     * [sound] is a built-in sound, or [AUTHORED] when [dsl] is set. [params] are the `classic()` slots, [katalyst]
-     * the orbit's (`delay.wet`, ...; an engine case's orbit runs the classic chain). The note's gate is [gateSec]
-     * seconds. An engine case with [newNoteEveryBlocks] above 0 starts a new note that often instead of one note at
-     * the start.
+     * [sound] is a built-in sound, or [AUTHORED] when [dsl] is set. [params] are the `classic()` slots, [katp] the
+     * orbit's (`delay.wet`, ...): the slots of the classic chain an engine case's orbit runs, or of [chain] when it is
+     * set. An engine case with a [chain] registers it ([KlangCommLink.Cmd.RegisterKatalyst]) and its notes reference
+     * it by name ([VoiceData.katalyst]). The note's gate is [gateSec] seconds. An engine case with
+     * [newNoteEveryBlocks] above 0 starts a new note that often instead of one note at the start, and with [katpNext]
+     * set its notes alternate between [katp] and [katpNext], so the orbit's owner moves the chain's slots at every
+     * note. A [duckTrigger] case adds a sustained saw on orbit [TRIGGER_ORBIT], with the classic chain, for the case's
+     * duck to listen to.
      */
     class Case(
         val name: String,
@@ -73,7 +110,10 @@ object AllocationCases {
         val sound: String,
         val dsl: IgnitorDsl? = null,
         val params: Map<String, Double>? = null,
-        val katalyst: Map<String, Double>? = null,
+        val katp: Map<String, Double>? = null,
+        val chain: KatalystDsl? = null,
+        val katpNext: Map<String, Double>? = null,
+        val duckTrigger: Boolean = false,
         val gateSec: Double = SUSTAIN_SEC,
         val newNoteEveryBlocks: Int = 0,
     )
@@ -104,6 +144,70 @@ object AllocationCases {
         "reverb.wet" to 0.3, "reverb.size" to 6.3,
         "phaser.wet" to 0.5, "phaser.rate" to 0.5, "phaser.sweep" to 800.0, "phaser.floor" to 0.5,
     )
+
+    /** A chain through the Kotlin door, the builder a Kotlin song uses: [build] appends to an empty chain. */
+    internal fun katalyst(build: (KatalystBuilder) -> KatalystBuilder): KatalystDsl =
+        build(KatalystBuilder(KatalystDsl(emptyList()))).node
+
+    /** A chain slot (`Katalyst.param`) named `arith.<name>`. */
+    private fun slot(name: String, default: Double) = KatalystParam(IgnitorDsl.Param(name = "arith.$name", default = default))
+
+    /**
+     * The eight arithmetic stages in one chain, with the operands [times] to [floor] (a number, or a [slot]). The values
+     * are not integers (an integral double travels as a small integer on V8 and boxes nothing); the cap and the floor
+     * cut into the saw's peaks; `abs` last folds what is left (the master's DC blocker takes the offset it makes).
+     * The doors cross on purpose: `max` builds the `Min` stage (the cap), `min` the `Max` stage (the floor).
+     */
+    private fun arithmetic(
+        times: IgnitorDslLike,
+        plus: IgnitorDslLike,
+        minus: IgnitorDslLike,
+        div: IgnitorDslLike,
+        pow: IgnitorDslLike,
+        cap: IgnitorDslLike,
+        floor: IgnitorDslLike,
+    ): KatalystDsl = katalyst {
+        it.times(times).plus(plus).minus(minus).div(div).pow(pow).max(cap).min(floor).abs()
+    }
+
+    /** `E-arith`: every operand a constant, the plain law loops. */
+    val arithmeticChain: KatalystDsl =
+        arithmetic(times = 0.9, plus = 0.013, minus = 0.007, div = 1.3, pow = 0.7, cap = 0.45, floor = -0.45)
+
+    /** `E-arith-glide`: every operand a slot, its default `E-arith`'s number. */
+    private val arithmeticSlots: KatalystDsl = arithmetic(
+        times = slot("times", 0.9),
+        plus = slot("plus", 0.013),
+        minus = slot("minus", 0.007),
+        div = slot("div", 1.3),
+        pow = slot("pow", 0.7),
+        cap = slot("cap", 0.45),
+        floor = slot("floor", -0.45),
+    )
+
+    /** The first note's slot values, [arithmeticChain]'s numbers. */
+    private val arithmeticA = mapOf(
+        "arith.times" to 0.9, "arith.plus" to 0.013, "arith.minus" to 0.007, "arith.div" to 1.3, "arith.pow" to 0.7,
+        "arith.cap" to 0.45, "arith.floor" to -0.45,
+    )
+
+    /**
+     * The second note's: every other operand moves, so its stage glides (the divisor as its reciprocal, through the
+     * multiply branch). The cap is unset (non-finite), so the `Min` stage lets go and its next operand arrives at once:
+     * it never glides, and no case runs its ramp loop.
+     */
+    private val arithmeticB = mapOf(
+        "arith.times" to 0.7, "arith.plus" to -0.011, "arith.minus" to 0.004, "arith.div" to 0.8, "arith.pow" to 1.3,
+        "arith.cap" to Double.NaN, "arith.floor" to -0.3,
+    )
+
+    /**
+     * The notes of `E-arith-glide`: one every 32 blocks, held for 30 of them, so every note owns the orbit for its gate
+     * and the glide (19 blocks at 48 kHz, `KnobGlide`) runs in 19 blocks of every 32.
+     */
+    private const val GLIDE_NOTE_BLOCKS: Int = 32
+
+    private const val GLIDE_GATE_SEC: Double = 30.0 * BLOCK_FRAMES / SAMPLE_RATE
 
     /** The cases, in scoreboard order. */
     val all: List<Case> = listOf(
@@ -144,8 +248,68 @@ object AllocationCases {
         Case(name = "C-full", engine = false, sound = "saw", params = full),
         Case(name = "E-sawC-sus", engine = true, sound = "saw"),
         Case(name = "E-noisesaw-sus", engine = true, sound = AUTHORED, dsl = saw() + IgnitorDsl.WhiteNoise()),
-        Case(name = "E-delay", engine = true, sound = "saw", katalyst = delay),
-        Case(name = "E-stages", engine = true, sound = "saw", katalyst = stages),
+        Case(name = "E-delay", engine = true, sound = "saw", katp = delay),
+        Case(name = "E-stages", engine = true, sound = "saw", katp = stages),
+        Case(name = "E-arith", engine = true, sound = "saw", chain = arithmeticChain),
+        Case(
+            name = "E-arith-glide",
+            engine = true,
+            sound = "saw",
+            chain = arithmeticSlots,
+            katp = arithmeticA,
+            katpNext = arithmeticB,
+            gateSec = GLIDE_GATE_SEC,
+            newNoteEveryBlocks = GLIDE_NOTE_BLOCKS,
+        ),
+        // The bus distort at its default 2x oversampling.
+        Case(name = "E-distort", engine = true, sound = "saw", chain = katalyst { it.distort(amount = 0.3) }),
+        // A compressor without lookahead, then a limiter with one (its delay ring); the threshold sits under the saw.
+        Case(
+            name = "E-comp",
+            engine = true,
+            sound = "saw",
+            chain = katalyst { it.compressor(threshold = -18.0, ratio = 4.0).limiter(threshold = -6.0, lookahead = 0.002) },
+        ),
+        // Two bells and a tap, the sections the Katalyst `eq` door writes (the crossovers are E-bands').
+        Case(
+            name = "E-eq",
+            engine = true,
+            sound = "saw",
+            chain = katalyst {
+                it.eq { e -> e.band(freq = 180.0, db = -3.5).band(freq = 2500.0, q = 1.3, db = 4.5).tap(freq = 800.0, gain = 0.6) }
+            },
+        ),
+        Case(name = "E-gain", engine = true, sound = "saw", chain = katalyst { it.gain(0.7) }),
+        // The duck listens to a second saw on its own orbit; its envelope follows that orbit's mix every block.
+        Case(
+            name = "E-duck",
+            engine = true,
+            sound = "saw",
+            chain = katalyst { it.duck(orbit = TRIGGER_ORBIT, depth = 0.6) },
+            duckTrigger = true,
+        ),
+        // Parallel distortion: a distorted branch beside an empty one, which gets the distort's phase twin.
+        Case(
+            name = "E-parallel",
+            engine = true,
+            sound = "saw",
+            chain = katalyst { it.parallel({ b -> b.distort(amount = 0.4) }, { b -> b }) },
+        ),
+        // Three bands with the mids distorted (the `bands` door's own example): the crossovers, the all-pass matching
+        // and the phase twins of the other two bands.
+        Case(
+            name = "E-bands",
+            engine = true,
+            sound = "saw",
+            chain = katalyst { it.bands { b -> b.cut(150.0).band { m -> m.distort(amount = 0.15) }.cut(5000.0) } },
+        ),
+        // A vowel sung through a body: the one resonator class, both kinds.
+        Case(
+            name = "E-body-vowel",
+            engine = true,
+            sound = "saw",
+            chain = katalyst { it.body(wet = 0.5, material = "wood").vowel(wet = 0.5, vowel = "a") },
+        ),
         Case(
             name = "E-C-rel05-n16",
             engine = true,
@@ -192,11 +356,12 @@ object AllocationCases {
     /** A new rig for [case], built and ready for its first block. */
     fun rig(case: Case): Rig = if (case.engine) EngineRig(case) else VoiceRig(case)
 
-    private fun voiceData(case: Case) = VoiceData.empty.copy(
+    private fun voiceData(case: Case, katp: Map<String, Double>? = case.katp) = VoiceData.empty.copy(
         freqHz = FREQ_HZ,
         sound = case.sound,
         ignitorParams = case.params,
-        katalystParams = case.katalyst,
+        katalystParams = katp,
+        katalyst = if (case.chain != null) CHAIN else null,
     )
 
     /** One voice through [VoiceFactory], offered to its cylinder and committed each block. */
@@ -288,25 +453,38 @@ object AllocationCases {
         private val out = StereoBuffer(BLOCK_FRAMES)
         private var block = 0
 
+        /** The notes started so far: with [Case.katpNext], an odd note carries it, an even one [Case.katp]. */
+        private var notes = 0
+
         init {
             if (case.dsl != null) {
                 dispatcher.handle(KlangCommLink.Cmd.RegisterIgnitor(playbackId = PLAYBACK_ID, name = case.sound, dsl = case.dsl))
             }
 
+            if (case.chain != null) {
+                dispatcher.handle(KlangCommLink.Cmd.RegisterKatalyst(playbackId = PLAYBACK_ID, name = CHAIN, dsl = case.chain))
+            }
+
+            if (case.duckTrigger) {
+                val trigger = VoiceData.empty.copy(freqHz = FREQ_HZ, sound = "saw", cylinder = TRIGGER_ORBIT)
+
+                schedule(data = trigger, startSec = 0.0, gateSec = SUSTAIN_SEC)
+            }
+
             if (case.newNoteEveryBlocks == 0) {
-                schedule(startSec = 0.0)
+                schedule(data = voiceData(case), startSec = 0.0, gateSec = case.gateSec)
             }
         }
 
-        private fun schedule(startSec: Double) {
+        private fun schedule(data: VoiceData, startSec: Double, gateSec: Double) {
             dispatcher.handle(
                 KlangCommLink.Cmd.ScheduleVoice(
                     playbackId = PLAYBACK_ID,
                     voice = ScheduledVoice(
                         playbackId = PLAYBACK_ID,
-                        data = voiceData(case),
+                        data = data,
                         startTime = startSec,
-                        gateEndTime = startSec + case.gateSec,
+                        gateEndTime = startSec + gateSec,
                         playbackStartTime = 0.0,
                     ),
                 )
@@ -315,8 +493,15 @@ object AllocationCases {
 
         override fun step() {
             if (case.newNoteEveryBlocks > 0 && block % case.newNoteEveryBlocks == 0) {
+                val katp = if (case.katpNext != null && notes % 2 == 1) case.katpNext else case.katp
+
                 // Two blocks ahead, so the note is admitted (a start in the past is refused).
-                schedule(startSec = (block + 2) * BLOCK_FRAMES / SAMPLE_RATE.toDouble())
+                schedule(
+                    data = voiceData(case = case, katp = katp),
+                    startSec = (block + 2) * BLOCK_FRAMES / SAMPLE_RATE.toDouble(),
+                    gateSec = case.gateSec,
+                )
+                notes++
             }
 
             dispatcher.renderBlock(cursorFrame = clock.cursorFrame, out = out)

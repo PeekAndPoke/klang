@@ -9,7 +9,7 @@ package io.peekandpoke.klang.audio_benchmark
 expect fun platformInfo(): String
 
 /**
- * Optional case filter, `KLANG_BENCH_FILTER` in the environment: when set, only the ignitor cases whose
- * name contains it run, and the other benchmark families are skipped. Null when unset or blank.
+ * Optional case filter, `KLANG_BENCH_FILTER` in the environment: when set, only the ignitor cases and the effect rows
+ * whose name contains it run, and the other benchmark families are skipped. Null when unset or blank.
  */
 expect fun benchmarkCaseFilter(): String?

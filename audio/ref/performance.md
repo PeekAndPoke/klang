@@ -473,11 +473,15 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
   `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
   sources is refused; the `alloc` step of `console/full-check.sh`)
-  measures the bytes per block of 17 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  measures the bytes per block of 27 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
   node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
   `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
-  breach. How it measures and the cases: `audio_benchmark/README.md`. The JVM guards in `jvmTest`
-  (`FirstBlockAllocationSpec`, `KatalystResonatorAllocationSpec`) stay where they are.
+  breach. How it measures and the cases: `audio_benchmark/README.md`. The cases cover the Ignitor's hot nodes and
+  every Katalyst stage family on an orbit: the classic chain's delay, reverb and phaser through its slots, and an
+  authored chain for the arithmetic (constant and gliding), the bus distort, the compressor and limiter, the eq, the
+  gain, the duck, `parallel`, `bands`, the body and the vowel (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`). Not
+  covered: an authored chain at the master position (`MasterBus`; every engine case runs its empty default). The JVM guards in `jvmTest` (`FirstBlockAllocationSpec`,
+  `KatalystResonatorAllocationSpec`) stay where they are.
 - **What it can see.** On V8 the method's noise (about 25 B per block) is larger than one heap number (16 B on
   node): a budget catches a heap number per sample or per knob read, not one new box per block. The JVM catches a
   single `Double` per block (24 B), or one every other block (its budgets are 6 B). A box usually shows on both,

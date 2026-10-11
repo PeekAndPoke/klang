@@ -350,6 +350,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Katalyst stage measurements: ten alloc cases run an authored Katalyst chain (every stage family; the
+  arithmetic constant and gliding), timing rows for the arithmetic stages; on V8 the bus distort's oversampled path and
+  `parallel`'s per-branch `copyInto` allocate per block (budgeted as they are, open):
+  `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`
 - 2026-10-11 Engine follow-up 1: the orbit stages' boxes on V8 located and the block processing's removed (the glide's
   result, the delay's and the reverb's tail step, the delay loops' arguments, the ring check's `toInt()`, the phaser's
   `alphaAt`, the depth clamp, the constant feedback rewrite) and the phaser's `configure` skips an unchanged config
