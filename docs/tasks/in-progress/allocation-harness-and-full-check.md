@@ -100,7 +100,8 @@ are the records' names, so a scoreboard row can be read against the reports.
 | `C-offrel` | voice: `classic()` saw inside a 1000 s release | 10b, the release arm | 21 B | 2,113 B | 0 B | 48 / 12 |
 | `C-env3` | voice: `classic()` saw with amplitude, pitch and FM envelopes in decay | 10a, 10b, 10d's envelope part (all three hosts) | 93 B (before item 8) | 6,242 B | 0 B | 256 / 12 |
 | `super7` | voice: supersaw, 7 voices, spread 0.3 | item 8, the unison stack | 0 B | 82 to 93 B | 0 B | 48 / 12 |
-| `super7a` | voice: the same with analog 0.3 | item 8; item 7's drift ramp | 0 B | 94 to 113 B | 0 B | 48 / 12 |
+| `super7a` | voice: the same with analog 0.3 | item 8, the unison stack with drift (its ramp never boxed: item 7) | 0 B | 94 to 113 B | 0 B | 48 / 12 |
+| `spluck-a` | voice: superpluck, 8 voices, analog 0.3, feedback 1 | item 7, the drift ramp's holder | 15 to 40 B | 407 to 566 B | 0 B | 96 / 6 |
 | `sgpad-vib` | voice: `sgpad` with a vibrato | item 12 on the JVM (the ladder), item 8 on V8 | 48 B | 113 to 129 B | 0 B | 88 / 12 |
 | `whitecolor` | voice: white noise, color 0.3 | item 3 (the noise stays clean); item 12's first JVM site | 0 B | (none) | 0 B (24 B in e3) | 48 / 12 |
 | `C-dist` | voice: `classic()` saw, fused distort 0.5 | item 9 on the fused node | 31 B | about 1.6 KB | 0 B | 80 / 12 |
@@ -109,6 +110,10 @@ are the records' names, so a scoreboard row can be read against the reports.
 | `E-sawC-sus` | engine: one `sawC` note, sustained | item 3, the limiter's level; item 8 | 68 B | 2,134 B | 0 B | 160 / 12 |
 | `E-noisesaw-sus` | engine: saw plus white noise, loud enough to limit | item 3, the limiter's gain | 56 B (before item 8) | 4,108 B | 0 B | 192 / 12 |
 | `E-C-rel05-n16` | engine: `classic()` saw, 0.5 s release, a new note every 16 blocks | 10b and item 8 across about 12 voices; item 11 (the build) | 1,045 B | 26,260 B | 377 B | 1,400 / 450 |
+
+Added 2026-10-11 (engine follow-up 7): `spluck-a`, the fifteenth case, and `super7a`'s guard corrected; its numbers are
+that change's (`docs/tasks/engine-follow-ups.md`, item 7). The other rows are as designed; the budgets in force are
+`audio_benchmark/alloc-budgets.txt`.
 
 "V8 now" and "V8 before" are bytes per block, from the latest record of each fix (e3, e9, e10, e8 and its review,
 mostly unpinned). The V8 times are in the detail file (0.7 µs for `saw` up to 35 µs for the n16 row). JVM times

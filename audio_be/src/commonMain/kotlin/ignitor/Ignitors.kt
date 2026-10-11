@@ -506,8 +506,8 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(lane)
                 // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
-                m = drift.startOf(lane) * 1.0
-                dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
+                m = drift.blockStart * 1.0
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             for (i in off until end) {
@@ -546,8 +546,8 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(lane)
                 // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
-                m = drift.startOf(lane) * 1.0
-                dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
+                m = drift.blockStart * 1.0
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             for (i in off until end) {
@@ -595,8 +595,8 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(lane)
                 // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
-                m = drift.startOf(lane) * 1.0
-                dm = rampStep(from = m, to = drift.endOf(lane), frames = end - off)
+                m = drift.blockStart * 1.0
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             for (i in off until end) {
@@ -2055,8 +2055,8 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(n)
                 // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
-                m = drift.startOf(n) * 1.0
-                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+                m = drift.blockStart * 1.0
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             for (i in off until end) {
@@ -2105,8 +2105,8 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(n)
                 // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
-                m = drift.startOf(n) * 1.0
-                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+                m = drift.blockStart * 1.0
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             for (i in off until end) {
@@ -2151,8 +2151,8 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(n)
                 // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
-                m = drift.startOf(n) * 1.0
-                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+                m = drift.blockStart * 1.0
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             for (i in off until end) {
@@ -2191,8 +2191,8 @@ object Ignitors {
             if (drift != null) {
                 drift.advanceLane(n)
                 // `* 1.0`: a seed from a call or a field must pass an arithmetic op on V8, or `m += dm` boxes (audio/ref/performance.md).
-                m = drift.startOf(n) * 1.0
-                dm = rampStep(from = m, to = drift.endOf(n), frames = end - off)
+                m = drift.blockStart * 1.0
+                dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
             for (i in off until end) {
@@ -2753,8 +2753,8 @@ object Ignitors {
 
                 if (lanes != null) {
                     lanes.advanceLane(n)
-                    m = lanes.startOf(n)
-                    dm = rampStep(from = m, to = lanes.endOf(n), frames = end - ctx.offset)
+                    m = lanes.blockStart
+                    dm = rampStep(from = m, to = lanes.blockEnd, frames = end - ctx.offset)
                 }
 
                 // The first string writes the buffer, the others add to it.

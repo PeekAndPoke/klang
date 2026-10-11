@@ -99,7 +99,13 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    callees stay inlined (A4); the `@Suppress` precedent as form, not reason (A5); the JVM line names `whitecolor` and
    item 12, and the section header points at item 12 (B1); B's rows added. Records and KDoc only.
 4. **The superpluck allocates per block**: 450 to 700 bytes with 8 voices and drift, the pluck about 65, before and
-   after the pass alike. Not located. Source: as 2. S to M.
+   after the pass alike. Not located. Source: as 2. S to M. **Measured at item 7 (2026-10-11):** the superpluck with
+   drift now reads 32 B per block (48 at `analogSpread` 0.5) in every process the item 7 probe measured, from 288 to
+   688; two of its boxes were the drift ramp (item 7's fix) and `getUnisonDetune`'s result, one per string, which V8
+   inlined in every process traced. What is left there is item 30's root frequency and one more heap number. But on
+   the harness bundle about 1 process in 30 still reads 300 to 460 B on the drift path, not located (item 7's tail).
+   The pluck was not measured. **Item 4 stays open while that tail is unlocated**; closing it needs the tail and a
+   look at the pluck.
 5. **The PWM loop boxes one heap number per sample** on the development bundle under a mixed profile (about 2 KB per
    block, `pulze` with a duty signal): the per-sample `setPulseShape(duty = ...)` call (`Ignitors.kt`). Not seen on the
    production bundle in isolation. Source: as 2. S.
@@ -187,9 +193,85 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    `NS` and `PEAK` in one `process.stdout.write`. Tests: `:audio_be:jvmTest` 2,661 of 2,661 and
    `:audio_be:jsBrowserTest` 2,557 of 2,557 green, on both forms. Reports: `tmp/reviews/e6-report.md`,
    `tmp/reviews/e6-r1-A.md`, `tmp/reviews/e6-r1-B.md`.
-7. **A drifting stack's ramp can box twice per voice per block**: `DriftLanes.startOf` and `endOf` return a double,
-   and where V8 does not inline `blendOf` (some mixed-profile processes, both bundles) that is 221 to 515 bytes per
-   block. A holder for the ramp is the shape. Source: as 2. S.
+7. **DONE (2026-10-11): the drift ramp boxed twice per voice per block in the superpluck; not reproduced in the
+   unison stacks.** Reported as "a drifting stack's ramp can box twice per voice per block": `DriftLanes.startOf` and
+   `endOf` return a double, and where V8 does not inline `blendOf` (some mixed-profile processes, both bundles) that
+   is 221 to 515 bytes per block. Source: as 2. **Measured on the production bundle**
+   (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22, one voice through `VoiceFactory` at middle C; the
+   bytes are those allocated between two forced GCs around the measured window, `--expose-gc --trace-gc-nvp` at a
+   1 MB semi-space, so a window reads in whole heap numbers): every `DriftLanes` adopter with drift (the five unison
+   stacks, 7 and 16 voices, with a vibrato, a moving phase, `analogSpread` 0.5 and 0; the partial bank, plain, phased,
+   with a signal gain, at spread 0.5; the superpluck with 8 strings, at spread 1 and 0.5), alone, under a mixed profile
+   (every case built and warmed round-robin in one process, then each measured; 15 processes in shuffled orders) and
+   with `--predictable`. **The stacks did not box the ramp in any process**: 16 B per block everywhere (item 30's root
+   frequency), and `--trace-turbo-inlining` shows `blendOf` inlined twice into `trapezoidLoop` and into
+   `renderPartial`. **The superpluck did**, in every process, alone or mixed: `SuperKarplusStrongIgnitor.generate`,
+   past the 460-byte limit itself, inlines `startOf` and `endOf` but never `blendOf` (144 bytes), so both results
+   crossed the call, 2 heap numbers per string per block (the sampling heap profiler, `--predictable`: 257 B per block
+   in `blendOf`). The rule in `audio/ref/performance.md` (a double result of a call V8 does not inline).
+   **Fix** (`audio_be/.../ignitor/DriftLanes.kt`): `advanceLane(lane)` steps the lane and leaves the voice's ramp in a
+   holder, `ramp`, a `DoubleArray(2)`, and returns nothing; `blockStart` and `blockEnd` are `inline` properties that
+   read it, so a read is an element load at the caller. `startOf`, `endOf` and `blendOf` are gone; the eight adopter
+   sites in `Ignitors.kt` read `blockStart` and `blockEnd` after their `advanceLane` (the partial bank's three loops,
+   the stacks' four, the superpluck's one). The KDoc of `ramp` is the guard. **The first form, two double fields,
+   only moved the boxes:** in a single-case process V8 stored them as fresh heap numbers inside the superpluck's
+   `generate` (the profiler, `--predictable`: 273 B per block there, about the HEAD count), and they went only under a
+   mixed profile; a hand-edited copy of that bundle with the fields replaced by a `Float64Array` read 32 B in 8 of 8
+   processes, so the holder is an array (measured, not explained: a field initialized at 1.5 instead of 1.0 boxed
+   the same). In the final form V8 does not inline `advanceLane` (274 bytes) into the superpluck's `generate`; it
+   returns nothing, and no double crosses. The stacks and the partial bank inline it (trace).
+   Bit for bit: raw doubles of the probe, HEAD against the tree, 600 blocks, 30 of 30 cases identical on V8 and 30 of
+   30 on the JVM, every last block sounding (every adopter above, the classic saw, `C-full`, `sgpad-vib`, three at 220
+   Hz, three engine rows); the corpus 18 of 18 against `docs/benchmarks/corpus-reference.md`. Bytes per block, one
+   value per process, HEAD / tree / HEAD again (a byte copy of HEAD; the single-case column HEAD / tree):
+
+   | case | single-case, unpinned (8 processes) | mixed, unpinned (5) | mixed, pinned `taskset -c 11` (3) | `--predictable` (2) |
+   |---|---|---|---|---|
+   | superpluck, analog 0.3 | 416 to 544 / 32 (all) | 288 / 32 / 288 (all) | 288 to 416 / 32 / 416 | 416 / 32 / 416 |
+   | the same, `analogSpread` 0.5 | 432 to 688 / 48 (all) | 304 / 48 / 304 (all) | 304 to 432 / 48 / 432 | 432 / 48 / 432 |
+   | superpluck, no drift (control) | | 32 / 32 / 32 | 32 to 160 / 32 / 160 | 32 / 32 / 32 |
+   | supersaw 7, analog 0.3 (`super7a`) | | 16 / 16 / 16 | 16 / 16 / 16 | 16 / 16 / 16 |
+   | the 22 other cases | | unchanged within one heap number | unchanged within one heap number | |
+
+   The superpluck's other box, `getUnisonDetune`'s double result, one per string (the 128-byte steps of HEAD's
+   spread), is gone with it: V8 now inlines it into `generate` in every process traced (item 4). The e8 method
+   (two processes, the GC-trace difference, 20,000 warm-up and 200,000 measured blocks, the mixed profile, medians
+   of 3, HEAD / tree / HEAD again): superpluck 401 / 72 / 401 B, at spread 0.5 445 / 36 / 385, without drift 159 / 5
+   / 160, the stacks, the partial bank and the controls within the method's noise. Time per block (mixed, 8
+   processes, medians): superpluck 10,124 / 9,845 / 9,836 ns, `super7a` 4,893 / 4,901 / 4,900, `super16a` 9,595 /
+   9,648 / 9,615, the partial bank 4,455 / 4,544 / 4,459, the classic saw (control) 1,438 / 1,522 / 1,499: within
+   the noise of HEAD against HEAD (0.97 to 1.03; single processes on every bundle ran up to 2.5 times the median).
+   **JVM**
+   (`ThreadMXBean`, 7 rounds, every case in one process): 0 B per block on both sides in all 27 cases, time 0.96 to
+   1.08 of HEAD (the rows that do not touch the drift as spread as the rows that do). **The allocation harness**
+   (`KLANG_BENCH_MODE=alloc`, 3 runs each, the tree's and HEAD's interleaved): every case unchanged within noise
+   (`super7a` 15 / 16, `super7` 21 / 16, n16 1,094 / 1,094 B), every run green 28 of 28, JVM 0 B on both sides (n16
+   409). No existing budget moves: the fix takes nothing off a harness case, so no regression reads under a budget it
+   read over before. **The harness guards it with a new case** (coordinator, 2026-10-11): `spluck-a`, the built-in
+   superpluck at middle C, 8 voices, `analog` 0.3, feedback 1 (at the default 0.996 the strings are silent long before
+   the window ends, which the check refuses: the last block's peak reads 0; with feedback 1 it reads 0.006). Budgets
+   by the file's rule: V8 96 (healthy rounds 1 to 53 B, median about 31; HEAD's code 407 to 566 B), JVM 6 (0 B on
+   both sides). With the item 7 source change reverted (HEAD's `DriftLanes.kt`, `Ignitors.kt` and the two specs, in
+   one lock call, restored and checked with `cmp`), the check is RED three times out of three, 1 of 30 over:
+   `spluck-a` 553, 546, 552 B (rounds 407 to 566); the tree GREEN three times, 30 of 30 (`spluck-a` 21, 40, 15). The
+   item 8 mutant (`readParam` a plain function) against the full budget set: RED, 9 of 30 over, `spluck-a` 381 B.
+   The case list changed, so the driver starts a new table in `docs/benchmarks/alloc-scoreboard.md` at its next run
+   (it compares the last table's header with today's case list). **A rare tail, not located:** about 1 window process
+   in 30 reads 300 to 460 B on `spluck-a`, the size of HEAD's regression (pooled over this change and review round 1,
+   9 of 292 rounds and process pairs, 295 to 459 B; 0 of 50 with `analog` 0, so it is on the drift path); the profiler
+   did not catch one in 110 processes (it perturbs the compile). The median of 3 rounds absorbs one such round; a
+   false red needs two of three, about 0.3 percent of runs (reviewer B; at most about 1 percent). A breach whose rounds
+   are not all high, and that does not repeat on a second run, is the tail; a breach that repeats is a regression.
+   HEAD's code read high in every round of every run, the item 8 mutant in every round of its one run. In the first form V8 inlined `advanceLane` into the superpluck's `generate`, and the
+   two fields ended as Double representation (`--trace-generalization`, reviewer B), like `AnalogDrift`'s, which do
+   not box: representation is ruled out, the cause is not located. `super7a`'s guard
+   text no longer names item 7: the stacks never boxed on the ramp. Tests: the specs read the holder
+   (`DriftLanesSpec`, `AnalogDriftSpec`); `DriftLanesSpec`'s "a retired index is nobody's lane" row now advances a
+   live lane first, so a retired index must overwrite the holder, not inherit the previous lane's ramp
+   (mutation-checked: the holder left unwritten for a voice with neither walk is red on that row and was green on
+   the old order; reading the holder before `advanceLane` is red on existing rows in all four adopter families,
+   8, 2, 8 and 1 failures). `:audio_be:jvmTest` 2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of 2,558 green.
+   Report: `tmp/reviews/e7-report.md`.
 8. **DONE (2026-10-10, with item 12): every knob read boxed on V8, through the shared `readParam`.**
    Reported as `ConstantIgnitor.controlRateValueOrNull` boxing, about 18 bytes per block through `blockStartValue` in
    the unison stacks (development, mixed profile), blamed on the interface's shape (`Double?`). Source: as 2.
@@ -656,6 +738,16 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
       200 bytes of `generate`'s inlining budget on two enum `getInstance` / `initEntries` calls (reviewer B, round 1
       of item 29). A constructor `val` would free that budget; not a box today, so left for a measured change.
     The filter drift that item 29's first form only moved is fixed (item 29, review round 1).
+    - **Checked at item 7 (2026-10-11): item 29's double-field holders do not box.** Item 7 found two double fields
+      boxing in a single-case process where an array did not, so item 29's holders were measured in `--predictable`
+      single-case processes on HEAD (`338e520d`; item 29's probe bundle, whose engine module is byte-identical):
+      `C-full` 46 B per block, `lpf` + `env` + `analog` 21, `lpf` + `analog` 31, `hpf` + `analog` 46, classic saw
+      with `analog` 16, classic saw 16 (e8 method, medians of 2). A hand-edited copy with the SVF node's cutoff, q and drift fields
+      and `FilterHumanization.driftMul` replaced by `Float64Array`s read the same (`C-full` 46, `hpf` + `analog` 46),
+      so the fields are not the box. What the one-filter voices with `analog` keep, one or two heap numbers above the
+      classic saw, the profiler books in `SvfIgnitor.generate`; writing out the `coerceAtLeast` of the analog read
+      there moved `hpf` + `analog` from 46 to 37 B and `lpf` + `analog` from 31 to 37 (within a heap number, not
+      conclusive). Not located further; inside the harness's noise band.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

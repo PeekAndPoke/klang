@@ -104,6 +104,15 @@ object AllocationCases {
             sound = "supersaw",
             params = mapOf("voices" to 7.0, "spread" to 0.3, "analog" to 0.3),
         ),
+        // Feedback 1: at the default 0.996 the strings are silent long before the window ends, which the check refuses.
+        // What the check sees at the end is the strings' DC, which feedback 1 keeps (a constant line is the loop's fixed
+        // point); the drift path it guards runs every block whatever the signal.
+        Case(
+            name = "spluck-a",
+            engine = false,
+            sound = "superpluck",
+            params = mapOf("voices" to 8.0, "analog" to 0.3, "feedback" to 1.0),
+        ),
         Case(
             name = "sgpad-vib",
             engine = false,

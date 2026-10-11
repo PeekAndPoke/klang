@@ -15,6 +15,12 @@
 #   C-full on V8 was re-set at engine follow-up 29 (2026-10-11) from that change's runs (tree medians 26 to 67 B,
 #   healthy rounds 21 to 71 B): its fix took about 150 B off, so the line now guards item 8 as well. 112 is 41 B
 #   above the worst healthy round and below the item 8 mutant's lowest round (154.8 B) and item 29's revert (165 B).
+#   spluck-a was added at engine follow-up 7 (2026-10-11), with its two lines set by the same rule from that change's
+#   runs: V8 healthy rounds 1 to 53 B (median about 31), HEAD's code (the old double-returning ramp) 407 to 566 B. About
+#   1 round in 30 on the healthy tree reads 300 to 460 B (the drift path, not located: docs/tasks/engine-follow-ups.md,
+#   item 7); the median of 3 rounds absorbs one such round. A spluck-a breach whose rounds are not all high, and that
+#   does not repeat on a second run, is that tail; a breach that repeats is a regression. HEAD's code read high in
+#   every round of every run, the item 8 mutant in every round of its one run.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -40,8 +46,10 @@ C-env3             v8        160     items 10a, 10b, 10d, the envelopes in all t
 C-env3             jvm       6       items 10a, 10b, 10d, the envelopes
 super7             v8        64      item 8, the unison stack
 super7             jvm       6       item 8, the unison stack
-super7a            v8        64      item 8 and item 7's drift ramp
-super7a            jvm       6       item 8, the unison stack (item 7's drift ramp is V8 only)
+super7a            v8        64      item 8, the unison stack with drift (its drift ramp never boxed: item 7, spluck-a)
+super7a            jvm       6       item 8, the unison stack with drift
+spluck-a           v8        96      item 7, the drift ramp's holder (the superpluck's generate never inlined the old blend)
+spluck-a           jvm       6       item 7, the superpluck with drift
 sgpad-vib          v8        80      item 8, the vibrato's knob reads (the only line on the vibrato path)
 sgpad-vib          jvm       6       item 12, the ladder
 whitecolor         v8        64      item 3, the noise stays clean

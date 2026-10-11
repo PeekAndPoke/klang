@@ -71,11 +71,12 @@ import kotlin.random.Random
  * null [DriftLanes] to their render loops then and skip the drift path entirely, which is what the
  * mono oscillators do with an inactive [AnalogDrift].
  *
- * **How a hot loop uses it.** [prepareBlock] once per block, then per voice [advanceLane], and
- * the ramp `m = startOf(lane) * 1.0`, `dm = rampStep(from = m, to = endOf(lane), frames = length)` hoisted before its
- * sample loop, which pays one add per sample. The seed passes `* 1.0` (exact): on V8 a call result that seeds a
- * loop-carried variable stays tagged, and every `m += dm` can allocate a heap number (the V8 rule in
- * `audio/ref/performance.md`). Nothing is read off the container per sample: on
+ * **How a hot loop uses it.** [prepareBlock] once per block, then per voice [advanceLane], which leaves that voice's
+ * ramp in [blockStart] and [blockEnd], and the ramp `m = blockStart * 1.0`,
+ * `dm = rampStep(from = m, to = blockEnd, frames = length)` hoisted before its sample loop, which pays one add per
+ * sample. The seed passes `* 1.0` (exact): on V8 a double from a field or a call that seeds a loop-carried variable
+ * stays tagged, and every `m += dm` can allocate a heap number (the V8 rule in `audio/ref/performance.md`). The ramp
+ * is a holder, not a return value, on purpose: see [ramp]. Nothing is read off the container per sample: on
  * Kotlin/JS that cost a drifting 8-voice supersaw about 16 percent (Node, 2026-09-10), and the
  * per-sample lane steps it replaced cost the Schmetterling guitars 19 percent (2026-09-15).
  */
@@ -120,6 +121,39 @@ class DriftLanes(capacity: Int, sharedLane: Boolean) {
 
     private var useShared: Boolean = false
     private var useOwn: Boolean = false
+
+    /**
+     * The holder of the ramp of the lane [advanceLane] last advanced: index 0 its start ([blockStart]), index 1 its end
+     * ([blockEnd]). Written by every [advanceLane], read right after it, before the next lane is advanced (it holds one
+     * lane at a time). 1.0 at both ends until the first [advanceLane].
+     *
+     * A HOLDER ON PURPOSE, AND AN ARRAY ON PURPOSE (engine follow-up 7, 2026-10-11; `audio/ref/performance.md`, "a
+     * non-integral double handed to a function that is not inlined"). The ramp was two double-returning calls,
+     * `startOf(lane)` and `endOf(lane)`, through one private `blendOf`. Where V8 did not inline `blendOf` into the
+     * adopter, each result crossed a call as a heap number: two per voice per block. The superpluck's `generate`
+     * never inlined it on the production bundle (16 heap numbers per block with 8 strings and drift, about 256 bytes);
+     * the unison stacks and the partial bank inline it today. Two double FIELDS written by [advanceLane] (the first
+     * form) only moved those boxes: in a single-case process V8 stored them as fresh heap numbers inside the
+     * superpluck's `generate`, the same count, and they went only under a mixed profile (measured, not explained).
+     * Elements of a `DoubleArray` (a `Float64Array` on Kotlin/JS) are raw doubles, so the element access itself never
+     * allocates in optimized code, whatever V8 inlines or decides about a field (a value read from it can still box
+     * further on, into a call V8 does not inline or a field: hence the adopters' `* 1.0`). No test can pin the boxes
+     * (the numbers are the same either way): this KDoc is the guard. Do not turn the ramp back into a double-returning
+     * accessor or into plain fields. A rare tail on the superpluck's drift path (about 1 process in 30, not located) is
+     * recorded in `docs/tasks/engine-follow-ups.md`, item 7.
+     */
+    @PublishedApi
+    internal val ramp: DoubleArray = doubleArrayOf(1.0, 1.0)
+
+    /**
+     * The multiplier the lane [advanceLane] last advanced starts this block at: the blend of both walks' block starts.
+     * Read right after that [advanceLane]. `inline`, so the read is an element load at the caller, never a call (see
+     * [ramp]).
+     */
+    inline val blockStart: Double get() = ramp[0]
+
+    /** The multiplier the lane [advanceLane] last advanced ends this block at, one step past [blockStart]. See [ramp]. */
+    inline val blockEnd: Double get() = ramp[1]
 
     /** How many own lanes are live. Adopters that hand out stable lane indices count from here. */
     val laneCount: Int get() = live
@@ -210,40 +244,42 @@ class DriftLanes(capacity: Int, sharedLane: Boolean) {
     /**
      * Steps voice [lane]'s own lane once for this block, when this block advances own lanes at all
      * (not at spread 0 exactly, not while [active] is false, not at a RETIRED index, whose object is
-     * still in the array but is no longer anybody's lane). Once per voice per block, before
-     * [startOf] and [endOf].
+     * still in the array but is no longer anybody's lane), and leaves the voice's ramp in [blockStart] and [blockEnd]:
+     * the blend of both walks' block starts and ends. Once per voice per block, after [prepareBlock], and the ramp is
+     * read before the next voice's call. Returns nothing on purpose (see [ramp]).
+     *
+     * The blend's endpoints are exact: spread 1 is the own lane's own multiplier, spread 0 the shared lane's, and a
+     * voice with neither (a retired index at spread 1, or an inactive container) sits at 1.
      */
     fun advanceLane(lane: Int) {
-        if (useOwn && lane < live) {
-            own[lane].beginBlock()
-        }
-    }
-
-    /** Voice [lane]'s multiplier at the start of this block: the blend of both walks' block starts. */
-    fun startOf(lane: Int): Double = blendOf(lane, atEnd = false)
-
-    /** Voice [lane]'s multiplier at the end of this block: the blend of both walks' block ends. */
-    fun endOf(lane: Int): Double = blendOf(lane, atEnd = true)
-
-    /**
-     * The blend, over the two lanes' ramp ends. Endpoints are exact: spread 1 is the own lane's own
-     * multiplier, spread 0 the shared lane's, and a voice with neither (a retired index at spread 1)
-     * sits at 1.
-     */
-    private fun blendOf(lane: Int, atEnd: Boolean): Double {
         val ownLane = if (useOwn && lane < live) own[lane] else null
         val sharedLane = if (useShared) shared else null
-        val ownV = if (ownLane == null) 1.0 else if (atEnd) ownLane.blockEnd else ownLane.blockStart
-        val sharedV = if (sharedLane == null) 1.0 else if (atEnd) sharedLane.blockEnd else sharedLane.blockStart
 
+        if (ownLane != null) {
+            ownLane.beginBlock()
+        }
+
+        // Plain branches, no elvis: `ownLane?.blockStart ?: 1.0` would merge the double with null, a tagged value on V8.
         if (sharedLane == null) {
-            return ownV
+            if (ownLane == null) {
+                ramp[0] = 1.0
+                ramp[1] = 1.0
+            } else {
+                ramp[0] = ownLane.blockStart
+                ramp[1] = ownLane.blockEnd
+            }
+
+            return
         }
 
         if (ownLane == null) {
-            return sharedV
+            ramp[0] = sharedLane.blockStart
+            ramp[1] = sharedLane.blockEnd
+
+            return
         }
 
-        return 1.0 + wShared * (sharedV - 1.0) + wOwn * (ownV - 1.0)
+        ramp[0] = 1.0 + wShared * (sharedLane.blockStart - 1.0) + wOwn * (ownLane.blockStart - 1.0)
+        ramp[1] = 1.0 + wShared * (sharedLane.blockEnd - 1.0) + wOwn * (ownLane.blockEnd - 1.0)
     }
 }

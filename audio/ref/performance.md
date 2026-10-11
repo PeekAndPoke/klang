@@ -262,6 +262,18 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   (`ResonatorConfig`, like the EQ's `DoubleArray`), handed over by reference; and a method that Kotlin's `inline`
   makes large can leave V8 without the budget to inline its small callees (`ResonatorBank.install` boxed the wet/dry
   law's doubles until its per-band and blend halves became methods of their own). The JVM boxes none of this.
+  **A holder of double fields can still box; an array element access in optimized code never allocates** (engine follow-up 7,
+  2026-10-11; a value read from it can still box further on, into a call or a field, hence the `* 1.0`):
+  `DriftLanes` first held the drift ramp in two double fields written per voice, and in a single-case process V8
+  stored them as fresh heap numbers inside the superpluck's `generate`, as many as the double returns they replaced
+  (gone only under a
+  mixed profile; a field initialized at 1.5 instead of 1.0 boxed the same; the fields ended as Double representation
+  in `--trace-generalization`, like `AnalogDrift`'s, which do not box, so representation is ruled out; in that form V8
+  inlined `advanceLane` into the superpluck's `generate`: measured, not explained). The holder is a
+  `DoubleArray(2)` (a `Float64Array` on Kotlin/JS, whose elements are raw doubles), read through `inline` properties,
+  and the box is gone in the processes measured (a rare tail of about 1 process in 30 on the superpluck's drift
+  path, 300 to 460 B, not located, is recorded in item 7). Measure a new field holder with `--predictable` in a
+  single-case process too. Item 29's field holders were checked so and do not box (item 31).
   **A per-sample helper past V8's bytecode limit for inlining (460 bytes) is never inlined**, however warm:
   `--trace-turbo-inlining` prints "Cannot consider ... for inlining (reason: 5)". Make it a Kotlin `inline` function,
   then check with the same flag that V8 still inlines the small helpers it calls (the caution above; here
@@ -436,7 +448,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
   `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
   sources is refused; the `alloc` step of `console/full-check.sh`)
-  measures the bytes per block of 14 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  measures the bytes per block of 15 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
   node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
   `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
   breach. How it measures and the cases: `audio_benchmark/README.md`. The JVM guards in `jvmTest`

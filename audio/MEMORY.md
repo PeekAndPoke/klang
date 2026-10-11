@@ -340,6 +340,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 7: the drift ramp's `DriftLanes.startOf`/`endOf` returned doubles through a `blendOf`
+  that the superpluck's `generate` never inlined on V8 (2 heap numbers per string per block); the unison stacks and
+  the partial bank inline it and did not box. `advanceLane` now leaves the ramp in a `DoubleArray(2)` holder read
+  through `inline` `blockStart`/`blockEnd` (two double fields only moved the boxes). Superpluck with drift from 288
+  to 688 B per block to 32 to 48 (a rare tail, about 1 process in 30, not located), bit for bit, corpus identical; a
+  new alloc case `spluck-a` guards it (V8 96, JVM 6):
+  `docs/tasks/engine-follow-ups.md` item 7
 - 2026-10-11 Engine follow-up 29: in a full `classic()` voice the SVF node's one shared `generate` ran out of V8's
   inlining budget, and its per-block setup boxed (about 8 heap numbers per block on the lowpass, 4 on the highpass,
   one per filter drift lane); the setup moved into methods of their own reading a holder, `SvfCoeffSweep` takes its

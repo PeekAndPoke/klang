@@ -13,7 +13,7 @@ import kotlin.random.Random
 
 /**
  * The drift-lane container ([DriftLanes]): N own [AnalogDrift] lanes plus one shared lane, blended
- * per block by `analogSpread` into a ramp every voice reads as `startOf` and `endOf`.
+ * per block by `analogSpread` into a ramp every voice reads from `blockStart` and `blockEnd` after its `advanceLane`.
  *
  * Every case runs against a test-side reference model built from the DOCUMENTED draw order (one int
  * for the shared lane's seed at `start`, then own lanes in index order at `ensureLanes`) and
@@ -50,7 +50,7 @@ class DriftLanesSpec : StringSpec({
     fun end(lanes: DriftLanes, lane: Int): Double {
         lanes.advanceLane(lane)
 
-        return lanes.endOf(lane)
+        return lanes.blockEnd
     }
 
     "spread 1: each lane's block end is its own AnalogDrift step bit for bit, and the lanes are all the rng pays for" {
@@ -134,32 +134,26 @@ class DriftLanesSpec : StringSpec({
 
         val ref = Reference(seed = 7, count = 2, analog = analog, rate = rate)
 
-        // Before any step an own lane sits at its seeded state, the same value at both ends
-        // (prepareBlock steps the shared lane, advanceLane the own one; neither has run for it).
+        // The first block starts at the seeded state, the lane's own: where the reference lane sat before its
+        // first step (its block ramp, unstepped), and ends one step past it.
         lanes.prepareBlock(1.0)
-        lanes.startOf(0).toRawBits() shouldBe lanes.endOf(0).toRawBits()
+        lanes.advanceLane(0)
+        lanes.blockStart.toRawBits() shouldBe ref.own[0].blockStart.toRawBits()
+        lanes.blockEnd.toRawBits() shouldBe ref.own[0].nextMultiplier().toRawBits()
 
         // At a constant spread every block starts where the previous one ended, bit for bit (a
         // spread change re-weights the blend, so continuity is promised within a spread only).
         lanes.prepareBlock(0.25)
         lanes.advanceLane(0)
 
-        var previousEnd = lanes.endOf(0)
+        var previousEnd = lanes.blockEnd
 
         repeat(blocks) {
             lanes.prepareBlock(0.25)
             lanes.advanceLane(0)
-            lanes.startOf(0).toRawBits() shouldBe previousEnd.toRawBits()
-            previousEnd = lanes.endOf(0)
+            lanes.blockStart.toRawBits() shouldBe previousEnd.toRawBits()
+            previousEnd = lanes.blockEnd
         }
-
-        // And the seeded state is the lane's own: the first block's start is where the reference
-        // lane sat before its first step (its block ramp, unstepped).
-        val fresh = started(analog, Random(7))
-
-        fresh.ensureLanes(1)
-        fresh.prepareBlock(1.0)
-        fresh.startOf(0).toRawBits() shouldBe ref.own[0].blockStart.toRawBits()
     }
 
     "the shared walk is the same whether the spread drops below 1 at the first block or the sixth" {
@@ -289,12 +283,15 @@ class DriftLanesSpec : StringSpec({
         lanes.prepareBlock(1.0)
         lanes.retireLanes(1)
 
-        // The objects are still in the array, waiting to be rebuilt; an adopter that still reads
-        // a retired index gets a plain 1.0 at both ends, never a stale walk.
-        lanes.advanceLane(2)
-        lanes.startOf(2) shouldBe 1.0
-        lanes.endOf(2) shouldBe 1.0
+        // A live lane drifts, and leaves its ramp in the holder.
         (end(lanes, 0) != 1.0) shouldBe true
+
+        // The objects are still in the array, waiting to be rebuilt; an adopter that still reads
+        // a retired index gets a plain 1.0 at both ends, never a stale walk, and never the ramp
+        // of the lane advanced before it (the holder keeps one lane at a time).
+        lanes.advanceLane(2)
+        lanes.blockStart shouldBe 1.0
+        lanes.blockEnd shouldBe 1.0
     }
 
     "what the node builds changes nothing: every capacity, with or without the shared lane, walks and draws bit for bit alike" {
@@ -313,8 +310,8 @@ class DriftLanesSpec : StringSpec({
 
                     for (n in 0 until count) {
                         lanes.advanceLane(n)
-                        out.add(lanes.startOf(n))
-                        out.add(lanes.endOf(n))
+                        out.add(lanes.blockStart)
+                        out.add(lanes.blockEnd)
                     }
                 }
             }
@@ -355,7 +352,8 @@ class DriftLanesSpec : StringSpec({
         lanes.retireLanes(0)
         lanes.prepareBlock(0.0)
         end(lanes, 0) shouldBe 1.0
-        lanes.startOf(3) shouldBe 1.0
+        lanes.advanceLane(3)
+        lanes.blockStart shouldBe 1.0
 
         rng.nextInt() shouldBe Random(7).nextInt()
     }
