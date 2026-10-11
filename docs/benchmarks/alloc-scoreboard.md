@@ -23,3 +23,10 @@ The cases are `AllocationCases` in `audio_benchmark`, at middle C (261.63 Hz).
 | 2026-10-10 | 7ddb8806 | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | jvm | JVM 17.0.17 | 0 B 0.30 | 0 B 0.97 | 0 B 1.67 | 0 B 5.95 | 0 B 2.18 | 0 B 2.80 | 0 B 3.31 | 0 B 1.09 | 0 B 1.41 | 0 B 4.39 | 0 B 7.29 | 0 B 4.05 | 0 B 5.27 | 409 B 23.49 |
 | 2026-10-11 | 201c3273 | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | v8 | node v22.12.0 | 15 B 0.72 | 15 B 1.49 | 15 B 2.85 | 61 B 8.50 | 22 B 3.60 | 16 B 4.70 | 36 B 5.42 | 5 B 1.28 | 30 B 1.97 | 51 B 6.19 | 37 B 8.41 | 67 B 6.26 | 67 B 8.22 | 1114 B 37.64 |
 | 2026-10-11 | 201c3273 | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | jvm | JVM 17.0.17 | 0 B 0.32 | 0 B 0.99 | 0 B 1.67 | 0 B 5.97 | 0 B 2.20 | 0 B 2.80 | 0 B 3.25 | 0 B 1.09 | 0 B 1.41 | 0 B 4.45 | 0 B 7.27 | 0 B 3.98 | 0 B 5.33 | 409 B 23.95 |
+
+## Since 2026-10-11
+
+| date | commit | machine | platform | runtime | saw | sawC | C-offrel | C-env3 | super7 | super7a | spluck-a | sgpad-vib | whitecolor | C-dist | tube4x | C-full | E-sawC-sus | E-noisesaw-sus | E-C-rel05-n16 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-11 | 42b87ca6 | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | v8 | node v22.12.0 | 16 B 0.71 | 16 B 1.39 | 21 B 2.55 | 68 B 8.60 | 16 B 3.65 | 16 B 4.72 | 41 B 10.90 | 30 B 5.49 | 22 B 1.30 | 31 B 2.03 | 62 B 6.29 | 35 B 8.66 | 67 B 6.32 | 36 B 8.19 | 1094 B 38.31 |
+| 2026-10-11 | 42b87ca6 | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | jvm | JVM 17.0.17 | 0 B 0.29 | 0 B 0.89 | 0 B 1.49 | 0 B 5.39 | 0 B 1.96 | 0 B 2.50 | 0 B 7.70 | 0 B 2.83 | 0 B 0.96 | 0 B 1.25 | 0 B 3.84 | 0 B 6.34 | 0 B 3.57 | 0 B 4.73 | 409 B 21.20 |
