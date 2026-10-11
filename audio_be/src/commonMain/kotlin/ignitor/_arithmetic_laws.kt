@@ -119,6 +119,17 @@ internal inline fun recipLaw(v: Double): Double = safeOut(1.0 / safeDiv(v))
 
 internal inline fun sqLaw(v: Double): Double = safeOut(v * v)
 
+// ── The range law ────────────────────────────────────────────────────────────────
+
+/**
+ * `range`: maps [v] from `[-1, 1]` onto `[from, to]`, `from + (v + 1)·0.5·(to - from)`, raw (no clamp: a [v] outside
+ * `[-1, 1]` lands outside the bounds). Written once for its two hosts: `RangeIgnitor`'s scalar and its audio-rate loop
+ * (katalyst knob expressions step 1, 2026-10-11, so the Katalyst's knob evaluator can share it). The constant-bound
+ * loop keeps its own re-associated form, `kFrom + (x + 1)·halfSpan`, bit-identical to this one because scaling by 0.5
+ * is exact (`ConstantFoldParitySpec` pins the two against each other).
+ */
+internal inline fun rangeLaw(v: Double, from: Double, to: Double): Double = from + (v + 1.0) * 0.5 * (to - from)
+
 // ── The ladders ──────────────────────────────────────────────────────────────────
 
 /**

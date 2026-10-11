@@ -860,7 +860,7 @@ private class RangeIgnitor(
         val f = from.controlRateValue(freqHz)
         val t = to.controlRateValue(freqHz)
 
-        return f + (v + 1.0) * 0.5 * (t - f)
+        return rangeLaw(v = v, from = f, to = t)
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -896,13 +896,10 @@ private class RangeIgnitor(
                 to.generate(toBuf, freqHz, ctx)
 
                 // `t − f` is per-sample here, not invariant: both bounds are audio-rate signals.
-                // The form stays unfactored to match `controlRateValue` bit-for-bit
+                // The one law, [rangeLaw], unfactored, so it matches `controlRateValue` bit-for-bit
                 // (ControlRateScalarParitySpec renders this path as the scalar's oracle).
                 for (i in ctx.offset until end) {
-                    val f = fromBuf[i]
-                    val t = toBuf[i]
-
-                    buffer[i] = f + (buffer[i] + 1.0) * 0.5 * (t - f)
+                    buffer[i] = rangeLaw(v = buffer[i], from = fromBuf[i], to = toBuf[i])
                 }
             }
         }

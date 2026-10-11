@@ -2887,11 +2887,7 @@ object Ignitors {
     // Internal helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Base step per sample for Perlin/Berlin noise. rate=1.0 walks ~144 noise-units/sec at 48kHz. */
-    private const val PERLIN_STEP = 0.003
-
-    /** fBm octave cap — bounds the linear per-sample cost of [perlinNoise]/[berlinNoise]. */
-    private const val PERLIN_FBM_MAX_OCTAVES = 8
+    // PERLIN_STEP and PERLIN_FBM_MAX_OCTAVES live in `_noise_laws.kt`, their one home in the module.
 
     // ═════════════════════════════════════════════════════════════════════════════
     // wrapPhase(), smallNumFastMod() live in `utils/phase_wrap.kt`; a semitone detune is
