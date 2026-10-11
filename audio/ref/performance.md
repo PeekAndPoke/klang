@@ -373,6 +373,33 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   processes before, 0 in every round after; about 95 MB of `Double`s over the harness run, now none on the render
   path). A nullable scalar on a hot read is a box on the JVM wherever the call is not inlined; keep the nullable
   view (`controlRateValueOrNull`, an extension) for the cold readers only.
+- **On V8, one node class is one compiled body with one inlining budget, shared by every instance: measure the
+  whole voice, not the stage** (2026-10-11, engine follow-up 29). TurboFan inlines a method's callees in order of
+  call frequency until a cumulative budget (920 bytes of bytecode by default) is spent. When two instances of one
+  class take different branches (`classic()`'s lowpass with a cutoff envelope and its highpass without one, both
+  `SvfIgnitor.generate`), each branch's callees run at half the frequency and are the first left out. So helpers
+  that a one-filter probe sees inlined (`prepareModEnvelope`, 56 bytes; Kotlin's `coerceIn` and `isFinite`, stdlib
+  calls on Kotlin/JS) stayed calls in the full voice, and their doubles crossed as heap numbers: about 8 per block on
+  the lowpass and 4 on the highpass, the sweep's arguments included; alone, the lowpass with `env` and `analog`
+  boxed only the sweep's three arguments (47 to 88 B on HEAD) and the highpass with `analog` nothing measurable.
+  Remedy: move the branch's per-block setup into a method of its own that takes no doubles (the node's own fields
+  hold the block's reads) and returns none (the results land in a holder), so it spends its own budget
+  (`SvfIgnitor.prepareEnvelopeSweep`, larger than the 460-byte limit, so never inlined back); a callee past that
+  limit takes its doubles from a holder (`SvfCoeffSweep`'s cutoffs and q); a per-block step returns nothing and the
+  caller reads a field (`FilterHumanization.stepDrift`, then `driftMul`). A small setup method can still be inlined
+  back where the voice is simpler, and then ITS callees compete for the caller's budget again: the static path's
+  `computeStaticCoeffs` is a call in a two-filter voice but inlined in a one-filter one, where Kotlin's `coerceIn`
+  was left out (about 2 heap numbers per block more than before, measured) until it was written out as two
+  comparisons (`clampSvfRange`). The `isFinite` guard beside it is still a 23-byte stdlib call (item 10): V8
+  inlined it in both shapes, but it is the next one out if `generate` grows. So a split is checked on both shapes.
+  Two placements measured worse and were dropped: the static path in place (boxes in the two-filter voice) and
+  both paths in one method (boxes in the one-filter voice, not explained). A box can also move instead of going: on
+  HEAD V8 inlined `blockDriftMultiplier` into `generate` and left the `nextMultiplier()` it called out; with
+  `nextMultiplier` folded into the lane's step, the two-filter voice left `blockDriftMultiplier` itself out, and its
+  double result crossed instead, one level up (seen in the trace). Inlining an outer method does not inline what it
+  calls, and a double return is a box wherever the call stays: hence the step that returns nothing. `C-full` went
+  from about 190 to about 40 bytes per block. A probe that renders one stage alone does not reproduce this class:
+  build the voice the songs build, then narrow it.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per

@@ -53,8 +53,8 @@ import kotlin.random.Random
  * ```
  * The seed passes `* 1.0` (exact): on V8 a double from a field or a call that seeds a loop-carried variable stays
  * tagged, and every `m += dm` can allocate a heap number, one per sample (the V8 rule in `audio/ref/performance.md`).
- * [nextMultiplier] is the raw step; the filter drift (`FilterHumanization`) holds one per block
- * without a ramp.
+ * [nextMultiplier] is the raw step. The filter drift (`FilterHumanization`) steps with [beginBlock] too and holds
+ * [blockEnd] across the block, without a ramp.
  *
  * **Built, then seeded** (tidy-up step 10). The no-argument constructor builds an unseeded lane
  * (inactive, multiplier 1); [seed] fills it later without allocating (the coefficient law is pure
@@ -134,16 +134,29 @@ class AnalogDrift() {
      */
     fun beginBlock() {
         blockStart = blockEnd
-        blockEnd = nextMultiplier()
+        blockEnd = step()
     }
 
     /**
      * Returns the next phase-increment multiplier. Centred on 1.0 with a
      * fast-jitter + slow-drift Gaussian-like distribution.
      *
-     * Only call when [active] is true.
+     * Only call when [active] is true. The raw step: every production lane steps through [beginBlock]; the tests
+     * keep this one as their reference.
      */
-    fun nextMultiplier(): Double {
+    fun nextMultiplier(): Double = step()
+
+    /**
+     * The step of [nextMultiplier] and [beginBlock], Kotlin `inline` ON PURPOSE (engine follow-up 29, 2026-10-11;
+     * `audio/ref/performance.md`, "one node class is one compiled body with one inlining budget"): [beginBlock]
+     * runs it in place, so the new multiplier goes straight into [blockEnd] and never crosses a call, whether or not
+     * a caller inlines [beginBlock]. A double-returning call inside it is what V8 left out of the filter node's
+     * `generate` on HEAD (the filter called [nextMultiplier] there, one heap number per lane per block); inlining
+     * an outer method does not inline what it calls. No test can pin it (the numbers are the same either way):
+     * this KDoc is the guard.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun step(): Double {
         // xorshift32 — inline, no Random dispatch
         var s = rngState
         s = s xor (s shl 13)

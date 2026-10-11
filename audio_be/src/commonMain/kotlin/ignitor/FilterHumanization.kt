@@ -41,7 +41,7 @@ internal fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Doub
  * **Why the cascade shares ONE of these.** `passes = N` chains N `SvfIgnitor`s, and the retired voice
  * strip's equivalent was ONE `AudioFilter` whose `sweepCutoff` fanned out to its N stages: one
  * tolerance, one drift lane, one multiplier per block for the whole cascade. So the build hands
- * the same instance to every stage of a cascade, and [blockDriftMultiplier] steps the lane only
+ * the same instance to every stage of a cascade, and [stepDrift] steps the lane only
  * when the block moved on, keyed on `IgniteContext.voiceElapsedFrames`.
  *
  * **What that key actually guarantees, stated exactly.** The test is "the frame counter CHANGED",
@@ -69,21 +69,32 @@ class FilterHumanization(
     val hasDrift: Boolean = drift != null
 
     private var lastSteppedAtFrame: Int = -1
-    private var driftMul: Double = 1.0
+
+    /** This block's drift multiplier, `1.0` when there is no lane. Set by [stepDrift]; the filter reads it here. */
+    var driftMul: Double = 1.0
+        private set
 
     /**
-     * This block's drift multiplier, `1.0` when there is no lane. Stepped ONCE per block even
-     * when several cascade stages share this instance.
+     * Steps the drift lane for this block and leaves the multiplier in [driftMul]; nothing without a lane.
+     * Stepped ONCE per block even when several cascade stages share this instance.
+     *
+     * **A step that returns nothing, and a field the filter reads, ON PURPOSE** (engine follow-up 29, 2026-10-11;
+     * `audio/ref/performance.md`, "one node class is one compiled body with one inlining budget"). As a method that
+     * returned the multiplier, V8 left it out of the SVF node's `generate` in a voice with two filters (its budget
+     * spent), and the multiplier, never a small integer, crossed the call as a heap number per filter per block (on
+     * HEAD the same box sat one level down, in `AnalogDrift.nextMultiplier()`'s return). Now nothing double crosses
+     * either call: the lane's own step is [AnalogDrift.beginBlock], which returns nothing and leaves the multiplier
+     * in [AnalogDrift.blockEnd]. The lane's `blockStart`, which `beginBlock` also moves, is not read for a filter
+     * (its drift is held across the block, not ramped). No test can pin the box: this KDoc is the guard.
      */
-    fun blockDriftMultiplier(ctx: IgniteContext): Double {
-        val lane = drift ?: return 1.0
+    fun stepDrift(ctx: IgniteContext) {
+        val lane = drift ?: return
 
         if (ctx.voiceElapsedFrames != lastSteppedAtFrame) {
             lastSteppedAtFrame = ctx.voiceElapsedFrames
-            driftMul = lane.nextMultiplier()
+            lane.beginBlock()
+            driftMul = lane.blockEnd
         }
-
-        return driftMul
     }
 }
 

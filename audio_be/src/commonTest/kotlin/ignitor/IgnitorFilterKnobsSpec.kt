@@ -490,6 +490,38 @@ class IgnitorFilterKnobsSpec : StringSpec({
         }
     }
 
+    "the drift reaches the COEFFICIENTS in the block it was stepped for" {
+        // The node steps the lane and then reads the multiplier from a field (engine follow-up 29): a read that
+        // is lost, or that comes before the step (one block late), keeps the rows above green, because they test
+        // the lane alone or the tolerance alone. A lane-only humanization (tolerance exactly 1.0) on a static
+        // 800 Hz lowpass must filter, block by block, exactly as the same lowpass whose cutoff is
+        // `800 * twin.nextMultiplier()`, the twin a lane built from the same seed. Exact bits: the node computes
+        // `(800 * m) * 1.0`, the reference `800 * m`, the same double.
+        val rate = analogDriftStepRate(sampleRate = sampleRate, blockFrames = blockFrames)
+        val lane = FilterHumanization(cutoffOffsetMul = 1.0, drift = AnalogDrift(4.0, rate, Random(11)))
+        val twin = AnalogDrift(4.0, rate, Random(11))
+        val cutoff = BlockCutoff()
+
+        val drifted = renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707), humanize = lane) }
+        val reference = renderRaw { upstream ->
+            val filter = upstream.lowpass(cutoffHz = cutoff, q = ConstantIgnitor(0.707))
+
+            // One twin step per block, before the block renders: the cutoff the drifted node must use.
+            object : Ignitor {
+                override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                    cutoff.value = 800.0 * twin.nextMultiplier()
+                    filter.generate(buffer, freqHz, ctx)
+                }
+            }
+        }
+
+        drifted shouldBe reference
+
+        withClue("...and the drift moved the sound (the control)") {
+            drifted shouldNotBe renderRaw { it.lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(0.707)) }
+        }
+    }
+
     "the drift lane is stepped once per block, not once per cascade stage" {
         // Two stages sharing one lane must see ONE multiplier per block. If each stage stepped
         // it, the second stage would filter at a different cutoff than the first and the render
@@ -497,14 +529,18 @@ class IgnitorFilterKnobsSpec : StringSpec({
         val lane = buildFilterHumanization(analog = 4.0, sampleRate = sampleRate, blockFrames = blockFrames, rng = seed())!!
         val context = ctx(seed())
 
-        val first = lane.blockDriftMultiplier(context)
-        val again = lane.blockDriftMultiplier(context)
+        lane.stepDrift(context)
+        val first = lane.driftMul
+        lane.stepDrift(context)
+        val again = lane.driftMul
 
         withClue("same block, same multiplier") { again shouldBe first }
 
         context.voiceElapsedFrames += blockFrames
 
-        withClue("next block, it moved") { lane.blockDriftMultiplier(context) shouldNotBe first }
+        lane.stepDrift(context)
+
+        withClue("next block, it moved") { lane.driftMul shouldNotBe first }
     }
     "the filter drift is twice the pitch drift (maintainer, 2026-09-29)" {
         // A contract, not the constant restated: the drift's trajectory does not depend on `analog`, only its
@@ -517,8 +553,21 @@ class IgnitorFilterKnobsSpec : StringSpec({
 
         repeat(2000) {
             val p = pitch.nextMultiplier() - 1.0
-            (lane.blockDriftMultiplier(context) - 1.0) shouldBe (2.0 * p plusOrMinus (abs(p) * 1e-9 + 1e-15))
+            lane.stepDrift(context)
+            (lane.driftMul - 1.0) shouldBe (2.0 * p plusOrMinus (abs(p) * 1e-9 + 1e-15))
             context.voiceElapsedFrames += blockFrames
         }
     }
 })
+
+/**
+ * A cutoff the test sets per block: not block-constant (so the SVF reads it by rendering one sample and recomputes
+ * its coefficients every block), every sample [value].
+ */
+private class BlockCutoff : Ignitor {
+    var value: Double = 0.0
+
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        buffer.fill(value, ctx.offset, ctx.windowEnd)
+    }
+}

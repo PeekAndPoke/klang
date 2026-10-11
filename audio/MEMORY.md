@@ -340,6 +340,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 29: in a full `classic()` voice the SVF node's one shared `generate` ran out of V8's
+  inlining budget, and its per-block setup boxed (about 8 heap numbers per block on the lowpass, 4 on the highpass,
+  one per filter drift lane); the setup moved into methods of their own reading a holder, `SvfCoeffSweep` takes its
+  cutoffs and q as fields, the SVF clamps' `coerceIn` is written out, and the filter drift is a step that returns
+  nothing (`FilterHumanization.stepDrift`) plus a field the node reads. `C-full` about 190 to 36 to 52 B per block,
+  bit for bit, corpus identical, its V8 budget re-set to 112; what is left is item 31:
+  `docs/tasks/engine-follow-ups.md` items 29 and 31
 - 2026-10-10 Engine follow-up 6: `WaveIgnitor` hands its `dt` to its loop methods (past V8's inlining limit) in its
   `WaveVoiceState.dt` holder, no longer as an argument; it boxed one heap number per block per wave oscillator on V8
   (about 16 B, now about 0), bit for bit, corpus identical; four V8 alloc budgets re-set with it:

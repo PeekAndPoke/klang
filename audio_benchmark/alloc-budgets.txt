@@ -7,11 +7,14 @@
 # (docs/benchmarks/alloc-scoreboard.md, the first two rows):
 # - V8: about 40 B or more above that run's median, and below the regression the case guards: one heap number per
 #   sample (about 2 KB per voice and block, items 3, 9, 10) or one per knob read (60 to 100 B per voice and block,
-#   item 8). Where today's figure and item 8's old one overlap (C-full, E-sawC-sus, E-noisesaw-sus) the budget
-#   guards the per-sample class only, and the voice rows guard item 8.
+#   item 8). Where today's figure and item 8's old one overlap (E-sawC-sus, E-noisesaw-sus) the budget guards the
+#   per-sample class only, and the voice rows guard item 8.
 # - Re-set: saw, sawC, C-offrel, sgpad-vib and C-dist on V8 were re-set at engine follow-up 6 (2026-10-10) from that
 #   change's runs (tree medians 16, 15, 16, 31 to 36 and 31 to 36 B), by the same rule: its fix took about 16 B per wave oscillator off,
 #   enough that item 8's regression read under the old budgets (docs/tasks/engine-follow-ups.md, item 6).
+#   C-full on V8 was re-set at engine follow-up 29 (2026-10-11) from that change's runs (tree medians 26 to 67 B,
+#   healthy rounds 21 to 71 B): its fix took about 150 B off, so the line now guards item 8 as well. 112 is 41 B
+#   above the worst healthy round and below the item 8 mutant's lowest round (154.8 B) and item 29's revert (165 B).
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -47,7 +50,7 @@ C-dist             v8        72      item 8; item 9, the fused distort
 C-dist             jvm       6       item 9, the fused distort
 tube4x             v8        160     item 9, the Shape node oversampled
 tube4x             jvm       6       item 9, the Shape node oversampled
-C-full             v8        320     the per-sample class only (item 29's open residue overlaps item 8)
+C-full             v8        112     item 8, the knob reads; item 29's SVF setup as a whole (its parts: the KDocs)
 C-full             jvm       6       item 12 step 2
 E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample class only)
 E-sawC-sus         jvm       6       item 3, the limiter's level; item 8

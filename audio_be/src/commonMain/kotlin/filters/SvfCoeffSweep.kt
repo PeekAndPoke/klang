@@ -18,10 +18,17 @@ import kotlin.math.pow
  * first sample and adds each step AFTER every sample, so the coefficients arrive at the end values when
  * the next block begins.
  *
- * Both ends share one [prepare] q, so `k` is the same at both ends and [kStep] is exactly 0: the
+ * Both ends share one [q], so `k` is the same at both ends and [kStep] is exactly 0: the
  * interpolation moves the cutoff only. Equal cutoffs at both ends (a sustain, a static or drift-only
  * filter) compute one coefficient set and zero steps, which is what computing both would give
  * (`x - x == 0.0`), without the second `tan`.
+ *
+ * **The block's cutoffs and q are fields the host writes, not arguments of [prepare]** (engine follow-up 29,
+ * 2026-10-11; `audio/ref/performance.md`, "a non-integral double handed to a function that is not inlined").
+ * [prepare] is past V8's bytecode limit for inlining (460 bytes: two coefficient computations), so V8 never inlines
+ * it, and a double argument crosses the call as a heap number: three per block on the filter envelope's path
+ * (both ends and a q that is not a small integer). The host owns this sweep and fills it, the holder shape of the
+ * delay's `DelayConfig`. No test can pin it (the sound is the same either way): this KDoc is the guard.
  *
  * Allocates nothing after construction.
  */
@@ -29,6 +36,15 @@ internal class SvfCoeffSweep {
     /** The coefficients at the block's first frame. Written by [prepare]. */
     val start = SvfCoeffs()
     private val end = SvfCoeffs()
+
+    /** The cutoff at the block's first frame, in Hz. Written by the host before [prepare]. */
+    var cutoffStartHz: Double = 0.0
+
+    /** The cutoff the block's steps arrive at, in Hz. Written by the host before [prepare]. */
+    var cutoffEndHz: Double = 0.0
+
+    /** The q of both ends. Written by the host before [prepare]. */
+    var q: Double = 0.0
 
     var a1Step: Double = 0.0
         private set
@@ -42,10 +58,15 @@ internal class SvfCoeffSweep {
         private set
 
     /**
-     * Resolves one block: [start] at [cutoffStartHz], the steps toward [cutoffEndHz] over [frames]
-     * samples. [frames] at or below 0 steps nothing.
+     * Resolves one block from [cutoffStartHz], [cutoffEndHz] and [q], which the host has written: [start] at
+     * [cutoffStartHz], the steps toward [cutoffEndHz] over [frames] samples. [frames] at or below 0 steps
+     * nothing. [sampleRate] is a whole number of Hz, a small integer on V8, so it crosses the call unboxed.
      */
-    fun prepare(cutoffStartHz: Double, cutoffEndHz: Double, q: Double, sampleRate: Double, frames: Int) {
+    fun prepare(sampleRate: Double, frames: Int) {
+        val cutoffStartHz = cutoffStartHz
+        val cutoffEndHz = cutoffEndHz
+        val q = q
+
         computeSvfCoeffs(cutoffHz = cutoffStartHz, q = q, sampleRate = sampleRate, out = start)
 
         if (frames <= 0 || cutoffEndHz == cutoffStartHz) {

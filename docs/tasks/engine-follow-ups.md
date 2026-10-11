@@ -335,7 +335,9 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    speed-up "about 15 to 50 percent".
 10. **Kotlin's `isFinite()` is a stdlib call on Kotlin/JS**, left out of the stages' inlining budget. An inline
     compare helped pinned and hurt unpinned, so it was dropped; worth a second look only with a measurement that holds
-    in both conditions. Source: as 2. S.
+    in both conditions. Also in the SVF clamps (`clampSvfCutoff`, `clampSvfQ`): item 29 wrote their `coerceIn` out
+    as comparisons (`clampSvfRange`) and kept `isFinite`, a 23-byte stdlib call that V8 inlined in both voice shapes
+    measured there, the next one to be left out if `SvfIgnitor.generate` grows. Source: as 2. S.
 10a. **DONE (2026-10-10, with 10b): every per-sample envelope boxed on V8, through the curve `when`.** Reported as
     about 2.17 KB per block for a voice whose pitch envelope is in its attack or decay (one 16-byte heap number per
     sample), about 65 KB per kick sweep; a double crossing a call V8 does not inline was suspected (`adsrCurveShape`,
@@ -475,10 +477,125 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     sine, `SineIgnitor.generate`, called from `FmModIgnitor.generate`) and the knob reads (`Ignitors.readParam`, about
     65 B per block, item 8 on V8; item 12 on the JVM).
 
-29. **The filter-envelope cutoff chain allocates on V8** (numbered after the last item, added 2026-10-10): a full
-    `classic()` voice (filter, filter envelope, tremolo, analog) still allocates about 130 + 65 + 32 B per block in
-    its cutoff chain, the same on HEAD and after items 8 and 12, so not a knob read. Not located further. Source:
-    `tmp/reviews/e8-r1-B.md` (items 8 and 12, review round 1, reviewer B's heap profile). S to M.
+29. **DONE (2026-10-11): the SVF node's per-block setup boxed on V8 in a full `classic()` voice, and so did the
+    filter drift.** Reported as about 130 + 65 + 32 B per block in the cutoff chain of a full `classic()` voice
+    (filter, filter envelope, tremolo, analog), the same on HEAD and after items 8 and 12, so not a knob read; the
+    harness case `C-full` read about 200 to 250 B per block. Source: `tmp/reviews/e8-r1-B.md`. **Measured on the
+    production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22, one voice through
+    `VoiceFactory`, classic saw at middle C and at 220 Hz; narrow cases built from `C-full`'s slots): the three sites
+    are the lowpass (`lpf` 1200 Hz, q 1.3, `env` 12, `analog` 0.2), about 8 heap numbers per block, the highpass
+    (`hpf` 80 Hz, `analog`), about 4, and the two filters' drift lanes, one each. Every one is a double crossing a
+    call V8 did not inline. **Cause** (sampling heap profiler, `--trace-turbo-inlining` on a copy of the bundle with
+    every method named): `SvfIgnitor.generate` is one compiled body with one inlining budget for every SVF node, and
+    in this voice its two instances take different branches (the envelope path, the static path), so each branch's
+    callees run at half the frequency and are the last in line for the budget. They were left out: on the envelope
+    path `prepareModEnvelope` (its stage times, 0.01 and 0.1 s, crossed as heap numbers) and the level's `coerceIn`,
+    on the static path the clamps of `computeSvfCoeffs` (Kotlin's `isFinite` and `coerceIn`, stdlib calls on
+    Kotlin/JS; the drifted cutoff and the q 0.707). `SvfCoeffSweep.prepare` is past the 460-byte limit (reason 5) and
+    is never inlined, so both cutoffs and the q 1.3 crossed it every block. And `FilterHumanization` stepped its lane
+    through `AnalogDrift.nextMultiplier()`, which V8 left out, so its result crossed. Alone, the lowpass with `env`
+    and `analog` read 47 to 88 B on HEAD (the sweep's arguments, about 3) and the highpass with `analog` 5 to 46 (the
+    noise band): the rest appears only in the full voice, which runs out of budget. The class is new to
+    `audio/ref/performance.md` ("one node class is one compiled body with one inlining budget"). **Fix** (no ADAA
+    file touched):
+    - `SvfIgnitor` reads its cutoff, q and drift into fields of its own (a holder) and runs the envelope path's
+      setup in `prepareEnvelopeSweep` (`IgnitorFilters.kt`), a method that takes the context only, returns nothing,
+      and is too large to be inlined back; the static path's setup in `computeStaticCoeffs`, the same shape.
+    - `SvfCoeffSweep.prepare(sampleRate, frames)` reads the cutoffs and q its host wrote into its fields
+      (`cutoffStartHz`, `cutoffEndHz`, `q`) instead of taking them as arguments (`SvfCoeffSweepSpec` follows).
+    - `clampSvfCutoff` and `clampSvfQ` (`LowPassHighPassFilters.kt`) clamp through `clampSvfRange`, `coerceIn`
+      written out as two comparisons (the same value for every input with lo at most hi; the `isFinite` guard
+      stays a stdlib call, item 10). Needed for the one-filter voice: there V8 inlines `computeStaticCoeffs` into
+      `generate` (238 bytes in the final form; 211 in the intermediate shape with the stdlib clamps), and the stdlib
+      `coerceIn` was then left out (a lowpass with `analog` alone read about 46 to 56 B against HEAD's 0 to 26 with
+      the split alone).
+    - The filter drift is a step that returns nothing and a field: `FilterHumanization.stepDrift(ctx)` (replaces
+      `blockDriftMultiplier`) steps the lane with `beginBlock()` and leaves the multiplier in `driftMul`, which
+      `SvfIgnitor.generate` reads (through an `if`, not an elvis, which would merge the double with null). And
+      `AnalogDrift`'s step is a private Kotlin `inline` function that `beginBlock` runs in place, so the lane's
+      step has no double-returning call either. The first form (review round 1, B1) kept a double-returning
+      `blockDriftMultiplier`: in the two-filter voice V8 then left IT out of `generate`, and the box moved one level
+      up instead of going (the trace showed it).
+    The KDoc at each site is the guard; no test can pin a box. Two other placements were measured and dropped: the
+    static path left in `generate` (the highpass's clamps boxed again in the full voice, `C-full` 77 to 87 B) and
+    both paths in one method (the one-filter voice boxed, 72 to 88 B, not explained).
+    Bit for bit: raw doubles of the probe, HEAD against the tree, 600 blocks, 38 of 38 cases identical on V8 and 38
+    of 38 on the JVM, none silent (every narrow case, `C-full` and its sustain-0.5, moving-decay and release
+    variants, each at middle C and at 220 Hz, and two engine rows); the corpus 18 of 18 against
+    `docs/benchmarks/corpus-reference.md`. Render bytes and ns per block, 20,000 warm-up and 200,000 measured
+    blocks, medians of 3, HEAD / tree / HEAD again (a byte copy of HEAD), unpinned; a few bytes either way, even
+    below zero, is the noise band:
+
+    | case | V8 unpinned |
+    |---|---|
+    | `C-full` (middle C) | 226 / 41 / 186 B, 8,361 / 8,261 / 8,382 ns |
+    | `C-full` at 220 Hz | 201 / 16 / 196 B, 8,378 / 8,189 / 8,326 ns |
+    | `C-full` without the distort | 212 / 72 / 196 B, 7,682 / 7,668 / 7,707 ns |
+    | `C-full`, `lpf.sustain` 0.5 | 263 / 52 / 253 B, 8,429 / 8,300 / 8,417 ns |
+    | `C-full`, the cutoff envelope in its decay | 237 / 47 / 223 B, 8,509 / 8,793 / 8,513 ns (5 rounds: 8,492 / 8,434 / 8,527) |
+    | `C-full`, filter and amplitude in their release | 248 / 41 / 232 B, 9,555 / 9,373 / 9,739 ns |
+    | `lpf` + `env` | 37 / 15 / 31 B, 2,294 / 2,240 / 2,251 ns |
+    | `lpf` + `env` + `analog` | 67 / 6 / 61 B, 4,142 / 4,118 / 4,235 ns |
+    | `lpf` + `env`, sustain 0.5 | 98 / 31 / 124 B, 2,239 / 2,221 / 2,304 ns |
+    | `lpf` + `analog` | 40 / 21 / 26 B, 4,115 / 4,148 / 4,257 ns |
+    | `hpf` + `analog` | 46 / 21 / 47 B, 4,147 / 4,112 / 4,103 ns |
+    | tremolo alone (control) | 16 / 31 / 36 B, 2,178 / 2,503 / 2,242 ns (5 rounds: 2,173 / 2,221 / 2,234) |
+    | `lpf` alone (control) | 16 / 16 / 21 B, 2,162 / 2,200 / 2,151 ns |
+    | classic saw, `analog` (control, oscillator drift) | 10 / 20 / 16 B, 1,563 / 1,573 / 1,560 ns |
+    | `C-dist` (control) | 36 / 31 / 31 B, 1,975 / 1,979 / 2,018 ns |
+    | classic saw (control) | 21 / 20 / 15 B, 1,376 / 1,345 / 1,364 ns |
+    | engine, `C-full` sustained | 205 / 103 / 253 B, 13,603 / 13,805 / 13,715 ns |
+    | engine, classic saw (control) | 67 / 62 / 72 B, 6,330 / 6,466 / 6,153 ns |
+
+    Pinned (`taskset -c 11`, medians of 3): `C-full` 279 / 36 / 243 B, 8,269 / 8,460 / 8,392 ns; the one-filter rows
+    are noisy pinned on both sides (`hpf` + `analog` 42 / 52 B, `lpf` + `analog` 57 / -10, medians of 5, single
+    rounds from -26 to 108). One heap number is 16 bytes on node and 12 in Chrome (pointer compression), the count the
+    same. Time: within the noise of HEAD and HEAD again (`C-full` 0.99, the others 0.97 to 1.03; the tremolo row's
+    first run had one 4.7 µs outlier round, 5 rounds read 1.02). What is left on `C-full`: item 30 (about 16 B at
+    middle C, gone at 220 Hz), and the residues item 31 lists (the tremolo's depth ladder, the fused distort,
+    `EnvelopeCore.prepare`'s arguments), all inside the GC trace's noise band on `C-full`. The table above is the
+    first form (the drift's box moved, not removed); the final form's rows are under "Review round 1" below. **JVM**
+    (`ThreadMXBean`, 7 rounds of 20,000 warm-up plus 16,000 blocks, every case in one process): 0 B per block on both
+    sides in every case, time 0.97 to 1.04 of HEAD. **The allocation harness** (`KLANG_BENCH_MODE=alloc`, 3 runs
+    each, HEAD's and the tree's interleaved): V8 `C-full` 186 / 42 B per block (runs 186, 190, 169 against 42, 47,
+    41), every other case unchanged within noise, every run green 28 of 28; time 0.97 to 1.03 of HEAD; JVM 0 B on
+    both sides (n16 409, the voice build). Tests: `:audio_be:jvmTest` 2,661 of 2,661 and `:audio_be:jsBrowserTest`
+    2,557 of 2,557 green. Report: `tmp/reviews/e29-report.md`. S to M.
+    **Review round 1, applied** (`tmp/reviews/e29-r1-A.md`, `e29-r1-B.md`, 2 MAJOR, 4 MINOR, 3 NIT; the code was
+    correct and bit for bit):
+    - B1: the filter drift's box had moved, not gone. In the two-filter voice V8 left the double-returning
+      `blockDriftMultiplier` out of `generate`. It is now `stepDrift`, which returns nothing, plus a field the node
+      reads (the fix bullet above). The trace of `C-full` shows `FilterHumanization.stepDrift` as a call that
+      returns nothing, with `beginBlock` and its step inlined into it, so no double crosses.
+    - A1: the static path's KDoc and the rule said the clamps need no inlining. `isFinite` is still a stdlib call:
+      both texts now say what holds, and `computeStaticCoeffs` is 238 bytes (211 was the intermediate shape).
+      Item 10 records it.
+    - B2 and B3: `C-full v8` re-set from 320 to 112, with guards that do not overclaim and a re-set clause in the
+      header of `audio_benchmark/alloc-budgets.txt`.
+    - B4: the residues moved to a new open item, 31.
+    - B5: the rule's "about 0 in either filter alone" is corrected.
+    - A3 and B6: `nextMultiplier` is marked as the tests' reference.
+
+    Bit for bit: 38 of 38 dumps on V8 and on the JVM, HEAD against the tree; the corpus 18 of 18. Render bytes and
+    ns per block, unpinned, medians of 3, HEAD / first form / final form / HEAD again:
+
+    | case | B per block | ns per block |
+    |---|---|---|
+    | `C-full` | 201 / 41 / 26 / 176 | 8,393 / 8,322 / 8,240 / 8,395 |
+    | `C-full` at 220 Hz | 176 / 11 / 17 / 181 | |
+    | `lpf` + `analog` | 47 / 16 / 15 / 11 | |
+    | `hpf` + `analog` | 42 / 15 / 21 / 30 | |
+
+    The allocation harness on the final form with budget 112, 3 runs: `C-full` 36, 52, 51 B (rounds 16 to 62),
+    every run green, 28 of 28. The item 8 mutant against it: RED, 8 of 28 over; `C-full` read 175 (rounds 169,
+    186, 175). Tests: `:audio_be:jvmTest` 2,661 of 2,661 and `:audio_be:jsBrowserTest` 2,557 of 2,557.
+    **Review round 2** (`tmp/reviews/e29-r2.md`, clean: 0 MAJOR, 1 MINOR, 2 NIT). MINOR 1, applied: the node's use of
+    the drift had no unit guard (a lost field read or a read before the step stayed green). A new row in
+    `IgnitorFilterKnobsSpec`, "the drift reaches the COEFFICIENTS in the block it was stepped for", renders a
+    lane-only humanization against the same lowpass whose cutoff is set per block to `800 * twin.nextMultiplier()`,
+    exact bits. Mutation-checked: `blockDriftMul = 1.0` red, the read moved before `stepDrift` red, the restored
+    tree green. NIT 3, applied: the clamp bullet gives 238 bytes for the final form. Tests: `:audio_be:jvmTest`
+    2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of 2,558.
 30. **Every voice boxes its own frequency once per block on V8** (numbered after the last item, added 2026-10-10):
     `IgniteRenderer.render` (`voices/IgniteRenderer.kt`) hands the voice's `freqHz`, a double field, to the root
     Ignitor's `generate`, a call V8 never inlines, so a non-integral note frequency (almost every real note; middle C
@@ -494,6 +611,30 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     remedy class is the holder of `audio/ref/performance.md` (for example the frequency on the `IgniteContext` the
     root already receives), but it touches the `Ignitor.generate` signature or the voice's render entry, so it is a
     design call, not a one-liner. Source: `tmp/reviews/e6-r1-B.md`, MINOR 4. S.
+
+31. **What item 29 left on a full `classic()` voice on V8** (numbered after the last item, added 2026-10-11): sites
+    item 29 located and did not fix, each about one heap number per block (16 B on node, 12 in Chrome), inside the
+    harness's V8 noise on `C-full`, so no budget catches them. Source: item 29, `tmp/reviews/e29-report.md`,
+    `tmp/reviews/e29-r1-B.md` (MINOR 4). S each.
+    - **`EnvelopeCore.prepare`'s arguments.** It is past V8's 460-byte limit (reason 5), never inlined, and takes
+      six doubles (the attack, decay and release frame counts, the sustain, `k`, `norm`). Every envelope host (the
+      chain `adsr` and `classic()`'s envelope, the FM, pitch and filter envelopes) calls it per block, so a
+      non-integral frame count or sustain is a heap number per block per host. `C-full`'s defaults travel as small
+      integers (0.01 and 0.1 s at 48 kHz are 480 and 4,800 frames, sustain 1.0); `lpf.sustain` 0.5 shows one more
+      (in `SvfIgnitor.prepareEnvelopeSweep`). Smallest remedy: a holder, fields on `EnvelopeCore` the host writes
+      and a `prepare()` that reads them: an interface change across every envelope host.
+    - **The tremolo's depth ladder.** `1 - max(depth, 0)` is block-constant; the `MinusIgnitor` scalar path calls
+      `b.controlRateValue` at one shared, polymorphic site that V8 does not inline, so `MaxIgnitor`'s non-integral
+      result is boxed (seen as `MaxIgnitor.controlRateValue` under the tremolo's `TimesIgnitor`). Smallest remedy:
+      a build-time fold of a block-constant subtree whose leaves are voice constants into one scalar: a new
+      mechanism, or a change in `IgnitorDslRuntime.kt` (ADAA-owned).
+    - **The fused distort** (`FusedDistortIgnitor.generate`, `IgnitorEffects.kt`, ADAA-owned): about one heap number
+      per block on `C-full` and `C-dist` (`DcBlocker` is a candidate it does not inline). Not located further.
+    - **Note, the SVF's `saturate` test** (`mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS` in
+      `SvfIgnitor.generate`) is a constant per node but runs per block, and in the two-filter voice it spends about
+      200 bytes of `generate`'s inlining budget on two enum `getInstance` / `initEntries` calls (reviewer B, round 1
+      of item 29). A constructor `val` would free that budget; not a box today, so left for a measured change.
+    The filter drift that item 29's first form only moved is fixed (item 29, review round 1).
 
 ## 2. Allocation on the JVM, at build and per orbit
 

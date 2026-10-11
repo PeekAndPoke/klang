@@ -133,7 +133,7 @@ import kotlin.math.tan
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun clampSvfCutoff(cutoffHz: Double, sampleRate: Double): Double =
-    if (cutoffHz.isFinite()) cutoffHz.coerceIn(5.0, 0.5 * sampleRate - 1.0) else 1000.0
+    if (cutoffHz.isFinite()) clampSvfRange(x = cutoffHz, lo = 5.0, hi = 0.5 * sampleRate - 1.0) else 1000.0
 
 /** The q a non-finite q falls back to: Butterworth, `1/sqrt(2)`. */
 internal const val SVF_Q_FALLBACK: Double = 0.7071067811865475
@@ -146,7 +146,18 @@ internal const val SVF_Q_FALLBACK: Double = 0.7071067811865475
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun clampSvfQ(q: Double): Double =
-    if (q.isFinite()) q.coerceIn(0.1, 200.0) else SVF_Q_FALLBACK
+    if (q.isFinite()) clampSvfRange(x = q, lo = 0.1, hi = 200.0) else SVF_Q_FALLBACK
+
+/**
+ * [x] held to `[lo, hi]` ([lo] at most [hi]): Kotlin's `coerceIn`, the same value for every input, written out
+ * ON PURPOSE (engine follow-up 29, 2026-10-11; `audio/ref/performance.md`, "one node class is one compiled body
+ * with one inlining budget"). On Kotlin/JS `coerceIn` is a stdlib function, a call V8 has to inline, and inside
+ * the SVF node's `generate` it was left out for lack of budget, so its double argument and result crossed as heap
+ * numbers every block. Written out, the clamp needs no inlining at all. No test can pin it: this KDoc is the guard.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun clampSvfRange(x: Double, lo: Double, hi: Double): Double =
+    if (x < lo) lo else if (x > hi) hi else x
 
 /** Bilinear-prewarped angle factor `K = tan(π·fc/fs)` with NaN/Inf-safe cutoff clamp. */
 @Suppress("NOTHING_TO_INLINE")

@@ -149,23 +149,40 @@ private class SvfIgnitor(
     private val envCore = EnvelopeCore()
     private val hasDrift: Boolean = humanize?.hasDrift == true
 
+    // Per-voice analog humanization, both 1.0 when the node has none, and `x * 1.0` is exactly `x` for
+    // every double, so a node without it renders bit-for-bit what it rendered without the feature. The
+    // ORDER of the two multiplies is the retired voice strip's: it multiplied the envelope's cutoff by the
+    // block's drift and then both ends by the fixed tolerance.
+    private val offsetMul: Double = humanize?.cutoffOffsetMul ?: 1.0
+
+    // The block's cutoff, q and drift, read in [generate] and held here for the two coefficient setups
+    // ([prepareEnvelopeSweep], [computeStaticCoeffs]): a holder, not arguments (see [prepareEnvelopeSweep]).
+    private var blockCutoff: Double = 0.0
+    private var blockQ: Double = 0.0
+    private var blockDriftMul: Double = 1.0
+
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
 
-            val baseCutoff = Ignitors.readParam(cutoffHz, freqHz, ctx)
-            val qVal = Ignitors.readParam(q, freqHz, ctx)
+            blockCutoff = Ignitors.readParam(cutoffHz, freqHz, ctx)
+            blockQ = Ignitors.readParam(q, freqHz, ctx)
+
             val analogVal = Ignitors.readParam(analog, freqHz, ctx).coerceAtLeast(0.0)
-            // Per-voice analog humanization, both 1.0 when the node has none, and `x * 1.0` is
-            // exactly `x` for every double, so a node without it renders bit-for-bit what it
-            // rendered before these two lines existed. The ORDER of the two multiplies is the
-            // retired voice strip's: it multiplied the envelope's cutoff by the block's drift and then
-            // both ends by the fixed tolerance.
-            val driftMul = humanize?.blockDriftMultiplier(ctx) ?: 1.0
-            val offsetMul = humanize?.cutoffOffsetMul ?: 1.0
+
+            // A statement, not `humanize?.driftMul ?: 1.0`: the elvis merges a double with null, and V8 holds the
+            // merge tagged, a heap number per block (`audio/ref/performance.md`, the `x ?: field` rule).
+            val hum = humanize
+
+            if (hum == null) {
+                blockDriftMul = 1.0
+            } else {
+                hum.stepDrift(ctx)
+                blockDriftMul = hum.driftMul
+            }
+
             val saturate = analogVal > 0.0 && (mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS)
             val driveScale = analogVal * FILTER_DRIVE_PER_ANALOG
-            val sr = ctx.sampleRate.toDouble()
             val length = ctx.length
 
             // Per-sample coefficient deltas (Bresenham accumulator). When env is off they're
@@ -184,17 +201,7 @@ private class SvfIgnitor(
             var gStep = 0.0
 
             if (hasEnv) {
-                envCore.prepareModEnvelope(
-                    ctx = ctx, attack = env.attack, decay = env.decay, sustain = env.sustain, release = env.release,
-                    attackCurve = env.attackCurve, decayCurve = env.decayCurve, releaseCurve = env.releaseCurve,
-                )
-                // The cutoff at the block's two ends, the drift held across the block
-                // (`filterEnvCutoff`: depth in SEMITONES, C3), swept linearly in between.
-                val pos = ctx.voiceElapsedFrames
-                val cutoffStart = envCore.filterEnvCutoff(pos = pos, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
-                val cutoffEnd = envCore.filterEnvCutoff(pos = pos + length, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
-
-                sweep.prepare(cutoffStartHz = cutoffStart, cutoffEndHz = cutoffEnd, q = qVal, sampleRate = sr, frames = length)
+                prepareEnvelopeSweep(ctx)
 
                 val c = sweep.start
 
@@ -205,7 +212,7 @@ private class SvfIgnitor(
                 // `hasDrift` is false without a lane, so the cheap latch below is untouched for
                 // every node that does not humanize; with one, the cutoff moves every block and
                 // there is nothing to latch.
-                computeSvfCoeffs(cutoffHz = baseCutoff * driftMul * offsetMul, q = qVal, sampleRate = sr, out = coefs)
+                computeStaticCoeffs(ctx)
                 a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
                 initialized = true
             } else {
@@ -318,6 +325,55 @@ private class SvfIgnitor(
                 }
             }
         }
+    }
+
+    /**
+     * The envelope path's block setup: the cutoff envelope prepared, the cutoff at the block's two ends (the drift
+     * held across the block; `filterEnvCutoff`: depth in SEMITONES, C3), and the [sweep] that carries the
+     * coefficients linearly between them.
+     *
+     * **A method of its own, reading [blockCutoff], [blockQ] and [blockDriftMul] from the node, ON PURPOSE**
+     * (engine follow-up 29, 2026-10-11; `audio/ref/performance.md`, "one node class is one compiled body with one
+     * inlining budget"). Inside [generate], whose one compiled body and one inlining budget every SVF node shares,
+     * this setup left V8 without the budget for its small callees: with a filter envelope, a drift and a second
+     * filter in the voice (`classic()` with `lpf.env`, `hpf` and `analog`), `prepareModEnvelope` (the stage times)
+     * and the level's `coerceIn` stayed calls, and so did the static path's clamps in the other filter, so their
+     * doubles crossed as heap numbers: with the sweep's arguments, about 8 per block on the lowpass and 4 on the
+     * highpass. Here the setup spends a budget of its own (its envelope code makes it larger than V8's limit for
+     * inlining, 460 bytes, so V8 never inlines it back into [generate]), and nothing double crosses into it
+     * ([generate] hands it the context only) or out of it (the results land in [sweep]). No test can pin it (the
+     * sound is the same either way): this KDoc is the guard. Do not fold it back into [generate], and do not hand
+     * it the cutoff, q or drift as arguments.
+     */
+    private fun prepareEnvelopeSweep(ctx: IgniteContext) {
+        envCore.prepareModEnvelope(
+            ctx = ctx, attack = env.attack, decay = env.decay, sustain = env.sustain, release = env.release,
+            attackCurve = env.attackCurve, decayCurve = env.decayCurve, releaseCurve = env.releaseCurve,
+        )
+
+        val pos = ctx.voiceElapsedFrames
+        val length = ctx.length
+        val baseCutoff = blockCutoff
+        val driftMul = blockDriftMul
+
+        sweep.cutoffStartHz = envCore.filterEnvCutoff(pos = pos, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
+        sweep.cutoffEndHz = envCore.filterEnvCutoff(pos = pos + length, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
+        sweep.q = blockQ
+        sweep.prepare(sampleRate = ctx.sampleRate.toDouble(), frames = length)
+    }
+
+    /**
+     * The static path's coefficients, at [blockCutoff] times the drift and the tolerance, into [coefs]. A method of
+     * its own, reading the holder, for the reason [prepareEnvelopeSweep] gives (engine follow-up 29): in a voice
+     * with a second SVF, V8 keeps it a call, and it spends its own budget. In a voice with one SVF, V8 inlines it
+     * into [generate] (238 bytes of bytecode on the production bundle), and its callees then compete for
+     * [generate]'s budget. That is why the `coerceIn` half of the clamps is written out as comparisons
+     * (`clampSvfRange`): with Kotlin's `coerceIn` (a stdlib call, 67 bytes) V8 left the clamps out there, about 2
+     * heap numbers per block for a lowpass with `analog`. The `isFinite` guard (item 10) is still a stdlib call, 23
+     * bytes, which V8 inlined in both measured shapes; it is the next candidate to be left out if [generate] grows.
+     */
+    private fun computeStaticCoeffs(ctx: IgniteContext) {
+        computeSvfCoeffs(cutoffHz = blockCutoff * blockDriftMul * offsetMul, q = blockQ, sampleRate = ctx.sampleRate.toDouble(), out = coefs)
     }
 }
 
