@@ -1,7 +1,7 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **open, planned** (D1 to D4 decided by the maintainer, 2026-10-11; the plan below, with Q2, Q3, Q8 and Q12
-put to the maintainer). Not started.
+Status: **open, planned and decided** (D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer, 2026-10-11; the other Q at the
+coordinator's lean). Not started.
 
 ## Why
 
@@ -138,8 +138,10 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
    block, JVM and V8.
 7. Records, and the render fixture removed.
 
-**Questions.** For the maintainer: Q2, Q3, Q8, Q12. The rest the coordinator takes at the lean, recorded here, and
-any of them can be reopened.
+**Questions.** Decided by the maintainer (2026-10-11), each at the lean: Q2 E2 ("keep shared, slots only"), Q3
+processed blocks, Q8 (a) the in-place blend, Q12 inherit with one fixed seed and an Ignitor follow-up for the
+sample-rate dependence (to be filed in `docs/tasks/engine-follow-ups.md`). The rest the coordinator takes at the lean,
+recorded here, and any of them can be reopened.
 - **Q1** `KatalystParam` retired, `Kat.param` returns `KatalystKnobDsl.Param`, `KatalystDsl.Slots.*` are the wire
   nodes; `katp` refuses an expression ("an expression is not a slot"). Lean: yes.
 - **Q2** the EQ sections: (E2) keep `IgnitorDsl.EqSection` with a constant or a `Kat.param` only, an expression on an
