@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.filters.EqSectionSpec
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
@@ -90,6 +91,17 @@ object KatalystChainBuilder {
         val writers = mutableListOf<KatalystSlotWriter>()
         var duck: KatalystDuckEffect? = null
         var duckStage: KatalystStageDsl.Duck? = null
+
+        // One arithmetic stage and, when it has an operand, its writer (ABS has none). An operand the chain cannot read
+        // falls back to NaN, which the stage reads as unset: its identity lives in the stage alone.
+        fun arithmetic(op: KatalystArithmeticOp, operand: IgnitorDsl?) {
+            val fx = KatalystArithmeticEffect(op = op, sampleRate = sampleRate, blockFrames = blockFrames)
+            pipeline.add(fx)
+
+            if (operand != null) {
+                writers.add(KatalystArithmeticWriter(fx = fx, operand = KatalystKnob(operand, Double.NaN)))
+            }
+        }
 
         for (stage in dsl.stages) {
             when (stage) {
@@ -286,6 +298,16 @@ object KatalystChainBuilder {
                     writers.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain, 1.0)))
                 }
 
+                // The arithmetic stages: the Ignitor's per-sample laws on the bus (`KatalystArithmeticEffect`).
+                is KatalystStageDsl.Plus -> arithmetic(KatalystArithmeticOp.PLUS, stage.other)
+                is KatalystStageDsl.Minus -> arithmetic(KatalystArithmeticOp.MINUS, stage.other)
+                is KatalystStageDsl.Times -> arithmetic(KatalystArithmeticOp.TIMES, stage.other)
+                is KatalystStageDsl.Div -> arithmetic(KatalystArithmeticOp.DIV, stage.other)
+                is KatalystStageDsl.Pow -> arithmetic(KatalystArithmeticOp.POW, stage.exp)
+                is KatalystStageDsl.Min -> arithmetic(KatalystArithmeticOp.MIN, stage.other)
+                is KatalystStageDsl.Max -> arithmetic(KatalystArithmeticOp.MAX, stage.other)
+                is KatalystStageDsl.Abs -> arithmetic(KatalystArithmeticOp.ABS, null)
+
                 // Branches side by side, each a chain of its own built here (the same shelves, so a branch's delay and
                 // reverb rent like the chain's). An empty stage is the bus unchanged: nothing is built. A duck in a
                 // branch is the orbit's duck (its position is ignored, see the Duck arm), so it is taken out of every
@@ -359,7 +381,9 @@ object KatalystChainBuilder {
                     is KatalystStageDsl.Parallel -> last = stage.lastDuck() ?: last
                     is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
                     is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,
-                    is KatalystStageDsl.Gain -> Unit
+                    is KatalystStageDsl.Gain, is KatalystStageDsl.Plus, is KatalystStageDsl.Minus, is KatalystStageDsl.Times,
+                    is KatalystStageDsl.Div, is KatalystStageDsl.Pow, is KatalystStageDsl.Min, is KatalystStageDsl.Max,
+                    is KatalystStageDsl.Abs -> Unit
                 }
             }
         }
@@ -376,7 +400,9 @@ object KatalystChainBuilder {
                 // Exhaustive on purpose, as in [lastDuck].
                 is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
                 is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,
-                is KatalystStageDsl.Gain -> stage
+                is KatalystStageDsl.Gain, is KatalystStageDsl.Plus, is KatalystStageDsl.Minus, is KatalystStageDsl.Times,
+                is KatalystStageDsl.Div, is KatalystStageDsl.Pow, is KatalystStageDsl.Min, is KatalystStageDsl.Max,
+                is KatalystStageDsl.Abs -> stage
             }
         }
     )

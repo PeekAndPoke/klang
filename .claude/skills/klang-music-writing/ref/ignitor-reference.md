@@ -534,6 +534,16 @@ Where the swing sits is up to the two values of `range`, the same word, paramete
 
 From `0..1` to `-1..1` without a range: `x.mul(2).minus(1)`.
 
+**On a Katalyst chain** (an orbit or the master) the same words are stages on the bus (2026-10-11): `plus`/`add`,
+`minus`/`sub`, `times`/`mul`, `div`, `pow`/`power`, `min`, `max`, `neg`/`negate`, `abs`, each sample through the
+same law as here. The operand is a number or a `Kat.param` (not a signal), and a moved `Kat.param` glides. For a level
+use `gain`, the fader; `times` is the arithmetic. A constant `plus` keeps its orbit from ever switching off.
+
+```javascript
+// rectify the bus an octave up into the distort, then cap it
+master(Katalyst(k => k.abs().distort(0.4).max(0.8)))
+```
+
 `rangex(from, to)` is the exponential twin, the same as sprudel's `rangex`: `-1` gives `from`, `0` the geometric
 mean `sqrt(from * to)`, `1` gives `to`, so each octave of a frequency sweep takes the same share of the swing (with
 a saw or a triangle, the same time; a sine lingers at its ends). Values at or below 0 are coerced to 0.0001.
@@ -574,9 +584,10 @@ let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distor
 ```
 
 - The sum is plain: `x.parallel(y => y, y => y)` is twice `x` (+6 dB). Blend with a `mul` inside a branch.
-- A branch that is LATE (an oversampled `distort` or `shape`: 4 samples at 2x, 6 at 4x and 8x) is matched by delaying
-  the others, so the clean and the dirty copy do not comb. A plain `plus` does NOT do that: `x.plus(x.distort(0.35,
-  "soft", 2))` sums them 4 samples apart, a comb with its first notch near 6 kHz. Prefer `parallel` for wet/dry
+- A branch that is LATE (an oversampled `distort` or `shape`: about 3 samples at 2x, 4 at 4x, 5 at 8x) is matched in
+  phase: the others run through an unshaped round trip of the same oversampler, so the clean and the dirty copy do not
+  comb. A plain `plus` does NOT do that: `x.plus(x.distort(0.35, "soft", 2))` sums them about 3 samples apart, a comb
+  with its first notch near 8 kHz. Prefer `parallel` for wet/dry
   splits.
 - The Katalyst builder has `parallel` too (branches of bus stages, each from an empty builder): see the sprudel
   reference's master line.

@@ -1,7 +1,9 @@
 # A better oversampler: polyphase IIR half-band, everywhere
 
-Status: **in progress since 2026-10-10, on the branch `iir-oversampler` (worktree `klang-worktrees/iir-oversampler`).**
-Part of [`../oversampling-regions.md`](../oversampling-regions.md) (its §6 "the resampler's quality becomes the sound
+Status: **done 2026-10-10.** Steps 1 to 4 reached main through PR #88 (the branch `iir-oversampler`, commit
+4b1f1509); step 5 decided by the maintainer and landed on the branch `bus-distort-default`. Whether the songs need
+retuning by ear is the maintainer's, from the listening pairs of step 4.
+Part of [`oversampling-regions.md`](../../tasks/oversampling-regions.md) (its §6 "the resampler's quality becomes the sound
 lever", §8a, §8b), done first and on its own: the sound part, no DSL change.
 
 ## Why
@@ -57,7 +59,11 @@ samples) is what `parallel` has to pad.
    its phase twin rather than whole samples (decided above).
 4. **Listening:** loudness-matched pairs of the songs that oversample (Kokon, Der Schmetterling, Tetris, TetrisRemix,
    IrishLamentTechno, A Truth Worth Lying For, Sandsturm), old kernel against new.
-5. **The bus default:** whether the Katalyst `distort` now oversamples by default (it does not today because the old
-   kernel dulled the mix).
+5. **The bus default:** whether the Katalyst `distort` now oversamples by default (it did not because the old
+   kernel dulled the mix). **Decided 2026-10-10 (maintainer): 2x** (`DISTORT_OVERSAMPLE`), over 4x or keeping it off. A
+   bus bends the whole mix, so its aliasing lands on every note; the IIR is flat, so the old reason is gone. It costs 3
+   frames of latency on that bus and a round trip per channel per block. The voice's `distort` stays at 0, a recorded
+   asymmetry. No builtin song changes: both bus `distort`s, Kokon's mids band and Der Schmetterling's master, already ask for
+   4x (review of step 5).
 
 Credits land with the code: the all-pass polyphase half-band (Valenzuela and Constantinides, 1983).

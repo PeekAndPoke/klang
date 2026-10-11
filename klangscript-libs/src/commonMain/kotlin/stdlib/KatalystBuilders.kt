@@ -96,12 +96,13 @@ fun IgnitorDslLike.toKatalystKnob(): IgnitorDsl = when (this) {
 /**
  * Builder for a [KatalystDsl] chain, handed to the `configure` lambda of `Katalyst(...)`. Knobs:
  * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `distort`, `duck`, `eq`,
- * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), `serial`,
+ * `gain`, the arithmetic of the Ignitor (`plus`, `minus`, `times`, `div`, `neg`, `abs`, `pow`, `min`, `max`, with its
+ * aliases), each appending a stage (`limiter` appends a compressor with limiter numbers), `serial`,
  * which runs the builder through functions of stages in order, `parallel`, which runs branches side by side and
  * sums them, and `bands`, which splits the bus into frequency bands.
  */
 data class KatalystBuilder(val node: KatalystDsl) {
-    internal fun plus(stage: KatalystStageDsl): KatalystBuilder = copy(node = KatalystDsl(node.stages + stage))
+    internal fun append(stage: KatalystStageDsl): KatalystBuilder = copy(node = KatalystDsl(node.stages + stage))
 }
 
 /**
@@ -191,7 +192,7 @@ fun KatalystBuilder.body(
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Body()
 
-    return plus(
+    return append(
         KatalystBodyBuilder(
             KatalystStageDsl.Body(
                 material = catalogueIndex(material, bare.material, BodyMaterials::indexOf, knob = { it.toKatalystKnob() }),
@@ -228,7 +229,7 @@ fun KatalystBuilder.vowel(
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Vowel()
 
-    return plus(
+    return append(
         KatalystVowelBuilder(
             KatalystStageDsl.Vowel(
                 vowel = catalogueIndex(vowel, bare.vowel, VowelBands::indexOf, knob = { it.toKatalystKnob() }),
@@ -259,7 +260,7 @@ fun KatalystBuilder.delay(
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Delay()
 
-    return plus(
+    return append(
         KatalystDelayBuilder(
             KatalystStageDsl.Delay(
                 wet = wet?.toKatalystKnob() ?: bare.wet,
@@ -290,7 +291,7 @@ fun KatalystBuilder.reverb(
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Reverb()
 
-    return plus(
+    return append(
         KatalystStageDsl.Reverb(
             wet = wet?.toKatalystKnob() ?: bare.wet,
             size = size?.toKatalystKnob() ?: bare.size,
@@ -322,7 +323,7 @@ fun KatalystBuilder.phaser(
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Phaser()
 
-    return plus(
+    return append(
         KatalystPhaserBuilder(
             KatalystStageDsl.Phaser(
                 rate = rate?.toKatalystKnob() ?: bare.rate,
@@ -369,7 +370,7 @@ fun KatalystBuilder.compressor(
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Compressor()
 
-    return plus(
+    return append(
         KatalystStageDsl.Compressor(
             threshold = threshold?.toKatalystKnob() ?: bare.threshold,
             ratio = ratio?.toKatalystKnob() ?: bare.ratio,
@@ -421,7 +422,7 @@ fun KatalystBuilder.limiter(
     attack: IgnitorDslLike? = null,
     release: IgnitorDslLike? = null,
     lookahead: Double? = null,
-): KatalystBuilder = plus(
+): KatalystBuilder = append(
     KatalystStageDsl.Compressor(
         threshold = threshold?.toKatalystKnob() ?: IgnitorDsl.Constant(LIMITER_THRESHOLD_DB),
         ratio = ratio?.toKatalystKnob() ?: IgnitorDsl.Constant(LIMITER_RATIO),
@@ -455,17 +456,18 @@ fun KatalystBuilder.limiter(
  *   `gentle`, ...); an unknown name is `soft`. Fixed with the chain.
  * @param oversample the oversampling factor (2, 4, 8; 0 or 1 is none). Fixed with the chain. It
  *   delays this orbit (at the output, the whole playback) by 3 frames at 2x, 4 at 4x and 5 at 8x. The
- *   default is 0, as on the voice.
+ *   default is 2x, unlike the voice's 0: a bus bends the whole mix, so its aliasing lands on every note.
+ *   `oversample = 1` keeps the raw aliased character.
  */
 @KlangScript.Function
 fun KatalystBuilder.distort(
     amount: IgnitorDslLike? = null,
     shape: String = "soft",
-    oversample: Int = 0,
+    oversample: Int = 2,
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Distort()
 
-    return plus(
+    return append(
         KatalystStageDsl.Distort(
             amount = amount?.toKatalystKnob() ?: bare.amount,
             shape = DistortionShapes.indexOf(shape).toInt(),
@@ -498,7 +500,7 @@ fun KatalystBuilder.duck(
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Duck()
 
-    return plus(
+    return append(
         KatalystStageDsl.Duck(
             orbit = orbit?.toKatalystKnob() ?: bare.orbit,
             depth = depth?.toKatalystKnob() ?: bare.depth,
@@ -522,7 +524,7 @@ fun KatalystBuilder.eq(configure: ((EqBuilder) -> EqBuilder)? = null): KatalystB
     // [IgnitorDsl.Silence] as a placeholder and only its SECTIONS travel into the stage.
     val built = EqBuilder(IgnitorDsl.Eq(inner = IgnitorDsl.Silence), onKatalyst = true).configuredBy("Katalyst eq", configure).node
 
-    return plus(KatalystStageDsl.Eq(sections = built.sections))
+    return append(KatalystStageDsl.Eq(sections = built.sections))
 }
 
 /**
@@ -539,7 +541,163 @@ fun KatalystBuilder.eq(configure: ((EqBuilder) -> EqBuilder)? = null): KatalystB
  */
 @KlangScript.Function
 fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
-    plus(KatalystStageDsl.Gain(gain = gain.toKatalystKnob()))
+    append(KatalystStageDsl.Gain(gain = gain.toKatalystKnob()))
+
+// ── Arithmetic: the Ignitor's operators on the bus ──────────────────────────────────────────────
+//
+// Each door appends one stage that runs the Ignitor's per-sample law of the same operator over the bus, so the same
+// numbers give the same sample on a voice and on a bus (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`).
+// The operand is a knob
+// like every other (a number or a `Kat.param`); a moving one glides, an unset (non-finite) one reads as the
+// operator's identity, and an unset cap or floor passes the bus. A stage that turns silence into something (an offset,
+// a floor above zero, a cap below it, a negative power) keeps its orbit from ever switching off, as the voice's
+// arithmetic would; the doors say which.
+
+/**
+ * Adds [other] to every sample of the bus. A constant is a DC offset: before a `distort` it clips the two halves of
+ * the wave differently. The output's DC blocker removes what reaches it, but an orbit whose mix never falls silent
+ * never switches off, so an offset keeps its orbit running.
+ *
+ * @param other a number or a `Kat.param`.
+ * @alias add
+ */
+@KlangScript.Function
+fun KatalystBuilder.plus(other: IgnitorDslLike): KatalystBuilder =
+    append(KatalystStageDsl.Plus(other = other.toKatalystKnob()))
+
+/**
+ * Adds [other] to every sample of the bus. Alias for [plus].
+ *
+ * @param other a number or a `Kat.param`.
+ * @alias plus
+ */
+@KlangScript.Function
+fun KatalystBuilder.add(other: IgnitorDslLike): KatalystBuilder = plus(other)
+
+/**
+ * Subtracts [other] from every sample of the bus. A constant is a DC offset, as with [plus], and keeps its orbit
+ * running.
+ *
+ * @param other a number or a `Kat.param`.
+ * @alias sub
+ */
+@KlangScript.Function
+fun KatalystBuilder.minus(other: IgnitorDslLike): KatalystBuilder =
+    append(KatalystStageDsl.Minus(other = other.toKatalystKnob()))
+
+/**
+ * Subtracts [other] from every sample of the bus. Alias for [minus].
+ *
+ * @param other a number or a `Kat.param`.
+ * @alias minus
+ */
+@KlangScript.Function
+fun KatalystBuilder.sub(other: IgnitorDslLike): KatalystBuilder = minus(other)
+
+/**
+ * Multiplies every sample of the bus by [other], exactly as the Ignitor's `times`. For a level, `gain` is the word:
+ * the fader glides the same way but does not clamp and skips unity; this is the arithmetic.
+ *
+ * @param other a number or a `Kat.param`.
+ * @alias mul
+ */
+@KlangScript.Function
+fun KatalystBuilder.times(other: IgnitorDslLike): KatalystBuilder =
+    append(KatalystStageDsl.Times(other = other.toKatalystKnob()))
+
+/**
+ * Multiplies every sample of the bus by [other]. Alias for [times].
+ *
+ * @param other a number or a `Kat.param`.
+ * @alias times
+ */
+@KlangScript.Function
+fun KatalystBuilder.mul(other: IgnitorDslLike): KatalystBuilder = times(other)
+
+/**
+ * Divides every sample of the bus by [other]. A divisor of exactly zero gives silence, as on the Ignitor. A moving
+ * divisor glides as a level (`1 / other`), so a move through zero passes through silence instead of a huge gain.
+ *
+ * @param other a number or a `Kat.param`.
+ */
+@KlangScript.Function
+fun KatalystBuilder.div(other: IgnitorDslLike): KatalystBuilder =
+    append(KatalystStageDsl.Div(other = other.toKatalystKnob()))
+
+/**
+ * Flips the polarity of the bus: a multiply by -1, as the Ignitor's `neg`.
+ *
+ * @alias negate
+ */
+@KlangScript.Function
+fun KatalystBuilder.neg(): KatalystBuilder = times(-1.0)
+
+/**
+ * Flips the polarity of the bus. Alias for [neg].
+ *
+ * @alias neg
+ */
+@KlangScript.Function
+fun KatalystBuilder.negate(): KatalystBuilder = neg()
+
+/**
+ * The absolute value of every sample: full-wave rectification. On a tone it sounds an octave up, with a DC offset that
+ * the output removes.
+ *
+ * ```KlangScript
+ * Katalyst(k => k.abs().distort(0.4))
+ * ```
+ */
+@KlangScript.Function
+fun KatalystBuilder.abs(): KatalystBuilder = append(KatalystStageDsl.Abs)
+
+/**
+ * Raises every sample of the bus to the power of [exp], keeping its sign (a negative sample gives `-(|x|^exp)`), as
+ * the Ignitor's `pow`. Above 1 the quiet parts sink, below 1 they rise. A negative [exp] turns every silent sample
+ * into the clamp's ceiling (1e15, the house limiter's business), so it belongs after something that never rests at
+ * zero, and it keeps its orbit running.
+ *
+ * @param exp a number or a `Kat.param`.
+ * @alias power
+ */
+@KlangScript.Function
+fun KatalystBuilder.pow(exp: IgnitorDslLike): KatalystBuilder =
+    append(KatalystStageDsl.Pow(exp = exp.toKatalystKnob()))
+
+/**
+ * Raises every sample of the bus to the power of [exp]. Alias for [pow].
+ *
+ * @param exp a number or a `Kat.param`.
+ * @alias pow
+ */
+@KlangScript.Function
+fun KatalystBuilder.power(exp: IgnitorDslLike): KatalystBuilder = pow(exp)
+
+/**
+ * The bus, but at least [other] per sample: anything below it is raised to it, the same meaning `min` carries on a
+ * number, a pattern and a signal. A floor is the per-sample MAXIMUM, so this door builds the `Max` stage. Do not
+ * "correct" the crossing. A floor above zero turns silence into DC and keeps its orbit running.
+ *
+ * @param other a number or a `Kat.param`.
+ */
+@KlangScript.Function
+fun KatalystBuilder.min(other: IgnitorDslLike): KatalystBuilder =
+    append(KatalystStageDsl.Max(other = other.toKatalystKnob()))
+
+/**
+ * The bus, but at most [other] per sample: anything above it is lowered to it, a hard cap on the positive half. A cap
+ * is the per-sample MINIMUM, so this door builds the `Min` stage. Do not "correct" the crossing. A cap below zero
+ * turns silence into DC and keeps its orbit running.
+ *
+ * ```KlangScript
+ * Katalyst(k => k.max(0.5).min(-0.5))   // hard clip at half scale
+ * ```
+ *
+ * @param other a number or a `Kat.param`.
+ */
+@KlangScript.Function
+fun KatalystBuilder.max(other: IgnitorDslLike): KatalystBuilder =
+    append(KatalystStageDsl.Min(other = other.toKatalystKnob()))
 
 /**
  * Runs the chain through [stages] in series, in the order written: `k.serial(a, b, c)` is `c(b(a(k)))`, the same
@@ -604,7 +762,7 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
     return when (built.size) {
         0 -> this
         1 -> copy(node = KatalystDsl(node.stages + built[0].stages))
-        else -> plus(KatalystStageDsl.Parallel(branches = built))
+        else -> append(KatalystStageDsl.Parallel(branches = built))
     }
 }
 
@@ -650,7 +808,7 @@ fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> Kata
         isResult = { it is KatalystBuilder },
     )
 
-    return plus(
+    return append(
         KatalystStageDsl.Parallel(
             branches = listOf(
                 KatalystDsl.of(KatalystStageDsl.Gain(gain = (1.0 - share).toKatalystKnob())),

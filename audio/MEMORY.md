@@ -190,7 +190,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 3.07, 4.40,
   5.06; held as 3, 4 and 5 frames). Its dry path runs through the phase twins (an unshaped round trip of the same
   oversampler per channel), so a fade between dry and distorted cannot notch; its tail hold is `Oversampler.tailFrames`.
-- **The oversampler is an IIR half-band** (2026-10-10, `docs/tasks/in-progress/iir-oversampler.md`): two all-pass
+  It oversamples at 2x unless the author names a factor (`DISTORT_OVERSAMPLE`, 2026-10-10); the voice's stays at 0.
+- **The oversampler is an IIR half-band** (2026-10-10, `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`): two all-pass
   chains per 2x stage, 8 coefficients at the base-rate stage and 6 above; the round trip is flat (0.00 dB to 20 kHz),
   aliases and images about 95 to 100 dB down, latency 3.07, 4.40, 5.06 samples at 2x, 4x, 8x, rising toward the top
   (3.9 at 16 kHz at 2x), so a host that sums a dry path with an oversampled one pads the dry with a PHASE TWIN, an
@@ -217,6 +218,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   an `eq()` tap in a band reads the band.
 - **`blend` on both hosts** (2026-10-10): `x.blend(wet, f)` is `parallel(dry * (1 - wet), f * wet)`, the linear
   law; `wet` a slot or a signal on the Ignitor, a plain number on the Katalyst (no param arithmetic there).
+- **Arithmetic on the Katalyst** (`KatalystArithmeticEffect`, 2026-10-11): `plus`, `minus`, `times`, `div`, `pow`,
+  `min`, `max`, `abs` (and the Ignitor's aliases) are stages that run the Ignitor's per-sample law on the bus, so the
+  same numbers give the same sample (`KatalystArithmeticEffectSpec` renders against the Ignitor runtime). The operand
+  is a number or a `Kat.param`, glides per sample, and reads non-finite as unset. `times` is not the fader. No
+  optimizer (won't implement, maintainer 2026-10-11): one cheap stage costs about 50 ns per block (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`, D5).
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
@@ -368,12 +374,15 @@ One line per step, newest first. A link to the archived task record where one ex
   nothing (`FilterHumanization.stepDrift`) plus a field the node reads. `C-full` about 190 to 36 to 52 B per block,
   bit for bit, corpus identical, its V8 budget re-set to 112; what is left is item 31:
   `docs/tasks/engine-follow-ups.md` items 29 and 31
+- 2026-10-11 The Ignitor's arithmetic as Katalyst stages, the same per-sample laws, no optimizer (maintainer): [record](../docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md)
 - 2026-10-10 Engine follow-up 6: `WaveIgnitor` hands its `dt` to its loop methods (past V8's inlining limit) in its
   `WaveVoiceState.dt` holder, no longer as an argument; it boxed one heap number per block per wave oscillator on V8
   (about 16 B, now about 0), bit for bit, corpus identical; four V8 alloc budgets re-set with it:
   `docs/tasks/engine-follow-ups.md` item 6
+- 2026-10-10 The bus `distort` oversamples at 2x by default (maintainer; the voice's stays at 0): step 5 of
+  `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`
 - 2026-10-10 The oversampler is a polyphase IIR half-band (flat to 20 kHz, about 100 dB of rejection, 3.07 samples at
-  2x), and every dry path beside an oversampled one runs through its phase twin: `docs/tasks/in-progress/iir-oversampler.md`
+  2x), and every dry path beside an oversampled one runs through its phase twin: `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`
 - 2026-10-10 Engine follow-ups 8 and 12: `Ignitors.readParam` is Kotlin `inline` (one shared helper was one
   megamorphic site that boxed every knob read on V8, 60 to 100 B per classic voice block), and the scalar is the
   primitive `Ignitor.controlRateValue`, read only when `isBlockConstant` (the nullable view is the extension

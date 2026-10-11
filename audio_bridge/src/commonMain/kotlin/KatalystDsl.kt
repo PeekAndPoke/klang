@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
+import io.peekandpoke.klang.audio_bridge.constants.DISTORT_OVERSAMPLE
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
@@ -460,15 +461,14 @@ sealed interface KatalystStageDsl {
      *   floored), the voice's knob and law (`Oversampler.factorOf`). A plain number fixed with the
      *   chain: it sizes the oversampler. Oversampling delays the bus by the oversampler's group delay
      *   (3 frames at 2x, 4 at 4x, 5 at 8x, rounded), in every state, and nothing compensates, as with the
-     *   compressor's lookahead. Default 0, the voice's default. (Until 2026-10-10 the oversampler also dulled a
-     *   whole mix, -2 dB at 16 kHz at 2x; its IIR half-band is flat, so whether a bus should oversample by
-     *   default is open: `docs/tasks/in-progress/iir-oversampler.md` step 5.)
+     *   compressor's lookahead. Default [DISTORT_OVERSAMPLE], 2x, unlike the voice's 0 (the reason is
+     *   on the constant). 0 or 1 turns it off.
      */
     @WireName("distort")
     data class Distort(
         val amount: IgnitorDsl = IgnitorDsl.Constant(DISTORT_AMOUNT),
         val shape: Int = DistortionShapes.SOFT_INDEX,
-        val oversample: Int = 0,
+        val oversample: Int = DISTORT_OVERSAMPLE,
     ) : KatalystStageDsl
 
     /**
@@ -559,6 +559,63 @@ sealed interface KatalystStageDsl {
     data class Gain(
         val gain: IgnitorDsl = IgnitorDsl.Constant(1.0),
     ) : KatalystStageDsl
+
+    // ── Arithmetic: the Ignitor's operators on the bus signal ───────────────────────────────────
+
+    /*
+     * The arithmetic stages (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`):
+     * each applies its Ignitor twin's per-sample law
+     * (`_arithmetic_laws.kt` in `audio_be`, one function per operator) to every sample of both channels, so a bus
+     * sample and a voice sample that meet the same numbers come out the same, clamps included (bit for bit against
+     * the authored node; an optimized voice divides by multiplying with the reciprocal, one rounding apart). The
+     * operand is a knob like every other: a `Constant` or a `Param`, read once per block. Two differences from the
+     * Ignitor, both because this is an orbit knob and not a voice's: a moving operand GLIDES per sample over
+     * `KNOB_GLIDE_SECONDS` (a divisor as its reciprocal, so a move never passes a huge gain), and a non-finite one
+     * reads as unset (the operator's identity; for `Min` and `Max` the stage passes the bus).
+     * Memoryless: no latency, no tail.
+     */
+
+    /** Adds [other] to every sample (the Ignitor's `Plus`, bare: no clamp). A constant offset is DC on the bus. */
+    @WireName("plus")
+    data class Plus(val other: IgnitorDsl) : KatalystStageDsl
+
+    /** Subtracts [other] from every sample (the Ignitor's `Minus`, bare: no clamp). */
+    @WireName("minus")
+    data class Minus(val other: IgnitorDsl) : KatalystStageDsl
+
+    /**
+     * Multiplies every sample by [other] (the Ignitor's `Times`, the output clamped by `safeOut`). Not the fader:
+     * [Gain] is the tone-neutral level, which does not clamp, skips unity and is the `gain.gain` slot of the classic
+     * chain; this is the arithmetic, identical to the voice's. A polarity flip is `Times(-1)`.
+     */
+    @WireName("times")
+    data class Times(val other: IgnitorDsl) : KatalystStageDsl
+
+    /** Divides every sample by [other] (the Ignitor's `Div`: a divisor of exactly zero gives zero, the output clamped). */
+    @WireName("div")
+    data class Div(val other: IgnitorDsl) : KatalystStageDsl
+
+    /** Raises every sample to [exp] (the Ignitor's `Pow`, signed magnitude: a negative sample keeps its sign). */
+    @WireName("pow")
+    data class Pow(val exp: IgnitorDsl) : KatalystStageDsl
+
+    /**
+     * The per-sample MINIMUM of the bus and [other]: a cap. Mathematical, like the Ignitor's `Min` node; the doors are
+     * clamps, so the `max` door ("at most") builds this one. Do not "correct" the crossing.
+     */
+    @WireName("min")
+    data class Min(val other: IgnitorDsl) : KatalystStageDsl
+
+    /**
+     * The per-sample MAXIMUM of the bus and [other]: a floor. Mathematical, like the Ignitor's `Max` node; the `min`
+     * door ("at least") builds this one.
+     */
+    @WireName("max")
+    data class Max(val other: IgnitorDsl) : KatalystStageDsl
+
+    /** The absolute value of every sample: full-wave rectification (the Ignitor's `Abs`). No knob. */
+    @WireName("abs")
+    data object Abs : KatalystStageDsl
 
     /**
      * Branches side by side: every branch runs on its own copy of the bus at this position, and the

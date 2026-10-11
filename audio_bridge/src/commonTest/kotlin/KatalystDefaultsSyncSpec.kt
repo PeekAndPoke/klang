@@ -86,6 +86,15 @@ class KatalystDefaultsSyncSpec : StringSpec({
             is KatalystStageDsl.Gain -> listOf(stage.gain)
             // The classic chain declares no parallel stage.
             is KatalystStageDsl.Parallel -> emptyList()
+            // Nor any arithmetic stage.
+            is KatalystStageDsl.Plus -> listOf(stage.other)
+            is KatalystStageDsl.Minus -> listOf(stage.other)
+            is KatalystStageDsl.Times -> listOf(stage.other)
+            is KatalystStageDsl.Div -> listOf(stage.other)
+            is KatalystStageDsl.Pow -> listOf(stage.exp)
+            is KatalystStageDsl.Min -> listOf(stage.other)
+            is KatalystStageDsl.Max -> listOf(stage.other)
+            is KatalystStageDsl.Abs -> emptyList()
         }
 
         return knobs.filterIsInstance<IgnitorDsl.Param>().map { it.name to it.default }
@@ -280,9 +289,9 @@ class KatalystDefaultsSyncSpec : StringSpec({
         KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Distort(inner = IgnitorDsl.Silence).amount
         KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Drive(inner = IgnitorDsl.Silence).amount
 
-        // ...and the shape and oversampling defaults are the voice's too: `soft`, no oversampler.
+        // ...and the shape default is the voice's too: `soft`. The oversampling default is NOT (2x on a bus, 0 on a
+        // voice), a recorded asymmetry (`DISTORT_OVERSAMPLE`); `KatalystDistortEffectSpec` renders its latency.
         KatalystStageDsl.Distort().shape shouldBe DistortionShapes.SOFT_INDEX
-        KatalystStageDsl.Distort().oversample shouldBe 0
     }
 
     "the phaser, the duck, the body and the vowel stay OFF bare: one knob has to name something" {
@@ -407,6 +416,15 @@ class KatalystDefaultsSyncSpec : StringSpec({
                     is KatalystStageDsl.Gain -> KatalystStageDsl.Gain(freshKnob(stage.gain))
                     // The classic chain declares no parallel stage; the arm keeps the `when` exhaustive.
                     is KatalystStageDsl.Parallel -> KatalystStageDsl.Parallel(stage.branches.toList())
+                    // Nor any arithmetic stage; the arms keep the `when` exhaustive.
+                    is KatalystStageDsl.Plus -> KatalystStageDsl.Plus(freshKnob(stage.other))
+                    is KatalystStageDsl.Minus -> KatalystStageDsl.Minus(freshKnob(stage.other))
+                    is KatalystStageDsl.Times -> KatalystStageDsl.Times(freshKnob(stage.other))
+                    is KatalystStageDsl.Div -> KatalystStageDsl.Div(freshKnob(stage.other))
+                    is KatalystStageDsl.Pow -> KatalystStageDsl.Pow(freshKnob(stage.exp))
+                    is KatalystStageDsl.Min -> KatalystStageDsl.Min(freshKnob(stage.other))
+                    is KatalystStageDsl.Max -> KatalystStageDsl.Max(freshKnob(stage.other))
+                    is KatalystStageDsl.Abs -> stage
                 }
             }
         )

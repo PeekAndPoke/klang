@@ -24,7 +24,7 @@ import kotlin.random.Random
 /**
  * The Ignitor `parallel` node (`docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 2): the branches SUMMED, the input
  * built once for all of them, and every branch matched in phase to the others: by phase twins, an unshaped round trip
- * of every oversampler a branch lacks ([BuiltIgnitor.oversamplers], `docs/tasks/in-progress/iir-oversampler.md`), or,
+ * of every oversampler a branch lacks ([BuiltIgnitor.oversamplers], `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`), or,
  * when a branch's oversamplers are unknown, by a whole-sample delay to the latest one ([BuiltIgnitor.latencySamples]).
  *
  * **The oracles are separate renders of the parts.** A source without draws renders the same samples in every build,

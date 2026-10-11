@@ -103,6 +103,15 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
                 is KatalystStageDsl.Gain -> listOf(stage.gain)
                 // The classic chain declares no parallel stage.
                 is KatalystStageDsl.Parallel -> emptyList()
+                // Nor any arithmetic stage.
+                is KatalystStageDsl.Plus -> listOf(stage.other)
+                is KatalystStageDsl.Minus -> listOf(stage.other)
+                is KatalystStageDsl.Times -> listOf(stage.other)
+                is KatalystStageDsl.Div -> listOf(stage.other)
+                is KatalystStageDsl.Pow -> listOf(stage.exp)
+                is KatalystStageDsl.Min -> listOf(stage.other)
+                is KatalystStageDsl.Max -> listOf(stage.other)
+                is KatalystStageDsl.Abs -> emptyList()
             }.forEach { knob -> knob.collectParams(params) }
         }
 

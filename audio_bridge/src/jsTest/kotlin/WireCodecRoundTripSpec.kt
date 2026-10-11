@@ -135,6 +135,15 @@ class WireCodecRoundTripSpec : StringSpec({
                 ),
                 KatalystStageDsl.Eq(),
                 KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.4)),
+                // the arithmetic stages: a constant or a slot operand each, and the knob-free rectifier
+                KatalystStageDsl.Plus(other = IgnitorDsl.Constant(0.1)),
+                KatalystStageDsl.Minus(other = IgnitorDsl.Param("off", 0.2)),
+                KatalystStageDsl.Times(other = IgnitorDsl.Constant(-1.0)),
+                KatalystStageDsl.Div(other = IgnitorDsl.Param("d", 2.0)),
+                KatalystStageDsl.Pow(exp = IgnitorDsl.Constant(1.5)),
+                KatalystStageDsl.Min(other = IgnitorDsl.Constant(0.9)),
+                KatalystStageDsl.Max(other = IgnitorDsl.Param("floor", -0.9)),
+                KatalystStageDsl.Abs,
                 // A chain inside a stage: an empty branch, a branch of two, and a parallel nested in a branch.
                 KatalystStageDsl.Parallel(
                     branches = listOf(
