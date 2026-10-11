@@ -11,6 +11,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
@@ -33,6 +34,7 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
@@ -480,6 +482,155 @@ class KatalystSlotResolverSpec : StringSpec({
         phaser.phaser.floor shouldBe 0.2
         phaser.center shouldBe 700.0
         phaser.sweep shouldBe 400.0
+    }
+
+    "the compressor and duck writers too: applied before their first resolve, they write the authored values" {
+        // Katalyst knob expressions step 2: both hand their stage a holder (`CompressorSettings`, `DuckSettings`) that
+        // they fill at resolve AND when they are built, the row above's rule.
+        val comp = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+
+        KatalystCompressorWriter(
+            fx = comp,
+            threshold = KatalystKnob(c(-18.0), COMPRESSOR_THRESHOLD_DB),
+            ratio = KatalystKnob(c(SLOT_UNSET), COMPRESSOR_RATIO),
+            knee = KatalystKnob(c(SLOT_UNSET), COMPRESSOR_KNEE_DB),
+            attack = KatalystKnob(c(SLOT_UNSET), COMPRESSOR_ATTACK_SECONDS),
+            release = KatalystKnob(c(SLOT_UNSET), COMPRESSOR_RELEASE_SECONDS),
+        ).apply()
+
+        comp.compressor.shouldNotBeNull().thresholdDb shouldBe -18.0
+
+        val duck = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+        val duckWriter = KatalystDuckWriter(
+            fx = duck,
+            orbit = KatalystKnob(c(2.0), SLOT_UNSET),
+            depth = KatalystKnob(c(0.6), DUCK_DEPTH),
+            attack = KatalystKnob(c(0.02), DUCK_ATTACK_SECONDS),
+        )
+
+        duckWriter.declared shouldBe true
+        duckWriter.apply()
+        duck.ducking.shouldNotBeNull().depth shouldBe 0.6
+    }
+
+    /** A compressor writer whose five knobs are all slots, unset unless a map writes them. */
+    fun compressorWriter(fx: KatalystCompressorEffect) = KatalystCompressorWriter(
+        fx = fx,
+        threshold = KatalystKnob(IgnitorDsl.Param("compressor.threshold", SLOT_UNSET), COMPRESSOR_THRESHOLD_DB),
+        ratio = KatalystKnob(IgnitorDsl.Param("compressor.ratio", SLOT_UNSET), COMPRESSOR_RATIO),
+        knee = KatalystKnob(IgnitorDsl.Param("compressor.knee", SLOT_UNSET), COMPRESSOR_KNEE_DB),
+        attack = KatalystKnob(IgnitorDsl.Param("compressor.attack", SLOT_UNSET), COMPRESSOR_ATTACK_SECONDS),
+        release = KatalystKnob(IgnitorDsl.Param("compressor.release", SLOT_UNSET), COMPRESSOR_RELEASE_SECONDS),
+    )
+
+    /** A duck writer whose three knobs are all slots, unset unless a map writes them. */
+    fun duckWriter(fx: KatalystDuckEffect) = KatalystDuckWriter(
+        fx = fx,
+        orbit = KatalystKnob(IgnitorDsl.Param("duck.orbit", SLOT_UNSET), SLOT_UNSET),
+        depth = KatalystKnob(IgnitorDsl.Param("duck.depth", SLOT_UNSET), DUCK_DEPTH),
+        attack = KatalystKnob(IgnitorDsl.Param("duck.attack", SLOT_UNSET), DUCK_ATTACK_SECONDS),
+    )
+
+    "compressor and duck: the writer hands ONE holder, refilled in place at every resolve" {
+        // A knob resolved every block (katalyst knob expressions) must not allocate a settings object per block.
+        val comp = compressorWriter(KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames))
+
+        comp.resolve(mapOf("compressor.threshold" to -10.0))
+
+        val held = comp.handed().shouldNotBeNull()
+
+        comp.resolve(mapOf("compressor.threshold" to -30.0, "compressor.ratio" to 6.0))
+        comp.handed() shouldBeSameInstanceAs held
+        held.thresholdDb shouldBe -30.0
+        held.ratio shouldBe 6.0
+
+        // All five unset is off, and the next resolve that sets one hands the same holder again.
+        comp.resolve(null)
+        comp.handed().shouldBeNull()
+        comp.resolve(mapOf("compressor.knee" to 3.0))
+        comp.handed() shouldBeSameInstanceAs held
+        held.kneeDb shouldBe 3.0
+        held.thresholdDb shouldBe COMPRESSOR_THRESHOLD_DB
+
+        val duck = duckWriter(KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames))
+
+        duck.resolve(mapOf("duck.orbit" to 2.0, "duck.depth" to 0.6))
+        duck.declared shouldBe true
+
+        val heldDuck = duck.handed().shouldNotBeNull()
+
+        duck.resolve(mapOf("duck.orbit" to 3.0, "duck.depth" to 0.3))
+        duck.handed() shouldBeSameInstanceAs heldDuck
+        heldDuck.cylinderId shouldBe 3
+        heldDuck.depth shouldBe 0.3
+
+        duck.resolve(mapOf("duck.orbit" to 3.0))
+        duck.declared shouldBe false
+        duck.handed().shouldBeNull()
+        duck.resolve(mapOf("duck.orbit" to 1.0, "duck.depth" to 0.5))
+        duck.declared shouldBe true
+        duck.handed() shouldBeSameInstanceAs heldDuck
+    }
+
+    "compressor: a new map with the same values writes nothing into the instance, a changed value writes all five" {
+        val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+        val writer = compressorWriter(fx)
+        val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
+
+        writer.resolve(mapOf("compressor.threshold" to -24.0))
+        writer.apply()
+        fx.process(ctx)
+
+        // A probe written behind the stage's back survives a new map that resolves to the same values ...
+        val comp = fx.compressor.shouldNotBeNull()
+
+        comp.releaseSeconds = 0.77
+        writer.resolve(mapOf("compressor.threshold" to -24.0))
+        writer.apply()
+        comp.releaseSeconds shouldBe 0.77
+
+        // ... and one whose unset knob is unset again (NaN both times): the writer's constant both times, no change.
+        writer.resolve(mapOf("compressor.threshold" to -24.0, "compressor.knee" to Double.NaN))
+        writer.apply()
+        comp.releaseSeconds shouldBe 0.77
+
+        // A changed value reaches the instance, and the write is all five.
+        writer.resolve(mapOf("compressor.threshold" to -30.0))
+        writer.apply()
+        comp.thresholdDb shouldBe -30.0
+        comp.releaseSeconds shouldBe COMPRESSOR_RELEASE_SECONDS
+    }
+
+    "compressor: a slot cleared after it was set takes its constant, never the value before" {
+        val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+        val writer = compressorWriter(fx)
+
+        writer.resolve(mapOf("compressor.threshold" to -30.0, "compressor.ratio" to 6.0))
+        writer.apply()
+        fx.compressor.shouldNotBeNull().thresholdDb shouldBe -30.0
+
+        writer.resolve(mapOf("compressor.threshold" to Double.NaN, "compressor.ratio" to 6.0))
+        writer.apply()
+        fx.compressor.shouldNotBeNull().thresholdDb shouldBe COMPRESSOR_THRESHOLD_DB
+    }
+
+    "duck: a changed knob reaches the instance, and an attack cleared after it was set takes its constant" {
+        val fx = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+        val writer = duckWriter(fx)
+
+        writer.resolve(mapOf("duck.orbit" to 2.0, "duck.depth" to 0.6, "duck.attack" to 0.5))
+        writer.apply()
+
+        val ducking = fx.ducking.shouldNotBeNull()
+
+        ducking.attackSeconds shouldBe 0.5
+
+        writer.resolve(mapOf("duck.orbit" to 3.0, "duck.depth" to 0.3, "duck.attack" to Double.NaN))
+        writer.apply()
+        fx.ducking shouldBeSameInstanceAs ducking
+        fx.duckCylinderId shouldBe 3
+        ducking.depth shouldBe 0.3
+        ducking.attackSeconds shouldBe DUCK_ATTACK_SECONDS
     }
 
     // ── Compressor ───────────────────────────────────────────────────────────────────────────────

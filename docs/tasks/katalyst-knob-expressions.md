@@ -127,15 +127,26 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
 
 **Steps** (one commit each, mandatory mutation tier):
 1. Laws hoisted, behaviour-identical (`rangeLaw`, the perlin step and octave cap to one internal home).
+   **Built** (2026-10-11): `rangeLaw` in `ignitor/_arithmetic_laws.kt`, `PERLIN_STEP` and `PERLIN_FBM_MAX_OCTAVES` in
+   `ignitor/_noise_laws.kt`; guarded by `ConstantFoldParitySpec`, `VibratoRangePhaseSpec`, `TremoloCompositionSpec`
+   (red on a mutated `rangeLaw`) and `BuiltInVoiceMatrixSpec` (the perlin and berlin pins).
 2. The compressor's and the duck's settings in preallocated holders, behaviour-identical.
-3. D1: the wire type with `Constant` and `Param` only, the full migration, renders identical in raw doubles for the
+   **Built** (2026-10-11): each writer refills one holder, the compressor's `configure` compares values
+   (`utils/same_knob.kt`, shared with the phaser); guarded by `KatalystSlotResolverSpec` (the holder rows),
+   `KatalystCompressorEffectSpec` (the cache rows), `KatalystSettingsAllocationSpec` (JVM) and `SameKnobSpec`.
+3. (Waits for `KlangMap` on main: the param maps become `KlangMap<Double>?` in the Klang-Main-Dev session's engine
+   follow-up 2; this step rebases onto it first, so the migration is written once against the new type. Agreed
+   between the sessions, 2026-10-11.) D1: the wire type with `Constant` and `Param` only, the full migration, renders identical in raw doubles for the
    master-chain songs and one classic-chain `katp` song (a scaffolding fixture, removed in step 7). `KatalystParam`
    retired (Q1), `coerce` deleted, an Ignitor node on a knob a type error.
 4. Expressions over slots (D4): the arithmetic, `neg`, `abs`, `range`, both doors, the evaluator, the unset rule (Q5).
 5. Modulators (D3) and the per-block path (D2), probably split: 5a nodes, doors and evaluator; 5b the chain hook and
    the stages; 5c the bank stages per Q8.
 6. Measured in the harness: a slot expression, a modulated gain and phaser center, a perlin; time and bytes per
-   block, JVM and V8.
+   block, JVM and V8. The per-block resolve of a modulated compressor or duck knob gets an allocation case of its own,
+   measured single-case with `--predictable` on V8 (step 2's `CompressorSettings` and `DuckSettings` are double-field
+   holders, proven allocation-free on the JVM only, and `audio/ref/performance.md` says such a holder can still box,
+   the `DriftLanes` note), or the holders become `DoubleArray`s.
 7. Records, and the render fixture removed.
 
 **Questions.** Decided by the maintainer (2026-10-11), each at the lean: Q2 E2 ("keep shared, slots only"), Q3
