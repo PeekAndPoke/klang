@@ -106,9 +106,104 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    the harness bundle about 1 process in 30 still reads 300 to 460 B on the drift path, not located (item 7's tail).
    The pluck was not measured. **Item 4 stays open while that tail is unlocated**; closing it needs the tail and a
    look at the pluck.
-5. **The PWM loop boxes one heap number per sample** on the development bundle under a mixed profile (about 2 KB per
-   block, `pulze` with a duty signal): the per-sample `setPulseShape(duty = ...)` call (`Ignitors.kt`). Not seen on the
-   production bundle in isolation. Source: as 2. S.
+   **Found at item 5 (2026-10-11), development bundle only, not followed up:** on
+   `compileTestDevelopmentExecutableKotlinJs` the superpluck with drift (`spluck-a`'s voice) reads 288 to 416 B per
+   block in every mixed process measured (21 of 21, before and after item 5 alike), the size of item 7's regression;
+   production reads 32. Item 7 measured production only.
+5. **DONE (2026-10-11): not reproduced on production; the development-bundle box was the PWM loop's phase seed, fixed
+   by the seed rule, which now covers every field seed of an oscillator loop.** Reported as one heap number per sample
+   on the development bundle under a mixed profile (about 2 KB per block, `pulze` with a duty signal), blamed on the
+   per-sample `setPulseShape(duty = ...)` call (`Ignitors.kt`); not seen on the production bundle in isolation.
+   Source: as 2. S. **Measured** (node 22, `:audio_be:compileTestProductionExecutableKotlinJs` and
+   `compileTestDevelopmentExecutableKotlinJs`, one voice through `VoiceFactory` at middle C; e7's method: every case
+   built and warmed round-robin in one process, then each measured between two forced GCs, so a window reads in whole
+   heap numbers). Cases: the rounded pulse with a duty of `0.5 + 0.3 * sine(0.7 Hz)`, with `analog` 0.3, with a 37 Hz
+   duty, the raw pulse, with a moving phase, inside `classic()` and inside `C-full`'s chain, an engine row, beside
+   the harness's cases as the other voices.
+   - **Production: no per-sample box in any process.** PWM voices 16 to 32 B per block (`C-full`'s chain 64 to 80,
+     the engine row 32 to 64), the constant-duty pulse 16 to 32: single-case, mixed in 7 shuffled processes, pinned
+     (`taskset -c 11`, 3), `--predictable` (2). Also on the harness's own bundle (four cases added there for one
+     build, then removed): 4 to 72 B per block in 5 processes per case. JVM (`ThreadMXBean`, 7 rounds): 0 B in every
+     case.
+   - **Development: reproduced in every mixed process (12 of 12)**, 2,080 to 2,136 B per block on every PWM voice
+     but the phased one (32 B); single-case 16 B. The profiler books it in `WaveIgnitor.generate`.
+   - **The cause is not the `setPulseShape` call**: V8 inlines it (152 bytes) into `generate` on both bundles
+     (`--trace-turbo-inlining`); a hand-edited development bundle with the call written out in place still read
+     2,096 B, as did the development bundle at ten times V8's inlining budgets, and one with the `lastDuty` field
+     kept in a local. It is the PWM loop's phase seed, `var phase = voice.phase`, a field read that seeded the
+     loop-carried phase without the arithmetic operation of the `* 1.0` rule (`audio/ref/performance.md`; the loop's
+     drift seed had it, the phase seed did not). Why only on the development bundle: there `voice.phase` compiles to
+     a getter call (`get_phase_...()`), and in one traced mixed process V8's later re-optimizations of
+     `WaveIgnitor.generate` did not inline it (reviewer B, `--trace-turbo-inlining`), so the seed is a call result
+     under the rule; `renderHoisted`, `renderPhased` and the stack loops inlined the same getter, and production
+     loads the field directly. One trace: a strong pointer, not a full proof.
+   - **Production's margin** (not this box): with V8's cumulative inlining budget cut from 920 to 600 the production
+     PWM voices still read 16 to 32 B; at 500 the drifting one boxes per sample (2,080 B) with or without the `* 1.0`,
+     so that box is another one, not located (it does not occur at V8's real budgets).
+
+   **Fix** (coordinator's decision, 2026-10-11: the development bundle is what the dev server runs; the rule applied
+   by its text to the oscillator loops). `* 1.0` with the rule's comment on every loop-carried double of an
+   oscillator loop seeded straight from a field:
+   - `audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt:1003`, `WaveIgnitor.generate`'s PWM loop, the phase (the
+     box; its comment names this item);
+   - `Ignitors.kt:1049` `renderHoisted` and `Ignitors.kt:1102` `renderPhased`, the phase;
+   - `Ignitors.kt:2040` `trapezoidLoop`, `Ignitors.kt:2097` `trapezoidLoopPhased`, `Ignitors.kt:2149` `sineLoop`,
+     `Ignitors.kt:2190` `sineLoopPhased` (the unison stacks), the voice's phase;
+   - `audio_be/src/commonMain/kotlin/ignitor/SampleIgnitor.kt:50`, the playhead;
+   - `audio_be/src/commonMain/kotlin/ignitor/KarplusString.kt:117` to `119`, the string's lowpass and allpass state
+     (`lpState`, `apPrevIn`, `apPrevOut`; the pluck and the superpluck).
+
+   The oscillator scope is a choice, not the rule's letter (which covers every loop). Not swept, candidates with no
+   box measured: the SVF coefficient ramps seeded from fields in `IgnitorFilters.kt` (`a1`, `a2`, `a3`, `k`, `g`, lines
+   208, 216, 219) and `DcBlocker.process` (`filters/LowPassHighPassFilters.kt:454` and `471`, `xp` and `yc`; `C-dist`
+   and `tube4x` read the same on both bundles under the mixed profile).
+   Checked and left, with the reason: the sine (`SineIgnitor`) and the impulse carry their phase in a field updated per
+   sample, no local seed; the noises (white, pink, brown, dust, crackle, Perlin) carry their state in fields too; the
+   partial bank's three loops already seed `* 1.0` (`renderPartial`, `renderPartialPhased`, `renderPartialGained`);
+   `Ignitors.kt:261` and `1431` (`var inc = phaseInc`) and `Ignitors.kt:603` (`var p = ph`) are set fresh every sample,
+   not loop-carried; the partial-apply loop at `Ignitors.kt:748` runs over partials, once per block, not over samples;
+   the Karplus `writePos` and `AnalogDrift`'s `rngState` are `Int`s; the accelerate ramp
+   (`PitchModFactories.kt:191`, `var ratio = 2.0.pow(...)`) is a pitch modulator, outside the scope (its seed is a
+   `Math.pow` in place; whether V8 treats it as a call result was not measured). Every drift seed (`m`) already had it.
+
+   **Proof.** Raw doubles, HEAD against the tree, 600 blocks, 35 of 35 cases identical on V8 and 35 of 35 on the JVM,
+   every last block sounding: the PWM cases (plain, drift, 37 Hz, raw, phased, in `classic()`, in `C-full`'s chain,
+   three at 220 Hz, two engine rows), every touched loop (the saw plain, with drift and phased; the constant-duty
+   pulse and square; the supersaw plain and phased, `super7a`; the supersine with drift plain and phased; the pluck
+   with stiffness and with drift, `spluck-a`; a looping sample plain and with drift) and the harness's voice cases.
+   The corpus 18 of 18 (`CORPUS GREEN`). `:audio_be:jvmTest` 2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of
+   2,558. Bytes per block, mixed, 3 shuffled processes each, HEAD / tree:
+
+   | case | development | production |
+   |---|---|---|
+   | `pwm` | 2,096 / 64 B, 2,452 / 2,010 ns | 32 / 32 B |
+   | `pwm`, `analog` 0.3 | 2,128 / 96 B, 2,595 / 2,319 ns | 32 / 32 B |
+   | `pwm`, 37 Hz duty | 2,080 / 48 B | 16 / 16 B |
+   | raw pulse, PWM | 2,096 / 64 B | 32 / 32 B |
+   | `pwm` in `classic()` | 2,096 / 64 B, 3,317 / 2,979 ns | 32 / 32 B |
+   | `pwm` in `C-full`'s chain | 2,128 / 96 B | 64 to 80 / 80 B |
+   | engine `pwm` | 2,096 to 2,134 / 64 to 102 B | 32 to 64 / 48 to 64 B |
+   | phased PWM, saw, phased saw, stacks, pluck, sample | unchanged (16 to 48 B) | unchanged (16 to 32 B) |
+
+   Time on production, mixed, 6 shuffled processes, medians, HEAD / tree / HEAD again (a byte copy): `pwm` 2,120 /
+   2,042 / 2,060 ns, `pwm` with drift 2,198 / 2,205 / 2,241, the phased saw 1,653 / 1,608 / 1,609, the saw with drift
+   870 / 880 / 904, `super7` 3,600 / 3,656 / 3,650, the phased supersaw 4,874 / 4,863 / 4,923, the supersine with
+   drift 6,508 / 6,220 / 6,405, phased 7,890 / 7,979 / 7,701, the pluck with stiffness 2,408 / 2,361 / 2,382, with
+   drift 2,147 / 2,180 / 2,111, the sample 547 / 549 / 544, with drift 626 / 633 / 619, `spluck-a` 10,446 / 10,483 /
+   10,708: within HEAD against HEAD. Bytes on production unchanged in every row. **The allocation harness**, one run on
+   the tree: GREEN, 30 of 30 (V8 medians `saw` 21, `super7` 11, `super7a` 15, `spluck-a` 37, `C-full` 32, n16 1,115
+   B; JVM 0, n16 409); one `spluck-a` round read 304 B, item 7's recorded tail (a per-process coin on both sides:
+   pooled over the production mixed processes of this item and its review, 288 B in 2 of 26 on HEAD and 3 of 20 on
+   the tree). **Nothing automated guards the development-bundle box; the comment at each seed is the only guard.**
+   Two reasons: the allocation check runs the production bundle, and its V8 half measures each case in its own
+   process, while this box needs other voices warmed in the same process (single-case on the development bundle:
+   16 B). No test either: the sound is bit-identical either way. The cheap guard, named and not built: an alloc-mode
+   option that builds and warms the other cases round-robin in the same process before measuring (the probe's
+   method), run on the development bundle (`:audio_benchmark:compileDevelopmentExecutableKotlinJs`) with a `pwm`
+   case and a budget of about 200 B (the box is about 2 KB, about 80 times the method's 25 B noise). Item 6's PWM
+   row with a moving phase (71 / 31 B) was the phased path and its `dt`: it reads 32 B. Review round 1
+   (`tmp/reviews/e5-r1-A.md`, `e5-r1-B.md`, 0 MAJOR, 4 MINOR, 5 NIT) applied, records only. Report:
+   `tmp/reviews/e5-report.md`.
 6. **DONE (2026-10-10): the plain wave oscillators boxed `dt`, one heap number per block per oscillator.** Reported
    as about 16 bytes per block per oscillator on the production bundle, pinned: `WaveIgnitor` hands its non-integral
    `dt` to its loop methods. Source: as 2. **Measured on the production bundle**
@@ -272,6 +367,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    the old order; reading the holder before `advanceLane` is red on existing rows in all four adopter families,
    8, 2, 8 and 1 failures). `:audio_be:jvmTest` 2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of 2,558 green.
    Report: `tmp/reviews/e7-report.md`.
+   The development bundle's superpluck (found at item 5): see item 4.
 8. **DONE (2026-10-10, with item 12): every knob read boxed on V8, through the shared `readParam`.**
    Reported as `ConstantIgnitor.controlRateValueOrNull` boxing, about 18 bytes per block through `blockStartValue` in
    the unison stacks (development, mixed profile), blamed on the interface's shape (`Double?`). Source: as 2.

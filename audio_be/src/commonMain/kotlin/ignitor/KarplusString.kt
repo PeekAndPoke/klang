@@ -113,9 +113,10 @@ internal class KarplusString {
         val g = gain * 1.0
         val line = delayLine
         val len = line.size
-        var lp = lpState
-        var prevIn = apPrevIn
-        var prevOut = apPrevOut
+        // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box it (audio/ref/performance.md).
+        var lp = lpState * 1.0
+        var prevIn = apPrevIn * 1.0
+        var prevOut = apPrevOut * 1.0
         var wp = writePos
 
         for (i in from until to) {

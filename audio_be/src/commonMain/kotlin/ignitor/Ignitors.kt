@@ -998,7 +998,9 @@ object Ignitors {
                         return
                     }
 
-                    var phase = voice.phase
+                    // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop boxes the phase per sample: about
+                    // 2 KB per block on the development bundle under a mixed profile (audio/ref/performance.md, engine follow-up 5).
+                    var phase = voice.phase * 1.0
                     val drift = voice.drift
                     val pol = polarity
                     var m = 1.0
@@ -1043,7 +1045,8 @@ object Ignitors {
             buffer: AudioBuffer, off: Int, end: Int, pm: DoubleArray?, safeWrap: Boolean,
         ) {
             val dt = voice.dt
-            var phase = voice.phase
+            // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box the phase (audio/ref/performance.md).
+            var phase = voice.phase * 1.0
             val drift = voice.drift
             val pol = polarity
             var m = 1.0
@@ -1095,7 +1098,8 @@ object Ignitors {
             ctx.scratchBuffers.use { offsets ->
                 phaseIn.render(offsets, actualFreq, ctx)
 
-                var phase = voice.phase
+                // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box the phase (audio/ref/performance.md).
+                var phase = voice.phase * 1.0
                 val drift = voice.drift
                 val pol = polarity
                 var m = 1.0
@@ -2032,7 +2036,8 @@ object Ignitors {
             buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
             pm: DoubleArray?, drift: DriftLanes?,
         ) {
-            var phase = vs.phase
+            // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box the phase (audio/ref/performance.md).
+            var phase = vs.phase * 1.0
             val dt = vs.dt
             // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
             // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
@@ -2088,7 +2093,8 @@ object Ignitors {
             buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
             pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
         ) {
-            var phase = vs.phase
+            // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box the phase (audio/ref/performance.md).
+            var phase = vs.phase * 1.0
             val dt = vs.dt
             // The safe wrap as in trapezoidLoop.
             val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
@@ -2139,7 +2145,8 @@ object Ignitors {
             buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
             pm: DoubleArray?, drift: DriftLanes?,
         ) {
-            var phase = vs.phase
+            // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box the phase (audio/ref/performance.md).
+            var phase = vs.phase * 1.0
             val dt = vs.dt
             // The safe wrap as in trapezoidLoop.
             val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
@@ -2179,7 +2186,8 @@ object Ignitors {
             buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
             pm: DoubleArray?, drift: DriftLanes?, offsets: AudioBuffer,
         ) {
-            var phase = vs.phase
+            // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box the phase (audio/ref/performance.md).
+            var phase = vs.phase * 1.0
             val dt = vs.dt
             // The safe wrap as in trapezoidLoop.
             val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)

@@ -254,6 +254,14 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   and others). On the development bundle that is confirmed: 2 of 3 processes before and 0 of 3 after in review (4
   of 8 and 0 of 7 in the pass). On the production bundle it was seen in 2 of 3 processes in one sample and in 0 of
   3 in another, so it is not reproduced there; the seeds cost nothing and stay by rule.
+  Engine follow-up 5 (2026-10-11) applied the rule to every field seed of an OSCILLATOR loop too: the phase of the
+  wave loops (`WaveIgnitor`'s PWM loop, `renderHoisted`, `renderPhased`) and of the unison stacks' four loops, the
+  sample's playhead, the Karplus string's filter state. The PWM loop's phase seed boxed per sample on the
+  development bundle under a mixed profile (about 2 KB per block, 64 B after), where `voice.phase` compiles to a
+  getter call that V8 did not inline into that `generate` in one traced process (a call result under this rule);
+  production loads the field directly and never showed it, and the others boxed on neither bundle. The oscillator
+  scope is a choice: the filter and effect loops were not swept (candidates: the SVF coefficient ramps in
+  `IgnitorFilters.kt`, `DcBlocker.process`; no box measured).
 - **On V8, a non-integral double handed to a function that is not inlined is a heap number per call** (2026-10-08,
   engine tidy-up step 12 (a)). The calling convention is tagged, so a double argument or a double result of a call
   V8 does not inline is boxed; an integral value in Smi range (a mix of 1.0, a floor of 0) travels as a Smi and is

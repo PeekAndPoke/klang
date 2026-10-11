@@ -340,6 +340,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 5: the PWM loop boxed its phase per sample on the development bundle only (about 2 KB per
+  block, mixed profile; the production bundle never), from its phase seed, not `setPulseShape`. The `* 1.0` seed rule
+  now covers the field seeds of every oscillator loop (the wave loops, the stacks, the sample, the Karplus string),
+  bit for bit, corpus identical: `docs/tasks/engine-follow-ups.md` item 5
 - 2026-10-11 Engine follow-up 7: the drift ramp's `DriftLanes.startOf`/`endOf` returned doubles through a `blendOf`
   that the superpluck's `generate` never inlined on V8 (2 heap numbers per string per block); the unison stacks and
   the partial bank inline it and did not box. `advanceLane` now leaves the ramp in a `DoubleArray(2)` holder read

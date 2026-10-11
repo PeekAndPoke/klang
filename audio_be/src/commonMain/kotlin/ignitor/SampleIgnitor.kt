@@ -46,7 +46,8 @@ class SampleIgnitor(
         val pcmMax = pcm.size - 1
         val phaseMod = ctx.phaseMod
 
-        var ph = playhead
+        // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box the playhead (audio/ref/performance.md).
+        var ph = playhead * 1.0
 
         if (drift.active) {
             // Analog drift path: wow & flutter on playback rate, one lane step per block, ramped
