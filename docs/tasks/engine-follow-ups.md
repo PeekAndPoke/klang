@@ -183,9 +183,193 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    passed the whole suite. MINOR 2 and NIT 1: `audio/MEMORY.md` and `audio/ref/performance.md` take this item's
    wording (every box located; the off phaser's call located, not removed; one pinned process one heap number above),
    and the first lines' readings above are labelled as such.
-2. **A new param map's resolve costs about 1,130 bytes** on the classic chain after S1; the profiler attributes it to
-   `KatalystKnob.resolve` on both bundles, whose code (two field stores) does not explain it. A `.katp` burst pays it
-   per block. Source: the record, "Found during the V8 allocation pass". M.
+2. **Steps 1, 2, 3 and 5 DONE (2026-10-11); step 4 OPEN, after the v0.6.5 release: every Kotlin/JS `HashMap` lookup
+   allocated 40 bytes on V8; the worklet's slot maps (step 1), sprudel's param bags (step 2), the sound registry
+   (step 3) and the dispatcher's engines (step 5) are a `KlangMap` now, and a `KlangMap` is not a Kotlin `Map` (step
+   5).** The item is DONE when step 4 is committed. Reported as: a new param map's resolve costs about 1,130 bytes on the
+   classic chain after S1, attributed to `KatalystKnob.resolve`, whose code does not explain it. **The cause**
+   (production bundle, node 22.12, a probe with the lookups alone, the knobs alone, the chain, two voices taking turns
+   as the orbit's owner; mixed and single-case, pinned and unpinned): the stdlib's generic `hashCode(dynamic)`, which
+   every `HashMap`/`HashSet` `get`, `put` and `containsKey` calls, ends in `else -> throw`, a closure that captures
+   the `typeof` result, so V8 creates a 40-byte function context on every call (node x64; about 20 in Chrome,
+   inferred). 27 lookups read 1,080 B exactly in every process, hit or miss, empty map or full; a new orbit map 1,096 B
+   (plus the reverb's documented lowpass box); a classic voice build makes 24 lookups whenever its `ignitorParams` map
+   is not null, up to 76 with many slots set. A counting copy of the bundle: no steady block hashes at all. A bundle
+   copy with only that `throw` arm rewritten read 0 B per lookup and 16 B per new map: the ceiling. The JVM allocates
+   nothing on a lookup (24 B per new map, the lowpass box). Tried and rejected: the lookup written out as a scan over
+   the entries (its iterator escapes wherever V8 does not inline the loop, 1,554 B on a one-entry map; on the JVM an
+   iterator per knob, 888 B). Report: `tmp/reviews/e2-report.md`; the design, `tmp/reviews/e2-klangmap-proposal.md`.
+   **Step 1** (the maintainer's direction: "a multiplatform KlangMap with dedicated implementations on each platform",
+   in `common`): `KlangMap<V>` (`common/src/*/kotlin/infra/KlangMap.kt`), a `String`-keyed `Map<String, V>` with three
+   writers (`set`, `setAll`, `copy`; `setAll` and not `putAll`, which clashes with `java.util.Map.putAll` on the JVM;
+   `remove` dropped in review round 1, no caller), over a native JS `Map` on JS and a `LinkedHashMap` on the JVM,
+   read-only to every reader on both (the JVM hands out the views of one `Collections.unmodifiableMap`, and the
+   compiler's `java.util.Map` writers throw); `KlangMapSpec` pins the contract on both platforms against
+   `LinkedHashMap` (14 rows), `KlangMapJvmSpec` the `java.util.Map` writers; every mutant red. Read it by key, never
+   walk it on a hot path: a walk allocates about 110 B per entry on JS (`audio/ref/performance.md`). On the JVM the
+   warm-up now trains on `KlangMap` while real JVM voices carry sprudel's `LinkedHashMap` until step 2 (a bimorphic
+   site, negligible). `wireDecodeStringDoubleMap` returns one, and so
+   do the engine's two producers (`WarmupRunner`, the sample-envelope merge). No wire type, codec, schema hash,
+   `@WireName` or signature changed; `IgnitorDslRuntime.kt` untouched. A new orbit map now costs about 16 B (the
+   lowpass box) under a mixed profile, a voice build loses its 24 to 76 lookups (957 to 3,062 B and 10 to 38 percent
+   of its time in the probe). **Bit for bit:** raw doubles of the probe, 600 blocks, both channels, HEAD's three
+   changed files against the tree, every voice through the generated wire codec on V8 (so its maps are the decoder's):
+   18 of 18 identical on V8 and 18 of 18 on the JVM, every last block sounding (the classic chain with ten map
+   contents and a burst of ten different maps, two voices taking turns as the owner, five engine cases, two with
+   `ignitorParams`). The corpus 18 of 18 (`CORPUS GREEN`). `:common` 128 (JVM) and 130 (JS),
+   `:audio_bridge:jvmTest` 148 and `:audio_bridge:jsBrowserTest` 280 (a new round-trip row: the decoded slot maps are
+   `KlangMap`s, in order, NaN kept; red with the decoder reverted), `:audio_be:jvmTest` 2,675 and
+   `:audio_be:jsBrowserTest` 2,571, green. **The harness guards it with a new case**, `C-remap`: two classic saw
+   voices, received through `receivedByEngine` (`audio_benchmark/.../engine_inbox.kt`: the wire codec on JS, the voice
+   as it is on the JVM), take turns as their orbit's owner, so the chain re-resolves every block. 6 runs GREEN, 36 of
+   36: healthy rounds 76.5 to 87.5 B with two single rounds at 143.9 and 149.8 (medians 77 to 88), JVM 24 B (the
+   lowpass box). Budgets by the file's rule: V8 192, JVM 36 (it reads 24, so 6 does not apply). The decoder reverted
+   (one lock call, restored and checked with `cmp`): RED, `C-remap` 1,128 to 1,164 B, the only line over. The item 8
+   mutant: RED with ten voice and engine lines, `C-remap` rounds 154 to 212 B, median 160 (review round 1: 139 to 145,
+   median 140), the median under its line: not an item 8 line. Time: `C-remap` 2.03 to 2.16 us per block against 2.80
+   to 3.11 with the decoder reverted, about 0.9 us per new map. No `C-build` case: one decoder function serves both fields, so `C-remap` sees a revert whole, and a voice
+   build per block reads about 21 KB, where the 2.2 KB step is about 10 percent and the harness's spread there is not
+   measured. Report: `tmp/reviews/e2-step1-report.md`.
+   **Measured, not removed:** in single-case processes (the harness runs one case per process) three writers' `resolve`
+   box one heap number each per new map: the body's and the vowel's, whose `fill` V8 leaves out and which hands the
+   unset index (NaN) to `ResonatorTables.at`, and the delay writer's (fully inlined; not explained). `C-remap` reads
+   77 to 93 B (medians) with them, the mixed probe 32 to 48 B.
+   **Step 3 DONE (2026-10-11): the per-note lookups.** Located (probe cases `reg-*` and `N-saw`, a short saw note per
+   block through the dispatcher; a counting copy of the bundle: 8 stdlib hashes per note, 6 on `saw`, 2 on the
+   playback id): the registry's `contains` from the scheduler's prefetch and from `VoiceFactory`, and its `optimized`
+   from `createExciter`, each hashing on the playback's fork and again on its root, and `engineFor`'s two lookups. A
+   second cost turned up: V8's `toLowerCase` allocates a fresh string even when nothing changes (23.9 B per call in a
+   node loop at every length measured, 1 to 8 characters; in the engine's path a 2-character `"bd"` paid it too), and
+   the registry lowercased the name at every level of the fork chain, 7 times per synth note. HEAD: 128 B per registry
+   lookup on V8, about 488 B per synth note. Fixed with the smallest changes: the registry's two maps are `KlangMap`s
+   (String keys, never removed from); its lookups ask for `lowerKey(name)` once per call and hand it down the chain
+   (the fork before its parent); `lowerKey` is exactly `name.lowercase()` but returns the name itself when no
+   character could change (an index loop; any ASCII capital or any character above 127 takes `lowercase()`; review
+   round 1, after round 0 tried the name as given and lowercased on a miss); `engineFor` looks the id up once
+   (`scheduledAgain` returns whether the engine stays attached). The dispatcher's `engines` map stays a
+   `LinkedHashMap` (it is removed from and walked, and `KlangMap` has no `remove`): one hash per scheduled voice, 40 B,
+   is left (gone in step 5, where `KlangMap` gained `delete`). V8 now (the worker's probe, single-case): a registry lookup about 1 B, hit or miss (a mixed-case name 24 B,
+   its lowercased copy); a synth note per block 13,257 / 12,806 B per block (HEAD / tree), a sample note 1,033 / 737
+   (`"snare"`) and 1,066 / 773 (`"bd"`). JVM: 0 B per lookup on both sides (a mixed-case name 48 B, both sides).
+   **Bit for bit:** the engine dumps (HEAD's registry and dispatcher against the tree, 600
+   blocks, every voice through the wire codec on V8, a note per block among them) 19 of 19 on V8 and 19 of 19 on the
+   JVM; the corpus 18 of 18. `:audio_be:jvmTest` 2,678 and `:audio_be:jsBrowserTest` 2,574, green (after review round 2). A new
+   `IgnitorRegistryTest` row: a mixed-case name finds the lowercase registration through a fork, the fork's own before
+   its parent's, for `get`, `optimized`, `contains` and `createExciter`; review round 1 added a non-ASCII row (`Ärger`,
+   `ölbass`). Mutants, round 0 (each in one lock call, unfiltered): the lookups without their lowercase retry RED;
+   `scheduledAgain` detaching a stopped engine RED, keeping a releasing one RED. Round 1 (the reviewers' list): the
+   parent asked before the fork in `authoredAt` and `optimizedAt` RED (2, 1), the parent arm of `containsAt` dropped
+   RED (133), `register` storing the name as given RED (3), `createExciter` without lowercasing RED (1), `Playing`
+   detaching RED (41), `Disposed` detaching GREEN (unreachable: a disposed engine is never filed), `lowerKey` never
+   lowercasing RED (3). **The harness guards it with a new case**, `E-C-n1` (in `AllocationCases.kt`; README): a short
+   classic saw note every block through the dispatcher. Healthy rounds 12,982 to 13,036 B (about 30 rounds, the
+   worker's 7 runs and review round 1's), JVM 6,616 B; the HEAD code 13,435 to 13,476 B, RED against the line, the only
+   line over. Budgets by the file's rule: V8 13,100 (64 B above the worst healthy round, 335 below HEAD's lowest), JVM
+   6,628 (12 B above the reading: one `Double` per note reads 6,640, RED). It catches the registry back on a HashMap
+   (13,235 to 13,254) and the lowercasing back at every level (13,153 to 13,184); it does not catch `engineFor`'s second
+   lookup (40 B, 13,024 to 13,048) nor a lowercase on every call (about 72 B per synth note, 13,059 to 13,075, 25 B
+   under the line): the comments at those sites guard them. A voice build per block, so any change to the voice build
+   moves it. A first JVM probe run read 24 B on the engine cases of the tree; the repeat read
+   24 B on HEAD's and 0 on the tree's (the JVM's process-dependent profile), and the alloc check read 0 on every
+   engine line. Report: `tmp/reviews/e2-step3-report.md`.
+   **Step 2 DONE (2026-10-11): sprudel's `ParamBag` and `classicSlotParams`' copy are a `KlangMap`, public API
+   unchanged.** Measured first (probe `tmp/reviews/e2/s2/probe/`, sprudel's production test bundle, node 22.12): each
+   case queries one cycle of a pattern per step and converts every event with `toVoiceData`, on JS plus the wire
+   encode (`encode_ScheduledVoice`, the browser's next step); the cases: a plain note, three bus doors, six voice doors,
+   many doors of both kinds, a patterned control, and the bag's own operations. HEAD hashed through the stdlib 0, 64,
+   14, 143 and 29 times per event. **The first form** (the bag on a `KlangMap`, `copy` through `new Map(source)`, the
+   merges and the encoder walking `entries`) cut the time by about a third or more but saved only about a tenth of the bytes, and the JVM got
+   worse (+200 to +460 B per event: the read-only wrapper made per map, and walks through it). **The final form**:
+   `KlangMap` gains `forEachEntry` and a `capacityHint` constructor; on JS `copy` and `setAll` from a `KlangMap` walk
+   the JS `Map`'s own `forEach`, and the wire encoder walks a `KlangMap` with `forEachEntry`; on the JVM the read-only
+   wrapper is made only when a view is asked for, `setAll` and `equals` take a `KlangMap`'s backing map directly, and
+   `classicSlotParams` presizes its copy as HEAD did (`toKlangMap(EXPECTED_SLOTS)`; `capacityHint` is the JVM's initial
+   table size, parity with HEAD's `LinkedHashMap(size + extraCapacity)`). V8, bytes per
+   event, mixed profile, HEAD / tree, medians of 3 processes (pinned alike): plain 2,772 / 2,783 (no bag; time 838 /
+   812 ns), three bus doors 17,128 / 12,418 (7.8 / 4.3 us), six voice doors 19,026 / 17,607 (7.6 / 6.2 us), many doors
+   45,334 / 31,727 (24.5 / 12.5 us), patterned 16,254 / 13,470 (6.0 / 4.8 us), the bag alone 9,793 / 3,355 (5.9 / 1.4
+   us); without the encode the same shape (three bus doors 16.1 / 11.3 KB). JVM (`ThreadMXBean`, 7 rounds, 5 HEAD and
+   3 tree runs interleaved): +0 to +168 B per event depending on the shape (plain 634 / 634, three bus doors 5,402 /
+   5,474, many 14,614 / 14,782; up to about 2.4 percent on small events, review round 1 read +2.0 and +2.4 percent; the
+   wrapper object per map), time within HEAD's spread (six voice doors 1,686 to 1,764 / 1,634 to 1,755 ns). Without the
+   presized copy the worker's probe read `p-voice6` and `p-many` 6 to 8 percent slower in 3 runs each; review round 1
+   found no such effect on six shapes, a 24-slot event among them, so the hint is kept as parity with HEAD. **Bit for bit:** the probe's converted events (64 cycles, every case, the maps
+   printed in their order) identical HEAD against the tree on V8 and on the JVM; the engine dumps (HEAD's `KlangMap`
+   and encoder against the tree, every voice through the wire codec on V8) 18 of 18 on V8 and 18 of 18 on the JVM; the
+   corpus 18 of 18. Tests: `:common` 131 (JVM) and 133 (JS), `:audio_bridge` 148 and 281, `:sprudel:jvmTest` 3,508,
+   `:sprudel:jsBrowserTest` 2,997, `:audio_be:jvmTest` 2,675, `:audio_be:jsBrowserTest` 2,571, green; the alloc check
+   GREEN, 36 of 36 (`C-remap` 83 B). New rows: `KlangMapSpec` (`forEachEntry`; `setAll` from a `KlangMap`; two
+   `KlangMap`s compare by content), `WireCodecRoundTripSpec` (`KlangMap` slot maps encode every entry in order), and
+   `ClassicSlotParamsSpec` ("the voice doors are written into a copy: the event's own bag stays as it was", a gap the
+   mutation check found: `toKlangMap` handing out the bag's own storage was green on all of sprudel's 3,505 JVM
+   tests). Mutants, each in one lock call: 11 of 11 RED (the JS `forEachEntry` with key and value swapped, the JS and
+   JVM `setAll` fast paths doing nothing, the JVM `equals` fast path always true, the JVM `forEachEntry` doing
+   nothing, the encoder writing 0.0, `ParamBag.copy` and `toMap` sharing the storage, `mergeFrom` doing nothing,
+   `toKlangMap` sharing it). Review round 1 added type rows (`ParamBagSpec`: the bag's `toMap` hands a `KlangMap`;
+   `ClassicSlotParamsSpec`: `toVoiceData`'s two maps are `KlangMap`s), which catch a revert to HEAD's `ParamBag`; they do not see the bag's
+   storage (review round 2: the storage on `mutableMapOf` with `toMap` still handing a `KlangMap` stayed green on all
+   3,508 JVM tests). **Guarded by their KDocs only:** the bag's storage, the encoder's `KlangMap` branch and the JS
+   `setAll`/`copy` fast paths through the native `forEach` (each changes only bytes, and no test sees bytes). **Open, for the maintainer:** whether sprudel gets an
+   allocation case of its own (the engine's harness does not run sprudel). Decided: it does, as step 4 (below). Comparing or printing a param map on JS
+   walks `entries` (`==` about 1.8 times HEAD's bytes, `toString` 10 to 30 percent more); nothing does it per event.
+   The engine's own copies (the sample-envelope merge, the warm-up) now take the native `forEach` copy on the
+   worklet: 600 B and 161 to 164 ns for 6 entries against step 1's `entries` loop at 1,160 B and 167 to 172 ns (review
+   round 2, this tree's production bundle; step 1's 473 ns for that copy did not reproduce). Report: `tmp/reviews/e2-step2-report.md`.
+   **Step 5 DONE (2026-10-11): `KlangMap` is not a `Map`** (maintainer, 2026-10-11: "not a `Map`; helpers as
+   extension functions when needed"). Plan: `tmp/reviews/e2-step5-plan.md`. `KlangMap<V>` has no `kotlin.collections`
+   supertype; its members are what its callers use (`get`, `contains`, `size`, `isEmpty`, `set`, `setAll`, `delete`,
+   `copy`, `forEachEntry`, the `capacityHint` constructor; `equals`, `hashCode` and `toString` by content, against
+   another `KlangMap` only), plus `klangMapOf` and two interop extensions, `KlangMap.toMap()` and `Map.toKlangMap()`,
+   for tests and tools. `VoiceData.ignitorParams` and `katalystParams` are `KlangMap<Double>?`, and so is every engine
+   signature that carried them (56 lines in 10 `audio_be` files, `Voice.kt` and the Klang-Research files listed in the
+   report, which only had their types changed). The dispatcher's `engines` map is a `KlangMap` (`delete` replaces
+   `remove`), so a synth note no longer hashes through the stdlib. Sprudel: `toVoiceData` hands `KlangMap`s over,
+   `ParamBag.toMap()` returns a plain copy. The wire codec generator lost its `Map<String, Double>` branch: a stdlib
+   `Map` field is refused with an error that names the field and says to use `KlangMap<Double>` (proven on a HEAD
+   copy: both `VoiceData` fields named); the `KlangMap` branch keeps the old type signature, so `WIRE_SCHEMA_HASH`
+   stays 1330155241. The KSP module has no test setup, so the refusal has no test (none built, as decided). The
+   harness converts its `mapOf` literals once per case (`Case.paramsMap`, `katpMap`, `katpNextMap`), so the chain's
+   identity gate sees the same map every block, as before. **Bit for bit:** a new `WireCodecRoundTripSpec` row
+   compares the encoded wire object with a `JSON.stringify` golden captured at `ccde9f9e` (a NaN slot and the key order
+   included; RED with the encoder dropping NaN, scaling a value or reversing the order; a `toFloat()` mutant was
+   GREEN because it is equivalent on Kotlin/JS); the engine dumps (HEAD against the tree, 600 blocks, every voice
+   through the wire codec on V8) 19 of 19 on V8 and 19 of 19 on the JVM, every last block sounding; sprudel's
+   converted events (64 cycles, 7 cases) identical on V8 and the JVM; the corpus 18 of 18. Tests, 0 failures:
+   `:common` 131 (JVM) and 132 (JS), `:audio_bridge` 148 and 283, `:audio_be` 2,692 and 2,586, `:sprudel` 3,508 (486
+   skipped, as before) and 2,997, the root's `:jvmTest` 60 (after review round 1). `KlangMapSpec` was rewritten for the new API (16 rows,
+   among them "it is not a Map" and the interop extensions); `KlangMapJvmSpec` now pins that it is no `java.util.Map`
+   and no `java.util.Collection`, and that a negative hint is coerced. The `shouldBe mapOf(...)` assertions compare
+   `KlangMap` with `klangMapOf(...)`; none was weakened. Mutants, each in one lock call, unfiltered: 19 of 19 RED (six
+   on the JS side of `KlangMap`, three on the JVM side, two on the common helpers, three on the encoder, three on the
+   dispatcher's `delete` and `activePlaybackIds`, `toKlangMap` sharing the bag's storage, `toVoiceData` dropping
+   `katalystParams`). **The allocation check:** `E-C-n1` read about 35 B less per note, all of it the dispatcher's map
+   (review round 1: that map back on a `LinkedHashMap` read what HEAD reads), and was re-set from 13,100 to 13,068 by
+   the file's rule: 45 healthy rounds 12,988.5 to 13,050.7 B (the worker's 6 runs and review round 1's 27 rounds,
+   full-check medians 13,004 to 13,023), the line 45 B above the worst median and 17 above the worst round. The
+   margins are thin, as `E-parallel`'s: the lowercasing back at every level read 13,166 to 13,191 (RED); a lowercase
+   on every call, step 3's gap, is caught by its median (13,090 and 13,091 in two samples), its lowest round 5 B over
+   the line; the dispatcher's map back on a `HashMap` goes red in about 1 run in 30 (medians 13,047 to 13,058), so
+   the comment at that field guards it. Two other lines moved down on V8: `E-C-rel05-n16` about 50 B (its notes stop
+   hashing the dispatcher's map) and `E-arith-glide` about 12 B (its `katp` maps are now `KlangMap`s, as the worklet's
+   decoder delivers them, where the harness used to hand the engine stdlib maps). With step 5 the encoder has one
+   branch for the slot maps, so the step 2 list of sites guarded by their KDocs only is the bag's storage and the JS
+   `setAll`/`copy` fast paths. 3 runs GREEN, 58 of 58, before review round 1; on the final tree g1 went RED on
+   `spluck-a`'s tail only (median 288: rounds 21.7, 324.4, 287.7), then g2 to g4 GREEN, 58 of 58; review round 2's
+   own run went RED on `E-arith`'s second mode only (median 191: rounds 190.9, 195.6, 51.2). Both are known tails, not
+   this change (the "Known tails" paragraph in `alloc-budgets.txt`). **Review round 1** (no CRITICAL or MAJOR): the
+   generator refuses a `KlangMap` whose values are not a non-null `Double` (a `KlangMap<Double?>` or `KlangMap<*>` used
+   to pass and fail in the generated code); `ParamBag.toKlangMap()` without added capacity is `KlangMap.copy` (19 to
+   32 B less per event on V8 than the sized form, under HEAD's figures; time the same); new rows pin that the sample
+   envelope fills a copy, never the voice's wire map (the in-place fill had passed every test), and pin
+   `WIRE_SCHEMA_HASH` at 1330155241 (a changed type signature had passed every test); the reviewers' mutants all
+   RED, the in-place fill and the changed signature only on the new rows, the harness's maps made per read on
+   `E-arith-glide`'s JVM line (233 against 211). `E-duck` was re-set to 152 for its V8 tail (item 38). Report:
+   `tmp/reviews/e2-step5-report.md`.
+   **Step 4 OPEN, after the v0.6.5 release, on the fresh `main`: a sprudel allocation case.** Planned in
+   `tmp/reviews/e2-step4-plan.md` (decided: an explicit `makesSound = false` flag and an output count, no reuse of
+   `peak()`; a one-note shape `note("c")` with many doors). The item is DONE when step 4 is committed.
+   **A note for upstream:** the stdlib's `hashCode(dynamic)` closure makes every Kotlin/JS `HashMap`/`HashSet`
+   operation allocate on V8; a statement-form `throw` there would remove it everywhere. Not filed from here.
 3. **DONE (2026-10-10): no noise box reproduces; the house limiter boxed per sample.** Reported as about 2 KB per
    block for a noise voice at engine level (the V8 pass's noise-plus-saw sound). Source: as 2. No noise box
    reproduces on either bundle, at voice level or through the dispatcher (reviewer A rebuilt the development bundle:
@@ -256,7 +440,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    drift now reads 32 B per block (48 at `analogSpread` 0.5) in every process the item 7 probe measured, from 288 to
    688; two of its boxes were the drift ramp (item 7's fix) and `getUnisonDetune`'s result, one per string, which V8
    inlined in every process traced. What is left there is item 30's root frequency and one more heap number. But on
-   the harness bundle about 1 process in 30 still reads 300 to 460 B on the drift path, not located (item 7's tail).
+   the harness bundle some processes still read 288 to 459 B on the drift path, not located (item 7's tail: 9 of 292
+   rounds at item 7, 11 of 51 at item 2, step 5; the "Known tails" paragraph in `alloc-budgets.txt`).
    The pluck was not measured. **Item 4 stays open while that tail is unlocated**; closing it needs the tail and a
    look at the pluck.
    **Found at item 5 (2026-10-11), development bundle only, not followed up:** on
@@ -508,8 +693,10 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    in 30 reads 300 to 460 B on `spluck-a`, the size of HEAD's regression (pooled over this change and review round 1,
    9 of 292 rounds and process pairs, 295 to 459 B; 0 of 50 with `analog` 0, so it is on the drift path); the profiler
    did not catch one in 110 processes (it perturbs the compile). The median of 3 rounds absorbs one such round; a
-   false red needs two of three, about 0.3 percent of runs (reviewer B; at most about 1 percent). A breach whose rounds
-   are not all high, and that does not repeat on a second run, is the tail; a breach that repeats is a regression.
+   false red needs two of three. The rate varies from session to session: item 2, step 5 read 11 of 51 tree rounds
+   high, about 1 run in 9 red by the median (the "Known tails" paragraph in `alloc-budgets.txt`, which has the rule: a
+   breach with every round over the line is a regression, a breach with a round under it is the tail; run once more
+   to confirm, and a second breach of the tail's shape is still the tail).
    HEAD's code read high in every round of every run, the item 8 mutant in every round of its one run. In the first form V8 inlined `advanceLane` into the superpluck's `generate`, and the
    two fields ended as Double representation (`--trace-generalization`, reviewer B), like `AnalogDrift`'s, which do
    not box: representation is ruled out, the cause is not located. `super7a`'s guard
@@ -1022,6 +1209,64 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     the steady path (the glide targets compared, the line's knobs rewritten only when they move, the latched retry
     exempt), proven bit for bit with the owner-change dumps of item 1. Related: item 10 (`isFinite`, the call that
     stays). S.
+33. **DONE (2026-10-11): `KatalystParallelEffect.process` copied the bus into each branch with `copyInto`, a
+    typed-array view per call on V8.** Reported (numbered after the last item, added 2026-10-11) as about 350 B per
+    block in `E-parallel`, the largest site in the sampling profiler (`subarray`); an experiment with `copyRangeInto`
+    read `E-parallel` 206 to 243 B and `E-bands` 223 to 270 against about 590 and 820. Source:
+    `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". **Cause:** Kotlin/JS's `copyInto` on
+    a typed array runs the stdlib's `arrayCopy`, `destination.set(source.subarray(startIndex, endIndex), offset)`, and
+    the view is a new object on every call: two per branch and block, four in `E-parallel`, six in `E-bands`. **Fix**
+    (`audio_be/.../cylinders/katalyst/KatalystParallelEffect.kt`): the house helper `copyRangeInto`
+    (`utils/buffer_copy.kt`; the rule in `audio/MEMORY.md`, "Guardrails", and `audio/ref/performance.md`), a plain
+    loop, so the same samples arrive and the copy no longer allocates on V8. What `process` still allocates there is
+    the distorted branch's oversampled path and its phase twins (`Pad.addPadded`), item 34's.
+    `KatalystParallelEffectSpec` (20), `KatalystEqEffectSpec` (20), `KatalystChainBuilderSpec` (12) and
+    `KatalystClassicPipelineOrderSpec` (7) green on the JVM and in the audio_be JS suite (2,571 of 2,571),
+    `BandsCrossoverSpec` 8 of 8 on the JVM; the corpus 18 of 18 identical (its songs run no authored Katalyst chain, so
+    for the stage itself the specs are the proof).
+    **The sweep** (every `copyInto` in `audio_be`'s main sources):
+    - `KatalystEqEffect.configure` copied the arriving scalars with `copyInto` twice, into `parkedValues` while a fade
+      runs and into `current` before an install. Not per block in a steady chain (an unchanged curve returns before
+      either), but on the audio thread on every block a knob moves during a fade, and the `parkedValues` KDoc says
+      parking "allocates nothing". Fixed the same way in this change; no allocation case runs it (`E-eq` installs once).
+      `KatalystEqEffectSpec` binds both copies: a mutant that copies nothing into `parkedValues` fails 1 test ("a curve
+      change on every block"), into `current` 13 (one lock call, restored, `cmp`).
+    - Left as they are, not on a per-block path: `PhasePool.drawBandedInto` (`target.copyInto(scratch)`,
+      `scratch.copyInto(target)`), a note-on path that redraws one entry every N notes and allocates a new entry while
+      the pool grows anyway; `SampleStore` (`msg.data.copyInto(...)`), once per sample chunk arriving, where the range
+      check is wanted (a malformed chunk throws on the JVM instead of writing past the end).
+    - Every other copy in `audio_be` already used `copyRangeInto` (`ChainSwap`, `Oversampler`, `KatalystFilterSwap`,
+      `KatalystCompressorEffect`, `KatalystDistortEffect`, `EqCore`, `Compressor`, `MemoizingIgnitor`).
+    **Measured** (the allocation check, unpinned; 4 full runs of 3 rounds on the tree, the last after the budgets were
+    re-set, and 15 single-case rounds per case by the driver's method; HEAD's code from the stage measurements' 3 runs
+    and the mutant below; bytes and µs per block):
+
+    | case | V8 HEAD | V8 tree | JVM HEAD / tree | V8 µs, the mutant's run / tree |
+    |---|---|---|---|---|
+    | `E-parallel` | medians 571 to 619 (rounds 568 to 624) | medians 185 to 228 (rounds 176 to 253) | 0 / 0 | 19.0 / 18.0 to 18.1 |
+    | `E-bands` | medians 809 to 840 (rounds 794 to 861) | medians 227 to 273 (rounds up to 279) | 0 / 0 | 32.7 / 31.1 to 31.5 |
+
+    (The stage measurements' rows read 21 and 36 µs; the whole machine read slower then, so only the same day's
+    mutant is compared.) What is left, about 150 B (`E-parallel`) and 200 B (`E-bands`) above the engine without a
+    stage (`E-sawC-sus`, about 60), is most likely the distorted branch's oversampled path (item 34; `E-distort` alone
+    reads about 100 above) and its phase twins, which take their work buffers the same way; not located further.
+    **The guard:** `alloc-budgets.txt`, `E-parallel` v8 664 to 268 and `E-bands` v8 896 to 320, by the file's rule (40
+    and 47 B above the highest healthy median; `E-parallel` set at 272 first and lowered in review round 1, where it
+    sat on the single-view mutant's lowest round). Mutants (one lock call, restored, `cmp`; their scoreboard rows taken
+    out with the backup): HEAD's two files, `E-parallel` 619 B and `E-bands` 809 over
+    their lines (the full check RED); a single view per block put back (one channel of the first branch), single-case
+    rounds `E-parallel` 272 to 319 (median 299) and `E-bands` 330 to 373 (median 331), both over.
+    **Found on the way:** `E-arith` on V8 has a second mode. With the tree's bundle (one link for the first three
+    runs, a fresh one for the fourth) it read medians 46, 175 (rounds 160, 175, 190: the second run RED against its 96, the row in the scoreboard), 52 and
+    52, with single rounds of 139 and 160 in the green runs; the HEAD mutant read 30 (rounds 15 to 63). The chain runs
+    no `parallel` and no `eq`, so not this change; not located. Like `spluck-a`'s tail (item 7), a breach that does not
+    repeat on a second run is that mode. HEAD's code also read `E-arith-glide` 511 B once (its line 500); filed as item
+    36. S.
+34. **The bus distort's oversampled path allocates about 120 B per block on V8** (numbered after the last item, added
+    2026-10-11): `E-distort` at the default 2x reads 155 to 191 B, at `oversample = 0` 46 to 73 B. The profiler names
+    `DistortionCore.shapeRun`, the oversampler's `interpolate44` and `decimate44`, and a map lookup (likely
+    `ScratchBuffers.oversample`'s `getOrPut` by factor); not located further. A fix re-sets the `E-distort` line.
+    Source: `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 
@@ -1108,6 +1353,33 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     7c range pass (a constant one in place, a signal one reading two bounds) and phase input (a moving phase read per
     sample), so a song benchmark's `work` column under-counts a vibrato. The tremolo's arm is the pattern (it counts
     only what runs). Source: `docs/tasks/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
+35. **A gliding `div` stage is slow on the JVM** (numbered after the last item, added 2026-10-11): the timing row
+    "`div` gliding" read 1.8 to 3.7 µs per block on the JVM in every run against 0.39 to 0.47 on node, about eight
+    cheap stages against one (the full check's compare file flags it, JVM 3.88x slower than node). Not explained; the
+    moving branch is `timesLaw` over a per-sample ramp (`applyLaw`'s ramp loop), while the `times` row, a constant
+    operand, runs the plain loop at about 0.3 µs, so no row times the ramp loop on its own. Source:
+    `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
+
+36. **`E-arith` has a second mode on V8** (numbered after the last item, added 2026-10-11): one full run of the
+    allocation check read it at a median of 175 B (rounds 160 to 190) against its line of 96, the other runs 46 to 52
+    with single rounds of 139 and 160; `E-arith-glide` once read 511 against its 500. The chain runs only the
+    arithmetic stages, so no item 33 site. Not located. Like `spluck-a`'s tail (item 7), a breach that does not repeat
+    on a second run is that mode; if it repeats it turns the check red at random, and then either the site is found or
+    the line follows item 7's rule. Item 2, step 5 read the mode in 4 of 51 tree rounds (181 to 196 B), and one run
+    went red on it at a median of 191; the rule for reading such a breach is the "Known tails" paragraph in
+    `alloc-budgets.txt`. Source: item 33, "Found on the way". S.
+37. **The Ignitor's `perlin` and `berlin` move per SAMPLE** (numbered after the last item, added 2026-10-11): their
+    `rate` is 0.003 noise units per sample (`PERLIN_STEP`), so the same number runs about 9 % faster at 48 kHz than at
+    44.1 kHz (about 144 units per second against 132). Seconds are the house unit. The Katalyst's `Kat.perlin` and
+    `Kat.berlin` inherit the law for parity (maintainer, 2026-10-11, Q12 of `docs/tasks/katalyst-knob-expressions.md`),
+    so both hosts change together: a rate per second, which moves the sound of every song that uses them at one of the
+    two rates. S.
+38. **`E-duck` has a tail on V8** (numbered after the last item, added 2026-10-11): about 1 round in 7 reads 97.6 to
+    108.8 B against healthy rounds of 24.8 to 66.7 (5 of 33 tree rounds; HEAD has it too, 103.1 in 8 rounds), and one
+    run held two tail rounds and read RED at 98 against the line of 96 (review round 1 of item 2, step 5). Its line was
+    re-set to 152, above the tail, so the release's full check does not go red by chance (`alloc-budgets.txt`). The
+    chain runs the duck with a sounding sidechain; the tail's site is not located. Locate it as `spluck-a`'s (item 7)
+    and `E-arith`'s (item 36) were looked for; a fix re-sets the line. S.
 
 ## 6. The audit's later steps and its open decisions
 

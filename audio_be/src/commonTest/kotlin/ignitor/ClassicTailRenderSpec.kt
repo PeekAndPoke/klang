@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
 
 /**
@@ -80,7 +81,7 @@ class ClassicTailRenderSpec : StringSpec({
 
     "an OFF envelope still reports its release as the voice's tail, the voice envelope's 0.05 or the written one" {
         fun tailOf(bag: Map<String, Double>): Double? =
-            tail.buildExciter(ignitorParams = bag, random = Random(7), freqHz = 220.0).releaseTailSec
+            tail.buildExciter(ignitorParams = bag.toKlangMap(), random = Random(7), freqHz = 220.0).releaseTailSec
 
         tailOf(mapOf("adsr.on" to 0.0)) shouldBe VOICE_ADSR_RELEASE_SEC
         tailOf(mapOf("adsr.on" to 0.0, "adsr.release" to 0.3)) shouldBe 0.3
@@ -89,7 +90,7 @@ class ClassicTailRenderSpec : StringSpec({
 
     "an unwritten classic() does not gate its output; a written tremolo does (the cull rule)" {
         fun gates(bag: Map<String, Double>): Boolean =
-            tail.buildExciter(ignitorParams = bag, random = Random(7), freqHz = 220.0).gatesOutput
+            tail.buildExciter(ignitorParams = bag.toKlangMap(), random = Random(7), freqHz = 220.0).gatesOutput
 
         gates(emptyMap()) shouldBe false
         gates(mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 4.0)) shouldBe true

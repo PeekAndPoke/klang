@@ -170,7 +170,7 @@ class LangBeatsSpec : StringSpec({
 
         val wire = note("c3").tremolo(0.6, beatRate(0)).queryArc(0.0, 1.0)[0].data.toVoiceData()
 
-        wire.ignitorParams?.containsKey("tremolo.rate") shouldBe false
+        wire.ignitorParams?.contains("tremolo.rate") shouldBe false
         wire.ignitorParams?.get("tremolo.depth") shouldBe 0.6
     }
 

@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.pregain
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -88,7 +89,7 @@ class VoicePregainWireSpec : StringSpec({
             data = VoiceData.empty.copy(
                 freqHz = 220.0,
                 sound = "test-inst",
-                ignitorParams = ignitorParams,
+                ignitorParams = ignitorParams?.toKlangMap(),
                 gain = gain,
             ),
             startTime = 0.0,

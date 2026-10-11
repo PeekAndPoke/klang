@@ -25,6 +25,8 @@ import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.shape
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -104,7 +106,7 @@ class IgnitorGateSpec : StringSpec({
         params: Map<String, Double>? = null,
         rng: Random = seed(),
         sampleSource: Ignitor? = null,
-    ): Ignitor = dsl.buildExciter(ignitorParams = params, random = rng, freqHz = freqHz, sampleSource = sampleSource).ignitor
+    ): Ignitor = dsl.buildExciter(ignitorParams = params?.toKlangMap(), random = rng, freqHz = freqHz, sampleSource = sampleSource).ignitor
 
     /**
      * [blocks] blocks of [dsl], built with [params] and rendered end to end.
@@ -807,7 +809,7 @@ class IgnitorGateSpec : StringSpec({
                 inner = saw, release = IgnitorDsl.Param("release", 0.1), on = IgnitorDsl.Constant(0.0),
             )
 
-            slotted.buildExciter(ignitorParams = mapOf("release" to 3.0), random = seed(), freqHz = freqHz)
+            slotted.buildExciter(ignitorParams = klangMapOf("release" to 3.0), random = seed(), freqHz = freqHz)
                 .releaseTailSec shouldBe 3.0
         }
 

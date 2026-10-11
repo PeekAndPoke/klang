@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -192,7 +193,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
         data = VoiceData.empty.copy(
             sound = "sine",
             freqHz = 440.0,
-            ignitorParams = mapOf("tremolo.depth" to 1.0, "tremolo.rate" to 4.0, "tremolo.shape" to LfoShapes.indexOf("square")),
+            ignitorParams = klangMapOf("tremolo.depth" to 1.0, "tremolo.rate" to 4.0, "tremolo.shape" to LfoShapes.indexOf("square")),
             cull = cull,
         ).withClassicSlots(DoorFields(adsr = DoorAdsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0))),
         playbackStartTime = 0.0,

@@ -26,7 +26,8 @@ import com.google.devtools.ksp.validate
  * Supported shapes: plain scalars (String/Double/Int/Boolean/Float), `DoubleArray` (pass-through), enums
  * (as ordinal Int), nested classes with a primary constructor, sealed classes — including intermediate sealed
  * levels, flattened to leaves — (string `t` type-tag from `@WireName`), `data object` sealed subtypes,
- * `List<T>`, `Set<T>` (as a JS array; decode rebuilds a LinkedHashSet), `Map<String,Double>`, and nullability of
+ * `List<T>`, `Set<T>` (as a JS array; decode rebuilds a LinkedHashSet), `KlangMap<Double>` (a JS object; in the schema
+ * signature it reads `Map<kotlin.String,kotlin.Double>`, the shape it replaced, so the hash did not move), and nullability of
  * any of those.
  *
  * **Identity.** The codec of a `@WireFormat` root opens an identity scope (`wireScoped`) for the call, and the codec of a
@@ -68,6 +69,7 @@ class WireCodecProcessor(
         private const val LIST = "kotlin.collections.List"
         private const val SET = "kotlin.collections.Set"
         private const val MAP = "kotlin.collections.Map"
+        private const val KLANG_MAP = "io.peekandpoke.klang.common.infra.KlangMap"
 
         private val SCALARS = setOf(
             "kotlin.String", "kotlin.Double", "kotlin.Int", "kotlin.Boolean", "kotlin.Float", "kotlin.Long",
@@ -139,11 +141,19 @@ class WireCodecProcessor(
         if (isPassthrough(qn)) return true
         if (qn == LIST) return collectType(type.arguments[0].type!!.resolve(), acc, "$ctx[]")
         if (qn == SET) return collectType(type.arguments[0].type!!.resolve(), acc, "$ctx{}")
+        if (qn == KLANG_MAP) {
+            // The support functions take a `KlangMap<Double>`, and `KlangMap` is invariant: a nullable value type or a
+            // star projection would fail in the generated code, so it is refused here, by name.
+            val arg = type.arguments[0].type?.resolve()
+            val v = arg?.declaration?.qualifiedName?.asString()
+            if (arg != null && v == "kotlin.Double" && !arg.isMarkedNullable) return true
+            val shown = if (arg == null) "*" else "$v${if (arg.isMarkedNullable) "?" else ""}"
+            errors += "unsupported KlangMap<$shown> at $ctx: only KlangMap<Double> (non-null values) is supported"
+            return false
+        }
         if (qn == MAP) {
-            val k = type.arguments[0].type!!.resolve().declaration.qualifiedName?.asString()
-            val v = type.arguments[1].type!!.resolve().declaration.qualifiedName?.asString()
-            if (k == "kotlin.String" && v == "kotlin.Double") return true
-            errors += "unsupported Map<$k, $v> at $ctx — only Map<String, Double> is supported"
+            errors += "a stdlib Map at $ctx is not a wire type: use KlangMap<Double> (io.peekandpoke.klang.common.infra.KlangMap). " +
+                "A Kotlin/JS HashMap allocates on every lookup inside the stdlib's hashing (engine follow-up 2)"
             return false
         }
         if (qn != null && qn.startsWith("kotlin.")) {
@@ -279,7 +289,7 @@ class WireCodecProcessor(
         return when (qn) {
             LIST -> "List<${typeSig(t.arguments[0].type!!.resolve())}>$n"
             SET -> "Set<${typeSig(t.arguments[0].type!!.resolve())}>$n"
-            MAP -> "Map<${typeSig(t.arguments[0].type!!.resolve())},${typeSig(t.arguments[1].type!!.resolve())}>$n"
+            KLANG_MAP -> "Map<kotlin.String,${typeSig(t.arguments[0].type!!.resolve())}>$n"
             else -> "$qn$n"
         }
     }
@@ -425,7 +435,7 @@ class WireCodecProcessor(
                 wrapEncNullable(acc, nullable, core)
             }
 
-            qn == MAP -> wrapEncNullable(acc, nullable, "wireEncodeStringDoubleMap(SELF)")
+            qn == KLANG_MAP -> wrapEncNullable(acc, nullable, "wireEncodeStringDoubleMap(SELF)")
             decl != null -> wrapEncNullable(acc, nullable, "${encName(decl)}(SELF)")
             else -> acc
         }
@@ -467,7 +477,7 @@ class WireCodecProcessor(
                 }
             }
 
-            qn == MAP -> wrapDecNullable(acc, nullable) { "wireDecodeStringDoubleMap($it)" }
+            qn == KLANG_MAP -> wrapDecNullable(acc, nullable) { "wireDecodeStringDoubleMap($it)" }
             decl != null -> wrapDecNullable(acc, nullable) { "${decName(decl)}($it)" }
             else -> acc
         }

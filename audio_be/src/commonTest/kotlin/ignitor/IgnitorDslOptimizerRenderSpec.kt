@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -153,8 +154,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             // future rule that shifts a draw across the build/generate boundary.
             val rngA = Random(seed)
             val rngB = Random(seed)
-            val a = authored.toExciter(ignitorParams, random = rngA)
-            val b = optimized.toExciter(ignitorParams, random = rngB)
+            val a = authored.toExciter(ignitorParams?.toKlangMap(), random = rngA)
+            val b = optimized.toExciter(ignitorParams?.toKlangMap(), random = rngB)
             val sentinel = -12345.0
             val bufA = AudioBuffer(blockFrames)
             val bufB = AudioBuffer(blockFrames)
@@ -229,8 +230,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // Control-rate semantics survive: a parameter consumer reads a block-constant tree as one
         // scalar per block and never renders it, so the optimized twin must be block-constant too,
         // with the same value.
-        val a = authored.toExciter(ignitorParams, random = Random(seed))
-        val b = optimized.toExciter(ignitorParams, random = Random(seed))
+        val a = authored.toExciter(ignitorParams?.toKlangMap(), random = Random(seed))
+        val b = optimized.toExciter(ignitorParams?.toKlangMap(), random = Random(seed))
 
         withClue("block-constant survives the pass") { b.isBlockConstant shouldBe a.isBlockConstant }
 

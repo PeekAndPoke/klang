@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
 
 /**
@@ -24,7 +25,7 @@ internal fun renderVoiceWindows(
     gateFrames: Int = 5000,
     freqHz: Double = 220.0,
 ): DoubleArray {
-    val ignitor = dsl.buildExciter(ignitorParams = bag, random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor
+    val ignitor = dsl.buildExciter(ignitorParams = bag?.toKlangMap(), random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor
     val ctx = IgniteContext(
         sampleRate = sampleRate,
         voiceDurationFrames = gateFrames,

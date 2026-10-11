@@ -376,8 +376,69 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **On V8, `x ?: field` with a nullable map value and a double field boxes the field's value** (V8 allocation pass,
   `KatalystKnob.resolve`): the merge is a tagged value, so an absent knob with a non-integral default became a heap
   number. Two branches store the same values without it: about 180 of the about 1,310 bytes a new param map cost on
-  the classic chain, on both bundles, pinned and unpinned. The rest is still attributed to that function by the
-  profiler and is not explained.
+  the classic chain, on both bundles, pinned and unpinned. The rest was the map lookup itself (the next rule).
+- **On Kotlin/JS every `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte context on V8** (engine
+  follow-up 2, 2026-10-11). The stdlib's generic `hashCode(dynamic)`, which `get`, `put` and `containsKey` call
+  through `findKey`, ends in `else -> throw ...`; a `throw` in expression position compiles to a closure called on the
+  spot, the closure captures the `typeof` result, so V8 creates a function context on EVERY call, whichever arm runs:
+  40 bytes on node x64 (about 20 in Chrome with pointer compression, inferred), hit or miss, empty map or full,
+  inlined or not. The profiler puts it in whichever function the `get` chain was inlined into (`KatalystKnob.resolve`
+  here, whose own code allocates nothing). Measured: 27 lookups 1,080 B exactly in every process; a new orbit map on
+  the classic chain 1,096 B (27 knobs, plus the reverb's documented lowpass box); a classic voice build 24 lookups
+  whenever its `ignitorParams` map is not null, up to 76 with many slots set (957 to 3,062 B and 10 to 38 percent of
+  the build time). Kotlin is 2.3.10; the JVM caches a string's hash and allocates nothing. **Remedy:** a map the
+  engine reads by key on JS is a `KlangMap` (`common/infra/KlangMap.kt`, a native JS `Map` on JS, a `LinkedHashMap`
+  on the JVM; not a Kotlin `Map` since step 5, so it has no `entries` to walk): its lookup allocates nothing (a new orbit map about 16 B; `C-remap` 2.03 to 2.16 us
+  per block against 2.80 to 3.11 with the decoder reverted, about 0.9 us per new map). The worklet's decoder
+  (`wireDecodeStringDoubleMap`), the warm-up and the sample-envelope merge make them; the allocation check's
+  `C-remap` guards the decoder. **Read a `KlangMap` by key, and walk it with its own walk:** it has no `entries`,
+  `keys` or `values` (step 5), and iterating them on a map on JS allocates about 110 B per entry (the JS iterator's results
+  and an entry object; 666 B per walk of 6 entries on node), where a `LinkedHashMap` walk is free once V8 inlines the
+  whole loop. That inlining is not reliable either: a lookup written out as a scan over a `LinkedHashMap`'s entries
+  was rejected, because its iterator escaped wherever V8 did not inline the loop (1,554 B on a one-entry map), and on
+  the JVM it made an iterator per knob. `KlangMap.forEachEntry`, `copy` and `setAll` from a `KlangMap` walk through the
+  JS `Map`'s own `forEach` (engine follow-up 2, step 2): a 6-entry copy 592 B, against 1,160 B through `entries`,
+  1,385 B through `new Map(source)` (which goes through the iterator protocol, a `[key, value]` array per entry) and
+  1,290 B for a `LinkedHashMap`'s `toMutableMap()`; the wire encoder walks a `KlangMap` with `forEachEntry`. Measured at
+  event level, that walk is what made sprudel's param bags pay off (below). The steady block path makes no lookup
+  at all (counted).
+  **Sprudel's param bags (step 2)**: `ParamBag` (both slot maps of an event) and `classicSlotParams`' copy are a
+  `KlangMap`. Per event, querying a cycle and converting with `toVoiceData` plus the wire encode, production bundle,
+  mixed profile, 3 processes: three bus doors 17.1 to 12.4 KB and 7.8 to 4.3 us, many doors 45.3 to 31.7 KB and 24.5
+  to 12.5 us, a patterned control 16.3 to 13.5 KB, six voice doors 19.0 to 17.6 KB, a plain note unchanged (no bag).
+  With `copy` through `new Map(source)` and the walks through `entries` (the first form) the saving was about 40 percent as large
+  (three bus doors 15.1 KB, many 40.1). The stdlib hashed 64 times per event with three bus doors and 143 with many,
+  and those hashes were not the only cost: a Kotlin/JS `LinkedHashMap` copy and growth allocate more than a JS `Map`.
+  The JVM: `KlangMap` is a wrapper there, +0 to +168 B per event depending on the shape, up to about 2.4 percent on
+  small events (review round 1 read +2.0 and +2.4 percent), time within HEAD's spread. The slot copy keeps HEAD's
+  presizing (`KlangMap(capacityHint)`, the JVM's initial table size); without it the worker's probe read its two
+  voice-door shapes 6 to 8 percent slower in 3 runs each, and review round 1 found no such effect on six shapes, so
+  the hint is kept as parity with HEAD, not for a measured gain. Comparing or printing a param map walks it (in
+  step 2 through `entries`, `==` about 1.8 times HEAD's bytes; since step 5 through `forEachEntry`, not measured);
+  nothing does it per event. **The per-note lookups (step 3):** the sound registry's two maps are `KlangMap`s and
+  `engineFor` looks the playback id up once, so a synth note hashed once (the dispatcher's `engines` map, 40 B),
+  where it hashed 8 times; since step 5 that map is a `KlangMap` too, and a synth note at the defaults hashes no more (an opt-in banded phase
+  pool, `phasePool` above 0.5, still makes one stdlib lookup per unison note: `PhasePool.kt`). **On V8, `toLowerCase` allocates a fresh string even when nothing changes**: 23.9 B per
+  call in a node loop from 1 to 8 characters (`"b"` to `"supersaw"`), 32 B from 9; in the engine's own path a
+  2-character `"bd"` paid it too. A reviewer's probe read nothing for `"bd"` because that name missed its map, unlike
+  its others (review round 2): measure in the real path. The registry lowercased the sound name at every level of its fork chain, 7 copies per
+  synth note. Its lookups now lowercase only when the name has a character that could change (`lowerKey`: an index
+  loop; any ASCII capital or any character above 127 takes `lowercase()`), once per call. The worker's probe (a synth
+  note per block through the dispatcher, single-case): 13,257 B per block at HEAD, 12,806 now; a sample note 1,033 to
+  737 (`"snare"`). The allocation check's `E-C-n1` reads 12,982 to 13,036 B (healthy rounds) against HEAD's code's
+  13,435 to 13,476, under a line of 13,100: it catches the registry back on `HashMap` and the lowercasing back at
+  every level, not `engineFor`'s second lookup (40 B; since step 5 a `KlangMap`
+  lookup, 0 B) nor a lowercase on every call (about 72 B per synth note, 25 B
+  under the line); those two are guarded by the comments at their sites. Since step 5 (the dispatcher's map a
+  `KlangMap`, about 35 B less per note, all of it that map) it reads 12,988.5 to 13,050.7 B in 45 healthy rounds
+  (full-check medians 13,004 to 13,023) under a line of 13,068. The margins are thin: a lowercase on every call is
+  caught by its median (13,090 and 13,091), its lowest round 5 B over the line; the dispatcher's map back on a
+  `HashMap` read medians 13,047 to 13,058 and goes red in about 1 run in 30, so the comment at that field guards it. Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,
+  `toMap`, `getOrPut` and `in` on a set before it lands: all of them make or read a stdlib map. The stdlib site is
+  worth an upstream report.
+  **Measured, not removed:** in single-case processes three writers' `resolve` box one heap number each per new map
+  (the body's and the vowel's `fill`, which V8 leaves out and which hands the unset index, NaN, to
+  `ResonatorTables.at`; the delay writer's, fully inlined, not explained); under a mixed profile they do not.
 - **On V8, a shared one-line forwarding helper is one megamorphic call site: make it Kotlin `inline`** (2026-10-10,
   engine follow-ups 8 and 12). V8 keeps its type feedback per call site in the bytecode, not per caller, so a
   small plain function that every caller goes through to make one call (`Ignitors.readParam` was
@@ -473,11 +534,15 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
   `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
   sources is refused; the `alloc` step of `console/full-check.sh`)
-  measures the bytes per block of 17 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  measures the bytes per block of 29 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
   node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
   `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
-  breach. How it measures and the cases: `audio_benchmark/README.md`. The JVM guards in `jvmTest`
-  (`FirstBlockAllocationSpec`, `KatalystResonatorAllocationSpec`) stay where they are.
+  breach. How it measures and the cases: `audio_benchmark/README.md`. The cases cover the Ignitor's hot nodes and
+  every Katalyst stage family on an orbit: the classic chain's delay, reverb and phaser through its slots, and an
+  authored chain for the arithmetic (constant and gliding), the bus distort, the compressor and limiter, the eq, the
+  gain, the duck, `parallel`, `bands`, the body and the vowel (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`). Not
+  covered: an authored chain at the master position (`MasterBus`; every engine case runs its empty default). The JVM guards in `jvmTest` (`FirstBlockAllocationSpec`,
+  `KatalystResonatorAllocationSpec`) stay where they are.
 - **What it can see.** On V8 the method's noise (about 25 B per block) is larger than one heap number (16 B on
   node): a budget catches a heap number per sample or per knob read, not one new box per block. The JVM catches a
   single `Double` per block (24 B), or one every other block (its budgets are 6 B). A box usually shows on both,

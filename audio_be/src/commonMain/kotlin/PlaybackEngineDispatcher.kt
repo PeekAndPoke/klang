@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.PlaybackEngine.Phase
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
  * The backend host: routes inbound [KlangCommLink.Cmd]s and renders the final block.
@@ -29,8 +30,10 @@ class PlaybackEngineDispatcher(
     private val context: AudioBackendContext,
     private val clock: BackendClock,
 ) {
-    // playbackId -> the engine filed under it (attached). LinkedHashMap: deterministic order, the creation order.
-    private val engines = LinkedHashMap<String, PlaybackEngine>()
+    // playbackId -> the engine filed under it (attached). A KlangMap: deterministic order, the creation order, and a
+    // lookup that allocates nothing on Kotlin/JS (every scheduled voice looks its playback up; engine follow-up 2).
+    // A HashMap here costs about 40 B per scheduled voice on V8, at the edge of E-C-n1's line: this comment guards it.
+    private val engines = KlangMap<PlaybackEngine>()
 
     // Every engine that renders, in render order (the order they sum into the mix in, so it is kept exactly): the
     // attached ones in [engines] order, then the DETACHED ones in the order they were detached. A detached engine
@@ -72,30 +75,39 @@ class PlaybackEngineDispatcher(
     }
 
     private fun engineFor(playbackId: String): PlaybackEngine {
-        engines[playbackId]?.let { scheduledAgain(it) }
+        // One lookup per call (engine follow-up 2, step 3, when `engines` was a HashMap at 40 bytes per lookup on
+        // Kotlin/JS). Since step 5 it is a KlangMap and a lookup allocates nothing; the field's comment guards that.
+        val attached = engines[playbackId] ?: return createEngine(playbackId)
+        val staysAttached = scheduledAgain(attached)
 
-        return engines[playbackId] ?: createEngine(playbackId)
+        if (staysAttached) {
+            return attached
+        }
+
+        return createEngine(playbackId)
     }
 
     /**
      * [engine]'s playback is scheduled again. A stopped one resumes, which cancels its pending disposal (e.g. a
-     * resume after a pause); a releasing one is detached, and the id gets a fresh engine ([engineFor]).
+     * resume after a pause); a releasing one is detached, and the id gets a fresh engine ([engineFor]). True when
+     * [engine] stays filed under its id.
      */
-    private fun scheduledAgain(engine: PlaybackEngine): Unit = when (engine.phase) {
-        Phase.Playing, Phase.Disposed -> Unit
+    private fun scheduledAgain(engine: PlaybackEngine): Boolean = when (engine.phase) {
+        Phase.Playing, Phase.Disposed -> true
 
         Phase.Stopped -> {
             engine.resume()
             ending.remove(engine)
-            Unit
+            true
         }
 
         Phase.Releasing, Phase.Released -> {
-            engines.remove(engine.playbackId)
+            engines.delete(engine.playbackId)
             rendering.remove(engine)
             rendering.add(engine)
             ending.remove(engine)
             ending.add(0, engine)
+            false
         }
     }
 
@@ -178,7 +190,7 @@ class PlaybackEngineDispatcher(
 
     /** Immediate disposal (warmup teardown) — does not let voices ring out. */
     fun cleanupHard(playbackId: String) {
-        val engine = engines.remove(playbackId) ?: return
+        val engine = engines.delete(playbackId) ?: return
 
         rendering.remove(engine)
         ending.remove(engine)
@@ -311,7 +323,7 @@ class PlaybackEngineDispatcher(
 
             // A detached engine's id may already belong to a fresh engine, which stays.
             if (engines[engine.playbackId] === engine) {
-                engines.remove(engine.playbackId)
+                engines.delete(engine.playbackId)
             }
 
             engine.dispose()
@@ -328,7 +340,7 @@ class PlaybackEngineDispatcher(
     val blockFrames: Int get() = context.blockFrames
 
     // ── Test / diagnostics inspection ────────────────────────────────────────────
-    internal val activePlaybackIds: Set<String> get() = engines.keys
+    internal val activePlaybackIds: Set<String> get() = buildSet { engines.forEachEntry { id, _ -> add(id) } }
 
     /** Stopped engines detached from their id mid-release (see [rendering]), still rendering. */
     internal val detachedCountForTest: Int get() = rendering.size - engines.size

@@ -937,13 +937,13 @@ data class SprudelVoiceData(
             // backend holds `Voice.katalystParams` for the whole life of the voice and its chain
             // gates the re-resolve on the map's IDENTITY, so a map sprudel could still write into
             // would change an orbit's settings invisibly. `ignitorParams` follows the same rule, one
-            // contract for both (`ParamBag.toMap`). The boundary already allocates a `VoiceData`,
+            // contract for both (`ParamBag.toKlangMap`). The boundary already allocates a `VoiceData`,
             // and one copy here replaces the one-per-slot copies the doors used to make.
             // The voice doors travel as slot keys in this bag (`classicSlotParams`, phase 3 step 8); their typed
             // wire fields left in phase 3 step 9, the pitch envelope's in pitch pipeline step 1, the vibrato's in step 2,
             // `accelerate` in step 3, the FM's in step 4.
             ignitorParams = classicSlotParams(),
-            katalystParams = katalystParams?.toMap(),
+            katalystParams = katalystParams?.toKlangMap(),
             cylinder = cylinder,
             pan = pan,
             cut = cut,

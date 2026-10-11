@@ -23,6 +23,7 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.math.round
 
@@ -60,7 +61,7 @@ class CylinderFaderThroughZeroSpec : StringSpec({
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         signal = TestIgnitors.constant,
-        katalystParams = fader?.let { mapOf("gain.gain" to it) },
+        katalystParams = fader?.let { klangMapOf("gain.gain" to it) },
     )
 
     /** What one block of the engine leaves behind: the orbit's output and whether it is still active. */
@@ -190,7 +191,7 @@ class CylinderFaderThroughZeroSpec : StringSpec({
             playbackId = "song",
             startTime = 0.0,
             gateEndTime = 0.3,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, gain = 0.5, katalystParams = mapOf("gain.gain" to 0.0)),
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, gain = 0.5, katalystParams = klangMapOf("gain.gain" to 0.0)),
             playbackStartTime = 0.0,
         )
         val master = ScheduledVoice(

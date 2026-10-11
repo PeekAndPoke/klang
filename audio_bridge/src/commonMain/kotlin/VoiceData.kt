@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.common.infra.KlangMap
+
 
 /**
  * Defines a voice
@@ -36,7 +38,7 @@ data class VoiceData(
 
     // Voice slots: classic()'s door slots (with the flat "onepole" [Hz]; sprudel's `penv` as `penv.*` / `penvCurves.*`, `vib` as `vibrato.*`, the flat "accelerate", `fm` as `fm.*`), the sample's "begin"/"end"/"speed"/"loop",
     // the oscillators' own ("density", "voices", "spread") and raw ignp() writes. sprudel's "panSpread" is unread.
-    val ignitorParams: Map<String, Double>?,
+    val ignitorParams: KlangMap<Double>?,
 
     /**
      * The orbit bus slots this voice writes, keyed `<stage>.<knob>` exactly as [KatalystDsl.classic]
@@ -63,7 +65,7 @@ data class VoiceData(
      * in step 5b-3, the phaser fields and the `filters` list that carried the vowel and the body in
      * phase 3 step 9.
      */
-    val katalystParams: Map<String, Double>? = null,
+    val katalystParams: KlangMap<Double>? = null,
 
     // Routing
     val cylinder: Int?,

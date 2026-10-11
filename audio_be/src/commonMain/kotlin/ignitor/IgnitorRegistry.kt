@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.random.Random
 
 /**
@@ -64,7 +65,11 @@ class IgnitorRegistry(
         }
     }
 
-    private val defs = mutableMapOf<String, IgnitorDsl>()
+    /**
+     * The authored trees by lowercase name. A [KlangMap]: on Kotlin/JS a `HashMap` lookup allocates 40 bytes inside the
+     * stdlib's hashing, and every note looks a name up here (engine follow-up 2, step 3).
+     */
+    private val defs = KlangMap<IgnitorDsl>()
 
     /**
      * Optimized twin of [defs] — what voices actually render. Kept separate so [get] can keep
@@ -74,7 +79,7 @@ class IgnitorRegistry(
      * out of the build of the OPTIMIZED tree, so there is one source and that hazard is gone.) The by-ear A/B does NOT go through here: `.optimizer(0)` travels in the tree
      * itself, so `optimized()` simply returns it untouched.
      */
-    private val optimizedDefs = mutableMapOf<String, IgnitorDsl>()
+    private val optimizedDefs = KlangMap<IgnitorDsl>()
 
     /**
      * Registers [dsl] under [name] and runs the graph optimizer ONCE, here, rather than per
@@ -120,23 +125,46 @@ class IgnitorRegistry(
     internal var optimizerFailures: Int = 0
         private set
 
+    // The lookups by name. Every key is stored lowercase ([register]), so a lookup asks for [lowerKey] of the name, once
+    // per call, and hands that key down the fork chain (the fork before its parent).
+
     /** The tree AS AUTHORED. See [optimized] for what renders. */
-    fun get(name: String): IgnitorDsl? = defs[name.lowercase()] ?: parent?.get(name)
+    fun get(name: String): IgnitorDsl? = authoredAt(lowerKey(name))
+
+    private fun authoredAt(key: String): IgnitorDsl? = defs[key] ?: parent?.authoredAt(key)
 
     /**
      * The tree that renders. Mirrors [get]'s parent delegation: built-ins register on the ROOT
      * registry while voices are created on a per-playback fork, so a local-only lookup would
      * return null for every built-in and silently drop the whole song.
      */
-    fun optimized(name: String): IgnitorDsl? =
-        optimizedDefs[name.lowercase()] ?: parent?.optimized(name)
+    fun optimized(name: String): IgnitorDsl? = optimizedAt(lowerKey(name))
 
-    fun contains(name: String?): Boolean {
-        val key = (name ?: DEFAULT_SOUND).lowercase()
-        return defs.containsKey(key) || (parent?.contains(key) == true)
+    private fun optimizedAt(key: String): IgnitorDsl? = optimizedDefs[key] ?: parent?.optimizedAt(key)
+
+    fun contains(name: String?): Boolean = containsAt(lowerKey(name ?: DEFAULT_SOUND))
+
+    private fun containsAt(key: String): Boolean = key in defs || (parent?.containsAt(key) == true)
+
+    /**
+     * Exactly `name.lowercase()`, without the copy when nothing in [name] could change: on V8 `lowercase()` makes a
+     * fresh string even then (24 bytes up to 8 characters, 32 from 9; engine follow-up 2, step 3), and every note
+     * looks its sound name up. An ASCII character outside `A` to `Z` lowercases to itself; anything else (an ASCII
+     * capital, or any character above 127, where the rules are Unicode's) takes `lowercase()`.
+     */
+    private fun lowerKey(name: String): String {
+        for (i in name.indices) {
+            val code = name[i].code
+
+            if (code in 65..90 || code > 127) {
+                return name.lowercase()
+            }
+        }
+
+        return name
     }
 
-    fun names(): Set<String> = (parent?.names() ?: emptySet()) + defs.keys
+    fun names(): Set<String> = (parent?.names() ?: emptySet()) + buildSet { defs.forEachEntry { key, _ -> add(key) } }
 
     /**
      * Creates a fresh [Ignitor] for the given oscillator name.
@@ -159,12 +187,10 @@ class IgnitorRegistry(
         sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
         blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     ): BuiltIgnitor? {
-        val key = (name ?: DEFAULT_SOUND).lowercase()
-
-        // No `?: get(key)` fallback on purpose: it could never fire (register writes both maps
+        // No `?: get(name)` fallback on purpose: it could never fire (register writes both maps
         // together), so it would only mask a future regression in optimized()'s delegation by
         // silently rendering unoptimized instead of failing a test.
-        val dsl = optimized(key) ?: return null
+        val dsl = optimized(name ?: DEFAULT_SOUND) ?: return null
 
         // The tree renders as registered: nothing is hung around it (the registry's `onepole` wrap for an
         // instrument that did not end in `classic()` retired with the voice strip, phase 3 step 9; the pattern's

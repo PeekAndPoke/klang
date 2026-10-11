@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.roomCha
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.roomState
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
+import io.peekandpoke.klang.common.infra.toKlangMap
 
 /**
  * The contracts of [ChainSwap] that its conversion from five `Cylinder` fields worked out for itself
@@ -40,7 +41,7 @@ class ChainSwapSpec : StringSpec({
         for (rig in listOf(a, b)) {
             rig.registry.register("dry", dryChain(0.9))
             rig.registry.register("room", roomChain(3.0))
-            rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState)
+            rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState.toKlangMap())
             rig.render(blocks = warm, level = 0.5)
         }
 
@@ -257,7 +258,7 @@ class ChainSwapSpec : StringSpec({
 
         val drainingRig = CylinderSwapRig()
         drainingRig.registry.register("dry", dryChain(1.0))
-        drainingRig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState)
+        drainingRig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState.toKlangMap())
         drainingRig.render(blocks = 60, level = 0.5)
         drainingRig.cylinder.requestChain("dry")
         drainingRig.render(blocks = drainingRig.fadeBlocks, level = 0.0)

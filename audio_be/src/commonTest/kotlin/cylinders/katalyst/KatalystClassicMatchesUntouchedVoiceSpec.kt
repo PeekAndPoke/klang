@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * [KatalystDsl.classic] claims to be what an orbit runs when the song never wrote a bus door. This
@@ -133,7 +134,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
         val bands = BodyMaterials.modesFor("wood").shouldNotBeNull()
 
         val chain = classicChain().also {
-            it.applyParams(mapOf("body.material" to BodyMaterials.indexOf("wood")))
+            it.applyParams(klangMapOf("body.material" to BodyMaterials.indexOf("wood")))
         }
 
         // The expected bank and mix are what a material-only call stands for, HAND-BUILT here with
@@ -158,7 +159,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
         val bands = VowelBands.bandsFor("a").shouldNotBeNull()
 
         val chain = classicChain().also {
-            it.applyParams(mapOf("vowel.vowel" to VowelBands.indexOf("a")))
+            it.applyParams(klangMapOf("vowel.vowel" to VowelBands.indexOf("a")))
         }
 
         val installed = chain.vowel.shouldNotBeNull()
@@ -179,7 +180,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
         val bands = BodyMaterials.modesFor("wood").shouldNotBeNull()
 
         val chain = classicChain().also {
-            it.applyParams(mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 0.3))
+            it.applyParams(klangMapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 0.3))
         }
 
         val installed = chain.body.shouldNotBeNull()
@@ -203,7 +204,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
         val bands = VowelBands.bandsFor("bass:a").shouldNotBeNull()
 
         val chain = classicChain().also {
-            it.applyParams(mapOf("vowel.vowel" to VowelBands.indexOf("bass:a"), "vowel.wet" to 0.6))
+            it.applyParams(klangMapOf("vowel.vowel" to VowelBands.indexOf("bass:a"), "vowel.wet" to 0.6))
         }
 
         val installed = chain.vowel.shouldNotBeNull()

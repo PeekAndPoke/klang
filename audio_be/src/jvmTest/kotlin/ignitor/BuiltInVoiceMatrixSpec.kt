@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.common.infra.toKlangMap
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.voices.DoorFields
 import io.peekandpoke.klang.audio_be.voices.DoorFilter
@@ -108,7 +110,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
     for ((name, _) in sources) {
         for (row in rows) {
             "$name: ${row.title}" {
-                val base = VoiceData.empty.copy(freqHz = 220.0, ignitorParams = row.own)
+                val base = VoiceData.empty.copy(freqHz = 220.0, ignitorParams = row.own?.toKlangMap())
                 val builtIn = render(base.copy(sound = name), row.doors)
                 val hash = builtIn.rawBitsHash()
 
@@ -142,7 +144,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
         // The matrix's rows run every built-in, and stiffness moves only the Karplus pair, so this row is its own.
         // It pins the allpass law and its state across blocks, which the rows above (stiffness 0) never reach.
         for (name in listOf("pluck", "superpluck")) {
-            val data = VoiceData.empty.copy(freqHz = 220.0, sound = name, ignitorParams = mapOf("stiffness" to 0.5))
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = name, ignitorParams = klangMapOf("stiffness" to 0.5))
             val stiff = render(data)
             val hash = stiff.rawBitsHash()
 

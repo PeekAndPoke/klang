@@ -17,6 +17,8 @@ import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
 
 /** This file's one seeded stream: every run draws the same, and successive builds still draw
@@ -36,7 +38,7 @@ private val testRandom = Random(0x5EED)
 class IgnitorTailSpec : StringSpec({
 
     fun tailOf(dsl: IgnitorDsl, ignitorParams: Map<String, Double>? = null, freqHz: Double = 440.0): Double? =
-        dsl.buildExciter(ignitorParams, freqHz = freqHz, random = testRandom).releaseTailSec
+        dsl.buildExciter(ignitorParams?.toKlangMap(), freqHz = freqHz, random = testRandom).releaseTailSec
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
@@ -198,14 +200,14 @@ class IgnitorTailSpec : StringSpec({
         registry.createExciter("pad", data, 440.0, random = testRandom)?.releaseTailSec shouldBe 1.1
 
         // The onepole wrap replaces the ignitor; it must not drop the finding with it.
-        val withOnepole = data.copy(ignitorParams = mapOf("onepole" to 900.0))
+        val withOnepole = data.copy(ignitorParams = klangMapOf("onepole" to 900.0))
         registry.createExciter("pad", withOnepole, 440.0, random = testRandom)?.releaseTailSec shouldBe 1.1
     }
     // ── endsInEnvelope: the root is a BUILT amplitude envelope (phase 3 step 6) ──────────────────
 
     "endsInEnvelope: classic()'s envelope when it is on; switched off it hands on what is below it; not for a bare source, not under a later stage" {
         fun ends(dsl: IgnitorDsl, ignitorParams: Map<String, Double>? = null): Boolean =
-            dsl.buildExciter(ignitorParams, freqHz = 440.0, random = testRandom).endsInEnvelope
+            dsl.buildExciter(ignitorParams?.toKlangMap(), freqHz = 440.0, random = testRandom).endsInEnvelope
 
         ends(IgnitorDsl.Sine().classic()) shouldBe true
         ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 0.0)) shouldBe false
@@ -247,6 +249,6 @@ class IgnitorTailSpec : StringSpec({
 
         optimized.shouldBeInstanceOf<IgnitorDsl.Affine>()
         optimized.buildExciter(freqHz = 440.0, random = testRandom).endsInEnvelope shouldBe true
-        optimized.buildExciter(mapOf("level" to 0.5), freqHz = 440.0, random = testRandom).endsInEnvelope shouldBe false
+        optimized.buildExciter(klangMapOf("level" to 0.5), freqHz = 440.0, random = testRandom).endsInEnvelope shouldBe false
     }
 })

@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * [KatalystDsl.classic] claims to be "the chain every cylinder has always run". This is the only
@@ -117,7 +118,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("delay.wet" to 0.5, "delay.time" to 0.25, "delay.feedback" to 0.3),
+                katalystParams = klangMapOf("delay.wet" to 0.5, "delay.time" to 0.25, "delay.feedback" to 0.3),
             ),
             blockStart = 0.0,
         )
@@ -140,7 +141,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         // Owner A charges a small room.
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("reverb.wet" to 0.8, "reverb.size" to 0.5),
+                katalystParams = klangMapOf("reverb.wet" to 0.8, "reverb.size" to 0.5),
             ),
             blockStart = 0.0,
         )
@@ -153,7 +154,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         // the stage's own buffer.
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("reverb.wet" to 0.0, "reverb.size" to 0.0),
+                katalystParams = klangMapOf("reverb.wet" to 0.0, "reverb.size" to 0.0),
             ),
             blockStart = 2.0 * bigBlock,
         )
@@ -180,7 +181,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         // Owner A charges the ring with a delay short enough that echoes land inside one block.
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("delay.wet" to 0.8, "delay.time" to 0.01, "delay.feedback" to 0.8),
+                katalystParams = klangMapOf("delay.wet" to 0.8, "delay.time" to 0.01, "delay.feedback" to 0.8),
             ),
             blockStart = 0.0,
         )

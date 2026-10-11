@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.pitchMod
 import io.peekandpoke.klang.audio_bridge.pitchModSemitones
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.vibrato
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.random.Random
@@ -119,7 +120,7 @@ class FmModulatorFollowsPitchSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(3),
         )
-        val built = dsl.buildExciter(ignitorParams = bag, random = ctx.random, freqHz = noteHz, sampleRate = sampleRate, sampleSource = probe).ignitor
+        val built = dsl.buildExciter(ignitorParams = bag.toKlangMap(), random = ctx.random, freqHz = noteHz, sampleRate = sampleRate, sampleSource = probe).ignitor
         val buffer = AudioBuffer(blockFrames)
 
         for (b in 0 until blocks) {

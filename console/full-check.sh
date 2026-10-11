@@ -14,6 +14,7 @@
 #   alloc   the production node bundle (relinked, so its time is fresh), then
 #           KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun
 #           (audio_benchmark/src/jvmMain/kotlin/AllocationCheck.kt, budgets in audio_benchmark/alloc-budgets.txt)
+#           A red alloc step on spluck-a or E-arith may be a known tail: the "Known tails" paragraph in that file.
 #
 # Everything the summary reads is taken inside a lock call: the test XML inside the tests step's own call, the
 # tree's state before inside the first call and after inside the last one. Another agent's build between two steps

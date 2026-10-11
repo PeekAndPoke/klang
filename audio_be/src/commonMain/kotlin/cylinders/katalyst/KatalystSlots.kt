@@ -10,12 +10,13 @@ import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.ignitor.controlRateValueOrNull
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.random.Random
 
 /**
  * Reads the knobs of a Katalyst chain: one [IgnitorDsl] slot node in, one `Double` out. The
  * composite values a stage wants instead of a number (the body and vowel `ResonatorConfig`s, the
- * [CompressorSettings], the [DuckSettings]) are built by that stage's writer
+ * [CompressorSettings], the [DuckSettings]) are filled by that stage's writer
  * (`KatalystSlotWriters.kt`), each the one caller of its rule.
  *
  * Katalyst step 3a (2026-09-17). The per-stage contract is `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7 and the
@@ -177,7 +178,7 @@ internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
         private set
 
     /** Re-reads a slot from the orbit's param state; null (no owner, no slots) is the default. */
-    fun resolve(params: Map<String, Double>?) {
+    fun resolve(params: KlangMap<Double>?) {
         val name = slot ?: return
         val fromState = params?.get(name)
 

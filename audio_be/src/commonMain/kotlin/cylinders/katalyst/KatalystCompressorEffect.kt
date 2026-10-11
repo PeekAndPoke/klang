@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_be.utils.crossfadeLinear
 import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
+import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.min
@@ -163,12 +164,24 @@ class KatalystCompressorEffect(
     val compressor: Compressor? get() = if (state === off) null else instance
 
     /**
-     * The settings last written into [compressor], by reference: the writer resolves a new object
-     * only when the owner's param state changes, so an unchanged owner costs one compare per block
-     * instead of five setters and about fifteen `exp()` (the open item on `writeCompressor`,
-     * closed here). Forgotten in [Off.enter], so the ON arm out of Off always writes the knobs.
+     * The five knobs last written into [compressor], in [CompressorSettings]' order (threshold, ratio, knee, attack,
+     * release), valid while [appliedValid]: an unchanged config costs five compares per block instead of five setters
+     * and about fifteen `exp()` (the open item on `writeCompressor`, closed here). Forgotten in [Off.enter], so the ON
+     * arm out of Off always writes the knobs.
+     *
+     * VALUES, not the settings object (katalyst knob expressions step 2, 2026-10-11): the writer refills one holder in
+     * place, so a reference compare would never see a change. Skipping is exact: every write is a function of the five
+     * values (the setters store the same coerced numbers and coefficients, a lookahead's smoothing re-split returns
+     * early on an unchanged length, and a [KnobGlide.retarget] to the target that stands is free), so a config that
+     * matches would have written nothing new. Compared NaN-aware with the sign of zero told apart ([sameKnob]): the
+     * writer substitutes its constants for an unset slot, so a NaN arrives only from a direct caller, and the setters
+     * drop it the same way every time; a raw `NaN != NaN` would write on every block. An ARRAY, not double fields, so
+     * the stores cannot box (engine follow-up 7).
      */
-    private var applied: CompressorSettings? = null
+    private val applied = DoubleArray(5)
+
+    /** True once a [configure] has filled [applied]; false after construction and in [Off.enter]. */
+    private var appliedValid: Boolean = false
 
     private val thresholdGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
     /** The ratio glides as its INVERSE, `1 / ratio`: see [Compressor.processGliding]. */
@@ -242,7 +255,7 @@ class KatalystCompressorEffect(
                 instance.reset()
             }
 
-            applied = null
+            appliedValid = false
             thresholdGlide.reset()
             inverseRatioGlide.reset()
             kneeGlide.reset()
@@ -435,7 +448,8 @@ class KatalystCompressorEffect(
     /**
      * Applies the orbit owner's compressor settings, null for none. Called by the chain's writer on
      * every block the orbit has an owner (`KatalystChain.applyParams`), so an unchanged owner must cost
-     * nothing: the knobs are written only when the settings object changes (see [applied]).
+     * nothing: the knobs are written only when a VALUE changes (see [applied]). The stage reads
+     * [settings] and keeps no reference to it.
      */
     fun configure(settings: CompressorSettings?) {
         if (settings == null) {
@@ -444,16 +458,31 @@ class KatalystCompressorEffect(
             return
         }
 
-        // Out of Off [applied] is null, so a new life always writes all five.
-        if (settings !== applied) {
+        val threshold = settings.thresholdDb
+        val ratio = settings.ratio
+        val knee = settings.kneeDb
+        val attack = settings.attackSeconds
+        val release = settings.releaseSeconds
+        val last = applied
+
+        // Out of Off [appliedValid] is false, so a new life always writes all five.
+        val unchanged = appliedValid && sameKnob(last[0], threshold) && sameKnob(last[1], ratio) &&
+            sameKnob(last[2], knee) && sameKnob(last[3], attack) && sameKnob(last[4], release)
+
+        if (!unchanged) {
             val c = instance
 
-            c.thresholdDb = settings.thresholdDb
-            c.ratio = settings.ratio
-            c.kneeDb = settings.kneeDb
-            c.attackSeconds = settings.attackSeconds
-            c.releaseSeconds = settings.releaseSeconds
-            applied = settings
+            c.thresholdDb = threshold
+            c.ratio = ratio
+            c.kneeDb = knee
+            c.attackSeconds = attack
+            c.releaseSeconds = release
+            last[0] = threshold
+            last[1] = ratio
+            last[2] = knee
+            last[3] = attack
+            last[4] = release
+            appliedValid = true
             retarget(c)
         }
 

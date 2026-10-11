@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.EqCore
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 
 /**
  * Orbit-level **mix equalizer**: the section list of a declared `eq` stage, run once on the summed
@@ -146,7 +147,8 @@ class KatalystEqEffect(
      * An array of the wrong SHAPE is IGNORED and the installed curve stands, the same house
      * fall-through [EqCore] states for its own index and window guards: this is a control-rate
      * door on the audio thread, where an escaped exception takes the whole worklet, and a
-     * mismatched length would otherwise throw inside `copyInto` or the compare pass.
+     * mismatched length would otherwise throw inside the copy or the compare pass on the JVM, or read and write past
+     * the end on JS.
      */
     fun configure(values: DoubleArray) {
         if (values.size != current.size) {
@@ -162,13 +164,13 @@ class KatalystEqEffect(
 
         if (!swap.settled) {
             // A fade is running and a third bank could not be heard: the SCALARS wait, latest wins.
-            values.copyInto(parkedValues)
+            values.copyRangeInto(destination = parkedValues, destinationOffset = 0, startIndex = 0, endIndex = values.size)
             hasParked = true
 
             return
         }
 
-        values.copyInto(current)
+        values.copyRangeInto(destination = current, destinationOffset = 0, startIndex = 0, endIndex = values.size)
 
         val index = freeBank()
         val bank = banks[index]

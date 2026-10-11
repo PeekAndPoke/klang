@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.compressor
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * The orbit compressor's SWITCHING on the cylinder: an untouched orbit has none, and a takeover by
@@ -35,7 +36,7 @@ class OrbitCompressorSpec : StringSpec({
     fun voiceWithCompressor() = VoiceTestHelpers.createSynthVoice(
         // The bus compressor reads the orbit's SLOT state since Katalyst step 5b-1; every knob is
         // named here, which is what a `compressor(...)` call writes through the door's fill rule.
-        katalystParams = mapOf(
+        katalystParams = klangMapOf(
             "compressor.threshold" to -20.0,
             "compressor.ratio" to 4.0,
             "compressor.knee" to 6.0,

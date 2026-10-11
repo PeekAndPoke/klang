@@ -13,6 +13,7 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * [Cylinders] keeps its orbits in the order they were rented and finds one by its id without a map (tidy-up step 7,
@@ -114,7 +115,7 @@ class CylindersOrderSpec : StringSpec({
             val voice = VoiceTestHelpers.createSynthVoice(
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
-                katalystParams = mapOf("duck.orbit" to duckOrbit.toDouble(), "duck.attack" to 0.001, "duck.depth" to 1.0),
+                katalystParams = klangMapOf("duck.orbit" to duckOrbit.toDouble(), "duck.attack" to 0.001, "duck.depth" to 1.0),
             )
 
             c.offer(id = 3, voice = voice, blockStart = 0.0).mixBuffer.left.fill(0.5)

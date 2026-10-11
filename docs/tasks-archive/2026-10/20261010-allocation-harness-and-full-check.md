@@ -1,7 +1,7 @@
 # The allocation harness in the repo, and one full check
 
-Status: **done (2026-10-10): built, proven and reviewed in three rounds, the third clean (0 MAJOR). Archive with the
-next housekeeping pass.** Run it: `console/full-check.sh` (`--fresh` forces every test task); the allocation step
+Status: **done (2026-10-10): built, proven and reviewed in three rounds, the third clean (0 MAJOR). Archived 2026-10-11
+(maintainer).** Run it: `console/full-check.sh` (`--fresh` forces every test task); the allocation step
 alone is in `audio_benchmark/README.md`.
 
 ## Why
@@ -107,6 +107,7 @@ are the records' names, so a scoreboard row can be read against the reports.
 | `C-dist` | voice: `classic()` saw, fused distort 0.5 | item 9 on the fused node | 31 B | about 1.6 KB | 0 B | 80 / 12 |
 | `tube4x` | voice: saw, `distort(0.5, "tube", 4)` | item 9, the Shape node oversampled | 72 B | 8,247 B | 0 B | 256 / 12 |
 | `C-full` | voice: `classic()` saw with distort, filter envelope, hpf, tremolo, analog | item 12 step 2 (48 B on the JVM before); holds item 29's open residue | 186 B | 273 to 346 B | 0 B | 320 / 12 |
+| `C-remap` | voice: two `sawC` voices with equal orbit delay maps, received as the engine receives them (on V8 through the wire codec), taking turns as their orbit's owner | item 2, the decoder's `KlangMap` (a new orbit map per block; not item 8: the mutant read median 160 B) | 77 to 88 B (medians; rounds to 150) | 1,128 to 1,164 B | 24 B | 192 / 36 |
 | `E-sawC-sus` | engine: one `sawC` note, sustained | item 3, the limiter's level; item 8 | 68 B | 2,134 B | 0 B | 160 / 12 |
 | `E-noisesaw-sus` | engine: saw plus white noise, loud enough to limit | item 3, the limiter's gain | 56 B (before item 8) | 4,108 B | 0 B | 192 / 12 |
 | `E-delay` | engine: one `sawC` note, the orbit delay (wet 0.3, time 0.2501, feedback 0.45) | item 1, the orbit delay's sites as a whole (its parts: the KDocs) | 62 to 67 B | 160 to 171 B | 0 B | 112 / 6 |
@@ -118,6 +119,16 @@ that change's (`docs/tasks/engine-follow-ups.md`, item 7). The other rows are as
 `audio_benchmark/alloc-budgets.txt`.
 Added 2026-10-11 (engine follow-up 1): `E-delay` and `E-stages`, the sixteenth and seventeenth cases; their numbers are
 that change's harness medians (`docs/tasks/engine-follow-ups.md`, item 1); `E-stages` as re-set in its review round 1.
+Added 2026-10-11 (engine follow-up 2, step 1): `C-remap`, the eighteenth case on its branch, with an `expect` helper of its own,
+`receivedByEngine` (`audio_benchmark/.../engine_inbox.kt`: the generated wire codec on JS, the voice as it is on the
+JVM); its numbers are that change's rounds, "before" the decoder reverted (`docs/tasks/engine-follow-ups.md`, item 2).
+Its JVM line is 36, not 6: the case reads 24 B, the reverb writer's documented `Double?` lowpass per new map. Adding
+it moved `E-C-rel05-n16` on the JVM from 409 to 414 B (5 of 5 runs; 409 with only `C-remap` taken out, review round 1):
+the shared process's mixed profile, under its 450.
+Added 2026-10-11 (Katalyst stage measurements): ten engine cases with an authored Katalyst chain, `E-arith` to
+`E-body-vowel`, 27 cases in all on its branch; what each builds, guards and reads:
+`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`.
+With both branches merged (2026-10-11, `klang-map`) and `E-C-n1` (engine follow-up 2, step 3), 29 cases.
 
 "V8 now" and "V8 before" are bytes per block, from the latest record of each fix (e3, e9, e10, e8 and its review,
 mostly unpinned). The V8 times are in the detail file (0.7 µs for `saw` up to 35 µs for the n16 row). JVM times

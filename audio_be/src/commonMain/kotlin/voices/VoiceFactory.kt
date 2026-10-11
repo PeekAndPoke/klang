@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor
@@ -376,9 +377,9 @@ class VoiceFactory(
 }
 
 /** The finite value this bag holds for [slot] (an `IgnitorDsl.Param` of `IgnitorDsl.Slots`), or null: unset or non-finite. */
-private fun Map<String, Double>?.finiteSlot(slot: IgnitorDsl): Double? =
+private fun KlangMap<Double>?.finiteSlot(slot: IgnitorDsl): Double? =
     this?.get((slot as IgnitorDsl.Param).name)?.takeIf { it.isFinite() } // NaN-guard: non-finite reads as unset
 
 /** [finiteSlot], or the slot's own default when unset: the default has one home, the `Param`. */
-private fun Map<String, Double>?.finiteSlotOrDefault(slot: IgnitorDsl): Double =
+private fun KlangMap<Double>?.finiteSlotOrDefault(slot: IgnitorDsl): Double =
     finiteSlot(slot) ?: (slot as IgnitorDsl.Param).default

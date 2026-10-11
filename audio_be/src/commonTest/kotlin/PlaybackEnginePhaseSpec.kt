@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_be.PlaybackEngine.Phase
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.toKlangMap
 
 /**
  * The engine's end of life as one [PlaybackEngine.Phase] (tidy-up step 9, audit item C3.1), one row per transition
@@ -90,7 +91,7 @@ class PlaybackEnginePhaseSpec : StringSpec({
                             freqHz = 440.0,
                             gain = 0.5,
                             cylinder = orbit,
-                            katalystParams = params,
+                            katalystParams = params?.toKlangMap(),
                         ),
                         playbackStartTime = 0.0,
                     ),

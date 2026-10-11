@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 
 /**
@@ -93,7 +94,7 @@ class KatalystClassicGainStageSpec : StringSpec({
                 ctx.mixBuffer.right[i] = dry * 0.5
             }
 
-            chain.applyParams(params)
+            chain.applyParams(params?.toKlangMap())
             chain.process(ctx)
 
             for (i in 0 until blockFrames) {

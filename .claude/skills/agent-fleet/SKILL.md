@@ -113,8 +113,10 @@ reads to take the lock.
   so a doubt is settled by a run instead of a guess. Always through `console/with-build-lock.sh`, one unquoted
   `--tests` FQCN per run. A reviewer never edits production code to fix anything; to TEST a doubt by a mutation it
   wraps the whole critical section in ONE lock call (back up the file, mutate, build and run, restore with `cp`,
-  verify with `cmp`, never with git) and reports the mutant and its verdict. Round-1 pairs run in parallel and take
-  the lock in turn: a reviewer that waits for the lock is not stalled.
+  verify with `cmp`, never with git) and reports the mutant and its verdict. *(Provisional, maintainer 2026-10-11:
+  reviewers name the mutants and the worker runs them in the next fix round, after two reviewer mutation calls were
+  refused by the safety check; `/review-loop`, "Reviewers name the mutants".)* Round-1 pairs run in parallel and
+  take the lock in turn: a reviewer that waits for the lock is not stalled.
 - **Counting tests: clear old results with `find`, never `rm -rf`** (2026-10-10: the pitch step 4 and step 5
   workers each ran `rm -rf <module>/build/test-results/<task>` to get a clean count, against their brief). The safe
   form: `find <module>/build/test-results/<task> -name '*.xml' -delete`, or count only the XML files newer than the

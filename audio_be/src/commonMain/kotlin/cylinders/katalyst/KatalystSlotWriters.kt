@@ -16,15 +16,16 @@ import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.KlangMap
 
 // The KatalystSlotWriter of every DECLARED stage kind: one class per stage, holding that stage's
 // KatalystKnobs and whatever composite its effect wants written.
 //
 // The split the interface asks for, stage by stage. `resolve` runs when the orbit's param state
-// changes and is the only place a map is read and a composite allocated; `apply` runs every block
-// and writes numbers that are already in hand. A chain with no `.katp` and no bus door on its orbit
-// therefore resolves exactly once, when it is built, and every block after that costs what step 3a
-// cost.
+// changes and is the only place a map is read and a composite filled (each writer refills its own
+// holder in place); `apply` runs every block and writes numbers that are already in hand. A chain
+// with no `.katp` and no bus door on its orbit therefore resolves exactly once, when it is built,
+// and every block after that costs what step 3a cost.
 //
 // Each writer holds the per-stage contract of `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`
 // §7 for its stage (the gate, and the rule for an unset slot), so a value that arrives from a slot
@@ -62,7 +63,7 @@ internal class KatalystResonatorWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         index.resolve(params)
         wet.resolve(params)
         floor.resolve(params)
@@ -102,7 +103,7 @@ internal class KatalystDelayWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         wet.resolve(params)
         time.resolve(params)
         feedback.resolve(params)
@@ -143,7 +144,7 @@ internal class KatalystReverbWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         wet.resolve(params)
         size.resolve(params)
         lowpass.resolve(params)
@@ -197,7 +198,7 @@ internal class KatalystPhaserWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         wet.resolve(params)
         rate.resolve(params)
         center.resolve(params)
@@ -242,22 +243,33 @@ internal class KatalystCompressorWriter(
     private val release: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var settings: CompressorSettings? = settings()
+    /** This writer's own settings, refilled at [resolve] and handed over by reference ([CompressorSettings] says why). */
+    private val settings = CompressorSettings()
 
-    override fun resolve(params: Map<String, Double>?) {
+    /** False while none of the five slots is set: the stage is off and [apply] hands null. */
+    private var on: Boolean = false
+
+    init {
+        fill()
+    }
+
+    override fun resolve(params: KlangMap<Double>?) {
         threshold.resolve(params)
         ratio.resolve(params)
         knee.resolve(params)
         attack.resolve(params)
         release.resolve(params)
-        settings = settings()
+        fill()
     }
 
     override fun apply() {
-        fx.configure(settings)
+        fx.configure(handed())
     }
 
-    private fun settings(): CompressorSettings? {
+    /** What [apply] hands the stage: this writer's one [settings] instance while the stage is on, else null. */
+    internal fun handed(): CompressorSettings? = if (on) settings else null
+
+    private fun fill() {
         val t = threshold.value
         val r = ratio.value
         val k = knee.value
@@ -266,16 +278,19 @@ internal class KatalystCompressorWriter(
 
         // NaN-guards on values the author can write: a non-finite slot was never set.
         if (!t.isFinite() && !r.isFinite() && !k.isFinite() && !a.isFinite() && !rel.isFinite()) {
-            return null
+            on = false
+
+            return
         }
 
-        return CompressorSettings(
-            thresholdDb = if (t.isFinite()) t else COMPRESSOR_THRESHOLD_DB,
-            ratio = if (r.isFinite()) r else COMPRESSOR_RATIO,
-            kneeDb = if (k.isFinite()) k else COMPRESSOR_KNEE_DB,
-            attackSeconds = if (a.isFinite()) a else COMPRESSOR_ATTACK_SECONDS,
-            releaseSeconds = if (rel.isFinite()) rel else COMPRESSOR_RELEASE_SECONDS,
-        )
+        val s = settings
+
+        s.thresholdDb = if (t.isFinite()) t else COMPRESSOR_THRESHOLD_DB
+        s.ratio = if (r.isFinite()) r else COMPRESSOR_RATIO
+        s.kneeDb = if (k.isFinite()) k else COMPRESSOR_KNEE_DB
+        s.attackSeconds = if (a.isFinite()) a else COMPRESSOR_ATTACK_SECONDS
+        s.releaseSeconds = if (rel.isFinite()) rel else COMPRESSOR_RELEASE_SECONDS
+        on = true
     }
 }
 
@@ -303,7 +318,7 @@ internal class KatalystEqWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         for (i in knobs.indices) {
             knobs[i]?.resolve(params)
         }
@@ -336,7 +351,7 @@ internal class KatalystGainWriter(
 
     private var factor: Double = guarded()
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         gain.resolve(params)
         factor = guarded()
     }
@@ -362,7 +377,7 @@ internal class KatalystArithmeticWriter(
     private val operand: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         operand.resolve(params)
     }
 
@@ -388,7 +403,7 @@ internal class KatalystDistortWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         amount.resolve(params)
         fill()
     }
@@ -418,7 +433,8 @@ internal class KatalystDuckWriter(
     private val attack: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var settings: DuckSettings? = settings()
+    /** This writer's own settings, refilled at [resolve] and handed over by reference ([DuckSettings] says why). */
+    private val settings = DuckSettings()
 
     /**
      * Whether this stage will be CONFIGURED rather than cleared, which the host asks BEFORE it
@@ -426,37 +442,46 @@ internal class KatalystDuckWriter(
      * a `var` because `.katp("duck.orbit", n)` can turn a declared duck on after the chain was
      * built.
      */
-    var declared: Boolean = settings != null
+    var declared: Boolean = false
         private set
 
-    override fun resolve(params: Map<String, Double>?) {
+    init {
+        fill()
+    }
+
+    override fun resolve(params: KlangMap<Double>?) {
         orbit.resolve(params)
         depth.resolve(params)
         attack.resolve(params)
-        settings = settings()
-        declared = settings != null
+        fill()
     }
 
     override fun apply() {
-        fx.configure(settings)
+        fx.configure(handed())
     }
 
-    private fun settings(): DuckSettings? {
+    /** What [apply] hands the stage: this writer's one [settings] instance while [declared], else null. */
+    internal fun handed(): DuckSettings? = if (declared) settings else null
+
+    private fun fill() {
         val source = orbit.value
         val amount = depth.value
         val attackSeconds = attack.value
 
         // NaN-guard on values the author can write: a non-finite orbit is "no source named".
         if (!source.isFinite() || !(amount > 0.0)) {
-            return null
+            declared = false
+
+            return
         }
 
-        return DuckSettings(
-            cylinderId = source.toInt(),
-            // NaN-guard on a value the author can write: a non-finite attack is unset.
-            attackSeconds = if (attackSeconds.isFinite()) attackSeconds else DUCK_ATTACK_SECONDS,
-            depth = amount,
-        )
+        val s = settings
+
+        s.cylinderId = source.toInt()
+        // NaN-guard on a value the author can write: a non-finite attack is unset.
+        s.attackSeconds = if (attackSeconds.isFinite()) attackSeconds else DUCK_ATTACK_SECONDS
+        s.depth = amount
+        declared = true
     }
 }
 
@@ -470,9 +495,9 @@ internal class KatalystParallelWriter(
     private val fx: KatalystParallelEffect,
 ) : KatalystSlotWriter {
 
-    private var params: Map<String, Double>? = null
+    private var params: KlangMap<Double>? = null
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         this.params = params
 
         for (i in fx.branches.indices) {

@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.adsrExpNorm
 import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -125,7 +126,7 @@ class AdsrIgnitorKnobsSpec : StringSpec({
             release = IgnitorDsl.Constant(0.1),
         )
         val bufDefault = render(dsl.toExciter(random = testRandom), n)
-        val bufOverride = render(dsl.toExciter(mapOf("expK" to 8.0), random = testRandom), n)
+        val bufOverride = render(dsl.toExciter(klangMapOf("expK" to 8.0), random = testRandom), n)
         for (i in 0 until n) bufOverride[i].toRawBits() shouldBe bufDefault[i].toRawBits()
     }
 
@@ -140,7 +141,7 @@ class AdsrIgnitorKnobsSpec : StringSpec({
             release = IgnitorDsl.Constant(0.1),
         )
         val bufDefault = render(dsl.toExciter(random = testRandom), n)
-        val bufOverride = render(dsl.toExciter(mapOf("declick" to 0.002), random = testRandom), n)
+        val bufOverride = render(dsl.toExciter(klangMapOf("declick" to 0.002), random = testRandom), n)
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 })

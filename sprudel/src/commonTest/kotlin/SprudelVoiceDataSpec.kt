@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.SoundValue
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 class SprudelVoiceDataSpec : StringSpec({
 
@@ -291,7 +292,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.ignitorParams shouldBe mapOf("adsr.attack" to 0.01, "adsr.decay" to 0.1, "adsr.sustain" to 0.7, "adsr.release" to 0.3)
+        voiceData.ignitorParams shouldBe klangMapOf("adsr.attack" to 0.01, "adsr.decay" to 0.1, "adsr.sustain" to 0.7, "adsr.release" to 0.3)
     }
 
     "toVoiceData() sends the LPF fields as the lpf.* slots" {
@@ -302,7 +303,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.ignitorParams shouldBe mapOf("lpf.freq" to 1000.0, "lpf.q" to 1.5)
+        voiceData.ignitorParams shouldBe klangMapOf("lpf.freq" to 1000.0, "lpf.q" to 1.5)
     }
 
     "toVoiceData() sends the HPF fields as the hpf.* slots" {
@@ -313,7 +314,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.ignitorParams shouldBe mapOf("hpf.freq" to 500.0, "hpf.q" to 2.0)
+        voiceData.ignitorParams shouldBe klangMapOf("hpf.freq" to 500.0, "hpf.q" to 2.0)
     }
 
     "toVoiceData() sends the BPF fields as the bpf.* slots (no passes)" {
@@ -324,7 +325,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.ignitorParams shouldBe mapOf("bpf.freq" to 750.0, "bpf.q" to 1.2)
+        voiceData.ignitorParams shouldBe klangMapOf("bpf.freq" to 750.0, "bpf.q" to 1.2)
     }
 
     "toVoiceData() sends the Notch fields as the notch.* slots (no passes)" {
@@ -335,7 +336,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.ignitorParams shouldBe mapOf("notch.freq" to 600.0, "notch.q" to 0.8)
+        voiceData.ignitorParams shouldBe klangMapOf("notch.freq" to 600.0, "notch.q" to 0.8)
     }
 
     "toVoiceData() sends every filter kind under its own slots, each with its own resonance" {
@@ -350,7 +351,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.ignitorParams shouldBe mapOf(
+        voiceData.ignitorParams shouldBe klangMapOf(
             "hpf.freq" to 500.0, "hpf.q" to 2.0,
             "bpf.freq" to 750.0, "bpf.q" to 1.2,
             "lpf.freq" to 1000.0, "lpf.q" to 1.5,
@@ -368,7 +369,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.ignitorParams shouldBe mapOf("lpf.freq" to 1000.0, "hpf.freq" to 500.0, "bpf.freq" to 750.0, "notch.freq" to 600.0)
+        voiceData.ignitorParams shouldBe klangMapOf("lpf.freq" to 1000.0, "hpf.freq" to 500.0, "bpf.freq" to 750.0, "notch.freq" to 600.0)
         voiceData.katalystParams shouldBe null
     }
 
@@ -381,7 +382,7 @@ class SprudelVoiceDataSpec : StringSpec({
         val voiceData = data.toVoiceData()
 
         voiceData.ignitorParams?.get("lpf.freq") shouldBe 1000.0
-        voiceData.ignitorParams?.containsKey("lpf.q") shouldBe false // the classic() slot default, 0.707 (LangDefaultQSpec)
+        voiceData.ignitorParams?.contains("lpf.q") shouldBe false // the classic() slot default, 0.707 (LangDefaultQSpec)
     }
 
     "toVoiceData() maps all basic fields correctly" {

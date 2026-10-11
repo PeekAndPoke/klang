@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.audio_be.ChainSwap
 import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -288,7 +289,7 @@ class Cylinder(
      * voice that gave the orbit up. The reference is dropped after [OWNER_STATE_BLOCKS], so nothing here
      * outlives its owner by more than that (the allocation-cleanup rule).
      */
-    private var ownerParams: Map<String, Double>? = null
+    private var ownerParams: KlangMap<Double>? = null
 
     /**
      * Blocks since the orbit's owner last handed [ownerParams] over, capped at

@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
  * A sample's own envelope as the DEFAULTS of the sample instrument's `adsr.*` slots (phase 3 step 7).
@@ -22,7 +23,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
  *
  * Returns [bag] itself when [meta] is null or fills nothing (no copy); otherwise a copy with the fills.
  */
-internal fun withSampleEnvelopeDefaults(bag: Map<String, Double>?, meta: AdsrDef?): Map<String, Double>? {
+internal fun withSampleEnvelopeDefaults(bag: KlangMap<Double>?, meta: AdsrDef?): KlangMap<Double>? {
     if (meta == null) {
         return bag
     }
@@ -46,9 +47,12 @@ internal fun withSampleEnvelopeDefaults(bag: Map<String, Double>?, meta: AdsrDef
     return defaults.result()
 }
 
-/** The bag being filled: a copy of [own], made at the first fill. */
-private class SampleEnvelopeDefaults(private val own: Map<String, Double>?) {
-    private var out: MutableMap<String, Double>? = null
+/**
+ * The bag being filled: a copy of [own], made at the first fill. A [KlangMap], like the decoder's (the voice build
+ * reads it by key, which a `HashMap` pays for on Kotlin/JS: `KlangMap`'s KDoc).
+ */
+private class SampleEnvelopeDefaults(private val own: KlangMap<Double>?) {
+    private var out: KlangMap<Double>? = null
 
     fun fill(slot: IgnitorDsl, value: Double?) {
         if (value == null || !value.isFinite()) { // NaN-guard: a non-finite default fills nothing
@@ -63,7 +67,7 @@ private class SampleEnvelopeDefaults(private val own: Map<String, Double>?) {
             return
         }
 
-        val target = out ?: (own?.toMutableMap() ?: mutableMapOf()).also { out = it }
+        val target = out ?: (own?.copy() ?: KlangMap()).also { out = it }
 
         target[name] = value
     }
@@ -72,5 +76,5 @@ private class SampleEnvelopeDefaults(private val own: Map<String, Double>?) {
         fill(slot, curve?.let { AdsrCurves.indexOf(it) })
     }
 
-    fun result(): Map<String, Double>? = out ?: own
+    fun result(): KlangMap<Double>? = out ?: own
 }

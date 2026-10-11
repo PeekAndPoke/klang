@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
 
 /**
@@ -66,7 +67,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
     }
 
     fun renderDsl(dsl: IgnitorDsl, params: Map<String, Double>? = null): List<Long> =
-        render(dsl.buildExciter(ignitorParams = params, random = Random(3), freqHz = freqHz).ignitor)
+        render(dsl.buildExciter(ignitorParams = params?.toKlangMap(), random = Random(3), freqHz = freqHz).ignitor)
 
     // ── The chain `adsr` ──────────────────────────────────────────────────────────────────────
 

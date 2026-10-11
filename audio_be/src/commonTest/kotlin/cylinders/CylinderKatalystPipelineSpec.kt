@@ -21,6 +21,8 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -77,7 +79,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val bf = blockFrames
 
         // Voice A (has body) claims the orbit body at block 0.
-        cylinder.offerAndCommit(VoiceTestHelpers.createSynthVoice(katalystParams = woodBody), blockStart = 0.0)
+        cylinder.offerAndCommit(VoiceTestHelpers.createSynthVoice(katalystParams = woodBody.toKlangMap()), blockStart = 0.0)
         bodyActiveOn(cylinder) shouldBe true
 
         // A stops offering; voice B (no body) owns from its block → body turns OFF.
@@ -97,7 +99,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         // Same onset: the voice created later is the newer one and owns (lifecycle step 5).
         val older = VoiceTestHelpers.createSynthVoice()
-        val owner = VoiceTestHelpers.createSynthVoice(katalystParams = woodBody)
+        val owner = VoiceTestHelpers.createSynthVoice(katalystParams = woodBody.toKlangMap())
 
         // Both offer in one block, in either order; the commit picks the newest.
         cylinder.offer(owner, blockStart = 0.0)
@@ -116,7 +118,7 @@ class OrbitBusPipelineSpec : StringSpec({
         // Owner A: reverb on — build up a comb-filter tail (small room = a drain the test can afford).
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("reverb.wet" to 0.8, "reverb.size" to 0.5),
+                katalystParams = klangMapOf("reverb.wet" to 0.8, "reverb.size" to 0.5),
             ),
             blockStart = 0.0,
         )
@@ -130,7 +132,7 @@ class OrbitBusPipelineSpec : StringSpec({
         // RETAINED params (the countdown decays at owner A's size, not the new owner's 0.0).
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("reverb.wet" to 0.0, "reverb.size" to 0.0),
+                katalystParams = klangMapOf("reverb.wet" to 0.0, "reverb.size" to 0.0),
             ),
             blockStart = 2.0 * bf,
         )
@@ -184,7 +186,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 5.0),
+            katalystParams = klangMapOf("reverb.wet" to 0.5, "reverb.size" to 5.0),
         )
         cylinder.offerAndCommit(voice, blockStart = 0.0)
 
@@ -216,7 +218,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            katalystParams = mapOf("duck.orbit" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
+            katalystParams = klangMapOf("duck.orbit" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
         )
         cylinder.offerAndCommit(voice, blockStart = 0.0)
 
@@ -240,7 +242,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            katalystParams = mapOf("duck.orbit" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
+            katalystParams = klangMapOf("duck.orbit" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
         )
         cylinder.offerAndCommit(voice, blockStart = 0.0)
 
@@ -258,7 +260,7 @@ class OrbitBusPipelineSpec : StringSpec({
         // the bypass path) is wrong across a full teardown — the carried phase would be "blocks
         // the previous life stayed active x rate", a cleanup-schedule artifact.
         fun phaserVoice() = VoiceTestHelpers.createSynthVoice(
-            katalystParams = mapOf(
+            katalystParams = klangMapOf(
                 // No `phaser.floor`: the fixture this replaced left the voice's floor at its
                 // default, and an unwritten slot resolves to the same PHASER_FLOOR the field
                 // defaulted to. Writing a 0.0 here would be a different dry coefficient.
@@ -337,7 +339,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf(
+                katalystParams = klangMapOf(
                     "phaser.rate" to 2.0, "phaser.wet" to 0.8, "phaser.center" to 1200.0,
                     "phaser.sweep" to 900.0,
                 ),
@@ -352,7 +354,7 @@ class OrbitBusPipelineSpec : StringSpec({
         // which drops it, and the phaser stayed engaged at 0.8 with the new owner's kernel params.
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf(
+                katalystParams = klangMapOf(
                     "phaser.rate" to 3.0, "phaser.wet" to Double.NaN, "phaser.center" to 800.0,
                     "phaser.sweep" to 700.0,
                 ),
@@ -370,7 +372,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf(
+                katalystParams = klangMapOf(
                     "phaser.rate" to 2.0, "phaser.wet" to 0.8, "phaser.center" to 1200.0,
                     "phaser.sweep" to 900.0,
                 ),
@@ -404,14 +406,16 @@ class OrbitBusPipelineSpec : StringSpec({
             "phaser.rate" to 2.0, "phaser.wet" to 0.5, "phaser.center" to 800.0, "phaser.sweep" to 600.0,
         )
         val voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = phaser + mapOf(
-                "phaser.floor" to 0.25,
-                "delay.wet" to 0.5, "delay.time" to 0.5, "delay.feedback" to 0.45,
-                "reverb.wet" to 0.5, "reverb.size" to 7.0, "reverb.lowpass" to 5000.0,
-                "duck.orbit" to 2.0, "duck.attack" to 0.05, "duck.depth" to 0.8,
-                "compressor.threshold" to -15.0, "compressor.ratio" to 3.0, "compressor.knee" to 4.0,
-                "compressor.attack" to 0.005, "compressor.release" to 0.2,
-            ),
+            katalystParams = (
+                phaser + mapOf(
+                    "phaser.floor" to 0.25,
+                    "delay.wet" to 0.5, "delay.time" to 0.5, "delay.feedback" to 0.45,
+                    "reverb.wet" to 0.5, "reverb.size" to 7.0, "reverb.lowpass" to 5000.0,
+                    "duck.orbit" to 2.0, "duck.attack" to 0.05, "duck.depth" to 0.8,
+                    "compressor.threshold" to -15.0, "compressor.ratio" to 3.0, "compressor.knee" to 4.0,
+                    "compressor.attack" to 0.005, "compressor.release" to 0.2,
+                )
+            ).toKlangMap(),
         )
 
         cylinder.offerAndCommit(voice, blockStart = 0.0)
@@ -464,7 +468,7 @@ class OrbitBusPipelineSpec : StringSpec({
         withClue("a phaser floor nobody writes arrives as the additive default 1.0") {
             val unfloored = createOrbit()
 
-            unfloored.offerAndCommit(VoiceTestHelpers.createSynthVoice(katalystParams = phaser), blockStart = 0.0)
+            unfloored.offerAndCommit(VoiceTestHelpers.createSynthVoice(katalystParams = phaser.toKlangMap()), blockStart = 0.0)
 
             unfloored.phaser!!.phaser.floor shouldBe 1.0
         }

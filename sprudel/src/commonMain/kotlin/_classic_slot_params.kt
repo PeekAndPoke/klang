@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.PassFilterSlots
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.common.infra.KlangMap
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 // Sprudel's voice doors as slots on the wire (phase 3 step 8)
@@ -54,17 +55,17 @@ internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
  *  - shapes and curves travel as their catalogue INDEX (`DistortionShapes`, `LfoShapes`, `AdsrCurves`), a
  *    flag as 1.0 or 0.0.
  *
- * An event that writes no voice door (every group null) returns at once with its own bag's copy (`ParamBag.toMap`),
+ * An event that writes no voice door (every group null) returns at once with its own bag's copy (`ParamBag.toKlangMap`),
  * the one allocation the wire boundary always had; otherwise ONE sized copy is written into (the hot path of the
  * frontend's query, measured in phase 3 step 8).
  */
-internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
+internal fun SprudelVoiceData.classicSlotParams(): KlangMap<Double>? {
     // The door-less event, the common case (a sample hit, a bare note): its own bag's copy, as the wire always
     // carried, with no writer and no key lookups.
     if (adsr == null && lpf == null && hpf == null && bpf == null && notch == null &&
         distortion == null && tremolo == null && sample == null && pitchEnv == null && pitchMod == null && fm == null
     ) {
-        return ignitorParams?.toMap()
+        return ignitorParams?.toKlangMap()
     }
 
     val k = ClassicSlotKeys
@@ -239,17 +240,19 @@ private object ClassicSlotKeys {
     val loop = name(s.sample.loop)
 }
 
-/** The bag being written: a copy of the event's own bag, sized once, made at the first field that is set. */
+/**
+ * The bag being written: a copy of the event's own bag, sized once, made at the first field that is set (a
+ * [KlangMap], as [ParamBag]'s storage).
+ */
 private class ClassicSlotParams(private val own: ParamBag?) {
-    private var out: MutableMap<String, Double>? = null
+    private var out: KlangMap<Double>? = null
 
     fun put(name: String, value: Double?) {
         if (value == null || !value.isFinite()) { // NaN-guard: a non-finite field reads as unset
             return
         }
 
-        val target = out
-            ?: (own?.toMutableMap(EXPECTED_SLOTS) ?: LinkedHashMap<String, Double>(EXPECTED_SLOTS)).also { out = it }
+        val target = out ?: (own?.toKlangMap(EXPECTED_SLOTS) ?: KlangMap(EXPECTED_SLOTS)).also { out = it }
 
         target[name] = value
     }
@@ -289,7 +292,7 @@ private class ClassicSlotParams(private val own: ParamBag?) {
         putCurve(keys.curveRelease, filter.releaseCurve)
     }
 
-    fun result(): Map<String, Double>? = out ?: own?.toMap()
+    fun result(): KlangMap<Double>? = out ?: own?.toKlangMap()
 
     private companion object {
         /** Room for the slots a richly written event adds, so the copy rarely grows while it is written. */

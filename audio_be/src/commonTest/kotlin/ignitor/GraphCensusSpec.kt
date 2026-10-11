@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.assertions.withClue
@@ -59,7 +60,7 @@ class GraphCensusSpec : StringSpec({
         // the engine clamps a cascade at FILTER_MAX_PASSES (16), so does the count
         GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = c(64.0))).passes shouldBe 1 + 16
         // a slotted count (phase 3 step 5) is read through the voice's params, as the runtime reads it
-        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = IgnitorDsl.Param("p", 1.0)), params = mapOf("p" to 3.0))
+        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = IgnitorDsl.Param("p", 1.0)), params = klangMapOf("p" to 3.0))
             .passes shouldBe 4
     }
 
@@ -200,7 +201,7 @@ class GraphCensusSpec : StringSpec({
             it.traffic shouldBe 2 * 4 - 1
             it.bytes shouldBe 64 + 4 * 40
         }
-        GraphCensus.of(IgnitorDsl.SuperSaw(), params = mapOf("voices" to 13.0)).passes shouldBe 13
+        GraphCensus.of(IgnitorDsl.SuperSaw(), params = klangMapOf("voices" to 13.0)).passes shouldBe 13
         GraphCensus.of(IgnitorDsl.SuperSaw()).passes shouldBe 8
     }
 

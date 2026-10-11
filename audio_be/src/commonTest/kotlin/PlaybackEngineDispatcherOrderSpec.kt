@@ -13,6 +13,7 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * The orders the dispatcher's per-block walks keep (tidy-up step 7, audit items B4.3 and B4.4): the engines render,
@@ -182,7 +183,7 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
                         freqHz = 440.0,
                         gain = 0.5,
                         cylinder = 3,
-                        katalystParams = mapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 1.0),
+                        katalystParams = klangMapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 1.0),
                     ),
                     playbackStartTime = 0.0,
                 ),

@@ -25,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.random.Random
 
 /** This file's one seeded stream: every run draws the same, and successive builds still draw
@@ -163,8 +164,8 @@ class SampleInstrumentSpec : StringSpec({
         Triple("tremolo", base, DoorFields(tremoloDepth = 0.7, tremoloRate = 6.0, tremoloShape = "square")),
         Triple("adsr", base, DoorFields(adsr = DoorAdsr(attack = 0.03, decay = 0.05, sustain = 0.4, release = 0.1))),
         Triple("adsrOff (the teardown fade)", base, DoorFields(adsr = DoorAdsr(on = false))),
-        Triple("onepole", base.copy(ignitorParams = mapOf("onepole" to 400.0)), DoorFields()),
-        Triple("pregain into distort", base.copy(ignitorParams = mapOf("pregain" to 1.7)), DoorFields(distort = 0.3)),
+        Triple("onepole", base.copy(ignitorParams = klangMapOf("onepole" to 400.0)), DoorFields()),
+        Triple("pregain into distort", base.copy(ignitorParams = klangMapOf("pregain" to 1.7)), DoorFields(distort = 0.3)),
     )
 
     for (sampleRate in listOf(48000, 44100)) {
@@ -245,7 +246,7 @@ class SampleInstrumentSpec : StringSpec({
         val long = DoorFields(adsr = DoorAdsr(release = 1.0))
         val depthSlot = (IgnitorDsl.Slots.tremolo.depth as IgnitorDsl.Param).name
         val (plain, _) = render(base.copy(sound = "probe"), sampleRate, pcm, doors = long)
-        val (tremolo, _) = render(base.copy(sound = "probe", ignitorParams = mapOf(depthSlot to 0.8)), sampleRate, pcm, doors = long)
+        val (tremolo, _) = render(base.copy(sound = "probe", ignitorParams = klangMapOf(depthSlot to 0.8)), sampleRate, pcm, doors = long)
 
         // The tremolo voice's STATE, not only "not culled": a render that ran past its end would also read "not
         // culled", for the wrong reason. Releasing pins that it is still in its release here.
@@ -262,8 +263,26 @@ class SampleInstrumentSpec : StringSpec({
             meta = SampleMetadata(anchor = 0.0, loop = null, adsr = AdsrDef.Std(release = 0.2)),
         )
         val releaseSlot = (IgnitorDsl.Slots.adsr.release as IgnitorDsl.Param).name
-        val (voice, _) = render(base.copy(sound = "probe", ignitorParams = mapOf(releaseSlot to Double.NaN)), sampleRate, pcm)
+        val (voice, _) = render(base.copy(sound = "probe", ignitorParams = klangMapOf(releaseSlot to Double.NaN)), sampleRate, pcm)
 
         voice.endFrame shouldBe gateEnd(sampleRate, pcm) + 0.2 * sampleRate
+    }
+
+    "the meta envelope fills a copy: the voice's own wire map stays as it arrived" {
+        // `VoiceFactory` hands the voice's decoded wire map (`data.ignitorParams`) to `withSampleEnvelopeDefaults`;
+        // the engine may hold and re-read that map, so the fill writes into a copy made at its first write.
+        val releaseSlot = (IgnitorDsl.Slots.adsr.release as IgnitorDsl.Param).name
+        val attackSlot = (IgnitorDsl.Slots.adsr.attack as IgnitorDsl.Param).name
+        val own = klangMapOf(releaseSlot to Double.NaN)
+        val filled = withSampleEnvelopeDefaults(own, AdsrDef.Std(attack = 0.01, release = 0.2))
+
+        withClue("the fills reach the result") {
+            filled!![releaseSlot] shouldBe 0.2
+            filled[attackSlot] shouldBe 0.01
+        }
+        withClue("the wire map keeps its one slot, still unset") {
+            own.size shouldBe 1
+            own[releaseSlot]!!.isNaN() shouldBe true
+        }
     }
 })

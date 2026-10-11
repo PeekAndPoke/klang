@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.UNISON_MAX_VOICES
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -88,7 +89,7 @@ class UnisonVoiceCapSpec : StringSpec({
         GraphCensus.of(IgnitorDsl.SuperPluck(voices = c(1e9))) shouldBe GraphCensus.of(IgnitorDsl.SuperPluck(voices = c(UNISON_MAX_VOICES.toDouble())))
         GraphCensus.of(IgnitorDsl.SuperSaw(voices = c(Double.POSITIVE_INFINITY))) shouldBe GraphCensus.of(IgnitorDsl.SuperSaw(voices = c(0.0)))
         // The pattern-level path, `unison(1e9)`: the count arrives in the voice's params and is read through the Param arm.
-        GraphCensus.of(IgnitorDsl.SuperSaw(), params = mapOf("voices" to 1e9)) shouldBe
-            GraphCensus.of(IgnitorDsl.SuperSaw(), params = mapOf("voices" to UNISON_MAX_VOICES.toDouble()))
+        GraphCensus.of(IgnitorDsl.SuperSaw(), params = klangMapOf("voices" to 1e9)) shouldBe
+            GraphCensus.of(IgnitorDsl.SuperSaw(), params = klangMapOf("voices" to UNISON_MAX_VOICES.toDouble()))
     }
 })

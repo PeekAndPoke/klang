@@ -14,6 +14,8 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toMap
 
 /**
  * The slot storage of one event, and the one METHOD the compound-door fill rule is expressed
@@ -159,6 +161,26 @@ class ParamBagSpec : StringSpec({
         bag.set("reverb.wet", 0.5)
 
         wire shouldBe mapOf("room" to 2.0)
+    }
+
+    "the wire copy holds the bag's entries in order, written and copied, and shares nothing with the bag" {
+        // `toKlangMap` is what `toVoiceData` hands the wire (engine follow-up 2, steps 2 and 5); `toMap` is the plain
+        // copy for tests and tools. Both must agree with the bag, in its order.
+        val bag = paramBagOf("reverb.wet" to 0.3)
+
+        bag.setOrDefault("reverb.size", null, 5.0)
+
+        val wire = bag.toKlangMap()
+
+        wire shouldBe klangMapOf("reverb.wet" to 0.3, "reverb.size" to 5.0)
+        wire.toMap().keys.toList() shouldBe listOf("reverb.wet", "reverb.size")
+        bag.copy().toKlangMap() shouldBe wire
+        ParamBag().also { it.mergeFrom(bag) }.toKlangMap() shouldBe wire
+        bag.toMap() shouldBe mapOf("reverb.wet" to 0.3, "reverb.size" to 5.0)
+
+        bag.set("reverb.wet", 0.9)
+
+        wire["reverb.wet"] shouldBe 0.3
     }
 
     "an empty bag is empty, and two bags with the same names are equal" {

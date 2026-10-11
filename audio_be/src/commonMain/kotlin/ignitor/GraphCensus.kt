@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.childNodes
@@ -75,7 +76,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         /** The shimmer's loop per sample: the input, the ring write, up to eight grains reading two taps each, the output. */
         private const val SHIMMER_TRAFFIC = 19
 
-        fun of(dsl: IgnitorDsl, blockFrames: Int = 128, params: Map<String, Double> = emptyMap(), soundIndex: Int = 0): GraphCensus {
+        fun of(dsl: IgnitorDsl, blockFrames: Int = 128, params: KlangMap<Double> = KlangMap(), soundIndex: Int = 0): GraphCensus {
             val walker = Walker(blockFrames = blockFrames, params = params, soundIndex = soundIndex)
 
             walker.count(dsl)
@@ -84,7 +85,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         }
 
         /** A leaf or arithmetic over leaves that is one value per block: no pass, no traffic. */
-        fun isScalar(dsl: IgnitorDsl): Boolean = Walker(blockFrames = 128, params = emptyMap(), soundIndex = 0).isScalar(dsl)
+        fun isScalar(dsl: IgnitorDsl): Boolean = Walker(blockFrames = 128, params = KlangMap(), soundIndex = 0).isScalar(dsl)
 
         /**
          * The buffer traffic per input sample of an [Oversampler] round trip at [factor], without the shaper's own work:
@@ -164,7 +165,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
     private class Walker(
         private val blockFrames: Int,
-        private val params: Map<String, Double>,
+        private val params: KlangMap<Double>,
         private val soundIndex: Int,
     ) {
         private val refs = IdentityCounts()

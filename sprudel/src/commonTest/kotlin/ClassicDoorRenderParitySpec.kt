@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.sprudel
 
+import io.peekandpoke.klang.common.infra.toMap
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -49,7 +51,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     val gateFrames = 5000
 
     fun render(dsl: IgnitorDsl, bag: Map<String, Double>): DoubleArray {
-        val ignitor = dsl.optimize().buildExciter(ignitorParams = bag, random = Random(7), freqHz = 220.0, sampleRate = sampleRate).ignitor
+        val ignitor = dsl.optimize().buildExciter(ignitorParams = bag.toKlangMap(), random = Random(7), freqHz = 220.0, sampleRate = sampleRate).ignitor
         val ctx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
@@ -230,7 +232,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     // saw through one tremolo into the default envelope, so the renders agree in raw bits, at every shape.
     for (shape in LfoShapes.names) {
         "DOOR PARITY: sprudel's tremolo(0.5, 5, \"$shape\") renders what the Ignitor door's tremolo(5, 0.5, \"$shape\") renders" {
-            val bag = note("a3").tremolo(0.5, 5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams ?: emptyMap()
+            val bag = note("a3").tremolo(0.5, 5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams?.toMap() ?: emptyMap()
             val viaSprudel = render(kotlin, bag)
             val viaIgnitor = render(IgnitorDsl.Saw().ignitorTremolo(5.0, 0.5, shape).classic(), emptyMap())
             val bare = render(kotlin, emptyMap())

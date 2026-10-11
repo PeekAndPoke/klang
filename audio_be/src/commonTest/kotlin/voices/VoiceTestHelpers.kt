@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.audio_be.AudioBuffer
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
@@ -83,7 +84,7 @@ object VoiceTestHelpers {
         cull: Double? = null,
 
         // The orbit chain's param state this voice carries while it owns the orbit.
-        katalystParams: Map<String, Double>? = null,
+        katalystParams: KlangMap<Double>? = null,
 
         // Stages after the tree, as the factory's `treeStages` (e.g. the teardown fade).
         treeStages: List<BlockRenderer> = emptyList(),
@@ -150,7 +151,7 @@ object VoiceTestHelpers {
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: TestEnvelope? = null,
-        katalystParams: Map<String, Double>? = null,
+        katalystParams: KlangMap<Double>? = null,
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,

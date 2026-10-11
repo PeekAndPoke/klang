@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -68,7 +69,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
 
     fun build(dsl: IgnitorDsl, params: Map<String, Double>? = null, rng: Random = seed()): Ignitor =
         dsl.buildExciter(
-            ignitorParams = params, random = rng, freqHz = freqHz,
+            ignitorParams = params?.toKlangMap(), random = rng, freqHz = freqHz,
             sampleRate = sampleRate, blockFrames = blockFrames,
         ).ignitor
 

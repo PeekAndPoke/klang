@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
@@ -664,15 +665,15 @@ class LangKatalystParamSpec : StringSpec({
         data.putKatalystParam("room", 9.0)
         data.putIgnitorParam("analog", 9.0)
 
-        wire.katalystParams shouldBe mapOf("room" to 2.0)
-        wire.ignitorParams shouldBe mapOf("analog" to 4.0)
+        wire.katalystParams shouldBe klangMapOf("room" to 2.0)
+        wire.ignitorParams shouldBe klangMapOf("analog" to 4.0)
     }
 
     "toVoiceData carries the map to the wire" {
         val event = note("c3").reverb(wet = 0.5, size = 6).katp("room", 2).queryArc(0.0, 1.0).first()
 
         event.data.toVoiceData().katalystParams shouldBe
-                mapOf("reverb.wet" to 0.5, "reverb.size" to 6.0, "room" to 2.0)
+                klangMapOf("reverb.wet" to 0.5, "reverb.size" to 6.0, "room" to 2.0)
 
         // A pattern that writes no slot sends no map at all.
         note("c3").queryArc(0.0, 1.0).first().data.toVoiceData().katalystParams.shouldBeNull()

@@ -3,363 +3,121 @@ name: code-style
 description: Use when someone asks to apply code style rules, check code style, clean up code style, or follow project code conventions.
 ---
 
-## What This Skill Does
+# Code style
 
-Loads the code style and coding convention rules for the Klang project.
-Apply these rules whenever writing or editing code.
+The Klang code conventions. Apply them whenever writing or editing code. The numbers are stable because other files
+cite them (`§21`): a retired rule leaves a gap, a new rule takes the next free number.
 
----
+## 1. Braces always
 
-## Formatting Rules
+`if`, `else`, `for`, `while` and `when` bodies get `{ }`, one-liners too.
 
-### 1. Always Use Curly Braces
+- Exception (2026-08-28): an `if`/`else` or a `when` arm whose value is consumed may stay brace-free on one line:
+  `phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)`.
+- A statement `if` (value discarded) always gets braces. Once any branch of an expression `if` needs braces or
+  several lines, all its branches get them (no `} else 0.0`).
 
-All `if`, `else`, `for`, `while`, and `when` branch bodies must use `{ }`, even for one-liners.
+## 2. Blank lines between steps
 
-**Wrong:**
+A blank line before and after an `if`/`for`/`when` block that is not the first or last statement of its block, so
+each branch of an early-return ladder reads as its own step.
 
-```kotlin
-if (condition) doSomething()
-if (condition) doSomething() else doOther()
-```
-
-**Correct:**
-
-```kotlin
-if (condition) {
-    doSomething()
-}
-if (condition) {
-    doSomething()
-} else {
-    doOther()
-}
-```
-
-**Exception — expression form (decided 2026-08-28):** an `if`/`else` used as an EXPRESSION (its
-value is consumed) may stay brace-free on one line. The same applies to `when` arms in expression
-position (`X -> value`).
-
-```kotlin
-val x = if (a) b else c
-phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
-```
-
-Two limits: statement-position `if`s (value discarded) always get braces, even one-liners; and the
-moment ANY branch of an expression `if` needs braces or multiple lines, brace ALL its branches —
-no `} else 0.0` mixing.
-
-### 2. Blank Lines Around `if` Blocks
-
-Leave a blank line before and after an `if` statement (and other block statements like `for`/
-`when`) when it is not the first or last statement in its enclosing block. Especially in
-early-return ladders (e.g. fast-path branches falling through to a general case), the blank
-lines make each branch read as its own step.
-
-The same spacing applies to variable declarations (added 2026-08-28): leave a blank line after a
-block of `val`/`var` declarations, and before a declaration that follows other statements.
-Consecutive declarations stay together as one group.
+- Declarations (2026-08-28): a blank line after a group of `val`/`var`, and before a declaration that follows other
+  statements. Consecutive declarations stay together.
+- `return` (2026-08-31): a blank line before every `return`, unless it is the only statement in its block. A comment
+  attached to the `return` stays attached; the blank goes above the comment.
 
 ```kotlin
 val step = readParam(rate, freqHz, ctx) * PERLIN_STEP
 val end = ctx.offset + ctx.length
 
+if (bConst) {
+    fillConst(buffer, ctx)
+
+    return
+}
+
 for (i in ctx.offset until end) {
-    val white = rng.nextDouble() * 2.0 - 1.0
-
-    out = (out + k * white) / denom
-    buffer[i] = out
+    buffer[i] = step
 }
 ```
 
-And a blank line before every `return` (added 2026-08-31), unless the `return` is the only
-statement in its block. Early-return ladders read as steps that way, and the final `return` of a
-function separates from the work that produced its value. A comment attached to the `return` stays
-attached: the blank goes above the comment, not between comment and `return`.
+## 3. Files, and where helpers live
 
-```kotlin
-if (kw != null) {
-    val kwInv = 1.0 - kw
+- Flat directories: sources sit at the module's package root (`src/commonMain/kotlin/`), never under
+  `io/peekandpoke/...`. A sub-package is one flat directory (`runtime/`, `intel/`).
+- A file holding a class, object or interface is named after it in PascalCase (`ShapingFuncs.kt` for `ShapingFuncs`).
+- A file of functions only is `lower_case.kt`, unique and descriptive (never `_utils.kt`). Beside class files it
+  takes a `_` prefix so it groups at the top (`_staff_pos_helpers.kt`); in a folder of function files only, no prefix.
+- Generic helpers (maintainer, 2026-10-07): a helper that knows nothing of its module's domain (list compaction, a NaN
+  guard, a numeric law, a byte conversion) lives in the module's `utils/`, package `io.peekandpoke.klang.<module>.utils`,
+  never `util`, `helpers` or `common`. A helper of one feature stays beside it as `_<feature>_helpers.kt`. Each
+  `utils` helper has a spec of its exact behaviour; a hot-path helper taking a lambda is `inline`.
+- The `common` module is itself a module of helpers: no `utils/`, grouped by topic (`math/`, `strings/`), each helper
+  with its spec (2026-10-09).
 
-    from.generate(buffer, freqHz, ctx)
+## 4. No duplication
 
-    return
-}
+A utility, a data class (`ResolvedShape`) or a piece of lookup logic (shape resolution) lives in one place and is
+imported, never copied as a `private` twin. In `audio_be`: numeric guards in `utils/numerical_safety.kt`, phase wraps
+in `utils/phase_wrap.kt`, fast math in `utils/fast_math.kt`.
 
-// fine as-is — the return is the whole block
-fun Ignitor.mul(factor: Ignitor): Ignitor = this * factor
-```
+## 5. No boxed types
 
-**Wrong:**
+Never `Long`, `ULong`, `Byte`, `UByte`, `Short`, `UShort` or `Char`, anywhere in the project. Use `Int` (counts,
+indices, char codes, bytes masked with `and 0xFF`) or `Double` (time). A `Long` from an external API is converted at
+the boundary.
 
-```kotlin
-if (bConst) {
-    // ...
-    return
-}
-if (aConst) {
-    // ...
-    return
-}
-a.generate(buffer, freqHz, ctx)
-```
+Why: on Kotlin/JS `Long` is an emulated class that allocates on every operation, `Char` is a boxed wrapper, and
+`Byte`/`Short` pay a range check on every operation.
 
-**Correct:**
+## 6. No allocation in audio hot paths
 
-```kotlin
-if (bConst) {
-    // ...
-    return
-}
+Nothing allocates per sample or per block: no `FloatArray()`, `listOf()`, `toList()`, `Pair()`, string concatenation
+or object creation. Preallocate at construction; a scratch buffer grows only when a block needs more
+(`if (temp.size < length) { temp = FloatArray(length) }`).
 
-if (aConst) {
-    // ...
-    return
-}
+## 7. No exceptions in audio hot paths
 
-a.generate(buffer, freqHz, ctx)
-```
+No `require()`, `check()` or `throw` in audio processing: they allocate strings and can kill the AudioWorklet thread.
 
-### 3. File Naming Conventions
+## 8. Flush IIR state
 
-**Flat directories.** Source files sit at the module's package root (`module/src/commonMain/kotlin/`),
-never nested under `io/peekandpoke/...` directories. Sub-packages get one flat directory
-(`runtime/`, `intel/`), not a mirrored package path.
+Every IIR (SVF, one-pole, allpass, DC blocker) passes each state update through `flushState()` from
+`utils/numerical_safety.kt`: `ic1eq = (2.0 * v1 - ic1eq).flushState()`.
 
+Why: denormals cost 10 to 100x CPU on some platforms, and a non-finite carry latches a filter for good (one `Inf` is
+enough, the next sample computes `-Inf + Inf`). The master round measured one such sample silencing the whole backend
+until a page reload.
 
-- **Files containing a class/object/interface:** PascalCase matching the primary declaration.
-- **Files containing only utility/helper/extension functions:** `lower_case.kt`.
-  In folders that also contain class files, use a `_` prefix (e.g., `_staff_pos_helpers.kt`) to
-  group utility files at the top of the file tree. In folders with only utility files, skip the
-  prefix — when every file starts with `_`, it adds noise instead of value.
-- **Utility file names must be unique and descriptive.** Generic names like `_utils.kt` make it
-  impossible to tell what's inside without opening the file.
+Exception: `Reverb` adds `ANTI_DENORMAL` instead (cheaper across its many combs and allpasses, documented at the
+class). That covers denormals only, not a non-finite carry.
 
-**Wrong:** `ShapingFunctions.kt` (class inside is `ShapingFuncs` — name mismatch)
-**Wrong:** `_utils.kt` (not unique, not descriptive)
-**Correct:** `ShapingFuncs.kt` (matches class — this pair was the real offender, fixed 2026-08-26)
-**Correct:** `_staff_pos_helpers.kt` (utility file alongside class files — `_` groups it at top)
-**Correct:** `math.kt`, `chain_rendering.kt` (utility-only folder — no `_` prefix needed)
+## 9. Edges are finite slopes
 
-**One home for generic helpers, the same name in every module (maintainer, 2026-10-07).** A helper that knows
-nothing of its module's domain (list compaction, a NaN guard, a numeric law, a byte conversion) lives in the
-module's `utils/` directory, package `io.peekandpoke.klang.<module>.utils`, the name `audio_fe`, `tones` and the root
-module already use. Never `util`, `helpers` or `common` for this. A helper that belongs to one feature (the
-mini-notation editor's node helpers, a tutorial's page helpers) stays next to that feature as `_<feature>_helpers.kt`.
-Each `utils` helper has a spec of its exact behaviour; a hot-path helper taking a lambda is `inline`.
+Saw, square and pulse never jump in one sample. The saw's flyback (`resetSamples`, scaled by the frequency, capped by
+`shapeMax`) and the pulse's flanks (`flankSamples`) are short slopes drawn by the shared trapezoid in
+`WaveVoiceState`. That keeps the aliasing down and is part of the analog character. The zawtooth resets instantly on
+purpose (brighter, harsher); the triangle has no jump. No PolyBLEP (an earlier version used it; `CREDITS.MD` still
+credits it).
 
-The `common` module is the exception: it is a module OF helpers, so it has no `utils/` and groups them by topic
-(`math/`, `strings/`), each with its spec (2026-10-09, the helper merges).
+## 10. Wrap phase
 
----
+Oscillator and LFO phase accumulators wrap (`wrapPhase()`, or `if (phase >= TWO_PI) phase -= TWO_PI`). Why: an
+unbounded phase loses `sin()` precision as the mantissa runs out of bits.
 
-## No Duplication Rules
+## 11 to 16. Deliberate, not findings
 
-### 3. No Duplicated Utility Functions
+- 11. Single-letter DSP names (`a`, `k`, `q`, `g`, `v`, `p`) that follow textbook convention.
+- 12. `.toFloat()` / `.toDouble()` at buffer boundaries: audio computes in `Double` and stores in `FloatArray`.
+- 13. `@Suppress("NOTHING_TO_INLINE")` on audio hot-path inline functions.
+- 14. `@Suppress("unused")` on a coherent API collection (`ShapingFuncs`).
+- 15. `x == true` on a `Boolean?`.
+- 16. Inline literals for well-known algorithm constants (Freeverb comb tunings), with a comment naming the source.
 
-Shared DSP utilities (`flushState`, shape resolution, etc.) must live in exactly one place
-and be imported. Never copy a utility function into another file as a `private` copy.
+## 17. Copyright header
 
-**Canonical location:** the module's `utils/` package (see "One home for generic helpers" above); in `audio_be`
-the numeric guards are in `utils/numerical_safety.kt`, the phase wraps in `utils/phase_wrap.kt`, the fast math in
-`utils/fast_math.kt`.
-
-### 4. No Duplicated Data Classes or Resolution Logic
-
-If two files need the same data class (e.g., `ResolvedShape`) or lookup logic (e.g., distortion
-shape resolution), extract it to a shared file. Both callers import from the same source.
-
----
-
-## Kotlin/JS Performance Rules
-
-### 5. No Boxed Types Anywhere in the Project
-
-This is a real-time audio engine — every CPU cycle counts, in DSP code **and** the UI layer.
-Several Kotlin types are boxed (heap-allocated wrapper objects) when compiled to JavaScript.
-**Never use them anywhere in the project.**
-
-#### Banned types and why
-
-| Type     | JS representation                                  | Problem                                      |
-|----------|----------------------------------------------------|----------------------------------------------|
-| `Long`   | Emulated `kotlin.Long` class (pair of 32-bit ints) | Always boxed, allocation on every operation  |
-| `ULong`  | Wraps `Long`                                       | Same boxing as `Long`                        |
-| `Byte`   | JS `number` + range checks                         | Coercion/masking overhead on every operation |
-| `Short`  | JS `number` + range checks                         | Coercion/masking overhead on every operation |
-| `UByte`  | Inline class wrapping `Byte`                       | Same overhead as `Byte`                      |
-| `UShort` | Inline class wrapping `Short`                      | Same overhead as `Short`                     |
-| `Char`   | Boxed `kotlin.Char` wrapper                        | Heap allocation                              |
-
-#### Safe alternatives
-
-| Instead of         | Use                                                |
-|--------------------|----------------------------------------------------|
-| `Long` / `ULong`   | `Int` for counts/indices, `Double` for time values |
-| `Byte` / `UByte`   | `Int` (mask with `and 0xFF` if needed)             |
-| `Short` / `UShort` | `Int` (mask with `and 0xFFFF` if needed)           |
-| `Char`             | `Int` (char code), or `String` for text            |
-
-#### Scope
-
-This applies **project-wide** — audio DSP, audio bridge, klangscript, sprudel, UI layer,
-everywhere. If a `Long` (or other banned type) arrives from an external API, convert it to
-`Int` or `Double` at the boundary immediately.
-
-**Wrong:**
-
-```kotlin
-var absPos = ctx.blockStart - startFrame  // Long arithmetic
-for (i in 0 until ctx.length) {
-    doWork(absPos)  // Long in hot loop
-    absPos++
-}
-
-val midi: Byte = 60  // Byte with range-check overhead
-val char: Char = 'A'  // Boxed Char wrapper
-```
-
-**Correct:**
-
-```kotlin
-var absPos = ((ctx.blockStart + ctx.offset) - startFrame).toInt()  // Convert at boundary
-for (i in 0 until ctx.length) {
-    doWork(absPos)  // Int in hot loop
-    absPos++
-}
-
-val midi: Int = 60   // Plain JS number
-val char: Int = 65   // Char code as Int, or use String for text
-```
-
-### 6. No Allocations in Audio Hot Paths
-
-No `FloatArray()`, `listOf()`, `toList()`, `Pair()`, `String` concatenation, or object creation
-in per-sample or per-block audio processing code. Pre-allocate buffers at construction time.
-
-**Wrong:**
-
-```kotlin
-override fun process(buffer: FloatArray, offset: Int, length: Int) {
-    val temp = FloatArray(length)  // Allocation every block!
-}
-```
-
-**Correct:**
-
-```kotlin
-private var temp: FloatArray = FloatArray(0)
-
-override fun process(buffer: FloatArray, offset: Int, length: Int) {
-    if (temp.size < length) {
-        temp = FloatArray(length)
-    }  // Resize only when needed
-}
-```
-
-### 7. No Exceptions in Audio Hot Paths
-
-Never use `require()`, `check()`, or throw exceptions in audio processing code.
-These allocate strings and can kill the AudioWorklet thread.
-
----
-
-## DSP Rules
-
-### 8. Flush IIR Filter State
-
-Every IIR filter (SVF, one-pole, allpass, DC blocker) must flush its state variables after
-each update. Use the shared `flushState()` from `utils/numerical_safety.kt`.
-
-**Why, two reasons:** denormal floats cause 10-100x CPU spikes on some platforms, and a
-NON-FINITE carry latches the filter permanently — an IIR whose state goes NaN can never
-recover, and one `Inf` is enough (the next sample computes `-Inf + Inf`). The master round
-measured where that ends: one such sample silenced the whole backend until a page reload.
-`flushState` rejects both, so following this rule is what makes a filter unable to latch.
-
-```kotlin
-ic1eq = (2.0 * v1 - ic1eq).flushState()
-ic2eq = (2.0 * v2 - ic2eq).flushState()
-```
-
-**Exception:** `Reverb` uses `+ ANTI_DENORMAL` instead (deliberate, documented at the class —
-its comb/allpass count makes the per-sample add cheaper). That exception is about DENORMALS
-only; it does not protect against a non-finite carry.
-
-### 9. Band-Limit Discontinuous Waveforms
-
-Oscillators with a jump in the wave (saw, square, pulse) never jump in one sample: the edge is a short finite
-slope, the saw's flyback (`resetSamples`, scaled by the frequency, capped by `shapeMax`) and the pulse's flanks
-(`flankSamples`), drawn by the shared trapezoid shape (`WaveVoiceState`). That keeps the aliasing down and is part of
-the analog character. The zawtooth is the deliberate exception (an instant reset, brighter and harsher). Triangle has
-no jump. The oscillators do not use PolyBLEP (an earlier version did; it is still credited in `CREDITS.MD`).
-
-### 10. Wrap Oscillator Phase
-
-LFO and oscillator phase accumulators must be wrapped to prevent unbounded growth.
-Use `if (phase >= TWO_PI) phase -= TWO_PI` or the `wrapPhase()` helper.
-
-**Why:** Unbounded phase loses `sin()` precision as the mantissa runs out of bits.
-
----
-
-## Naming Rules
-
-### 11. Single-Letter DSP Variable Names Are Acceptable
-
-Standard DSP coefficient names (`a`, `k`, `q`, `g`, `v`, `p`) are accepted when they
-match established mathematical or DSP textbook conventions.
-
-### 12. `.toFloat()` / `.toDouble()` at Buffer Boundaries Are Expected
-
-Audio code computes in `Double` for precision and stores in `FloatArray` for memory/perf.
-The conversions at the boundary are intentional — do not flag them as unnecessary casts.
-
----
-
-## Annotation Rules
-
-### 13. `@Suppress("NOTHING_TO_INLINE")` Is Accepted on Audio Hot-Path Inline Functions
-
-The Kotlin compiler warns that inlining is unnecessary for non-lambda functions. In audio code,
-avoiding call overhead is intentional. The suppression is accepted.
-
-### 14. `@Suppress("unused")` Is Accepted on API Surface Libraries
-
-Collections of utility functions (e.g., `ShapingFuncs`) may have members that aren't all
-currently referenced but form a coherent API. The suppression is accepted.
-
----
-
-## Boolean and Null Rules
-
-### 15. `== true` on `Boolean?` Is Correct Kotlin Idiom
-
-When a Boolean is nullable, `x == true` is the correct and idiomatic null-safe check.
-Do not flag this as a style issue.
-
----
-
-## Comment Rules
-
-### 16. Algorithm Constants May Be Inline Literals
-
-Well-known algorithm tuning constants (Freeverb delay lengths, filter coefficient tables, etc.)
-are acceptable as inline numeric literals **when documented with a source comment**.
-
-```kotlin
-// Freeverb standard comb tunings (designed for 44100 Hz)
-private val combTuning = intArrayOf(1116, 1188, 1277, 1356, ...)
-```
-
----
-
-## File Header Rules
-
-### 17. Every Source File Starts With the Copyright Header
-
-Every `.kt` source file must begin with the project license header as its very first lines,
-**above** any `@file:` annotation or `package` declaration:
+Every `.kt` file starts with this header, above any `@file:` annotation or `package`:
 
 ```kotlin
 /*
@@ -368,18 +126,12 @@ Every `.kt` source file must begin with the project license header as its very f
  */
 ```
 
-- **New files:** IntelliJ inserts this automatically via the "Klang AGPL" copyright profile in
-  `.idea/copyright/`. When creating files outside the IDE, add the header manually.
-- **Year:** the end year tracks the current year — IntelliJ's "Update copyright" before-commit
-  action keeps it current. Don't hand-edit the year per file.
-- **Brand:** always "Klangmotor" / "Motor" with a plain o. The old metal-umlaut spelling "Motör"
-  was retired 2026-08-25; it survives only in historical records (`DEV-DIARY.MD`, `docs/history/`,
-  `docs/tasks-archive/`), which are never "fixed".
-- **Exempt:** `.kts` build scripts, and any third-party / vendored file that carries its own
-  copyright notice (never overwrite someone else's notice with ours).
-- **`tones/` module is MIT, not AGPL.** It is a Kotlin port of tonal.js (MIT) and is licensed MIT
-  to match upstream. Files there use a different header that also credits danigb — never apply the
-  AGPL header inside `tones/`:
+- IntelliJ inserts it (the "Klang AGPL" profile in `.idea/copyright/`) and keeps the end year current on commit.
+  Outside the IDE, add it by hand; never hand-edit the year.
+- "Klangmotor" / "Motor" with a plain o. The umlaut spelling (retired 2026-08-25) survives only in historical records
+  (`DEV-DIARY.MD`, `docs/history/`, `docs/tasks-archive/`), which are never "fixed".
+- Exempt: `.kts` build scripts, and third-party files with their own notice (never overwrite it).
+- `tones/` is MIT (a port of tonal.js) and never gets the AGPL header. The "Klang tones MIT" profile applies its own:
 
   ```kotlin
   /*
@@ -390,74 +142,53 @@ Every `.kt` source file must begin with the project license header as its very f
    */
   ```
 
-  IntelliJ applies this automatically via the "Klang tones MIT" copyright profile scoped to `tones/`.
+## 18. Imports, not fully qualified names
 
-## Language Rules
+Import every referenced type and function; `io.peekandpoke.klang.audio_bridge.VoiceData` inline in code is a finding.
+The only exception is a real name clash inside one file.
 
-### 18. Imports, Not Fully Qualified Names
+## 19. Exhaustive `when` as an expression
 
-Use an import for every referenced type or function. `io.peekandpoke.klang.audio_bridge.VoiceData`
-inline in code is a finding; the only exception is a genuine name clash inside one file.
+Over a sealed class or enum, `when` is an expression so the compiler checks every arm. Arms that do nothing are
+written out (`is Foo -> Unit` or `{}`), never skipped by a statement `when`.
 
-### 19. Exhaustive `when` in Expression Form
+Exception (2026-10-10, provisional): inside a per-sample loop, or an inline function called in one, a `when`
+producing a double may be an exhaustive statement `when` assigning an initialized `var`, because V8 boxes the
+expression form's result there (`audio/ref/performance.md`, the rule on the exhaustive `when` in a sample loop).
 
-Over a sealed class or enum, write `when` as an expression so the compiler checks every arm. Arms
-that do nothing are written out (`is Foo -> Unit` or `{}`); never a bare non-exhaustive
-statement `when` that silently skips a new variant.
+## 20. Mark NaN guards
 
-Exception (2026-10-10, provisional): inside a per-sample loop, or an inline function called in one, a `when` producing a double may be an exhaustive statement `when`
-assigning an initialized `var` (V8 boxes the expression form's result there); see `audio/ref/performance.md`, the rule
-on the exhaustive `when` in a sample loop.
+A self-comparison is not obvious to the next reader: `if (x != x) { // NaN-guard`.
 
-### 20. Annotate NaN Guards
+## 21. Coerce user input, `require()` only internal invariants
 
-A self-comparison NaN check is not obvious to the next reader. Always mark it:
+Anything a user can reach (sprudel args, KlangScript DSL args, UI inputs, imports) is coerced into range
+(`coerceIn`, defaults, clamping of indices and counts), never asserted. `require()` and `check()` guard internal
+invariants only. This is the "coerce" half of `/dsl-design` §6; the "raw" half (no unasked safety clamp on an audio
+parameter) lives there.
 
-```kotlin
-if (x != x) { // NaN-guard
-    return 0.0
-}
-```
+## 22. No em-dashes in user-facing text
 
-### 21. Coerce User Input, `require()` Only Internal Invariants
+Never `—` or `–` in docs, KDoc, UI strings, tutorials, commit messages or reports; use commas, colons, parentheses
+or a new sentence. The A/B comment suffix is `, swap`. Why (maintainer, 2026-08): the dash reads as an AI tell.
 
-Anything a user can reach (sprudel args, KlangScript DSL args, UI inputs, imports) is coerced
-into range (`coerceIn`, defaults, clamping of INDICES and COUNTS), never asserted. `require()`
-and `check()` are for internal invariants only. This is the "coerce" half of `/dsl-design` §6;
-the "raw" half (no unasked safety clamps on AUDIO parameters) lives there too.
+## 23. Negated equality is `shouldNotBe`
 
-### 22. No Em-Dashes in User-Facing Text
+In a spec, `a shouldNotBe b`, never `(a == b) shouldBe false`, so a failure names both values. Exception: a boxed
+`NaN`, where `shouldNotBe` passes for the wrong reason; the raw comparison is then deliberate and says so in a comment.
+(2026-09-18, it recurred after being retired; the row is in `/review-loop`'s `escape-ledger.md`.)
 
-Never `—` or `–` in docs, KDoc, UI strings, tutorials, commit messages or reports. Use commas,
-colons, parentheses or a new sentence. The A/B comment suffix convention is `, swap`.
-(Maintainer, 2026-08: the dash reads as an AI tell.)
+## 24. Name arguments that could be swapped
 
-### 24. Name Arguments That Could Be Swapped
+At a call site, name the arguments whenever two or more could be swapped and still compile (two `Int` ids, several
+`Double` frames or seconds, two `Boolean` flags), or whenever reordering the parameters would silently shift them:
+`cylinders.checkIn(orbit = voice.cylinderId, voiceId = voice.id, blockStart = ctx.blockStart)`. Positional is fine
+for a single argument or for types that cannot be confused.
 
-At a call site, pass arguments by name whenever two or more of them could be swapped and still
-compile (two `Int` ids, several `Double` frames or seconds, two `Boolean` flags), or whenever a
-later refactoring that reorders the parameters would silently shift them. Positional is fine for
-a single argument or for arguments whose types cannot be confused.
+Exempt: standard-library calls whose order is standard or does not matter (`maxOf`, `minOf`, `coerceIn`, `fill`,
+`copyOfRange`, `subList`, `Pair`, `Triple`; `copyInto` IS named, its destination offset sits next to a range), calls
+of a function-typed value (Kotlin forbids names there), and Java calls. Open: whether literal data tables with their
+column helper declared right above stay positional (`docs/tasks/_maintainer-questions.md`).
 
-```kotlin
-cylinders.checkIn(orbit = voice.cylinderId, voiceId = voice.id, blockStart = ctx.blockStart) // not checkIn(7, 42, 1024.0)
-```
-
-Exempt, because naming cannot or need not help: calls to the standard library whose order is standard or does not
-matter (`maxOf`, `minOf`, `coerceIn`, `fill`, `copyOfRange`, `subList`, `Pair`, `Triple`; `copyInto` IS named, its
-destination offset sits next to a range), calls of a function-typed value (Kotlin forbids names there) and Java calls.
-Whether literal data tables with their column helper declared right above stay positional is open
-(`docs/tasks/_maintainer-questions.md`).
-
-(Maintainer, 2026-10-07, after a review found `Cylinders.checkIn(id: Int, voiceId: Int, ...)`
-whose two ids swap silently and whose order differed from `Cylinder.checkIn`.)
-
-## Test Rules
-
-### 23. Negated Equality Is `shouldNotBe`
-
-A negated equality in a spec is `a shouldNotBe b`, never `(a == b) shouldBe false`, so a failure
-names both values instead of "expected false but was true". The one exception is a boxed `NaN`,
-where `shouldNotBe` passes for the wrong reason and the raw comparison is deliberate; say so in a
-comment at that site. (Added 2026-09-18 after the form recurred one round after it was retired
-at three sites; `/review-loop`'s `escape-ledger.md` has the row.)
+Why (maintainer, 2026-10-07): a review found `Cylinders.checkIn(id: Int, voiceId: Int, ...)`, whose two ids swap
+silently and whose order differed from `Cylinder.checkIn`.

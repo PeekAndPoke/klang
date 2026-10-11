@@ -30,6 +30,8 @@ import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
@@ -79,7 +81,7 @@ class KatalystParallelEffectSpec : StringSpec({
         blockFrames = blockFrames,
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
-    ).also { it.applyParams(params) }
+    ).also { it.applyParams(params?.toKlangMap()) }
 
     /** Well below the limiter's ceiling, different on the two channels so a swapped channel shows. */
     fun left(k: Int): Double =
@@ -330,7 +332,7 @@ class KatalystParallelEffectSpec : StringSpec({
         run(built, blocks = 2).shouldBe({ left(it) }, { right(it) })
 
         built.reset()
-        built.applyParams(mapOf("branch.gain" to 3.0))
+        built.applyParams(klangMapOf("branch.gain" to 3.0))
 
         // A fresh fader snaps, so the new factor holds from the first sample.
         run(built, blocks = 2).shouldBe({ 4.0 * left(it) }, { 4.0 * right(it) })

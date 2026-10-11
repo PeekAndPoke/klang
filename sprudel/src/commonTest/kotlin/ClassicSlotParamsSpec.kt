@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.sprudel
 
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toMap
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -46,7 +48,7 @@ class ClassicSlotParamsSpec : StringSpec({
 
     fun wire(p: SprudelPattern?) = (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data.toVoiceData()
 
-    fun slots(p: SprudelPattern?): Map<String, Double> = wire(p).ignitorParams ?: emptyMap()
+    fun slots(p: SprudelPattern?): Map<String, Double> = wire(p).ignitorParams?.toMap() ?: emptyMap()
 
     "no voice door written: the wire bag is the event's own bag, and no bag at all without one" {
         wire(note("c")).ignitorParams shouldBe null
@@ -55,7 +57,29 @@ class ClassicSlotParamsSpec : StringSpec({
 
     "only a FINITE value is written: a non-finite door value leaves the slot unset" {
         createSprudelVoiceData { crush = Double.NaN; release = Double.POSITIVE_INFINITY; cutoff = 800.0; resonance = Double.NaN }
-            .toVoiceData().ignitorParams shouldBe mapOf("lpf.freq" to 800.0)
+            .toVoiceData().ignitorParams shouldBe klangMapOf("lpf.freq" to 800.0)
+    }
+
+    "the voice doors are written into a copy: the event's own bag stays as it was, and a second conversion is the same" {
+        val data = createSprudelVoiceData { cutoff = 800.0 }.also { it.ignitorParamsOrNew().set("voices", 3.0) }
+        val first = data.toVoiceData().ignitorParams
+
+        first shouldBe klangMapOf("voices" to 3.0, "lpf.freq" to 800.0)
+        data.ignitorParams shouldBe paramBagOf("voices" to 3.0)
+        data.toVoiceData().ignitorParams shouldBe first
+    }
+
+    "toVoiceData hands both slot maps over, with a voice door and without one" {
+        // Their type is `KlangMap` by `VoiceData`'s fields (engine follow-up 2, step 5); this pins what they hold.
+        val withDoor = createSprudelVoiceData { cutoff = 800.0 }.also {
+            it.ignitorParamsOrNew().set("voices", 3.0)
+            it.katalystParamsOrNew().set("reverb.wet", 0.3)
+        }.toVoiceData()
+        val withoutDoor = createSprudelVoiceData { }.also { it.ignitorParamsOrNew().set("voices", 3.0) }.toVoiceData()
+
+        withDoor.ignitorParams shouldBe klangMapOf("voices" to 3.0, "lpf.freq" to 800.0)
+        withDoor.katalystParams shouldBe klangMapOf("reverb.wet" to 0.3)
+        withoutDoor.ignitorParams shouldBe klangMapOf("voices" to 3.0)
     }
 
     "the typed door wins over an ignp of the same key, in either order" {

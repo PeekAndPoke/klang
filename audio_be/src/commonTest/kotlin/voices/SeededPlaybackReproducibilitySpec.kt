@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * Seeded-voice-rng (D3c), PRODUCTION wiring: the per-voice streams dealt by VoiceFactory
@@ -39,7 +40,7 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
     // cutoff tolerance AND the filter-modulator drift — every voice-stream consumer family.
     fun noteData(): VoiceData = VoiceData.empty.copy(
         sound = "supersaw",
-        ignitorParams = mapOf("analog" to 3.0),
+        ignitorParams = klangMapOf("analog" to 3.0),
     ).withClassicSlots(DoorFields(filters = listOf(DoorFilter.LowPass(freq = 2000.0, q = 1.0))))
 
     val sampleSound = "seedtest"
@@ -143,7 +144,7 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
             )
             rig.schedule(
                 0.0,
-                VoiceData.empty.copy(sound = sampleSound, ignitorParams = mapOf("analog" to 3.0)),
+                VoiceData.empty.copy(sound = sampleSound, ignitorParams = klangMapOf("analog" to 3.0)),
             )
             return rig.render(blocks = 20)
         }

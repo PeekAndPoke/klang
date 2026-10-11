@@ -26,6 +26,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
 
 /** One row of the `classic()` voice table: its title and its slots. */
@@ -144,7 +145,7 @@ object ClassicVoiceRig {
         bag: Map<String, Double>,
         sampleRate: Int,
         sound: String = "saw",
-    ): DoubleArray = render(base.copy(sound = sound, ignitorParams = bag.takeIf { it.isNotEmpty() }), sampleRate)
+    ): DoubleArray = render(base.copy(sound = sound, ignitorParams = (bag.takeIf { it.isNotEmpty() })?.toKlangMap()), sampleRate)
 
     fun firstMismatch(a: DoubleArray, b: DoubleArray): Int = a.indices.firstOrNull { a[it].toRawBits() != b[it].toRawBits() } ?: -1
 

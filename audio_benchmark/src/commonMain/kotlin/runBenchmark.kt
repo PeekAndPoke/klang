@@ -22,10 +22,12 @@ fun runBenchmark() {
     val filter = benchmarkCaseFilter()
 
     if (filter != null) {
-        // A filtered run is a focused A/B: only the matching ignitor cases, nothing else.
+        // A filtered run is a focused A/B: only the matching ignitor and effect cases, nothing else.
         println("Case filter: \"$filter\" (KLANG_BENCH_FILTER)")
         println()
         println(runIgnitorBenchmarks(platform, filter))
+        println()
+        println(runEffectBenchmarks(platform, filter))
 
         return
     }
@@ -86,13 +88,19 @@ private fun runIgnitorBenchmarks(platform: String, filter: String? = null): Stri
     return bench.toMarkdown(results, platform)
 }
 
-private fun runEffectBenchmarks(platform: String): String {
+private fun runEffectBenchmarks(platform: String, filter: String? = null): String {
     val bench = EffectBenchmark()
-    val cases = EffectBenchmark.defaultCases()
+    val cases = EffectBenchmark.defaultCases().filter { filter == null || it.name.contains(filter) }
 
     println("=== Effect benchmarks ===")
     println("Running ${cases.size} cases (3x each, median)...")
     println()
+
+    if (cases.isEmpty()) {
+        println("No effect case matches \"$filter\".")
+
+        return ""
+    }
 
     val results = bench.run(cases)
 

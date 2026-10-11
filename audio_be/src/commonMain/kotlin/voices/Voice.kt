@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.utils.fadeToZero
 import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
+import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.math.ceil
 
 /**
@@ -82,7 +83,7 @@ class Voice(
      * `katalystParam` door's KDoc in `sprudel/lang/lang_katalyst.kt`: EVERY chain reads it, for every stage
      * it declares, the chain a cylinder is born with included (Katalyst step 5b-1).
      */
-    val katalystParams: Map<String, Double>? = null,
+    val katalystParams: KlangMap<Double>? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Cut group

@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.pow
@@ -98,7 +99,7 @@ class VibratoRangePhaseSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             random = Random(7),
         )
-        val built = dsl.buildExciter(ignitorParams = bag, freqHz = noteHz, sampleRate = sampleRate, random = ctx.random, sampleSource = probe).ignitor
+        val built = dsl.buildExciter(ignitorParams = bag?.toKlangMap(), freqHz = noteHz, sampleRate = sampleRate, random = ctx.random, sampleSource = probe).ignitor
         val buffer = AudioBuffer(blockFrames)
 
         for (b in 0 until blocks) {
