@@ -41,7 +41,8 @@ internal enum class KatalystArithmeticOp {
  * that sample, written from the block's END so the block lands on its value bit for bit. A constant operand never
  * moves (a new number is a new chain), so it is the plain law on every sample. The first value snaps, as on the fader.
  * For every operator but [KatalystArithmeticOp.DIV] the output at an operand between two values lies between the
- * outputs at those values, so a linear glide invents nothing.
+ * outputs at those values, so a linear glide invents nothing (a -0.0 sample under a negative power excepted: it
+ * flips between the two signed `safeOut` bounds, which both endpoints already put on the bus).
  *
  * **[KatalystArithmeticOp.DIV] glides its RECIPROCAL**, the level `1 / divisor` (0 for a divisor of 0, the house rule),
  * and multiplies by it while it moves. A linear glide of the divisor itself would pass through divisors near zero
@@ -92,10 +93,6 @@ internal class KatalystArithmeticEffect(
 
     /** Sets the operand; see the class KDoc for the glide and for what a non-finite one means. */
     fun configure(operand: Double) {
-        if (op == KatalystArithmeticOp.ABS) {
-            return
-        }
-
         // NaN-guard on a value the author can write: a non-finite operand is unset (class KDoc).
         val written = if (operand.isFinite()) operand else identity
 

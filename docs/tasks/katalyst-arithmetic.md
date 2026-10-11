@@ -2,6 +2,7 @@
 
 Status: **steps 1, 2 and 4 built 2026-10-11** on the branch `bus-distort-default`. Step 3, the optimizer, is not
 built: D5 measured it and it does not pay (the numbers below); it waits for the maintainer's word.
+Reviewed in three rounds, the third clean (2026-10-11).
 
 ## Why
 
@@ -128,8 +129,8 @@ coordinator's leans:
    `Kat.param` operand follows `katp`; NaN in the operand reads as the stage's "unset" (decided per stage, like the
    gain's unity). Mandatory tier, every spec mutation-checked.
 2. **The doors.** KlangScript and Kotlin in one change (`KatalystBuilders.kt`, the `@KlangScript.Function`
-   extensions are both doors), with the Ignitor's aliases, the `min`/`max` crossing and a row in
-   `KlangScriptKatalystDoorParitySpec`. Script-door defaults stay plain literals (there are none: every operand is
+   extensions are both doors), with the Ignitor's aliases, the `min`/`max` crossing and their own door-parity spec,
+   `KlangScriptKatalystArithmeticDoorParitySpec`. Script-door defaults stay plain literals (there are none: every operand is
    required).
 3. **The optimizer** (only after D5): a pure `KatalystDsl -> KatalystDsl` pass at registration, the Ignitor
    optimizer's rule shape on a list. Candidates: neighbouring constant arithmetic folds into one stage, identities go
