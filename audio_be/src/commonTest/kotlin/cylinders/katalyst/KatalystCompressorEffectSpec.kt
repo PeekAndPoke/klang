@@ -477,7 +477,9 @@ class KatalystCompressorEffectSpec : StringSpec({
         knobRow(a = settings(ratio = 100.0), z = settings(ratio = 1.0))
     }
 
-    "an unchanged owner writes nothing into the instance: the knobs are written when the settings change" {
+    "an unchanged config writes nothing into the instance: the knobs are written when a VALUE changes" {
+        // Katalyst knob expressions step 2: the writer refills ONE holder in place, so the effect compares the five
+        // values, not the object (until then a new object per resolve, compared by reference).
         val s = settings(thresholdDb = -20.0)
         val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val ctx = createCtx()
@@ -485,15 +487,96 @@ class KatalystCompressorEffectSpec : StringSpec({
         effect.configure(s)
         effect.process(ctx)
 
-        // A probe written behind the effect's back survives a re-configure with the SAME settings
-        // (the writer hands the same object every block of one owner) ...
+        // A probe written behind the effect's back survives a re-configure with the SAME settings ...
         val c = effect.compressor.shouldNotBeNull()
         c.releaseSeconds = 0.77
         effect.configure(s)
         c.releaseSeconds shouldBe 0.77
 
-        // ... and is overwritten by a new settings object, even one with equal numbers.
+        // ... and with another object holding equal numbers ...
         effect.configure(settings(thresholdDb = -20.0))
+        c.releaseSeconds shouldBe 0.77
+
+        // ... and is overwritten when one value of the same holder changes in place: all five are written.
+        s.thresholdDb = -21.0
+        effect.configure(s)
+        c.thresholdDb shouldBe -21.0
+        c.releaseSeconds shouldBe 0.1
+    }
+
+    "each of the five knobs alone, changed in place in the same holder, reaches the instance" {
+        // One knob per step, so a compare that ignores one knob, or tests another knob's value in its place, leaves that
+        // knob behind. (A compare against another knob's STORED slot fails safe, writing every block: the "writes
+        // nothing" and "NaN knob settles" rows catch that one.)
+        // The new values are ones the setters store as they are (a ratio of at least 1, a knee of at least 0).
+        val s = settings(thresholdDb = -25.0, ratio = 4.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = 0.1)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+        val ctx = createCtx()
+
+        effect.configure(s)
+        effect.process(ctx)
+
+        val c = effect.compressor.shouldNotBeNull()
+
+        /** One knob: its name, its new value, how the holder takes it, how the instance reads it. */
+        class Knob(val name: String, val next: Double, val write: (Double) -> Unit, val read: () -> Double)
+
+        val knobs = listOf(
+            Knob(name = "threshold", next = -18.0, write = { s.thresholdDb = it }, read = { c.thresholdDb }),
+            Knob(name = "ratio", next = 3.0, write = { s.ratio = it }, read = { c.ratio }),
+            Knob(name = "knee", next = 2.0, write = { s.kneeDb = it }, read = { c.kneeDb }),
+            Knob(name = "attack", next = 0.008, write = { s.attackSeconds = it }, read = { c.attackSeconds }),
+            Knob(name = "release", next = 0.25, write = { s.releaseSeconds = it }, read = { c.releaseSeconds }),
+        )
+
+        for (knob in knobs) {
+            knob.write(knob.next)
+            effect.configure(s)
+            effect.process(ctx)
+
+            withClue("${knob.name} changed alone") {
+                knob.read() shouldBe knob.next
+            }
+        }
+    }
+
+    "a NaN knob settles: a config that repeats it writes nothing, though NaN never equals itself" {
+        // The cached-config rule of `/review-loop`: a raw compare would see the NaN threshold as a change on every
+        // block. The writer never hands one (it substitutes its constants); a direct caller can.
+        val s = settings(thresholdDb = Double.NaN)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+        val ctx = createCtx()
+
+        effect.configure(s)
+        effect.process(ctx)
+
+        val c = effect.compressor.shouldNotBeNull()
+        c.releaseSeconds = 0.77
+        effect.configure(s)
+        effect.configure(settings(thresholdDb = Double.NaN))
+        c.releaseSeconds shouldBe 0.77
+    }
+
+    "a life that ended forgets the cache: the next ON writes every knob, even the same numbers" {
+        val s = settings(thresholdDb = -20.0)
+        val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+        val ctx = createCtx()
+
+        effect.configure(s)
+        effect.process(ctx)
+
+        val c = effect.compressor.shouldNotBeNull()
+
+        // Off, and the fade out lands: the life ends ([compressor] reads null in Off; the instance lives on).
+        effect.configure(null)
+
+        repeat(fadeLen / blockFrames + 2) { effect.process(ctx) }
+
+        effect.compressor.shouldBeNull()
+
+        c.releaseSeconds = 0.77
+        effect.configure(s)
+        effect.compressor.shouldNotBeNull() shouldBeSameInstanceAs c
         c.releaseSeconds shouldBe 0.1
     }
 })

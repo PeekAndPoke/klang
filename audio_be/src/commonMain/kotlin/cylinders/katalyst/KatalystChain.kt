@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  * the chain would run its first blocks at the settings [KatalystChain.reset] left.
  *
  * **Two methods, because the orbit's param state changes far more rarely than a block goes by**
- * (Katalyst step 5a). [resolve] re-reads this stage's [KatalystKnob]s from the state and rebuilds
+ * (Katalyst step 5a). [resolve] re-reads this stage's [KatalystKnob]s from the state and refills
  * whatever composite the stage wants (a `ResonatorConfig`, a [CompressorSettings]); [apply] writes what is
  * already resolved into the stage and does no lookup and no allocation, so it can run on every
  * block. [KatalystChain.applyParams] is the one place that decides

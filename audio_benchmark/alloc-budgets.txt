@@ -56,6 +56,28 @@
 #   6,628, 12 B above the reading (6,616 in every process on two case mixes, HEAD the same; one process 6,520): it tells
 #   none from one Double per note (a mutant with one box per voice build read 6,640, RED), as C-remap's 36 does for its
 #   24. Item 2 allocates nothing on the JVM; the line guards the voice build's bytes there.
+#   E-arith to E-body-vowel were added by the Katalyst stage measurements (2026-10-11,
+#   docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md), with their lines set by the same rule from that change's runs (4 runs of
+#   3 rounds, the healthy medians in brackets): E-arith 96 (10 to 52), E-arith-glide 500 (450 to 456), E-distort 232
+#   (155 to 185), E-comp, E-eq, E-gain, E-duck and E-body-vowel 96 (15 to 57), E-parallel 664 (571 to 604), E-bands 896
+#   (809 to 840). They guard the per-sample class in their stages, and E-arith the once-per-block class as well (a
+#   small array per block in one stage breached it on both platforms; a single box per block only on the JVM; applyLaw
+#   made a plain function read about 49 KB on V8 and 0 on the JVM, which inlines it there, and E-arith-glide caught it
+#   on both, 11 KB on the JVM). E-distort
+#   carries an open V8 allocation, budgeted as it stands: the bus distort's oversampled path (about 120 B per block;
+#   at oversample 0 the case read about 60; item 34). A fix re-sets that line. E-parallel and E-bands were re-set at
+#   engine follow-up 33 (2026-10-11), by the same rule from that change's runs (4 runs of 3 rounds, and 15 single-case
+#   rounds each): `KatalystParallelEffect` copied the bus into each branch with `copyInto`, a typed-array view per call
+#   on V8, and now copies with `copyRangeInto`. E-parallel healthy medians 185 to 228 B (rounds up to 253), E-bands
+#   227 to 273 (rounds up to 279); HEAD's code read medians 619 and 809 (rounds 568 to 624 and 804 to 861). 268 and
+#   320 are 40 and 47 B above the highest healthy median, and a single view per block put back (one channel of one
+#   branch) reads over both: E-parallel rounds 272 to 319 (median 299), E-bands 330 to 373 (median 331). E-parallel's
+#   margin is thin: 268 sits 15 B above the highest healthy round (253) and 4 B below the mutant's lowest (272), under
+#   the V8 noise of about 25 B, so a single view per block is caught by its median, not in every round (re-set from
+#   272 in review round 1, where the line sat ON the mutant's lowest round).
+#   E-arith-glide's figure is mostly its note path (a new voice every 32
+#   blocks: the same notes with constant operands read the same 205 B on the JVM and 439 on V8), which is why its JVM
+#   line is 6 B above 205, not above 0: the JVM reads that note path the same in every run.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -107,5 +129,25 @@ E-stages           v8        96      item 1: a revert of everything; the delay's
 E-stages           jvm       6       item 1, the three orbit stages
 E-C-n1             v8        13100   item 2 step 3: the registry and the sound name per note (not engineFor's lookup nor a needless lowercase: their comments)
 E-C-n1             jvm       6628    the voice build per note; one Double per note (item 2 allocates nothing on the JVM)
+E-arith            v8        96      the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw)
+E-arith            jvm       6       the eight arithmetic stages, constant operands
+E-arith-glide      v8        500     the arithmetic glide: the per-sample ramp, div's reciprocal, an unset cap arriving at once (with the note path)
+E-arith-glide      jvm       211     the arithmetic glide; 205 B of it is the note path, the same in every run
+E-distort          v8        232     the bus distort, 2x: the per-sample class (its oversampled path's per-block boxes are open, item 34)
+E-distort          jvm       6       the bus distort, 2x
+E-comp             v8        96      the orbit compressor and a lookahead limiter
+E-comp             jvm       6       the orbit compressor and a lookahead limiter
+E-eq               v8        96      the orbit eq: two bells and a tap
+E-eq               jvm       6       the orbit eq
+E-gain             v8        96      the group fader off unity
+E-gain             jvm       6       the group fader off unity
+E-duck             v8        96      the duck with a sounding sidechain
+E-duck             jvm       6       the duck with a sounding sidechain
+E-parallel         v8        268     item 33, the per-branch copy; parallel, a distorted branch and its phase twin: the per-sample class
+E-parallel         jvm       6       parallel, a distorted branch and its phase twin
+E-bands            v8        320     item 33, the per-branch copy; bands, three with the mids distorted: the per-sample class
+E-bands            jvm       6       bands, three with the mids distorted
+E-body-vowel       v8        96      the body and the vowel on an orbit (V8; the JVM's guard is KatalystResonatorAllocationSpec)
+E-body-vowel       jvm       6       the body and the vowel on an orbit
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build

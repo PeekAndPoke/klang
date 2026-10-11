@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.PhaserBlock
+import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
@@ -120,7 +121,7 @@ class KatalystPhaserEffect(
      * The five knobs the last [configure] applied, in [PhaserConfig]'s order (depth, rate, center, sweep, floor), valid
      * while [appliedValid]: an unchanged config returns before it writes anything (engine follow-up 1, review round 1).
      *
-     * The house pattern of an unchanged config (the EQ's `unchanged`, the resonator's, the compressor's by reference):
+     * The house pattern of an unchanged config (the EQ's `unchanged`, the resonator's, the compressor's):
      * the writer re-applies its config on every block (`KatalystChain.applyParams`), and on V8 the writes it repeated
      * were calls V8 did not always inline (the rate setter, the four `KnobGlide.retarget`s, the wet/dry law's
      * `WetDryMix.dryCoeff` and `wetCoeff`), so their doubles crossed as heap numbers every block, 2 to 4 of them
@@ -284,20 +285,6 @@ class KatalystPhaserEffect(
         centerGlide.retarget(PHASER_CENTER_HZ)
         sweepGlide.reset()
         sweepGlide.retarget(PHASER_SWEEP_HZ)
-    }
-
-    /**
-     * The same knob value for [configure]'s compare (see [applied]): equal, with -0.0 and 0.0 told apart, or both NaN.
-     * Exact: a config that passes it would have written the same numbers. Inline, so no double crosses a call.
-     */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun sameKnob(stored: Double, arriving: Double): Boolean {
-        // NaN-guard on a self-comparison: two non-finite knobs are the same value to this stage (see [applied]).
-        if (stored != stored) {
-            return arriving != arriving
-        }
-
-        return stored == arriving && (stored != 0.0 || 1.0 / stored == 1.0 / arriving)
     }
 
     /**

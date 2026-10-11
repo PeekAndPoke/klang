@@ -25,18 +25,25 @@ Measures real-time factor (RTF) — values below 1.0 mean faster than real-time.
 
 ### One family of cases only
 
-`KLANG_BENCH_FILTER` runs just the ignitor cases whose name contains it and skips everything
-else, which is what an A/B wants (a pair of rows, a minute, both platforms):
+`KLANG_BENCH_FILTER` runs just the ignitor and effect cases whose name contains it and skips
+everything else, which is what an A/B wants (a pair of rows, a minute, both platforms):
 
 ```bash
 KLANG_BENCH_FILTER=guitar-rig ./gradlew :audio_benchmark:jsNodeProductionRun
+KLANG_BENCH_FILTER=Katalyst ./gradlew :audio_benchmark:jvmRun   # the Katalyst stage rows
 ```
 
 ### The allocation check (bytes per block)
 
-Beside the timing (real-time factor) there is an allocation mode: 19 fixed cases (`AllocationCases.kt`, common
+Beside the timing (real-time factor) there is an allocation mode: 29 fixed cases (`AllocationCases.kt`, common
 code, middle C), measured on the JVM in-process and on V8 in node, and compared with the budget file
-`alloc-budgets.txt`. One case, `C-remap`, takes its voices through `receivedByEngine` (`engine_inbox.kt`): on JS the
+`alloc-budgets.txt`. Thirteen render voices without the engine (`C-remap` two, taking turns); sixteen run the engine (`PlaybackEngineDispatcher`, the master stage
+included), ten of them with an authored Katalyst chain on the orbit: the case registers it
+(`KlangCommLink.Cmd.RegisterKatalyst`) and its notes reference it by name (`VoiceData.katalyst`), as a song's do. The
+chains are built through the Kotlin door (`KatalystBuilder`). `E-arith-glide` moves its chain's slots with notes every
+32 blocks that alternate between two `katp` maps, so its figure includes the note path's (one new voice per 32
+blocks).
+One case, `C-remap`, takes its voices through `receivedByEngine` (`engine_inbox.kt`): on JS the
 generated wire codec, the path every voice takes into the worklet, so a change of the decoder's map type shows in
 its bytes; on the JVM the voice as it is.
 
@@ -95,6 +102,10 @@ The benchmark prints:
 - **4 noise generators** — white, pink, brown, dust
 - **4 scaling tests** — supersaw at 1, 4, 8, 16 internal voices
 - **5 compositions** — supersaw+lpf+adsr, +reverb, pluck+distort, square+fm, sine+vibrato+tremolo
+
+The effect section (`EffectBenchmark.kt`) times the effect classes one by one, and the Katalyst arithmetic stages as an
+orbit runs them: a chain built by `KatalystChainBuilder`, its param state applied and the chain processed every
+block. Subtract its "Katalyst empty chain" row (the stereo copy and the dispatch) for the stages alone.
 
 Results are sorted most expensive first.
 

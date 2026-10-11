@@ -8,6 +8,8 @@ package io.peekandpoke.klang.audio_benchmark
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Ducking
@@ -28,8 +30,18 @@ import io.peekandpoke.klang.audio_be.ignitor.notch
 import io.peekandpoke.klang.audio_be.ignitor.onePoleHighpass
 import io.peekandpoke.klang.audio_be.ignitor.onePoleLowpass
 import io.peekandpoke.klang.audio_be.ignitor.plus
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.script.stdlib.div
+import io.peekandpoke.klang.script.stdlib.max
+import io.peekandpoke.klang.script.stdlib.plus
+import io.peekandpoke.klang.script.stdlib.pow
+import io.peekandpoke.klang.script.stdlib.times
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
 import kotlin.math.sin
@@ -244,6 +256,40 @@ class EffectBenchmark(
                 srcL.copyInto(left)
                 srcR.copyInto(right)
                 comp.process(left, right, bf)
+            }
+            step
+        }
+
+        // ── Katalyst stages (an authored chain, built by the engine's chain builder) ──
+
+        /**
+         * One orbit chain as the cylinder runs it: [KatalystChainBuilder] builds it from [dsl], and every block copies a
+         * sine into the orbit mix, hands the chain its param state (the owner's map: [moves] alternate every
+         * [moveEveryBlocks] blocks, or null) and runs it. Subtract "Katalyst empty chain" for the stages alone.
+         */
+        private fun katalystCase(
+            name: String,
+            dsl: KatalystDsl,
+            moves: List<Map<String, Double>>? = null,
+            moveEveryBlocks: Int = 1,
+        ): Case = Case(name) { sr, bf ->
+            val chain = KatalystChainBuilder.build(
+                dsl = dsl,
+                sampleRate = sr,
+                blockFrames = bf,
+                rings = SizedBuffers.forRings(sr),
+                reverbs = ReverbUnits(sr),
+            )
+            val ctx = KatalystContext(blockFrames = bf, mixBuffer = StereoBuffer(bf))
+            val srcL = sineSource(440.0, sr, bf)
+            val srcR = sineSource(440.0, sr, bf)
+            var block = 0
+            val step: () -> Unit = {
+                srcL.copyInto(ctx.mixBuffer.left)
+                srcR.copyInto(ctx.mixBuffer.right)
+                chain.applyParams(if (moves == null) null else moves[(block / moveEveryBlocks) % moves.size])
+                chain.process(ctx)
+                block++
             }
             step
         }
@@ -484,6 +530,22 @@ class EffectBenchmark(
                     releaseSeconds = 0.1,
                 )
             },
+
+            // ── Katalyst stages: the arithmetic (docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md).
+            // The operands are not integers (V8 keeps an integral double as a small integer, which hides a box).
+            katalystCase("Katalyst empty chain (baseline: stereo copy + dispatch)", KatalystDsl(emptyList())),
+            katalystCase("Katalyst times (1 cheap stage)", AllocationCases.katalyst { it.times(0.9) }),
+            katalystCase("Katalyst times+plus+max (3 cheap stages)", AllocationCases.katalyst { it.times(0.9).plus(0.013).max(0.45) }),
+            katalystCase("Katalyst pow (1 stage)", AllocationCases.katalyst { it.pow(0.7) }),
+            // Gliding all the time: the divisor moves every 8 blocks, inside the 17-block glide (44.1 kHz), so every
+            // block takes the moving branch (the reciprocal, multiplied in per sample).
+            katalystCase(
+                "Katalyst div (gliding)",
+                AllocationCases.katalyst { it.div(KatalystParam(IgnitorDsl.Param(name = "bench.div", default = 1.3))) },
+                moves = listOf(mapOf("bench.div" to 1.3), mapOf("bench.div" to 0.8)),
+                moveEveryBlocks = 8,
+            ),
+            katalystCase("Katalyst 8 arithmetic stages (E-arith's chain)", AllocationCases.arithmeticChain),
 
             Case("Ducking (mono)") { sr, bf ->
                 val ducking = Ducking(sr, attackSeconds = 0.1, depth = 0.5)

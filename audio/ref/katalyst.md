@@ -121,6 +121,11 @@ reverb, the filter swap and the compressor copy it. What every copy must keep:
   linear or monotonic in (for a divisor its reciprocal, the level), and give each such knob a row that glides through
   and into the pole, bounds the output AND proves the move is a glide (a neighbour-step bound, a hand-computed ramp
   value): a bound alone is passed by a one-block step (round 2).
+- **A config cache over several knobs gets a row per knob, one knob changed at a time** (2026-10-11, knob
+  expressions step 2, a MAJOR): a stage that skips `configure` when its knobs equal the last applied ones must show
+  that each knob alone reaches the instance; rows that move one knob or all of them together leave the other compares
+  unbound (`KatalystCompressorEffectSpec`, "each of the five knobs alone"). A compare against another knob's stored
+  slot fails safe (writes every block) and is caught by an "unchanged config writes nothing" row instead.
 
 - A private sealed `State` with one preallocated instance per state; `enter` is the only way in and the only place
   a state's own data is initialised. A datum belongs to a state only if it dies with that state (the tail ceiling

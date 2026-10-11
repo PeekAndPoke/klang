@@ -7,16 +7,20 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 /**
  * What a declared compressor stage is configured with: the five knobs, every one resolved to a
- * number. [KatalystCompressorWriter] builds it when the orbit's param state changes, and
- * [KatalystCompressorEffect.configure] compares it BY REFERENCE, so an unchanged owner costs one
- * compare per block.
+ * number. [KatalystCompressorEffect.configure] compares the VALUES with the ones it applied last, so
+ * an unchanged owner costs five compares per block and writes nothing.
+ *
+ * **Mutable and reused, on purpose** (katalyst knob expressions step 2, 2026-10-11): [KatalystCompressorWriter]
+ * owns one and refills it in place at every resolve. It built a new one per resolve before, which a
+ * knob resolved every block would turn into an allocation per block. The stage reads the values and
+ * keeps no reference.
  *
  * Lived under `Voice` until 2026-10-07 (audit A1.7), though only the chain ever used it.
  */
 class CompressorSettings(
-    val thresholdDb: Double,
-    val ratio: Double,
-    val kneeDb: Double,
-    val attackSeconds: Double,
-    val releaseSeconds: Double,
+    var thresholdDb: Double = Double.NaN,
+    var ratio: Double = Double.NaN,
+    var kneeDb: Double = Double.NaN,
+    var attackSeconds: Double = Double.NaN,
+    var releaseSeconds: Double = Double.NaN,
 )

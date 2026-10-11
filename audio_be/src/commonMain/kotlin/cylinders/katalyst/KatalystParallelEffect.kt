@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.min
 
@@ -100,8 +101,8 @@ class KatalystParallelEffect internal constructor(
         for (i in branches.indices) {
             val own = contexts[i].mixBuffer
 
-            mix.left.copyInto(own.left, destinationOffset = 0, startIndex = 0, endIndex = frames)
-            mix.right.copyInto(own.right, destinationOffset = 0, startIndex = 0, endIndex = frames)
+            mix.left.copyRangeInto(destination = own.left, destinationOffset = 0, startIndex = 0, endIndex = frames)
+            mix.right.copyRangeInto(destination = own.right, destinationOffset = 0, startIndex = 0, endIndex = frames)
 
             branches[i].process(contexts[i])
         }
