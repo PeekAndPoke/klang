@@ -563,7 +563,8 @@ sealed interface KatalystStageDsl {
     // ── Arithmetic: the Ignitor's operators on the bus signal ───────────────────────────────────
 
     /*
-     * The arithmetic stages (`docs/tasks/katalyst-arithmetic.md`): each applies its Ignitor twin's per-sample law
+     * The arithmetic stages (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`):
+     * each applies its Ignitor twin's per-sample law
      * (`_arithmetic_laws.kt` in `audio_be`, one function per operator) to every sample of both channels, so a bus
      * sample and a voice sample that meet the same numbers come out the same, clamps included (bit for bit against
      * the authored node; an optimized voice divides by multiplying with the reciprocal, one rounding apart). The

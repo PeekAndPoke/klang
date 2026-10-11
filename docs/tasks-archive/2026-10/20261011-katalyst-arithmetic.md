@@ -1,7 +1,7 @@
 # Arithmetic on the Katalyst: the Ignitor's operators as bus stages, and a small optimizer
 
-Status: **steps 1, 2 and 4 built 2026-10-11** on the branch `bus-distort-default`. Step 3, the optimizer, is not
-built: D5 measured it and it does not pay (the numbers below); it waits for the maintainer's word.
+Status: **done 2026-10-11** on the branch `bus-distort-default`: steps 1, 2 and 4 built; step 3, the optimizer, is
+**won't implement** (maintainer, 2026-10-11, on the D5 numbers below: "Ok then no optimizer for the catalyst now").
 Reviewed in three rounds, the third clean (2026-10-11).
 
 ## Why
@@ -87,8 +87,11 @@ coordinator's leans:
 - **D5, measured** (JVM, 48 kHz, 128 frames, a timing loop that includes refilling the block): one `times` stage 232
   ns per block, `times` + `plus` + `min` 331 ns, so one cheap stage is about 50 ns; a `pow` 3,359 ns (a reference
   compressor 2,696 ns, a reference reverb 4,572 ns). The block budget is 2,666,667 ns. Folding three cheap stages into
-  one would save about 100 ns per orbit per block, about 0.004 %, and a `pow` cannot be folded away. Lean: no
-  optimizer; revisit if the editor or a song ever builds long runs of arithmetic.
+  one would save about 100 ns per orbit per block, about 0.004 %, and a `pow` cannot be folded away. Measured on the
+  JVM only; the JS figure the brief asked for was not taken. Decided (maintainer): no optimizer. A fold would also
+  have to answer the glide: two gliding operands folded into one product do not give the same ramp (the product of
+  two linear ramps is not linear), so it would cover constant operands only or need a margin decision of its own.
+  Revisit if a measurement ever shows long runs of arithmetic on many orbits.
 - **D6:** the set above with the Ignitor's aliases (`add`, `sub`, `mul`, `power`, `negate`) and parameter names
   (`other`, `exp`).
 
@@ -132,7 +135,7 @@ coordinator's leans:
    extensions are both doors), with the Ignitor's aliases, the `min`/`max` crossing and their own door-parity spec,
    `KlangScriptKatalystArithmeticDoorParitySpec`. Script-door defaults stay plain literals (there are none: every operand is
    required).
-3. **The optimizer** (only after D5): a pure `KatalystDsl -> KatalystDsl` pass at registration, the Ignitor
+3. **The optimizer: won't implement** (maintainer, 2026-10-11, D5). What it would have been: a pure `KatalystDsl -> KatalystDsl` pass at registration, the Ignitor
    optimizer's rule shape on a list. Candidates: neighbouring constant arithmetic folds into one stage, identities go
    (`mul(1)`, `div(1)`, `add(0)` if D3 keeps it), a `Kat.param` operand is a wall. Each rule held to
    `OPTIMIZER_PARITY` by a render spec (authored chain against optimized chain), plus a kill switch like the Ignitor's

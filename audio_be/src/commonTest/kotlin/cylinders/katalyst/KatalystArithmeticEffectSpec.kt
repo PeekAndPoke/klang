@@ -38,7 +38,9 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * The arithmetic stages on the bus ([KatalystArithmeticEffect], `docs/tasks/katalyst-arithmetic.md`): every sample is
+ * The arithmetic stages on the bus ([KatalystArithmeticEffect],
+ * `docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`):
+ * every sample is
  * the Ignitor's sample for the same numbers, and a moving operand glides.
  *
  * The parity oracle is the Ignitor RUNTIME (the nodes `IgnitorDslRuntime` builds for each operator, fed the same

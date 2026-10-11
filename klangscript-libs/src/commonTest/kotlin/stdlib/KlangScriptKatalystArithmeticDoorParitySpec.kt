@@ -16,7 +16,8 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * The Katalyst arithmetic doors (`docs/tasks/katalyst-arithmetic.md`): every door and alias, on the script door and
+ * The Katalyst arithmetic doors (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`):
+ * every door and alias, on the script door and
  * the Kotlin door, against the stage data class written out by hand, so a door wired to the wrong stage cannot look
  * right on both sides. The `min`/`max` crossing is part of the table: `max` ("at most") builds the `Min` stage.
  */

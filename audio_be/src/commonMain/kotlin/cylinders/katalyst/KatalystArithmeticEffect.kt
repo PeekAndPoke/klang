@@ -30,7 +30,8 @@ internal enum class KatalystArithmeticOp {
 }
 
 /**
- * The arithmetic stages on the bus (`docs/tasks/katalyst-arithmetic.md`): every sample of both channels goes through
+ * The arithmetic stages on the bus (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`):
+ * every sample of both channels goes through
  * the SAME per-sample law as the Ignitor's node of that operator (`_arithmetic_laws.kt`), so a settled operand gives
  * the sample the authored Ignitor node gives, bit for bit, clamps included. (A registered voice runs its optimized
  * tree, where a constant divide is a multiply by the reciprocal: one rounding apart, within `OPTIMIZER_PARITY`.)

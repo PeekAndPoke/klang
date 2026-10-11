@@ -546,7 +546,8 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
 // ── Arithmetic: the Ignitor's operators on the bus ──────────────────────────────────────────────
 //
 // Each door appends one stage that runs the Ignitor's per-sample law of the same operator over the bus, so the same
-// numbers give the same sample on a voice and on a bus (`docs/tasks/katalyst-arithmetic.md`). The operand is a knob
+// numbers give the same sample on a voice and on a bus (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`).
+// The operand is a knob
 // like every other (a number or a `Kat.param`); a moving one glides, an unset (non-finite) one reads as the
 // operator's identity, and an unset cap or floor passes the bus. A stage that turns silence into something (an offset,
 // a floor above zero, a cap below it, a negative power) keeps its orbit from ever switching off, as the voice's

@@ -514,7 +514,7 @@ the common language of audio, to be found with `/dsl-design`.
 
 ### 6.10 The Ignitor and the Katalyst stay two DSLs (maintainer, 2026-10-11)
 
-Considered while asking for the Ignitor's arithmetic on the Katalyst (`docs/tasks/katalyst-arithmetic.md`). The
+Considered while asking for the Ignitor's arithmetic on the Katalyst (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`). The
 maintainer's sketch: an Ignitor as a special Katalyst that also sees the note, either as `interface Ignitor :
 Katalyst` or as one generic root, `Dsp<T: DspContext>`, with `Katalyst : Dsp<KatalystContext>` and
 `Ignitor : Dsp<IgnContext>`. Every operator would be written once, an Ignitor could be plugged into a Katalyst knob,
