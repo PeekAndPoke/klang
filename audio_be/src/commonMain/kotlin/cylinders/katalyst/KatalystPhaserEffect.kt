@@ -116,6 +116,29 @@ class KatalystPhaserEffect(
     /** The block's knob values, filled per block in [process] and handed over by reference ([PhaserBlock] says why). */
     private val block = PhaserBlock()
 
+    /**
+     * The five knobs the last [configure] applied, in [PhaserConfig]'s order (depth, rate, center, sweep, floor), valid
+     * while [appliedValid]: an unchanged config returns before it writes anything (engine follow-up 1, review round 1).
+     *
+     * The house pattern of an unchanged config (the EQ's `unchanged`, the resonator's, the compressor's by reference):
+     * the writer re-applies its config on every block (`KatalystChain.applyParams`), and on V8 the writes it repeated
+     * were calls V8 did not always inline (the rate setter, the four `KnobGlide.retarget`s, the wet/dry law's
+     * `WetDryMix.dryCoeff` and `wetCoeff`), so their doubles crossed as heap numbers every block, 2 to 4 of them
+     * (`audio/ref/performance.md`). Skipping them is exact: every write of [configure] is a function of the five
+     * knobs and of state only [configure] and [reset] change ([process] only advances the glides and clears
+     * [fresh], and a repeated `retarget` to the target that stands, a repeated setter write of the same number and
+     * a repeated breakpoint write while [fresh] are all no-ops). [reset] invalidates it.
+     *
+     * The values are compared the EQ's way, NaN-aware ([sameKnob]): a non-finite knob is a value like any other here
+     * (the setters and the glides substitute it the same way every time), and a raw `NaN != NaN` would defeat the
+     * compare on every block (the cached-config rule of `/review-loop`). An ARRAY, not double fields, so the stores
+     * cannot box (engine follow-up 7).
+     */
+    private val applied = DoubleArray(5)
+
+    /** True once a [configure] has filled [applied]; false after construction and [reset]. */
+    private var appliedValid: Boolean = false
+
     init {
         // Unset is identity: the dry mix, which is what the depth gate's off target is too.
         dryGlide.retarget(1.0)
@@ -158,8 +181,9 @@ class KatalystPhaserEffect(
 
     /**
      * Applies the orbit owner's five phaser knobs. Called by the chain's writer on every block the
-     * orbit has an owner, so an unchanged owner must cost nothing: every write here is either a store of
-     * the same number or a [KnobGlide.retarget] to the target that already stands.
+     * orbit has an owner, so an unchanged owner must cost nothing: it returns at the compare with the
+     * knobs last applied ([applied]), and every write below would have been a store of the same number
+     * or a [KnobGlide.retarget] to the target that already stands.
      *
      * THE GATE lives here, and there is only one: [PhaserConfig.depth] BELOW [Phaser.MIN_ACTIVE_DEPTH] aims the
      * two coefficients at identity, and the KERNEL params are not written at all. A no-phaser owner
@@ -181,13 +205,33 @@ class KatalystPhaserEffect(
         val center = config.center
         val sweep = config.sweep
         val floor = config.floor
+        val last = applied
+
+        // An unchanged config writes nothing: see [applied].
+        if (appliedValid && sameKnob(last[0], depth) && sameKnob(last[1], rate) && sameKnob(last[2], center) &&
+            sameKnob(last[3], sweep) && sameKnob(last[4], floor)
+        ) {
+            return
+        }
+
+        last[0] = depth
+        last[1] = rate
+        last[2] = center
+        last[3] = sweep
+        last[4] = floor
+        appliedValid = true
 
         phaser.depth = depth
 
         if (phaser.depth >= Phaser.MIN_ACTIVE_DEPTH) {
             phaser.rate = rate
             phaser.floor = floor
-            phaser.feedback = 0.5
+            // The cascade's feedback is the constant 0.5, set where the cores are made and in
+            // `Phaser.resetForReuse`, and written nowhere else: not rewritten per block, on purpose
+            // (engine follow-up 1, 2026-10-11). On V8 the write was a call V8 left out of this stage's
+            // budget, its 0.5 a heap number every block (`audio/ref/performance.md`). So the stage no longer
+            // forces 0.5 onto the [Phaser] it is handed: production always hands it a fresh one
+            // (`KatalystChainBuilder`), and a phaser built with another feedback would keep it.
             centerGlide.retarget(if (center > 0) center else PHASER_CENTER_HZ)
             sweepGlide.retarget(if (sweep > 0) sweep else PHASER_SWEEP_HZ)
 
@@ -228,6 +272,8 @@ class KatalystPhaserEffect(
     override fun reset() {
         phaser.resetForReuse()
         fresh = true
+        // The kernel and the glides are back at their defaults, so the next config must be written, whatever it is.
+        appliedValid = false
 
         // Forget, then aim at the identity the cleared stage stands at: the next value snaps.
         dryGlide.reset()
@@ -238,6 +284,20 @@ class KatalystPhaserEffect(
         centerGlide.retarget(PHASER_CENTER_HZ)
         sweepGlide.reset()
         sweepGlide.retarget(PHASER_SWEEP_HZ)
+    }
+
+    /**
+     * The same knob value for [configure]'s compare (see [applied]): equal, with -0.0 and 0.0 told apart, or both NaN.
+     * Exact: a config that passes it would have written the same numbers. Inline, so no double crosses a call.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun sameKnob(stored: Double, arriving: Double): Boolean {
+        // NaN-guard on a self-comparison: two non-finite knobs are the same value to this stage (see [applied]).
+        if (stored != stored) {
+            return arriving != arriving
+        }
+
+        return stored == arriving && (stored != 0.0 || 1.0 / stored == 1.0 / arriving)
     }
 
     /**

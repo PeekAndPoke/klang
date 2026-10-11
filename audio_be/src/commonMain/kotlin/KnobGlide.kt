@@ -56,27 +56,30 @@ internal class KnobGlide(
     /** The frames of one render block, pinned to 128 in the engine. */
     blockFrames: Int,
 ) {
-    /** How many blocks one glide spans: the glide time in samples, rounded to whole blocks, at least one. */
-    private val blocks: Int = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt().coerceAtLeast(1)
+    // The state [advance] reads and writes is `internal`, not private, because [advance] is an `inline` member of
+    // this `internal` class (see its KDoc): an inline body may only touch what its own visibility can see.
 
-    private val invBlocks: Double = 1.0 / blocks
+    /** How many blocks one glide spans: the glide time in samples, rounded to whole blocks, at least one. */
+    internal val blocks: Int = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt().coerceAtLeast(1)
+
+    internal val invBlocks: Double = 1.0 / blocks
 
     /** The value in force: after [advance], the value for the block just advanced. */
     var value: Double = 0.0
-        private set
+        internal set
 
     /** Where the knob is going; equal to [value] once the glide has landed. */
     var target: Double = 0.0
-        private set
+        internal set
 
     /** Where the running glide started: the value in force at the [retarget] that began it. */
-    private var start: Double = 0.0
+    internal var start: Double = 0.0
 
     /** Blocks left in the running glide; zero means settled. */
-    private var remaining: Int = 0
+    internal var remaining: Int = 0
 
     /** True until an [advance] has consumed a value: see the class KDoc, "the first value snaps". */
-    private var snapNext: Boolean = true
+    internal var snapNext: Boolean = true
 
     /** True while the knob is still on its way to [target]. */
     val isGliding: Boolean get() = remaining > 0
@@ -103,8 +106,17 @@ internal class KnobGlide(
         remaining = blocks
     }
 
-    /** COEFFICIENT use: moves the knob by one block and returns the value in force for it. Call once per block. */
-    fun advance(): Double {
+    /**
+     * COEFFICIENT use: moves the knob by one block and returns the value in force for it. Call once per block.
+     *
+     * **Kotlin `inline`, on purpose** (engine follow-up 1, 2026-10-11): every caller is a stage's per-block path,
+     * and on V8 a double returned by a call that is not inlined is a heap number (`audio/ref/performance.md`).
+     * As a plain method, V8 left it out of the delay's and the reverb's `process` (the glide settled, its result
+     * discarded, still boxed in the callee), so a settled feedback or size of 0.45 or 0.5 cost one heap number per
+     * block. Inline, the value never crosses a call. No test can pin it; this KDoc is the guard.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun advance(): Double {
         snapNext = false
 
         if (remaining == 0) {

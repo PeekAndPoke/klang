@@ -302,12 +302,29 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   now hand a holder (`DelayConfig`, `ReverbConfig`, `PhaserConfig`) and the phaser stage hands `Phaser.process` a
   `PhaserBlock`. Measured and dropped: an inline finiteness compare in place of `isFinite()` (better pinned to one
   core, worse unpinned on the phaser and on all three stages together), a Unit-returning glide step (within noise),
-  and the resonator's split remedy on the delay (worse). **The stages are not clean after the pass** (open: `docs/tasks/engine-follow-ups.md`, section 1). At engine level
-  (one note through `PlaybackEngine`), bytes per block on the production bundle: pinned (medians of 3 to 6 runs,
-  ranges in brackets), delay 82 (34 to 98; HEAD 81), reverb 22 (HEAD 21), phaser 144 (144 to 192; HEAD 176), with a
-  floor of 0.5 192 (160 to 192; HEAD 240), all three 197 (HEAD 277); unpinned (median of three), 98, 38, 112, 128,
-  149 (HEAD 229). On the development bundle (single runs pinned): pinned 131, 102, 96, 128, 276 (HEAD 356); unpinned
-  131, 103, 112, 144, 260 (HEAD 356). Four cautions for this class of box:
+  and the resonator's split remedy on the delay (worse). After the pass, at engine level, the production bundle read (pinned, medians) delay 82, reverb 22, phaser 144
+  (192 with a floor of 0.5), all three 197 bytes per block (HEAD 277). **After engine follow-up 1 (2026-10-11) every box
+  located in the stages' block processing is gone** (an off phaser's call into `Phaser.process`, about one heap number
+  per block in single-case processes, is located, not removed) (`docs/tasks/engine-follow-ups.md`, item 1): the doubles that crossed were
+  `KnobGlide.advance`'s result (now Kotlin `inline`), the delay's and the reverb's tail step (`TailCeiling.observe`,
+  `peakOf` and the units' window and laps getters; now `DelayLine.observeTail` and `Reverb.observeTail`, one call that
+  takes no double, with the helpers `inline`), the delay loops' per-block arguments (`DelayLine.blockArgs`, a
+  `DoubleArray` holder), the phaser's `alphaAt` (now `inline`) and two configure calls (the depth's `coerceIn` written
+  out, the constant feedback no longer rewritten per block). In six shuffled mixed processes the delay and the reverb
+  read exactly what the engine without them reads, all three together what the phaser alone reads (before its
+  `configure` was fixed, below).
+  **The per-block `configure` is a class of its own**: a writer re-applies the resolved knobs every block
+  (`KatalystChain.applyParams`), and in some processes V8 compiles the stage's `configure` with nothing inlined but
+  `isFinite` (a mixed profile, where most orbits take the off arm, leaves the active arm cold), so every setter,
+  `KnobGlide.retarget` and the phaser's wet/dry law take their doubles across calls; in single-case processes the
+  phaser's `WetDryMix.dryCoeff` and `wetCoeff` were left out of the writer's budget. The remedy is no call on the steady
+  path: the house pattern of an unchanged config (the EQ's `unchanged`, the resonator's, the compressor's), now in the
+  phaser stage too (`KatalystPhaserEffect.applied`, review round 1 of follow-up 1), after which every stage case read
+  the engine without a stage in every mixed process measured but one pinned process (the delay, one heap number). The delay's and the reverb's `configure` are item 32.
+  **A `Math.ceil` handed to a call that is not inlined boxes even when it is a whole number:** V8 cannot rule out -0,
+  so it cannot travel as a small integer (the `toInt()` inside the delay's `framesFor(time)`, run every block until
+  follow-up 1 kept the conversion off the steady path).
+  Four cautions for this class of box:
   - **Measure pinned AND unpinned.** `taskset` to one core puts V8's concurrent compiler on the core of the measured
     code, which changes the tier-up history and so which calls are left out. A single bundle varies by up to five
     heap numbers per block between unpinned processes (and pinned ones vary too while the sibling threads are busy);
@@ -456,7 +473,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
   `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
   sources is refused; the `alloc` step of `console/full-check.sh`)
-  measures the bytes per block of 15 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  measures the bytes per block of 17 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
   node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
   `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
   breach. How it measures and the cases: `audio_benchmark/README.md`. The JVM guards in `jvmTest`

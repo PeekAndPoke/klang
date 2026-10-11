@@ -109,11 +109,15 @@ are the records' names, so a scoreboard row can be read against the reports.
 | `C-full` | voice: `classic()` saw with distort, filter envelope, hpf, tremolo, analog | item 12 step 2 (48 B on the JVM before); holds item 29's open residue | 186 B | 273 to 346 B | 0 B | 320 / 12 |
 | `E-sawC-sus` | engine: one `sawC` note, sustained | item 3, the limiter's level; item 8 | 68 B | 2,134 B | 0 B | 160 / 12 |
 | `E-noisesaw-sus` | engine: saw plus white noise, loud enough to limit | item 3, the limiter's gain | 56 B (before item 8) | 4,108 B | 0 B | 192 / 12 |
+| `E-delay` | engine: one `sawC` note, the orbit delay (wet 0.3, time 0.2501, feedback 0.45) | item 1, the orbit delay's sites as a whole (its parts: the KDocs) | 62 to 67 B | 160 to 171 B | 0 B | 112 / 6 |
+| `E-stages` | engine: one `sawC` note, the delay, the reverb and the phaser (floor 0.5) | item 1: a revert of everything, the delay's sites with all three running, the per-sample class in the reverb and the phaser; the reverb's and the phaser's per-block sites only in part (a revert of them read 93 to 129 B, medians; their KDocs) | 11 to 51 B | 217 to 259 B | 0 B | 96 / 6 |
 | `E-C-rel05-n16` | engine: `classic()` saw, 0.5 s release, a new note every 16 blocks | 10b and item 8 across about 12 voices; item 11 (the build) | 1,045 B | 26,260 B | 377 B | 1,400 / 450 |
 
 Added 2026-10-11 (engine follow-up 7): `spluck-a`, the fifteenth case, and `super7a`'s guard corrected; its numbers are
 that change's (`docs/tasks/engine-follow-ups.md`, item 7). The other rows are as designed; the budgets in force are
 `audio_benchmark/alloc-budgets.txt`.
+Added 2026-10-11 (engine follow-up 1): `E-delay` and `E-stages`, the sixteenth and seventeenth cases; their numbers are
+that change's harness medians (`docs/tasks/engine-follow-ups.md`, item 1); `E-stages` as re-set in its review round 1.
 
 "V8 now" and "V8 before" are bytes per block, from the latest record of each fix (e3, e9, e10, e8 and its review,
 mostly unpinned). The V8 times are in the detail file (0.7 µs for `saw` up to 35 µs for the n16 row). JVM times

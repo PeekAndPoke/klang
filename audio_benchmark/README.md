@@ -34,7 +34,7 @@ KLANG_BENCH_FILTER=guitar-rig ./gradlew :audio_benchmark:jsNodeProductionRun
 
 ### The allocation check (bytes per block)
 
-Beside the timing (real-time factor) there is an allocation mode: 15 fixed cases (`AllocationCases.kt`, common
+Beside the timing (real-time factor) there is an allocation mode: 17 fixed cases (`AllocationCases.kt`, common
 code, middle C), measured on the JVM in-process and on V8 in node, and compared with the budget file
 `alloc-budgets.txt`.
 

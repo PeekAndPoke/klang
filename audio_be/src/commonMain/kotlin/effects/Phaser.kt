@@ -79,11 +79,22 @@ class Phaser(sampleRate: Int) {
             coreR.rate = value
         }
 
-    /** Wet/dry crossfade amount, clamped to `[0, 1]`. NaN/Inf silently ignored. */
+    /**
+     * Wet/dry crossfade amount, clamped to `[0, 1]`. NaN/Inf silently ignored.
+     *
+     * The clamp is Kotlin's `coerceIn(0.0, 1.0)` written out, ON PURPOSE (engine follow-up 1, 2026-10-11): the orbit
+     * stage writes the depth on every block, and on Kotlin/JS `coerceIn` is a stdlib call that V8 left out of the
+     * stage's budget, so the depth and the clamped result crossed it as heap numbers (`audio/ref/performance.md`;
+     * item 29's `clampSvfRange` is the precedent). The same value for every finite input. No test can pin it; this
+     * KDoc is the guard.
+     */
     var depth: Double = 0.0
         set(value) {
-            if (!value.isFinite()) return
-            field = value.coerceIn(0.0, 1.0)
+            if (!value.isFinite()) { // NaN-guard (and Inf): a non-finite depth keeps the stored one
+                return
+            }
+
+            field = if (value < 0.0) 0.0 else if (value > 1.0) 1.0 else value
         }
 
     /**

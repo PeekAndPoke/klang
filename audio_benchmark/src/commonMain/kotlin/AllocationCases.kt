@@ -62,9 +62,10 @@ object AllocationCases {
     /**
      * One case.
      *
-     * [sound] is a built-in sound, or [AUTHORED] when [dsl] is set. [params] are the `classic()` slots. The note's
-     * gate is [gateSec] seconds. An engine case with [newNoteEveryBlocks] above 0 starts a new note that often
-     * instead of one note at the start.
+     * [sound] is a built-in sound, or [AUTHORED] when [dsl] is set. [params] are the `classic()` slots, [katalyst]
+     * the orbit's (`delay.wet`, ...; an engine case's orbit runs the classic chain). The note's gate is [gateSec]
+     * seconds. An engine case with [newNoteEveryBlocks] above 0 starts a new note that often instead of one note at
+     * the start.
      */
     class Case(
         val name: String,
@@ -72,6 +73,7 @@ object AllocationCases {
         val sound: String,
         val dsl: IgnitorDsl? = null,
         val params: Map<String, Double>? = null,
+        val katalyst: Map<String, Double>? = null,
         val gateSec: Double = SUSTAIN_SEC,
         val newNoteEveryBlocks: Int = 0,
     )
@@ -89,6 +91,18 @@ object AllocationCases {
         "adsr.attack" to 0.0, "adsr.decay" to 1000.0, "adsr.sustain" to 0.5,
         "penv.semitones" to 24.0, "penv.attack" to 0.0, "penv.decay" to 1000.0, "penv.sustain" to 0.0,
         "fm.ratio" to 1.4, "fm.depth" to 300.0, "fm.attack" to 0.0, "fm.decay" to 1000.0, "fm.sustain" to 0.3,
+    )
+
+    /**
+     * The orbit delay of the stage cases: a tap of 0.2501 s, 12,004.8 samples, so the tap's fraction is not a whole
+     * number (a fraction of 0 travels as a small integer on V8 and boxes nothing), and a feedback of 0.45.
+     */
+    private val delay = mapOf("delay.wet" to 0.3, "delay.time" to 0.2501, "delay.feedback" to 0.45)
+
+    /** The three orbit stages of `E-stages`: [delay], the reverb, the phaser with a floor below 1. */
+    private val stages = delay + mapOf(
+        "reverb.wet" to 0.3, "reverb.size" to 6.3,
+        "phaser.wet" to 0.5, "phaser.rate" to 0.5, "phaser.sweep" to 800.0, "phaser.floor" to 0.5,
     )
 
     /** The cases, in scoreboard order. */
@@ -130,6 +144,8 @@ object AllocationCases {
         Case(name = "C-full", engine = false, sound = "saw", params = full),
         Case(name = "E-sawC-sus", engine = true, sound = "saw"),
         Case(name = "E-noisesaw-sus", engine = true, sound = AUTHORED, dsl = saw() + IgnitorDsl.WhiteNoise()),
+        Case(name = "E-delay", engine = true, sound = "saw", katalyst = delay),
+        Case(name = "E-stages", engine = true, sound = "saw", katalyst = stages),
         Case(
             name = "E-C-rel05-n16",
             engine = true,
@@ -176,7 +192,12 @@ object AllocationCases {
     /** A new rig for [case], built and ready for its first block. */
     fun rig(case: Case): Rig = if (case.engine) EngineRig(case) else VoiceRig(case)
 
-    private fun voiceData(case: Case) = VoiceData.empty.copy(freqHz = FREQ_HZ, sound = case.sound, ignitorParams = case.params)
+    private fun voiceData(case: Case) = VoiceData.empty.copy(
+        freqHz = FREQ_HZ,
+        sound = case.sound,
+        ignitorParams = case.params,
+        katalystParams = case.katalyst,
+    )
 
     /** One voice through [VoiceFactory], offered to its cylinder and committed each block. */
     private class VoiceRig(case: Case) : Rig() {

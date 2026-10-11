@@ -8,7 +8,8 @@
 # - V8: about 40 B or more above that run's median, and below the regression the case guards: one heap number per
 #   sample (about 2 KB per voice and block, items 3, 9, 10) or one per knob read (60 to 100 B per voice and block,
 #   item 8). Where today's figure and item 8's old one overlap (E-sawC-sus, E-noisesaw-sus) the budget guards the
-#   per-sample class only, and the voice rows guard item 8.
+#   per-sample class only, and the voice rows guard item 8 (E-stages caught the item 8 mutant once, 108 B against
+#   96, but it is not an item 8 line either).
 # - Re-set: saw, sawC, C-offrel, sgpad-vib and C-dist on V8 were re-set at engine follow-up 6 (2026-10-10) from that
 #   change's runs (tree medians 16, 15, 16, 31 to 36 and 31 to 36 B), by the same rule: its fix took about 16 B per wave oscillator off,
 #   enough that item 8's regression read under the old budgets (docs/tasks/engine-follow-ups.md, item 6).
@@ -21,6 +22,16 @@
 #   item 7); the median of 3 rounds absorbs one such round. A spluck-a breach whose rounds are not all high, and that
 #   does not repeat on a second run, is that tail; a breach that repeats is a regression. HEAD's code read high in
 #   every round of every run, the item 8 mutant in every round of its one run.
+#   E-delay and E-stages were added at engine follow-up 1 (2026-10-11), with their lines set by the same rule from
+#   that change's runs (3 runs of 3 rounds): E-delay healthy rounds 30 to 71 B (medians 62 to 67), HEAD's code 125
+#   to 171 (medians 160 to 171). Each part of the delay's fix is about one heap number per block, under the V8
+#   resolution (a revert of the glide alone read 61 B, review round 1), so the line guards the delay's sites as a
+#   whole. E-stages was set at 176 first and re-set to 96 in review round 1, after the phaser stage learned to skip
+#   an unchanged config: healthy rounds 10 to 57 B (medians 11 to 51, 6 runs of 3 rounds), HEAD's code 203 to 346
+#   (medians 217 to 259). It guards a revert of everything, the delay's sites with all three stages running, and the
+#   per-sample class in the reverb and the phaser (it is the only case that runs them). The reverb's and the phaser's
+#   per-block sites it sees only in part: a revert of their five files read medians 128, 129, 129 and 93 B in four
+#   runs (rounds 92 to 222), so one run in four stays under the line; those parts are guarded by their KDocs.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -64,5 +75,9 @@ E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample
 E-sawC-sus         jvm       6       item 3, the limiter's level; item 8
 E-noisesaw-sus     v8        160     item 3, the limiter's gain (the per-sample class only)
 E-noisesaw-sus     jvm       6       item 3, the limiter's gain
+E-delay            v8        112     item 1, the orbit delay's sites as a whole (its parts: the KDocs)
+E-delay            jvm       6       item 1, the orbit delay
+E-stages           v8        96      item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
+E-stages           jvm       6       item 1, the three orbit stages
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build

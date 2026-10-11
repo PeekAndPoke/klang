@@ -26,10 +26,163 @@ These are V8 only. The JVM allocates nothing per block in steady state except it
 block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: see items 8 and 12). The method and the rules learned are in
 `audio/ref/performance.md`.
 
-1. **The stages still allocate** (delay, reverb, phaser). After the V8 pass, bytes per block at engine level,
-   production bundle pinned: delay 82, reverb 22, phaser 144 (192 with floor 0.5), all three 197; development pinned:
-   131, 102, 96 (128), 276. The boxing sites are not located. Source: the record, "The V8 allocation pass" (the
-   result table) and "Found during tidy-up step 12". M.
+1. **DONE (2026-10-11): every box located in the stages' block processing is gone, and the phaser's per-block
+   `configure` skips an unchanged config (review round 1); the delay's and the reverb's `configure` is item 32.** Reported as: after the V8 pass, bytes per block at engine level, production bundle pinned: delay 82, reverb
+   22, phaser 144 (192 with floor 0.5), all three 197; development pinned: 131, 102, 96 (128), 276. The boxing sites
+   were not located. Source: the record, "The V8 allocation pass" (the result table) and "Found during tidy-up step
+   12". **Measured on the production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22), one
+   sustained note through `PlaybackEngineDispatcher` (the master stage runs too) with the stage's `katalystParams` on
+   the classic orbit chain: a sine at middle C with the delay (wet 0.3, time 0.25, feedback 0.5; and time 0.2501,
+   feedback 0.45, a fractional tap), the reverb (wet 0.3, size 5; and size 6.3 with a lowpass), the phaser (wet 0.5,
+   rate 0.5, sweep 800; and floor 0.5), all three, the same on the classic saw, on `C-full`'s voice and on a 7-voice
+   supersaw; single-case and mixed (every case warmed round-robin in one process, then each measured between two
+   forced GCs, whole heap numbers; e7's method), pinned and unpinned. Reproduced first (HEAD, mixed, 4 processes,
+   bytes over the same engine without a stage): delay 17 to 97, fractional delay 65 to 177, reverb 5 to 21, phaser 32
+   to 64, with floor 48 to 96, all three 69 to 149, all three fractional with floor 149 to 293.
+   **Sites** (sampling heap profiler, `--trace-turbo-inlining`, `--no-concurrent-recompilation` traces per compile,
+   single-case and mixed), each a double crossing a call V8 did not inline:
+   - `KnobGlide.advance()`'s result (111 bytes), left out of the delay's and the reverb's `process` (the settled glide
+     of the feedback and the size, its result discarded and still boxed in the callee): one per block each.
+   - The delay's and the reverb's tail step: `DelayLine.reachSamples` and `shortestSamples` (88 bytes each) behind
+     `tailWindowSamples` and `tailLapsPerWindow`, left out (one each when the tap is fractional), and in some compiles
+     `TailCeiling.observe` itself (358 bytes, three doubles), its `fresh`, `currentDelaySamples` and `isFinite`.
+   - `DelayLine.processInternal` (past the 460-byte limit, reason 5) took the tap's fraction, the feedback, its step
+     and the cap as arguments, twice per block: one or two per block, in every process.
+   - The delay's ring check in `configure`, every block: the `toInt()` inside `framesFor(time)`, a stdlib call
+     (`numberToInt`, 28 bytes) V8 left out, handed a `Math.ceil` that V8 cannot rule out as -0, so even a whole
+     frame count crossed as a heap number.
+   - The phaser: `PhaserCore.alphaAt` (twice per core per block, its phase and result) left out of `Phaser.process`
+     when pinned, about five per block; in `configure` the depth's `coerceIn` (a stdlib call), the per-block rewrite
+     of the constant feedback 0.5 (`PhaserCore`'s setter left out), the rate setter and the wet/dry law
+     (`Phaser.dryCoeff`/`wetCoeff` through `WetDryMix`).
+   With ten times V8's inlining budgets the stages add 1 to 7 bytes per block (one process of three; the other two
+   then boxed per sample elsewhere), as the pass found: all are budget boxes.
+   **Fix** (remedies the rules name, no ADAA file edited):
+   - `KnobGlide.advance` is Kotlin `inline` (`audio_be/.../KnobGlide.kt`; the state it reads is `internal`).
+   - `DelayLine.observeTail(ceiling, input, frames)` and `Reverb.observeTail(...)`: one call that takes no double and
+     returns none; `TailCeiling.observe`, `fresh`, `saturate` and `peakOf` are Kotlin `inline` (the ceiling's state
+     `internal`), and so are `DelayLine.currentDelaySamples`, `reachSamples`, `shortestSamples` and the reverb's
+     `effectiveFeedback` and `feedbackFor`. `DelayLine.tailWindowSamples` and `tailLapsPerWindow` are gone (their KDoc
+     moved to `observeTail`), the reverb's two are private. `fresh`'s loop seed takes the `* 1.0` of the seed rule.
+   - `DelayLine.blockArgs`, a `DoubleArray` holder for the loops' per-block doubles (an array, item 7's lesson).
+   - `KatalystDelayEffect.ensureRing` compares the ring's capacity with `framesNeeded(time)` in doubles, so the
+     `toInt()` runs only when a ring is rented or grown (the same decision for every time).
+   - `PhaserCore.alphaAt` Kotlin `inline`; `Phaser.depth`'s clamp written out (item 29's precedent); the phaser
+     stage's `configure` no longer rewrites the constant feedback (set where the cores are made and in
+     `resetForReuse`, written nowhere else).
+   The KDoc at each site is the guard.
+   **Bit for bit:** raw doubles of the probe, 600 blocks, both channels, HEAD against the tree, 30 of 30 cases
+   identical on V8 and 30 of 30 on the JVM, every last block sounding: every stage case above, an owner-change case
+   (the delay crossfades to a new tap, the feedback, size and phaser knobs glide, then the delay and the reverb
+   drain), four at 220 Hz, the engine saw and `C-full`, and the harness's voice cases. The corpus 18 of 18
+   (`CORPUS GREEN`). `:audio_be:jvmTest` 2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of 2,558.
+   **Bytes per block, HEAD / tree / HEAD again (a byte copy), mixed, one value per process** (unpinned 6 shuffled
+   processes, pinned `taskset -c 11` 3), ranges over the processes; the engine without a stage reads 16 to 48:
+
+   | case | mixed unpinned | mixed pinned | single-case unpinned (medians of 3) | single-case pinned |
+   |---|---|---|---|---|
+   | engine, no stage (control) | 16-48 / 16-48 / 16-48 | 16-48 / 16 / 16 | 62 / 67 / 66 | 41 / 52 / 16 |
+   | delay | 65-145 / 16-48 / 65-145 | 65-176 / 16-96 / 81-145 | 104 / 67 / 93 | 58 / 46 / 92 |
+   | delay, fractional tap | 113-209 / 16-48 / 129-257 | 160-241 / 16-96 / 129-209 | 166 / 67 / 165 | 151 / 31 / 119 |
+   | reverb | 21-69 / 16-48 / 21-84 | 37-53 / 16 / 21-69 | 57 / 67 / 82 | 51 / 31 / 42 |
+   | phaser | 80-112 / 48-96 / 80-112 | 80-112 / 64-80 / 48-80 | 98 / 77 / 108 | 176 / 68 / 196 |
+   | phaser, floor 0.5 | 96-144 / 80-112 / 96-144 | 96-144 / 80-112 / 64-96 | 124 / 114 / 123 | 166 / 82 / 176 |
+   | all three | 133-197 / 48-96 / 133-213 | 149-245 / 64-160 / 133-229 | 134 / 88 / 171 | 207 / 63 / 232 |
+   | all three, fractional, floor 0.5 | 213-293 / 80-112 / 213-357 | 229-341 / 80-192 / 197-309 | 222 / 113 / 217 | 279 / 92 / 284 |
+   | `C-full`'s voice, all three | 245-341 / 112-144 / 245-389 | 277-373 / 128-224 / 245-357 | 263 / 139 / 279 | 357 / 129 / 335 |
+
+   Unpinned and mixed, the delay and the reverb read exactly the engine without them in every process, and all three
+   read what the phaser alone reads; `--predictable` single-case (medians of 2, HEAD / tree): fractional delay 176 /
+   83, reverb 52 / 36, phaser with floor 206 / 129, all three 377 / 176 (control 36 / 36). The voice cases are
+   unchanged (`spluck-a` read 288 in one tree process, item 7's tail). One heap number is 16 bytes on node and 12 in
+   Chrome. **Time** (mixed unpinned, medians): delay 8,917 / 8,468 / 8,994 ns, fractional 8,933 / 8,517 / 8,824,
+   reverb 17,232 / 17,117 / 17,362, phaser 8,942 / 8,793 / 9,090, all three 21,929 / 21,440 / 21,440, `C-full` with
+   all three 28,517 / 28,338 / 28,469, the control 6,698 / 6,604 / 6,649: 0.95 to 1.00 of HEAD. **JVM** (`ThreadMXBean`,
+   7 rounds, every case in one process): 0 B per block on both sides in all 26 cases, time 0.88 to 1.04 of HEAD.
+   **What is left, and why:**
+   - **The per-block `configure`** (the first form's residue). A writer re-applies the resolved knobs every block
+     (`KatalystChain.applyParams`), and in a mixed profile, where most orbits take the off arm, V8 can compile a
+     stage's `configure` with nothing inlined but `isFinite` (a trace of such a process: the delay's setters, both
+     `KnobGlide.retarget`s and `ensureRing` left out), so every knob crosses a call: the phaser 2 to 4 heap numbers per
+     block in every process, the delay and the reverb up to 5 in some processes (two of three pinned mixed processes,
+     rarely unpinned). In single-case processes the phaser's residue was `WetDryMix.dryCoeff` and `wetCoeff`, left out
+     of the writer's budget (reviewer B, round 1). The phaser's half is fixed in review round 1 (below); the delay's and
+     the reverb's is item 32.
+   - **An off phaser's call** (`KatalystPhaserEffect.process` into `Phaser.process` while bypassed) costs about one
+     heap number per block in single-case processes, not in mixed ones; a guard around the call removes it, an early
+     return inside does not. Not explained, inside the noise band. (So "every box located": this one is located, not
+     removed.)
+   - Outside the stages, in every engine case: item 30's root frequency (16 B at middle C) and about 16 to 32 B in
+     `PlaybackEngine.renderBlock` (its per-block seconds handed to calls; not located further).
+   - The development bundle was not measured (the fixes are the same source on both bundles).
+   - **Two compiled forms in ADAA-owned files change, unmeasured:** `KnobGlide.advance` is now inlined into the orbit
+     distort stage (`KatalystDistortEffect`'s `amountGlide.advance()`); bit for bit by construction, but no case and no
+     probe runs that stage, so its bytes are not measured (a note for the ADAA session). `PhaserCore.alphaAt` inlines
+     only into `PhaserCore.prepareBlock`, so the voice phaser in `IgnitorEffects.kt` compiles as before (reviewer A).
+   **The harness guards it with two cases** (`AllocationCases.kt`): `E-delay` (the classic saw, the fractional delay)
+   and `E-stages` (all three, the phaser with floor 0.5). Budgets by the file's rule from this change's runs (3 runs
+   each side, interleaved): `E-delay` V8 112 (tree rounds 30 to 71, medians 62 to 67; HEAD's code 125 to 171, medians
+   160 to 171), `E-stages` V8 176 (tree 77 to 130, medians 92 to 102; HEAD's code 203 to 346, medians 217 to 259), JVM
+   6 for both (0 B). HEAD's code (the nine source files at HEAD, the new cases kept) read RED in 3 of 3 runs, both
+   cases over (over the first lines, 120 and 200, and every median above the final ones); the tree GREEN 3 of 3, 34 of
+   34, and once more on the first lines, 112 and 176 (`E-delay` 32, `E-stages` 109 B, the first form). The item 8 mutant (`readParam` a plain function) against the full budget set, one lock call: RED, 10 of 34
+   over (`sawC` 78, `C-offrel` 67, `super7` 78, `super7a` 94, `spluck-a` 381, `sgpad-vib` 114, `C-dist` 114, `C-full`
+   180, `E-delay` 128, n16 1,860 B); `E-stages` read 164, under its 176. The case list changed, so the driver starts
+   a new scoreboard table at its next run; no row written. Report: `tmp/reviews/e1-report.md`.
+   **Review round 1, applied** (`tmp/reviews/e1-r1-A.md`, `e1-r1-B.md`; 1 MAJOR, 7 MINOR, 6 NIT; the code bit for bit
+   in every path, the numbers reproduced):
+   - B1 (MAJOR) and B MINOR 1, 2: `E-stages`'s first guard text claimed the reverb's and the phaser's sites; a revert of
+     their five files read 130 B, green under 176 (reviewer B). The texts now say what each line guards (the budget
+     file, its header, this item, the harness task doc): `E-delay` the delay's sites as a whole (a revert of the glide
+     alone read 61 B); `E-stages` a revert of everything, the delay's sites with all three running, the per-sample
+     class in the reverb and the phaser, and their per-block sites only in part.
+   - B MINOR 3, built: the phaser stage skips an unchanged config (`KatalystPhaserEffect.applied`, the house pattern
+     of the EQ, the resonator and the compressor): the five raw knobs compared with the last ones applied, NaN-aware
+     and with -0.0 told apart, in a `DoubleArray`; `reset` invalidates it. Exact, because every write of `configure` is
+     a function of the five knobs and of state only `configure` and `reset` change. The delay's and the reverb's half
+     is item 32 (a skip is not exact there without more work). Bit for bit: 30 of 30 dumps on V8 and on the JVM, HEAD
+     against the tree, the owner-change case among them; the corpus 18 of 18. Bytes, HEAD / tree (round 1 form),
+     one value per process:
+
+     | case | mixed unpinned (6) | mixed pinned (3) | single-case unpinned / pinned (medians of 3; first form between) |
+     |---|---|---|---|
+     | engine, no stage (control) | 16-48 / 16-48 | 16-48 / 16 | 63 / 67 / 62, 21 / 68 / 72 |
+     | delay, fractional tap | 97-209 / 16-48 | 129-193 / 16-32 | 160 / 67 / 62, 139 / 36 / 17 |
+     | reverb | 21-69 / 16-48 | 21-101 / 16 | 83 / 62 / 31, 37 / 42 / 73 |
+     | phaser | 64-112 / 16-48 | 64-112 / 16 | 139 / 93 / 46, 165 / 47 / 26 |
+     | phaser, floor 0.5 | 80-144 / 16-48 | 96-144 / 16 | 119 / 108 / 46, 191 / 72 / 11 |
+     | all three | 101-197 / 16-48 | 133-245 / 16-32 | 180 / 73 / 51, 216 / 67 / 10 |
+     | all three, fractional, floor 0.5 | 165-309 / 16-48 | 213-325 / 16-32 | 232 / 109 / 47, 304 / 73 / 11 |
+     | `C-full`'s voice, all three | 197-357 / 64-96 | 261-357 / 64 | 283 / 144 / 83, 330 / 129 / 52 |
+
+     In every mixed process every stage case now reads what the engine without a stage reads, but for one pinned
+     process with the delay one heap number above it. The time column of that run is within HEAD's (all three 25,922
+     against 26,422 ns, in a run where the machine was busier). The allocation harness on the round 1 form, 6 tree
+     runs: GREEN every time, `E-stages` 11 to 51 B (medians; rounds 10 to 57), `E-delay` 62 to 67.
+   - The `E-stages` line re-set from 176 to 96 by the file's rule (45 B above the highest healthy median, 39 above the
+     worst round). It catches a revert of everything (HEAD's code 217 to 259), and the item 8 mutant now too (one lock
+     call: RED, 11 of 34 over, `E-stages` 108, `E-delay` 128, `C-full` 171, `sawC` 77, n16 1,867 B). A revert of the
+     reverb's and the phaser's five files (each run in one lock call, restored and checked with `cmp`): medians 128,
+     129, 129 B in three runs and 93 in a fourth (rounds 92 to 222), so it reads red in three runs of four, not always.
+   - A MINOR 1: `DelayLineSpec`'s two crossfade rows take fractional taps (0.0101, 0.0203, 0.0307 s), so the holder's
+     crossfade slots are pinned (mutation: the `ARG_TO_ALPHA` write dropped, RED, 2 of 19; green on the old times).
+     A MINOR 2: a `LazyRingSpec` row, "an installed ring keeps serving up to exactly its class, and grows one frame
+     past it" (mutations `>=` to `>` and the margin dropped from the steady compare: RED, 1 of 21 each). A new
+     `KatalystPhaserEffectSpec` row pins the skip's invalidation ("a reset under an owner whose knobs stand": the
+     invalidation dropped, RED; a compare that leaves out the floor is red on an existing row). Each mutation in one
+     lock call, restored with `cp` and checked with `cmp`. `:audio_be:jvmTest` 2,664 of 2,664, `:audio_be:jsBrowserTest`
+     2,560 of 2,560.
+   - A MINOR 3 and the NITs: the History line says "unpinned"; the `KnobGlide` comment; "the `toInt()` inside
+     `framesFor(time)`"; `TailCeiling`'s "How" names `observeTail`; the phaser stage's comment says it no longer forces
+     0.5 onto the `Phaser` it is handed; this item's headline scoped. B MINOR 4: the ADAA bullet above.
+   **Review round 2** (`tmp/reviews/e1-r2/review.md`, clean: 0 MAJOR, 2 MINOR, 2 NIT; a revert of the reverb's and the
+   phaser's five files red in 4 of 5 runs across the worker and the reviewer). MINOR 1, applied: two
+   `KatalystPhaserEffectSpec` rows pin the skip's sweep term and its NaN arm (the writer hands rate, center and sweep
+   raw, and an unset slot is NaN): "the skip sees a change of the sweep alone" (the sweep left out of the compare: RED)
+   and "an unset knob (NaN) followed by a set one is a change" (the NaN arm matching any value: RED); both mutants had
+   passed the whole suite. MINOR 2 and NIT 1: `audio/MEMORY.md` and `audio/ref/performance.md` take this item's
+   wording (every box located; the off phaser's call located, not removed; one pinned process one heap number above),
+   and the first lines' readings above are labelled as such.
 2. **A new param map's resolve costs about 1,130 bytes** on the classic chain after S1; the profiler attributes it to
    `KatalystKnob.resolve` on both bundles, whose code (two field stores) does not explain it. A `.katp` burst pays it
    per block. Source: the record, "Found during the V8 allocation pass". M.
@@ -844,6 +997,31 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
       classic saw, the profiler books in `SvfIgnitor.generate`; writing out the `coerceAtLeast` of the analog read
       there moved `hpf` + `analog` from 46 to 37 B and `lpf` + `analog` from 31 to 37 (within a heap number, not
       conclusive). Not located further; inside the harness's noise band.
+
+32. **What item 1 left: the delay's and the reverb's per-block `configure`** (numbered after the last item, added
+    2026-10-11). Source: item 1 and its review round 1 (`tmp/reviews/e1-r1-B.md`, MINOR 3). The chain's writers
+    re-apply their resolved knobs on every block (`KatalystChain.applyParams`). On V8 a stage's `configure` can then be
+    a cold compile in a mixed profile, where most orbits take the off arm: a trace of one such process (item 1) shows
+    the delay's `configure` with nothing inlined but `isFinite`, its setters (`time`, `feedback`, `cap`), both
+    `KnobGlide.retarget`s and `ensureRing` left out, so every knob crosses a call, up to 5 heap numbers per block. In
+    single-case processes (the allocation check's shape) the phaser's residue was its wet/dry law instead,
+    `WetDryMix.dryCoeff` and `wetCoeff` left out of the writer's budget (reviewer B's trace). **The phaser is done**
+    (item 1, round 1): it skips an unchanged config, the house pattern (the EQ's `unchanged`, the resonator's, the
+    compressor's by reference; the writers' comment `KatalystSlotWriters.kt`, "the effect short-circuits an unchanged
+    config"), comparing the raw knobs NaN-aware and with -0.0 told apart (the cached-config rule: a NaN never defeats
+    the compare), invalidated by `reset`. After it no residue was measured on the delay or the reverb either: in 6
+    unpinned and 3 pinned mixed processes every stage case read the engine without a stage, but for one pinned
+    process with the delay one heap number above it (item 1, round 1). So what is left is a risk, not a measured
+    cost: a later compile history can bring the cold `configure` back. **Not built for the delay and the reverb,
+    because a skip is not exact there without more work:** the delay's `configure` writes the feedback target into
+    the line every block and `advanceGlide` overwrites it with the glide's value before the block, so between the two
+    a reader (`Active.sustainsItself`) sees the target; skipping would leave the glide's
+    last value there mid-glide. And a refused ring grow consults the shelf again on every `configure` (the latched
+    retry), which a skip would stop. The reverb writes its size target the same way (`advanceGlide` overwrites it
+    while the size glides). The remedy, when a case shows the cost again: the same skip with those two writes kept on
+    the steady path (the glide targets compared, the line's knobs rewritten only when they move, the latched retry
+    exempt), proven bit for bit with the owner-change dumps of item 1. Related: item 10 (`isFinite`, the call that
+    stays). S.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

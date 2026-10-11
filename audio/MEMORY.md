@@ -232,9 +232,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **The resonator stage is handed its config in a holder, not as double arguments** (`ResonatorConfig`, tidy-up step
   12 (a)): passing them made a steady body allocate about 40 bytes per block on V8, where a non-integral double
   crossing a call V8 does not inline is a heap number. The delay, reverb and phaser writers do the same since the V8
-  allocation pass (`DelayConfig`, `ReverbConfig`, `PhaserConfig`, the phaser's `PhaserBlock`). The stages still
-  allocate on V8 (production, engine level: delay 82, reverb 22, phaser 144 bytes per block), an open probe:
-  `docs/tasks/engine-follow-ups.md` section 1. `audio/ref/performance.md`.
+  allocation pass (`DelayConfig`, `ReverbConfig`, `PhaserConfig`, the phaser's `PhaserBlock`). Since engine follow-up
+  1 every box located in their block processing is gone (a tail step that takes no double, `DelayLine.observeTail`; a holder for the
+  delay loops, `DelayLine.blockArgs`; `KnobGlide.advance`, `TailCeiling.observe` and `PhaserCore.alphaAt` Kotlin
+  `inline`), and the phaser stage skips an unchanged config (`KatalystPhaserEffect.applied`, the EQ's pattern); the
+  delay's and the reverb's per-block `configure` can still box in a cold compile, and an off phaser's call into
+  `Phaser.process` is located, not removed: `docs/tasks/engine-follow-ups.md`
+  items 1 and 32, `audio/ref/performance.md`.
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
   which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
   summation order, so changing it changes bits.
@@ -340,6 +344,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 1: the orbit stages' boxes on V8 located and the block processing's removed (the glide's
+  result, the delay's and the reverb's tail step, the delay loops' arguments, the ring check's `toInt()`, the phaser's
+  `alphaAt`, the depth clamp, the constant feedback rewrite) and the phaser's `configure` skips an unchanged config
+  (review round 1); in unpinned mixed processes every stage case now reads what the engine without a stage reads,
+  bit for bit, corpus identical; the delay's and the reverb's `configure` is item 32; two alloc cases, `E-delay`
+  (V8 112) and `E-stages` (V8 96): `docs/tasks/engine-follow-ups.md` items 1 and 32
 - 2026-10-11 Engine follow-up 5: the PWM loop boxed its phase per sample on the development bundle only (about 2 KB per
   block, mixed profile; the production bundle never), from its phase seed, not `setPulseShape`. The `* 1.0` seed rule
   now covers the field seeds of every oscillator loop (the wave loops, the stacks, the sample, the Karplus string),

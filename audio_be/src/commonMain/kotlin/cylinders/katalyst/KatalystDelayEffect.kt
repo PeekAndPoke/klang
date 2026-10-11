@@ -131,14 +131,22 @@ class KatalystDelayEffect(
      * `toInt()` saturating and the `+ margin` wrapping NEGATIVE and quietly renting the smallest ring.
      */
     private fun framesFor(time: Double): Int {
-        val frames = ceil(time * sampleRate)
+        val frames = framesNeeded(time)
 
-        if (!(frames < Int.MAX_VALUE - RING_MARGIN_FRAMES)) { // also catches NaN
+        if (!(frames < Int.MAX_VALUE)) { // also catches NaN
             return Int.MAX_VALUE
         }
 
-        return frames.toInt() + RING_MARGIN_FRAMES
+        return frames.toInt()
     }
+
+    /**
+     * [framesFor] before the conversion to `Int`: `ceil(time · sampleRate)` plus the margin, as a double. Exact for
+     * every frame count below `Int.MAX_VALUE` (whole numbers far below 2^53), so a compare with it decides what a
+     * compare with [framesFor] decides. Inline, so its double never crosses a call (see [ensureRing]).
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun framesNeeded(time: Double): Double = ceil(time * sampleRate) + RING_MARGIN_FRAMES
 
     /**
      * Ensures a ring that holds [time] is installed, renting or growing as needed. Returns the
@@ -149,13 +157,19 @@ class KatalystDelayEffect(
      * seam), then gives the old ring back. Never shrinks: a shorter time keeps the ring it has.
      */
     private fun ensureRing(time: Double): DelayLine? {
-        val needed = framesFor(time)
         val current = delayLine
 
-        if (current != null && current.capacityFrames >= needed) {
+        // The steady path, run on every block an owner is committed: compared in doubles ([framesNeeded]), so the
+        // `Int` conversion of [framesFor] runs only when a ring is rented or grown. On purpose (engine follow-up 1,
+        // 2026-10-11): on Kotlin/JS `toInt()` is a stdlib call, V8 left it out of this stage's budget, and the frame
+        // count it was handed (a `ceil`, which V8 cannot rule out as -0) crossed as a heap number every block
+        // (`audio/ref/performance.md`). The same decision as `capacityFrames >= framesFor(time)`: a frame count past
+        // `Int.MAX_VALUE` or a NaN fails both.
+        if (current != null && current.capacityFrames >= framesNeeded(time)) {
             return current
         }
 
+        val needed = framesFor(time)
         val neededClass = rings.classFrames(needed)
         val latched = refusedFrames != 0 && neededClass >= refusedFrames
 
@@ -342,14 +356,9 @@ class KatalystDelayEffect(
 
             // The tail question is answered from the INPUT: the block's feed peak feeds a
             // ceiling on the ring's content that decays by the feedback once per delay period
-            // (TailCeiling). O(block) here, O(1) to ask. Nothing is ever O(ring).
-            activeTail.observe(
-                inputPeak = TailCeiling.peakOf(feed, frames),
-                frames = frames,
-                windowSamples = line.tailWindowSamples,
-                feedback = line.feedback,
-                lapsPerWindow = line.tailLapsPerWindow,
-            )
+            // (TailCeiling). O(block) here, O(1) to ask. Nothing is ever O(ring). One call that takes no double
+            // (engine follow-up 1, `DelayLine.observeTail` says why).
+            line.observeTail(ceiling = activeTail, input = feed, frames = frames)
             line.process(input = feed, output = ctx.mixBuffer, length = frames)
         }
 

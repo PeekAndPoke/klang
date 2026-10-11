@@ -177,6 +177,18 @@ class DelayLine(
     /** The feedback the last block ended on: where the next block's per-sample ramp starts. */
     private var feedbackInForce: Double = 0.0
 
+    /**
+     * The block's per-block doubles, written by [process] and [processCrossfade] and read by the per-channel loops
+     * ([processInternal], [processInternalCrossfade]), indexed by [ARG_ALPHA] ... [ARG_CAP].
+     *
+     * **A holder, on purpose** (engine follow-up 1, 2026-10-11): the loops are past V8's 460-byte limit for inlining,
+     * so they are always calls, and on V8 a non-integral double handed to a call that is not inlined is a heap number
+     * (`audio/ref/performance.md`): the tap's fraction and the feedback cost one each per call, every block. An
+     * ARRAY, not double fields: an element access in optimized code never allocates (engine follow-up 7). No test can
+     * pin it; this KDoc is the guard.
+     */
+    private val blockArgs = DoubleArray(BLOCK_ARGS)
+
     /** Test seam: true while a tap crossfade runs. */
     internal val isCrossfading: Boolean get() = fading
 
@@ -322,27 +334,46 @@ class DelayLine(
     }
 
     /**
-     * The window for [TailCeiling]: one recirculation (the effective tap distance) plus the
-     * interpolation neighbour, so a read never reaches further back than the previous window.
+     * One block of the tail ceiling's upkeep: [TailCeiling.observe] with the peak of [input] (the block's feed, after
+     * the send scaling), this line's window, its [feedback] and its laps per window.
+     *
+     * - The window: one recirculation (the effective tap distance, [reachSamples]) plus the interpolation neighbour,
+     *   so a read never reaches further back than the previous window.
+     * - The laps per window: computed like the reverb's, `ceil(window / period)`, with the SHORTEST tap still
+     *   sounding as the period, because the window is the longest one (see [reachSamples]): during a crossfade from a
+     *   long tap to a short one the short tap comes round many times inside the long window, and counting it once
+     *   would let the ceiling under-state. On a settled line it is `ceil((time + 1) / time)`, 2 for every reachable
+     *   time.
+     *
+     * **One call that takes no double and returns none, on purpose** (engine follow-up 1, 2026-10-11): the window, the
+     * laps and the peak used to cross into the stage as double results (`tailWindowSamples`, `reachSamples`,
+     * `shortestSamples`) and on into [TailCeiling.observe], calls V8 did not always inline, each a heap number per
+     * block (`audio/ref/performance.md`). Here the helpers and the ceiling's step are Kotlin `inline`, so nothing
+     * double crosses a call. No test can pin it; this KDoc is the guard.
      */
-    val tailWindowSamples: Double get() = reachSamples() + 1.0
+    internal fun observeTail(ceiling: TailCeiling, input: StereoBuffer, frames: Int) {
+        val window = reachSamples() + 1.0
+
+        ceiling.observe(
+            inputPeak = TailCeiling.peakOf(buffer = input, frames = frames),
+            frames = frames,
+            windowSamples = window,
+            feedback = feedback,
+            lapsPerWindow = ceil(window / shortestSamples()).toInt(),
+        )
+    }
 
     /**
-     * The ring's laps per [tailWindowSamples]: computed like the reverb's, `ceil(window / period)`,
-     * with the SHORTEST tap still sounding as the period, because the window is the longest one
-     * (see [reachSamples]): during a crossfade from a long tap to a short one the short tap comes
-     * round many times inside the long window, and counting it once would let the ceiling
-     * under-state. On a settled line it is `ceil((time + 1) / time)`, 2 for every reachable time.
+     * The effective tap distance in samples: [time] under the same coercion [process] applies. Inline, like the two
+     * below, for the reason [observeTail] gives.
      */
-    val tailLapsPerWindow: Int
-        get() = ceil(tailWindowSamples / shortestSamples()).toInt()
-
-    /** The effective tap distance in samples — [time] under the same coercion [process] applies. */
-    private fun currentDelaySamples(): Double =
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun currentDelaySamples(): Double =
         (time * sampleRate).coerceIn(MIN_DELAY_SECONDS * sampleRate, bufferSize - 2.0)
 
     /** The shortest tap that can sound within the next crossfade: [reachSamples]' counterpart. */
-    private fun shortestSamples(): Double {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun shortestSamples(): Double {
         val target = currentDelaySamples()
 
         if (snapTap) {
@@ -363,7 +394,8 @@ class DelayLine(
      * change has started its fade) never under-reaches the tap that is still sounding. Equal to the
      * time whenever the line is settled.
      */
-    private fun reachSamples(): Double {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun reachSamples(): Double {
         val target = currentDelaySamples()
 
         if (snapTap) {
@@ -422,7 +454,9 @@ class DelayLine(
         }
 
         if (fading) {
-            processCrossfade(input = input, output = output, length = length, fbEnd = fbEnd, fbStep = fbStep)
+            blockArgs[ARG_FB_END] = fbEnd
+            blockArgs[ARG_FB_STEP] = fbStep
+            processCrossfade(input = input, output = output, length = length)
 
             return
         }
@@ -432,13 +466,18 @@ class DelayLine(
         // than once per channel × chunk (4×).
         val delaySamples = tapSamples
         val delayInt = delaySamples.toInt()
-        val alpha = delaySamples - delayInt
         val last = length - 1
         // Sanitised once per block, not per sample. `softCapTo`'s branches are loop-invariant here,
         // and this file's own PERF note records that a previously added per-sample check cost
         // ~+33% JVM / +30% JS at the rate this path runs.
         val rawCap = cap
-        val safeCap = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
+        val args = blockArgs
+
+        // The loop's doubles go through the holder (see [blockArgs]).
+        args[ARG_ALPHA] = delaySamples - delayInt
+        args[ARG_FB_END] = fbEnd
+        args[ARG_FB_STEP] = fbStep
+        args[ARG_CAP] = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
 
         // Split the block at ring-buffer wrap boundaries so the inner loop has no
         // 'if (pos >= bufferSize)' check. A while loop rather than a single split:
@@ -452,10 +491,10 @@ class DelayLine(
             val chunk = min(length - done, bufferSize - pos)
 
             processInternal(
-                buffer = buffer.left, input = input.left, output = output.left, offset = done, length = chunk, startWritePos = pos, delayInt = delayInt, alpha = alpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap,
+                buffer = buffer.left, input = input.left, output = output.left, offset = done, length = chunk, startWritePos = pos, delayInt = delayInt, last = last,
             )
             processInternal(
-                buffer = buffer.right, input = input.right, output = output.right, offset = done, length = chunk, startWritePos = pos, delayInt = delayInt, alpha = alpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap,
+                buffer = buffer.right, input = input.right, output = output.right, offset = done, length = chunk, startWritePos = pos, delayInt = delayInt, last = last,
             )
 
             done += chunk
@@ -470,19 +509,22 @@ class DelayLine(
      * crossfade's per-sample weight, which ends at exactly 1.0 on the fade's last sample and holds
      * there for the rest of the block, where `old * 0.0 + new * 1.0` is the single-tap read bit for
      * bit. Everything else (the feedback, the soft cap, the NaN guard, the wrap split) is the plain
-     * path's.
+     * path's. The feedback ramp arrives in [blockArgs], written by [process]: no double crosses this call.
      */
-    private fun processCrossfade(input: StereoBuffer, output: StereoBuffer, length: Int, fbEnd: Double, fbStep: Double) {
+    private fun processCrossfade(input: StereoBuffer, output: StereoBuffer, length: Int) {
         val fromSamples = fadeFromSamples
         val fromInt = fromSamples.toInt()
-        val fromAlpha = fromSamples - fromInt
         val toSamples = tapSamples
         val toInt = toSamples.toInt()
-        val toAlpha = toSamples - toInt
         val last = length - 1
         val rawCap = cap
-        val safeCap = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
         val fadeStart = fadeDone
+        val args = blockArgs
+
+        // The loop's doubles go through the holder (see [blockArgs]).
+        args[ARG_ALPHA] = fromSamples - fromInt
+        args[ARG_TO_ALPHA] = toSamples - toInt
+        args[ARG_CAP] = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
 
         var done = 0
         var pos = writePos
@@ -492,11 +534,11 @@ class DelayLine(
 
             processInternalCrossfade(
                 buffer = buffer.left, input = input.left, output = output.left, offset = done, length = chunk, startWritePos = pos,
-                fromInt = fromInt, fromAlpha = fromAlpha, toInt = toInt, toAlpha = toAlpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap, fadeStart = fadeStart,
+                fromInt = fromInt, toInt = toInt, last = last, fadeStart = fadeStart,
             )
             processInternalCrossfade(
                 buffer = buffer.right, input = input.right, output = output.right, offset = done, length = chunk, startWritePos = pos,
-                fromInt = fromInt, fromAlpha = fromAlpha, toInt = toInt, toAlpha = toAlpha, fbEnd = fbEnd, fbStep = fbStep, last = last, cap = safeCap, fadeStart = fadeStart,
+                fromInt = fromInt, toInt = toInt, last = last, fadeStart = fadeStart,
             )
 
             done += chunk
@@ -513,7 +555,10 @@ class DelayLine(
         }
     }
 
-    /** The crossfade twin of [processInternal]; see [processCrossfade]. */
+    /**
+     * The crossfade twin of [processInternal]; see [processCrossfade]. The taps' fractions, the feedback ramp and the
+     * cap arrive in [blockArgs].
+     */
     private fun processInternalCrossfade(
         buffer: AudioBuffer,
         input: AudioBuffer,
@@ -522,15 +567,16 @@ class DelayLine(
         length: Int,
         startWritePos: Int,
         fromInt: Int,
-        fromAlpha: Double,
         toInt: Int,
-        toAlpha: Double,
-        fbEnd: Double,
-        fbStep: Double,
         last: Int,
-        cap: Double,
         fadeStart: Int,
     ) {
+        val args = blockArgs
+        val fromAlpha = args[ARG_ALPHA]
+        val toAlpha = args[ARG_TO_ALPHA]
+        val fbEnd = args[ARG_FB_END]
+        val fbStep = args[ARG_FB_STEP]
+        val cap = args[ARG_CAP]
         val total = fadeTotal
         val inv = invFadeTotal
         var pos = startWritePos
@@ -582,6 +628,7 @@ class DelayLine(
         }
     }
 
+    /** One channel of one chunk of [process]. The tap's fraction, the feedback ramp and the cap arrive in [blockArgs]. */
     private fun processInternal(
         buffer: AudioBuffer,
         input: AudioBuffer,
@@ -590,12 +637,13 @@ class DelayLine(
         length: Int,
         startWritePos: Int,
         delayInt: Int,
-        alpha: Double,
-        fbEnd: Double,
-        fbStep: Double,
         last: Int,
-        cap: Double,
     ) {
+        val args = blockArgs
+        val alpha = args[ARG_ALPHA]
+        val fbEnd = args[ARG_FB_END]
+        val fbStep = args[ARG_FB_STEP]
+        val cap = args[ARG_CAP]
         var pos = startWritePos
         // The feedback ramp, entered at this chunk's first sample (see [process]). One add per
         // sample, of exactly 0.0 on a settled line.
@@ -664,5 +712,13 @@ class DelayLine(
          * doesn't blow up at boundary conditions.
          */
         private const val MIN_DELAY_SECONDS: Double = 0.0001
+
+        // The slots of [blockArgs]. [ARG_ALPHA] is the tap's fraction, or the leaving tap's in a crossfade.
+        private const val ARG_ALPHA: Int = 0
+        private const val ARG_TO_ALPHA: Int = 1
+        private const val ARG_FB_END: Int = 2
+        private const val ARG_FB_STEP: Int = 3
+        private const val ARG_CAP: Int = 4
+        private const val BLOCK_ARGS: Int = 5
     }
 }

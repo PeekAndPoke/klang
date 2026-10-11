@@ -290,23 +290,49 @@ class Reverb(
     /** The comb feedback [process] runs at: `size x FEEDBACK_SCALE + FEEDBACK_OFFSET` — one
      *  definition shared with [drainSamplesUntilSilent], so the drain math can never diverge from
      *  the DSP it predicts. */
-    private fun effectiveFeedback(): Double = feedbackFor(size)
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun effectiveFeedback(): Double = feedbackFor(size)
 
-    /** The comb feedback a normalized [size] maps to: the one definition of the size-to-feedback mapping. */
-    private fun feedbackFor(size: Double): Double = size * FEEDBACK_SCALE + FEEDBACK_OFFSET
+    /**
+     * The comb feedback a normalized [size] maps to: the one definition of the size-to-feedback mapping. Inline, like
+     * [effectiveFeedback], for the reason [observeTail] gives.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun feedbackFor(size: Double): Double = size * FEEDBACK_SCALE + FEEDBACK_OFFSET
 
     /** The comb feedback right now, for [TailCeiling] — one definition with [process] and the drain. */
     val tailFeedback: Double get() = effectiveFeedback()
 
     /** The window for [TailCeiling]: the longest comb's revolution plus one sample. */
-    val tailWindowSamples: Double get() = longestCombSamples + 1.0
+    private val tailWindowSamples: Double = longestCombSamples + 1.0
 
     /**
      * How many times a sample can pass the SHORTEST comb within [tailWindowSamples]: the comb
      * lengths span 1116..1617 (+ spread), under 2×, so two. Computed, not assumed, so a retuning
      * cannot silently break the ceiling's bound.
      */
-    val tailLapsPerWindow: Int = ceil((longestCombSamples + 1.0) / combTuning.min().toDouble()).toInt()
+    private val tailLapsPerWindow: Int = ceil((longestCombSamples + 1.0) / combTuning.min().toDouble()).toInt()
+
+    /**
+     * One block of the tail ceiling's upkeep: [TailCeiling.observe] with the peak of [input] (the block's feed, after
+     * the send scaling), the comb network's window ([tailWindowSamples]), its feedback ([tailFeedback]) and its laps
+     * per window ([tailLapsPerWindow]).
+     *
+     * **One call that takes no double and returns none, on purpose** (engine follow-up 1, 2026-10-11): the window,
+     * the feedback and the peak used to cross into the stage as double results and on into [TailCeiling.observe],
+     * calls V8 did not always inline, each a heap number per block (`audio/ref/performance.md`). Here the helpers and
+     * the ceiling's step are Kotlin `inline`, so nothing double crosses a call. `DelayLine.observeTail` is the twin.
+     * No test can pin it; this KDoc is the guard.
+     */
+    internal fun observeTail(ceiling: TailCeiling, input: StereoBuffer, frames: Int) {
+        ceiling.observe(
+            inputPeak = TailCeiling.peakOf(buffer = input, frames = frames),
+            frames = frames,
+            windowSamples = tailWindowSamples,
+            feedback = effectiveFeedback(),
+            lapsPerWindow = tailLapsPerWindow,
+        )
+    }
 
     /**
      * Process one block. Reads dry stereo from [input], adds the wet
