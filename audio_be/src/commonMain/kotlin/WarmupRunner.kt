@@ -14,10 +14,24 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.infra.klangMapOf
 
-/** This voice's orbit slots plus [more]: the warmup builds its variants by adding to one base. */
-private fun VoiceData.withKatalystParams(vararg more: Pair<String, Double>): VoiceData =
-    copy(katalystParams = (katalystParams ?: emptyMap()) + more)
+/**
+ * This voice's orbit slots plus [more]: the warmup builds its variants by adding to one base. A [KlangMap], the type
+ * the worklet's decoder hands the engine, so the warmup trains the map reads on the receiver they meet later.
+ */
+private fun VoiceData.withKatalystParams(vararg more: Pair<String, Double>): VoiceData {
+    val merged = KlangMap<Double>()
+
+    katalystParams?.let { merged.setAll(it) }
+
+    for ((name, value) in more) {
+        merged[name] = value
+    }
+
+    return copy(katalystParams = merged)
+}
 
 /**
  * Primes the audio render hot path before the first real voice arrives.
@@ -104,11 +118,13 @@ class WarmupRunner(
          * bare trees and ignore these.
          */
         private val WARMUP_CLASSIC_SLOTS: Map<String, Double> = IgnitorDsl.Slots.let { s ->
-            listOf(
-                s.adsr.attack to 0.001, s.adsr.decay to 0.05, s.adsr.sustain to 0.0, s.adsr.release to 0.05,
-                s.lpf.freq to 2000.0, s.lpf.q to 0.3,
+            klangMapOf(
+                listOf(
+                    s.adsr.attack to 0.001, s.adsr.decay to 0.05, s.adsr.sustain to 0.0, s.adsr.release to 0.05,
+                    s.lpf.freq to 2000.0, s.lpf.q to 0.3,
+                )
+                    .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }
             )
-                .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }
         }
 
         /**
@@ -189,7 +205,7 @@ class WarmupRunner(
                         cylinder = orbit,
                         // The envelope and the lowpass as `classic()`'s slots, for the built-ins and the sample.
                         ignitorParams = WARMUP_CLASSIC_SLOTS,
-                        katalystParams = mapOf(
+                        katalystParams = klangMapOf(
                             "delay.wet" to 0.5,
                             "delay.time" to 0.3,
                             "delay.feedback" to 0.2,

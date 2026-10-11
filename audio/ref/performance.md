@@ -376,8 +376,38 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **On V8, `x ?: field` with a nullable map value and a double field boxes the field's value** (V8 allocation pass,
   `KatalystKnob.resolve`): the merge is a tagged value, so an absent knob with a non-integral default became a heap
   number. Two branches store the same values without it: about 180 of the about 1,310 bytes a new param map cost on
-  the classic chain, on both bundles, pinned and unpinned. The rest is still attributed to that function by the
-  profiler and is not explained.
+  the classic chain, on both bundles, pinned and unpinned. The rest was the map lookup itself (the next rule).
+- **On Kotlin/JS every `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte context on V8** (engine
+  follow-up 2, 2026-10-11). The stdlib's generic `hashCode(dynamic)`, which `get`, `put` and `containsKey` call
+  through `findKey`, ends in `else -> throw ...`; a `throw` in expression position compiles to a closure called on the
+  spot, the closure captures the `typeof` result, so V8 creates a function context on EVERY call, whichever arm runs:
+  40 bytes on node x64 (about 20 in Chrome with pointer compression, inferred), hit or miss, empty map or full,
+  inlined or not. The profiler puts it in whichever function the `get` chain was inlined into (`KatalystKnob.resolve`
+  here, whose own code allocates nothing). Measured: 27 lookups 1,080 B exactly in every process; a new orbit map on
+  the classic chain 1,096 B (27 knobs, plus the reverb's documented lowpass box); a classic voice build 24 lookups
+  whenever its `ignitorParams` map is not null, up to 76 with many slots set (957 to 3,062 B and 10 to 38 percent of
+  the build time). Kotlin is 2.3.10; the JVM caches a string's hash and allocates nothing. **Remedy:** a map the
+  engine reads by key on JS is a `KlangMap` (`common/infra/KlangMap.kt`, a native JS `Map` behind `Map<String, V>`;
+  a `LinkedHashMap` on the JVM): its lookup allocates nothing (a new orbit map about 16 B; `C-remap` 2.03 to 2.16 us
+  per block against 2.80 to 3.11 with the decoder reverted, about 0.9 us per new map). The worklet's decoder
+  (`wireDecodeStringDoubleMap`), the warm-up and the sample-envelope merge make them; the allocation check's
+  `C-remap` guards the decoder. **Read a `KlangMap` by key; never walk it on a hot path:** iterating one on JS
+  allocates about 110 B per entry (the JS iterator's results and an entry object; 666 B per walk of 6 entries on
+  node), where a `LinkedHashMap` walk is free once V8 inlines the whole loop. That inlining is not reliable either:
+  a lookup written out as a scan over a `LinkedHashMap`'s entries was rejected, because its iterator escaped wherever
+  V8 did not inline the loop (1,554 B on a one-entry map), and on the JVM it made an iterator per knob. The one walk
+  per event is the sample-envelope merge's `klangMapOf(own)` on a decoded map, still cheaper than before (a 6-entry
+  copy 1,160 B and 317 ns against HEAD's `toMutableMap()` 1,290 B and 549 ns; through the JS `Map`'s own `forEach` it
+  read 592 B but 473 ns, not taken; `new Map(source)` 1,385 B). The steady block path makes no lookup at all
+  (counted). Still on the per-voice path, 8 stdlib hashes per note (320 B on node): the sound-name `contains` and
+  `get` of the build and the dispatcher's prefetch `contains` each hash twice (the playback's registry is a fork that
+  asks its parent), and `engineFor`'s two lookups by playback id (`docs/tasks/engine-follow-ups.md` item 2, a
+  candidate). Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,
+  `toMap`, `getOrPut` and `in` on a set before it lands: all of them make or read a stdlib map. The stdlib site is
+  worth an upstream report.
+  **Measured, not removed:** in single-case processes three writers' `resolve` box one heap number each per new map
+  (the body's and the vowel's `fill`, which V8 leaves out and which hands the unset index, NaN, to
+  `ResonatorTables.at`; the delay writer's, fully inlined, not explained); under a mixed profile they do not.
 - **On V8, a shared one-line forwarding helper is one megamorphic call site: make it Kotlin `inline`** (2026-10-10,
   engine follow-ups 8 and 12). V8 keeps its type feedback per call site in the bytecode, not per caller, so a
   small plain function that every caller goes through to make one call (`Ignitors.readParam` was
@@ -473,7 +503,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
   `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
   sources is refused; the `alloc` step of `console/full-check.sh`)
-  measures the bytes per block of 17 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  measures the bytes per block of 18 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
   node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
   `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
   breach. How it measures and the cases: `audio_benchmark/README.md`. The JVM guards in `jvmTest`

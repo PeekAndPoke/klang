@@ -65,7 +65,8 @@ object AllocationCases {
      * [sound] is a built-in sound, or [AUTHORED] when [dsl] is set. [params] are the `classic()` slots, [katalyst]
      * the orbit's (`delay.wet`, ...; an engine case's orbit runs the classic chain). The note's gate is [gateSec]
      * seconds. An engine case with [newNoteEveryBlocks] above 0 starts a new note that often instead of one note at
-     * the start.
+     * the start. A voice case with [ownersTakingTurns] runs two such voices, received as the engine receives them
+     * ([receivedByEngine]), taking turns as their orbit's owner block by block.
      */
     class Case(
         val name: String,
@@ -76,6 +77,7 @@ object AllocationCases {
         val katalyst: Map<String, Double>? = null,
         val gateSec: Double = SUSTAIN_SEC,
         val newNoteEveryBlocks: Int = 0,
+        val ownersTakingTurns: Boolean = false,
     )
 
     private fun c(v: Double) = IgnitorDsl.Constant(v)
@@ -142,6 +144,9 @@ object AllocationCases {
             dsl = saw().distort(amount = 0.5, shape = "tube", oversample = 4),
         ),
         Case(name = "C-full", engine = false, sound = "saw", params = full),
+        // A new owner, and so a new param map instance, on the orbit every block: the chain re-resolves its 27 slot
+        // knobs each block, a map lookup per knob (engine follow-up 2, the decoder's map type).
+        Case(name = "C-remap", engine = false, sound = "saw", katalyst = delay, ownersTakingTurns = true),
         Case(name = "E-sawC-sus", engine = true, sound = "saw"),
         Case(name = "E-noisesaw-sus", engine = true, sound = AUTHORED, dsl = saw() + IgnitorDsl.WhiteNoise()),
         Case(name = "E-delay", engine = true, sound = "saw", katalyst = delay),
@@ -190,7 +195,11 @@ object AllocationCases {
     }
 
     /** A new rig for [case], built and ready for its first block. */
-    fun rig(case: Case): Rig = if (case.engine) EngineRig(case) else VoiceRig(case)
+    fun rig(case: Case): Rig = when {
+        case.engine -> EngineRig(case)
+        case.ownersTakingTurns -> TurnsRig(case)
+        else -> VoiceRig(case)
+    }
 
     private fun voiceData(case: Case) = VoiceData.empty.copy(
         freqHz = FREQ_HZ,
@@ -253,6 +262,80 @@ object AllocationCases {
             voice.render(ctx)
 
             val next = ctx.cylinders.offer(id = voice.cylinderId, voice = voice, blockStart = 0.0)
+
+            next.commitOwner()
+            cylinder = next
+            block++
+        }
+
+        override fun peak(): Double {
+            val mix = cylinder?.mixBuffer ?: return 0.0
+
+            return peakOf(left = mix.left, right = mix.right, frames = BLOCK_FRAMES)
+        }
+    }
+
+    /**
+     * Two voices of [case] taking turns as their orbit's owner, only the owner rendering each block: a voice offers
+     * itself inside its render, and of two rendering voices the later one would own the orbit every block. Each voice
+     * carries its own copy of the case's orbit slots, received as the engine receives them ([receivedByEngine]), so the
+     * orbit sees a new map instance every block and its chain re-resolves every slot knob.
+     */
+    private class TurnsRig(case: Case) : Rig() {
+        private val registry = IgnitorRegistry().apply { registerDefaults() }
+
+        private val factory = VoiceFactory(
+            sampleRate = SAMPLE_RATE,
+            blockFrames = BLOCK_FRAMES,
+            voiceBuffer = DoubleArray(BLOCK_FRAMES),
+            scratchBuffers = ScratchBuffers(BLOCK_FRAMES),
+        )
+
+        private val voices: Array<Voice> = Array(2) { index ->
+            val data = voiceData(case).copy(katalystParams = case.katalyst?.let { LinkedHashMap(it) })
+            val scheduled = receivedByEngine(
+                ScheduledVoice(
+                    playbackId = PLAYBACK_ID,
+                    data = data,
+                    startTime = 0.0,
+                    gateEndTime = case.gateSec,
+                    playbackStartTime = 0.0,
+                )
+            )
+
+            factory.makeVoice(
+                scheduled = scheduled,
+                backendStartTimeSec = 0.0,
+                playbackCtx = PlaybackCtx(PLAYBACK_ID, registry, PhasePools(Random(1 + index))),
+            ) { null } ?: error("voice $index of case ${case.name} was not built")
+        }
+
+        private val ctx = Voice.RenderContext(
+            cylinders = Cylinders(blockFrames = BLOCK_FRAMES, sampleRate = SAMPLE_RATE),
+            sampleRate = SAMPLE_RATE,
+            blockFrames = BLOCK_FRAMES,
+            voiceBuffer = DoubleArray(BLOCK_FRAMES),
+            scratchBuffers = ScratchBuffers(BLOCK_FRAMES),
+        )
+
+        private var block = 0
+        private var cylinder: Cylinder? = null
+
+        override fun step() {
+            val last = cylinder
+
+            if (last != null) {
+                last.mixBuffer.left.fill(0.0)
+                last.mixBuffer.right.fill(0.0)
+            }
+
+            ctx.blockStart = (block * BLOCK_FRAMES).toDouble()
+
+            val owner = voices[block % 2]
+
+            owner.render(ctx)
+
+            val next = ctx.cylinders.offer(id = owner.cylinderId, voice = owner, blockStart = 0.0)
 
             next.commitOwner()
             cylinder = next

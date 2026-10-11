@@ -88,7 +88,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The wire** (`VoiceData`, `KlangCommLink`): pitch, gain, pan, routing, lifetime, and two slot maps; only seconds
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
   `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`; an empty one is silence everywhere, so as a
-  Katalyst bus knob it reads 0.0, not the knob's default). Fields: `audio/ref/data-model.md`.
+  Katalyst bus knob it reads 0.0, not the knob's default). Fields: `audio/ref/data-model.md`. On the worklet the
+  decoder hands both slot maps over as a `KlangMap` (`common/infra`, a native JS `Map` behind it), whose lookup
+  allocates nothing (engine follow-up 2; the guardrail below).
 - **A shared node stays one node across the wire** (`@WireShared` on `IgnitorDsl`, 2026-10-10): the generated codec
   encodes and decodes each instance once per message, and `postMessage`'s structured clone keeps the sharing, so a
   `let` used twice is built once in the browser as on the JVM (the build cache keys by identity). Before, the browser
@@ -245,6 +247,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   delay's and the reverb's per-block `configure` can still box in a cold compile, and an off phaser's call into
   `Phaser.process` is located, not removed: `docs/tasks/engine-follow-ups.md`
   items 1 and 32, `audio/ref/performance.md`.
+- **A map the engine reads by key on Kotlin/JS is a `KlangMap`** (`common/infra/KlangMap.kt`, engine follow-up 2):
+  every Kotlin/JS `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte function context on V8 inside
+  the stdlib's `hashCode` (27 per new orbit map on the classic chain, 24 to 76 per classic voice build). The decoder,
+  the warm-up and the sample-envelope merge make `KlangMap`s; the steady block path makes no lookup at all. Read it
+  by key, never walk it on a hot path (about 110 B per entry on JS): `audio/ref/performance.md`.
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
   which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
   summation order, so changing it changes bits.
@@ -350,6 +357,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 2, step 1: a new param map cost about 1,100 B on V8, 27 `HashMap` lookups at 40 B each
+  inside the Kotlin/JS stdlib's `hashCode`; the new multiplatform `KlangMap` (`common/infra`, a JS `Map` on JS, a
+  `LinkedHashMap` on the JVM) is what the worklet's decoder, the warm-up and the sample-envelope merge make, no wire or
+  signature change; a new map now costs about 16 B, bit for bit, corpus identical; the alloc case `C-remap` (V8 192,
+  JVM 36); sprudel's `ParamBag` is step 2: `docs/tasks/engine-follow-ups.md` item 2
 - 2026-10-11 Engine follow-up 1: the orbit stages' boxes on V8 located and the block processing's removed (the glide's
   result, the delay's and the reverb's tail step, the delay loops' arguments, the ring check's `toInt()`, the phaser's
   `alphaAt`, the depth clamp, the constant feedback rewrite) and the phaser's `configure` skips an unchanged config

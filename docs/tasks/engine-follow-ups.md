@@ -183,9 +183,68 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    passed the whole suite. MINOR 2 and NIT 1: `audio/MEMORY.md` and `audio/ref/performance.md` take this item's
    wording (every box located; the off phaser's call located, not removed; one pinned process one heap number above),
    and the first lines' readings above are labelled as such.
-2. **A new param map's resolve costs about 1,130 bytes** on the classic chain after S1; the profiler attributes it to
-   `KatalystKnob.resolve` on both bundles, whose code (two field stores) does not explain it. A `.katp` burst pays it
-   per block. Source: the record, "Found during the V8 allocation pass". M.
+2. **Step 1 DONE (2026-10-11): every Kotlin/JS `HashMap` lookup allocated 40 bytes on V8; the worklet's slot maps are
+   a `KlangMap` now. Step 2 (sprudel) open.** Reported as: a new param map's resolve costs about 1,130 bytes on the
+   classic chain after S1, attributed to `KatalystKnob.resolve`, whose code does not explain it. **The cause**
+   (production bundle, node 22.12, a probe with the lookups alone, the knobs alone, the chain, two voices taking turns
+   as the orbit's owner; mixed and single-case, pinned and unpinned): the stdlib's generic `hashCode(dynamic)`, which
+   every `HashMap`/`HashSet` `get`, `put` and `containsKey` calls, ends in `else -> throw`, a closure that captures
+   the `typeof` result, so V8 creates a 40-byte function context on every call (node x64; about 20 in Chrome,
+   inferred). 27 lookups read 1,080 B exactly in every process, hit or miss, empty map or full; a new orbit map 1,096 B
+   (plus the reverb's documented lowpass box); a classic voice build makes 24 lookups whenever its `ignitorParams` map
+   is not null, up to 76 with many slots set. A counting copy of the bundle: no steady block hashes at all. A bundle
+   copy with only that `throw` arm rewritten read 0 B per lookup and 16 B per new map: the ceiling. The JVM allocates
+   nothing on a lookup (24 B per new map, the lowpass box). Tried and rejected: the lookup written out as a scan over
+   the entries (its iterator escapes wherever V8 does not inline the loop, 1,554 B on a one-entry map; on the JVM an
+   iterator per knob, 888 B). Report: `tmp/reviews/e2-report.md`; the design, `tmp/reviews/e2-klangmap-proposal.md`.
+   **Step 1** (the maintainer's direction: "a multiplatform KlangMap with dedicated implementations on each platform",
+   in `common`): `KlangMap<V>` (`common/src/*/kotlin/infra/KlangMap.kt`), a `String`-keyed `Map<String, V>` with three
+   writers (`set`, `setAll`, `copy`; `setAll` and not `putAll`, which clashes with `java.util.Map.putAll` on the JVM;
+   `remove` dropped in review round 1, no caller), over a native JS `Map` on JS and a `LinkedHashMap` on the JVM,
+   read-only to every reader on both (the JVM hands out the views of one `Collections.unmodifiableMap`, and the
+   compiler's `java.util.Map` writers throw); `KlangMapSpec` pins the contract on both platforms against
+   `LinkedHashMap` (14 rows), `KlangMapJvmSpec` the `java.util.Map` writers; every mutant red. Read it by key, never
+   walk it on a hot path: a walk allocates about 110 B per entry on JS (`audio/ref/performance.md`). On the JVM the
+   warm-up now trains on `KlangMap` while real JVM voices carry sprudel's `LinkedHashMap` until step 2 (a bimorphic
+   site, negligible). `wireDecodeStringDoubleMap` returns one, and so
+   do the engine's two producers (`WarmupRunner`, the sample-envelope merge). No wire type, codec, schema hash,
+   `@WireName` or signature changed; `IgnitorDslRuntime.kt` untouched. A new orbit map now costs about 16 B (the
+   lowpass box) under a mixed profile, a voice build loses its 24 to 76 lookups (957 to 3,062 B and 10 to 38 percent
+   of its time in the probe). **Bit for bit:** raw doubles of the probe, 600 blocks, both channels, HEAD's three
+   changed files against the tree, every voice through the generated wire codec on V8 (so its maps are the decoder's):
+   18 of 18 identical on V8 and 18 of 18 on the JVM, every last block sounding (the classic chain with ten map
+   contents and a burst of ten different maps, two voices taking turns as the owner, five engine cases, two with
+   `ignitorParams`). The corpus 18 of 18 (`CORPUS GREEN`). `:common` 128 (JVM) and 130 (JS),
+   `:audio_bridge:jvmTest` 148 and `:audio_bridge:jsBrowserTest` 280 (a new round-trip row: the decoded slot maps are
+   `KlangMap`s, in order, NaN kept; red with the decoder reverted), `:audio_be:jvmTest` 2,675 and
+   `:audio_be:jsBrowserTest` 2,571, green. **The harness guards it with a new case**, `C-remap`: two classic saw
+   voices, received through `receivedByEngine` (`audio_benchmark/.../engine_inbox.kt`: the wire codec on JS, the voice
+   as it is on the JVM), take turns as their orbit's owner, so the chain re-resolves every block. 6 runs GREEN, 36 of
+   36: healthy rounds 76.5 to 87.5 B with two single rounds at 143.9 and 149.8 (medians 77 to 88), JVM 24 B (the
+   lowpass box). Budgets by the file's rule: V8 192, JVM 36 (it reads 24, so 6 does not apply). The decoder reverted
+   (one lock call, restored and checked with `cmp`): RED, `C-remap` 1,128 to 1,164 B, the only line over. The item 8
+   mutant: RED with ten voice and engine lines, `C-remap` rounds 154 to 212 B, median 160 (review round 1: 139 to 145,
+   median 140), the median under its line: not an item 8 line. Time: `C-remap` 2.03 to 2.16 us per block against 2.80
+   to 3.11 with the decoder reverted, about 0.9 us per new map. No `C-build` case: one decoder function serves both fields, so `C-remap` sees a revert whole, and a voice
+   build per block reads about 21 KB, where the 2.2 KB step is about 10 percent and the harness's spread there is not
+   measured. Report: `tmp/reviews/e2-step1-report.md`.
+   **Measured, not removed:** in single-case processes (the harness runs one case per process) three writers' `resolve`
+   box one heap number each per new map: the body's and the vowel's, whose `fill` V8 leaves out and which hands the
+   unset index (NaN) to `ResonatorTables.at`, and the delay writer's (fully inlined; not explained). `C-remap` reads
+   77 to 93 B (medians) with them, the mixed probe 32 to 48 B.
+   **A candidate after step 2** (review round 1, reviewer B): per note, 8 stdlib hashes (320 B on node) are still on
+   the per-voice path: `IgnitorRegistry.contains` from `VoiceFactory.makeVoice` and from the dispatcher's
+   `prefetchSampleSound`, and `IgnitorRegistry.get` from the build, each twice (the playback's registry is a fork that
+   misses and asks its parent), and `engineFor`'s two `HashMap` lookups by playback id. With a `LinkedHashMap` slot
+   map the same note hashed 32 times.
+   **Step 2, open: sprudel's `ParamBag`** (`sprudel/src/commonMain/kotlin/ParamBag.kt`) backs onto a `KlangMap` (and
+   `ClassicSlotParams.out`); its public API stays. Every door write hashes once, a companion fill twice, `clone()`,
+   the merges and `toVoiceData` once per entry. Measure first: a probe on sprudel's production test bundle that builds
+   one event with about a dozen door writes, clones it, merges it and calls `toVoiceData`, bytes and time per event,
+   `LinkedHashMap` against `KlangMap`, mixed profile, pinned and unpinned (estimate: 1.6 to 2 KB per event on node, on
+   the main thread). S.
+   **A note for upstream:** the stdlib's `hashCode(dynamic)` closure makes every Kotlin/JS `HashMap`/`HashSet`
+   operation allocate on V8; a statement-form `throw` there would remove it everywhere. Not filed from here.
 3. **DONE (2026-10-10): no noise box reproduces; the house limiter boxed per sample.** Reported as about 2 KB per
    block for a noise voice at engine level (the V8 pass's noise-plus-saw sound). Source: as 2. No noise box
    reproduces on either bundle, at voice level or through the dispatcher (reviewer A rebuilt the development bundle:

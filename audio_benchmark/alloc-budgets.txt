@@ -32,6 +32,17 @@
 #   per-sample class in the reverb and the phaser (it is the only case that runs them). The reverb's and the phaser's
 #   per-block sites it sees only in part: a revert of their five files read medians 128, 129, 129 and 93 B in four
 #   runs (rounds 92 to 222), so one run in four stays under the line; those parts are guarded by their KDocs.
+#   C-remap was added at engine follow-up 2 (2026-10-11): two classic saw voices received as the engine receives them
+#   (on V8 through the wire codec, so their maps are the decoder's) take turns as their orbit's owner, so the chain
+#   re-resolves its 27 slot knobs every block. Healthy rounds (6 runs of 3): 16 of 18 at 76.5 to 87.5 B, two at 143.9
+#   and 149.8 (one high round in each of two runs; medians 77 to 88); the line is 42 B above the worst round. A decoder
+#   that hands a HashMap again costs 40 B per lookup: the decoder reverted read 1,128 to 1,164 B (RED, the only line
+#   over). It is not an item 8 line: the item 8 mutant read rounds of 154 to 212 B, median 160 (and 139 to 145, median
+#   140, in review round 1), and the median is what the check compares, under this line; the voice lines guard item 8.
+#   Its JVM line is 36, not 6: the case reads 24 B, one Double per new map, the reverb writer's `Double?` lowpass
+#   (documented as a box per resolve), so 36 tells that one box from two. Adding the case moved E-C-rel05-n16 on the
+#   JVM from 409 to 414 B (5 of 5 runs; 409 again with only C-remap taken out, review round 1): the shared process's
+#   mixed profile, not a cost of the change, under its 450.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -71,6 +82,8 @@ tube4x             v8        160     item 9, the Shape node oversampled
 tube4x             jvm       6       item 9, the Shape node oversampled
 C-full             v8        112     item 8, the knob reads; item 29's SVF setup as a whole (its parts: the KDocs)
 C-full             jvm       6       item 12 step 2
+C-remap            v8        192     item 2, the decoder's KlangMap: a new orbit map per block (not item 8: the voice lines)
+C-remap            jvm       36      item 2; reads 24 B, the reverb writer's Double? lowpass per new map by design, so 36 and not 6
 E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample class only)
 E-sawC-sus         jvm       6       item 3, the limiter's level; item 8
 E-noisesaw-sus     v8        160     item 3, the limiter's gain (the per-sample class only)

@@ -20,6 +20,7 @@ import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
 import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
+import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
  * Round-trip guard for the KSP-generated worklet wire codec (JS-only — the codec uses `dynamic`).
@@ -177,6 +178,26 @@ class WireCodecRoundTripSpec : StringSpec({
         val sv = ScheduledVoice("pb-1", data, startTime = 1.25, gateEndTime = 2.5, playbackStartTime = 0.5)
 
         decode_ScheduledVoice(encode_ScheduledVoice(sv)) shouldBe sv
+    }
+
+    "the decoded slot maps are KlangMaps, in the order they were sent, a NaN slot included" {
+        // The engine reads these maps by key; a KlangMap's lookup allocates nothing on Kotlin/JS where a HashMap's
+        // costs 40 bytes (engine follow-up 2). Equality with the sent LinkedHashMap is the row above.
+        val data = VoiceData.empty.copy(
+            ignitorParams = linkedMapOf("lpf.freq" to 1000.0, "analog" to 0.2, "adsr.attack" to 0.01),
+            katalystParams = linkedMapOf("reverb.wet" to 0.3, "delay.wet" to SLOT_UNSET, "body.material" to 2.0),
+        )
+        val decoded = decode_ScheduledVoice(encode_ScheduledVoice(ScheduledVoice("pb-1", data, 0.0, 1.0, 0.0))).data
+        val ignitor = decoded.ignitorParams
+        val katalyst = decoded.katalystParams
+
+        (ignitor is KlangMap<*>) shouldBe true
+        (katalyst is KlangMap<*>) shouldBe true
+        ignitor!!.keys.toList() shouldBe listOf("lpf.freq", "analog", "adsr.attack")
+        katalyst!!.keys.toList() shouldBe listOf("reverb.wet", "delay.wet", "body.material")
+        katalyst["delay.wet"]!!.isNaN() shouldBe true
+        katalyst["reverb.wet"] shouldBe 0.3
+        katalyst["gain.gain"] shouldBe null
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
