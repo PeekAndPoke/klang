@@ -1,7 +1,7 @@
 # The allocation harness in the repo, and one full check
 
-Status: **done (2026-10-10): built, proven and reviewed in three rounds, the third clean (0 MAJOR). Archive with the
-next housekeeping pass.** Run it: `console/full-check.sh` (`--fresh` forces every test task); the allocation step
+Status: **done (2026-10-10): built, proven and reviewed in three rounds, the third clean (0 MAJOR). Archived 2026-10-11
+(maintainer).** Run it: `console/full-check.sh` (`--fresh` forces every test task); the allocation step
 alone is in `audio_benchmark/README.md`.
 
 ## Why

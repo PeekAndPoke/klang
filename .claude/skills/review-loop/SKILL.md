@@ -83,6 +83,11 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   NaN (self-unequal, so a raw compare never settles), what is STORED afterwards, and does the
   mismatch branch allocate. The rule for the code: compare and store SUBSTITUTED values, never the
   raw input. A change that touches one such stage asks the reviewer to sweep the others.
+  *(provisional, maintainer 2026-10-11)* One exception: a compare-only memo (it stores the raw knobs only to skip an
+  unchanged config, and every value `configure` writes is recomputed from them) may store and compare the RAW
+  values, when its compare is NaN-aware (a NaN equals a NaN) and tells -0.0 from 0.0. That is the only exact form
+  where a setter keeps its old value on a NaN, so a stored substituted value would not match the input. Example:
+  `KatalystPhaserEffect.applied` (engine follow-up 1). The NaN questions above still get answered for it.
 - **A claim about what existing code DOES, or about a fact a record holds (a count, a number, a status),
   is verified by reading the code or the record before it is written anywhere** (2026-09-19, rewritten
   2026-09-24 after the third recurrence, widened 2026-09-28 to facts after a writer's doubt about two counts
@@ -292,6 +297,12 @@ reader.
   dotted paths afterwards; the compiler cannot tell prose from code inside a string.
 - **Reviewers may run Gradle, under the lock** (maintainer, 2026-10-04): a doubt settled by a run beats a guess; the
   rules (one lock call around mutate, build, restore; `cp` and `cmp`) are in `/agent-fleet`, "Reviewers may build".
+- **Reviewers name the mutants, the worker runs them** *(provisional, maintainer 2026-10-11)*: a reviewer's
+  mutate-build-restore lock call was refused twice on 2026-10-11 (the safety check saw an `rm` that was not there),
+  while the workers' identical calls passed. A reviewer reads the code, names each mutant it doubts with the result it
+  expects (red on which row, or green as a gap), and puts them in its findings; the worker runs each one in the next
+  fix round, one lock call each, and reports red or green. Reviewers still build and run tests and measurements under
+  the lock; a scratch copy (`git archive` inside one lock call) is fine for a measurement.
 - **Snapshot the working tree only inside a lock call** (2026-10-08). A blind pair runs side by side, and a
   mutation check lives in the REAL tree for the length of its lock call. Reviewer B of tidy step 11 (b) and (c) copied
   the tree without the lock while reviewer A had `polarity = -1.0` mutated in, and its "new side" carried the mutant.
