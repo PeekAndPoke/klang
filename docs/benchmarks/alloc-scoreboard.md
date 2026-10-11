@@ -39,3 +39,10 @@ The cases are `AllocationCases` in `audio_benchmark`, at middle C (261.63 Hz).
 | 2026-10-11 | 1fa3aad9 | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | jvm | JVM 17.0.17 | 0 B 0.29 | 0 B 0.93 | 0 B 1.49 | 0 B 5.14 | 0 B 1.84 | 0 B 2.34 | 0 B 7.51 | 0 B 2.75 | 0 B 0.92 | 0 B 1.30 | 0 B 3.69 | 0 B 6.79 | 0 B 3.43 | 0 B 4.39 | 0 B 4.13 | 0 B 10.73 | 409 B 20.50 |
 | 2026-10-11 | 10b6d25a | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | v8 | node v22.12.0 | 26 B 0.66 | 15 B 1.29 | 20 B 2.38 | 71 B 8.11 | 20 B 3.56 | 15 B 4.64 | 32 B 9.98 | 36 B 4.95 | 14 B 1.19 | 31 B 1.85 | 50 B 5.91 | 36 B 7.93 | 67 B 5.90 | 62 B 7.89 | 57 B 7.86 | 16 B 20.31 | 1102 B 35.26 |
 | 2026-10-11 | 10b6d25a | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | jvm | JVM 17.0.17 | 0 B 0.27 | 0 B 0.85 | 0 B 1.45 | 0 B 5.14 | 0 B 1.75 | 0 B 2.25 | 0 B 7.37 | 0 B 2.69 | 0 B 0.47 | 0 B 1.19 | 0 B 3.70 | 0 B 6.06 | 0 B 3.35 | 0 B 4.46 | 0 B 4.03 | 0 B 10.30 | 409 B 19.65 |
+
+## Since 2026-10-11
+
+| date | commit | machine | platform | runtime | saw | sawC | C-offrel | C-env3 | super7 | super7a | spluck-a | sgpad-vib | whitecolor | C-dist | tube4x | C-full | C-remap | E-sawC-sus | E-noisesaw-sus | E-delay | E-stages | E-C-rel05-n16 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-11 | 52b3e502 | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | v8 | node v22.12.0 | 26 B 0.73 | 15 B 1.39 | 21 B 2.70 | 72 B 9.60 | 15 B 4.11 | 15 B 4.61 | 36 B 10.86 | 37 B 5.30 | 21 B 1.32 | 36 B 2.03 | 51 B 6.53 | 46 B 8.46 | 77 B 2.27 | 67 B 6.74 | 67 B 8.27 | 68 B 8.75 | 40 B 21.78 | 1098 B 38.10 |
+| 2026-10-11 | 52b3e502 | AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics | jvm | JVM 17.0.17 | 0 B 0.30 | 0 B 0.93 | 0 B 1.55 | 0 B 5.39 | 0 B 1.98 | 0 B 2.58 | 0 B 7.88 | 0 B 2.91 | 0 B 0.50 | 0 B 1.32 | 0 B 3.90 | 0 B 6.40 | 24 B 1.05 | 0 B 3.63 | 0 B 4.77 | 0 B 4.62 | 0 B 11.00 | 414 B 22.25 |
