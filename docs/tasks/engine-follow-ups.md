@@ -596,7 +596,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     exact bits. Mutation-checked: `blockDriftMul = 1.0` red, the read moved before `stepDrift` red, the restored
     tree green. NIT 3, applied: the clamp bullet gives 238 bytes for the final form. Tests: `:audio_be:jvmTest`
     2,662 of 2,662 and `:audio_be:jsBrowserTest` 2,558 of 2,558.
-30. **Every voice boxes its own frequency once per block on V8** (numbered after the last item, added 2026-10-10):
+30. **WON'T IMPLEMENT (maintainer, 2026-10-11), the ready fix written down below. Every voice boxes its own
+    frequency once per block on V8** (numbered after the last item, added 2026-10-10):
     `IgniteRenderer.render` (`voices/IgniteRenderer.kt`) hands the voice's `freqHz`, a double field, to the root
     Ignitor's `generate`, a call V8 never inlines, so a non-integral note frequency (almost every real note; middle C
     in the allocation harness) is one heap number per voice per block. The children receive it already tagged, so it
@@ -611,6 +612,26 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     remedy class is the holder of `audio/ref/performance.md` (for example the frequency on the `IgniteContext` the
     root already receives), but it touches the `Ignitor.generate` signature or the voice's render entry, so it is a
     design call, not a one-liner. Source: `tmp/reviews/e6-r1-B.md`, MINOR 4. S.
+    **The design call (2026-10-11).** Four options were measured on scratch copies of the production bundle
+    (`tmp/reviews/e30-proposal.md`, data in `tmp/reviews/e30-design/`):
+    - **A, a plain holder for the root: does not work.** The frequency already sits in a plain double field
+      (`IgniteRenderer.freqHz`); loading it to pass it is what boxes, so the box only moves.
+    - **B, a tagged cell in `IgniteRenderer` (S, one file): the ready fix.** A field typed `Any?`, written `null`
+      first and then the frequency, read with `as Double`: V8 keeps the field tagged, so the box is made once per
+      voice, not per block. Hand-edited bundle: `saw` 16 to -5, `sawC` 15 to -2, `super7` 21 to -1, n16 1,096 to
+      920 B per block, time unchanged, last-block peaks identical in all 14 cases; on the JVM one `Double` per voice
+      build. Guard: the n16 V8 budget re-set from 1500 to about 960, mutation-checked.
+    - **C, the frequency off `generate` onto `IgniteContext` (L):** 73 `generate` overrides, ADAA-owned
+      `IgnitorEffects.kt`, about 277 test calls; removes the root box and `DetuneIgnitor`'s, but can add boxes where
+      the frequency is passed into a call V8 does not inline (`controlRateValue` at polymorphic sites,
+      `resolveFreq`), so its net effect is unknown without a prototype.
+    - **D, leave it: chosen.** About 12 B per voice block in Chrome, bytes only, no measured speed behind it; B is a V8
+      trick in plain sight, weighed against the stone rule "Complexity is the enemy". If the phone ever needs it, B
+      is the fix to build.
+    Found on the way: `DetuneIgnitor` (`freqHz * ratio`) boxes once per detune node per block (`sgpad-vib` 15.5
+    against -0.2 B); pitch envelopes, vibrato, accelerate and FM's carrier work through `IgniteContext.phaseMod` and
+    box nothing. `controlRateValue(freqHz)` keeps its argument: the build, the sizing reads and the Katalyst slots
+    call it with no render context.
 
 31. **What item 29 left on a full `classic()` voice on V8** (numbered after the last item, added 2026-10-11): sites
     item 29 located and did not fix, each about one heap number per block (16 B on node, 12 in Chrome), inside the
