@@ -1,6 +1,6 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **open, waits for the maintainer's decisions D1 to D4** (2026-10-11). Not started.
+Status: **open, decided** (D1 to D4, maintainer, 2026-10-11). Not started.
 
 ## Why
 
@@ -36,7 +36,18 @@ DSLs, maintainer 2026-10-11): the Katalyst gets its own knob vocabulary, it does
 Both are one thing: a knob is an EXPRESSION in the Katalyst's own small language (constants, slots, arithmetic,
 modulators), evaluated by the chain per block.
 
-## Decide before implementing
+## Decided (maintainer, 2026-10-11)
+
+- **D1:** a separate wire type, (a) below: "yes separate wire type".
+- **D2:** per block, (a) below: "yes to the per block glide".
+- **D3:** "yes same modulators as on ignitors": the Ignitor's LFO-capable oscillators, with their names and
+  parameter words: `sine`, `saw`, `square`, `tri`, `ramp`, `perlin`, `berlin` (`KlangScriptIgnitor.kt`). The three
+  audio-rate noises (`whitenoise`, `brownnoise`, `pinknoise`) are not on the list: read once per block they are a
+  random step per block, not a modulator. The implementer confirms each door's parameters against the Ignitor's
+  before building.
+- **D4:** "yes same": the arithmetic words, laws and clamps of the stages, plus `range(lo, hi)`.
+
+## The questions as they were put
 
 - **D1, the wire type of a knob.** Today every stage field is an `IgnitorDsl` (`KatalystStageDsl.Gain(gain:
   IgnitorDsl)`, and so on), with a `Kat.param` carried as an `IgnitorDsl.Param`. Options:
