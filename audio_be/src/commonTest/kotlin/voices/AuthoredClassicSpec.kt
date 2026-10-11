@@ -25,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -210,7 +211,7 @@ class AuthoredClassicSpec : StringSpec({
 
     "classic() places no pregain: an authored tree that does not place the slot ignores pregain(2)" {
         val plain = render(base.copy(sound = "shortclassic"))
-        val pushed = render(base.copy(sound = "shortclassic", ignitorParams = mapOf("pregain" to 2.0)))
+        val pushed = render(base.copy(sound = "shortclassic", ignitorParams = klangMapOf("pregain" to 2.0)))
 
         withClue("classic(), first mismatch") { firstMismatch(a = plain.out, b = pushed.out) shouldBe -1 }
         withClue("the harness hears the voice") { maxAbs(a = plain.out, from = onsetFrame, until = gateFrame) shouldBeGreaterThan 0.1 }

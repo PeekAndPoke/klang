@@ -17,11 +17,10 @@
 #   healthy rounds 21 to 71 B): its fix took about 150 B off, so the line now guards item 8 as well. 112 is 41 B
 #   above the worst healthy round and below the item 8 mutant's lowest round (154.8 B) and item 29's revert (165 B).
 #   spluck-a was added at engine follow-up 7 (2026-10-11), with its two lines set by the same rule from that change's
-#   runs: V8 healthy rounds 1 to 53 B (median about 31), HEAD's code (the old double-returning ramp) 407 to 566 B. About
-#   1 round in 30 on the healthy tree reads 300 to 460 B (the drift path, not located: docs/tasks/engine-follow-ups.md,
-#   item 7); the median of 3 rounds absorbs one such round. A spluck-a breach whose rounds are not all high, and that
-#   does not repeat on a second run, is that tail; a breach that repeats is a regression. HEAD's code read high in
-#   every round of every run, the item 8 mutant in every round of its one run.
+#   runs: V8 healthy rounds 1 to 53 B (median about 31), HEAD's code (the old double-returning ramp) 407 to 566 B. The
+#   healthy tree has a tail at 288 to 459 B (the drift path, not located: docs/tasks/engine-follow-ups.md, items 4 and
+#   7), whose rate varies from session to session: see "Known tails" below. HEAD's code read high in every round of
+#   every run, the item 8 mutant in every round of its one run.
 #   E-delay and E-stages were added at engine follow-up 1 (2026-10-11), with their lines set by the same rule from
 #   that change's runs (3 runs of 3 rounds): E-delay healthy rounds 30 to 71 B (medians 62 to 67), HEAD's code 125
 #   to 171 (medians 160 to 171). Each part of the delay's fix is about one heap number per block, under the V8
@@ -51,8 +50,18 @@
 #   lowest. It catches the registry back on a HashMap (about 240 B per note; mutant read 13,235 to 13,254, RED) and the
 #   lowercasing back at every level (about 168 B; 13,153 to 13,184, RED). It does not catch engineFor's second lookup
 #   (40 B; 13,024 to 13,048, green) nor a lowercase on every call where none is needed (about 72 B per synth note;
-#   13,059 to 13,075, green, 25 B under the line): the comments at those two sites guard them. The case is a voice
-#   build per block, so any change to the voice build moves it: re-set it by this rule when one does. Its JVM line is
+#   13,059 to 13,075, green, 25 B under the line): the comments at those two sites guard them (since step 5 the map is a
+#   KlangMap and a second lookup costs 0 B). The case is a voice
+#   build per block, so any change to the voice build moves it: re-set it by this rule when one does.
+#   Re-set at engine follow-up 2, step 5 (2026-10-11), from 13,100 to 13,068: the dispatcher's `engines` map became a
+#   KlangMap, about 35 B less per note, all of it that map (review round 1: the map back on a LinkedHashMap read what
+#   HEAD reads, 31 to 35 B over the tree). Healthy rounds 12,988.5 to 13,050.7 B (45 rounds: the worker's 6 runs and
+#   review round 1's 27 rounds; full-check medians 13,004 to 13,023); the line is 45 B above the worst median (the
+#   check compares medians) and 17 above the worst round. The margins are thin, as E-parallel's: a lowercase on every
+#   call read 13,072.6 to 13,129.7 (11 rounds: one run of 3, median 13,090; review round 1's 8, median 13,091), so it is caught by its median,
+#   its lowest round only 5 B over the line; the lowercasing back at every level read 13,166 to 13,191 (RED). The
+#   dispatcher's map back on a HashMap (one stdlib hash per scheduled voice) read 13,036 to 13,072 (medians 13,047 to
+#   13,058, 2 of 18 rounds over the line, so RED in about 1 run in 30): the comment at the field guards it. Its JVM line is
 #   6,628, 12 B above the reading (6,616 in every process on two case mixes, HEAD the same; one process 6,520): it tells
 #   none from one Double per note (a mutant with one box per voice build read 6,640, RED), as C-remap's 36 does for its
 #   24. Item 2 allocates nothing on the JVM; the line guards the voice build's bytes there.
@@ -77,7 +86,16 @@
 #   272 in review round 1, where the line sat ON the mutant's lowest round).
 #   E-arith-glide's figure is mostly its note path (a new voice every 32
 #   blocks: the same notes with constant operands read the same 205 B on the JVM and 439 on V8), which is why its JVM
-#   line is 6 B above 205, not above 0: the JVM reads that note path the same in every run.
+#   line is 6 B above 205, not above 0. Since the merge of 2026-10-11 the JVM reads that note path at 204 to 207 B
+#   from process to process (HEAD the same). Engine follow-up 2, step 5 moved its V8 figure down about 12 B (about 439
+#   to 427): its katp maps are now KlangMaps, as the worklet's decoder delivers them, where the harness used to hand
+#   the engine stdlib maps that hash on V8; E-C-rel05-n16 fell about 50 B (its notes stop hashing the dispatcher's map).
+#   E-duck was re-set at engine follow-up 2, step 5, review round 1 (2026-10-11), from 96 to 152; it is the Katalyst
+#   stage measurements' line, re-set here. Its healthy rounds read 24.8 to 66.7 B (medians 47 to 63), with a tail: 5
+#   of 33 tree rounds read 97.6 to 108.8 (HEAD has it too, 103.1 in 8 rounds), and one run held two tail rounds and
+#   read RED at 98 against 96. A tail that common is not absorbed by the median of 3, so 152 sits 43 B above the
+#   highest tail round and still far under the per-sample class it guards (one heap number per sample, about 2 KB per
+#   block). The tail is not located: docs/tasks/engine-follow-ups.md, item 38.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -91,6 +109,17 @@
 #   of 9 rounds damps this; it does not remove it.
 #   The JVM can also optimise a box away: review round 1 routed the ladder's constant reads through a nullable read
 #   (item 12's class) and the JVM read 0 B, while V8 read one more heap number.
+#
+# Known tails (records only; a red full check on these two lines is read by hand):
+# - spluck-a (items 4 and 7): a healthy round sometimes reads 288 to 459 B against 1 to 53. Item 7 pooled 9 of 292
+#   rounds; engine follow-up 2, step 5 read 11 of 51 tree rounds high (2026-10-11 and 12), so a run went red by the
+#   median in about 1 run in 9. The tail overlaps HEAD's old code (407 to 566) and sits above the item 8 mutant (381),
+#   which is why the line cannot move above it.
+# - E-arith (item 36, its second mode): 4 of the same 51 tree rounds read 181 to 196 B against its line of 96; one
+#   run went red at a median of 191 (rounds 190.9, 195.6, 51.2), and HEAD's copy reads it too.
+# The rule for both: a breach with every round over the line is a regression (HEAD's code and the mutants read high
+# in every round of every run); a breach with a round under the line is the tail. Run the check once more to confirm;
+# a second breach of the tail's shape is still the tail.
 #
 # case             platform  budget  guards
 saw                v8        56      the control (a jump means the method or the bundle changed)
@@ -127,12 +156,12 @@ E-delay            v8        112     item 1, the orbit delay's sites as a whole 
 E-delay            jvm       6       item 1, the orbit delay
 E-stages           v8        96      item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
 E-stages           jvm       6       item 1, the three orbit stages
-E-C-n1             v8        13100   item 2 step 3: the registry and the sound name per note (not engineFor's lookup nor a needless lowercase: their comments)
+E-C-n1             v8        13068   item 2 steps 3 and 5: the registry and the sound name per note, a needless lowercase (not the dispatcher's map: its comment)
 E-C-n1             jvm       6628    the voice build per note; one Double per note (item 2 allocates nothing on the JVM)
 E-arith            v8        96      the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw)
 E-arith            jvm       6       the eight arithmetic stages, constant operands
 E-arith-glide      v8        500     the arithmetic glide: the per-sample ramp, div's reciprocal, an unset cap arriving at once (with the note path)
-E-arith-glide      jvm       211     the arithmetic glide; 205 B of it is the note path, the same in every run
+E-arith-glide      jvm       211     the arithmetic glide; 204 to 207 B of it is the note path (since the merge of 2026-10-11)
 E-distort          v8        232     the bus distort, 2x: the per-sample class (its oversampled path's per-block boxes are open, item 34)
 E-distort          jvm       6       the bus distort, 2x
 E-comp             v8        96      the orbit compressor and a lookahead limiter
@@ -141,7 +170,7 @@ E-eq               v8        96      the orbit eq: two bells and a tap
 E-eq               jvm       6       the orbit eq
 E-gain             v8        96      the group fader off unity
 E-gain             jvm       6       the group fader off unity
-E-duck             v8        96      the duck with a sounding sidechain
+E-duck             v8        152     the duck with a sounding sidechain (its tail: item 38)
 E-duck             jvm       6       the duck with a sounding sidechain
 E-parallel         v8        268     item 33, the per-branch copy; parallel, a distorted branch and its phase twin: the per-sample class
 E-parallel         jvm       6       parallel, a distorted branch and its phase twin

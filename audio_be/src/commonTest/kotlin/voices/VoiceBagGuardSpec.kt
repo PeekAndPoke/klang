@@ -23,6 +23,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -174,7 +175,7 @@ class VoiceBagGuardSpec : StringSpec({
         VoiceData.empty.copy(
             freqHz = 220.0,
             sound = sound,
-            ignitorParams = analog?.let { mapOf("analog" to it) },
+            ignitorParams = analog?.let { klangMapOf("analog" to it) },
         ).withClassicSlots(DoorFields(filters = listOf(DoorFilter.LowPass(freq = lowpassHz, q = 1.0)))) // a built-in reads its filter as slots (step 8)
 
     fun peakOf(buf: DoubleArray): Double = buf.maxOf { abs(it) }
@@ -300,7 +301,7 @@ class VoiceBagGuardSpec : StringSpec({
     fun sampleVoice(analog: Double?): VoiceData = VoiceData.empty.copy(
         freqHz = 440.0,
         sound = sampleSound,
-        ignitorParams = analog?.let { mapOf("analog" to it) },
+        ignitorParams = analog?.let { klangMapOf("analog" to it) },
     )
 
     fun renderSample(analog: Double?): DoubleArray = renderVoice(sampleVoice(analog)) { sampleEntry }
@@ -345,7 +346,7 @@ class VoiceBagGuardSpec : StringSpec({
         val data = VoiceData.empty.copy(
             freqHz = 220.0,
             sound = "saw",
-            ignitorParams = onepole?.let { mapOf("onepole" to it) },
+            ignitorParams = onepole?.let { klangMapOf("onepole" to it) },
         )
 
         return registry.createExciter("saw", data, freqHz = 220.0, random = Random(7))?.ignitor

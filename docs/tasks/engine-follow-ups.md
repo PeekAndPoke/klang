@@ -183,8 +183,10 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    passed the whole suite. MINOR 2 and NIT 1: `audio/MEMORY.md` and `audio/ref/performance.md` take this item's
    wording (every box located; the off phaser's call located, not removed; one pinned process one heap number above),
    and the first lines' readings above are labelled as such.
-2. **DONE (2026-10-11), in two steps: every Kotlin/JS `HashMap` lookup allocated 40 bytes on V8; the worklet's slot
-   maps (step 1) and sprudel's param bags (step 2) are a `KlangMap` now.** Reported as: a new param map's resolve costs about 1,130 bytes on the
+2. **Steps 1, 2, 3 and 5 DONE (2026-10-11); step 4 OPEN, after the v0.6.5 release: every Kotlin/JS `HashMap` lookup
+   allocated 40 bytes on V8; the worklet's slot maps (step 1), sprudel's param bags (step 2), the sound registry
+   (step 3) and the dispatcher's engines (step 5) are a `KlangMap` now, and a `KlangMap` is not a Kotlin `Map` (step
+   5).** The item is DONE when step 4 is committed. Reported as: a new param map's resolve costs about 1,130 bytes on the
    classic chain after S1, attributed to `KatalystKnob.resolve`, whose code does not explain it. **The cause**
    (production bundle, node 22.12, a probe with the lookups alone, the knobs alone, the chain, two voices taking turns
    as the orbit's owner; mixed and single-case, pinned and unpinned): the stdlib's generic `hashCode(dynamic)`, which
@@ -246,7 +248,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    round 1, after round 0 tried the name as given and lowercased on a miss); `engineFor` looks the id up once
    (`scheduledAgain` returns whether the engine stays attached). The dispatcher's `engines` map stays a
    `LinkedHashMap` (it is removed from and walked, and `KlangMap` has no `remove`): one hash per scheduled voice, 40 B,
-   is left. V8 now (the worker's probe, single-case): a registry lookup about 1 B, hit or miss (a mixed-case name 24 B,
+   is left (gone in step 5, where `KlangMap` gained `delete`). V8 now (the worker's probe, single-case): a registry lookup about 1 B, hit or miss (a mixed-case name 24 B,
    its lowercased copy); a synth note per block 13,257 / 12,806 B per block (HEAD / tree), a sample note 1,033 / 737
    (`"snare"`) and 1,066 / 773 (`"bd"`). JVM: 0 B per lookup on both sides (a mixed-case name 48 B, both sides).
    **Bit for bit:** the engine dumps (HEAD's registry and dispatcher against the tree, 600
@@ -308,11 +310,64 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    storage (review round 2: the storage on `mutableMapOf` with `toMap` still handing a `KlangMap` stayed green on all
    3,508 JVM tests). **Guarded by their KDocs only:** the bag's storage, the encoder's `KlangMap` branch and the JS
    `setAll`/`copy` fast paths through the native `forEach` (each changes only bytes, and no test sees bytes). **Open, for the maintainer:** whether sprudel gets an
-   allocation case of its own (the engine's harness does not run sprudel). Comparing or printing a param map on JS
+   allocation case of its own (the engine's harness does not run sprudel). Decided: it does, as step 4 (below). Comparing or printing a param map on JS
    walks `entries` (`==` about 1.8 times HEAD's bytes, `toString` 10 to 30 percent more); nothing does it per event.
    The engine's own copies (the sample-envelope merge, the warm-up) now take the native `forEach` copy on the
    worklet: 600 B and 161 to 164 ns for 6 entries against step 1's `entries` loop at 1,160 B and 167 to 172 ns (review
    round 2, this tree's production bundle; step 1's 473 ns for that copy did not reproduce). Report: `tmp/reviews/e2-step2-report.md`.
+   **Step 5 DONE (2026-10-11): `KlangMap` is not a `Map`** (maintainer, 2026-10-11: "not a `Map`; helpers as
+   extension functions when needed"). Plan: `tmp/reviews/e2-step5-plan.md`. `KlangMap<V>` has no `kotlin.collections`
+   supertype; its members are what its callers use (`get`, `contains`, `size`, `isEmpty`, `set`, `setAll`, `delete`,
+   `copy`, `forEachEntry`, the `capacityHint` constructor; `equals`, `hashCode` and `toString` by content, against
+   another `KlangMap` only), plus `klangMapOf` and two interop extensions, `KlangMap.toMap()` and `Map.toKlangMap()`,
+   for tests and tools. `VoiceData.ignitorParams` and `katalystParams` are `KlangMap<Double>?`, and so is every engine
+   signature that carried them (56 lines in 10 `audio_be` files, `Voice.kt` and the Klang-Research files listed in the
+   report, which only had their types changed). The dispatcher's `engines` map is a `KlangMap` (`delete` replaces
+   `remove`), so a synth note no longer hashes through the stdlib. Sprudel: `toVoiceData` hands `KlangMap`s over,
+   `ParamBag.toMap()` returns a plain copy. The wire codec generator lost its `Map<String, Double>` branch: a stdlib
+   `Map` field is refused with an error that names the field and says to use `KlangMap<Double>` (proven on a HEAD
+   copy: both `VoiceData` fields named); the `KlangMap` branch keeps the old type signature, so `WIRE_SCHEMA_HASH`
+   stays 1330155241. The KSP module has no test setup, so the refusal has no test (none built, as decided). The
+   harness converts its `mapOf` literals once per case (`Case.paramsMap`, `katpMap`, `katpNextMap`), so the chain's
+   identity gate sees the same map every block, as before. **Bit for bit:** a new `WireCodecRoundTripSpec` row
+   compares the encoded wire object with a `JSON.stringify` golden captured at `ccde9f9e` (a NaN slot and the key order
+   included; RED with the encoder dropping NaN, scaling a value or reversing the order; a `toFloat()` mutant was
+   GREEN because it is equivalent on Kotlin/JS); the engine dumps (HEAD against the tree, 600 blocks, every voice
+   through the wire codec on V8) 19 of 19 on V8 and 19 of 19 on the JVM, every last block sounding; sprudel's
+   converted events (64 cycles, 7 cases) identical on V8 and the JVM; the corpus 18 of 18. Tests, 0 failures:
+   `:common` 131 (JVM) and 132 (JS), `:audio_bridge` 148 and 283, `:audio_be` 2,692 and 2,586, `:sprudel` 3,508 (486
+   skipped, as before) and 2,997, the root's `:jvmTest` 60 (after review round 1). `KlangMapSpec` was rewritten for the new API (16 rows,
+   among them "it is not a Map" and the interop extensions); `KlangMapJvmSpec` now pins that it is no `java.util.Map`
+   and no `java.util.Collection`, and that a negative hint is coerced. The `shouldBe mapOf(...)` assertions compare
+   `KlangMap` with `klangMapOf(...)`; none was weakened. Mutants, each in one lock call, unfiltered: 19 of 19 RED (six
+   on the JS side of `KlangMap`, three on the JVM side, two on the common helpers, three on the encoder, three on the
+   dispatcher's `delete` and `activePlaybackIds`, `toKlangMap` sharing the bag's storage, `toVoiceData` dropping
+   `katalystParams`). **The allocation check:** `E-C-n1` read about 35 B less per note, all of it the dispatcher's map
+   (review round 1: that map back on a `LinkedHashMap` read what HEAD reads), and was re-set from 13,100 to 13,068 by
+   the file's rule: 45 healthy rounds 12,988.5 to 13,050.7 B (the worker's 6 runs and review round 1's 27 rounds,
+   full-check medians 13,004 to 13,023), the line 45 B above the worst median and 17 above the worst round. The
+   margins are thin, as `E-parallel`'s: the lowercasing back at every level read 13,166 to 13,191 (RED); a lowercase
+   on every call, step 3's gap, is caught by its median (13,090 and 13,091 in two samples), its lowest round 5 B over
+   the line; the dispatcher's map back on a `HashMap` goes red in about 1 run in 30 (medians 13,047 to 13,058), so
+   the comment at that field guards it. Two other lines moved down on V8: `E-C-rel05-n16` about 50 B (its notes stop
+   hashing the dispatcher's map) and `E-arith-glide` about 12 B (its `katp` maps are now `KlangMap`s, as the worklet's
+   decoder delivers them, where the harness used to hand the engine stdlib maps). With step 5 the encoder has one
+   branch for the slot maps, so the step 2 list of sites guarded by their KDocs only is the bag's storage and the JS
+   `setAll`/`copy` fast paths. 3 runs GREEN, 58 of 58, before review round 1; on the final tree g1 went RED on
+   `spluck-a`'s tail only (median 288: rounds 21.7, 324.4, 287.7), then g2 to g4 GREEN, 58 of 58; review round 2's
+   own run went RED on `E-arith`'s second mode only (median 191: rounds 190.9, 195.6, 51.2). Both are known tails, not
+   this change (the "Known tails" paragraph in `alloc-budgets.txt`). **Review round 1** (no CRITICAL or MAJOR): the
+   generator refuses a `KlangMap` whose values are not a non-null `Double` (a `KlangMap<Double?>` or `KlangMap<*>` used
+   to pass and fail in the generated code); `ParamBag.toKlangMap()` without added capacity is `KlangMap.copy` (19 to
+   32 B less per event on V8 than the sized form, under HEAD's figures; time the same); new rows pin that the sample
+   envelope fills a copy, never the voice's wire map (the in-place fill had passed every test), and pin
+   `WIRE_SCHEMA_HASH` at 1330155241 (a changed type signature had passed every test); the reviewers' mutants all
+   RED, the in-place fill and the changed signature only on the new rows, the harness's maps made per read on
+   `E-arith-glide`'s JVM line (233 against 211). `E-duck` was re-set to 152 for its V8 tail (item 38). Report:
+   `tmp/reviews/e2-step5-report.md`.
+   **Step 4 OPEN, after the v0.6.5 release, on the fresh `main`: a sprudel allocation case.** Planned in
+   `tmp/reviews/e2-step4-plan.md` (decided: an explicit `makesSound = false` flag and an output count, no reuse of
+   `peak()`; a one-note shape `note("c")` with many doors). The item is DONE when step 4 is committed.
    **A note for upstream:** the stdlib's `hashCode(dynamic)` closure makes every Kotlin/JS `HashMap`/`HashSet`
    operation allocate on V8; a statement-form `throw` there would remove it everywhere. Not filed from here.
 3. **DONE (2026-10-10): no noise box reproduces; the house limiter boxed per sample.** Reported as about 2 KB per
@@ -385,7 +440,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    drift now reads 32 B per block (48 at `analogSpread` 0.5) in every process the item 7 probe measured, from 288 to
    688; two of its boxes were the drift ramp (item 7's fix) and `getUnisonDetune`'s result, one per string, which V8
    inlined in every process traced. What is left there is item 30's root frequency and one more heap number. But on
-   the harness bundle about 1 process in 30 still reads 300 to 460 B on the drift path, not located (item 7's tail).
+   the harness bundle some processes still read 288 to 459 B on the drift path, not located (item 7's tail: 9 of 292
+   rounds at item 7, 11 of 51 at item 2, step 5; the "Known tails" paragraph in `alloc-budgets.txt`).
    The pluck was not measured. **Item 4 stays open while that tail is unlocated**; closing it needs the tail and a
    look at the pluck.
    **Found at item 5 (2026-10-11), development bundle only, not followed up:** on
@@ -637,8 +693,10 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    in 30 reads 300 to 460 B on `spluck-a`, the size of HEAD's regression (pooled over this change and review round 1,
    9 of 292 rounds and process pairs, 295 to 459 B; 0 of 50 with `analog` 0, so it is on the drift path); the profiler
    did not catch one in 110 processes (it perturbs the compile). The median of 3 rounds absorbs one such round; a
-   false red needs two of three, about 0.3 percent of runs (reviewer B; at most about 1 percent). A breach whose rounds
-   are not all high, and that does not repeat on a second run, is the tail; a breach that repeats is a regression.
+   false red needs two of three. The rate varies from session to session: item 2, step 5 read 11 of 51 tree rounds
+   high, about 1 run in 9 red by the median (the "Known tails" paragraph in `alloc-budgets.txt`, which has the rule: a
+   breach with every round over the line is a regression, a breach with a round under it is the tail; run once more
+   to confirm, and a second breach of the tail's shape is still the tail).
    HEAD's code read high in every round of every run, the item 8 mutant in every round of its one run. In the first form V8 inlined `advanceLane` into the superpluck's `generate`, and the
    two fields ended as Double representation (`--trace-generalization`, reviewer B), like `AnalogDrift`'s, which do
    not box: representation is ruled out, the cause is not located. `super7a`'s guard
@@ -1307,13 +1365,21 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     with single rounds of 139 and 160; `E-arith-glide` once read 511 against its 500. The chain runs only the
     arithmetic stages, so no item 33 site. Not located. Like `spluck-a`'s tail (item 7), a breach that does not repeat
     on a second run is that mode; if it repeats it turns the check red at random, and then either the site is found or
-    the line follows item 7's rule. Source: item 33, "Found on the way". S.
+    the line follows item 7's rule. Item 2, step 5 read the mode in 4 of 51 tree rounds (181 to 196 B), and one run
+    went red on it at a median of 191; the rule for reading such a breach is the "Known tails" paragraph in
+    `alloc-budgets.txt`. Source: item 33, "Found on the way". S.
 37. **The Ignitor's `perlin` and `berlin` move per SAMPLE** (numbered after the last item, added 2026-10-11): their
     `rate` is 0.003 noise units per sample (`PERLIN_STEP`), so the same number runs about 9 % faster at 48 kHz than at
     44.1 kHz (about 144 units per second against 132). Seconds are the house unit. The Katalyst's `Kat.perlin` and
     `Kat.berlin` inherit the law for parity (maintainer, 2026-10-11, Q12 of `docs/tasks/katalyst-knob-expressions.md`),
     so both hosts change together: a rate per second, which moves the sound of every song that uses them at one of the
     two rates. S.
+38. **`E-duck` has a tail on V8** (numbered after the last item, added 2026-10-11): about 1 round in 7 reads 97.6 to
+    108.8 B against healthy rounds of 24.8 to 66.7 (5 of 33 tree rounds; HEAD has it too, 103.1 in 8 rounds), and one
+    run held two tail rounds and read RED at 98 against the line of 96 (review round 1 of item 2, step 5). Its line was
+    re-set to 152, above the tail, so the release's full check does not go red by chance (`alloc-budgets.txt`). The
+    chain runs the duck with a sounding sidechain; the tail's site is not located. Locate it as `spluck-a`'s (item 7)
+    and `E-arith`'s (item 36) were looked for; a fix re-sets the line. S.
 
 ## 6. The audit's later steps and its open decisions
 

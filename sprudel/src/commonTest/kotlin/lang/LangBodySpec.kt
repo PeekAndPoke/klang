@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
+import io.peekandpoke.klang.common.infra.toMap
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangBodySpec : StringSpec({
@@ -23,7 +24,7 @@ class LangBodySpec : StringSpec({
     // step 5b-1); the `FilterDef.Body` the voice once carried in `filters` left the wire in phase 3 step 9. So these
     // rows read the slots the door writes, and resolve the material index through the table the orbit uses.
     fun slots(pattern: SprudelPattern): Map<String, Double> =
-        pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams ?: emptyMap()
+        pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams?.toMap() ?: emptyMap()
 
     fun modes(slots: Map<String, Double>) = BodyMaterials.modesAt(slots["body.material"] ?: Double.NaN)
 
@@ -49,7 +50,7 @@ class LangBodySpec : StringSpec({
     "body params survive the grouped merge (material + wet + floor)" {
         // The wire carries the raw value; the [0, 1] coercion is the ENGINE's (ResonatorBank, C4).
         val events = note("c3").body(material = "brass", wet = 0.8, floor = 0.15).queryArc(0.0, 1.0)
-        val slots = events[0].data.toVoiceData().katalystParams ?: emptyMap()
+        val slots = events[0].data.toVoiceData().katalystParams?.toMap() ?: emptyMap()
 
         events[0].data.body shouldBe "brass"
         slots["body.material"] shouldBe BodyMaterials.indexOf("brass")
@@ -81,6 +82,6 @@ class LangBodySpec : StringSpec({
 
         voiceData.katalystParams?.get("body.material") shouldBe BodyMaterials.indexOf("wood")
         voiceData.ignitorParams?.get("lpf.freq") shouldBe 800.0
-        voiceData.ignitorParams?.keys?.any { it.startsWith("body.") } shouldBe false
+        voiceData.ignitorParams?.toMap()?.keys?.any { it.startsWith("body.") } shouldBe false
     }
 })

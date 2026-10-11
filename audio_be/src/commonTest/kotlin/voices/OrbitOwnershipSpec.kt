@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 
 /**
@@ -38,7 +39,7 @@ class OrbitOwnershipSpec : StringSpec({
     fun voice(start: Double, gate: Double, end: Double = gate + 4800.0, body: Boolean = false): Voice = createVoice(
         startFrame = start, gateEndFrame = gate, endFrame = end,
         sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER,
-        katalystParams = if (body) bodyParams else null,
+        katalystParams = (if (body) bodyParams else null)?.toKlangMap(),
     )
 
     // A fresh context (and with it fresh orbits) per row.

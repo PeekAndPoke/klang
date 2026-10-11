@@ -20,6 +20,7 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
 
 /**
@@ -72,7 +73,7 @@ class SamplePlayheadStartSpec : StringSpec({
                 data = VoiceData.empty.copy(
                     freqHz = freqHz, // pitchHz below is 220, so freqHz / 220 is the playback rate
                     sound = "playheadprobe", // unregistered => the sample branch
-                    ignitorParams = slots,
+                    ignitorParams = slots?.toKlangMap(),
                 ).withClassicSlots(DoorFields(adsr = DoorAdsr(release = 0.01, on = false), begin = begin)), // envelope off: raw sample values
                 startTime = 0.0,
                 gateEndTime = 0.5,

@@ -16,6 +16,8 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
@@ -81,7 +83,7 @@ class OptimizerSongParitySpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames), random = random,
     )
 
-    fun assertParity(clue: String, authored: IgnitorDsl, ignitorParams: Map<String, Double>?) {
+    fun assertParity(clue: String, authored: IgnitorDsl, ignitorParams: KlangMap<Double>?) {
         val optimized = authored.optimize()
         val rngA = Random(11)
         val rngB = Random(11)
@@ -132,7 +134,7 @@ class OptimizerSongParitySpec : StringSpec({
 
                 seen.add(sound.ignitor)
                 graphs++
-                assertParity("${song.title}, orbit ${event.data.cylinder}:", sound.ignitor, event.data.ignitorParams?.toMap())
+                assertParity("${song.title}, orbit ${event.data.cylinder}:", sound.ignitor, (event.data.ignitorParams?.toMap())?.toKlangMap())
             }
         }
 

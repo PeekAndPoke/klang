@@ -31,6 +31,9 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 
 /**
@@ -71,11 +74,11 @@ class CylinderKatalystParamsSpec : StringSpec({
     )
 
     /** A voice with no bus fields of its own, carrying only the orbit's slot state. */
-    fun voice(params: Map<String, Double>?): Voice =
+    fun voice(params: KlangMap<Double>?): Voice =
         VoiceTestHelpers.createSynthVoice(katalystParams = params)
 
     /** What `.reverb(wet = 0.5, size = 6)` writes: the slot the door fills plus the one it names. */
-    fun room(size: Double): Map<String, Double> = mapOf("reverb.wet" to 0.5, "reverb.size" to size)
+    fun room(size: Double): KlangMap<Double> = klangMapOf("reverb.wet" to 0.5, "reverb.size" to size)
 
     class Rig(val registry: KatalystRegistry = KatalystRegistry()) {
         val cylinder = Cylinder(
@@ -161,7 +164,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         chain.applyParams(null)
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(3.0)
 
-        chain.applyParams(mapOf("reverb.size" to 9.0))
+        chain.applyParams(klangMapOf("reverb.size" to 9.0))
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(9.0)
 
         // No owner, no state: back to what the chain itself says.
@@ -176,7 +179,7 @@ class CylinderKatalystParamsSpec : StringSpec({
             )
         )
 
-        chain.applyParams(mapOf("reverb.size" to 9.0))
+        chain.applyParams(klangMapOf("reverb.size" to 9.0))
 
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(4.0)
     }
@@ -191,7 +194,7 @@ class CylinderKatalystParamsSpec : StringSpec({
             )
         )
 
-        chain.applyParams(mapOf("phaser.wet" to 0.8, "phaser.floor" to 0.2))
+        chain.applyParams(klangMapOf("phaser.wet" to 0.8, "phaser.floor" to 0.2))
 
         val phaser = chain.phaser.shouldNotBeNull().phaser
 
@@ -200,13 +203,13 @@ class CylinderKatalystParamsSpec : StringSpec({
 
         // An unset FLOOR, with the phaser still engaged so the kernel params are written: a NaN
         // here reaches `WetDryMix.dryCoeff` and comes out as a full notch.
-        chain.applyParams(mapOf("phaser.wet" to 0.8, "phaser.floor" to SLOT_UNSET))
+        chain.applyParams(klangMapOf("phaser.wet" to 0.8, "phaser.floor" to SLOT_UNSET))
 
         phaser.floor shouldBe PHASER_FLOOR
 
         // An unset WET is OFF. `Phaser.depth`'s setter DROPS a non-finite value and keeps the depth
         // it had, so without the guard the phaser stays engaged at 0.8 forever.
-        chain.applyParams(mapOf("phaser.wet" to SLOT_UNSET, "phaser.floor" to 0.2))
+        chain.applyParams(klangMapOf("phaser.wet" to SLOT_UNSET, "phaser.floor" to 0.2))
 
         phaser.depth shouldBe PHASER_WET
 
@@ -225,7 +228,7 @@ class CylinderKatalystParamsSpec : StringSpec({
             )
         )
 
-        chain.applyParams(mapOf("duck.orbit" to 1.0, "duck.depth" to 0.8))
+        chain.applyParams(klangMapOf("duck.orbit" to 1.0, "duck.depth" to 0.8))
         chain.ducksWith() shouldBe true
 
         // Back on the shelf, and back in the cache. The host asks this BEFORE the arriving chain's
@@ -297,7 +300,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         fun render(ownerSlots: Map<String, Double>): Pair<Cylinder, Double> {
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
-            cylinder.offerAndCommit(voice(ownerSlots), blockStart = 0.0)
+            cylinder.offerAndCommit(voice(ownerSlots.toKlangMap()), blockStart = 0.0)
 
             var worst = 0.0
 
@@ -349,7 +352,7 @@ class CylinderKatalystParamsSpec : StringSpec({
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
             cylinder.offerAndCommit(
-                VoiceTestHelpers.createSynthVoice(katalystParams = params),
+                VoiceTestHelpers.createSynthVoice(katalystParams = params?.toKlangMap()),
                 blockStart = 0.0,
             )
 

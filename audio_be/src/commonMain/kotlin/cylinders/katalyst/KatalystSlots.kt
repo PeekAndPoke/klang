@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.ignitor.controlRateValueOrNull
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.random.Random
 
 /**
@@ -177,7 +178,7 @@ internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
         private set
 
     /** Re-reads a slot from the orbit's param state; null (no owner, no slots) is the default. */
-    fun resolve(params: Map<String, Double>?) {
+    fun resolve(params: KlangMap<Double>?) {
         val name = slot ?: return
         val fromState = params?.get(name)
 

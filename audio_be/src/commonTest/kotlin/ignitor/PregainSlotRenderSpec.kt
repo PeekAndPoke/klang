@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.tanh
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -71,7 +72,7 @@ class PregainSlotRenderSpec : StringSpec({
 
     /** [blocks] blocks of [dsl], built with [params] and rendered end to end. */
     fun render(dsl: IgnitorDsl, params: Map<String, Double>? = null): DoubleArray {
-        val ignitor = dsl.buildExciter(ignitorParams = params, random = seed()).ignitor
+        val ignitor = dsl.buildExciter(ignitorParams = params?.toKlangMap(), random = seed()).ignitor
         val out = DoubleArray(blockFrames * blocks)
         val buffer = AudioBuffer(blockFrames)
         val context = ctx()

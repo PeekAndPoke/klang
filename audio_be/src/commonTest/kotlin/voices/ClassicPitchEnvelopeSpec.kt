@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.pow
@@ -172,14 +173,14 @@ class ClassicPitchEnvelopeSpec : StringSpec({
         val bare = renderPitchRatios(doors = DoorFields(), frames = frames, gateFrames = 4000)
         val nanSemitones = renderPitchRatios(
             doors = DoorFields(penv = stages),
-            data = VoiceData.empty.copy(ignitorParams = mapOf(semitonesKey to Double.NaN)),
+            data = VoiceData.empty.copy(ignitorParams = klangMapOf(semitonesKey to Double.NaN)),
             frames = frames,
             gateFrames = 4000,
         )
         val unwrittenSustain = renderPitchRatios(doors = DoorFields(penv = stages.copy(semitones = 12.0)), frames = frames, gateFrames = 4000)
         val infiniteSustain = renderPitchRatios(
             doors = DoorFields(penv = stages.copy(semitones = 12.0)),
-            data = VoiceData.empty.copy(ignitorParams = mapOf(sustainKey to Double.POSITIVE_INFINITY)),
+            data = VoiceData.empty.copy(ignitorParams = klangMapOf(sustainKey to Double.POSITIVE_INFINITY)),
             frames = frames,
             gateFrames = 4000,
         )

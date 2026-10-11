@@ -117,14 +117,15 @@ class WarmupRunner(
          * 50 ms, a lowpass at 2 kHz, q 0.3. The vocabulary graphs do not end in `classic()`, so they play as their
          * bare trees and ignore these.
          */
-        private val WARMUP_CLASSIC_SLOTS: Map<String, Double> = IgnitorDsl.Slots.let { s ->
-            klangMapOf(
-                listOf(
-                    s.adsr.attack to 0.001, s.adsr.decay to 0.05, s.adsr.sustain to 0.0, s.adsr.release to 0.05,
-                    s.lpf.freq to 2000.0, s.lpf.q to 0.3,
-                )
-                    .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }
-            )
+        private val WARMUP_CLASSIC_SLOTS: KlangMap<Double> = IgnitorDsl.Slots.let { s ->
+            val slots = KlangMap<Double>()
+
+            listOf(
+                s.adsr.attack to 0.001, s.adsr.decay to 0.05, s.adsr.sustain to 0.0, s.adsr.release to 0.05,
+                s.lpf.freq to 2000.0, s.lpf.q to 0.3,
+            ).forEach { (slot, value) -> slots[(slot as IgnitorDsl.Param).name] = value }
+
+            slots
         }
 
         /**

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -400,7 +401,7 @@ class KatalystEqEffectSpec : StringSpec({
 
         for (b in 0 until data.size / blockFrames) {
             if (b == changeBlock) {
-                chain.applyParams(mapOf("eq.db" to -12.0))
+                chain.applyParams(klangMapOf("eq.db" to -12.0))
             } else if (b == 0) {
                 chain.applyParams(null)
             }
@@ -451,7 +452,7 @@ class KatalystEqEffectSpec : StringSpec({
                 // 0 dB is the bit-transparent curve, so once the fade has run out, ANY residue of
                 // the previous bank shows up as a difference from the input: its 24 dB ring, a
                 // stale integrator, a fade that never finished.
-                chain.applyParams(mapOf("eq.db" to 0.0))
+                chain.applyParams(klangMapOf("eq.db" to 0.0))
             }
 
             val base = b * blockFrames
@@ -667,7 +668,7 @@ class KatalystEqEffectSpec : StringSpec({
             loud(b)
         }
 
-        chain.applyParams(mapOf("eq.db" to 12.0)) // install 2, bank 1; bank 0 is parked, mid-ring
+        chain.applyParams(klangMapOf("eq.db" to 12.0)) // install 2, bank 1; bank 0 is parked, mid-ring
 
         loud(8)
         loud(9)

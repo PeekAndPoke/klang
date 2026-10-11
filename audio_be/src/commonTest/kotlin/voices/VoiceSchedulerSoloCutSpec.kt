@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -405,7 +406,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
     // ── A soloed VOICE is protected for its whole life; the source's window serves between events (Q14, Q28) ───
 
     /** A soloed pad with a 5 s release, hard left: its tail outlives the 2 s hold by far. */
-    fun pad(solo: Double? = 1.0): VoiceData = tone(sourceId = "pad", pan = 0.0, solo = solo).copy(ignitorParams = mapOf("adsr.release" to 5.0))
+    fun pad(solo: Double? = 1.0): VoiceData = tone(sourceId = "pad", pan = 0.0, solo = solo).copy(ignitorParams = klangMapOf("adsr.release" to 5.0))
 
     "solo: a soloed pad's long release plays at full level beside another live solo, until the voice ends (Q14)" {
         // `note("c3").sound(myPad).release(5).solo()` beside `s("bd*4").solo()`: the kick (hard right) solos all
@@ -857,7 +858,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         // solo(1.0) from 1.5 s to 2 s. The cull reads the voice's level BEFORE the multiplier; read
         // after it, the 50 ms cull window would end the bed in the mute and it would never come back.
         val releaseSlot = (IgnitorDsl.Slots.adsr.release as IgnitorDsl.Param).name
-        val bed = tone(sourceId = "bed", pan = 1.0).copy(ignitorParams = mapOf(releaseSlot to 8.0))
+        val bed = tone(sourceId = "bed", pan = 1.0).copy(ignitorParams = klangMapOf(releaseSlot to 8.0))
 
         val rig = Rig()
         rig.schedule(0.0, soloControl(sourceId = "lead", solo = 1.0), durSec = 2.0)

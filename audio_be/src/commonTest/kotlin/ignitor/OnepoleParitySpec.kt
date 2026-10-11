@@ -15,6 +15,8 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -83,7 +85,7 @@ class OnepoleParitySpec : StringSpec({
             register("rawsine", IgnitorDsl.OnePoleLowpass(inner = IgnitorDsl.Sine(), freq = IgnitorDsl.Slots.onepole))
         }
         fun exciter(params: Map<String, Double>?): Ignitor {
-            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", ignitorParams = params)
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", ignitorParams = params?.toKlangMap())
             return registry.createExciter("rawsine", data, freqHz = 220.0, random = Random(7))
                 ?.ignitor ?: error("no exciter")
         }
@@ -99,7 +101,7 @@ class OnepoleParitySpec : StringSpec({
         // made it `classic()`'s first stage, the same place). A wrap around the whole tree would put it AFTER the
         // envelope, which the anti-vacuous side shows is a different signal.
         val registry = IgnitorRegistry().apply { registerDefaults() }
-        val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", ignitorParams = mapOf("onepole" to 800.0))
+        val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", ignitorParams = klangMapOf("onepole" to 800.0))
         val viaRegistry = render(
             registry.createExciter("sine", data, freqHz = 220.0, random = Random(7))?.ignitor ?: error("no exciter"),
         )

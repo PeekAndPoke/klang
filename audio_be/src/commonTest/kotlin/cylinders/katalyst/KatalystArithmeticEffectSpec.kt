@@ -31,6 +31,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.round
@@ -190,12 +191,12 @@ class KatalystArithmeticEffectSpec : StringSpec({
     "a slot operand's first value snaps, and a katp move glides per sample over the glide time, landing exactly" {
         val probe = 0.5
         val chain = build(KatalystStageDsl.Times(IgnitorDsl.Param("t", 1.0)))
-        chain.applyParams(mapOf("t" to 0.8))
+        chain.applyParams(klangMapOf("t" to 0.8))
 
         // Fresh: the first value arrives at once.
         block(chain, probe).forEach { it shouldBe probe * 0.8 }
 
-        chain.applyParams(mapOf("t" to 0.2))
+        chain.applyParams(klangMapOf("t" to 0.2))
         val glide = (1..glideBlocks).map { block(chain, probe) }
 
         // Block k ends at 0.8 + (0.2 - 0.8) * k / G, and each block ramps there from where the last ended.
@@ -223,10 +224,10 @@ class KatalystArithmeticEffectSpec : StringSpec({
     "a pow operand ramps per sample too: the law is taken with the operand at each sample" {
         val probe = 0.5
         val chain = build(KatalystStageDsl.Pow(IgnitorDsl.Param("e", 1.0)))
-        chain.applyParams(mapOf("e" to 1.0))
+        chain.applyParams(klangMapOf("e" to 1.0))
         block(chain, probe)
 
-        chain.applyParams(mapOf("e" to 2.0))
+        chain.applyParams(klangMapOf("e" to 2.0))
         val first = block(chain, probe)
         val step = (1.0 / glideBlocks) / blockFrames
 
@@ -247,7 +248,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
         val times = build(KatalystStageDsl.Times(IgnitorDsl.Param("t", 0.5)))
         times.applyParams(null)
         block(times, probe).forEach { it shouldBe probe * 0.5 }
-        times.applyParams(mapOf("t" to Double.NaN))
+        times.applyParams(klangMapOf("t" to Double.NaN))
         val back = (1..glideBlocks).map { block(times, probe) }
         back.first()[blockFrames - 1] shouldBe (probe * (0.5 + 0.5 / glideBlocks) plusOrMinus 1e-12)
         back.last()[blockFrames - 1] shouldBe probe
@@ -256,11 +257,11 @@ class KatalystArithmeticEffectSpec : StringSpec({
         val cap = build(KatalystStageDsl.Min(IgnitorDsl.Param("c", Double.NaN)))
         cap.applyParams(null)
         block(cap, probe).forEach { it shouldBe probe }
-        cap.applyParams(mapOf("c" to 0.3))
+        cap.applyParams(klangMapOf("c" to 0.3))
         block(cap, probe).forEach { it shouldBe 0.3 }
 
         // A move of the cap after that glides: halfway between blocks, not a jump to the new bound.
-        cap.applyParams(mapOf("c" to 0.1))
+        cap.applyParams(klangMapOf("c" to 0.1))
         val moving = block(cap, probe)
         moving[blockFrames - 1] shouldBe (0.3 + (0.1 - 0.3) / glideBlocks plusOrMinus 1e-12)
     }
@@ -281,9 +282,9 @@ class KatalystArithmeticEffectSpec : StringSpec({
 
         for ((from, to, lands) in cases) {
             val chain = build(KatalystStageDsl.Div(IgnitorDsl.Param("d", 1.0)))
-            chain.applyParams(mapOf("d" to from))
+            chain.applyParams(klangMapOf("d" to from))
             val before = block(chain, probe)
-            chain.applyParams(mapOf("d" to to))
+            chain.applyParams(klangMapOf("d" to to))
 
             val glide = (1..glideBlocks + 1).map { block(chain, probe) }
             val joined = doubleArrayOf(before.last()) + glide.reduce { a, b -> a + b }
@@ -306,9 +307,9 @@ class KatalystArithmeticEffectSpec : StringSpec({
 
         // 1 to -1 by hand: the level ends the first glide block at 1 + (-1 - 1) / G, and passes through silence.
         val chain = build(KatalystStageDsl.Div(IgnitorDsl.Param("d", 1.0)))
-        chain.applyParams(mapOf("d" to 1.0))
+        chain.applyParams(klangMapOf("d" to 1.0))
         block(chain, probe)
-        chain.applyParams(mapOf("d" to -1.0))
+        chain.applyParams(klangMapOf("d" to -1.0))
         val glide = (1..glideBlocks).map { block(chain, probe) }
 
         glide.first()[blockFrames - 1] shouldBe (probe * (1.0 - 2.0 / glideBlocks) plusOrMinus 1e-12)
@@ -332,7 +333,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
                 val chain = build(stage)
                 chain.applyParams(null)
                 block(chain, probe)
-                chain.applyParams(mapOf("o" to Double.NaN))
+                chain.applyParams(klangMapOf("o" to Double.NaN))
 
                 val settled = (1..glideBlocks + 1).map { block(chain, probe) }.last()
 
@@ -347,23 +348,23 @@ class KatalystArithmeticEffectSpec : StringSpec({
         cap.applyParams(null)
         block(cap, probe).forEach { it shouldBe 0.3 }
 
-        cap.applyParams(mapOf("c" to Double.NaN))
+        cap.applyParams(klangMapOf("c" to Double.NaN))
         block(cap, probe).forEach { it shouldBe probe }
 
-        cap.applyParams(mapOf("c" to 0.2))
+        cap.applyParams(klangMapOf("c" to 0.2))
         block(cap, probe).forEach { it shouldBe 0.2 }
     }
 
     "a reset forgets the glide: the next life's first operand snaps" {
         val probe = 0.5
         val chain = build(KatalystStageDsl.Times(IgnitorDsl.Param("t", 1.0)))
-        chain.applyParams(mapOf("t" to 0.8))
+        chain.applyParams(klangMapOf("t" to 0.8))
         block(chain, probe)
-        chain.applyParams(mapOf("t" to 0.2))
+        chain.applyParams(klangMapOf("t" to 0.2))
         block(chain, probe)
 
         chain.reset()
-        chain.applyParams(mapOf("t" to 0.4))
+        chain.applyParams(klangMapOf("t" to 0.4))
         block(chain, probe).forEach { it shouldBe probe * 0.4 }
     }
 })

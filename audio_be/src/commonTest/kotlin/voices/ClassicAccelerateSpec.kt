@@ -15,6 +15,8 @@ import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.random.Random
@@ -108,7 +110,7 @@ class ClassicAccelerateSpec : StringSpec({
             withClue("$value") {
                 renderPitchRatios(
                     doors = DoorFields(),
-                    data = VoiceData.empty.copy(ignitorParams = mapOf(key to value)),
+                    data = VoiceData.empty.copy(ignitorParams = klangMapOf(key to value)),
                     frames = frames,
                     gateFrames = 2000,
                 ).toList() shouldBe bare.toList()
@@ -120,7 +122,7 @@ class ClassicAccelerateSpec : StringSpec({
 
     /** The class the root of [dsl]'s build hands the source, built with [bag]: a pitched source under a built pitch stage is a `ModApplyingIgnitor`. */
     fun shapeOf(dsl: IgnitorDsl, bag: Map<String, Double>): Any {
-        val built: Ignitor = dsl.buildExciter(ignitorParams = bag, random = Random(7), freqHz = 220.0, sampleRate = sampleRate).ignitor
+        val built: Ignitor = dsl.buildExciter(ignitorParams = bag.toKlangMap(), random = Random(7), freqHz = 220.0, sampleRate = sampleRate).ignitor
 
         return (built as MemoizingIgnitor).inner::class
     }

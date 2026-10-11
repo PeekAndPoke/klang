@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.sprudel
 
 import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.infra.toMap
 
 /**
  * The slot storage of ONE event, `<name>` to `Double`, and the one method the fill rule is
@@ -19,7 +20,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * per slot, which is what keeps a pattern that fills a dozen slots out of the "twenty allocations
  * per note" class. The bag is allocated on the first write ([SprudelVoiceData.ignitorParamsOrNew] and
  * its twin), copied once per event by [SprudelVoiceData.clone], and copied once more at the wire by
- * [toMap]. Anything else would give two events one bag, and one event's write would land on the
+ * [toKlangMap]. Anything else would give two events one bag, and one event's write would land on the
  * other.
  *
  * ## The fill rule's one method
@@ -91,7 +92,7 @@ class ParamBag private constructor(
             return
         }
 
-        if (!values.containsKey(name)) {
+        if (name !in values) {
             values[name] = default
         }
     }
@@ -111,22 +112,28 @@ class ParamBag private constructor(
         values.setAll(other.values)
     }
 
+    /** A plain copy of the entries, in their order, for tests and tools; the wire takes [toKlangMap]. */
+    fun toMap(): Map<String, Double> = values.toMap()
+
     /**
-     * The wire boundary: a COPY of the entries, never the bag's own storage.
+     * The wire boundary: a COPY of the entries, never the bag's own storage, which a caller may add to
+     * (`classicSlotParams`).
      *
      * The backend holds `Voice.katalystParams` for the whole life of the voice and gates its
      * re-resolve on the map's IDENTITY, so a map sprudel could still write into would move an
      * orbit's settings with nothing to notice it.
+     *
+     * With [extraCapacity] above 0 the JVM table starts at the bag's size plus that many slots, the size this copy
+     * always had (a JS `Map` takes no size; see `KlangMap(capacityHint)`). Without it the copy is `KlangMap.copy`,
+     * 19 to 32 bytes less per event on V8 than the sized form (engine follow-up 2, step 5, review round 1).
      */
-    fun toMap(): Map<String, Double> = values.copy()
+    internal fun toKlangMap(extraCapacity: Int = 0): KlangMap<Double> {
+        if (extraCapacity == 0) {
+            return values.copy()
+        }
 
-    /**
-     * The wire boundary's writable twin of [toMap]: a fresh COPY a caller may add to (`classicSlotParams`). Its JVM
-     * table starts at the bag's size plus [extraCapacity] slots, the size this copy always had (a JS `Map` takes no
-     * size; see `KlangMap(capacityHint)`).
-     */
-    internal fun toKlangMap(extraCapacity: Int): KlangMap<Double> =
-        KlangMap<Double>(values.size + extraCapacity).also { it.setAll(values) }
+        return KlangMap<Double>(values.size + extraCapacity).also { it.setAll(values) }
+    }
 
     override fun equals(other: Any?): Boolean = this === other || (other is ParamBag && values == other.values)
 

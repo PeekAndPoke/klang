@@ -16,8 +16,9 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   `katalystParamsOrNew()`), copied once per event by `clone()`, `merge` builds a fresh one, `mergeFrom`
   folds into the receiver's own. The class KDoc of `ParamBag` has the contract. Its storage is a `KlangMap`
   (`common/infra`): on Kotlin/JS a `HashMap` write or lookup allocates 40 bytes inside the stdlib's hashing, and a
-  `KlangMap` walk through its entries about 110 per entry, so the bag copies and merges through `KlangMap`'s own walk
-  (`copy`, `setAll`, `forEachEntry`) and never iterates `entries` per event (engine follow-up 2, step 2).
+  walk through a map's entries about 110 per entry, so the bag copies and merges through `KlangMap`'s own walk
+  (`copy`, `setAll`, `forEachEntry`; engine follow-up 2, step 2). A `KlangMap` is not a Kotlin `Map` (step 5):
+  `toVoiceData` hands `KlangMap`s to the wire, and `ParamBag.toMap()` is a plain copy for tests and tools.
 - `toVoiceData()` is the one boundary. The voice doors stay TYPED on this side (the query hot loop keeps its
   one allocation, `docs/plans/signal-flow-redesign.md` §4) and are written there as `classic()` slot keys
   into `ignitorParams` by `_classic_slot_params.kt`: the pitch envelope (`penv.*`, `penvCurves.*`), the vibrato
@@ -224,3 +225,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   12.5 us (the wire encode included); the JVM +0 to +168 B per event (up to about 2.4 percent on small events), its
   time within HEAD's spread
   (`docs/tasks/engine-follow-ups.md` item 2, step 2).
+- 2026-10-11: a `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s two slot maps are `KlangMap`s, built
+  by `toVoiceData` from the bags, and `ParamBag.toMap()` returns a plain copy; events identical on V8 and the JVM
+  (`docs/tasks/engine-follow-ups.md` item 2, step 5).

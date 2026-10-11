@@ -55,28 +55,22 @@ inline fun <T> wireDecodeSet(arr: dynamic, dec: (dynamic) -> T): Set<T> {
 }
 
 /**
- * Map<String, Double> → JS object. A [KlangMap] (sprudel's slot maps) is walked with its own walk, which allocates
- * nothing per entry, where iterating its entries would allocate per entry (`KlangMap`'s KDoc).
+ * [KlangMap] → JS object, walked with [KlangMap.forEachEntry] (nothing allocated per entry). The wire's one string-keyed
+ * map shape: the generated codec refuses a stdlib `Map` field (`audio-wire-codec-ksp`).
  */
-fun wireEncodeStringDoubleMap(m: Map<String, Double>): dynamic {
+fun wireEncodeStringDoubleMap(m: KlangMap<Double>): dynamic {
     val o = wireObj()
 
-    if (m is KlangMap<Double>) {
-        m.forEachEntry { k, v -> o[k] = v }
+    m.forEachEntry { k, v -> o[k] = v }
 
-        return o
-    }
-
-    for ((k, v) in m) o[k] = v
     return o
 }
 
 /**
- * JS object → a [KlangMap] (insertion order preserved via Object.keys). A [KlangMap] and not a `LinkedHashMap`: the
- * engine reads these maps by key (`ignitorParams` at every voice build, `katalystParams` at every owner change of an
- * orbit), and on Kotlin/JS a `HashMap` lookup allocates 40 bytes per call inside the stdlib's hashing, a `KlangMap`
- * lookup nothing (engine follow-up 2, `docs/tasks/engine-follow-ups.md` item 2). The KDoc is the guard together with
- * the allocation check's `C-remap` case.
+ * JS object → a [KlangMap] (insertion order preserved via Object.keys). The engine reads these maps by key
+ * (`ignitorParams` at every voice build, `katalystParams` at every owner change of an orbit), and on Kotlin/JS a
+ * `HashMap` lookup allocates 40 bytes inside the stdlib's hashing, a `KlangMap` lookup nothing (engine follow-up 2,
+ * `docs/tasks/engine-follow-ups.md` item 2). The allocation check's `C-remap` case guards it.
  */
 fun wireDecodeStringDoubleMap(o: dynamic): KlangMap<Double> {
     val keys = js("Object.keys(o)").unsafeCast<Array<String>>()

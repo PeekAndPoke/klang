@@ -5,11 +5,13 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.common.infra.toMap
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.uniqueId
+import io.peekandpoke.klang.audio_bridge.wire.WIRE_SCHEMA_HASH
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Feedback
 import io.peekandpoke.klang.audio_bridge.wire.decode_KatalystDsl
@@ -20,7 +22,6 @@ import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
 import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
-import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
@@ -168,10 +169,10 @@ class WireCodecRoundTripSpec : StringSpec({
     "ScheduledVoice round-trips a populated VoiceData (both slot maps, a false Boolean?)" {
         val data = VoiceData.empty.copy(
             note = "c3", freqHz = 130.81, gain = 0.7, soundIndex = 2, cull = 0.2,
-            ignitorParams = mapOf("voices" to 7.0, "spread" to 0.3, "lpf.freq" to 1000.0, "adsr.on" to 0.0),
+            ignitorParams = klangMapOf("voices" to 7.0, "spread" to 0.3, "lpf.freq" to 1000.0, "adsr.on" to 0.0),
             // The second string-keyed map, the orbit's slot state: same shape, different host, and
             // a key with a dot in it (the `<stage>.<knob>` spelling every classic slot carries).
-            katalystParams = mapOf("reverb.size" to 6.0, "compressor.ratio" to 8.0, "room" to 0.5),
+            katalystParams = klangMapOf("reverb.size" to 6.0, "compressor.ratio" to 8.0, "room" to 0.5),
             // Non-default on purpose (default is null): `Boolean?` through a `dynamic` codec is exactly the
             // shape where `false` and `undefined` can be confused.
             control = false,
@@ -181,29 +182,27 @@ class WireCodecRoundTripSpec : StringSpec({
         decode_ScheduledVoice(encode_ScheduledVoice(sv)) shouldBe sv
     }
 
-    "the decoded slot maps are KlangMaps, in the order they were sent, a NaN slot included" {
-        // The engine reads these maps by key; a KlangMap's lookup allocates nothing on Kotlin/JS where a HashMap's
-        // costs 40 bytes (engine follow-up 2). Equality with the sent LinkedHashMap is the row above.
+    "the decoded slot maps keep the order they were sent in and a NaN slot, and an absent key reads null" {
+        // The engine reads these maps by key (engine follow-up 2), and the decoder must hand every slot over as it
+        // was sent. Equality with the sent maps is the row above.
         val data = VoiceData.empty.copy(
-            ignitorParams = linkedMapOf("lpf.freq" to 1000.0, "analog" to 0.2, "adsr.attack" to 0.01),
-            katalystParams = linkedMapOf("reverb.wet" to 0.3, "delay.wet" to SLOT_UNSET, "body.material" to 2.0),
+            ignitorParams = klangMapOf("lpf.freq" to 1000.0, "analog" to 0.2, "adsr.attack" to 0.01),
+            katalystParams = klangMapOf("reverb.wet" to 0.3, "delay.wet" to SLOT_UNSET, "body.material" to 2.0),
         )
         val decoded = decode_ScheduledVoice(encode_ScheduledVoice(ScheduledVoice("pb-1", data, 0.0, 1.0, 0.0))).data
         val ignitor = decoded.ignitorParams
         val katalyst = decoded.katalystParams
 
-        (ignitor is KlangMap<*>) shouldBe true
-        (katalyst is KlangMap<*>) shouldBe true
-        ignitor!!.keys.toList() shouldBe listOf("lpf.freq", "analog", "adsr.attack")
-        katalyst!!.keys.toList() shouldBe listOf("reverb.wet", "delay.wet", "body.material")
+        ignitor!!.toMap().keys.toList() shouldBe listOf("lpf.freq", "analog", "adsr.attack")
+        katalyst!!.toMap().keys.toList() shouldBe listOf("reverb.wet", "delay.wet", "body.material")
         katalyst["delay.wet"]!!.isNaN() shouldBe true
         katalyst["reverb.wet"] shouldBe 0.3
         katalyst["gain.gain"] shouldBe null
     }
 
     "KlangMap slot maps (sprudel's) encode every entry, in order, and round-trip" {
-        // Pins that every entry of a KlangMap reaches the wire, in order. Which walk the encoder takes (its
-        // `forEachEntry` branch or the generic iteration) changes only the bytes, so no row can see it: its KDoc.
+        // Pins that every entry of a KlangMap reaches the wire, in order (the encoder walks it with `forEachEntry`,
+        // its one walk since step 5).
         val data = VoiceData.empty.copy(
             ignitorParams = klangMapOf("lpf.freq" to 1000.0, "analog" to 0.2),
             katalystParams = klangMapOf("reverb.wet" to 0.3, "delay.wet" to SLOT_UNSET, "body.material" to 2.0),
@@ -211,9 +210,32 @@ class WireCodecRoundTripSpec : StringSpec({
         val decoded = decode_ScheduledVoice(encode_ScheduledVoice(ScheduledVoice("pb-1", data, 0.0, 1.0, 0.0))).data
 
         decoded shouldBe data
-        decoded.ignitorParams!!.keys.toList() shouldBe listOf("lpf.freq", "analog")
-        decoded.katalystParams!!.keys.toList() shouldBe listOf("reverb.wet", "delay.wet", "body.material")
+        decoded.ignitorParams!!.toMap().keys.toList() shouldBe listOf("lpf.freq", "analog")
+        decoded.katalystParams!!.toMap().keys.toList() shouldBe listOf("reverb.wet", "delay.wet", "body.material")
         decoded.katalystParams!!["delay.wet"]!!.isNaN() shouldBe true
+    }
+
+    "the wire object is byte for byte what it was when the slot maps were stdlib maps (a golden from before step 5)" {
+        // Engine follow-up 2, step 5: `KlangMap` became the fields' type. The golden is JSON.stringify of the same
+        // voice encoded at `ccde9f9e`, when the fields were `Map<String, Double>` (built with `linkedMapOf`): same
+        // keys, same order, same numbers. JSON prints a NaN slot as null; the rows above pin the NaN through the codec.
+        val data = VoiceData.empty.copy(
+            note = "c3", freqHz = 130.81, gain = 0.7, soundIndex = 2, cull = 0.2,
+            ignitorParams = klangMapOf("voices" to 7.0, "spread" to 0.3, "lpf.freq" to 1000.0, "adsr.on" to 0.0),
+            katalystParams = klangMapOf("reverb.size" to 6.0, "delay.wet" to SLOT_UNSET, "body.material" to 2.0, "room" to 0.5),
+            control = false,
+        )
+        val sv = ScheduledVoice("pb-1", data, startTime = 1.25, gateEndTime = 2.5, playbackStartTime = 0.5)
+        val json = js("JSON").stringify(encode_ScheduledVoice(sv)).unsafeCast<String>()
+
+        json shouldBe GOLDEN_WIRE_JSON
+    }
+
+    "the wire schema hash is pinned: a change of the wire's type signatures moves it, and a move is made here on purpose" {
+        // The worklet refuses a message whose hash differs from its own (`WorkletContract`), so a moved hash only
+        // refuses a stale worklet. Pinned since engine follow-up 2, step 5, which changed the slot maps' Kotlin type
+        // and kept their signature. A deliberate wire change updates this number in the same change.
+        WIRE_SCHEMA_HASH shouldBe 1330155241
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -348,3 +370,12 @@ class WireCodecRoundTripSpec : StringSpec({
         dec.meta shouldBe meta
     }
 })
+
+/** JSON.stringify of the golden voice above, encoded at `ccde9f9e` (engine follow-up 2, step 5). */
+private const val GOLDEN_WIRE_JSON: String =
+    "{\"playbackId\":\"pb-1\",\"data\":{\"note\":\"c3\",\"freqHz\":130.81,\"gain\":0.7,\"legato\":null," +
+        "\"bank\":null,\"sound\":null,\"soundIndex\":2,\"ignitorParams\":{\"voices\":7,\"spread\":0.3," +
+        "\"lpf.freq\":1000,\"adsr.on\":0},\"katalystParams\":{\"reverb.size\":6,\"delay.wet\":null," +
+        "\"body.material\":2,\"room\":0.5},\"cylinder\":null,\"pan\":null,\"cut\":null,\"solo\":null," +
+        "\"sourceId\":null,\"master\":null,\"katalyst\":null,\"control\":false,\"tags\":null,\"cull\":0.2}," +
+        "\"startTime\":1.25,\"gateEndTime\":2.5,\"playbackStartTime\":0.5}"

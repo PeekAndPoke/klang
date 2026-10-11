@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDuckEffect
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
+import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.math.max
 
 /**
@@ -126,7 +127,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
         abstract fun ownerClaimed(chain: KatalystChain)
 
-        abstract fun configureLeaving(params: Map<String, Double>?)
+        abstract fun configureLeaving(params: KlangMap<Double>?)
 
         abstract fun hardCut()
     }
@@ -155,7 +156,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
         override fun ownerClaimed(chain: KatalystChain) {}
 
-        override fun configureLeaving(params: Map<String, Double>?) {}
+        override fun configureLeaving(params: KlangMap<Double>?) {}
 
         override fun hardCut() {}
     }
@@ -304,7 +305,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
         }
 
         /** The leaving chain is still audible, so the owner still steers it until the fade ends. */
-        override fun configureLeaving(params: Map<String, Double>?) {
+        override fun configureLeaving(params: KlangMap<Double>?) {
             leaving?.applyParams(params)
         }
 
@@ -384,7 +385,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
         override fun ownerClaimed(chain: KatalystChain) {}
 
-        override fun configureLeaving(params: Map<String, Double>?) {}
+        override fun configureLeaving(params: KlangMap<Double>?) {}
 
         override fun hardCut() {
             leaving?.retire()
@@ -439,7 +440,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
         override fun ownerClaimed(chain: KatalystChain) {}
 
-        override fun configureLeaving(params: Map<String, Double>?) {}
+        override fun configureLeaving(params: KlangMap<Double>?) {}
 
         override fun hardCut() {
             leaving?.retire()
@@ -545,7 +546,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
     }
 
     /** The owner's params, for the leaving chain while it is still audible. */
-    fun configureLeaving(params: Map<String, Double>?) {
+    fun configureLeaving(params: KlangMap<Double>?) {
         state.configureLeaving(params)
     }
 

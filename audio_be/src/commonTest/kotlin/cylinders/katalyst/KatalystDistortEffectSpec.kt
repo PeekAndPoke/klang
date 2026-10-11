@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -508,12 +509,12 @@ class KatalystDistortEffectSpec : StringSpec({
         stage.isOn shouldBe false
 
         // A pattern writes the slot: on.
-        chain.applyParams(mapOf("drive" to 0.3))
+        chain.applyParams(klangMapOf("drive" to 0.3))
         chain.process(ctx)
         stage.isOn shouldBe true
 
         // ...and what it then renders is distorted, not the input: the default `soft` at 0.3 bends the mix.
-        chain.applyParams(mapOf("drive" to 0.3))
+        chain.applyParams(klangMapOf("drive" to 0.3))
         for (i in 0 until blockFrames) {
             ctx.mixBuffer.left[i] = inputL(i)
             ctx.mixBuffer.right[i] = inputR(i)

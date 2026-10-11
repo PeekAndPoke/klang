@@ -20,6 +20,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 
 /**
@@ -250,7 +251,7 @@ class VoiceCullingSpec : StringSpec({
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
             // The orbit's body reads the SLOT state (Katalyst step 5b-1): a material INDEX from
             // the shared catalogue plus its mix, which is what `.body(material = "wood", wet = 1)` writes.
-            katalystParams = mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 1.0),
+            katalystParams = klangMapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 1.0),
         )
         val ctx = createContext(blockStart = 0.0, blockFrames = 128, sampleRate = sampleRate)
         var start = 0.0

@@ -9,28 +9,20 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
 /**
- * Pins [KlangMap]'s contract on both platforms, with Kotlin's own `LinkedHashMap` as the reference wherever the
- * contract says "as a `Map` / as `LinkedHashMap`": the same operations on both, the same answers.
+ * Pins [KlangMap]'s contract on both platforms. Where the contract says "as Kotlin's own maps do" (order, overwrite,
+ * `hashCode`, `toString`), Kotlin's `LinkedHashMap` is the reference: the same writes on both, the same answers.
  */
 class KlangMapSpec : StringSpec({
 
-    /** The same writes on a [KlangMap] and on a `LinkedHashMap`. */
-    class Twin {
-        val klang = KlangMap<Double>()
-        val ref = LinkedHashMap<String, Double>()
+    /** The entries in iteration order, as pairs. */
+    fun <V> KlangMap<V>.pairs(): List<Pair<String, V>> = buildList { forEachEntry { key, value -> add(key to value) } }
 
-        fun set(key: String, value: Double) {
-            klang[key] = value
-            ref[key] = value
-        }
-    }
-
-    "an absent key reads null and is not contained" {
+    "an absent key reads null and is not contained; size and isEmpty count the keys" {
         val map = klangMapOf("a" to 1.5)
 
         map["b"] shouldBe null
-        map.containsKey("b") shouldBe false
-        map.containsKey("a") shouldBe true
+        ("b" in map) shouldBe false
+        ("a" in map) shouldBe true
         map.size shouldBe 1
         map.isEmpty() shouldBe false
         KlangMap<Double>().isEmpty() shouldBe true
@@ -48,19 +40,37 @@ class KlangMapSpec : StringSpec({
         map.size shouldBe 1
     }
 
-    "iteration follows insertion order and an overwrite keeps its position, as LinkedHashMap" {
-        val both = Twin()
+    "iteration follows insertion order, an overwrite keeps its position, a deleted and re-set key goes last, as LinkedHashMap" {
+        val klang = KlangMap<Double>()
+        val ref = LinkedHashMap<String, Double>()
 
-        both.set("delay.wet", 0.3)
-        both.set("reverb.size", 6.3)
-        both.set("body.wet", 0.4)
-        both.set("delay.wet", 0.5) // overwrite: stays first
-        both.set("gain.gain", 0.8)
+        fun set(key: String, value: Double) {
+            klang[key] = value
+            ref[key] = value
+        }
 
-        both.klang.keys.toList() shouldBe listOf("delay.wet", "reverb.size", "body.wet", "gain.gain")
-        both.klang.keys.toList() shouldBe both.ref.keys.toList()
-        both.klang.values.toList() shouldBe both.ref.values.toList()
-        both.klang.entries.map { it.key to it.value } shouldBe both.ref.entries.map { it.key to it.value }
+        set("delay.wet", 0.3)
+        set("reverb.size", 6.3)
+        set("body.wet", 0.4)
+        set("delay.wet", 0.5) // overwrite: stays first
+        klang.delete("reverb.size")
+        ref.remove("reverb.size")
+        set("reverb.size", 7.0) // re-set: goes last
+        set("gain.gain", 0.8)
+
+        klang.pairs() shouldBe listOf("delay.wet" to 0.5, "body.wet" to 0.4, "reverb.size" to 7.0, "gain.gain" to 0.8)
+        klang.pairs() shouldBe ref.toList()
+    }
+
+    "delete answers the old value, or null for an absent key, and the key is gone" {
+        val map = klangMapOf("a" to 1.0, "b" to 2.5)
+
+        map.delete("a") shouldBe 1.0
+        map.delete("zz") shouldBe null
+        ("a" in map) shouldBe false
+        map["a"] shouldBe null
+        map.size shouldBe 1
+        map shouldBe klangMapOf("b" to 2.5)
     }
 
     "a copy is independent in both directions and keeps the order" {
@@ -68,169 +78,104 @@ class KlangMapSpec : StringSpec({
         val copy = original.copy()
 
         copy shouldBe original
-        copy.keys.toList() shouldBe listOf("a", "b")
+        copy.pairs() shouldBe listOf("a" to 1.0, "b" to 2.0)
 
         copy["c"] = 3.0
         copy["a"] = 9.0
         original["b"] = 8.0
 
-        original shouldBe mapOf("a" to 1.0, "b" to 8.0)
-        copy shouldBe mapOf("a" to 9.0, "b" to 2.0, "c" to 3.0)
+        original shouldBe klangMapOf("a" to 1.0, "b" to 8.0)
+        copy shouldBe klangMapOf("a" to 9.0, "b" to 2.0, "c" to 3.0)
     }
 
-    "equality with a LinkedHashMap and a HashMap holds in both directions, hashCode is Map's" {
-        val klang = klangMapOf("delay.wet" to 0.3, "reverb.size" to 6.3, "gain.gain" to 1.0)
-        val linked = linkedMapOf("delay.wet" to 0.3, "reverb.size" to 6.3, "gain.gain" to 1.0)
-        val hashed = hashMapOf("gain.gain" to 1.0, "delay.wet" to 0.3, "reverb.size" to 6.3)
+    "two KlangMaps compare by content in any order, both ways; hashCode is a Map's for the same content" {
+        val a = klangMapOf("delay.wet" to 0.3, "reverb.size" to 6.3, "gain.gain" to 1.0)
+        val b = klangMapOf("gain.gain" to 1.0, "delay.wet" to 0.3, "reverb.size" to 6.3)
 
-        (klang == linked) shouldBe true
-        (linked == klang) shouldBe true
-        (klang == hashed) shouldBe true
-        (hashed == klang) shouldBe true
-        (klang as Any == klang.copy()) shouldBe true
-        klang.hashCode() shouldBe linked.hashCode()
-        klang.hashCode() shouldBe hashed.hashCode()
+        (a == b) shouldBe true
+        (b == a) shouldBe true
+        a.hashCode() shouldBe b.hashCode()
+        a.hashCode() shouldBe linkedMapOf("delay.wet" to 0.3, "reverb.size" to 6.3, "gain.gain" to 1.0).hashCode()
     }
 
-    "a different value, a missing key or an extra key is unequal, as for LinkedHashMap" {
-        val klang = klangMapOf("a" to 1.0, "b" to 2.0)
-
-        (klang == mapOf("a" to 1.0, "b" to 2.5)) shouldBe false
-        (mapOf("a" to 1.0, "b" to 2.5) == klang) shouldBe false
-        (klang == mapOf("a" to 1.0)) shouldBe false
-        (klang == mapOf("a" to 1.0, "b" to 2.0, "c" to 3.0)) shouldBe false
-        (klang == mapOf("a" to 1.0, "c" to 2.0)) shouldBe false
-        (klang as Any == listOf(1.0, 2.0)) shouldBe false
-    }
-
-    "NaN and signed zeros compare as in a LinkedHashMap" {
-        val klang = klangMapOf("wet" to Double.NaN, "zero" to -0.0)
-        val ref = linkedMapOf("wet" to Double.NaN, "zero" to -0.0)
-        val positive = linkedMapOf("wet" to Double.NaN, "zero" to 0.0)
-
-        klang["wet"]!!.isNaN() shouldBe true
-        (klang == ref) shouldBe (ref == linkedMapOf("wet" to Double.NaN, "zero" to -0.0))
-        (klang == positive) shouldBe (ref == positive)
-        (positive == klang) shouldBe (positive == ref)
-        klang.hashCode() shouldBe ref.hashCode()
-    }
-
-    "containsValue answers as LinkedHashMap, NaN included" {
-        val klang = klangMapOf("a" to 1.0, "b" to Double.NaN)
-        val ref = linkedMapOf("a" to 1.0, "b" to Double.NaN)
-
-        klang.containsValue(1.0) shouldBe true
-        klang.containsValue(2.0) shouldBe false
-        klang.containsValue(Double.NaN) shouldBe ref.containsValue(Double.NaN)
-    }
-
-    "the entries, keys and values views agree with LinkedHashMap's" {
-        val klang = klangMapOf("x" to 1.0, "y" to 2.0, "z" to 3.0)
-        val ref = linkedMapOf("x" to 1.0, "y" to 2.0, "z" to 3.0)
-
-        klang.entries shouldBe ref.entries
-        klang.keys shouldBe ref.keys
-        klang.values.toList() shouldBe ref.values.toList()
-        klang.entries.size shouldBe 3
-        klang.keys.contains("y") shouldBe true
-        klang.values.contains(3.0) shouldBe true
-        klang.entries.first().hashCode() shouldBe ref.entries.first().hashCode()
-        (klang.entries.first() == ref.entries.first()) shouldBe true
-        (ref.entries.first() == klang.entries.first()) shouldBe true
-        (klang.entries.first() as Any == ref.entries.last()) shouldBe false
-        (klang.entries.first() as Any == linkedMapOf("x" to 9.0).entries.first()) shouldBe false
-        (klang.entries.first() as Any == linkedMapOf("q" to 1.0).entries.first()) shouldBe false
-        klang.entries.contains(ref.entries.last()) shouldBe true
-    }
-
-    "no reader can write through it: the map, its views and its entries refuse a write" {
+    "a different value, a missing key or an extra key is unequal, both ways" {
         val map = klangMapOf("a" to 1.0, "b" to 2.0)
 
-        // A cast to a mutable type fails (JS, and the JVM for the map itself) or the write throws (the JVM's views).
-        @Suppress("UNCHECKED_CAST")
-        val writes = listOf(
-            runCatching { (map as MutableMap<String, Double>).remove("a") },
-            runCatching { (map.keys as MutableSet<String>).remove("a") },
-            runCatching { (map.values as MutableCollection<Double>).remove(1.0) },
-            runCatching { (map.entries as MutableSet<Map.Entry<String, Double>>).clear() },
-            runCatching { (map.entries.first() as MutableMap.MutableEntry<String, Double>).setValue(9.0) },
-        )
-
-        writes.map { it.isFailure } shouldBe listOf(true, true, true, true, true)
-        map shouldBe mapOf("a" to 1.0, "b" to 2.0)
+        (map == klangMapOf("a" to 1.0, "b" to 2.5)) shouldBe false
+        (klangMapOf("a" to 1.0, "b" to 2.5) == map) shouldBe false
+        (map == klangMapOf("a" to 1.0)) shouldBe false
+        (klangMapOf("a" to 1.0) == map) shouldBe false
+        (map == klangMapOf("a" to 1.0, "b" to 2.0, "c" to 3.0)) shouldBe false
+        (map == klangMapOf("a" to 1.0, "c" to 2.0)) shouldBe false
     }
 
-    "an exhausted iterator throws NoSuchElementException" {
-        val iterator = klangMapOf("a" to 1.0).entries.iterator()
+    "it is not a Map: it never equals a stdlib map, even one with the same entries" {
+        val map = klangMapOf("a" to 1.0)
 
-        iterator.next()
-        iterator.hasNext() shouldBe false
-
-        val thrown = runCatching { iterator.next() }.exceptionOrNull()
-
-        (thrown is NoSuchElementException) shouldBe true
+        ((map as Any) is Map<*, *>) shouldBe false
+        ((map as Any) == linkedMapOf("a" to 1.0)) shouldBe false
+        ((linkedMapOf("a" to 1.0) as Any) == map) shouldBe false
     }
 
-    "toString prints as LinkedHashMap does" {
-        klangMapOf("a" to 1.5, "b" to 2.0).toString() shouldBe linkedMapOf("a" to 1.5, "b" to 2.0).toString()
-        KlangMap<Double>().toString() shouldBe linkedMapOf<String, Double>().toString()
+    "NaN equals NaN and -0.0 differs from 0.0, as in a LinkedHashMap" {
+        val map = klangMapOf("wet" to Double.NaN, "zero" to -0.0)
+
+        map["wet"]!!.isNaN() shouldBe true
+        (map == klangMapOf("wet" to Double.NaN, "zero" to -0.0)) shouldBe
+            (linkedMapOf("wet" to Double.NaN, "zero" to -0.0) == linkedMapOf("wet" to Double.NaN, "zero" to -0.0))
+        (map == klangMapOf("wet" to Double.NaN, "zero" to 0.0)) shouldBe
+            (linkedMapOf("wet" to Double.NaN, "zero" to -0.0) == linkedMapOf("wet" to Double.NaN, "zero" to 0.0))
+        map.hashCode() shouldBe linkedMapOf("wet" to Double.NaN, "zero" to -0.0).hashCode()
     }
 
-    "setAll and klangMapOf keep the source's order and overwrite in place" {
-        val map = klangMapOf("b" to 2.0, "a" to 1.0, "b" to 3.0)
-
-        map.keys.toList() shouldBe listOf("b", "a")
-        map["b"] shouldBe 3.0
-
-        map.setAll(linkedMapOf("c" to 4.0, "a" to 5.0))
-
-        map.keys.toList() shouldBe listOf("b", "a", "c")
-        map shouldBe mapOf("b" to 3.0, "a" to 5.0, "c" to 4.0)
-        klangMapOf(linkedMapOf("q" to 1.0, "p" to 2.0)).keys.toList() shouldBe listOf("q", "p")
-    }
-
-    "forEachEntry visits every entry once, in insertion order, as the entries view does" {
+    "forEachEntry visits every entry once, in insertion order" {
         val map = klangMapOf("delay.wet" to 0.3, "reverb.size" to 6.3, "gain.gain" to 1.0)
 
         map["delay.wet"] = 0.5
 
-        val seen = mutableListOf<Pair<String, Double>>()
-
-        map.forEachEntry { key, value -> seen.add(key to value) }
-
-        seen shouldBe listOf("delay.wet" to 0.5, "reverb.size" to 6.3, "gain.gain" to 1.0)
-        seen shouldBe map.entries.map { it.key to it.value }
-
-        val none = mutableListOf<String>()
-
-        KlangMap<Double>().forEachEntry { key, _ -> none.add(key) }
-
-        none shouldBe emptyList()
+        map.pairs() shouldBe listOf("delay.wet" to 0.5, "reverb.size" to 6.3, "gain.gain" to 1.0)
+        KlangMap<Double>().pairs() shouldBe emptyList()
     }
 
-    "setAll from another KlangMap overwrites in place, appends new keys in order, and shares nothing" {
+    "setAll overwrites in place, appends new keys in order, and shares nothing with its source" {
         val target = klangMapOf("b" to 2.0, "a" to 1.0)
         val source = klangMapOf("c" to 4.0, "a" to 5.0)
 
         target.setAll(source)
 
-        target.keys.toList() shouldBe listOf("b", "a", "c")
-        target shouldBe mapOf("b" to 2.0, "a" to 5.0, "c" to 4.0)
+        target.pairs() shouldBe listOf("b" to 2.0, "a" to 5.0, "c" to 4.0)
 
         source["d"] = 6.0
 
-        target.containsKey("d") shouldBe false
-        source.keys.toList() shouldBe listOf("c", "a", "d")
+        ("d" in target) shouldBe false
+        source.pairs() shouldBe listOf("c" to 4.0, "a" to 5.0, "d" to 6.0)
     }
 
-    "two KlangMaps compare by content, both ways" {
-        val a = klangMapOf("x" to 1.0, "y" to 2.0)
+    "toString prints as Kotlin's own map of the same entries does" {
+        klangMapOf("a" to 1.5, "b" to 2.0).toString() shouldBe linkedMapOf("a" to 1.5, "b" to 2.0).toString()
+        KlangMap<Double>().toString() shouldBe linkedMapOf<String, Double>().toString()
+    }
 
-        (a == klangMapOf("y" to 2.0, "x" to 1.0)) shouldBe true
-        (a == klangMapOf("x" to 1.0, "y" to 2.5)) shouldBe false
-        (klangMapOf("x" to 1.0, "y" to 2.5) == a) shouldBe false
-        (a == klangMapOf("x" to 1.0)) shouldBe false
-        a.hashCode() shouldBe klangMapOf("y" to 2.0, "x" to 1.0).hashCode()
+    "klangMapOf keeps the order and a later duplicate overwrites in place" {
+        val map = klangMapOf("b" to 2.0, "a" to 1.0, "b" to 3.0)
+
+        map.pairs() shouldBe listOf("b" to 3.0, "a" to 1.0)
+    }
+
+    "the interop extensions copy in order, both ways, and share nothing" {
+        val klang = klangMapOf("q" to 1.0, "p" to 2.0)
+        val plain = klang.toMap()
+
+        plain shouldBe linkedMapOf("q" to 1.0, "p" to 2.0)
+        plain.keys.toList() shouldBe listOf("q", "p")
+
+        val back = linkedMapOf("y" to 3.0, "x" to 4.0).toKlangMap()
+
+        back.pairs() shouldBe listOf("y" to 3.0, "x" to 4.0)
+
+        klang["r"] = 5.0
+
+        plain.containsKey("r") shouldBe false
     }
 
     "a null value is stored, contained and read as null" {
@@ -238,10 +183,19 @@ class KlangMapSpec : StringSpec({
 
         map["unset"] = null
 
-        map.containsKey("unset") shouldBe true
+        ("unset" in map) shouldBe true
         map["unset"] shouldBe null
         map.size shouldBe 1
-        (map == mapOf<String, Double?>("unset" to null)) shouldBe true
-        (map == mapOf<String, Double?>("other" to null)) shouldBe false
+        (map == klangMapOf<Double?>("unset" to null)) shouldBe true
+        (map == klangMapOf<Double?>("other" to null)) shouldBe false
+    }
+
+    "a capacity hint gives an empty map that works as any other, a negative hint included" {
+        val map = KlangMap<Double>(32)
+
+        map.isEmpty() shouldBe true
+        map["a"] = 1.0
+        map shouldBe klangMapOf("a" to 1.0)
+        KlangMap<Double>(-5).also { it["b"] = 2.0 } shouldBe klangMapOf("b" to 2.0)
     }
 })

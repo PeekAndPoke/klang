@@ -45,6 +45,7 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * One row per stage of the resolver contract (`docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7): what a chain's
@@ -165,12 +166,12 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        chain.applyParams(mapOf("reverb.lowpass" to 3000.0))
+        chain.applyParams(klangMapOf("reverb.lowpass" to 3000.0))
 
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().lowpass shouldBe 3000.0
 
         // A new map instance: the chain re-resolves only when the param state changes.
-        chain.applyParams(mapOf("reverb.lowpass" to SLOT_UNSET))
+        chain.applyParams(klangMapOf("reverb.lowpass" to SLOT_UNSET))
 
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().lowpass.shouldBeNull()
     }
@@ -216,7 +217,7 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        chain.applyParams(mapOf("reverb.wet" to 0.0, "reverb.size" to 6.0))
+        chain.applyParams(klangMapOf("reverb.wet" to 0.0, "reverb.size" to 6.0))
 
         val unit = chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
 
@@ -238,7 +239,7 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        untouched.applyParams(mapOf("reverb.size" to 6.0))
+        untouched.applyParams(klangMapOf("reverb.size" to 6.0))
 
         untouched.reverb.shouldNotBeNull().reverb.shouldBeNull()
     }
@@ -258,7 +259,7 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        chain.applyParams(mapOf("delay.wet" to 0.0, "delay.time" to 0.25, "delay.feedback" to 0.3))
+        chain.applyParams(klangMapOf("delay.wet" to 0.0, "delay.time" to 0.25, "delay.feedback" to 0.3))
 
         chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().time shouldBe 0.25
 
@@ -276,7 +277,7 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        untouched.applyParams(mapOf("delay.time" to 0.25, "delay.feedback" to 0.3))
+        untouched.applyParams(klangMapOf("delay.time" to 0.25, "delay.feedback" to 0.3))
 
         untouched.delay.shouldNotBeNull().delayLine.shouldBeNull()
     }
@@ -297,7 +298,7 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        chain.applyParams(mapOf("reverb.wet" to -0.5, "reverb.size" to 6.0))
+        chain.applyParams(klangMapOf("reverb.wet" to -0.5, "reverb.size" to 6.0))
 
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
     }
@@ -324,7 +325,7 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        chain.applyParams(mapOf("reverb.wet" to SLOT_UNSET, "reverb.size" to 6.0))
+        chain.applyParams(klangMapOf("reverb.wet" to SLOT_UNSET, "reverb.size" to 6.0))
 
         chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
     }
@@ -353,7 +354,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // Two answers, both written down: the writer's `Reverb.normalizeSize` reads NaN as 0.0 (off)
         // and CLAMPS +Infinity to 1.0, where a master stage used to substitute the shared constant.
         fun classicRoom(size: Double) = declared(*KatalystDsl.classic.stages.toTypedArray())
-            .also { it.applyParams(mapOf("reverb.wet" to 0.4, "reverb.size" to size)) }
+            .also { it.applyParams(klangMapOf("reverb.wet" to 0.4, "reverb.size" to size)) }
             .reverb.shouldNotBeNull().reverb
 
         classicRoom(Double.NaN).shouldBeNull()
@@ -365,7 +366,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // writes one slot, the classic chain's own `delay.time` is the untouched 0.0, and nothing runs.
         val chain = declared(*KatalystDsl.classic.stages.toTypedArray())
 
-        chain.applyParams(mapOf("delay.wet" to 0.4))
+        chain.applyParams(klangMapOf("delay.wet" to 0.4))
 
         chain.delay.shouldNotBeNull().delayLine.shouldBeNull()
     }
@@ -535,11 +536,11 @@ class KatalystSlotResolverSpec : StringSpec({
         // A knob resolved every block (katalyst knob expressions) must not allocate a settings object per block.
         val comp = compressorWriter(KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames))
 
-        comp.resolve(mapOf("compressor.threshold" to -10.0))
+        comp.resolve(klangMapOf("compressor.threshold" to -10.0))
 
         val held = comp.handed().shouldNotBeNull()
 
-        comp.resolve(mapOf("compressor.threshold" to -30.0, "compressor.ratio" to 6.0))
+        comp.resolve(klangMapOf("compressor.threshold" to -30.0, "compressor.ratio" to 6.0))
         comp.handed() shouldBeSameInstanceAs held
         held.thresholdDb shouldBe -30.0
         held.ratio shouldBe 6.0
@@ -547,27 +548,27 @@ class KatalystSlotResolverSpec : StringSpec({
         // All five unset is off, and the next resolve that sets one hands the same holder again.
         comp.resolve(null)
         comp.handed().shouldBeNull()
-        comp.resolve(mapOf("compressor.knee" to 3.0))
+        comp.resolve(klangMapOf("compressor.knee" to 3.0))
         comp.handed() shouldBeSameInstanceAs held
         held.kneeDb shouldBe 3.0
         held.thresholdDb shouldBe COMPRESSOR_THRESHOLD_DB
 
         val duck = duckWriter(KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames))
 
-        duck.resolve(mapOf("duck.orbit" to 2.0, "duck.depth" to 0.6))
+        duck.resolve(klangMapOf("duck.orbit" to 2.0, "duck.depth" to 0.6))
         duck.declared shouldBe true
 
         val heldDuck = duck.handed().shouldNotBeNull()
 
-        duck.resolve(mapOf("duck.orbit" to 3.0, "duck.depth" to 0.3))
+        duck.resolve(klangMapOf("duck.orbit" to 3.0, "duck.depth" to 0.3))
         duck.handed() shouldBeSameInstanceAs heldDuck
         heldDuck.cylinderId shouldBe 3
         heldDuck.depth shouldBe 0.3
 
-        duck.resolve(mapOf("duck.orbit" to 3.0))
+        duck.resolve(klangMapOf("duck.orbit" to 3.0))
         duck.declared shouldBe false
         duck.handed().shouldBeNull()
-        duck.resolve(mapOf("duck.orbit" to 1.0, "duck.depth" to 0.5))
+        duck.resolve(klangMapOf("duck.orbit" to 1.0, "duck.depth" to 0.5))
         duck.declared shouldBe true
         duck.handed() shouldBeSameInstanceAs heldDuck
     }
@@ -577,7 +578,7 @@ class KatalystSlotResolverSpec : StringSpec({
         val writer = compressorWriter(fx)
         val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
 
-        writer.resolve(mapOf("compressor.threshold" to -24.0))
+        writer.resolve(klangMapOf("compressor.threshold" to -24.0))
         writer.apply()
         fx.process(ctx)
 
@@ -585,17 +586,17 @@ class KatalystSlotResolverSpec : StringSpec({
         val comp = fx.compressor.shouldNotBeNull()
 
         comp.releaseSeconds = 0.77
-        writer.resolve(mapOf("compressor.threshold" to -24.0))
+        writer.resolve(klangMapOf("compressor.threshold" to -24.0))
         writer.apply()
         comp.releaseSeconds shouldBe 0.77
 
         // ... and one whose unset knob is unset again (NaN both times): the writer's constant both times, no change.
-        writer.resolve(mapOf("compressor.threshold" to -24.0, "compressor.knee" to Double.NaN))
+        writer.resolve(klangMapOf("compressor.threshold" to -24.0, "compressor.knee" to Double.NaN))
         writer.apply()
         comp.releaseSeconds shouldBe 0.77
 
         // A changed value reaches the instance, and the write is all five.
-        writer.resolve(mapOf("compressor.threshold" to -30.0))
+        writer.resolve(klangMapOf("compressor.threshold" to -30.0))
         writer.apply()
         comp.thresholdDb shouldBe -30.0
         comp.releaseSeconds shouldBe COMPRESSOR_RELEASE_SECONDS
@@ -605,11 +606,11 @@ class KatalystSlotResolverSpec : StringSpec({
         val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = compressorWriter(fx)
 
-        writer.resolve(mapOf("compressor.threshold" to -30.0, "compressor.ratio" to 6.0))
+        writer.resolve(klangMapOf("compressor.threshold" to -30.0, "compressor.ratio" to 6.0))
         writer.apply()
         fx.compressor.shouldNotBeNull().thresholdDb shouldBe -30.0
 
-        writer.resolve(mapOf("compressor.threshold" to Double.NaN, "compressor.ratio" to 6.0))
+        writer.resolve(klangMapOf("compressor.threshold" to Double.NaN, "compressor.ratio" to 6.0))
         writer.apply()
         fx.compressor.shouldNotBeNull().thresholdDb shouldBe COMPRESSOR_THRESHOLD_DB
     }
@@ -618,14 +619,14 @@ class KatalystSlotResolverSpec : StringSpec({
         val fx = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = duckWriter(fx)
 
-        writer.resolve(mapOf("duck.orbit" to 2.0, "duck.depth" to 0.6, "duck.attack" to 0.5))
+        writer.resolve(klangMapOf("duck.orbit" to 2.0, "duck.depth" to 0.6, "duck.attack" to 0.5))
         writer.apply()
 
         val ducking = fx.ducking.shouldNotBeNull()
 
         ducking.attackSeconds shouldBe 0.5
 
-        writer.resolve(mapOf("duck.orbit" to 3.0, "duck.depth" to 0.3, "duck.attack" to Double.NaN))
+        writer.resolve(klangMapOf("duck.orbit" to 3.0, "duck.depth" to 0.3, "duck.attack" to Double.NaN))
         writer.apply()
         fx.ducking shouldBeSameInstanceAs ducking
         fx.duckCylinderId shouldBe 3
@@ -795,7 +796,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
         // The doors write index plus wet, and the stage comes on with THAT material's modes.
         chain.applyParams(
-            mapOf(
+            klangMapOf(
                 "body.material" to BodyMaterials.indexOf("wood"),
                 "body.wet" to 0.3,
                 "vowel.vowel" to VowelBands.indexOf("bass:a"),
@@ -810,7 +811,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
         // A moved index re-resolves to the other box, and index 0 (`none`) switches it back off.
         chain.applyParams(
-            mapOf(
+            klangMapOf(
                 "body.material" to BodyMaterials.indexOf("glass"),
                 "body.wet" to 0.3,
                 "vowel.vowel" to 0.0,
@@ -839,7 +840,7 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        val first = mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 0.3)
+        val first = klangMapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 0.3)
 
         chain.applyParams(first)
         chain.resolveCount shouldBe 1
@@ -853,7 +854,7 @@ class KatalystSlotResolverSpec : StringSpec({
         chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("wood"))
 
         // A DIFFERENT map with a different index does, and lands on the other box.
-        chain.applyParams(mapOf("body.material" to BodyMaterials.indexOf("bell"), "body.wet" to 0.3))
+        chain.applyParams(klangMapOf("body.material" to BodyMaterials.indexOf("bell"), "body.wet" to 0.3))
         chain.resolveCount shouldBe 2
         chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("bell"))
     }

@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.pitchMod
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.vibrato
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sin
@@ -87,7 +88,7 @@ class FmModulatorTopologySpec : StringSpec({
             }
         }
         val ctx = IgniteContext(sampleRate = sampleRate, voiceDurationFrames = 2000, gateEndFrame = 2000, scratchBuffers = ScratchBuffers(blockFrames), random = Random(3))
-        val built = dsl.buildExciter(ignitorParams = bag, random = ctx.random, freqHz = note, sampleRate = sampleRate, sampleSource = probe).ignitor
+        val built = dsl.buildExciter(ignitorParams = bag.toKlangMap(), random = ctx.random, freqHz = note, sampleRate = sampleRate, sampleSource = probe).ignitor
         val buffer = AudioBuffer(blockFrames)
 
         for (b in 0 until blocks) {

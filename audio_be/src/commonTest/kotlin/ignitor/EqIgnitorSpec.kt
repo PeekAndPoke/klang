@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -103,8 +104,8 @@ class EqIgnitorSpec : StringSpec({
         freqs: List<Double> = listOf(220.0),
     ) {
         for (f in freqs) {
-            val a = chained.toExciter(ignitorParams, random = testRandom)
-            val b = fused.toExciter(ignitorParams, random = testRandom)
+            val a = chained.toExciter(ignitorParams?.toKlangMap(), random = testRandom)
+            val b = fused.toExciter(ignitorParams?.toKlangMap(), random = testRandom)
             val bufA = AudioBuffer(blockFrames)
             val bufB = AudioBuffer(blockFrames)
             val ca = ctx()

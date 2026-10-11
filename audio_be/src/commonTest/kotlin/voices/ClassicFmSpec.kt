@@ -15,6 +15,8 @@ import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
@@ -224,7 +226,7 @@ class ClassicFmSpec : StringSpec({
             withClue("depth $value") {
                 renderPitchRatios(
                     doors = DoorFields(),
-                    data = VoiceData.empty.copy(ignitorParams = mapOf(key to value)),
+                    data = VoiceData.empty.copy(ignitorParams = klangMapOf(key to value)),
                     frames = frames,
                     gateFrames = 2000,
                 ).toList() shouldBe bare.toList()
@@ -239,7 +241,7 @@ class ClassicFmSpec : StringSpec({
         val depth = (s.depth as IgnitorDsl.Param).name to 300.0
         val reference = renderPitchRatios(
             doors = DoorFields(),
-            data = VoiceData.empty.copy(ignitorParams = mapOf(depth)),
+            data = VoiceData.empty.copy(ignitorParams = klangMapOf(depth)),
             frames = frames,
             gateFrames = 2000,
         )
@@ -253,7 +255,7 @@ class ClassicFmSpec : StringSpec({
                 withClue("$name $value") {
                     renderPitchRatios(
                         doors = DoorFields(),
-                        data = VoiceData.empty.copy(ignitorParams = mapOf(depth, name to value)),
+                        data = VoiceData.empty.copy(ignitorParams = klangMapOf(depth, name to value)),
                         frames = frames,
                         gateFrames = 2000,
                     ).toList() shouldBe reference.toList()
@@ -266,7 +268,7 @@ class ClassicFmSpec : StringSpec({
 
     /** The class the root of [dsl]'s build hands the source, built with [bag]: a pitched source under a built pitch stage is a `ModApplyingIgnitor`. */
     fun shapeOf(dsl: IgnitorDsl, bag: Map<String, Double>): Any {
-        val built: Ignitor = dsl.buildExciter(ignitorParams = bag, random = Random(7), freqHz = 220.0, sampleRate = sampleRate).ignitor
+        val built: Ignitor = dsl.buildExciter(ignitorParams = bag.toKlangMap(), random = Random(7), freqHz = 220.0, sampleRate = sampleRate).ignitor
 
         return (built as MemoizingIgnitor).inner::class
     }

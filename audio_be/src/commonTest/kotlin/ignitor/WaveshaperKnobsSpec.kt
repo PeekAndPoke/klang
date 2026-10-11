@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.tremolo
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
 
 /**
@@ -79,7 +80,7 @@ class WaveshaperKnobsSpec : StringSpec({
     /** [dsl] through the DSL runtime, ONE `Random` for the build and the render, as a voice has. */
     fun render(dsl: IgnitorDsl, params: Map<String, Double>? = null): DoubleArray {
         val rng = seed()
-        val ignitor = dsl.buildExciter(ignitorParams = params, random = rng, freqHz = freqHz, sampleRate = sampleRate).ignitor
+        val ignitor = dsl.buildExciter(ignitorParams = params?.toKlangMap(), random = rng, freqHz = freqHz, sampleRate = sampleRate).ignitor
 
         return renderBuilt(ignitor, rng)
     }
@@ -271,7 +272,7 @@ class WaveshaperKnobsSpec : StringSpec({
 
     "gatesOutput: a built tremolo on the spine reports it; a gated one, a parameter-position one and none do not" {
         fun IgnitorDsl.gates(params: Map<String, Double>? = null): Boolean =
-            buildExciter(ignitorParams = params, random = seed(), freqHz = freqHz, sampleRate = sampleRate).gatesOutput
+            buildExciter(ignitorParams = params?.toKlangMap(), random = seed(), freqHz = freqHz, sampleRate = sampleRate).gatesOutput
 
         val source = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
 

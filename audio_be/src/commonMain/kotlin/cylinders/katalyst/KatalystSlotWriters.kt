@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.KlangMap
 
 // The KatalystSlotWriter of every DECLARED stage kind: one class per stage, holding that stage's
 // KatalystKnobs and whatever composite its effect wants written.
@@ -62,7 +63,7 @@ internal class KatalystResonatorWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         index.resolve(params)
         wet.resolve(params)
         floor.resolve(params)
@@ -102,7 +103,7 @@ internal class KatalystDelayWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         wet.resolve(params)
         time.resolve(params)
         feedback.resolve(params)
@@ -143,7 +144,7 @@ internal class KatalystReverbWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         wet.resolve(params)
         size.resolve(params)
         lowpass.resolve(params)
@@ -197,7 +198,7 @@ internal class KatalystPhaserWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         wet.resolve(params)
         rate.resolve(params)
         center.resolve(params)
@@ -252,7 +253,7 @@ internal class KatalystCompressorWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         threshold.resolve(params)
         ratio.resolve(params)
         knee.resolve(params)
@@ -317,7 +318,7 @@ internal class KatalystEqWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         for (i in knobs.indices) {
             knobs[i]?.resolve(params)
         }
@@ -350,7 +351,7 @@ internal class KatalystGainWriter(
 
     private var factor: Double = guarded()
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         gain.resolve(params)
         factor = guarded()
     }
@@ -376,7 +377,7 @@ internal class KatalystArithmeticWriter(
     private val operand: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         operand.resolve(params)
     }
 
@@ -402,7 +403,7 @@ internal class KatalystDistortWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         amount.resolve(params)
         fill()
     }
@@ -448,7 +449,7 @@ internal class KatalystDuckWriter(
         fill()
     }
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         orbit.resolve(params)
         depth.resolve(params)
         attack.resolve(params)
@@ -494,9 +495,9 @@ internal class KatalystParallelWriter(
     private val fx: KatalystParallelEffect,
 ) : KatalystSlotWriter {
 
-    private var params: Map<String, Double>? = null
+    private var params: KlangMap<Double>? = null
 
-    override fun resolve(params: Map<String, Double>?) {
+    override fun resolve(params: KlangMap<Double>?) {
         this.params = params
 
         for (i in fx.branches.indices) {

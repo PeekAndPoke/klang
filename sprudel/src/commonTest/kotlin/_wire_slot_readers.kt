@@ -7,6 +7,7 @@ package io.peekandpoke.klang.sprudel
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.common.infra.toMap
 
 /** TEST ONLY. A filter's cutoff envelope, read back from its slot keys by [wireFilters]. */
 data class WireFilterEnv(
@@ -41,7 +42,7 @@ sealed interface WireFilter {
  * writing a wrong key fails here instead of agreeing with itself.
  */
 fun VoiceData.wireFilters(): List<WireFilter> {
-    val slots = ignitorParams ?: emptyMap()
+    val slots = ignitorParams?.toMap() ?: emptyMap()
 
     fun curve(door: String, stage: String): AdsrCurve? =
         slots["${door}Curves.$stage"]?.let { AdsrCurve.entries[it.toInt()] }

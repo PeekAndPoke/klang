@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
@@ -260,7 +261,7 @@ class KatalystInsertFeedSpec : StringSpec({
         // Through the real voice and cylinder: without the slots the orbit rents nothing and
         // sounds different. Until step 5b-3 this was the engagement control for a row showing that
         // the voice's delay and reverb FIELDS reached nothing; the fields left in that step.
-        val (wet, _) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames, katalystParams = slots))
+        val (wet, _) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames, katalystParams = slots.toKlangMap()))
         val (dry, orbit) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames))
 
         withClue("no ring and no network without the slots") {

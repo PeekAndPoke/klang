@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -426,7 +427,7 @@ class IgnitorRegistryTest : StringSpec({
         val registry = IgnitorRegistry().apply { registerDefaults() }
 
         fun rootOf(bag: Map<String, Double>): Ignitor {
-            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "saw", ignitorParams = bag)
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "saw", ignitorParams = bag.toKlangMap())
             val root = registry.createExciter("saw", data, freqHz = 220.0, random = testRandom)?.ignitor ?: error("no exciter")
 
             return (root as MemoizingIgnitor).inner

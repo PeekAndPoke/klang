@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.common.infra.toKlangMap
 
 /**
  * The chain swap of a cylinder is a state machine whose transitions are POINTER SWAPS between the
@@ -55,7 +56,7 @@ class ChainSwapStateIdentitySpec : StringSpec({
             )
         )
         rig.registry.register("ducker", ducker)
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState)
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState.toKlangMap())
 
         // Everything here compares with `===` (`shouldBeSameInstanceAs`): a state written one day as
         // a `data class` would make two fresh instances EQUAL and keep an `equals` compare green

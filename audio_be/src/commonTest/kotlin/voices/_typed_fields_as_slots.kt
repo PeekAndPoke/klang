@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.common.infra.toKlangMap
+import io.peekandpoke.klang.common.infra.toMap
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
@@ -112,7 +114,7 @@ sealed interface DoorFilter {
  * travel as their catalogue index, flags as 1.0 or 0.0.
  */
 fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
-    val out = ignitorParams?.toMutableMap() ?: mutableMapOf()
+    val out = ignitorParams?.toMap()?.toMutableMap() ?: mutableMapOf()
     val s = IgnitorDsl.Slots
 
     fun put(slot: IgnitorDsl, value: Double?) {
@@ -218,5 +220,5 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
     put(s.sample.speed, doors.speed)
     put(s.sample.loop, doors.loop?.let { if (it) 1.0 else 0.0 })
 
-    return copy(ignitorParams = out.takeIf { it.isNotEmpty() })
+    return copy(ignitorParams = out.takeIf { it.isNotEmpty() }?.toKlangMap())
 }

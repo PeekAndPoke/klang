@@ -30,6 +30,8 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 
 /**
@@ -357,7 +359,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "a swap on a SOUNDING orbit ramps per sample: no step, and the level travels" {
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = squashing())
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = squashing().toKlangMap())
 
         // The compressor's envelope settles on the probe, so the level before the swap is a plateau.
         rig.render(blocks = 60, level = probe)
@@ -381,7 +383,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "the level travels through the middle instead of teleporting" {
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = squashing())
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = squashing().toKlangMap())
 
         rig.render(blocks = 60, level = probe)
         val before = peakOf(rig.block(level = probe))
@@ -399,7 +401,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
         // A wet room on the classic chain, fed from the orbit mix by the owner's wet.
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0).toKlangMap())
 
         // The room is loud, and the mix keeps feeding it right across the swap: the leaving
         // chain's feed is ramped with its dry (both come from the one ramped mix it is handed), or
@@ -430,7 +432,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = echoState(wet = 0.5, time = 0.1, feedback = 0.5) + roomState(wet = 0.5, size = 3.0),
+            katalystParams = (echoState(wet = 0.5, time = 0.1, feedback = 0.5) + roomState(wet = 0.5, size = 3.0)).toKlangMap(),
         )
 
         // Long enough for the DC probe's own echo onsets to die away (the first echo of a constant
@@ -462,7 +464,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // that activates on a constant, crossfade or not).
         rig.registry.register("wet", wetChain(time = 0.25, size = 6.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = roomState(size = 6.0) + echoState(time = 0.02, feedback = 0.5),
+            katalystParams = (roomState(size = 6.0) + echoState(time = 0.02, feedback = 0.5)).toKlangMap(),
         )
 
         // Long enough for the outgoing chain's room and echo to reach their steady level.
@@ -520,7 +522,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // envelope, what governs it is the arriving chain.
         rig.registry.register("ducked", duckChain(depth = 0.9, attack = 0.05, orbit = 5.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 3.0, depth = 0.4, attack = 0.2),
+            katalystParams = duckState(orbit = 3.0, depth = 0.4, attack = 0.2).toKlangMap(),
         )
 
         // The sidechain pumps, then stops: the envelope is now recovering, slowly, which is the
@@ -561,7 +563,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("ducked-b", slotDuckChain())
         // katp-ONLY: no `ducking` field at all, so nothing but the chain's own slots can say that
         // this orbit ducks, and `beginFade`'s resolve is the only thing that can know it in time.
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = state)
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = state.toKlangMap())
 
         rig.cylinder.requestChain("ducked-a")
 
@@ -605,7 +607,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("no-duck", noDuckChain())
         rig.registry.register("slot-room", roomSlotChain())
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 3.0, depth = 0.9) + mapOf("reverb.size" to 9.0),
+            katalystParams = (duckState(orbit = 3.0, depth = 0.9) + mapOf("reverb.size" to 9.0)).toKlangMap(),
         )
 
         // The orbit starts on a chain with no duck stage, so the only duck in this row is the
@@ -640,7 +642,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // Nothing ducks the orbit before the swap, and the trigger is already sounding. Since step
         // 5b-1 that takes a duck-free chain: the born-with one reads the owner's `duck.*` slots
         // like any other, so it would duck before the swap and there would be no edge to ramp.
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = duckState(orbit = 0.0, depth = 0.8))
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = duckState(orbit = 0.0, depth = 0.8).toKlangMap())
         rig.cylinder.requestChain("no-duck")
 
         rig.render(blocks = 10, level = probe, sidechainLevel = 0.5)
@@ -751,7 +753,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("dry", dryChain(1.0))
         // A fast duck, so the envelope's own release can follow the depth ramp down.
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 0.0, depth = 0.8, attack = 0.005),
+            katalystParams = duckState(orbit = 0.0, depth = 0.8, attack = 0.005).toKlangMap(),
         )
 
         // A steady trigger: the reduction is in force and stays there until the depth is ramped.
@@ -829,7 +831,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // `duck.depth` and the voice's own `ducking` field says nothing. The correction used to be
         // gated on that field, which skipped exactly this voice.
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 0.0, depth = 0.8),
+            katalystParams = duckState(orbit = 0.0, depth = 0.8).toKlangMap(),
         )
 
         val across = last.after(rig.render(blocks = fadeBlocks + 6, level = probe, sidechainLevel = 0.5))
@@ -863,7 +865,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val ramped = rig.render(blocks = 3, level = probe, sidechainLevel = 0.5, owned = false)
 
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 0.0, depth = 0.8),
+            katalystParams = duckState(orbit = 0.0, depth = 0.8).toKlangMap(),
         )
 
         // Render while the duck that is fading OUT still governs the orbit, which is exactly the
@@ -1010,7 +1012,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "the outgoing chain's tail is drained, not cut, and its unit goes back when it is done" {
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0).toKlangMap())
 
         rig.render(blocks = 200, level = probe)
         rig.cylinder.requestChain("dry")
@@ -1067,7 +1069,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         for (pre in 0 until 36 step 2) {
             val rig = Rig()
             rig.registry.register("dry", dryChain(1.0))
-            rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = echoState(wet = 1.0, time = 0.1, feedback = 0.7))
+            rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = echoState(wet = 1.0, time = 0.1, feedback = 0.7).toKlangMap())
 
             rig.render(blocks = 4, level = probe)
             rig.render(blocks = pre)
@@ -1075,7 +1077,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             val line = rig.cylinder.delay.shouldNotBeNull().delayLine.shouldNotBeNull()
 
             rig.cylinder.requestChain("dry")
-            rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = echoState(wet = 1.0, time = 0.1, feedback = 0.0))
+            rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = echoState(wet = 1.0, time = 0.1, feedback = 0.0).toKlangMap())
             rig.skipBlock()
 
             var retiredAfter = -1
@@ -1106,7 +1108,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val rig = Rig()
         rig.registry.register("room", roomChain(6.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = echoState(time = 0.2, feedback = 0.5),
+            katalystParams = echoState(time = 0.2, feedback = 0.5).toKlangMap(),
         )
 
         rig.render(blocks = 4, level = probe)
@@ -1122,7 +1124,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         // A new owner takes the orbit mid-fade (the previous one missed a block and lapsed).
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = echoState(time = 0.35, feedback = 0.5),
+            katalystParams = echoState(time = 0.35, feedback = 0.5).toKlangMap(),
         )
         rig.skipBlock()
         rig.block(level = probe)
@@ -1141,7 +1143,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // A third owner, while the outgoing chain only rings out: a live config would take its
         // delay back out of the Draining state and point it at a live feed again.
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = echoState(time = 0.05, feedback = 0.5),
+            katalystParams = echoState(time = 0.05, feedback = 0.5).toKlangMap(),
         )
         rig.skipBlock()
         rig.block(level = probe)
@@ -1211,7 +1213,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "tryDeactivate refuses while a chain fades or drains" {
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0).toKlangMap())
 
         rig.render(blocks = 200, level = probe)
         rig.cylinder.requestChain("dry")
@@ -1260,7 +1262,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val rig = Rig()
         rig.registry.register("room", roomChain(6.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = roomState(size = 6.0) + echoState(time = 0.2, feedback = 0.5),
+            katalystParams = (roomState(size = 6.0) + echoState(time = 0.2, feedback = 0.5)).toKlangMap(),
         )
 
         rig.render(blocks = 20, level = probe)
@@ -1294,7 +1296,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "retire ends a running drain and strands no unit" {
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0).toKlangMap())
 
         rig.render(blocks = 200, level = probe)
         rig.cylinder.requestChain("dry")
@@ -1317,7 +1319,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // (the effect latches the refusal, see `KatalystReverbEffect`).
         val rig = Rig(reverbs = ReverbUnits(sampleRate, maxIdle = 0, allocate = { null }))
         rig.registry.register("room", roomChain(6.0))
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0).toKlangMap())
 
         rig.block(level = probe)
 

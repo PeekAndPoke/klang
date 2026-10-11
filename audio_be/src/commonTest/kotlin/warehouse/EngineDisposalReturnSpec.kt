@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.warehouse
 
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
@@ -73,7 +74,7 @@ class EngineDisposalReturnSpec : StringSpec({
             sound = "sine", freqHz = 440.0, cylinder = cylinder,
             // The orbit's stages read the SLOT state (Katalyst step 5b-1), the amounts included since
             // step 5b-2. What a `delay(...)` / `reverb(...)` call writes.
-            katalystParams = mapOf(
+            katalystParams = klangMapOf(
                 "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.0, "delay.cap" to 1.0,
                 // AUTHORED 0 to 10, the scale the old `VoiceData.reverbSize` was already on: the number
                 // is unchanged from the fixture this replaced.

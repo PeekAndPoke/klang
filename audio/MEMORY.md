@@ -251,8 +251,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   every Kotlin/JS `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte function context on V8 inside
   the stdlib's `hashCode` (27 per new orbit map on the classic chain, 24 to 76 per classic voice build). The decoder,
   the warm-up and the sample-envelope merge make `KlangMap`s; the steady block path makes no lookup at all. Read it
-  by key, and walk it with `forEachEntry` (or `copy`/`setAll`), never through `entries` (about 110 B per entry on JS):
-  `audio/ref/performance.md`. Sprudel's `ParamBag` keeps its storage in one too, and so does the sound registry, whose
+  by key, and walk it with `forEachEntry` (or `copy`/`setAll`): it is not a Kotlin `Map` (maintainer, 2026-10-11), so
+  it has no `entries` (about 110 B per entry on JS), and the wire codec's generator refuses a stdlib `Map` field:
+  `audio/ref/performance.md`. `VoiceData`'s two slot maps, sprudel's `ParamBag` and the dispatcher's `engines` are
+  `KlangMap`s too, and so is the sound registry, whose
   lookups lowercase a name only when it has a character that could change (V8's `toLowerCase` allocates about 24 B
   even when nothing changes, at every length measured).
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
@@ -360,6 +362,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-11 Engine follow-up 2, step 5: `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s slot maps and
+  the dispatcher's `engines` are `KlangMap`s, the codec generator refuses a stdlib `Map` field; the wire bytes, the
+  schema hash and the engine bit for bit unchanged, corpus identical; `E-C-n1` re-set to 13,068, `E-duck` to 152
+  (its V8 tail, item 38): `docs/tasks/engine-follow-ups.md` item 2
 - 2026-10-11 Engine follow-up 2, step 3: the per-note lookups: the sound registry on `KlangMap`s, its name lowercased
   only when a character could change, `engineFor` one lookup; a synth note about 450 B lighter on V8, bit for bit,
   corpus identical; the alloc case `E-C-n1` (V8 13,100, JVM 6,628): `docs/tasks/engine-follow-ups.md` item 2

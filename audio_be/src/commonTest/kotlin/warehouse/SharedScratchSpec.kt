@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_bridge.crush
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.tremolo
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 
 /**
@@ -150,7 +151,7 @@ class SharedScratchSpec : StringSpec({
         engine.scheduler.scheduleVoice(
             ScheduledVoice(
                 playbackId = "vib", startTime = 0.0, gateEndTime = 1.0,
-                data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, ignitorParams = mapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3)),
+                data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, ignitorParams = klangMapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3)),
                 playbackStartTime = 0.0,
             )
         )

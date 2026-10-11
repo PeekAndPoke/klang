@@ -20,6 +20,8 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 
 /**
  * [KatalystChainBuilder] is the one mapping from a declared stage to the effect the engine runs
@@ -165,7 +167,7 @@ class KatalystChainBuilderSpec : StringSpec({
 
         val params = mapOf("duck.orbit" to 3.0, "duck.depth" to 0.7, "duck.attack" to 0.02)
 
-        chain.applyParams(params)
+        chain.applyParams(params.toKlangMap())
 
         // The surviving writer is bound to the instance the chain exposes and processes.
         duck.duckCylinderId shouldBe 3
@@ -174,7 +176,7 @@ class KatalystChainBuilderSpec : StringSpec({
 
         // And a second block reuses that one DSP instance instead of building another, which is
         // what keeps the duck's envelope follower alive across notes.
-        chain.applyParams(params)
+        chain.applyParams(params.toKlangMap())
 
         duck.ducking.shouldNotBeNull() shouldBeSameInstanceAs ducking
     }
@@ -200,12 +202,12 @@ class KatalystChainBuilderSpec : StringSpec({
 
         // Four blocks of a sounding orbit whose duck names no source orbit: off, but alive.
         repeat(4) {
-            chain.applyParams(mapOf("duck.depth" to 0.0))
+            chain.applyParams(klangMapOf("duck.depth" to 0.0))
             chain.process(ctx)
         }
 
         // Now it engages. The weight has to start from 0 and ride in.
-        chain.applyParams(mapOf("duck.orbit" to 3.0, "duck.depth" to 0.8))
+        chain.applyParams(klangMapOf("duck.orbit" to 3.0, "duck.depth" to 0.8))
 
         duck.weight shouldBe 0.0
     }

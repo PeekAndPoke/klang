@@ -144,7 +144,7 @@ class IgnitorRegistry(
 
     fun contains(name: String?): Boolean = containsAt(lowerKey(name ?: DEFAULT_SOUND))
 
-    private fun containsAt(key: String): Boolean = defs.containsKey(key) || (parent?.containsAt(key) == true)
+    private fun containsAt(key: String): Boolean = key in defs || (parent?.containsAt(key) == true)
 
     /**
      * Exactly `name.lowercase()`, without the copy when nothing in [name] could change: on V8 `lowercase()` makes a
@@ -164,7 +164,7 @@ class IgnitorRegistry(
         return name
     }
 
-    fun names(): Set<String> = (parent?.names() ?: emptySet()) + defs.keys
+    fun names(): Set<String> = (parent?.names() ?: emptySet()) + buildSet { defs.forEachEntry { key, _ -> add(key) } }
 
     /**
      * Creates a fresh [Ignitor] for the given oscillator name.

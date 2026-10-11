@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
  * Writes a chain's own slots into ONE built stage, with no voice in sight: the chain is the
@@ -32,7 +33,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  */
 internal interface KatalystSlotWriter {
     /** Re-read this stage's slots from the orbit's param state. Null = the authored defaults. */
-    fun resolve(params: Map<String, Double>?)
+    fun resolve(params: KlangMap<Double>?)
 
     /** Write the resolved values into the stage. No map, no allocation, idempotent. */
     fun apply()
@@ -102,7 +103,7 @@ class KatalystChain internal constructor(
      * The param state [writers] last resolved from, by REFERENCE: the gate of [applyParams]. Null
      * both before anything resolved (see [everResolved]) and after a resolve from no owner.
      */
-    private var resolvedFrom: Map<String, Double>? = null
+    private var resolvedFrom: KlangMap<Double>? = null
 
     /** False until the first [applyParams], so that resolving from a null state still happens. */
     private var everResolved: Boolean = false
@@ -202,7 +203,7 @@ class KatalystChain internal constructor(
      * The reference is dropped by [reset] and [retire], so an idle chain pins no voice's map (the
      * allocation-cleanup rule).
      */
-    fun applyParams(params: Map<String, Double>?) {
+    fun applyParams(params: KlangMap<Double>?) {
         resolveParams(params)
 
         for (i in writers.indices) {
@@ -226,7 +227,7 @@ class KatalystChain internal constructor(
      * Idempotent and gated exactly like [applyParams], so the [applyParams] that follows on the
      * same map instance costs nothing extra.
      */
-    fun resolveParams(params: Map<String, Double>?) {
+    fun resolveParams(params: KlangMap<Double>?) {
         if (everResolved && params === resolvedFrom) {
             return
         }

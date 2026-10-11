@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
@@ -301,7 +302,7 @@ class SongBenchmark(
 
                 for (data in rendering) {
                     val sound = data.sound ?: IgnitorRegistry.DEFAULT_SOUND
-                    val params = data.ignitorParams ?: emptyMap()
+                    val params = data.ignitorParams ?: KlangMap()
                     val index = data.soundIndex ?: 0
                     val census = censusByVoice.getOrPut("$sound|$index|$params") {
                         ignitorRegistry.optimized(sound)?.let { GraphCensus.of(it, blockFrames, params, index) } ?: sampleVoice

@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.tremolo
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -77,7 +78,7 @@ class TremoloCompositionSpec : StringSpec({
     }
 
     fun build(dsl: IgnitorDsl, sampleRate: Int, params: Map<String, Double>? = null): Ignitor =
-        dsl.buildExciter(ignitorParams = params, random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor
+        dsl.buildExciter(ignitorParams = params?.toKlangMap(), random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor
 
     fun renderNode(
         dsl: IgnitorDsl,

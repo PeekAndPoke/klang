@@ -24,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.math.round
 
@@ -397,7 +398,7 @@ class KatalystGainEffectSpec : StringSpec({
         chain.applyParams(null)
         renderBlock()
 
-        chain.applyParams(mapOf("gain" to 0.5))
+        chain.applyParams(klangMapOf("gain" to 0.5))
 
         // The glide, landing exactly on what the pattern wrote.
         shouldGlide(blocks = List(glideBlocks + 1) { renderBlock() }, from = 1.0, to = 0.5)

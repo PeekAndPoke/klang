@@ -32,6 +32,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
+import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -63,7 +64,7 @@ import kotlin.random.Random
  * oscillator via [ModApplyingIgnitor]. Insert effects and binary ops pass the mod through transparently.
  */
 fun IgnitorDsl.buildExciter(
-    ignitorParams: Map<String, Double>? = null,
+    ignitorParams: KlangMap<Double>? = null,
     soundIndex: Int = 0,
     phasePools: PhasePools? = null,
     orbit: Int = 0,
@@ -103,7 +104,7 @@ const val DEFAULT_BUILD_SAMPLE_RATE: Int = 44100
  * needs the release tail.
  */
 fun IgnitorDsl.toExciter(
-    ignitorParams: Map<String, Double>? = null,
+    ignitorParams: KlangMap<Double>? = null,
     soundIndex: Int = 0,
     phasePools: PhasePools? = null,
     orbit: Int = 0,
@@ -343,7 +344,7 @@ private fun IgnitorDsl.Variants.pick(soundIndex: Int): IgnitorDsl {
  * @param accumulatedMod ratio-space mod Ignitor accumulated from outer pitch-mod wrappers (null = no mod).
  */
 internal fun IgnitorDsl.buildIgnitor(
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
     cache: IgnitorBuildCache,
     accumulatedMod: Ignitor? = null,
 ): BuiltIgnitor {
@@ -354,7 +355,7 @@ internal fun IgnitorDsl.buildIgnitor(
     //    A NON-FINITE override reads as UNSET and takes the slot's authored default. That is the
     //    general rule for every wire number (`/dsl-design` section 4), applied once, at the one
     //    place a slot resolves, rather than per slot name. Two reasons it is general: the bag is
-    //    an open `Map<String, Double>` that any frontend may fill, so no name is safer than
+    //    an open `KlangMap<Double>` that any frontend may fill, so no name is safer than
     //    another; and a NaN that gets in multiplies through the rest of the tree and the voice
     //    never recovers. Sprudel alone can deliver one through a string atom (`"NaN"` and
     //    `"Infinity"` both parse) or an overflowing power. The Katalyst's own `SLOT_UNSET` slots
@@ -642,7 +643,7 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
  *   table and it lives in `audio/ref/off-values.md`; each call site below carries its row.
  */
 private inline fun IgnitorDsl.gatedOff(
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
     cache: IgnitorBuildCache,
     isOff: (Double) -> Boolean,
 ): Boolean {
@@ -655,7 +656,7 @@ private inline fun IgnitorDsl.gatedOff(
  * The knob's build-time value, or `null` when it is not a build-time constant and the stage must
  * therefore be built unconditionally. The leaf restriction and its reason live in [gatedOff].
  */
-private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Double? {
+private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Double? {
     if (this !is IgnitorDsl.Param && this !is IgnitorDsl.Constant) {
         return null
     }
@@ -683,7 +684,7 @@ private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: Map<String, Double>?, c
  * pipeline step 0).
  */
 private inline fun IgnitorDsl.gatedOffWhenFinite(
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
     cache: IgnitorBuildCache,
     isOff: (Double) -> Boolean,
 ): Boolean {
@@ -700,7 +701,7 @@ private inline fun IgnitorDsl.gatedOffWhenFinite(
  * keeps the default here, at build. A signal is built as it is (the edge rules: the `vibrato` row of
  * `audio/ref/off-values.md`). Leaf-only, so asking draws nothing ([gatedOff]'s KDoc).
  */
-private fun IgnitorDsl.finiteLiteralOr(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache, fallback: Double): Ignitor {
+private fun IgnitorDsl.finiteLiteralOr(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache, fallback: Double): Ignitor {
     val literal = buildTimeKnobValue(ignitorParams, cache)
 
     if (literal != null && !literal.isFinite()) {
@@ -719,7 +720,7 @@ private fun IgnitorDsl.finiteLiteralOr(ignitorParams: Map<String, Double>?, cach
  * its other knobs); a signal is built as it is (the edge rules: the `vibrato` row of `audio/ref/off-values.md`).
  * Leaf-only, so asking draws nothing.
  */
-private fun IgnitorDsl.Vibrato.hasBuiltRange(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean {
+private fun IgnitorDsl.Vibrato.hasBuiltRange(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Boolean {
     val from = rangeFrom.buildTimeKnobValue(ignitorParams, cache)?.let { if (it.isFinite()) it else VIBRATO_RANGE_FROM }
     val to = rangeTo.buildTimeKnobValue(ignitorParams, cache)?.let { if (it.isFinite()) it else VIBRATO_RANGE_TO }
 
@@ -732,7 +733,7 @@ private fun IgnitorDsl.Vibrato.hasBuiltRange(ignitorParams: Map<String, Double>?
  * sine renders exactly as without the knob (the oscillators' `phase` reads a non-finite offset as 0 too, `PhaseOffset`).
  * Any other value or a signal is the sine's own `phase` input: the oscillators' unit and law, one word per concept.
  */
-private fun IgnitorDsl.Vibrato.vibratoPhase(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Ignitor? {
+private fun IgnitorDsl.Vibrato.vibratoPhase(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Ignitor? {
     val literal = phase.buildTimeKnobValue(ignitorParams, cache)
 
     if (literal != null && (literal == 0.0 || !literal.isFinite())) {
@@ -757,7 +758,7 @@ private fun IgnitorDsl.Vibrato.vibratoPhase(ignitorParams: Map<String, Double>?,
  *
  * The caller must also check [survivesUnityFold] on the side that would survive. See there.
  */
-private fun IgnitorDsl.gatedOffAtUnity(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean {
+private fun IgnitorDsl.gatedOffAtUnity(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Boolean {
     val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
 
     return value == 1.0
@@ -816,7 +817,7 @@ private fun Ignitor.survivesUnityFold(): Boolean = !isBlockConstant
  * "Unset" here is ANY non-finite value, not only the `SLOT_UNSET` spelling: that is the house rule
  * for every wire number (`/dsl-design` section 4), and `SLOT_UNSET` is simply the value we WRITE.
  */
-private fun IgnitorDsl.gatedOffWhenUnset(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean =
+private fun IgnitorDsl.gatedOffWhenUnset(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Boolean =
     gatedOff(ignitorParams, cache) { false }
 
 
@@ -854,7 +855,7 @@ private fun filterEnvDef(
     attackCurve: IgnitorDsl,
     decayCurve: IgnitorDsl,
     releaseCurve: IgnitorDsl,
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
     cache: IgnitorBuildCache,
 ): FilterEnvDef {
     val authoredDepth = env.filterEnvKnob(ignitorParams, cache, 0.0)
@@ -915,7 +916,7 @@ private fun slotLayerDepth(
     decay: IgnitorDsl,
     sustain: IgnitorDsl,
     release: IgnitorDsl,
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
 ): Double {
     // Only an UNSET depth slot is a question: a `Param` whose DEFAULT is the non-finite sentinel,
     // as `classic()` places it, and which the bag did not write. An authored default (0 or any other
@@ -936,12 +937,12 @@ private fun slotLayerDepth(
  * Finite-in-the-bag only (maintainer, 2026-09-25): an authored default never counts, and a non-finite
  * value is unset, the rule the `Param` leaf applies to every slot.
  */
-private fun IgnitorDsl.writtenIn(ignitorParams: Map<String, Double>?): Boolean =
+private fun IgnitorDsl.writtenIn(ignitorParams: KlangMap<Double>?): Boolean =
     this is IgnitorDsl.Param && ignitorParams?.get(name)?.isFinite() == true
 
 /** One cutoff-envelope knob: its build-time value, or [fallback] when it has none. See [filterEnvDef]. */
 private fun IgnitorDsl.filterEnvKnob(
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
     cache: IgnitorBuildCache,
     fallback: Double,
 ): Double = buildTimeKnobValue(ignitorParams, cache)?.takeIf { it.isFinite() } ?: fallback
@@ -960,7 +961,7 @@ private fun IgnitorDsl.filterEnvKnob(
  * The waveshaper a `shape` knob selects: `DistortionShapes.indexAt`'s rule, so a non-finite,
  * negative or past-the-end index is `soft`, as an unknown name is. A non-leaf is `soft`.
  */
-private fun IgnitorDsl.distortionShapeKnob(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): DistortionShape =
+private fun IgnitorDsl.distortionShapeKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): DistortionShape =
     distortionShapeAt(buildTimeKnobValue(ignitorParams, cache) ?: DistortionShapes.SOFT_INDEX.toDouble())
 
 /**
@@ -968,7 +969,7 @@ private fun IgnitorDsl.distortionShapeKnob(ignitorParams: Map<String, Double>?, 
  * ([Oversampler.factorOf], then [Oversampler.factorToStages]): a factor of 1 or less, a non-finite
  * one and a non-leaf are all 0 stages, today's plain path. Decision D7's stopgap.
  */
-private fun IgnitorDsl.oversampleStagesKnob(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
+private fun IgnitorDsl.oversampleStagesKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Int =
     Oversampler.factorToStages(Oversampler.factorOf(buildTimeKnobValue(ignitorParams, cache) ?: 0.0))
 
 /**
@@ -977,11 +978,11 @@ private fun IgnitorDsl.oversampleStagesKnob(ignitorParams: Map<String, Double>?,
  * 1..`FILTER_MAX_PASSES` and reads a non-finite value as one pass, exactly as the retired strip read sprudel's
  * `lpf(passes = ...)`. A non-leaf has no build-time answer and is one pass.
  */
-private fun IgnitorDsl.passesKnob(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
+private fun IgnitorDsl.passesKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Int =
     coercePasses(buildTimeKnobValue(ignitorParams, cache) ?: 1.0)
 
 /** The LFO waveform a tremolo `shape` knob selects, as its index in [LfoShapes] (`indexAt`'s rule); a non-leaf is `sine`. */
-private fun IgnitorDsl.lfoShapeIndexKnob(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
+private fun IgnitorDsl.lfoShapeIndexKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Int =
     LfoShapes.indexAt(buildTimeKnobValue(ignitorParams, cache) ?: LfoShapes.SINE_INDEX.toDouble())
 
 /**
@@ -1048,7 +1049,7 @@ internal fun tremoloGainInRange(
  * filter and pitch envelopes.
  */
 private fun IgnitorDsl.adsrCurveKnob(
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
     cache: IgnitorBuildCache,
     fallback: AdsrCurve,
 ): AdsrCurve = buildTimeKnobValue(ignitorParams, cache)?.let { AdsrCurves.curveAt(it, fallback) } ?: fallback
@@ -1061,7 +1062,7 @@ private fun IgnitorDsl.adsrCurveKnob(
  * than `<= 0.0` because this is a FLAG, not an amount: the house flag rule is "non-zero is on"
  * (`coerceFlag` on the script door, `isTruthy` in sprudel), so a negative value is on there too.
  */
-private fun IgnitorDsl.switchedOff(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean {
+private fun IgnitorDsl.switchedOff(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Boolean {
     val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
 
     return value == 0.0
@@ -1080,7 +1081,7 @@ private fun IgnitorDsl.switchedOff(ignitorParams: Map<String, Double>?, cache: I
  * leaf, so the case that matters for step 6 is covered. A non-finite release reports none either,
  * the ON path's rule.
  */
-private fun IgnitorDsl.offEnvelopeTail(ignitorParams: Map<String, Double>?, cache: IgnitorBuildCache): Double? =
+private fun IgnitorDsl.offEnvelopeTail(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Double? =
     buildTimeKnobValue(ignitorParams, cache)?.takeIf { it.isFinite() }
 
 /**
@@ -1097,7 +1098,7 @@ private fun IgnitorDsl.offEnvelopeTail(ignitorParams: Map<String, Double>?, cach
  */
 private fun IgnitorDsl.filterHumanization(
     humanize: Boolean,
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
     cache: IgnitorBuildCache,
 ): FilterHumanization? {
     if (!humanize) {
@@ -1119,7 +1120,7 @@ private fun IgnitorDsl.filterHumanization(
  * only. The absorb happens inside the local `withMod` helper, not per arm.
  */
 private fun IgnitorDsl.buildRaw(
-    ignitorParams: Map<String, Double>?,
+    ignitorParams: KlangMap<Double>?,
     cache: IgnitorBuildCache,
     accumulatedMod: Ignitor?,
 ): BuiltIgnitor {

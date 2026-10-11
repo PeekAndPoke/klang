@@ -26,6 +26,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * The per-cylinder chain swap: how a `katalyst(…)` name becomes the chain an orbit runs
@@ -334,7 +335,7 @@ class CylinderChainSwapSpec : StringSpec({
         // A room the deactivation has to clear, written as a SLOT so the born-with chain reads it.
         rig.sound(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 6.0),
+                katalystParams = klangMapOf("reverb.wet" to 0.5, "reverb.size" to 6.0),
             )
         )
 
@@ -362,7 +363,7 @@ class CylinderChainSwapSpec : StringSpec({
         // with the owner: the next voice configures the orbit from scratch and writes its own 2.
         rig.sound(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 2.0),
+                katalystParams = klangMapOf("reverb.wet" to 0.5, "reverb.size" to 2.0),
             )
         )
 

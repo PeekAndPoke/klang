@@ -24,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 
 /**
@@ -77,7 +78,7 @@ class EngineStopReleaseSpec : StringSpec({
         playbackId = "song",
         startTime = 0.0,
         gateEndTime = 0.05,
-        data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, gain = 0.5, katalystParams = katalystParams),
+        data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, gain = 0.5, katalystParams = katalystParams?.toKlangMap()),
         playbackStartTime = 0.0,
     )
 
@@ -231,7 +232,7 @@ class EngineStopReleaseSpec : StringSpec({
             startTime = start,
             gateEndTime = start + 0.05,
             data = VoiceData.empty.copy(
-                sound = "sine", freqHz = 440.0, gain = 0.5, cylinder = orbit, katalystParams = params, katalyst = katalyst,
+                sound = "sine", freqHz = 440.0, gain = 0.5, cylinder = orbit, katalystParams = params?.toKlangMap(), katalyst = katalyst,
             ),
             playbackStartTime = 0.0,
         )

@@ -37,6 +37,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.peekandpoke.klang.script.stdlib.div
 import io.peekandpoke.klang.script.stdlib.max
 import io.peekandpoke.klang.script.stdlib.plus
@@ -283,11 +284,12 @@ class EffectBenchmark(
             val ctx = KatalystContext(blockFrames = bf, mixBuffer = StereoBuffer(bf))
             val srcL = sineSource(440.0, sr, bf)
             val srcR = sineSource(440.0, sr, bf)
+            val moveMaps = moves?.map { it.toKlangMap() }
             var block = 0
             val step: () -> Unit = {
                 srcL.copyInto(ctx.mixBuffer.left)
                 srcR.copyInto(ctx.mixBuffer.right)
-                chain.applyParams(if (moves == null) null else moves[(block / moveEveryBlocks) % moves.size])
+                chain.applyParams(if (moveMaps == null) null else moveMaps[(block / moveEveryBlocks) % moveMaps.size])
                 chain.process(ctx)
                 block++
             }

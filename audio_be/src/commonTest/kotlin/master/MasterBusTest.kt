@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.master
 
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -154,7 +155,7 @@ class MasterBusTest : StringSpec({
             if (dsl != null) {
                 d.handle(KlangCommLink.Cmd.RegisterKatalyst(playbackId = "song", name = "m", dsl = dsl))
                 val carrier = masterEvent("m")
-                voices += carrier.copy(data = carrier.data.copy(katalystParams = mapOf("level" to 0.25)))
+                voices += carrier.copy(data = carrier.data.copy(katalystParams = klangMapOf("level" to 0.25)))
             }
 
             d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = voices))

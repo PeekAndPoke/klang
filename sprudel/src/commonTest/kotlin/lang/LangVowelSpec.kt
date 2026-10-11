@@ -10,6 +10,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.common.infra.toMap
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangVowelSpec : StringSpec({
@@ -37,7 +38,7 @@ class LangVowelSpec : StringSpec({
     // `FilterDef.Formant` the voice once carried in `filters` left the wire in phase 3 step 9. These rows read the
     // slots the door writes and resolve the vowel index through the table the orbit uses.
     fun slots(pattern: SprudelPattern): Map<String, Double> =
-        pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams ?: emptyMap()
+        pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams?.toMap() ?: emptyMap()
 
     fun bands(slots: Map<String, Double>) = VowelBands.bandsAt(slots["vowel.vowel"] ?: Double.NaN)
 

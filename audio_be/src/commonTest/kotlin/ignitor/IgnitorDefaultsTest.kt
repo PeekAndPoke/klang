@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
@@ -38,7 +39,7 @@ class IgnitorDefaultsTest : StringSpec({
         ignitorParams: Map<String, Double>? = null,
         freqHz: Double = 440.0,
     ): AudioBuffer {
-        val data = VoiceData.empty.copy(sound = soundName, ignitorParams = ignitorParams)
+        val data = VoiceData.empty.copy(sound = soundName, ignitorParams = ignitorParams?.toKlangMap())
         val exciter = registry.createExciter(soundName, data, freqHz, random = testRandom)
             ?.ignitor ?: error("Unknown sound: $soundName")
         val buffer = AudioBuffer(blockFrames)
@@ -171,7 +172,7 @@ class IgnitorDefaultsTest : StringSpec({
     // slot can move the render: the old key is inert, the new key is read. The corpus cannot see
     // `leak` (no song writes it), so this row is its proof.
     fun renderSeeded(soundName: String, ignitorParams: Map<String, Double>? = null): List<Double> {
-        val data = VoiceData.empty.copy(sound = soundName, ignitorParams = ignitorParams)
+        val data = VoiceData.empty.copy(sound = soundName, ignitorParams = ignitorParams?.toKlangMap())
         val exciter = registry.createExciter(soundName, data, 440.0, random = Random(7))
             ?.ignitor ?: error("Unknown sound: $soundName")
         val buffer = AudioBuffer(blockFrames)

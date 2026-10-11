@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.klangMapOf
 import java.lang.management.ManagementFactory
 
 /**
@@ -86,7 +87,7 @@ class KatalystSettingsAllocationSpec : StringSpec({
             release = KatalystKnob(slot("compressor.release"), COMPRESSOR_RELEASE_SECONDS),
         )
         val maps = Array(5) {
-            mapOf(
+            klangMapOf(
                 "compressor.threshold" to -30.0 + 2.0 * it,
                 "compressor.ratio" to 2.0 + it,
                 "compressor.knee" to 1.0 + it,
@@ -119,7 +120,7 @@ class KatalystSettingsAllocationSpec : StringSpec({
             attack = KatalystKnob(slot("duck.attack"), DUCK_ATTACK_SECONDS),
         )
         val maps = Array(5) {
-            mapOf(
+            klangMapOf(
                 "duck.orbit" to 1.0 + it,
                 "duck.depth" to 0.3 + 0.1 * it,
                 "duck.attack" to 0.05 + 0.02 * it,

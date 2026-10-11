@@ -23,6 +23,9 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toKlangMap
 
 /**
  * The resonator stage ([KatalystResonatorEffect], body and vowel, one class since engine tidy-up step 12 (a)): what a
@@ -61,7 +64,7 @@ class KatalystResonatorEffectSpec : StringSpec({
                 lastName = name
             }
 
-            chain.applyParams(params)
+            chain.applyParams(params.toKlangMap())
 
             for (i in 0 until blockFrames) {
                 seed = seed * 1103515245 + 12345
@@ -135,7 +138,7 @@ class KatalystResonatorEffectSpec : StringSpec({
             )
 
             chain.applyParams(
-                mapOf("vowel.vowel" to VowelBands.indexOf("a"), "body.material" to BodyMaterials.indexOf("wood"))
+                klangMapOf("vowel.vowel" to VowelBands.indexOf("a"), "body.material" to BodyMaterials.indexOf("wood"))
             )
 
             withClue("declared ${order.map { it::class.simpleName }}") {
@@ -180,11 +183,11 @@ class KatalystResonatorEffectSpec : StringSpec({
         )
 
         // The classic chain declares both stages; a voice that asks for neither must not cost their banks.
-        chain.applyParams(emptyMap())
+        chain.applyParams(KlangMap())
         chain.body.shouldNotBeNull().hasPool shouldBe false
         chain.vowel.shouldNotBeNull().hasPool shouldBe false
 
-        chain.applyParams(mapOf("body.material" to BodyMaterials.indexOf("wood")))
+        chain.applyParams(klangMapOf("body.material" to BodyMaterials.indexOf("wood")))
         chain.body.shouldNotBeNull().hasPool shouldBe true
         chain.vowel.shouldNotBeNull().hasPool shouldBe false
     }

@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * Tests for Cylinder cleanup functionality (tryDeactivate).
@@ -122,7 +123,7 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("delay.wet" to 1.0, "delay.time" to 0.02, "delay.feedback" to 0.4),
+                katalystParams = klangMapOf("delay.wet" to 1.0, "delay.time" to 0.02, "delay.feedback" to 0.4),
             ),
             blockStart = 0.0,
         )
@@ -159,7 +160,7 @@ class OrbitCleanupTest : StringSpec({
             VoiceTestHelpers.createSynthVoice(
                 // lowpass set so the reset's `lowpass = null` line has something to clear —
                 // a fresh-default null would make that assert vacuous (review round 3).
-                katalystParams = mapOf(
+                katalystParams = klangMapOf(
                     "reverb.wet" to 1.0, "reverb.size" to 5.0, "reverb.lowpass" to 3000.0,
                 ),
             ),
@@ -195,7 +196,7 @@ class OrbitCleanupTest : StringSpec({
         // `delay.wet` is WRITTEN, so the line runs, and the ring stays empty.)
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("delay.wet" to 1.0, "delay.time" to 0.5, "delay.feedback" to 1.2),
+                katalystParams = klangMapOf("delay.wet" to 1.0, "delay.time" to 0.5, "delay.feedback" to 1.2),
             ),
             blockStart = 0.0,
         )
@@ -220,7 +221,7 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("duck.orbit" to 3.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
+                katalystParams = klangMapOf("duck.orbit" to 3.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
             ),
             blockStart = 0.0,
         )
@@ -242,7 +243,7 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("duck.orbit" to 4.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
+                katalystParams = klangMapOf("duck.orbit" to 4.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
             ),
             blockStart = 0.0,
         )

@@ -387,12 +387,12 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   the classic chain 1,096 B (27 knobs, plus the reverb's documented lowpass box); a classic voice build 24 lookups
   whenever its `ignitorParams` map is not null, up to 76 with many slots set (957 to 3,062 B and 10 to 38 percent of
   the build time). Kotlin is 2.3.10; the JVM caches a string's hash and allocates nothing. **Remedy:** a map the
-  engine reads by key on JS is a `KlangMap` (`common/infra/KlangMap.kt`, a native JS `Map` behind `Map<String, V>`;
-  a `LinkedHashMap` on the JVM): its lookup allocates nothing (a new orbit map about 16 B; `C-remap` 2.03 to 2.16 us
+  engine reads by key on JS is a `KlangMap` (`common/infra/KlangMap.kt`, a native JS `Map` on JS, a `LinkedHashMap`
+  on the JVM; not a Kotlin `Map` since step 5, so it has no `entries` to walk): its lookup allocates nothing (a new orbit map about 16 B; `C-remap` 2.03 to 2.16 us
   per block against 2.80 to 3.11 with the decoder reverted, about 0.9 us per new map). The worklet's decoder
   (`wireDecodeStringDoubleMap`), the warm-up and the sample-envelope merge make them; the allocation check's
-  `C-remap` guards the decoder. **Read a `KlangMap` by key, and walk it with its own walk, never through
-  `entries`:** iterating `entries`, `keys` or `values` on JS allocates about 110 B per entry (the JS iterator's results
+  `C-remap` guards the decoder. **Read a `KlangMap` by key, and walk it with its own walk:** it has no `entries`,
+  `keys` or `values` (step 5), and iterating them on a map on JS allocates about 110 B per entry (the JS iterator's results
   and an entry object; 666 B per walk of 6 entries on node), where a `LinkedHashMap` walk is free once V8 inlines the
   whole loop. That inlining is not reliable either: a lookup written out as a scan over a `LinkedHashMap`'s entries
   was rejected, because its iterator escaped wherever V8 did not inline the loop (1,554 B on a one-entry map), and on
@@ -413,10 +413,12 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   small events (review round 1 read +2.0 and +2.4 percent), time within HEAD's spread. The slot copy keeps HEAD's
   presizing (`KlangMap(capacityHint)`, the JVM's initial table size); without it the worker's probe read its two
   voice-door shapes 6 to 8 percent slower in 3 runs each, and review round 1 found no such effect on six shapes, so
-  the hint is kept as parity with HEAD, not for a measured gain. Comparing or printing a param map on JS walks
-  `entries` (`==` about 1.8 times HEAD's bytes, `toString` 10 to 30 percent more); nothing does it per event. **The per-note lookups (step 3):** the sound registry's two maps are `KlangMap`s and
-  `engineFor` looks the playback id up once, so a synth note now hashes once (the dispatcher's `engines` map, 40 B),
-  where it hashed 8 times. **On V8, `toLowerCase` allocates a fresh string even when nothing changes**: 23.9 B per
+  the hint is kept as parity with HEAD, not for a measured gain. Comparing or printing a param map walks it (in
+  step 2 through `entries`, `==` about 1.8 times HEAD's bytes; since step 5 through `forEachEntry`, not measured);
+  nothing does it per event. **The per-note lookups (step 3):** the sound registry's two maps are `KlangMap`s and
+  `engineFor` looks the playback id up once, so a synth note hashed once (the dispatcher's `engines` map, 40 B),
+  where it hashed 8 times; since step 5 that map is a `KlangMap` too, and a synth note at the defaults hashes no more (an opt-in banded phase
+  pool, `phasePool` above 0.5, still makes one stdlib lookup per unison note: `PhasePool.kt`). **On V8, `toLowerCase` allocates a fresh string even when nothing changes**: 23.9 B per
   call in a node loop from 1 to 8 characters (`"b"` to `"supersaw"`), 32 B from 9; in the engine's own path a
   2-character `"bd"` paid it too. A reviewer's probe read nothing for `"bd"` because that name missed its map, unlike
   its others (review round 2): measure in the real path. The registry lowercased the sound name at every level of its fork chain, 7 copies per
@@ -425,8 +427,13 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   note per block through the dispatcher, single-case): 13,257 B per block at HEAD, 12,806 now; a sample note 1,033 to
   737 (`"snare"`). The allocation check's `E-C-n1` reads 12,982 to 13,036 B (healthy rounds) against HEAD's code's
   13,435 to 13,476, under a line of 13,100: it catches the registry back on `HashMap` and the lowercasing back at
-  every level, not `engineFor`'s second lookup (40 B) nor a lowercase on every call (about 72 B per synth note, 25 B
-  under the line); those two are guarded by the comments at their sites. Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,
+  every level, not `engineFor`'s second lookup (40 B; since step 5 a `KlangMap`
+  lookup, 0 B) nor a lowercase on every call (about 72 B per synth note, 25 B
+  under the line); those two are guarded by the comments at their sites. Since step 5 (the dispatcher's map a
+  `KlangMap`, about 35 B less per note, all of it that map) it reads 12,988.5 to 13,050.7 B in 45 healthy rounds
+  (full-check medians 13,004 to 13,023) under a line of 13,068. The margins are thin: a lowercase on every call is
+  caught by its median (13,090 and 13,091), its lowest round 5 B over the line; the dispatcher's map back on a
+  `HashMap` read medians 13,047 to 13,058 and goes red in about 1 run in 30, so the comment at that field guards it. Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,
   `toMap`, `getOrPut` and `in` on a set before it lands: all of them make or read a stdlib map. The stdlib site is
   worth an upstream report.
   **Measured, not removed:** in single-case processes three writers' `resolve` box one heap number each per new map

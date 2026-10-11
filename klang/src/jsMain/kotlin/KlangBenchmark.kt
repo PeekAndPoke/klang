@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.coroutines.delay
@@ -377,13 +378,12 @@ class KlangBenchmark(
                 // A lowpass to make it realistic load, as `classic()`'s slots (phase 3 step 8: a built-in reads
                 // slots only); the envelope runs at its defaults, the voice envelope's (`VOICE_ADSR_*`).
                 ignitorParams = IgnitorDsl.Slots.lpf.let { lpf ->
-                    mapOf("voices" to 8.0) + listOf(lpf.freq to 1000.0, lpf.q to 1.0)
-                        .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }
+                    klangMapOf("voices" to 8.0, (lpf.freq as IgnitorDsl.Param).name to 1000.0, (lpf.q as IgnitorDsl.Param).name to 1.0)
                 },
                 freqHz = 220.0 + (id * 2),
                 // Enable the orbit reverb. Its stage reads the SLOTS, the amount included
                 // (Katalyst step 5b-2), and the wire has no reverb fields since 5b-3.
-                katalystParams = mapOf("reverb.wet" to 0.2, "reverb.size" to 0.5),
+                katalystParams = klangMapOf("reverb.wet" to 0.2, "reverb.size" to 0.5),
             )
         )
         scheduler.scheduleVoice(voice)

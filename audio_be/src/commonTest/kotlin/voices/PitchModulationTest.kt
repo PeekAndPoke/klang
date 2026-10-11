@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
@@ -93,7 +94,7 @@ class PitchModulationTest : StringSpec({
 
         fun render(bag: Map<String, Double>): AudioBuffer {
             val instrument = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0)).classic()
-            val voice = createSynthVoice(blockFrames = bf, signal = instrument.toExciter(ignitorParams = bag, random = Random(1)))
+            val voice = createSynthVoice(blockFrames = bf, signal = instrument.toExciter(ignitorParams = bag.toKlangMap(), random = Random(1)))
             val ctx = createContext(blockFrames = bf)
             voice.render(ctx)
             return ctx.voiceBuffer

@@ -48,7 +48,7 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 
 ### The instrument's slots: `ignitorParams`
 
-`ignitorParams: Map<String, Double>?` is the voice's slot bag. The instrument's tree resolves every
+`ignitorParams: KlangMap<Double>?` is the voice's slot bag. The instrument's tree resolves every
 `IgnitorDsl.Param` against it, falling back to the slot's authored default. Sprudel's
 `toVoiceData()` writes the voice doors here (`classicSlotParams` in
 `sprudel/src/commonMain/kotlin/_classic_slot_params.kt`, the one place sprudel's words meet the
@@ -107,7 +107,7 @@ envelope with a release of 0 and collapsed the FM at the gate). `fm.release` is 
 ### Orbit bus slots: `katalystParams`
 
 Every orbit stage (delay, reverb, compressor, duck, phaser, body, vowel) reads its knobs from
-`katalystParams: Map<String, Double>?`, keyed `<stage>.<knob>` exactly as `KatalystDsl.classic` names
+`katalystParams: KlangMap<Double>?`, keyed `<stage>.<knob>` exactly as `KatalystDsl.classic` names
 them (`delay.wet`, `reverb.size`, `compressor.threshold`, `duck.orbit`, `phaser.wet`, `body.material`,
 `vowel.vowel`, ...), and the orbit's OWNER voice applies them. The delay, reverb, compressor and duck
 fields left the wire in Katalyst step 5b-3 (2026-09-19); the phaser fields and the `filters` list in

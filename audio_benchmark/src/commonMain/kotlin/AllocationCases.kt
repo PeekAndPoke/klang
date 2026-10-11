@@ -26,6 +26,8 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.infra.toKlangMap
 import io.peekandpoke.klang.script.stdlib.IgnitorDslLike
 import io.peekandpoke.klang.script.stdlib.KatalystBuilder
 import io.peekandpoke.klang.script.stdlib.abs
@@ -118,7 +120,15 @@ object AllocationCases {
         val gateSec: Double = SUSTAIN_SEC,
         val newNoteEveryBlocks: Int = 0,
         val ownersTakingTurns: Boolean = false,
-    )
+    ) {
+        /**
+         * [params], [katp] and [katpNext] as the engine takes them (`KlangMap`s), made once per case: every note of a
+         * case hands over the same instance, so the chain's identity gate sees what it always saw.
+         */
+        internal val paramsMap: KlangMap<Double>? = params?.toKlangMap()
+        internal val katpMap: KlangMap<Double>? = katp?.toKlangMap()
+        internal val katpNextMap: KlangMap<Double>? = katpNext?.toKlangMap()
+    }
 
     private fun c(v: Double) = IgnitorDsl.Constant(v)
 
@@ -368,10 +378,10 @@ object AllocationCases {
         else -> VoiceRig(case)
     }
 
-    private fun voiceData(case: Case, katp: Map<String, Double>? = case.katp) = VoiceData.empty.copy(
+    private fun voiceData(case: Case, katp: KlangMap<Double>? = case.katpMap) = VoiceData.empty.copy(
         freqHz = FREQ_HZ,
         sound = case.sound,
-        ignitorParams = case.params,
+        ignitorParams = case.paramsMap,
         katalystParams = katp,
         katalyst = if (case.chain != null) CHAIN else null,
     )
@@ -460,7 +470,7 @@ object AllocationCases {
         )
 
         private val voices: Array<Voice> = Array(2) { index ->
-            val data = voiceData(case).copy(katalystParams = case.katp?.let { LinkedHashMap(it) })
+            val data = voiceData(case).copy(katalystParams = case.katp?.toKlangMap())
             val scheduled = receivedByEngine(
                 ScheduledVoice(
                     playbackId = PLAYBACK_ID,
@@ -579,7 +589,7 @@ object AllocationCases {
 
         override fun step() {
             if (case.newNoteEveryBlocks > 0 && block % case.newNoteEveryBlocks == 0) {
-                val katp = if (case.katpNext != null && notes % 2 == 1) case.katpNext else case.katp
+                val katp = if (case.katpNextMap != null && notes % 2 == 1) case.katpNextMap else case.katpMap
 
                 // Two blocks ahead, so the note is admitted (a start in the past is refused).
                 schedule(
