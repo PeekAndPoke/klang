@@ -104,10 +104,15 @@ class Compressor(
      * How fast the gain closes. One concept, two mechanisms: a one-pole time constant when
      * [lookaheadSeconds] is 0, the smoothing length when it is not.
      *
-     * On the lookahead path this re-splits the box taps. It allocates nothing — the rings are sized
-     * once at construction — but it DOES re-prime them to the *current* gain (not to unity; see
-     * [primeBoxes]), so a live write causes a small gain step bounded by the smoother's own lag.
-     * Fine at a settings change, not something to call per block.
+     * On the lookahead path this re-sizes the two box filters ([resizeSmoothing]): CONTINUOUSLY, the
+     * running sums take or drop the samples entering or leaving each window, and nothing is re-primed.
+     * It allocates nothing (the rings are sized once at construction) and the ceiling holds for any
+     * old/new pair of lengths. So it may be written per block: a modulated attack (Katalyst knob
+     * expressions step 5b) moves the smoothing length by a tap or two per change, and the gain moves by
+     * about a tap's share of the window, not by a step. Measured (DC bursts, threshold -20, ratio 10,
+     * lookahead 5 ms): the largest one-sample gain step under an attack moving 2 to 4 ms per block is
+     * within a small factor of a fixed 2 ms attack's (`LimiterLookaheadSpec`), where the re-priming this
+     * replaced stepped it by 0.6 to 0.7 of an 0.87 reduction (review round 1 of step 5b).
      */
     var attackSeconds: Double = guardOr(value = attackSeconds, fallback = 0.003)
         set(value) {
@@ -178,8 +183,10 @@ class Compressor(
 
     // Two cascaded box filters: combined support b1 + b2 - 1 taps, coverage condition
     // b1 + b2 - 2 <= delayFrames.
-    // Allocated ONCE at the ceiling; `boxLen` is the portion actually in use, so re-splitting the
-    // taps from the attackSeconds setter can never allocate or resize on the audio thread.
+    // Allocated ONCE at the ceiling (the CAPACITY, `(delayFrames + 2) / 2`); `boxLen` is the window in use.
+    // Each ring keeps the last `capacity` values it was fed, indexed modulo its capacity whatever
+    // `boxLen` is, so a length change only moves the window over history the ring already holds
+    // (see resizeSmoothing). Nothing is allocated or resized on the audio thread.
     private val boxA = DoubleArray(if (delayFrames > 0) (delayFrames + 2) / 2 else 0)
     private val boxB = DoubleArray(if (delayFrames > 0) (delayFrames + 2) / 2 else 0)
     private var boxLen = 1
@@ -246,10 +253,28 @@ class Compressor(
     /**
      * Re-split the box taps from [attackSeconds], honouring `b1 + b2 - 2 <= delayFrames`.
      *
-     * **Allocates nothing.** The arrays are sized once at construction to the ceiling; this only
-     * moves `boxLen`. It also re-primes the ring, because changing the used length invalidates the
-     * running sums and the positions — without that, shrinking would index past the live region and
-     * growing would divide a stale sum by a larger length, both of which produce a gain above 1.
+     * **Continuous, no re-prime** (review round 1 of knob expressions step 5b). Each ring holds the
+     * last `capacity` values it was fed (written modulo its capacity, never modulo [boxLen]), so the
+     * new window's samples are already there: a longer box adds the samples between the old and the
+     * new window to its running sum, a shorter one subtracts the samples that leave it. The output is
+     * then the mean over the new window of what the box was really fed, so it moves by the difference
+     * of two means over overlapping windows, never jumps to the instantaneous gain. Re-priming here,
+     * as before, refilled both rings with the current gain and stepped the applied gain by up to the
+     * whole reduction in one sample under a modulated attack (0.6 to 0.7 of an 0.87 reduction, measured).
+     *
+     * **Safe for any old/new pair.** Every box length is at most the capacity `C = (delayFrames + 2) / 2`,
+     * so for ANY two lengths `b1, b2 <= C`, `b1 + b2 - 2 <= 2C - 2 <= delayFrames`: whatever lengths
+     * the two boxes ran at while a given output sample was being smoothed, every release-stage value it
+     * averages lies inside that sample's hold window, which is the ceiling argument of [lookaheadStep].
+     * Values written before the last prime (construction, [reset], [reseedFromRing]) are the prime's
+     * seed: reachable only by a window reaching back past the prime, which the same bound keeps to
+     * samples whose delayed output is the ring's silence (construction, reset) or already re-heard
+     * (reseed: `delayFrames` steps follow the prime).
+     *
+     * **Allocates nothing**; the adjustment costs one read per sample entering or leaving a window
+     * (a tap or two per change for a modulated attack, at most `C` once for a jump across the range).
+     * At a FIXED length nothing here runs and the per-sample sums are added and subtracted in the
+     * order they always were, so a fixed attack (the house limiter) renders bit for bit as before.
      */
     private fun resizeSmoothing() {
         val requested = (attackSeconds * sampleRate).toInt()
@@ -264,14 +289,44 @@ class Compressor(
         // range cannot invert. That coupling is MIN_LOOKAHEAD_FRAMES >= 2 * MIN_BOX_TAPS - 2 — break
         // it and coerceIn throws IllegalArgumentException on the audio thread.
         val half = (total / 2).coerceIn(MIN_BOX_TAPS, boxA.size)
-        if (half == boxLen) return
 
+        if (half == boxLen) {
+            return
+        }
+
+        boxASum += windowChange(ring = boxA, pos = boxAPos, from = boxLen, to = half)
+        boxBSum += windowChange(ring = boxB, pos = boxBPos, from = boxLen, to = half)
         boxLen = half
-        primeBoxes()
     }
 
     /**
-     * Refill both box rings with the CURRENT gain and rebuild their running sums for [boxLen].
+     * What a box's running sum gains when its window goes from [from] to [to] samples: the sum of the
+     * samples written `from + 1 .. to` samples ago for a longer window, minus those written
+     * `to + 1 .. from` ago for a shorter one. [pos] is where the ring writes next, so the sample written
+     * `k` samples ago sits at `pos - k`, modulo the capacity. Inline, so no double crosses a call.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun windowChange(ring: DoubleArray, pos: Int, from: Int, to: Int): Double {
+        val capacity = ring.size
+        val sign = if (to > from) 1.0 else -1.0
+        val shorter = if (to > from) from else to
+        val longer = if (to > from) to else from
+        var change = 0.0
+
+        for (k in shorter + 1..longer) {
+            val at = pos - k
+
+            change += ring[if (at < 0) at + capacity else at]
+        }
+
+        return sign * change
+    }
+
+    /**
+     * Refill both box rings, their whole capacity, with the CURRENT gain and rebuild their running
+     * sums for [boxLen]. For construction and the detector resets ([resetLookaheadGain]), never for a
+     * length change ([resizeSmoothing] moves the window continuously). The whole capacity, so a later
+     * longer window finds the seed and not a stale value.
      *
      * Priming with `1.0` would be a full-scale event, not a neutral one: mid-stream at −12 dB of
      * reduction it snaps the gain to unity in a single sample (measured: Δgain 0.76 linear,
@@ -282,10 +337,9 @@ class Compressor(
      */
     private fun primeBoxes() {
         val seed = slowGain * fastGain
-        for (i in 0 until boxLen) {
-            boxA[i] = seed
-            boxB[i] = seed
-        }
+
+        boxA.fill(seed)
+        boxB.fill(seed)
         boxAPos = 0
         boxBPos = 0
         boxASum = seed * boxLen
@@ -587,17 +641,23 @@ class Compressor(
         val releaseGain = slowGain * fastGain
 
         // ── Two cascaded box filters (C1 step response) ──
+        // Each ring is written modulo its CAPACITY, and the sample leaving the window is the one
+        // written `len` samples ago (`resizeSmoothing` says why). At a fixed length that is the same
+        // value the old ring-of-`len` overwrote, added and subtracted in the same order: bit for bit.
         val len = boxLen
         val a = boxA
-        boxASum += releaseGain - a[boxAPos]
+        val capacity = a.size
+        val leavingA = boxAPos - len
+        boxASum += releaseGain - a[if (leavingA < 0) leavingA + capacity else leavingA]
         a[boxAPos] = releaseGain
-        boxAPos = if (boxAPos + 1 == len) 0 else boxAPos + 1
+        boxAPos = if (boxAPos + 1 == capacity) 0 else boxAPos + 1
         val stage1 = boxASum / len
 
         val b = boxB
-        boxBSum += stage1 - b[boxBPos]
+        val leavingB = boxBPos - len
+        boxBSum += stage1 - b[if (leavingB < 0) leavingB + capacity else leavingB]
         b[boxBPos] = stage1
-        boxBPos = if (boxBPos + 1 == len) 0 else boxBPos + 1
+        boxBPos = if (boxBPos + 1 == capacity) 0 else boxBPos + 1
 
         return boxBSum / len
     }

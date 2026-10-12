@@ -68,10 +68,17 @@ internal class KatalystArithmeticEffect(
     sampleRate: Int,
     /** The frames of one render block, pinned to 128 in the engine. */
     blockFrames: Int,
+    /**
+     * True when the operand's knob holds a modulator (knob expressions step 5b, D2): it glides over ONE block, so the
+     * law takes an operand ramped across each block from the last block's value to this one's. DIV keeps gliding its
+     * reciprocal, the level (see the class KDoc): a modulated divisor that swings through 0 sweeps the level through
+     * every value between the two blocks' reciprocals and no other.
+     */
+    modulated: Boolean = false,
 ) : KatalystEffect {
 
     /** The operand (for DIV its reciprocal): where it stands, where it is going, the snap of a fresh stage. */
-    private val glide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val glide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = modulated)
 
     /** The value an unset operand reads as; NaN for MIN and MAX, which have none. The one table of identities. */
     private val identity: Double = when (op) {

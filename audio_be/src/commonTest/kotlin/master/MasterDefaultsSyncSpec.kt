@@ -85,6 +85,6 @@ class MasterDefaultsSyncSpec : StringSpec({
 
     "the reverb lowpass defaults to absent on the stage and the DSP: the fixed default damping applies" {
         KatalystStageDsl.Reverb().lowpass shouldBe null
-        Reverb(44100).lowpass shouldBe null
+        Reverb(44100).lowpass.isNaN() shouldBe true
     }
 })

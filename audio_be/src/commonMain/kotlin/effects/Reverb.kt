@@ -117,13 +117,18 @@ class Reverb(
         }
 
     /**
-     * High-frequency damping of the tail as a lowpass cutoff in Hz; lower = darker. Null = the fixed
-     * [DEFAULT_DAMP]. NaN/Inf silently ignored.
+     * High-frequency damping of the tail as a lowpass cutoff in Hz; lower = darker. NaN = unset, the fixed
+     * [DEFAULT_DAMP].
+     *
+     * **A non-finite write UNSETS it** (stored as NaN, never as a number), unlike [size], whose setter keeps what
+     * it had: an unset cutoff is a meaning of its own here, and it is what `KatalystReverbEffect` reads a non-finite
+     * slot as. A primitive (knob expressions step 5b), so a cutoff written every block, a modulated
+     * `reverb.lowpass`, boxes nothing.
      */
-    var lowpass: Double? = null
+    var lowpass: Double = Double.NaN
         set(value) {
-            if (value != null && !value.isFinite()) return
-            field = value
+            // NaN-guard: a non-finite cutoff is unset, never stored as a number.
+            field = if (value.isFinite()) value else Double.NaN
         }
 
     /**
@@ -284,7 +289,7 @@ class Reverb(
      */
     fun restoreDefaults() {
         size = normalizeSize(REVERB_SIZE)
-        lowpass = null
+        lowpass = Double.NaN
     }
 
     /** The comb feedback [process] runs at: `size x FEEDBACK_SCALE + FEEDBACK_OFFSET` — one
@@ -354,7 +359,8 @@ class Reverb(
         // Damping ← DEFAULT_DAMP, or lowpass when set. lowpass = nyquist → no damping;
         // lowpass = 0 → max damping. Then scale to the comb LPF range.
         val lp = lowpass
-        val effectiveDamp = if (lp != null) {
+        // NaN-guard: NaN is the unset cutoff ([lowpass] never holds an infinity).
+        val effectiveDamp = if (lp == lp) {
             val nyquist = sampleRate / 2.0
             val normalised = (lp / nyquist).coerceIn(0.0, 1.0)
             1.0 - normalised

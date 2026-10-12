@@ -34,20 +34,24 @@ import io.peekandpoke.klang.common.infra.KlangMap
  *  - a [KatalystKnobDsl.Param] is its default and its name;
  *  - an expression with at least one slot leaf (step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md`,
  *    D4) is a [KatalystKnobProgram], compiled here;
- *  - so is a tree with a modulator (`Kat.sine` and the rest, step 5, D3), never folded. **Until step 5b wires the
- *    chain's per-block tick it is FROZEN**: no door builds one yet, and a Kotlin caller who builds one by hand gets
- *    its value at the modulators' start (each clock at its start, the `phase` operand included), evaluated at build
- *    and again on every changed map like a slot expression, but never moving between them. Chosen over a refusal
- *    because a refusal at chain build would be an exception on the audio thread for an input the wire accepts.
+ *  - so is a tree with a modulator (`Kat.sine` and the rest, step 5, D3), never folded, compiled on the chain's
+ *    sample rate and block size: [isModulated]. Its value moves per BLOCK through [tick], which the chain calls at
+ *    the top of every block it processes (`KatalystChain.process`, step 5b), owner or not.
  *
  * From then on [resolve] is one map lookup for a plain slot, one per slot LEAF and one run of the program for an
  * expression, and nothing at all for a constant. That is the cost rule of the param state: one lookup per SLOT per
  * CHANGED map, and zero per block, because the writers read [value] and never the map. An expression over slots
- * only is evaluated at resolve and never per block ([evaluations] counts it).
+ * only is evaluated at resolve and never per block ([evaluations] counts it); a modulated one is evaluated at resolve
+ * and once per [tick], with the slot leaves as the last resolve loaded them.
+ *
+ * **The order inside one block** (step 5b): a changed map resolves first (the host's `applyParams`, a run at the
+ * clocks as they stand, which moves no clock), then the chain's [tick] (a run, then every clock one block on). So a
+ * block that resolves reads the same clocks twice and advances them once: never a double advance.
  *
  * **Resolution happens ONCE, when the chain is built**, and again only when the orbit's param state CHANGES (Katalyst
- * step 5a): every answer here is block-constant, so the writer [KatalystChainBuilder] installs holds the resolved
- * numbers here and re-applies them on every owner claim. That is what keeps a writer allocation-free per block.
+ * step 5a): the answer of a knob without a modulator is block-constant, so the writer [KatalystChainBuilder] installs
+ * holds the resolved numbers here and re-applies them on every owner claim. That is what keeps a writer
+ * allocation-free per block. A modulated knob moves only through [tick], into the same fields.
  *
  * "Not in the map" and "no map at all" are the same answer, the authored default, so a pattern that
  * writes nothing hears exactly what the chain says.
@@ -70,6 +74,10 @@ internal class KatalystKnob(
      * builds, so a site that forgot it would seed its noises from 0 unseen; a knob built alone passes a fresh one.
      */
     noises: KatalystNoiseOrdinals,
+    /** The chain's sample rate: a modulator's clock and wave edges are compiled on it. */
+    sampleRate: Int,
+    /** The frames of one block of the chain, pinned to 128 in the engine: a modulator's clock steps by it per tick. */
+    blockFrames: Int,
 ) {
 
     /** The slot name when the knob is a plain [KatalystKnobDsl.Param], null otherwise. */
@@ -77,6 +85,12 @@ internal class KatalystKnob(
 
     /** The compiled expression when the knob is one with a slot leaf or a modulator, null otherwise. */
     private val program: KatalystKnobProgram?
+
+    /**
+     * What the last slot load of [program] answered ([LOADED_UNSET], [LOADED_AUTHORED], [LOADED_WRITTEN]); written by
+     * the first load in `init` and by every [resolve], read by [tick]. [LOADED_AUTHORED] for a knob without a program.
+     */
+    private var loaded: Int = LOADED_AUTHORED
 
     /** What the chain itself says: a constant's number (a folded expression's too), a `Param`'s default. */
     private val authored: Double
@@ -108,11 +122,10 @@ internal class KatalystKnob(
             is KatalystKnobDsl.Sine, is KatalystKnobDsl.Saw, is KatalystKnobDsl.Ramp, is KatalystKnobDsl.Tri,
             is KatalystKnobDsl.Square, is KatalystKnobDsl.PerlinNoise, is KatalystKnobDsl.BerlinNoise,
             -> {
-                // Step 5a: nothing ticks a knob's program yet, so the clock is a placeholder; see the class KDoc.
                 val compiled = KatalystKnobProgram.compile(
                     node = node,
-                    sampleRate = UNTICKED_SAMPLE_RATE,
-                    blockFrames = UNTICKED_BLOCK_FRAMES,
+                    sampleRate = sampleRate,
+                    blockFrames = blockFrames,
                     noises = noises,
                 )
 
@@ -125,7 +138,9 @@ internal class KatalystKnob(
                     program = compiled
                     // The expression at every slot's default, the Q5 rule included: what [resolve] gives with no map.
                     // Read straight off the result register after `run()`, no double returned across a call.
-                    if (loadSlots(compiled, null) == LOADED_UNSET) {
+                    loaded = loadSlots(compiled, null)
+
+                    if (loaded == LOADED_UNSET) {
                         authored = SLOT_UNSET
                     } else {
                         evaluations++
@@ -136,6 +151,12 @@ internal class KatalystKnob(
             }
         }
     }
+
+    /**
+     * True when the knob's expression holds a modulator ([KatalystKnobProgram.isModulated]): its value moves per block
+     * through [tick], and the stage glides it over one block (`KnobGlide`'s `modulated`). Fixed at build.
+     */
+    val isModulated: Boolean = program?.isModulated == true
 
     /** The number the stage is configured with right now. */
     var value: Double = authored
@@ -190,7 +211,7 @@ internal class KatalystKnob(
 
     /** The expression path of [resolve]: load every slot leaf, then run, unless a leaf is unset (Q5). */
     private fun resolveExpression(compiled: KatalystKnobProgram, params: KlangMap<Double>?) {
-        val loaded = loadSlots(compiled, params)
+        loaded = loadSlots(compiled, params)
 
         if (loaded == LOADED_UNSET) {
             written = false
@@ -200,10 +221,50 @@ internal class KatalystKnob(
         }
 
         // `run()` takes and returns no double; the value is read off the result register here, so no double crosses
-        // a call that V8 may leave out once step 5 evaluates per block (`audio/ref/performance.md`).
+        // a call that V8 may leave out (`audio/ref/performance.md`).
         evaluations++
         compiled.run()
+        takeResult(compiled)
+    }
 
+    /**
+     * True while the knob's modulators RUN and its value is a number: it [isModulated], its slot leaves are not unset
+     * (Q5), and [value] is finite. The "was it asked for" questions of the stages count such a knob as asked for (Q7:
+     * `stageAskedFor`, the duck's depth), because its value crossing a threshold every few blocks is the author's
+     * modulation, not a request to switch the stage off.
+     *
+     * The finite clause is the one home of "a non-finite modulated value asks for nothing" (review round 1 of step 5b):
+     * `Kat.sine(1).plus(NaN)` keeps its NaN through the law, loads no unset leaf, and would otherwise declare a duck
+     * with a NaN depth or run a delay or reverb at the default wet, where the same NaN as a constant leaves both off.
+     */
+    val isModulating: Boolean get() = isModulated && loaded != LOADED_UNSET && value.isFinite()
+
+    /**
+     * One block of a modulated knob (step 5b; the chain's per-block hook, `KatalystChain.process`): runs the program
+     * with the slot leaves as the last [resolve] loaded them, takes its value, and moves every clock one block on
+     * ([KatalystKnobProgram.tick]). Nothing for a knob without a modulator.
+     *
+     * **An unset knob is not ticked** (Q5 with Q3): while a slot leaf reads a non-finite value the knob is [SLOT_UNSET]
+     * and its clocks PAUSE, so a modulator over a cleared slot resumes where it stopped once the slot is written again.
+     * It must not tick then anyway: the failed load leaves the non-finite leaf in its register, and a periodic clock
+     * advanced by NaN reads as a rewind to 0 (`wrapPhase`).
+     *
+     * Allocation-free; takes and returns no double.
+     */
+    fun tick() {
+        val compiled = program ?: return
+
+        if (!compiled.isModulated || loaded == LOADED_UNSET) {
+            return
+        }
+
+        evaluations++
+        compiled.tick()
+        takeResult(compiled)
+    }
+
+    /** Reads the program's result register into [value] and [written], after a run. */
+    private fun takeResult(compiled: KatalystKnobProgram) {
         val result = compiled.registers[compiled.resultRegister]
 
         // NaN-guard: a non-finite result (a non-finite constant through a law that keeps it) is not a write.
@@ -212,16 +273,6 @@ internal class KatalystKnob(
     }
 
     private companion object {
-        /**
-         * Step 5a only, removed by 5b: the sample rate a modulated knob's program is compiled with until the chain
-         * hands over its own. Nothing ticks it, so the clocks never read it; the wave edges do, as a sliver of a
-         * cycle at the edge of a phase-offset saw, ramp, triangle or square (two samples' worth at most).
-         */
-        const val UNTICKED_SAMPLE_RATE = 48000
-
-        /** Step 5a only, removed by 5b: the block of [UNTICKED_SAMPLE_RATE]'s placeholder clock (never ticked). */
-        const val UNTICKED_BLOCK_FRAMES = 128
-
         /** [loadSlots]: a slot leaf is non-finite, the whole knob is unset (Q5); the loading stopped there. */
         const val LOADED_UNSET = 0
 
@@ -273,4 +324,11 @@ internal class KatalystKnob(
 internal fun knobOrUnset(
     node: KatalystKnobDsl?,
     noises: KatalystNoiseOrdinals,
-): KatalystKnob = KatalystKnob(node = node ?: KatalystKnobDsl.Constant(SLOT_UNSET), noises = noises)
+    sampleRate: Int,
+    blockFrames: Int,
+): KatalystKnob = KatalystKnob(
+    node = node ?: KatalystKnobDsl.Constant(SLOT_UNSET),
+    noises = noises,
+    sampleRate = sampleRate,
+    blockFrames = blockFrames,
+)

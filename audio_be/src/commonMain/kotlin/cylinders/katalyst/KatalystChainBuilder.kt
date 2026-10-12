@@ -88,17 +88,28 @@ object KatalystChainBuilder {
     ): KatalystChain {
         val pipeline = mutableListOf<KatalystEffect>()
         val writers = mutableListOf<KatalystSlotWriter>()
-        var duck: KatalystDuckEffect? = null
         var duckStage: KatalystStageDsl.Duck? = null
+
+        // Every knob of the chain, on its sample rate and block size (a modulator's clock) and its one noise counter.
+        // Each stage's knobs are built BEFORE the stage, in the order its writer lists them (the noise ordinals follow
+        // that order), so the stage can glide a modulated knob over one block (`KnobGlide`'s span, step 5b, D2).
+        fun knob(node: KatalystKnobDsl): KatalystKnob =
+            KatalystKnob(node = node, noises = noises, sampleRate = sampleRate, blockFrames = blockFrames)
 
         // One arithmetic stage and, when it has an operand, its writer (ABS has none). A non-finite operand the stage
         // reads as unset: its identity lives in the stage alone.
-        fun arithmetic(op: KatalystArithmeticOp, operand: KatalystKnobDsl?) {
-            val fx = KatalystArithmeticEffect(op = op, sampleRate = sampleRate, blockFrames = blockFrames)
+        fun arithmetic(op: KatalystArithmeticOp, node: KatalystKnobDsl?) {
+            val operand = node?.let { knob(it) }
+            val fx = KatalystArithmeticEffect(
+                op = op,
+                sampleRate = sampleRate,
+                blockFrames = blockFrames,
+                modulated = operand?.isModulated == true,
+            )
             pipeline.add(fx)
 
             if (operand != null) {
-                writers.add(KatalystArithmeticWriter(fx = fx, operand = KatalystKnob(operand, noises)))
+                writers.add(KatalystArithmeticWriter(fx = fx, operand = operand))
             }
         }
 
@@ -118,13 +129,14 @@ object KatalystChainBuilder {
                     // The material is a slot like the rest, holding the INDEX of a name in
                     // `BodyMaterials.names` (Katalyst step 5a-2). An unset index (the bare stage's
                     // SLOT_UNSET, or a slot nobody wrote whose default is unset) leaves the stage off
-                    // rather than picking a box nobody asked for.
+                    // rather than picking a box nobody asked for. Nothing glides here: a change is a bank
+                    // swap, so the stage takes no span.
                     writers.add(
                         KatalystResonatorWriter(
                             fx = fx,
-                            index = KatalystKnob(stage.material, noises),
-                            wet = KatalystKnob(stage.wet, noises),
-                            floor = KatalystKnob(stage.floor, noises),
+                            index = knob(stage.material),
+                            wet = knob(stage.wet),
+                            floor = knob(stage.floor),
                         )
                     )
                 }
@@ -142,9 +154,9 @@ object KatalystChainBuilder {
                     writers.add(
                         KatalystResonatorWriter(
                             fx = fx,
-                            index = KatalystKnob(stage.vowel, noises),
-                            wet = KatalystKnob(stage.wet, noises),
-                            floor = KatalystKnob(stage.floor, noises),
+                            index = knob(stage.vowel),
+                            wet = knob(stage.wet),
+                            floor = knob(stage.floor),
                         )
                     )
                 }
@@ -153,10 +165,17 @@ object KatalystChainBuilder {
                 // construct a 10-second DelayLine per orbit (7.68 MB, 97 % of the cylinder)
                 // delay or not.
                 is KatalystStageDsl.Delay -> {
+                    val wet = knob(stage.wet)
+                    val time = knob(stage.time)
+                    val feedback = knob(stage.feedback)
+                    val cap = knob(stage.cap)
                     val fx = KatalystDelayEffect(
                         rings = rings,
                         sampleRate = sampleRate,
                         blockFrames = blockFrames,
+                        wetModulated = wet.isModulated,
+                        feedbackModulated = feedback.isModulated,
+                        timeModulated = time.isModulated,
                     )
                     pipeline.add(fx)
 
@@ -167,23 +186,25 @@ object KatalystChainBuilder {
                     // AUTHORED `wet(0.0)` rents no ring (decided 2026-09-17, consistent with the
                     // phaser gated on depth and the duck on orbit), while a wet a PATTERN wrote runs
                     // the stage whatever its value. The one home of that rule is [stageAskedFor].
-                    writers.add(
-                        KatalystDelayWriter(
-                            fx = fx,
-                            wet = KatalystKnob(stage.wet, noises),
-                            time = KatalystKnob(stage.time, noises),
-                            feedback = KatalystKnob(stage.feedback, noises),
-                            cap = KatalystKnob(stage.cap, noises),
-                        )
-                    )
+                    writers.add(KatalystDelayWriter(fx = fx, wet = wet, time = time, feedback = feedback, cap = cap))
                 }
 
                 // No network until the stage is asked for ([stageAskedFor], resource warehouse 2d): ~200 KB per
                 // orbit otherwise.
                 is KatalystStageDsl.Reverb -> {
+                    val wet = knob(stage.wet)
+                    val size = knob(stage.size)
+                    val lowpass = knobOrUnset(
+                        node = stage.lowpass,
+                        noises = noises,
+                        sampleRate = sampleRate,
+                        blockFrames = blockFrames,
+                    )
                     val fx = KatalystReverbEffect(
                         units = reverbs,
                         blockFrames = blockFrames,
+                        wetModulated = wet.isModulated,
+                        sizeModulated = size.isModulated,
                     )
                     pipeline.add(fx)
 
@@ -193,59 +214,69 @@ object KatalystChainBuilder {
                     // passes it through the one shared conversion, and configure bounds it again
                     // at the door. `reverb.wet` is how much of the orbit mix feeds the room, and
                     // whether the stage runs is [stageAskedFor], as on the delay above.
-                    writers.add(
-                        KatalystReverbWriter(
-                            fx = fx,
-                            wet = KatalystKnob(stage.wet, noises),
-                            size = KatalystKnob(stage.size, noises),
-                            lowpass = knobOrUnset(stage.lowpass, noises),
-                        )
-                    )
+                    writers.add(KatalystReverbWriter(fx = fx, wet = wet, size = size, lowpass = lowpass))
                 }
 
                 is KatalystStageDsl.Phaser -> {
+                    val wet = knob(stage.wet)
+                    val rate = knob(stage.rate)
+                    val center = knob(stage.center)
+                    val sweep = knob(stage.sweep)
+                    val floor = knob(stage.floor)
                     val fx = KatalystPhaserEffect(
                         phaser = Phaser(sampleRate),
                         sampleRate = sampleRate,
                         blockFrames = blockFrames,
+                        mixModulated = wet.isModulated || floor.isModulated,
+                        centerModulated = center.isModulated,
+                        sweepModulated = sweep.isModulated,
                     )
                     pipeline.add(fx)
 
                     writers.add(
                         KatalystPhaserWriter(
                             fx = fx,
-                            wet = KatalystKnob(stage.wet, noises),
-                            rate = KatalystKnob(stage.rate, noises),
-                            center = KatalystKnob(stage.center, noises),
-                            sweep = KatalystKnob(stage.sweep, noises),
-                            floor = KatalystKnob(stage.floor, noises),
+                            wet = wet,
+                            rate = rate,
+                            center = center,
+                            sweep = sweep,
+                            floor = floor,
                         )
                     )
                 }
 
                 is KatalystStageDsl.Compressor -> {
+                    val threshold = knob(stage.threshold)
+                    val ratio = knob(stage.ratio)
+                    val knee = knob(stage.knee)
+                    val attack = knob(stage.attack)
+                    val release = knob(stage.release)
                     // The lookahead is fixed per chain: it sizes the instance's ring here, at build
                     // time, and the effect coerces it (bounded, non-finite is none).
                     val fx = KatalystCompressorEffect(
                         sampleRate = sampleRate,
                         blockFrames = blockFrames,
                         lookaheadSeconds = stage.lookahead,
+                        thresholdModulated = threshold.isModulated,
+                        ratioModulated = ratio.isModulated,
+                        kneeModulated = knee.isModulated,
                     )
                     pipeline.add(fx)
 
                     writers.add(
                         KatalystCompressorWriter(
                             fx = fx,
-                            threshold = KatalystKnob(stage.threshold, noises),
-                            ratio = KatalystKnob(stage.ratio, noises),
-                            knee = KatalystKnob(stage.knee, noises),
-                            attack = KatalystKnob(stage.attack, noises),
-                            release = KatalystKnob(stage.release, noises),
+                            threshold = threshold,
+                            ratio = ratio,
+                            knee = knee,
+                            attack = attack,
+                            release = release,
                         )
                     )
                 }
 
                 is KatalystStageDsl.Distort -> {
+                    val amount = knob(stage.amount)
                     // The shape and the oversampling factor are fixed per chain, as on a voice per note: they
                     // pick the shaper and size the oversampler here, at build time. The amount is a slot.
                     val fx = KatalystDistortEffect(
@@ -253,17 +284,18 @@ object KatalystChainBuilder {
                         blockFrames = blockFrames,
                         shapeIndex = stage.shape,
                         oversampleFactor = stage.oversample,
+                        amountModulated = amount.isModulated,
                     )
                     pipeline.add(fx)
 
-                    writers.add(KatalystDistortWriter(fx = fx, amount = KatalystKnob(stage.amount, noises)))
+                    writers.add(KatalystDistortWriter(fx = fx, amount = amount))
                 }
 
                 // Declared in the list, run outside it: `Cylinders` applies it after every orbit,
                 // because it needs cross-orbit access to the sidechain source. The last
-                // declaration wins, so a second Duck stage replaces the first, instance and all.
+                // declaration wins, so a second Duck stage replaces the first; its instance is built
+                // after the loop, with its knobs.
                 is KatalystStageDsl.Duck -> {
-                    duck = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
                     duckStage = stage
                 }
 
@@ -283,18 +315,25 @@ object KatalystChainBuilder {
                     // 2026-09-19, which is bit-transparent and is what let `katp("gain.gain", x)`
                     // reach the fader of an orbit that declares nothing one step before every
                     // other knob could.
-                    writers.add(KatalystEqWriter(fx = fx, knobs = eqKnobs(specs)))
+                    val knobs = eqKnobs(specs = specs, sampleRate = sampleRate, blockFrames = blockFrames)
+
+                    writers.add(KatalystEqWriter(fx = fx, knobs = knobs))
                 }
 
                 // The group fader, after the inserts (the signal-flow plan's D5).
                 is KatalystStageDsl.Gain -> {
-                    val fx = KatalystGainEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+                    val gain = knob(stage.gain)
+                    val fx = KatalystGainEffect(
+                        sampleRate = sampleRate,
+                        blockFrames = blockFrames,
+                        modulated = gain.isModulated,
+                    )
                     pipeline.add(fx)
 
                     // Unity is the identity element of the stage, not a tuned value, which is why
                     // it is a literal here and in `KatalystStageDsl.Gain` rather than a shared
                     // constant (the wire KDoc says so).
-                    writers.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain, noises)))
+                    writers.add(KatalystGainWriter(fx = fx, gain = gain))
                 }
 
                 // The arithmetic stages: the Ignitor's per-sample laws on the bus (`KatalystArithmeticEffect`).
@@ -329,30 +368,32 @@ object KatalystChainBuilder {
                     val branchDuck = stage.lastDuck()
 
                     if (branchDuck != null) {
-                        duck = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
                         duckStage = branchDuck
                     }
                 }
             }
         }
 
-        // The duck's writer is installed after the loop so that only the winning instance is ever
-        // configured; its position among the writers is unobservable (every writer touches exactly
-        // one stage), and the duck's list position is documented as ignored anyway.
+        // The duck, its writer and its knobs are built after the loop so that only the winning stage
+        // is ever built and configured; its position among the writers is unobservable (every writer
+        // touches exactly one stage), and the duck's list position is documented as ignored anyway.
         // The winning stage's slots, for the same reason: the dropped duplicate's are never read.
-        // `duck` and `duckStage` are set together, so both are null or neither is.
-        val theDuck = duck
         val winner = duckStage
+        var theDuck: KatalystDuckEffect? = null
         var duckWriter: KatalystDuckWriter? = null
 
-        if (theDuck != null && winner != null) {
-            duckWriter = KatalystDuckWriter(
-                fx = theDuck,
-                orbit = KatalystKnob(winner.orbit, noises),
-                depth = KatalystKnob(winner.depth, noises),
-                attack = KatalystKnob(winner.attack, noises),
+        if (winner != null) {
+            val orbit = knob(winner.orbit)
+            val depth = knob(winner.depth)
+            val attack = knob(winner.attack)
+            val fx = KatalystDuckEffect(
+                sampleRate = sampleRate,
+                blockFrames = blockFrames,
+                depthModulated = depth.isModulated,
             )
 
+            theDuck = fx
+            duckWriter = KatalystDuckWriter(fx = fx, orbit = orbit, depth = depth, attack = attack)
             writers.add(duckWriter)
         }
 
@@ -419,20 +460,25 @@ object KatalystChainBuilder {
      * coefficient helpers take a non-finite freq to 1000 Hz, a non-finite q to 0.707 and a
      * non-finite db to a transparent bell, so nothing here can put a NaN in the mix.
      */
-    private fun eqKnobs(specs: List<EqSectionSpec>): Array<KatalystKnob?> {
+    private fun eqKnobs(specs: List<EqSectionSpec>, sampleRate: Int, blockFrames: Int): Array<KatalystKnob?> {
         val knobs = arrayOfNulls<KatalystKnob>(specs.size * KatalystEqEffect.KNOBS_PER_SECTION)
+
+        // A fresh noise counter each: an EQ section knob is a constant or a slot, never a modulator (Q2, E2).
+        fun section(node: IgnitorDsl): KatalystKnob = knobOrUnset(
+            node = eqKnob(node),
+            noises = KatalystNoiseOrdinals(),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+        )
 
         for (i in specs.indices) {
             val spec = specs[i]
             val base = i * KatalystEqEffect.KNOBS_PER_SECTION
 
-            // A fresh noise counter each: an EQ section knob is a constant or a slot, never a modulator (Q2, E2).
-            knobs[base + KatalystEqEffect.KNOB_FREQ] = knobOrUnset(eqKnob(spec.freq), KatalystNoiseOrdinals())
-            knobs[base + KatalystEqEffect.KNOB_Q] = knobOrUnset(eqKnob(spec.q), KatalystNoiseOrdinals())
-            knobs[base + KatalystEqEffect.KNOB_DB] = spec.db?.let { knobOrUnset(eqKnob(it), KatalystNoiseOrdinals()) }
-            knobs[base + KatalystEqEffect.KNOB_GAIN] = spec.gain?.let {
-                knobOrUnset(eqKnob(it), KatalystNoiseOrdinals())
-            }
+            knobs[base + KatalystEqEffect.KNOB_FREQ] = section(spec.freq)
+            knobs[base + KatalystEqEffect.KNOB_Q] = section(spec.q)
+            knobs[base + KatalystEqEffect.KNOB_DB] = spec.db?.let { section(it) }
+            knobs[base + KatalystEqEffect.KNOB_GAIN] = spec.gain?.let { section(it) }
         }
 
         return knobs
@@ -484,11 +530,17 @@ object KatalystChainBuilder {
  * Off is expressed by handing the effect a non-finite time respectively size, so the ONE threshold
  * stays inside the effect (where it also drains a live tail instead of freezing it) and this
  * function only decides whether anybody asked for the stage at all.
+ *
+ * **A modulated wet is asked for** while its modulators run ([KatalystKnob.isModulating], Q7 of
+ * `docs/tasks/in-progress/katalyst-knob-expressions.md`, step 5b): an LFO that dips the wet to 0 or below is the
+ * author's modulation, a level that glides like a written 0, and must not drain the stage and rent it again every
+ * cycle. A modulated wet whose slot leaf is unset (Q5), or whose value is not finite, asks for nothing: off, as the
+ * same NaN as a constant is. So this gate is true only with a finite wet.
  */
 internal fun stageAskedFor(wet: KatalystKnob): Boolean {
     // NaN-guard on a value the author can write: a non-finite wet was never set, so it is neither
     // a write nor a positive amount, and an unset stage is off. That is the same reading the voice
     // path gave an untouched effect.
-    return wet.written || (wet.value.isFinite() && wet.value > 0.0)
+    return wet.written || wet.isModulating || (wet.value.isFinite() && wet.value > 0.0)
 }
 

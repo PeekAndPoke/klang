@@ -106,7 +106,7 @@ class ReverbNetworkLawSpec : StringSpec({
             for ((sampleRate, size, lowpass) in listOf(Triple(44100, 0.5, null), Triple(48000, 0.8, 3000.0))) {
                 val reverb = Reverb(sampleRate).apply {
                     this.size = size
-                    this.lowpass = lowpass
+                    this.lowpass = lowpass ?: Double.NaN
                 }
                 val inBuf = StereoBuffer(block)
                 val outBuf = StereoBuffer(block)

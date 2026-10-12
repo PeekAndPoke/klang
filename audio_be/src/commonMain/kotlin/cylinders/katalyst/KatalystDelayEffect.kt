@@ -37,9 +37,32 @@ import kotlin.math.min
  *  - `time` does NOT glide (a glide bends the echoes' pitch): [DelayLine] crossfades from the old
  *    tap to the new one (its KDoc has the measurement and the rules).
  * The first configure out of [Off] snaps both glides (the ring is empty there, and a song whose
- * delay never changes stays identical to a constant feed); [Draining] keeps the feedback gliding
- * towards the last Active value, so a drain is still "Active on silent input"; [Off.enter] forgets
- * both, next to the tail ceiling.
+ * delay never changes stays identical to a constant feed), except the wet of a modulated time (see
+ * below); [Draining] keeps the feedback gliding towards the last Active value, so a drain is still
+ * "Active on silent input"; [Off.enter] forgets both, next to the tail ceiling.
+ *
+ * **A modulated time switches the feed with the wet glide** (knob expressions step 5b, review rounds 1
+ * and 2). On a stage whose time knob holds a modulator ([timeModulated]):
+ *  - **Going off**, a FINITE time below [MIN_ACTIVE_DELAY_SECONDS] first takes the wet glide to 0 over
+ *    its span (50 ms, one block for a modulated wet), and the stage stays [Active] while it falls: the
+ *    falling feed goes into the ring and the ceiling watches it, as on any Active block. The off-config
+ *    that finds the glide landed measures the tap window and enters [Draining] or [Off] exactly as
+ *    every other off does.
+ *  - **Coming back** from any state but Active, the wet glides up from 0 ([KnobGlide.startFrom]): out of
+ *    [Off], the first activation after a build or a reset included (the ring is empty, so the first
+ *    echoes fade in rather than arrive), and out of [Draining], whether the drain began after the fade
+ *    or with a hard cut. A return while the fade still runs turns the glide around where it stands.
+ *  - **The contract** it rests on: the off-config is RE-APPLIED every block, because only an off-config
+ *    moves a landed fade on into the drain. Production holds it: the slot writer applies every block,
+ *    and with a modulated time it is a modulated writer, which `KatalystChain.process` ticks and applies
+ *    on every block it processes.
+ *
+ * Without it an LFO through the gate wrote a step of the whole feed into the ring twice per cycle,
+ * and the ring repeated it. EVERY OTHER switch-off keeps the hard cut it always had (an owner change, a
+ * `katp` time pattern on an unmodulated stage, an unset time, and a non-finite time on a modulated stage,
+ * which acts at once, mid-fade too): a chain without a modulator renders as before, and on an owner change a fade would
+ * feed the NEW owner's first 50 ms into the old owner's ring (the cut against that bleed is an open
+ * by-ear question).
  *
  * The effect owns an active/draining/off lifecycle so that turning the delay off never freezes a
  * live tail inside the ring (block-framing ledger D3: the ring's write clock used to stop dead the
@@ -76,6 +99,16 @@ class KatalystDelayEffect(
     private val rings: SizedBuffers,
     private val sampleRate: Int,
     blockFrames: Int,
+    /** True when the wet's knob holds a modulator: [wetGlide] spans one block (knob expressions step 5b, D2). */
+    wetModulated: Boolean = false,
+    /** True when the feedback's knob holds a modulator: [feedbackGlide] spans one block (step 5b, D2). */
+    feedbackModulated: Boolean = false,
+    /**
+     * True when the time's knob holds a modulator: a finite time below [MIN_ACTIVE_DELAY_SECONDS] then fades the feed
+     * out before the drain, and a return glides it up from 0 (see the class KDoc). False keeps the hard cut and the
+     * snap.
+     */
+    private val timeModulated: Boolean = false,
 ) : KatalystEffect {
     /**
      * Test seam: start with a ring already installed, as every spec written before rings were rented
@@ -207,11 +240,18 @@ class KatalystDelayEffect(
     /** What the line is fed while Active: the orbit mix at this stage's position, times [wetGlide]. */
     private val feed = StereoBuffer(blockFrames)
 
-    /** The owner's `wet`, a LEVEL knob (see the class KDoc). Forgotten in [Off.enter]. */
-    private val wetGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    /**
+     * The owner's `wet`, a LEVEL knob (see the class KDoc). On a modulated time it is taken to 0 before the drain and
+     * started from 0 on a return; forgotten in [Off.enter].
+     */
+    private val wetGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = wetModulated)
 
     /** The owner's `feedback`, a COEFFICIENT knob (see the class KDoc). Forgotten in [Off.enter]. */
-    private val feedbackGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val feedbackGlide =
+        KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = feedbackModulated)
+
+    /** Test seam: the wet in force after the last processed block (the glide's value). */
+    internal val wetInForce: Double get() = wetGlide.value
 
     /**
      * The Active-state tail question answered from a ceiling on the ring's content (see
@@ -248,7 +288,8 @@ class KatalystDelayEffect(
      *   window saw (see [TailCeiling]); after it, nothing above -110 dBFS is dropped.
      * Both repairs only ever RAISE the ceiling, so an orbit can reset later than before, never
      * earlier; for a steady feedback nothing moved. The reverb shares none of the drain half
-     * (fixed comb lengths, comb feedback structurally below 1).
+     * (fixed comb lengths, comb feedback structurally below 1). The feed's fade of a modulated
+     * time adds nothing here: it runs in [Active], where the ceiling observes every block.
      *
      * Entering [Off] is the one place the ceiling is forgotten, because there the ring is empty.
      * That line is load-bearing: without it the next life reads the previous life's ceiling and
@@ -265,13 +306,14 @@ class KatalystDelayEffect(
      *
      * | state \ event | `configure`, delay ON | `configure`, delay OFF | `process`, countdown ends | `reset` | `retire` / `release` |
      * |---|---|---|---|---|---|
-     * | **Off** | **Active** (a ring is rented if needed). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | Off | Off |
-     * | **Active** | Active (the knobs are rewritten) | **Draining**, or **Off** when the tap window is already silent | (never) | Off | Off |
-     * | **Draining** | **Active** (the ring and its ceiling carry on under the new tap; after a self-oscillating drain the ceiling is re-measured first) | Draining (the countdown keeps running) | **Off** | Off | Off |
+     * | **Off** | **Active** (a ring is rented if needed; on a modulated time the wet glides up from 0). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | Off | Off |
+     * | **Active** | Active (the knobs are rewritten; mid-fade the wet glide turns around) | **Draining**, or **Off** when the tap window is already silent. On a modulated time with a finite value, first **Active** while the wet glide falls to 0 (the off-config is re-applied every block), then that | (never) | Off | Off |
+     * | **Draining** | **Active** (the ring and its ceiling carry on under the new tap; after a self-oscillating drain the ceiling is re-measured first; on a modulated time the wet glides up from 0) | Draining (the countdown keeps running) | **Off** | Off | Off |
      *
-     * The ON arm of [configure] is the same from every state but one line, so it stays on the
-     * effect and only the OFF arm dispatches ([deactivate]); the one line is a reference compare
-     * that hands a return from [Draining] its ceiling check ([Draining.resume], Katalyst 5c-5).
+     * The ON arm of [configure] is the same from every state but two lines, so it stays on the
+     * effect and only the OFF arm dispatches ([deactivate]); the two lines are reference compares,
+     * one that starts a modulated time's wet from 0 on any return to Active (see the class KDoc),
+     * and one that hands a return from [Draining] its ceiling check ([Draining.resume], Katalyst 5c-5).
      * Per block that is one virtual call for the block ([process]) and, on the OFF arm only, one
      * more for the owner's config: a running delay takes the ON arm and dispatches nothing through
      * [state]. That is the price of the `when`s they replace.
@@ -295,13 +337,14 @@ class KatalystDelayEffect(
 
         /**
          * The owner's off-config arrived. [line] is the effect's ring, which [configure] has
-         * already proven non-null. A state that has nothing to do with it ignores it.
+         * already proven non-null. A state that has nothing to do with it ignores it. [fade] is true
+         * when the off is a modulated time crossing the gate with a finite value (see the class KDoc).
          *
          * Do not read the parameter as a pattern: it is here ONLY so the one state that uses the
          * ring does not repeat a null check the caller has just done. [process] takes the context
          * and reads `delayLine` itself, because there the caller has checked nothing.
          */
-        abstract fun deactivate(line: DelayLine)
+        abstract fun deactivate(line: DelayLine, fade: Boolean)
     }
 
     /** Nothing in the ring and nothing to do: a true short-circuit until an owner re-enables. */
@@ -332,7 +375,7 @@ class KatalystDelayEffect(
         override fun sustainsItself(): Boolean = false
 
         /** Already off: an owner that says off again says nothing. */
-        override fun deactivate(line: DelayLine) {}
+        override fun deactivate(line: DelayLine, fade: Boolean) {}
     }
 
     /**
@@ -372,7 +415,18 @@ class KatalystDelayEffect(
             return activeTail.hasTail && abs(line.feedback) >= 1.0
         }
 
-        override fun deactivate(line: DelayLine) {
+        override fun deactivate(line: DelayLine, fade: Boolean) {
+            // A modulated time crossing the gate: the feed falls to 0 over the wet glide's span while the stage stays
+            // Active, and only an off-config that finds the glide landed goes on below (see the class KDoc). A wet at
+            // rest at 0 has nothing to fade.
+            if (fade && (wetGlide.isGliding || wetGlide.value != 0.0)) {
+                wetGlide.retarget(0.0)
+
+                if (wetGlide.isGliding) {
+                    return
+                }
+            }
+
             // One O(delayInt) scan at the transition: the countdown starts from what the TAP can
             // still reach (review round 3 replaced the static worst-case bound; round 4 shrank
             // the scan from the whole ring to the tap window: older content is overwritten
@@ -478,7 +532,7 @@ class KatalystDelayEffect(
          * second off-config must NOT restart it, or an owner re-applied every block would hold
          * the tail open for ever.
          */
-        override fun deactivate(line: DelayLine) {}
+        override fun deactivate(line: DelayLine, fade: Boolean) {}
     }
 
     private val off = Off()
@@ -536,9 +590,10 @@ class KatalystDelayEffect(
 
         // Non-finite reads as OFF (time) or as the shared default (feedback, cap, wet), never as the
         // previous owner's value: DelayLine's setters DROP non-finite writes, so passing one through
-        // would leave whatever the last owner set. The slot writer never hands a non-finite wet to a
-        // running stage (`stageAskedFor`); this guard is the door's own contract for a direct caller
-        // (the reverb door reads a non-finite size as off the same way).
+        // would leave whatever the last owner set. The slot writer hands a non-finite wet only with an
+        // off time (`stageAskedFor` is true only with a finite wet, a modulated one included); this guard
+        // is the door's own contract for a direct caller (the reverb door reads a non-finite size as off
+        // the same way).
         if (time.isFinite() && time >= MIN_ACTIVE_DELAY_SECONDS) {
             // No ring and none to be had: the orbit stays dry rather than the worklet dying.
             val line = ensureRing(time) ?: return
@@ -553,6 +608,13 @@ class KatalystDelayEffect(
             line.feedback = guardedFeedback
             line.cap = if (cap.isFinite()) cap else DELAY_CAP
             feedbackGlide.retarget(guardedFeedback)
+
+            // A modulated time returns to Active with its feed at 0, out of Off or Draining alike, so the wet glides
+            // up from there; a return mid-fade (Active) turns the falling glide around where it stands (class KDoc).
+            if (timeModulated && state !== active) {
+                wetGlide.startFrom(0.0)
+            }
+
             wetGlide.retarget(if (wet.isFinite()) wet else DELAY_WET)
 
             // A return mid-drain: the frozen ceiling may need a measurement (after the knobs, so
@@ -568,8 +630,9 @@ class KatalystDelayEffect(
         // Never activated: nothing to drain.
         val line = this.delayLine ?: return
 
-        // Only [Active] has work to do here; the other two say why they do not.
-        state.deactivate(line)
+        // Only [Active] has work to do here; the other two say why they do not. A FINITE time on this arm is below
+        // the gate; only a modulated one fades the feed (a non-finite time, unset or not asked for, is the hard cut).
+        state.deactivate(line = line, fade = timeModulated && time.isFinite())
     }
 
     /**

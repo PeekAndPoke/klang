@@ -192,6 +192,9 @@ class DelayLine(
     /** Test seam: true while a tap crossfade runs. */
     internal val isCrossfading: Boolean get() = fading
 
+    /** Test seam: the tap distance in force, in samples (where a running crossfade goes). */
+    internal val tapInForce: Double get() = tapSamples
+
     /** Test seam for the migration rows: where the next sample will be written. */
     internal val writePosForTest: Int get() = writePos
 

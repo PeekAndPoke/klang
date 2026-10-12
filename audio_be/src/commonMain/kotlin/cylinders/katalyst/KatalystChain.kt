@@ -37,6 +37,19 @@ internal interface KatalystSlotWriter {
 
     /** Write the resolved values into the stage. No map, no allocation, idempotent. */
     fun apply()
+
+    /**
+     * True when a knob this writer ticks holds a modulator ([KatalystKnob.isModulated]), so the chain must call [tick]
+     * and [apply] on every block it processes ([KatalystChain.process]). Fixed at build.
+     */
+    val isModulated: Boolean
+
+    /**
+     * One block of this writer's modulated knobs (knob expressions step 5b): each ticks ([KatalystKnob.tick]: a run,
+     * then its clocks one block on), then the writer refills what [apply] hands over. Called only when [isModulated],
+     * once per processed block, by [KatalystChain.process]; no map, no allocation.
+     */
+    fun tick()
 }
 
 /**
@@ -91,6 +104,14 @@ class KatalystChain internal constructor(
      * meanings, and the next reader to append to "the lifecycle set" would change the pipeline).
      */
     private val stages: Array<KatalystEffect> = if (duck == null) serial.copyOf() else serial + duck
+
+    /**
+     * The writers with a modulated knob ([KatalystSlotWriter.isModulated]), in [writers]' order: the ones [process]
+     * ticks and applies at the top of every block. Empty for a chain without a modulator, which therefore processes
+     * exactly as before step 5b. A `parallel` stage's writer is never here: each branch is a chain and ticks its own
+     * in its own [process], which the stage calls once per block.
+     */
+    private val modulated: Array<KatalystSlotWriter> = writers.filter { it.isModulated }.toTypedArray()
 
     /**
      * Test seam: how many writers the build installed. The one way a spec can tell "the dropped
@@ -241,8 +262,25 @@ class KatalystChain internal constructor(
         }
     }
 
-    /** Runs the serial chain on the orbit's buffers, in DSL order. */
+    /**
+     * Runs the serial chain on the orbit's buffers, in DSL order.
+     *
+     * **First, the modulated knobs move** (knob expressions step 5b, "the hook"): each writer in [modulated] ticks its
+     * knobs one block and applies, before any stage runs. HERE and not in [applyParams], because a chain processes
+     * whenever it is active, and only an owned orbit is configured: an orbit with no owner, the master (configured
+     * with no state), the leaving chain of a swap through its fade AND its drain (Q4: its modulators keep running, its
+     * slots stay as its last resolve left them), and every `parallel` branch (the stage calls this once per branch per
+     * block) all come through here, once per block. The clocks therefore run over the blocks this chain processed
+     * (Q3): they pause while it does not, and [reset] does not rewind them.
+     *
+     * The order with a changed map: the host's [applyParams] resolves first (a run at the clocks as they stand), then
+     * this tick runs and advances once, so a block never advances a clock twice. The [apply] after the tick writes this
+     * block's values; on an owned orbit the host's own [applyParams] earlier in the block wrote the previous block's,
+     * which every stage takes as an unchanged config (a retarget to the target that stands, a compare that matches).
+     */
     fun process(ctx: KatalystContext) {
+        tickModulated()
+
         for (i in serial.indices) {
             serial[i].process(ctx)
         }
@@ -252,6 +290,16 @@ class KatalystChain internal constructor(
         // it is what closes its "the first initialisation is instant" window: a duck that engages
         // at bar five must fade in rather than snap (see [KatalystDuckEffect.orbitBlockRan]).
         duck?.orbitBlockRan()
+    }
+
+    /** The hook of [process]: every modulated writer ticks one block, then applies. Nothing for a chain without one. */
+    private fun tickModulated() {
+        for (i in modulated.indices) {
+            val writer = modulated[i]
+
+            writer.tick()
+            writer.apply()
+        }
     }
 
     /**

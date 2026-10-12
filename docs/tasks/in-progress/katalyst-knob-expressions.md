@@ -1,6 +1,6 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **in progress, steps 1 to 4 and 5a built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer,
+Status: **in progress, steps 1 to 4, 5a and 5b built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer,
 2026-10-11, Q12's seed refined 2026-10-12; the other Q at the coordinator's lean).
 
 ## Why
@@ -226,12 +226,125 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
    `WireCodecRoundTripSpec` (a row per node, its defaults, a nested tree).
    Known consequence of the seed rule: it is per CHAIN, so two orbits whose chains put a noise at the same position walk
    the same noise; a `seed` knob would be a later door decision.
-   **Notes for 5b.** While a knob is unset (Q5), 5b does not tick it: its clocks pause, in line with Q3's processed
+   **Notes for 5b** (all four built in 5b). While a knob is unset (Q5), 5b does not tick it: its clocks pause, in line with Q3's processed
    blocks (a failed Q5 load leaves the failing leaf's non-finite value in its register, so a tick would advance a
    periodic clock by NaN, which `wrapPhase` reads as a rewind to 0). Tick-after-resolve order: resolve, then tick (a
    run, then the advance), never a double advance in one block. The noise `rate` is REQUIRED on the Katalyst doors, as
    `freq` is (Q10): the Ignitor's default of 1 is an audio-rate default, 0.384 cells a block, a noise AM rather than an
    LFO (coordinator's call, reopenable). The placeholder clock of `KatalystKnob` (`UNTICKED_*`) goes.
+   **5b built** (2026-10-12): the per-block path and the doors.
+   - **The hook** (hard part 1): `KatalystChain.process` ticks, at its top, every writer with a modulated knob
+     (`KatalystSlotWriter.isModulated`, fixed at build, collected once into `modulated`) and applies it: each knob runs
+     its program and advances its clocks one block (`KatalystKnob.tick`), the writer refills its holder, `apply`
+     configures the stage. So an orbit with no owner, the master, the leaving chain of a swap through its fade AND its
+     drain (Q4: its modulators run, its slots stay as its last resolve left them) and every `parallel` branch (its own
+     `process`, once per block; the `parallel` writer never ticks) all modulate. Order per block: a changed map resolves
+     in the host's `applyParams` (a run at the clocks as they stand), then the tick runs and advances once: never a
+     double advance. An owned orbit therefore applies twice a block (the host's `applyParams` with the last tick's
+     values, then the hook with this block's), which every stage takes as an unchanged config. An unset knob (Q5) is not
+     ticked: its clocks pause and resume where they stopped. The `UNTICKED_*` placeholder is gone: knobs compile on the
+     chain's sample rate and block size (`KatalystKnob(node, noises, sampleRate, blockFrames)`).
+   - **The span** (D2): `KnobGlide(..., modulated)`, chosen per knob at construction: one block for a knob whose
+     expression holds a modulator, `KNOB_GLIDE_SECONDS` for every other (a `katp`-moved knob on the same stage keeps
+     its 50 ms). The builder now builds a stage's knobs before the stage (same noise ordinals, the writer's order), and
+     the duck after the loop. Q6 (a slot and a modulator in one knob: one block) and Q16 (`carryOver` across spans
+     clamps; reachable now, KDoc rewritten) as decided.
+   - **The stages, as built:**
+
+     | stage | knob | rule (modulated) |
+     |---|---|---|
+     | gain | `gain` | one-block level glide, per sample from the last block's value |
+     | arithmetic | operand | one-block glide; `div` keeps gliding its reciprocal: through the pole the level ramps between the two blocks' reciprocals and nowhere else |
+     | distort | `amount` | one-block glide (the drive ramped per sample); the `amount <= 0` gate reads the block's value and switches through the stage's 50 ms blend, turned around where it stands (an LFO through 0 never reaches Off: accepted, documented on the constructor) |
+     | delay | `wet`, `feedback` | one-block glides |
+     | delay | `time` | the block's value to the line: it steps through the 50 ms tap crossfade, a change mid-crossfade parked, latest wins (Q9, "not a chorus"); a finite time below `MIN_ACTIVE_DELAY_SECONDS` keeps the stage Active while the wet glides the feed to 0 (one block for a modulated wet), then the off-config that finds it landed drains, and above the gate it resumes; every return to Active (out of Off, out of Draining, the first activation) glides the wet up from 0 (`KnobGlide.startFrom`). Rounds 1 and 2: before, the feed was cut and restarted in one sample. Only a modulated time fades; every other off keeps the hard cut, a non-finite time on a modulated stage included, which acts at once, mid-fade too. A longer time grows the ring once per size class (a rent on the audio thread, as for `katp`) |
+     | delay | `cap` | per block, no glide |
+     | delay, reverb | `wet` gate | Q7: a MODULATING wet (`KatalystKnob.isModulating`: modulated, not unset, and finite since round 1) asks for the stage (`stageAskedFor`), so an LFO through 0 does not drain and re-rent; a NaN modulated wet is off, as a NaN constant is |
+     | reverb | `wet`, `size` | one-block glides; a size below `MIN_ACTIVE_SIZE` drains, above it resumes, per block, with the delay's feed fade both ways when the size is modulated (rounds 1 and 2); an unset modulated size fades too (the writer hands `Reverb.normalizeSize`'s 0 for it, a finite size below the gate), where an unset delay time hard-cuts: `normalizeSize`'s NaN-to-0 is the pooled room's existing rule, and a delay time has no finite stand-in for unset, so the two differ by their doors, not by a 5b decision |
+     | reverb | `lowpass` | per block, no glide; `ReverbConfig.lowpass` and `Reverb.lowpass` are primitives (NaN unset, a non-finite write unsets; round 1 made the DSP's ONE field, replacing the nullable setter and `setLowpassOrUnset`): the `Double?` holder allocated 24 bytes a block with a moving lowpass (measured, mutation M16c) |
+     | phaser | `wet`, `floor` | the C4 pair glides over one block when EITHER is modulated (they share it; a `katp` move of the other then steps over one block too); the depth gate switches per block through the pair; an LFO through the gate lands the pair on identity, the next identity block clears the cascade, so every cycle restarts the cascade from rest (click-free: the wet coefficient is near 0 there) |
+     | phaser | `center`, `sweep`; `rate` | one-block glides each; the rate at once. The `applied` short-circuit is defeated every block (step 6 measures) |
+     | compressor | `threshold`, `ratio` (as its inverse), `knee`; `attack`, `release` | one-block glides; attack and release at once; the step 2 holders, no allocation (JVM). With a lookahead the attack resizes the box smoother CONTINUOUSLY (round 1: it re-primed both boxes on every length change, a gain step of 0.6 to 0.7) |
+     | duck | `depth`; `attack`; `orbit` | one-block glide; Q7: a modulating depth keeps the stage declared (`Ducking` reads a depth below 0 as 0), a NaN one does not (round 1); the attack at once; the orbit switches with no mechanism (the open item `docs/tasks/by-ear/duck-orbit-switch-click.md`); the switch weight keeps its 50 ms |
+     | body, vowel | `material`, `vowel` | ticked: a new index steps through the bank swap (20 ms, a change during a fade parked) |
+     | body, vowel | `wet`, `floor` | **TEMPORARY until 5c (Q8):** refused at both doors, a type error ("a Katalyst body's wet takes no Kat modulator yet; a moving wet would restart the resonance every block"), anywhere in the expression; a hand-built one (Kotlin, the wire) is FROZEN, never ticked (the resonator writer ticks the index only). 5c lifts both |
+     | eq | sections | refuse an expression, a modulator included (Q2, unchanged) |
+   - **The doors** (both, one implementation on `KlangScriptKatalyst`, `Kat`/`Katalyst`): `sine`, `saw`, `ramp`, `tri`,
+     `square` as `(freq, configure)` with builders `KatalystSineBuilder` ... `KatalystSquareBuilder` (`phase`; `duty` on
+     the square), `perlin` and `berlin` flat as `(rate, octaves = 1, persistence = 0.5)`; `freq` and `rate` required,
+     defaults plain literals, no `analog`, flank or reset knobs (Q10, Q11). A pre-existing KDoc example
+     (`k.phaser(0.5, center = ...)` on `range`) mixed positional and named arguments, which KlangScript refuses; fixed.
+   - **Decided in 5b, not by the plan** (coordinator's to reopen): the phaser's `wet` and `floor` share one glide, so
+     either modulated makes the pair one block; the duck's `depth > 0` is an "asked for" question (Q7), not a
+     threshold gate, so a modulating depth keeps the stage declared; a hand-built modulator on a `body`/`vowel` `wet`
+     or `floor` is frozen rather than refused at runtime (5a's reason: no exception on the audio thread for an input
+     the wire accepts); `Reverb` keeps its cutoff as one primitive field (`lowpass`, NaN unset, round 1)
+     so a moving lowpass boxes nothing; `KatalystKnob.evaluations` counts ticks too.
+   - **Guarded by** `KatalystModulatedChainSpec` (each periodic shape and both noises on a gain stage, the block's last
+     sample against the hand law at blocks 0, 1 and k, the one-block ramp's middle; an arithmetic stage over a
+     modulator; an orbit with no owner, the master, a `parallel` branch ticking once, the leaving chain through fade
+     and drain; the unset clock pausing and resuming; resolve then tick; the span per knob on one phaser),
+     `KatalystModulatedStagesSpec` (a row per stage decision above: `div` through its pole, the distort gate, delay
+     wet and feedback with the Q7 gate, the time stepping and parking, the time gate, the cap, reverb wet, size,
+     lowpass and the size gate, the phaser pair, rate, center, sweep and its depth gate, the compressor's five, the
+     duck's depth, attack, orbit and Q7, the duck takeover across spans, the body index through the swap, the frozen
+     hand-built body wet), `KatalystModulatedChainAllocationSpec` (JVM: 1,000 blocks of a chain with a modulated knob
+     on every stage family, every knob of most, 0 bytes), `KatalystKnobModulatorSpec` (a resolve never advances, the
+     knob's tick; the hand laws moved to `_katalyst_modulator_hand_laws.kt`),
+     `KlangScriptKatalystModulatorDoorParitySpec` (every door, positional and named, script and Kotlin, against
+     hand-built nodes; params and expressions as operands; a modulator in arithmetic and on stages; the Ignitor-node,
+     `eq` and body/vowel refusals; a missing `freq`/`rate`). 38 mutations, 37 red (the hook moved into `applyParams`,
+     a parent ticking its `parallel` branches, an unset knob ticked or advancing, a resolve that advances, the span
+     back to 50 ms and every span one block, each stage not told its knob is modulated, `div` gliding the divisor, the
+     distort gate cutting, the Q7 gates of the wet and the duck, `carryOver` unclamped, each per-block refill dropped,
+     the delay's parking and time gate, the reverb's size gate, the body wet ticked and the index not, knobs compiled
+     at 44.1 kHz, a settings object per refill, the boxed `ReverbConfig.lowpass`, five door mutations); the one green:
+     writing the lowpass through the `Double?` setter, a box the JVM's escape analysis removes (the JVM row cannot see
+     it; V8 is step 6's). Totals: `audio_be` JVM 2756 and JS 2647, `audio_bridge` 148 and 285, `klangscript-libs` 902
+     and 679, `sprudel` 3509 (486 skipped) and 2998 (3 skipped), the root module JVM 64 (the step 3 fixture green: four
+     rows, chains without modulators render identically), `klang` 33 and 18, all green. Corpus 18 of 18 identical. The
+     allocation check: the first run RED on `E-arith` alone, the known second mode of `engine-follow-ups.md` item 36
+     (rounds 155.1, 195.3, 15.5 B; a chain without a modulator, whose hook is an empty loop), the second run GREEN, 58
+     of 58 (`E-arith` 47 B); both runs' rows are in `docs/benchmarks/alloc-scoreboard.md`. No allocation case holds a
+     modulator yet: step 6.
+   - **Review round 1 fixes** (2026-10-12): `KatalystKnob.isModulating` asks for a finite value too (a NaN modulated
+     wet or depth is off, as a NaN constant is); `Compressor` resizes its lookahead box smoother continuously (the
+     rings keep their whole capacity of history, a length change moves the running sums by the samples entering or
+     leaving; `primeBoxes` only at construction and the resets; a fixed attack bit for bit as before): the largest
+     one-sample gain step under an attack moving 2 to 4 ms per block went 0.61 to 0.0144, a fixed 2 ms attack's 0.0148;
+     a MODULATED delay time or reverb size crossing its gate fades the feed (`timeModulated`, `sizeModulated` at build;
+     round 1 ran the fade as a sub-mode at the head of Draining, round 2 rebuilt it, below); every other switch-off
+     keeps the hard cut (coordinator, after a first version that faded every off moved the corpus); `Reverb.lowpass` is
+     one primitive field. Guarded by `LimiterLookaheadSpec` (the gain step; the ceiling under an attack moving every
+     block), `KatalystModulatedStagesSpec` (a NaN modulated wet and depth; the feed edge per stage both ways) and the
+     unchanged "drains on schedule" rows (the hard cut). 19 mutations, 18 red (the green one guarded code round 2
+     deleted); corpus 18 of 18 identical; allocation check GREEN, 58 of 58.
+   - **Review round 2 fixes** (2026-10-12): the fade REBUILT, smaller. A modulated time or size crossing the gate with
+     a finite value keeps the stage Active while the wet glide falls to 0 (the ceiling observing as on any Active
+     block); the off-config that finds it landed drains or goes Off exactly as an unmodulated off does. Contract, in
+     the class KDocs: the off-config is re-applied every block (the writer of a modulated time or size is a modulated
+     writer). Every return to Active from Off or Draining, the first activation and a hard-cut drain included, starts
+     the wet at 0 (`KnobGlide.startFrom`); round 1 snapped there. Deleted: Draining's `fading` and `fed`, the
+     countdown raise, the fed re-measure, both "never Off inside the fade" guards, the reverb's second heal and its
+     Draining `size`; the unmodulated path is line for line pre-5b. Recorded behaviour change: such a stage fades its
+     feed IN at its first activation (an empty unit). Feed edges through `KatalystChainBuilder.build` (DC 0.5, wet
+     0.8, largest one-sample output step; round 1's in brackets, measured with `startFrom` removed): delay off 2.1e-4, from Off 2.1e-4 (0.4), from a
+     hard-cut drain 2.9e-4 (0.4), first activation 2.1e-4 (0.4); reverb 5.9e-5, 5.9e-5 (0.0104), 6.0e-5 (0.0104),
+     5.9e-5 (0.0104). Guarded by `KatalystModulatedStagesSpec` (a "through build()" row per stage; the two per-block
+     gate rows re-baselined, block 4 is now the one-block fade) and `LimiterLookaheadSpec` (literal bounds next to the
+     ratio). 9 mutations, 9 red. Totals: `audio_be` JVM 2766 and JS 2657, `klangscript-libs` 902 and 679, the root
+     module JVM 64, all green; corpus 18 of 18 identical; allocation check GREEN, 58 of 58 (a first run refused a
+     stale V8 bundle, its rows are in the scoreboard).
+     **Open by ear:** an unmodulated delay or reverb still cuts its feed in one sample on an owner change or a `katp`
+     off; a fade would remove that edge but feed the new owner's first 50 ms into the old owner's ring or room, a bleed
+     across owners, so cut against bleed is a listening question outside 5b.
+   - **Review:** 3 rounds (round 1 opus, round 2 reviewer-high, round 3 reviewer-xhigh, both reviewers each round;
+     the safety valve fired after round 2 and the maintainer chose the rebuild and round 3), 0 critical, 4 major (round
+     1: a NaN modulated value counted as asked for, a modulated lookahead attack re-primed the smoother; round 2: the
+     return from Off still snapped, the builder's `timeModulated` unguarded), round 3 clean. Round 3's wording MINORs
+     applied (a `katp` time cuts on an UNMODULATED stage; why an unset reverb size fades and an unset delay time cuts;
+     the phaser cascade restarting from rest when an LFO crosses its depth gate). Lessons in `audio/ref/katalyst.md`,
+     the stage-lifecycle template.
 6. Measured in the harness: a slot expression, a modulated gain and phaser center, a perlin; time and bytes per
    block, JVM and V8. The per-block resolve of a modulated compressor or duck knob gets an allocation case of its own,
    measured single-case with `--predictable` on V8 (step 2's `CompressorSettings` and `DuckSettings` are double-field
@@ -240,7 +353,11 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
    single-case `--predictable` processes and under a mixed orbit profile: (a) one sine knob, (b) a square with a slot
    duty, (c) a saw whose freq is a sine (a rebake per tick), (d) perlin at octaves 1 and 8, (e) a chain with all seven
    kinds. `fbm` takes and returns doubles once per noise op per tick (a few heap numbers expected), the shape setters
-   only on a rebake.
+   only on a rebake. The per-block double crossings the JVM spec cannot see (5b review round 1, audio 3), each a
+   candidate heap number per block on a moving knob: `KnobGlide.retarget`, the gain's and the arithmetic's
+   `configure(Double)`, `gate()`, `guarded()`, `guardedDepth()`, `guardedFloor()`, `Reverb.normalizeSize`, the
+   `Reverb.lowpass` setter, the five `Compressor` setters (each runs `updateCoefficients`, so 15 `timeConstantCoeff`
+   per block on a mismatch), `Ducking.attackSeconds`.
 7. Records, and the render fixture removed.
 
 **Questions.** Decided by the maintainer (2026-10-11), each at the lean: Q2 E2 ("keep shared, slots only"), Q3
@@ -259,8 +376,14 @@ the coordinator takes at the lean, recorded here, and any of them can be reopene
 - **Q5** any non-finite slot leaf makes the whole knob unset. Lean: yes.
 - **Q6** an expression mixing a slot and a modulator glides over one block, so a `katp` jump on it steps over 2.7 ms.
   Lean: accept.
-- **Q7** the "was it asked for" gates count a modulated knob as asked for; the threshold gates (delay time, reverb
-  size, phaser depth, distort amount) read the per-block value and switch with their click-free mechanisms. Lean: yes.
+- **Q7** the "was it asked for" gates count a modulated knob as asked for (while its value is finite); the threshold
+  gates (delay time, reverb size, phaser depth, distort amount) read the per-block value and switch with their
+  click-free mechanisms. Lean: yes. (For a modulated delay time or reverb size that mechanism is the wet glide on the
+  feed, built in 5b review rounds 1 and 2: a finite time or size below the gate keeps the stage Active while the wet
+  glides to 0, and the off-config that finds it landed drains; every return to Active, out of Off or Draining and the
+  first activation included, glides the wet up from 0. Before it, both cut and restarted the feed in one sample. An
+  unmodulated time or size, a hard cut on a modulated stage, and every owner change keep the hard cut: an open by-ear
+  question, see the 5b record.)
 - **Q8** `body`/`vowel` wet and floor: (a) an in-place per-sample blend in `ResonatorBank` (a DSP change), (b) accept
   20 ms zero-state steps, (c) refuse modulators there. Lean: (a); the index knobs step through the swap.
 - **Q9** a modulated delay time steps through the 50 ms crossfade, "not a chorus"; a tape-style tap is future work.

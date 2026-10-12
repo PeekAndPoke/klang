@@ -47,6 +47,14 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * `wet` and `floor` pass through RAW: a non-finite one is unset, and [KatalystResonatorEffect.configure] substitutes
  * the kind's constant for it before its compare (a raw `katp` write is the only way one arrives: the `body(...)` and
  * `vowel(...)` doors fill their own companions, `/dsl-design` §4, checklist 11).
+ *
+ * **A modulator** (knob expressions step 5b): only the INDEX ticks. A modulated material or vowel steps through the
+ * bank swap whenever it crosses into another table (a new bank from zero state over `BANK_CROSSFADE_SECONDS`, a change
+ * during a fade parked, latest wins; "steps, never morphs", the morph was rejected by ear in 2026-09). A modulated
+ * `wet` or `floor` is NOT ticked until step 5c builds the in-place blend (Q8): any change of either installs a new bank
+ * from zero state, so a moving one would restart the resonance every block. The doors refuse it (a type error); a
+ * Kotlin caller who builds one by hand gets it FROZEN at its modulators' start, evaluated on every changed map like a
+ * slot expression and never moving between them. TEMPORARY, recorded in the task doc; 5c lifts it.
  */
 internal class KatalystResonatorWriter(
     private val fx: KatalystResonatorEffect,
@@ -74,6 +82,14 @@ internal class KatalystResonatorWriter(
         // A null table (the chain names no material or vowel, or an index out of range) turns the resonator off, and
         // the effect short-circuits an unchanged config, so this is free on an unchanged block.
         fx.configure(config)
+    }
+
+    /** The index only: `wet` and `floor` stay frozen until step 5c (see the class KDoc). */
+    override val isModulated: Boolean = index.isModulated
+
+    override fun tick() {
+        index.tick()
+        fill()
     }
 
     private fun fill() {
@@ -113,6 +129,16 @@ internal class KatalystDelayWriter(
 
     override fun apply() {
         fx.configure(config)
+    }
+
+    override val isModulated: Boolean = wet.isModulated || time.isModulated || feedback.isModulated || cap.isModulated
+
+    override fun tick() {
+        wet.tick()
+        time.tick()
+        feedback.tick()
+        cap.tick()
+        fill()
     }
 
     private fun fill() {
@@ -155,10 +181,19 @@ internal class KatalystReverbWriter(
         fx.configure(config)
     }
 
+    override val isModulated: Boolean = wet.isModulated || size.isModulated || lowpass.isModulated
+
+    override fun tick() {
+        wet.tick()
+        size.tick()
+        lowpass.tick()
+        fill()
+    }
+
     private fun fill() {
         config.size = gate()
         // The lowpass slot, RAW: a non-finite one is unset, which [KatalystReverbEffect.configure] turns into the
-        // engine's own fixed damping. Boxed here, once per resolve, and not in [apply].
+        // engine's own fixed damping. A primitive, so a lowpass that moves per block boxes nothing (step 5b).
         config.lowpass = lowpass.value
         config.wet = wet.value
     }
@@ -209,6 +244,18 @@ internal class KatalystPhaserWriter(
 
     override fun apply() {
         fx.configure(config)
+    }
+
+    override val isModulated: Boolean =
+        wet.isModulated || rate.isModulated || center.isModulated || sweep.isModulated || floor.isModulated
+
+    override fun tick() {
+        wet.tick()
+        rate.tick()
+        center.tick()
+        sweep.tick()
+        floor.tick()
+        fill()
     }
 
     private fun fill() {
@@ -264,6 +311,18 @@ internal class KatalystCompressorWriter(
 
     override fun apply() {
         fx.configure(handed())
+    }
+
+    override val isModulated: Boolean =
+        threshold.isModulated || ratio.isModulated || knee.isModulated || attack.isModulated || release.isModulated
+
+    override fun tick() {
+        threshold.tick()
+        ratio.tick()
+        knee.tick()
+        attack.tick()
+        release.tick()
+        fill()
     }
 
     /** What [apply] hands the stage: this writer's one [settings] instance while the stage is on, else null. */
@@ -332,6 +391,14 @@ internal class KatalystEqWriter(
         fx.configure(values)
     }
 
+    /**
+     * Never: a section knob is a constant or a slot (Q2, E2: the door refuses an expression and
+     * `KatalystChainBuilder.eqKnob` reads only those two leaves off a section).
+     */
+    override val isModulated: Boolean = false
+
+    override fun tick() {}
+
     private fun fill() {
         for (i in knobs.indices) {
             // `knobs[i]?.value ?: 0.0` boxes the nullable Double per knob on the JVM; the explicit
@@ -360,6 +427,13 @@ internal class KatalystGainWriter(
         fx.configure(factor)
     }
 
+    override val isModulated: Boolean = gain.isModulated
+
+    override fun tick() {
+        gain.tick()
+        factor = guarded()
+    }
+
     /**
      * NaN-guard on a value the author can write: an unset fader is unity, the identity element of
      * the stage. NOT a
@@ -383,6 +457,12 @@ internal class KatalystArithmeticWriter(
 
     override fun apply() {
         fx.configure(operand.value)
+    }
+
+    override val isModulated: Boolean = operand.isModulated
+
+    override fun tick() {
+        operand.tick()
     }
 }
 
@@ -410,6 +490,13 @@ internal class KatalystDistortWriter(
 
     override fun apply() {
         fx.configure(config)
+    }
+
+    override val isModulated: Boolean = amount.isModulated
+
+    override fun tick() {
+        amount.tick()
+        fill()
     }
 
     private fun fill() {
@@ -460,6 +547,15 @@ internal class KatalystDuckWriter(
         fx.configure(handed())
     }
 
+    override val isModulated: Boolean = orbit.isModulated || depth.isModulated || attack.isModulated
+
+    override fun tick() {
+        orbit.tick()
+        depth.tick()
+        attack.tick()
+        fill()
+    }
+
     /** What [apply] hands the stage: this writer's one [settings] instance while [declared], else null. */
     internal fun handed(): DuckSettings? = if (declared) settings else null
 
@@ -468,8 +564,11 @@ internal class KatalystDuckWriter(
         val amount = depth.value
         val attackSeconds = attack.value
 
-        // NaN-guard on values the author can write: a non-finite orbit is "no source named".
-        if (!source.isFinite() || !(amount > 0.0)) {
+        // NaN-guard on values the author can write: a non-finite orbit is "no source named". A depth that is not
+        // above 0 asks for no ducking, unless the depth is MODULATING (Q7: a modulated knob counts as asked for, so an
+        // LFO through 0 does not switch the stage off and on; `Ducking.depth` takes a depth below 0 as 0). Either way a
+        // declared depth is finite: a NaN fails `> 0`, and `isModulating` is false on a non-finite value.
+        if (!source.isFinite() || !(amount > 0.0 || depth.isModulating)) {
             declared = false
 
             return
@@ -510,4 +609,13 @@ internal class KatalystParallelWriter(
             fx.branches[i].applyParams(params)
         }
     }
+
+    /**
+     * Never, whatever the branches hold: each branch is a chain that ticks its own modulated writers in its own
+     * `process`, which [KatalystParallelEffect] calls once per branch per block. Ticking them here too would advance
+     * every branch clock twice a block.
+     */
+    override val isModulated: Boolean = false
+
+    override fun tick() {}
 }

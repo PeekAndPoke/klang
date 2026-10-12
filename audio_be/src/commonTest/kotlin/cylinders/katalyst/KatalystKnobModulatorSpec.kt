@@ -52,10 +52,10 @@ class KatalystKnobModulatorSpec : StringSpec({
     val blockFrames = 128
 
     /** An eighth of a cycle per block: `dt = 2^-10`. */
-    val eighth = 46.875
+    val eighth = EIGHTH_HZ
 
     /** One sample's phase at [eighth]: the saw's flyback, half the pulse's minimum flank. */
-    val dt = 1.0 / 1024.0
+    val dt = EIGHTH_DT
 
     fun c(v: Double) = KatalystKnobDsl.Constant(v)
 
@@ -77,31 +77,8 @@ class KatalystKnobModulatorSpec : StringSpec({
         return if (p >= 1.0) p - 1.0 else p
     }
 
-    // ── The hand laws, written from the shapes' definitions at [eighth] ──────────────────────────────────────────
-
-    fun handSine(p: Double) = sin(2.0 * PI * p)
-
-    /** Rise over `[0, 1 - dt]`, then a one-sample flyback. */
-    fun handSaw(p: Double): Double {
-        val riseEnd = 1.0 - dt
-
-        return if (p < riseEnd) -1.0 + p * 2.0 / riseEnd else 1.0 - (p - riseEnd) * 2.0 / dt
-    }
-
-    /** Duty 0.5, both flanks fully open: up over half a cycle, down over the other. */
-    fun handTri(p: Double) = if (p < 0.5) -1.0 + 4.0 * p else 1.0 - 4.0 * (p - 0.5)
-
-    /** A two-sample rise, high to [duty], a two-sample fall, low to the end. */
-    fun handSquare(p: Double, duty: Double): Double {
-        val flank = 2.0 * dt
-
-        return when {
-            p < flank -> -1.0 + p * 2.0 / flank
-            p < duty -> 1.0
-            p < duty + flank -> 1.0 - (p - duty) * 2.0 / flank
-            else -> -1.0
-        }
-    }
+    // The hand laws (`handSine`, `handSaw`, `handTri`, `handSquare`) live in `_katalyst_modulator_hand_laws.kt`, shared
+    // with the chain rows of step 5b.
 
     // ── The Ignitor oracle ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -631,13 +608,14 @@ class KatalystKnobModulatorSpec : StringSpec({
     // ── Noise seeds by position in a chain ───────────────────────────────────────────────────────────────────────
 
     "the chain builder counts the noises of the whole chain: two noise knobs differ, a parallel branch counts too" {
-        // Two faders, each a perlin ranged to [0.5, 1.5], frozen at their start until 5b. A fader's first factor
-        // snaps, so a block of ones comes out as the product of the two. The expected factors are the two knobs built
-        // on one counter (ordinals 0 and 1); a builder that seeded every knob alike would give the first one squared.
+        // Two faders, each a perlin ranged to [0.5, 1.5]; the first block reads each walk at its start (the tick runs,
+        // then advances). A fader's first factor snaps, so a block of ones comes out as the product of the two. The
+        // expected factors are the two knobs built on one counter (ordinals 0 and 1); a builder that seeded every knob
+        // alike would give the first one squared.
         val knob = KatalystKnobDsl.Range(inner = KatalystKnobDsl.PerlinNoise(), from = c(0.5), to = c(1.5))
         val counter = KatalystNoiseOrdinals()
-        val g0 = KatalystKnob(knob, counter).value
-        val g1 = KatalystKnob(knob, counter).value
+        val g0 = testKnob(knob, counter).value
+        val g1 = testKnob(knob, counter).value
 
         withClue("the two positions give two factors") { (g0 != g1).shouldBeTrue() }
 
@@ -673,12 +651,12 @@ class KatalystKnobModulatorSpec : StringSpec({
         }
     }
 
-    // ── A hand-built modulator on a knob, step 5a ────────────────────────────────────────────────────────────────
+    // ── A modulated knob: resolve reads, tick moves (step 5b) ────────────────────────────────────────────────────
 
-    "until 5b a modulated knob is frozen at its modulators' start: evaluated at build and on every map, never moving" {
-        // No door builds one yet; a Kotlin caller may. The value is the tree at each clock's start (the sine at its
-        // phase operand), re-evaluated with the slots on a changed map, and never moved between maps.
-        val knob = KatalystKnob(
+    "a modulated knob moves only by its tick: a resolve evaluates at the clocks as they stand and advances nothing" {
+        // The value is the tree at each clock, re-evaluated with the slots on a changed map; a tick runs at the clock
+        // and then moves it one block on, so the next resolve or tick reads the next block.
+        val knob = testKnob(
             KatalystKnobDsl.Range(
                 inner = KatalystKnobDsl.Sine(freq = c(5.0), phase = c(0.125)),
                 from = KatalystKnobDsl.Param("lo", 400.0),
@@ -686,25 +664,51 @@ class KatalystKnobModulatorSpec : StringSpec({
             ),
             KatalystNoiseOrdinals(),
         )
+        // 5 Hz at 48 kHz in 128-frame blocks: 5 * 128 / 48000 of a cycle per block.
+        val step = 5.0 * 128.0 / 48000.0
 
-        // The range law by hand, at the sine's start: sin(2 pi / 8).
-        fun ranged(from: Double) = from + (handSine(0.125) + 1.0) * 0.5 * (1600.0 - from)
+        // The range law by hand, at the sine's phase `p`.
+        fun ranged(from: Double, p: Double) = from + (handSine(p) + 1.0) * 0.5 * (1600.0 - from)
 
-        knob.value shouldBe (ranged(400.0) plusOrMinus 1e-6)
+        knob.isModulated.shouldBeTrue()
+        knob.isModulating.shouldBeTrue()
+        knob.value shouldBe (ranged(400.0, 0.125) plusOrMinus 1e-6)
         knob.written.shouldBeFalse()
 
         repeat(5) { knob.resolve(klangMapOf("other" to it.toDouble())) }
 
-        knob.value shouldBe (ranged(400.0) plusOrMinus 1e-6)
+        withClue("five resolves moved no clock") { knob.value shouldBe (ranged(400.0, 0.125) plusOrMinus 1e-6) }
+
+        knob.tick()
+
+        withClue("the first tick reads the clock where it stood") {
+            knob.value shouldBe (ranged(400.0, 0.125) plusOrMinus 1e-6)
+        }
+
         knob.resolve(klangMapOf("lo" to 1000.0))
-        knob.value shouldBe (ranged(1000.0) plusOrMinus 1e-6)
-        knob.written.shouldBeTrue()
-        withClue("once at build, then once per resolve") { knob.evaluations shouldBe 7 }
 
-        // Without a slot leaf: a modulated tree is not a constant either, so it is evaluated, at its start.
-        val bare = KatalystKnob(KatalystKnobDsl.Tri(freq = c(5.0), phase = c(0.25)), KatalystNoiseOrdinals())
+        withClue("the resolve after one tick reads block 1, with the new slot") {
+            knob.value shouldBe (ranged(1000.0, 0.125 + step) plusOrMinus 1e-6)
+            knob.written.shouldBeTrue()
+        }
 
-        abs(bare.value) shouldBe (0.0 plusOrMinus 1e-12)
-        bare.evaluations shouldBe 1
+        knob.tick()
+        knob.tick()
+
+        withClue("block 2, not 3: the resolve advanced nothing") {
+            knob.value shouldBe (ranged(1000.0, 0.125 + 2.0 * step) plusOrMinus 1e-6)
+        }
+        withClue("once at build, once per resolve, once per tick") { knob.evaluations shouldBe 10 }
+
+        // A knob without a modulator: a tick does nothing at all.
+        val slotOnly = testKnob(
+            KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("a", 2.0), right = c(3.0)),
+            KatalystNoiseOrdinals(),
+        )
+
+        slotOnly.isModulated.shouldBeFalse()
+        slotOnly.tick()
+        slotOnly.evaluations shouldBe 1
+        slotOnly.value shouldBe 6.0
     }
 })

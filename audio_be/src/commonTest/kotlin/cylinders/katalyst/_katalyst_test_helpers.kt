@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 
 // A chain's stages by kind, for the specs that ask about ONE of them (the warehouse specs about the rented ring and
 // network, the resonator specs about a body and a vowel). Main code has no typed accessor for a serial stage (only
@@ -60,3 +61,10 @@ internal val Cylinder.compressor: KatalystCompressorEffect? get() = currentChain
 
 /** The bus pipeline of the chain in service, in the order it declares its stages (the duck is not in it). */
 internal val Cylinder.pipeline: List<KatalystEffect> get() = currentChain.pipeline
+
+/**
+ * A [KatalystKnob] built alone, as a spec needs one: on a 48 kHz clock in 128-frame blocks (what a modulator's clock is
+ * compiled on; a knob without a modulator never reads it), on the noise counter the spec hands in.
+ */
+internal fun testKnob(node: KatalystKnobDsl, noises: KatalystNoiseOrdinals): KatalystKnob =
+    KatalystKnob(node = node, noises = noises, sampleRate = 48000, blockFrames = 128)

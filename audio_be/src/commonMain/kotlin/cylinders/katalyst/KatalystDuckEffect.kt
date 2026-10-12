@@ -111,6 +111,12 @@ class KatalystDuckEffect(
     private val sampleRate: Int,
     /** The frames of one render block, pinned to 128 in the engine. */
     blockFrames: Int,
+    /**
+     * True when the depth's knob holds a modulator (knob expressions step 5b, D2): [depthGlide] spans one block. The
+     * switch weight [fade] keeps its [KNOB_GLIDE_SECONDS]: it is the stage's own edge, not a knob. A [takeOver] between
+     * two ducks of different depth spans clamps the carried countdown (`KnobGlide.carryOver`, Q16).
+     */
+    depthModulated: Boolean = false,
 ) : KatalystEffect {
 
     /** Sidechain source orbit ID (which orbit triggers the ducking), null while the stage is off. */
@@ -138,7 +144,7 @@ class KatalystDuckEffect(
     private val fade = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /** The depth in force: a LEVEL knob, ramped per sample. Forgotten with the life ([endLife]). */
-    private val depthGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val depthGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = depthModulated)
 
     /**
      * True while the duck pass has run since the orbit's last block. The host's order inside one

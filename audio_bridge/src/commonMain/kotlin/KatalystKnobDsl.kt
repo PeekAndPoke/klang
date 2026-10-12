@@ -19,9 +19,10 @@ package io.peekandpoke.klang.audio_bridge
  * [Plus], [Minus], [Times], [Div], [Pow], [Min], [Max], [Neg], [Abs], [Range]), and the modulators (step 5, D3:
  * [Sine], [Saw], [Ramp], [Tri], [Square], [PerlinNoise], [BerlinNoise]). The engine evaluates an expression with the
  * Ignitor's own laws, on a scalar, whenever the orbit's `katp` state changes (`KatalystKnob` in `audio_be`); a
- * modulated one once per processed block from step 5b on (`KatalystKnobProgram.tick`). The one residue of mixing is
- * the `eq` stage, whose sections stay [IgnitorDsl.EqSection] shared with the voice (Q2, E2): its door maps a [Param]
- * onto the section's [IgnitorDsl.Param] and refuses an expression.
+ * modulated one once per block the chain processes (`KatalystKnob.tick`, called by `KatalystChain.process`; step 5b).
+ * The script and Kotlin doors of the modulators are `Kat.sine` and the rest (`KlangScriptKatalyst`). The one residue
+ * of mixing is the `eq` stage, whose sections stay [IgnitorDsl.EqSection] shared with the voice (Q2, E2): its door
+ * maps a [Param] onto the section's [IgnitorDsl.Param] and refuses an expression.
  *
  * Every node carries the same field names and wire names as its Ignitor twin ([IgnitorDsl.Constant],
  * [IgnitorDsl.Param], [IgnitorDsl.Plus] and the rest); the wire tells the two hierarchies apart by the field's declared

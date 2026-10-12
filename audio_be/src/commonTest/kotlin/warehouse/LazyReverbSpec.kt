@@ -190,7 +190,7 @@ class LazyReverbSpec : StringSpec({
         units.syncCleans shouldBe 0
         again shouldBeSameInstanceAs used
         again.size shouldBe 0.5 // constructor defaults
-        again.lowpass shouldBe null
+        again.lowpass.isNaN() shouldBe true
         again.hasTail(0.0) shouldBe false
 
         // Same input, same output as a unit that was never used: the shelf leaves no fingerprint.

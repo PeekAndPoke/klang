@@ -48,12 +48,14 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * an orbit and at the output. At the output nothing fills a slot (it stays at its default) and a
  * `duck` stage is inert.
  *
- * Every knob takes a number, a Katalyst param or a Katalyst expression over params (`Kat.param("fader", 1).times(0.5)`;
- * `IgnitorDslLike`, converted by [toKatalystKnob]) and nothing else: any Ignitor node, an `Ignitor.param(...)`
- * included, is a script error at the stage call; the reason is on [toKatalystKnob]. The chain reads its knobs once per
- * block. The exceptions are the knobs fixed when the chain is built, plain numbers or names: the compressor's and the
- * limiter's `lookahead` (it sizes a delay ring) and `distort`'s `shape` and `oversample`; and the `eq` sections, whose
- * knobs take a number or a param only ([toEqSectionKnob]).
+ * Every knob takes a number, a Katalyst param or a Katalyst expression over params and modulators
+ * (`Kat.param("fader", 1).times(0.5)`, `Kat.sine(0.1).range(400, 1600)`; `IgnitorDslLike`, converted by
+ * [toKatalystKnob]) and nothing else: any Ignitor node, an `Ignitor.param(...)` included, is a script error at the stage
+ * call; the reason is on [toKatalystKnob]. The chain reads its knobs once per block. The exceptions are the knobs fixed
+ * when the chain is built, plain numbers or names: the compressor's and the limiter's `lookahead` (it sizes a delay
+ * ring) and `distort`'s `shape` and `oversample`; the `eq` sections, whose knobs take a number or a param only
+ * ([toEqSectionKnob]); and, until step 5c, a `body`'s or `vowel`'s `wet` and `floor`, which take no modulator
+ * ([toResonatorMixKnob]).
  */
 
 /**
@@ -117,6 +119,49 @@ internal fun KatalystKnobDsl.toEqSectionKnob(): IgnitorDsl = when (this) {
         "a Katalyst eq section takes a number or a Kat.param; got a Kat expression",
         operation = "Katalyst eq",
     )
+}
+
+/**
+ * The knob a `body`'s or `vowel`'s `wet` or `floor` takes: what [toKatalystKnob] gives, except a knob that holds a
+ * modulator (`Kat.sine` and the rest, anywhere in its expression), which is a [KlangScriptTypeError] ("a Katalyst
+ * body's wet takes no Kat modulator yet; a moving wet would restart the resonance every block").
+ *
+ * **TEMPORARY** (knob expressions step 5b, recorded in `docs/tasks/in-progress/katalyst-knob-expressions.md`): the
+ * resonator installs a new bank from zero state on any change of its wet or floor, so a wet moving every block would
+ * restart the resonance every block (Q8). Step 5c builds the in-place blend and lifts this refusal. The index knobs
+ * (`material`, `vowel`) take a modulator: a new index steps through the bank swap, which is what an index change is.
+ * A slot or a slot expression is accepted as before: it changes only when the pattern writes it.
+ */
+private fun IgnitorDslLike.toResonatorMixKnob(stage: String, param: String): KatalystKnobDsl {
+    val knob = toKatalystKnob()
+
+    if (knob.holdsModulator()) {
+        throw KlangScriptTypeError(
+            "a Katalyst $stage's $param takes no Kat modulator yet; " +
+                    "a moving $param would restart the resonance every block",
+            operation = "Katalyst $stage",
+        )
+    }
+
+    return knob
+}
+
+/** True when this knob's expression holds a modulator anywhere: the tree walk of [toResonatorMixKnob]. */
+private fun KatalystKnobDsl.holdsModulator(): Boolean = when (this) {
+    is KatalystKnobDsl.Constant, is KatalystKnobDsl.Param -> false
+    is KatalystKnobDsl.Plus -> left.holdsModulator() || right.holdsModulator()
+    is KatalystKnobDsl.Minus -> left.holdsModulator() || right.holdsModulator()
+    is KatalystKnobDsl.Times -> left.holdsModulator() || right.holdsModulator()
+    is KatalystKnobDsl.Div -> left.holdsModulator() || right.holdsModulator()
+    is KatalystKnobDsl.Pow -> base.holdsModulator() || exp.holdsModulator()
+    is KatalystKnobDsl.Min -> left.holdsModulator() || right.holdsModulator()
+    is KatalystKnobDsl.Max -> left.holdsModulator() || right.holdsModulator()
+    is KatalystKnobDsl.Neg -> inner.holdsModulator()
+    is KatalystKnobDsl.Abs -> inner.holdsModulator()
+    is KatalystKnobDsl.Range -> inner.holdsModulator() || from.holdsModulator() || to.holdsModulator()
+    is KatalystKnobDsl.Sine, is KatalystKnobDsl.Saw, is KatalystKnobDsl.Ramp, is KatalystKnobDsl.Tri,
+    is KatalystKnobDsl.Square, is KatalystKnobDsl.PerlinNoise, is KatalystKnobDsl.BerlinNoise,
+    -> true
 }
 
 // ── The chain ────────────────────────────────────────────────────────────────
@@ -224,7 +269,7 @@ fun KatalystBuilder.body(
         KatalystBodyBuilder(
             KatalystStageDsl.Body(
                 material = catalogueIndex(material, bare.material, BodyMaterials::indexOf, constant = { KatalystKnobDsl.Constant(it) }, knob = { it.toKatalystKnob() }),
-                wet = wet?.toKatalystKnob() ?: bare.wet,
+                wet = wet?.toResonatorMixKnob(stage = "body", param = "wet") ?: bare.wet,
                 floor = bare.floor,
             )
         ).configuredBy("Katalyst body", configure).node
@@ -261,7 +306,7 @@ fun KatalystBuilder.vowel(
         KatalystVowelBuilder(
             KatalystStageDsl.Vowel(
                 vowel = catalogueIndex(vowel, bare.vowel, VowelBands::indexOf, constant = { KatalystKnobDsl.Constant(it) }, knob = { it.toKatalystKnob() }),
-                wet = wet?.toKatalystKnob() ?: bare.wet,
+                wet = wet?.toResonatorMixKnob(stage = "vowel", param = "wet") ?: bare.wet,
                 floor = bare.floor,
             )
         ).configuredBy("Katalyst vowel", configure).node
@@ -880,9 +925,10 @@ fun KatalystBuilder.bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBui
 // Ignitor's arithmetic, plus `range`). Each door wraps the knob it is called on in one [KatalystKnobDsl] node; an
 // operand is converted by [toKatalystKnob], so it is a number (a [KatalystKnobDsl.Constant]), a `Kat.param` or another
 // expression, and an Ignitor node is the same script error as on a stage knob. The engine evaluates the expression
-// with the Ignitor's own laws whenever the orbit's `katp` state changes, never per block, and a slot leaf that reads a
-// non-finite value makes the whole knob unset (its stage takes its constant). One implementation for both doors: a
-// Kotlin song writes `KlangScriptKatalyst.param("fader", 1.0).times(0.5)`.
+// with the Ignitor's own laws whenever the orbit's `katp` state changes, and once per block when it holds a modulator
+// (`Kat.sine` and the rest, step 5b); a slot leaf that reads a non-finite value makes the whole knob unset (its stage
+// takes its constant). One implementation for both doors: a Kotlin song writes
+// `KlangScriptKatalyst.param("fader", 1.0).times(0.5)`.
 
 /**
  * This knob plus [other]: an offset. The Ignitor's `plus` law, unclamped.
@@ -1036,7 +1082,7 @@ fun KatalystKnobDsl.abs(): KatalystKnobDsl = KatalystKnobDsl.Abs(inner = this)
  *
  * ```KlangScript
  * // one slot from -1 to 1 sweeps the phaser's center from 400 to 1600 Hz
- * Katalyst(k => k.phaser(0.5, center = Kat.param("sweep", 0).range(400, 1600)))
+ * Katalyst(k => k.phaser(wet = 0.5, center = Kat.param("sweep", 0).range(400, 1600)))
  * ```
  *
  * @param from the value at -1, a number, a `Kat.param` or a Kat expression.
@@ -1057,7 +1103,7 @@ data class KatalystBodyBuilder(val node: KatalystStageDsl.Body)
  */
 @KlangScript.Function
 fun KatalystBodyBuilder.floor(floor: IgnitorDslLike): KatalystBodyBuilder =
-    copy(node = node.copy(floor = floor.toKatalystKnob()))
+    copy(node = node.copy(floor = floor.toResonatorMixKnob(stage = "body", param = "floor")))
 
 // ── Vowel ────────────────────────────────────────────────────────────────────
 
@@ -1070,7 +1116,7 @@ data class KatalystVowelBuilder(val node: KatalystStageDsl.Vowel)
  */
 @KlangScript.Function
 fun KatalystVowelBuilder.floor(floor: IgnitorDslLike): KatalystVowelBuilder =
-    copy(node = node.copy(floor = floor.toKatalystKnob()))
+    copy(node = node.copy(floor = floor.toResonatorMixKnob(stage = "vowel", param = "floor")))
 
 // ── Delay ────────────────────────────────────────────────────────────────────
 
@@ -1091,3 +1137,84 @@ data class KatalystPhaserBuilder(val node: KatalystStageDsl.Phaser)
 @KlangScript.Function
 fun KatalystPhaserBuilder.floor(floor: IgnitorDslLike): KatalystPhaserBuilder =
     copy(node = node.copy(floor = floor.toKatalystKnob()))
+
+// ── The modulators' builders ─────────────────────────────────────────────────
+//
+// Handed to the `configure` lambda of the modulator doors on the Katalyst object (`Kat.sine(freq, configure)` and the
+// rest, `KlangScriptKatalyst`): the Ignitor's oscillator builders' shape with only the knobs a bus LFO keeps (Q11 of
+// `docs/tasks/in-progress/katalyst-knob-expressions.md`: `phase` on every periodic shape, `duty` on the square; no
+// `analog`, no flank or reset knobs). Each knob takes a number, a `Kat.param` or a Kat expression.
+
+/** Builder for a [KatalystKnobDsl.Sine], handed to the `configure` lambda of `Kat.sine(...)`. Knob: `phase`. */
+data class KatalystSineBuilder(val node: KatalystKnobDsl.Sine)
+
+/**
+ * Where in its cycle the sine is read, in cycles (default 0, the upward zero crossing): 0.25 starts it on its peak,
+ * and it wraps, no clamp. A constant is the start phase; a moving one shifts the reading point every block.
+ *
+ * ```KlangScript
+ * Katalyst(k => k.gain(Kat.sine(0.5, x => x.phase(0.25)).range(0.5, 1)))   // starts at full level, then dips
+ * ```
+ */
+@KlangScript.Function
+fun KatalystSineBuilder.phase(phase: IgnitorDslLike): KatalystSineBuilder =
+    copy(node = node.copy(phase = phase.toKatalystKnob()))
+
+/** Builder for a [KatalystKnobDsl.Saw], handed to the `configure` lambda of `Kat.saw(...)`. Knob: `phase`. */
+data class KatalystSawBuilder(val node: KatalystKnobDsl.Saw)
+
+/**
+ * Where in its cycle the saw is read, in cycles (default 0, the bottom of its rise): 0.5 starts it at 0, mid-rise, and
+ * it wraps, no clamp.
+ */
+@KlangScript.Function
+fun KatalystSawBuilder.phase(phase: IgnitorDslLike): KatalystSawBuilder =
+    copy(node = node.copy(phase = phase.toKatalystKnob()))
+
+/** Builder for a [KatalystKnobDsl.Ramp], handed to the `configure` lambda of `Kat.ramp(...)`. Knob: `phase`. */
+data class KatalystRampBuilder(val node: KatalystKnobDsl.Ramp)
+
+/**
+ * Where in its cycle the ramp is read, in cycles (default 0, the top of its fall): 0.5 starts it at 0, mid-fall, and it
+ * wraps, no clamp.
+ */
+@KlangScript.Function
+fun KatalystRampBuilder.phase(phase: IgnitorDslLike): KatalystRampBuilder =
+    copy(node = node.copy(phase = phase.toKatalystKnob()))
+
+/** Builder for a [KatalystKnobDsl.Tri], handed to the `configure` lambda of `Kat.tri(...)`. Knob: `phase`. */
+data class KatalystTriBuilder(val node: KatalystKnobDsl.Tri)
+
+/**
+ * Where in its cycle the triangle is read, in cycles (default 0, its lowest point): 0.5 starts it at its top, and it
+ * wraps, no clamp.
+ */
+@KlangScript.Function
+fun KatalystTriBuilder.phase(phase: IgnitorDslLike): KatalystTriBuilder =
+    copy(node = node.copy(phase = phase.toKatalystKnob()))
+
+/**
+ * Builder for a [KatalystKnobDsl.Square], handed to the `configure` lambda of `Kat.square(...)`. Knobs: `duty`,
+ * `phase`.
+ */
+data class KatalystSquareBuilder(val node: KatalystKnobDsl.Square)
+
+/**
+ * The share of each cycle the square spends high, 0 to 1 (default 0.5, a square). A Kat expression moves it, which is
+ * a pulse-width modulation of the LFO.
+ *
+ * ```KlangScript
+ * Katalyst(k => k.gain(Kat.square(1, x => x.duty(0.25)).range(0.4, 1)))   // full level a quarter of each second
+ * ```
+ */
+@KlangScript.Function
+fun KatalystSquareBuilder.duty(duty: IgnitorDslLike): KatalystSquareBuilder =
+    copy(node = node.copy(duty = duty.toKatalystKnob()))
+
+/**
+ * Where in its cycle the square is read, in cycles (default 0, the foot of its rising edge): 0.5 starts it on its
+ * falling edge, and it wraps, no clamp.
+ */
+@KlangScript.Function
+fun KatalystSquareBuilder.phase(phase: IgnitorDslLike): KatalystSquareBuilder =
+    copy(node = node.copy(phase = phase.toKatalystKnob()))

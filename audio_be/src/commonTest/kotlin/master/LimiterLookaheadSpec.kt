@@ -218,6 +218,116 @@ class LimiterLookaheadSpec : StringSpec({
         peaks.forEach { it shouldBe 0 }
     }
 
+    "the ceiling holds while the smoothing length moves every block (an attack written per block)" {
+        // The box lengths change between any two blocks here, from the shortest the attack allows to the whole
+        // window and back. Every length stays within the ring capacity, so any old/new pair still covers the hold
+        // window (Compressor.resizeSmoothing). A broken running-sum adjustment on a length change shows up here.
+        val limiter = houseLimiter()
+        val blockFrames = 128
+        val frames = sampleRate / 4
+        val signal = kick(frames, peak = exp(12.0 / 20.0 * 2.302585092994046))
+        val left = signal.copyOf()
+        val right = signal.copyOf()
+        val attacks = listOf(0.0005, 0.005, 0.002, 0.0001, 0.004, 0.001)
+        var start = 0
+        var block = 0
+
+        while (start < frames) {
+            val n = minOf(blockFrames, frames - start)
+            val l = left.copyOfRange(start, start + n)
+            val r = right.copyOfRange(start, start + n)
+
+            limiter.attackSeconds = attacks[block % attacks.size]
+            limiter.process(left = l, right = r, blockSize = n)
+            l.copyInto(left, destinationOffset = start)
+            start += n
+            block++
+        }
+
+        samplesOverCeiling(left) shouldBe 0
+        (peakDbfs(left) < 0.0) shouldBe true
+    }
+
+    "an attack that moves per block does not step the gain: within a small factor of a fixed attack's smoothness" {
+        // Review round 1 of knob expressions step 5b: re-priming the boxes on every length change snapped the gain
+        // from the smoothed value to the instantaneous one, 0.69 in one sample (of 0.87 of reduction) where a fixed
+        // 2 ms attack moves at most 0.0148. DC bursts at 0 dB every 0.23 s on a 0.05 floor, threshold -20, ratio 10,
+        // lookahead 5 ms; the attack a sine 2 to 4 ms at 0.3 Hz, written once per 128-frame block.
+        val rate = 48000
+        val blockFrames = 128
+        val frames = rate * 10
+        val period = (0.23 * rate).toInt()
+        val burst = (0.1 * rate).toInt()
+
+        fun largestGainStep(moving: Boolean): Double {
+            val compressor = Compressor(
+                sampleRate = rate,
+                thresholdDb = -20.0,
+                ratio = 10.0,
+                attackSeconds = 0.002,
+                lookaheadSeconds = 0.005,
+            )
+            val l = DoubleArray(blockFrames)
+            val r = DoubleArray(blockFrames)
+            val dl = DoubleArray(blockFrames)
+            val dr = DoubleArray(blockFrames)
+            var previous = Double.NaN
+            var largest = 0.0
+            var start = 0
+
+            while (start < frames) {
+                if (moving) {
+                    compressor.attackSeconds = 0.003 + 0.001 * sin(2.0 * PI * 0.3 * start / rate)
+                }
+
+                for (i in 0 until blockFrames) {
+                    val x = if ((start + i) % period < burst) 1.0 else 0.05
+
+                    l[i] = x
+                    r[i] = x
+                }
+
+                compressor.processLookahead(
+                    left = l,
+                    right = r,
+                    blockSize = blockFrames,
+                    delayedLeft = dl,
+                    delayedRight = dr,
+                )
+
+                for (i in 0 until blockFrames) {
+                    // The ring is empty for the first 5 ms: no gain to read off a silent sample.
+                    if (dl[i] != 0.0) {
+                        val gain = l[i] / dl[i]
+
+                        if (previous == previous) {
+                            largest = maxOf(largest, abs(gain - previous))
+                        }
+
+                        previous = gain
+                    }
+                }
+
+                start += blockFrames
+            }
+
+            return largest
+        }
+
+        val fixed = largestGainStep(moving = false)
+        val moving = largestGainStep(moving = true)
+
+        println("largest one-sample gain step: fixed 2 ms $fixed, moving 2..4 ms $moving")
+
+        // The fixed attack is the yardstick: a smoother of about 48 taps per box, 0.87 of reduction. Measured 0.0148;
+        // a literal bound too, so a change to the fixed-length path cannot carry the yardstick up with it.
+        (fixed < 0.02) shouldBe true
+        // Within three times it: a length change of one tap moves each box's mean by at most a tap's share. Measured
+        // 0.0144 (the re-primed boxes stepped 0.61); the literal bound holds on its own, whatever the yardstick does.
+        (moving < 0.03) shouldBe true
+        (moving < 3.0 * fixed) shouldBe true
+    }
+
     "two peaks inside one lookahead window — the case that defeated the naive design" {
         // A second, larger peak arriving while the gain is already moving. A ramp-based design
         // restarts from the current gain and cannot get there in time; the min-hold handles it with

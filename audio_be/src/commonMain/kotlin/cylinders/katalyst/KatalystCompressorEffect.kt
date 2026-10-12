@@ -122,6 +122,12 @@ class KatalystCompressorEffect(
      * building this effect allocates; 0 (the default) is no lookahead and no latency.
      */
     lookaheadSeconds: Double = 0.0,
+    /** True when the threshold's knob holds a modulator: [thresholdGlide] spans one block (knob expressions 5b, D2). */
+    thresholdModulated: Boolean = false,
+    /** True when the ratio's knob holds a modulator: [inverseRatioGlide] spans one block (step 5b, D2). */
+    ratioModulated: Boolean = false,
+    /** True when the knee's knob holds a modulator: [kneeGlide] spans one block (step 5b, D2). */
+    kneeModulated: Boolean = false,
 ) : KatalystEffect, KatalystLatentEffect {
 
     private val fadeLen: Int = (sampleRate * KNOB_GLIDE_SECONDS).toInt().coerceAtLeast(1)
@@ -183,10 +189,21 @@ class KatalystCompressorEffect(
     /** True once a [configure] has filled [applied]; false after construction and in [Off.enter]. */
     private var appliedValid: Boolean = false
 
-    private val thresholdGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val thresholdGlide =
+        KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = thresholdModulated)
     /** The ratio glides as its INVERSE, `1 / ratio`: see [Compressor.processGliding]. */
-    private val inverseRatioGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
-    private val kneeGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val inverseRatioGlide =
+        KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = ratioModulated)
+    private val kneeGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = kneeModulated)
+
+    /** Test seam: the threshold in force, in dB, after the last processed block (the glide's value). */
+    internal val thresholdInForce: Double get() = thresholdGlide.value
+
+    /** Test seam: the inverse ratio in force after the last processed block (the glide's value). */
+    internal val inverseRatioInForce: Double get() = inverseRatioGlide.value
+
+    /** Test seam: the knee in force, in dB, after the last processed block (the glide's value). */
+    internal val kneeInForce: Double get() = kneeGlide.value
 
     /**
      * True from construction and from [reset] until a block has been processed: while it holds, a

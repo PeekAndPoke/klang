@@ -73,11 +73,11 @@ class KatalystSettingsAllocationSpec : StringSpec({
         val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = KatalystCompressorWriter(
             fx = fx,
-            threshold = KatalystKnob(slot("compressor.threshold"), KatalystNoiseOrdinals()),
-            ratio = KatalystKnob(slot("compressor.ratio"), KatalystNoiseOrdinals()),
-            knee = KatalystKnob(slot("compressor.knee"), KatalystNoiseOrdinals()),
-            attack = KatalystKnob(slot("compressor.attack"), KatalystNoiseOrdinals()),
-            release = KatalystKnob(slot("compressor.release"), KatalystNoiseOrdinals()),
+            threshold = testKnob(slot("compressor.threshold"), KatalystNoiseOrdinals()),
+            ratio = testKnob(slot("compressor.ratio"), KatalystNoiseOrdinals()),
+            knee = testKnob(slot("compressor.knee"), KatalystNoiseOrdinals()),
+            attack = testKnob(slot("compressor.attack"), KatalystNoiseOrdinals()),
+            release = testKnob(slot("compressor.release"), KatalystNoiseOrdinals()),
         )
         val maps = Array(5) {
             klangMapOf(
@@ -108,9 +108,9 @@ class KatalystSettingsAllocationSpec : StringSpec({
         val fx = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = KatalystDuckWriter(
             fx = fx,
-            orbit = KatalystKnob(slot("duck.orbit"), KatalystNoiseOrdinals()),
-            depth = KatalystKnob(slot("duck.depth"), KatalystNoiseOrdinals()),
-            attack = KatalystKnob(slot("duck.attack"), KatalystNoiseOrdinals()),
+            orbit = testKnob(slot("duck.orbit"), KatalystNoiseOrdinals()),
+            depth = testKnob(slot("duck.depth"), KatalystNoiseOrdinals()),
+            attack = testKnob(slot("duck.attack"), KatalystNoiseOrdinals()),
         )
         val maps = Array(5) {
             klangMapOf(
@@ -140,7 +140,7 @@ class KatalystSettingsAllocationSpec : StringSpec({
         // Knob expressions step 4: the evaluator runs at every resolve (here every block, as a modulated knob will),
         // over its register array, with no lambda, no box and no settings object. A nested tree over three slots.
         val fx = KatalystGainEffect(sampleRate = sampleRate, blockFrames = blockFrames)
-        val knob = KatalystKnob(
+        val knob = testKnob(
             KatalystKnobDsl.Range(
                 inner = KatalystKnobDsl.Times(
                     left = KatalystKnobDsl.Param("x", 0.0),

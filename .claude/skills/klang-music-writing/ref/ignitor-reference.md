@@ -778,14 +778,14 @@ and the wrong one is a script error at the call, with the fix in the message. `i
 `Katalyst(k => k.reverb(0.5, cutoff))` with the `cutoff` of the setter example above, says
 `an Ignitor param in a Katalyst chain; use Kat.param`, and a Katalyst param in an Ignitor tree says
 `a Katalyst knob in an Ignitor tree; use Ign.param`. A chain knob takes a number, a `Katalyst.param` or a Kat
-expression over params and nothing else: any Ignitor node there (an oscillator, an expression over an Ignitor param)
+expression over params and modulators and nothing else: any Ignitor node there (an oscillator, an expression over an Ignitor param)
 is a script error at the stage call, `a Katalyst knob takes a number, a Kat.param or a Kat expression; got a sound`.
 
 **Kat expressions** (2026-10-12): a Katalyst param has the Ignitor's arithmetic words, laws and clamps, plus `range`:
 `plus`/`add`, `minus`/`sub`, `times`/`mul`, `div`, `pow`/`power`, `min`, `max` (clamps: `max(0.9)` is "at most
 0.9"), `neg`/`negate`, `abs`, `range(from, to)`. One `katp` moves every knob that reads the slot, each through its
-own expression, and the stage glides to the new value as it does for a plain param. The chain evaluates the
-expression when the pattern writes a slot, not per block. A slot that reads a non-finite value leaves the whole knob
+own expression, and the stage glides to the new value as it does for a plain param. The chain evaluates an
+expression over params when the pattern writes a slot, not per block (one with a modulator, below, per block). A slot that reads a non-finite value leaves the whole knob
 unset (the stage takes its default). Not on an `eq` section (a number or a `Kat.param` only), not on `blend(wet)`
 (a plain number), and `katp` takes the param, never an expression.
 
@@ -795,6 +795,28 @@ let fader = Kat.param("fader", 1)
 let bus = Katalyst(k => k.reverb(0.3, fader.times(4).plus(1)).gain(fader.times(0.5)))
 
 note("c3 e3 g3").s("supersaw").katalyst(bus).katp("fader", "<1 0.5>")
+```
+
+**Kat modulators** (2026-10-12): a bus LFO the chain owns. `Kat.sine(freq)`, `Kat.saw(freq)`, `Kat.ramp(freq)`,
+`Kat.tri(freq)` and `Kat.square(freq)` take the rate in Hz, REQUIRED (there is no note on a bus), and a builder with
+`phase` (the square also `duty`): `Kat.square(1, x => x.duty(0.25))`. `Kat.perlin(rate)` and `Kat.berlin(rate)` are
+smooth noise walks; `rate` is required and is the Ignitor's noise unit (rate 1 is about 144 cells a second at 48 kHz,
+so a slow drift wants about 0.0005 to 0.01). Each swings about -1..1, so map it with `range(from, to)`; it takes the
+arithmetic like a param, and a param may sit inside it (`Kat.sine(Kat.param("lfo", 0.2))`). The chain reads it once
+per block and the stage ramps the knob across the block to that value; its clock runs while the orbit sounds and
+pauses while it sleeps. A modulated delay `time` steps through the delay's 50 ms tap crossfade (a stepping echo, not a
+chorus), and a modulated `body` material or `vowel` steps through the bank swap. Not on an `eq` section, and not yet
+on a `body`'s or `vowel`'s `wet` or `floor` (a script error until the in-place blend lands). Unlike the Ignitor's: no
+`analog`, no flank or reset knobs.
+
+```javascript
+// the phaser's center sweeps 400 to 1600 Hz every ten seconds, the fader breathes at 0.25 Hz
+let bus = Katalyst(k => k
+  .phaser(wet = 0.6, center = Kat.sine(0.1).range(400, 1600))
+  .gain(Kat.tri(0.25).range(0.7, 1))
+)
+
+note("c3 e3 g3").s("supersaw").katalyst(bus)
 ```
 
 ### Audio-rate Modulation

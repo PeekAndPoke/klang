@@ -84,6 +84,14 @@ class KatalystDistortEffect(
     shapeIndex: Int = DistortionShapes.SOFT_INDEX,
     /** The oversampling factor, the voice's knob ([Oversampler.factorToStages]): 0 or 1 is none. */
     oversampleFactor: Int = 0,
+    /**
+     * True when the amount's knob holds a modulator (knob expressions step 5b, D2): it glides over ONE block, the
+     * drive ramped per sample from the last block's amount to this one's. The ON/OFF gate reads the block's value
+     * (Q7): an amount that swings through 0 switches the stage off and on through its own blend over
+     * [KNOB_GLIDE_SECONDS], turned around where it stands; accepted, a modulated amount is the author's to keep
+     * above 0.
+     */
+    amountModulated: Boolean = false,
 ) : KatalystEffect, KatalystLatentEffect {
 
     private val fadeLen: Int = (sampleRate * KNOB_GLIDE_SECONDS).toInt().coerceAtLeast(1)
@@ -140,7 +148,7 @@ class KatalystDistortEffect(
     private val twinL: Oversampler? = if (stages > 0) Oversampler(stages) else null
     private val twinR: Oversampler? = if (stages > 0) Oversampler(stages) else null
 
-    private val amountGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val amountGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = amountModulated)
 
     /** True from construction and from [reset] until a block has been processed: a switch then acts at once. */
     private var fresh: Boolean = true

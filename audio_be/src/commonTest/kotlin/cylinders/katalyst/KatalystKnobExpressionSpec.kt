@@ -76,7 +76,7 @@ class KatalystKnobExpressionSpec : StringSpec({
 
     /** The value of a knob built from [node] after resolving [state]. */
     fun knobValue(node: KatalystKnobDsl, state: KlangMap<Double>?): Double =
-        KatalystKnob(node, KatalystNoiseOrdinals()).also { it.resolve(state) }.value
+        testKnob(node, KatalystNoiseOrdinals()).also { it.resolve(state) }.value
 
     /**
      * Runs [knob] over [operands] in every leaf placement: leaf `i` is a slot when bit `i` of the mask is set (the
@@ -225,7 +225,7 @@ class KatalystKnobExpressionSpec : StringSpec({
         whole.registers[whole.resultRegister] shouldBe 6.0
 
         // A folded knob is a constant knob: it never evaluates, at build or at a resolve.
-        val knob = KatalystKnob(
+        val knob = testKnob(
             KatalystKnobDsl.Abs(inner = KatalystKnobDsl.Neg(inner = inner)),
             KatalystNoiseOrdinals(),
         )
@@ -271,7 +271,7 @@ class KatalystKnobExpressionSpec : StringSpec({
 
     "a non-finite slot leaf makes the whole knob unset, where the law would have read it as a set number" {
         // `times` scrubs a NaN to 0: without the rule a cleared slot would read as a SET 0.
-        val knob = KatalystKnob(
+        val knob = testKnob(
             KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("w", 0.5), right = c(2.0)),
             KatalystNoiseOrdinals(),
         )
@@ -290,7 +290,7 @@ class KatalystKnobExpressionSpec : StringSpec({
 
     "an unset leaf unsets the knob whatever the others say, a default that is unset included" {
         // `a` is written, `b` is never written and its default is unset: the knob is unset, and not written.
-        val knob = KatalystKnob(
+        val knob = testKnob(
             KatalystKnobDsl.Plus(
                 left = KatalystKnobDsl.Param("a", 1.0),
                 right = KatalystKnobDsl.Param("b", SLOT_UNSET),
@@ -315,7 +315,7 @@ class KatalystKnobExpressionSpec : StringSpec({
     }
 
     "a constant is not a slot: a non-finite constant follows the laws" {
-        val scrubbed = KatalystKnob(
+        val scrubbed = testKnob(
             KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("a", 1.0), right = c(Double.NaN)),
             KatalystNoiseOrdinals(),
         )
@@ -326,7 +326,7 @@ class KatalystKnobExpressionSpec : StringSpec({
             scrubbed.written.shouldBeTrue()
         }
 
-        val kept = KatalystKnob(
+        val kept = testKnob(
             KatalystKnobDsl.Plus(left = KatalystKnobDsl.Param("a", 1.0), right = c(Double.NaN)),
             KatalystNoiseOrdinals(),
         )
@@ -339,7 +339,7 @@ class KatalystKnobExpressionSpec : StringSpec({
     }
 
     "written is true exactly when a slot leaf took a finite value from the state" {
-        val knob = KatalystKnob(
+        val knob = testKnob(
             KatalystKnobDsl.Plus(left = KatalystKnobDsl.Param("a", 1.0), right = KatalystKnobDsl.Param("b", 2.0)),
             KatalystNoiseOrdinals(),
         )
@@ -418,7 +418,7 @@ class KatalystKnobExpressionSpec : StringSpec({
     // ── The cost rule: an expression over slots evaluates at resolve, never per block ─────────────────────────────
 
     "an expression knob evaluates once per resolve, and never while the stage runs its blocks" {
-        val knob = KatalystKnob(
+        val knob = testKnob(
             KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("fader", 1.0), right = c(0.5)),
             KatalystNoiseOrdinals(),
         )
