@@ -7,7 +7,9 @@ package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.utils.flushState
+import kotlin.math.roundToInt
 
 /**
  * The whole resonator stage on one MONO channel: a parallel bank of TPT-SVF bandpasses, each band scaled by its own
@@ -24,8 +26,28 @@ import io.peekandpoke.klang.audio_be.utils.flushState
  * with `w` the mix clamped to `[0, 1]` (non-finite reads 0) and `floor` likewise. The p = 2 (equal-AMPLITUDE) branch
  * of [WetDryMix] applies because the wet is the dry through the bank, coherent in the passbands. `floor` is the
  * least dry coefficient (the body's is 0.4, the vowel's 0.2); above it the dry stays at the floor while the wet keeps
- * rising. **A mix at or below 0 bypasses**: the buffer is untouched and the bands do not run, so their state does not
- * advance.
+ * rising.
+ *
+ * **The blend moves IN PLACE; only the table is the bank's identity** (knob expressions step 5c, decision Q8 (a) of
+ * `docs/tasks/in-progress/katalyst-knob-expressions.md`). [install] makes the bank fresh on a table, its blend snapped;
+ * [glideBlend] moves the mix and the floor of a bank that sounds, and touches neither its bands nor their state, so a
+ * moving `wet` or `floor` does not restart the resonance unless the mix lands at 0 (below). What glides is the PAIR
+ * of coefficients, `dryGain` and `wetGain`, each a [KnobGlide] ramped per sample from the value the last block ended
+ * on (written from the block's end, so it lands bit for bit), and not the mix `w`: the output is LINEAR in the two
+ * coefficients (the dry and the wet do not depend on them), so ramping both linearly is exactly a linear crossfade
+ * between the output at the old blend and the output at the new one, never outside them (the stage-lifecycle
+ * template's "a glide is linear in what it holds"). A glide of `w` would bend each coefficient along a `sin^2` and
+ * could not carry a floor move at all, which is a second knob of the same pair. The pair spans ONE block when the mix
+ * or the floor holds a modulator ([mixModulated], D2, the phaser's rule for its C4 pair) and [KnobGlide]'s 50 ms
+ * otherwise. A settled blend takes the plain loop, bit for bit what the bank did before the glide existed.
+ *
+ * **A mix at or below 0 bypasses once the blend has landed there**: the buffer is untouched and the bands do not run.
+ * While the blend glides towards 0 (or away from it) the bands run, so the wet leaves and arrives with its resonance.
+ * The block the glide LANDS on 0 zeroes every band's state at its end (the output is the dry exactly by then, so the
+ * zeroing is silent): the bands stop clean and not stale, and a return glides the wet up from 0 over bands starting
+ * from rest, which is the onset a fresh bank has, under a wet coefficient that starts at 0. The phaser's cascade
+ * follows the same rule at its depth gate. Keeping the frozen state instead would let a return restart the bands on a
+ * ring of a signal long gone.
  *
  * Each band is the Cytomic TPT SVF with the bandpass tap normalised to a unity peak (`k * v1`, so q is a pure width
  * control): `v3 = v0 - ic2; v1 = a1*ic1 + a2*v3; v2 = ic2 + a2*ic1 + a3*v3; ic1 = 2*v1 - ic1; ic2 = 2*v2 - ic2`, the
@@ -51,8 +73,14 @@ class ResonatorBank(
     /** The number of bands the storage holds before [install] has to grow it. */
     capacity: Int,
     private val sampleRate: Double,
-    /** The frames of one render block: sizes the wet scratch. */
+    /** The frames of one render block: sizes the wet scratch, and is the unit [glideBlend]'s span counts in. */
     blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+    /**
+     * True when the stage's `wet` or `floor` holds a modulator (`Kat.sine` and the rest): the blend glides over ONE
+     * block instead of [KnobGlide]'s 50 ms (knob expressions step 5c, D2). Both knobs feed the one pair of
+     * coefficients, so either makes the pair one block. See the class KDoc.
+     */
+    mixModulated: Boolean = false,
 ) : AudioFilter {
 
     private var a1 = DoubleArray(capacity)
@@ -67,12 +95,30 @@ class ResonatorBank(
     var count: Int = 0
         private set
 
-    /** The mix `w`, clamped to `[0, 1]`; at 0 [process] bypasses. */
+    /** The mix `w` the blend is going to, clamped to `[0, 1]`; at 0 [process] bypasses once the blend has landed. */
     private var amount: Double = 0.0
-    private var dryGain: Double = 1.0
-    private var wetGain: Double = 0.0
+
+    /** The dry coefficient, a LEVEL knob ramped per sample (see the class KDoc). Unset is identity, 1. */
+    private val dryGain = KnobGlide(
+        sampleRate = sampleRate.roundToInt(),
+        blockFrames = blockFrames,
+        modulated = mixModulated,
+    ).also { it.retarget(1.0) }
+
+    /** The wet coefficient, the other half of the pair. Unset is identity, 0. */
+    private val wetGain = KnobGlide(
+        sampleRate = sampleRate.roundToInt(),
+        blockFrames = blockFrames,
+        modulated = mixModulated,
+    ).also { it.retarget(0.0) }
 
     private var wet: AudioBuffer = AudioBuffer(blockFrames)
+
+    /**
+     * Where the pair stood when the block began (dry, wet), for [blendRamped]: an ARRAY, so the two doubles reach the
+     * ramp without crossing a call (a double handed to a call V8 does not inline is a heap number; `ResonatorConfig`).
+     */
+    private val rampFrom = DoubleArray(2)
 
     /** The coefficient holder [computeSvfCoeffs] writes into, one per bank. */
     private val coeffs = SvfCoeffs()
@@ -82,8 +128,9 @@ class ResonatorBank(
 
     /**
      * Makes this bank a FRESH one on [config]: every band's coefficients and gain from its table, every integrator
-     * zeroed, the blend's two coefficients from the wet/dry law. Only for a bank nobody hears (see the class KDoc); the
-     * result is bit for bit a bank built new on the same values. A null table installs no bands (the wet is silence).
+     * zeroed, the blend's two coefficients from the wet/dry law, SNAPPED (no glide from what the bank held before).
+     * Only for a bank nobody hears (see the class KDoc); the result is bit for bit a bank built new on the same values.
+     * A null table installs no bands (the wet is silence).
      *
      * The mix and the floor are coerced as the law says (non-finite reads 0, both clamped to `[0, 1]`); a host that
      * has its own rule for an unset knob substitutes it before calling. The bank reads [config] and keeps no reference
@@ -129,18 +176,52 @@ class ResonatorBank(
         ic2[band] = 0.0
     }
 
-    /** The blend's amount and its two coefficients, from [config]'s mix and floor by the wet/dry law. */
+    /** The blend's amount and its two coefficients, from [config]'s mix and floor by the wet/dry law, snapped. */
     private fun installBlend(config: ResonatorConfig) {
+        dryGain.reset()
+        wetGain.reset()
+        targetBlend(config)
+    }
+
+    /**
+     * Moves the blend to [config]'s mix and floor IN PLACE, from where it stands: the bands, their coefficients and
+     * their state are untouched, so the resonance carries on (knob expressions step 5c), unless the mix lands at 0,
+     * where [process] zeroes the band state on the landing block (the class KDoc). The pair of coefficients glides
+     * over the bank's span (one block when [mixModulated], 50 ms otherwise) and a new target mid-glide turns it from
+     * where it stands ([KnobGlide]). The same mix and floor again is free. The table is ignored: a new table is a new
+     * bank ([install]). Coerced as [install] coerces; the bank keeps no reference to [config].
+     */
+    fun glideBlend(config: ResonatorConfig) {
+        targetBlend(config)
+    }
+
+    /**
+     * The one home of the blend's law: the amount and the two coefficients' targets. Its own method with no double
+     * crossing the call (see [installBand]).
+     */
+    private fun targetBlend(config: ResonatorConfig) {
         val mix = config.mix
 
         amount = if (mix.isFinite()) mix.coerceIn(0.0, 1.0) else 0.0
-        dryGain = WetDryMix.dryCoeff(w = amount, floor = config.floor, p = 2)
-        wetGain = WetDryMix.wetCoeff(amount, p = 2)
+        dryGain.retarget(WetDryMix.dryCoeff(w = amount, floor = config.floor, p = 2))
+        wetGain.retarget(WetDryMix.wetCoeff(amount, p = 2))
     }
 
     override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-        // A mix at 0: out = dry. The buffer stays untouched (bit-identical) and no band runs.
-        if (amount <= 0.0) {
+        // Where the pair stands, whether it still travels, and where this block takes it. Both advance on every block,
+        // the bypassed ones included, so the snap window closes with the first block and a later move glides.
+        val gliding = dryGain.isGliding || wetGain.isGliding
+        val dgFrom = dryGain.value
+        val wgFrom = wetGain.value
+        val dgTo = dryGain.advance()
+        val wgTo = wetGain.advance()
+
+        rampFrom[0] = dgFrom
+        rampFrom[1] = wgFrom
+
+        // A mix at 0 and the blend landed there: out = dry. The buffer stays untouched (bit-identical) and no band
+        // runs; the landing block zeroed their state (below).
+        if (amount <= 0.0 && !gliding) {
             return
         }
 
@@ -157,11 +238,53 @@ class ResonatorBank(
             runBand(band = b, buffer = buffer, offset = offset, length = length, wet = w)
         }
 
-        val dg = dryGain
-        val wg = wetGain
+        if (dgFrom == dgTo && wgFrom == wgTo) {
+            // Settled: the plain blend, bit for bit the bank's law before the glide existed.
+            for (i in 0 until length) {
+                buffer[offset + i] = buffer[offset + i] * dgTo + w[i] * wgTo
+            }
+        } else {
+            blendRamped(buffer = buffer, offset = offset, length = length)
+        }
+
+        if (amount <= 0.0 && !dryGain.isGliding && !wetGain.isGliding) {
+            // The landing on 0: the output is the dry from here on, so the bands stop clean (see the class KDoc).
+            clearBands()
+        }
+    }
+
+    /**
+     * The blend over a block in which the pair moves: each coefficient ramps linearly per sample from where the last
+     * block ended ([rampFrom]) to the value in force now, written from the END, `to - step * (last - i)`, so the
+     * block's last sample takes the value bit for bit ([KnobGlide.advanceScaled]'s rule).
+     */
+    private fun blendRamped(buffer: AudioBuffer, offset: Int, length: Int) {
+        if (length == 0) {
+            return
+        }
+
+        val w = wet
+        val dgFrom = rampFrom[0]
+        val wgFrom = rampFrom[1]
+        val dgTo = dryGain.value
+        val wgTo = wetGain.value
+        val dgStep = (dgTo - dgFrom) / length
+        val wgStep = (wgTo - wgFrom) / length
+        val last = length - 1
 
         for (i in 0 until length) {
+            val dg = dgTo - dgStep * (last - i)
+            val wg = wgTo - wgStep * (last - i)
+
             buffer[offset + i] = buffer[offset + i] * dg + w[i] * wg
+        }
+    }
+
+    /** Every band's state to rest, the coefficients and gains kept: the landing of a blend on 0. */
+    private fun clearBands() {
+        for (b in 0 until count) {
+            ic1[b] = 0.0
+            ic2[b] = 0.0
         }
     }
 

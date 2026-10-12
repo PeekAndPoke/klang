@@ -48,13 +48,12 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * the kind's constant for it before its compare (a raw `katp` write is the only way one arrives: the `body(...)` and
  * `vowel(...)` doors fill their own companions, `/dsl-design` §4, checklist 11).
  *
- * **A modulator** (knob expressions step 5b): only the INDEX ticks. A modulated material or vowel steps through the
- * bank swap whenever it crosses into another table (a new bank from zero state over `BANK_CROSSFADE_SECONDS`, a change
- * during a fade parked, latest wins; "steps, never morphs", the morph was rejected by ear in 2026-09). A modulated
- * `wet` or `floor` is NOT ticked until step 5c builds the in-place blend (Q8): any change of either installs a new bank
- * from zero state, so a moving one would restart the resonance every block. The doors refuse it (a type error); a
- * Kotlin caller who builds one by hand gets it FROZEN at its modulators' start, evaluated on every changed map like a
- * slot expression and never moving between them. TEMPORARY, recorded in the task doc; 5c lifts it.
+ * **A modulator** (knob expressions steps 5b and 5c): all three knobs tick. A modulated material or vowel steps through
+ * the bank swap whenever it crosses into another table (a new bank from zero state over `BANK_CROSSFADE_SECONDS`, a
+ * change during a fade parked, latest wins; "steps, never morphs", the morph was rejected by ear in 2026-09). A
+ * modulated `wet` or `floor` moves the blend of the banks that sound in place, over one block, with no new bank and
+ * the resonance ringing on unless the mix lands at 0 (step 5c, Q8 (a); [KatalystResonatorEffect]'s KDoc). The
+ * builder tells the stage whether either is modulated (its `mixModulated`).
  */
 internal class KatalystResonatorWriter(
     private val fx: KatalystResonatorEffect,
@@ -84,11 +83,12 @@ internal class KatalystResonatorWriter(
         fx.configure(config)
     }
 
-    /** The index only: `wet` and `floor` stay frozen until step 5c (see the class KDoc). */
-    override val isModulated: Boolean = index.isModulated
+    override val isModulated: Boolean = index.isModulated || wet.isModulated || floor.isModulated
 
     override fun tick() {
         index.tick()
+        wet.tick()
+        floor.tick()
         fill()
     }
 

@@ -33,7 +33,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *
  * **Every edge fades** (Katalyst step 5c-6, decided with the maintainer 2026-09-19): off fades the bank to dry over
  * `BANK_CROSSFADE_SECONDS` and only then releases it, on fades in from dry, a change crossfades from what sounds now,
- * and an owner that returns to the same config mid-fade-out takes the fading bank back ([KatalystFilterSwap.resume]).
+ * and an owner that returns with the same table mid-fade-out takes the fading bank back ([KatalystFilterSwap.resume]).
  * [reset] and [retire] stay a HARD cut: the cylinder calls them when the orbit has gone silent or goes to the shelf,
  * and a fade that survived them would resume on the orbit's next life.
  *
@@ -50,12 +50,29 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * not with it: the classic chain declares both stages and most voices use neither, so an eager pool would hold about
  * 12 KB per classic cylinder for nothing. One allocation per stage life, never one per change.
  *
+ * **Only a TABLE change is a new bank; the mix and the floor move in place** (knob expressions step 5c, decision Q8
+ * (a), 2026-10-12). A changed material or vowel (or on, or off) goes through the swap above. A changed `wet` or `floor`
+ * with the same table moves the blend of the banks that sound ([ResonatorBank.glideBlend]) and installs nothing: the
+ * pair of coefficients glides per sample, over one block when either knob holds a modulator ([mixModulated]) and over
+ * 50 ms otherwise, and the bands ring on, so a moving wet does not restart the resonance unless the mix lands at 0
+ * (below). It reaches every pair the swap holds, the one fading out included, so a mix that moves during a table's
+ * fade moves both sides of it, and an owner that returns inside a fade to dry with a new mix takes the fading pair
+ * back on that mix. A call with ANOTHER table carries its mix and floor through the swap as one word: an install snaps
+ * the new pair's blend and leaves the outgoing pair's as it sounded, and a parked change waits whole, which is what a
+ * table and a mix changing together did before. (So while a third table waits in the parking slot, at most one fade,
+ * 20 ms, the blend of the pairs that sound holds. The parked install snaps its pair to the latest mix, and the
+ * outgoing pair catches up at the next mix move while it fades out: over one block when the mix is modulated, so up
+ * to one fade of modulation lands in one block.) The bypass at a mix of 0 is the bank's: the bands keep running while
+ * the blend travels to 0 and stop, their state zeroed, on the block it lands, so a return starts them from rest
+ * ([ResonatorBank]'s KDoc).
+ *
  * **Intent and sound are two things.** [isEngaged] is the intent (the owner's latest word was a table), which is the
  * parking slot's when a config waits and the swap's otherwise; the bank may still be sounding after it turned false.
  * The config cache (what [installedTable], [installedMix] and [installedFloor] read, and the left bank of the pair)
- * describes the pair the last install configured. It survives a fade-out on purpose, so a returning owner can take the
- * fading bank back, and it is never trusted on its own: an unchanged config with the intent off asks the swap whether
- * that pair still sounds, and installs afresh when it does not (question 2 of `docs/plans/effect-state-machines.md`).
+ * describes the pair the last install configured, its table, and the blend last applied to the pairs that sound. It
+ * survives a fade-out on purpose, so a returning owner can take the fading bank back, and it is never trusted on its
+ * own: an unchanged config with the intent off asks the swap whether that pair still sounds, and installs afresh when
+ * it does not (question 2 of `docs/plans/effect-state-machines.md`).
  */
 class KatalystResonatorEffect(
     /** Body or vowel: which unset constants [configure] substitutes, and which tables the pool is sized for. */
@@ -63,12 +80,29 @@ class KatalystResonatorEffect(
     private val sampleRate: Double,
     /** The frames of one render block; sizes the swap's and the banks' scratch (see [KatalystFilterSwap]). */
     private val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+    /**
+     * True when the `wet` or the `floor` knob holds a modulator (knob expressions step 5c, D2): every bank's blend
+     * glides over ONE block instead of 50 ms ([ResonatorBank]'s `mixModulated`). Both knobs feed the one pair of
+     * coefficients, so either makes the pair one block, and a `katp` move of the other then steps over one block too
+     * (the phaser's reading for its shared pair).
+     */
+    private val mixModulated: Boolean = false,
 ) : KatalystEffect {
 
     /** One stereo pair of banks: the unit the pool holds and the swap blends. */
-    private class BankPair(capacity: Int, sampleRate: Double, blockFrames: Int) {
-        val left = ResonatorBank(capacity = capacity, sampleRate = sampleRate, blockFrames = blockFrames)
-        val right = ResonatorBank(capacity = capacity, sampleRate = sampleRate, blockFrames = blockFrames)
+    private class BankPair(capacity: Int, sampleRate: Double, blockFrames: Int, mixModulated: Boolean) {
+        val left = ResonatorBank(
+            capacity = capacity,
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            mixModulated = mixModulated,
+        )
+        val right = ResonatorBank(
+            capacity = capacity,
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            mixModulated = mixModulated,
+        )
     }
 
     /** The wet an unset (non-finite) mix stands for: `BODY_WET` or `VOWEL_WET`. */
@@ -125,8 +159,9 @@ class KatalystResonatorEffect(
      * wrong lookup or a knob wired to the wrong argument installs a real bank of the wrong box (or sings the wrong
      * vowel) and reads as "engaged" either way. Nothing else can see which one it is.
      *
-     * They read the values the pair was configured from, so an unset knob reads as its constant and never as the
-     * non-finite marker that arrived, and a PARKED change is not in them yet.
+     * They read the values the pair was configured from (for the mix and the floor: the blend last applied, the
+     * target the banks glide to), so an unset knob reads as its constant and never as the non-finite marker that
+     * arrived, and a PARKED table is not in them yet.
      */
     internal val installedTable: ResonatorTable? get() = cur.table
 
@@ -146,6 +181,14 @@ class KatalystResonatorEffect(
     internal var installs: Int = 0
         private set
 
+    /**
+     * Test seam: how many times a mix or floor change moved the blend of a pair the swap holds ([glideBlend]). An
+     * unchanged blend adds none, and neither does a change that finds no pair sounding (the swap Off, the cache kept):
+     * that one installs. A moving blend adds one per change and never an install.
+     */
+    internal var blendMoves: Int = 0
+        private set
+
     /** Test seam: whether the pool has been built (it is, from the first install on). */
     internal val hasPool: Boolean get() = pool != null
 
@@ -158,9 +201,10 @@ class KatalystResonatorEffect(
      * `VOWEL_FLOOR`). This is the ONE home of that rule: the writer hands the slots through raw, so a raw `katp` write
      * arrives here non-finite.
      *
-     * A null fades the bank out (see the class KDoc); a second null while it fades is free. While a fade runs the word
-     * is PARKED instead of acted on, except for the one word that needs no new bank: a return to the config that is
-     * fading out, which turns that fade around.
+     * A null fades the bank out (see the class KDoc); a second null while it fades is free. While a fade runs a word
+     * with a NEW table is PARKED instead of acted on. A word with the installed table needs no new bank and is acted
+     * on at once: its mix and floor move the blend in place on every pair the swap holds, and when that pair is fading
+     * out it is taken back, which turns that fade around.
      */
     fun configure(offer: ResonatorConfig) {
         val table = offer.table
@@ -187,22 +231,36 @@ class KatalystResonatorEffect(
         // writer because this is where the compare is, and the failure it prevents is a per-block install on the audio
         // thread rather than a wrong number.
         // NaN-guards, and they sit BEFORE the comparison on purpose: a NaN is never equal to itself, so an unguarded
-        // non-finite mix made the test below true on EVERY block and reconfigured a bank per block on the audio thread,
-        // restarting a crossfade that then never completed. Substituted, compared and stored, so the value the banks
-        // are configured from is the value the next block compares against.
+        // non-finite mix made the compare below true on EVERY block (before step 5c it reconfigured a bank per block
+        // on the audio thread, restarting a crossfade that then never completed; now it would retarget the blend per
+        // block). Substituted, compared and stored, so the value the banks are configured from is the value the next
+        // block compares against.
         val mix = offer.mix
         val floor = offer.floor
         val m = if (mix.isFinite()) mix else unsetWet
         val f = if (floor.isFinite()) floor else unsetFloor
 
-        // Install only when the table, the mix or the floor actually changes: with ownership this is once per owner
-        // change (a live owner re-offers the same config every block, which short-circuits here). The table compares
-        // by REFERENCE: `ResonatorTables` shares one instance between indices whose rows are equal, so a switch among
-        // aliases (`bass:a`, `bass:ei`) is no change.
-        val unchanged = table === cur.table && m == cur.mix && f == cur.floor
+        // The TABLE is the bank's identity, and only the table (knob expressions step 5c, Q8 (a)): a mix or a floor
+        // change moves the blend of the banks that sound IN PLACE, and installs nothing. It compares by REFERENCE:
+        // `ResonatorTables` shares one instance between indices whose rows are equal, so a switch among aliases
+        // (`bass:a`, `bass:ei`) is no change. With ownership a new table arrives once per owner change (a live owner
+        // re-offers the same config every block, which short-circuits here); a modulated index steps through it.
+        val unchanged = table === cur.table
+
+        // The blend moves in place when the table is the one installed: on every pair the swap holds, the one in
+        // service AND, during a fade, the one fading out, so a mix that moves while a table's fade runs moves both
+        // sides of it. A call with ANOTHER table carries its mix and floor with it through the swap, as one word: an
+        // install snaps the new pair's blend and leaves the outgoing pair's as it sounded, and a parked change waits
+        // whole (Katalyst 5c-11: the fade in flight is untouched). So a table and a mix that change together render as
+        // they did before step 5c.
+        if (unchanged && (m != cur.mix || f != cur.floor)) {
+            cur.mix = m
+            cur.floor = f
+            glideBlend()
+        }
 
         if (unchanged) {
-            // The owner's latest word is the config already installed, so anything parked behind it is overtaken
+            // The owner's latest word is the table already installed, so anything parked behind it is overtaken
             // (latest wins) whether or not a fade is still running.
             parked.table = null
             hasParked = false
@@ -211,12 +269,12 @@ class KatalystResonatorEffect(
                 return
             }
 
-            // The owner is back with the config it had: take the fading pair back where it stands. Only while it
-            // still sounds; once it has faded out the cache describes a released pair, and the identical config
-            // installs afresh below. A return after a DIFFERENT change (A, then B, then A again within one fade) is
-            // not found here, because the cache holds B: A parks, and once B's fade lands a fresh A fades in over it.
-            // Searching the outgoing pair by config is complexity the safety net does not need (decided in the 5c-6
-            // review).
+            // The owner is back with the table it had: take the fading pair back where it stands (its blend moved
+            // above, in place). Only while it still sounds; once it has faded out the cache describes a released
+            // pair, and the identical config installs afresh below. A return after a DIFFERENT change (A, then B,
+            // then A again within one fade) is not found here, because the cache holds B: A parks, and once B's fade
+            // lands a fresh A fades in over it. Searching the outgoing pair by config is complexity the safety net
+            // does not need (decided in the 5c-6 review).
             val left = curLeft
 
             if (left != null && swap.resume(left)) {
@@ -241,6 +299,32 @@ class KatalystResonatorEffect(
     }
 
     /**
+     * Moves the blend of every pair the swap holds to [cur]'s mix and floor, in place. [configure] calls it only when
+     * either changed (both substituted, so finite, and the plain compare there is exact). A pair the swap does not hold
+     * is left alone: nobody hears it, and its next way into service is [install], which sets its blend afresh. It
+     * counts in [blendMoves] only when it moved a pair. No double crosses the call (the numbers travel in [cur];
+     * [ResonatorConfig] says why).
+     */
+    private fun glideBlend() {
+        val pairs = pool ?: return
+        var moved = false
+
+        for (i in pairs.indices) {
+            val pair = pairs[i]
+
+            if (swap.holds(pair.left)) {
+                pair.left.glideBlend(cur)
+                pair.right.glideBlend(cur)
+                moved = true
+            }
+        }
+
+        if (moved) {
+            blendMoves++
+        }
+    }
+
+    /**
      * Configures the pair nobody hears from [cur] and hands it to the swap. Only while the swap is settled, where it
      * holds at most ONE pair, so the other is always free.
      */
@@ -260,7 +344,14 @@ class KatalystResonatorEffect(
     /** The pool's one allocation, at the first install of this stage's life (see the class KDoc). */
     private fun buildPool(): Array<BankPair> {
         val capacity = ResonatorTables.capacity(kind)
-        val pairs = Array(2) { BankPair(capacity = capacity, sampleRate = sampleRate, blockFrames = blockFrames) }
+        val pairs = Array(2) {
+            BankPair(
+                capacity = capacity,
+                sampleRate = sampleRate,
+                blockFrames = blockFrames,
+                mixModulated = mixModulated,
+            )
+        }
 
         pool = pairs
 

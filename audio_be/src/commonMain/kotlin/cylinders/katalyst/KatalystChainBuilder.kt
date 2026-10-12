@@ -119,46 +119,40 @@ object KatalystChainBuilder {
                 // per-voice chain). In the classic chain they run first, so they color the dry
                 // mix before the time/dynamics effects.
                 is KatalystStageDsl.Body -> {
+                    // The material is a slot like the rest, holding the INDEX of a name in
+                    // `BodyMaterials.names` (Katalyst step 5a-2). An unset index (the bare stage's
+                    // SLOT_UNSET, or a slot nobody wrote whose default is unset) leaves the stage off
+                    // rather than picking a box nobody asked for. A change of it is a bank swap; the wet and
+                    // the floor glide the blend in place, over one block when either holds a modulator (step 5c).
+                    val material = knob(stage.material)
+                    val wet = knob(stage.wet)
+                    val floor = knob(stage.floor)
                     val fx = KatalystResonatorEffect(
                         kind = ResonatorKind.BODY,
                         sampleRate = sampleRate.toDouble(),
                         blockFrames = blockFrames,
+                        mixModulated = wet.isModulated || floor.isModulated,
                     )
                     pipeline.add(fx)
 
-                    // The material is a slot like the rest, holding the INDEX of a name in
-                    // `BodyMaterials.names` (Katalyst step 5a-2). An unset index (the bare stage's
-                    // SLOT_UNSET, or a slot nobody wrote whose default is unset) leaves the stage off
-                    // rather than picking a box nobody asked for. Nothing glides here: a change is a bank
-                    // swap, so the stage takes no span.
-                    writers.add(
-                        KatalystResonatorWriter(
-                            fx = fx,
-                            index = knob(stage.material),
-                            wet = knob(stage.wet),
-                            floor = knob(stage.floor),
-                        )
-                    )
+                    writers.add(KatalystResonatorWriter(fx = fx, index = material, wet = wet, floor = floor))
                 }
 
                 // The vowel is the same stage class with the other kind, and its own instance: a chain that declares
                 // both runs both (a vowel sung through a body).
                 is KatalystStageDsl.Vowel -> {
+                    val vowel = knob(stage.vowel)
+                    val wet = knob(stage.wet)
+                    val floor = knob(stage.floor)
                     val fx = KatalystResonatorEffect(
                         kind = ResonatorKind.VOWEL,
                         sampleRate = sampleRate.toDouble(),
                         blockFrames = blockFrames,
+                        mixModulated = wet.isModulated || floor.isModulated,
                     )
                     pipeline.add(fx)
 
-                    writers.add(
-                        KatalystResonatorWriter(
-                            fx = fx,
-                            index = knob(stage.vowel),
-                            wet = knob(stage.wet),
-                            floor = knob(stage.floor),
-                        )
-                    )
+                    writers.add(KatalystResonatorWriter(fx = fx, index = vowel, wet = wet, floor = floor))
                 }
 
                 // No ring until the stage is asked for ([stageAskedFor], resource warehouse 2b). This used to

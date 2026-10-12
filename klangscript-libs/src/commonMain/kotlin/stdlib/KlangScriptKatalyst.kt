@@ -138,8 +138,8 @@ object KlangScriptKatalyst {
     // (Q10: a bus has no note to default to; the Ignitor's noise default of 1 walks 0.384 cells per block, a noise AM
     // rather than an LFO), and there is no `analog` and no flank, reset or shape knob (Q11: their effect lives at
     // sample level, and a modulator here is read once per block). Each returns a Katalyst knob: it takes the knob
-    // arithmetic (`range`, `times`, ...) and goes wherever a `Kat.param` goes, except the `eq` sections and, until the
-    // in-place blend lands, a `body`'s or `vowel`'s `wet` and `floor`.
+    // arithmetic (`range`, `times`, ...) and goes wherever a `Kat.param` goes, except the `eq` sections. On a `body`'s
+    // or `vowel`'s `wet` and `floor` it glides the blend in place (step 5c).
     //
     // The chain reads a modulator once per BLOCK, at the block's start, and the stage glides the knob linearly across
     // the block to that value (D2). Its clock starts when the chain is built and runs over the blocks the chain

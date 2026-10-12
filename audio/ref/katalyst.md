@@ -47,7 +47,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 
 | stage | switch on / off | knob changes |
 |---|---|---|
-| body, vowel, orbit EQ | `KatalystFilterSwap`: TWO banks, a linear crossfade over `BANK_CROSSFADE_SECONDS` (0.02). A change during a fade is refused by the swap and PARKED by the host as a config, latest wins, installed on the landing block | a changed material or vowel is a new bank (the bank in service is never retuned; the morph was rejected by ear, 2026-09-20) |
+| body, vowel, orbit EQ | `KatalystFilterSwap`: TWO banks, a linear crossfade over `BANK_CROSSFADE_SECONDS` (0.02). A change during a fade is refused by the swap and PARKED by the host as a config, latest wins, installed on the landing block | a changed material or vowel is a new bank (the bank in service is never retuned; the morph was rejected by ear, 2026-09-20). Body and vowel `wet` and `floor` move the blend IN PLACE (knob expressions step 5c): the dry and wet coefficients glide per sample on every bank the swap holds, over 50 ms, one block when modulated, no install; a mix at 0 bypasses once the blend has landed there, the landing zeroes the bands |
 | delay | Off, Active, Draining state machine (`KatalystDelayEffect`). A MODULATED time crossing the gate with a finite value stays Active while the wet glide takes the feed to 0, then the off-config that finds it landed drains (the off-config is re-applied every block); every return to Active from Off or Draining, the first activation included, glides the wet up from 0 (knob expressions step 5b, review rounds 1 and 2). Every other off cuts the feed in one sample, and an unmodulated return snaps (an open by-ear question: a fade would bleed a new owner into the old ring) | `time`: `DelayLine` crossfades the old tap to the new over 50 ms, a change mid-crossfade is parked; `feedback`: glides per block and ramps per sample; `wet`: per-sample level glide |
 | reverb | the same state machine, and the delay's feed fade and glide from 0 for a modulated size, an unset one included (the writer hands `Reverb.normalizeSize`'s 0 for it; an unset delay time has no finite stand-in and hard-cuts) (`KatalystReverbEffect`) | `size` glides on the normalized 0..1 axis; `lowpass` (damping) does not glide, measured inaudible; `wet` as the delay's |
 | compressor | a linear blend with dry over `KNOB_GLIDE_SECONDS`; ON fades a reset instance in; the instance is built with the effect, never on the audio thread | `threshold`, `ratio` (as its inverse), `knee` glide per sample (`Compressor.processGliding`); `attack`, `release` apply at once |
@@ -140,7 +140,9 @@ reverb, the filter swap and the compressor copy it. What every copy must keep:
 - **A fix's rows go through the production builder and cover every entry state** (the same step, round 2, two
   MAJORs): rows that build the effect by hand with the fix's flag set leave the builder's wiring of that flag unbound
   (a mutant setting it `false` stayed green); and a fix for an edge "in both directions" gets a row per state the
-  stage can return FROM (Off and Draining), not only the one the first row happened to reach.
+  stage can return FROM (Off and Draining), not only the one the first row happened to reach. A stage with a swap
+  counts the swap's states as entry states too: settled, fading to a pair, fading to DRY, a word parked, off (step 5c,
+  a recurrence: a word arriving inside a fade to dry had no row).
 
 - A private sealed `State` with one preallocated instance per state; `enter` is the only way in and the only place
   a state's own data is initialised. A datum belongs to a state only if it dies with that state (the tail ceiling
@@ -168,6 +170,13 @@ DSP is `filters/ResonatorBank.kt` (the bands and the dry/wet blend in one mono b
 reorder, the index is the wire encoding. `ResonatorTables` builds one table per index once and SHARES one instance
 between indices whose rows are equal (`bass:a`, `bass:ei`, `bass:au`), so the stage's compare by reference keeps a
 switch among aliases free. A change installs into the pooled pair the swap does not hold (two pairs, built at the
-stage's first install), from zero state: no allocation per change, and a sounding bank never retunes. The stage is
-offered a `ResonatorConfig` by reference (a double crossing a call boxes on V8). Guards: `CatalogueIndexSpec`,
-`ResonatorTablesSpec`, `ResonatorBankSpec`, `KatalystResonatorEffectSpec`, `KatalystResonatorAllocationSpec`.
+stage's first install), from zero state: no allocation per change, and a sounding bank never retunes. Only the table
+is a bank's identity (knob expressions step 5c, Q8 (a)): a `wet` or `floor` change with the same table glides the
+blend of the banks that sound in place (`ResonatorBank.glideBlend`: the pair `dryGain`, `wetGain`, linear in the
+output, per sample over 50 ms, or one block when either knob holds a modulator), on the pair fading out too, so a
+moving wet does not restart the resonance unless the mix lands at 0 (below); a call with another table carries its mix
+through the swap as one word. A mix at or below 0 bypasses once the blend has landed there, and the landing block
+zeroes the band state, so a return starts the bands from rest under a wet coefficient from 0. The stage is offered a `ResonatorConfig` by reference (a
+double crossing a call boxes on V8). Guards: `CatalogueIndexSpec`,
+`ResonatorTablesSpec`, `ResonatorBankSpec`, `KatalystResonatorEffectSpec`, `KatalystResonatorAllocationSpec`,
+`KatalystModulatedStagesSpec` (the in-place blend, step 5c).

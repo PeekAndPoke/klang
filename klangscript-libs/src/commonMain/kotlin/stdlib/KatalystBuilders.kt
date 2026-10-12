@@ -54,8 +54,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * call; the reason is on [toKatalystKnob]. The chain reads its knobs once per block. The exceptions are the knobs fixed
  * when the chain is built, plain numbers or names: the compressor's and the limiter's `lookahead` (it sizes a delay
  * ring) and `distort`'s `shape` and `oversample`; the `eq` sections, whose knobs take a number or a param only
- * ([toEqSectionKnob]); and, until step 5c, a `body`'s or `vowel`'s `wet` and `floor`, which take no modulator
- * ([toResonatorMixKnob]).
+ * ([toEqSectionKnob]).
  */
 
 /**
@@ -119,49 +118,6 @@ internal fun KatalystKnobDsl.toEqSectionKnob(): IgnitorDsl = when (this) {
         "a Katalyst eq section takes a number or a Kat.param; got a Kat expression",
         operation = "Katalyst eq",
     )
-}
-
-/**
- * The knob a `body`'s or `vowel`'s `wet` or `floor` takes: what [toKatalystKnob] gives, except a knob that holds a
- * modulator (`Kat.sine` and the rest, anywhere in its expression), which is a [KlangScriptTypeError] ("a Katalyst
- * body's wet takes no Kat modulator yet; a moving wet would restart the resonance every block").
- *
- * **TEMPORARY** (knob expressions step 5b, recorded in `docs/tasks/in-progress/katalyst-knob-expressions.md`): the
- * resonator installs a new bank from zero state on any change of its wet or floor, so a wet moving every block would
- * restart the resonance every block (Q8). Step 5c builds the in-place blend and lifts this refusal. The index knobs
- * (`material`, `vowel`) take a modulator: a new index steps through the bank swap, which is what an index change is.
- * A slot or a slot expression is accepted as before: it changes only when the pattern writes it.
- */
-private fun IgnitorDslLike.toResonatorMixKnob(stage: String, param: String): KatalystKnobDsl {
-    val knob = toKatalystKnob()
-
-    if (knob.holdsModulator()) {
-        throw KlangScriptTypeError(
-            "a Katalyst $stage's $param takes no Kat modulator yet; " +
-                    "a moving $param would restart the resonance every block",
-            operation = "Katalyst $stage",
-        )
-    }
-
-    return knob
-}
-
-/** True when this knob's expression holds a modulator anywhere: the tree walk of [toResonatorMixKnob]. */
-private fun KatalystKnobDsl.holdsModulator(): Boolean = when (this) {
-    is KatalystKnobDsl.Constant, is KatalystKnobDsl.Param -> false
-    is KatalystKnobDsl.Plus -> left.holdsModulator() || right.holdsModulator()
-    is KatalystKnobDsl.Minus -> left.holdsModulator() || right.holdsModulator()
-    is KatalystKnobDsl.Times -> left.holdsModulator() || right.holdsModulator()
-    is KatalystKnobDsl.Div -> left.holdsModulator() || right.holdsModulator()
-    is KatalystKnobDsl.Pow -> base.holdsModulator() || exp.holdsModulator()
-    is KatalystKnobDsl.Min -> left.holdsModulator() || right.holdsModulator()
-    is KatalystKnobDsl.Max -> left.holdsModulator() || right.holdsModulator()
-    is KatalystKnobDsl.Neg -> inner.holdsModulator()
-    is KatalystKnobDsl.Abs -> inner.holdsModulator()
-    is KatalystKnobDsl.Range -> inner.holdsModulator() || from.holdsModulator() || to.holdsModulator()
-    is KatalystKnobDsl.Sine, is KatalystKnobDsl.Saw, is KatalystKnobDsl.Ramp, is KatalystKnobDsl.Tri,
-    is KatalystKnobDsl.Square, is KatalystKnobDsl.PerlinNoise, is KatalystKnobDsl.BerlinNoise,
-    -> true
 }
 
 // ── The chain ────────────────────────────────────────────────────────────────
@@ -269,7 +225,7 @@ fun KatalystBuilder.body(
         KatalystBodyBuilder(
             KatalystStageDsl.Body(
                 material = catalogueIndex(material, bare.material, BodyMaterials::indexOf, constant = { KatalystKnobDsl.Constant(it) }, knob = { it.toKatalystKnob() }),
-                wet = wet?.toResonatorMixKnob(stage = "body", param = "wet") ?: bare.wet,
+                wet = wet?.toKatalystKnob() ?: bare.wet,
                 floor = bare.floor,
             )
         ).configuredBy("Katalyst body", configure).node
@@ -306,7 +262,7 @@ fun KatalystBuilder.vowel(
         KatalystVowelBuilder(
             KatalystStageDsl.Vowel(
                 vowel = catalogueIndex(vowel, bare.vowel, VowelBands::indexOf, constant = { KatalystKnobDsl.Constant(it) }, knob = { it.toKatalystKnob() }),
-                wet = wet?.toResonatorMixKnob(stage = "vowel", param = "wet") ?: bare.wet,
+                wet = wet?.toKatalystKnob() ?: bare.wet,
                 floor = bare.floor,
             )
         ).configuredBy("Katalyst vowel", configure).node
@@ -1103,7 +1059,7 @@ data class KatalystBodyBuilder(val node: KatalystStageDsl.Body)
  */
 @KlangScript.Function
 fun KatalystBodyBuilder.floor(floor: IgnitorDslLike): KatalystBodyBuilder =
-    copy(node = node.copy(floor = floor.toResonatorMixKnob(stage = "body", param = "floor")))
+    copy(node = node.copy(floor = floor.toKatalystKnob()))
 
 // ── Vowel ────────────────────────────────────────────────────────────────────
 
@@ -1116,7 +1072,7 @@ data class KatalystVowelBuilder(val node: KatalystStageDsl.Vowel)
  */
 @KlangScript.Function
 fun KatalystVowelBuilder.floor(floor: IgnitorDslLike): KatalystVowelBuilder =
-    copy(node = node.copy(floor = floor.toResonatorMixKnob(stage = "vowel", param = "floor")))
+    copy(node = node.copy(floor = floor.toKatalystKnob()))
 
 // ── Delay ────────────────────────────────────────────────────────────────────
 

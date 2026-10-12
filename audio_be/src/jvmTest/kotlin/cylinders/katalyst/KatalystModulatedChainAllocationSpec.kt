@@ -9,6 +9,7 @@ import com.sun.management.ThreadMXBean
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -29,7 +30,8 @@ import java.lang.management.ManagementFactory
  * Every knob a stage reads per block moves, and the duck's pass runs on a sidechain, so every branch of the per-block
  * paths is taken: the body's and the vowel's index swap their banks, the delay's time steps through its crossfade, the
  * reverb's lowpass is written as a primitive, the compressor writes its five setters, the arithmetic covers every
- * operator with an operand.
+ * operator with an operand. Since step 5c a second body and vowel move their wet and floor every block (the in-place
+ * blend, the body's wet through 0), and each installs one bank in all.
  */
 class KatalystModulatedChainAllocationSpec : StringSpec({
 
@@ -60,6 +62,18 @@ class KatalystModulatedChainAllocationSpec : StringSpec({
                 vowel = KatalystKnobDsl.Range(inner = KatalystKnobDsl.Tri(freq = c(0.9)), from = c(1.0), to = c(4.0)),
                 wet = c(0.3),
                 floor = c(0.2),
+            ),
+            // Step 5c: a second body and vowel whose wet AND floor move, the blend gliding in place every block. The
+            // body's wet crosses 0, so the bypass, its landing and the return from rest run too.
+            KatalystStageDsl.Body(
+                material = c(2.0),
+                wet = sine(freq = 0.85, from = -0.2, to = 0.8),
+                floor = sine(freq = 0.65, from = 0.2, to = 0.6),
+            ),
+            KatalystStageDsl.Vowel(
+                vowel = c(3.0),
+                wet = sine(freq = 0.95, from = 0.2, to = 0.9),
+                floor = sine(freq = 0.55, from = 0.0, to = 0.5),
             ),
             KatalystStageDsl.Delay(
                 wet = sine(freq = 0.7, from = -0.1, to = 0.4),
@@ -171,6 +185,10 @@ class KatalystModulatedChainAllocationSpec : StringSpec({
 
         withClue("the fewest bytes a run of 1,000 blocks took was $fewest") {
             fewest shouldBe 0.0
+        }
+        withClue("the moving wet and floor installed nothing: one bank each for the 5c body and vowel") {
+            chain.body.shouldNotBeNull().installs shouldBe 1
+            chain.vowel.shouldNotBeNull().installs shouldBe 1
         }
         withClue("the blocks ran and the output stayed finite (the sum is $sum)") {
             b shouldBe 17_500

@@ -119,8 +119,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   laws). Which knob glides how: `audio/ref/katalyst.md`.
 - **Body and vowel** are one stage class with two kinds (`KatalystResonatorEffect`, `ResonatorKind`); a chain runs
   both stages as two instances. One table per catalogue index (`ResonatorTables`, equal rows share an instance, so a
-  switch among aliases installs nothing); a change installs into the pooled pair nobody hears (two pairs, built at
-  the stage's first install), from zero state: no allocation per change, and a sounding bank never retunes.
+  switch among aliases installs nothing); a TABLE change installs into the pooled pair nobody hears (two pairs, built
+  at the stage's first install), from zero state: no allocation per change, and a sounding bank never retunes. A
+  `wet` or `floor` change glides the blend of the sounding banks in place, no install (knob expressions step 5c).
   `audio/ref/katalyst.md`.
 - **Authored lookahead** (Katalyst `compressor` / `limiter`): build-time, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` 0.05, uncompensated by the author's choice; the authored limiter defaults to
@@ -363,6 +364,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-12 Katalyst knob expressions, steps 5a to 5c: Katalyst knobs take modulators (`Kat.sine`, `saw`, `ramp`,
+  `tri`, `square`, `perlin`, `berlin`), ticked once per processed block at the top of `KatalystChain.process`, a
+  modulated knob gliding over one block; `body`/`vowel` wet and floor glide the blend in place (Q8 (a)):
+  `docs/tasks/in-progress/katalyst-knob-expressions.md` step 5
 - 2026-10-12 Katalyst knob expressions, step 4: a Katalyst knob may be an expression over `Kat.param`s (the
   Ignitor's arithmetic and `range`, `KatalystKnobDsl`), compiled per knob at chain build (`KatalystKnobProgram`)
   and evaluated with the Ignitor's laws once per changed map; a non-finite slot leaf unsets the knob (Q5):

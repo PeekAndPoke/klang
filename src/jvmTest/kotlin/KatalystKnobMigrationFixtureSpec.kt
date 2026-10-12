@@ -116,11 +116,14 @@ class KatalystKnobMigrationFixtureSpec : StringSpec({
     """.trimIndent()
 
     // The hashes the unchanged tree rendered (eb39b385), twice each, before the migration began; the authored row was
-    // rewritten in step 3's review round 1 and pinned the same way, in a scratch worktree at eb39b385.
+    // rewritten in step 3's review round 1 and pinned the same way, in a scratch worktree at eb39b385. Step 5c re-pinned
+    // the authored row on purpose (Q8 (a), the maintainer's): its `katp("vw", ...)` moves the vowel's wet alone, which
+    // now glides in place instead of installing a fresh bank (was `6a69ecdeb84e8574`; with the mix back in the bank's
+    // identity compare the row renders the old hash, so the whole move is the in-place blend).
     val pinned = listOf(
         Triple("classic chain through katp", classicKatp, "afce19df06d968f4"),
         Triple("classic chain through the bus doors", classicDoors, "f64d42e5c1e288b1"),
-        Triple("authored chain, a Kat.param on every knob kind, every one moved", authored, "6a69ecdeb84e8574"),
+        Triple("authored chain, a Kat.param on every knob kind, every one moved", authored, "2949f0d641d984ec"),
         Triple("master chain, slots at their defaults", masterDefaults, "de98222378e41b4d"),
     )
 

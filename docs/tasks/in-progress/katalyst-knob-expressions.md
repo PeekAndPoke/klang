@@ -1,6 +1,6 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **in progress, steps 1 to 4, 5a and 5b built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer,
+Status: **in progress, steps 1 to 4, 5a, 5b and 5c built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer,
 2026-10-11, Q12's seed refined 2026-10-12; the other Q at the coordinator's lean).
 
 ## Why
@@ -267,7 +267,7 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
      | compressor | `threshold`, `ratio` (as its inverse), `knee`; `attack`, `release` | one-block glides; attack and release at once; the step 2 holders, no allocation (JVM). With a lookahead the attack resizes the box smoother CONTINUOUSLY (round 1: it re-primed both boxes on every length change, a gain step of 0.6 to 0.7) |
      | duck | `depth`; `attack`; `orbit` | one-block glide; Q7: a modulating depth keeps the stage declared (`Ducking` reads a depth below 0 as 0), a NaN one does not (round 1); the attack at once; the orbit switches with no mechanism (the open item `docs/tasks/by-ear/duck-orbit-switch-click.md`); the switch weight keeps its 50 ms |
      | body, vowel | `material`, `vowel` | ticked: a new index steps through the bank swap (20 ms, a change during a fade parked) |
-     | body, vowel | `wet`, `floor` | **TEMPORARY until 5c (Q8):** refused at both doors, a type error ("a Katalyst body's wet takes no Kat modulator yet; a moving wet would restart the resonance every block"), anywhere in the expression; a hand-built one (Kotlin, the wire) is FROZEN, never ticked (the resonator writer ticks the index only). 5c lifts both |
+     | body, vowel | `wet`, `floor` | ticked since 5c (Q8 (a)): the blend moves IN PLACE, no install. The pair of coefficients `dryGain`, `wetGain` glides per sample on every bank the swap holds (a fading pair included), over one block when either knob is modulated (they share the pair), 50 ms for a `katp` move otherwise; the bands ring on unless the mix lands at 0. Only a table change (index, on) installs through the swap, carrying its mix as one word; off fades the pair in service to dry. A mix at or below 0 bypasses once the blend has landed there; the landing block zeroes the band state, and a return starts the bands from rest under a wet coefficient from 0. (5b: refused at both doors and frozen when hand-built; 5c lifted both) |
      | eq | sections | refuse an expression, a modulator included (Q2, unchanged) |
    - **The doors** (both, one implementation on `KlangScriptKatalyst`, `Kat`/`Katalyst`): `sine`, `saw`, `ramp`, `tri`,
      `square` as `(freq, configure)` with builders `KatalystSineBuilder` ... `KatalystSquareBuilder` (`phase`; `duty` on
@@ -345,6 +345,92 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
      applied (a `katp` time cuts on an UNMODULATED stage; why an unset reverb size fades and an unset delay time cuts;
      the phaser cascade restarting from rest when an LFO crosses its depth gate). Lessons in `audio/ref/katalyst.md`,
      the stage-lifecycle template.
+   **5c built** (2026-10-12): the in-place blend of `body` and `vowel` (Q8 (a)); 5b's refusal and freeze lifted.
+   - **What changed.** Only the TABLE is a resonator bank's identity: `KatalystResonatorEffect.configure` compares the
+     table alone (by reference), so a material or vowel change (or on, or off) still installs through the 20 ms swap,
+     and a `wet` or `floor` change with the same table calls `ResonatorBank.glideBlend` on every pair the swap holds:
+     no install, the bands and their state untouched. `ResonatorBank` holds its blend as two `KnobGlide`s, `dryGain`
+     and `wetGain`, LEVEL knobs ramped per sample from the last block's value, written from the block's end; one block
+     when `mixModulated`, 50 ms otherwise; `install` snaps them (a reinstalled bank is still bit for bit a new one), and
+     a settled blend runs the old loop, bit for bit. The resonator writer ticks `wet` and `floor` too, and the builder
+     builds the three knobs before the stage and passes `mixModulated = wet.isModulated || floor.isModulated`. The
+     doors take a modulator on all four knobs (`toResonatorMixKnob` and `holdsModulator` deleted; nothing else used
+     them).
+   - **Decided in 5c, not by the plan** (coordinator's to reopen):
+     - Glide the two COEFFICIENTS, not `w`: the output is linear in them, so a linear ramp of both is exactly a linear
+       crossfade between the old blend's output and the new one's, never outside them; a `w` glide bends both along a
+       `sin^2` and cannot carry a floor move. They share one span (the phaser's rule for its C4 pair): either knob
+       modulated makes both one block, and a `katp` move of the other then steps over one block (Q6's reading).
+     - The mix reaches every pair the swap HOLDS, the pair fading out included, so a mix moving during a table's fade
+       moves both sides of it. A call with ANOTHER table carries its mix as one word: an install snaps the new pair's
+       blend and leaves the outgoing pair's as it sounded (one block behind for a modulated mix, then it follows), and
+       a parked change waits whole (5c-11's "the fade in flight is untouched" rows stand), so for at most one fade
+       (20 ms) while a third table waits, the blend of the pairs that sound holds; the parked install snaps its pair to
+       the latest mix, and the outgoing pair catches up at the next mix move, over one block for a modulated mix (up
+       to 20 ms of modulation in one block; the audio review of round 1 estimated about 2 dB in one block for a 2 Hz sine
+       over a range of 0.7). This keeps a table and a mix that change together rendering as before.
+     - The bypass at a mix at or below 0 holds only once the blend has LANDED there; while it glides the bands run.
+       The landing block zeroes the band state (silent: the output is the dry by its last sample), so a return starts
+       the bands from rest under a wet coefficient ramping from 0, the phaser's cascade rule. The bypass keys on the
+       target mix, not on the coefficients (a mix of 1e-300 still runs the bands, `ResonatorBankSpec`'s law row).
+     - The stage counts its in-place moves (`blendMoves`, a test seam next to `installs`).
+   - **Rows** (`KatalystModulatedStagesSpec`, every one through `KatalystChainBuilder.build`; the oracle is the hand
+     blend `dry * dg + wet * wg` with the coefficients by hand per block and ramped per sample, over the bank's band sum
+     taken from a full-wet render of the same table, so only a bank never re-installed matches it, within 1e-9):
+     - a body with a sine wet: one install at blocks 0, 1, 2, 7, 13 and 23, one blend move per block whose wet changed,
+       the knob at its clock, and every block of 24 on the oracle;
+     - a vowel with a sine floor across the floor's kink (the law's 0.206 at wet 0.7): one install over 24 blocks, one
+       blend move per block whose floor changed, and every block with the floor at its clock and on the oracle;
+     - both in one chain: each installed once, the largest one-sample step 0.00624 against 0.00883 for the worst of the
+       four fixed renders at the ranges' ends (bound 1.1 times);
+     - a wet through 0 and back: blocks 0 to 4 on the oracle (block 4 glides to the dry), blocks 5 to 7 the tone bit for
+       bit, blocks 8 to 11 on the oracle over bands FROM REST (a full-wet render whose tone starts at block 8); the
+       return's largest step 0.01352 against the dry tone's own 0.01440 (bound 1.1 times; a fixed wet of 0.75 gives
+       0.01235);
+     - a `katp` move of an unmodulated wet (0.3 to 0.8): one install, one blend move, nothing parked, the 19-block glide
+       at 48 kHz linear in each coefficient, every block of 30 on the oracle;
+     - a material change (wood to glass by `katp`) while the wet moves: the second install at block 6, and blocks 0 to
+       19 on the oracle of the swap's own crossfade (960 samples) of the two blends, each pair's coefficients as the
+       decision above schedules them;
+     - `KatalystModulatedChainAllocationSpec` (JVM): a second body and vowel with a moving wet AND floor (the body's
+       wet through 0), 0 bytes per 1,000 blocks, one install each over 17,500 blocks;
+     - `KlangScriptKatalystModulatorDoorParitySpec`: the refusal row flipped to acceptance, a body's and a vowel's wet
+       (alone, inside a slot expression) and floor on the script door, and wet and floor on the Kotlin door, against
+       hand-built nodes.
+   - **Mutations**, 17, all red: the mix back in the identity compare (6 of the 6 stage rows; the allocation row, 2189
+     installs); the writer not ticking `wet` (3) or `floor` (1); the writer's `isModulated` the index only (4); the
+     builder not telling the body (3) or the vowel (1); the bank's dry glide (4) or wet glide (3) back to 50 ms for a
+     modulated knob; the landing without its zeroing (the return row, 0.066 off the from-rest oracle at block 8); the
+     bypass while the blend still glides (the through-0 row); a glide of `w` with the coefficients taken from it (6,
+     1.4e-3 off on the sine-wet row); the mix reaching only the pair in service (the table-change row, block 7); no
+     per-sample ramp (6); every span one block (the `katp` row); the body door dropping a wet, the vowel builder
+     dropping a floor (the door row each). Each in one lock call, restored and compared.
+   - **Behaviour change, not yet accepted**: the corpus is 18 of 18 identical, but the step 3 scaffolding fixture's
+     authored row moves (`KatalystKnobMigrationFixtureSpec`, 6a69ecdeb84e8574 to 2949f0d641d984ec): its
+     `katp("vw", "<0.2 0.5>")` moves the vowel's wet alone each cycle, which glides in place now where it installed a
+     fresh bank; peak delta 0.0714 (-22.9 dBFS) at 4.015 s, first difference at 2.005 s, peak 0.6271 unchanged. With the
+     mix back in the identity compare the row renders 6a69ecdeb84e8574 again, so the delta is the in-place blend alone
+     (its `mat` and `bf` move together, a table change, and render as before). The pin is left for the coordinator.
+   - **For step 6's list**, the double crossings of a moving blend, per moving block per bank (two banks, four during a
+     fade): `WetDryMix.dryCoeff`/`wetCoeff` (in and out) and two `KnobGlide.retarget` in `ResonatorBank.targetBlend`;
+     the two `KnobGlide.value` reads in `process`. The ramp's start values travel in a `DoubleArray`.
+   - **Totals**: `audio_be` JVM 2771 and JS 2662, `klangscript-libs` 902 and 679, the root module JVM 64 with the one
+     fixture row above red, all else green; corpus 18 of 18 identical; allocation check: the first run RED on
+     `spluck-a` alone (V8 314 B, budget 96, the known tail), the second GREEN, 58 of 58; both runs' rows are in the
+     scoreboard.
+   - **Round 1 fixes** (2026-10-12): two rows, an owner back inside a fade to dry with a new wet (the resumed bank
+     glides to it, on the oracle through the swap's turn-around; red under the mix moving only while `swap.active`,
+     block 7, and under a snapping `glideBlend`) and a new wet after that fade has landed (a fresh install, no blend
+     move; red under the old count); `blendMoves` counts only a move of a held pair; the resonance that rings on
+     through a moving wet now says "unless the mix lands at 0" and the parked-table hold names the catch-up, at every
+     site; the deleted door refusal's text gone from `KlangScriptKatalyst.kt` and the music-writing reference.
+     `audio_be` JVM 2773 and JS 2664, `klangscript-libs` 902 and 679, the root module JVM 64 (the fixture at
+     2949f0d641d984ec), corpus 18 of 18 identical.
+   - **Review:** 2 rounds (round 1 opus, both reviewers; round 2 reviewer-high, one reviewer for the test-only delta),
+     0 critical, 1 major (round 1: a new wet inside a fade to dry was untested, a mutant survived; a test gap), round 2
+     clean. Round 2's wording MINORs applied: a same-table word during a fade is acted on at once (the configure KDoc);
+     `audio/MEMORY.md` and `audio/ref/effects-mixing.md` say a wet or floor change glides in place; "off" installs
+     nothing, it fades the pair in service to dry (`audio-constraints.md`, the stage table).
 6. Measured in the harness: a slot expression, a modulated gain and phaser center, a perlin; time and bytes per
    block, JVM and V8. The per-block resolve of a modulated compressor or duck knob gets an allocation case of its own,
    measured single-case with `--predictable` on V8 (step 2's `CompressorSettings` and `DuckSettings` are double-field
@@ -357,7 +443,9 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
    candidate heap number per block on a moving knob: `KnobGlide.retarget`, the gain's and the arithmetic's
    `configure(Double)`, `gate()`, `guarded()`, `guardedDepth()`, `guardedFloor()`, `Reverb.normalizeSize`, the
    `Reverb.lowpass` setter, the five `Compressor` setters (each runs `updateCoefficients`, so 15 `timeConstantCoeff`
-   per block on a mismatch), `Ducking.attackSeconds`.
+   per block on a mismatch), `Ducking.attackSeconds`. And Kotlin/JS's `Double.coerceIn`, which is not inline: 4 calls
+   per bank per moving block of a body or vowel blend (`ResonatorBank.targetBlend` once, `WetDryMix.dryCoeff` twice,
+   `WetDryMix.wetCoeff` once; 5c review round 1, audio 3).
 7. Records, and the render fixture removed.
 
 **Questions.** Decided by the maintainer (2026-10-11), each at the lean: Q2 E2 ("keep shared, slots only"), Q3

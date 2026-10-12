@@ -805,9 +805,9 @@ so a slow drift wants about 0.0005 to 0.01). Each swings about -1..1, so map it 
 arithmetic like a param, and a param may sit inside it (`Kat.sine(Kat.param("lfo", 0.2))`). The chain reads it once
 per block and the stage ramps the knob across the block to that value; its clock runs while the orbit sounds and
 pauses while it sleeps. A modulated delay `time` steps through the delay's 50 ms tap crossfade (a stepping echo, not a
-chorus), and a modulated `body` material or `vowel` steps through the bank swap. Not on an `eq` section, and not yet
-on a `body`'s or `vowel`'s `wet` or `floor` (a script error until the in-place blend lands). Unlike the Ignitor's: no
-`analog`, no flank or reset knobs.
+chorus), and a modulated `body` material or `vowel` steps through the bank swap, while a modulated `wet` or `floor`
+there glides the blend in place, the resonance ringing on unless the wet lands at 0. Not on an `eq` section. Unlike
+the Ignitor's: no `analog`, no flank or reset knobs.
 
 ```javascript
 // the phaser's center sweeps 400 to 1600 Hz every ten seconds, the fader breathes at 0.25 Hz

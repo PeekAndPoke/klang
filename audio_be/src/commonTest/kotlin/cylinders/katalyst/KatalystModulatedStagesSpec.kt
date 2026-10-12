@@ -20,13 +20,16 @@ import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
 
@@ -1007,14 +1010,511 @@ class KatalystModulatedStagesSpec : StringSpec({
         }
     }
 
-    "a hand-built modulator on a body's wet is frozen until 5c: no bank restarts, the wet at its clock's start" {
-        // The doors refuse it (a type error); a Kotlin caller who builds the node gets the knob frozen.
-        val chain = build(KatalystDsl.of(KatalystStageDsl.Body(material = c(1.0), wet = lfo, floor = c(0.4))))
+    // ── Body and vowel: the in-place blend (step 5c, Q8 (a)) ─────────────────────────────────────────────────────
+
+    /** The 220 Hz sine at 0.5 of these rows, sample [i] of block [k]; silence before block [from]. */
+    fun tone(k: Int, i: Int, from: Int = 0): Double =
+        if (k < from) 0.0 else 0.5 * sin(2.0 * PI * 220.0 * (k * blockFrames + i) / sampleRate)
+
+    /**
+     * [blocks] blocks of [tone] (silent before block [from]) through [chain], configured with no owner first; [before]
+     * runs before each block (an owner's `applyParams`), [after] after it. The left channel, every block end to end.
+     */
+    fun render(
+        chain: KatalystChain,
+        blocks: Int,
+        from: Int = 0,
+        before: (Int) -> Unit = {},
+        after: (Int) -> Unit = {},
+    ): DoubleArray {
+        val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
+        val out = DoubleArray(blocks * blockFrames)
+
+        chain.applyParams(null)
+
+        for (k in 0 until blocks) {
+            for (i in 0 until blockFrames) {
+                ctx.mixBuffer.left[i] = tone(k = k, i = i, from = from)
+                ctx.mixBuffer.right[i] = ctx.mixBuffer.left[i]
+            }
+
+            before(k)
+            chain.process(ctx)
+            ctx.mixBuffer.left.copyInto(destination = out, destinationOffset = k * blockFrames)
+            after(k)
+        }
+
+        return out
+    }
+
+    /** The wet/dry law's dry coefficient at p = 2, by hand: `max(floor, cos(w * pi / 2)^2)`, `w` clamped to [0, 1]. */
+    fun dryOf(w: Double, floor: Double): Double {
+        val x = cos(w.coerceIn(0.0, 1.0) * PI / 2.0)
+
+        return max(floor, x * x)
+    }
+
+    /** The wet coefficient at p = 2, by hand: `sin(w * pi / 2)^2`. */
+    fun wetOf(w: Double): Double {
+        val x = sin(w.coerceIn(0.0, 1.0) * PI / 2.0)
+
+        return x * x
+    }
+
+    /** A coefficient ramped per sample across one block from [from] to [to], written from the block's end. */
+    fun ramp(from: Double, to: Double, i: Int): Double = to - (to - from) / blockFrames * (blockFrames - 1 - i)
+
+    /**
+     * The blend of one sample by hand: the dry tone times the dry coefficient plus [wet] times the wet one, each ramped
+     * across the block from (dry, wet) [from] to [to].
+     */
+    fun blendAt(k: Int, i: Int, wet: Double, from: Pair<Double, Double>, to: Pair<Double, Double>): Double =
+        tone(k = k, i = i) * ramp(from = from.first, to = to.first, i = i) +
+                wet * ramp(from = from.second, to = to.second, i = i)
+
+    /**
+     * The largest difference between [actual] and [expected] in block [k] of both, `expected` taken per sample from
+     * [expect].
+     */
+    fun deviation(actual: DoubleArray, k: Int, expect: (Int) -> Double): Double {
+        var worst = 0.0
+
+        for (i in 0 until blockFrames) {
+            worst = max(worst, abs(actual[k * blockFrames + i] - expect(i)))
+        }
+
+        return worst
+    }
+
+    /** The largest one-sample step of [out] over blocks [first] to [last], the seam into [first] included. */
+    fun largestStepOf(out: DoubleArray, first: Int, last: Int): Double {
+        var largest = 0.0
+        val start = max(1, first * blockFrames)
+
+        for (j in start until (last + 1) * blockFrames) {
+            largest = max(largest, abs(out[j] - out[j - 1]))
+        }
+
+        return largest
+    }
+
+    /**
+     * How many of the blocks 1 to [upTo] carry a [value] other than the block before's, by the hand law: the sine of
+     * these rows repeats a value on blocks 1 and 2 and on 5 and 6 (its phase of 1/16 is symmetric about the peaks).
+     */
+    fun changes(upTo: Int, value: (Int) -> Double): Int = (1..upTo).count { abs(value(it) - value(it - 1)) > 1e-6 }
+
+    val wood = BodyMaterials.indexOf("wood")
+    val glass = BodyMaterials.indexOf("glass")
+    val vowelA = VowelBands.indexOf("a")
+
+    /** A body chain of one stage on [material]. */
+    fun bodyChain(material: Double, wet: KatalystKnobDsl, floor: Double = 0.4) =
+        build(KatalystDsl.of(KatalystStageDsl.Body(material = c(material), wet = wet, floor = c(floor))))
+
+    /** A stage at full wet over a floor of 0 renders its band sum: the dry coefficient is cos(pi/2)^2, about 4e-33. */
+    fun fullWetBody(material: Double) = KatalystDsl.of(
+        KatalystStageDsl.Body(material = c(material), wet = c(1.0), floor = c(0.0)),
+    )
+
+    "a body's sine wet glides the blend in place through build(): installed once, the resonance rings on (5c)" {
+        // Blocks 0, 1 and k against the hand blend over the bank's own band sum (a full-wet render of the same table):
+        // only a bank that is never re-installed rings on from block 0, and only a one-block per-sample ramp of the
+        // two coefficients lands on these samples.
+        val blocks = 24
+        val chain = bodyChain(material = wood, wet = lfoRange(0.2, 0.8))
         val body = chain.body.shouldNotBeNull()
+        val installs = IntArray(blocks)
+        val moves = IntArray(blocks)
+        val mixes = DoubleArray(blocks)
+        val out = render(chain, blocks, after = { k ->
+            installs[k] = body.installs
+            moves[k] = body.blendMoves
+            mixes[k] = body.installedMix
+        })
+        val wet = render(build(fullWetBody(wood)), blocks)
 
-        run(chain, blocks = 12) { _, _ -> }
+        fun coeffs(k: Int) = dryOf(ranged(k, 0.2, 0.8), 0.4) to wetOf(ranged(k, 0.2, 0.8))
 
-        withClue("one install, the first") { body.installs shouldBe 1 }
-        body.installedMix shouldBe (s(0) plusOrMinus 1e-9)
+        for (k in listOf(0, 1, 2, 7, 13, blocks - 1)) {
+            withClue("block $k: one install, a blend move per block whose wet changed, the knob at its clock") {
+                installs[k] shouldBe 1
+                moves[k] shouldBe changes(upTo = k) { ranged(it, 0.2, 0.8) }
+                mixes[k] shouldBe (ranged(k, 0.2, 0.8) plusOrMinus 1e-9)
+            }
+        }
+
+        for (k in 0 until blocks) {
+            val from = coeffs(if (k == 0) 0 else k - 1)
+            val to = coeffs(k)
+
+            withClue("block $k against the hand blend over the ringing bands") {
+                deviation(out, k) { i -> blendAt(k = k, i = i, wet = wet[k * blockFrames + i], from = from, to = to) }
+                    .shouldBeLessThanOrEqual(1e-9)
+            }
+        }
+    }
+
+    "a vowel's sine floor glides the blend in place through build(), across the floor's kink, installed once (5c)" {
+        // At wet 0.7 the law's own dry coefficient is cos(0.35 pi)^2 = 0.206; the floor sweeps 0.02 to 0.58, so the dry
+        // coefficient takes the floor on some blocks and the law on others.
+        val blocks = 24
+        val vowel = KatalystDsl.of(KatalystStageDsl.Vowel(vowel = c(vowelA), wet = c(0.7), floor = lfoRange(0.0, 0.6)))
+        val chain = build(vowel)
+        val stage = chain.vowel.shouldNotBeNull()
+        val floors = DoubleArray(blocks)
+        val out = render(chain, blocks, after = { k -> floors[k] = stage.installedFloor })
+        val wet = render(
+            build(KatalystDsl.of(KatalystStageDsl.Vowel(vowel = c(vowelA), wet = c(1.0), floor = c(0.0)))),
+            blocks,
+        )
+
+        fun coeffs(k: Int) = dryOf(0.7, ranged(k, 0.0, 0.6)) to wetOf(0.7)
+
+        withClue("the floor takes both sides of the kink") {
+            (0 until blocks).any { ranged(it, 0.0, 0.6) > dryOf(0.7, 0.0) }.shouldBeTrue()
+            (0 until blocks).any { ranged(it, 0.0, 0.6) < dryOf(0.7, 0.0) }.shouldBeTrue()
+        }
+        withClue("one install, a blend move per block whose floor changed") {
+            stage.installs shouldBe 1
+            stage.blendMoves shouldBe changes(upTo = blocks - 1) { ranged(it, 0.0, 0.6) }
+        }
+
+        for (k in 0 until blocks) {
+            val from = coeffs(if (k == 0) 0 else k - 1)
+            val to = coeffs(k)
+
+            withClue("block $k: the floor at its clock, and the hand blend over the ringing bands") {
+                floors[k] shouldBe (ranged(k, 0.0, 0.6) plusOrMinus 1e-9)
+                deviation(out, k) { i -> blendAt(k = k, i = i, wet = wet[k * blockFrames + i], from = from, to = to) }
+                    .shouldBeLessThanOrEqual(1e-9)
+            }
+        }
+    }
+
+    "a moving body wet and vowel floor through build() stay as smooth as the fixed renders at their ends (5c)" {
+        // The reference is the smoothest bound a fixed blend gives: the largest step of the four renders with the body
+        // wet and the vowel floor held at the ends of their ranges (a lower wet passes more of the dry, so its step is
+        // the larger one).
+        val blocks = 48
+
+        fun chain(bodyWet: KatalystKnobDsl, vowelFloor: KatalystKnobDsl) = build(
+            KatalystDsl.of(
+                KatalystStageDsl.Body(material = c(wood), wet = bodyWet, floor = c(0.4)),
+                KatalystStageDsl.Vowel(vowel = c(vowelA), wet = c(0.7), floor = vowelFloor),
+            )
+        )
+
+        val moving = chain(bodyWet = lfoRange(0.2, 0.8), vowelFloor = lfoRange(0.0, 0.6))
+        val movingStep = largestStepOf(render(moving, blocks), first = 0, last = blocks - 1)
+        val fixedStep = listOf(0.2, 0.8).flatMap { w -> listOf(0.0, 0.6).map { f -> w to f } }.maxOf { (w, f) ->
+            largestStepOf(render(chain(bodyWet = c(w), vowelFloor = c(f)), blocks), first = 0, last = blocks - 1)
+        }
+
+        println("5c: the largest one-sample step, moving $movingStep, the fixed ends at most $fixedStep")
+
+        withClue("each stage installed once") {
+            moving.body.shouldNotBeNull().installs shouldBe 1
+            moving.vowel.shouldNotBeNull().installs shouldBe 1
+        }
+        withClue("moving $movingStep against the fixed ends' $fixedStep: within 1.1 times") {
+            movingStep.shouldBeLessThanOrEqual(1.1 * fixedStep)
+        }
+    }
+
+    "a body wet through 0 lands, stops its bands clean, and returns from rest without a click (5c)" {
+        // The wet by block: 0.399, 0.750, 0.750, 0.399, -0.099, -0.450, -0.450, -0.099, then again. Block 4 glides the
+        // blend to the dry and lands on it; blocks 5 to 7 bypass (the tone untouched, bit for bit); block 8 glides back
+        // up over bands that start from REST (the landing zeroed them), which is a full-wet render whose tone starts at
+        // block 8.
+        val blocks = 12
+        val chain = bodyChain(material = wood, wet = lfoRange(-0.5, 0.8))
+        val out = render(chain, blocks)
+        val wetFromZero = render(build(fullWetBody(wood)), blocks)
+        val wetFromBlock8 = render(build(fullWetBody(wood)), blocks, from = 8)
+        val fixed = render(bodyChain(material = wood, wet = c(0.75)), blocks)
+
+        fun coeffs(k: Int) = dryOf(ranged(k, -0.5, 0.8), 0.4) to wetOf(ranged(k, -0.5, 0.8))
+
+        withClue("the wet is at or below 0 on blocks 4 to 7 only") {
+            (0 until blocks).filter { ranged(it, -0.5, 0.8) <= 0.0 } shouldBe listOf(4, 5, 6, 7)
+        }
+        for (k in 0..4) {
+            val from = coeffs(if (k == 0) 0 else k - 1)
+
+            withClue("block $k, the bands ringing since block 0 (block 4 glides to the dry)") {
+                deviation(out, k) { i ->
+                    blendAt(k = k, i = i, wet = wetFromZero[k * blockFrames + i], from = from, to = coeffs(k))
+                }.shouldBeLessThanOrEqual(1e-9)
+            }
+        }
+        for (k in 5..7) {
+            withClue("block $k bypasses: the tone, bit for bit") {
+                (0 until blockFrames).all { out[k * blockFrames + it] == tone(k = k, i = it) }.shouldBeTrue()
+            }
+        }
+        for (k in 8 until blocks) {
+            val from = coeffs(k - 1)
+
+            withClue("block $k: back from the dry over bands from rest") {
+                deviation(out, k) { i ->
+                    blendAt(k = k, i = i, wet = wetFromBlock8[k * blockFrames + i], from = from, to = coeffs(k))
+                }.shouldBeLessThanOrEqual(1e-9)
+            }
+        }
+
+        // The return against the larger of the two smooth bounds around it: the dry tone's own step (the blend leaves
+        // from the dry) and a fixed wet at the top of the range.
+        val returning = largestStepOf(out, first = 8, last = 9)
+        val dryStep = 0.5 * 2.0 * PI * 220.0 / sampleRate
+        val steady = max(dryStep, largestStepOf(fixed, first = 0, last = blocks - 1))
+
+        println("5c: the return from wet 0, the largest one-sample step $returning, the dry's $dryStep, bound $steady")
+
+        withClue("the return's largest step $returning against $steady: within 1.1 times") {
+            returning.shouldBeLessThanOrEqual(1.1 * steady)
+        }
+    }
+
+    "a katp move of an unmodulated body's wet glides in place over 50 ms (19 blocks at 48 kHz): no swap (5c)" {
+        val blocks = 30
+        val chain = build(
+            KatalystDsl.of(
+                KatalystStageDsl.Body(
+                    material = c(wood),
+                    wet = KatalystKnobDsl.Param(name = "bw", default = 0.3),
+                    floor = c(0.4),
+                ),
+            )
+        )
+        val body = chain.body.shouldNotBeNull()
+        val out = render(chain, blocks, before = { k ->
+            if (k == 5) {
+                chain.applyParams(klangMapOf("bw" to 0.8))
+            }
+        })
+        val wet = render(build(fullWetBody(wood)), blocks)
+        val start = dryOf(0.3, 0.4) to wetOf(0.3)
+        val target = dryOf(0.8, 0.4) to wetOf(0.8)
+
+        // After j blocks of the glide (block 5 is j = 1), linear in each coefficient, landing on the target at j = 19.
+        fun at(j: Int): Pair<Double, Double> {
+            val t = j.coerceIn(0, 19) / 19.0
+
+            val dry = start.first + (target.first - start.first) * t
+            val wet = start.second + (target.second - start.second) * t
+
+            return dry to wet
+        }
+
+        withClue("one install, one blend move, nothing parked") {
+            body.installs shouldBe 1
+            body.blendMoves shouldBe 1
+            body.isParked.shouldBeFalse()
+        }
+
+        for (k in 0 until blocks) {
+            val j = k - 4
+
+            withClue("block $k, glide block $j") {
+                deviation(out, k) { i ->
+                    blendAt(k = k, i = i, wet = wet[k * blockFrames + i], from = at(j - 1), to = at(j))
+                }.shouldBeLessThanOrEqual(1e-9)
+            }
+        }
+    }
+
+    "a table change while the mix moves still swaps, and the moving mix reaches both pairs of the fade (5c)" {
+        // The material moves from wood to glass at block 6 (an owner's katp): glass installs into the other pair from
+        // rest and fades in over 960 samples (20 ms) while wood fades out. The wet moves every block. The install snaps
+        // glass's blend at block 6's wet and leaves wood's as it sounded (block 5's); from block 7 on the mix moves
+        // BOTH pairs, so both terms of the swap's crossfade carry it.
+        val blocks = 20
+        val chain = build(
+            KatalystDsl.of(
+                KatalystStageDsl.Body(
+                    material = KatalystKnobDsl.Param(name = "bm", default = wood),
+                    wet = lfoRange(0.2, 0.8),
+                    floor = c(0.4),
+                ),
+            )
+        )
+        val body = chain.body.shouldNotBeNull()
+        val installs = IntArray(blocks)
+        val out = render(
+            chain,
+            blocks,
+            before = { k ->
+                if (k == 6) {
+                    chain.applyParams(klangMapOf("bm" to glass))
+                }
+            },
+            after = { k -> installs[k] = body.installs },
+        )
+        val wetWood = render(build(fullWetBody(wood)), blocks)
+        val wetGlass = render(build(fullWetBody(glass)), blocks, from = 6)
+
+        fun coeffs(k: Int) = dryOf(ranged(k, 0.2, 0.8), 0.4) to wetOf(ranged(k, 0.2, 0.8))
+
+        withClue("the swap ran: a second install at block 6, glass") {
+            installs[5] shouldBe 1
+            installs[6] shouldBe 2
+            installs[blocks - 1] shouldBe 2
+            body.installedTable shouldBe ResonatorTables.at(kind = ResonatorKind.BODY, slotValue = glass)
+        }
+
+        for (k in 0 until blocks) {
+            // Wood's blend: block 6 holds block 5's, block 7 ramps from block 5's to block 7's.
+            val woodFrom = coeffs(if (k == 0) 0 else if (k == 7) 5 else k - 1)
+            val woodTo = coeffs(if (k == 6) 5 else k)
+            val glassFrom = coeffs(if (k <= 6) 6 else k - 1)
+            val glassTo = coeffs(k)
+
+            withClue("block $k") {
+                deviation(out, k) { i ->
+                    val j = k * blockFrames + i
+                    val woodOut = blendAt(k = k, i = i, wet = wetWood[j], from = woodFrom, to = woodTo)
+
+                    if (k < 6) {
+                        woodOut
+                    } else {
+                        val glassOut = blendAt(k = k, i = i, wet = wetGlass[j], from = glassFrom, to = glassTo)
+                        val p = j - 6 * blockFrames
+                        val weight = if (p < 960) (960 - p) * (1.0 / 960) else 0.0
+
+                        glassOut + weight * (woodOut - glassOut)
+                    }
+                }.shouldBeLessThanOrEqual(1e-9)
+            }
+        }
+    }
+
+    /** A body of one stage whose material and wet are `katp` slots, `bm` and `bw`, on wood at a wet of 0.3. */
+    fun slotBody() = build(
+        KatalystDsl.of(
+            KatalystStageDsl.Body(
+                material = KatalystKnobDsl.Param(name = "bm", default = wood),
+                wet = KatalystKnobDsl.Param(name = "bw", default = 0.3),
+                floor = c(0.4),
+            ),
+        )
+    )
+
+    "an owner back inside a fade to dry with a new wet takes the fading bank back and glides it to that wet (5c)" {
+        // Block 5 names no material (`bm` 0, the index of none: a null table), so the bank fades to dry over 960
+        // samples. Block 7, 256 samples into that fade, names wood again with a new wet, 0.3 to 0.8: the fading pair is
+        // taken back where it stands (the swap turns the fade around, the dry going out from its weight then, 256/960)
+        // and its blend glides over 50 ms (19 blocks) to the new wet. The bank is never re-installed, so its bands ring
+        // on from block 0 and the full-wet render of wood is its band sum throughout.
+        val blocks = 30
+        val chain = slotBody()
+        val body = chain.body.shouldNotBeNull()
+        val engaged = BooleanArray(blocks)
+        val out = render(
+            chain,
+            blocks,
+            before = { k ->
+                if (k == 5) {
+                    chain.applyParams(klangMapOf("bm" to 0.0))
+                }
+
+                if (k == 7) {
+                    chain.applyParams(klangMapOf("bm" to wood, "bw" to 0.8))
+                }
+            },
+            after = { k -> engaged[k] = body.isEngaged },
+        )
+        val wet = render(build(fullWetBody(wood)), blocks)
+        val start = dryOf(0.3, 0.4) to wetOf(0.3)
+        val target = dryOf(0.8, 0.4) to wetOf(0.8)
+        val inv = 1.0 / 960
+
+        // After j blocks of the glide (block 7 is j = 1), linear in each coefficient, landing on the target at j = 19.
+        fun at(j: Int): Pair<Double, Double> {
+            val t = j.coerceIn(0, 19) / 19.0
+
+            val dg = start.first + (target.first - start.first) * t
+            val wg = start.second + (target.second - start.second) * t
+
+            return dg to wg
+        }
+
+        for (k in 0 until blocks) {
+            withClue("block $k") {
+                deviation(out, k) { i ->
+                    val j = k * blockFrames + i
+                    val bank = blendAt(k = k, i = i, wet = wet[j], from = at(k - 7), to = at(k - 6))
+                    val dry = tone(k = k, i = i)
+
+                    if (k < 5) {
+                        bank
+                    } else if (k < 7) {
+                        // The fade to dry: the bank is the outgoing entry, from weight 1.
+                        val w = (960 - (j - 5 * blockFrames)) * inv
+
+                        dry + w * (bank - dry)
+                    } else {
+                        // Turned around: the bank is the target, the dry the outgoing entry from 256/960.
+                        val q = j - 7 * blockFrames
+                        val w = if (q < 960) (1.0 - 704 * inv) * ((960 - q) * inv) else 0.0
+
+                        bank + w * (dry - bank)
+                    }
+                }.shouldBeLessThanOrEqual(1e-9)
+            }
+        }
+
+        withClue("the fading bank taken back: one install, one blend move, the new wet installed, nothing parked") {
+            body.installs shouldBe 1
+            body.blendMoves shouldBe 1
+            body.installedMix shouldBe 0.8
+            body.isParked.shouldBeFalse()
+            (0 until blocks).filter { !engaged[it] } shouldBe listOf(5, 6)
+        }
+    }
+
+    "a new wet after a fade to dry has landed installs a fresh bank and counts no blend move (5c)" {
+        // Block 2 names no material, so the bank fades to dry and lands inside block 9 (960 samples). Block 12 names
+        // wood again with a new wet: the config cache still holds wood, but no pair sounds, so nothing moves in place
+        // and the change installs a fresh bank, its blend snapped at the new wet, fading in from dry over bands from
+        // rest (a full-wet render whose tone starts at block 12).
+        val blocks = 24
+        val chain = slotBody()
+        val body = chain.body.shouldNotBeNull()
+        val out = render(chain, blocks, before = { k ->
+            if (k == 2) {
+                chain.applyParams(klangMapOf("bm" to 0.0))
+            }
+
+            if (k == 12) {
+                chain.applyParams(klangMapOf("bm" to wood, "bw" to 0.8))
+            }
+        })
+        val wet = render(build(fullWetBody(wood)), blocks, from = 12)
+        val target = dryOf(0.8, 0.4) to wetOf(0.8)
+
+        withClue("a fresh install at the new wet, and no blend move: no pair sounded to move") {
+            body.installs shouldBe 2
+            body.blendMoves shouldBe 0
+            body.installedMix shouldBe 0.8
+        }
+        for (k in 10..11) {
+            withClue("block $k, landed on the dry: the tone, bit for bit") {
+                (0 until blockFrames).all { out[k * blockFrames + it] == tone(k = k, i = it) }.shouldBeTrue()
+            }
+        }
+        for (k in 12 until blocks) {
+            withClue("block $k: the fresh bank fading in over the dry") {
+                deviation(out, k) { i ->
+                    val j = k * blockFrames + i
+                    val bank = blendAt(k = k, i = i, wet = wet[j], from = target, to = target)
+                    val dry = tone(k = k, i = i)
+                    val q = j - 12 * blockFrames
+                    val w = if (q < 960) (960 - q) * (1.0 / 960) else 0.0
+
+                    bank + w * (dry - bank)
+                }.shouldBeLessThanOrEqual(1e-9)
+            }
+        }
     }
 })

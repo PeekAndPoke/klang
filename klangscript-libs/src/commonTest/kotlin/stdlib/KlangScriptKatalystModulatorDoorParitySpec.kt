@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -26,8 +27,8 @@ import io.peekandpoke.klang.script.runtime.NativeObjectValue
  * (the same object, `KlangScriptKatalyst`), positional and named, against the [KatalystKnobDsl] node written out by
  * hand. The Ignitor's door shape, with the recorded differences: `freq` and the noises' `rate` required (Q10), the
  * builders keep only `phase` and the square's `duty` (Q11). Then a modulator inside the knob arithmetic and on a stage,
- * and the refusals: an Ignitor node as an operand, a modulator on an `eq` section (Q2), and, until step 5c, on a
- * `body`'s or `vowel`'s `wet` and `floor`.
+ * and the refusals: an Ignitor node as an operand and a modulator on an `eq` section (Q2). A `body`'s or `vowel`'s
+ * `wet` and `floor` take a modulator since step 5c (the in-place blend, Q8 (a)); 5b refused it there.
  */
 class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
 
@@ -234,35 +235,54 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         }.message shouldBe message
     }
 
-    "until step 5c a body's or a vowel's wet and floor refuse a modulator, anywhere in the expression, on both doors" {
-        for (stage in listOf("body", "vowel")) {
-            val reason = "would restart the resonance every block"
-            val wet = "a Katalyst $stage's wet takes no Kat modulator yet; a moving wet $reason"
-            val floor = "a Katalyst $stage's floor takes no Kat modulator yet; a moving floor $reason"
+    "a body's and a vowel's wet and floor take a modulator, alone and inside an expression, on both doors (5c)" {
+        // 5b refused all four (a moving wet re-installed the bank); step 5c's in-place blend lifted the refusal.
+        val sine = KatalystKnobDsl.Sine(freq = c(1.0))
+        val tri = KatalystKnobDsl.Range(inner = KatalystKnobDsl.Tri(freq = c(0.5)), from = c(0.2), to = c(0.4))
+        val product = KatalystKnobDsl.Times(
+            left = KatalystKnobDsl.Param(name = "w", default = 0.5),
+            right = KatalystKnobDsl.PerlinNoise(rate = c(0.01)),
+        )
+        val bareBody = KatalystStageDsl.Body()
+        val bareVowel = KatalystStageDsl.Vowel()
 
-            withClue("$stage wet, script") {
-                shouldThrow<KlangScriptTypeError> { ks("Katalyst(k => k.$stage(Kat.sine(1)))") }.message shouldBe wet
-            }
-            withClue("$stage wet inside an expression, script") {
-                shouldThrow<KlangScriptTypeError> {
-                    ks("""Katalyst(k => k.$stage(Kat.param("w", 0.5).times(Kat.perlin(0.01))))""")
-                }.message shouldBe wet
-            }
-            withClue("$stage floor, script") {
-                shouldThrow<KlangScriptTypeError> {
-                    ks("Katalyst(k => k.$stage(wet = 0.5, configure = x => x.floor(Kat.tri(0.5).range(0.2, 0.4))))")
-                }.message shouldBe floor
-            }
-            withClue("$stage: a slot expression on the wet is still a knob") {
-                ks("""Katalyst(k => k.$stage(Kat.param("w", 0.5).times(0.5)))""").stages.size shouldBe 1
-            }
+        withClue("body wet, script") {
+            ks("Katalyst(k => k.body(Kat.sine(1)))") shouldBe KatalystDsl.of(bareBody.copy(wet = sine))
+        }
+        withClue("body wet inside an expression, script") {
+            ks("""Katalyst(k => k.body(Kat.param("w", 0.5).times(Kat.perlin(0.01))))""") shouldBe
+                    KatalystDsl.of(bareBody.copy(wet = product))
+        }
+        withClue("body floor, script") {
+            ks("Katalyst(k => k.body(wet = 0.5, configure = x => x.floor(Kat.tri(0.5).range(0.2, 0.4))))") shouldBe
+                    KatalystDsl.of(bareBody.copy(wet = c(0.5), floor = tri))
+        }
+        withClue("vowel wet, script") {
+            ks("Katalyst(k => k.vowel(Kat.sine(1)))") shouldBe KatalystDsl.of(bareVowel.copy(wet = sine))
+        }
+        withClue("vowel wet inside an expression, script") {
+            ks("""Katalyst(k => k.vowel(Kat.param("w", 0.5).times(Kat.perlin(0.01))))""") shouldBe
+                    KatalystDsl.of(bareVowel.copy(wet = product))
+        }
+        withClue("vowel floor, script") {
+            ks("Katalyst(k => k.vowel(wet = 0.5, configure = x => x.floor(Kat.tri(0.5).range(0.2, 0.4))))") shouldBe
+                    KatalystDsl.of(bareVowel.copy(wet = c(0.5), floor = tri))
         }
 
-        shouldThrow<KlangScriptTypeError> { KlangScriptKatalyst.build { it.body(wet = KlangScriptKatalyst.sine(1)) } }
-            .message shouldContain "body's wet takes no Kat modulator"
-        shouldThrow<KlangScriptTypeError> {
-            KlangScriptKatalyst.build { it.vowel(0.5, "a") { v -> v.floor(KlangScriptKatalyst.saw(1)) } }
-        }.message shouldContain "vowel's floor takes no Kat modulator"
+        val kotlinTri = KlangScriptKatalyst.tri(0.5).range(0.2, 0.4)
+
+        withClue("body wet and floor, Kotlin") {
+            KlangScriptKatalyst.build {
+                it.body(wet = KlangScriptKatalyst.sine(1)) { b -> b.floor(kotlinTri) }
+            } shouldBe KatalystDsl.of(bareBody.copy(wet = sine, floor = tri))
+        }
+        withClue("vowel wet and floor, Kotlin") {
+            KlangScriptKatalyst.build {
+                it.vowel(KlangScriptKatalyst.sine(1), "a") { v -> v.floor(kotlinTri) }
+            } shouldBe KatalystDsl.of(
+                KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("a")), wet = sine, floor = tri)
+            )
+        }
     }
 
     "a configure lambda that returns the wrong thing names the door" {
