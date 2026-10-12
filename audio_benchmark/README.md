@@ -35,11 +35,13 @@ KLANG_BENCH_FILTER=Katalyst ./gradlew :audio_benchmark:jvmRun   # the Katalyst s
 
 ### The allocation check (bytes per block)
 
-Beside the timing (real-time factor) there is an allocation mode: 29 fixed cases (`AllocationCases.kt`, common
+Beside the timing (real-time factor) there is an allocation mode: 30 fixed cases (`AllocationCases.kt`, common
 code, middle C), measured on the JVM in-process and on V8 in node, and compared with the budget file
 `alloc-budgets.txt`. Thirteen render voices without the engine (`C-remap` two, taking turns); sixteen run the engine (`PlaybackEngineDispatcher`, the master stage
 included), ten of them with an authored Katalyst chain on the orbit: the case registers it
-(`KlangCommLink.Cmd.RegisterKatalyst`) and its notes reference it by name (`VoiceData.katalyst`), as a song's do. The
+(`KlangCommLink.Cmd.RegisterKatalyst`) and its notes reference it by name (`VoiceData.katalyst`), as a song's do. One, `S-doors`, runs
+sprudel's per-event path (a one-note pattern with voice and bus doors, `toVoiceData`, the wire encode on JS) and
+renders no sound: its flag `makesSound = false` makes the driver check the outputs of its last step, not a peak. The
 chains are built through the Kotlin door (`KatalystBuilder`). `E-arith-glide` moves its chain's slots with notes every
 32 blocks that alternate between two `katp` maps, so its figure includes the note path's (one new voice per 32
 blocks).

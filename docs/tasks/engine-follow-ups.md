@@ -183,10 +183,10 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    passed the whole suite. MINOR 2 and NIT 1: `audio/MEMORY.md` and `audio/ref/performance.md` take this item's
    wording (every box located; the off phaser's call located, not removed; one pinned process one heap number above),
    and the first lines' readings above are labelled as such.
-2. **Steps 1, 2, 3 and 5 DONE (2026-10-11); step 4 OPEN, after the v0.6.5 release: every Kotlin/JS `HashMap` lookup
+2. **DONE (2026-10-12), in five steps (1, 2, 3 and 5 on 2026-10-11, 4 on 2026-10-12): every Kotlin/JS `HashMap` lookup
    allocated 40 bytes on V8; the worklet's slot maps (step 1), sprudel's param bags (step 2), the sound registry
    (step 3) and the dispatcher's engines (step 5) are a `KlangMap` now, and a `KlangMap` is not a Kotlin `Map` (step
-   5).** The item is DONE when step 4 is committed. Reported as: a new param map's resolve costs about 1,130 bytes on the
+   5).** Reported as: a new param map's resolve costs about 1,130 bytes on the
    classic chain after S1, attributed to `KatalystKnob.resolve`, whose code does not explain it. **The cause**
    (production bundle, node 22.12, a probe with the lookups alone, the knobs alone, the chain, two voices taking turns
    as the orbit's owner; mixed and single-case, pinned and unpinned): the stdlib's generic `hashCode(dynamic)`, which
@@ -365,9 +365,18 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    RED, the in-place fill and the changed signature only on the new rows, the harness's maps made per read on
    `E-arith-glide`'s JVM line (233 against 211). `E-duck` was re-set to 152 for its V8 tail (item 38). Report:
    `tmp/reviews/e2-step5-report.md`.
-   **Step 4 OPEN, after the v0.6.5 release, on the fresh `main`: a sprudel allocation case.** Planned in
-   `tmp/reviews/e2-step4-plan.md` (decided: an explicit `makesSound = false` flag and an output count, no reuse of
-   `peak()`; a one-note shape `note("c")` with many doors). The item is DONE when step 4 is committed.
+   **Step 4 DONE (2026-10-12): the sprudel allocation case `S-doors`** (plan `tmp/reviews/e2-step4-plan.md`). One
+   step queries one cycle of `note("c")` with voice and bus doors, converts the event with `toVoiceData` and hands it
+   on as the browser does (`sentToWorklet` in `engine_inbox.kt`: the wire encode on JS, the voice itself on the JVM).
+   It makes no sound: a `makesSound = false` flag on the case, and the driver checks the rig's `outputs()` (an
+   `OUTPUTS n` line on V8) instead of a peak. V8 healthy rounds 35,636 to 36,140 B per event (3 runs, medians 35,702
+   to 36,052); the `ParamBag` storage back on a stdlib `LinkedHashMap` read 45,730 to 45,920, the JS `setAll`/`copy`
+   fast path through the iterator protocol 39,159 to 39,599 (each mutant built and restored in one lock call). Lines:
+   V8 36,500, JVM 15,764 (it reads 15,752; neither mutant moves the JVM). The encoder mutant of the plan no longer
+   exists: since step 5 the encoder has one walk. 2 more runs GREEN, 60 of 60; the first went RED on `E-arith`'s
+   second mode only (rounds 154.7, 20.7, 190.9: a known tail). The outputs guard seen red (review): with `note("~")`
+   (no event per step) the check read `FAIL S-doors jvm` and `FAIL S-doors v8: it produced nothing in its window
+   (outputs 0)`, 0 of 60 over budget otherwise; the line restored and checked with `cmp`.
    **A note for upstream:** the stdlib's `hashCode(dynamic)` closure makes every Kotlin/JS `HashMap`/`HashSet`
    operation allocate on V8; a statement-form `throw` there would remove it everywhere. Not filed from here.
 3. **DONE (2026-10-10): no noise box reproduces; the house limiter boxed per sample.** Reported as about 2 KB per

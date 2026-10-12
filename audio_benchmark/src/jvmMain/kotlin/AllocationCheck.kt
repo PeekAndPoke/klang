@@ -102,6 +102,7 @@ object AllocationCheck {
     private val allocatedLine = Regex("""allocated=(\d+)""")
     private val nsLine = Regex("""^NS ([0-9.eE+-]+)$""")
     private val peakLine = Regex("""^PEAK (\S+)$""")
+    private val outputsLine = Regex("""^OUTPUTS (\d+)$""")
     private val errorLike = Regex("""Error|Exception|ERROR""")
 
     /** Node's "Name: message" line of an uncaught throw; it comes AFTER the throw site's source line. */
@@ -305,10 +306,16 @@ object AllocationCheck {
                 }
 
                 val peak = rig.peak()
+                val outputs = rig.outputs()
 
-                if (!(peak >= SILENT_PEAK) && case.name !in silent) {
-                    silent.add(case.name)
-                    problems.add("FAIL ${case.name} jvm: silent, it rendered nothing in its window (last block peak $peak)")
+                if (case.name !in silent) {
+                    if (case.makesSound && !(peak >= SILENT_PEAK)) {
+                        silent.add(case.name)
+                        problems.add("FAIL ${case.name} jvm: silent, it rendered nothing in its window (last block peak $peak)")
+                    } else if (!case.makesSound && outputs < 1) {
+                        silent.add(case.name)
+                        problems.add("FAIL ${case.name} jvm: it produced nothing in its window (outputs $outputs)")
+                    }
                 }
 
                 bytes.getOrPut(case.name) { mutableListOf() }.add((a1 - a0) / JVM_COUNT)
@@ -418,14 +425,20 @@ object AllocationCheck {
         window.failure?.let { return it }
 
         val peak = window.peak
+        val outputs = window.outputs
+        val makesSound = AllocationCases.byName(case)?.makesSound ?: true
 
         return when {
             window.gcLines == 0 ->
                 V8Outcome.Failed("no allocated= lines in the window's --trace-gc-nvp output (another node or trace format?)")
 
             !(window.ns > 0.0) -> V8Outcome.Failed("NS ${window.ns}: the window did not run")
-            peak == null -> V8Outcome.Failed("no PEAK line: an older bundle without the peak?")
-            !(peak >= SILENT_PEAK) ->
+            !makesSound && outputs == null -> V8Outcome.Failed("no OUTPUTS line: an older bundle?")
+            !makesSound && outputs != null && outputs < 1 ->
+                V8Outcome.Failed("it produced nothing in its window (outputs $outputs)", silent = true)
+
+            makesSound && peak == null -> V8Outcome.Failed("no PEAK line: an older bundle without the peak?")
+            makesSound && !(peak != null && peak >= SILENT_PEAK) ->
                 V8Outcome.Failed("silent, it rendered nothing in its window (last block peak $peak)", silent = true)
 
             else -> V8Outcome.Measured(
@@ -444,6 +457,7 @@ object AllocationCheck {
         val gcLines: Int = 0,
         val ns: Double = 0.0,
         val peak: Double? = null,
+        val outputs: Int? = null,
         val failure: V8Outcome.Failed? = null,
     )
 
@@ -479,6 +493,7 @@ object AllocationCheck {
             var gcLines = 0
             var ns: Double? = null
             var peak: Double? = null
+            var outputs: Int? = null
             var errorMessage: String? = null
             var firstError: String? = null
             var last: String? = null
@@ -499,11 +514,14 @@ object AllocationCheck {
                 val text = line.trim()
                 val nsMatch = nsLine.find(text)
                 val peakMatch = peakLine.find(text)
+                val outputsMatch = outputsLine.find(text)
 
                 if (nsMatch != null) {
                     ns = nsMatch.groupValues[1].toDouble()
                 } else if (peakMatch != null) {
                     peak = peakMatch.groupValues[1].toDoubleOrNull() ?: Double.NaN
+                } else if (outputsMatch != null) {
+                    outputs = outputsMatch.groupValues[1].toInt()
                 } else if (text.isNotEmpty()) {
                     if (errorMessage == null && errorMessageLike.containsMatchIn(text)) {
                         errorMessage = text
@@ -527,7 +545,7 @@ object AllocationCheck {
                 return NodeRun(failure = V8Outcome.Failed("node exit $exit, no NS line; it said: $said"))
             }
 
-            return NodeRun(allocated = allocated, gcLines = gcLines, ns = measuredNs, peak = peak)
+            return NodeRun(allocated = allocated, gcLines = gcLines, ns = measuredNs, peak = peak, outputs = outputs)
         } finally {
             output.delete()
         }
