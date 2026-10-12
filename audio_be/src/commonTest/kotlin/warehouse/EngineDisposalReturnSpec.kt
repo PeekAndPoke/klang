@@ -23,8 +23,8 @@ import io.peekandpoke.klang.audio_be.peak
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -157,8 +157,8 @@ class EngineDisposalReturnSpec : StringSpec({
             KlangCommLink.Cmd.RegisterKatalyst(
                 playbackId = "song", name = "wet",
                 dsl = KatalystDsl.of(
-                    KatalystStageDsl.Delay(wet = IgnitorDsl.Constant(0.5), time = IgnitorDsl.Constant(0.3)),
-                    KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(5.0)),
+                    KatalystStageDsl.Delay(wet = KatalystKnobDsl.Constant(0.5), time = KatalystKnobDsl.Constant(0.3)),
+                    KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.4), size = KatalystKnobDsl.Constant(5.0)),
                 ),
             )
         )

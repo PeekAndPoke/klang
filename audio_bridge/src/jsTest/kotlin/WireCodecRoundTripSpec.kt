@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_bridge
 
 import io.peekandpoke.klang.common.infra.toMap
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
@@ -41,17 +42,17 @@ class WireCodecRoundTripSpec : StringSpec({
         // NaN travels; this pins that, and pins that the comparison is not vacuous (an Infinity and
         // a finite neighbour are in the same list).
         listOf(
-            KatalystDsl.of(KatalystStageDsl.Compressor(threshold = IgnitorDsl.Param("compressor.threshold", SLOT_UNSET))),
-            KatalystDsl.of(KatalystStageDsl.Duck(orbit = IgnitorDsl.Param("duck.orbit", Double.POSITIVE_INFINITY))),
-            KatalystDsl.of(KatalystStageDsl.Reverb(lowpass = IgnitorDsl.Constant(SLOT_UNSET))),
-            KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Param("g", 1.4))),
+            KatalystDsl.of(KatalystStageDsl.Compressor(threshold = KatalystKnobDsl.Param("compressor.threshold", SLOT_UNSET))),
+            KatalystDsl.of(KatalystStageDsl.Duck(orbit = KatalystKnobDsl.Param("duck.orbit", Double.POSITIVE_INFINITY))),
+            KatalystDsl.of(KatalystStageDsl.Reverb(lowpass = KatalystKnobDsl.Constant(SLOT_UNSET))),
+            KatalystDsl.of(KatalystStageDsl.Gain(KatalystKnobDsl.Param("g", 1.4))),
         ).forEach { decode_KatalystDsl(encode_KatalystDsl(it)) shouldBe it }
 
         // ...and the decoded default really is non-finite, not a zero the equality glossed over.
         val decoded = decode_KatalystDsl(encode_KatalystDsl(KatalystDsl.classic))
         val threshold = decoded.stages.filterIsInstance<KatalystStageDsl.Compressor>().single().threshold
 
-        (threshold as IgnitorDsl.Param).default.isFinite() shouldBe false
+        (threshold as KatalystKnobDsl.Param).default.isFinite() shouldBe false
     }
 
     "a DECODED classic chain maps to the same synthetic name: the only fresh NaN in the system" {
@@ -71,14 +72,70 @@ class WireCodecRoundTripSpec : StringSpec({
         // about a zero the codec substituted on the way through.
         val threshold = decoded.stages.filterIsInstance<KatalystStageDsl.Compressor>().single().threshold
 
-        (threshold as IgnitorDsl.Param).default.isFinite() shouldBe false
+        (threshold as KatalystKnobDsl.Param).default.isFinite() shouldBe false
 
         // Encoding the decoded chain again must land on the same name too: a second trip is what a
         // relayed command does (frontend to worklet to a nested playback).
         decode_KatalystDsl(encode_KatalystDsl(decoded)).uniqueId() shouldBe KatalystDsl.classic.uniqueId()
     }
 
-    "KatalystDsl round-trips (every KatalystStageDsl variant, with IgnitorDsl knobs)" {
+    "every knob of every stage carries both KatalystKnobDsl leaves through the trip" {
+        // The knob type of step 3 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: per stage, one chain whose
+        // every
+        // knob is a Constant and one whose every knob is a Param (each its own name, a description on one), so a
+        // knob the codec drops, swaps with a neighbour or decodes as the other leaf goes red on its stage. The eq
+        // carries the Q2 residue: a section knob is an Ignitor leaf, the Param one included.
+        var n = 0
+        fun k(): KatalystKnobDsl.Constant = KatalystKnobDsl.Constant(0.125 * ++n)
+        fun p(): KatalystKnobDsl.Param = KatalystKnobDsl.Param(name = "knob${++n}", default = 0.5 * n, description = "d$n")
+
+        listOf(
+            KatalystStageDsl.Body(material = k(), wet = k(), floor = k()),
+            KatalystStageDsl.Body(material = p(), wet = p(), floor = p()),
+            KatalystStageDsl.Vowel(vowel = k(), wet = k(), floor = k()),
+            KatalystStageDsl.Vowel(vowel = p(), wet = p(), floor = p()),
+            KatalystStageDsl.Delay(wet = k(), time = k(), feedback = k(), cap = k()),
+            KatalystStageDsl.Delay(wet = p(), time = p(), feedback = p(), cap = p()),
+            KatalystStageDsl.Reverb(wet = k(), size = k(), lowpass = k()),
+            KatalystStageDsl.Reverb(wet = p(), size = p(), lowpass = p()),
+            KatalystStageDsl.Phaser(rate = k(), wet = k(), center = k(), sweep = k(), floor = k()),
+            KatalystStageDsl.Phaser(rate = p(), wet = p(), center = p(), sweep = p(), floor = p()),
+            KatalystStageDsl.Compressor(threshold = k(), ratio = k(), knee = k(), attack = k(), release = k(), lookahead = 0.002),
+            KatalystStageDsl.Compressor(threshold = p(), ratio = p(), knee = p(), attack = p(), release = p()),
+            KatalystStageDsl.Distort(amount = k(), shape = 2, oversample = 8),
+            KatalystStageDsl.Distort(amount = p()),
+            KatalystStageDsl.Duck(orbit = k(), depth = k(), attack = k()),
+            KatalystStageDsl.Duck(orbit = p(), depth = p(), attack = p()),
+            KatalystStageDsl.Gain(gain = k()),
+            KatalystStageDsl.Gain(gain = p()),
+            KatalystStageDsl.Plus(other = k()),
+            KatalystStageDsl.Plus(other = p()),
+            KatalystStageDsl.Minus(other = k()),
+            KatalystStageDsl.Minus(other = p()),
+            KatalystStageDsl.Times(other = k()),
+            KatalystStageDsl.Times(other = p()),
+            KatalystStageDsl.Div(other = k()),
+            KatalystStageDsl.Div(other = p()),
+            KatalystStageDsl.Pow(exp = k()),
+            KatalystStageDsl.Pow(exp = p()),
+            KatalystStageDsl.Min(other = k()),
+            KatalystStageDsl.Min(other = p()),
+            KatalystStageDsl.Max(other = k()),
+            KatalystStageDsl.Max(other = p()),
+            KatalystStageDsl.Eq(
+                sections = listOf(
+                    IgnitorDsl.EqSection.Bell(
+                        freq = IgnitorDsl.Param("eqf", 900.0, "the bell"), q = IgnitorDsl.Constant(0.8), db = IgnitorDsl.Param("eqdb", 3.0),
+                    ),
+                    IgnitorDsl.EqSection.RawTap(freq = IgnitorDsl.Constant(2500.0), q = IgnitorDsl.Constant(0.7), gain = IgnitorDsl.Param("tap", 0.5)),
+                ),
+            ),
+        ).forEach { stage ->
+            withClue(stage.toString()) { decode_KatalystDsl(encode_KatalystDsl(KatalystDsl.of(stage))) shouldBe KatalystDsl.of(stage) }
+        }
+    }
+
+    "KatalystDsl round-trips (every KatalystStageDsl variant, with KatalystKnobDsl knobs)" {
         // Every variant, and on each the shapes a codec can silently lose: a Param knob next to a
         // Constant one, the nullable `lowpass` in BOTH states, an empty section list next to a
         // populated one, and the two catalogue-index knobs (`body.material`, `vowel.vowel`) both
@@ -88,46 +145,46 @@ class WireCodecRoundTripSpec : StringSpec({
             KatalystDsl.classic,
             KatalystDsl.of(
                 KatalystStageDsl.Body(
-                    material = IgnitorDsl.Constant(BodyMaterials.indexOf("wood")),
-                    wet = IgnitorDsl.Constant(0.7),
-                    floor = IgnitorDsl.Constant(0.3),
+                    material = KatalystKnobDsl.Constant(BodyMaterials.indexOf("wood")),
+                    wet = KatalystKnobDsl.Constant(0.7),
+                    floor = KatalystKnobDsl.Constant(0.3),
                 ),
                 KatalystStageDsl.Body(),
                 KatalystStageDsl.Vowel(
-                    vowel = IgnitorDsl.Constant(VowelBands.indexOf("soprano:a")),
-                    wet = IgnitorDsl.Param("vowel.wet", 0.6),
-                    floor = IgnitorDsl.Constant(0.1),
+                    vowel = KatalystKnobDsl.Constant(VowelBands.indexOf("soprano:a")),
+                    wet = KatalystKnobDsl.Param("vowel.wet", 0.6),
+                    floor = KatalystKnobDsl.Constant(0.1),
                 ),
                 KatalystStageDsl.Vowel(),
                 KatalystStageDsl.Delay(
-                    wet = IgnitorDsl.Constant(0.2), time = IgnitorDsl.Constant(0.375),
-                    feedback = IgnitorDsl.Constant(0.45), cap = IgnitorDsl.Constant(3.0),
+                    wet = KatalystKnobDsl.Constant(0.2), time = KatalystKnobDsl.Constant(0.375),
+                    feedback = KatalystKnobDsl.Constant(0.45), cap = KatalystKnobDsl.Constant(3.0),
                 ),
                 // every reverb field set, including the nullable lowpass
                 KatalystStageDsl.Reverb(
-                    wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(8.0),
-                    lowpass = IgnitorDsl.Constant(9000.0),
+                    wet = KatalystKnobDsl.Constant(0.4), size = KatalystKnobDsl.Constant(8.0),
+                    lowpass = KatalystKnobDsl.Constant(9000.0),
                 ),
                 // ...and the nullable branch: lowpass absent
-                KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(8.0)),
+                KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.4), size = KatalystKnobDsl.Constant(8.0)),
                 KatalystStageDsl.Phaser(
-                    rate = IgnitorDsl.Constant(0.3), wet = IgnitorDsl.Constant(0.5),
-                    center = IgnitorDsl.Constant(800.0), sweep = IgnitorDsl.Constant(1200.0),
-                    floor = IgnitorDsl.Constant(0.2),
+                    rate = KatalystKnobDsl.Constant(0.3), wet = KatalystKnobDsl.Constant(0.5),
+                    center = KatalystKnobDsl.Constant(800.0), sweep = KatalystKnobDsl.Constant(1200.0),
+                    floor = KatalystKnobDsl.Constant(0.2),
                 ),
                 // ...with a lookahead, the one plain-Double knob of the Katalyst (step 12 C2)
                 KatalystStageDsl.Compressor(
-                    threshold = IgnitorDsl.Constant(-21.0), ratio = IgnitorDsl.Constant(3.0),
-                    knee = IgnitorDsl.Constant(6.0), attack = IgnitorDsl.Constant(0.005),
-                    release = IgnitorDsl.Constant(0.12), lookahead = 0.004,
+                    threshold = KatalystKnobDsl.Constant(-21.0), ratio = KatalystKnobDsl.Constant(3.0),
+                    knee = KatalystKnobDsl.Constant(6.0), attack = KatalystKnobDsl.Constant(0.005),
+                    release = KatalystKnobDsl.Constant(0.12), lookahead = 0.004,
                 ),
                 KatalystStageDsl.Duck(
-                    orbit = IgnitorDsl.Constant(2.0), depth = IgnitorDsl.Constant(0.8),
-                    attack = IgnitorDsl.Constant(0.05),
+                    orbit = KatalystKnobDsl.Constant(2.0), depth = KatalystKnobDsl.Constant(0.8),
+                    attack = KatalystKnobDsl.Constant(0.05),
                 ),
                 // the bus distort: a slot amount and the two plain Int knobs fixed with the chain, and bare
                 KatalystStageDsl.Distort(
-                    amount = IgnitorDsl.Param("drive", 0.15), shape = DistortionShapes.indexOf("tube").toInt(), oversample = 4,
+                    amount = KatalystKnobDsl.Param("drive", 0.15), shape = DistortionShapes.indexOf("tube").toInt(), oversample = 4,
                 ),
                 KatalystStageDsl.Distort(),
                 KatalystStageDsl.Eq(
@@ -137,26 +194,109 @@ class WireCodecRoundTripSpec : StringSpec({
                     )
                 ),
                 KatalystStageDsl.Eq(),
-                KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.4)),
+                KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.4)),
                 // the arithmetic stages: a constant or a slot operand each, and the knob-free rectifier
-                KatalystStageDsl.Plus(other = IgnitorDsl.Constant(0.1)),
-                KatalystStageDsl.Minus(other = IgnitorDsl.Param("off", 0.2)),
-                KatalystStageDsl.Times(other = IgnitorDsl.Constant(-1.0)),
-                KatalystStageDsl.Div(other = IgnitorDsl.Param("d", 2.0)),
-                KatalystStageDsl.Pow(exp = IgnitorDsl.Constant(1.5)),
-                KatalystStageDsl.Min(other = IgnitorDsl.Constant(0.9)),
-                KatalystStageDsl.Max(other = IgnitorDsl.Param("floor", -0.9)),
+                KatalystStageDsl.Plus(other = KatalystKnobDsl.Constant(0.1)),
+                KatalystStageDsl.Minus(other = KatalystKnobDsl.Param("off", 0.2)),
+                KatalystStageDsl.Times(other = KatalystKnobDsl.Constant(-1.0)),
+                KatalystStageDsl.Div(other = KatalystKnobDsl.Param("d", 2.0)),
+                KatalystStageDsl.Pow(exp = KatalystKnobDsl.Constant(1.5)),
+                KatalystStageDsl.Min(other = KatalystKnobDsl.Constant(0.9)),
+                KatalystStageDsl.Max(other = KatalystKnobDsl.Param("floor", -0.9)),
                 KatalystStageDsl.Abs,
                 // A chain inside a stage: an empty branch, a branch of two, and a parallel nested in a branch.
                 KatalystStageDsl.Parallel(
                     branches = listOf(
                         KatalystDsl(emptyList()),
-                        KatalystDsl.of(KatalystStageDsl.Distort(), KatalystStageDsl.Gain(gain = IgnitorDsl.Param("g", 0.25))),
+                        KatalystDsl.of(KatalystStageDsl.Distort(), KatalystStageDsl.Gain(gain = KatalystKnobDsl.Param("g", 0.25))),
                         KatalystDsl.of(KatalystStageDsl.Parallel(branches = listOf(KatalystDsl.of(KatalystStageDsl.Duck())))),
                     ),
                 ),
             ),
         ).forEach { decode_KatalystDsl(encode_KatalystDsl(it)) shouldBe it }
+    }
+
+    "every KatalystKnobDsl expression node carries its operands through the trip, in their order" {
+        // Step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: a row per node, each operand a different
+        // leaf (and the leaves' values all different), so an operand the codec drops, swaps or decodes as another node
+        // goes red on its node. Then one deep tree, every node nested in another.
+        val a = KatalystKnobDsl.Param(name = "a", default = 0.25, description = "the a")
+        val b = KatalystKnobDsl.Constant(-3.5)
+        val c = KatalystKnobDsl.Param(name = "c", default = 7.0)
+
+        listOf(
+            KatalystKnobDsl.Plus(left = a, right = b),
+            KatalystKnobDsl.Minus(left = b, right = a),
+            KatalystKnobDsl.Times(left = a, right = c),
+            KatalystKnobDsl.Div(left = c, right = b),
+            KatalystKnobDsl.Pow(base = a, exp = b),
+            KatalystKnobDsl.Min(left = b, right = c),
+            KatalystKnobDsl.Max(left = c, right = a),
+            KatalystKnobDsl.Neg(inner = a),
+            KatalystKnobDsl.Abs(inner = b),
+            KatalystKnobDsl.Range(inner = a, from = b, to = c),
+            KatalystKnobDsl.Range(
+                inner = KatalystKnobDsl.Neg(
+                    inner = KatalystKnobDsl.Times(left = a, right = KatalystKnobDsl.Abs(inner = b)),
+                ),
+                from = KatalystKnobDsl.Max(
+                    left = KatalystKnobDsl.Pow(base = c, exp = b),
+                    right = KatalystKnobDsl.Div(left = a, right = c),
+                ),
+                to = KatalystKnobDsl.Min(
+                    left = KatalystKnobDsl.Plus(left = b, right = c),
+                    right = KatalystKnobDsl.Minus(left = c, right = a),
+                ),
+            ),
+        ).forEach { knob ->
+            val chain = KatalystDsl.of(
+                KatalystStageDsl.Gain(gain = knob),
+                KatalystStageDsl.Reverb(size = knob, lowpass = knob),
+            )
+
+            withClue(knob.toString()) { decode_KatalystDsl(encode_KatalystDsl(chain)) shouldBe chain }
+        }
+    }
+
+    "every KatalystKnobDsl modulator carries its operands through the trip, in their order" {
+        // Step 5a of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: a row per modulator with every operand a
+        // different leaf, a row per modulator on its defaults, then modulators nested in each other and in the
+        // arithmetic (a modulator's operand is any knob, a modulator included).
+        val a = KatalystKnobDsl.Param(name = "a", default = 0.25, description = "the a")
+        val b = KatalystKnobDsl.Constant(-3.5)
+        val c = KatalystKnobDsl.Param(name = "c", default = 7.0)
+
+        listOf(
+            KatalystKnobDsl.Sine(freq = a, phase = b),
+            KatalystKnobDsl.Saw(freq = b, phase = c),
+            KatalystKnobDsl.Ramp(freq = c, phase = a),
+            KatalystKnobDsl.Tri(freq = a, phase = c),
+            KatalystKnobDsl.Square(freq = c, duty = a, phase = b),
+            KatalystKnobDsl.PerlinNoise(rate = a, octaves = b, persistence = c),
+            KatalystKnobDsl.BerlinNoise(rate = c, octaves = a, persistence = b),
+            KatalystKnobDsl.Sine(freq = b),
+            KatalystKnobDsl.Saw(freq = b),
+            KatalystKnobDsl.Ramp(freq = b),
+            KatalystKnobDsl.Tri(freq = b),
+            KatalystKnobDsl.Square(freq = b),
+            KatalystKnobDsl.PerlinNoise(),
+            KatalystKnobDsl.BerlinNoise(),
+            KatalystKnobDsl.Range(
+                inner = KatalystKnobDsl.Square(
+                    freq = KatalystKnobDsl.Sine(freq = a, phase = KatalystKnobDsl.Tri(freq = c)),
+                    duty = KatalystKnobDsl.Abs(inner = KatalystKnobDsl.BerlinNoise(rate = b)),
+                ),
+                from = KatalystKnobDsl.PerlinNoise(octaves = KatalystKnobDsl.Ramp(freq = a)),
+                to = KatalystKnobDsl.Times(left = KatalystKnobDsl.Saw(freq = c), right = b),
+            ),
+        ).forEach { knob ->
+            val chain = KatalystDsl.of(
+                KatalystStageDsl.Gain(gain = knob),
+                KatalystStageDsl.Reverb(size = knob, lowpass = knob),
+            )
+
+            withClue(knob.toString()) { decode_KatalystDsl(encode_KatalystDsl(chain)) shouldBe chain }
+        }
     }
 
     "SampleRequest round-trips (scalars + nulls)" {
@@ -234,8 +374,11 @@ class WireCodecRoundTripSpec : StringSpec({
     "the wire schema hash is pinned: a change of the wire's type signatures moves it, and a move is made here on purpose" {
         // The worklet refuses a message whose hash differs from its own (`WorkletContract`), so a moved hash only
         // refuses a stale worklet. Pinned since engine follow-up 2, step 5, which changed the slot maps' Kotlin type
-        // and kept their signature. A deliberate wire change updates this number in the same change.
-        WIRE_SCHEMA_HASH shouldBe 1330155241
+        // and kept their signature. A deliberate wire change updates this number in the same change: step 3 of
+        // `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` moved it from 1330155241 (the Katalyst knobs left
+        // `IgnitorDsl` for `KatalystKnobDsl`), step 4 from 1168938423 (the knob expressions joined it), step 5a from
+        // 615137850 (the modulators joined it).
+        WIRE_SCHEMA_HASH shouldBe 211191718
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -299,7 +442,7 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Cmd.RegisterIgnitor(playbackId = "pb", name = "mysynth", dsl = dsl),
             KlangCommLink.Cmd.RegisterKatalyst(
                 playbackId = "pb", name = "katalyst-0",
-                dsl = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)), KatalystStageDsl.Reverb()),
+                dsl = KatalystDsl.of(KatalystStageDsl.Gain(KatalystKnobDsl.Constant(1.4)), KatalystStageDsl.Reverb()),
             ),
             KlangCommLink.Cmd.RegisterKatalyst(playbackId = "pb", name = "katalyst-1", dsl = KatalystDsl.classic),
             KlangCommLink.Cmd.Sample.NotFound(SampleRequest(bank = "b", sound = "s", index = 1, note = "c3")),

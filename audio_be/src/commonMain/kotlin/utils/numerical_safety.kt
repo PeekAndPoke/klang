@@ -43,6 +43,24 @@ inline fun Double.nanGuard(): Double = if (this != this) 0.0 else this
 inline fun Double.finiteOrZero(): Double = if (abs(this) <= Double.MAX_VALUE) this else 0.0
 
 /**
+ * True for a finite value, false for NaN and both infinities: [Double.isFinite] without the call. One compare,
+ * `abs(x) <= Double.MAX_VALUE`, the idiom of [finiteOrZero].
+ *
+ * For a per-block path that runs every block once a knob moves (a modulated Katalyst knob, knob expressions step 6):
+ * on Kotlin/JS `isFinite()` is a stdlib call, and in a caller whose V8 inlining budget is spent it stays a call, so the
+ * double it takes is a heap number. Used on the chain's per-block hook: `KnobGlide.retarget`, `KatalystKnob`'s result
+ * and `isModulating`, the slot writers' guards and gates, `stageAskedFor`, the arithmetic stage's `configure`. Measured
+ * as a GROUP (mutant G1 of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`, all of them back on `isFinite()`,
+ * against run T, `--predictable`, single-case, bytes per block): `E-kat-sine` 31.2 against 15.5, `E-kat-dyn` 128.8
+ * against 98.7, `E-kat-mix` 272.1 against 196.3, one to five heap numbers per case and under every line with the
+ * allocation check's method. Measured as a group because which stdlib call V8 leaves out depends on the hook's whole
+ * budget, so one site put back alone is not a fair test of it. On a cold path,
+ * `isFinite()` reads better and costs nothing.
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun Double.isFiniteInline(): Boolean = abs(this) <= Double.MAX_VALUE
+
+/**
  * Flushes an IIR/FIR carry to zero unless it is a NORMAL, FINITE magnitude.
  *
  * Two failure modes, one guard, because both say the same thing: this value must not be

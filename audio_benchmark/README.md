@@ -35,16 +35,22 @@ KLANG_BENCH_FILTER=Katalyst ./gradlew :audio_benchmark:jvmRun   # the Katalyst s
 
 ### The allocation check (bytes per block)
 
-Beside the timing (real-time factor) there is an allocation mode: 30 fixed cases (`AllocationCases.kt`, common
+Beside the timing (real-time factor) there is an allocation mode: 40 fixed cases (`AllocationCases.kt`, common
 code, middle C), measured on the JVM in-process and on V8 in node, and compared with the budget file
-`alloc-budgets.txt`. Thirteen render voices without the engine (`C-remap` two, taking turns); sixteen run the engine (`PlaybackEngineDispatcher`, the master stage
-included), ten of them with an authored Katalyst chain on the orbit: the case registers it
+`alloc-budgets.txt`. Fourteen render voices without the engine (`C-remap` and `C-kat-remap` two, taking turns); twenty-five run the engine (`PlaybackEngineDispatcher`, the master stage
+included), nineteen of them with an authored Katalyst chain on the orbit: the case registers it
 (`KlangCommLink.Cmd.RegisterKatalyst`) and its notes reference it by name (`VoiceData.katalyst`), as a song's do. One, `S-doors`, runs
 sprudel's per-event path (a one-note pattern with voice and bus doors, `toVoiceData`, the wire encode on JS) and
 renders no sound: its flag `makesSound = false` makes the driver check the outputs of its last step, not a peak. The
 chains are built through the Kotlin door (`KatalystBuilder`). `E-arith-glide` moves its chain's slots with notes every
 32 blocks that alternate between two `katp` maps, so its figure includes the note path's (one new voice per 32
-blocks).
+blocks). The nine `E-kat-*` cases move a knob every block through the chain's own modulators (`Kat.sine` and the
+rest, knob expressions step 6): one sine, a square with a slot-expression duty, a saw whose freq is a sine, perlin at
+one and eight octaves, all seven kinds, the compressor's five knobs with the duck's depth and attack, the body's and the vowel's
+wet and floor, a delay time and a reverb size through their gates (and the reverb's lowpass), and a mixed orbit
+(body, vowel, delay, reverb, phaser, compressor, fader and duck, one knob each moving). `C-kat-remap` is `C-remap`'s
+turns with an authored chain whose fader is a slot expression, so the expression is evaluated on every block's new
+map.
 One case, `C-remap`, takes its voices through `receivedByEngine` (`engine_inbox.kt`): on JS the
 generated wire codec, the path every voice takes into the worklet, so a change of the decoder's map type shows in
 its bytes; on the JVM the voice as it is.
@@ -107,7 +113,10 @@ The benchmark prints:
 
 The effect section (`EffectBenchmark.kt`) times the effect classes one by one, and the Katalyst arithmetic stages as an
 orbit runs them: a chain built by `KatalystChainBuilder`, its param state applied and the chain processed every
-block. Subtract its "Katalyst empty chain" row (the stereo copy and the dispatch) for the stages alone.
+block. Subtract its "Katalyst empty chain" row (the stereo copy and the dispatch) for the stages alone. The knob rows
+(knob expressions step 6) time a modulated knob against the same chain with constant knobs ("Katalyst gain,
+constant", "Katalyst 7 stages, constants", "Katalyst mixed orbit, constants"): the difference is the cost of the
+modulation.
 
 Results are sorted most expensive first.
 

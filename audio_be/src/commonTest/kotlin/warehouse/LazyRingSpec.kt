@@ -22,8 +22,8 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
 import io.peekandpoke.klang.audio_be.effects.DelayLine
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -180,9 +180,9 @@ class LazyRingSpec : StringSpec({
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Delay(
-                    wet = IgnitorDsl.Constant(1.0),
-                    time = IgnitorDsl.Constant(0.3),
-                    feedback = IgnitorDsl.Constant(0.0),
+                    wet = KatalystKnobDsl.Constant(1.0),
+                    time = KatalystKnobDsl.Constant(0.3),
+                    feedback = KatalystKnobDsl.Constant(0.0),
                 ),
             ),
             sampleRate = sampleRate,

@@ -166,7 +166,7 @@ The class-form resonator implements `AudioFilter` (`process(buffer, offset, leng
 | Class                                     | Type                                              |
 |-------------------------------------------|---------------------------------------------------|
 | `DcBlocker`                               | raw-pole DC blocker (the one-pole lowpass and highpass are Ignitor nodes, `ignitor/IgnitorFilters.kt`) |
-| `ResonatorBank`                           | parallel SVF bandpass bank (body, vowel) and its dry/wet blend, mono; reconfigured only while unheard (tidy-up step 12 (a)) |
+| `ResonatorBank`                           | parallel SVF bandpass bank (body, vowel) and its dry/wet blend, mono; its bands reconfigured only while unheard (tidy-up step 12 (a)), its blend glided in place (knob expressions step 5c) |
 | `EqCore`                                  | the equalizer's fused sections                    |
 
 The per-voice filters are not class-form any more: `lpf`/`hpf`/`bpf`/`notch` are `classic()` stages, each the

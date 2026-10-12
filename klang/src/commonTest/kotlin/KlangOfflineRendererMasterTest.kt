@@ -7,8 +7,8 @@ package io.peekandpoke.klang.audio_engine
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPattern
@@ -80,7 +80,7 @@ class KlangOfflineRendererMasterTest : StringSpec({
 
     "an offline render applies the song's master chain" {
         val plain = renderPeak(master = null)
-        val boosted = renderPeak(master = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(4.0))))
+        val boosted = renderPeak(master = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(4.0))))
 
         plain shouldBeGreaterThan 0.0
         // Same note, same render — the only difference is the master, so the recording must be louder.

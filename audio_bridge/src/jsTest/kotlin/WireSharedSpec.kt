@@ -9,10 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.wire.decode_IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.wire.decode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.encode_IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
 
 /**
@@ -53,15 +51,6 @@ class WireSharedSpec : StringSpec({
 
         decoded shouldBe cmd
         same(dsl.left, (dsl.right as IgnitorDsl.Times).left) shouldBe true
-    }
-
-    "inside a chain: a knob shared by two stages stays one object" {
-        val knob = IgnitorDsl.Saw().lowpass(5.0)
-        val chain = KatalystDsl.of(KatalystStageDsl.Gain(knob), KatalystStageDsl.Gain(knob))
-        val decoded = decode_KatalystDsl(hop(encode_KatalystDsl(chain)))
-
-        decoded shouldBe chain
-        same((decoded.stages[0] as KatalystStageDsl.Gain).gain, (decoded.stages[1] as KatalystStageDsl.Gain).gain) shouldBe true
     }
 
     "a parallel's branches still read ONE input after the hop" {

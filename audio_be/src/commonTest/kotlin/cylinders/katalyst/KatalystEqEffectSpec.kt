@@ -526,6 +526,27 @@ class KatalystEqEffectSpec : StringSpec({
         fx.installs shouldBe 1
     }
 
+    "a section knob that is neither a constant nor a slot reads as UNSET on a bus, and the chain still builds" {
+        // The sections stay Ignitor nodes (decision Q2 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`), so a
+        // section
+        // built by hand in Kotlin can carry any node; the bus reads a Constant or a Param off it and nothing else
+        // (`KatalystChainBuilder.eqKnob`, since step 3 there: no fold, no probe). The oracle is the same section with
+        // the knob spelled as an unset slot, and the control is what the old fold made of it (2000 * 2 = 4000 Hz).
+        fun bell(freq: IgnitorDsl) =
+            chainOf(KatalystStageDsl.Eq(sections = listOf(IgnitorDsl.EqSection.Bell(freq = freq, q = c(4.0), db = c(12.0)))))
+
+        val input = noise(blocks * blockFrames)
+        val expression = throughOrbit(bell(IgnitorDsl.Times(left = c(2000.0), right = c(2.0))), input)
+        val unset = throughOrbit(bell(IgnitorDsl.Param("f", SLOT_UNSET)), input)
+        val folded = throughOrbit(bell(c(4000.0)), input)
+
+        maxAbsDiff(expression, unset) shouldBe 0.0
+
+        withClue("the unset section is not the old fold's 4000 Hz bell, so the row can tell them apart") {
+            (maxAbsDiff(expression, folded) > 1e-3) shouldBe true
+        }
+    }
+
     // ── The two chain kinds, and the lifecycle ───────────────────────────────────────────────────
 
     "an eq appended to the classic block engages from the orbit's param state like any stage" {

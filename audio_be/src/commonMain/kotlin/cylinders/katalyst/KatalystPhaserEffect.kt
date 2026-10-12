@@ -91,19 +91,29 @@ class KatalystPhaserEffect(
     sampleRate: Int,
     /** The frames of one render block, pinned to 128 in the engine. */
     blockFrames: Int,
+    /**
+     * True when the `wet` OR the `floor` knob holds a modulator (knob expressions step 5b, D2): both feed the one pair
+     * of C4 coefficients, so the pair glides over ONE block, the depth gate's ON and OFF edges included, and a `katp`
+     * move of the other knob of the two then steps over one block too (Q6's reading for a shared glide).
+     */
+    mixModulated: Boolean = false,
+    /** True when the `center` knob holds a modulator: [centerGlide] spans one block (step 5b, D2). */
+    centerModulated: Boolean = false,
+    /** True when the `sweep` knob holds a modulator: [sweepGlide] spans one block (step 5b, D2). */
+    sweepModulated: Boolean = false,
 ) : KatalystEffect {
 
     /** The C4 law's dry coefficient in force: a LEVEL knob, ramped per sample. */
-    private val dryGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val dryGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = mixModulated)
 
     /** The C4 law's wet coefficient in force: a LEVEL knob, ramped per sample. */
-    private val wetGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val wetGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = mixModulated)
 
     /** The breakpoint centre in Hz: a COEFFICIENT knob, one value per block. */
-    private val centerGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val centerGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = centerModulated)
 
     /** The breakpoint sweep width in Hz: a COEFFICIENT knob, one value per block. */
-    private val sweepGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val sweepGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = sweepModulated)
 
     /**
      * True from construction and from [reset] until a block has been processed: while it holds,

@@ -18,8 +18,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.PI
@@ -50,7 +50,7 @@ class KatalystInsertFeedSpec : StringSpec({
         reverbs = ReverbUnits(sampleRate),
     ).also { it.applyParams(null) }
 
-    fun c(value: Double) = IgnitorDsl.Constant(value)
+    fun c(value: Double) = KatalystKnobDsl.Constant(value)
 
     /** Two partials per channel: a signal whose every sample differs. */
     fun input(block: Int, i: Int, right: Boolean): Double {

@@ -9,14 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.common.infra.klangMapOf
 import java.lang.management.ManagementFactory
@@ -41,7 +34,7 @@ class KatalystSettingsAllocationSpec : StringSpec({
 
     fun bytes(): Double = mx.currentThreadAllocatedBytes.toDouble()
 
-    fun slot(name: String) = IgnitorDsl.Param(name, SLOT_UNSET)
+    fun slot(name: String) = KatalystKnobDsl.Param(name, SLOT_UNSET)
 
     fun ctx(): KatalystContext = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames)).apply {
         sidechainBuffer = StereoBuffer(blockFrames)
@@ -80,11 +73,11 @@ class KatalystSettingsAllocationSpec : StringSpec({
         val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = KatalystCompressorWriter(
             fx = fx,
-            threshold = KatalystKnob(slot("compressor.threshold"), COMPRESSOR_THRESHOLD_DB),
-            ratio = KatalystKnob(slot("compressor.ratio"), COMPRESSOR_RATIO),
-            knee = KatalystKnob(slot("compressor.knee"), COMPRESSOR_KNEE_DB),
-            attack = KatalystKnob(slot("compressor.attack"), COMPRESSOR_ATTACK_SECONDS),
-            release = KatalystKnob(slot("compressor.release"), COMPRESSOR_RELEASE_SECONDS),
+            threshold = testKnob(slot("compressor.threshold"), KatalystNoiseOrdinals()),
+            ratio = testKnob(slot("compressor.ratio"), KatalystNoiseOrdinals()),
+            knee = testKnob(slot("compressor.knee"), KatalystNoiseOrdinals()),
+            attack = testKnob(slot("compressor.attack"), KatalystNoiseOrdinals()),
+            release = testKnob(slot("compressor.release"), KatalystNoiseOrdinals()),
         )
         val maps = Array(5) {
             klangMapOf(
@@ -115,9 +108,9 @@ class KatalystSettingsAllocationSpec : StringSpec({
         val fx = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = KatalystDuckWriter(
             fx = fx,
-            orbit = KatalystKnob(slot("duck.orbit"), SLOT_UNSET),
-            depth = KatalystKnob(slot("duck.depth"), DUCK_DEPTH),
-            attack = KatalystKnob(slot("duck.attack"), DUCK_ATTACK_SECONDS),
+            orbit = testKnob(slot("duck.orbit"), KatalystNoiseOrdinals()),
+            depth = testKnob(slot("duck.depth"), KatalystNoiseOrdinals()),
+            attack = testKnob(slot("duck.attack"), KatalystNoiseOrdinals()),
         )
         val maps = Array(5) {
             klangMapOf(
@@ -140,6 +133,51 @@ class KatalystSettingsAllocationSpec : StringSpec({
 
         withClue("the fewest bytes a run of 400 changed resolves took was $fewest") {
             fewest shouldBe 0.0
+        }
+    }
+
+    "an expression knob: re-resolving a changed map every block evaluates it and allocates nothing" {
+        // Knob expressions step 4: the evaluator runs at every resolve (here every block, as a modulated knob will),
+        // over its register array, with no lambda, no box and no settings object. A nested tree over three slots.
+        val fx = KatalystGainEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+        val knob = testKnob(
+            KatalystKnobDsl.Range(
+                inner = KatalystKnobDsl.Times(
+                    left = KatalystKnobDsl.Param("x", 0.0),
+                    right = KatalystKnobDsl.Constant(0.5),
+                ),
+                from = KatalystKnobDsl.Abs(inner = KatalystKnobDsl.Param("lo", 0.25)),
+                to = KatalystKnobDsl.Max(
+                    left = KatalystKnobDsl.Param("hi", 1.0),
+                    right = KatalystKnobDsl.Constant(0.75),
+                ),
+            ),
+            KatalystNoiseOrdinals(),
+        )
+        val writer = KatalystGainWriter(fx = fx, gain = knob)
+        val maps = Array(5) {
+            klangMapOf(
+                "x" to -0.9 + 0.4 * it,
+                "lo" to -0.1 - 0.05 * it,
+                "hi" to 1.1 + 0.1 * it,
+            )
+        }
+        val ctx = ctx()
+        var b = 0
+
+        val fewest = fewestBytes {
+            writer.resolve(maps[b % maps.size])
+            writer.apply()
+            fill(ctx, b)
+            fx.process(ctx)
+            b++
+        }
+
+        withClue("the fewest bytes a run of 400 changed resolves took was $fewest") {
+            fewest shouldBe 0.0
+        }
+        withClue("the expression really ran at every resolve: once at build, then 10 runs of 400") {
+            knob.evaluations shouldBe 4001
         }
     }
 })

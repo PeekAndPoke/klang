@@ -59,7 +59,7 @@ the memory consumption as already present for most ignitor nodes".
 - `audio_benchmark/README.md` (how the check runs), `audio_benchmark/src/commonMain/kotlin/AllocationCases.kt`,
   `audio_benchmark/alloc-budgets.txt`, `audio_benchmark/src/commonMain/kotlin/EffectBenchmark.kt`
 - `docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md` (D5)
-- `docs/tasks/katalyst-knob-expressions.md` step 4 measures its knobs with this harness.
+- `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` step 4 measures its knobs with this harness.
 
 ## Built (2026-10-11)
 

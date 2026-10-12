@@ -9,8 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
@@ -59,7 +59,7 @@ class KlangOfflineRendererKatalystTest : StringSpec({
     }
 
     "a declared chain lands in the offline renderer's katalyst registry, under its synthetic name" {
-        val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.17)))
+        val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.17)))
         val renderer = renderer()
 
         // Before the sweep the name is unknown; the registry never invents a fallback.
@@ -74,7 +74,7 @@ class KlangOfflineRendererKatalystTest : StringSpec({
         // The offline path registers on the renderer's parent rather than sending
         // `Cmd.RegisterKatalyst`, which is the one way it differs from live. A fork that could not
         // see it would leave every declared chain unresolved in an offline render.
-        val chain = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.8)))
+        val chain = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.8)))
         val renderer = renderer()
 
         sweep(renderer, listOf(Event(katalyst = KatalystValue.Dsl(chain))))
@@ -87,8 +87,8 @@ class KlangOfflineRendererKatalystTest : StringSpec({
         // is one edit. This is the row that fails if the offline path ever grows its own copy again
         // and forgets one position: the output chain (`master(...)`) is a Katalyst too since
         // phase 3 step 12 C5, and the master bus resolves it in the same registry the orbits read.
-        val chain = KatalystDsl.of(KatalystStageDsl.Delay(wet = IgnitorDsl.Constant(0.11)))
-        val master = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.9)))
+        val chain = KatalystDsl.of(KatalystStageDsl.Delay(wet = KatalystKnobDsl.Constant(0.11)))
+        val master = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.9)))
         val renderer = renderer()
 
         sweep(

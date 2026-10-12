@@ -9,8 +9,8 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -32,7 +32,7 @@ class KlangScriptKatalystArithmeticDoorParitySpec : StringSpec({
         return result.value.shouldBeInstanceOf<KatalystDsl>()
     }
 
-    fun c(value: Double): IgnitorDsl = IgnitorDsl.Constant(value)
+    fun c(value: Double): KatalystKnobDsl = KatalystKnobDsl.Constant(value)
 
     val empty = KatalystBuilder(KatalystDsl(emptyList()))
 
@@ -41,7 +41,7 @@ class KlangScriptKatalystArithmeticDoorParitySpec : StringSpec({
         val name: String,
         val param: String,
         val kotlin: (KatalystBuilder, Any) -> KatalystBuilder,
-        val stage: (IgnitorDsl) -> KatalystStageDsl,
+        val stage: (KatalystKnobDsl) -> KatalystStageDsl,
     )
 
     val doors = listOf(
@@ -71,7 +71,7 @@ class KlangScriptKatalystArithmeticDoorParitySpec : StringSpec({
 
     "a Katalyst param is the operand's slot, on every operand door and both doors" {
         for (door in doors) {
-            val expected = KatalystDsl.of(door.stage(IgnitorDsl.Param("trim", 0.8)))
+            val expected = KatalystDsl.of(door.stage(KatalystKnobDsl.Param("trim", 0.8)))
 
             withClue("${door.name}, script") { ks("""Katalyst(k => k.${door.name}(Kat.param("trim", 0.8)))""") shouldBe expected }
             withClue("${door.name}, Kotlin") {

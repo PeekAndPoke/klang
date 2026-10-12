@@ -87,14 +87,9 @@ fun IgnitorDsl.buildExciter(
  * placeholder: it binds the context's rate at the first block, before the kernel runs.)
  *
  * Every path that RENDERS A VOICE passes the backend's own rate, through
- * `IgnitorRegistry.createExciter`. Two callers do NOT, and neither renders a voice: [toExciter],
- * the signal-only convenience, does not forward the parameter at all, and `KatalystSlots` calls
- * `buildExciter` with only its fixed-seed stream to resolve an orbit knob. A filter node CAN appear
- * in a `katp` override (nothing rejects one); what it cannot do there is render, because `KatalystSlots` reads the
- * built graph through `controlRateValueOrNull`, which returns null for a filter and sends the knob
- * to its fallback. So a humanized filter written into an orbit knob would take its four draws off
- * that fixed stream and build a lane at 44100 that nothing ever steps. Absurd rather than
- * dangerous, and named here so the next reader does not have to rediscover it.
+ * `IgnitorRegistry.createExciter`. One caller does NOT, and it renders no voice: [toExciter],
+ * the signal-only convenience, does not forward the parameter at all. (Until 2026-10-12 the Katalyst's
+ * knob coercion was a second one; a chain knob is a `KatalystKnobDsl` since, and never builds an Ignitor.)
  */
 const val DEFAULT_BUILD_SAMPLE_RATE: Int = 44100
 
@@ -359,7 +354,7 @@ internal fun IgnitorDsl.buildIgnitor(
     //    another; and a NaN that gets in multiplies through the rest of the tree and the voice
     //    never recovers. Sprudel alone can deliver one through a string atom (`"NaN"` and
     //    `"Infinity"` both parse) or an overflowing power. The Katalyst's own `SLOT_UNSET` slots
-    //    do NOT pass through here: they resolve in `KatalystSlots` / `KatalystKnob` off
+    //    do NOT pass through here: they resolve in `KatalystKnob` off
     //    `katalystParams`, where non-finite is the DECLARED off state and stays readable as such.
     when (this) {
         is IgnitorDsl.Param -> {

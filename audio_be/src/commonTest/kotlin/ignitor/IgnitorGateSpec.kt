@@ -1067,8 +1067,8 @@ class IgnitorGateSpec : StringSpec({
 
     "one instrument, two bags: the two builds are structurally different graphs" {
         // `IgnitorBuildCache` is created fresh inside `buildExciter`, and `buildExciter` runs per
-        // note-on (`IgnitorRegistry.createExciter` from `VoiceFactory`, and `KatalystSlots` for a
-        // knob resolve), verified by caller search, 2026-09-20. So the gate's decision is
+        // note-on (`IgnitorRegistry.createExciter` from `VoiceFactory`; the Katalyst's knob resolve
+        // was a second caller until 2026-10-12), verified by caller search, 2026-09-20. So the gate's decision is
         // constant for a cache's whole lifetime and no key change is needed. This row is the
         // tripwire under that: a cache that ever spanned two voices would hand the written voice
         // the unwritten voice's graph, and the two shapes below would become one.

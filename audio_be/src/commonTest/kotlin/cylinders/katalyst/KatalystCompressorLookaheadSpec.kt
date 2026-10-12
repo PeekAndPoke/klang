@@ -21,8 +21,8 @@ import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
@@ -59,7 +59,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
 
     val fadeLen = (sampleRate * KNOB_GLIDE_SECONDS).toInt()
 
-    fun c(value: Double) = IgnitorDsl.Constant(value)
+    fun c(value: Double) = KatalystKnobDsl.Constant(value)
 
     /** What `k.limiter(lookahead = ...)` appends (the door itself is pinned in klangscript-libs). */
     fun limiterStage(lookaheadSeconds: Double) = KatalystStageDsl.Compressor(

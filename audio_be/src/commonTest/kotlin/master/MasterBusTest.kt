@@ -25,8 +25,8 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -46,7 +46,7 @@ class MasterBusTest : StringSpec({
     val blockFrames = 128
     val sampleRate = 44100
 
-    fun c(value: Double): IgnitorDsl = IgnitorDsl.Constant(value)
+    fun c(value: Double): KatalystKnobDsl = KatalystKnobDsl.Constant(value)
 
     /** Blocks to skip before measuring the envelope — covers the voice's own attack/decay. */
     val ATTACK_BLOCKS = 60
@@ -172,7 +172,7 @@ class MasterBusTest : StringSpec({
 
         fun peak(samples: DoubleArray): Double = samples.maxOf { abs(it) }
 
-        val slotted = render(KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Param("level", 2.5))))
+        val slotted = render(KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Param("level", 2.5))))
         val constant = render(KatalystDsl.of(KatalystStageDsl.Gain(gain = c(2.5))))
         val plain = render(null)
 

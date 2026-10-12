@@ -10,8 +10,8 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
 /**
@@ -39,7 +39,7 @@ class MasterRingShelfSpec : StringSpec({
     }
 
     fun delayDsl(time: Double) = KatalystDsl.of(
-        KatalystStageDsl.Delay(wet = IgnitorDsl.Constant(0.5), time = IgnitorDsl.Constant(time), feedback = IgnitorDsl.Constant(0.3))
+        KatalystStageDsl.Delay(wet = KatalystKnobDsl.Constant(0.5), time = KatalystKnobDsl.Constant(time), feedback = KatalystKnobDsl.Constant(0.3))
     )
 
     "a master leaving service returns its ring at once, and the next master delay of that class takes it" {

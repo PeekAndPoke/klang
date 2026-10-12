@@ -185,7 +185,7 @@ class OrbitCleanupTest : StringSpec({
         // passes the buffer assert while the dead owner's room survives into the next life
         // (review round 2).
         cylinder.reverb!!.reverb!!.size shouldBe 0.0
-        cylinder.reverb!!.reverb!!.lowpass shouldBe null
+        cylinder.reverb!!.reverb!!.lowpass.isNaN() shouldBe true
     }
 
     "a draining self-oscillating delay with an EMPTY ring does not pin the orbit" {

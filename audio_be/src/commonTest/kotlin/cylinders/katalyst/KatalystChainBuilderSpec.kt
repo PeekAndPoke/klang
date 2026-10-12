@@ -14,8 +14,8 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
@@ -95,13 +95,13 @@ class KatalystChainBuilderSpec : StringSpec({
     "a chain declares a tail exactly when it declares a reverb, a delay or a distort (the list of KatalystChain.declaresTail)" {
         // The master's "is a tail possible at all" test reads this (`MasterBus.isRinging`); it moved from the master
         // onto the chain in engine tidy-up step 13 (A2.1).
-        val wet = IgnitorDsl.Constant(0.4)
+        val wet = KatalystKnobDsl.Constant(0.4)
 
         build(KatalystDsl.classic).declaresTail shouldBe true
         build(KatalystDsl(emptyList())).declaresTail shouldBe false
         build(KatalystDsl.of(KatalystStageDsl.Reverb(wet = wet))).declaresTail shouldBe true
         build(KatalystDsl.of(KatalystStageDsl.Delay(wet = wet))).declaresTail shouldBe true
-        build(KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(0.8)))).declaresTail shouldBe false
+        build(KatalystDsl.of(KatalystStageDsl.Gain(KatalystKnobDsl.Constant(0.8)))).declaresTail shouldBe false
         build(KatalystDsl.of(KatalystStageDsl.Compressor())).declaresTail shouldBe false
         build(KatalystDsl.of(KatalystStageDsl.Phaser())).declaresTail shouldBe false
         // The distort stage's DC blocker decays after its input stops (review round 2 of the distort stage).
@@ -144,9 +144,9 @@ class KatalystChainBuilderSpec : StringSpec({
         // `Duck()` carries constants and would be deaf to it, which would make the row pass on a
         // duck nothing ever writes.
         fun duck() = KatalystStageDsl.Duck(
-            orbit = IgnitorDsl.Param("duck.orbit", SLOT_UNSET),
-            depth = IgnitorDsl.Param("duck.depth", DUCK_DEPTH),
-            attack = IgnitorDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+            orbit = KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET),
+            depth = KatalystKnobDsl.Param("duck.depth", DUCK_DEPTH),
+            attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
         )
 
         val chain = build(
@@ -190,9 +190,9 @@ class KatalystChainBuilderSpec : StringSpec({
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Duck(
-                    orbit = IgnitorDsl.Param("duck.orbit", SLOT_UNSET),
-                    depth = IgnitorDsl.Param("duck.depth", DUCK_DEPTH),
-                    attack = IgnitorDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+                    orbit = KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET),
+                    depth = KatalystKnobDsl.Param("duck.depth", DUCK_DEPTH),
+                    attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
                 )
             )
         )

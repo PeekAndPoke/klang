@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.round
 
@@ -38,7 +39,7 @@ import kotlin.math.round
  * **The first value snaps.** After construction and after [reset], every [retarget] sets the
  * value outright until an [advance] has consumed one: there is nothing to be continuous with
  * before the first block (the rule and the reason are in `KatalystGainEffect`'s KDoc, "why an
- * ARRIVING factor snaps").
+ * ARRIVING factor snaps"). An owner that knows where its output stands spends the window with [startFrom].
  * Without it every orbit would open with a glide from a meaningless default, and every render
  * would change.
  *
@@ -50,30 +51,75 @@ import kotlin.math.round
  * (the review ledger's cached-config rule).
  *
  * `-0.0` and `0.0` compare equal here, so a retarget between the two is no move.
+ *
+ * **The span is chosen at construction, per knob** (decision D2 of
+ * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, step 5b): [KNOB_GLIDE_SECONDS] for a knob a pattern moves
+ * through its slots, ONE block for a knob whose expression holds a modulator ([modulated]). A modulator retargets the
+ * knob every block, so a 50 ms glide would smear it (a one-pole on the knob, see the trap above); over one block the
+ * glide is a linear ramp from the value the last block ended on to this block's, which is D2's per-block ramp. A knob
+ * that mixes a slot and a modulator glides over one block too, so a `katp` jump on it steps over one block (Q6).
  */
 internal class KnobGlide(
     sampleRate: Int,
     /** The frames of one render block, pinned to 128 in the engine. */
     blockFrames: Int,
+    /**
+     * True for a knob whose expression holds a modulator (`Kat.sine` and the rest): the glide spans one block instead
+     * of [KNOB_GLIDE_SECONDS]. See the class KDoc. False, today's span, for every other knob and for a stage's own
+     * switch weights.
+     */
+    modulated: Boolean = false,
 ) {
     // The state [advance] reads and writes is `internal`, not private, because [advance] is an `inline` member of
     // this `internal` class (see its KDoc): an inline body may only touch what its own visibility can see.
 
-    /** How many blocks one glide spans: the glide time in samples, rounded to whole blocks, at least one. */
-    internal val blocks: Int = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt().coerceAtLeast(1)
+    /**
+     * How many blocks one glide spans: the glide time in samples, rounded to whole blocks, at least one; exactly one
+     * for a [modulated] knob.
+     */
+    internal val blocks: Int = if (modulated) {
+        1
+    } else {
+        round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt().coerceAtLeast(1)
+    }
 
     internal val invBlocks: Double = 1.0 / blocks
 
+    /**
+     * The knob's three doubles, [value], [target] and [start], indexed by [VALUE], [TARGET] and [START], read and
+     * written through `inline` accessors.
+     *
+     * **An array, on purpose** (Katalyst knob expressions step 6, 2026-10-12): a knob that moves writes them every
+     * block, and as three double FIELDS V8 stored fresh heap numbers for them in some stages' per-block paths (the
+     * steady classic stages' too), while an
+     * element access in optimized code never allocates (`audio/ref/performance.md`, the rule of engine follow-up 7).
+     * Measured with `--predictable`, single-case, bytes per block, the three fields put back (mutant M6) against the
+     * array: `E-stages` 45.5 against 15.8, `E-delay` 61.1 against 32.3, `E-kat-gates` 92.0 against 66.6, `E-kat-dyn`
+     * 113.7 against 98.7 (runs M6 and T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). With the allocation
+     * check's method the mutant stays under every line. No test can pin it; this KDoc is the guard.
+     */
+    internal val state = DoubleArray(STATE_SIZE)
+
     /** The value in force: after [advance], the value for the block just advanced. */
-    var value: Double = 0.0
-        internal set
+    var value: Double
+        inline get() = state[VALUE]
+        internal inline set(v) {
+            state[VALUE] = v
+        }
 
     /** Where the knob is going; equal to [value] once the glide has landed. */
-    var target: Double = 0.0
-        internal set
+    var target: Double
+        inline get() = state[TARGET]
+        internal inline set(v) {
+            state[TARGET] = v
+        }
 
     /** Where the running glide started: the value in force at the [retarget] that began it. */
-    internal var start: Double = 0.0
+    internal var start: Double
+        inline get() = state[START]
+        inline set(v) {
+            state[START] = v
+        }
 
     /** Blocks left in the running glide; zero means settled. */
     internal var remaining: Int = 0
@@ -84,9 +130,21 @@ internal class KnobGlide(
     /** True while the knob is still on its way to [target]. */
     val isGliding: Boolean get() = remaining > 0
 
-    /** Sets where the knob goes. Called as often as settings arrive; an unchanged target is free. */
-    fun retarget(next: Double) {
-        if (!next.isFinite()) { // NaN-guard (and Inf): the owner substitutes its meaning first, see the KDoc
+    /**
+     * Sets where the knob goes. Called as often as settings arrive; an unchanged target is free.
+     *
+     * **Kotlin `inline`, on purpose** (knob expressions step 6, 2026-10-12), for the reason [advance] is: a modulated
+     * knob retargets every block, and on V8 a double handed to a call that is not inlined is a heap number
+     * (`audio/ref/performance.md`). As a plain method V8 left it out of the stages' per-block paths once their budget
+     * was spent. Measured with `--predictable`, single-case, bytes per block, the plain method (mutant M1) read
+     * `E-kat-mix` 439.2 against 196.3 (runs M1 and T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`); with the
+     * allocation check's method 441.3, over its line. Its guard is [isFiniteInline], one of the per-block `isFinite()`
+     * calls replaced together (see there). No test can pin it; this KDoc and the allocation check's `E-kat-mix` line
+     * are the guard.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun retarget(next: Double) {
+        if (!next.isFiniteInline()) { // NaN-guard (and Inf): the owner substitutes its meaning first, see the KDoc
             return
         }
 
@@ -196,6 +254,27 @@ internal class KnobGlide(
     }
 
     /**
+     * Puts the knob AT [v] with nothing left to travel and SPENDS the snap window, so the next [retarget] glides from
+     * [v] instead of snapping.
+     *
+     * For a stage whose output is known to stand at [v] although the knob says otherwise: the delay and the reverb
+     * with a modulated time or size, whose feed is 0 on any return to Active, so the wet glides up from 0 there
+     * (knob expressions step 5b, review round 2). [settleAt] keeps the snap window as it is; this one closes it.
+     *
+     * A non-finite value is ignored, like [retarget]'s.
+     */
+    fun startFrom(v: Double) {
+        if (!v.isFinite()) { // NaN-guard, the same wall as [retarget]'s
+            return
+        }
+
+        value = v
+        target = v
+        remaining = 0
+        snapNext = false
+    }
+
+    /**
      * Takes [other]'s position over, mid-glide and all, and SPENDS the snap window.
      *
      * For a knob that MOVES between owners with the thing it describes: the duck's stage weight and
@@ -207,13 +286,15 @@ internal class KnobGlide(
      * The glide's START comes too, not only its value and countdown: without it a glide carried
      * over halfway would interpolate from the wrong end.
      *
-     * **PRECONDITION: [other] spans its glide over the same number of blocks**, which means the
-     * same sample rate and the same block size. The countdown is in blocks and [blocks] is per
-     * instance, so a longer glide's countdown read on a shorter one would drive the value OUTSIDE
-     * `[start, target]`: 17 blocks reading a countdown of 19 from 1.0 towards 0.0 lands on 1.0588,
-     * which for the duck's weight is over-ducking and for its mirror a boost. Unreachable today
-     * (one builder and one sample rate per cylinder), so the countdown is CLAMPED rather than
-     * rejected: this is a shared helper and the next caller should not have to rediscover the rule.
+     * **[other] may span its glide over a different number of blocks**, and then the countdown is CLAMPED to this
+     * one's [blocks]. The countdown is in blocks and [blocks] is per instance, so a longer glide's countdown read on
+     * a shorter one unclamped would drive the value OUTSIDE `[start, target]`: 17 blocks reading a countdown of 19
+     * from 1.0 towards 0.0 lands on 1.0588, which for the duck's weight is over-ducking and for its mirror a boost.
+     * Reachable since knob expressions step 5b (Q16 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`,
+     * accepted): a duck whose `depth` holds a modulator glides over ONE block, so a takeover between it and a duck
+     * with a slot depth crosses spans. Clamped, a carried glide that had more blocks left than this span finishes
+     * within this span, still between its endpoints (faster, never outside); one with fewer carries on as it was.
+     * Two sample rates on one cylinder stay unreachable (one builder and one sample rate per cylinder).
      */
     fun carryOver(other: KnobGlide) {
         value = other.value
@@ -227,5 +308,13 @@ internal class KnobGlide(
     fun reset() {
         remaining = 0
         snapNext = true
+    }
+
+    internal companion object {
+        /** The slots of [state]. */
+        const val VALUE: Int = 0
+        const val TARGET: Int = 1
+        const val START: Int = 2
+        private const val STATE_SIZE: Int = 3
     }
 }

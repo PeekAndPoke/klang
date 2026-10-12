@@ -5,158 +5,159 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
-import io.peekandpoke.klang.audio_be.ignitor.Ignitor
-import io.peekandpoke.klang.audio_be.ignitor.buildExciter
-import io.peekandpoke.klang.audio_be.ignitor.controlRateValueOrNull
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.common.infra.KlangMap
-import kotlin.random.Random
 
-/**
- * Reads the knobs of a Katalyst chain: one [IgnitorDsl] slot node in, one `Double` out. The
- * composite values a stage wants instead of a number (the body and vowel `ResonatorConfig`s, the
- * [CompressorSettings], the [DuckSettings]) are filled by that stage's writer
- * (`KatalystSlotWriters.kt`), each the one caller of its rule.
+/*
+ * Reads the knobs of a Katalyst chain: one [KatalystKnobDsl] in, one `Double` out ([KatalystKnob]). The composite
+ * values a stage wants instead of a number (the body and vowel `ResonatorConfig`s, the [CompressorSettings], the
+ * [DuckSettings]) are filled by that stage's writer (`KatalystSlotWriters.kt`), each the one caller of its rule.
  *
- * Katalyst step 3a (2026-09-17). The per-stage contract is `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7 and the
- * value rule is the signal-flow plan §7 (D4): **a chain's stage knobs come from its slots only**,
- * on every chain since step 5b-1, the one a cylinder is born with included. The owner voice is a
- * knob source only through the map it carries ([KatalystKnob]); it has no bus fields since 5b-3.
+ * Katalyst step 3a (2026-09-17). The per-stage contract is `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7 and
+ * the value rule is the signal-flow plan §7 (D4): **a chain's stage knobs come from its slots only**, on every chain
+ * since step 5b-1, the one a cylinder is born with included. The owner voice is a knob source only through the map it
+ * carries; it has no bus fields since 5b-3.
  *
- * **Resolution happens ONCE, when the chain is built**, and again only when the orbit's param
- * state CHANGES (Katalyst step 5a): every answer here is block-constant by contract, so the writer
- * [KatalystChainBuilder] installs holds the resolved numbers in its [KatalystKnob]s and re-applies
- * them on every owner claim. That is what keeps a writer allocation-free per block.
- *
- * The param state is the owner voice's `katalystParams` map, which `.katp` and the bus doors write:
- * a [IgnitorDsl.Param] reads `state[name]` and falls back to its authored default. Only a `Param`
- * moves; a [IgnitorDsl.Constant] and a coerced node stay as they were built ([KatalystKnob]).
+ * The param state is the owner voice's `katalystParams` map, which `.katp` and the bus doors write: a
+ * [KatalystKnobDsl.Param] reads `state[name]` and falls back to its authored default. Only a `Param` moves; a
+ * [KatalystKnobDsl.Constant] stays as it was built, and an expression over them moves with its slots
+ * ([KatalystKnobProgram]).
  */
-internal object KatalystSlots {
-
-    /**
-     * The two note frequencies a non-leaf knob is read at (see [coerce]). Any two audible,
-     * unequal values do the job; these are an A4 and its octave, so a failure message reads like
-     * music rather than like a magic number. Not user-facing, so they live here and not in
-     * `audio_bridge/constants/`.
-     */
-    private const val PROBE_A_HZ: Double = 440.0
-    private const val PROBE_B_HZ: Double = 660.0 // not an octave of PROBE_A_HZ, so an octave-invariant use of freq still disagrees
-
-    /**
-     * The seed of the random stream a coerced knob's build draws from (see [coerce]). A bus has no
-     * voice and so no voice stream; a fixed seed keeps the build off the process-wide `Random`.
-     * No answer of [coerce] reads a draw: the nodes that draw at build (noise, the unison stacks,
-     * a humanized filter) answer null at control rate, so the knob takes its fallback whatever the
-     * seed. Fixed rather than global so a second backend has nothing hidden to reproduce.
-     */
-    private const val KNOB_BUILD_SEED: Int = 0
-
-    /**
-     * The AUTHORED value of one knob: [IgnitorDsl.Constant] is its number, [IgnitorDsl.Param] is
-     * its default, a missing node is [fallback], and anything else is coerced. What the orbit's
-     * param state then makes of a `Param` is [KatalystKnob]'s job, not this one's.
-     *
-     * Not an exhaustive `when`, deliberately: a knob is block-constant BY CONTRACT
-     * ([KatalystStageDsl]), so the two leaf kinds are the vocabulary and everything else is the
-     * pathological case the contract already says to coerce rather than reject. Enumerating the
-     * ninety-odd [IgnitorDsl] variants here would claim a meaning for each of them that the bus
-     * does not have.
-     */
-    fun resolve(node: IgnitorDsl?, fallback: Double): Double = when (node) {
-        null -> fallback
-        is IgnitorDsl.Constant -> node.value
-        is IgnitorDsl.Param -> node.default
-        else -> coerce(node, fallback)
-    }
-
-    /**
-     * A knob that is not a slot leaf: read it at control rate if the graph answers the SAME finite
-     * number whatever note it is read at, else take the knob's default. Never a throw and never a
-     * rejection: the Motor stays raw, and an author who hands an oscillator to a bus knob keeps
-     * their sound and loses only the modulation.
-     *
-     * **Two probes at two frequencies, and the answers must agree** (decided with the maintainer,
-     * 2026-09-17): a bus has no note, so a knob whose value DEPENDS on one is not a bus knob at
-     * all. `Ignitor.freq()` answers 440 and 660, `Ignitor.freq().mul(2)` answers 880 and 1320, and both
-     * therefore take their constant instead of an invented number. A pitch-free fold
-     * (`0.1 * 3`, or `1 / 0`, which the engine's `Div` maps to a finite 0.0) answers the same on
-     * both probes and is the author's value, zero included: nothing here may second-guess a 0.0,
-     * or `phaser(rate = 0)` would stop meaning what it says.
-     *
-     * A single probe cannot make that distinction, which is what makes this the discriminator and
-     * not a NaN guard: the first version handed in one non-finite frequency and was defeated by
-     * the engine's own scrubbing (`Times` runs its product through `safeOut`, so NaN came back as
-     * a finite 0.0 and read as "delay off").
-     *
-     * The graph is built ONCE and read twice: [controlRateValueOrNull] is a pure
-     * structural read by contract, so the second query cannot advance any state the first one saw.
-     *
-     * The try/catch is the audio-thread guard, not a diagnostic: [resolve] runs at chain-install
-     * time inside the render callback, where an escaping exception takes the worklet with it. Should
-     * a build ever throw, the house answer to "the engine cannot read this knob" is the knob's default,
-     * not a dead voice.
-     *
-     * An empty `Ignitor.variants()` no longer throws (since 2026-10-07 it is silence everywhere): it builds
-     * `Constant(0)`, both probes agree, and the knob reads 0.0. Until then the build threw and the knob
-     * fell back to its default.
-     *
-     * The build itself allocates, which is why this is a chain-build path only.
-     */
-    private fun coerce(node: IgnitorDsl, fallback: Double): Double {
-        // The guard covers the two reads as well as the build: every override today is a pure
-        // fold, and the policy on this thread is degrade, never throw.
-        val first: Double
-        val second: Double
-
-        try {
-            val ignitor = node.buildExciter(random = Random(KNOB_BUILD_SEED)).ignitor
-
-            first = ignitor.controlRateValueOrNull(PROBE_A_HZ) ?: return fallback
-            second = ignitor.controlRateValueOrNull(PROBE_B_HZ) ?: return fallback
-        } catch (_: Throwable) {
-            return fallback
-        }
-
-        // NaN-guard on a value the author can write, plus the agreement test: a NaN never equals
-        // itself, so the comparison also rejects a graph that answers non-finite on either probe.
-        if (!first.isFinite() || first != second) {
-            return fallback
-        }
-
-        return first
-    }
-}
 
 /**
- * One knob of a DECLARED stage: its authored value, plus the slot name the orbit's param state may
- * move it with.
+ * One knob of a DECLARED stage: its authored value, plus the slot names the orbit's param state may move it with.
  *
- * Built ONCE per knob when the chain is built, which is where the expensive part of
- * [KatalystSlots.resolve] lives: a [IgnitorDsl.Constant] is read, and anything that is neither a
- * constant nor a slot is probed and folded to a number for good. From then on this knob is two
- * fields, and [resolve] is one map lookup for a slot and nothing at all for every other knob kind.
- * That is the cost rule of the param state: one lookup per SLOT per CHANGED map, and zero per
- * block, because the writers read [value] and never the map.
+ * Built ONCE per knob when the chain is built, in one of three shapes:
+ *  - a [KatalystKnobDsl.Constant] is its number, and so is an expression without a slot leaf, folded here through
+ *    the laws ([KatalystKnobProgram.isConstant]);
+ *  - a [KatalystKnobDsl.Param] is its default and its name;
+ *  - an expression with at least one slot leaf (step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`,
+ *    D4) is a [KatalystKnobProgram], compiled here;
+ *  - so is a tree with a modulator (`Kat.sine` and the rest, step 5, D3), never folded, compiled on the chain's
+ *    sample rate and block size: [isModulated]. Its value moves per BLOCK through [tick], which the chain calls at
+ *    the top of every block it processes (`KatalystChain.process`, step 5b), owner or not.
+ *
+ * From then on [resolve] is one map lookup for a plain slot, one per slot LEAF and one run of the program for an
+ * expression, and nothing at all for a constant. That is the cost rule of the param state: one lookup per SLOT per
+ * CHANGED map, and zero per block, because the writers read [value] and never the map. An expression over slots
+ * only is evaluated at resolve and never per block ([evaluations] counts it); a modulated one is evaluated at resolve
+ * and once per [tick], with the slot leaves as the last resolve loaded them.
+ *
+ * **The order inside one block** (step 5b): a changed map resolves first (the host's `applyParams`, a run at the
+ * clocks as they stand, which moves no clock), then the chain's [tick] (a run, then every clock one block on). So a
+ * block that resolves reads the same clocks twice and advances them once: never a double advance.
+ *
+ * **Resolution happens ONCE, when the chain is built**, and again only when the orbit's param state CHANGES (Katalyst
+ * step 5a): the answer of a knob without a modulator is block-constant, so the writer [KatalystChainBuilder] installs
+ * holds the resolved numbers here and re-applies them on every owner claim. That is what keeps a writer
+ * allocation-free per block. A modulated knob moves only through [tick], into the same fields.
  *
  * "Not in the map" and "no map at all" are the same answer, the authored default, so a pattern that
  * writes nothing hears exactly what the chain says.
  *
- * **Only a knob that IS a slot listens.** An expression OVER a slot
- * (`Ignitor.param("room", 5).mul(2)` on a chain knob through the script door, or the same built in Kotlin;
- * `Katalyst.param(...)` itself has no arithmetic) is neither a constant nor a `Param`, so it goes through
- * [KatalystSlots.resolve]'s coercion once, here, and becomes a number for the life of the chain:
- * `katp("room", x)` never reaches it. A bus knob is block-constant by contract, and folding is what
- * that contract means; the author's way to scale a slot is on the pattern side.
+ * **An expression with a non-finite slot leaf is unset as a whole** (Q5): a leaf that reads a non-finite value (from
+ * the state, or its default while nothing writes it) makes [value] [SLOT_UNSET] and [written] false, so the stage
+ * takes its constant exactly as for an unset plain slot; nothing is evaluated then. The laws would not keep the NaN
+ * (`times` scrubs it to 0), so without the rule `Kat.slot.body.wet.times(2)` would read as a SET 0. A constant is not
+ * a slot: a non-finite constant in an expression follows the laws.
+ *
+ * Never an Ignitor node: the wire type is [KatalystKnobDsl] (decision D1). Until 2026-10-12 a knob was an
+ * `IgnitorDsl`, and anything that was neither a constant nor a slot was probed at two note frequencies and folded to
+ * one number here; that coercion is gone with the type.
  */
-internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
+internal class KatalystKnob(
+    node: KatalystKnobDsl,
+    /**
+     * The chain's running count of noise modulators, which seeds each noise by its position
+     * ([KATALYST_KNOB_NOISE_SEED]). Required, no default: the chain builder passes its one counter to every knob it
+     * builds, so a site that forgot it would seed its noises from 0 unseen; a knob built alone passes a fresh one.
+     */
+    noises: KatalystNoiseOrdinals,
+    /** The chain's sample rate: a modulator's clock and wave edges are compiled on it. */
+    sampleRate: Int,
+    /** The frames of one block of the chain, pinned to 128 in the engine: a modulator's clock steps by it per tick. */
+    blockFrames: Int,
+) {
 
-    /** The slot name when the knob is a [IgnitorDsl.Param], null for every other knob kind. */
-    private val slot: String? = (node as? IgnitorDsl.Param)?.name
+    /** The slot name when the knob is a plain [KatalystKnobDsl.Param], null otherwise. */
+    private val slot: String?
 
-    /** What the chain itself says: a `Param`'s default, a constant's number, a coerced fold. */
-    private val authored: Double = KatalystSlots.resolve(node, fallback)
+    /** The compiled expression when the knob is one with a slot leaf or a modulator, null otherwise. */
+    private val program: KatalystKnobProgram?
+
+    /**
+     * What the last slot load of [program] answered ([LOADED_UNSET], [LOADED_AUTHORED], [LOADED_WRITTEN]); written by
+     * the first load in `init` and by every [resolve], read by [tick]. [LOADED_AUTHORED] for a knob without a program.
+     */
+    private var loaded: Int = LOADED_AUTHORED
+
+    /** What the chain itself says: a constant's number (a folded expression's too), a `Param`'s default. */
+    private val authored: Double
+
+    /**
+     * Test seam: how many times this knob ran its expression, the one at build included. Zero for a plain knob.
+     * Declared before `init`, which runs the first evaluation.
+     */
+    internal var evaluations: Int = 0
+        private set
+
+    init {
+        when (node) {
+            is KatalystKnobDsl.Constant -> {
+                slot = null
+                program = null
+                authored = node.value
+            }
+
+            is KatalystKnobDsl.Param -> {
+                slot = node.name
+                program = null
+                authored = node.default
+            }
+
+            is KatalystKnobDsl.Plus, is KatalystKnobDsl.Minus, is KatalystKnobDsl.Times, is KatalystKnobDsl.Div,
+            is KatalystKnobDsl.Pow, is KatalystKnobDsl.Min, is KatalystKnobDsl.Max, is KatalystKnobDsl.Neg,
+            is KatalystKnobDsl.Abs, is KatalystKnobDsl.Range,
+            is KatalystKnobDsl.Sine, is KatalystKnobDsl.Saw, is KatalystKnobDsl.Ramp, is KatalystKnobDsl.Tri,
+            is KatalystKnobDsl.Square, is KatalystKnobDsl.PerlinNoise, is KatalystKnobDsl.BerlinNoise,
+            -> {
+                val compiled = KatalystKnobProgram.compile(
+                    node = node,
+                    sampleRate = sampleRate,
+                    blockFrames = blockFrames,
+                    noises = noises,
+                )
+
+                slot = null
+
+                if (compiled.isConstant) {
+                    program = null
+                    authored = compiled.registers[compiled.resultRegister]
+                } else {
+                    program = compiled
+                    // The expression at every slot's default, the Q5 rule included: what [resolve] gives with no map.
+                    // Read straight off the result register after `run()`, no double returned across a call.
+                    loaded = loadSlots(compiled, null)
+
+                    if (loaded == LOADED_UNSET) {
+                        authored = SLOT_UNSET
+                    } else {
+                        evaluations++
+                        compiled.run()
+                        authored = compiled.registers[compiled.resultRegister]
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * True when the knob's expression holds a modulator ([KatalystKnobProgram.isModulated]): its value moves per block
+     * through [tick], and the stage glides it over one block (`KnobGlide`'s `modulated`). Fixed at build.
+     */
+    val isModulated: Boolean = program?.isModulated == true
 
     /** The number the stage is configured with right now. */
     var value: Double = authored
@@ -171,14 +172,26 @@ internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
      * FINITE on purpose: a non-finite slot is the wire's "never set" (`/dsl-design` §4), so a
      * cleared knob reads as untouched, exactly as a null field did.
      *
+     * For an expression: at least one slot leaf took a finite value from the state AND the expression's value is
+     * finite, so `written` always comes with a finite [value], as on a plain slot. An unset expression (Q5) is never
+     * written.
+     *
      * Always false for a knob that is not a slot: a chain that AUTHORED its wet as a number said
      * what it wanted, and no pattern touched it.
      */
     var written: Boolean = false
         private set
 
-    /** Re-reads a slot from the orbit's param state; null (no owner, no slots) is the default. */
+    /** Re-reads the slots from the orbit's param state; null (no owner, no slots) is the defaults. */
     fun resolve(params: KlangMap<Double>?) {
+        val compiled = program
+
+        if (compiled != null) {
+            resolveExpression(compiled, params)
+
+            return
+        }
+
         val name = slot ?: return
         val fromState = params?.get(name)
 
@@ -196,4 +209,128 @@ internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
             value = authored
         }
     }
+
+    /** The expression path of [resolve]: load every slot leaf, then run, unless a leaf is unset (Q5). */
+    private fun resolveExpression(compiled: KatalystKnobProgram, params: KlangMap<Double>?) {
+        loaded = loadSlots(compiled, params)
+
+        if (loaded == LOADED_UNSET) {
+            written = false
+            value = SLOT_UNSET
+
+            return
+        }
+
+        // `run()` takes and returns no double; the value is read off the result register here, so no double crosses
+        // a call that V8 may leave out (`audio/ref/performance.md`).
+        evaluations++
+        compiled.run()
+        takeResult(compiled)
+    }
+
+    /**
+     * True while the knob's modulators RUN and its value is a number: it [isModulated], its slot leaves are not unset
+     * (Q5), and [value] is finite. The "was it asked for" questions of the stages count such a knob as asked for (Q7:
+     * `stageAskedFor`, the duck's depth), because its value crossing a threshold every few blocks is the author's
+     * modulation, not a request to switch the stage off.
+     *
+     * The finite clause is the one home of "a non-finite modulated value asks for nothing" (review round 1 of step 5b):
+     * `Kat.sine(1).plus(NaN)` keeps its NaN through the law, loads no unset leaf, and would otherwise declare a duck
+     * with a NaN depth or run a delay or reverb at the default wet, where the same NaN as a constant leaves both off.
+     */
+    val isModulating: Boolean get() = isModulated && loaded != LOADED_UNSET && value.isFiniteInline()
+
+    /**
+     * One block of a modulated knob (step 5b; the chain's per-block hook, `KatalystChain.process`): runs the program
+     * with the slot leaves as the last [resolve] loaded them, takes its value, and moves every clock one block on
+     * ([KatalystKnobProgram.tick]). Nothing for a knob without a modulator.
+     *
+     * **An unset knob is not ticked** (Q5 with Q3): while a slot leaf reads a non-finite value the knob is [SLOT_UNSET]
+     * and its clocks PAUSE, so a modulator over a cleared slot resumes where it stopped once the slot is written again.
+     * It must not tick then anyway: the failed load leaves the non-finite leaf in its register, and a periodic clock
+     * advanced by NaN reads as a rewind to 0 (`wrapPhase`).
+     *
+     * Allocation-free; takes and returns no double.
+     */
+    fun tick() {
+        val compiled = program ?: return
+
+        if (!compiled.isModulated || loaded == LOADED_UNSET) {
+            return
+        }
+
+        evaluations++
+        compiled.tick()
+        takeResult(compiled)
+    }
+
+    /** Reads the program's result register into [value] and [written], after a run. */
+    private fun takeResult(compiled: KatalystKnobProgram) {
+        val result = compiled.registers[compiled.resultRegister]
+
+        // NaN-guard: a non-finite result (a non-finite constant through a law that keeps it) is not a write.
+        // Without the stdlib call: a modulated knob takes its result every block (`isFiniteInline`'s KDoc, step 6).
+        written = loaded == LOADED_WRITTEN && result.isFiniteInline()
+        value = result
+    }
+
+    private companion object {
+        /** [loadSlots]: a slot leaf is non-finite, the whole knob is unset (Q5); the loading stopped there. */
+        const val LOADED_UNSET = 0
+
+        /** [loadSlots]: every leaf is finite, none came from the state. */
+        const val LOADED_AUTHORED = 1
+
+        /** [loadSlots]: every leaf is finite, and at least one came from the state. */
+        const val LOADED_WRITTEN = 2
+
+        /**
+         * Loads every slot leaf of [compiled] into its register, from [params] or its default, the plain slot's two
+         * branches (no `?:` merge, the V8 rule in [resolve]). One lookup per leaf; it stops at the first non-finite
+         * leaf, the Q5 short-circuit. An `Int` result, never a double across the call.
+         */
+        fun loadSlots(compiled: KatalystKnobProgram, params: KlangMap<Double>?): Int {
+            val names = compiled.slotNames
+            val defaults = compiled.slotDefaults
+            val regs = compiled.slotRegisters
+            val r = compiled.registers
+            var fromState = false
+
+            for (s in names.indices) {
+                val v = params?.get(names[s])
+
+                if (v != null) {
+                    r[regs[s]] = v
+                    fromState = true
+                } else {
+                    r[regs[s]] = defaults[s]
+                }
+
+                // NaN-guard on a value the author can write: one unset leaf unsets the knob (Q5).
+                if (!r[regs[s]].isFinite()) {
+                    return LOADED_UNSET
+                }
+            }
+
+            return if (fromState) LOADED_WRITTEN else LOADED_AUTHORED
+        }
+    }
 }
+
+/**
+ * The knob of a field that may be MISSING: the reverb's omitted `lowpass` and an EQ section knob the engine cannot read
+ * (`KatalystChainBuilder.eqKnob`), the two nullable knobs of a chain. A missing knob is [SLOT_UNSET], a constant: the
+ * stage's own "unset" (the engine's damping, the section helper's fallback). Every other stage knob is non-null on the
+ * wire and goes straight to [KatalystKnob].
+ */
+internal fun knobOrUnset(
+    node: KatalystKnobDsl?,
+    noises: KatalystNoiseOrdinals,
+    sampleRate: Int,
+    blockFrames: Int,
+): KatalystKnob = KatalystKnob(
+    node = node ?: KatalystKnobDsl.Constant(SLOT_UNSET),
+    noises = noises,
+    sampleRate = sampleRate,
+    blockFrames = blockFrames,
+)

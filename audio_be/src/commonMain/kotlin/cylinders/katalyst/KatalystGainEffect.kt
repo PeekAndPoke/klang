@@ -74,10 +74,15 @@ class KatalystGainEffect(
     sampleRate: Int,
     /** The frames of one render block, pinned to 128 in the engine. */
     blockFrames: Int,
+    /**
+     * True when the factor's knob holds a modulator (knob expressions step 5b, D2): it then glides over ONE block, a
+     * per-sample ramp from the last block's value to this block's, instead of `KNOB_GLIDE_SECONDS` ([KnobGlide]).
+     */
+    modulated: Boolean = false,
 ) : KatalystEffect {
 
     /** The fader: the level in force, where it is going, and the snap of a fresh stage. */
-    private val glide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val glide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = modulated)
 
     init {
         // Unset is unity, the identity element (the helper itself starts at zero, which would mute).

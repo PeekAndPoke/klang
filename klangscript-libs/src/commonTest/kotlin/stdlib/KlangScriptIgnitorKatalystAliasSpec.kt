@@ -14,7 +14,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.script.generated.generatedStdlibDocs
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.BoundNativeMethod
@@ -108,7 +108,7 @@ class KlangScriptIgnitorKatalystAliasSpec : StringSpec({
     "every Katalyst.slot knob is Kat.slot's and KatalystDsl.Slots', the same instance" {
         val s = KatalystDsl.Slots
 
-        val knobs: List<Pair<String, KatalystParam>> = listOf(
+        val knobs: List<Pair<String, KatalystKnobDsl.Param>> = listOf(
             "body.material" to s.body.material, "body.wet" to s.body.wet, "body.floor" to s.body.floor,
             "vowel.vowel" to s.vowel.vowel, "vowel.wet" to s.vowel.wet, "vowel.floor" to s.vowel.floor,
             "delay.wet" to s.delay.wet, "delay.time" to s.delay.time, "delay.feedback" to s.delay.feedback,

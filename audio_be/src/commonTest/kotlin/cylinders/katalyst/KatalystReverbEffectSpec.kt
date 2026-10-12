@@ -386,7 +386,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.reverb!!.lowpass shouldBe 500.0
 
         effect.configure(size = 0.5, lowpass = Double.NaN, wet = 1.0)
-        effect.reverb!!.lowpass shouldBe null
+        effect.reverb!!.lowpass.isNaN() shouldBe true
     }
 
     "size is bounded to 0..1 at the door too" {
@@ -536,7 +536,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.reset()
 
         effect.reverb!!.size shouldBe 0.0
-        effect.reverb!!.lowpass shouldBe null
+        effect.reverb!!.lowpass.isNaN() shouldBe true
     }
 
     "a quiet network drains in proportion to its content, not the saturated worst case" {

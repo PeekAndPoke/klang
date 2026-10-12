@@ -22,8 +22,8 @@ import io.peekandpoke.klang.audio_be.roundTrip
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
@@ -57,7 +57,7 @@ class KatalystParallelEffectSpec : StringSpec({
     val lookahead = 0.005
     val delay = (lookahead * sampleRate).toInt()
 
-    fun c(value: Double) = IgnitorDsl.Constant(value)
+    fun c(value: Double) = KatalystKnobDsl.Constant(value)
 
     /** A limiter that never reaches its ceiling on the input below: a pure delay of [delay] frames. */
     val late = KatalystStageDsl.Compressor(
@@ -325,7 +325,7 @@ class KatalystParallelEffectSpec : StringSpec({
     // ── The branches read the orbit's slots ─────────────────────────────────────────────────────
 
     "a slot in a branch reads the orbit's param state, and a new state reaches it" {
-        val gain = KatalystStageDsl.Gain(IgnitorDsl.Param("branch.gain", 1.0))
+        val gain = KatalystStageDsl.Gain(KatalystKnobDsl.Param("branch.gain", 1.0))
         val built = chain(parallel(empty, branch(gain)), params = mapOf("branch.gain" to 0.0))
 
         // Written 0: only the dry branch is left.

@@ -19,8 +19,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
@@ -351,7 +351,7 @@ class KatalystGainEffectSpec : StringSpec({
         // non-finite slot was never set, and an unset fader is the identity. Without it the whole
         // orbit would be NaN for good.
         val chain = KatalystChainBuilder.build(
-            dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Param("gain", SLOT_UNSET))),
+            dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Param("gain", SLOT_UNSET))),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
@@ -374,7 +374,7 @@ class KatalystGainEffectSpec : StringSpec({
 
     "the gain slot is what `katp` moves, and the move glides to the value the pattern wrote" {
         val chain = KatalystChainBuilder.build(
-            dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Param("gain", 1.0))),
+            dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Param("gain", 1.0))),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
@@ -404,6 +404,56 @@ class KatalystGainEffectSpec : StringSpec({
         shouldGlide(blocks = List(glideBlocks + 1) { renderBlock() }, from = 1.0, to = 0.5)
     }
 
+    "an expression over the gain slot moves over the same glide: katp(fader) on gain(fader * 0.5)" {
+        // Knob expressions step 4 (`docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`): the expression is
+        // evaluated at the resolve, and the stage glides to its value as it glides to a plain slot's.
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Gain(
+                    gain = KatalystKnobDsl.Times(
+                        left = KatalystKnobDsl.Param("fader", 1.0),
+                        right = KatalystKnobDsl.Constant(0.5),
+                    ),
+                )
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        fun renderBlock(): DoubleArray {
+            val ctx = ctx()
+
+            for (i in 0 until blockFrames) {
+                ctx.mixBuffer.left[i] = probe
+                ctx.mixBuffer.right[i] = probe
+            }
+
+            chain.process(ctx)
+
+            return ctx.mixBuffer.left.copyOf()
+        }
+
+        chain.applyParams(null)
+
+        withClue("in service at the default, 1 * 0.5") { renderBlock()[blockFrames - 1] shouldBe probe * 0.5 }
+
+        chain.applyParams(klangMapOf("fader" to 0.6))
+
+        val first = renderBlock()
+
+        // By hand, at 44.1 kHz: 17 glide blocks from 0.5 to 0.6 * 0.5 = 0.3. The first block ends at
+        // 0.5 - 0.2 / 17 = 0.48823529411764705, and its frame 63 sits 64 frames of 0.2 / 17 / 128 earlier on the ramp,
+        // at 0.4941176470588235; times the probe 0.5.
+        withClue("frame 63 of the first glide block") { first[63] shouldBe (0.24705882352941178 plusOrMinus 1e-12) }
+        withClue("the first glide block's last frame") {
+            first[blockFrames - 1] shouldBe (0.24411764705882352 plusOrMinus 1e-12)
+        }
+
+        shouldGlide(blocks = listOf(first) + List(glideBlocks) { renderBlock() }, from = 0.5, to = 0.3)
+    }
+
     // ── The mute idiom, through a real cylinder ──────────────────────────────────────────────────
 
     "a gain-0 orbit stays exactly silent across the deactivation grace, block after block" {
@@ -421,7 +471,7 @@ class KatalystGainEffectSpec : StringSpec({
 
         registry.register(
             "mute",
-            KatalystDsl(KatalystDsl.classic.stages + KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(0.0))),
+            KatalystDsl(KatalystDsl.classic.stages + KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(0.0))),
         )
         cylinders.requestChain(orbit, "mute")
 

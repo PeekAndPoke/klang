@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.ignitor.minusLaw
 import io.peekandpoke.klang.audio_be.ignitor.plusLaw
 import io.peekandpoke.klang.audio_be.ignitor.powLaw
 import io.peekandpoke.klang.audio_be.ignitor.timesLaw
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 
 /** Which law a [KatalystArithmeticEffect] applies; one per arithmetic stage of `KatalystStageDsl`. */
 internal enum class KatalystArithmeticOp {
@@ -68,10 +69,17 @@ internal class KatalystArithmeticEffect(
     sampleRate: Int,
     /** The frames of one render block, pinned to 128 in the engine. */
     blockFrames: Int,
+    /**
+     * True when the operand's knob holds a modulator (knob expressions step 5b, D2): it glides over ONE block, so the
+     * law takes an operand ramped across each block from the last block's value to this one's. DIV keeps gliding its
+     * reciprocal, the level (see the class KDoc): a modulated divisor that swings through 0 sweeps the level through
+     * every value between the two blocks' reciprocals and no other.
+     */
+    modulated: Boolean = false,
 ) : KatalystEffect {
 
     /** The operand (for DIV its reciprocal): where it stands, where it is going, the snap of a fresh stage. */
-    private val glide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val glide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = modulated)
 
     /** The value an unset operand reads as; NaN for MIN and MAX, which have none. The one table of identities. */
     private val identity: Double = when (op) {
@@ -92,12 +100,19 @@ internal class KatalystArithmeticEffect(
         }
     }
 
-    /** Sets the operand; see the class KDoc for the glide and for what a non-finite one means. */
+    /**
+     * Sets the operand; see the class KDoc for the glide and for what a non-finite one means.
+     *
+     * The finiteness tests are `isFiniteInline`, not the stdlib `isFinite()` (knob expressions step 6, 2026-10-12):
+     * a modulated operand configures the stage every block from the chain's hook, and on V8 a stdlib call left out of
+     * the hook takes its double as a heap number (`audio/ref/performance.md`). One of the group the KDoc of
+     * `isFiniteInline` measures. No test can pin it; that KDoc and this one are the guard.
+     */
     fun configure(operand: Double) {
         // NaN-guard on a value the author can write: a non-finite operand is unset (class KDoc).
-        val written = if (operand.isFinite()) operand else identity
+        val written = if (operand.isFiniteInline()) operand else identity
 
-        if (!written.isFinite()) {
+        if (!written.isFiniteInline()) {
             unset = true
 
             return

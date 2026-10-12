@@ -25,8 +25,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
@@ -155,8 +155,8 @@ class CylinderKatalystParamsSpec : StringSpec({
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Reverb(
-                    wet = IgnitorDsl.Constant(0.5),
-                    size = IgnitorDsl.Param("reverb.size", default = 3.0),
+                    wet = KatalystKnobDsl.Constant(0.5),
+                    size = KatalystKnobDsl.Param("reverb.size", default = 3.0),
                 )
             )
         )
@@ -175,7 +175,7 @@ class CylinderKatalystParamsSpec : StringSpec({
     "a Constant knob is not a slot: a state entry of the same name never moves it" {
         val chain = build(
             KatalystDsl.of(
-                KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.5), size = IgnitorDsl.Constant(4.0))
+                KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(4.0))
             )
         )
 
@@ -188,8 +188,8 @@ class CylinderKatalystParamsSpec : StringSpec({
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Phaser(
-                    wet = IgnitorDsl.Param("phaser.wet", 0.0),
-                    floor = IgnitorDsl.Param("phaser.floor", 1.0),
+                    wet = KatalystKnobDsl.Param("phaser.wet", 0.0),
+                    floor = KatalystKnobDsl.Param("phaser.floor", 1.0),
                 )
             )
         )
@@ -222,8 +222,8 @@ class CylinderKatalystParamsSpec : StringSpec({
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Duck(
-                    orbit = IgnitorDsl.Param("duck.orbit", default = Double.NaN),
-                    depth = IgnitorDsl.Param("duck.depth", default = 0.0),
+                    orbit = KatalystKnobDsl.Param("duck.orbit", default = Double.NaN),
+                    depth = KatalystKnobDsl.Param("duck.depth", default = 0.0),
                 )
             )
         )

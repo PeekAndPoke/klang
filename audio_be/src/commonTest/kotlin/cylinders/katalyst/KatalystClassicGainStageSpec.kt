@@ -13,8 +13,8 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
@@ -176,7 +176,7 @@ class KatalystClassicGainStageSpec : StringSpec({
         // The author's own stage after classic's slot. At unity the product is 0.8; with the slot
         // at 0.5 it is 0.4. Two multiplies, no special case, which is what "an ordinary stage"
         // means on this side of the wire too.
-        val authored = KatalystDsl(KatalystDsl.classic.stages + KatalystStageDsl.Gain(IgnitorDsl.Constant(0.8)))
+        val authored = KatalystDsl(KatalystDsl.classic.stages + KatalystStageDsl.Gain(KatalystKnobDsl.Constant(0.8)))
 
         val reference = render(build(KatalystDsl.classic), null)
         val trimmed = render(build(authored), null)
@@ -204,7 +204,7 @@ class KatalystClassicGainStageSpec : StringSpec({
         // stages: each stage's writer reads the key it was given, so a second fader wired to
         // `gain.gain` squares the pattern's value.
         val doubled = KatalystDsl(
-            KatalystDsl.classic.stages + KatalystStageDsl.Gain(IgnitorDsl.Param("gain.gain", 1.0))
+            KatalystDsl.classic.stages + KatalystStageDsl.Gain(KatalystKnobDsl.Param("gain.gain", 1.0))
         )
 
         val reference = render(build(KatalystDsl.classic), null)

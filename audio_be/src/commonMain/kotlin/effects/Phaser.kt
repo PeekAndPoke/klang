@@ -256,8 +256,6 @@ class Phaser(sampleRate: Int) {
      * values and keeps no reference to the holder.
      */
     fun process(buffer: StereoBuffer, frames: Int, block: PhaserBlock) {
-        val centerTo = block.centerTo
-        val sweepTo = block.sweepTo
         val dryFrom = block.dryFrom
         val dryTo = block.dryTo
         val wetFrom = block.wetFrom
@@ -276,8 +274,8 @@ class Phaser(sampleRate: Int) {
         // stop the sweep — the phase would otherwise resume framing-dependently after a patterned
         // depth dips through zero. Cost on the gated path: two sin + two tan per core per block
         // (alphaAt runs at both block boundaries).
-        coreL.prepareBlock(blockFrames = frames, centerTo = centerTo, sweepTo = sweepTo)
-        coreR.prepareBlock(blockFrames = frames, centerTo = centerTo, sweepTo = sweepTo)
+        coreL.prepareBlock(blockFrames = frames, block = block)
+        coreR.prepareBlock(blockFrames = frames, block = block)
 
         if (identity) {
             // Same policy as the ignitor door (ledger D5): a bypass clears the cascade instead of

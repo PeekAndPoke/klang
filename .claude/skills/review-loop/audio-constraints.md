@@ -40,8 +40,11 @@ gone is removed when someone notices, not kept for history.
   since phase 3 step 12 C3); `MasterBus` still asks only after `TAIL_CHECK_INTERVAL_BLOCKS` silent blocks, because a
   delay is silent between echoes and an output-only test would cut them.
 - **A sounding resonator bank never retunes** (body and vowel, one class with two kinds, `KatalystResonatorEffect`,
-  tidy-up step 12 (a)): a change installs only into the pooled pair the swap does not hold, from zero state. Do not
-  morph or reconfigure the bank in service; the 5c-10 morph was rejected by ear (`ResonatorBank`'s KDoc).
+  tidy-up step 12 (a)): a TABLE change (material, vowel, on) installs only into the pooled pair the swap does not
+  hold, from zero state; off fades the pair in service to dry. Do not morph or retune the bands of the bank in service; the 5c-10 morph was rejected by ear
+  (`ResonatorBank`'s KDoc). The blend is not the table: a `wet` or `floor` change glides the dry and wet coefficients
+  of the sounding banks in place and leaves the bands alone, except that a mix landing at 0 zeroes their state, so a
+  return starts them from rest (knob expressions step 5c, Q8 (a), maintainer 2026-10-11).
 - **Numerical contract**: `SAFE_MIN 1e-15` / `SAFE_MAX 1e15` (matches SuperCollider `zapgremlins`);
   "safe" means finite, **not** small: consumers must be O(1) regardless of magnitude.
 - **Rejected optimisations, do not retry:** `fastCopy` (about 22x slower on JS), ProtoBuf for the

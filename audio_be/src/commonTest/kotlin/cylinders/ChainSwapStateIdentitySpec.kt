@@ -18,8 +18,8 @@ import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.roomCha
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.roomState
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.common.infra.toKlangMap
 
@@ -50,9 +50,9 @@ class ChainSwapStateIdentitySpec : StringSpec({
         rig.registry.register("ducked", duckedRoomChain())
         val ducker = KatalystDsl.of(
             KatalystStageDsl.Duck(
-                orbit = IgnitorDsl.Constant(0.0),
-                depth = IgnitorDsl.Constant(0.6),
-                attack = IgnitorDsl.Constant(0.05),
+                orbit = KatalystKnobDsl.Constant(0.0),
+                depth = KatalystKnobDsl.Constant(0.6),
+                attack = KatalystKnobDsl.Constant(0.05),
             )
         )
         rig.registry.register("ducker", ducker)
@@ -182,9 +182,9 @@ class ChainSwapStateIdentitySpec : StringSpec({
             "loop",
             KatalystDsl.of(
                 KatalystStageDsl.Delay(
-                    wet = IgnitorDsl.Constant(0.5),
-                    time = IgnitorDsl.Constant(0.1),
-                    feedback = IgnitorDsl.Constant(1.0),
+                    wet = KatalystKnobDsl.Constant(0.5),
+                    time = KatalystKnobDsl.Constant(0.1),
+                    feedback = KatalystKnobDsl.Constant(1.0),
                 )
             ),
         )

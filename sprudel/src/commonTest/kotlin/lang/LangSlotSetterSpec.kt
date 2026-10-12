@@ -12,7 +12,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor
@@ -130,7 +130,7 @@ class LangSlotSetterSpec : StringSpec({
             scriptSlots = listOf(
                 "\"reverb.wet\"", "Kat.slot.reverb.wet", "Katalyst.slot.reverb.wet", "Kat.param(\"reverb.wet\", 9)",
             ),
-            kotlinSlots = listOf("reverb.wet", KatalystDsl.Slots.reverb.wet, KatalystParam(IgnitorDsl.Param("reverb.wet", 9.0))),
+            kotlinSlots = listOf("reverb.wet", KatalystDsl.Slots.reverb.wet, KatalystKnobDsl.Param("reverb.wet", 9.0)),
         )
     }
 
@@ -206,7 +206,7 @@ class LangSlotSetterSpec : StringSpec({
         errorRows(
             setters = ignitorSetters,
             wrongs = wrongKinds(
-                otherParamScript = "Kat.param(\"room\", 5)", otherParam = KatalystParam(IgnitorDsl.Param("room", 5.0)),
+                otherParamScript = "Kat.param(\"room\", 5)", otherParam = KatalystKnobDsl.Param("room", 5.0),
                 otherSlotScript = "Kat.slot.reverb.wet", otherSlot = KatalystDsl.Slots.reverb.wet,
             ),
         )
@@ -218,6 +218,33 @@ class LangSlotSetterSpec : StringSpec({
             wrongs = wrongKinds(
                 otherParamScript = "Ign.param(\"cutoff\", 800)", otherParam = IgnitorDsl.Param("cutoff", 800.0),
                 otherSlotScript = "Ign.slot.lpf.freq", otherSlot = IgnitorDsl.Slots.lpf.freq,
+            ),
+        )
+    }
+
+    "katalystParam and katp: a Katalyst expression is not a slot, so it is refused at the call" {
+        // Knob expressions step 4: `Kat.param("room", 5).mul(2)` is a knob, not a slot. `katp` writes the slot by its
+        // name and the expression over it follows, so the fix is the param itself. On `ignp` it is the wrong kind.
+        val expression = KatalystKnobDsl.Times(
+            left = KatalystKnobDsl.Param("room", 5.0),
+            right = KatalystKnobDsl.Constant(2.0),
+        )
+        val script = "Kat.param(\"room\", 5).mul(2)"
+
+        errorRows(
+            setters = katalystSetters,
+            wrongs = listOf(
+                Wrong("a Katalyst expression", script, expression) {
+                    "${it.name} expects a slot name or a Katalyst param; an expression is not a slot, write its param"
+                },
+            ),
+        )
+        errorRows(
+            setters = ignitorSetters,
+            wrongs = listOf(
+                Wrong("a Katalyst expression", script, expression) {
+                    "${it.name} expects a slot name or an Ignitor param, got a Kat expression"
+                },
             ),
         )
     }

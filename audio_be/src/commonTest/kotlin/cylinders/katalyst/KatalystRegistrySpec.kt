@@ -8,8 +8,8 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
 /**
@@ -23,8 +23,8 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
  */
 class KatalystRegistrySpec : StringSpec({
 
-    val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.3)))
-    val other = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.4)))
+    val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.3)))
+    val other = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.4)))
 
     "an unknown name resolves to null, never to a fallback chain" {
         val registry = KatalystRegistry()

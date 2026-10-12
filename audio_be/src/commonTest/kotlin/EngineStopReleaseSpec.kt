@@ -18,8 +18,8 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -47,7 +47,7 @@ class EngineStopReleaseSpec : StringSpec({
     val holdBlocks = 20 * sampleRate / blockFrames
     val law = ReleaseLaw(sampleRate)
 
-    fun c(value: Double): IgnitorDsl = IgnitorDsl.Constant(value)
+    fun c(value: Double): KatalystKnobDsl = KatalystKnobDsl.Constant(value)
 
     /** A dispatcher and its one engine "song", rendered block by block without the house stage. */
     class Rig {
