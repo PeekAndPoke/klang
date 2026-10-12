@@ -1,6 +1,6 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **in progress, steps 1 to 3 built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer, 2026-10-11; the
+Status: **in progress, steps 1 to 4 built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer, 2026-10-11; the
 other Q at the coordinator's lean).
 
 ## Why
@@ -161,6 +161,37 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
 4. Expressions over slots (D4): the arithmetic, `neg`, `abs`, `range`, both doors, the evaluator, the unset rule (Q5).
    The non-null knobs' fallback arguments are dead since step 3; step 4 makes `KatalystKnob` non-null with the
    nullable path kept for `lowpass` and the EQ.
+   **Built** (2026-10-12): the nodes `Plus`, `Minus`, `Times`, `Div`, `Pow(base, exp)`, `Min`, `Max` (mathematical),
+   `Neg`, `Abs`, `Range(inner, from, to)` on `KatalystKnobDsl`, the Ignitor twins' field and wire names
+   (`WIRE_SCHEMA_HASH` 1168938423 to 615137850, no KSP change). The evaluator `KatalystKnobProgram`
+   (`audio_be/.../katalyst/KatalystKnobProgram.kt`): compiled once per knob into an op array, operand and output
+   register indices and one register `DoubleArray`; constant subtrees fold at compile through the same `execute` (a
+   statement `when` over `KatalystKnobOp` storing into the registers, the laws of `_arithmetic_laws.kt`, `neg` as
+   `timesLaw(x, -1.0)` as the Ignitor's `neg()` builds it). `KatalystKnob(node)` is non-null; `knobOrUnset` is the
+   nullable path (reverb `lowpass`, the EQ section knobs), a missing knob being `Constant(SLOT_UNSET)`. A plain
+   `Param` resolves exactly as before; an expression loads one register per slot leaf (one lookup each) and runs
+   once per changed map, never per block. Q5: a leaf reading a non-finite value (state or default) stops the load
+   and the knob is `SLOT_UNSET`, not written. `written` = a leaf took a finite value from the state AND the value is
+   finite (so `written` always comes with a finite value, as on a plain slot; a NaN constant through `plus` is no
+   write). Doors (both, `KatalystBuilders.kt`): `plus`/`add`, `minus`/`sub`, `times`/`mul`, `div`, `pow`/`power`,
+   `min`/`max` (the crossing), `neg`/`negate`, `abs`, `range(from, to)` on `KatalystKnobDsl`; operands through
+   `toKatalystKnob` (text now "a number, a Kat.param or a Kat expression"); `toEqSectionKnob` refuses an expression
+   (E2, recorded); `katalystSlotName` refuses one ("an expression is not a slot, write its param"). `blend(wet)`
+   unchanged; its reason text no longer claims a param has no arithmetic (Q14 stays the follow-up). Guarded by
+   `KatalystKnobExpressionSpec` (every op against the Ignitor runtime's control-rate value of the same tree over
+   15 operands, NaN, both zeros, 0 divisors, 1e300 and the infinities included, every leaf placement: the fold and
+   the evaluator; the fold's instruction count; Q5; `written`; a stage's constant on an unset expression; the delay's
+   `stageAskedFor` on a written expression wet; one evaluation per resolve over 50 blocks),
+   `KatalystGainEffectSpec` (`katp("fader", 0.6)` on `gain(fader.times(0.5))`: the 17-block glide from 0.5 to 0.3,
+   frame 63 of the first block 0.24705882352941178 by hand), `KatalystSettingsAllocationSpec` (a three-slot nested
+   expression re-resolved every block: 0 bytes, 4001 evaluations), `WireCodecRoundTripSpec` (a row per node and a
+   deep tree), `KlangScriptKatalystKnobExpressionDoorParitySpec` (every door and alias, positional and named, both
+   doors, the crossing, Ignitor operands, the EQ refusal), `LangSlotSetterSpec` (`katp`/`ignp` refuse an
+   expression), `KlangScriptKatalystDoorParitySpec` (the Q3 row flips to accepted). 30 mutations, each red (every
+   law arm, the crossing, the register wiring, the fold, the unset short-circuit, `written`, a per-block evaluation,
+   an allocating load, each door); the wire rows' one DSL-side mutation (a duplicate wire name) is refused by the
+   codec processor at build. Allocation check GREEN, 58 of 58 within budget (no case holds an expression knob yet:
+   step 6).
 5. Modulators (D3) and the per-block path (D2), probably split: 5a nodes, doors and evaluator; 5b the chain hook and
    the stages; 5c the bank stages per Q8.
 6. Measured in the harness: a slot expression, a modulated gain and phaser center, a perlin; time and bytes per

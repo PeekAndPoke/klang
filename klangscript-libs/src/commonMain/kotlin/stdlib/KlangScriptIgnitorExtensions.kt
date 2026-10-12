@@ -34,9 +34,9 @@ typealias IgnitorDslLike = Any
  * lambda that landed on a sound slot (`Ignitor.whitenoise(x => ...)`, which has no `configure`) reads
  * as "got a function", not as an internal error.
  *
- * A Katalyst knob ([KatalystKnobDsl], a `Kat.param` today) has its own message: it is the chain's knob by intent, its
- * author drives it with `katp`, which writes the orbit's map and never reaches the voice, so in an Ignitor tree the
- * knob would sit at its default while the song moves it. The mirror of the Katalyst knobs' refusal of an Ignitor
+ * A Katalyst knob ([KatalystKnobDsl]: a `Kat.param`, a `Kat.slot`, or an expression over them) has its own message:
+ * it is the chain's knob by intent, its author drives it with `katp`, which writes the orbit's map and never reaches
+ * the voice, so in an Ignitor tree the knob would sit at its default while the song moves it. The mirror of the Katalyst knobs' refusal of an Ignitor
  * node (`toKatalystKnob`; decision Q2 of `docs/plans/ignitor-katalyst-naming.md`, D1 of
  * `docs/tasks/in-progress/katalyst-knob-expressions.md`).
  */
@@ -101,7 +101,9 @@ fun ignitorSlotName(slot: IgnitorSlotLike?, door: String, twin: String, location
 
 /**
  * The slot NAME a `katalystParam` / `katp` call writes: a string as it is, a Katalyst param by its name. The mirror
- * of [ignitorSlotName], with the same reasons for a typed error; an Ignitor param is the wrong host ("use [twin]").
+ * of [ignitorSlotName], with the same reasons for a typed error; an Ignitor param is the wrong host ("use [twin]"), and
+ * a Katalyst expression (`Kat.param("fader", 1).times(0.5)`) is not a slot: `katp` writes the slot by name, and the
+ * expression over it follows.
  *
  * @param door the door the author called (`"katp"`, `"katalystParam"`), for the message
  * @param twin the same door on the other host (`"ignp"`, `"ignitorParam"`), the fix for an Ignitor param
@@ -118,11 +120,32 @@ fun katalystSlotName(slot: KatalystSlotLike?, door: String, twin: String, locati
         )
 
         else -> throw KlangScriptTypeError(
-            message = "$door expects a slot name or a Katalyst param, got ${describeArgument(slot)}",
+            message = if (isKatalystExpression(slot)) {
+                "$door expects a slot name or a Katalyst param; an expression is not a slot, write its param"
+            } else {
+                "$door expects a slot name or a Katalyst param, got ${describeArgument(slot)}"
+            },
             operation = door,
             location = location,
         )
     }
+
+/**
+ * Whether [value] is a Katalyst knob EXPRESSION, any [KatalystKnobDsl] node but the two leaves. Exhaustive over the
+ * knob type, so a node that joins it (the modulators of step 5) decides here.
+ */
+internal fun isKatalystExpression(value: Any?): Boolean = when (value) {
+    is KatalystKnobDsl -> when (value) {
+        is KatalystKnobDsl.Constant, is KatalystKnobDsl.Param -> false
+
+        is KatalystKnobDsl.Plus, is KatalystKnobDsl.Minus, is KatalystKnobDsl.Times, is KatalystKnobDsl.Div,
+        is KatalystKnobDsl.Pow, is KatalystKnobDsl.Min, is KatalystKnobDsl.Max, is KatalystKnobDsl.Neg,
+        is KatalystKnobDsl.Abs, is KatalystKnobDsl.Range,
+        -> true
+    }
+
+    else -> false
+}
 
 /** What a wrong argument IS, in the words a song uses, for the resolvers' and the Katalyst knobs' messages. */
 internal fun describeArgument(value: Any?): String = when (value) {
@@ -131,7 +154,7 @@ internal fun describeArgument(value: Any?): String = when (value) {
     is Number -> "a number"
     is Boolean -> "a boolean"
     is IgnitorDsl -> "a sound"
-    is KatalystKnobDsl -> "a Katalyst knob"
+    is KatalystKnobDsl -> if (isKatalystExpression(value)) "a Kat expression" else "a Katalyst knob"
     is KatalystDsl -> "a Katalyst chain"
     is Function<*> -> "a function"
     is List<*> -> "an array"

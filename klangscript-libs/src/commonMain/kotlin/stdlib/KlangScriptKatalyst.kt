@@ -108,10 +108,11 @@ object KlangScriptKatalyst {
      * note("c3 e3 g3").s("supersaw").katalyst(bus).katp("room", "<2 9>")
      * ```
      *
-     * It returns a Katalyst knob (a [KatalystKnobDsl.Param], the wire node the chain carries), not a sound. It has no
-     * arithmetic yet (`.mul(2)` on it is a script error; step 4 of
-     * `docs/tasks/in-progress/katalyst-knob-expressions.md` adds
-     * it): do the arithmetic on the pattern side. An Ignitor node on a chain knob is a script error at the stage call.
+     * It returns a Katalyst knob (a [KatalystKnobDsl.Param], the wire node the chain carries), not a sound. It has the
+     * Ignitor's arithmetic words and `range` (step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md`):
+     * `Katalyst.param("fader", 1).times(0.5)` is a knob too, which the chain evaluates whenever the pattern writes the
+     * slot. `katp` writes the param, never an expression over it. An Ignitor node on a chain knob is a script error at
+     * the stage call.
      *
      * The twin of `Ignitor.param` on the other host: that one fills the voice's own instrument from
      * `ignp`, this one the orbit's chain from `katp`. The two namespaces never cross, and the two kinds of param do

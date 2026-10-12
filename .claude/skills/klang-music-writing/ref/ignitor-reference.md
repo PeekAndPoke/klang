@@ -536,7 +536,8 @@ From `0..1` to `-1..1` without a range: `x.mul(2).minus(1)`.
 
 **On a Katalyst chain** (an orbit or the master) the same words are stages on the bus (2026-10-11): `plus`/`add`,
 `minus`/`sub`, `times`/`mul`, `div`, `pow`/`power`, `min`, `max`, `neg`/`negate`, `abs`, each sample through the
-same law as here. The operand is a number or a `Kat.param` (not a signal), and a moved `Kat.param` glides. For a level
+same law as here. The operand is a number, a `Kat.param` or a Kat expression (not a signal), and a moved `Kat.param`
+glides. For a level
 use `gain`, the fader; `times` is the arithmetic. A constant `plus` keeps its orbit from ever switching off.
 
 ```javascript
@@ -627,7 +628,7 @@ let breathe = x => x.blend(Ignitor.sine(0.25).range(0.1, 0.5), y => y.distort(0.
 ```
 
 - Linear is right for a branch correlated with the dry (distortion, compression, filters).
-- On the Katalyst, `wet` is a plain number (`1 - wet` needs arithmetic a Katalyst param does not have), and the branch
+- On the Katalyst, `wet` is a plain number (a `Kat.param` there is a follow-up), and the branch
   gets an empty builder: `k.blend(0.3, b => b.distort(0.6, "hard"))`. A `reverb` or `delay` in the branch carries
   the dry as well, so `k.blend(w, b => b.reverb(1, 7))` is the dry plus `w` of the room.
 
@@ -776,10 +777,25 @@ and the wrong one is a script error at the call, with the fix in the message. `i
 `a Katalyst param passed to ignp; use katp`. An `Ignitor.param` handed to a chain knob, as in
 `Katalyst(k => k.reverb(0.5, cutoff))` with the `cutoff` of the setter example above, says
 `an Ignitor param in a Katalyst chain; use Kat.param`, and a Katalyst param in an Ignitor tree says
-`a Katalyst knob in an Ignitor tree; use Ign.param`. A chain knob takes a number or a `Katalyst.param` and nothing
-else: any other Ignitor node there (an oscillator, an expression over an Ignitor param) is a script error at the stage
-call, `a Katalyst knob takes a number or a Kat.param; got a sound`. A Katalyst param has no arithmetic yet
-(`Katalyst.param("room", 5).mul(2)` is an error): do the arithmetic on the pattern side.
+`a Katalyst knob in an Ignitor tree; use Ign.param`. A chain knob takes a number, a `Katalyst.param` or a Kat
+expression over params and nothing else: any Ignitor node there (an oscillator, an expression over an Ignitor param)
+is a script error at the stage call, `a Katalyst knob takes a number, a Kat.param or a Kat expression; got a sound`.
+
+**Kat expressions** (2026-10-12): a Katalyst param has the Ignitor's arithmetic words, laws and clamps, plus `range`:
+`plus`/`add`, `minus`/`sub`, `times`/`mul`, `div`, `pow`/`power`, `min`, `max` (clamps: `max(0.9)` is "at most
+0.9"), `neg`/`negate`, `abs`, `range(from, to)`. One `katp` moves every knob that reads the slot, each through its
+own expression, and the stage glides to the new value as it does for a plain param. The chain evaluates the
+expression when the pattern writes a slot, not per block. A slot that reads a non-finite value leaves the whole knob
+unset (the stage takes its default). Not on an `eq` section (a number or a `Kat.param` only), not on `blend(wet)`
+(a plain number), and `katp` takes the param, never an expression.
+
+```javascript
+// one fader slot drives the bus level and the room size together
+let fader = Kat.param("fader", 1)
+let bus = Katalyst(k => k.reverb(0.3, fader.times(4).plus(1)).gain(fader.times(0.5)))
+
+note("c3 e3 g3").s("supersaw").katalyst(bus).katp("fader", "<1 0.5>")
+```
 
 ### Audio-rate Modulation
 

@@ -261,10 +261,10 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * implementation, which is what keeps one effect one sound on every bus.
  *
  * **Every knob is a [KatalystKnobDsl]**, the Katalyst's own knob language and not an [IgnitorDsl] node
- * (`docs/tasks/in-progress/katalyst-knob-expressions.md`, D1): a [KatalystKnobDsl.Constant] or a
- * [KatalystKnobDsl.Param], read
- * once per block. An Ignitor node on a knob is a type error at the door (the script door's stage call; the Kotlin
- * door's constructors do not take one), never coerced. The Motor stays raw, so a knob is never clamped beyond what
+ * (`docs/tasks/in-progress/katalyst-knob-expressions.md`, D1): a [KatalystKnobDsl.Constant], a
+ * [KatalystKnobDsl.Param], or an expression over them (step 4, D4), read once per block. An Ignitor node on a knob is
+ * a type error at the door (the script door's stage call; the Kotlin door's constructors do not take one), never
+ * coerced. The Motor stays raw, so a knob is never clamped beyond what
  * the underlying DSP already does. **The exceptions are the knobs fixed per chain**, plain numbers because they size
  * or pick something when the chain is built, so a slot there could never move, and the type says so:
  * [Compressor.lookahead] (a delay ring, phase 3 step 12 C2), [Distort.shape] and [Distort.oversample]. The other is

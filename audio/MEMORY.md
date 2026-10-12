@@ -219,12 +219,13 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   all-pass, flat within 0.001 dB (`BandsCrossoverSpec`). A band's processors get the band behind a sectionless EQ, so
   an `eq()` tap in a band reads the band.
 - **`blend` on both hosts** (2026-10-10): `x.blend(wet, f)` is `parallel(dry * (1 - wet), f * wet)`, the linear
-  law; `wet` a slot or a signal on the Ignitor, a plain number on the Katalyst (no param arithmetic there).
+  law; `wet` a slot or a signal on the Ignitor, a plain number on the Katalyst (a `Kat.param` there is follow-up
+  Q14 of `docs/tasks/in-progress/katalyst-knob-expressions.md`).
 - **Arithmetic on the Katalyst** (`KatalystArithmeticEffect`, 2026-10-11): `plus`, `minus`, `times`, `div`, `pow`,
   `min`, `max`, `abs` (and the Ignitor's aliases) are stages that run the Ignitor's per-sample law on the bus, so the
   same numbers give the same sample (`KatalystArithmeticEffectSpec` renders against the Ignitor runtime). The operand
-  is a number or a `Kat.param`, glides per sample, and reads non-finite as unset. `times` is not the fader. No
-  optimizer (won't implement, maintainer 2026-10-11): one cheap stage costs about 50 ns per block (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`, D5).
+  is a number, a `Kat.param` or a Kat expression, glides per sample, and reads non-finite as unset. `times` is not
+  the fader. No optimizer (won't implement, maintainer 2026-10-11): one cheap stage costs about 50 ns per block (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`, D5).
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
@@ -362,6 +363,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-12 Katalyst knob expressions, step 4: a Katalyst knob may be an expression over `Kat.param`s (the
+  Ignitor's arithmetic and `range`, `KatalystKnobDsl`), compiled per knob at chain build (`KatalystKnobProgram`)
+  and evaluated with the Ignitor's laws once per changed map; a non-finite slot leaf unsets the knob (Q5):
+  `docs/tasks/in-progress/katalyst-knob-expressions.md` step 4
 - 2026-10-11 Engine follow-up 2, step 5: `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s slot maps and
   the dispatcher's `engines` are `KlangMap`s, the codec generator refuses a stdlib `Map` field; the wire bytes, the
   schema hash and the engine bit for bit unchanged, corpus identical; `E-C-n1` re-set to 13,068, `E-duck` to 152

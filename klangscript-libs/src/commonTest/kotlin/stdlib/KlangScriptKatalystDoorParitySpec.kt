@@ -543,7 +543,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         // takes a number or a sound, so it is a type error; an old stage lambda either lands on a
         // flat door's first parameter (a type error) or floats to `configure`, where the knob it
         // calls no longer exists.
-        val notANumber = "a Katalyst knob takes a number or a Kat.param; got"
+        val notANumber = "a Katalyst knob takes a number, a Kat.param or a Kat expression; got"
         listOf(
             """Katalyst(k => k.body("wood"))""" to notANumber,
             """Katalyst(k => k.vowel("a"))""" to notANumber,
@@ -613,7 +613,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         // expression over an Ignitor param folded to one number; both are refused now. The Kotlin door's stage
         // constructors refuse an Ignitor node at compile time (their fields are `KatalystKnobDsl`); its builder doors
         // take `Any` like the script door and refuse here.
-        val message = "a Katalyst knob takes a number or a Kat.param; got a sound"
+        val message = "a Katalyst knob takes a number, a Kat.param or a Kat expression; got a sound"
 
         doors.forEach { door ->
             door.params.forEach { param ->
@@ -662,7 +662,9 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     }
 
     "a wrong value kind on a Katalyst knob says what a knob takes, on both doors" {
-        val message: (String) -> String = { got -> "a Katalyst knob takes a number or a Kat.param; got $got" }
+        val message: (String) -> String = { got ->
+            "a Katalyst knob takes a number, a Kat.param or a Kat expression; got $got"
+        }
 
         listOf(
             """Katalyst(k => k.reverb(size = "room"))""" to "a string",
@@ -723,9 +725,18 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         (KlangScriptKatalyst.param("room", 5.0) as KatalystKnobDsl.Param).name shouldBe "room"
     }
 
-    "a Katalyst param has no arithmetic: an expression over it is a script error, not a silent fold (Q3)" {
-        val err = shouldThrow<KlangScriptTypeError> { ks("""Katalyst(k => k.reverb(size = Kat.param("room", 5).mul(2)))""") }
-        err.message shouldBe "Native type 'Param' has no method 'mul'."
+    "an expression over a Katalyst param is a knob of its own language, accepted on a stage knob (D4, step 4)" {
+        // Until step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md` a `Kat.param` had no arithmetic and
+        // this was a script error ("Native type 'Param' has no method 'mul'"); the expression doors are
+        // `KlangScriptKatalystKnobExpressionDoorParitySpec`'s subject.
+        ks("""Katalyst(k => k.reverb(size = Kat.param("room", 5).mul(2)))""") shouldBe KatalystDsl.of(
+            KatalystStageDsl.Reverb(
+                size = KatalystKnobDsl.Times(
+                    left = KatalystKnobDsl.Param("room", 5.0),
+                    right = KatalystKnobDsl.Constant(2.0),
+                ),
+            )
+        )
     }
 
     "a Katalyst param in an Ignitor tree is a script error naming the fix" {
@@ -754,7 +765,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         // innermost native call, here `k.reverb(...)`, whose location is its opening parenthesis.
         listOf(
             "let a = 1\nlet K = Katalyst(k => k.reverb(wet = \"x\"))" to
-                    "a Katalyst knob takes a number or a Kat.param; got",
+                    "a Katalyst knob takes a number, a Kat.param or a Kat expression; got",
             "let a = 1\nlet K = Katalyst(k => k.reverb(size = Ignitor.param(\"a\", 1)))" to
                     "an Ignitor param in a Katalyst chain; use Kat.param",
         ).forEach { (script, reason) ->

@@ -379,6 +379,11 @@ class KatalystDefaultsSyncSpec : StringSpec({
         fun freshKnob(knob: KatalystKnobDsl): KatalystKnobDsl = when (knob) {
             is KatalystKnobDsl.Param -> freshParam(knob)
             is KatalystKnobDsl.Constant -> knob
+            // The classic chain's knobs are leaves; an expression (knob expressions step 4) is never on it.
+            is KatalystKnobDsl.Plus, is KatalystKnobDsl.Minus, is KatalystKnobDsl.Times, is KatalystKnobDsl.Div,
+            is KatalystKnobDsl.Pow, is KatalystKnobDsl.Min, is KatalystKnobDsl.Max, is KatalystKnobDsl.Neg,
+            is KatalystKnobDsl.Abs, is KatalystKnobDsl.Range,
+            -> knob
         }
 
         val rebuilt = KatalystDsl(

@@ -222,6 +222,33 @@ class LangSlotSetterSpec : StringSpec({
         )
     }
 
+    "katalystParam and katp: a Katalyst expression is not a slot, so it is refused at the call" {
+        // Knob expressions step 4: `Kat.param("room", 5).mul(2)` is a knob, not a slot. `katp` writes the slot by its
+        // name and the expression over it follows, so the fix is the param itself. On `ignp` it is the wrong kind.
+        val expression = KatalystKnobDsl.Times(
+            left = KatalystKnobDsl.Param("room", 5.0),
+            right = KatalystKnobDsl.Constant(2.0),
+        )
+        val script = "Kat.param(\"room\", 5).mul(2)"
+
+        errorRows(
+            setters = katalystSetters,
+            wrongs = listOf(
+                Wrong("a Katalyst expression", script, expression) {
+                    "${it.name} expects a slot name or a Katalyst param; an expression is not a slot, write its param"
+                },
+            ),
+        )
+        errorRows(
+            setters = ignitorSetters,
+            wrongs = listOf(
+                Wrong("a Katalyst expression", script, expression) {
+                    "${it.name} expects a slot name or an Ignitor param, got a Kat expression"
+                },
+            ),
+        )
+    }
+
     "the script error carries the call's location, so the editor marks the call" {
         for (code in listOf("""note("c3").ignp(Kat.slot.reverb.wet, 1)""", """note("c3").katp(Ign.slot.lpf.freq, 1)""")) {
             withClue(code) {
