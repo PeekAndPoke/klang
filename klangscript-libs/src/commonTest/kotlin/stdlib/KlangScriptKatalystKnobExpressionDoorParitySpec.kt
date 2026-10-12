@@ -19,7 +19,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * The Katalyst knob expression doors (step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md`, D4): every
+ * The Katalyst knob expression doors (step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, D4): every
  * door and alias, positional and named, on the script door and the Kotlin door, against the [KatalystKnobDsl] node
  * written out by hand, so a door wired to the wrong node cannot look right on both sides. The `min`/`max` crossing is
  * part of the table: `max` ("at most", a cap) builds [KatalystKnobDsl.Min]. The refusals: an Ignitor node as an

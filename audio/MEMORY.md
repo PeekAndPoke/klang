@@ -113,10 +113,14 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
   `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
   dispatcher keeps only the render order and the disposal order, both exact.
-- **Knob glide** `KNOB_GLIDE_SECONDS` 0.05 in whole blocks (17 at 44.1 kHz, 19 at 48 kHz); **bank crossfade**
-  `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. The bank crossfade and the compressor's switch
-  fade run one linear law, `utils/linear_crossfade.kt` (the chain swap's `Crossfade` and the duck's glide are other
-  laws). Which knob glides how: `audio/ref/katalyst.md`.
+- **Katalyst knobs** (2026-10-12): a stage knob is a `KatalystKnobDsl`: a number, a `Kat.param`, a modulator
+  (`Kat.sine`, `saw`, `ramp`, `tri`, `square`, `perlin`, `berlin`), or the Ignitor's arithmetic and `range` over any of
+  these, never an Ignitor node; the `eq` sections take a number or a `Kat.param` only. A knob over slots is evaluated when the owner's map changes; a knob that holds a modulator is
+  ticked once per processed block at the top of `KatalystChain.process`. `audio/ref/katalyst.md`.
+- **Knob glide** `KNOB_GLIDE_SECONDS` 0.05 in whole blocks (17 at 44.1 kHz, 19 at 48 kHz), one block for a knob that
+  holds a modulator; **bank crossfade** `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. The bank
+  crossfade and the compressor's switch fade run one linear law, `utils/linear_crossfade.kt` (the chain swap's
+  `Crossfade` and the duck's glide are other laws). Which knob glides how: `audio/ref/katalyst.md`.
 - **Body and vowel** are one stage class with two kinds (`KatalystResonatorEffect`, `ResonatorKind`); a chain runs
   both stages as two instances. One table per catalogue index (`ResonatorTables`, equal rows share an instance, so a
   switch among aliases installs nothing); a TABLE change installs into the pooled pair nobody hears (two pairs, built
@@ -221,7 +225,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   an `eq()` tap in a band reads the band.
 - **`blend` on both hosts** (2026-10-10): `x.blend(wet, f)` is `parallel(dry * (1 - wet), f * wet)`, the linear
   law; `wet` a slot or a signal on the Ignitor, a plain number on the Katalyst (a `Kat.param` there is follow-up
-  Q14 of `docs/tasks/in-progress/katalyst-knob-expressions.md`).
+  Q14, `docs/tasks/katalyst-knob-followups.md` section 4).
 - **Arithmetic on the Katalyst** (`KatalystArithmeticEffect`, 2026-10-11): `plus`, `minus`, `times`, `div`, `pow`,
   `min`, `max`, `abs` (and the Ignitor's aliases) are stages that run the Ignitor's per-sample law on the bus, so the
   same numbers give the same sample (`KatalystArithmeticEffectSpec` renders against the Ignitor runtime). The operand
@@ -364,14 +368,18 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-12 Katalyst knob expressions, done (steps 6 and 7): ten allocation cases and twelve timing rows for moving
+  knobs, five V8 remedies (`KnobGlide.retarget` inline and its state in a `DoubleArray`, `Compressor.glideArgs`,
+  `PhaserCore.prepareBlock` from its block, `isFiniteInline`), engine follow-ups 39 to 41 filed; the step 3 render
+  fixture removed, the task archived: `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`
 - 2026-10-12 Katalyst knob expressions, steps 5a to 5c: Katalyst knobs take modulators (`Kat.sine`, `saw`, `ramp`,
   `tri`, `square`, `perlin`, `berlin`), ticked once per processed block at the top of `KatalystChain.process`, a
   modulated knob gliding over one block; `body`/`vowel` wet and floor glide the blend in place (Q8 (a)):
-  `docs/tasks/in-progress/katalyst-knob-expressions.md` step 5
+  `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` step 5
 - 2026-10-12 Katalyst knob expressions, step 4: a Katalyst knob may be an expression over `Kat.param`s (the
   Ignitor's arithmetic and `range`, `KatalystKnobDsl`), compiled per knob at chain build (`KatalystKnobProgram`)
   and evaluated with the Ignitor's laws once per changed map; a non-finite slot leaf unsets the knob (Q5):
-  `docs/tasks/in-progress/katalyst-knob-expressions.md` step 4
+  `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` step 4
 - 2026-10-11 Engine follow-up 2, step 5: `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s slot maps and
   the dispatcher's `engines` are `KlangMap`s, the codec generator refuses a stdlib `Map` field; the wire bytes, the
   schema hash and the engine bit for bit unchanged, corpus identical; `E-C-n1` re-set to 13,068, `E-duck` to 152

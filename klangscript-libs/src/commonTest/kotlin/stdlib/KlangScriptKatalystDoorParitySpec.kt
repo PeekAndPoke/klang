@@ -607,7 +607,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     }
 
     "an Ignitor node on any Katalyst knob is a script error at the stage call, on both doors (D1)" {
-        // The Katalyst has its own knob language since step 3 of `docs/tasks/in-progress/katalyst-knob-expressions.md`:
+        // The Katalyst has its own knob language since step 3 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`:
         // a number or
         // a `Kat.param`, nothing of the Ignitor's. An oscillator used to be probed and folded to the knob's default, an
         // expression over an Ignitor param folded to one number; both are refused now. The Kotlin door's stage
@@ -712,7 +712,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     "Katalyst.param and Ignitor.param are distinct types: a Katalyst param is the chain's own knob node, not a sound" {
         // Two namespaces that never cross (`ignp` fills the voice's, `katp` the orbit's), two types since 2026-10-03
         // so the doors can tell them apart (the plan's section 4.4), and since step 3 of
-        // `docs/tasks/in-progress/katalyst-knob-expressions.md` two wire types too: the chain carries the
+        // `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` two wire types too: the chain carries the
         // `KatalystKnobDsl.Param`
         // itself, no handle over an Ignitor param.
         val engine = klangScript()
@@ -726,7 +726,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     }
 
     "an expression over a Katalyst param is a knob of its own language, accepted on a stage knob (D4, step 4)" {
-        // Until step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md` a `Kat.param` had no arithmetic and
+        // Until step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` a `Kat.param` had no arithmetic and
         // this was a script error ("Native type 'Param' has no method 'mul'"); the expression doors are
         // `KlangScriptKatalystKnobExpressionDoorParitySpec`'s subject.
         ks("""Katalyst(k => k.reverb(size = Kat.param("room", 5).mul(2)))""") shouldBe KatalystDsl.of(

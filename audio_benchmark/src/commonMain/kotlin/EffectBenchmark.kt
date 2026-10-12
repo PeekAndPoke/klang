@@ -567,7 +567,7 @@ class EffectBenchmark(
             katalystCase("Katalyst 8 arithmetic stages (E-arith's chain)", AllocationCases.arithmeticChain),
 
             // ── Katalyst knob expressions and modulators (step 6 of
-            // docs/tasks/in-progress/katalyst-knob-expressions.md).
+            // docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md).
             // Each modulated row against its constant control. The difference is the modulation AND the DSP paths a
             // moving knob takes where a constant one does not: the hook, the evaluator, the writer's refill and the
             // stage's configure, plus the per-sample ramps (the fader's and the arithmetic's one-block glide, the

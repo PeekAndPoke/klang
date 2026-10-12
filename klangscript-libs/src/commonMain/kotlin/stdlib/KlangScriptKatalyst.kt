@@ -109,7 +109,7 @@ object KlangScriptKatalyst {
      * ```
      *
      * It returns a Katalyst knob (a [KatalystKnobDsl.Param], the wire node the chain carries), not a sound. It has the
-     * Ignitor's arithmetic words and `range` (step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md`):
+     * Ignitor's arithmetic words and `range` (step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`):
      * `Katalyst.param("fader", 1).times(0.5)` is a knob too, which the chain evaluates whenever the pattern writes the
      * slot. `katp` writes the param, never an expression over it. An Ignitor node on a chain knob is a script error at
      * the stage call.
@@ -132,7 +132,7 @@ object KlangScriptKatalyst {
 
     // ── The modulators: a bus LFO, on any knob that takes a Kat.param ─────────────────────────────────────────────
     //
-    // Decision D3 of `docs/tasks/in-progress/katalyst-knob-expressions.md`: the Ignitor's LFO-capable oscillators,
+    // Decision D3 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: the Ignitor's LFO-capable oscillators,
     // their words and their door shape (`freq` on the door, `phase` and the square's `duty` on a builder behind
     // `configure`; the noises flat), with three differences recorded there: `freq` and the noises' `rate` are REQUIRED
     // (Q10: a bus has no note to default to; the Ignitor's noise default of 1 walks 0.384 cells per block, a noise AM

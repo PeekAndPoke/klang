@@ -32,7 +32,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * The Katalyst's own modulators (step 5a of `docs/tasks/in-progress/katalyst-knob-expressions.md`, D3, Q3, Q10 to Q12):
+ * The Katalyst's own modulators (step 5a of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, D3, Q3, Q10 to Q12):
  * the modulator instructions of [KatalystKnobProgram], their clocks and their laws.
  *
  * **Two oracles.** The hand laws below (the shapes written out from their definitions, `kotlin.math.sin` for the sine)

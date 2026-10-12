@@ -97,7 +97,7 @@
 #   highest tail round and still far under the per-sample class it guards (one heap number per sample, about 2 KB per
 #   block). The tail is not located: docs/tasks/engine-follow-ups.md, item 38.
 #   C-kat-remap and E-kat-sine to E-kat-mix were added by Katalyst knob expressions step 6 (2026-10-12,
-#   docs/tasks/in-progress/katalyst-knob-expressions.md): each E-kat chain moves a knob every block through its own
+#   docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md): each E-kat chain moves a knob every block through its own
 #   modulators, C-kat-remap evaluates a slot expression on a new map every block. The lines follow this file's rule
 #   (about 40 B above the highest healthy median of the check's method, and above a tail seen in the rounds of the FINAL
 #   tree; a tail read on an earlier engine is cited as such, not budgeted for, the lesson of step 6's review), from

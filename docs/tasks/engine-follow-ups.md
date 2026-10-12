@@ -1371,7 +1371,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 37. **The Ignitor's `perlin` and `berlin` move per SAMPLE** (numbered after the last item, added 2026-10-11): their
     `rate` is 0.003 noise units per sample (`PERLIN_STEP`), so the same number runs about 9 % faster at 48 kHz than at
     44.1 kHz (about 144 units per second against 132). Seconds are the house unit. The Katalyst's `Kat.perlin` and
-    `Kat.berlin` inherit the law for parity (maintainer, 2026-10-11, Q12 of `docs/tasks/in-progress/katalyst-knob-expressions.md`),
+    `Kat.berlin` inherit the law for parity (maintainer, 2026-10-11, Q12 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`),
     so both hosts change together: a rate per second, which moves the sound of every song that uses them at one of the
     two rates. S.
 38. **`E-duck` has a tail on V8** (numbered after the last item, added 2026-10-11): about 1 round in 7 reads 97.6 to
@@ -1389,7 +1389,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     remedy changes the noise classes in `common.math`, which the Ignitor's per-sample noise sources share (a holder for
     the argument and the result, or an `inline` fbm whose `noise` calls V8 then inlines, both to be measured on the
     Ignitor's own cases too), so it was not built in step 6. A fix re-sets the `E-kat-perlin` and `E-kat-all7` lines.
-    Source: `docs/tasks/in-progress/katalyst-knob-expressions.md`, step 6. S.
+    Source: `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, step 6. S.
 40. **A modulated orbit compressor writes its five knobs through five setters every block** (numbered after the last
     item, added 2026-10-12): `KatalystCompressorEffect.configure` calls `Compressor.thresholdDb`, `ratio`, `kneeDb`,
     `attackSeconds` and `releaseSeconds`, each a setter call that V8 does not inline, so each knob crosses as a heap

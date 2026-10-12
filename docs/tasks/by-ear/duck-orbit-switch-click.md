@@ -18,6 +18,9 @@ orbit-to-orbit switch brings no new sound into the mix to mask the drop. The oth
   while switching. Keeps the duck working through the switch. **The record's recommendation, if it is to be fixed.**
 - **(c) Glide the reduction to 0 dB, switch, glide back.** An audible dip, but no new machinery.
 
+Since Katalyst knob expressions step 5b (2026-10-12) a MODULATED `duck.orbit` (a `Kat` modulator on the duck's
+orbit knob) reaches the same switch, as a `katp` move does.
+
 ## Corners recorded next to it (pre-existing, not fixed, listed so nobody reads them as new)
 
 - A duck handover does not carry the arriving chain's `duck.depth`, so two chains with different depths on one

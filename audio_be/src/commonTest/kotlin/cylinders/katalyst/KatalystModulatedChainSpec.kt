@@ -34,7 +34,7 @@ import kotlin.math.round
 import kotlin.random.Random
 
 /**
- * Knob expressions step 5b (`docs/tasks/in-progress/katalyst-knob-expressions.md`): the per-block path of a modulated
+ * Knob expressions step 5b (`docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`): the per-block path of a modulated
  * Katalyst knob through a REAL chain. The hook (a modulated knob ticks at the top of `KatalystChain.process`, owner or
  * not), its reach (an orbit with no owner, the master, a `parallel` branch, the leaving chain of a swap through its
  * fade and its drain), the clock rules (an unset knob pauses, a resolve never advances) and the span (D2: a modulated

@@ -405,7 +405,7 @@ class KatalystGainEffectSpec : StringSpec({
     }
 
     "an expression over the gain slot moves over the same glide: katp(fader) on gain(fader * 0.5)" {
-        // Knob expressions step 4 (`docs/tasks/in-progress/katalyst-knob-expressions.md`): the expression is
+        // Knob expressions step 4 (`docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`): the expression is
         // evaluated at the resolve, and the stage glides to its value as it glides to a plain slot's.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(

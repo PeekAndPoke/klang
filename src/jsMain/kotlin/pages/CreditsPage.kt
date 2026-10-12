@@ -361,6 +361,13 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         reduction of William J. Cody and William Waite, *Software Manual for the Elementary Functions*
                         (Prentice-Hall, 1980); the coefficients were fitted for Klang, no third-party code
                         - **Perlin noise** (Ken Perlin) — organic drift and noise textures
+                        - **Berlin noise** (James Coyne and Jade Rowland, from Strudel's `berlin`): Perlin's drift with
+                        straight segments. Klang joins hashed random values with straight lines, its hash the 32-bit
+                        finalizer of Austin Appleby's MurmurHash3 (public domain); sprudel's `berlin` signal, the Ignitor's
+                        `berlin` and the Katalyst's `Kat.berlin`
+                        - **Fractal Brownian motion**, after Benoit B. Mandelbrot and John W. Van Ness's fractional
+                        Brownian motion (SIAM Review, 1968): the noises' `octaves` and `persistence`, the same noise
+                        layered at doubling speed and falling level
                         - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
                         - **Lookahead limiting** after **[Geraint Luff](https://signalsmith-audio.co.uk/writing/2022/limiter/)**
                         (Signalsmith Audio) — the master limiter's anticipating gain path: a moving minimum of the

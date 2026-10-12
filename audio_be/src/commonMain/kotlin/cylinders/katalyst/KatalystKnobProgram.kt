@@ -66,7 +66,7 @@ internal enum class KatalystKnobModulator {
 
 /**
  * The base seed of the perlin and berlin modulators of a Katalyst chain (Q12 of
- * `docs/tasks/in-progress/katalyst-knob-expressions.md`, fixed per position, maintainer 2026-10-12: "the n-th noise in
+ * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, fixed per position, maintainer 2026-10-12: "the n-th noise in
  * a chain gets seed + n, so two noise knobs move independently but every build sounds the same"). The noise op of
  * ordinal `n` ([KatalystNoiseOrdinals]) seeds a `Random(KATALYST_KNOB_NOISE_SEED + n)` of its own and builds from it
  * in the order the Ignitor's noise sources build from the stream they are handed: the noise first, then the start
@@ -115,7 +115,7 @@ internal class KatalystNoiseOrdinals {
 
 /**
  * A Katalyst knob EXPRESSION compiled once, when the chain is built, into flat arrays: the evaluator of decisions D4
- * (step 4) and D3 (step 5a) of `docs/tasks/in-progress/katalyst-knob-expressions.md`.
+ * (step 4) and D3 (step 5a) of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`.
  *
  * **The shape.** Every value of the expression lives in one [registers] array: the constants, one register per slot
  * leaf, and one register per instruction for its result. Instruction `i` runs the law of [ops]`[i]` over the registers

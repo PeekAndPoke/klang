@@ -33,7 +33,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
  *  - a [KatalystKnobDsl.Constant] is its number, and so is an expression without a slot leaf, folded here through
  *    the laws ([KatalystKnobProgram.isConstant]);
  *  - a [KatalystKnobDsl.Param] is its default and its name;
- *  - an expression with at least one slot leaf (step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md`,
+ *  - an expression with at least one slot leaf (step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`,
  *    D4) is a [KatalystKnobProgram], compiled here;
  *  - so is a tree with a modulator (`Kat.sine` and the rest, step 5, D3), never folded, compiled on the chain's
  *    sample rate and block size: [isModulated]. Its value moves per BLOCK through [tick], which the chain calls at

@@ -22,7 +22,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * The Katalyst modulator doors (step 5b of `docs/tasks/in-progress/katalyst-knob-expressions.md`, D3): `Kat.sine`,
+ * The Katalyst modulator doors (step 5b of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, D3): `Kat.sine`,
  * `Kat.saw`, `Kat.ramp`, `Kat.tri`, `Kat.square`, `Kat.perlin`, `Kat.berlin`, on the script door and the Kotlin door
  * (the same object, `KlangScriptKatalyst`), positional and named, against the [KatalystKnobDsl] node written out by
  * hand. The Ignitor's door shape, with the recorded differences: `freq` and the noises' `rate` required (Q10), the

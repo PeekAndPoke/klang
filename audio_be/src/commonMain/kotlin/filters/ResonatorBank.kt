@@ -29,7 +29,7 @@ import kotlin.math.roundToInt
  * rising.
  *
  * **The blend moves IN PLACE; only the table is the bank's identity** (knob expressions step 5c, decision Q8 (a) of
- * `docs/tasks/in-progress/katalyst-knob-expressions.md`). [install] makes the bank fresh on a table, its blend snapped;
+ * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`). [install] makes the bank fresh on a table, its blend snapped;
  * [glideBlend] moves the mix and the floor of a bank that sounds, and touches neither its bands nor their state, so a
  * moving `wet` or `floor` does not restart the resonance unless the mix lands at 0 (below). What glides is the PAIR
  * of coefficients, `dryGain` and `wetGain`, each a [KnobGlide] ramped per sample from the value the last block ended

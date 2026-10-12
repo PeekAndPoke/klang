@@ -1,7 +1,43 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **in progress, steps 1 to 4, 5a, 5b, 5c and 6 built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer,
-2026-10-11, Q12's seed refined 2026-10-12; the other Q at the coordinator's lean).
+Status: **done 2026-10-12** on the branch `katalyst-live-knobs`: steps 1 to 7 built. A Katalyst knob is an
+expression in the Katalyst's own wire type (`KatalystKnobDsl`: constants, `Kat.param`, the Ignitor's arithmetic and
+`range`, and the modulators `Kat.sine`, `saw`, `ramp`, `tri`, `square`, `perlin`, `berlin`), evaluated on a changed
+map or, with a modulator, once per processed block; `body` and `vowel` blend in place; measured, with five V8
+remedies. Reviews (rounds, critical, major; from the records and the step commits): steps 1 and 2 together 2, 0, 1;
+step 3 1, 0, 0; step 4 1, 0, 0; 5a 2, 0, 1; 5b 3, 0, 4; 5c 2, 0, 1; step 6 2, 0, 2; 13 rounds, 0 critical, 9 major,
+each step's last round clean. The open items went to their homes ("Open, handed on" below): two listening
+questions in `docs/tasks/by-ear/`, four follow-ups in `docs/tasks/katalyst-knob-followups.md`, the V8 items in the
+engine follow-ups. (Decided: D1 to D4, Q2,
+Q3, Q8 and Q12 by the maintainer, 2026-10-11, Q12's seed refined 2026-10-12; the other Q at the coordinator's lean.)
+
+## Open, handed on
+
+- **Cut against bleed on an owner change** (5b), a listening question:
+  `docs/tasks/by-ear/delay-reverb-owner-change-cut.md`.
+- **Engine follow-ups** (`docs/tasks/engine-follow-ups.md`): items 39 (the knob noises' `fbm` crossings on V8) and
+  40 (the modulated compressor's five setters), each with the budget lines a fix re-sets, and 41 (the residue of a
+  moving delay time, reverb size and phaser breakpoint, not located) were filed by step 6; item 37 is Q12's (perlin
+  and berlin per second; the Ignitor's and the Katalyst's noises change together). Item 36 (`E-arith`'s second V8
+  mode, in 5b) and `spluck-a`'s known tail (in 5c; items 4 and 7, "Known tails" in
+  `audio_benchmark/alloc-budgets.txt`) each turned one allocation check red, green on the second run. Items 34 and
+  35 come from the stage measurements, 38 from engine follow-up 2; none from this task.
+- **E1 (Q2), a `seed` knob (5a), a tape-style delay tap (Q9), `blend(wet)` with a `Kat.param` (Q14)**:
+  `docs/tasks/katalyst-knob-followups.md`, sections 1 to 4.
+- **The duck orbit switch click**: a modulated `duck.orbit` switches with no mechanism, as a `katp` one does:
+  `docs/tasks/by-ear/duck-orbit-switch-click.md` (the corner is recorded there).
+
+## Where to continue
+
+The task is closed; nothing of it waits half-built. The work is on the branch `katalyst-live-knobs`. To understand
+the knobs, read `audio/ref/katalyst.md` first ("Where a knob comes from", the stage table, and the lifecycle
+template's lessons of 5b and 5c), then the KDocs of `KatalystKnobDsl` (`audio_bridge`), `KatalystKnobProgram` and
+`KatalystKnob` (`audio_be/.../cylinders/katalyst/`) and `KatalystChain.process` (the hook). The doors are in
+`KlangScriptKatalyst.kt` and `KatalystBuilders.kt` (`klangscript-libs`), their shapes in
+`.claude/skills/dsl-design/door-shapes.md`, the song writer's view in
+`.claude/skills/klang-music-writing/ref/ignitor-reference.md`. The V8 numbers and remedies: step 6 below and
+`audio/ref/performance.md`. Next in this area: engine follow-ups 39 to 41, then whichever open item above a song asks
+for.
 
 ## Why
 
@@ -12,14 +48,15 @@ The maintainer, 2026-10-11, after the Katalyst arithmetic stages landed
 - "Ignitors as katalyst params sound interesting, but i would say we should instead create the equivalents
   Kat.sine() etc. instead of mixing the two dsls."
 
-Today a Katalyst knob is a number or a `Kat.param`, and nothing else listens:
+Before this task (2026-10-11) a Katalyst knob was a number or a `Kat.param`, and nothing else listened:
 
-- `Kat.param(...)` has no arithmetic of its own (`KatalystSlots.kt`, the `KatalystKnob` KDoc). An expression over a
-  slot can only be written with Ignitor nodes (`Ignitor.param("room", 5).mul(2)`; a BARE `Ignitor.param` is a type
-  error, an expression over one is accepted, `toKatalystKnob`), and anything that is neither a constant nor a slot
-  is probed and FOLDED to one number when the chain is built (`KatalystSlots.coerce`). `katp` never reaches it.
-- An Ignitor oscillator on a knob (`k.phaser(rate = Ignitor.sine(0.2))`) is accepted and goes through the same
-  probe: a signal is not block-constant, so `controlRateValueOrNull` answers null and the knob falls back to its
+- `Kat.param(...)` had no arithmetic of its own (`KatalystSlots.kt`, the `KatalystKnob` KDoc). An expression over a
+  slot could only be written with Ignitor nodes (`Ignitor.param("room", 5).mul(2)`; a BARE `Ignitor.param` was a type
+  error, an expression over one was accepted, `toKatalystKnob`), and anything that was neither a constant nor a slot
+  was probed and FOLDED to one number when the chain was built (`KatalystSlots.coerce`, retired). `katp` never
+  reached it.
+- An Ignitor oscillator on a knob (`k.phaser(rate = Ignitor.sine(0.2))`) was accepted and went through the same
+  probe: a signal is not block-constant, so `controlRateValueOrNull` answered null and the knob fell back to its
   default. Silent, never an error.
 
 The direction follows `docs/plans/future/signal-graph-engine.md` §6.10 (the Ignitor and the Katalyst stay two
@@ -153,7 +190,8 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
    `WireCodecRoundTripSpec` (a row per stage with both leaves), `KlangScriptKatalystDoorParitySpec` (the new D1 row),
    `LangSlotSetterSpec`, `KatalystSlotResolverSpec`, `KatalystEqEffectSpec`. Renders identical in raw doubles: the
    corpus (18 songs, Kokon at `dfa9cd64389e619f` before and after, the reference itself predates the `eb39b385`
-   Kokon edit) and the scaffolding fixture `src/jvmTest/kotlin/KatalystKnobMigrationFixtureSpec.kt` (classic chain
+   Kokon edit) and the scaffolding fixture `KatalystKnobMigrationFixtureSpec` in the root module's `jvmTest` (removed in
+   step 7: its job, proving that the migration rendered identically, was done; classic chain
    through `katp` `afce19df06d968f4`, through the bus doors `f64d42e5c1e288b1`, an authored chain with a `Kat.param`
    on every knob kind, each moved by `katp` through two values its default is not, `6a69ecdeb84e8574`, a master chain
    `de98222378e41b4d`; each pinned twice on the unchanged tree, the authored row in a scratch worktree at `eb39b385`
@@ -314,7 +352,9 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
      one-sample gain step under an attack moving 2 to 4 ms per block went 0.61 to 0.0144, a fixed 2 ms attack's 0.0148;
      a MODULATED delay time or reverb size crossing its gate fades the feed (`timeModulated`, `sizeModulated` at build;
      round 1 ran the fade as a sub-mode at the head of Draining, round 2 rebuilt it, below); every other switch-off
-     keeps the hard cut (coordinator, after a first version that faded every off moved the corpus); `Reverb.lowpass` is
+     keeps the hard cut (coordinator, after a first version that faded every off moved the corpus: `frozen piece
+     derSchmetterling_2026_09_16`, hash `0fc662a01aaecd03` to `07ee8c4618b22ca4`, peak 0.9144 to 0.9145, the whole move
+     the fade, 18 of 18 identical with only the fade's retargets removed); `Reverb.lowpass` is
      one primitive field. Guarded by `LimiterLookaheadSpec` (the gain step; the ceiling under an attack moving every
      block), `KatalystModulatedStagesSpec` (a NaN modulated wet and depth; the feed edge per stage both ways) and the
      unchanged "drains on schedule" rows (the hard cut). 19 mutations, 18 red (the green one guarded code round 2
@@ -405,12 +445,13 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
      1.4e-3 off on the sine-wet row); the mix reaching only the pair in service (the table-change row, block 7); no
      per-sample ramp (6); every span one block (the `katp` row); the body door dropping a wet, the vowel builder
      dropping a floor (the door row each). Each in one lock call, restored and compared.
-   - **Behaviour change, not yet accepted**: the corpus is 18 of 18 identical, but the step 3 scaffolding fixture's
+   - **Behaviour change**: the corpus is 18 of 18 identical, but the step 3 scaffolding fixture's
      authored row moves (`KatalystKnobMigrationFixtureSpec`, 6a69ecdeb84e8574 to 2949f0d641d984ec): its
      `katp("vw", "<0.2 0.5>")` moves the vowel's wet alone each cycle, which glides in place now where it installed a
      fresh bank; peak delta 0.0714 (-22.9 dBFS) at 4.015 s, first difference at 2.005 s, peak 0.6271 unchanged. With the
      mix back in the identity compare the row renders 6a69ecdeb84e8574 again, so the delta is the in-place blend alone
-     (its `mat` and `bf` move together, a table change, and render as before). The pin is left for the coordinator.
+     (its `mat` and `bf` move together, a table change, and render as before). The 5c commit re-pinned the row as the
+     intended change of Q8 (a); step 7 removed the fixture.
    - **For step 6's list**, the double crossings of a moving blend, per moving block per bank (two banks, four during a
      fade): `WetDryMix.dryCoeff`/`wetCoeff` (in and out) and two `KnobGlide.retarget` in `ResonatorBank.targetBlend`;
      the two `KnobGlide.value` reads in `process`. The ramp's start values travel in a `DoubleArray`.
@@ -580,11 +621,26 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
      `E-kat-mix` line 250 (above), `E-kat-perlin` 232, the probes that could not see a setter crossing replaced by
      round 2's R1 to R3 in the run record, four sentences corrected.
 7. Records, and the render fixture removed.
+   **7 built** (2026-10-12): the scaffolding fixture `KatalystKnobMigrationFixtureSpec` removed (its four rows had
+   proven the step 3 migration render-identical, and its authored row had pinned 5c's intended move). The records
+   checked against the code: `audio/ref/katalyst.md` ("A knob is a `KatalystKnobDsl`" in "Where a knob comes from"),
+   `audio/MEMORY.md` (a "Katalyst knobs" law, the one-block glide, one History line for steps 6 and 7),
+   `docs/retired-names.md` (the `KatalystParam` row quotes the error text as it reads since step 4),
+   `klangscript-libs/CLAUDE.md` (its file table names the modulators and the knob arithmetic);
+   `.claude/skills/dsl-design/door-shapes.md` and the music-writing reference (`ref/ignitor-reference.md`, "Kat
+   expressions" and "Kat modulators", an LFO example included) already matched the code. Credits: Berlin noise (James
+   Coyne and Jade Rowland, with the MurmurHash3 finalizer of its hash) and fractal Brownian motion (the noises'
+   octaves) added to `CREDITS.MD` and the in-app Credits page; Perlin noise was credited. This record archived from
+   `docs/tasks/in-progress/`, every link to it along (33 files, code KDocs and test comments included).
+   Tests, each through the lock: the root module JVM 60 (64 less the fixture's four rows), `audio_be` JVM 2773,
+   `audio_bridge` JVM 148, `klangscript-libs` JVM 902, `audio_benchmark` compiled (no JVM tests), the root module's JS
+   compiled for the Credits page; all green. No engine or DSL code changed in step 7: comments, records, the Credits
+   page's text and the fixture's removal.
 
 **Questions.** Decided by the maintainer (2026-10-11), each at the lean: Q2 E2 ("keep shared, slots only"), Q3
 processed blocks, Q8 (a) the in-place blend, Q12 inherit with one fixed seed (refined 2026-10-12: fixed per position,
 "the n-th noise in a chain gets seed + n, so two noise knobs move independently but every build sounds the same")
-and an Ignitor follow-up for the sample-rate dependence (to be filed in `docs/tasks/engine-follow-ups.md`). The rest
+and an Ignitor follow-up for the sample-rate dependence (filed as item 37 of `docs/tasks/engine-follow-ups.md`). The rest
 the coordinator takes at the lean, recorded here, and any of them can be reopened.
 - **Q1** `KatalystParam` retired, `Kat.param` returns `KatalystKnobDsl.Param`, `KatalystDsl.Slots.*` are the wire
   nodes; `katp` refuses an expression ("an expression is not a slot"). Lean: yes.

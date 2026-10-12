@@ -229,7 +229,7 @@ object AllocationCases {
 
     private const val GLIDE_GATE_SEC: Double = 30.0 * BLOCK_FRAMES / SAMPLE_RATE
 
-    // ── The knob expressions and the modulators (step 6 of docs/tasks/in-progress/katalyst-knob-expressions.md) ──
+    // ── The knob expressions and the modulators (step 6 of docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md) ──
     //
     // Every chain below moves at least one knob every block through the chain's hook (`KatalystChain.process`: each
     // modulated writer ticks its knobs, refills its holder and configures its stage). The rates and the ranges are not

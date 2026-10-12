@@ -499,7 +499,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   from about 190 to about 40 bytes per block. A probe that renders one stage alone does not reproduce this class:
   build the voice the songs build, then narrow it.
 - **A knob that moves every block makes its whole per-block path hot: measure a group of sites, and in both modes**
-  (2026-10-12, Katalyst knob expressions step 6, `docs/tasks/in-progress/katalyst-knob-expressions.md`; the runs:
+  (2026-10-12, Katalyst knob expressions step 6, `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`; the runs:
   `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). A modulated Katalyst knob runs the chain's hook every block
   (the knob's evaluation, the writer's refill, the stage's `configure`, `KnobGlide.retarget`), and every small
   double-taking call on it competes for one inlining budget. Fixed: `KnobGlide.retarget` a plain method (now `inline`),
@@ -560,7 +560,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   authored chain for the arithmetic (constant and gliding), the bus distort, the compressor and limiter, the eq, the
   gain, the duck, `parallel`, `bands`, the body and the vowel (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`), and the
   knobs that move every block through the chain's own modulators, the `E-kat-*` cases (knob expressions step 6,
-  `docs/tasks/in-progress/katalyst-knob-expressions.md`). Not
+  `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`). Not
   covered: an authored chain at the master position (`MasterBus`; every engine case runs its empty default). The JVM guards in `jvmTest` (`FirstBlockAllocationSpec`,
   `KatalystResonatorAllocationSpec`) stay where they are.
 - **What it can see.** On V8 the method's noise (about 25 B per block) is larger than one heap number (16 B on

@@ -65,7 +65,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * an expression, see [toEqSectionKnob]).
  *
  * ANY [IgnitorDsl] is a [KlangScriptTypeError]: the Katalyst has its own knob language (decision D1 of
- * `docs/tasks/in-progress/katalyst-knob-expressions.md`, `docs/plans/future/signal-graph-engine.md` §6.10), and an
+ * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, `docs/plans/future/signal-graph-engine.md` §6.10), and an
  * Ignitor node
  * means nothing on a bus knob (an oscillator has no bus value, a note frequency no bus note). Until 2026-10-12 such a
  * node was accepted and folded to one number when the chain was built; the type split removed that coercion.
@@ -95,7 +95,7 @@ fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
 
 /**
  * A Katalyst knob as the [IgnitorDsl] an EQ section carries: the residue of mixing the two DSLs that decision Q2 of
- * `docs/tasks/in-progress/katalyst-knob-expressions.md` keeps (maintainer, 2026-10-11, E2: "keep shared, slots only").
+ * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` keeps (maintainer, 2026-10-11, E2: "keep shared, slots only").
  * The `eq`
  * stage's sections are [IgnitorDsl.EqSection], the one section law shared with the voice EQ and with `bands`, so a
  * bus section's knob is an Ignitor leaf: a [KatalystKnobDsl.Constant] becomes an [IgnitorDsl.Constant] and a
@@ -810,11 +810,11 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
  * branch carries the dry as well (it adds its return on top), so `blend(w, b => b.reverb(1, 7))` is the dry plus `w`
  * of the room. [wet] is a plain number here, where the Ignitor's may be a slot or a signal (recorded asymmetry):
  * `1 - wet` needed arithmetic a Katalyst param did not have until step 4 of
- * `docs/tasks/in-progress/katalyst-knob-expressions.md`, and taking a `Kat.param` or a Kat expression here is its
- * follow-up Q14. A number that is not finite reads as 0. Any
+ * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, and taking a `Kat.param` or a Kat expression here is its
+ * follow-up Q14 (`docs/tasks/katalyst-knob-followups.md` section 4). A number that is not finite reads as 0. Any
  * Ignitor node
  * is refused, `Ignitor.constant(...)` included (it was accepted until step 3 of
- * `docs/tasks/in-progress/katalyst-knob-expressions.md`,
+ * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`,
  * 2026-10-12, when the Katalyst knobs stopped taking Ignitor nodes).
  *
  * @param wet the share of the branch, 0 to 1.
@@ -877,7 +877,7 @@ fun KatalystBuilder.bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBui
 
 // ── Knob expressions: the Ignitor's arithmetic on a Katalyst knob ─────────────────────────────────────────────────
 //
-// Step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md` (decision D4: the same words, laws and clamps as the
+// Step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` (decision D4: the same words, laws and clamps as the
 // Ignitor's arithmetic, plus `range`). Each door wraps the knob it is called on in one [KatalystKnobDsl] node; an
 // operand is converted by [toKatalystKnob], so it is a number (a [KatalystKnobDsl.Constant]), a `Kat.param` or another
 // expression, and an Ignitor node is the same script error as on a stage knob. The engine evaluates the expression
@@ -1098,7 +1098,7 @@ fun KatalystPhaserBuilder.floor(floor: IgnitorDslLike): KatalystPhaserBuilder =
 //
 // Handed to the `configure` lambda of the modulator doors on the Katalyst object (`Kat.sine(freq, configure)` and the
 // rest, `KlangScriptKatalyst`): the Ignitor's oscillator builders' shape with only the knobs a bus LFO keeps (Q11 of
-// `docs/tasks/in-progress/katalyst-knob-expressions.md`: `phase` on every periodic shape, `duty` on the square; no
+// `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: `phase` on every periodic shape, `duty` on the square; no
 // `analog`, no flank or reset knobs). Each knob takes a number, a `Kat.param` or a Kat expression.
 
 /** Builder for a [KatalystKnobDsl.Sine], handed to the `configure` lambda of `Kat.sine(...)`. Knob: `phase`. */

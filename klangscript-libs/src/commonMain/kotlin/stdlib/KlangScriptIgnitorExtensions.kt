@@ -38,7 +38,7 @@ typealias IgnitorDslLike = Any
  * it is the chain's knob by intent, its author drives it with `katp`, which writes the orbit's map and never reaches
  * the voice, so in an Ignitor tree the knob would sit at its default while the song moves it. The mirror of the Katalyst knobs' refusal of an Ignitor
  * node (`toKatalystKnob`; decision Q2 of `docs/plans/ignitor-katalyst-naming.md`, D1 of
- * `docs/tasks/in-progress/katalyst-knob-expressions.md`).
+ * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`).
  */
 fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
     is IgnitorDsl -> this

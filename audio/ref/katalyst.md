@@ -30,6 +30,16 @@ holds the full text, this file names it and gives the short form. How each law w
   settings it last applied. Every chain, the born-with one included, reads
   its knobs from there; the voice has no bus fields any more. Voices that need independent bus effects go on
   different orbits. The chain re-resolves only when the owner's map instance changes (`KatalystChain.resolvedFrom`).
+- **A knob is a `KatalystKnobDsl`** (`audio_bridge/.../KatalystKnobDsl.kt`, the knob expressions task, 2026-10-12): a
+  `Constant`, a `Param` (`Kat.param`, `Kat.slot.*`), a modulator (`Kat.sine`, `saw`, `ramp`, `tri`, `square`,
+  `perlin`, `berlin`), or the Ignitor's arithmetic and `range` over any of these; never an Ignitor node. `KatalystKnob` compiles each
+  knob once at chain build (`KatalystKnobProgram`: the Ignitor's laws on a scalar, constant subtrees folded). A knob
+  over slots only is evaluated when the owner's map changes, never per block. A knob that holds a modulator is ticked
+  once per processed block at the top of `KatalystChain.process`, so an ownerless orbit, the master, a leaving chain
+  and every `parallel` branch modulate; its clocks run over the blocks the chain processes (paused while the orbit
+  sleeps, not reset), and the n-th noise of a chain is seeded by its position. A slot leaf that reads a non-finite
+  value unsets the whole knob, and an unset knob's clocks pause. The build-time knobs (`lookahead`, `distort`'s
+  `shape` and `oversample`) are numbers, and an `eq` section takes a number or a `Kat.param` only (decision Q2, E2).
 - **A non-finite knob is the declared OFF state** (`KatalystKnob.written` is false for it). This includes a
   non-finite `wet`, which turns the stage off for the whole orbit: not a pure improvement over the old field path,
   accepted so that "non-finite is unset" holds on every knob. Guard: `KatalystSlotResolverSpec`.
@@ -62,7 +72,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 `KNOB_GLIDE_SECONDS` (0.05) in whole 128-frame blocks, lands bit-exactly, restarts from where the knob stands on a
 new target, and ignores a non-finite target. A knob whose expression holds a modulator (`Kat.sine` and the rest) glides
 over ONE block instead, chosen per knob when the chain is built (knob expressions step 5b, D2; the per-stage rules are
-in `docs/tasks/in-progress/katalyst-knob-expressions.md`, "5b built"). Two traps for the next knob:
+in `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, "5b built"). Two traps for the next knob:
 
 - The owner re-applies its settings EVERY block, so a retarget to the same value must be free; a helper that
   restarts on every call never lands.

@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_bridge
 
 /**
  * The value of one Katalyst stage knob: the Katalyst's own small knob language, on the wire next to [KatalystStageDsl]
- * (decision D1 of `docs/tasks/in-progress/katalyst-knob-expressions.md`, maintainer 2026-10-11: "yes separate wire
+ * (decision D1 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, maintainer 2026-10-11: "yes separate wire
  * type").
  *
  * The Ignitor and the Katalyst stay two DSLs, on the wire too (`docs/plans/future/signal-graph-engine.md` §6.10): a
