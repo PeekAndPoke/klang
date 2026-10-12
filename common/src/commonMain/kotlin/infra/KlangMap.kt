@@ -12,7 +12,7 @@ package io.peekandpoke.klang.common.infra
  * **Why it exists.** On Kotlin/JS every `HashMap`/`HashSet` operation with a non-null key goes through the stdlib's
  * generic `hashCode(dynamic)`, whose `else -> throw` arm compiles to a closure that captures the `typeof` result, so
  * V8 allocates a function context on EVERY call: 40 bytes per lookup on node (measured, engine follow-up 2,
- * `docs/tasks/engine-follow-ups.md` item 2). A JS `Map` hashes a string key without allocating, so a lookup here
+ * `docs/tasks/in-progress/engine-follow-ups.md` item 2). A JS `Map` hashes a string key without allocating, so a lookup here
  * costs nothing. The JVM caches a string's hash and allocates nothing either way; its side is a thin wrapper so that
  * both platforms share one type. The rule is in `audio/ref/performance.md`.
  *

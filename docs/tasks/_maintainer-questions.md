@@ -6,7 +6,7 @@ task file it belongs to, and the question leaves this list.
 
 The questions are numbered, so an answer can be as short as "Q3: yes, Q7: keep".
 
-Branch: `pitch-pipeline` (from `main` at `662aa8db`, v0.6.0; `katalyst-distort` merged in as `aab25677`; v0.6.1). The open engine items that are not questions: [`engine-follow-ups.md`](engine-follow-ups.md).
+Branch: `pitch-pipeline` (from `main` at `662aa8db`, v0.6.0; `katalyst-distort` merged in as `aab25677`; v0.6.1). The open engine items that are not questions: [`engine-follow-ups.md`](in-progress/engine-follow-ups.md).
 
 ---
 

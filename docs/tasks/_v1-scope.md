@@ -57,7 +57,7 @@ port to Zig.
    allocation pass, [`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md) (audit
    2026-10-07). Its bug, an empty `variants()` crashing the audio thread, was fixed first (2026-10-07: it is silence
    now). What is still open (the V8 residues, the audit's later steps and decisions):
-   [`engine-follow-ups.md`](engine-follow-ups.md), behaviour-neutral items not V1 by the sorting rule, the shape
+   [`engine-follow-ups.md`](in-progress/engine-follow-ups.md), behaviour-neutral items not V1 by the sorting rule, the shape
    and sound items each a question for the maintainer first.
 4. Takeover / voice stealing and the cut-group semantics: [`future/cut-group-semantics.md`](future/cut-group-semantics.md)
    decided first, then [`voice-takeover.md`](voice-takeover.md) Phase 1.

@@ -66,7 +66,7 @@ import kotlin.random.Random
 
 /**
  * The fixed case list of the allocation check (`KLANG_BENCH_MODE=alloc`, `console/full-check.sh`), the same on
- * both platforms. Each voice case and the first engine cases guard one fix of `docs/tasks/engine-follow-ups.md`
+ * both platforms. Each voice case and the first engine cases guard one fix of `docs/tasks/in-progress/engine-follow-ups.md`
  * against a regression that brings a heap number per sample or per knob read back; the cases with an authored
  * Katalyst chain guard its stages (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`). The
  * budgets and what each one guards are in `audio_benchmark/alloc-budgets.txt`.

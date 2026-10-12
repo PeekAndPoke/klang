@@ -140,7 +140,7 @@ class DriftLanes(capacity: Int, sharedLane: Boolean) {
      * further on, into a call V8 does not inline or a field: hence the adopters' `* 1.0`). No test can pin the boxes
      * (the numbers are the same either way): this KDoc is the guard. Do not turn the ramp back into a double-returning
      * accessor or into plain fields. A rare tail on the superpluck's drift path (about 1 process in 30, not located) is
-     * recorded in `docs/tasks/engine-follow-ups.md`, item 7.
+     * recorded in `docs/tasks/in-progress/engine-follow-ups.md`, item 7.
      */
     @PublishedApi
     internal val ramp: DoubleArray = doubleArrayOf(1.0, 1.0)

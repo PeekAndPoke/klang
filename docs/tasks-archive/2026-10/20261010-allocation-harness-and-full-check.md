@@ -115,13 +115,13 @@ are the records' names, so a scoreboard row can be read against the reports.
 | `E-C-rel05-n16` | engine: `classic()` saw, 0.5 s release, a new note every 16 blocks | 10b and item 8 across about 12 voices; item 11 (the build) | 1,045 B | 26,260 B | 377 B | 1,400 / 450 |
 
 Added 2026-10-11 (engine follow-up 7): `spluck-a`, the fifteenth case, and `super7a`'s guard corrected; its numbers are
-that change's (`docs/tasks/engine-follow-ups.md`, item 7). The other rows are as designed; the budgets in force are
+that change's (`docs/tasks/in-progress/engine-follow-ups.md`, item 7). The other rows are as designed; the budgets in force are
 `audio_benchmark/alloc-budgets.txt`.
 Added 2026-10-11 (engine follow-up 1): `E-delay` and `E-stages`, the sixteenth and seventeenth cases; their numbers are
-that change's harness medians (`docs/tasks/engine-follow-ups.md`, item 1); `E-stages` as re-set in its review round 1.
+that change's harness medians (`docs/tasks/in-progress/engine-follow-ups.md`, item 1); `E-stages` as re-set in its review round 1.
 Added 2026-10-11 (engine follow-up 2, step 1): `C-remap`, the eighteenth case on its branch, with an `expect` helper of its own,
 `receivedByEngine` (`audio_benchmark/.../engine_inbox.kt`: the generated wire codec on JS, the voice as it is on the
-JVM); its numbers are that change's rounds, "before" the decoder reverted (`docs/tasks/engine-follow-ups.md`, item 2).
+JVM); its numbers are that change's rounds, "before" the decoder reverted (`docs/tasks/in-progress/engine-follow-ups.md`, item 2).
 Its JVM line is 36, not 6: the case reads 24 B, the reverb writer's documented `Double?` lowpass per new map. Adding
 it moved `E-C-rel05-n16` on the JVM from 409 to 414 B (5 of 5 runs; 409 with only `C-remap` taken out, review round 1):
 the shared process's mixed profile, under its 450.

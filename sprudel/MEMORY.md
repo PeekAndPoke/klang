@@ -224,7 +224,7 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   with three bus doors went from about 17.1 to 12.4 KB and 7.8 to 4.3 us, with many doors 45 to 32 KB and 24.5 to
   12.5 us (the wire encode included); the JVM +0 to +168 B per event (up to about 2.4 percent on small events), its
   time within HEAD's spread
-  (`docs/tasks/engine-follow-ups.md` item 2, step 2).
+  (`docs/tasks/in-progress/engine-follow-ups.md` item 2, step 2).
 - 2026-10-11: a `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s two slot maps are `KlangMap`s, built
   by `toVoiceData` from the bags, and `ParamBag.toMap()` returns a plain copy; events identical on V8 and the JVM
-  (`docs/tasks/engine-follow-ups.md` item 2, step 5).
+  (`docs/tasks/in-progress/engine-follow-ups.md` item 2, step 5).

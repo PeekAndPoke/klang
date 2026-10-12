@@ -305,7 +305,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   and the resonator's split remedy on the delay (worse). After the pass, at engine level, the production bundle read (pinned, medians) delay 82, reverb 22, phaser 144
   (192 with a floor of 0.5), all three 197 bytes per block (HEAD 277). **After engine follow-up 1 (2026-10-11) every box
   located in the stages' block processing is gone** (an off phaser's call into `Phaser.process`, about one heap number
-  per block in single-case processes, is located, not removed) (`docs/tasks/engine-follow-ups.md`, item 1): the doubles that crossed were
+  per block in single-case processes, is located, not removed) (`docs/tasks/in-progress/engine-follow-ups.md`, item 1): the doubles that crossed were
   `KnobGlide.advance`'s result (now Kotlin `inline`), the delay's and the reverb's tail step (`TailCeiling.observe`,
   `peakOf` and the units' window and laps getters; now `DelayLine.observeTail` and `Reverb.observeTail`, one call that
   takes no double, with the helpers `inline`), the delay loops' per-block arguments (`DelayLine.blockArgs`, a
@@ -455,7 +455,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   boxed. Measured on the production bundle (HEAD / inline / HEAD again, medians of
   3, unpinned): classic saw 77 / 21 / 82 bytes per block, unison stack 98 / 0 / 97, the dozen releasing voices
   1,846 / 1,062 / 1,844, bit for bit the same sound, at 0.96 to 1.01 of HEAD's time; pinned alike (the record:
-  `docs/tasks/engine-follow-ups.md`, items 8 and 12). No test can pin it: the KDoc at the helper is the guard.
+  `docs/tasks/in-progress/engine-follow-ups.md`, items 8 and 12). No test can pin it: the KDoc at the helper is the guard.
   **How to check:** the sampling heap profiler puts the box in the helper or in its callee; `--trace-turbo-inlining`
   then shows the callee as a candidate the caller never inlines (`blockStartValue` from `AdsrIgnitor`'s `generate`,
   five times on HEAD), and after the change the small callees inlined into the caller instead (`isBlockConstant` and

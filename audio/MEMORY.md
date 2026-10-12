@@ -245,7 +245,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   delay loops, `DelayLine.blockArgs`; `KnobGlide.advance`, `TailCeiling.observe` and `PhaserCore.alphaAt` Kotlin
   `inline`), and the phaser stage skips an unchanged config (`KatalystPhaserEffect.applied`, the EQ's pattern); the
   delay's and the reverb's per-block `configure` can still box in a cold compile, and an off phaser's call into
-  `Phaser.process` is located, not removed: `docs/tasks/engine-follow-ups.md`
+  `Phaser.process` is located, not removed: `docs/tasks/in-progress/engine-follow-ups.md`
   items 1 and 32, `audio/ref/performance.md`.
 - **A map the engine reads by key on Kotlin/JS is a `KlangMap`** (`common/infra/KlangMap.kt`, engine follow-up 2):
   every Kotlin/JS `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte function context on V8 inside
@@ -277,7 +277,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   work and the fold does not fire (`survivesUnityFold`). The Karplus family's raw `feedback` is authored character.
 - **The active list's order still reaches the sound** through one path: unison phase-pool takes are drawn on a
   voice's first rendered block, so a change to the removal order re-deals phases (open:
-  `docs/tasks/engine-follow-ups.md`, item 14). Ownership no longer depends on it (newest onset wins).
+  `docs/tasks/in-progress/engine-follow-ups.md`, item 14). Ownership no longer depends on it (newest onset wins).
 - **Do not remove the past-cutoff in `VoiceScheduler.promoteScheduled`**: it stops `ReplaceVoices` from
   re-promoting voices that already played. `replaceVoices` dedups against active voices
   (`ScheduledVoice.isDuplicate`); the frontend's resync grace window is 0.2 s (`KlangPatternScheduler`).
@@ -327,7 +327,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 - **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
   `duck-orbit-switch-click.md`, and the owed rounds listed there.
-- **Engine pass 1 follow-ups**: `docs/tasks/engine-follow-ups.md` (the V8 residues, the phase-pool order, the
+- **Engine pass 1 follow-ups**: `docs/tasks/in-progress/engine-follow-ups.md` (the V8 residues, the phase-pool order, the
   audit's later steps and open decisions).
 - **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
   §4, the cut-group fade, done by lifecycle step 4), `docs/tasks/svf-coefficient-cache-never-engages.md`,
@@ -362,24 +362,28 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-12 Engine follow-up 2, step 4, item 2 DONE: the allocation case `S-doors` guards sprudel's event path
+  (query, `toVoiceData`, wire encode), a case that makes no sound checks its outputs instead of a peak; V8 36,500,
+  JVM 15,764. The follow-ups file moved to `docs/tasks/in-progress/` (paused for the token budget):
+  `docs/tasks/in-progress/engine-follow-ups.md` item 2
 - 2026-10-11 Engine follow-up 2, step 5: `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s slot maps and
   the dispatcher's `engines` are `KlangMap`s, the codec generator refuses a stdlib `Map` field; the wire bytes, the
   schema hash and the engine bit for bit unchanged, corpus identical; `E-C-n1` re-set to 13,068, `E-duck` to 152
-  (its V8 tail, item 38): `docs/tasks/engine-follow-ups.md` item 2
+  (its V8 tail, item 38): `docs/tasks/in-progress/engine-follow-ups.md` item 2
 - 2026-10-11 Engine follow-up 2, step 3: the per-note lookups: the sound registry on `KlangMap`s, its name lowercased
   only when a character could change, `engineFor` one lookup; a synth note about 450 B lighter on V8, bit for bit,
-  corpus identical; the alloc case `E-C-n1` (V8 13,100, JVM 6,628): `docs/tasks/engine-follow-ups.md` item 2
+  corpus identical; the alloc case `E-C-n1` (V8 13,100, JVM 6,628): `docs/tasks/in-progress/engine-follow-ups.md` item 2
 - 2026-10-11 Engine follow-up 2, step 2: sprudel's `ParamBag` on a `KlangMap`; `KlangMap.forEachEntry` and a
   `capacityHint`, the JS copy and merge through the JS `Map`'s own walk, the wire encoder walks a `KlangMap` with it;
-  the engine bit for bit, corpus identical: `docs/tasks/engine-follow-ups.md` item 2
+  the engine bit for bit, corpus identical: `docs/tasks/in-progress/engine-follow-ups.md` item 2
 - 2026-10-11 Engine follow-up 2, step 1: a new param map cost about 1,100 B on V8, 27 `HashMap` lookups at 40 B each
   inside the Kotlin/JS stdlib's `hashCode`; the new multiplatform `KlangMap` (`common/infra`, a JS `Map` on JS, a
   `LinkedHashMap` on the JVM) is what the worklet's decoder, the warm-up and the sample-envelope merge make, no wire or
   signature change; a new map now costs about 16 B, bit for bit, corpus identical; the alloc case `C-remap` (V8 192,
-  JVM 36); sprudel's `ParamBag` is step 2: `docs/tasks/engine-follow-ups.md` item 2
+  JVM 36); sprudel's `ParamBag` is step 2: `docs/tasks/in-progress/engine-follow-ups.md` item 2
 - 2026-10-11 Engine follow-up 33: `parallel`'s per-branch copy and the Katalyst EQ's scalar copies are `copyRangeInto`
   (no `subarray` view per call on V8); `E-parallel` about 600 to about 220 B per block, `E-bands` about 820 to about
-  250, their V8 lines 268 and 320: `docs/tasks/engine-follow-ups.md` item 33
+  250, their V8 lines 268 and 320: `docs/tasks/in-progress/engine-follow-ups.md` item 33
 - 2026-10-11 Katalyst stage measurements: ten alloc cases run an authored Katalyst chain (every stage family; the
   arithmetic constant and gliding), timing rows for the arithmetic stages; on V8 the bus distort's oversampled path and
   `parallel`'s per-branch `copyInto` allocate per block (budgeted as they are, open):
@@ -389,30 +393,30 @@ One line per step, newest first. A link to the archived task record where one ex
   `alphaAt`, the depth clamp, the constant feedback rewrite) and the phaser's `configure` skips an unchanged config
   (review round 1); in unpinned mixed processes every stage case now reads what the engine without a stage reads,
   bit for bit, corpus identical; the delay's and the reverb's `configure` is item 32; two alloc cases, `E-delay`
-  (V8 112) and `E-stages` (V8 96): `docs/tasks/engine-follow-ups.md` items 1 and 32
+  (V8 112) and `E-stages` (V8 96): `docs/tasks/in-progress/engine-follow-ups.md` items 1 and 32
 - 2026-10-11 Engine follow-up 5: the PWM loop boxed its phase per sample on the development bundle only (about 2 KB per
   block, mixed profile; the production bundle never), from its phase seed, not `setPulseShape`. The `* 1.0` seed rule
   now covers the field seeds of every oscillator loop (the wave loops, the stacks, the sample, the Karplus string),
-  bit for bit, corpus identical: `docs/tasks/engine-follow-ups.md` item 5
+  bit for bit, corpus identical: `docs/tasks/in-progress/engine-follow-ups.md` item 5
 - 2026-10-11 Engine follow-up 7: the drift ramp's `DriftLanes.startOf`/`endOf` returned doubles through a `blendOf`
   that the superpluck's `generate` never inlined on V8 (2 heap numbers per string per block); the unison stacks and
   the partial bank inline it and did not box. `advanceLane` now leaves the ramp in a `DoubleArray(2)` holder read
   through `inline` `blockStart`/`blockEnd` (two double fields only moved the boxes). Superpluck with drift from 288
   to 688 B per block to 32 to 48 (a rare tail, about 1 process in 30, not located), bit for bit, corpus identical; a
   new alloc case `spluck-a` guards it (V8 96, JVM 6):
-  `docs/tasks/engine-follow-ups.md` item 7
+  `docs/tasks/in-progress/engine-follow-ups.md` item 7
 - 2026-10-11 Engine follow-up 29: in a full `classic()` voice the SVF node's one shared `generate` ran out of V8's
   inlining budget, and its per-block setup boxed (about 8 heap numbers per block on the lowpass, 4 on the highpass,
   one per filter drift lane); the setup moved into methods of their own reading a holder, `SvfCoeffSweep` takes its
   cutoffs and q as fields, the SVF clamps' `coerceIn` is written out, and the filter drift is a step that returns
   nothing (`FilterHumanization.stepDrift`) plus a field the node reads. `C-full` about 190 to 36 to 52 B per block,
   bit for bit, corpus identical, its V8 budget re-set to 112; what is left is item 31:
-  `docs/tasks/engine-follow-ups.md` items 29 and 31
+  `docs/tasks/in-progress/engine-follow-ups.md` items 29 and 31
 - 2026-10-11 The Ignitor's arithmetic as Katalyst stages, the same per-sample laws, no optimizer (maintainer): [record](../docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md)
 - 2026-10-10 Engine follow-up 6: `WaveIgnitor` hands its `dt` to its loop methods (past V8's inlining limit) in its
   `WaveVoiceState.dt` holder, no longer as an argument; it boxed one heap number per block per wave oscillator on V8
   (about 16 B, now about 0), bit for bit, corpus identical; four V8 alloc budgets re-set with it:
-  `docs/tasks/engine-follow-ups.md` item 6
+  `docs/tasks/in-progress/engine-follow-ups.md` item 6
 - 2026-10-10 The bus `distort` oversamples at 2x by default (maintainer; the voice's stays at 0): step 5 of
   `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`
 - 2026-10-10 The oversampler is a polyphase IIR half-band (flat to 20 kHz, about 100 dB of rejection, 3.07 samples at
@@ -421,18 +425,18 @@ One line per step, newest first. A link to the archived task record where one ex
   megamorphic site that boxed every knob read on V8, 60 to 100 B per classic voice block), and the scalar is the
   primitive `Ignitor.controlRateValue`, read only when `isBlockConstant` (the nullable view is the extension
   `controlRateValueOrNull`; the "true flag, null value" breach path is dropped, maintainer); bit for bit, corpus
-  identical: `docs/tasks/engine-follow-ups.md` items 8 and 12
+  identical: `docs/tasks/in-progress/engine-follow-ups.md` items 8 and 12
 - 2026-10-10 Engine follow-ups 10a and 10b: `adsrCurveShape` is a statement `when`; its expression form boxed
   every sample of a moving envelope on V8 (the chain `adsr`, `classic()`'s envelope, the pitch and FM envelopes,
-  about 2.1 KB per block each, now about 0), bit for bit, corpus identical: `docs/tasks/engine-follow-ups.md` items
+  about 2.1 KB per block each, now about 0), bit for bit, corpus identical: `docs/tasks/in-progress/engine-follow-ups.md` items
   10a and 10b
 - 2026-10-10 Engine follow-up 3: no noise box reproduces; the house limiter's per-sample `lookaheadStep`, never
   inlined by V8, boxed about 2 KB per block whenever anything sounded and 4 KB from its first reduction on (the
   likely cause of the old figure, unproven), now about 0; it is `inline`, bit for bit, corpus identical:
-  `docs/tasks/engine-follow-ups.md` item 3
+  `docs/tasks/in-progress/engine-follow-ups.md` item 3
 - 2026-10-10 Engine follow-up 9: `DistortionCore` dispatches its shape once per block to one loop per shape; the
   per-sample `when` boxed every shaped sample on V8 (2 to 33 KB per block, now about 0), bit for bit, corpus
-  identical: `docs/tasks/engine-follow-ups.md` item 9
+  identical: `docs/tasks/in-progress/engine-follow-ups.md` item 9
 - 2026-10-10 The sine's explicit partials, `partial(ratio, gain, phase)` (a fourth bank, wire `Sine.partials`, cap
   256, both doors), corpus identical: `docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`
 - 2026-10-10 Pitch pipeline 7c: the vibrato's `range(from, to)` and `phase` (node fields, both doors, `classic()`
@@ -485,7 +489,7 @@ One line per step, newest first. A link to the archived task record where one ex
   regrouped, bare instruments, D6): `docs/tasks/pitch-pipeline-into-the-tree.md` step 1
 - 2026-10-09 v0.6.0: the engine tidy-up is done (steps 1 to 13: the twins written once, `FilterDef` retired, a plain
   number at every constant door; the V8 allocation pass), bit-identical on the corpus; the open items:
-  `docs/tasks/engine-follow-ups.md`; the record: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`
+  `docs/tasks/in-progress/engine-follow-ups.md`; the record: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`
 - 2026-10-09 The `classic()` slot renames: the envelope words and `declick`, `crush.bits`, `coarse.factor`, the
   pluck's `feedback`, brown noise's `leak`, on every door, node, wire field and runtime factory, bit-identical:
   `docs/tasks-archive/2026-10/20261009-classic-slot-names-check.md`

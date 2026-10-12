@@ -280,7 +280,7 @@ its release and its own output has stayed under the audibility floor for the cul
   its scheduled `endFrame`, because the list order decided who took an orbit next (measured 2026-09-15 on Der
   Schmetterling: -32 dBFS). Ownership now goes by onset (the newest `Sounding` voice), and every removal keeps the
   list's order, so nothing needs the zombie. One order effect remains, the unison phase-pool take on a voice's
-  first block (open: `docs/tasks/engine-follow-ups.md`, item 14).
+  first block (open: `docs/tasks/in-progress/engine-follow-ups.md`, item 14).
 - **Never in the gate, and never before the voice has sounded.** The held part of a note may be
   silent on purpose (a slow attack, a silent lead-in). Only the release, which has been told to
   stop, is culled, and only once at least one block has been audible (`Voice.heard`): a sample

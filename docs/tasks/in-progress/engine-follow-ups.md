@@ -1,7 +1,15 @@
 # Engine follow-ups after the tidy-up
 
+**Paused 2026-10-12 (maintainer: weekly token budget), on a stable point.** Item 2 is DONE (KlangMap, released in
+v0.6.5; step 4 on branch `sprudel-alloc-case`, not merged yet). Where to continue, open V8 items first: 31 (what item
+29 left on a full `classic()` voice), 32 (the delay's and reverb's per-block `configure`), 34 (the bus distort's
+oversampled path), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
+and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+`docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
+[`_maintainer-questions.md`](../_maintainer-questions.md).
+
 Status: **open, collected 2026-10-09** when the engine tidy-up was archived
-([`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md), "the record" below; v0.6.0). Each
+([`20261009-engine-tidy-up.md`](../../tasks-archive/2026-10/20261009-engine-tidy-up.md), "the record" below; v0.6.0). Each
 item was checked against the later sections of the record and against the code at `662aa8db`; only what is still open
 is listed. Nothing here changes a surface a tutorial teaches, except where an item says so. A behaviour-neutral item is
 proven the usual way: bit-identity on the 18-song corpus and Kokon, and for an allocation item a measurement on the
@@ -1341,7 +1349,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 16. **The weak pluck `ignitorParam` rows**: `IgnitorDefaultsTest`'s "pluck responds to ignitorParam" rows for
     `brightness`, `pickPosition` and `stiffness` render both sides from one shared, advancing `testRandom`, so they
     differ even when the slot is not read. Render each side from the same fresh seed, as the `feedback` and `leak` rows
-    already do. Source: [`20261009-classic-slot-names-check.md`](../tasks-archive/2026-10/20261009-classic-slot-names-check.md),
+    already do. Source: [`20261009-classic-slot-names-check.md`](../../tasks-archive/2026-10/20261009-classic-slot-names-check.md),
     step 2b. S.
 17. **`DelayLineMigrationSpec`'s "the timeout is the assertion" row may not be able to fail**: a kotest `timeout`
     cannot interrupt a busy loop on the JVM, so a mutant that spins hangs the suite instead of going red. Not checked
@@ -1350,7 +1358,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 ## 5. Small leftovers
 
 18. **`VoiceFactory.buildVoice` takes `cut = data.cut` beside `data`** at both call sites, a redundancy. Source:
-    [`code-style-named-args-pass.md`](code-style-named-args-pass.md), "Declarations". S.
+    [`code-style-named-args-pass.md`](../code-style-named-args-pass.md), "Declarations". S.
 19. **`VcaOffTeardownSpec` keeps its file name** after its constant became `TEARDOWN_FADE_SECONDS`. Source: the record,
     step 5, "Left". S.
 20. **Test-only DSP entry points from the per-voice era** (audit A2.9): `Compressor.process(buffer, offset, length)`,
@@ -1393,17 +1401,17 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 ## 6. The audit's later steps and its open decisions
 
 The tidy-up ran the audit's order (section D of
-[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
+[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
 and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound changes; each needs the maintainer.
 Each was checked against the code: none is done (item 21's package dissolve aside).
 
 21. **Step 15, planned work in its own order:** after the pitch pipeline
-    ([`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` (done
+    ([`pitch-pipeline-into-the-tree.md`](../pitch-pipeline-into-the-tree.md)), dissolve `voices/strip/` (done
     in its step 5, 2026-10-10: the package is `voices/`) and fold the contexts (B3.1, B3.2; `SendRenderer` loses the "send" word with it, A2.5); then
-    [`future/one-chain-host.md`](future/one-chain-host.md), extended by the two tail polls of one law (A2.10) and the
+    [`future/one-chain-host.md`](../future/one-chain-host.md), extended by the two tail polls of one law (A2.10) and the
     host plumbing's package move (B3.8).
 22. **Step 16, the duck's "attack" renamed** to what it is, a release (A2.7; `Ducking.kt` still says "named
-    externally as attack for Strudel compat"): [`future/ducking-unfinished.md`](future/ducking-unfinished.md) item 1. A
+    externally as attack for Strudel compat"): [`future/ducking-unfinished.md`](../future/ducking-unfinished.md) item 1. A
     door rename. S to M.
 23. **Step 17, one word for the vowel stage** (B3.6): `LowPassHighPassFilters.createFormant` still says formant. S.
 24. **Step 18, the wire and the words:**
@@ -1415,10 +1423,10 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 25. **Step 19, sound, optional:** the per-sample `exp(-k / tau)` in `TailRelease` (B4.19), and one silence floor for
     the master's tail poll (1e-4 against 1e-5 everywhere else, decision D9). S each.
 26. **Step 20, the Katalyst by-ear items**, each with a home: A1.1
-    ([`future/delay-ceiling-edges.md`](future/delay-ceiling-edges.md)), A1.2
-    ([`by-ear/duck-orbit-switch-click.md`](by-ear/duck-orbit-switch-click.md)), A1.3
-    ([`by-ear/chain-swap-request-during-drain.md`](by-ear/chain-swap-request-during-drain.md)), A1.9
-    ([`future/transition-times.md`](future/transition-times.md) §4).
+    ([`future/delay-ceiling-edges.md`](../future/delay-ceiling-edges.md)), A1.2
+    ([`by-ear/duck-orbit-switch-click.md`](../by-ear/duck-orbit-switch-click.md)), A1.3
+    ([`by-ear/chain-swap-request-during-drain.md`](../by-ear/chain-swap-request-during-drain.md)), A1.9
+    ([`future/transition-times.md`](../future/transition-times.md) §4).
 27. **The audit's decisions not taken yet** (section E): D2 (`MasterStage` against `MasterBus`, two "masters"), D4
     (one block driver or two: offline renders never run the dispatcher), D6 and D9 (above), D8 (the delay and reverb
     lifecycles: one core or two readable twins), D11 (`SampleStore` grows for the life of the backend), C4.1 and C4.2
@@ -1427,12 +1435,12 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 
 ## 7. Questions with the maintainer
 
-Open, in [`_maintainer-questions.md`](_maintainer-questions.md), not repeated here: Q19 (the engine disposal order),
+Open, in [`_maintainer-questions.md`](../_maintainer-questions.md), not repeated here: Q19 (the engine disposal order),
 Q24 (the third Kotlin spelling of the Ignitor doors) and Q28 (solo protects the SOLOED voice, the refinement of Q14).
 
 Decided 2026-10-09 and done in the batch of small items between pitch pipeline steps 3b and 4: Q14 (a soloed release
 tail beside another solo stays at full level while the voice lives:
-[`20261009-solo-protects-whole-voice.md`](../tasks-archive/2026-10/20261009-solo-protects-whole-voice.md)), Q16
+[`20261009-solo-protects-whole-voice.md`](../../tasks-archive/2026-10/20261009-solo-protects-whole-voice.md)), Q16
 (the PolyBLEP texts; `CREDITS.MD` and the Credits page keep it), Q17 (the warehouse panel shows `reverbFailures` and
 `reverbDropped`) and Q23 (`variants` takes plain numbers as constants). Decided and kept as they are: Q12, the solo
 ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
