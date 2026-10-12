@@ -80,7 +80,8 @@ class WireCodecRoundTripSpec : StringSpec({
     }
 
     "every knob of every stage carries both KatalystKnobDsl leaves through the trip" {
-        // The knob type of step 3 of `docs/tasks/katalyst-knob-expressions.md`: per stage, one chain whose every
+        // The knob type of step 3 of `docs/tasks/in-progress/katalyst-knob-expressions.md`: per stage, one chain whose
+        // every
         // knob is a Constant and one whose every knob is a Param (each its own name, a description on one), so a
         // knob the codec drops, swaps with a neighbour or decodes as the other leaf goes red on its stage. The eq
         // carries the Q2 residue: a section knob is an Ignitor leaf, the Param one included.
@@ -291,7 +292,8 @@ class WireCodecRoundTripSpec : StringSpec({
         // The worklet refuses a message whose hash differs from its own (`WorkletContract`), so a moved hash only
         // refuses a stale worklet. Pinned since engine follow-up 2, step 5, which changed the slot maps' Kotlin type
         // and kept their signature. A deliberate wire change updates this number in the same change: step 3 of
-        // `docs/tasks/katalyst-knob-expressions.md` moved it from 1330155241 (the Katalyst knobs left `IgnitorDsl`
+        // `docs/tasks/in-progress/katalyst-knob-expressions.md` moved it from 1330155241 (the Katalyst knobs left
+        // `IgnitorDsl`
         // for `KatalystKnobDsl`).
         WIRE_SCHEMA_HASH shouldBe 1168938423
     }

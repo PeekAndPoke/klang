@@ -109,7 +109,8 @@ object KlangScriptKatalyst {
      * ```
      *
      * It returns a Katalyst knob (a [KatalystKnobDsl.Param], the wire node the chain carries), not a sound. It has no
-     * arithmetic yet (`.mul(2)` on it is a script error; step 4 of `docs/tasks/katalyst-knob-expressions.md` adds
+     * arithmetic yet (`.mul(2)` on it is a script error; step 4 of
+     * `docs/tasks/in-progress/katalyst-knob-expressions.md` adds
      * it): do the arithmetic on the pattern side. An Ignitor node on a chain knob is a script error at the stage call.
      *
      * The twin of `Ignitor.param` on the other host: that one fills the voice's own instrument from

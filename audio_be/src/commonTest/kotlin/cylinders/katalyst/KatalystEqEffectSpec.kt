@@ -527,7 +527,8 @@ class KatalystEqEffectSpec : StringSpec({
     }
 
     "a section knob that is neither a constant nor a slot reads as UNSET on a bus, and the chain still builds" {
-        // The sections stay Ignitor nodes (decision Q2 of `docs/tasks/katalyst-knob-expressions.md`), so a section
+        // The sections stay Ignitor nodes (decision Q2 of `docs/tasks/in-progress/katalyst-knob-expressions.md`), so a
+        // section
         // built by hand in Kotlin can carry any node; the bus reads a Constant or a Param off it and nothing else
         // (`KatalystChainBuilder.eqKnob`, since step 3 there: no fold, no probe). The oracle is the same section with
         // the knob spelled as an unset slot, and the control is what the old fold made of it (2000 * 2 = 4000 Hz).

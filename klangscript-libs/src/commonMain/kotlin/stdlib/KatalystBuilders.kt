@@ -62,7 +62,8 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * [toEqSectionKnob]).
  *
  * ANY [IgnitorDsl] is a [KlangScriptTypeError]: the Katalyst has its own knob language (decision D1 of
- * `docs/tasks/katalyst-knob-expressions.md`, `docs/plans/future/signal-graph-engine.md` §6.10), and an Ignitor node
+ * `docs/tasks/in-progress/katalyst-knob-expressions.md`, `docs/plans/future/signal-graph-engine.md` §6.10), and an
+ * Ignitor node
  * means nothing on a bus knob (an oscillator has no bus value, a note frequency no bus note). Until 2026-10-12 such a
  * node was accepted and folded to one number when the chain was built; the type split removed that coercion.
  *
@@ -91,7 +92,8 @@ fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
 
 /**
  * A Katalyst knob as the [IgnitorDsl] an EQ section carries: the residue of mixing the two DSLs that decision Q2 of
- * `docs/tasks/katalyst-knob-expressions.md` keeps (maintainer, 2026-10-11, E2: "keep shared, slots only"). The `eq`
+ * `docs/tasks/in-progress/katalyst-knob-expressions.md` keeps (maintainer, 2026-10-11, E2: "keep shared, slots only").
+ * The `eq`
  * stage's sections are [IgnitorDsl.EqSection], the one section law shared with the voice EQ and with `bands`, so a
  * bus section's knob is an Ignitor leaf: a [KatalystKnobDsl.Constant] becomes an [IgnitorDsl.Constant] and a
  * [KatalystKnobDsl.Param] the [IgnitorDsl.Param] of the same name and default, which the engine reads from the
@@ -793,7 +795,8 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
  * branch carries the dry as well (it adds its return on top), so `blend(w, b => b.reverb(1, 7))` is the dry plus `w`
  * of the room. [wet] is a plain number here, where the Ignitor's may be a slot or a signal: `1 - wet` needs arithmetic,
  * which a Katalyst param does not have (recorded asymmetry). A number that is not finite reads as 0. Any Ignitor node
- * is refused, `Ignitor.constant(...)` included (it was accepted until step 3 of `docs/tasks/katalyst-knob-expressions.md`,
+ * is refused, `Ignitor.constant(...)` included (it was accepted until step 3 of
+ * `docs/tasks/in-progress/katalyst-knob-expressions.md`,
  * 2026-10-12, when the Katalyst knobs stopped taking Ignitor nodes).
  *
  * @param wet the share of the branch, 0 to 1.

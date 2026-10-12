@@ -41,7 +41,8 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * writes nothing hears exactly what the chain says.
  *
  * A knob reads a constant or a slot and nothing else: the Katalyst's knob language has no other node yet (steps 4
- * and 5 of `docs/tasks/katalyst-knob-expressions.md` add expressions and modulators), and an Ignitor node never
+ * and 5 of `docs/tasks/in-progress/katalyst-knob-expressions.md` add expressions and modulators), and an Ignitor node
+ * never
  * reaches a stage knob (the wire type is [KatalystKnobDsl], decision D1). Until 2026-10-12 a knob was an `IgnitorDsl`,
  * and anything that was neither a constant nor a slot was probed at two note frequencies and folded to one number
  * here; that coercion is gone with the type.

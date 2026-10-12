@@ -95,7 +95,8 @@ object KatalystChainBuilder {
 
         // One arithmetic stage and, when it has an operand, its writer (ABS has none). The operand is never null when
         // a writer is made, so the NaN fallback is never read (dead since step 3 of
-        // `docs/tasks/katalyst-knob-expressions.md`; step 4 rewrites `KatalystKnob`). A non-finite operand the stage
+        // `docs/tasks/in-progress/katalyst-knob-expressions.md`; step 4 rewrites `KatalystKnob`). A non-finite operand
+        // the stage
         // reads as unset: its identity lives in the stage alone.
         fun arithmetic(op: KatalystArithmeticOp, operand: KatalystKnobDsl?) {
             val fx = KatalystArithmeticEffect(op = op, sampleRate = sampleRate, blockFrames = blockFrames)
@@ -441,7 +442,8 @@ object KatalystChainBuilder {
 
     /**
      * An EQ section's knob as a chain knob. The sections stay [IgnitorDsl.EqSection], shared with the voice and with
-     * `bands` (decision Q2 of `docs/tasks/katalyst-knob-expressions.md`, E2), so this is the one place a Katalyst knob
+     * `bands` (decision Q2 of `docs/tasks/in-progress/katalyst-knob-expressions.md`, E2), so this is the one place a
+     * Katalyst knob
      * is read off an Ignitor node: an [IgnitorDsl.Constant] is a constant, an [IgnitorDsl.Param] the slot of that name,
      * which is what the Katalyst door writes for a number and a `Kat.param`.
      *

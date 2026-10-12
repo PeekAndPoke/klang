@@ -607,7 +607,8 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     }
 
     "an Ignitor node on any Katalyst knob is a script error at the stage call, on both doors (D1)" {
-        // The Katalyst has its own knob language since step 3 of `docs/tasks/katalyst-knob-expressions.md`: a number or
+        // The Katalyst has its own knob language since step 3 of `docs/tasks/in-progress/katalyst-knob-expressions.md`:
+        // a number or
         // a `Kat.param`, nothing of the Ignitor's. An oscillator used to be probed and folded to the knob's default, an
         // expression over an Ignitor param folded to one number; both are refused now. The Kotlin door's stage
         // constructors refuse an Ignitor node at compile time (their fields are `KatalystKnobDsl`); its builder doors
@@ -709,7 +710,8 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     "Katalyst.param and Ignitor.param are distinct types: a Katalyst param is the chain's own knob node, not a sound" {
         // Two namespaces that never cross (`ignp` fills the voice's, `katp` the orbit's), two types since 2026-10-03
         // so the doors can tell them apart (the plan's section 4.4), and since step 3 of
-        // `docs/tasks/katalyst-knob-expressions.md` two wire types too: the chain carries the `KatalystKnobDsl.Param`
+        // `docs/tasks/in-progress/katalyst-knob-expressions.md` two wire types too: the chain carries the
+        // `KatalystKnobDsl.Param`
         // itself, no handle over an Ignitor param.
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")

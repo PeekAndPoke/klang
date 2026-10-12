@@ -28,7 +28,8 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 /**
  * The one constructor of this file: the knob `<stage>.<knob>` with its default (no description, as the chain always
  * had). A [KatalystKnobDsl.Param], the wire node the chain carries and the object `katp` takes, so the handle a song
- * names and the knob the chain reads are one value (decision Q1 of `docs/tasks/katalyst-knob-expressions.md`: the
+ * names and the knob the chain reads are one value (decision Q1 of
+ * `docs/tasks/in-progress/katalyst-knob-expressions.md`: the
  * separate `KatalystParam` handle is retired, the type split is the wire's own).
  */
 private fun knob(stage: String, knob: String, default: Double): KatalystKnobDsl.Param =

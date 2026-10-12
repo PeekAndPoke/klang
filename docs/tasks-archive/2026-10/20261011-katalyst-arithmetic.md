@@ -145,7 +145,7 @@ coordinator's leans:
 
 ## Not in this task
 
-The first two are taken up by `docs/tasks/katalyst-knob-expressions.md` (maintainer, 2026-10-11: a `Kat.param`
+The first two are taken up by `docs/tasks/in-progress/katalyst-knob-expressions.md` (maintainer, 2026-10-11: a `Kat.param`
 expression is evaluated at least once per block, and the Katalyst gets its own `Kat.sine()` and the rest rather than
 Ignitor nodes); the cost of the stages goes into the harness with `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`.
 

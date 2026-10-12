@@ -261,7 +261,8 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * implementation, which is what keeps one effect one sound on every bus.
  *
  * **Every knob is a [KatalystKnobDsl]**, the Katalyst's own knob language and not an [IgnitorDsl] node
- * (`docs/tasks/katalyst-knob-expressions.md`, D1): a [KatalystKnobDsl.Constant] or a [KatalystKnobDsl.Param], read
+ * (`docs/tasks/in-progress/katalyst-knob-expressions.md`, D1): a [KatalystKnobDsl.Constant] or a
+ * [KatalystKnobDsl.Param], read
  * once per block. An Ignitor node on a knob is a type error at the door (the script door's stage call; the Kotlin
  * door's constructors do not take one), never coerced. The Motor stays raw, so a knob is never clamped beyond what
  * the underlying DSP already does. **The exceptions are the knobs fixed per chain**, plain numbers because they size
@@ -502,7 +503,8 @@ sealed interface KatalystStageDsl {
      *
      * Reuses [IgnitorDsl.EqSection] verbatim, so a section means the same thing on a voice and on
      * an orbit. This is the one place a Katalyst stage still carries Ignitor nodes (decision Q2 of
-     * `docs/tasks/katalyst-knob-expressions.md`, E2: the sections are a DSP law shared with the voice and with
+     * `docs/tasks/in-progress/katalyst-knob-expressions.md`, E2: the sections are a DSP law shared with the voice and
+     * with
      * `bands`). The Katalyst door lets a section knob be a number or a `Kat.param` only, as a
      * [IgnitorDsl.Constant] or a [IgnitorDsl.Param]; the engine reads any other node there as unset.
      *

@@ -16,7 +16,8 @@ import java.util.HexFormat
 import kotlin.math.abs
 
 /**
- * SCAFFOLDING, removed in step 7 of `docs/tasks/katalyst-knob-expressions.md`: the render fixture of step 3, the
+ * SCAFFOLDING, removed in step 7 of `docs/tasks/in-progress/katalyst-knob-expressions.md`: the render fixture of step
+ * 3, the
  * migration of every Katalyst stage knob from `IgnitorDsl` to `KatalystKnobDsl`.
  *
  * Each row renders a small synth-only song offline and compares a SHA-256 of the raw output doubles (the engine's
