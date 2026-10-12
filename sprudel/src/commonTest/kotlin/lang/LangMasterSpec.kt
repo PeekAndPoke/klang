@@ -11,8 +11,8 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -27,7 +27,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  */
 class LangMasterSpec : StringSpec({
 
-    fun c(value: Double): IgnitorDsl = IgnitorDsl.Constant(value)
+    fun c(value: Double): KatalystKnobDsl = KatalystKnobDsl.Constant(value)
 
     val loud = KatalystDsl.of(KatalystStageDsl.Gain(gain = c(2.0)))
 

@@ -324,11 +324,13 @@ fun FmBuilder.adsr(
  *
  * One builder for both hosts, so a section means the same on a voice and on an orbit. [onKatalyst] is the one
  * difference: the Katalyst `eq` sets it, and the knobs then convert like every other chain knob
- * ([toKatalystKnob]: a Katalyst param listens to `katp`, an Ignitor param is a script error) instead of like a tree
- * leaf ([toIgnitorDsl]).
+ * ([toKatalystKnob]: a number or a Katalyst param, which listens to `katp`; any Ignitor node is a script error) and are
+ * mapped onto the section's Ignitor leaf ([toEqSectionKnob], the recorded residue of decision Q2), instead of
+ * converting like a tree leaf ([toIgnitorDsl]).
  */
 data class EqBuilder(val node: IgnitorDsl.Eq, val onKatalyst: Boolean = false) {
-    internal fun knob(value: IgnitorDslLike): IgnitorDsl = if (onKatalyst) value.toKatalystKnob() else value.toIgnitorDsl()
+    internal fun knob(value: IgnitorDslLike): IgnitorDsl =
+        if (onKatalyst) value.toKatalystKnob().toEqSectionKnob() else value.toIgnitorDsl()
 }
 
 /**

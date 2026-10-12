@@ -11,8 +11,8 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
 /**
@@ -31,7 +31,7 @@ class MasterBusAdoptionSpec : StringSpec({
 
     fun newBus(): MasterBus {
         val registry = KatalystRegistry()
-        registry.register("loud", KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(4.0))))
+        registry.register("loud", KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(4.0))))
         return MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry)
     }
 

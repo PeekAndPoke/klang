@@ -20,8 +20,8 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.master.MasterBus
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.math.abs
 
@@ -308,7 +308,7 @@ class LazyReverbSpec : StringSpec({
         // replaces is retired there and then (eager retire, step 12 C4); a chain is built when its
         // request lands.
         for (i in 0 until 3) {
-            registry.register("m$i", KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(5.0 + i * 0.1))))
+            registry.register("m$i", KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.4), size = KatalystKnobDsl.Constant(5.0 + i * 0.1))))
         }
 
         bus.requestSwap("m0")

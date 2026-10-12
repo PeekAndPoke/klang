@@ -15,8 +15,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.math.PI
 import kotlin.math.sin
@@ -136,21 +136,21 @@ internal class CylinderSwapRig(val sampleRate: Int = 44100) {
     companion object {
         /** A chain with neither a delay nor a reverb: nothing it leaves behind can ring. */
         fun dryChain(gain: Double) = KatalystDsl.of(
-            KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(gain))
+            KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(gain))
         )
 
         /** A chain with a room of its own, so it drains when it leaves. */
         fun roomChain(size: Double) = KatalystDsl.of(
-            KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.5), size = IgnitorDsl.Constant(size))
+            KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(size))
         )
 
         /** A room and a duck listening to orbit 0: it drains, and its duck is handed over on a swap. */
         fun duckedRoomChain() = KatalystDsl.of(
-            KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.5), size = IgnitorDsl.Constant(6.0)),
+            KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(6.0)),
             KatalystStageDsl.Duck(
-                orbit = IgnitorDsl.Constant(0.0),
-                depth = IgnitorDsl.Constant(0.8),
-                attack = IgnitorDsl.Constant(0.05),
+                orbit = KatalystKnobDsl.Constant(0.0),
+                depth = KatalystKnobDsl.Constant(0.8),
+                attack = KatalystKnobDsl.Constant(0.05),
             ),
         )
 

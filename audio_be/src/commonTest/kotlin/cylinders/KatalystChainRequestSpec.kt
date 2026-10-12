@@ -16,8 +16,8 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.body
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.pipeline
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -38,7 +38,7 @@ class KatalystChainRequestSpec : StringSpec({
     val sampleRate = 44100
 
     /** A chain with neither delay, reverb, body nor duck, so the stage list says which one runs. */
-    val gainOnly = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.5)))
+    val gainOnly = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.5)))
 
     fun newDispatcher(): PlaybackEngineDispatcher =
         PlaybackEngineDispatcher.create(

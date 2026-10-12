@@ -12,6 +12,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -28,7 +29,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 class LangKatalystSpec : StringSpec({
 
     val chainA = KatalystDsl.of(KatalystStageDsl.Eq(sections = listOf(IgnitorDsl.EqSection.Lowpass())))
-    val chainB = KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.3)))
+    val chainB = KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.3)))
 
     "katalyst() emits one control event per cycle carrying only the chain" {
         val events = katalyst(chainA).queryArc(0.0, 1.0)
@@ -200,7 +201,7 @@ class LangKatalystSpec : StringSpec({
     // ── the script door ──────────────────────────────────────────────────────
 
     "katalyst() is available from KlangScript with the same result" {
-        val kotlinEvents = katalyst(KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4))))
+        val kotlinEvents = katalyst(KatalystDsl.of(KatalystStageDsl.Gain(KatalystKnobDsl.Constant(1.4))))
             .queryArc(0.0, 1.0)
         val scriptEvents = SprudelPattern
             .compile("""katalyst(Katalyst(k => k.gain(1.4)))""")!!
@@ -217,13 +218,13 @@ class LangKatalystSpec : StringSpec({
             .queryArc(0.0, 1.0)
 
         script[0].data.katalyst shouldBe KatalystValue.Dsl(
-            KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)))
+            KatalystDsl.of(KatalystStageDsl.Gain(KatalystKnobDsl.Constant(1.4)))
         )
     }
 
     "KatalystValue.Dsl.name is the chain's synthetic name, computed on READ not on construction" {
         // Parity first: `name` must be the same door the rest of the code uses.
-        val chain = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(4321.0)))
+        val chain = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(4321.0)))
         val value = KatalystValue.Dsl(chain)
 
         value.name shouldBe chain.uniqueId()
@@ -233,8 +234,8 @@ class LangKatalystSpec : StringSpec({
         // name were computed in the constructor the numbers would follow CONSTRUCTION order. Build
         // two never-before-seen chains in one order and read them in the other; the numbers must
         // follow the reads.
-        val first = KatalystValue.Dsl(KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(9911.0))))
-        val second = KatalystValue.Dsl(KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(9912.0))))
+        val first = KatalystValue.Dsl(KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(9911.0))))
+        val second = KatalystValue.Dsl(KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(9912.0))))
 
         val secondNumber = second.name.substringAfterLast('-').toInt()
         val firstNumber = first.name.substringAfterLast('-').toInt()

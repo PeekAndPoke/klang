@@ -8,7 +8,7 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -34,15 +34,16 @@ typealias IgnitorDslLike = Any
  * lambda that landed on a sound slot (`Ignitor.whitenoise(x => ...)`, which has no `configure`) reads
  * as "got a function", not as an internal error.
  *
- * A [KatalystParam] has its own message: it is the chain's slot by intent, its author drives it with `katp`, which
- * writes the orbit's map and never reaches the voice, so in an Ignitor tree the knob would sit at its default while
- * the song moves it. The mirror of the Katalyst knobs' refusal of a bare Ignitor
- * param (`toKatalystKnob`, decision Q2 of `docs/plans/ignitor-katalyst-naming.md`).
+ * A Katalyst knob ([KatalystKnobDsl], a `Kat.param` today) has its own message: it is the chain's knob by intent, its
+ * author drives it with `katp`, which writes the orbit's map and never reaches the voice, so in an Ignitor tree the
+ * knob would sit at its default while the song moves it. The mirror of the Katalyst knobs' refusal of an Ignitor
+ * node (`toKatalystKnob`; decision Q2 of `docs/plans/ignitor-katalyst-naming.md`, D1 of
+ * `docs/tasks/katalyst-knob-expressions.md`).
  */
 fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
     is IgnitorDsl -> this
     is Number -> IgnitorDsl.Constant(this.toDouble())
-    is KatalystParam -> throw KlangScriptTypeError("a Katalyst param in an Ignitor tree; use Ign.param", operation = "sound parameter")
+    is KatalystKnobDsl -> throw KlangScriptTypeError("a Katalyst knob in an Ignitor tree; use Ign.param", operation = "sound parameter")
     is Function<*> -> throw KlangScriptTypeError("expected a sound or a number, got a function", operation = "sound parameter")
     else -> throw KlangScriptTypeError("expected a sound or a number, got ${this::class.simpleName}", operation = "sound parameter")
 }
@@ -85,7 +86,7 @@ fun ignitorSlotName(slot: IgnitorSlotLike?, door: String, twin: String, location
     when (slot) {
         is String -> slot
         is IgnitorDsl.Param -> slot.name
-        is KatalystParam -> throw KlangScriptTypeError(
+        is KatalystKnobDsl.Param -> throw KlangScriptTypeError(
             message = "a Katalyst param passed to $door; use $twin",
             operation = door,
             location = location,
@@ -109,7 +110,7 @@ fun ignitorSlotName(slot: IgnitorSlotLike?, door: String, twin: String, location
 fun katalystSlotName(slot: KatalystSlotLike?, door: String, twin: String, location: SourceLocation? = null): String =
     when (slot) {
         is String -> slot
-        is KatalystParam -> slot.name
+        is KatalystKnobDsl.Param -> slot.name
         is IgnitorDsl.Param -> throw KlangScriptTypeError(
             message = "an Ignitor param passed to $door; use $twin",
             operation = door,
@@ -130,6 +131,7 @@ internal fun describeArgument(value: Any?): String = when (value) {
     is Number -> "a number"
     is Boolean -> "a boolean"
     is IgnitorDsl -> "a sound"
+    is KatalystKnobDsl -> "a Katalyst knob"
     is KatalystDsl -> "a Katalyst chain"
     is Function<*> -> "a function"
     is List<*> -> "an array"
@@ -142,18 +144,26 @@ internal fun describeArgument(value: Any?): String = when (value) {
  * a NAME through its catalogue's `indexOf`, a number or a slot as it is, and nothing at all as
  * [bare], the stage's own value. The one conversion every such door shares (Katalyst step 5a-2 for
  * `body` and `vowel`, phase 3 step 3b for `shape`, `distort` and the tremolo builder), so a name,
- * its index and a slot carrying the index are one knob on every door. [knob] converts a number or a slot: the
- * Ignitor doors' [toIgnitorDsl] by default, the Katalyst doors pass `toKatalystKnob`.
+ * its index and a slot carrying the index are one knob on every door. This form is the Ignitor doors'
+ * ([toIgnitorDsl]); the Katalyst doors use the one with a `constant` and a `knob` of their own.
  */
-internal fun catalogueIndex(
+internal fun catalogueIndex(value: IgnitorDslLike?, bare: IgnitorDsl, indexOf: (String) -> Double): IgnitorDsl =
+    catalogueIndex(value = value, bare = bare, indexOf = indexOf, constant = { IgnitorDsl.Constant(it) }, knob = { it.toIgnitorDsl() })
+
+/**
+ * The name-knob rule of the other [catalogueIndex], for a knob type [K] of either DSL: [constant] wraps the index a
+ * name resolves to, [knob] converts a number or a slot (`toKatalystKnob` on the Katalyst doors).
+ */
+internal fun <K> catalogueIndex(
     value: IgnitorDslLike?,
-    bare: IgnitorDsl,
+    bare: K,
     indexOf: (String) -> Double,
-    knob: (IgnitorDslLike) -> IgnitorDsl = { it.toIgnitorDsl() },
-): IgnitorDsl =
+    constant: (Double) -> K,
+    knob: (IgnitorDslLike) -> K,
+): K =
     when (value) {
         null -> bare
-        is String -> IgnitorDsl.Constant(indexOf(value))
+        is String -> constant(indexOf(value))
         else -> knob(value)
     }
 

@@ -33,9 +33,8 @@ import io.peekandpoke.klang.audio_be.ignitor.plus
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.common.infra.toKlangMap
 import io.peekandpoke.klang.script.stdlib.div
@@ -543,7 +542,7 @@ class EffectBenchmark(
             // block takes the moving branch (the reciprocal, multiplied in per sample).
             katalystCase(
                 "Katalyst div (gliding)",
-                AllocationCases.katalyst { it.div(KatalystParam(IgnitorDsl.Param(name = "bench.div", default = 1.3))) },
+                AllocationCases.katalyst { it.div(KatalystKnobDsl.Param(name = "bench.div", default = 1.3)) },
                 moves = listOf(mapOf("bench.div" to 1.3), mapOf("bench.div" to 0.8)),
                 moveEveryBlocks = 8,
             ),

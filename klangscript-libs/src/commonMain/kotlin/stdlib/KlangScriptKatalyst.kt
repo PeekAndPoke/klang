@@ -7,9 +7,8 @@
 
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
@@ -109,22 +108,25 @@ object KlangScriptKatalyst {
      * note("c3 e3 g3").s("supersaw").katalyst(bus).katp("room", "<2 9>")
      * ```
      *
-     * It returns a Katalyst param, not a sound: it has no arithmetic (`.mul(2)` on it is a script error), because a
-     * knob listens to `katp` only when it IS the slot. An expression over any param on a chain knob (an
-     * `Ignitor.param(...).mul(2)`, say) is folded ONCE when the chain is built and does not listen: hand the knob a
-     * `Katalyst.param` and do the arithmetic on the pattern side.
+     * It returns a Katalyst knob (a [KatalystKnobDsl.Param], the wire node the chain carries), not a sound. It has no
+     * arithmetic yet (`.mul(2)` on it is a script error; step 4 of `docs/tasks/katalyst-knob-expressions.md` adds
+     * it): do the arithmetic on the pattern side. An Ignitor node on a chain knob is a script error at the stage call.
      *
      * The twin of `Ignitor.param` on the other host: that one fills the voice's own instrument from
      * `ignp`, this one the orbit's chain from `katp`. The two namespaces never cross, and the two kinds of param do
-     * not either: an `Ignitor.param` on a chain knob, or this one handed to `ignp`, is a script error at the call.
+     * not either: an `Ignitor.param` on a chain knob, or this one handed to `ignp` or placed in an Ignitor tree, is a
+     * script error at the call.
+     *
+     * Typed as the [KatalystKnobDsl] root on this door, as `Ignitor.param` is typed `IgnitorDsl`: the editor names the
+     * knob language rather than its leaf, and the Kotlin door's [KatalystDsl.Slots] carry the leaf type.
      *
      * @param name slot name, `<stage>.<knob>` for a classic knob or any word for an authored one
      * @param default the value the knob has while nothing writes the name
      * @param description human-readable description for documentation
      */
     @KlangScript.Method
-    fun param(name: String, default: Double, description: String = ""): KatalystParam =
-        KatalystParam(IgnitorDsl.Param(name, default, description))
+    fun param(name: String, default: Double, description: String = ""): KatalystKnobDsl =
+        KatalystKnobDsl.Param(name = name, default = default, description = description)
 
     /**
      * The knobs of the classic chain, one group per stage: `Katalyst.slot.reverb.wet`, `Katalyst.slot.gain.gain` and

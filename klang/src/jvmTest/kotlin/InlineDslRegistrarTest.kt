@@ -10,6 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
@@ -153,7 +154,7 @@ class InlineDslRegistrarTest : StringSpec({
 
     "a chain written at both positions, master and orbit, is announced ONCE" {
         val (reg, sent) = newRegistrar()
-        val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.23)))
+        val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.23)))
 
         reg.announceAll(
             listOf(
@@ -172,8 +173,8 @@ class InlineDslRegistrarTest : StringSpec({
     "announceAll registers every inline DSL kind found in the events" {
         val (reg, sent) = newRegistrar()
         val osc = IgnitorDsl.Saw(freq = IgnitorDsl.Constant(123.45))
-        val master = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(2.6)))
-        val katalyst = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)))
+        val master = KatalystDsl.of(KatalystStageDsl.Gain(KatalystKnobDsl.Constant(2.6)))
+        val katalyst = KatalystDsl.of(KatalystStageDsl.Gain(KatalystKnobDsl.Constant(1.4)))
 
         reg.announceAll(
             listOf(
@@ -192,7 +193,7 @@ class InlineDslRegistrarTest : StringSpec({
 
     "the katalyst sweep announces once per chain and stamps the playbackId" {
         val (reg, sent) = newRegistrar()
-        val katalyst = KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.31)))
+        val katalyst = KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.31)))
         val events = listOf(FakeEvent(katalyst = KatalystValue.Dsl(katalyst)))
 
         // A carrier re-emits its chain every cycle, so the sweep sees the same chain again and

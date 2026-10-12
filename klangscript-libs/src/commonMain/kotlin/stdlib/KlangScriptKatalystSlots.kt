@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
@@ -14,8 +14,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 // The knobs of the classic chain on the script door: `Katalyst.slot.reverb.wet`, `Kat.slot.gain.gain`.
 //
 // The twin of `KlangScriptIgnitorSlots` on the other host. Each group is the script face of one group of
-// `KatalystDsl.Slots` (the Kotlin door), and every property hands back THE SAME `KatalystParam` object, so a script
-// and a Kotlin song name identical knobs. The names and the defaults are documented once, in `audio_bridge`'s
+// `KatalystDsl.Slots` (the Kotlin door), and every property hands back THE SAME `KatalystKnobDsl.Param` object, so a
+// script and a Kotlin song name identical knobs. Typed as the `KatalystKnobDsl` root here, as `Kat.param` is. The names and the defaults are documented once, in `audio_bridge`'s
 // `KatalystDslSlots.kt` and the KDoc of `KatalystDsl.classic`.
 //
 // Each type is registered with `@TypeExtensions` on itself rather than as an `@Object`, so it is reachable only
@@ -80,15 +80,15 @@ object KlangScriptKatalystBodySlots {
 
     /** `body.material`. The material as its INDEX in the catalogue, default unset (no body). What `body(material = ...)` writes. */
     @KlangScript.Property
-    val material: KatalystParam = KatalystDsl.Slots.body.material
+    val material: KatalystKnobDsl = KatalystDsl.Slots.body.material
 
     /** `body.wet`. How much of the orbit runs through the body, default unset (the engine's `BODY_WET` once a material is set). */
     @KlangScript.Property
-    val wet: KatalystParam = KatalystDsl.Slots.body.wet
+    val wet: KatalystKnobDsl = KatalystDsl.Slots.body.wet
 
     /** `body.floor`. The broadband floor under the modes. */
     @KlangScript.Property
-    val floor: KatalystParam = KatalystDsl.Slots.body.floor
+    val floor: KatalystKnobDsl = KatalystDsl.Slots.body.floor
 }
 
 /** `Katalyst.slot.vowel`: the vowel stage's knobs. */
@@ -99,15 +99,15 @@ object KlangScriptKatalystVowelSlots {
 
     /** `vowel.vowel`. The vowel as its INDEX in the catalogue, default unset (no vowel). What `vowel(vowel = ...)` writes. */
     @KlangScript.Property
-    val vowel: KatalystParam = KatalystDsl.Slots.vowel.vowel
+    val vowel: KatalystKnobDsl = KatalystDsl.Slots.vowel.vowel
 
     /** `vowel.wet`. How much of the orbit runs through the formant bank, default unset (the engine's `VOWEL_WET` once a vowel is set). */
     @KlangScript.Property
-    val wet: KatalystParam = KatalystDsl.Slots.vowel.wet
+    val wet: KatalystKnobDsl = KatalystDsl.Slots.vowel.wet
 
     /** `vowel.floor`. The dry floor of the formant bank. */
     @KlangScript.Property
-    val floor: KatalystParam = KatalystDsl.Slots.vowel.floor
+    val floor: KatalystKnobDsl = KatalystDsl.Slots.vowel.floor
 }
 
 /** `Katalyst.slot.delay`: the delay stage's knobs. */
@@ -118,19 +118,19 @@ object KlangScriptKatalystDelaySlots {
 
     /** `delay.wet`. How much of the orbit goes into the delay, default 0 (off). */
     @KlangScript.Property
-    val wet: KatalystParam = KatalystDsl.Slots.delay.wet
+    val wet: KatalystKnobDsl = KatalystDsl.Slots.delay.wet
 
     /** `delay.time`. Delay time in seconds, default 0 (off: the delay engages on its time). */
     @KlangScript.Property
-    val time: KatalystParam = KatalystDsl.Slots.delay.time
+    val time: KatalystKnobDsl = KatalystDsl.Slots.delay.time
 
     /** `delay.feedback`. Feedback amount, default 0. */
     @KlangScript.Property
-    val feedback: KatalystParam = KatalystDsl.Slots.delay.feedback
+    val feedback: KatalystKnobDsl = KatalystDsl.Slots.delay.feedback
 
     /** `delay.cap`. The soft cap of the recirculating line. */
     @KlangScript.Property
-    val cap: KatalystParam = KatalystDsl.Slots.delay.cap
+    val cap: KatalystKnobDsl = KatalystDsl.Slots.delay.cap
 }
 
 /** `Katalyst.slot.reverb`: the reverb stage's knobs. */
@@ -141,15 +141,15 @@ object KlangScriptKatalystReverbSlots {
 
     /** `reverb.wet`. How much of the orbit goes into the reverb, default 0 (off). */
     @KlangScript.Property
-    val wet: KatalystParam = KatalystDsl.Slots.reverb.wet
+    val wet: KatalystKnobDsl = KatalystDsl.Slots.reverb.wet
 
     /** `reverb.size`. Tail length, default 0 (off: the reverb engages on its size). */
     @KlangScript.Property
-    val size: KatalystParam = KatalystDsl.Slots.reverb.size
+    val size: KatalystKnobDsl = KatalystDsl.Slots.reverb.size
 
     /** `reverb.lowpass`. Damping of the tail as a lowpass cutoff in Hz, default unset (undamped). */
     @KlangScript.Property
-    val lowpass: KatalystParam = KatalystDsl.Slots.reverb.lowpass
+    val lowpass: KatalystKnobDsl = KatalystDsl.Slots.reverb.lowpass
 }
 
 /** `Katalyst.slot.phaser`: the phaser stage's knobs. */
@@ -160,23 +160,23 @@ object KlangScriptKatalystPhaserSlots {
 
     /** `phaser.rate`. Sweep rate in Hz. */
     @KlangScript.Property
-    val rate: KatalystParam = KatalystDsl.Slots.phaser.rate
+    val rate: KatalystKnobDsl = KatalystDsl.Slots.phaser.rate
 
     /** `phaser.wet`. Wet amount, default 0 (off). */
     @KlangScript.Property
-    val wet: KatalystParam = KatalystDsl.Slots.phaser.wet
+    val wet: KatalystKnobDsl = KatalystDsl.Slots.phaser.wet
 
     /** `phaser.center`. Center frequency of the sweep in Hz. */
     @KlangScript.Property
-    val center: KatalystParam = KatalystDsl.Slots.phaser.center
+    val center: KatalystKnobDsl = KatalystDsl.Slots.phaser.center
 
     /** `phaser.sweep`. Width of the sweep in Hz. */
     @KlangScript.Property
-    val sweep: KatalystParam = KatalystDsl.Slots.phaser.sweep
+    val sweep: KatalystKnobDsl = KatalystDsl.Slots.phaser.sweep
 
     /** `phaser.floor`. Minimum dry share. */
     @KlangScript.Property
-    val floor: KatalystParam = KatalystDsl.Slots.phaser.floor
+    val floor: KatalystKnobDsl = KatalystDsl.Slots.phaser.floor
 }
 
 /** `Katalyst.slot.compressor`: the compressor stage's knobs, all five unset (off) until one is written. */
@@ -187,23 +187,23 @@ object KlangScriptKatalystCompressorSlots {
 
     /** `compressor.threshold`. Ceiling in dBFS where gain reduction starts. */
     @KlangScript.Property
-    val threshold: KatalystParam = KatalystDsl.Slots.compressor.threshold
+    val threshold: KatalystKnobDsl = KatalystDsl.Slots.compressor.threshold
 
     /** `compressor.ratio`. Compression ratio above the threshold. */
     @KlangScript.Property
-    val ratio: KatalystParam = KatalystDsl.Slots.compressor.ratio
+    val ratio: KatalystKnobDsl = KatalystDsl.Slots.compressor.ratio
 
     /** `compressor.knee`. Soft-knee width in dB. */
     @KlangScript.Property
-    val knee: KatalystParam = KatalystDsl.Slots.compressor.knee
+    val knee: KatalystKnobDsl = KatalystDsl.Slots.compressor.knee
 
     /** `compressor.attack`. How fast the gain closes, in seconds. */
     @KlangScript.Property
-    val attack: KatalystParam = KatalystDsl.Slots.compressor.attack
+    val attack: KatalystKnobDsl = KatalystDsl.Slots.compressor.attack
 
     /** `compressor.release`. How fast the gain opens again, in seconds. */
     @KlangScript.Property
-    val release: KatalystParam = KatalystDsl.Slots.compressor.release
+    val release: KatalystKnobDsl = KatalystDsl.Slots.compressor.release
 }
 
 /** `Katalyst.slot.gain`: the group fader's knob. */
@@ -214,7 +214,7 @@ object KlangScriptKatalystGainSlots {
 
     /** `gain.gain`. The orbit's group fader, default 1 (unity). The stage `gain`, its knob `gain`: `Katalyst.slot.gain.gain` reads oddly and is right. */
     @KlangScript.Property
-    val gain: KatalystParam = KatalystDsl.Slots.gain.gain
+    val gain: KatalystKnobDsl = KatalystDsl.Slots.gain.gain
 }
 
 /** `Katalyst.slot.duck`: the duck stage's knobs. */
@@ -225,13 +225,13 @@ object KlangScriptKatalystDuckSlots {
 
     /** `duck.orbit`. The orbit to listen to, default unset (no ducking). */
     @KlangScript.Property
-    val orbit: KatalystParam = KatalystDsl.Slots.duck.orbit
+    val orbit: KatalystKnobDsl = KatalystDsl.Slots.duck.orbit
 
     /** `duck.depth`. How far this orbit is pulled down, default 0. */
     @KlangScript.Property
-    val depth: KatalystParam = KatalystDsl.Slots.duck.depth
+    val depth: KatalystKnobDsl = KatalystDsl.Slots.duck.depth
 
     /** `duck.attack`. How fast the duck closes, in seconds. */
     @KlangScript.Property
-    val attack: KatalystParam = KatalystDsl.Slots.duck.attack
+    val attack: KatalystKnobDsl = KatalystDsl.Slots.duck.attack
 }

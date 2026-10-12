@@ -30,7 +30,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
  */
 class KatalystDslSlotsSpec : StringSpec({
 
-    fun p(name: String, default: Double) = IgnitorDsl.Param(name = name, default = default)
+    fun p(name: String, default: Double) = KatalystKnobDsl.Param(name = name, default = default)
 
     "classic is the chain it always was, by value" {
         KatalystDsl.classic shouldBe KatalystDsl(
@@ -77,7 +77,7 @@ class KatalystDslSlotsSpec : StringSpec({
         val gain = stages[6] as KatalystStageDsl.Gain
         val duck = stages[7] as KatalystStageDsl.Duck
 
-        val pairs: List<Pair<IgnitorDsl?, KatalystParam>> = listOf(
+        val pairs: List<Pair<KatalystKnobDsl?, KatalystKnobDsl.Param>> = listOf(
             body.material to s.body.material, body.wet to s.body.wet, body.floor to s.body.floor,
             vowel.vowel to s.vowel.vowel, vowel.wet to s.vowel.wet, vowel.floor to s.vowel.floor,
             delay.wet to s.delay.wet, delay.time to s.delay.time, delay.feedback to s.delay.feedback, delay.cap to s.delay.cap,
@@ -95,7 +95,7 @@ class KatalystDslSlotsSpec : StringSpec({
         pairs.map { it.second.name }.toSet() shouldHaveSize 27
 
         pairs.forEach { (knob, handle) ->
-            withClue(handle.name) { knob shouldBeSameInstanceAs handle.param }
+            withClue(handle.name) { knob shouldBeSameInstanceAs handle }
         }
     }
 })

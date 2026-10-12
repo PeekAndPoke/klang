@@ -14,8 +14,8 @@ import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
@@ -230,11 +230,11 @@ class ClosedFormTailSpec : StringSpec({
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Delay(
-                    wet = IgnitorDsl.Constant(0.5),
-                    time = IgnitorDsl.Constant(0.05),
-                    feedback = IgnitorDsl.Constant(0.5),
+                    wet = KatalystKnobDsl.Constant(0.5),
+                    time = KatalystKnobDsl.Constant(0.05),
+                    feedback = KatalystKnobDsl.Constant(0.5),
                 ),
-                KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(5.0)),
+                KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.4), size = KatalystKnobDsl.Constant(5.0)),
             ),
             sampleRate = sampleRate,
             blockFrames = blockFrames,

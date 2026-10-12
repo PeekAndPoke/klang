@@ -12,8 +12,8 @@ import io.peekandpoke.klang.audio_be.MasterStage
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_LOOKAHEAD_SECONDS
@@ -38,7 +38,7 @@ class MasterDefaultsSyncSpec : StringSpec({
 
         // ...and `master(Katalyst())`, the empty chain, is the way back to it, mid-song.
         val registry = KatalystRegistry().apply {
-            register("loud", KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(2.0))))
+            register("loud", KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(2.0))))
             register("off", KatalystDsl(emptyList()))
         }
         val switchedOff = MasterBus(sampleRate = 44100, blockFrames = 128, registry = registry)

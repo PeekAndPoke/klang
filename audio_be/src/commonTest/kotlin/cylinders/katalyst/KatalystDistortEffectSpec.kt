@@ -22,8 +22,8 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.PI
@@ -494,7 +494,7 @@ class KatalystDistortEffectSpec : StringSpec({
 
     "the chain's writer reads the amount from a slot: a pattern switches the stage on and moves it" {
         val chain = KatalystChainBuilder.build(
-            dsl = KatalystDsl.of(KatalystStageDsl.Distort(amount = IgnitorDsl.Param("drive", 0.0))),
+            dsl = KatalystDsl.of(KatalystStageDsl.Distort(amount = KatalystKnobDsl.Param("drive", 0.0))),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),

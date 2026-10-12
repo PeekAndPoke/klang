@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
@@ -51,7 +52,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * `katp("gain.gain", x)` (signal-flow plan section 6, spot C).
  *
  * **One kind of writer, on every chain** (Katalyst step 5b-1, 2026-09-19): every knob of every
- * stage comes from the chain's own slots ([KatalystKnob] over [KatalystSlots]), resolved here and
+ * stage comes from the chain's own slots ([KatalystKnob]), resolved here and
  * re-resolved only when the orbit's param state changes. That state is the owner voice's
  * `katalystParams`, which `.katp` and the bus doors write (step 5a), and it is the ONE way a bus
  * knob reaches a stage, for a declared chain and for the chain a cylinder is born with alike. The
@@ -92,9 +93,11 @@ object KatalystChainBuilder {
         var duck: KatalystDuckEffect? = null
         var duckStage: KatalystStageDsl.Duck? = null
 
-        // One arithmetic stage and, when it has an operand, its writer (ABS has none). An operand the chain cannot read
-        // falls back to NaN, which the stage reads as unset: its identity lives in the stage alone.
-        fun arithmetic(op: KatalystArithmeticOp, operand: IgnitorDsl?) {
+        // One arithmetic stage and, when it has an operand, its writer (ABS has none). The operand is never null when
+        // a writer is made, so the NaN fallback is never read (dead since step 3 of
+        // `docs/tasks/katalyst-knob-expressions.md`; step 4 rewrites `KatalystKnob`). A non-finite operand the stage
+        // reads as unset: its identity lives in the stage alone.
+        fun arithmetic(op: KatalystArithmeticOp, operand: KatalystKnobDsl?) {
             val fx = KatalystArithmeticEffect(op = op, sampleRate = sampleRate, blockFrames = blockFrames)
             pipeline.add(fx)
 
@@ -117,9 +120,10 @@ object KatalystChainBuilder {
                     pipeline.add(fx)
 
                     // The material is a slot like the rest, holding the INDEX of a name in
-                    // `BodyMaterials.names` (Katalyst step 5a-2). Its fallback is the wire's
-                    // "never set", so a knob the bus cannot read leaves the stage off rather
-                    // than picking a box nobody asked for.
+                    // `BodyMaterials.names` (Katalyst step 5a-2). An unset index (the bare stage's
+                    // SLOT_UNSET, or a slot nobody wrote whose default is unset) leaves the stage off
+                    // rather than picking a box nobody asked for. The fallbacks of this and every other
+                    // non-null knob are never read since step 3 (see [KatalystKnob]).
                     writers.add(
                         KatalystResonatorWriter(
                             fx = fx,
@@ -411,20 +415,13 @@ object KatalystChainBuilder {
      * One knob per section param, flat, in the layout [KatalystEqEffect.configure] reads: four
      * slots per section, the ones the section's type does not have left null.
      *
-     * The fallback is [SLOT_UNSET] rather than a number, and that is the one place this stage
-     * departs from "an unreadable knob takes its shared wire constant": a section's defaults live
-     * on its own wire variant (a lowpass cuts at 2000, a bell sits at 1000) and are not shared
-     * constants, so copying them here would be two spellings of one default. Unset is safe: the
+     * The fallback, read for a section knob [eqKnob] cannot map, is [SLOT_UNSET] rather than a
+     * number. It departs from the rule of the one nullable stage knob, the reverb's `lowpass`, whose
+     * missing value is the engine's default: a section's defaults live on its own wire variant (a
+     * lowpass cuts at 2000, a bell sits at 1000) and are not shared constants, so copying them here
+     * would be two spellings of one default. Unset is safe: the
      * coefficient helpers take a non-finite freq to 1000 Hz, a non-finite q to 0.707 and a
      * non-finite db to a transparent bell, so nothing here can put a NaN in the mix.
-     *
-     * The ASYMMETRY that buys is worth stating plainly, because it is audible: a knob the bus
-     * cannot read is one a VOICE can. `lowpass(freq = sine.range(400, 800))` renders around its
-     * center per voice; on a bus the same section lands on the helper's fallback, 1000 Hz, which
-     * is neither the author's center nor the wire default of 2000. The alternative (the wire
-     * default) would only move the wrong number, and the right fix is not a better fallback but a
-     * `katp` pattern, which is what a moving bus knob IS. Recorded here so nobody reads the
-     * fallback as the declared default.
      */
     private fun eqKnobs(specs: List<EqSectionSpec>): Array<KatalystKnob?> {
         val knobs = arrayOfNulls<KatalystKnob>(specs.size * KatalystEqEffect.KNOBS_PER_SECTION)
@@ -433,13 +430,36 @@ object KatalystChainBuilder {
             val spec = specs[i]
             val base = i * KatalystEqEffect.KNOBS_PER_SECTION
 
-            knobs[base + KatalystEqEffect.KNOB_FREQ] = KatalystKnob(spec.freq, SLOT_UNSET)
-            knobs[base + KatalystEqEffect.KNOB_Q] = KatalystKnob(spec.q, SLOT_UNSET)
-            knobs[base + KatalystEqEffect.KNOB_DB] = spec.db?.let { KatalystKnob(it, SLOT_UNSET) }
-            knobs[base + KatalystEqEffect.KNOB_GAIN] = spec.gain?.let { KatalystKnob(it, SLOT_UNSET) }
+            knobs[base + KatalystEqEffect.KNOB_FREQ] = KatalystKnob(eqKnob(spec.freq), SLOT_UNSET)
+            knobs[base + KatalystEqEffect.KNOB_Q] = KatalystKnob(eqKnob(spec.q), SLOT_UNSET)
+            knobs[base + KatalystEqEffect.KNOB_DB] = spec.db?.let { KatalystKnob(eqKnob(it), SLOT_UNSET) }
+            knobs[base + KatalystEqEffect.KNOB_GAIN] = spec.gain?.let { KatalystKnob(eqKnob(it), SLOT_UNSET) }
         }
 
         return knobs
+    }
+
+    /**
+     * An EQ section's knob as a chain knob. The sections stay [IgnitorDsl.EqSection], shared with the voice and with
+     * `bands` (decision Q2 of `docs/tasks/katalyst-knob-expressions.md`, E2), so this is the one place a Katalyst knob
+     * is read off an Ignitor node: an [IgnitorDsl.Constant] is a constant, an [IgnitorDsl.Param] the slot of that name,
+     * which is what the Katalyst door writes for a number and a `Kat.param`.
+     *
+     * Anything else is null, the missing knob, which reads as [SLOT_UNSET] (see [eqKnobs]): the door refuses it, so
+     * only a section built by hand in Kotlin can carry one. Not an exhaustive `when`, deliberately: the two leaves are
+     * the vocabulary of a bus section, and enumerating the ninety-odd [IgnitorDsl] variants would claim a meaning for
+     * each that the bus does not have.
+     *
+     * The ASYMMETRY that buys is worth stating plainly, because it is audible: a knob the bus cannot read is one a
+     * VOICE can. `lowpass(freq = sine.range(400, 800))` renders around its center per voice; a section built by hand
+     * with that knob lands on a bus at the helper's fallback, 1000 Hz, which is neither the author's center nor the
+     * wire default of 2000. Recorded here so nobody reads the fallback as the declared default; a moving bus knob is a
+     * `katp` pattern.
+     */
+    private fun eqKnob(node: IgnitorDsl): KatalystKnobDsl? = when (node) {
+        is IgnitorDsl.Constant -> KatalystKnobDsl.Constant(node.value)
+        is IgnitorDsl.Param -> KatalystKnobDsl.Param(name = node.name, default = node.default, description = node.description)
+        else -> null
     }
 }
 

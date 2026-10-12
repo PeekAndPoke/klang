@@ -14,8 +14,8 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
@@ -84,7 +84,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
 
     /** The default of one slot of the classic chain, by name. */
     fun slot(name: String): Double {
-        val params = mutableListOf<IgnitorDsl.Param>()
+        val params = mutableListOf<KatalystKnobDsl.Param>()
 
         KatalystDsl.classic.stages.forEach { stage ->
             when (stage) {
@@ -113,7 +113,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
                 is KatalystStageDsl.Min -> listOf(stage.other)
                 is KatalystStageDsl.Max -> listOf(stage.other)
                 is KatalystStageDsl.Abs -> emptyList()
-            }.forEach { knob -> knob.collectParams(params) }
+            }.filterIsInstanceTo(params)
         }
 
         return params.first { it.name == name }.default

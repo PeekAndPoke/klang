@@ -16,8 +16,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.common.infra.klangMapOf
 
@@ -78,7 +78,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         KatalystDsl.classic.stages.any { it is KatalystStageDsl.Eq } shouldBe false
 
         val fader = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Gain>().single()
-        val slot = fader.gain.shouldBeInstanceOf<IgnitorDsl.Param>()
+        val slot = fader.gain.shouldBeInstanceOf<KatalystKnobDsl.Param>()
 
         slot.name shouldBe "gain.gain"
         slot.default shouldBe 1.0

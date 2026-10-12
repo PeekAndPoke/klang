@@ -44,7 +44,7 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
  * referenced from `VoiceData.katalyst` (the orbit position) and `VoiceData.master` (the output
  * position, one per playback). One chain type, two positions, one registry (phase 3 step 12,
  * 2026-09-28): the Master DSL that the output used to run is retired. At the output nothing fills a
- * [IgnitorDsl.Param] slot (it is its default) and a `duck` stage is inert.
+ * [KatalystKnobDsl.Param] slot (it is its default) and a `duck` stage is inert.
  *
  * A Katalyst rides *events*: `katalyst(...)` stamps the reference onto a pattern event, so an
  * orbit's chain can change over musical time, and `master(...)` does the same for the output.
@@ -62,8 +62,8 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 @WireFormat
 data class KatalystDsl(val stages: List<KatalystStageDsl>) {
     /**
-     * The knobs of [classic], one group per stage, each a [KatalystParam] named `<stage>.<knob>`: the Kotlin door of
-     * `Katalyst.slot.reverb.wet` (the script door hands back the SAME instances). [classic] is built from these, so a
+     * The knobs of [classic], one group per stage, each a [KatalystKnobDsl.Param] named `<stage>.<knob>`: the Kotlin door
+     * of `Katalyst.slot.reverb.wet` (the script door hands back the SAME instances). [classic] is built from these, so a
      * handle and the chain's knob are one slot by construction, and `katp(KatalystDsl.Slots.reverb.wet, 0.3)` writes
      * exactly what `katp("reverb.wet", 0.3)` writes. The groups and their defaults: `KatalystDslSlots.kt`; why each
      * default is what it is: the KDoc of [classic].
@@ -117,7 +117,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          * A ducks B less hard, which is what a fader on a desk does). Both remain true when step
          * 5b makes the sends insert-style stages.
          *
-         * Every knob is a **slot** ([IgnitorDsl.Param]) named `<stage>.<knob>`, which is the
+         * Every knob is a **slot** ([KatalystKnobDsl.Param]) named `<stage>.<knob>`, which is the
          * vocabulary the sprudel doors write into once the cylinder reads the chain.
          *
          * **A slot's default IS its value when nobody writes it, so the classic chain has to encode
@@ -188,45 +188,45 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
         val classic: KatalystDsl = KatalystDsl(
             listOf(
                 KatalystStageDsl.Body(
-                    material = Slots.body.material.param,
+                    material = Slots.body.material,
                     // Unset, not 0.0: the engine substitutes BODY_WET for an unset mix, and the
                     // stage is gated on the material, so seeding the amount switches nothing on.
-                    wet = Slots.body.wet.param,
-                    floor = Slots.body.floor.param,
+                    wet = Slots.body.wet,
+                    floor = Slots.body.floor,
                 ),
                 KatalystStageDsl.Vowel(
-                    vowel = Slots.vowel.vowel.param,
+                    vowel = Slots.vowel.vowel,
                     // Unset for the body's reason, see the classic KDoc.
-                    wet = Slots.vowel.wet.param,
-                    floor = Slots.vowel.floor.param,
+                    wet = Slots.vowel.wet,
+                    floor = Slots.vowel.floor,
                 ),
                 KatalystStageDsl.Delay(
-                    wet = Slots.delay.wet.param,
-                    time = Slots.delay.time.param,
-                    feedback = Slots.delay.feedback.param,
-                    cap = Slots.delay.cap.param,
+                    wet = Slots.delay.wet,
+                    time = Slots.delay.time,
+                    feedback = Slots.delay.feedback,
+                    cap = Slots.delay.cap,
                 ),
                 KatalystStageDsl.Reverb(
-                    wet = Slots.reverb.wet.param,
-                    size = Slots.reverb.size.param,
-                    lowpass = Slots.reverb.lowpass.param,
+                    wet = Slots.reverb.wet,
+                    size = Slots.reverb.size,
+                    lowpass = Slots.reverb.lowpass,
                 ),
                 KatalystStageDsl.Phaser(
-                    rate = Slots.phaser.rate.param,
-                    wet = Slots.phaser.wet.param,
-                    center = Slots.phaser.center.param,
-                    sweep = Slots.phaser.sweep.param,
-                    floor = Slots.phaser.floor.param,
+                    rate = Slots.phaser.rate,
+                    wet = Slots.phaser.wet,
+                    center = Slots.phaser.center,
+                    sweep = Slots.phaser.sweep,
+                    floor = Slots.phaser.floor,
                 ),
                 // All five unset, not four constants and an unset threshold: the engine's gate is
                 // "any of the five set", so four finite constants would read as a compressor that
                 // is already on. See the classic KDoc.
                 KatalystStageDsl.Compressor(
-                    threshold = Slots.compressor.threshold.param,
-                    ratio = Slots.compressor.ratio.param,
-                    knee = Slots.compressor.knee.param,
-                    attack = Slots.compressor.attack.param,
-                    release = Slots.compressor.release.param,
+                    threshold = Slots.compressor.threshold,
+                    ratio = Slots.compressor.ratio,
+                    knee = Slots.compressor.knee,
+                    attack = Slots.compressor.attack,
+                    release = Slots.compressor.release,
                 ),
                 // The group fader, at unity: the LAST stage the orbit's mix runs through (the
                 // duck below is declared last but runs outside the list, see [KatalystStageDsl.Duck]).
@@ -235,12 +235,12 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
                 // here so that a pattern can reach the fader with `katp("gain.gain", x)` without
                 // declaring a chain at all; there is no sprudel door for it yet.
                 KatalystStageDsl.Gain(
-                    gain = Slots.gain.gain.param,
+                    gain = Slots.gain.gain,
                 ),
                 KatalystStageDsl.Duck(
-                    orbit = Slots.duck.orbit.param,
-                    depth = Slots.duck.depth.param,
-                    attack = Slots.duck.attack.param,
+                    orbit = Slots.duck.orbit,
+                    depth = Slots.duck.depth,
+                    attack = Slots.duck.attack,
                 ),
             )
         )
@@ -260,14 +260,14 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * `Compressor` / `Reverb` / `DelayLine` every host uses). No stage may introduce its own DSP
  * implementation, which is what keeps one effect one sound on every bus.
  *
- * **Every knob is an [IgnitorDsl], restricted to block-constant nodes** ([IgnitorDsl.Constant] and
- * [IgnitorDsl.Param]): one value vocabulary for the chain, the same one [IgnitorDsl.EqSection]
- * already uses. A knob that somehow carries a signal-rate node is to be COERCED, never rejected:
- * the step-2 resolver reads it once per block and falls back to the knob's default when it cannot.
- * The Motor stays raw, so a knob is never clamped beyond what the underlying DSP already does.
- * **The one exception is [Compressor.lookahead]**, a plain `Double` fixed per chain (phase 3 step
- * 12 C2): it sizes a delay ring when the chain is built, so a slot there could never move, and the
- * type says so.
+ * **Every knob is a [KatalystKnobDsl]**, the Katalyst's own knob language and not an [IgnitorDsl] node
+ * (`docs/tasks/katalyst-knob-expressions.md`, D1): a [KatalystKnobDsl.Constant] or a [KatalystKnobDsl.Param], read
+ * once per block. An Ignitor node on a knob is a type error at the door (the script door's stage call; the Kotlin
+ * door's constructors do not take one), never coerced. The Motor stays raw, so a knob is never clamped beyond what
+ * the underlying DSP already does. **The exceptions are the knobs fixed per chain**, plain numbers because they size
+ * or pick something when the chain is built, so a slot there could never move, and the type says so:
+ * [Compressor.lookahead] (a delay ring, phase 3 step 12 C2), [Distort.shape] and [Distort.oversample]. The other is
+ * [Eq]: its sections stay the [IgnitorDsl.EqSection] the voice uses (decision Q2, E2).
  *
  * **Every knob keeps the name and the scale of its sprudel door**, so a number means the same
  * thing whether it is written on a pattern or in a chain. A BARE stage means "I reached for this
@@ -310,9 +310,9 @@ sealed interface KatalystStageDsl {
      */
     @WireName("body")
     data class Body(
-        val material: IgnitorDsl = IgnitorDsl.Constant(SLOT_UNSET),
-        val wet: IgnitorDsl = IgnitorDsl.Constant(BODY_WET),
-        val floor: IgnitorDsl = IgnitorDsl.Constant(BODY_FLOOR),
+        val material: KatalystKnobDsl = KatalystKnobDsl.Constant(SLOT_UNSET),
+        val wet: KatalystKnobDsl = KatalystKnobDsl.Constant(BODY_WET),
+        val floor: KatalystKnobDsl = KatalystKnobDsl.Constant(BODY_FLOOR),
     ) : KatalystStageDsl
 
     /**
@@ -333,9 +333,9 @@ sealed interface KatalystStageDsl {
      */
     @WireName("vowel")
     data class Vowel(
-        val vowel: IgnitorDsl = IgnitorDsl.Constant(SLOT_UNSET),
-        val wet: IgnitorDsl = IgnitorDsl.Constant(VOWEL_WET),
-        val floor: IgnitorDsl = IgnitorDsl.Constant(VOWEL_FLOOR),
+        val vowel: KatalystKnobDsl = KatalystKnobDsl.Constant(SLOT_UNSET),
+        val wet: KatalystKnobDsl = KatalystKnobDsl.Constant(VOWEL_WET),
+        val floor: KatalystKnobDsl = KatalystKnobDsl.Constant(VOWEL_FLOOR),
     ) : KatalystStageDsl
 
     /**
@@ -351,10 +351,10 @@ sealed interface KatalystStageDsl {
      */
     @WireName("delay")
     data class Delay(
-        val wet: IgnitorDsl = IgnitorDsl.Constant(DELAY_WET),
-        val time: IgnitorDsl = IgnitorDsl.Constant(DELAY_TIME_SECONDS),
-        val feedback: IgnitorDsl = IgnitorDsl.Constant(DELAY_FEEDBACK),
-        val cap: IgnitorDsl = IgnitorDsl.Constant(DELAY_CAP),
+        val wet: KatalystKnobDsl = KatalystKnobDsl.Constant(DELAY_WET),
+        val time: KatalystKnobDsl = KatalystKnobDsl.Constant(DELAY_TIME_SECONDS),
+        val feedback: KatalystKnobDsl = KatalystKnobDsl.Constant(DELAY_FEEDBACK),
+        val cap: KatalystKnobDsl = KatalystKnobDsl.Constant(DELAY_CAP),
     ) : KatalystStageDsl
 
     /**
@@ -374,9 +374,9 @@ sealed interface KatalystStageDsl {
      */
     @WireName("reverb")
     data class Reverb(
-        val wet: IgnitorDsl = IgnitorDsl.Constant(REVERB_WET),
-        val size: IgnitorDsl = IgnitorDsl.Constant(REVERB_SIZE),
-        val lowpass: IgnitorDsl? = null,
+        val wet: KatalystKnobDsl = KatalystKnobDsl.Constant(REVERB_WET),
+        val size: KatalystKnobDsl = KatalystKnobDsl.Constant(REVERB_SIZE),
+        val lowpass: KatalystKnobDsl? = null,
     ) : KatalystStageDsl
 
     /**
@@ -393,11 +393,11 @@ sealed interface KatalystStageDsl {
      */
     @WireName("phaser")
     data class Phaser(
-        val rate: IgnitorDsl = IgnitorDsl.Constant(PHASER_RATE_HZ),
-        val wet: IgnitorDsl = IgnitorDsl.Constant(PHASER_WET),
-        val center: IgnitorDsl = IgnitorDsl.Constant(PHASER_CENTER_HZ),
-        val sweep: IgnitorDsl = IgnitorDsl.Constant(PHASER_SWEEP_HZ),
-        val floor: IgnitorDsl = IgnitorDsl.Constant(PHASER_FLOOR),
+        val rate: KatalystKnobDsl = KatalystKnobDsl.Constant(PHASER_RATE_HZ),
+        val wet: KatalystKnobDsl = KatalystKnobDsl.Constant(PHASER_WET),
+        val center: KatalystKnobDsl = KatalystKnobDsl.Constant(PHASER_CENTER_HZ),
+        val sweep: KatalystKnobDsl = KatalystKnobDsl.Constant(PHASER_SWEEP_HZ),
+        val floor: KatalystKnobDsl = KatalystKnobDsl.Constant(PHASER_FLOOR),
     ) : KatalystStageDsl
 
     /**
@@ -429,11 +429,11 @@ sealed interface KatalystStageDsl {
      */
     @WireName("compressor")
     data class Compressor(
-        val threshold: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_THRESHOLD_DB),
-        val ratio: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_RATIO),
-        val knee: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_KNEE_DB),
-        val attack: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_ATTACK_SECONDS),
-        val release: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_RELEASE_SECONDS),
+        val threshold: KatalystKnobDsl = KatalystKnobDsl.Constant(COMPRESSOR_THRESHOLD_DB),
+        val ratio: KatalystKnobDsl = KatalystKnobDsl.Constant(COMPRESSOR_RATIO),
+        val knee: KatalystKnobDsl = KatalystKnobDsl.Constant(COMPRESSOR_KNEE_DB),
+        val attack: KatalystKnobDsl = KatalystKnobDsl.Constant(COMPRESSOR_ATTACK_SECONDS),
+        val release: KatalystKnobDsl = KatalystKnobDsl.Constant(COMPRESSOR_RELEASE_SECONDS),
         val lookahead: Double = COMPRESSOR_LOOKAHEAD_SECONDS,
     ) : KatalystStageDsl
 
@@ -466,7 +466,7 @@ sealed interface KatalystStageDsl {
      */
     @WireName("distort")
     data class Distort(
-        val amount: IgnitorDsl = IgnitorDsl.Constant(DISTORT_AMOUNT),
+        val amount: KatalystKnobDsl = KatalystKnobDsl.Constant(DISTORT_AMOUNT),
         val shape: Int = DistortionShapes.SOFT_INDEX,
         val oversample: Int = DISTORT_OVERSAMPLE,
     ) : KatalystStageDsl
@@ -492,16 +492,19 @@ sealed interface KatalystStageDsl {
      */
     @WireName("duck")
     data class Duck(
-        val orbit: IgnitorDsl = IgnitorDsl.Constant(SLOT_UNSET),
-        val depth: IgnitorDsl = IgnitorDsl.Constant(DUCK_DEPTH),
-        val attack: IgnitorDsl = IgnitorDsl.Constant(DUCK_ATTACK_SECONDS),
+        val orbit: KatalystKnobDsl = KatalystKnobDsl.Constant(SLOT_UNSET),
+        val depth: KatalystKnobDsl = KatalystKnobDsl.Constant(DUCK_DEPTH),
+        val attack: KatalystKnobDsl = KatalystKnobDsl.Constant(DUCK_ATTACK_SECONDS),
     ) : KatalystStageDsl
 
     /**
      * The mix equalizer: one stage whose inside is a list of sections, applied left to right.
      *
      * Reuses [IgnitorDsl.EqSection] verbatim, so a section means the same thing on a voice and on
-     * an orbit.
+     * an orbit. This is the one place a Katalyst stage still carries Ignitor nodes (decision Q2 of
+     * `docs/tasks/katalyst-knob-expressions.md`, E2: the sections are a DSP law shared with the voice and with
+     * `bands`). The Katalyst door lets a section knob be a number or a `Kat.param` only, as a
+     * [IgnitorDsl.Constant] or a [IgnitorDsl.Param]; the engine reads any other node there as unset.
      *
      * There is no default position: a stage sits where it is written, and nothing reorders it. An EQ
      * after the reverb and before the dynamics shapes the room with the dry and lets the detector
@@ -557,7 +560,7 @@ sealed interface KatalystStageDsl {
      */
     @WireName("gain")
     data class Gain(
-        val gain: IgnitorDsl = IgnitorDsl.Constant(1.0),
+        val gain: KatalystKnobDsl = KatalystKnobDsl.Constant(1.0),
     ) : KatalystStageDsl
 
     // ── Arithmetic: the Ignitor's operators on the bus signal ───────────────────────────────────
@@ -577,11 +580,11 @@ sealed interface KatalystStageDsl {
 
     /** Adds [other] to every sample (the Ignitor's `Plus`, bare: no clamp). A constant offset is DC on the bus. */
     @WireName("plus")
-    data class Plus(val other: IgnitorDsl) : KatalystStageDsl
+    data class Plus(val other: KatalystKnobDsl) : KatalystStageDsl
 
     /** Subtracts [other] from every sample (the Ignitor's `Minus`, bare: no clamp). */
     @WireName("minus")
-    data class Minus(val other: IgnitorDsl) : KatalystStageDsl
+    data class Minus(val other: KatalystKnobDsl) : KatalystStageDsl
 
     /**
      * Multiplies every sample by [other] (the Ignitor's `Times`, the output clamped by `safeOut`). Not the fader:
@@ -589,29 +592,29 @@ sealed interface KatalystStageDsl {
      * chain; this is the arithmetic, identical to the voice's. A polarity flip is `Times(-1)`.
      */
     @WireName("times")
-    data class Times(val other: IgnitorDsl) : KatalystStageDsl
+    data class Times(val other: KatalystKnobDsl) : KatalystStageDsl
 
     /** Divides every sample by [other] (the Ignitor's `Div`: a divisor of exactly zero gives zero, the output clamped). */
     @WireName("div")
-    data class Div(val other: IgnitorDsl) : KatalystStageDsl
+    data class Div(val other: KatalystKnobDsl) : KatalystStageDsl
 
     /** Raises every sample to [exp] (the Ignitor's `Pow`, signed magnitude: a negative sample keeps its sign). */
     @WireName("pow")
-    data class Pow(val exp: IgnitorDsl) : KatalystStageDsl
+    data class Pow(val exp: KatalystKnobDsl) : KatalystStageDsl
 
     /**
      * The per-sample MINIMUM of the bus and [other]: a cap. Mathematical, like the Ignitor's `Min` node; the doors are
      * clamps, so the `max` door ("at most") builds this one. Do not "correct" the crossing.
      */
     @WireName("min")
-    data class Min(val other: IgnitorDsl) : KatalystStageDsl
+    data class Min(val other: KatalystKnobDsl) : KatalystStageDsl
 
     /**
      * The per-sample MAXIMUM of the bus and [other]: a floor. Mathematical, like the Ignitor's `Max` node; the `min`
      * door ("at least") builds this one.
      */
     @WireName("max")
-    data class Max(val other: IgnitorDsl) : KatalystStageDsl
+    data class Max(val other: KatalystKnobDsl) : KatalystStageDsl
 
     /** The absolute value of every sample: full-wave rectification (the Ignitor's `Abs`). No knob. */
     @WireName("abs")

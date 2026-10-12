@@ -24,8 +24,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
@@ -79,35 +79,35 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     /** A chain with neither a delay nor a reverb: one pass-through stage, the "dry" chain. */
     fun dryChain(gain: Double) = KatalystDsl.of(
-        KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(gain))
+        KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(gain))
     )
 
     /** A chain whose only stage is a room of its own, for the warm-up rows. */
     fun roomChain(size: Double) = KatalystDsl.of(
-        KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.5), size = IgnitorDsl.Constant(size))
+        KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(size))
     )
 
     /** A chain whose only stage is an echo, so the stage list says which chain is in service. */
     fun echoChain(time: Double) = KatalystDsl.of(
-        KatalystStageDsl.Delay(time = IgnitorDsl.Constant(time))
+        KatalystStageDsl.Delay(time = KatalystKnobDsl.Constant(time))
     )
 
     /** A chain with a room AND an echo of its own, for the wet-path rows. */
     fun wetChain(time: Double, size: Double) = KatalystDsl.of(
         KatalystStageDsl.Delay(
-            wet = IgnitorDsl.Constant(0.5),
-            time = IgnitorDsl.Constant(time),
-            feedback = IgnitorDsl.Constant(0.5),
+            wet = KatalystKnobDsl.Constant(0.5),
+            time = KatalystKnobDsl.Constant(time),
+            feedback = KatalystKnobDsl.Constant(0.5),
         ),
-        KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.5), size = IgnitorDsl.Constant(size)),
+        KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(size)),
     )
 
     /** A chain whose only stage is a duck listening to [orbit]. */
     fun duckChain(depth: Double, attack: Double, orbit: Double = 0.0) = KatalystDsl.of(
         KatalystStageDsl.Duck(
-            orbit = IgnitorDsl.Constant(orbit),
-            depth = IgnitorDsl.Constant(depth),
-            attack = IgnitorDsl.Constant(attack),
+            orbit = KatalystKnobDsl.Constant(orbit),
+            depth = KatalystKnobDsl.Constant(depth),
+            attack = KatalystKnobDsl.Constant(attack),
         )
     )
 
@@ -118,9 +118,9 @@ class CylinderChainCrossfadeSpec : StringSpec({
      */
     fun slotDuckChain() = KatalystDsl.of(
         KatalystStageDsl.Duck(
-            orbit = IgnitorDsl.Param("duck.orbit", SLOT_UNSET),
-            depth = IgnitorDsl.Param("duck.depth", 0.0),
-            attack = IgnitorDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+            orbit = KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET),
+            depth = KatalystKnobDsl.Param("duck.depth", 0.0),
+            attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
         )
     )
 
@@ -130,13 +130,13 @@ class CylinderChainCrossfadeSpec : StringSpec({
      */
     fun roomSlotChain() = KatalystDsl.of(
         KatalystStageDsl.Reverb(
-            wet = IgnitorDsl.Constant(0.5),
-            size = IgnitorDsl.Param("reverb.size", 3.0),
+            wet = KatalystKnobDsl.Constant(0.5),
+            size = KatalystKnobDsl.Param("reverb.size", 3.0),
         ),
         KatalystStageDsl.Duck(
-            orbit = IgnitorDsl.Param("duck.orbit", SLOT_UNSET),
-            depth = IgnitorDsl.Param("duck.depth", 0.0),
-            attack = IgnitorDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+            orbit = KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET),
+            depth = KatalystKnobDsl.Param("duck.depth", 0.0),
+            attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
         ),
     )
 
@@ -151,7 +151,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
      * start from an un-ducked orbit while the owner already carries the state.
      */
     fun noDuckChain() = KatalystDsl.of(
-        KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.0), size = IgnitorDsl.Constant(0.0))
+        KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.0), size = KatalystKnobDsl.Constant(0.0))
     )
 
     /**
@@ -159,7 +159,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
      * `KatalystDuckWriter` resolves to no settings.
      */
     fun duckChainWithNoOrbit() = KatalystDsl.of(
-        KatalystStageDsl.Duck(depth = IgnitorDsl.Constant(0.8))
+        KatalystStageDsl.Duck(depth = KatalystKnobDsl.Constant(0.8))
     )
 
     /** A ring shelf that records every allocation it is asked for. */
@@ -982,11 +982,11 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // A room AND a duck on the way out, so the chain is still DRAINING when the row looks: a
         // chain that retires at the end of the fade would drop its duck on that path instead.
         rig.registry.register("ducked", KatalystDsl.of(
-            KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.5), size = IgnitorDsl.Constant(6.0)),
+            KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(6.0)),
             KatalystStageDsl.Duck(
-                orbit = IgnitorDsl.Constant(0.0),
-                depth = IgnitorDsl.Constant(0.8),
-                attack = IgnitorDsl.Constant(0.05),
+                orbit = KatalystKnobDsl.Constant(0.0),
+                depth = KatalystKnobDsl.Constant(0.8),
+                attack = KatalystKnobDsl.Constant(0.05),
             ),
         ))
         rig.registry.register("dry", dryChain(1.0))

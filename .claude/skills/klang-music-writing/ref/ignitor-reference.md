@@ -775,10 +775,11 @@ The two kinds of param are different types, `Ignitor.param` for the instrument a
 and the wrong one is a script error at the call, with the fix in the message. `ignp(Katalyst.param(...), 1)` says
 `a Katalyst param passed to ignp; use katp`. An `Ignitor.param` handed to a chain knob, as in
 `Katalyst(k => k.reverb(0.5, cutoff))` with the `cutoff` of the setter example above, says
-`an Ignitor param in a Katalyst chain; use Kat.param`. A Katalyst param has no arithmetic
-(`Katalyst.param("room", 5).mul(2)` is an error). An expression over an Ignitor param on a chain knob is accepted,
-but it is folded once when the chain is built and does not listen to `katp`: hand the knob a `Katalyst.param` and
-do the arithmetic on the pattern side.
+`an Ignitor param in a Katalyst chain; use Kat.param`, and a Katalyst param in an Ignitor tree says
+`a Katalyst knob in an Ignitor tree; use Ign.param`. A chain knob takes a number or a `Katalyst.param` and nothing
+else: any other Ignitor node there (an oscillator, an expression over an Ignitor param) is a script error at the stage
+call, `a Katalyst knob takes a number or a Kat.param; got a sound`. A Katalyst param has no arithmetic yet
+(`Katalyst.param("room", 5).mul(2)` is an error): do the arithmetic on the pattern side.
 
 ### Audio-rate Modulation
 

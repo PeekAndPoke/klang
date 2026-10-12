@@ -23,8 +23,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.common.infra.klangMapOf
 
@@ -44,12 +44,12 @@ class CylinderChainSwapSpec : StringSpec({
 
     /** A chain with a delay and nothing else: its `delay` stage is there, its `reverb` is not. */
     fun delayChain(time: Double) = KatalystDsl.of(
-        KatalystStageDsl.Delay(time = IgnitorDsl.Constant(time))
+        KatalystStageDsl.Delay(time = KatalystKnobDsl.Constant(time))
     )
 
     /** A chain with neither a delay nor a reverb, the "everything the classic chain has is gone" case. */
     fun gainChain(gain: Double) = KatalystDsl.of(
-        KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(gain))
+        KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(gain))
     )
 
     /** A ring shelf that records every allocation it is asked for, and can be told to refuse. */
@@ -412,7 +412,7 @@ class CylinderChainSwapSpec : StringSpec({
         // The feedback is deliberately NOT the DELAY_FEEDBACK default, or the two chains would be
         // content-equal and the second request would be the no-op of the row above.
         rig.registry.register("echo-slower", KatalystDsl.of(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Constant(0.25), feedback = IgnitorDsl.Constant(0.45))
+            KatalystStageDsl.Delay(time = KatalystKnobDsl.Constant(0.25), feedback = KatalystKnobDsl.Constant(0.45))
         ))
 
         rig.cylinder.requestChain("echo")
@@ -505,7 +505,7 @@ class CylinderChainSwapSpec : StringSpec({
         val rig = Rig(alloc = Recording(failing = true))
         rig.registry.register("echo", delayChain(0.25))
         rig.registry.register("echo-2", KatalystDsl.of(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Constant(0.25), feedback = IgnitorDsl.Constant(0.45))
+            KatalystStageDsl.Delay(time = KatalystKnobDsl.Constant(0.25), feedback = KatalystKnobDsl.Constant(0.45))
         ))
         rig.registry.register("dry", gainChain(1.0))
 
@@ -573,7 +573,7 @@ class CylinderChainSwapSpec : StringSpec({
         // Re-labelled for the next engine WITHOUT going through `CylinderUnits.giveBack` first.
         val next = KatalystRegistry()
         next.register("echo-next", KatalystDsl.of(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Constant(0.25), feedback = IgnitorDsl.Constant(0.45))
+            KatalystStageDsl.Delay(time = KatalystKnobDsl.Constant(0.25), feedback = KatalystKnobDsl.Constant(0.45))
         ))
         rig.cylinder.adopt(id = 5, silentBlocksBeforeTailCheck = 0, katalysts = next)
 

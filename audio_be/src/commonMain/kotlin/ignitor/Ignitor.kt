@@ -35,7 +35,7 @@ interface Ignitor {
      * The block-constant scalar value of this signal. READ ONLY WHEN [isBlockConstant] IS TRUE: then it is the
      * node's value for this block; otherwise it is unspecified (the default is NaN, a combinator over a varying
      * child computes from that child's unspecified value) and no reader may use it. The nullable view for the cold
-     * readers (the build, the Katalyst slots) is the extension [controlRateValueOrNull], which gates on the flag.
+     * readers (the build) is the extension [controlRateValueOrNull], which gates on the flag.
      *
      * Block-constant leaves ([ConstantIgnitor], [ParamIgnitor], [FreqIgnitor]) and pure pointwise
      * combinators (`plus`/`times`/… folding block-constant children) return their value here; everything
@@ -114,7 +114,7 @@ interface Ignitor {
 
 /**
  * The scalar as a nullable view, for the cold readers that ask a question rather than read a knob (the ignitor
- * build at note-on, the Katalyst slots, the build's sizing reads): [Ignitor.controlRateValue] when
+ * build at note-on, the build's sizing reads): [Ignitor.controlRateValue] when
  * [Ignitor.isBlockConstant], `null` otherwise. Not for a per-block path: there the flag and the primitive scalar
  * are read directly (a `Double?` boxes on the JVM wherever the call is not inlined).
  */

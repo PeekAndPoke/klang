@@ -9,7 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
@@ -41,7 +41,7 @@ class KatalystSettingsAllocationSpec : StringSpec({
 
     fun bytes(): Double = mx.currentThreadAllocatedBytes.toDouble()
 
-    fun slot(name: String) = IgnitorDsl.Param(name, SLOT_UNSET)
+    fun slot(name: String) = KatalystKnobDsl.Param(name, SLOT_UNSET)
 
     fun ctx(): KatalystContext = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames)).apply {
         sidechainBuffer = StereoBuffer(blockFrames)

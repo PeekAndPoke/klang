@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
@@ -48,47 +48,60 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * an orbit and at the output. At the output nothing fills a slot (it stays at its default) and a
  * `duck` stage is inert.
  *
- * Every knob takes a number OR a Katalyst param (`IgnitorDslLike`, converted by [toKatalystKnob]). An
- * `Ignitor.param(...)` is a script error there; the reason is on [toKatalystKnob]. An expression over a param
- * (`Ignitor.param("room", 5).mul(2)`) is folded ONCE, when the chain is built, and never listens: hand the knob a
- * `Katalyst.param` and do the arithmetic on the pattern side. The chain reads its knobs once per block, so a signal-rate node on one is coerced, never rejected. The one
- * exception is the compressor's and the limiter's `lookahead`, a plain number fixed when the chain is built (it
- * sizes a delay ring).
+ * Every knob takes a number OR a Katalyst param (`IgnitorDslLike`, converted by [toKatalystKnob]) and nothing else: any
+ * Ignitor node, an `Ignitor.param(...)` included, is a script error at the stage call; the reason is on
+ * [toKatalystKnob]. The chain reads its knobs once per block. The exceptions are the knobs fixed when the chain is
+ * built, plain numbers or names: the compressor's and the limiter's `lookahead` (it sizes a delay ring) and
+ * `distort`'s `shape` and `oversample`.
  */
 
 /**
- * Converts a Katalyst knob argument to the [IgnitorDsl] its stage carries: a number to a [IgnitorDsl.Constant], a
- * [KatalystParam] to its [KatalystParam.param] (the slot `katp` writes), any other [IgnitorDsl] as it is (the chain
- * folds it to a number once, when it is built). The one conversion of every Katalyst builder knob, the Katalyst `eq`
- * sections included.
+ * Converts a Katalyst knob argument to the [KatalystKnobDsl] its stage carries: a number to a
+ * [KatalystKnobDsl.Constant], a Katalyst knob (`Kat.param(...)`, `Kat.slot.*`) as it is. The one conversion of every
+ * Katalyst builder knob, the Katalyst `eq` sections included (they map the result onto their Ignitor section, see
+ * [toEqSectionKnob]).
  *
- * A BARE [IgnitorDsl.Param] is a [KlangScriptTypeError] (decision Q2 of `docs/plans/ignitor-katalyst-naming.md`,
+ * ANY [IgnitorDsl] is a [KlangScriptTypeError]: the Katalyst has its own knob language (decision D1 of
+ * `docs/tasks/katalyst-knob-expressions.md`, `docs/plans/future/signal-graph-engine.md` §6.10), and an Ignitor node
+ * means nothing on a bus knob (an oscillator has no bus value, a note frequency no bus note). Until 2026-10-12 such a
+ * node was accepted and folded to one number when the chain was built; the type split removed that coercion.
+ *
+ * A BARE [IgnitorDsl.Param] keeps its own message (decision Q2 of `docs/plans/ignitor-katalyst-naming.md`,
  * 2026-10-03). THIS IS THE ONE HOME of the reason: an Ignitor param is the voice's slot by intent. Its author drives
  * it with `ignp`, which writes the voice's map and never reaches the chain, so on a chain the knob would sit at its
- * default while the song moves it. (The engine itself reads any `Param` on a chain from the orbit's `katp` state by
- * name; the type split is what tells the two apart.) Not a coercion, for the reason [ignitorSlotName] gives: the
- * wrong KIND of argument, which no clamp can make mean what the author wanted.
+ * default while the song moves it; the fix is `Kat.param`. Not a coercion, for the reason [ignitorSlotName] gives:
+ * the wrong KIND of argument, which no clamp can make mean what the author wanted.
  *
- * An expression over a param (`Ignitor.param("room", 5).mul(2)`) is accepted and folded once at build, so it does not
- * listen: hand the knob a `Katalyst.param`. (Not refused: a tree walk for a `Param` would also trip on the
- * `Slots.analog` default every oscillator carries, so `k.phaser(rate = Ignitor.sine(0.2))` would be refused.)
- *
- * Anything that is neither a number, a Katalyst param nor a sound (a string, a lambda, an object ...) is a type error with
- * its own text: "a Katalyst knob takes a number, a Kat.param or a Kat.slot; got ...".
+ * Anything else (another Ignitor node, a string, a lambda, an object ...) is a type error with its own text: "a
+ * Katalyst knob takes a number or a Kat.param; got ...". Step 4 of that task widens what a knob takes.
  *
  * Both errors are thrown without a source location (this function has no call site to give); the native-call
  * guard (`guardNativeCall` in klangscript) gives them the location of the stage call, so the editor marks
  * `k.reverb(...)`. Guard: `KlangScriptKatalystDoorParitySpec`, "a wrong knob value is reported at the stage call".
  */
-fun IgnitorDslLike.toKatalystKnob(): IgnitorDsl = when (this) {
-    is KatalystParam -> param
+fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
+    is KatalystKnobDsl -> this
+    is Number -> KatalystKnobDsl.Constant(this.toDouble())
     is IgnitorDsl.Param -> throw KlangScriptTypeError("an Ignitor param in a Katalyst chain; use Kat.param", operation = "Katalyst knob")
-    is IgnitorDsl -> this
-    is Number -> IgnitorDsl.Constant(this.toDouble())
     else -> throw KlangScriptTypeError(
-        "a Katalyst knob takes a number, a Kat.param or a Kat.slot; got ${describeArgument(this)}",
+        "a Katalyst knob takes a number or a Kat.param; got ${describeArgument(this)}",
         operation = "Katalyst knob",
     )
+}
+
+/**
+ * A Katalyst knob as the [IgnitorDsl] an EQ section carries: the residue of mixing the two DSLs that decision Q2 of
+ * `docs/tasks/katalyst-knob-expressions.md` keeps (maintainer, 2026-10-11, E2: "keep shared, slots only"). The `eq`
+ * stage's sections are [IgnitorDsl.EqSection], the one section law shared with the voice EQ and with `bands`, so a
+ * bus section's knob is an Ignitor leaf: a [KatalystKnobDsl.Constant] becomes an [IgnitorDsl.Constant] and a
+ * [KatalystKnobDsl.Param] the [IgnitorDsl.Param] of the same name and default, which the engine reads from the
+ * orbit's `katp` state (`KatalystChainBuilder.eqKnob`). Recorded asymmetry: a section knob takes a number or a
+ * `Kat.param` only, never what a stage knob may take beyond that. A Katalyst section hierarchy (E1) is its own task,
+ * for the day a song wants a swept bus EQ.
+ */
+internal fun KatalystKnobDsl.toEqSectionKnob(): IgnitorDsl = when (this) {
+    is KatalystKnobDsl.Constant -> IgnitorDsl.Constant(value)
+    is KatalystKnobDsl.Param -> IgnitorDsl.Param(name = name, default = default, description = description)
 }
 
 // ── The chain ────────────────────────────────────────────────────────────────
@@ -195,7 +208,7 @@ fun KatalystBuilder.body(
     return append(
         KatalystBodyBuilder(
             KatalystStageDsl.Body(
-                material = catalogueIndex(material, bare.material, BodyMaterials::indexOf, knob = { it.toKatalystKnob() }),
+                material = catalogueIndex(material, bare.material, BodyMaterials::indexOf, constant = { KatalystKnobDsl.Constant(it) }, knob = { it.toKatalystKnob() }),
                 wet = wet?.toKatalystKnob() ?: bare.wet,
                 floor = bare.floor,
             )
@@ -232,7 +245,7 @@ fun KatalystBuilder.vowel(
     return append(
         KatalystVowelBuilder(
             KatalystStageDsl.Vowel(
-                vowel = catalogueIndex(vowel, bare.vowel, VowelBands::indexOf, knob = { it.toKatalystKnob() }),
+                vowel = catalogueIndex(vowel, bare.vowel, VowelBands::indexOf, constant = { KatalystKnobDsl.Constant(it) }, knob = { it.toKatalystKnob() }),
                 wet = wet?.toKatalystKnob() ?: bare.wet,
                 floor = bare.floor,
             )
@@ -389,7 +402,7 @@ fun KatalystBuilder.compressor(
  * and one wire word.
  *
  * The limiter numbers live on the DOOR, and the stage does not know it was a limiter: a knob the
- * engine cannot read (a signal-rate node, or a slot whose value is unset or non-finite) falls back to the
+ * engine cannot read (a slot whose value is unset or non-finite) falls back to the
  * COMPRESSOR's shared constant (threshold -20, ratio 4, knee 6, attack 0.003, release 0.1), not to
  * the limiter's. Write a slot's default as the number you want.
  *
@@ -424,11 +437,11 @@ fun KatalystBuilder.limiter(
     lookahead: Double? = null,
 ): KatalystBuilder = append(
     KatalystStageDsl.Compressor(
-        threshold = threshold?.toKatalystKnob() ?: IgnitorDsl.Constant(LIMITER_THRESHOLD_DB),
-        ratio = ratio?.toKatalystKnob() ?: IgnitorDsl.Constant(LIMITER_RATIO),
-        knee = knee?.toKatalystKnob() ?: IgnitorDsl.Constant(LIMITER_KNEE_DB),
-        attack = attack?.toKatalystKnob() ?: IgnitorDsl.Constant(AUTHORED_LIMITER_ATTACK_SECONDS),
-        release = release?.toKatalystKnob() ?: IgnitorDsl.Constant(LIMITER_RELEASE_SECONDS),
+        threshold = threshold?.toKatalystKnob() ?: KatalystKnobDsl.Constant(LIMITER_THRESHOLD_DB),
+        ratio = ratio?.toKatalystKnob() ?: KatalystKnobDsl.Constant(LIMITER_RATIO),
+        knee = knee?.toKatalystKnob() ?: KatalystKnobDsl.Constant(LIMITER_KNEE_DB),
+        attack = attack?.toKatalystKnob() ?: KatalystKnobDsl.Constant(AUTHORED_LIMITER_ATTACK_SECONDS),
+        release = release?.toKatalystKnob() ?: KatalystKnobDsl.Constant(LIMITER_RELEASE_SECONDS),
         lookahead = lookahead ?: AUTHORED_LIMITER_LOOKAHEAD_SECONDS,
     )
 )
@@ -779,7 +792,9 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
  * Linear is right for a branch correlated with the dry (distortion, compression, filters). A `reverb` or `delay` in the
  * branch carries the dry as well (it adds its return on top), so `blend(w, b => b.reverb(1, 7))` is the dry plus `w`
  * of the room. [wet] is a plain number here, where the Ignitor's may be a slot or a signal: `1 - wet` needs arithmetic,
- * which a Katalyst param does not have (recorded asymmetry). A number that is not finite reads as 0.
+ * which a Katalyst param does not have (recorded asymmetry). A number that is not finite reads as 0. Any Ignitor node
+ * is refused, `Ignitor.constant(...)` included (it was accepted until step 3 of `docs/tasks/katalyst-knob-expressions.md`,
+ * 2026-10-12, when the Katalyst knobs stopped taking Ignitor nodes).
  *
  * @param wet the share of the branch, 0 to 1.
  * @param branch a function from a builder to a builder, given an empty one.
@@ -788,10 +803,10 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
 fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
     val number = when (wet) {
         is Number -> wet.toDouble()
-        is IgnitorDsl.Constant -> wet.value
+        is KatalystKnobDsl.Constant -> wet.value
         else -> throw KlangScriptTypeError(
             message = "wet is a plain number here (1 - wet needs arithmetic, which a Katalyst param or a signal does not " +
-                    "have); got ${wet::class.simpleName}",
+                    "have); got ${describeArgument(wet)}",
             operation = "Katalyst blend",
         )
     }

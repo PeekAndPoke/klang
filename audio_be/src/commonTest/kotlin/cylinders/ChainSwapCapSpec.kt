@@ -18,8 +18,8 @@ import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.ReleaseLaw
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.dryChain
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.roomChain
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.math.abs
 
@@ -62,9 +62,9 @@ class ChainSwapCapSpec : StringSpec({
     /** A delay that sustains itself: feedback 1 on silence never decays. */
     val loop = KatalystDsl.of(
         KatalystStageDsl.Delay(
-            wet = IgnitorDsl.Constant(0.5),
-            time = IgnitorDsl.Constant(0.1),
-            feedback = IgnitorDsl.Constant(1.0),
+            wet = KatalystKnobDsl.Constant(0.5),
+            time = KatalystKnobDsl.Constant(0.1),
+            feedback = KatalystKnobDsl.Constant(1.0),
         )
     )
 

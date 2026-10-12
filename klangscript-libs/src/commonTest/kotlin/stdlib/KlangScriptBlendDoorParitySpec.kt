@@ -12,6 +12,7 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.blend
 import io.peekandpoke.klang.audio_bridge.mul
@@ -41,6 +42,7 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
     fun errorOf(block: () -> Unit): String = shouldThrowAny { block() }.message ?: ""
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
+    fun k(v: Double) = KatalystKnobDsl.Constant(v)
 
     // ── Ignitor ──────────────────────────────────────────────────────────────────────────────────
 
@@ -89,8 +91,8 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
         katalyst("Katalyst(k => k.blend(0.3, b => b.distort(0.6)))") shouldBe KatalystDsl.of(
             KatalystStageDsl.Parallel(
                 branches = listOf(
-                    KatalystDsl.of(KatalystStageDsl.Gain(c(0.7))),
-                    KatalystDsl.of(KatalystStageDsl.Distort(amount = c(0.6)), KatalystStageDsl.Gain(c(0.3))),
+                    KatalystDsl.of(KatalystStageDsl.Gain(k(0.7))),
+                    KatalystDsl.of(KatalystStageDsl.Distort(amount = k(0.6)), KatalystStageDsl.Gain(k(0.3))),
                 ),
             ),
         )
@@ -103,8 +105,8 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
 
         val stage = empty.blend(Double.NaN) { it.distort(0.6) }.node.stages.single().shouldBeInstanceOf<KatalystStageDsl.Parallel>()
 
-        stage.branches[0].stages.single() shouldBe KatalystStageDsl.Gain(c(1.0))
-        stage.branches[1].stages.last() shouldBe KatalystStageDsl.Gain(c(0.0))
+        stage.branches[0].stages.single() shouldBe KatalystStageDsl.Gain(k(1.0))
+        stage.branches[1].stages.last() shouldBe KatalystStageDsl.Gain(k(0.0))
     }
 
     // ── A broken branch is named ─────────────────────────────────────────────────────────────────
@@ -112,6 +114,11 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
     "Katalyst: a param or a signal as wet is a script error that says wet is a plain number here" {
         errorOf { katalyst("""Katalyst(k => k.blend(Katalyst.param("mix", 0.3), b => b.distort(0.6)))""") } shouldContain
                 "wet is a plain number here"
+        errorOf { katalyst("""Katalyst(k => k.blend(Katalyst.param("mix", 0.3), b => b.distort(0.6)))""") } shouldContain
+                "got a Katalyst knob"
+        // An Ignitor constant was accepted until step 3 (2026-10-12); a Katalyst knob takes no Ignitor node now.
+        errorOf { katalyst("""Katalyst(k => k.blend(Ignitor.constant(0.3), b => b.distort(0.6)))""") } shouldContain
+                "got a sound"
     }
 
     "a branch that returns nothing or something else is named, on both DSLs" {

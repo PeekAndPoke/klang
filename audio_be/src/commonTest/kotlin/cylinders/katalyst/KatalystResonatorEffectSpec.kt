@@ -17,8 +17,8 @@ import io.peekandpoke.klang.audio_be.filters.ResonatorConfig
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
@@ -120,12 +120,12 @@ class KatalystResonatorEffectSpec : StringSpec({
         // The maintainer's "a" sung through "wood", in both orders. The classic chain declares the body first, so a
         // `chain.vowel` that took the last resonator of any kind would still pass there.
         val vowelStage = KatalystStageDsl.Vowel(
-            vowel = IgnitorDsl.Param("vowel.vowel", SLOT_UNSET),
-            wet = IgnitorDsl.Param("vowel.wet", 0.7),
+            vowel = KatalystKnobDsl.Param("vowel.vowel", SLOT_UNSET),
+            wet = KatalystKnobDsl.Param("vowel.wet", 0.7),
         )
         val bodyStage = KatalystStageDsl.Body(
-            material = IgnitorDsl.Param("body.material", SLOT_UNSET),
-            wet = IgnitorDsl.Param("body.wet", 0.6),
+            material = KatalystKnobDsl.Param("body.material", SLOT_UNSET),
+            wet = KatalystKnobDsl.Param("body.wet", 0.6),
         )
 
         for (order in listOf(listOf(vowelStage, bodyStage), listOf(bodyStage, vowelStage))) {

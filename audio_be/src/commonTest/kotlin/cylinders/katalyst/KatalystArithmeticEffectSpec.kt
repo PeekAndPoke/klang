@@ -27,8 +27,8 @@ import io.peekandpoke.klang.audio_be.ignitor.pow
 import io.peekandpoke.klang.audio_be.ignitor.times
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.common.infra.klangMapOf
@@ -130,17 +130,17 @@ class KatalystArithmeticEffectSpec : StringSpec({
 
         // Each row: the stage, and the Ignitor node the runtime builds for that operator over a source.
         val rows: List<Triple<String, KatalystStageDsl, (Ignitor) -> Ignitor>> = listOf(
-            Triple("plus 0.25", KatalystStageDsl.Plus(IgnitorDsl.Constant(0.25)), { s -> s + ConstantIgnitor(0.25) }),
-            Triple("minus 0.25", KatalystStageDsl.Minus(IgnitorDsl.Constant(0.25)), { s -> s.minus(ConstantIgnitor(0.25)) }),
-            Triple("times 10", KatalystStageDsl.Times(IgnitorDsl.Constant(10.0)), { s -> s * ConstantIgnitor(10.0) }),
-            Triple("times -1 (neg)", KatalystStageDsl.Times(IgnitorDsl.Constant(-1.0)), { s -> s.neg() }),
-            Triple("div 3", KatalystStageDsl.Div(IgnitorDsl.Constant(3.0)), { s -> s.div(ConstantIgnitor(3.0)) }),
-            Triple("div 0", KatalystStageDsl.Div(IgnitorDsl.Constant(0.0)), { s -> s.div(ConstantIgnitor(0.0)) }),
-            Triple("div 1e-20", KatalystStageDsl.Div(IgnitorDsl.Constant(1e-20)), { s -> s.div(ConstantIgnitor(1e-20)) }),
-            Triple("pow 2", KatalystStageDsl.Pow(IgnitorDsl.Constant(2.0)), { s -> s.pow(ConstantIgnitor(2.0)) }),
-            Triple("pow 0.5", KatalystStageDsl.Pow(IgnitorDsl.Constant(0.5)), { s -> s.pow(ConstantIgnitor(0.5)) }),
-            Triple("min 0.3", KatalystStageDsl.Min(IgnitorDsl.Constant(0.3)), { s -> s.min(ConstantIgnitor(0.3)) }),
-            Triple("max -0.3", KatalystStageDsl.Max(IgnitorDsl.Constant(-0.3)), { s -> s.max(ConstantIgnitor(-0.3)) }),
+            Triple("plus 0.25", KatalystStageDsl.Plus(KatalystKnobDsl.Constant(0.25)), { s -> s + ConstantIgnitor(0.25) }),
+            Triple("minus 0.25", KatalystStageDsl.Minus(KatalystKnobDsl.Constant(0.25)), { s -> s.minus(ConstantIgnitor(0.25)) }),
+            Triple("times 10", KatalystStageDsl.Times(KatalystKnobDsl.Constant(10.0)), { s -> s * ConstantIgnitor(10.0) }),
+            Triple("times -1 (neg)", KatalystStageDsl.Times(KatalystKnobDsl.Constant(-1.0)), { s -> s.neg() }),
+            Triple("div 3", KatalystStageDsl.Div(KatalystKnobDsl.Constant(3.0)), { s -> s.div(ConstantIgnitor(3.0)) }),
+            Triple("div 0", KatalystStageDsl.Div(KatalystKnobDsl.Constant(0.0)), { s -> s.div(ConstantIgnitor(0.0)) }),
+            Triple("div 1e-20", KatalystStageDsl.Div(KatalystKnobDsl.Constant(1e-20)), { s -> s.div(ConstantIgnitor(1e-20)) }),
+            Triple("pow 2", KatalystStageDsl.Pow(KatalystKnobDsl.Constant(2.0)), { s -> s.pow(ConstantIgnitor(2.0)) }),
+            Triple("pow 0.5", KatalystStageDsl.Pow(KatalystKnobDsl.Constant(0.5)), { s -> s.pow(ConstantIgnitor(0.5)) }),
+            Triple("min 0.3", KatalystStageDsl.Min(KatalystKnobDsl.Constant(0.3)), { s -> s.min(ConstantIgnitor(0.3)) }),
+            Triple("max -0.3", KatalystStageDsl.Max(KatalystKnobDsl.Constant(-0.3)), { s -> s.max(ConstantIgnitor(-0.3)) }),
             Triple("abs", KatalystStageDsl.Abs, { s -> s.abs() }),
         )
 
@@ -163,16 +163,16 @@ class KatalystArithmeticEffectSpec : StringSpec({
             return bus(stage, samples, samples).first[0]
         }
 
-        one(KatalystStageDsl.Plus(IgnitorDsl.Constant(0.25)), 0.5) shouldBe 0.75
-        one(KatalystStageDsl.Minus(IgnitorDsl.Constant(0.25)), 0.5) shouldBe 0.25
-        one(KatalystStageDsl.Times(IgnitorDsl.Constant(10.0)), 3e14) shouldBe 1e15
-        one(KatalystStageDsl.Times(IgnitorDsl.Constant(-1.0)), 0.5) shouldBe -0.5
-        one(KatalystStageDsl.Div(IgnitorDsl.Constant(4.0)), 0.5) shouldBe 0.125
-        one(KatalystStageDsl.Div(IgnitorDsl.Constant(0.0)), 0.5) shouldBe 0.0
-        one(KatalystStageDsl.Pow(IgnitorDsl.Constant(2.0)), -0.5) shouldBe -0.25
-        one(KatalystStageDsl.Min(IgnitorDsl.Constant(0.3)), 0.5) shouldBe 0.3
-        one(KatalystStageDsl.Min(IgnitorDsl.Constant(0.3)), 0.2) shouldBe 0.2
-        one(KatalystStageDsl.Max(IgnitorDsl.Constant(-0.3)), -0.5) shouldBe -0.3
+        one(KatalystStageDsl.Plus(KatalystKnobDsl.Constant(0.25)), 0.5) shouldBe 0.75
+        one(KatalystStageDsl.Minus(KatalystKnobDsl.Constant(0.25)), 0.5) shouldBe 0.25
+        one(KatalystStageDsl.Times(KatalystKnobDsl.Constant(10.0)), 3e14) shouldBe 1e15
+        one(KatalystStageDsl.Times(KatalystKnobDsl.Constant(-1.0)), 0.5) shouldBe -0.5
+        one(KatalystStageDsl.Div(KatalystKnobDsl.Constant(4.0)), 0.5) shouldBe 0.125
+        one(KatalystStageDsl.Div(KatalystKnobDsl.Constant(0.0)), 0.5) shouldBe 0.0
+        one(KatalystStageDsl.Pow(KatalystKnobDsl.Constant(2.0)), -0.5) shouldBe -0.25
+        one(KatalystStageDsl.Min(KatalystKnobDsl.Constant(0.3)), 0.5) shouldBe 0.3
+        one(KatalystStageDsl.Min(KatalystKnobDsl.Constant(0.3)), 0.2) shouldBe 0.2
+        one(KatalystStageDsl.Max(KatalystKnobDsl.Constant(-0.3)), -0.5) shouldBe -0.3
         one(KatalystStageDsl.Abs, -0.5) shouldBe 0.5
     }
 
@@ -190,7 +190,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
 
     "a slot operand's first value snaps, and a katp move glides per sample over the glide time, landing exactly" {
         val probe = 0.5
-        val chain = build(KatalystStageDsl.Times(IgnitorDsl.Param("t", 1.0)))
+        val chain = build(KatalystStageDsl.Times(KatalystKnobDsl.Param("t", 1.0)))
         chain.applyParams(klangMapOf("t" to 0.8))
 
         // Fresh: the first value arrives at once.
@@ -223,7 +223,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
 
     "a pow operand ramps per sample too: the law is taken with the operand at each sample" {
         val probe = 0.5
-        val chain = build(KatalystStageDsl.Pow(IgnitorDsl.Param("e", 1.0)))
+        val chain = build(KatalystStageDsl.Pow(KatalystKnobDsl.Param("e", 1.0)))
         chain.applyParams(klangMapOf("e" to 1.0))
         block(chain, probe)
 
@@ -240,12 +240,12 @@ class KatalystArithmeticEffectSpec : StringSpec({
         val probe = 0.5
 
         // A constant NaN: plus reads 0, the bus passes.
-        val plus = build(KatalystStageDsl.Plus(IgnitorDsl.Constant(Double.NaN)))
+        val plus = build(KatalystStageDsl.Plus(KatalystKnobDsl.Constant(Double.NaN)))
         plus.applyParams(null)
         block(plus, probe).forEach { it shouldBe probe }
 
         // A slot cleared to NaN: times glides back to 1.
-        val times = build(KatalystStageDsl.Times(IgnitorDsl.Param("t", 0.5)))
+        val times = build(KatalystStageDsl.Times(KatalystKnobDsl.Param("t", 0.5)))
         times.applyParams(null)
         block(times, probe).forEach { it shouldBe probe * 0.5 }
         times.applyParams(klangMapOf("t" to Double.NaN))
@@ -254,7 +254,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
         back.last()[blockFrames - 1] shouldBe probe
 
         // A cap with no finite operand passes the bus, and its first operand arrives at once.
-        val cap = build(KatalystStageDsl.Min(IgnitorDsl.Param("c", Double.NaN)))
+        val cap = build(KatalystStageDsl.Min(KatalystKnobDsl.Param("c", Double.NaN)))
         cap.applyParams(null)
         block(cap, probe).forEach { it shouldBe probe }
         cap.applyParams(klangMapOf("c" to 0.3))
@@ -281,7 +281,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
         )
 
         for ((from, to, lands) in cases) {
-            val chain = build(KatalystStageDsl.Div(IgnitorDsl.Param("d", 1.0)))
+            val chain = build(KatalystStageDsl.Div(KatalystKnobDsl.Param("d", 1.0)))
             chain.applyParams(klangMapOf("d" to from))
             val before = block(chain, probe)
             chain.applyParams(klangMapOf("d" to to))
@@ -306,7 +306,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
         }
 
         // 1 to -1 by hand: the level ends the first glide block at 1 + (-1 - 1) / G, and passes through silence.
-        val chain = build(KatalystStageDsl.Div(IgnitorDsl.Param("d", 1.0)))
+        val chain = build(KatalystStageDsl.Div(KatalystKnobDsl.Param("d", 1.0)))
         chain.applyParams(klangMapOf("d" to 1.0))
         block(chain, probe)
         chain.applyParams(klangMapOf("d" to -1.0))
@@ -319,13 +319,13 @@ class KatalystArithmeticEffectSpec : StringSpec({
     "every operator's unset operand is its identity: a slot cleared to NaN lands on the bus unchanged, either sign" {
         // Each stage starts on a real operand, so a wrong identity cannot hide behind an operand that already was one.
         val stages = listOf(
-            "plus" to KatalystStageDsl.Plus(IgnitorDsl.Param("o", 0.25)),
-            "minus" to KatalystStageDsl.Minus(IgnitorDsl.Param("o", 0.25)),
-            "times" to KatalystStageDsl.Times(IgnitorDsl.Param("o", 0.5)),
-            "div" to KatalystStageDsl.Div(IgnitorDsl.Param("o", 4.0)),
-            "pow" to KatalystStageDsl.Pow(IgnitorDsl.Param("o", 2.0)),
-            "min (cap)" to KatalystStageDsl.Min(IgnitorDsl.Param("o", 0.3)),
-            "max (floor)" to KatalystStageDsl.Max(IgnitorDsl.Param("o", -0.3)),
+            "plus" to KatalystStageDsl.Plus(KatalystKnobDsl.Param("o", 0.25)),
+            "minus" to KatalystStageDsl.Minus(KatalystKnobDsl.Param("o", 0.25)),
+            "times" to KatalystStageDsl.Times(KatalystKnobDsl.Param("o", 0.5)),
+            "div" to KatalystStageDsl.Div(KatalystKnobDsl.Param("o", 4.0)),
+            "pow" to KatalystStageDsl.Pow(KatalystKnobDsl.Param("o", 2.0)),
+            "min (cap)" to KatalystStageDsl.Min(KatalystKnobDsl.Param("o", 0.3)),
+            "max (floor)" to KatalystStageDsl.Max(KatalystKnobDsl.Param("o", -0.3)),
         )
 
         for ((name, stage) in stages) {
@@ -344,7 +344,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
 
     "a cap cleared to NaN lets go at the next block, and its next operand arrives at once" {
         val probe = 0.5
-        val cap = build(KatalystStageDsl.Min(IgnitorDsl.Param("c", 0.3)))
+        val cap = build(KatalystStageDsl.Min(KatalystKnobDsl.Param("c", 0.3)))
         cap.applyParams(null)
         block(cap, probe).forEach { it shouldBe 0.3 }
 
@@ -357,7 +357,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
 
     "a reset forgets the glide: the next life's first operand snaps" {
         val probe = 0.5
-        val chain = build(KatalystStageDsl.Times(IgnitorDsl.Param("t", 1.0)))
+        val chain = build(KatalystStageDsl.Times(KatalystKnobDsl.Param("t", 1.0)))
         chain.applyParams(klangMapOf("t" to 0.8))
         block(chain, probe)
         chain.applyParams(klangMapOf("t" to 0.2))

@@ -1,7 +1,7 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **open, planned and decided** (D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer, 2026-10-11; the other Q at the
-coordinator's lean). Not started.
+Status: **in progress, steps 1 to 3 built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer, 2026-10-11; the
+other Q at the coordinator's lean).
 
 ## Why
 
@@ -139,7 +139,28 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
    between the sessions, 2026-10-11.) D1: the wire type with `Constant` and `Param` only, the full migration, renders identical in raw doubles for the
    master-chain songs and one classic-chain `katp` song (a scaffolding fixture, removed in step 7). `KatalystParam`
    retired (Q1), `coerce` deleted, an Ignitor node on a knob a type error.
+   **Built** (2026-10-12): `KatalystKnobDsl` (`audio_bridge/KatalystKnobDsl.kt`, leaves `Constant(value)` and
+   `Param(name, default, description)`, wire names `const` and `param` like the Ignitor's) on all 35 stage knob fields;
+   `KatalystDsl.Slots.*` and `Kat.param` are `KatalystKnobDsl.Param` (the script door types both as the root
+   `KatalystKnobDsl`, as `Ignitor.param` is typed `IgnitorDsl`); `toKatalystKnob` refuses every Ignitor node,
+   `toIgnitorDsl` every Katalyst knob; the `eq` door maps a `Kat.param` onto the section's `IgnitorDsl.Param`
+   (`toEqSectionKnob`, Q2) and the chain builder reads only those two leaves off a section (`eqKnob`, anything else
+   unset, `KatalystEqEffectSpec` pins it); `KatalystSlots.resolve`/`coerce` and their six rows in `KatalystSlotResolverSpec` deleted, and the
+   `WireSharedSpec` row about an Ignitor tree shared between two stage knobs. `WIRE_SCHEMA_HASH` 1330155241 to
+   1168938423; no change to either KSP processor. Behaviour changes, all on inputs no song uses: an Ignitor node on a
+   knob was folded once and is now a script error (`k.blend(Ignitor.constant(0.3), ...)` included, which was accepted),
+   and a hand-built Kotlin EQ section holding an expression reads unset instead of its fold. Guarded by `KatalystDslSlotsSpec`, `KatalystDefaultsSyncSpec`,
+   `WireCodecRoundTripSpec` (a row per stage with both leaves), `KlangScriptKatalystDoorParitySpec` (the new D1 row),
+   `LangSlotSetterSpec`, `KatalystSlotResolverSpec`, `KatalystEqEffectSpec`. Renders identical in raw doubles: the
+   corpus (18 songs, Kokon at `dfa9cd64389e619f` before and after, the reference itself predates the `eb39b385`
+   Kokon edit) and the scaffolding fixture `src/jvmTest/kotlin/KatalystKnobMigrationFixtureSpec.kt` (classic chain
+   through `katp` `afce19df06d968f4`, through the bus doors `f64d42e5c1e288b1`, an authored chain with a `Kat.param`
+   on every knob kind, each moved by `katp` through two values its default is not, `6a69ecdeb84e8574`, a master chain
+   `de98222378e41b4d`; each pinned twice on the unchanged tree, the authored row in a scratch worktree at `eb39b385`
+   after review round 1 found its first version moved only 5 of its 18 params).
 4. Expressions over slots (D4): the arithmetic, `neg`, `abs`, `range`, both doors, the evaluator, the unset rule (Q5).
+   The non-null knobs' fallback arguments are dead since step 3; step 4 makes `KatalystKnob` non-null with the
+   nullable path kept for `lowpass` and the EQ.
 5. Modulators (D3) and the per-block path (D2), probably split: 5a nodes, doors and evaluator; 5b the chain hook and
    the stages; 5c the bank stages per Q8.
 6. Measured in the harness: a slot expression, a modulated gain and phaser center, a perlin; time and bytes per
@@ -193,7 +214,7 @@ recorded here, and any of them can be reopened.
 
 ## References
 
-- `audio_be/src/commonMain/kotlin/cylinders/katalyst/KatalystSlots.kt` (`KatalystKnob`, `coerce`)
+- `audio_be/src/commonMain/kotlin/cylinders/katalyst/KatalystSlots.kt` (`KatalystKnob`; `coerce` deleted in step 3)
 - `klangscript-libs/src/commonMain/kotlin/stdlib/KatalystBuilders.kt` (`toKatalystKnob`, the one conversion)
 - `audio_be/src/commonMain/kotlin/KnobGlide.kt`
 - `docs/plans/future/signal-graph-engine.md` §6.10

@@ -71,7 +71,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
     /** Every knob of every stage, flattened to `slot name to default`, in declaration order. */
     fun slots(stage: KatalystStageDsl): List<Pair<String, Double>> {
-        val knobs: List<IgnitorDsl?> = when (stage) {
+        val knobs: List<KatalystKnobDsl?> = when (stage) {
             is KatalystStageDsl.Body -> listOf(stage.material, stage.wet, stage.floor)
             is KatalystStageDsl.Vowel -> listOf(stage.vowel, stage.wet, stage.floor)
             is KatalystStageDsl.Delay -> listOf(stage.wet, stage.time, stage.feedback, stage.cap)
@@ -97,7 +97,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
             is KatalystStageDsl.Abs -> emptyList()
         }
 
-        return knobs.filterIsInstance<IgnitorDsl.Param>().map { it.name to it.default }
+        return knobs.filterIsInstance<KatalystKnobDsl.Param>().map { it.name to it.default }
     }
 
     val classicSlots: Map<String, Double> = KatalystDsl.classic.stages.flatMap { slots(it) }.toMap()
@@ -266,28 +266,31 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // The other half of the family rule. `Katalyst(k => k.reverb())` means "I want a reverb",
         // so the bare stage seeds the shared defaults; only `classic` seeds the untouched state. If
         // these two ever collapse into one, one of the two meanings is gone.
-        KatalystStageDsl.Reverb().wet shouldBe IgnitorDsl.Constant(REVERB_WET)
-        KatalystStageDsl.Reverb().size shouldBe IgnitorDsl.Constant(REVERB_SIZE)
-        KatalystStageDsl.Delay().wet shouldBe IgnitorDsl.Constant(DELAY_WET)
-        KatalystStageDsl.Delay().time shouldBe IgnitorDsl.Constant(DELAY_TIME_SECONDS)
-        KatalystStageDsl.Delay().feedback shouldBe IgnitorDsl.Constant(DELAY_FEEDBACK)
-        KatalystStageDsl.Delay().cap shouldBe IgnitorDsl.Constant(DELAY_CAP)
-        KatalystStageDsl.Compressor().threshold shouldBe IgnitorDsl.Constant(COMPRESSOR_THRESHOLD_DB)
-        KatalystStageDsl.Body().wet shouldBe IgnitorDsl.Constant(BODY_WET)
-        KatalystStageDsl.Body().floor shouldBe IgnitorDsl.Constant(BODY_FLOOR)
-        KatalystStageDsl.Vowel().wet shouldBe IgnitorDsl.Constant(VOWEL_WET)
-        KatalystStageDsl.Vowel().floor shouldBe IgnitorDsl.Constant(VOWEL_FLOOR)
-        KatalystStageDsl.Phaser().center shouldBe IgnitorDsl.Constant(PHASER_CENTER_HZ)
-        KatalystStageDsl.Phaser().sweep shouldBe IgnitorDsl.Constant(PHASER_SWEEP_HZ)
-        KatalystStageDsl.Phaser().floor shouldBe IgnitorDsl.Constant(PHASER_FLOOR)
-        KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Constant(DISTORT_AMOUNT)
+        KatalystStageDsl.Reverb().wet shouldBe KatalystKnobDsl.Constant(REVERB_WET)
+        KatalystStageDsl.Reverb().size shouldBe KatalystKnobDsl.Constant(REVERB_SIZE)
+        KatalystStageDsl.Delay().wet shouldBe KatalystKnobDsl.Constant(DELAY_WET)
+        KatalystStageDsl.Delay().time shouldBe KatalystKnobDsl.Constant(DELAY_TIME_SECONDS)
+        KatalystStageDsl.Delay().feedback shouldBe KatalystKnobDsl.Constant(DELAY_FEEDBACK)
+        KatalystStageDsl.Delay().cap shouldBe KatalystKnobDsl.Constant(DELAY_CAP)
+        KatalystStageDsl.Compressor().threshold shouldBe KatalystKnobDsl.Constant(COMPRESSOR_THRESHOLD_DB)
+        KatalystStageDsl.Body().wet shouldBe KatalystKnobDsl.Constant(BODY_WET)
+        KatalystStageDsl.Body().floor shouldBe KatalystKnobDsl.Constant(BODY_FLOOR)
+        KatalystStageDsl.Vowel().wet shouldBe KatalystKnobDsl.Constant(VOWEL_WET)
+        KatalystStageDsl.Vowel().floor shouldBe KatalystKnobDsl.Constant(VOWEL_FLOOR)
+        KatalystStageDsl.Phaser().center shouldBe KatalystKnobDsl.Constant(PHASER_CENTER_HZ)
+        KatalystStageDsl.Phaser().sweep shouldBe KatalystKnobDsl.Constant(PHASER_SWEEP_HZ)
+        KatalystStageDsl.Phaser().floor shouldBe KatalystKnobDsl.Constant(PHASER_FLOOR)
+        KatalystStageDsl.Distort().amount shouldBe KatalystKnobDsl.Constant(DISTORT_AMOUNT)
     }
 
     "a bare bus distort pushes as hard as a bare voice distort: one default, both hosts" {
         // Parameter parity (`/dsl-design` §4): `distort` means the same push on a voice and on a bus. The voice's
         // two nodes carry their default as a literal; this row is what keeps the bus constant equal to it.
-        KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Distort(inner = IgnitorDsl.Silence).amount
-        KatalystStageDsl.Distort().amount shouldBe IgnitorDsl.Drive(inner = IgnitorDsl.Silence).amount
+        // Two DSLs, two knob types since the knob split (`KatalystKnobDsl`), so the NUMBERS are compared.
+        val bus = (KatalystStageDsl.Distort().amount as KatalystKnobDsl.Constant).value
+
+        bus shouldBe (IgnitorDsl.Distort(inner = IgnitorDsl.Silence).amount as IgnitorDsl.Constant).value
+        bus shouldBe (IgnitorDsl.Drive(inner = IgnitorDsl.Silence).amount as IgnitorDsl.Constant).value
 
         // ...and the shape default is the voice's too: `soft`. The oversampling default is NOT (2x on a bus, 0 on a
         // voice), a recorded asymmetry (`DISTORT_OVERSAMPLE`); `KatalystDistortEffectSpec` renders its latency.
@@ -299,34 +302,34 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // sprudel doors today. The phaser is gated on its depth (`Phaser.MIN_ACTIVE_DEPTH`), so
         // `phaser()` with no wet is a chain entry that does nothing; the duck needs a source orbit
         // before it can duck anything; and the body and the vowel need a catalogue INDEX.
-        val bareMaterial = (KatalystStageDsl.Body().material as IgnitorDsl.Constant).value
-        val bareVowel = (KatalystStageDsl.Vowel().vowel as IgnitorDsl.Constant).value
+        val bareMaterial = (KatalystStageDsl.Body().material as KatalystKnobDsl.Constant).value
+        val bareVowel = (KatalystStageDsl.Vowel().vowel as KatalystKnobDsl.Constant).value
 
         withClue("a bare body names no material") { bareMaterial.isFinite() shouldBe false }
         withClue("a bare vowel names none either") { bareVowel.isFinite() shouldBe false }
         // ...and not a zero, for the same reason `duck.orbit` is not: 0 is `none`, a real entry in
         // the catalogue, so "never set" has to be the absence marker to stay distinguishable.
-        IgnitorDsl.Constant(bareMaterial) shouldBe IgnitorDsl.Constant(SLOT_UNSET)
-        IgnitorDsl.Constant(bareVowel) shouldBe IgnitorDsl.Constant(SLOT_UNSET)
+        KatalystKnobDsl.Constant(bareMaterial) shouldBe KatalystKnobDsl.Constant(SLOT_UNSET)
+        KatalystKnobDsl.Constant(bareVowel) shouldBe KatalystKnobDsl.Constant(SLOT_UNSET)
 
-        KatalystStageDsl.Phaser().wet shouldBe IgnitorDsl.Constant(PHASER_WET)
-        (KatalystStageDsl.Phaser().wet as IgnitorDsl.Constant).value shouldBe 0.0
-        KatalystStageDsl.Phaser().rate shouldBe IgnitorDsl.Constant(PHASER_RATE_HZ)
-        (KatalystStageDsl.Phaser().rate as IgnitorDsl.Constant).value shouldBe 0.0
+        KatalystStageDsl.Phaser().wet shouldBe KatalystKnobDsl.Constant(PHASER_WET)
+        (KatalystStageDsl.Phaser().wet as KatalystKnobDsl.Constant).value shouldBe 0.0
+        KatalystStageDsl.Phaser().rate shouldBe KatalystKnobDsl.Constant(PHASER_RATE_HZ)
+        (KatalystStageDsl.Phaser().rate as KatalystKnobDsl.Constant).value shouldBe 0.0
 
-        KatalystStageDsl.Duck().depth shouldBe IgnitorDsl.Constant(DUCK_DEPTH)
-        (KatalystStageDsl.Duck().depth as IgnitorDsl.Constant).value shouldBe 0.0
-        KatalystStageDsl.Duck().attack shouldBe IgnitorDsl.Constant(DUCK_ATTACK_SECONDS)
+        KatalystStageDsl.Duck().depth shouldBe KatalystKnobDsl.Constant(DUCK_DEPTH)
+        (KatalystStageDsl.Duck().depth as KatalystKnobDsl.Constant).value shouldBe 0.0
+        KatalystStageDsl.Duck().attack shouldBe KatalystKnobDsl.Constant(DUCK_ATTACK_SECONDS)
 
         // `orbit` is a member of the UNSET family, not a plain zero: 0 is a legitimate orbit, so
         // the off state has to be the absence marker. A `-1` is a finite orbit request too.
         // And it is asserted the way the rule says to: `orbit shouldBe SLOT_UNSET` FAILS here,
         // because kotest compares primitive Doubles with IEEE `==` and NaN is not equal to itself.
         // That is the "test isFinite(), never compare" rule biting in its own spec.
-        val orbit = (KatalystStageDsl.Duck().orbit as IgnitorDsl.Constant).value
+        val orbit = (KatalystStageDsl.Duck().orbit as KatalystKnobDsl.Constant).value
 
         orbit.isFinite() shouldBe false
-        IgnitorDsl.Constant(orbit) shouldBe IgnitorDsl.Constant(SLOT_UNSET)
+        KatalystKnobDsl.Constant(orbit) shouldBe KatalystKnobDsl.Constant(SLOT_UNSET)
     }
 
     "the classic body and vowel carry their NAME as an unset index slot, like every other knob" {
@@ -336,8 +339,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
         val body = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Body>().single()
         val vowel = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Vowel>().single()
 
-        val material = body.material.shouldBeInstanceOf<IgnitorDsl.Param>()
-        val theVowel = vowel.vowel.shouldBeInstanceOf<IgnitorDsl.Param>()
+        val material = body.material.shouldBeInstanceOf<KatalystKnobDsl.Param>()
+        val theVowel = vowel.vowel.shouldBeInstanceOf<KatalystKnobDsl.Param>()
 
         material.name shouldBe "body.material"
         theVowel.name shouldBe "vowel.vowel"
@@ -349,8 +352,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // And so is the AMOUNT of both stages, which is the other half of "a material-only call
         // works on a declared chain": the engine substitutes BODY_WET / VOWEL_WET for an unset mix,
         // so the door has nothing to invent (round 1, 2026-09-18).
-        body.wet.shouldBeInstanceOf<IgnitorDsl.Param>().default.isFinite() shouldBe false
-        vowel.wet.shouldBeInstanceOf<IgnitorDsl.Param>().default.isFinite() shouldBe false
+        body.wet.shouldBeInstanceOf<KatalystKnobDsl.Param>().default.isFinite() shouldBe false
+        vowel.wet.shouldBeInstanceOf<KatalystKnobDsl.Param>().default.isFinite() shouldBe false
     }
 
     "a classic chain rebuilt from FRESH instances gets the same name, NaN slots and all" {
@@ -367,15 +370,15 @@ class KatalystDefaultsSyncSpec : StringSpec({
         //
         // Deliberately in commonTest: JS and JVM represent and hash doubles differently, so this is
         // a per-platform property and a jvmTest row would only prove half of it.
-        fun freshParam(p: IgnitorDsl.Param) = IgnitorDsl.Param(
+        fun freshParam(p: KatalystKnobDsl.Param) = KatalystKnobDsl.Param(
             name = p.name.toList().joinToString(""),
             default = if (p.default.isFinite()) p.default else Double.NaN,
             description = p.description,
         )
 
-        fun freshKnob(knob: IgnitorDsl): IgnitorDsl = when (knob) {
-            is IgnitorDsl.Param -> freshParam(knob)
-            else -> knob
+        fun freshKnob(knob: KatalystKnobDsl): KatalystKnobDsl = when (knob) {
+            is KatalystKnobDsl.Param -> freshParam(knob)
+            is KatalystKnobDsl.Constant -> knob
         }
 
         val rebuilt = KatalystDsl(
@@ -437,7 +440,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
         (rebuiltCompressor === classicCompressor) shouldBe false
         (rebuiltCompressor.threshold === classicCompressor.threshold) shouldBe false
-        (rebuiltCompressor.threshold as IgnitorDsl.Param).default.isFinite() shouldBe false
+        (rebuiltCompressor.threshold as KatalystKnobDsl.Param).default.isFinite() shouldBe false
 
         rebuilt shouldBe KatalystDsl.classic
         rebuilt.uniqueId() shouldBe KatalystDsl.classic.uniqueId()
@@ -465,6 +468,6 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // The data-class `equals` the wire round trip relies on is the OTHER one (total order), so
         // a decoded `Param(name, NaN)` does compare equal to its original. Not a contradiction:
         // different operator, and `WireCodecRoundTripSpec` depends on this one holding.
-        IgnitorDsl.Param("x", SLOT_UNSET) shouldBe IgnitorDsl.Param("x", SLOT_UNSET)
+        KatalystKnobDsl.Param("x", SLOT_UNSET) shouldBe KatalystKnobDsl.Param("x", SLOT_UNSET)
     }
 })

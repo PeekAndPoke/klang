@@ -12,7 +12,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor
@@ -130,7 +130,7 @@ class LangSlotSetterSpec : StringSpec({
             scriptSlots = listOf(
                 "\"reverb.wet\"", "Kat.slot.reverb.wet", "Katalyst.slot.reverb.wet", "Kat.param(\"reverb.wet\", 9)",
             ),
-            kotlinSlots = listOf("reverb.wet", KatalystDsl.Slots.reverb.wet, KatalystParam(IgnitorDsl.Param("reverb.wet", 9.0))),
+            kotlinSlots = listOf("reverb.wet", KatalystDsl.Slots.reverb.wet, KatalystKnobDsl.Param("reverb.wet", 9.0)),
         )
     }
 
@@ -206,7 +206,7 @@ class LangSlotSetterSpec : StringSpec({
         errorRows(
             setters = ignitorSetters,
             wrongs = wrongKinds(
-                otherParamScript = "Kat.param(\"room\", 5)", otherParam = KatalystParam(IgnitorDsl.Param("room", 5.0)),
+                otherParamScript = "Kat.param(\"room\", 5)", otherParam = KatalystKnobDsl.Param("room", 5.0),
                 otherSlotScript = "Kat.slot.reverb.wet", otherSlot = KatalystDsl.Slots.reverb.wet,
             ),
         )

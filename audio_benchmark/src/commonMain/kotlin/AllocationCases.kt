@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.KatalystParam
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.distort
@@ -162,7 +162,7 @@ object AllocationCases {
         build(KatalystBuilder(KatalystDsl(emptyList()))).node
 
     /** A chain slot (`Katalyst.param`) named `arith.<name>`. */
-    private fun slot(name: String, default: Double) = KatalystParam(IgnitorDsl.Param(name = "arith.$name", default = default))
+    private fun slot(name: String, default: Double) = KatalystKnobDsl.Param(name = "arith.$name", default = default)
 
     /**
      * The eight arithmetic stages in one chain, with the operands [times] to [floor] (a number, or a [slot]). The values

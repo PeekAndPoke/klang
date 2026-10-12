@@ -11,6 +11,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.parallel
@@ -38,6 +39,7 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
     }
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
+    fun k(v: Double) = KatalystKnobDsl.Constant(v)
 
     fun errorOf(block: () -> Unit): String = shouldThrowAny { block() }.message ?: ""
 
@@ -82,11 +84,11 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
 
     "Katalyst: two branches are one Parallel stage, in the order written, each from an empty builder" {
         val expected = KatalystDsl.of(
-            KatalystStageDsl.Gain(c(2.0)),
+            KatalystStageDsl.Gain(k(2.0)),
             KatalystStageDsl.Parallel(
                 branches = listOf(
                     KatalystDsl(emptyList()),
-                    KatalystDsl.of(KatalystStageDsl.Gain(c(0.5)), KatalystStageDsl.Gain(c(0.25))),
+                    KatalystDsl.of(KatalystStageDsl.Gain(k(0.5)), KatalystStageDsl.Gain(k(0.25))),
                 ),
             ),
         )

@@ -19,8 +19,8 @@ import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.math.PI
 import kotlin.math.abs
@@ -36,7 +36,7 @@ class MasterOutputChainSpec : StringSpec({
     val sampleRate = 44100
     val blockFrames = 128
 
-    fun c(value: Double) = IgnitorDsl.Constant(value)
+    fun c(value: Double) = KatalystKnobDsl.Constant(value)
 
     /** Loud, silent, loud: the silent stretch is where a host that resets on silence would show. */
     fun input(block: Int, i: Int): Double {

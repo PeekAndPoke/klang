@@ -18,8 +18,8 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
@@ -81,7 +81,7 @@ class KatalystSlotResolverSpec : StringSpec({
         reverbs = ReverbUnits(sampleRate),
     ).also { it.applyParams(null) }
 
-    fun c(value: Double) = IgnitorDsl.Constant(value)
+    fun c(value: Double) = KatalystKnobDsl.Constant(value)
 
     // ── Delay ────────────────────────────────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // hands the slot through raw, audit B2.11) has to clear it.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
-                KatalystStageDsl.Reverb(size = c(6.0), lowpass = IgnitorDsl.Param("reverb.lowpass", SLOT_UNSET))
+                KatalystStageDsl.Reverb(size = c(6.0), lowpass = KatalystKnobDsl.Param("reverb.lowpass", SLOT_UNSET))
             ),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
@@ -207,8 +207,8 @@ class KatalystSlotResolverSpec : StringSpec({
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Reverb(
-                    wet = IgnitorDsl.Param("reverb.wet", 0.0),
-                    size = IgnitorDsl.Param("reverb.size", 0.0),
+                    wet = KatalystKnobDsl.Param("reverb.wet", 0.0),
+                    size = KatalystKnobDsl.Param("reverb.size", 0.0),
                 )
             ),
             sampleRate = sampleRate,
@@ -229,8 +229,8 @@ class KatalystSlotResolverSpec : StringSpec({
         val untouched = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Reverb(
-                    wet = IgnitorDsl.Param("reverb.wet", 0.0),
-                    size = IgnitorDsl.Param("reverb.size", 0.0),
+                    wet = KatalystKnobDsl.Param("reverb.wet", 0.0),
+                    size = KatalystKnobDsl.Param("reverb.size", 0.0),
                 )
             ),
             sampleRate = sampleRate,
@@ -248,9 +248,9 @@ class KatalystSlotResolverSpec : StringSpec({
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Delay(
-                    wet = IgnitorDsl.Param("delay.wet", 0.0),
-                    time = IgnitorDsl.Param("delay.time", 0.0),
-                    feedback = IgnitorDsl.Param("delay.feedback", 0.0),
+                    wet = KatalystKnobDsl.Param("delay.wet", 0.0),
+                    time = KatalystKnobDsl.Param("delay.time", 0.0),
+                    feedback = KatalystKnobDsl.Param("delay.feedback", 0.0),
                 )
             ),
             sampleRate = sampleRate,
@@ -266,9 +266,9 @@ class KatalystSlotResolverSpec : StringSpec({
         val untouched = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Delay(
-                    wet = IgnitorDsl.Param("delay.wet", 0.0),
-                    time = IgnitorDsl.Param("delay.time", 0.0),
-                    feedback = IgnitorDsl.Param("delay.feedback", 0.0),
+                    wet = KatalystKnobDsl.Param("delay.wet", 0.0),
+                    time = KatalystKnobDsl.Param("delay.time", 0.0),
+                    feedback = KatalystKnobDsl.Param("delay.feedback", 0.0),
                 )
             ),
             sampleRate = sampleRate,
@@ -288,8 +288,8 @@ class KatalystSlotResolverSpec : StringSpec({
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Reverb(
-                    wet = IgnitorDsl.Param("reverb.wet", 0.0),
-                    size = IgnitorDsl.Param("reverb.size", 0.0),
+                    wet = KatalystKnobDsl.Param("reverb.wet", 0.0),
+                    size = KatalystKnobDsl.Param("reverb.size", 0.0),
                 )
             ),
             sampleRate = sampleRate,
@@ -315,8 +315,8 @@ class KatalystSlotResolverSpec : StringSpec({
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Reverb(
-                    wet = IgnitorDsl.Param("reverb.wet", 0.0),
-                    size = IgnitorDsl.Param("reverb.size", 0.0),
+                    wet = KatalystKnobDsl.Param("reverb.wet", 0.0),
+                    size = KatalystKnobDsl.Param("reverb.size", 0.0),
                 )
             ),
             sampleRate = sampleRate,
@@ -517,19 +517,19 @@ class KatalystSlotResolverSpec : StringSpec({
     /** A compressor writer whose five knobs are all slots, unset unless a map writes them. */
     fun compressorWriter(fx: KatalystCompressorEffect) = KatalystCompressorWriter(
         fx = fx,
-        threshold = KatalystKnob(IgnitorDsl.Param("compressor.threshold", SLOT_UNSET), COMPRESSOR_THRESHOLD_DB),
-        ratio = KatalystKnob(IgnitorDsl.Param("compressor.ratio", SLOT_UNSET), COMPRESSOR_RATIO),
-        knee = KatalystKnob(IgnitorDsl.Param("compressor.knee", SLOT_UNSET), COMPRESSOR_KNEE_DB),
-        attack = KatalystKnob(IgnitorDsl.Param("compressor.attack", SLOT_UNSET), COMPRESSOR_ATTACK_SECONDS),
-        release = KatalystKnob(IgnitorDsl.Param("compressor.release", SLOT_UNSET), COMPRESSOR_RELEASE_SECONDS),
+        threshold = KatalystKnob(KatalystKnobDsl.Param("compressor.threshold", SLOT_UNSET), COMPRESSOR_THRESHOLD_DB),
+        ratio = KatalystKnob(KatalystKnobDsl.Param("compressor.ratio", SLOT_UNSET), COMPRESSOR_RATIO),
+        knee = KatalystKnob(KatalystKnobDsl.Param("compressor.knee", SLOT_UNSET), COMPRESSOR_KNEE_DB),
+        attack = KatalystKnob(KatalystKnobDsl.Param("compressor.attack", SLOT_UNSET), COMPRESSOR_ATTACK_SECONDS),
+        release = KatalystKnob(KatalystKnobDsl.Param("compressor.release", SLOT_UNSET), COMPRESSOR_RELEASE_SECONDS),
     )
 
     /** A duck writer whose three knobs are all slots, unset unless a map writes them. */
     fun duckWriter(fx: KatalystDuckEffect) = KatalystDuckWriter(
         fx = fx,
-        orbit = KatalystKnob(IgnitorDsl.Param("duck.orbit", SLOT_UNSET), SLOT_UNSET),
-        depth = KatalystKnob(IgnitorDsl.Param("duck.depth", SLOT_UNSET), DUCK_DEPTH),
-        attack = KatalystKnob(IgnitorDsl.Param("duck.attack", SLOT_UNSET), DUCK_ATTACK_SECONDS),
+        orbit = KatalystKnob(KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET), SLOT_UNSET),
+        depth = KatalystKnob(KatalystKnobDsl.Param("duck.depth", SLOT_UNSET), DUCK_DEPTH),
+        attack = KatalystKnob(KatalystKnobDsl.Param("duck.attack", SLOT_UNSET), DUCK_ATTACK_SECONDS),
     )
 
     "compressor and duck: the writer hands ONE holder, refilled in place at every resolve" {
@@ -775,12 +775,12 @@ class KatalystSlotResolverSpec : StringSpec({
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Body(
-                    material = IgnitorDsl.Param("body.material", SLOT_UNSET),
-                    wet = IgnitorDsl.Param("body.wet", 0.0),
+                    material = KatalystKnobDsl.Param("body.material", SLOT_UNSET),
+                    wet = KatalystKnobDsl.Param("body.wet", 0.0),
                 ),
                 KatalystStageDsl.Vowel(
-                    vowel = IgnitorDsl.Param("vowel.vowel", SLOT_UNSET),
-                    wet = IgnitorDsl.Param("vowel.wet", 0.0),
+                    vowel = KatalystKnobDsl.Param("vowel.vowel", SLOT_UNSET),
+                    wet = KatalystKnobDsl.Param("vowel.wet", 0.0),
                 ),
             ),
             sampleRate = sampleRate,
@@ -830,8 +830,8 @@ class KatalystSlotResolverSpec : StringSpec({
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Body(
-                    material = IgnitorDsl.Param("body.material", SLOT_UNSET),
-                    wet = IgnitorDsl.Param("body.wet", 0.0),
+                    material = KatalystKnobDsl.Param("body.material", SLOT_UNSET),
+                    wet = KatalystKnobDsl.Param("body.wet", 0.0),
                 )
             ),
             sampleRate = sampleRate,
@@ -857,35 +857,6 @@ class KatalystSlotResolverSpec : StringSpec({
         chain.applyParams(klangMapOf("body.material" to BodyMaterials.indexOf("bell"), "body.wet" to 0.3))
         chain.resolveCount shouldBe 2
         chain.body.shouldNotBeNull().installedTable.bandList() shouldBe bodyBandList(BodyMaterials.modesFor("bell"))
-    }
-
-    "body and vowel: a signal-rate node on the index slot is coerced, never refused" {
-        // The two-probe rule, on the index knob like on every other one. A pitch-free fold IS the
-        // author's number, so `0.5 * 2` picks the first material; an oscillator has no bus value,
-        // so it takes the knob's fallback, which is unset, which is the stage off.
-        val folded = declared(
-            KatalystStageDsl.Body(material = IgnitorDsl.Times(left = c(0.5), right = c(2.0)), wet = c(0.3))
-        )
-
-        folded.body.shouldNotBeNull().isEngaged shouldBe true
-        folded.body.shouldNotBeNull().installedTable.bandList() shouldBe
-                bodyBandList(BodyMaterials.modesFor(BodyMaterials.names[1]))
-
-        val oscillated = declared(
-            KatalystStageDsl.Body(material = IgnitorDsl.Sine(), wet = c(0.3)),
-            KatalystStageDsl.Vowel(vowel = IgnitorDsl.Sine(), wet = c(0.3)),
-        )
-
-        oscillated.body.shouldNotBeNull().isEngaged shouldBe false
-        oscillated.vowel.shouldNotBeNull().isEngaged shouldBe false
-
-        // And a note-DEPENDENT knob, the case one probe cannot see: two probes disagree, so it
-        // falls back to unset rather than to whatever the material index is at 440 Hz.
-        val perNote = declared(
-            KatalystStageDsl.Body(material = IgnitorDsl.Freq, wet = c(0.3))
-        )
-
-        perNote.body.shouldNotBeNull().isEngaged shouldBe false
     }
 
     "body and vowel: the installed bank is the voice path's, up to the floor fill" {
@@ -994,70 +965,9 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "a Param slot resolves to its authored default" {
         val chain = declared(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Param(name = "delay.time", default = 0.125))
+            KatalystStageDsl.Delay(time = KatalystKnobDsl.Param(name = "delay.time", default = 0.125))
         )
 
         chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().time shouldBe 0.125
-    }
-
-    "a foldable arithmetic node is read at control rate, not refused" {
-        val chain = declared(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Times(left = c(0.1), right = c(3.0)))
-        )
-
-        // 0.1 * 3 is 0.30000000000000004 in binary floating point; the row pins the FOLD, so the
-        // expression is the same one the resolver evaluates.
-        chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().time shouldBe (0.1 * 3.0)
-    }
-
-    "an oscillator handed to a knob takes the knob's default, and nothing throws" {
-        val chain = declared(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Sine(), feedback = IgnitorDsl.Sine())
-        )
-
-        val line = chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull()
-
-        // DELAY_TIME_SECONDS and DELAY_FEEDBACK are what a BARE `delay()` stage carries, which is
-        // the only sensible reading of "this knob has no number".
-        line.time shouldBe DELAY_TIME_SECONDS
-        line.feedback shouldBe DELAY_FEEDBACK
-    }
-
-    "the note frequency a bus does not have: Ignitor.freq() resolves to the knob's constant" {
-        // The resolver reads a non-leaf knob at TWO frequencies and only believes an answer that
-        // is the same on both: a knob whose value depends on a note is not a bus knob.
-        //
-        // The knob under test is `feedback`, deliberately: on `time` a single-probe regression
-        // would ask for a 440-second ring and the row would allocate a third of a gigabyte before
-        // it failed.
-        val chain = declared(
-            KatalystStageDsl.Delay(time = c(0.25), feedback = IgnitorDsl.Freq)
-        )
-
-        chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().feedback shouldBe DELAY_FEEDBACK
-    }
-
-    "a frequency-DEPENDENT subtree takes the knob's constant too, not its value at one note" {
-        // `Ignitor.freq().mul(2)` folds at control rate, so a single probe would accept it (880.0 at 440);
-        // two probes disagree (880 vs 1320) and the knob keeps its constant. This is the row the
-        // first version of the resolver got wrong: `Times` scrubs a non-finite probe to 0.0
-        // through `safeOut`, so a NaN-based discriminator read it as a legitimate zero.
-        val chain = declared(
-            KatalystStageDsl.Delay(time = c(0.25), feedback = IgnitorDsl.Times(left = IgnitorDsl.Freq, right = c(2.0)))
-        )
-
-        chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().feedback shouldBe DELAY_FEEDBACK
-    }
-
-    "a pitch-free fold is the author's value, zero included" {
-        // `1 / 0` is a finite 0.0 in this engine (`IgnitorDsl.Div` maps a zero divisor to zero)
-        // and answers the same at both probes, so it IS the author's number. On a time knob that
-        // number means off, and the resolver may not second-guess it: the same rule keeps
-        // `phaser(rate = 0)` meaning a standing sweep.
-        val chain = declared(
-            KatalystStageDsl.Delay(time = IgnitorDsl.Div(left = c(1.0), right = c(0.0)))
-        )
-
-        chain.delay.shouldNotBeNull().delayLine.shouldBeNull()
     }
 })

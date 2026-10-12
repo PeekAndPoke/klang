@@ -16,8 +16,8 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.TestIgnitors
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -203,7 +203,7 @@ class CylinderFaderThroughZeroSpec : StringSpec({
         )
 
         if (withMaster) {
-            val loud = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(2.0)))
+            val loud = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(2.0)))
             d.handle(KlangCommLink.Cmd.RegisterKatalyst(playbackId = "song", name = "loud", dsl = loud))
         }
 

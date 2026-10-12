@@ -19,8 +19,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
@@ -351,7 +351,7 @@ class KatalystGainEffectSpec : StringSpec({
         // non-finite slot was never set, and an unset fader is the identity. Without it the whole
         // orbit would be NaN for good.
         val chain = KatalystChainBuilder.build(
-            dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Param("gain", SLOT_UNSET))),
+            dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Param("gain", SLOT_UNSET))),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
@@ -374,7 +374,7 @@ class KatalystGainEffectSpec : StringSpec({
 
     "the gain slot is what `katp` moves, and the move glides to the value the pattern wrote" {
         val chain = KatalystChainBuilder.build(
-            dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Param("gain", 1.0))),
+            dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Param("gain", 1.0))),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
@@ -421,7 +421,7 @@ class KatalystGainEffectSpec : StringSpec({
 
         registry.register(
             "mute",
-            KatalystDsl(KatalystDsl.classic.stages + KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(0.0))),
+            KatalystDsl(KatalystDsl.classic.stages + KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(0.0))),
         )
         cylinders.requestChain(orbit, "mute")
 
