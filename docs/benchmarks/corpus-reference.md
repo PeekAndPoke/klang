@@ -6,12 +6,12 @@ after the master, and the peak. Written by `./gradlew runSongBenchmark --args=co
 changes the sound on purpose carries its new reference, so this file's history lists every deliberate sound
 change. The method is in `src/jvmMain/kotlin/CorpusCheck.kt`.
 
-Accepted on 2026-10-10, tree `d7a455e4-dirty`.
+Accepted on 2026-10-12, tree `ca1f9d1e`.
 
 | song | hash | peak |
 |---|---|---|
 | Final Synthasy VII Prelude | f91ffdccb17b59e3 | 0.3866 |
-| Kokon | 6bf3f260f4d7bf50 | 0.7614 |
+| Kokon | dfa9cd64389e619f | 0.7602 |
 | Die Kirschblüte | a18405ffedce68aa | 0.7038 |
 | Der Schmetterling | feb4fe1003fb38f3 | 0.7703 |
 | Gestrandet | 09ee233fd4a79694 | 0.0550 |
