@@ -37,10 +37,13 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.common.infra.toKlangMap
+import io.peekandpoke.klang.script.stdlib.Kat
 import io.peekandpoke.klang.script.stdlib.div
+import io.peekandpoke.klang.script.stdlib.gain
 import io.peekandpoke.klang.script.stdlib.max
 import io.peekandpoke.klang.script.stdlib.plus
 import io.peekandpoke.klang.script.stdlib.pow
+import io.peekandpoke.klang.script.stdlib.range
 import io.peekandpoke.klang.script.stdlib.times
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
@@ -265,13 +268,15 @@ class EffectBenchmark(
         /**
          * One orbit chain as the cylinder runs it: [KatalystChainBuilder] builds it from [dsl], and every block copies a
          * sine into the orbit mix, hands the chain its param state (the owner's map: [moves] alternate every
-         * [moveEveryBlocks] blocks, or null) and runs it. Subtract "Katalyst empty chain" for the stages alone.
+         * [moveEveryBlocks] blocks, or null) and runs it. With [sidechain] a slow sine is the duck's trigger and the
+         * duck runs too, as the cylinder runs it after the chain. Subtract "Katalyst empty chain" for the stages alone.
          */
         private fun katalystCase(
             name: String,
             dsl: KatalystDsl,
             moves: List<Map<String, Double>>? = null,
             moveEveryBlocks: Int = 1,
+            sidechain: Boolean = false,
         ): Case = Case(name) { sr, bf ->
             val chain = KatalystChainBuilder.build(
                 dsl = dsl,
@@ -284,12 +289,25 @@ class EffectBenchmark(
             val srcL = sineSource(440.0, sr, bf)
             val srcR = sineSource(440.0, sr, bf)
             val moveMaps = moves?.map { it.toKlangMap() }
+            val trigger = if (sidechain) StereoBuffer(bf) else null
             var block = 0
+
+            if (trigger != null) {
+                sineSource(3.0, sr, bf).copyInto(trigger.left)
+                sineSource(3.0, sr, bf).copyInto(trigger.right)
+                ctx.sidechainBuffer = trigger
+            }
+
             val step: () -> Unit = {
                 srcL.copyInto(ctx.mixBuffer.left)
                 srcR.copyInto(ctx.mixBuffer.right)
                 chain.applyParams(if (moveMaps == null) null else moveMaps[(block / moveEveryBlocks) % moveMaps.size])
                 chain.process(ctx)
+
+                if (trigger != null) {
+                    chain.processDuck(ctx)
+                }
+
                 block++
             }
             step
@@ -547,6 +565,62 @@ class EffectBenchmark(
                 moveEveryBlocks = 8,
             ),
             katalystCase("Katalyst 8 arithmetic stages (E-arith's chain)", AllocationCases.arithmeticChain),
+
+            // ── Katalyst knob expressions and modulators (step 6 of
+            // docs/tasks/in-progress/katalyst-knob-expressions.md).
+            // Each modulated row against its constant control. The difference is the modulation AND the DSP paths a
+            // moving knob takes where a constant one does not: the hook, the evaluator, the writer's refill and the
+            // stage's configure, plus the per-sample ramps (the fader's and the arithmetic's one-block glide, the
+            // compressor's `processGliding`, the body's and the vowel's blend ramps) and the delay's tap crossfade on
+            // every block its time moves. It is not the cost of any one of them.
+            katalystCase(
+                "Katalyst gain, constant (control of the knob rows)",
+                AllocationCases.katalyst { it.gain(0.65) },
+            ),
+            // A new map every block: the slot re-resolves every block, the expression re-evaluates (an evaluation per
+            // new map is the most a slot expression ever costs; a song's map changes per note).
+            katalystCase(
+                "Katalyst gain, slot (a new map every block)",
+                AllocationCases.katalyst { it.gain(Kat.param("bench.g", 0.6)) },
+                moves = listOf(mapOf("bench.g" to 0.6), mapOf("bench.g" to 0.7)),
+            ),
+            katalystCase(
+                "Katalyst gain, slot expression (a new map every block)",
+                AllocationCases.katalyst { it.gain(Kat.param("bench.g", 0.6).times(1.1).plus(0.013)) },
+                moves = listOf(mapOf("bench.g" to 0.6), mapOf("bench.g" to 0.7)),
+            ),
+            katalystCase("Katalyst gain, sine knob (E-kat-sine's chain)", AllocationCases.sineChain),
+            katalystCase(
+                "Katalyst gain, square with a slot duty (E-kat-square's chain)",
+                AllocationCases.squareChain,
+                moves = listOf(mapOf("kat.duty" to 0.35)),
+            ),
+            katalystCase("Katalyst gain, saw with a sine freq (E-kat-sawfm's chain)", AllocationCases.sawFmChain),
+            katalystCase(
+                "Katalyst gain, perlin 1 octave",
+                AllocationCases.katalyst { it.gain(Kat.perlin(0.0031).range(0.45, 0.85)) },
+            ),
+            katalystCase(
+                "Katalyst gain, perlin 8 octaves",
+                AllocationCases.katalyst { it.gain(Kat.perlin(0.0031, octaves = 8.0).range(0.45, 0.85)) },
+            ),
+            katalystCase("Katalyst 7 stages, constants (control of E-kat-all7)", AllocationCases.allKindsConstant),
+            katalystCase(
+                "Katalyst 7 stages, the seven modulator kinds (E-kat-all7's chain)",
+                AllocationCases.allKindsChain,
+            ),
+            katalystCase(
+                "Katalyst mixed orbit, constants (control of E-kat-mix)",
+                AllocationCases.mixedConstant,
+                moves = listOf(mapOf("kat.sweep" to 650.0)),
+                sidechain = true,
+            ),
+            katalystCase(
+                "Katalyst mixed orbit, modulated (E-kat-mix's chain)",
+                AllocationCases.mixedChain,
+                moves = listOf(mapOf("kat.sweep" to 650.0)),
+                sidechain = true,
+            ),
 
             Case("Ducking (mono)") { sr, bf ->
                 val ducking = Ducking(sr, attackSeconds = 0.1, depth = 0.5)

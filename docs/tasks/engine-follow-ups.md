@@ -1380,6 +1380,37 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     re-set to 152, above the tail, so the release's full check does not go red by chance (`alloc-budgets.txt`). The
     chain runs the duck with a sounding sidechain; the tail's site is not located. Locate it as `spluck-a`'s (item 7)
     and `E-arith`'s (item 36) were looked for; a fix re-sets the line. S.
+39. **The Katalyst knob noises cross three doubles per noise per block on V8** (numbered after the last item, added
+    2026-10-12): `KatalystKnobProgram.sample` calls `PerlinNoise.fbm(x, octaves, persistence)` and `BerlinNoise.fbm`
+    once per noise per tick; V8 does not inline them there, so the clock, the persistence and the result each cross a
+    call as a heap number, about 48 B per noise per block. `E-kat-perlin` (two noises) reads 113.7 B per block against
+    the fader's 15.7 and `E-kat-all7` (two noises among seven knobs) 120.0 (`--predictable`, single-case, run T of
+    `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`); with the allocation check's method `E-kat-perlin` reads medians of 144 to 149. The JVM reads 0. A
+    remedy changes the noise classes in `common.math`, which the Ignitor's per-sample noise sources share (a holder for
+    the argument and the result, or an `inline` fbm whose `noise` calls V8 then inlines, both to be measured on the
+    Ignitor's own cases too), so it was not built in step 6. A fix re-sets the `E-kat-perlin` and `E-kat-all7` lines.
+    Source: `docs/tasks/in-progress/katalyst-knob-expressions.md`, step 6. S.
+40. **A modulated orbit compressor writes its five knobs through five setters every block** (numbered after the last
+    item, added 2026-10-12): `KatalystCompressorEffect.configure` calls `Compressor.thresholdDb`, `ratio`, `kneeDb`,
+    `attackSeconds` and `releaseSeconds`, each a setter call that V8 does not inline, so each knob crosses as a heap
+    number, and each setter runs `updateCoefficients` (15 `timeConstantCoeff`, an `exp` each, per block where one would
+    do). `E-kat-dyn` reads 98.7 B per block against the duck's floor of 46.7 (`--predictable`, single-case, run T of
+    `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`): 52 B, about three heap numbers. Measured on a hand-edited copy of that bundle (run X40 of the same
+    record): the five fields written in place and `updateCoefficients` (with `resizeSmoothing` under a lookahead)
+    called once read `E-kat-dyn` 45.4 and `E-kat-mix` 165.4 against 196.3 (`--predictable`; 57.2 and 164.4 with the
+    check's method). The remedy is a change to how `Compressor` stores its knobs (a holder or a `DoubleArray` the orbit
+    stage fills and one method that applies it, the setters kept for the other callers; the class is also the house
+    limiter's), so it was not built in step 6. Its time is not measured on its own. A fix re-sets the `E-kat-dyn` and
+    `E-kat-mix` lines. Source: as 39. S.
+41. **The residue of a moving delay time, reverb size and phaser breakpoint on V8** (numbered after the last item,
+    added 2026-10-12): `E-kat-gates` reads 66.6 B per block against the delay alone's 32.3 (`--predictable`,
+    single-case, run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). The sampling heap profiler (development runs, not recorded) books it in the
+    reverb's `process` and `observeTail`, the delay line's crossfade loop and `observeTail`, and the delay and reverb
+    writers' tick; on `E-kat-mix` also the phaser core's per-block writes of the new breakpoint. Not located further.
+    Ruled out by hand-edited copies of that bundle (probes R1 to R3 of the same record, step 6's review round 2): the
+    `Reverb.lowpass` setter as a direct write (66.7), the reverb configure's size path inlined too (66.9), and the
+    delay configure's five `isFinite` calls inlined (66.1; `E-kat-mix` 201.8): none removes a heap number. Source: as
+    39. S.
 
 ## 6. The audit's later steps and its open decisions
 

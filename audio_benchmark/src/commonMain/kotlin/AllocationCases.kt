@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -29,6 +30,7 @@ import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.toKlangMap
 import io.peekandpoke.klang.script.stdlib.IgnitorDslLike
+import io.peekandpoke.klang.script.stdlib.Kat
 import io.peekandpoke.klang.script.stdlib.KatalystBuilder
 import io.peekandpoke.klang.script.stdlib.abs
 import io.peekandpoke.klang.script.stdlib.band
@@ -36,18 +38,24 @@ import io.peekandpoke.klang.script.stdlib.bands
 import io.peekandpoke.klang.script.stdlib.body
 import io.peekandpoke.klang.script.stdlib.compressor
 import io.peekandpoke.klang.script.stdlib.cut
+import io.peekandpoke.klang.script.stdlib.delay
 import io.peekandpoke.klang.script.stdlib.distort
 import io.peekandpoke.klang.script.stdlib.div
 import io.peekandpoke.klang.script.stdlib.duck
+import io.peekandpoke.klang.script.stdlib.duty
 import io.peekandpoke.klang.script.stdlib.eq
+import io.peekandpoke.klang.script.stdlib.floor
 import io.peekandpoke.klang.script.stdlib.gain
 import io.peekandpoke.klang.script.stdlib.limiter
 import io.peekandpoke.klang.script.stdlib.max
 import io.peekandpoke.klang.script.stdlib.min
 import io.peekandpoke.klang.script.stdlib.minus
 import io.peekandpoke.klang.script.stdlib.parallel
+import io.peekandpoke.klang.script.stdlib.phaser
 import io.peekandpoke.klang.script.stdlib.plus
 import io.peekandpoke.klang.script.stdlib.pow
+import io.peekandpoke.klang.script.stdlib.range
+import io.peekandpoke.klang.script.stdlib.reverb
 import io.peekandpoke.klang.script.stdlib.tap
 import io.peekandpoke.klang.script.stdlib.times
 import io.peekandpoke.klang.script.stdlib.vowel
@@ -221,6 +229,149 @@ object AllocationCases {
 
     private const val GLIDE_GATE_SEC: Double = 30.0 * BLOCK_FRAMES / SAMPLE_RATE
 
+    // ── The knob expressions and the modulators (step 6 of docs/tasks/in-progress/katalyst-knob-expressions.md) ──
+    //
+    // Every chain below moves at least one knob every block through the chain's hook (`KatalystChain.process`: each
+    // modulated writer ticks its knobs, refills its holder and configures its stage). The rates and the ranges are not
+    // integers (an integral double travels as a small integer on V8 and boxes nothing), and every range keeps the
+    // orbit sounding. The `*Constant` twins hold each modulated knob at a fixed number in its range, for the timing
+    // rows' comparison (`EffectBenchmark`).
+
+    /** (a) One sine on the group fader: the plainest modulated knob, one modulator and one `range` per block. */
+    internal val sineChain: KatalystDsl = katalyst { it.gain(Kat.sine(0.7).range(0.45, 0.85)) }
+
+    /**
+     * (b) A square whose duty is a SLOT EXPRESSION (`kat.duty`, written by the case's `katp`), on the group fader: the
+     * square's shape, and the expression's arithmetic run every block inside the modulated knob (a slot leaf loaded
+     * once per new map, then the `plus` per tick).
+     */
+    internal val squareChain: KatalystDsl = katalyst {
+        it.gain(Kat.square(1.3) { b -> b.duty(Kat.param("kat.duty", 0.3).plus(0.05)) }.range(0.45, 0.85))
+    }
+
+    /** (c) A saw whose freq is a sine: its edges are rebaked every block (`setSawShape`, the `dt` moves). */
+    internal val sawFmChain: KatalystDsl = katalyst {
+        it.gain(Kat.saw(Kat.sine(0.3).range(0.6, 1.9)).range(0.45, 0.85))
+    }
+
+    /** (d) A perlin at one octave on the group fader and one at eight on a `times` stage: `fbm` once per tick each. */
+    internal val perlinChain: KatalystDsl = katalyst {
+        it.gain(Kat.perlin(0.0031).range(0.45, 0.85)).times(Kat.perlin(0.0031, octaves = 8.0).range(0.8, 1.15))
+    }
+
+    /** (e) All seven modulator kinds in one chain, the fader and six `times` stages, each near unity. */
+    internal val allKindsChain: KatalystDsl = katalyst {
+        it.gain(Kat.sine(0.7).range(0.45, 0.85))
+            .times(Kat.saw(0.53).range(0.85, 1.1))
+            .times(Kat.ramp(0.41).range(0.85, 1.1))
+            .times(Kat.tri(0.67).range(0.85, 1.1))
+            .times(Kat.square(0.37).range(0.85, 1.1))
+            .times(Kat.perlin(0.0031).range(0.85, 1.1))
+            .times(Kat.berlin(0.0027).range(0.85, 1.1))
+    }
+
+    /** [allKindsChain] with each knob a constant in its range. */
+    internal val allKindsConstant: KatalystDsl = katalyst {
+        it.gain(0.65).times(0.97).times(0.97).times(0.97).times(0.97).times(0.97).times(0.97)
+    }
+
+    /**
+     * The compressor with all five knobs moving and the duck's depth and attack moving (the settings holders, step 2:
+     * each writer refills one `CompressorSettings` or `DuckSettings` per block and hands it to its stage; the attack
+     * reaches `Ducking.attackSeconds` every block). The duck listens to the trigger orbit, and its depth stays above 0.
+     */
+    internal val dynamicsChain: KatalystDsl = katalyst {
+        it.compressor(
+            threshold = Kat.sine(0.51).range(-26.5, -12.5),
+            ratio = Kat.tri(0.43).range(2.5, 5.5),
+            knee = Kat.saw(0.37).range(0.5, 5.5),
+            attack = Kat.sine(0.61).range(0.0021, 0.0093),
+            release = Kat.ramp(0.29).range(0.051, 0.187),
+        ).duck(
+            orbit = TRIGGER_ORBIT,
+            depth = Kat.sine(0.45).range(0.25, 0.75),
+            attack = Kat.tri(0.33).range(0.011, 0.047),
+        )
+    }
+
+    /**
+     * A body and a vowel whose wet and floor move every block (step 5c: the blend glides in place, through
+     * `WetDryMix`'s `coerceIn`). The body's wet crosses 0, so the bypass, its landing and the return from rest run too.
+     */
+    internal val resonatorChain: KatalystDsl = katalyst {
+        it.body(wet = Kat.sine(0.85).range(-0.2, 0.7), material = "wood") { b ->
+            b.floor(Kat.sine(0.65).range(0.25, 0.6))
+        }.vowel(wet = Kat.tri(0.95).range(0.3, 0.8), vowel = "a") { b -> b.floor(Kat.sine(0.55).range(0.1, 0.45)) }
+    }
+
+    /**
+     * A delay whose time and a reverb whose size cross their gates (`MIN_ACTIVE_DELAY_SECONDS`, `MIN_ACTIVE_SIZE`)
+     * every cycle (step 5b: the feed fades out below the gate, the stage drains, and above it the feed fades back in
+     * from 0). Above the gate the delay's time steps through its tap crossfade every block. The reverb's lowpass moves
+     * too, written into the primitive `Reverb.lowpass` every block (step 5b).
+     */
+    internal val gatesChain: KatalystDsl = katalyst {
+        it.delay(wet = 0.35, time = Kat.sine(0.3).range(-0.04, 0.26), feedback = 0.45)
+            .reverb(wet = 0.3, size = Kat.sine(0.2).range(-1.5, 6.5), lowpass = Kat.sine(0.27).range(2100.5, 6300.5))
+    }
+
+    /**
+     * A slot EXPRESSION on the fader of a chain whose orbit sees a new param map every block ([TurnsRig]): the
+     * expression is evaluated on every resolve, the most a slot expression ever costs (a song's map changes per note).
+     */
+    internal val remapExpressionChain: KatalystDsl = katalyst {
+        it.gain(Kat.param("kat.g", 0.6).times(1.1).plus(0.013))
+    }
+
+    /**
+     * The mixed orbit profile: every stage family a song's orbit runs but `eq`, `distort` and the arithmetic, one knob
+     * each moving, spread over the seven kinds (the phaser's center among them, its `applied` short-circuit defeated
+     * every block), and a slot expression on the phaser's sweep (`kat.sweep`, resolved once). The duck listens to the
+     * trigger orbit.
+     */
+    internal val mixedChain: KatalystDsl = mixed(
+        bodyWet = Kat.sine(0.85).range(0.2, 0.7),
+        vowelWet = Kat.tri(0.95).range(0.3, 0.8),
+        delayTime = Kat.saw(0.31).range(0.21, 0.26),
+        reverbSize = Kat.perlin(0.0031).range(3.5, 6.5),
+        phaserCenter = Kat.sine(0.23).range(450.0, 1650.0),
+        threshold = Kat.ramp(0.51).range(-26.5, -12.5),
+        gain = Kat.berlin(0.0027).range(0.75, 0.95),
+        duckDepth = Kat.square(0.45).range(0.25, 0.75),
+    )
+
+    /** [mixedChain] with each moving knob a constant in its range (the sweep's slot expression stays). */
+    internal val mixedConstant: KatalystDsl = mixed(
+        bodyWet = 0.45,
+        vowelWet = 0.55,
+        delayTime = 0.235,
+        reverbSize = 5.1,
+        phaserCenter = 1050.0,
+        threshold = -19.5,
+        gain = 0.85,
+        duckDepth = 0.5,
+    )
+
+    private fun mixed(
+        bodyWet: IgnitorDslLike,
+        vowelWet: IgnitorDslLike,
+        delayTime: IgnitorDslLike,
+        reverbSize: IgnitorDslLike,
+        phaserCenter: IgnitorDslLike,
+        threshold: IgnitorDslLike,
+        gain: IgnitorDslLike,
+        duckDepth: IgnitorDslLike,
+    ): KatalystDsl = katalyst {
+        it.body(wet = bodyWet, material = "wood")
+            .vowel(wet = vowelWet, vowel = "a")
+            .delay(wet = 0.3, time = delayTime, feedback = 0.45)
+            .reverb(wet = 0.3, size = reverbSize)
+            .phaser(wet = 0.5, rate = 0.55, center = phaserCenter, sweep = Kat.param("kat.sweep", 600.0).times(1.3))
+            .compressor(threshold = threshold, ratio = 3.5)
+            .gain(gain)
+            .duck(orbit = TRIGGER_ORBIT, depth = duckDepth)
+    }
+
     /** The cases, in scoreboard order. */
     val all: List<Case> = listOf(
         Case(name = "saw", engine = false, sound = AUTHORED, dsl = saw()),
@@ -261,6 +412,16 @@ object AllocationCases {
         // A new owner, and so a new param map instance, on the orbit every block: the chain re-resolves its 27 slot
         // knobs each block, a map lookup per knob (engine follow-up 2, the decoder's map type).
         Case(name = "C-remap", engine = false, sound = "saw", katp = delay, ownersTakingTurns = true),
+        // The same turns with an authored chain whose fader is a slot expression: one evaluation per new map, every
+        // block (knob expressions step 6).
+        Case(
+            name = "C-kat-remap",
+            engine = false,
+            sound = "saw",
+            chain = remapExpressionChain,
+            katp = mapOf("kat.g" to 0.62),
+            ownersTakingTurns = true,
+        ),
         Case(name = "E-sawC-sus", engine = true, sound = "saw"),
         Case(name = "E-noisesaw-sus", engine = true, sound = AUTHORED, dsl = saw() + IgnitorDsl.WhiteNoise()),
         Case(name = "E-delay", engine = true, sound = "saw", katp = delay),
@@ -327,6 +488,30 @@ object AllocationCases {
             engine = true,
             sound = "saw",
             chain = katalyst { it.body(wet = 0.5, material = "wood").vowel(wet = 0.5, vowel = "a") },
+        ),
+        // The knob expressions and the modulators (step 6 of the knob expressions task): each chain moves a knob every
+        // block through the chain's hook.
+        Case(name = "E-kat-sine", engine = true, sound = "saw", chain = sineChain),
+        Case(
+            name = "E-kat-square",
+            engine = true,
+            sound = "saw",
+            chain = squareChain,
+            katp = mapOf("kat.duty" to 0.35),
+        ),
+        Case(name = "E-kat-sawfm", engine = true, sound = "saw", chain = sawFmChain),
+        Case(name = "E-kat-perlin", engine = true, sound = "saw", chain = perlinChain),
+        Case(name = "E-kat-all7", engine = true, sound = "saw", chain = allKindsChain),
+        Case(name = "E-kat-dyn", engine = true, sound = "saw", chain = dynamicsChain, duckTrigger = true),
+        Case(name = "E-kat-res", engine = true, sound = "saw", chain = resonatorChain),
+        Case(name = "E-kat-gates", engine = true, sound = "saw", chain = gatesChain),
+        Case(
+            name = "E-kat-mix",
+            engine = true,
+            sound = "saw",
+            chain = mixedChain,
+            katp = mapOf("kat.sweep" to 650.0),
+            duckTrigger = true,
         ),
         Case(
             name = "E-C-rel05-n16",
@@ -457,7 +642,8 @@ object AllocationCases {
      * Two voices of [case] taking turns as their orbit's owner, only the owner rendering each block: a voice offers
      * itself inside its render, and of two rendering voices the later one would own the orbit every block. Each voice
      * carries its own copy of the case's orbit slots, received as the engine receives them ([receivedByEngine]), so the
-     * orbit sees a new map instance every block and its chain re-resolves every slot knob.
+     * orbit sees a new map instance every block and its chain re-resolves every slot knob. With a [Case.chain] the
+     * orbit runs it: the rig's cylinders resolve its name in a registry of their own, requested once.
      */
     private class TurnsRig(case: Case) : Rig() {
         private val registry = IgnitorRegistry().apply { registerDefaults() }
@@ -489,7 +675,15 @@ object AllocationCases {
         }
 
         private val ctx = Voice.RenderContext(
-            cylinders = Cylinders(blockFrames = BLOCK_FRAMES, sampleRate = SAMPLE_RATE),
+            cylinders = Cylinders(
+                blockFrames = BLOCK_FRAMES,
+                sampleRate = SAMPLE_RATE,
+                katalysts = KatalystRegistry().apply {
+                    if (case.chain != null) {
+                        register(name = CHAIN, dsl = case.chain)
+                    }
+                },
+            ),
             sampleRate = SAMPLE_RATE,
             blockFrames = BLOCK_FRAMES,
             voiceBuffer = DoubleArray(BLOCK_FRAMES),
@@ -498,6 +692,12 @@ object AllocationCases {
 
         private var block = 0
         private var cylinder: Cylinder? = null
+
+        init {
+            if (case.chain != null) {
+                ctx.cylinders.requestChain(orbit = 0, name = CHAIN)
+            }
+        }
 
         override fun step() {
             val last = cylinder

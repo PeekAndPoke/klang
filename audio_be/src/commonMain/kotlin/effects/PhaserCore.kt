@@ -124,6 +124,28 @@ internal class PhaserCore(
      * force must not move out from under the next block's start.
      */
     fun prepareBlock(blockFrames: Int, centerTo: Double, sweepTo: Double) {
+        prepare(blockFrames = blockFrames, centerTo = centerTo, sweepTo = sweepTo)
+    }
+
+    /**
+     * The same, the breakpoint read from [block] ([PhaserBlock.centerTo], [PhaserBlock.sweepTo]): the form
+     * [Phaser.process] calls, once per core and block.
+     *
+     * **No double crosses the call, on purpose** (Katalyst knob expressions step 6, 2026-10-12): with a modulated
+     * center or sweep the breakpoint is a new non-integral double every block, and on V8 a double handed to a call
+     * that is not inlined is a heap number (`audio/ref/performance.md`). As two arguments, V8 left the call out of
+     * `Phaser.process` and boxed them: `E-kat-mix` read 226.1 B per block against 196.3 (`--predictable`,
+     * single-case; mutant M8 and run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`), about two heap
+     * numbers, under its line. The body is [prepare], Kotlin `inline`, so this form reads the holder in place. No test
+     * can pin it; this KDoc is the guard.
+     */
+    fun prepareBlock(blockFrames: Int, block: PhaserBlock) {
+        prepare(blockFrames = blockFrames, centerTo = block.centerTo, sweepTo = block.sweepTo)
+    }
+
+    /** The body of both [prepareBlock] forms with a breakpoint; inline, so neither passes a double on. */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun prepare(blockFrames: Int, centerTo: Double, sweepTo: Double) {
         if (blockFrames <= 0) {
             alphaIncrement = 0.0
             return

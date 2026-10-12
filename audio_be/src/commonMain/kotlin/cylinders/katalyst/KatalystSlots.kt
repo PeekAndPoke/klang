@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.common.infra.KlangMap
@@ -237,7 +238,7 @@ internal class KatalystKnob(
      * `Kat.sine(1).plus(NaN)` keeps its NaN through the law, loads no unset leaf, and would otherwise declare a duck
      * with a NaN depth or run a delay or reverb at the default wet, where the same NaN as a constant leaves both off.
      */
-    val isModulating: Boolean get() = isModulated && loaded != LOADED_UNSET && value.isFinite()
+    val isModulating: Boolean get() = isModulated && loaded != LOADED_UNSET && value.isFiniteInline()
 
     /**
      * One block of a modulated knob (step 5b; the chain's per-block hook, `KatalystChain.process`): runs the program
@@ -268,7 +269,8 @@ internal class KatalystKnob(
         val result = compiled.registers[compiled.resultRegister]
 
         // NaN-guard: a non-finite result (a non-finite constant through a law that keeps it) is not a write.
-        written = loaded == LOADED_WRITTEN && result.isFinite()
+        // Without the stdlib call: a modulated knob takes its result every block (`isFiniteInline`'s KDoc, step 6).
+        written = loaded == LOADED_WRITTEN && result.isFiniteInline()
         value = result
     }
 

@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.ignitor.minusLaw
 import io.peekandpoke.klang.audio_be.ignitor.plusLaw
 import io.peekandpoke.klang.audio_be.ignitor.powLaw
 import io.peekandpoke.klang.audio_be.ignitor.timesLaw
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 
 /** Which law a [KatalystArithmeticEffect] applies; one per arithmetic stage of `KatalystStageDsl`. */
 internal enum class KatalystArithmeticOp {
@@ -99,12 +100,19 @@ internal class KatalystArithmeticEffect(
         }
     }
 
-    /** Sets the operand; see the class KDoc for the glide and for what a non-finite one means. */
+    /**
+     * Sets the operand; see the class KDoc for the glide and for what a non-finite one means.
+     *
+     * The finiteness tests are `isFiniteInline`, not the stdlib `isFinite()` (knob expressions step 6, 2026-10-12):
+     * a modulated operand configures the stage every block from the chain's hook, and on V8 a stdlib call left out of
+     * the hook takes its double as a heap number (`audio/ref/performance.md`). One of the group the KDoc of
+     * `isFiniteInline` measures. No test can pin it; that KDoc and this one are the guard.
+     */
     fun configure(operand: Double) {
         // NaN-guard on a value the author can write: a non-finite operand is unset (class KDoc).
-        val written = if (operand.isFinite()) operand else identity
+        val written = if (operand.isFiniteInline()) operand else identity
 
-        if (!written.isFinite()) {
+        if (!written.isFiniteInline()) {
             unset = true
 
             return

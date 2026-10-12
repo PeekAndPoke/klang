@@ -162,9 +162,10 @@ internal class KatalystNoiseOrdinals {
  * and its `when` is a statement whose arms store into the registers (a `when` yielding a double boxes inside a loop),
  * and the registers and the clocks are `DoubleArray`s, `Float64Array`s on Kotlin/JS, whose elements never box. No
  * lambda, no allocation: evaluating allocates nothing on the JVM, measured (`KatalystSettingsAllocationSpec`,
- * `KatalystKnobModulatorAllocationSpec`); V8 is measured in step 6. Two calls cross a double on a moving path: the
- * noises' `fbm` (once per noise op per tick, its argument and result) and the wave shape's setter (only when `dt` or
- * the duty changed), both as the Ignitor makes them.
+ * `KatalystKnobModulatorAllocationSpec`); on V8 measured in step 6 (`E-kat-*`). Two calls cross a double on a moving
+ * path: the noises' `fbm` (once per noise op per tick, its argument and result: three heap numbers per noise per
+ * block, open as engine follow-up 39) and the wave shape's setter (only when `dt` or the duty changed; `E-kat-sawfm`,
+ * a rebake every block, reads the fader's floor), both as the Ignitor makes them.
  */
 internal class KatalystKnobProgram private constructor(
     private val ops: Array<KatalystKnobOp>,

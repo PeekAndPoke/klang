@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.round
 
@@ -84,16 +85,41 @@ internal class KnobGlide(
 
     internal val invBlocks: Double = 1.0 / blocks
 
+    /**
+     * The knob's three doubles, [value], [target] and [start], indexed by [VALUE], [TARGET] and [START], read and
+     * written through `inline` accessors.
+     *
+     * **An array, on purpose** (Katalyst knob expressions step 6, 2026-10-12): a knob that moves writes them every
+     * block, and as three double FIELDS V8 stored fresh heap numbers for them in some stages' per-block paths (the
+     * steady classic stages' too), while an
+     * element access in optimized code never allocates (`audio/ref/performance.md`, the rule of engine follow-up 7).
+     * Measured with `--predictable`, single-case, bytes per block, the three fields put back (mutant M6) against the
+     * array: `E-stages` 45.5 against 15.8, `E-delay` 61.1 against 32.3, `E-kat-gates` 92.0 against 66.6, `E-kat-dyn`
+     * 113.7 against 98.7 (runs M6 and T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). With the allocation
+     * check's method the mutant stays under every line. No test can pin it; this KDoc is the guard.
+     */
+    internal val state = DoubleArray(STATE_SIZE)
+
     /** The value in force: after [advance], the value for the block just advanced. */
-    var value: Double = 0.0
-        internal set
+    var value: Double
+        inline get() = state[VALUE]
+        internal inline set(v) {
+            state[VALUE] = v
+        }
 
     /** Where the knob is going; equal to [value] once the glide has landed. */
-    var target: Double = 0.0
-        internal set
+    var target: Double
+        inline get() = state[TARGET]
+        internal inline set(v) {
+            state[TARGET] = v
+        }
 
     /** Where the running glide started: the value in force at the [retarget] that began it. */
-    internal var start: Double = 0.0
+    internal var start: Double
+        inline get() = state[START]
+        inline set(v) {
+            state[START] = v
+        }
 
     /** Blocks left in the running glide; zero means settled. */
     internal var remaining: Int = 0
@@ -104,9 +130,21 @@ internal class KnobGlide(
     /** True while the knob is still on its way to [target]. */
     val isGliding: Boolean get() = remaining > 0
 
-    /** Sets where the knob goes. Called as often as settings arrive; an unchanged target is free. */
-    fun retarget(next: Double) {
-        if (!next.isFinite()) { // NaN-guard (and Inf): the owner substitutes its meaning first, see the KDoc
+    /**
+     * Sets where the knob goes. Called as often as settings arrive; an unchanged target is free.
+     *
+     * **Kotlin `inline`, on purpose** (knob expressions step 6, 2026-10-12), for the reason [advance] is: a modulated
+     * knob retargets every block, and on V8 a double handed to a call that is not inlined is a heap number
+     * (`audio/ref/performance.md`). As a plain method V8 left it out of the stages' per-block paths once their budget
+     * was spent. Measured with `--predictable`, single-case, bytes per block, the plain method (mutant M1) read
+     * `E-kat-mix` 439.2 against 196.3 (runs M1 and T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`); with the
+     * allocation check's method 441.3, over its line. Its guard is [isFiniteInline], one of the per-block `isFinite()`
+     * calls replaced together (see there). No test can pin it; this KDoc and the allocation check's `E-kat-mix` line
+     * are the guard.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun retarget(next: Double) {
+        if (!next.isFiniteInline()) { // NaN-guard (and Inf): the owner substitutes its meaning first, see the KDoc
             return
         }
 
@@ -270,5 +308,13 @@ internal class KnobGlide(
     fun reset() {
         remaining = 0
         snapNext = true
+    }
+
+    internal companion object {
+        /** The slots of [state]. */
+        const val VALUE: Int = 0
+        const val TARGET: Int = 1
+        const val START: Int = 2
+        private const val STATE_SIZE: Int = 3
     }
 }

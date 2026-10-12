@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.filters.EqSectionSpec
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -535,6 +536,6 @@ internal fun stageAskedFor(wet: KatalystKnob): Boolean {
     // NaN-guard on a value the author can write: a non-finite wet was never set, so it is neither
     // a write nor a positive amount, and an unset stage is off. That is the same reading the voice
     // path gave an untouched effect.
-    return wet.written || wet.isModulating || (wet.value.isFinite() && wet.value > 0.0)
+    return wet.written || wet.isModulating || (wet.value.isFiniteInline() && wet.value > 0.0)
 }
 

@@ -368,10 +368,26 @@ class Compressor(
     }
 
     /**
+     * The six ends of a gliding block's ramps, written by the caller and read by [processGliding], indexed by
+     * [GLIDE_THRESHOLD_FROM] ... [GLIDE_KNEE_TO].
+     *
+     * **A holder, on purpose** (Katalyst knob expressions step 6, 2026-10-12): a modulated compressor knob glides
+     * every block, [processGliding] is past V8's 460-byte limit for inlining, so it is always a call, and on V8 a
+     * non-integral double handed to a call that is not inlined is a heap number (`audio/ref/performance.md`): as six
+     * arguments they cost about six heap numbers per block (mutant M7 of
+     * `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`: `E-kat-dyn` 196.5 B against 98.7, `--predictable`,
+     * single-case; 196.4 with the allocation check's method, over its line). An ARRAY, not double fields: an element
+     * access in optimized code never allocates (engine follow-up 7). [DelayLine]'s `blockArgs` is the precedent. No
+     * test can pin it; this KDoc and the allocation check's `E-kat-dyn` line are the guard.
+     */
+    internal val glideArgs = DoubleArray(GLIDE_ARGS)
+
+    /**
      * One stereo block of the classic path while the three GAIN-COMPUTER knobs move: threshold,
      * inverse ratio and knee run linearly per sample from the values the previous block ended on
-     * ([thresholdFrom], [inverseRatioFrom], [kneeFrom]) to [thresholdTo], [inverseRatioTo] and
-     * [kneeTo], written from the END, so the last sample runs at the `To` values bit for bit. The
+     * (`thresholdFrom`, `inverseRatioFrom`, `kneeFrom`) to `thresholdTo`, `inverseRatioTo` and
+     * `kneeTo`, written from the END, so the last sample runs at the `To` values bit for bit. The six arrive in
+     * [glideArgs], written by the caller before the call. The
      * envelope follower is the same one [process] runs (it reads none of the three), so it stays
      * continuous.
      *
@@ -396,22 +412,20 @@ class Compressor(
      * in force, because its delay ring must see every block. There a knob step does not step the
      * output: the required gain passes through the hold, the release and the box smoother first.
      */
-    internal fun processGliding(
-        left: AudioBuffer,
-        right: AudioBuffer,
-        blockSize: Int,
-        thresholdFrom: Double,
-        thresholdTo: Double,
-        inverseRatioFrom: Double,
-        inverseRatioTo: Double,
-        kneeFrom: Double,
-        kneeTo: Double,
-    ) {
+    internal fun processGliding(left: AudioBuffer, right: AudioBuffer, blockSize: Int) {
         if (delayFrames > 0 || blockSize <= 0) {
             process(left = left, right = right, blockSize = blockSize)
 
             return
         }
+
+        val args = glideArgs
+        val thresholdFrom = args[GLIDE_THRESHOLD_FROM]
+        val thresholdTo = args[GLIDE_THRESHOLD_TO]
+        val inverseRatioFrom = args[GLIDE_INVERSE_RATIO_FROM]
+        val inverseRatioTo = args[GLIDE_INVERSE_RATIO_TO]
+        val kneeFrom = args[GLIDE_KNEE_FROM]
+        val kneeTo = args[GLIDE_KNEE_TO]
 
         val thresholdStep = (thresholdTo - thresholdFrom) / blockSize
         val inverseRatioStep = (inverseRatioTo - inverseRatioFrom) / blockSize
@@ -805,6 +819,15 @@ class Compressor(
          */
         fun coerceLookaheadSeconds(seconds: Double): Double =
             if (seconds.isFinite()) seconds.coerceIn(0.0, MAX_LOOKAHEAD_SECONDS) else 0.0
+
+        /** The slots of [glideArgs]: the threshold's ramp from and to, the inverse ratio's, the knee's. */
+        internal const val GLIDE_THRESHOLD_FROM: Int = 0
+        internal const val GLIDE_THRESHOLD_TO: Int = 1
+        internal const val GLIDE_INVERSE_RATIO_FROM: Int = 2
+        internal const val GLIDE_INVERSE_RATIO_TO: Int = 3
+        internal const val GLIDE_KNEE_FROM: Int = 4
+        internal const val GLIDE_KNEE_TO: Int = 5
+        private const val GLIDE_ARGS: Int = 6
 
         /** How much faster the dual release's fast branch is than the configured release. */
         private const val FAST_RELEASE_DIVISOR: Double = 10.0

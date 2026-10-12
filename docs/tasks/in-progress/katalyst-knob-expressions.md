@@ -1,6 +1,6 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **in progress, steps 1 to 4, 5a, 5b and 5c built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer,
+Status: **in progress, steps 1 to 4, 5a, 5b, 5c and 6 built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer,
 2026-10-11, Q12's seed refined 2026-10-12; the other Q at the coordinator's lean).
 
 ## Why
@@ -446,6 +446,139 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
    per block on a mismatch), `Ducking.attackSeconds`. And Kotlin/JS's `Double.coerceIn`, which is not inline: 4 calls
    per bank per moving block of a body or vowel blend (`ResonatorBank.targetBlend` once, `WetDryMix.dryCoeff` twice,
    `WetDryMix.wetCoeff` once; 5c review round 1, audio 3).
+   **6 built** (2026-10-12, review round 1 applied): ten allocation cases, twelve timing rows, five remedies, three
+   follow-ups filed. **Every number below comes from a run of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`** (named
+   there: run T the tree, run H HEAD's engine with the tree's cases, mutants M1, M6, M7, M8, G1, probes P1 and P2, the
+   hand-edited bundles X40 and XS, and the four full checks' allocation tables) **or from the full checks' timing
+   records** `docs/benchmarks/2026-10-12_185434_*.md` and `2026-10-12_191024_*.md`.
+   - **The cases** (`audio_benchmark/AllocationCases.kt`; every rate and range non-integral; a twin with constant
+     knobs for the timing rows): `E-kat-sine` (a) a sine on the fader; `E-kat-square` (b) a square on the fader whose
+     duty is a slot expression (`Kat.param("kat.duty", 0.3).plus(0.05)`, written by the case's `katp`), so the
+     expression's arithmetic runs every block inside the modulated knob; `E-kat-sawfm` (c) a saw whose freq is a sine,
+     a rebake per block; `E-kat-perlin` (d) perlin at one octave on the fader and at eight on a `times` stage (merged:
+     one path, `fbm`, with two octave counts); `E-kat-all7` (e) all seven kinds, the fader and six `times` stages;
+     `E-kat-dyn` the compressor with all five knobs moving and the duck's depth and attack (the settings holders and
+     `Ducking.attackSeconds`); `E-kat-res` a body and a vowel with wet and floor moving (the 5c blend and its
+     `WetDryMix` `coerceIn`; the body's wet through 0); `E-kat-gates` a delay time and a reverb size through their gates
+     (the 5b feed fade) and the reverb's lowpass moving (the `Reverb.lowpass` setter); `E-kat-mix` the mixed orbit
+     profile: body, vowel, delay, reverb, phaser, compressor, fader and duck (not `eq`, `distort` or the arithmetic),
+     one knob each moving over the seven kinds (the phaser's center among them), a slot expression on the phaser's
+     sweep; `C-kat-remap` `C-remap`'s two voices taking turns as the owner, so the orbit sees a new map every block,
+     with an authored chain whose fader is a slot expression: one evaluation per block (it measures the resolve, not
+     the stage's DSP: the voice rig does not process the chain).
+   - **Bytes per block on V8**, `--predictable`, single-case, HEAD's engine (run H) / the tree (run T); the check's
+     own method (unpinned, 3 rounds, medians) on the tree (run T, then the full checks 2026-10-12_184920 and
+     `_190741`), and HEAD's engine by the check's method (run H). The fader alone (`E-gain`) reads 15.7 in both trees
+     and 46 to 52 by the check's method.
+
+     | case | `--predictable` H / T | the check's method, T and the two full checks | H, the check's method |
+     |---|---|---|---|
+     | `C-kat-remap` | 15.7 / 15.7 | 15, 11, 21 | 16 |
+     | `E-kat-sine` | 52.5 / 15.5 | 47, 31, 47 | 48 |
+     | `E-kat-square` | 31.2 / 15.6 | 47, 36, 50 | 61 |
+     | `E-kat-sawfm` | 52.3 / 15.3 | 51, 46, 46 | 73 |
+     | `E-kat-perlin` | 113.1 / 113.7 | 149, 145, 144 | 155 |
+     | `E-kat-all7` | 149.9 / 120.0 | 161, 155, 155 | 181 |
+     | `E-kat-dyn` | 262.7 / 98.7 | 103, 104, 103 | 269 |
+     | `E-kat-res` | 159.9 / 15.7 | 6, 98, 21 | 171 |
+     | `E-kat-gates` | 112.6 / 66.6 | 67, 117, 72 | 134 |
+     | `E-kat-mix` | 521.5 / 196.3 | 205, 201, 196 | 587 |
+
+     The classic orbits gained too (`--predictable`, H / T): `E-stages` 68.3 / 15.8, `E-delay` 75.9 / 32.3, `C-remap`
+     160.1 / 30.1. The check's method reads several cases' HEAD and tree within each other's spread (`E-kat-sine`,
+     `E-kat-perlin`, `E-kat-all7`): there the difference is not resolved by it. **The JVM reads 0 B on all ten** (the
+     full checks: `ThreadMXBean`, 9 rounds, every case in one process).
+   - **The remedies** (each located with the sampling heap profiler and `--trace-turbo-inlining` on the production
+     bundle in development runs; each proven by a mutant in one lock call, backed up, relinked, restored, compared
+     with `cmp` and the tree's diff hash). "Over its line" means the mutant's median by the check's method exceeds a
+     budget line; nothing else is called red.
+     1. `KnobGlide.retarget` Kotlin `inline`. M1: `E-kat-mix` 439.2 (`--predictable`) and 441.3 by the check's method,
+        **over its line** (250); `E-kat-res` 158.4 and 184.7, over its 144 in that run but not counted (its healthy
+        medians reach 98).
+     2. `KnobGlide`'s `value`, `target` and `start` in a `DoubleArray`, read through `inline` accessors. M6:
+        `E-stages` 45.5, `E-delay` 61.1, `E-kat-gates` 92.0, `E-kat-dyn` 113.7 (`--predictable`); by the check's method
+        36.4, 61.2, 123.6, 108.7, **under every line**: guarded by its KDoc.
+     3. `Compressor.processGliding` takes its six ramp ends from `Compressor.glideArgs`. M7: `E-kat-dyn` 196.5
+        (`--predictable`), 196.4 by the check's method, **over its line** (152).
+     4. `PhaserCore.prepareBlock(blockFrames, block)` reads the breakpoint from the `PhaserBlock`. M8: `E-kat-mix`
+        226.1 (`--predictable`), 232.7 by the check's method, **under its line**: guarded by its KDoc.
+     5. The hook's `isFinite()` calls as `isFiniteInline` (`utils/numerical_safety.kt`): `KnobGlide.retarget`,
+        `KatalystKnob`'s result and `isModulating`, `stageAskedFor`, the writers' guards and gates (now `inline`), the
+        compressor's and the duck's `fill`, the arithmetic stage's `configure`. Measured as a group, G1 (all of them
+        back): `E-kat-sine` 31.2, `E-kat-square` 29.6, `E-kat-sawfm` 31.2, `E-kat-all7` 134.5, `E-kat-dyn` 128.8,
+        `E-kat-mix` 272.1 (`--predictable`); by the check's method 67.3, 67.4, 61.9, 176.1, 134.2, 263.7, **under every
+        line**: guarded by the KDoc of `isFiniteInline`.
+     **Dropped in review round 1**: `KatalystGainEffect.configure` `inline` (no measured benefit of its own; `glide` is
+     private again; run T reads `E-kat-sine` at the fader's floor without it), and the arithmetic stage taking the
+     knob (`configure(KatalystKnob)`; its one figure was a mode of `E-kat-all7` that the tree shows too, run T's round
+     of 277; the stage keeps its `configure(Double)`, now with `isFiniteInline`).
+   - **The candidates of the plan's list, each with an outcome**: `KnobGlide.retarget` and the gain's and the
+     arithmetic's `configure(Double)`: remedies 1 and 5. `gate()`, `guarded()`, `guardedDepth()`, `guardedFloor()`: in
+     remedy 5. `Reverb.normalizeSize`: no case reads a difference that names it (not measured on its own). The
+     `Reverb.lowpass` setter: no heap number, by review round 2's probes R1 and R2 of the run record (the setter call
+     replaced by a direct field write, then the reverb configure's size path too: `E-kat-gates` 66.7 and 66.9 against
+     run T's 66.6); probe P1 (a fixed lowpass against the moving one) could not see it, because both arms call the
+     setter every block. The five `Compressor` setters: 52 B per block on `E-kat-dyn` (98.7 against `E-duck`'s 46.7, run T), filed
+     as item 40 (X40: the fields written in place read 45.4). `Ducking.attackSeconds`: none, because X40 accounts for
+     `E-kat-dyn`'s excess over the duck's floor (45.4 with the compressor's setters gone, `E-duck` 46.7); probe P2 (a
+     fixed attack against the moving one) could not see it, for P1's reason. Kotlin/JS `Double.coerceIn` in the blend: `E-kat-res` reads
+     15.7, the fader's floor (run T), none. The step 2 settings holders: XS (their fields as `Float64Array`s) reads
+     `E-kat-dyn` 98.7 and `E-kat-mix` 196.3, as run T: they do not box. A slot expression on a new map every block:
+     `C-kat-remap` 15.7 in both trees, none.
+   - **Filed** (`docs/tasks/engine-follow-ups.md`): item 39, the knob noises' `fbm` (three heap numbers per noise per
+     block: `E-kat-perlin` 113.7 against the fader's 15.7); item 40, the compressor's five setters per block (52 B per
+     block, about three heap numbers, and 15 `exp`); item 41, the residue on a moving delay time, reverb size and phaser
+     breakpoint (`E-kat-gates` 66.6 against `E-delay`'s 32.3), not located. Their lines are budgeted as they stand.
+   - **Budgets** (`alloc-budgets.txt`, the file's rule: about 40 B above the highest healthy median by the check's
+     method, above a tail of high rounds): `C-kat-remap` 64, `E-kat-sine`, `-square`, `-sawfm` 96, `E-kat-perlin` 232 (above run T's round of 194),
+     `E-kat-all7` 336 (above run T's round of 277), `E-kat-dyn` 152, `E-kat-res` 144, `E-kat-gates` 160 (set at 112
+     first; the first full check of the final tree read a healthy 117 and went red), `E-kat-mix` 250 (the rule's 40 B over
+     its medians; review round 2 chose it over 304, whose rounds of 265 and 248 came from the engine before review
+     round 1, and at 250 it also guards the `isFinite` group, G1 264); JVM 6 each. **The lines that guard a remedy**: `E-kat-mix`
+     (`KnobGlide.retarget` inline, and the `isFinite` group) and `E-kat-dyn` (`Compressor.glideArgs`). The others guard the per-sample class only
+     (run H reads under each, but `E-kat-res`). The classic `E-stages` and `E-delay` lines are not re-set.
+   - **Timing** (`EffectBenchmark`, 44.1 kHz, the chain from `KatalystChainBuilder`, its params applied and the chain
+     processed every block; 10,000 warm-up and 3 iterations of 5,000 blocks per row, the median; µs per block from the
+     full checks' records `2026-10-12_185434_compare.md` / `2026-10-12_191024_compare.md`):
+
+     | row | JVM | node |
+     |---|---|---|
+     | empty chain (baseline) | 0.031 / 0.031 | 0.093 / 0.119 |
+     | fader, constant (control) | 0.047 / 0.051 | 0.254 / 0.240 |
+     | fader, slot, a new map every block | 0.367 / 0.321 | 0.266 / 0.256 |
+     | fader, slot expression, a new map every block | 0.133 / 0.139 | 0.271 / 0.288 |
+     | fader, sine | 0.186 / 0.189 | 0.301 / 0.259 |
+     | fader, square with a slot duty | 0.108 / 0.106 | 0.273 / 0.272 |
+     | fader, saw with a sine freq | 0.167 / 0.169 | 0.313 / 0.279 |
+     | fader, perlin 1 octave | 0.148 / 0.150 | 0.277 / 0.265 |
+     | fader, perlin 8 octaves | 0.191 / 0.191 | 0.309 / 0.330 |
+     | 7 stages, constants (control) | 1.24 / 1.22 | 1.67 / 1.60 |
+     | 7 stages, the seven kinds | 1.64 / 1.62 | 2.43 / 2.22 |
+     | mixed orbit, constants (control) | 21.35 / 21.14 | 31.21 / 31.09 |
+     | mixed orbit, modulated | 23.55 / 23.32 | 33.81 / 33.41 |
+
+     **What the difference is.** A modulated row against its constant control is the modulation AND the DSP paths a
+     moving knob takes where a constant one does not (the hook, the evaluator, the writer's refill and the stage's
+     `configure`, plus the per-sample ramps: the fader's and the arithmetic's one-block glide, the compressor's
+     `processGliding`, the body's and the vowel's blend ramps, and the delay's tap crossfade every block its time
+     moves). It is not the cost of any one of them, item 40's `exp` included. **Read**: the mixed orbit costs 2.2 µs per
+     block on the JVM (10 percent) and 2.3 to 2.6 on node (7 to 8 percent) over its constant twin; the seven kinds 0.4 µs
+     on the JVM and 0.6 to 0.8 on node over seven constant stages. On the JVM a modulated fader costs 0.06 to 0.14 µs
+     over the constant one. On node a modulated fader reads 0.02 to 0.09 µs over the constant control. **Not
+     resolved**: single rows move by up to 0.04 µs between the two runs (the sine 0.301 and 0.259), so on node a slot
+     expression's evaluation against a plain slot's lookup (0.271 and 0.288 against 0.266 and 0.256) and eight perlin
+     octaves against one (0.309 and 0.330 against 0.277 and 0.265) are not resolved by three iterations of 5,000
+     blocks.
+   - **Proof**: `console/full-check.sh` on the final tree: 2026-10-12 18:49 RED on `E-kat-gates` alone (117 against
+     its first line of 112, a healthy reading; the line was re-set to 160), then 19:07 GREEN: 17,688 tests (`audio_be`
+     JVM 2,773 and JS 2,664 run fresh at 18:49 on this code, the root module JVM 64 with the step 3 fixture at
+     `2949f0d641d984ec`), the corpus 18 of 18 identical, alloc 78 of 78 within budget. No sound changed: the remedies
+     are inlining and holders, and the corpus and the tests are the guard.
+   - **Review:** 2 rounds (round 1 opus, both reviewers; round 2 reviewer-high, one reviewer), 0 critical, 2 major
+     (round 1: the timing table came from uncommitted scratch logs and contradicted the committed records it cited; the
+     `E-kat-mix` line at 240 risked a red by chance on that engine), round 2 clean. Round 2's MINORs applied: the
+     `E-kat-mix` line 250 (above), `E-kat-perlin` 232, the probes that could not see a setter crossing replaced by
+     round 2's R1 to R3 in the run record, four sentences corrected.
 7. Records, and the render fixture removed.
 
 **Questions.** Decided by the maintainer (2026-10-11), each at the lean: Q2 E2 ("keep shared, slots only"), Q3

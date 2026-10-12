@@ -498,6 +498,24 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   calls, and a double return is a box wherever the call stays: hence the step that returns nothing. `C-full` went
   from about 190 to about 40 bytes per block. A probe that renders one stage alone does not reproduce this class:
   build the voice the songs build, then narrow it.
+- **A knob that moves every block makes its whole per-block path hot: measure a group of sites, and in both modes**
+  (2026-10-12, Katalyst knob expressions step 6, `docs/tasks/in-progress/katalyst-knob-expressions.md`; the runs:
+  `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). A modulated Katalyst knob runs the chain's hook every block
+  (the knob's evaluation, the writer's refill, the stage's `configure`, `KnobGlide.retarget`), and every small
+  double-taking call on it competes for one inlining budget. Fixed: `KnobGlide.retarget` a plain method (now `inline`),
+  the stdlib `isFinite()` calls of the knob, the glide and the gain and compressor writers on the hook (now
+  `isFiniteInline`, one compare; the delay, reverb and resonator `configure` keep theirs, measured harmless), `Compressor.processGliding`'s six
+  arguments and `PhaserCore.prepareBlock`'s two (now holders), and `KnobGlide`'s three double fields, which boxed
+  where a `DoubleArray` does not (item 7's rule again; it also took about two heap numbers per block off the classic
+  `E-stages` and `E-delay` under `--predictable`: 45.5 and 61.1 with the fields, 15.8 and 32.3 without; the check's
+  method reads no difference). Lessons: the `isFinite()` calls are
+  measured as a GROUP (all put back: one to five heap numbers per case), because which stdlib call V8 leaves out
+  depends on the hook's whole budget; the allocation check's mode and `--predictable` can disagree, and a case can
+  carry a tail of high rounds in either tree (`E-kat-all7` read a round of 277 against medians of 155 to 161), so a
+  remedy is judged by a mutant in both modes and a line is set above the tail; and the double-field settings holders
+  (`CompressorSettings`, `DuckSettings`) do not box: as `Float64Array`s in a hand-edited bundle (run XS) `E-kat-dyn`
+  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). Open: the knob noises' `fbm` (item 39), the compressor's five setters (item 40), a residue on the moving
+  delay, reverb and phaser paths (item 41).
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per
@@ -534,13 +552,15 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **The allocation check** (`KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun`, after
   `./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun`, without which a bundle older than its
   sources is refused; the `alloc` step of `console/full-check.sh`)
-  measures the bytes per block of 29 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
+  measures the bytes per block of 39 fixed cases on the JVM (in-process, `ThreadMXBean`) and on V8 (the production
   node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
   `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
   breach. How it measures and the cases: `audio_benchmark/README.md`. The cases cover the Ignitor's hot nodes and
   every Katalyst stage family on an orbit: the classic chain's delay, reverb and phaser through its slots, and an
   authored chain for the arithmetic (constant and gliding), the bus distort, the compressor and limiter, the eq, the
-  gain, the duck, `parallel`, `bands`, the body and the vowel (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`). Not
+  gain, the duck, `parallel`, `bands`, the body and the vowel (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`), and the
+  knobs that move every block through the chain's own modulators, the `E-kat-*` cases (knob expressions step 6,
+  `docs/tasks/in-progress/katalyst-knob-expressions.md`). Not
   covered: an authored chain at the master position (`MasterBus`; every engine case runs its empty default). The JVM guards in `jvmTest` (`FirstBlockAllocationSpec`,
   `KatalystResonatorAllocationSpec`) stay where they are.
 - **What it can see.** On V8 the method's noise (about 25 B per block) is larger than one heap number (16 B on

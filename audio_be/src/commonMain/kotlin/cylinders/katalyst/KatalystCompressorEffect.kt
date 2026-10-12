@@ -537,17 +537,16 @@ class KatalystCompressorEffect(
             return
         }
 
-        c.processGliding(
-            left = left,
-            right = right,
-            blockSize = n,
-            thresholdFrom = thresholdFrom,
-            thresholdTo = thresholdTo,
-            inverseRatioFrom = inverseRatioFrom,
-            inverseRatioTo = inverseRatioTo,
-            kneeFrom = kneeFrom,
-            kneeTo = kneeTo,
-        )
+        // The ramps' ends go through the instance's holder: no double crosses the call (`Compressor.glideArgs`).
+        val args = c.glideArgs
+
+        args[Compressor.GLIDE_THRESHOLD_FROM] = thresholdFrom
+        args[Compressor.GLIDE_THRESHOLD_TO] = thresholdTo
+        args[Compressor.GLIDE_INVERSE_RATIO_FROM] = inverseRatioFrom
+        args[Compressor.GLIDE_INVERSE_RATIO_TO] = inverseRatioTo
+        args[Compressor.GLIDE_KNEE_FROM] = kneeFrom
+        args[Compressor.GLIDE_KNEE_TO] = kneeTo
+        c.processGliding(left = left, right = right, blockSize = n)
     }
 
     /** Grows the dry scratch buffers to [n] frames once, for a direct caller's longer block. */

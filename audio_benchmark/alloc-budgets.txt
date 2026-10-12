@@ -96,6 +96,30 @@
 #   read RED at 98 against 96. A tail that common is not absorbed by the median of 3, so 152 sits 43 B above the
 #   highest tail round and still far under the per-sample class it guards (one heap number per sample, about 2 KB per
 #   block). The tail is not located: docs/tasks/engine-follow-ups.md, item 38.
+#   C-kat-remap and E-kat-sine to E-kat-mix were added by Katalyst knob expressions step 6 (2026-10-12,
+#   docs/tasks/in-progress/katalyst-knob-expressions.md): each E-kat chain moves a knob every block through its own
+#   modulators, C-kat-remap evaluates a slot expression on a new map every block. The lines follow this file's rule
+#   (about 40 B above the highest healthy median of the check's method, and above a tail seen in the rounds of the FINAL
+#   tree; a tail read on an earlier engine is cited as such, not budgeted for, the lesson of step 6's review), from
+#   three runs of the final tree: run T of docs/benchmarks/2026-10-12_183400_knob-step6-v8.md and the two full checks
+#   whose tables that record holds (2026-10-12_184920, _190741; healthy medians in brackets): C-kat-remap 64 (11 to 21),
+#   E-kat-sine, E-kat-square, E-kat-sawfm 96 (31 to 51, the fader's floor, E-gain's line), E-kat-perlin 232 (144 to 149;
+#   a round of 194 in run T, so the line sits above that tail), E-kat-all7 336 (155 to 161; a round of 277 in run T, so
+#   the line sits above that tail, as E-duck's does), E-kat-dyn 152 (103 to 104), E-kat-res 144 (6 to 98), E-kat-gates
+#   160 (67 to 117; set at 112 first, which the first full check's healthy 117 crossed), E-kat-mix 250 (196 to 205, the
+#   largest of 9 rounds 221; the rule's 40 B; review round 2 of step 6 chose it over 304: the rounds of 265 and 248 that
+#   set 304 were read on the engine before review round 1, whose two extra remedies are gone, and at 250 the line also
+#   tells the isFinite group (G1, 264) from the tree; a breach needs two of the three rounds above it).
+#   WHICH LINE GUARDS WHICH REMEDY (the mutants of the same record, the check's method): E-kat-mix guards
+#   KnobGlide.retarget being inline (mutant M1 441); E-kat-dyn guards Compressor.glideArgs (mutant M7 196). No other
+#   line tells a remedy from its mutant: the KnobGlide fields (M6: E-kat-gates 124, E-kat-dyn 109), the phaser's
+#   prepareBlock with two arguments (M8: E-kat-mix 233) read under their lines and are guarded by their KDocs; the
+#   isFinite group (G1: E-kat-sine 67, E-kat-dyn 134) reads under those two lines but over E-kat-mix's (264). E-kat-res read M1 at 185 and HEAD's engine
+#   (run H) at 171, over its 144 in those runs, but its healthy medians reach 98, so it is not counted as a guard.
+#   E-kat-sine, -square, -sawfm, -perlin, -all7, -gates and C-kat-remap guard the per-sample class only: HEAD's
+#   engine (run H) reads under each of them. Lines
+#   that carry an open V8 allocation, budgeted as it stands: E-kat-perlin and E-kat-all7 the noises' fbm (item 39),
+#   E-kat-dyn and E-kat-mix the compressor's five setters (item 40); a fix re-sets those lines.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -148,6 +172,8 @@ C-full             v8        112     item 8, the knob reads; item 29's SVF setup
 C-full             jvm       6       item 12 step 2
 C-remap            v8        192     item 2, the decoder's KlangMap: a new orbit map per block (not item 8: the voice lines)
 C-remap            jvm       36      item 2; reads 24 B, the reverb writer's Double? lowpass per new map by design, so 36 and not 6
+C-kat-remap        v8        64      a slot expression evaluated on a new map every block: the evaluation allocates nothing (no remedy)
+C-kat-remap        jvm       6       a slot expression evaluated on a new map every block
 E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample class only)
 E-sawC-sus         jvm       6       item 3, the limiter's level; item 8
 E-noisesaw-sus     v8        160     item 3, the limiter's gain (the per-sample class only)
@@ -178,5 +204,23 @@ E-bands            v8        320     item 33, the per-branch copy; bands, three 
 E-bands            jvm       6       bands, three with the mids distorted
 E-body-vowel       v8        96      the body and the vowel on an orbit (V8; the JVM's guard is KatalystResonatorAllocationSpec)
 E-body-vowel       jvm       6       the body and the vowel on an orbit
+E-kat-sine         v8        96      one sine on the fader: the per-sample class only (HEAD reads under it)
+E-kat-sine         jvm       6       one sine on the fader
+E-kat-square       v8        96      a square with a slot-expression duty: the per-sample class only
+E-kat-square       jvm       6       a square with a slot-expression duty
+E-kat-sawfm        v8        96      a saw whose freq is a sine (a rebake per block): the per-sample class only
+E-kat-sawfm        jvm       6       a saw whose freq is a sine
+E-kat-perlin       v8        232     perlin at 1 and 8 octaves: the per-sample class, above its tail (a round of 194); fbm open (item 39)
+E-kat-perlin       jvm       6       perlin at 1 and 8 octaves
+E-kat-all7         v8        336     all seven kinds: the per-sample class only, above its tail (a round of 277); fbm open (item 39)
+E-kat-all7         jvm       6       all seven kinds
+E-kat-dyn          v8        152     the compressor's five, the duck's depth and attack: Compressor.glideArgs (mutant 196); the setters open (item 40)
+E-kat-dyn          jvm       6       the compressor's five, the duck's depth and attack
+E-kat-res          v8        144     the body's and the vowel's wet and floor: the per-sample class (KnobGlide.retarget's mutant reads over it, not reliably)
+E-kat-res          jvm       6       the body's and the vowel's wet and floor
+E-kat-gates        v8        160     a delay time, a reverb size and lowpass through their gates: the per-sample class only (HEAD reads under it)
+E-kat-gates        jvm       6       a delay time, a reverb size and lowpass through their gates
+E-kat-mix          v8        250     the mixed orbit: KnobGlide.retarget inline (mutant 441), the isFinite group (264); items 39, 40, 41 open
+E-kat-mix          jvm       6       the mixed orbit
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build

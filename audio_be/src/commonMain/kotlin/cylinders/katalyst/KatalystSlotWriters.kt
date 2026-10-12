@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.filters.ResonatorConfig
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
@@ -148,7 +149,8 @@ internal class KatalystDelayWriter(
         config.wet = wet.value
     }
 
-    private fun gate(): Double = if (stageAskedFor(wet)) time.value else SLOT_UNSET
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun gate(): Double = if (stageAskedFor(wet)) time.value else SLOT_UNSET
 }
 
 /**
@@ -198,7 +200,8 @@ internal class KatalystReverbWriter(
         config.wet = wet.value
     }
 
-    private fun gate(): Double =
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun gate(): Double =
         if (stageAskedFor(wet)) Reverb.normalizeSize(size.value) else SLOT_UNSET
 }
 
@@ -268,9 +271,11 @@ internal class KatalystPhaserWriter(
 
     // NaN-guards on values the author can write: an unset slot is OFF for the amount and the
     // engine's own dry coefficient for the floor, not whatever the setter last held.
-    private fun guardedDepth(): Double = if (wet.value.isFinite()) wet.value else PHASER_WET
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun guardedDepth(): Double = if (wet.value.isFiniteInline()) wet.value else PHASER_WET
 
-    private fun guardedFloor(): Double = if (floor.value.isFinite()) floor.value else PHASER_FLOOR
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun guardedFloor(): Double = if (floor.value.isFiniteInline()) floor.value else PHASER_FLOOR
 }
 
 /**
@@ -336,7 +341,9 @@ internal class KatalystCompressorWriter(
         val rel = release.value
 
         // NaN-guards on values the author can write: a non-finite slot was never set.
-        if (!t.isFinite() && !r.isFinite() && !k.isFinite() && !a.isFinite() && !rel.isFinite()) {
+        if (!t.isFiniteInline() && !r.isFiniteInline() && !k.isFiniteInline() && !a.isFiniteInline() &&
+            !rel.isFiniteInline()
+        ) {
             on = false
 
             return
@@ -344,11 +351,11 @@ internal class KatalystCompressorWriter(
 
         val s = settings
 
-        s.thresholdDb = if (t.isFinite()) t else COMPRESSOR_THRESHOLD_DB
-        s.ratio = if (r.isFinite()) r else COMPRESSOR_RATIO
-        s.kneeDb = if (k.isFinite()) k else COMPRESSOR_KNEE_DB
-        s.attackSeconds = if (a.isFinite()) a else COMPRESSOR_ATTACK_SECONDS
-        s.releaseSeconds = if (rel.isFinite()) rel else COMPRESSOR_RELEASE_SECONDS
+        s.thresholdDb = if (t.isFiniteInline()) t else COMPRESSOR_THRESHOLD_DB
+        s.ratio = if (r.isFiniteInline()) r else COMPRESSOR_RATIO
+        s.kneeDb = if (k.isFiniteInline()) k else COMPRESSOR_KNEE_DB
+        s.attackSeconds = if (a.isFiniteInline()) a else COMPRESSOR_ATTACK_SECONDS
+        s.releaseSeconds = if (rel.isFiniteInline()) rel else COMPRESSOR_RELEASE_SECONDS
         on = true
     }
 }
@@ -439,7 +446,8 @@ internal class KatalystGainWriter(
      * the stage. NOT a
      * magnitude clamp: a negative factor and one above unity pass through untouched.
      */
-    private fun guarded(): Double = if (gain.value.isFinite()) gain.value else 1.0
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun guarded(): Double = if (gain.value.isFiniteInline()) gain.value else 1.0
 }
 
 /**
@@ -568,7 +576,7 @@ internal class KatalystDuckWriter(
         // above 0 asks for no ducking, unless the depth is MODULATING (Q7: a modulated knob counts as asked for, so an
         // LFO through 0 does not switch the stage off and on; `Ducking.depth` takes a depth below 0 as 0). Either way a
         // declared depth is finite: a NaN fails `> 0`, and `isModulating` is false on a non-finite value.
-        if (!source.isFinite() || !(amount > 0.0 || depth.isModulating)) {
+        if (!source.isFiniteInline() || !(amount > 0.0 || depth.isModulating)) {
             declared = false
 
             return
@@ -578,7 +586,7 @@ internal class KatalystDuckWriter(
 
         s.cylinderId = source.toInt()
         // NaN-guard on a value the author can write: a non-finite attack is unset.
-        s.attackSeconds = if (attackSeconds.isFinite()) attackSeconds else DUCK_ATTACK_SECONDS
+        s.attackSeconds = if (attackSeconds.isFiniteInline()) attackSeconds else DUCK_ATTACK_SECONDS
         s.depth = amount
         declared = true
     }
