@@ -10,3 +10,5 @@ import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
 
 actual fun receivedByEngine(voice: ScheduledVoice): ScheduledVoice = decode_ScheduledVoice(encode_ScheduledVoice(voice))
+
+actual fun sentToWorklet(voice: ScheduledVoice): Any? = encode_ScheduledVoice(voice)

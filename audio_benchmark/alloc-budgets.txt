@@ -2,7 +2,7 @@
 # the alloc step of console/full-check.sh): bytes per block, the most a case may allocate.
 #
 # One line per case and platform: case, platform (v8 or jvm), budget, and what the budget guards (the item numbers
-# are docs/tasks/engine-follow-ups.md's). A case without a line, or a line naming an unknown case, turns the run red.
+# are docs/tasks/in-progress/engine-follow-ups.md's). A case without a line, or a line naming an unknown case, turns the run red.
 # Fixed numbers, set by hand, never by a run. They were set on 2026-10-10 from the harness's first run at middle C
 # (docs/benchmarks/alloc-scoreboard.md, the first two rows):
 # - V8: about 40 B or more above that run's median, and below the regression the case guards: one heap number per
@@ -12,13 +12,13 @@
 #   96, but it is not an item 8 line either).
 # - Re-set: saw, sawC, C-offrel, sgpad-vib and C-dist on V8 were re-set at engine follow-up 6 (2026-10-10) from that
 #   change's runs (tree medians 16, 15, 16, 31 to 36 and 31 to 36 B), by the same rule: its fix took about 16 B per wave oscillator off,
-#   enough that item 8's regression read under the old budgets (docs/tasks/engine-follow-ups.md, item 6).
+#   enough that item 8's regression read under the old budgets (docs/tasks/in-progress/engine-follow-ups.md, item 6).
 #   C-full on V8 was re-set at engine follow-up 29 (2026-10-11) from that change's runs (tree medians 26 to 67 B,
 #   healthy rounds 21 to 71 B): its fix took about 150 B off, so the line now guards item 8 as well. 112 is 41 B
 #   above the worst healthy round and below the item 8 mutant's lowest round (154.8 B) and item 29's revert (165 B).
 #   spluck-a was added at engine follow-up 7 (2026-10-11), with its two lines set by the same rule from that change's
 #   runs: V8 healthy rounds 1 to 53 B (median about 31), HEAD's code (the old double-returning ramp) 407 to 566 B. The
-#   healthy tree has a tail at 288 to 459 B (the drift path, not located: docs/tasks/engine-follow-ups.md, items 4 and
+#   healthy tree has a tail at 288 to 459 B (the drift path, not located: docs/tasks/in-progress/engine-follow-ups.md, items 4 and
 #   7), whose rate varies from session to session: see "Known tails" below. HEAD's code read high in every round of
 #   every run, the item 8 mutant in every round of its one run.
 #   E-delay and E-stages were added at engine follow-up 1 (2026-10-11), with their lines set by the same rule from
@@ -95,7 +95,17 @@
 #   of 33 tree rounds read 97.6 to 108.8 (HEAD has it too, 103.1 in 8 rounds), and one run held two tail rounds and
 #   read RED at 98 against 96. A tail that common is not absorbed by the median of 3, so 152 sits 43 B above the
 #   highest tail round and still far under the per-sample class it guards (one heap number per sample, about 2 KB per
-#   block). The tail is not located: docs/tasks/engine-follow-ups.md, item 38.
+#   block). The tail is not located: docs/tasks/in-progress/engine-follow-ups.md, item 38.
+#   S-doors was added at engine follow-up 2, step 4 (2026-10-12): sprudel's per-event path, no engine. One step
+#   queries one cycle of note("c") with voice and bus doors (lpf, adsr, analog, reverb, delay, phaser, body,
+#   compressor), converts the event with toVoiceData and hands it on as the browser does (the wire encode on JS, the
+#   voice itself on the JVM), so bytes per block are bytes per event. It makes no sound (makesSound = false): the driver
+#   checks the outputs of its last step instead of a peak. V8 healthy rounds 35,636 to 36,140 B (3 runs of 3, medians
+#   35,702 to 36,052, and 3 more rounds by the same two-process method); the ParamBag storage back on a stdlib
+#   LinkedHashMap read 45,730 to 45,920, the JS setAll/copy fast path through the iterator protocol 39,159 to 39,599.
+#   36,500 is 360 B above the worst healthy round and 2,659 below the nearest regression's lowest. The JVM reads
+#   15,752 in every run; 15,764 tells one Double per event,
+#   as E-C-n1's line does. Neither mutant moves the JVM (no KlangMap wrapper to lose there; the fast path is JS only).
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -180,3 +190,5 @@ E-body-vowel       v8        96      the body and the vowel on an orbit (V8; the
 E-body-vowel       jvm       6       the body and the vowel on an orbit
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build
+S-doors            v8        36500   item 2 step 4: the param bags' KlangMap storage and its JS copy fast path (per event)
+S-doors            jvm       15764   sprudel's per-event pipeline; one Double per event (not an item 2 line: the JVM sees neither mutant)

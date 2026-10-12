@@ -14,3 +14,10 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
  * change of the decoder's map type shows in its bytes.
  */
 expect fun receivedByEngine(voice: ScheduledVoice): ScheduledVoice
+
+/**
+ * [voice] as the frontend hands it on to the worklet: on Kotlin/JS the generated wire encode (the browser's next step
+ * after sprudel's `toVoiceData`, which walks both slot maps); on the JVM the voice itself, since the JVM engine takes
+ * sprudel's voice data in-process and nothing is encoded. The allocation check's `S-doors` case sends through this.
+ */
+expect fun sentToWorklet(voice: ScheduledVoice): Any?

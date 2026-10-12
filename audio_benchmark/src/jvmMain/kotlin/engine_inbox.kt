@@ -8,3 +8,5 @@ package io.peekandpoke.klang.audio_benchmark
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 
 actual fun receivedByEngine(voice: ScheduledVoice): ScheduledVoice = voice
+
+actual fun sentToWorklet(voice: ScheduledVoice): Any? = voice

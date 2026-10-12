@@ -381,7 +381,7 @@ slots on its `classic()` probe; the realtime gate row of `VoiceLifecycleSpec` ho
   the noise). Gated on, the tree's memo and `ModApplyingIgnitor` cost more than the strip's one buffer: render +13 to
   +16 percent for a settled saw with `penv` and +2 to +12 percent while it sweeps (about +210 to +740 ns per block
   per voice, under 0.03 percent of a 2.67 ms block); build about +3 KB per voice on V8 and +1.7 KB on the JVM. The
-  sweep's own V8 boxing (about 2.17 KB per block, HEAD alike) is `docs/tasks/engine-follow-ups.md` item 10a.
+  sweep's own V8 boxing (about 2.17 KB per block, HEAD alike) is `docs/tasks/in-progress/engine-follow-ups.md` item 10a.
 - **Review round 1** (`tmp/reviews/pp1-r1-A.md`, 1 MAJOR; `tmp/reviews/pp1-r1-B.md`, 0 MAJOR), applied: the script
   `classic()` door's KDoc lists the pitch envelope stage and says an instrument without `classic()` ignores `penv`
   (D6), and the sprudel `vibrato`, `accelerate` and `fm` KDocs say they still reach every instrument from the strip
@@ -1516,7 +1516,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     constant-operand path (`controlRateValueOrNull` returns `Double?` through `MaxIgnitor` and `ParamIgnitor`), which
     the JIT does not always eliminate in the two-source graph. The house arithmetic nodes' scalar path, the same
     shape as the tremolo's floor; V8 shows none. Not patched in 7b: it is the second site of
-    `docs/tasks/engine-follow-ups.md` item 12 (the JVM boxes a `Double` per block-constant read), which now names it.
+    `docs/tasks/in-progress/engine-follow-ups.md` item 12 (the JVM boxes a `Double` per block-constant read), which now names it.
   - **Listening pairs** (`tmp/listening/pp-7b/`, `README.md`, before = HEAD, after = the tree, `console/record.sh`):
     a constant depth (`vib(5.5, 0.4)` on a saw: identical at 16 bits), a fast-moving depth (0 to 3 semitones at 23 Hz:
     -12.2 dB, the staircase gone), a slow swell (-39.9 dB, nothing to hear), a supersaw with `vib` (other dice, +2.6
@@ -1629,7 +1629,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     costs nothing measurable per block and about
     16 to 60 ns and 90 to 260 bytes per voice to build. The 24 bytes per block of a constant range on the JVM are
     possibly `RangeIgnitor`'s constant-bound read boxing a `Double` (`controlRateValueOrNull`), possibly a third site of
-    `docs/tasks/engine-follow-ups.md` item 12 (not profiled; review round 1, B2).
+    `docs/tasks/in-progress/engine-follow-ups.md` item 12 (not profiled; review round 1, B2).
   - **Mutation checks** (one lock call each: backed up, mutated, run, restored with `cp`, `cmp` clean): the range
     always built red on five rows (the default, the slots, the non-finite slot, literal and phase rows); never built
     red on eleven; the bounds swapped in the factory red on ten; the default test without its finite substitution red

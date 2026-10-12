@@ -35,7 +35,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
  * When [mod] is itself freq-invariant (every sprudel door, every vibrato with constant knobs, a nested wrapper), the
  * frequency does not matter, so the wrapper hands on the caller's `freqHz` instead of the pinned field: the same
  * samples, and on V8 no heap number per block (a double loaded from a field and handed to a call V8 does not inline is
- * boxed; `docs/tasks/engine-follow-ups.md` item 10c).
+ * boxed; `docs/tasks/in-progress/engine-follow-ups.md` item 10c).
  *
  * Its readers are the modulator's own pitched sources and the pitch-mod memos and nested wrappers inside the
  * modulator, all rendered by the fm right after [pin], so the pinned frequency is always the current block's. One

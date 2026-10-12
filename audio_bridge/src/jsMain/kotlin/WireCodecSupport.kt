@@ -70,7 +70,7 @@ fun wireEncodeStringDoubleMap(m: KlangMap<Double>): dynamic {
  * JS object → a [KlangMap] (insertion order preserved via Object.keys). The engine reads these maps by key
  * (`ignitorParams` at every voice build, `katalystParams` at every owner change of an orbit), and on Kotlin/JS a
  * `HashMap` lookup allocates 40 bytes inside the stdlib's hashing, a `KlangMap` lookup nothing (engine follow-up 2,
- * `docs/tasks/engine-follow-ups.md` item 2). The allocation check's `C-remap` case guards it.
+ * `docs/tasks/in-progress/engine-follow-ups.md` item 2). The allocation check's `C-remap` case guards it.
  */
 fun wireDecodeStringDoubleMap(o: dynamic): KlangMap<Double> {
     val keys = js("Object.keys(o)").unsafeCast<Array<String>>()

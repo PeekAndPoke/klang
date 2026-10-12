@@ -9,7 +9,7 @@
 > `12727e8f`, (b) `ab9f172c`; the V8 pass `a6eebdbb`, `4c1c8bd1`, `9ca9c98b`, `e6ff9a00`, its record `15fa76ce`.
 >
 > **Where the open items went:** every item still open from the "Found during ..." sections, the V8 pass and the
-> audit's later steps and decisions is in [`docs/tasks/engine-follow-ups.md`](../../tasks/engine-follow-ups.md), with
+> audit's later steps and decisions is in [`docs/tasks/in-progress/engine-follow-ups.md`](../../tasks/in-progress/engine-follow-ups.md), with
 > a link back to its section here. The questions this work raised (Q16, Q17, Q19, Q23, Q24) stay in
 > [`docs/tasks/_maintainer-questions.md`](../../tasks/_maintainer-questions.md).
 

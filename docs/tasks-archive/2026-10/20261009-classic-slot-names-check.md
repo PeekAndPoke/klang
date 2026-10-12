@@ -7,7 +7,7 @@
 > `945c092b`; step 2a `27d833df`; step 2b `5e2b8be9`; step 3 `d72e119d`; step 4 `b72e605a`.
 >
 > **Where the open items went:** the weak pluck `ignitorParam` rows found in step 2b (`brightness`, `pickPosition`,
-> `stiffness` on one advancing seed) are in [`docs/tasks/engine-follow-ups.md`](../../tasks/engine-follow-ups.md);
+> `stiffness` on one advancing seed) are in [`docs/tasks/in-progress/engine-follow-ups.md`](../../tasks/in-progress/engine-follow-ups.md);
 > sprudel's `analog(amount)` is Q25 in [`docs/tasks/_maintainer-questions.md`](../../tasks/_maintainer-questions.md).
 > The red rig-anchor row of `SongBenchmarkCasesCompileSpec` the steps mention was fixed by `662aa8db`.
 

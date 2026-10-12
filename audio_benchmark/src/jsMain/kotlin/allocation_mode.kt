@@ -7,7 +7,8 @@ package io.peekandpoke.klang.audio_benchmark
 
 /**
  * One V8 measurement of the allocation check: renders [warm] blocks of the case [name], then [count] more, and
- * prints `NS <ns per block of the counted window>` and `PEAK <the last block's peak>`. The bytes are not measured here: node's `--trace-gc-nvp` lines
+ * prints `NS <ns per block of the counted window>` and `PEAK <the last block's peak>` (`OUTPUTS <n>` for a case that
+ * makes no sound, [AllocationCases.Case.makesSound]). The bytes are not measured here: node's `--trace-gc-nvp` lines
  * carry them, and the driver (`AllocationCheck.kt`, JVM main) subtracts a run with `count = 0` from a run with
  * `count > 0`. An unknown case prints `ERROR` and sets a failing exit code.
  */
@@ -32,7 +33,9 @@ fun runAllocationCase(name: String, warm: Int, count: Int) {
     val t1 = nowMs()
     val ns = if (count > 0) (t1 - t0) * 1.0e6 / count else 0.0
 
-    writeStdout("NS $ns\nPEAK ${rig.peak()}\n")
+    val proof = if (case.makesSound) "PEAK ${rig.peak()}" else "OUTPUTS ${rig.outputs()}"
+
+    writeStdout("NS $ns\n$proof\n")
 }
 
 /**

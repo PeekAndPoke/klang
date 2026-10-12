@@ -51,12 +51,22 @@ import io.peekandpoke.klang.script.stdlib.pow
 import io.peekandpoke.klang.script.stdlib.tap
 import io.peekandpoke.klang.script.stdlib.times
 import io.peekandpoke.klang.script.stdlib.vowel
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.adsr
+import io.peekandpoke.klang.sprudel.lang.analog
+import io.peekandpoke.klang.sprudel.lang.body
+import io.peekandpoke.klang.sprudel.lang.compressor
+import io.peekandpoke.klang.sprudel.lang.delay
+import io.peekandpoke.klang.sprudel.lang.lpf
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.phaser
+import io.peekandpoke.klang.sprudel.lang.reverb
 import kotlin.math.abs
 import kotlin.random.Random
 
 /**
  * The fixed case list of the allocation check (`KLANG_BENCH_MODE=alloc`, `console/full-check.sh`), the same on
- * both platforms. Each voice case and the first engine cases guard one fix of `docs/tasks/engine-follow-ups.md`
+ * both platforms. Each voice case and the first engine cases guard one fix of `docs/tasks/in-progress/engine-follow-ups.md`
  * against a regression that brings a heap number per sample or per knob read back; the cases with an authored
  * Katalyst chain guard its stages (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`). The
  * budgets and what each one guards are in `audio_benchmark/alloc-budgets.txt`.
@@ -105,7 +115,9 @@ object AllocationCases {
      * set its notes alternate between [katp] and [katpNext], so the orbit's owner moves the chain's slots at every
      * note. A [duckTrigger] case adds a sustained saw on orbit [TRIGGER_ORBIT], with the classic chain, for the case's
      * duck to listen to. A voice case with [ownersTakingTurns] runs two such voices, received as the engine
-     * receives them ([receivedByEngine]), taking turns as their orbit's owner block by block.
+     * receives them ([receivedByEngine]), taking turns as their orbit's owner block by block. A [sprudel] case runs
+     * sprudel's per-event path instead of the engine ([SprudelRig]); it renders no sound, so [makesSound] is false
+     * and the driver's silence check asks its rig for [Rig.outputs] instead of [Rig.peak].
      */
     class Case(
         val name: String,
@@ -120,6 +132,8 @@ object AllocationCases {
         val gateSec: Double = SUSTAIN_SEC,
         val newNoteEveryBlocks: Int = 0,
         val ownersTakingTurns: Boolean = false,
+        val sprudel: Boolean = false,
+        val makesSound: Boolean = !sprudel,
     ) {
         /**
          * [params], [katp] and [katpNext] as the engine takes them (`KlangMap`s), made once per case: every note of a
@@ -336,6 +350,14 @@ object AllocationCases {
             gateSec = 0.01,
             newNoteEveryBlocks = 16,
         ),
+        // Sprudel's per-event path (engine follow-up 2, step 4): one note with voice and bus doors per step, through
+        // `toVoiceData` and on to the worklet. It guards the param bags' KlangMap storage and its copies.
+        Case(
+            name = "S-doors",
+            engine = false,
+            sound = "",
+            sprudel = true,
+        ),
     )
 
     /** The case named [name], or null. */
@@ -358,6 +380,12 @@ object AllocationCases {
          * window (a case that went silent would measure nothing and read 0 B). Read after the window, never in it.
          */
         abstract fun peak(): Double
+
+        /**
+         * For a case that makes no sound ([Case.makesSound] false): how many outputs its last step produced, the
+         * proof that it still runs its path at the end of its window. Read after the window, never in it.
+         */
+        open fun outputs(): Int = 0
     }
 
     /** The largest absolute sample of the first [frames] frames of [left] and [right]. */
@@ -373,6 +401,7 @@ object AllocationCases {
 
     /** A new rig for [case], built and ready for its first block. */
     fun rig(case: Case): Rig = when {
+        case.sprudel -> SprudelRig()
         case.engine -> EngineRig(case)
         case.ownersTakingTurns -> TurnsRig(case)
         else -> VoiceRig(case)
@@ -385,6 +414,53 @@ object AllocationCases {
         katalystParams = katp,
         katalyst = if (case.chain != null) CHAIN else null,
     )
+
+    /**
+     * Sprudel's per-event path, no engine: one step queries one cycle of a one-note pattern with voice and bus doors
+     * (both param bags, the door writes and fills, `clone`, the merges, `toVoiceData`'s copies) and hands every event
+     * on as the browser does ([sentToWorklet]). Bytes per step are bytes per event.
+     */
+    private class SprudelRig : Rig() {
+        private val pattern: SprudelPattern = note("c")
+            .lpf(freq = 1200, q = 1.3, env = 12)
+            .adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.4)
+            .analog(0.2)
+            .reverb(wet = 0.3, size = 5, lowpass = 4321)
+            .delay(wet = 0.2, time = 0.25, feedback = 0.4)
+            .phaser(wet = 0.5, rate = 0.5)
+            .body(wet = 0.4, material = "wood")
+            .compressor(threshold = -12, ratio = 3)
+
+        private var cycle = 0
+        private var sent = 0
+        private var last: Any? = null
+
+        override fun step() {
+            val events = pattern.queryArc(cycle.toDouble(), cycle + 1.0)
+
+            sent = 0
+            last = null
+
+            for (i in events.indices) {
+                val voice = ScheduledVoice(
+                    playbackId = PLAYBACK_ID,
+                    data = events[i].toVoiceData(),
+                    startTime = 0.0,
+                    gateEndTime = 1.0,
+                    playbackStartTime = 0.0,
+                )
+
+                last = sentToWorklet(voice)
+                sent++
+            }
+
+            cycle++
+        }
+
+        override fun peak(): Double = 0.0
+
+        override fun outputs(): Int = if (last != null) sent else 0
+    }
 
     /** One voice through [VoiceFactory], offered to its cylinder and committed each block. */
     private class VoiceRig(case: Case) : Rig() {

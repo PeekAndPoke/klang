@@ -532,7 +532,7 @@ export song = stack(
     .reverb(0.20, 7, 7000)                         // the hall: one room for the whole band, about 2 s, warm
     .gain(1.05)                                    // the house level, -14 LUFS
     .bands(b => b.cut(150)
-      .band(mid => mid.distort(0.15, "soft", 4).mul(0.75)).cut(5000)
+      .band(mid => mid.distort(0.10, "soft", 4).mul(0.80)).cut(5000)
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))

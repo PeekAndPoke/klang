@@ -104,7 +104,7 @@ Every case sounds at the end of its window (the harness's peak check). `E-duck`'
 for that case the check proves the engine sounds, not the ducked orbit.
 
 **Two V8 allocations found, left open** (JVM 0 B for both; budgeted as they stand, a fix re-sets the lines; filed
-as items 33 and 34 of `docs/tasks/engine-follow-ups.md`, the gliding `div`'s JVM time below as item 35):
+as items 33 and 34 of `docs/tasks/in-progress/engine-follow-ups.md`, the gliding `div`'s JVM time below as item 35):
 - `KatalystParallelEffect.process` copies the bus into each branch with `copyInto`, which on Kotlin/JS makes a
   typed-array view per call (the sampling profiler: `subarray`, the largest site). With `copyRangeInto` (an
   experiment, restored) `E-parallel` read 206 to 243 B and `E-bands` 223 to 270.
