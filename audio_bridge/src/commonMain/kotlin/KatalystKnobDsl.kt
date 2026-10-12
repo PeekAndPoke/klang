@@ -16,16 +16,19 @@ package io.peekandpoke.klang.audio_bridge
  * Kotlin door's stage constructors take only this type.
  *
  * Two leaves, a [Constant] and a [Param] (step 3 of that task), and the arithmetic over them (step 4, decision D4:
- * [Plus], [Minus], [Times], [Div], [Pow], [Min], [Max], [Neg], [Abs], [Range]); the modulators join in step 5. The
- * engine evaluates an expression with the Ignitor's own laws, on a scalar, whenever the orbit's `katp` state changes
- * (`KatalystKnob` in `audio_be`). The one residue of mixing is the `eq` stage, whose sections stay
- * [IgnitorDsl.EqSection] shared with the voice (Q2, E2): its door maps a [Param] onto the section's [IgnitorDsl.Param]
- * and refuses an expression.
+ * [Plus], [Minus], [Times], [Div], [Pow], [Min], [Max], [Neg], [Abs], [Range]), and the modulators (step 5, D3:
+ * [Sine], [Saw], [Ramp], [Tri], [Square], [PerlinNoise], [BerlinNoise]). The engine evaluates an expression with the
+ * Ignitor's own laws, on a scalar, whenever the orbit's `katp` state changes (`KatalystKnob` in `audio_be`); a
+ * modulated one once per processed block from step 5b on (`KatalystKnobProgram.tick`). The one residue of mixing is
+ * the `eq` stage, whose sections stay [IgnitorDsl.EqSection] shared with the voice (Q2, E2): its door maps a [Param]
+ * onto the section's [IgnitorDsl.Param] and refuses an expression.
  *
  * Every node carries the same field names and wire names as its Ignitor twin ([IgnitorDsl.Constant],
  * [IgnitorDsl.Param], [IgnitorDsl.Plus] and the rest); the wire tells the two hierarchies apart by the field's declared
- * type, not by the name. [Min] and [Max] are the MATHEMATICAL minimum and maximum, as on the Ignitor: the `max` door
- * (a cap) builds [Min] and the `min` door (a floor) builds [Max].
+ * type, not by the name. One modulator differs: [Square] has the fields of the node the Ignitor's `square` door
+ * builds ([IgnitorDsl.Pulze], minus the Ignitor-only knobs) and the class and wire name of the door word, which is
+ * also [IgnitorDsl.Square]'s. [Min] and [Max] are the MATHEMATICAL minimum and maximum, as on the Ignitor: the `max`
+ * door (a cap) builds [Min] and the `min` door (a floor) builds [Max].
  */
 @WireFormat
 sealed interface KatalystKnobDsl {
@@ -97,4 +100,120 @@ sealed interface KatalystKnobDsl {
     /** [inner] mapped from `[-1, 1]` onto `[from, to]`, linearly and unclamped: the Ignitor's `range` law. */
     @WireName("range")
     data class Range(val inner: KatalystKnobDsl, val from: KatalystKnobDsl, val to: KatalystKnobDsl) : KatalystKnobDsl
+
+    // ── The modulators (step 5, D3): the Ignitor's LFO shapes, read once per block ─────────────────────────────────
+    //
+    // A bus LFO owned by the chain: its clock starts when the chain is built and advances over the blocks the chain
+    // processes (Q3). Each value is the Ignitor's own law at the same phase (`SineIgnitor`, the wave oscillator's
+    // trapezoid, the perlin and berlin fBm walks), sampled at the start of each block, so it is not bit-identical to
+    // an Ignitor LFO's per-sample stream: the same law at block resolution. Every operand is a knob of its own, so a
+    // rate can be a `Kat.param` or an expression. Recorded asymmetries with the Ignitor (Q11): no `analog`, no flank,
+    // reset or shape knobs (their effect lives at sample level), and the three audio-rate noises are not here (read
+    // once per block they are a random step, not a modulator).
+
+    /**
+     * A sine, `-1` to `1`. Phase 0 is the upward zero crossing, as the Ignitor's `sine`.
+     *
+     * @param freq frequency in Hz (required, Q10); a negative one runs the phase backwards, raw.
+     * @param phase offset as a fraction of one cycle, wrapped (1.25 is 0.25). A constant is the start phase; a moving
+     *   one shifts the reading point per block, the Ignitor's phase input at block resolution.
+     */
+    @WireName("sine")
+    data class Sine(
+        val freq: KatalystKnobDsl,
+        val phase: KatalystKnobDsl = Constant(0.0),
+    ) : KatalystKnobDsl
+
+    /**
+     * A rising sawtooth, `-1` to `1`, with the Ignitor saw's flyback (its default flank in samples at this [freq]).
+     * Phase 0 is `-1`, the bottom of the rise.
+     *
+     * @param freq frequency in Hz (required, Q10).
+     * @param phase offset as a fraction of one cycle, wrapped; see [Sine.phase].
+     */
+    @WireName("saw")
+    data class Saw(
+        val freq: KatalystKnobDsl,
+        val phase: KatalystKnobDsl = Constant(0.0),
+    ) : KatalystKnobDsl
+
+    /**
+     * A falling ramp, `1` to `-1`: the negated [Saw], as the Ignitor's `ramp`. Phase 0 is `+1`, the top of the fall.
+     *
+     * @param freq frequency in Hz (required, Q10).
+     * @param phase offset as a fraction of one cycle, wrapped; see [Sine.phase].
+     */
+    @WireName("ramp")
+    data class Ramp(
+        val freq: KatalystKnobDsl,
+        val phase: KatalystKnobDsl = Constant(0.0),
+    ) : KatalystKnobDsl
+
+    /**
+     * A triangle, `-1` to `1`: the Ignitor's `tri`, the pulse shape with both flanks fully open. Phase 0 is `-1`, its
+     * lowest point.
+     *
+     * @param freq frequency in Hz (required, Q10).
+     * @param phase offset as a fraction of one cycle, wrapped; see [Sine.phase].
+     */
+    @WireName("tri")
+    data class Tri(
+        val freq: KatalystKnobDsl,
+        val phase: KatalystKnobDsl = Constant(0.0),
+    ) : KatalystKnobDsl
+
+    /**
+     * A square with a variable [duty], `-1` to `1`: the Ignitor's `square` door, which builds its rounded pulse
+     * (`IgnitorDsl.Pulze`) with the default edges (the minimum flank in samples at this [freq], no extra rise or
+     * fall). Phase 0 is `-1`, the foot of the rising edge. Named for the door word, `square`; the Ignitor's own
+     * `IgnitorDsl.Square` is a fixed-duty node no door builds. Read once per block: a high plateau shorter than a
+     * block (`duty / freq` below about 2.67 ms at 48 kHz) is caught by some block starts and missed by others, so a
+     * narrow-duty gate drops pulses well below the about 187 Hz alias limit (no clamp).
+     *
+     * @param freq frequency in Hz (required, Q10).
+     * @param duty the share of the cycle spent high, clamped to `0.01..0.99` by the shape (the Ignitor's law).
+     * @param phase offset as a fraction of one cycle, wrapped; see [Sine.phase].
+     */
+    @WireName("square")
+    data class Square(
+        val freq: KatalystKnobDsl,
+        val duty: KatalystKnobDsl = Constant(0.5),
+        val phase: KatalystKnobDsl = Constant(0.0),
+    ) : KatalystKnobDsl
+
+    /**
+     * Perlin noise, about `-1` to `1`: the Ignitor's `perlin` walk, seeded by its position in the chain (Q12: the
+     * n-th noise of a chain takes the base seed plus n), so every build of a chain hears the same walks.
+     *
+     * Read once per block, its `rate` reads in cells per block: rate 1 steps `128 * 0.003 = 0.384` cells a block
+     * (about 144 cells a second at 48 kHz), a noise AM rather than an LFO. Useful as a modulator from about 0.001 to
+     * 0.05 (about 0.15 to 7 cells a second at 48 kHz); each octave above the first moves twice as fast as the one
+     * below, so the top octaves turn into per-block jitter first.
+     *
+     * @param rate walk speed in the Ignitor's unit: `rate * 0.003` noise units per SAMPLE, so its speed follows the
+     *   sample rate (Q12, inherited for parity).
+     * @param octaves fBm octaves, truncated to a whole number and held to `1..8`.
+     * @param persistence fBm amplitude falloff per octave.
+     */
+    @WireName("perlin-noise")
+    data class PerlinNoise(
+        val rate: KatalystKnobDsl = Constant(1.0),
+        val octaves: KatalystKnobDsl = Constant(1.0),
+        val persistence: KatalystKnobDsl = Constant(0.5),
+    ) : KatalystKnobDsl
+
+    /**
+     * Berlin noise, `-1` to `1`: the Ignitor's `berlin` walk (piecewise-linear), seeded by its position in the chain
+     * (Q12). Its `rate` reads as [PerlinNoise]'s, with the same useful range.
+     *
+     * @param rate walk speed in the Ignitor's unit, per sample; see [PerlinNoise.rate].
+     * @param octaves fBm octaves, truncated to a whole number and held to `1..8`.
+     * @param persistence fBm amplitude falloff per octave.
+     */
+    @WireName("berlin-noise")
+    data class BerlinNoise(
+        val rate: KatalystKnobDsl = Constant(1.0),
+        val octaves: KatalystKnobDsl = Constant(1.0),
+        val persistence: KatalystKnobDsl = Constant(0.5),
+    ) : KatalystKnobDsl
 }

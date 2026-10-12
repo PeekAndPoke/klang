@@ -132,7 +132,7 @@ fun katalystSlotName(slot: KatalystSlotLike?, door: String, twin: String, locati
 
 /**
  * Whether [value] is a Katalyst knob EXPRESSION, any [KatalystKnobDsl] node but the two leaves. Exhaustive over the
- * knob type, so a node that joins it (the modulators of step 5) decides here.
+ * knob type, so a node that joins it decides here; the modulators of step 5 (`Sine` to `BerlinNoise`) are expressions.
  */
 internal fun isKatalystExpression(value: Any?): Boolean = when (value) {
     is KatalystKnobDsl -> when (value) {
@@ -141,6 +141,8 @@ internal fun isKatalystExpression(value: Any?): Boolean = when (value) {
         is KatalystKnobDsl.Plus, is KatalystKnobDsl.Minus, is KatalystKnobDsl.Times, is KatalystKnobDsl.Div,
         is KatalystKnobDsl.Pow, is KatalystKnobDsl.Min, is KatalystKnobDsl.Max, is KatalystKnobDsl.Neg,
         is KatalystKnobDsl.Abs, is KatalystKnobDsl.Range,
+        is KatalystKnobDsl.Sine, is KatalystKnobDsl.Saw, is KatalystKnobDsl.Ramp, is KatalystKnobDsl.Tri,
+        is KatalystKnobDsl.Square, is KatalystKnobDsl.PerlinNoise, is KatalystKnobDsl.BerlinNoise,
         -> true
     }
 

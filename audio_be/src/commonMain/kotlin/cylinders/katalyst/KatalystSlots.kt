@@ -33,7 +33,12 @@ import io.peekandpoke.klang.common.infra.KlangMap
  *    the laws ([KatalystKnobProgram.isConstant]);
  *  - a [KatalystKnobDsl.Param] is its default and its name;
  *  - an expression with at least one slot leaf (step 4 of `docs/tasks/in-progress/katalyst-knob-expressions.md`,
- *    D4) is a [KatalystKnobProgram], compiled here.
+ *    D4) is a [KatalystKnobProgram], compiled here;
+ *  - so is a tree with a modulator (`Kat.sine` and the rest, step 5, D3), never folded. **Until step 5b wires the
+ *    chain's per-block tick it is FROZEN**: no door builds one yet, and a Kotlin caller who builds one by hand gets
+ *    its value at the modulators' start (each clock at its start, the `phase` operand included), evaluated at build
+ *    and again on every changed map like a slot expression, but never moving between them. Chosen over a refusal
+ *    because a refusal at chain build would be an exception on the audio thread for an input the wire accepts.
  *
  * From then on [resolve] is one map lookup for a plain slot, one per slot LEAF and one run of the program for an
  * expression, and nothing at all for a constant. That is the cost rule of the param state: one lookup per SLOT per
@@ -57,12 +62,20 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * `IgnitorDsl`, and anything that was neither a constant nor a slot was probed at two note frequencies and folded to
  * one number here; that coercion is gone with the type.
  */
-internal class KatalystKnob(node: KatalystKnobDsl) {
+internal class KatalystKnob(
+    node: KatalystKnobDsl,
+    /**
+     * The chain's running count of noise modulators, which seeds each noise by its position
+     * ([KATALYST_KNOB_NOISE_SEED]). Required, no default: the chain builder passes its one counter to every knob it
+     * builds, so a site that forgot it would seed its noises from 0 unseen; a knob built alone passes a fresh one.
+     */
+    noises: KatalystNoiseOrdinals,
+) {
 
     /** The slot name when the knob is a plain [KatalystKnobDsl.Param], null otherwise. */
     private val slot: String?
 
-    /** The compiled expression when the knob is one with a slot leaf, null otherwise. */
+    /** The compiled expression when the knob is one with a slot leaf or a modulator, null otherwise. */
     private val program: KatalystKnobProgram?
 
     /** What the chain itself says: a constant's number (a folded expression's too), a `Param`'s default. */
@@ -92,8 +105,16 @@ internal class KatalystKnob(node: KatalystKnobDsl) {
             is KatalystKnobDsl.Plus, is KatalystKnobDsl.Minus, is KatalystKnobDsl.Times, is KatalystKnobDsl.Div,
             is KatalystKnobDsl.Pow, is KatalystKnobDsl.Min, is KatalystKnobDsl.Max, is KatalystKnobDsl.Neg,
             is KatalystKnobDsl.Abs, is KatalystKnobDsl.Range,
+            is KatalystKnobDsl.Sine, is KatalystKnobDsl.Saw, is KatalystKnobDsl.Ramp, is KatalystKnobDsl.Tri,
+            is KatalystKnobDsl.Square, is KatalystKnobDsl.PerlinNoise, is KatalystKnobDsl.BerlinNoise,
             -> {
-                val compiled = KatalystKnobProgram.compile(node)
+                // Step 5a: nothing ticks a knob's program yet, so the clock is a placeholder; see the class KDoc.
+                val compiled = KatalystKnobProgram.compile(
+                    node = node,
+                    sampleRate = UNTICKED_SAMPLE_RATE,
+                    blockFrames = UNTICKED_BLOCK_FRAMES,
+                    noises = noises,
+                )
 
                 slot = null
 
@@ -191,6 +212,16 @@ internal class KatalystKnob(node: KatalystKnobDsl) {
     }
 
     private companion object {
+        /**
+         * Step 5a only, removed by 5b: the sample rate a modulated knob's program is compiled with until the chain
+         * hands over its own. Nothing ticks it, so the clocks never read it; the wave edges do, as a sliver of a
+         * cycle at the edge of a phase-offset saw, ramp, triangle or square (two samples' worth at most).
+         */
+        const val UNTICKED_SAMPLE_RATE = 48000
+
+        /** Step 5a only, removed by 5b: the block of [UNTICKED_SAMPLE_RATE]'s placeholder clock (never ticked). */
+        const val UNTICKED_BLOCK_FRAMES = 128
+
         /** [loadSlots]: a slot leaf is non-finite, the whole knob is unset (Q5); the loading stopped there. */
         const val LOADED_UNSET = 0
 
@@ -239,5 +270,7 @@ internal class KatalystKnob(node: KatalystKnobDsl) {
  * stage's own "unset" (the engine's damping, the section helper's fallback). Every other stage knob is non-null on the
  * wire and goes straight to [KatalystKnob].
  */
-internal fun knobOrUnset(node: KatalystKnobDsl?): KatalystKnob =
-    KatalystKnob(node ?: KatalystKnobDsl.Constant(SLOT_UNSET))
+internal fun knobOrUnset(
+    node: KatalystKnobDsl?,
+    noises: KatalystNoiseOrdinals,
+): KatalystKnob = KatalystKnob(node = node ?: KatalystKnobDsl.Constant(SLOT_UNSET), noises = noises)

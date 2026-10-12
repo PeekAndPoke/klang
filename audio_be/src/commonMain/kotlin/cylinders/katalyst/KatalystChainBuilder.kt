@@ -64,6 +64,27 @@ object KatalystChainBuilder {
         rings: SizedBuffers,
         /** The unit shelf a reverb stage rents from. Required, same reason. */
         reverbs: ReverbUnits,
+    ): KatalystChain = build(
+        dsl = dsl,
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        rings = rings,
+        reverbs = reverbs,
+        noises = KatalystNoiseOrdinals(),
+    )
+
+    /**
+     * [build] with the chain's running count of noise modulators, [noises]: one counter per chain, handed to every knob
+     * and on into a `parallel`'s branches, so the n-th noise of the whole chain is seeded by n (see
+     * [KatalystNoiseOrdinals]).
+     */
+    private fun build(
+        dsl: KatalystDsl,
+        sampleRate: Int,
+        blockFrames: Int,
+        rings: SizedBuffers,
+        reverbs: ReverbUnits,
+        noises: KatalystNoiseOrdinals,
     ): KatalystChain {
         val pipeline = mutableListOf<KatalystEffect>()
         val writers = mutableListOf<KatalystSlotWriter>()
@@ -77,7 +98,7 @@ object KatalystChainBuilder {
             pipeline.add(fx)
 
             if (operand != null) {
-                writers.add(KatalystArithmeticWriter(fx = fx, operand = KatalystKnob(operand)))
+                writers.add(KatalystArithmeticWriter(fx = fx, operand = KatalystKnob(operand, noises)))
             }
         }
 
@@ -101,9 +122,9 @@ object KatalystChainBuilder {
                     writers.add(
                         KatalystResonatorWriter(
                             fx = fx,
-                            index = KatalystKnob(stage.material),
-                            wet = KatalystKnob(stage.wet),
-                            floor = KatalystKnob(stage.floor),
+                            index = KatalystKnob(stage.material, noises),
+                            wet = KatalystKnob(stage.wet, noises),
+                            floor = KatalystKnob(stage.floor, noises),
                         )
                     )
                 }
@@ -121,9 +142,9 @@ object KatalystChainBuilder {
                     writers.add(
                         KatalystResonatorWriter(
                             fx = fx,
-                            index = KatalystKnob(stage.vowel),
-                            wet = KatalystKnob(stage.wet),
-                            floor = KatalystKnob(stage.floor),
+                            index = KatalystKnob(stage.vowel, noises),
+                            wet = KatalystKnob(stage.wet, noises),
+                            floor = KatalystKnob(stage.floor, noises),
                         )
                     )
                 }
@@ -149,10 +170,10 @@ object KatalystChainBuilder {
                     writers.add(
                         KatalystDelayWriter(
                             fx = fx,
-                            wet = KatalystKnob(stage.wet),
-                            time = KatalystKnob(stage.time),
-                            feedback = KatalystKnob(stage.feedback),
-                            cap = KatalystKnob(stage.cap),
+                            wet = KatalystKnob(stage.wet, noises),
+                            time = KatalystKnob(stage.time, noises),
+                            feedback = KatalystKnob(stage.feedback, noises),
+                            cap = KatalystKnob(stage.cap, noises),
                         )
                     )
                 }
@@ -175,9 +196,9 @@ object KatalystChainBuilder {
                     writers.add(
                         KatalystReverbWriter(
                             fx = fx,
-                            wet = KatalystKnob(stage.wet),
-                            size = KatalystKnob(stage.size),
-                            lowpass = knobOrUnset(stage.lowpass),
+                            wet = KatalystKnob(stage.wet, noises),
+                            size = KatalystKnob(stage.size, noises),
+                            lowpass = knobOrUnset(stage.lowpass, noises),
                         )
                     )
                 }
@@ -193,11 +214,11 @@ object KatalystChainBuilder {
                     writers.add(
                         KatalystPhaserWriter(
                             fx = fx,
-                            wet = KatalystKnob(stage.wet),
-                            rate = KatalystKnob(stage.rate),
-                            center = KatalystKnob(stage.center),
-                            sweep = KatalystKnob(stage.sweep),
-                            floor = KatalystKnob(stage.floor),
+                            wet = KatalystKnob(stage.wet, noises),
+                            rate = KatalystKnob(stage.rate, noises),
+                            center = KatalystKnob(stage.center, noises),
+                            sweep = KatalystKnob(stage.sweep, noises),
+                            floor = KatalystKnob(stage.floor, noises),
                         )
                     )
                 }
@@ -215,11 +236,11 @@ object KatalystChainBuilder {
                     writers.add(
                         KatalystCompressorWriter(
                             fx = fx,
-                            threshold = KatalystKnob(stage.threshold),
-                            ratio = KatalystKnob(stage.ratio),
-                            knee = KatalystKnob(stage.knee),
-                            attack = KatalystKnob(stage.attack),
-                            release = KatalystKnob(stage.release),
+                            threshold = KatalystKnob(stage.threshold, noises),
+                            ratio = KatalystKnob(stage.ratio, noises),
+                            knee = KatalystKnob(stage.knee, noises),
+                            attack = KatalystKnob(stage.attack, noises),
+                            release = KatalystKnob(stage.release, noises),
                         )
                     )
                 }
@@ -235,7 +256,7 @@ object KatalystChainBuilder {
                     )
                     pipeline.add(fx)
 
-                    writers.add(KatalystDistortWriter(fx = fx, amount = KatalystKnob(stage.amount)))
+                    writers.add(KatalystDistortWriter(fx = fx, amount = KatalystKnob(stage.amount, noises)))
                 }
 
                 // Declared in the list, run outside it: `Cylinders` applies it after every orbit,
@@ -273,7 +294,7 @@ object KatalystChainBuilder {
                     // Unity is the identity element of the stage, not a tuned value, which is why
                     // it is a literal here and in `KatalystStageDsl.Gain` rather than a shared
                     // constant (the wire KDoc says so).
-                    writers.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain)))
+                    writers.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain, noises)))
                 }
 
                 // The arithmetic stages: the Ignitor's per-sample laws on the bus (`KatalystArithmeticEffect`).
@@ -298,6 +319,7 @@ object KatalystChainBuilder {
                             blockFrames = blockFrames,
                             rings = rings,
                             reverbs = reverbs,
+                            noises = noises,
                         )
                     }
                     val fx = KatalystParallelEffect(branches = branches, blockFrames = blockFrames)
@@ -326,9 +348,9 @@ object KatalystChainBuilder {
         if (theDuck != null && winner != null) {
             duckWriter = KatalystDuckWriter(
                 fx = theDuck,
-                orbit = KatalystKnob(winner.orbit),
-                depth = KatalystKnob(winner.depth),
-                attack = KatalystKnob(winner.attack),
+                orbit = KatalystKnob(winner.orbit, noises),
+                depth = KatalystKnob(winner.depth, noises),
+                attack = KatalystKnob(winner.attack, noises),
             )
 
             writers.add(duckWriter)
@@ -404,10 +426,13 @@ object KatalystChainBuilder {
             val spec = specs[i]
             val base = i * KatalystEqEffect.KNOBS_PER_SECTION
 
-            knobs[base + KatalystEqEffect.KNOB_FREQ] = knobOrUnset(eqKnob(spec.freq))
-            knobs[base + KatalystEqEffect.KNOB_Q] = knobOrUnset(eqKnob(spec.q))
-            knobs[base + KatalystEqEffect.KNOB_DB] = spec.db?.let { knobOrUnset(eqKnob(it)) }
-            knobs[base + KatalystEqEffect.KNOB_GAIN] = spec.gain?.let { knobOrUnset(eqKnob(it)) }
+            // A fresh noise counter each: an EQ section knob is a constant or a slot, never a modulator (Q2, E2).
+            knobs[base + KatalystEqEffect.KNOB_FREQ] = knobOrUnset(eqKnob(spec.freq), KatalystNoiseOrdinals())
+            knobs[base + KatalystEqEffect.KNOB_Q] = knobOrUnset(eqKnob(spec.q), KatalystNoiseOrdinals())
+            knobs[base + KatalystEqEffect.KNOB_DB] = spec.db?.let { knobOrUnset(eqKnob(it), KatalystNoiseOrdinals()) }
+            knobs[base + KatalystEqEffect.KNOB_GAIN] = spec.gain?.let {
+                knobOrUnset(eqKnob(it), KatalystNoiseOrdinals())
+            }
         }
 
         return knobs

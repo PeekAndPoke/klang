@@ -73,11 +73,11 @@ class KatalystSettingsAllocationSpec : StringSpec({
         val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = KatalystCompressorWriter(
             fx = fx,
-            threshold = KatalystKnob(slot("compressor.threshold")),
-            ratio = KatalystKnob(slot("compressor.ratio")),
-            knee = KatalystKnob(slot("compressor.knee")),
-            attack = KatalystKnob(slot("compressor.attack")),
-            release = KatalystKnob(slot("compressor.release")),
+            threshold = KatalystKnob(slot("compressor.threshold"), KatalystNoiseOrdinals()),
+            ratio = KatalystKnob(slot("compressor.ratio"), KatalystNoiseOrdinals()),
+            knee = KatalystKnob(slot("compressor.knee"), KatalystNoiseOrdinals()),
+            attack = KatalystKnob(slot("compressor.attack"), KatalystNoiseOrdinals()),
+            release = KatalystKnob(slot("compressor.release"), KatalystNoiseOrdinals()),
         )
         val maps = Array(5) {
             klangMapOf(
@@ -108,9 +108,9 @@ class KatalystSettingsAllocationSpec : StringSpec({
         val fx = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = KatalystDuckWriter(
             fx = fx,
-            orbit = KatalystKnob(slot("duck.orbit")),
-            depth = KatalystKnob(slot("duck.depth")),
-            attack = KatalystKnob(slot("duck.attack")),
+            orbit = KatalystKnob(slot("duck.orbit"), KatalystNoiseOrdinals()),
+            depth = KatalystKnob(slot("duck.depth"), KatalystNoiseOrdinals()),
+            attack = KatalystKnob(slot("duck.attack"), KatalystNoiseOrdinals()),
         )
         val maps = Array(5) {
             klangMapOf(
@@ -151,7 +151,8 @@ class KatalystSettingsAllocationSpec : StringSpec({
                     left = KatalystKnobDsl.Param("hi", 1.0),
                     right = KatalystKnobDsl.Constant(0.75),
                 ),
-            )
+            ),
+            KatalystNoiseOrdinals(),
         )
         val writer = KatalystGainWriter(fx = fx, gain = knob)
         val maps = Array(5) {

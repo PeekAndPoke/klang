@@ -258,6 +258,47 @@ class WireCodecRoundTripSpec : StringSpec({
         }
     }
 
+    "every KatalystKnobDsl modulator carries its operands through the trip, in their order" {
+        // Step 5a of `docs/tasks/in-progress/katalyst-knob-expressions.md`: a row per modulator with every operand a
+        // different leaf, a row per modulator on its defaults, then modulators nested in each other and in the
+        // arithmetic (a modulator's operand is any knob, a modulator included).
+        val a = KatalystKnobDsl.Param(name = "a", default = 0.25, description = "the a")
+        val b = KatalystKnobDsl.Constant(-3.5)
+        val c = KatalystKnobDsl.Param(name = "c", default = 7.0)
+
+        listOf(
+            KatalystKnobDsl.Sine(freq = a, phase = b),
+            KatalystKnobDsl.Saw(freq = b, phase = c),
+            KatalystKnobDsl.Ramp(freq = c, phase = a),
+            KatalystKnobDsl.Tri(freq = a, phase = c),
+            KatalystKnobDsl.Square(freq = c, duty = a, phase = b),
+            KatalystKnobDsl.PerlinNoise(rate = a, octaves = b, persistence = c),
+            KatalystKnobDsl.BerlinNoise(rate = c, octaves = a, persistence = b),
+            KatalystKnobDsl.Sine(freq = b),
+            KatalystKnobDsl.Saw(freq = b),
+            KatalystKnobDsl.Ramp(freq = b),
+            KatalystKnobDsl.Tri(freq = b),
+            KatalystKnobDsl.Square(freq = b),
+            KatalystKnobDsl.PerlinNoise(),
+            KatalystKnobDsl.BerlinNoise(),
+            KatalystKnobDsl.Range(
+                inner = KatalystKnobDsl.Square(
+                    freq = KatalystKnobDsl.Sine(freq = a, phase = KatalystKnobDsl.Tri(freq = c)),
+                    duty = KatalystKnobDsl.Abs(inner = KatalystKnobDsl.BerlinNoise(rate = b)),
+                ),
+                from = KatalystKnobDsl.PerlinNoise(octaves = KatalystKnobDsl.Ramp(freq = a)),
+                to = KatalystKnobDsl.Times(left = KatalystKnobDsl.Saw(freq = c), right = b),
+            ),
+        ).forEach { knob ->
+            val chain = KatalystDsl.of(
+                KatalystStageDsl.Gain(gain = knob),
+                KatalystStageDsl.Reverb(size = knob, lowpass = knob),
+            )
+
+            withClue(knob.toString()) { decode_KatalystDsl(encode_KatalystDsl(chain)) shouldBe chain }
+        }
+    }
+
     "SampleRequest round-trips (scalars + nulls)" {
         listOf(
             SampleRequest(bank = "MPC60", sound = "bd", index = 2, note = "c3"),
@@ -335,8 +376,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // refuses a stale worklet. Pinned since engine follow-up 2, step 5, which changed the slot maps' Kotlin type
         // and kept their signature. A deliberate wire change updates this number in the same change: step 3 of
         // `docs/tasks/in-progress/katalyst-knob-expressions.md` moved it from 1330155241 (the Katalyst knobs left
-        // `IgnitorDsl` for `KatalystKnobDsl`), step 4 from 1168938423 (the knob expressions joined it).
-        WIRE_SCHEMA_HASH shouldBe 615137850
+        // `IgnitorDsl` for `KatalystKnobDsl`), step 4 from 1168938423 (the knob expressions joined it), step 5a from
+        // 615137850 (the modulators joined it).
+        WIRE_SCHEMA_HASH shouldBe 211191718
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {

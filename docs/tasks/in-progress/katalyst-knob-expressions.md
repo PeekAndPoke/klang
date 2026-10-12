@@ -1,7 +1,7 @@
 # Katalyst knobs that listen: expressions over `Kat.param`, and the Katalyst's own modulators
 
-Status: **in progress, steps 1 to 4 built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer, 2026-10-11; the
-other Q at the coordinator's lean).
+Status: **in progress, steps 1 to 4 and 5a built** (decided: D1 to D4, Q2, Q3, Q8 and Q12 by the maintainer,
+2026-10-11, Q12's seed refined 2026-10-12; the other Q at the coordinator's lean).
 
 ## Why
 
@@ -193,18 +193,61 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
    codec processor at build. Allocation check GREEN, 58 of 58 within budget (no case holds an expression knob yet:
    step 6).
 5. Modulators (D3) and the per-block path (D2), probably split: 5a nodes, doors and evaluator; 5b the chain hook and
-   the stages; 5c the bank stages per Q8.
+   the stages; 5c the bank stages per Q8. (As run: 5a the nodes and the evaluator only, the doors move to 5b with the
+   chain hook, so no door can build a modulator before a chain can tick one.)
+   **5a built** (2026-10-12): the nodes `Sine`, `Saw`, `Ramp`, `Tri` (`freq` required, `phase` default 0), `Square`
+   (`freq`, `duty` default 0.5, `phase`), `PerlinNoise`, `BerlinNoise` (`rate` 1, `octaves` 1, `persistence` 0.5) on
+   `KatalystKnobDsl`, field and wire names of the Ignitor's (`sine`, `saw`, `ramp`, `tri`, `perlin-noise`,
+   `berlin-noise`); `Square` takes the fields of the `Pulze` the Ignitor's `square` door builds and the door word as
+   class and wire name (`square`). `WIRE_SCHEMA_HASH` 615137850 to 211191718, no KSP change. The evaluator
+   (`KatalystKnobProgram`): one `MODULATOR` instruction per node, never folded (nor anything above it), its shape and
+   clock in arrays; `run()` samples each modulator at its clock, `tick()` runs and then advances every clock one block
+   (`dt * blockFrames`, `dt = freq / sampleRate`, wrapped by `wrapPhase`; a noise by `rate * PERLIN_STEP *
+   blockFrames`), `isModulated` from the tree; `compile` takes the chain's `sampleRate` and `blockFrames`. The laws are
+   the Ignitor's (`fastSin`, `waveTrapezoid` in a `WaveVoiceState` rebaked when `dt` or the duty changes, the fBm walks
+   built in the Ignitor's order); the `phase` operand is read at `clock + phase` as the Ignitor's phase input. Seeds are
+   fixed PER POSITION (Q12): the n-th noise of a chain, in build order (`KatalystNoiseOrdinals`, one counter the chain
+   builder hands to every knob and into a `parallel`'s branches; within a knob, compile order), is seeded
+   `KATALYST_KNOB_NOISE_SEED + n`. The noise clocks wrap: perlin by 256, its period, the same walk bit for bit; berlin
+   at 2^23, one step per about 16 hours at rate 1, so the top octave never saturates `toInt()`. One deliberate
+   difference: a non-finite noise rate holds the walk, where the Ignitor's would keep the NaN. **A hand-built modulator
+   on a chain knob is FROZEN until 5b** (`KatalystKnob`): evaluated at build and on every changed map at the clocks'
+   start, never ticked, compiled on a placeholder clock (`UNTICKED_SAMPLE_RATE`, `UNTICKED_BLOCK_FRAMES`, removed by
+   5b); chosen over a refusal, which would be an exception on the audio thread for an input the wire accepts. Guarded by
+   `KatalystKnobModulatorSpec` (each shape at the hand clock against hand laws and bit for bit against the Ignitor's
+   oscillator at the same phase, five offsets, ticks 0 to 17 across the wrap; each shape against the Ignitor's own
+   per-sample stream at 1/8, 1.25 and 2.5 cycles per block; the edges by hand; a slot `freq`; a moving `freq` rebaking
+   the saw's and the square's edges and a moving duty the square's; perlin and berlin on two builds and against the
+   Ignitor's walk; the seed per position in a knob, on a shared counter and through the chain builder, a `parallel`
+   branch included; the law's period of 256 bit for bit, a fast perlin against the Ignitor's unwrapped walk, a perlin
+   far past 2^24 cells bit for bit against the law at its position modulo 256 (the one row that binds the wrap), the
+   berlin range far past 2^31; the non-finite rate; `Kat.sine(1).range(400, 1600)` by hand; the fold and `isModulated`;
+   the frozen knob), `KatalystKnobModulatorAllocationSpec` (JVM, 10,000 ticks of every kind, 0 bytes),
+   `WireCodecRoundTripSpec` (a row per node, its defaults, a nested tree).
+   Known consequence of the seed rule: it is per CHAIN, so two orbits whose chains put a noise at the same position walk
+   the same noise; a `seed` knob would be a later door decision.
+   **Notes for 5b.** While a knob is unset (Q5), 5b does not tick it: its clocks pause, in line with Q3's processed
+   blocks (a failed Q5 load leaves the failing leaf's non-finite value in its register, so a tick would advance a
+   periodic clock by NaN, which `wrapPhase` reads as a rewind to 0). Tick-after-resolve order: resolve, then tick (a
+   run, then the advance), never a double advance in one block. The noise `rate` is REQUIRED on the Katalyst doors, as
+   `freq` is (Q10): the Ignitor's default of 1 is an audio-rate default, 0.384 cells a block, a noise AM rather than an
+   LFO (coordinator's call, reopenable). The placeholder clock of `KatalystKnob` (`UNTICKED_*`) goes.
 6. Measured in the harness: a slot expression, a modulated gain and phaser center, a perlin; time and bytes per
    block, JVM and V8. The per-block resolve of a modulated compressor or duck knob gets an allocation case of its own,
    measured single-case with `--predictable` on V8 (step 2's `CompressorSettings` and `DuckSettings` are double-field
    holders, proven allocation-free on the JVM only, and `audio/ref/performance.md` says such a holder can still box,
-   the `DriftLanes` note), or the holders become `DoubleArray`s.
+   the `DriftLanes` note), or the holders become `DoubleArray`s. The modulators (from the audio review of 5a), each in
+   single-case `--predictable` processes and under a mixed orbit profile: (a) one sine knob, (b) a square with a slot
+   duty, (c) a saw whose freq is a sine (a rebake per tick), (d) perlin at octaves 1 and 8, (e) a chain with all seven
+   kinds. `fbm` takes and returns doubles once per noise op per tick (a few heap numbers expected), the shape setters
+   only on a rebake.
 7. Records, and the render fixture removed.
 
 **Questions.** Decided by the maintainer (2026-10-11), each at the lean: Q2 E2 ("keep shared, slots only"), Q3
-processed blocks, Q8 (a) the in-place blend, Q12 inherit with one fixed seed and an Ignitor follow-up for the
-sample-rate dependence (to be filed in `docs/tasks/engine-follow-ups.md`). The rest the coordinator takes at the lean,
-recorded here, and any of them can be reopened.
+processed blocks, Q8 (a) the in-place blend, Q12 inherit with one fixed seed (refined 2026-10-12: fixed per position,
+"the n-th noise in a chain gets seed + n, so two noise knobs move independently but every build sounds the same")
+and an Ignitor follow-up for the sample-rate dependence (to be filed in `docs/tasks/engine-follow-ups.md`). The rest
+the coordinator takes at the lean, recorded here, and any of them can be reopened.
 - **Q1** `KatalystParam` retired, `Kat.param` returns `KatalystKnobDsl.Param`, `KatalystDsl.Slots.*` are the wire
   nodes; `katp` refuses an expression ("an expression is not a slot"). Lean: yes.
 - **Q2** the EQ sections: (E2) keep `IgnitorDsl.EqSection` with a constant or a `Kat.param` only, an expression on an

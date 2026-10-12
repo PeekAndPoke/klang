@@ -420,9 +420,9 @@ class KatalystSlotResolverSpec : StringSpec({
 
         KatalystResonatorWriter(
             fx = body,
-            index = KatalystKnob(c(wood)),
-            wet = KatalystKnob(c(0.6)),
-            floor = KatalystKnob(c(0.3)),
+            index = KatalystKnob(c(wood), KatalystNoiseOrdinals()),
+            wet = KatalystKnob(c(0.6), KatalystNoiseOrdinals()),
+            floor = KatalystKnob(c(0.3), KatalystNoiseOrdinals()),
         ).apply()
 
         body.installedTable shouldBeSameInstanceAs ResonatorTables.at(kind = ResonatorKind.BODY, slotValue = wood).shouldNotBeNull()
@@ -433,10 +433,10 @@ class KatalystSlotResolverSpec : StringSpec({
 
         KatalystDelayWriter(
             fx = delay,
-            wet = KatalystKnob(c(0.3)),
-            time = KatalystKnob(c(0.25)),
-            feedback = KatalystKnob(c(0.4)),
-            cap = KatalystKnob(c(0.9)),
+            wet = KatalystKnob(c(0.3), KatalystNoiseOrdinals()),
+            time = KatalystKnob(c(0.25), KatalystNoiseOrdinals()),
+            feedback = KatalystKnob(c(0.4), KatalystNoiseOrdinals()),
+            cap = KatalystKnob(c(0.9), KatalystNoiseOrdinals()),
         ).apply()
 
         val line = delay.delayLine.shouldNotBeNull()
@@ -449,9 +449,9 @@ class KatalystSlotResolverSpec : StringSpec({
 
         KatalystReverbWriter(
             fx = reverb,
-            wet = KatalystKnob(c(0.3)),
-            size = KatalystKnob(c(6.0)),
-            lowpass = KatalystKnob(c(3000.0)),
+            wet = KatalystKnob(c(0.3), KatalystNoiseOrdinals()),
+            size = KatalystKnob(c(6.0), KatalystNoiseOrdinals()),
+            lowpass = KatalystKnob(c(3000.0), KatalystNoiseOrdinals()),
         ).apply()
 
         val unit = reverb.reverb.shouldNotBeNull()
@@ -463,11 +463,11 @@ class KatalystSlotResolverSpec : StringSpec({
 
         KatalystPhaserWriter(
             fx = phaser,
-            wet = KatalystKnob(c(0.5)),
-            rate = KatalystKnob(c(3.0)),
-            center = KatalystKnob(c(700.0)),
-            sweep = KatalystKnob(c(400.0)),
-            floor = KatalystKnob(c(0.2)),
+            wet = KatalystKnob(c(0.5), KatalystNoiseOrdinals()),
+            rate = KatalystKnob(c(3.0), KatalystNoiseOrdinals()),
+            center = KatalystKnob(c(700.0), KatalystNoiseOrdinals()),
+            sweep = KatalystKnob(c(400.0), KatalystNoiseOrdinals()),
+            floor = KatalystKnob(c(0.2), KatalystNoiseOrdinals()),
         ).apply()
 
         phaser.phaser.depth shouldBe 0.5
@@ -484,11 +484,11 @@ class KatalystSlotResolverSpec : StringSpec({
 
         KatalystCompressorWriter(
             fx = comp,
-            threshold = KatalystKnob(c(-18.0)),
-            ratio = KatalystKnob(c(SLOT_UNSET)),
-            knee = KatalystKnob(c(SLOT_UNSET)),
-            attack = KatalystKnob(c(SLOT_UNSET)),
-            release = KatalystKnob(c(SLOT_UNSET)),
+            threshold = KatalystKnob(c(-18.0), KatalystNoiseOrdinals()),
+            ratio = KatalystKnob(c(SLOT_UNSET), KatalystNoiseOrdinals()),
+            knee = KatalystKnob(c(SLOT_UNSET), KatalystNoiseOrdinals()),
+            attack = KatalystKnob(c(SLOT_UNSET), KatalystNoiseOrdinals()),
+            release = KatalystKnob(c(SLOT_UNSET), KatalystNoiseOrdinals()),
         ).apply()
 
         comp.compressor.shouldNotBeNull().thresholdDb shouldBe -18.0
@@ -496,9 +496,9 @@ class KatalystSlotResolverSpec : StringSpec({
         val duck = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val duckWriter = KatalystDuckWriter(
             fx = duck,
-            orbit = KatalystKnob(c(2.0)),
-            depth = KatalystKnob(c(0.6)),
-            attack = KatalystKnob(c(0.02)),
+            orbit = KatalystKnob(c(2.0), KatalystNoiseOrdinals()),
+            depth = KatalystKnob(c(0.6), KatalystNoiseOrdinals()),
+            attack = KatalystKnob(c(0.02), KatalystNoiseOrdinals()),
         )
 
         duckWriter.declared shouldBe true
@@ -509,19 +509,19 @@ class KatalystSlotResolverSpec : StringSpec({
     /** A compressor writer whose five knobs are all slots, unset unless a map writes them. */
     fun compressorWriter(fx: KatalystCompressorEffect) = KatalystCompressorWriter(
         fx = fx,
-        threshold = KatalystKnob(KatalystKnobDsl.Param("compressor.threshold", SLOT_UNSET)),
-        ratio = KatalystKnob(KatalystKnobDsl.Param("compressor.ratio", SLOT_UNSET)),
-        knee = KatalystKnob(KatalystKnobDsl.Param("compressor.knee", SLOT_UNSET)),
-        attack = KatalystKnob(KatalystKnobDsl.Param("compressor.attack", SLOT_UNSET)),
-        release = KatalystKnob(KatalystKnobDsl.Param("compressor.release", SLOT_UNSET)),
+        threshold = KatalystKnob(KatalystKnobDsl.Param("compressor.threshold", SLOT_UNSET), KatalystNoiseOrdinals()),
+        ratio = KatalystKnob(KatalystKnobDsl.Param("compressor.ratio", SLOT_UNSET), KatalystNoiseOrdinals()),
+        knee = KatalystKnob(KatalystKnobDsl.Param("compressor.knee", SLOT_UNSET), KatalystNoiseOrdinals()),
+        attack = KatalystKnob(KatalystKnobDsl.Param("compressor.attack", SLOT_UNSET), KatalystNoiseOrdinals()),
+        release = KatalystKnob(KatalystKnobDsl.Param("compressor.release", SLOT_UNSET), KatalystNoiseOrdinals()),
     )
 
     /** A duck writer whose three knobs are all slots, unset unless a map writes them. */
     fun duckWriter(fx: KatalystDuckEffect) = KatalystDuckWriter(
         fx = fx,
-        orbit = KatalystKnob(KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET)),
-        depth = KatalystKnob(KatalystKnobDsl.Param("duck.depth", SLOT_UNSET)),
-        attack = KatalystKnob(KatalystKnobDsl.Param("duck.attack", SLOT_UNSET)),
+        orbit = KatalystKnob(KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET), KatalystNoiseOrdinals()),
+        depth = KatalystKnob(KatalystKnobDsl.Param("duck.depth", SLOT_UNSET), KatalystNoiseOrdinals()),
+        attack = KatalystKnob(KatalystKnobDsl.Param("duck.attack", SLOT_UNSET), KatalystNoiseOrdinals()),
     )
 
     "compressor and duck: the writer hands ONE holder, refilled in place at every resolve" {

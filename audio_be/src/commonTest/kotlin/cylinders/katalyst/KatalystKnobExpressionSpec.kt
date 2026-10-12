@@ -76,7 +76,7 @@ class KatalystKnobExpressionSpec : StringSpec({
 
     /** The value of a knob built from [node] after resolving [state]. */
     fun knobValue(node: KatalystKnobDsl, state: KlangMap<Double>?): Double =
-        KatalystKnob(node).also { it.resolve(state) }.value
+        KatalystKnob(node, KatalystNoiseOrdinals()).also { it.resolve(state) }.value
 
     /**
      * Runs [knob] over [operands] in every leaf placement: leaf `i` is a slot when bit `i` of the mask is set (the
@@ -204,18 +204,31 @@ class KatalystKnobExpressionSpec : StringSpec({
 
     "a constant subtree folds at compile into one register and emits no instruction, a constant tree folds whole" {
         val inner = KatalystKnobDsl.Times(left = c(2.0), right = c(3.0))
-        val mixed = KatalystKnobProgram.compile(KatalystKnobDsl.Plus(left = slot("a"), right = inner))
+        val mixed = KatalystKnobProgram.compile(
+            node = KatalystKnobDsl.Plus(left = slot("a"), right = inner),
+            sampleRate = 48000,
+            blockFrames = 128,
+            noises = KatalystNoiseOrdinals(),
+        )
 
         withClue("the slot's plus is the one instruction left") { mixed.instructionCount shouldBe 1 }
         mixed.isConstant.shouldBeFalse()
 
-        val whole = KatalystKnobProgram.compile(KatalystKnobDsl.Abs(inner = KatalystKnobDsl.Neg(inner = inner)))
+        val whole = KatalystKnobProgram.compile(
+            node = KatalystKnobDsl.Abs(inner = KatalystKnobDsl.Neg(inner = inner)),
+            sampleRate = 48000,
+            blockFrames = 128,
+            noises = KatalystNoiseOrdinals(),
+        )
 
         whole.isConstant.shouldBeTrue()
         whole.registers[whole.resultRegister] shouldBe 6.0
 
         // A folded knob is a constant knob: it never evaluates, at build or at a resolve.
-        val knob = KatalystKnob(KatalystKnobDsl.Abs(inner = KatalystKnobDsl.Neg(inner = inner)))
+        val knob = KatalystKnob(
+            KatalystKnobDsl.Abs(inner = KatalystKnobDsl.Neg(inner = inner)),
+            KatalystNoiseOrdinals(),
+        )
         knob.resolve(klangMapOf("a" to 1.0))
 
         knob.evaluations shouldBe 0
@@ -226,7 +239,12 @@ class KatalystKnobExpressionSpec : StringSpec({
     "a bare Param root is a slot register and no instruction, and it is not a constant" {
         // `isConstant` asks for the slot leaves, not the instructions: a caller that took a no-op program for a
         // folded one would freeze the slot at its default.
-        val bare = KatalystKnobProgram.compile(KatalystKnobDsl.Param("a", 0.5))
+        val bare = KatalystKnobProgram.compile(
+            node = KatalystKnobDsl.Param("a", 0.5),
+            sampleRate = 48000,
+            blockFrames = 128,
+            noises = KatalystNoiseOrdinals(),
+        )
 
         bare.instructionCount shouldBe 0
         bare.isConstant.shouldBeFalse()
@@ -253,7 +271,10 @@ class KatalystKnobExpressionSpec : StringSpec({
 
     "a non-finite slot leaf makes the whole knob unset, where the law would have read it as a set number" {
         // `times` scrubs a NaN to 0: without the rule a cleared slot would read as a SET 0.
-        val knob = KatalystKnob(KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("w", 0.5), right = c(2.0)))
+        val knob = KatalystKnob(
+            KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("w", 0.5), right = c(2.0)),
+            KatalystNoiseOrdinals(),
+        )
 
         knob.value shouldBe 1.0
 
@@ -270,7 +291,11 @@ class KatalystKnobExpressionSpec : StringSpec({
     "an unset leaf unsets the knob whatever the others say, a default that is unset included" {
         // `a` is written, `b` is never written and its default is unset: the knob is unset, and not written.
         val knob = KatalystKnob(
-            KatalystKnobDsl.Plus(left = KatalystKnobDsl.Param("a", 1.0), right = KatalystKnobDsl.Param("b", SLOT_UNSET))
+            KatalystKnobDsl.Plus(
+                left = KatalystKnobDsl.Param("a", 1.0),
+                right = KatalystKnobDsl.Param("b", SLOT_UNSET),
+            ),
+            KatalystNoiseOrdinals(),
         )
 
         withClue("at build, from the defaults: unset, and nothing was evaluated") {
@@ -291,7 +316,8 @@ class KatalystKnobExpressionSpec : StringSpec({
 
     "a constant is not a slot: a non-finite constant follows the laws" {
         val scrubbed = KatalystKnob(
-            KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("a", 1.0), right = c(Double.NaN))
+            KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("a", 1.0), right = c(Double.NaN)),
+            KatalystNoiseOrdinals(),
         )
         scrubbed.resolve(klangMapOf("a" to 2.0))
 
@@ -300,7 +326,10 @@ class KatalystKnobExpressionSpec : StringSpec({
             scrubbed.written.shouldBeTrue()
         }
 
-        val kept = KatalystKnob(KatalystKnobDsl.Plus(left = KatalystKnobDsl.Param("a", 1.0), right = c(Double.NaN)))
+        val kept = KatalystKnob(
+            KatalystKnobDsl.Plus(left = KatalystKnobDsl.Param("a", 1.0), right = c(Double.NaN)),
+            KatalystNoiseOrdinals(),
+        )
         kept.resolve(klangMapOf("a" to 2.0))
 
         withClue("plus keeps the NaN: the value is not finite, so it is no write") {
@@ -311,7 +340,8 @@ class KatalystKnobExpressionSpec : StringSpec({
 
     "written is true exactly when a slot leaf took a finite value from the state" {
         val knob = KatalystKnob(
-            KatalystKnobDsl.Plus(left = KatalystKnobDsl.Param("a", 1.0), right = KatalystKnobDsl.Param("b", 2.0))
+            KatalystKnobDsl.Plus(left = KatalystKnobDsl.Param("a", 1.0), right = KatalystKnobDsl.Param("b", 2.0)),
+            KatalystNoiseOrdinals(),
         )
 
         knob.resolve(null)
@@ -388,7 +418,10 @@ class KatalystKnobExpressionSpec : StringSpec({
     // ── The cost rule: an expression over slots evaluates at resolve, never per block ─────────────────────────────
 
     "an expression knob evaluates once per resolve, and never while the stage runs its blocks" {
-        val knob = KatalystKnob(KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("fader", 1.0), right = c(0.5)))
+        val knob = KatalystKnob(
+            KatalystKnobDsl.Times(left = KatalystKnobDsl.Param("fader", 1.0), right = c(0.5)),
+            KatalystNoiseOrdinals(),
+        )
         val fx = KatalystGainEffect(sampleRate = 44100, blockFrames = 128)
         val writer = KatalystGainWriter(fx = fx, gain = knob)
         val ctx = KatalystContext(blockFrames = 128, mixBuffer = StereoBuffer(128))
