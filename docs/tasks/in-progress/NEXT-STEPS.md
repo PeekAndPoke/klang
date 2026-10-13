@@ -49,7 +49,7 @@ are the engine stream's (Q38).
 
 - C1 to C11 in [`../../housekeeping/2026-10-10-baseline.md`](../../housekeeping/2026-10-10-baseline.md) (the FM
   diagnostic is C6).
-- Q30 and Q31 in [`../_maintainer-questions.md`](../_maintainer-questions.md).
+- An FM round together: [`../future/fm-revisit.md`](../future/fm-revisit.md). The questions file is empty.
 - The provisional rule "reviewers name the mutants, the worker runs them" (Q37): in the next review loop, let a
   reviewer run its own mutants again; if that passes, remove the rule from `/review-loop` and `/agent-fleet`.
 - The stdlib's `hashCode(dynamic)` closure (every Kotlin/JS `HashMap` operation allocates on V8) is noted for an

@@ -21,7 +21,8 @@ follow-ups 31 to 41, as long as each stays a purely independent performance fix 
 their helpers), Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q20 (fix the frozen songs'
 shared orbits: `song-orbit-ownership-review.md`), Q13 (`progress()` and `elapsed()`, curves as their own future
 feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`), Q33 and Q32 (accelerate and the pitch envelope both stay nodes: pitch 7d, 7e), Q29 (`duty(width)`: engine follow-up 44), Q24 (typed Kotlin doors with `.ign`/`.kat`, KlangScript keeps its own
-door: `kotlin-typed-doors.md`), Q28 (solo: the latest value wins at once, engine
+door: `kotlin-typed-doors.md`), Q30 and Q31 (confirmed as decided by default; FM gets its own round with the
+maintainer: `future/fm-revisit.md`), Q28 (solo: the latest value wins at once, engine
 follow-up 43).
 
 ---
@@ -36,44 +37,10 @@ None open.
 
 Work went ahead with the conservative choice. A "no" here means a small follow-up change.
 
-## Q30. Sprudel `fm` without an envelope keeps its depth through the release tail (pitch step 4)
-
-Source: the step 4 worker, before any code changed (`tmp/reviews/pp-step4-report.md`). The plan said the new
-`fm.release` slot at 0.0 is "today's sound". That holds for an enveloped `fm`, not for one without an envelope.
-Decided by default under D3 ("FM moves onto the node's law, proven by listening pairs"):
-
-```
-note("c3").s("sine").fm(300, 1.4).release(0.5)
-// before: the FM depth drops to 0 at the first block after the gate; the 0.5 s tail is the plain sine (-19.2 dB diff)
-// after:  the FM depth stays full through the tail, as the Ignitor door's fm always did
-```
-
-The strip ran its FM envelope on every voice with the release fixed at 0, so the modulation stopped at the gate (the
-block-framing ledger's E10/E11 defect). The node runs an envelope only when one is written. An enveloped `fm` with
-release 0 still stops at the gate, now exactly on the gate frame, and the new `fm(release = ...)` can ramp it. No
-song uses sprudel's `fm`. A listening pair joins `tmp/listening/pp-step4/`. A "no" means a law change on the `Fm` node
-for every envelope-free fm, or a switch only `classic()` sets.
-
-## Q31. `s("sgpad").fm(...)` loses its pitch (pitch step 4; your 3b call, now with numbers)
-
-Your 3b decision: the one shape the engine cannot process (an fm above a forking `detune`) "stays quiet and recorded"
-for `s("sgpad").fm(...)`, decided when it happens on a real song. Step 4 kept that. Review round 1 measured how it
-sounds, and it is worse than the earlier +0.6 dB suggested:
-
-```
-note("c3").s("sgpad").fm(150, 1.5)
-// before (v0.6.1): one FM for both saw layers, the pad's pitch intact (2.6 % of the energy off the harmonic grid)
-// after:  one modulator serves both layers and jumps a block of phase at every block boundary:
-//         95 % of the energy off the grid, an inharmonic comb about 18.75 Hz apart, the pitch is gone,
-//         and the output depends on the block size (+2.8 dB between blocks of 128 and 64)
-```
-
-`sgpad` is the only built-in with this shape (`(Saw() + Saw().detune(0.1)) / 2`); no song uses sprudel's `fm`. A
-listening pair is in `tmp/listening/pp-step4/`. Options: (a) keep it as decided, recorded; (b) rebuild `sgpad` so it
-reads one pitch per FM (the author rule, `x.fm(...) + x.fm(...).detune(...)`, does not fit a slot-fed classic stage, so
-this would need a look); (c) the build-time diagnostic task (`fm-above-forking-detune-diagnostic.md`) also covers a
-sprudel door over a built-in. Recommendation: (a) for now, and decide when a song wants it.
+None open.
 
 ---
 
 # Part 3: For later (not blocking anything now)
+
+None open.
