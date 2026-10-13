@@ -6,7 +6,118 @@ task file it belongs to, and the question leaves this list.
 
 The questions are numbered, so an answer can be as short as "Q3: yes, Q7: keep".
 
-Branch: `pitch-pipeline` (from `main` at `662aa8db`, v0.6.0; `katalyst-distort` merged in as `aab25677`; v0.6.1). The open engine items that are not questions: [`engine-follow-ups.md`](in-progress/engine-follow-ups.md).
+State: `main` after v0.6.5 and the pause housekeeping (2026-10-13); where each stream picks up:
+[`in-progress/NEXT-STEPS.md`](in-progress/NEXT-STEPS.md). The open engine items that are not questions:
+[`engine-follow-ups.md`](in-progress/engine-follow-ups.md).
+
+---
+
+# Part 0: Before the refill (2026-10-13)
+
+The calls that decide where the next work goes. Q34 to Q37 are quick; Q38 and Q39 set the direction.
+
+## Q34. Two corpus references: accept your song edits
+
+Klang-Research put this to you too; one answer covers both. The full check on `9e1bcec7` is green except these two,
+and both moved only because the song text changed:
+
+```
+Kokon              dfa9cd64389e619f -> 7ccfb80bdaa75799   peak 0.7602 -> 0.7594   (the mid band's distort 0.15 -> 0.10, its level 0.75 -> 0.80)
+Der Schmetterling  feb4fe1003fb38f3 -> dc6c8f3ddf82ddab   peak 0.7703 -> 0.7707   (the snare lpf 11200 -> 11500, and your edits in 6b7f2e2c)
+```
+
+Accept both (one `runSongBenchmark --args=corpus-accept`, recorded as yours), and the starting point is green.
+
+## Q35. One link line in an ADAA file
+
+`audio_be/src/commonMain/kotlin/DistortionCore.kt:147` names the follow-ups file at its old path:
+
+```kotlin
+     * `docs/tasks/engine-follow-ups.md`.               // today: a dead path
+     * `docs/tasks/in-progress/engine-follow-ups.md`.   // the fix, comment only
+```
+
+The file is on the ADAA list sessions keep off. Klang-Research says the ADAA work is not theirs. Is the list still
+live (and whose is it), or may I fix the line? If the list is retired, I would also drop it from the coordinator's
+standing constraints.
+
+## Q36. Tidy the merged branches
+
+All merged into `main`, nothing unmerged on them:
+
+```
+klang-map  sprudel-alloc-case  alloc-harness  katalyst-live-knobs (+ worktree ../klang-worktrees/katalyst-live-knobs)
+engine-follow-ups-v8  engine-pass-1  pitch-pipeline  pitch-pipeline-fm
+```
+
+Delete them locally (`git branch -d`, which refuses an unmerged one) and remove the worktree? Remote branches stay
+yours either way. Recommendation: yes, local only.
+
+## Q37. Two provisional review rules: keep them?
+
+From 2026-10-11; no case against either has come up:
+
+1. **Reviewers name the mutants, the worker runs them.** A reviewer writes "change `outputs < 1` to `outputs < 0` at
+   `AllocationCheck.kt:315`, expect a FAIL"; the worker builds it, measures and restores it in one lock call.
+   (Before, reviewers ran them, and the safety check refused that twice.)
+2. **A compare-only memo may hold raw knobs.** A stage may keep the last knob values it applied, only to skip a
+   re-apply when nothing changed (`KatalystPhaserEffect.applied`, a `DoubleArray(5)`), without that counting as a
+   second copy of its config.
+
+Drop the *(provisional)* mark on both, keep them provisional longer, or drop one?
+
+## Q38. After the refill: more V8 allocation work, or sound first?
+
+The `_priorities.md` guideline says "sound first", and hard performance work comes after the tutorial quarter and the
+launch. The engine list's next items are all V8 allocation residues, each small:
+
+```
+31  a full classic() voice: about one heap number per block per site (16 B), several sites   S each
+32  the delay's and reverb's per-block configure: up to 5 heap numbers per block              S
+34  the bus distort's oversampled path: about 120 B per block                                 S
+39  a perlin/berlin knob noise: about 48 B per noise per block                                S
+40  a modulated orbit compressor: about 52 B per block, and 15 exp() where 1 would do         S
+41  a moving delay time / reverb size / phaser breakpoint: about 34 B per block              not located
+```
+
+For scale: each sprudel event costs about 36 KB on the main thread (`S-doors`) and each new voice about 13 KB in the
+worklet, while these residues are tens of bytes per block; no listener hears them unless GC pauses show on a phone.
+
+Options:
+- (a) Finish 31 to 41 first (six small steps, each with its review loop), then switch.
+- (b) Park them in the follow-ups list and switch to sound now: the next song (C10, deep house, ready since the
+  tidy-up), the tutorial quarter, or the open listening calls (Q39, C9).
+- (c) Only 40 (it also wastes CPU: 15 `exp` per block) and 34 (the default distort pays it), then switch.
+
+Recommendation: (c), then (b).
+
+## Q39. A delay or reverb switched off: cut or fade? (a listening call)
+
+Home: [`by-ear/delay-reverb-owner-change-cut.md`](by-ear/delay-reverb-owner-change-cut.md). When an orbit's delay or
+reverb switches off by an owner change or a `katp`, its feed is cut in one sample; only a modulated knob crossing its
+gate fades.
+
+```
+// orbit 1: the pad's long reverb, then a dry pluck takes the orbit (its settings switch the reverb off)
+note("c3").s("pad").room(0.6).orbit(1)      // the room rings on from what it last got:
+note("e4").s("pluck").orbit(1).late(0.5)    //   (a) a one-sample edge, carried by the combs
+                                            //   (b) a 50 ms fade, but the pluck's first 50 ms bleed into the pad's room
+                                            //   (c) fade only a katp switch-off, cut on an owner change
+```
+
+(b) also moves one frozen corpus piece by 0.0001 peak and needs plumbing for an orbit without an owner. Listen
+first, or decide now? Recommendation: (a) until a song shows the edge.
+
+## Smaller calls waiting since 2026-10-10
+
+C1 to C15 in [`../housekeeping/2026-10-10-baseline.md`](../housekeeping/2026-10-10-baseline.md) ("Smaller calls"):
+the named-args pass beyond the engine, worklet tests, NaN on signal paths, runtime errors phase 4, `randL`/`filter`,
+the fm diagnostic, the sprudel form-(d) sweep, `n().add()`, the duck switch, next songs, finished plans, block
+framing, knob glide, naming Q10, the blog series. Say which you want to take now, and I bring those over here with
+examples.
+
+The stdlib note (no question): every Kotlin/JS `HashMap` operation allocates 40 B on V8 because of a closure in the
+stdlib's `hashCode(dynamic)`; a report upstream (JetBrains YouTrack) would be yours to file, if you want it.
 
 ---
 
