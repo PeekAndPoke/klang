@@ -2,7 +2,8 @@
 
 **Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
-v0.6.5, step 4 merged after). Where to continue, open V8 items first: 31 (what item 29 left on a full `classic()`
+v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
+fix that changes no API), open V8 items first: 31 (what item 29 left on a full `classic()`
 voice), 32 (the delay's and reverb's per-block `configure`), 34 (the bus distort's oversampled path), 39 to 41 (the
 Katalyst knob expressions' residues), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
 and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in

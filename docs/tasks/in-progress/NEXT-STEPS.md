@@ -11,14 +11,15 @@ picks up again. Read it first, then the task file it names.
 - The full check on `main` (2026-10-13, `9e1bcec7`): tests GREEN (17,684), allocation GREEN (80 of 80), timing done;
   the corpus differed only on the maintainer's song edits, re-accepted the same day (Q34) on the songs as of
   `d9804f41`. Song edits should not turn the check red at all: [`../song-checks-move-freely.md`](../song-checks-move-freely.md).
-- No branch holds unmerged work of either session. Merged and safe to delete when you like (the maintainer's call):
-  `klang-map`, `sprudel-alloc-case`, `alloc-harness`, `katalyst-live-knobs` (and its worktree
-  `../klang-worktrees/katalyst-live-knobs`), plus older ones (`engine-follow-ups-v8`, `engine-pass-1`,
-  `pitch-pipeline`, `pitch-pipeline-fm`).
+- No branch holds unmerged work of either session. The merged branches and the `katalyst-live-knobs` worktree were
+  deleted 2026-10-13 (Q36); 55 older merged local branches remain, and `code-blocks-with-mutator` is the one unmerged.
 
 ## Engine stream (Klang-Main-Dev)
 
-The one task in progress: [`engine-follow-ups.md`](engine-follow-ups.md). Its first paragraph is the order:
+The one task in progress: [`engine-follow-ups.md`](engine-follow-ups.md). Its first paragraph is the order. Q38
+(maintainer, 2026-10-13): finish 31 to 41 after the refill, **as long as each is a purely independent performance fix
+that changes no API**; an item that turns out to need an API change (a door, a wire type, a public signature) stops
+and goes to the maintainer.
 
 1. The open V8 items: 31 (what item 29 left on a full `classic()` voice), 32 (the delay's and reverb's per-block
    `configure`), 34 (the bus distort's oversampled path), 39 to 41 (the Katalyst knob expressions' residues: the knob
@@ -37,8 +38,8 @@ A step there runs as before: a worker, a review loop, the allocation check for a
 Its task is closed and archived:
 [`20261012-katalyst-knob-expressions.md`](../../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md), "Where
 to continue". What is left waits for a song that asks for it:
-[`../katalyst-knob-followups.md`](../katalyst-knob-followups.md). Its V8 items are 39 to 41 of the engine list above,
-so agree who takes them before starting.
+[`../katalyst-knob-followups.md`](../katalyst-knob-followups.md). Its V8 items, 39 to 41 of the engine list above,
+are the engine stream's (Q38).
 
 ## Open with the maintainer
 

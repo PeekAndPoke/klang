@@ -14,21 +14,9 @@ State: `main` after v0.6.5 and the pause housekeeping (2026-10-13); where each s
 
 # Part 0: Before the refill (2026-10-13)
 
-The calls that decide where the next work goes. Q36 and Q37 are quick; Q38 and Q39 set the direction. Answered
-2026-10-13: Q34 (the corpus re-accepted; songs move freely: `song-checks-move-freely.md`), Q35 (no ADAA exists, the
-link fixed).
-
-## Q36. Tidy the merged branches
-
-All merged into `main`, nothing unmerged on them:
-
-```
-klang-map  sprudel-alloc-case  alloc-harness  katalyst-live-knobs (+ worktree ../klang-worktrees/katalyst-live-knobs)
-engine-follow-ups-v8  engine-pass-1  pitch-pipeline  pitch-pipeline-fm
-```
-
-Delete them locally (`git branch -d`, which refuses an unmerged one) and remove the worktree? Remote branches stay
-yours either way. Recommendation: yes, local only.
+The calls that decide where the next work goes. Open: Q37 and Q39. Answered 2026-10-13: Q34 (the corpus re-accepted; songs move freely: `song-checks-move-freely.md`), Q35 (no ADAA exists, the
+link fixed), Q36 (the eight merged branches and the worktree deleted), Q38 (after the refill, finish engine
+follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API).
 
 ## Q37. Two provisional review rules: keep them?
 
@@ -42,31 +30,6 @@ From 2026-10-11; no case against either has come up:
    second copy of its config.
 
 Drop the *(provisional)* mark on both, keep them provisional longer, or drop one?
-
-## Q38. After the refill: more V8 allocation work, or sound first?
-
-The `_priorities.md` guideline says "sound first", and hard performance work comes after the tutorial quarter and the
-launch. The engine list's next items are all V8 allocation residues, each small:
-
-```
-31  a full classic() voice: about one heap number per block per site (16 B), several sites   S each
-32  the delay's and reverb's per-block configure: up to 5 heap numbers per block              S
-34  the bus distort's oversampled path: about 120 B per block                                 S
-39  a perlin/berlin knob noise: about 48 B per noise per block                                S
-40  a modulated orbit compressor: about 52 B per block, and 15 exp() where 1 would do         S
-41  a moving delay time / reverb size / phaser breakpoint: about 34 B per block              not located
-```
-
-For scale: each sprudel event costs about 36 KB on the main thread (`S-doors`) and each new voice about 13 KB in the
-worklet, while these residues are tens of bytes per block; no listener hears them unless GC pauses show on a phone.
-
-Options:
-- (a) Finish 31 to 41 first (six small steps, each with its review loop), then switch.
-- (b) Park them in the follow-ups list and switch to sound now: the next song (C10, deep house, ready since the
-  tidy-up), the tutorial quarter, or the open listening calls (Q39, C9).
-- (c) Only 40 (it also wastes CPU: 15 `exp` per block) and 34 (the default distort pays it), then switch.
-
-Recommendation: (c), then (b).
 
 ## Q39. A delay or reverb switched off: cut or fade? (a listening call)
 
