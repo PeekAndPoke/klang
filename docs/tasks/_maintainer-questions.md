@@ -20,62 +20,20 @@ rule 2 dropped, the exception documented in its KDoc, and the register says rule
 follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API), Q39 (fade, do not cut: engine follow-up 42), Q18 (the data tables stay positional, documented at
 their helpers), Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q20 (fix the frozen songs'
 shared orbits: `song-orbit-ownership-review.md`), Q13 (`progress()` and `elapsed()`, curves as their own future
-feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`).
+feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`), Q33 (compose accelerate now: pitch 7e), Q28 (solo: the latest value wins at once, engine
+follow-up 43).
 
 ---
 
 # Part 1: Blocking (work waits on the answer)
 
----
-
-## Q33. Accelerate: compose it as D11 says, or keep the node (composition 7e)
-
-Your D11 (2026-10-09): "if we can represent them through other primitives, they should leave, same as the tremolo
-node did", so accelerate was to become `pitchModSemitones(semitones * progress)`. The spike
-(`tmp/reviews/pp-7e-report.md`) built it and measured it against today's node:
-
-```
-note("c3").s("saw").accelerate(12).release(1)
-// sound: the same apart from a rounding of about 8e-8 cents (Kokon's strike moves at -148 dB)
-// cost:  about +0.7 us per accelerate voice per block, while gliding AND while holding the target
-//        (1.2 to 1.5x on V8, 1.4 to 2x on the JVM); today one multiply per frame, composed three passes per frame
-```
-
-Two smaller differences, only for a script-door accelerate with a SIGNAL amount: the amount is read per sample (like
-the vibrato after 7b), and an infinite sample pushes the pitch to the ceiling or freezes the source where today it
-plays no glide. Options: (a) keep the node for now, as the pitch envelope did (Q32; the work stops here until you
-say); (b) compose it and accept the cost (about 0.03 % of a block per voice) and the infinite-sample clause. The
-pitch envelope and accelerate are the same question, so one answer can cover both. Recommendation: (a), revisit if a
-cheaper "settled block" path ever exists for other reasons.
+None open.
 
 ---
 
 # Part 2: Decided by default, please confirm
 
 Work went ahead with the conservative choice. A "no" here means a small follow-up change.
-
-## Q28. Solo protects the SOLOED voice for its whole life (refining your Q14)
-
-Source: the small-items review (`tmp/reviews/small-r1-B.md`). Taken literally ("any of its voices"), Q14 kept a source
-protected for as long as it played, even after its solo was taken away: `solo(1)` edited to `solo(0)` left the pad at
-full level for all 16 s. Decided by default: a voice is kept only if it was soloed itself.
-
-```
-note("c3").sound(myPad).release(5).solo()   // the soloed pad rings at full level to its end   (Q14)
-// edit to .solo(0): the pad is ducked again 2 s after the last solo event, as before Q14
-```
-
-A note that started BEFORE its source was soloed is not kept either (it drops back 2 s after the solo's last event).
-Say if you meant otherwise.
-
-Three more behaviours neither Q14 nor Q28 named, measured in the third review (`tmp/reviews/small-r3.md`), as the
-code now does them:
-1. A soloed tail past its window does not hold the background down: the rest comes back after the window, while the
-   soloed pad rings on at full level (as before Q14).
-2. A soloed voice evicted from the solo tracker's 32 entries stays protected (it is the voice's own flag now).
-3. A ringing soloed voice of the WEAKER of two solos plays at full level, like every protected voice.
-
-Say if any of these should be different.
 
 ## Q30. Sprudel `fm` without an envelope keeps its depth through the release tail (pitch step 4)
 

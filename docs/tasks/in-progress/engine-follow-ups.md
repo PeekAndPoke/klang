@@ -1291,6 +1291,13 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     do not cut"). A sound change, so not part of the performance batch 31 to 41. Plan, cost and the corpus effect:
     [`../by-ear/delay-reverb-owner-change-cut.md`](../by-ear/delay-reverb-owner-change-cut.md). M.
 
+43. **Solo reacts at once: the latest `solo()` value wins immediately** (added 2026-10-13, maintainer Q28, revising
+    their Q14: "This is a debugging tool, not a musical one, and it has to react quickly to the user's needs"). The
+    newest incoming solo value takes effect at once and the volume moves at once; no voice keeps a protection from an
+    earlier solo, and nothing waits 2 s after the last solo event. Replaces the behaviour of
+    [`20261009-solo-protects-whole-voice.md`](../../tasks-archive/2026-10/20261009-solo-protects-whole-voice.md) and
+    Q28's three refinements. A behaviour change, so not part of the performance batch 31 to 41. S to M.
+
 ## 2. Allocation on the JVM, at build and per orbit
 
 11. **`Voice` copies its stage list into an `Array` per voice start** (`pipeline.toTypedArray()`), one small

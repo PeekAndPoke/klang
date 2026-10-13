@@ -29,7 +29,8 @@ and goes to the maintainer.
 2. The known tails of the allocation check, each a breach that a rerun clears (the rule is in the header of
    `audio_benchmark/alloc-budgets.txt`): 4 (`spluck-a`), 36 (`E-arith`'s second mode), 38 (`E-duck`).
 3. [`../song-checks-move-freely.md`](../song-checks-move-freely.md) (small, decided).
-   Then the two sound changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39)
+   Then the behaviour changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39), 43 (solo reacts at once, Q28), accelerate
+   composed (pitch 7e, Q33)
    and the frozen songs' shared orbits ([`../song-orbit-ownership-review.md`](../song-orbit-ownership-review.md), Q20).
 4. Sections 2 to 6 of the same file (13, 11, the small leftovers, the audit's later steps).
 
@@ -48,7 +49,7 @@ are the engine stream's (Q38).
 
 - C1 to C11 in [`../../housekeeping/2026-10-10-baseline.md`](../../housekeeping/2026-10-10-baseline.md) (the FM
   diagnostic is C6).
-- Q24, Q28 to Q33 in [`../_maintainer-questions.md`](../_maintainer-questions.md).
+- Q24, Q29 to Q32 in [`../_maintainer-questions.md`](../_maintainer-questions.md).
 - The provisional rule "reviewers name the mutants, the worker runs them" (Q37): in the next review loop, let a
   reviewer run its own mutants again; if that passes, remove the rule from `/review-loop` and `/agent-fleet`.
 - The stdlib's `hashCode(dynamic)` closure (every Kotlin/JS `HashMap` operation allocates on V8) is noted for an

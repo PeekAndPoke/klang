@@ -1719,7 +1719,11 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     Katalyst alike, from the `adsr` curves (`AdsrCurves`) to tweens (`../plans/future/signal-graph-engine.md` 6.8)
     and fully individual curves. Its own deep design round: [`future/curves.md`](future/curves.md).
 - **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and
-  `pitchModSemitones`; FM keeps its node for D1). The original reasoning: Accelerate's law is a per-block seed with per-sample stepping and one
+  `pitchModSemitones`; FM keeps its node for D1). **Decided 2026-10-13 (maintainer, Q33): compose it, now,** over the spike's cost
+  (about +0.7 us per accelerate voice per block; "the performance impact is fine"), because `progress()` and the
+  generic curves (7f, `future/curves.md`) make the composed form the one to build on. Its two script-door clauses
+  (a signal amount read per sample; an infinite sample pushes the pitch to the ceiling or freezes the source) are
+  accepted with it. Spike: `tmp/reviews/pp-7e-report.md`. Not started. The original reasoning: Accelerate's law is a per-block seed with per-sample stepping and one
   reader; a `progress` primitive would be a node for one use. FM is already a composition (any modulator tree), and its
   law (linear deviation, the index envelope, the freq bypass) has no second reader. **Bound** (7a review rounds 1 and
   2, B3): through `pitchModSemitones` accelerate's ratio becomes `fastExp2` per sample from the frame alone, worst
