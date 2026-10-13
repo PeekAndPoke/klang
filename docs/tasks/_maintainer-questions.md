@@ -20,7 +20,8 @@ rule 2 dropped, the exception documented in its KDoc, and the register says rule
 follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API), Q39 (fade, do not cut: engine follow-up 42), Q18 (the data tables stay positional, documented at
 their helpers), Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q20 (fix the frozen songs'
 shared orbits: `song-orbit-ownership-review.md`), Q13 (`progress()` and `elapsed()`, curves as their own future
-feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`), Q33 and Q32 (accelerate and the pitch envelope both stay nodes: pitch 7d, 7e), Q29 (`duty(width)`: engine follow-up 44), Q28 (solo: the latest value wins at once, engine
+feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`), Q33 and Q32 (accelerate and the pitch envelope both stay nodes: pitch 7d, 7e), Q29 (`duty(width)`: engine follow-up 44), Q24 (typed Kotlin doors with `.ign`/`.kat`, KlangScript keeps its own
+door: `kotlin-typed-doors.md`), Q28 (solo: the latest value wins at once, engine
 follow-up 43).
 
 ---
@@ -76,30 +77,3 @@ sprudel door over a built-in. Recommendation: (a) for now, and decide when a son
 ---
 
 # Part 3: For later (not blocking anything now)
-
-## Q24. A third Kotlin spelling of the Ignitor doors: keep it as engine shorthand, or grow it?
-
-Source: the step 13 table and its review (reviewer B corrected the first version of this question). Not blocking.
-
-**What exists.** Two Kotlin surfaces build the same `IgnitorDsl` trees:
-- the **Kotlin door** in `klangscript-libs` (`KlangScriptIgnitorExtensions`, the twin of the KlangScript door by
-  `/dsl-design` §3): every value is `IgnitorDslLike`, so a number, a signal, or a mix of both fits anywhere;
-- the **`audio_bridge` extensions** (`fun IgnitorDsl.vibrato(rate: Double, semitones: Double)` and friends), used by
-  engine code, `classic()`, the defaults and specs. They have limits the doors do not:
-  - eleven of them take only numbers (`detune`, `drive`, `distort`, `crush`, `coarse`, `phaser`, `tremolo`,
-    `shimmer`, `vibrato`, `accelerate`, `fm`), so a modulated vibrato rate does not fit;
-  - the arithmetic ones (step 13) and the filters take all numbers or all signals, not a mix:
-    `lowpass(lfo, q = 4.0)` or `clamp(0.0, env)` need `IgnitorDsl.Constant(...)` spelled out;
-  - `phaser` and `shimmer` have no `floor`, which the script builders have.
-
-```kotlin
-// klangscript-libs Kotlin door: works
-KlangScriptIgnitor.vibrato(self = osc, rate = perlin, semitones = 0.3)
-// audio_bridge extension: only numbers
-osc.vibrato(rate = 5.0, semitones = 0.3)
-```
-
-**The question.** Growing the `audio_bridge` extensions to full parity would make them a third complete spelling of
-every door (one word per concept says no). **Recommendation: keep them as engine-internal shorthand, record their
-limits in their file header, and point authors (Kotlin included) at the `klangscript-libs` door.** The alternative is
-to align them fully. No song is affected either way (songs are KlangScript).
