@@ -1,6 +1,9 @@
 # Song review: patterns with different bus settings share one orbit
 
-Status: **for the maintainer to review in the song code (2026-10-07).** Found by voice lifecycle step 5
+Status: **the frozen songs decided (maintainer, 2026-10-13, Q20): fix their shared-orbit conflicts, so they are
+reasonable in what they do** (each conflicting pattern its own orbit, or the settings made to agree; the corpus
+reference of the two frozen songs is re-accepted after). The live songs below stay with the maintainer.
+First noted 2026-10-07 for the maintainer to review in the song code. Found by voice lifecycle step 5
 (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`), measured in review (`tmp/reviews/vl5-r1-B.md`, reviewer B, round 1).
 
 ## What this is

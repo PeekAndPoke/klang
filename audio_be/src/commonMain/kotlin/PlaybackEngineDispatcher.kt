@@ -24,7 +24,9 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * An engine's end of life is its own [PlaybackEngine.phase] (the transition table is in its KDoc): the dispatcher
  * asks it whether a scheduled-again engine resumes (`Stopped`) or is detached (`Releasing`, `Released`), and whether
  * a stopped one may be disposed ([PlaybackEngine.isIdle]). It keeps no lifecycle of its own, only the two orders the
- * output depends on: the render order ([rendering]) and the disposal order ([ending]).
+ * output depends on: the render order ([rendering]) and the disposal order ([ending]). The disposal order costs one
+ * extra list and decides which pooled reverb or delay unit a later rent gets when several engines end in the same
+ * block; it stays as it is (maintainer, 2026-10-13, Q19): that case almost never happens and is not worth simplifying.
  */
 class PlaybackEngineDispatcher(
     private val context: AudioBackendContext,

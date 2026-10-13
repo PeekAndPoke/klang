@@ -48,6 +48,10 @@ object BodyMaterials {
         val q: Double,
     )
 
+    /**
+     * Helper for mode creation. It names the columns once, so the table below stays positional: a deliberate departure
+     * from named arguments (`/code-style`), because naming every cell would triple each row (maintainer, 2026-10-13, Q18).
+     */
     private fun m(freq: Double, db: Double, q: Double) = Mode(freq = freq, db = db, q = q)
 
     /**

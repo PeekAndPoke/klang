@@ -49,7 +49,11 @@ object VowelBands {
         val q: Double,
     )
 
-    /** Helper for band creation. */
+    /**
+     * Helper for band creation. It names the columns once, so the table below stays positional (`b(1040.0, -7.0, 70.0)`):
+     * a deliberate departure from named arguments (`/code-style`), because naming every cell would triple each row
+     * (maintainer, 2026-10-13, Q18).
+     */
     private fun b(freq: Double, db: Double, q: Double) = Band(freq = freq, db = db, q = q)
 
     /**

@@ -1287,6 +1287,10 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     `ScratchBuffers.oversample`'s `getOrPut` by factor); not located further. A fix re-sets the `E-distort` line.
     Source: `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
 
+42. **A delay or reverb switched off fades its feed instead of cutting it** (added 2026-10-13, maintainer Q39: "fade,
+    do not cut"). A sound change, so not part of the performance batch 31 to 41. Plan, cost and the corpus effect:
+    [`../by-ear/delay-reverb-owner-change-cut.md`](../by-ear/delay-reverb-owner-change-cut.md). M.
+
 ## 2. Allocation on the JVM, at build and per orbit
 
 11. **`Voice` copies its stage list into an `Array` per voice start** (`pipeline.toTypedArray()`), one small

@@ -14,38 +14,12 @@ State: `main` after v0.6.5 and the pause housekeeping (2026-10-13); where each s
 
 # Part 0: Before the refill (2026-10-13)
 
-The calls that decide where the next work goes. Open: Q39. Answered 2026-10-13: Q34 (the corpus re-accepted; songs move freely: `song-checks-move-freely.md`), Q35 (no ADAA exists, the
+The calls that decide where the next work goes. All answered 2026-10-13: Q34 (the corpus re-accepted; songs move freely: `song-checks-move-freely.md`), Q35 (no ADAA exists, the
 link fixed), Q36 (the eight merged branches and the worktree deleted), Q37 (rule 1 stays provisional and is expected to go: the next review loop tries reviewers running mutants again;
 rule 2 dropped, the exception documented in its KDoc, and the register says rules are guard-rails), Q38 (after the refill, finish engine
-follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API).
-
-## Q39. A delay or reverb switched off: cut or fade? (a listening call)
-
-Home: [`by-ear/delay-reverb-owner-change-cut.md`](by-ear/delay-reverb-owner-change-cut.md). When an orbit's delay or
-reverb switches off by an owner change or a `katp`, its feed is cut in one sample; only a modulated knob crossing its
-gate fades.
-
-```
-// orbit 1: the pad's long reverb, then a dry pluck takes the orbit (its settings switch the reverb off)
-note("c3").s("pad").room(0.6).orbit(1)      // the room rings on from what it last got:
-note("e4").s("pluck").orbit(1).late(0.5)    //   (a) a one-sample edge, carried by the combs
-                                            //   (b) a 50 ms fade, but the pluck's first 50 ms bleed into the pad's room
-                                            //   (c) fade only a katp switch-off, cut on an owner change
-```
-
-(b) also moves one frozen corpus piece by 0.0001 peak and needs plumbing for an orbit without an owner. Listen
-first, or decide now? Recommendation: (a) until a song shows the edge.
-
-## Smaller calls waiting since 2026-10-10
-
-C1 to C15 in [`../housekeeping/2026-10-10-baseline.md`](../housekeeping/2026-10-10-baseline.md) ("Smaller calls"):
-the named-args pass beyond the engine, worklet tests, NaN on signal paths, runtime errors phase 4, `randL`/`filter`,
-the fm diagnostic, the sprudel form-(d) sweep, `n().add()`, the duck switch, next songs, finished plans, block
-framing, knob glide, naming Q10, the blog series. Say which you want to take now, and I bring those over here with
-examples.
-
-The stdlib note (no question): every Kotlin/JS `HashMap` operation allocates 40 B on V8 because of a closure in the
-stdlib's `hashCode(dynamic)`; a report upstream (JetBrains YouTrack) would be yours to file, if you want it.
+follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API), Q39 (fade, do not cut: engine follow-up 42), Q18 (the data tables stay positional, documented at
+their helpers), Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q20 (fix the frozen songs'
+shared orbits: `song-orbit-ownership-review.md`).
 
 ---
 
@@ -213,39 +187,3 @@ signal-graph tweens). Accelerate clamps it at 1 inside. Open:
 ```
 Ign.saw().lowpass(Ign.progress().sub(1).clamp(0, 1).curve("scurve").range(4000, 600))   // the tail darkens, eased
 ```
-
-## Q18. Named arguments in data tables
-
-From the `/code-style` §24 pass. The vowel and body-material tables stay positional (`VowelBands.b`, 180 rows;
-`BodyMaterials.m`, 120 rows), because the helper declared right above each table names the columns, and naming every
-cell would triple each row.
-
-**Example.**
-
-```kotlin
-private fun b(freq: Double, db: Double, q: Double) = ...   // the column order, declared once
-b(1040.0, -7.0, 70.0)                                      // today
-b(freq = 1040.0, db = -7.0, q = 70.0)                      // if named
-```
-
-Add a "data table" exception to §24, or name them too (one more script run)?
-
-## Q19. Engine disposal order
-
-Found in tidy-up step 9. When several engines go idle in the same block, the order they are disposed in decides which
-units land on top of the warehouse's last-in-first-out shelves, and so which reverb or delay ring a later rent gets.
-
-**Example.** Two songs stop in the same block. Today song A's reverb is shelved first, so the next song to start gets
-song B's reverb unit. Disposing in render order could hand it A's instead. The units are equivalent, but a render is
-then not bit-identical to before.
-
-Step 9 keeps today's order, at the cost of one extra list in the dispatcher. Keep it, or simplify?
-
-## Q20. Frozen songs
-
-Source: [`song-orbit-ownership-review.md`](song-orbit-ownership-review.md).
-
-**Example.** `strangerThings_2026_07_03` (`FrozenSongs.kt`) and `derSchmetterling_2026_09_16` (`FrozenPieces.kt`) have
-lines that share an orbit and fight over its effects, the same bug fixed in the live songs.
-
-Fix their shared-orbit conflicts, or keep them as snapshots of the old sound?

@@ -1,6 +1,9 @@
 # A delay or reverb switched off by an owner change cuts its feed in one sample
 
-Status: **open question for the maintainer's ear, not heard.** Carried 2026-10-12 out of the Katalyst
+Status: **decided (maintainer, 2026-10-13, Q39): fade, do not cut, so (b) below: every switch-off fades the feed
+over the wet glide.** Not started; it needs the plumbing named under "The cost" (an orbit without an owner must
+still re-apply its off-config), and it moves the frozen piece `derSchmetterling_2026_09_16` slightly (re-accept
+after). Engine follow-up 42. Before the decision: Carried 2026-10-12 out of the Katalyst
 knob expressions record when it was archived
 ([`../../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`](../../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md),
 the 5b record and its review rounds 1 and 2). The next action is a decision, best made by ear.
