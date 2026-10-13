@@ -172,7 +172,15 @@ to align them fully. No song is affected either way (songs are KlangScript).
 
 Decided so far (2026-10-09): public, 0 at the onset, 1.0 at the gate close, growing on past 1 so release-tail effects
 can be built; a foundation for tweens and general curves (one curve vocabulary with the `adsr` stages and the
-signal-graph tweens). Accelerate clamps it at 1 inside. Open:
+signal-graph tweens). Accelerate clamps it at 1 inside.
+
+Answered 2026-10-13 (maintainer, thinking aloud, "no good mental model yet"): `progress()` keeps the decided
+shape (0 to 1 over the gate, then on past 1 at the same pace); a note without a known gate length (live MIDI) keeps
+progress at 0 throughout, even after its note-off (option (a) of 2 below); a seconds-based signal is wanted too,
+named for what it is, e.g. `elapsed()`. Still open: whether `elapsed()` counts from the onset or from the gate close
+(1 below), and how a curve is written (3). Nothing of this is built yet: accelerate is its own node today (Q33).
+
+Open, as first asked:
 
 1. **After the gate: gate lengths, or seconds too?** In gate lengths, a 0.1 s note with a 2 s release reaches 21 at
    its end, a 2 s note reaches 2: a tail effect runs 20 times faster on staccato notes. A seconds-based `sinceGate()`
