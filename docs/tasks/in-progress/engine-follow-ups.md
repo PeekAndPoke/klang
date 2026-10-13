@@ -1298,6 +1298,13 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     [`20261009-solo-protects-whole-voice.md`](../../tasks-archive/2026-10/20261009-solo-protects-whole-voice.md) and
     Q28's three refinements. A behaviour change, so not part of the performance batch 31 to 41. S to M.
 
+44. **`duty(amount)` becomes `duty(width)`** (added 2026-10-13, maintainer Q29: "width seems to be the better name").
+    The pulse width door's parameter: 0 to 1, the share of the cycle that is high (0.5 = square); positional
+    `duty(0.3)` unchanged. `amount` stays the distort drive's word only (Q21). A door change (one word per concept):
+    every surface in the same change, the KlangScript stdlib and Kotlin doors with their door-parity spec, the sprudel
+    door (`lang_synthesis_ignitorparam.kt`) and the docs; the slot name `duty` is unchanged. Not part of the
+    performance batch 31 to 41. S.
+
 ## 2. Allocation on the JVM, at build and per orbit
 
 11. **`Voice` copies its stage list into an `Array` per voice start** (`pipeline.toTypedArray()`), one small

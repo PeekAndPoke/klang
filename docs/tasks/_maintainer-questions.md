@@ -20,7 +20,7 @@ rule 2 dropped, the exception documented in its KDoc, and the register says rule
 follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API), Q39 (fade, do not cut: engine follow-up 42), Q18 (the data tables stay positional, documented at
 their helpers), Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q20 (fix the frozen songs'
 shared orbits: `song-orbit-ownership-review.md`), Q13 (`progress()` and `elapsed()`, curves as their own future
-feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`), Q33 and Q32 (accelerate and the pitch envelope both stay nodes: pitch 7d, 7e), Q28 (solo: the latest value wins at once, engine
+feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`), Q33 and Q32 (accelerate and the pitch envelope both stay nodes: pitch 7d, 7e), Q29 (`duty(width)`: engine follow-up 44), Q28 (solo: the latest value wins at once, engine
 follow-up 43).
 
 ---
@@ -76,12 +76,6 @@ sprudel door over a built-in. Recommendation: (a) for now, and decide when a son
 ---
 
 # Part 3: For later (not blocking anything now)
-
-## Q29. `duty(amount)`: the word `amount` once more
-
-From the small-items batch. `amount` is the distort drive only (Q21), but the pulse width door still says
-`duty(amount)`. Decided 2026-10-09: rename it later, not in v0.6.1. Proposal for then: `duty(width)` (0 to 1, the
-share of the cycle that is high); positional `duty(0.3)` unchanged.
 
 ## Q24. A third Kotlin spelling of the Ignitor doors: keep it as engine shorthand, or grow it?
 
