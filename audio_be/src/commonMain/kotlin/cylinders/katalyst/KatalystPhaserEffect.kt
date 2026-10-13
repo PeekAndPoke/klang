@@ -142,8 +142,10 @@ class KatalystPhaserEffect(
      *
      * The values are compared the EQ's way, NaN-aware ([sameKnob]): a non-finite knob is a value like any other here
      * (the setters and the glides substitute it the same way every time), and a raw `NaN != NaN` would defeat the
-     * compare on every block (the cached-config rule of `/review-loop`). An ARRAY, not double fields, so the stores
-     * cannot box (engine follow-up 7).
+     * compare on every block (the cached-config rule of `/review-loop`). It stores the RAW knobs, a deliberate
+     * exception to that rule's "store substituted values": a memo that only skips an unchanged config must match the
+     * input exactly, and a setter keeps its old value on a NaN, so a substituted value would never match it. An ARRAY,
+     * not double fields, so the stores cannot box (engine follow-up 7).
      */
     private val applied = DoubleArray(5)
 

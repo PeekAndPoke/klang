@@ -30,6 +30,11 @@ to be healthy rules. There is always the option to question these rules. Good ru
 to messy outcomes." A rule marked *(provisional)* is followed like any other, and a case where it makes the outcome
 messier is reported to the maintainer, not worked around. It loses the mark when it has proven itself.
 
+**Rules are guard-rails, not commandments** (maintainer, 2026-10-13): "Let us not create a German tax-code like
+ruleset. Let us stay reasonable." A reasonable exception for a good reason gets no rule of its own; it gets short,
+clear documentation where it lives (a KDoc saying which rule it departs from and why). When a rule looks as if it
+should be broken on purpose, consult the maintainer, and the rules do not have to be decided again and again.
+
 ### Stone
 
 | Rule                                                                                                                                                   | Since      | Detail                                    |

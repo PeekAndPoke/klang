@@ -14,22 +14,10 @@ State: `main` after v0.6.5 and the pause housekeeping (2026-10-13); where each s
 
 # Part 0: Before the refill (2026-10-13)
 
-The calls that decide where the next work goes. Open: Q37 and Q39. Answered 2026-10-13: Q34 (the corpus re-accepted; songs move freely: `song-checks-move-freely.md`), Q35 (no ADAA exists, the
-link fixed), Q36 (the eight merged branches and the worktree deleted), Q38 (after the refill, finish engine
+The calls that decide where the next work goes. Open: Q39. Answered 2026-10-13: Q34 (the corpus re-accepted; songs move freely: `song-checks-move-freely.md`), Q35 (no ADAA exists, the
+link fixed), Q36 (the eight merged branches and the worktree deleted), Q37 (rule 1 stays provisional and is expected to go: the next review loop tries reviewers running mutants again;
+rule 2 dropped, the exception documented in its KDoc, and the register says rules are guard-rails), Q38 (after the refill, finish engine
 follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API).
-
-## Q37. Two provisional review rules: keep them?
-
-From 2026-10-11; no case against either has come up:
-
-1. **Reviewers name the mutants, the worker runs them.** A reviewer writes "change `outputs < 1` to `outputs < 0` at
-   `AllocationCheck.kt:315`, expect a FAIL"; the worker builds it, measures and restores it in one lock call.
-   (Before, reviewers ran them, and the safety check refused that twice.)
-2. **A compare-only memo may hold raw knobs.** A stage may keep the last knob values it applied, only to skip a
-   re-apply when nothing changed (`KatalystPhaserEffect.applied`, a `DoubleArray(5)`), without that counting as a
-   second copy of its config.
-
-Drop the *(provisional)* mark on both, keep them provisional longer, or drop one?
 
 ## Q39. A delay or reverb switched off: cut or fade? (a listening call)
 

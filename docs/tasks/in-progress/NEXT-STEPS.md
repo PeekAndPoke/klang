@@ -48,7 +48,7 @@ are the engine stream's (Q38).
   diagnostic is C6).
 - Q13, Q29 (`duty(width)`) and Q30 to Q33 in [`../_maintainer-questions.md`](../_maintainer-questions.md).
 - A listening question from the knob expressions: [`../by-ear/delay-reverb-owner-change-cut.md`](../by-ear/delay-reverb-owner-change-cut.md).
-- Two provisional review rules from 2026-10-11 to confirm or drop (`.claude/skills/review-loop/SKILL.md`): reviewers
-  name the mutants and the worker runs them; a compare-only memo may hold raw knobs. No case against either has come up so far.
+- The provisional rule "reviewers name the mutants, the worker runs them" (Q37): in the next review loop, let a
+  reviewer run its own mutants again; if that passes, remove the rule from `/review-loop` and `/agent-fleet`.
 - The stdlib's `hashCode(dynamic)` closure (every Kotlin/JS `HashMap` operation allocates on V8) is noted for an
   upstream report, not filed (engine follow-ups, item 2).
