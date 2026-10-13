@@ -1706,19 +1706,18 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   (`_maintainer-questions.md` Q32): move the node's settled shortcuts into the `adsr` host's pitch mode (moves code,
   does not remove it), or accept the cost (about 1 us per settled penv voice per block) with the signal differences
   recorded.
-- **7f. `progress()` as a public signal, and curves on it** (maintainer, 2026-10-09; design open). The primitive under
-  the composed accelerate is offered to authors, and it does NOT stop at 1: 0 at the onset, 1.0 at the gate close,
-  growing on after it ("then one can build effects that only sound in the release tail"); accelerate clamps it at 1
-  internally for its hold. The maintainer: "it also opens the door to tweening-like functions or general curves,
-  other than adsr curves". A tween is a 0-to-1 ramp shaped by a curve, the same object as the signal-graph plan's
-  tween (`../plans/future/signal-graph-engine.md` 6.8: one automation write with a duration and a curve), so one
-  curve vocabulary should serve the `adsr` stages (`AdsrCurves`: linear, square, cube, scurve, invsquare,
-  exponential), `progress()` and later tweens. Open before it is designed (`_maintainer-questions.md` Q13):
-  - after the gate, does progress count in gate lengths (as asked) and/or is there a seconds-based `sinceGate()`
-    beside it (the provisional units rule);
-  - live MIDI notes: today a held note's base is a far horizon (progress about 0, never moving at note-off, decided
-    2026-08-29); release-tail effects need an answer there;
-  - how a curve is applied to a signal (`progress().curve("scurve")`, `.ease(...)`), on both doors.
+- **7f. `progress()` and `elapsed()` as public signals** (maintainer, 2026-10-09; decided 2026-10-13, Q13; not
+  built). The primitive under a composed accelerate, offered to authors:
+  - `progress()`: 0 at the onset, 1.0 at the gate close, growing on past 1 at the same pace ("then one can build
+    effects that only sound in the release tail"). For what follows the note's shape whatever its length (a filter
+    closing over each note, a swell). A note without a known gate length (live MIDI) keeps it at 0 throughout, even
+    after its note-off.
+  - `elapsed()`: seconds since the onset (the units rule), for what happens in real time (a vibrato that starts
+    0.3 s in) and on live notes. More such signals (`elapsedRelease()`) only when a song wants one.
+  - A curve: not now. When it comes, a curve argument on `progress(curve = linear)` rather than a `.curve(...)`
+    method, and the curve itself becomes its own feature: a curve is a node that plugs in anywhere, Ignitor and
+    Katalyst alike, from the `adsr` curves (`AdsrCurves`) to tweens (`../plans/future/signal-graph-engine.md` 6.8)
+    and fully individual curves. Its own deep design round: [`future/curves.md`](future/curves.md).
 - **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and
   `pitchModSemitones`; FM keeps its node for D1). The original reasoning: Accelerate's law is a per-block seed with per-sample stepping and one
   reader; a `progress` primitive would be a node for one use. FM is already a composition (any modulator tree), and its

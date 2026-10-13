@@ -19,7 +19,8 @@ link fixed), Q36 (the eight merged branches and the worktree deleted), Q37 (rule
 rule 2 dropped, the exception documented in its KDoc, and the register says rules are guard-rails), Q38 (after the refill, finish engine
 follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API), Q39 (fade, do not cut: engine follow-up 42), Q18 (the data tables stay positional, documented at
 their helpers), Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q20 (fix the frozen songs'
-shared orbits: `song-orbit-ownership-review.md`).
+shared orbits: `song-orbit-ownership-review.md`), Q13 (`progress()` and `elapsed()`, curves as their own future
+feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`).
 
 ---
 
@@ -167,31 +168,3 @@ osc.vibrato(rate = 5.0, semitones = 0.3)
 every door (one word per concept says no). **Recommendation: keep them as engine-internal shorthand, record their
 limits in their file header, and point authors (Kotlin included) at the `klangscript-libs` door.** The alternative is
 to align them fully. No song is affected either way (songs are KlangScript).
-
-## Q13. The `progress()` signal (pitch plan §7f; not blocking, the composition block comes after the pipeline)
-
-Decided so far (2026-10-09): public, 0 at the onset, 1.0 at the gate close, growing on past 1 so release-tail effects
-can be built; a foundation for tweens and general curves (one curve vocabulary with the `adsr` stages and the
-signal-graph tweens). Accelerate clamps it at 1 inside.
-
-Answered 2026-10-13 (maintainer, thinking aloud, "no good mental model yet"): `progress()` keeps the decided
-shape (0 to 1 over the gate, then on past 1 at the same pace); a note without a known gate length (live MIDI) keeps
-progress at 0 throughout, even after its note-off (option (a) of 2 below); a seconds-based signal is wanted too,
-named for what it is, e.g. `elapsed()`. Still open: whether `elapsed()` counts from the onset or from the gate close
-(1 below), and how a curve is written (3). Nothing of this is built yet: accelerate is its own node today (Q33).
-
-Open, as first asked:
-
-1. **After the gate: gate lengths, or seconds too?** In gate lengths, a 0.1 s note with a 2 s release reaches 21 at
-   its end, a 2 s note reaches 2: a tail effect runs 20 times faster on staccato notes. A seconds-based `sinceGate()`
-   (0 while the gate is open, then 0.5 after half a second ...) fits the units rule. Both?
-2. **Live MIDI notes:** a held key has no known gate length, so progress stays about 0 (the far horizon). At
-   note-off: (a) stay as decided in August (no tail effects on live notes), (b) jump to 1.0 and grow on (accelerate
-   would jump at the release), or (c) rely on `sinceGate()`, which starts counting at the real note-off for every
-   note.
-3. **How a curve is written** on a signal: `Ign.progress().curve("scurve")`, `.ease("scurve")`, or a curve argument
-   on `progress()` itself?
-
-```
-Ign.saw().lowpass(Ign.progress().sub(1).clamp(0, 1).curve("scurve").range(4000, 600))   // the tail darkens, eased
-```
