@@ -12,7 +12,8 @@ picks up again. Read it first, then the task file it names.
   the corpus differed only on the maintainer's song edits, re-accepted the same day (Q34) on the songs as of
   `d9804f41`. Song edits should not turn the check red at all: [`../song-checks-move-freely.md`](../song-checks-move-freely.md).
 - No branch holds unmerged work of either session. The merged branches and the `katalyst-live-knobs` worktree were
-  deleted 2026-10-13 (Q36); 55 older merged local branches remain, and `code-blocks-with-mutator` is the one unmerged.
+  deleted 2026-10-13 (Q36), and so were the 55 older merged local branches and the abandoned experiment
+  `code-blocks-with-mutator` (maintainer). `main` is the only local branch.
 
 ## Engine stream (Klang-Main-Dev)
 
