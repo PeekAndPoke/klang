@@ -126,9 +126,9 @@ let makeGuitar = (rig) => {
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.70, kMax = 0.95, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
-    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.50).centerJitter(0.30)
+    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.30).centerJitter(0.30)
     // analog settings
-    .analog(pAnalog).analogSpread(0.3)
+    .analog(pAnalog).analogSpread(0.15)
   )
 
   let signal = saw.mul(Ign.slot.pregain)

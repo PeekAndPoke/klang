@@ -174,7 +174,7 @@ let makeGuitar = (rig) => {
     // character knobs, plain scalars on the supersaw builder
     .spreadPower(1.0).sideAtten(0.5).gainJitter(0.30).centerJitter(0.30)
     // analog settings
-    .analog(pAnalog).analogSpread(0.05)
+    .analog(pAnalog).analogSpread(0.15)
   )
  
   let signal = saw.mul(Ign.slot.pregain)
@@ -467,7 +467,7 @@ export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin(0.0000, 0
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
-export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.12).pan(0.575)
+export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.13).pan(0.575)
   .lpf("11500".add(perlin(0, 500).slow(4)))
 export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
@@ -529,8 +529,10 @@ export song = stack(
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
     .reverb(0.05, 7, 6000)
-    .gain(3.5)
-    .distort(0.15, "soft", 4)
+    .gain(4.0)
+    .bands(b => b.cut(150)
+      .band(mid => mid.distort(0.10, "soft", 4).mul(0.80)).cut(5000)
+    ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )
