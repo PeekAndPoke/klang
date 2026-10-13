@@ -144,7 +144,7 @@ internal class DistortionCore(
      * initialized `var` assigned in a statement `when`, `audio/ref/performance.md`) removes those boxes too, but these
      * switch-free loops run 12 to 25 percent faster again than it; folding back to it gives that up with no test to
      * say so (the bits are the same either way). This KDoc is the guard; the measurement is in
-     * `docs/tasks/engine-follow-ups.md`.
+     * `docs/tasks/in-progress/engine-follow-ups.md`.
      */
     private fun shapeRun(buffer: AudioBuffer, from: Int, to: Int, drive: Double) = when (shape) {
         DistortionShape.SOFT -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.fastTanh(it) }

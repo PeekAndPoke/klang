@@ -70,6 +70,7 @@ messier is reported to the maintainer, not worked around. It loses the mark when
 | *(provisional)* Credits: every person, idea, paper, standard, tool or piece of music Klang builds on is credited in `CREDITS.MD` AND on the in-app Credits page (`src/jsMain/kotlin/pages/CreditsPage.kt`), the two kept in step, in the same change that brings it in. An idea only named in a plan or a research note is credited when it lands; a song credits its inspirations in its own "Inspired by" lines. Commercial products are not credited (maintainer, 2026-10-10): a public idea behind one is credited as the idea, an idea that is not public is not credited at all. | 2026-10-09, products 2026-10-10 | this line |
 | Nothing in the backend or the frontend allocates without a way to clean it up: per-playback state lives in a storage the playback owns or in a per-playbackId registry that is freed when the playback dies; process-wide maps that grow per edit are debt (tracked in `docs/plans/signal-flow-redesign.md` §11). | 2026-09-17 | this file |
 | Script-door defaults are plain literals (number, string, boolean, null); the KSP build refuses any other default (e.g. a `Slots.*` leaf) with an error naming the door and parameter. Bake the literal on the door, resolve the real default in the body. | 2026-09-05, enforced 2026-10-06 | `/dsl-design` §3 |
+| *(provisional)* Two kinds of check: a check for the future (it guards behaviour we keep), or scaffolding (it guards one rewrite or addition, names that work, and goes in the change that finishes it, so it adds no weight after). Decide which when the check is written. Songs move freely: no check goes red because a song was edited, except one that proves the song still compiles (maintainer, 2026-10-13). | 2026-09-06, kinds 2026-10-13 | this line |
 
 ### Guideline
 
@@ -85,7 +86,6 @@ messier is reported to the maintainer, not worked around. It loses the mark when
 | Review rounds 3 and later run on the strongest model tier (`fable`) at effort xhigh, never max.                            | 2026-09-05, capped 2026-09-28 | `/agent-fleet`                             |
 | Whitespace and blank-line findings are not worth a round; codefactor.io fixes formatting.                                  | 2026-07    | `/review-loop` Gotchas                     |
 | Module `MEMORY.md` files state what is true NOW and stay short (restructured 2026-09-29 after `audio/MEMORY.md` reached 3,000 lines): a change updates its section in place and adds one History line; the narrative lives in the task record, the full dated record in `<module>/ref/memory-history.md`. | 2026-09-29 | the knowhow skills |
-| Scaffolding goes when its job is done: a migration guard, a one-off script or a comparison fixture is removed in the change that finishes the migration, so no future reader wonders why it exists. | 2026-09-06 | this line |
 
 ### Guardrail
 

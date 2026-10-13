@@ -14,32 +14,9 @@ State: `main` after v0.6.5 and the pause housekeeping (2026-10-13); where each s
 
 # Part 0: Before the refill (2026-10-13)
 
-The calls that decide where the next work goes. Q34 to Q37 are quick; Q38 and Q39 set the direction.
-
-## Q34. Two corpus references: accept your song edits
-
-Klang-Research put this to you too; one answer covers both. The full check on `9e1bcec7` is green except these two,
-and both moved only because the song text changed:
-
-```
-Kokon              dfa9cd64389e619f -> 7ccfb80bdaa75799   peak 0.7602 -> 0.7594   (the mid band's distort 0.15 -> 0.10, its level 0.75 -> 0.80)
-Der Schmetterling  feb4fe1003fb38f3 -> dc6c8f3ddf82ddab   peak 0.7703 -> 0.7707   (the snare lpf 11200 -> 11500, and your edits in 6b7f2e2c)
-```
-
-Accept both (one `runSongBenchmark --args=corpus-accept`, recorded as yours), and the starting point is green.
-
-## Q35. One link line in an ADAA file
-
-`audio_be/src/commonMain/kotlin/DistortionCore.kt:147` names the follow-ups file at its old path:
-
-```kotlin
-     * `docs/tasks/engine-follow-ups.md`.               // today: a dead path
-     * `docs/tasks/in-progress/engine-follow-ups.md`.   // the fix, comment only
-```
-
-The file is on the ADAA list sessions keep off. Klang-Research says the ADAA work is not theirs. Is the list still
-live (and whose is it), or may I fix the line? If the list is retired, I would also drop it from the coordinator's
-standing constraints.
+The calls that decide where the next work goes. Q36 and Q37 are quick; Q38 and Q39 set the direction. Answered
+2026-10-13: Q34 (the corpus re-accepted; songs move freely: `song-checks-move-freely.md`), Q35 (no ADAA exists, the
+link fixed).
 
 ## Q36. Tidy the merged branches
 
