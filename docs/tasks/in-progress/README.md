@@ -7,3 +7,6 @@ says how far it is.
 
 When a file moves, every link to it moves with it: grep the repository for its name (code KDocs included) and fix
 each path in the same commit.
+
+During a pause the paused tasks stay here (maintainer, 2026-10-13), and [`NEXT-STEPS.md`](NEXT-STEPS.md) says
+where each stream picks up again.
