@@ -1684,7 +1684,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     tremolo is unchanged. A6: item 28 of `engine-follow-ups.md`, the vibrato's `GraphCensus` arm. Suites: `audio_bridge`
     jvmTest 148, `audio_be` jvmTest 2,592, `klangscript-libs` jvmTest 847, `sprudel` jvmTest 3,505, `DslDocExamplesSpec`
     green, `compileTestKotlinJs` of `audio_bridge`, `audio_be`, `sprudel`, `klangscript-libs` and the root green.
-- **7d. Pitch envelope composed** (S to M, after a spike): `constant(amount)` shaped by the envelope law into the
+- **7d. Pitch envelope composed** (S to M, after a spike; **decided 2026-10-13, maintainer Q32: it stays a node**): `constant(amount)` shaped by the envelope law into the
   primitive. The chain `adsr` is the AMPLITUDE host (the level floors at 0), the pitch law is raw; the product
   `amount * level` and the `/ 12` match today's bits, so the spike checks whether a negative sustain is the only
   difference, and whether the amplitude host's shortcuts keep `renderPitchEnvelopeRatios`' settled-block cost (D10).
@@ -1719,11 +1719,10 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     Katalyst alike, from the `adsr` curves (`AdsrCurves`) to tweens (`../plans/future/signal-graph-engine.md` 6.8)
     and fully individual curves. Its own deep design round: [`future/curves.md`](future/curves.md).
 - **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and
-  `pitchModSemitones`; FM keeps its node for D1). **Decided 2026-10-13 (maintainer, Q33): compose it, now,** over the spike's cost
-  (about +0.7 us per accelerate voice per block; "the performance impact is fine"), because `progress()` and the
-  generic curves (7f, `future/curves.md`) make the composed form the one to build on. Its two script-door clauses
-  (a signal amount read per sample; an infinite sample pushes the pitch to the ceiling or freezes the source) are
-  accepted with it. Spike: `tmp/reviews/pp-7e-report.md`. Not started. The original reasoning: Accelerate's law is a per-block seed with per-sample stepping and one
+  `pitchModSemitones`; FM keeps its node for D1). **Decided 2026-10-13 (maintainer, Q32 and Q33): accelerate stays a node, as the pitch
+  envelope does (7d)**, the two answered alike. A first answer that day said "compose" and was taken back the same
+  day ("let's keep accelerate a node as well"). Spike: `tmp/reviews/pp-7e-report.md`; `progress()` (7f) and the
+  curves (`future/curves.md`) do not depend on it. The original reasoning: Accelerate's law is a per-block seed with per-sample stepping and one
   reader; a `progress` primitive would be a node for one use. FM is already a composition (any modulator tree), and its
   law (linear deviation, the index envelope, the freq bypass) has no second reader. **Bound** (7a review rounds 1 and
   2, B3): through `pitchModSemitones` accelerate's ratio becomes `fastExp2` per sample from the frame alone, worst
