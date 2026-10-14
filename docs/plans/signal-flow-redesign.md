@@ -424,7 +424,7 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   With the envelope inside the tree, the rule becomes "duration plus the tree's longest release",
   read from the tree at build. Needs its own paragraph in phase 3's task.
 - The Ignitor's script object and setter carried misnomers (the known debt in `/dsl-design` §5); renamed in their
-  own item after phase 3, DONE 2026-10-04 (`docs/plans/ignitor-katalyst-naming.md`).
+  own item after phase 3, DONE 2026-10-04 (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`).
 - Tutorials, the Lexikon and the whitepaper describe doors as fields and the voice pipeline as the
   engine; phase 5 re-reads them once the surfaces are gone. (2026-09-28: the whitepaper is re-read; the Lexikon had
   no stale entry; the tutorials belong to their own session.)

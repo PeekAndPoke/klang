@@ -21,7 +21,7 @@ Planned work that already removes items, so they are not counted twice (marked *
 - `docs/tasks/pitch-pipeline-into-the-tree.md` (the pitch strip `be/voices/strip/pitch/`, `Voice.Vibrato` /
   `Fm` / `Accelerate` / `PitchEnvelope` / `Envelope`, `BlockContext.freqModBuffer` and the `phaseMod` feed,
   `EnvelopeCalc.kt`, the pitch wire fields, and the natural moment to dissolve `voices/strip/`);
-- `docs/tasks/code-style-named-args-pass.md` (every swappable positional call, e.g. `VoiceFactory.buildVoice`'s
+- `docs/tasks-archive/2026-10/20261014-code-style-named-args-pass.md` (every swappable positional call, e.g. `VoiceFactory.buildVoice`'s
   17 positional arguments, `Cylinders.checkIn`);
 - `docs/tasks/future/one-chain-host.md` (the `Cylinder` / `MasterBus` chain plumbing table, the
   `cylinders/katalyst/` package name).
@@ -39,9 +39,9 @@ the code.
 | id | item | where it lives now | still true? | size |
 |---|---|---|---|---|
 | A1.1 | The delay's tail ceiling on a changing owner: (1) a lengthened tap re-reaches content the ceiling wrote off; (2) after a self-oscillating fall, the hold decays from `CEILING_MAX` | `docs/tasks/future/delay-ceiling-edges.md` | **Yes.** `KatalystDelayEffect.kt:427-433` re-measures only on a return from a self-oscillating drain, never on a lengthened `delay.time`. `TailCeiling.kt:141,196,212` saturate at `CEILING_MAX` (`:244`, 1e6), not at the cap | S + S |
-| A1.2 | `duck.orbit` switch onto a sounding source clicks, plus four recorded duck-handover corners | `docs/tasks/by-ear/duck-orbit-switch-click.md` | **Yes.** No blend mechanism exists (`audio/ref/katalyst.md:53` says so). The file's code pointers are current | decision first, then S to M |
+| A1.2 | `duck.orbit` switch onto a sounding source clicks, plus four recorded duck-handover corners | `docs/tasks/future/duck-orbit-switch-click.md` | **Yes.** No blend mechanism exists (`audio/ref/katalyst.md:53` says so). The file's code pointers are current | decision first, then S to M |
 | A1.3 | A chain request during the old chain's drain waits up to about 24.5 s | `docs/tasks/by-ear/chain-swap-request-during-drain.md` | **Yes.** `Cylinder.kt:452-457` (HEAD) parks `pendingKey` while `!swap.settled`; `MasterBus.requestSwap` does the same | by ear |
-| A1.4 | The `Osc` / `oscp` rename (§D1) | was `signal-flow-redesign.md` §11 and a V1 row | **Done** 2026-10-04 (`docs/plans/ignitor-katalyst-naming.md`). No `oscp` / `Osc.` remains in the engine. Only the record's top pointer is stale (history; leave it) | none |
+| A1.4 | The `Osc` / `oscp` rename (§D1) | was `signal-flow-redesign.md` §11 and a V1 row | **Done** 2026-10-04 (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`). No `oscp` / `Osc.` remains in the engine. Only the record's top pointer is stale (history; leave it) | none |
 | A1.5 | The EQ's per-sample ramps (`EqCore` is snap-only) | `docs/plans/unified-eq.md` (D4 note) | **Partly dissolved.** The orbit was closed by the bank swap (Katalyst step 4). Since phase 3 step 12 the master runs the same `KatalystEqEffect` bank swap, so the record's "still open for a future master eq" no longer applies. What remains true: a per-voice `IgnitorDsl.Eq` with a signal-driven knob zippers per block (`EqCore` snap-only). `EqCore.kt:17` and `:26-27` still say "the planned master eq stage adopts it later": stale | doc S |
 | A1.6 | The pattern door that takes a configure lambda (`.katalyst(k => ...)`, `.master(k => ...)`) | `docs/tasks/katalyst-master-configure-doors.md` | Open, NICE, blocked on `klangscript-union-types.md` step 3. Not engine code | M (sprudel / KlangScript) |
 | A1.7 | `Voice.Compressor` / `Voice.Ducking` live under `Voice` though only the chain uses them (record line 548: "still there" on 2026-09-27) | **no task file** | **Yes.** `be/voices/Voice.kt:538-577` (HEAD). The only main-code users are `KatalystSlots`, `KatalystSlotWriters`, `KatalystCompressorEffect`, `KatalystDuckEffect`. `Voice.Ducking.cylinderId` / `attackSeconds` carry pre-Katalyst names | S to M |

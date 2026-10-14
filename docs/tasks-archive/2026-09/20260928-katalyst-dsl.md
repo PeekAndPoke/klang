@@ -10,7 +10,7 @@
 > - The delay's tail ceiling on a changing owner (the lengthened tap, the `CEILING_MAX` hold):
 >   [`../../tasks/future/delay-ceiling-edges.md`](../../tasks/future/delay-ceiling-edges.md).
 > - The `duck.orbit` switch click and the recorded duck handover corners:
->   [`../../tasks/by-ear/duck-orbit-switch-click.md`](../../tasks/by-ear/duck-orbit-switch-click.md).
+>   [`../../tasks/future/duck-orbit-switch-click.md`](../../tasks/future/duck-orbit-switch-click.md).
 > - The swap request during a drain: [`../../tasks/by-ear/chain-swap-request-during-drain.md`](../../tasks/by-ear/chain-swap-request-during-drain.md).
 > - The `Osc` / `oscp` rename noted at §D1: `../../plans/signal-flow-redesign.md` section 11, and a V1 row in
 >   [`../../tasks/_v1-scope.md`](../../tasks/_v1-scope.md).

@@ -51,7 +51,7 @@
 
 - **Sine partial banks (2026-09-07)**: `Osc.sine(freq, x => x.harmonics(count, rolloff).octaves(...).suboctaves(...).fundamental(gain).analogSpread(s))`,
   five knobs on `OscSineBuilder`, same builders on the Kotlin door; parity guard `KlangScriptSineSpec`.
-  Design: `docs/plans/sine-partial-banks.md` (knobs on the sine, not separate doors; `fundamental` is a gain,
+  Design: `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md` (knobs on the sine, not separate doors; `fundamental` is a gain,
   not a boolean; sub-harmonics won't-implement).
 
 - **`@KlangScript.Invoke` (2026-09-07, maintainer decision)**: the call form of a callable object is

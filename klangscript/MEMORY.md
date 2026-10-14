@@ -123,7 +123,7 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`,
   `docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`). The Pipeline and Master builders of S5
   and S6 are retired since (rules register).
-- 2026-09-07: `@KlangScript.Invoke`; sine partial banks (`docs/plans/sine-partial-banks.md`).
+- 2026-09-07: `@KlangScript.Invoke`; sine partial banks (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`).
 - 2026-09-08: methods on number literals, the number methods, library registration merges per name
   (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`).
 - 2026-09-10: `analogSpread` on the super family (`docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`).
@@ -132,7 +132,7 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   a number"), found while building `through` (`docs/tasks-archive/2026-10/20261002-through-signal-chains.md`).
 - 2026-10-04: the Ignitor/Katalyst naming: the stdlib object is `Ignitor` with the alias `Ign` (a
   `@KlangScript.Constant`, the house pattern for a second name), `Katalyst` with `Kat`, `Ignitor.slot` and
-  `Katalyst.slot` hand back the Kotlin door's objects (`docs/plans/ignitor-katalyst-naming.md`).
+  `Katalyst.slot` hand back the Kotlin door's objects (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`).
 - 2026-10-04: error locations: a script error thrown without a location inside a native call gets the call's
   location (`guardNativeCall`, via `KlangScriptRuntimeError.withLocation`), one with a location keeps it; so a
   wrong Katalyst knob value marks `k.reverb(...)` (guards: `NativeCallErrorLocationSpec`, `KlangScriptKatalystDoorParitySpec`).

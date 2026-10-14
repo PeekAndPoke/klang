@@ -1,5 +1,8 @@
 # Unified Equalizer — filter-chain fusion via graph optimizer
 
+> **2026-10-14 (maintainer, C11):** this plan belongs to the AAA production tricks, or is at least a prerequisite of some of
+> them (the shelf and tilt sections first): [`aaa-production-tricks.md`](aaa-production-tricks.md).
+
 > **Note 2026-09-28:** the Master DSL is gone (phase 3 step 12). Where this plan says `MasterFx.eq` or a master eq,
 > read the Katalyst `eq` stage at the output position, `master(Katalyst(k => k.eq(...)))`, which runs the same snap-only
 > `EqCore` as the orbit's `eq`. The ramp-API precondition below still holds for any modulated eq.

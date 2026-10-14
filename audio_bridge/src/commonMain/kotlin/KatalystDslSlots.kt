@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 // The knobs of the classic chain, one group per stage: `KatalystDsl.Slots.reverb.wet` (the Ignitor/Katalyst naming,
-// `docs/plans/ignitor-katalyst-naming.md` section 4.3).
+// `docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md` section 4.3).
 //
 // The twin of `IgnitorDslClassic.kt`'s groups on the other host: every knob is named `<stage>.<knob>`, which is the
 // vocabulary `katp` and the sprudel bus doors write, and [KatalystDsl.classic] is built FROM these groups, so the chain

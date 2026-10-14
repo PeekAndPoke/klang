@@ -1,5 +1,7 @@
 # Audio backend audit: the leftovers
 
+**Archived 2026-10-14 (maintainer, C2): §2 closed, the worklet tests are not built; every section is now done or closed.**
+
 Status: **§1 follow-up, §3 and §5 done 2026-10-07; §4 done 2026-10-07 by voice lifecycle step 4 (a cut fades the
 choked voice over 4 ms, `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`); §2 open for the maintainer**, investigated, with the
 findings and a proposal each in "What was done" at the end (§2: what a worklet spec can reach, and its cost; §4: the
@@ -11,8 +13,8 @@ own is listed here, each item re-checked against the tree on 2026-09-27.
 
 The three maintainer calls the audit parked (the `GuitarClickHuntTest` runtime, decided 2026-09-27 and done; the two meanings of
 `attackSeconds`, `VoiceTestHelpers` bypassing `VoiceFactory`) are not repeated here; they live in
-[`future/audit-parked-decisions.md`](future/audit-parked-decisions.md). The `cut(0)` question (F19)
-lives in [`future/cut-group-semantics.md`](future/cut-group-semantics.md).
+[`future/audit-parked-decisions.md`](../../tasks/future/audit-parked-decisions.md). The `cut(0)` question (F19)
+lives in [`future/cut-group-semantics.md`](../../tasks/future/cut-group-semantics.md).
 
 ## 1. Parity specs pinned to a clock production no longer produces
 

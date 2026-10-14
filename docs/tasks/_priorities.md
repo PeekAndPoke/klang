@@ -164,6 +164,8 @@ The release-defining set, regardless of when they're sequenced:
     steps (the duck's attack, the vowel word, "cylinder" as the one word, `legato` on the wire) and its open decisions
     are the maintainer's call. The current engine order is in [`_v1-scope.md`](_v1-scope.md).
 
+- **NICE** · **Blog series: the phone that does not get faster** ([`../plans/blog-optimization-series.md`](../plans/blog-optimization-series.md)): P16's fact check, then publishing. Not urgent (maintainer, 2026-10-14, C15).
+
 ## Blocked / off-plan / parked
 
 - **Maintainer decisions, all answered** (raised in the topic walk of 2026-10-02/04, answered 2026-10-06/07): (1) Sonnet 5.5 as a third,
@@ -176,7 +178,7 @@ The release-defining set, regardless of when they're sequenced:
   sprudel sounds get no `phase` slot,
   [`20261006-oscillator-phase-knob.md`](../tasks-archive/2026-10/20261006-oscillator-phase-knob.md), "Recorded
   asymmetries". Done 2026-10-07: [`20261007-shared-modulator-memo-rate.md`](../tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md), a stateful
-  modulator shared by oscillators at different pitches ran at double rate (pre-existing, `duty` and `phase`); open from that batch: [`bugfix-non-finite-pitch-strip-and-signals.md`](bugfix-non-finite-pitch-strip-and-signals.md), and the audit leftovers §2 (worklet tests) and §4 (cut groups, by ear) in [`audit-audio-backend-leftovers.md`](audit-audio-backend-leftovers.md).
+  modulator shared by oscillators at different pitches ran at double rate (pre-existing, `duty` and `phase`); open from that batch: [`bugfix-non-finite-pitch-strip-and-signals.md`](bugfix-non-finite-pitch-strip-and-signals.md), and the audit leftovers §2 (worklet tests) and §4 (cut groups, by ear) in [`../tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md`](../tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md).
   Answered 2026-10-07: (4) the saw's node is `IgnitorDsl.Saw` (wire name `saw`, factory `Ignitors.saw`), like its
   door `Ign.saw`; sprudel's `sndTriangle()` is `sndTri()` (it still sets the sound `triangle`); the sound names and
   the LFO shape `sawtooth` stay,

@@ -221,7 +221,7 @@ modulator serves both pitches and advances once per pitch per block; if the mod 
 modulator holds a pitch node whose knobs read no `Freq`, the second pitch's render even reads the first pitch's outer
 mod (that node's memo was filled under the first pin). The author rule: give each layer its own fm,
 inside its detune, and sum them, `x.fm(m1) + x.fm(m2).detune(7)`. A build-time diagnostic is its own task
-(`docs/tasks/fm-above-forking-detune-diagnostic.md`).
+(`docs/tasks/future/fm-above-forking-detune-diagnostic.md`).
 
 ## Envelope / voice-lifetime semantics
 

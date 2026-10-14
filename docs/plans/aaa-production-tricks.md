@@ -34,6 +34,7 @@ facts; the few that would go into code first were checked against a source and a
    send, no group); the Ignitor has no delay line.
 4. **The best value per effort**, in our reading (section 6):
    1. Shelf and tilt sections in `EqSection`. They are small and land on both hosts at once.
+      Prerequisite: [`unified-eq.md`](unified-eq.md) (maintainer, 2026-10-14, C11).
    2. A Katalyst `saturate` stage. It is the clipper before the limiter, plus parallel saturation, an exciter
       and bass harmonics on a bus.
    3. The reverb's pre-delay, feed filter and self-duck.

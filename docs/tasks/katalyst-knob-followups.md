@@ -4,7 +4,7 @@
 > when that task closed (2026-10-12). Nothing here blocks anything; each item waits for a song that asks for it.
 > The V8 items live in [`engine-follow-ups.md`](in-progress/engine-follow-ups.md) (39 to 41), the listening question in
 > [`by-ear/delay-reverb-owner-change-cut.md`](by-ear/delay-reverb-owner-change-cut.md), the duck's orbit switch in
-> [`by-ear/duck-orbit-switch-click.md`](by-ear/duck-orbit-switch-click.md).
+> [`future/duck-orbit-switch-click.md`](future/duck-orbit-switch-click.md).
 
 ## 1. E1, a Katalyst EQ section hierarchy (decision Q2)
 

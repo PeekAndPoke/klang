@@ -1,5 +1,7 @@
 # An authoring diagnostic: an fm above a forking detune
 
+**Moved to `future/` 2026-10-14 (maintainer, C6), with the FM round ([`fm-revisit.md`](fm-revisit.md)).**
+
 Status: **decided (maintainer, 2026-10-09), queued after the pitch pipeline; not started.** The first editor
 diagnostic of its kind.
 

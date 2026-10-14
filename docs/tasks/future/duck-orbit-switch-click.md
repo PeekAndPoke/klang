@@ -1,5 +1,8 @@
 # A `duck.orbit` switch onto a sounding source clicks
 
+**Moved to `future/` 2026-10-14 (maintainer, C9): ducking and the sidechain need their own work, maybe after the
+configurable Motor work; see also [`ducking-unfinished.md`](ducking-unfinished.md).**
+
 Status: **open for the maintainer, measured, not fixed.** Carried 2026-09-28 out of the Katalyst DSL record when it
 was archived ([`../../tasks-archive/2026-09/20260928-katalyst-dsl.md`](../../tasks-archive/2026-09/20260928-katalyst-dsl.md),
 section 9, step 5c; measured in the 5c-9 review, 2026-09-20). The next action is a decision, best made by ear.
@@ -32,7 +35,7 @@ orbit knob) reaches the same switch, as a `katp` move does.
 
 The ducking design as a whole is being rethought as composition (bus references, a gain modulator reading another
 bus): [`../../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) section 5 and
-[`../future/ducking-unfinished.md`](../future/ducking-unfinished.md). If that lands first, this decision may dissolve.
+[`../future/ducking-unfinished.md`](ducking-unfinished.md). If that lands first, this decision may dissolve.
 
 Code: `audio_be/src/commonMain/kotlin/cylinders/katalyst/KatalystDuckEffect.kt`, the handover in
 `Cylinder.handOverDuck`.

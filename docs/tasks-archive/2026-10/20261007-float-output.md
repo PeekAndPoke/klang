@@ -55,7 +55,7 @@ against the retired rule restated in the spec).
   the edge's -1 boundary back to the retired one, the edge rounding instead of truncating, the byte order swapped in
   `writePcm16` and in the WAV header, the WAV data size counted in frames, the offline `onBlock` reporting the
   interleaved count. Not covered by any spec: the worklet's copy loop and `JvmAudioBackend` (neither has a test
-  source; the worklet's is `docs/tasks/audit-audio-backend-leftovers.md` §2(b)).
+  source; the worklet's is `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md` §2(b)).
 - The existing specs that read the 16-bit output now read the floats: an "audible" bar of 200 counts became 0.006
   (about -44 dBFS), "exact silence" became exact 0.0 (stricter, and green), the Katalyst render rows in the root
   `jvmTest` keep their 16-bit counts through `pcm16`.

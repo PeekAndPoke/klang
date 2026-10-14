@@ -2558,7 +2558,7 @@ body/analog per superimposed copy.
   `harmonics`/`octaves`/`suboctaves` counts with rolloffs, `fundamental` gain and `analogSpread`;
   `Ignitors.sinePartials` renders the bank in one pass, the runtime builds the plain `SineIgnitor` for
   literal defaults (`Sine.isPlainSine()`), partials at Nyquist are silent. Plan and decisions:
-  `docs/plans/sine-partial-banks.md`; guard: `SinePartialBankSpec` (golden test against the hand-rolled
+  `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`; guard: `SinePartialBankSpec` (golden test against the hand-rolled
   Der Schmetterling stack).
 - Effects: delay, reverb, phaser, compressor, ducking, body, vowel, EQ on the orbit (Katalyst), the same chain at the
   output through `master(...)` (duck inert there); per voice,
@@ -2628,7 +2628,7 @@ in a local, the `SineStackIgnitor` shape) brought the bank to 22 µs. So: twenty
 cost less than one loop that keeps its phase in an array. When writing a multi-voice or multi-partial
 oscillator, render voice-major with locals, accumulate into the buffer (`if (first) s else buffer[i] + s`),
 and sample any per-sample shared state (here the shared drift walk) into a scratch array first.
-`sin()` dominates the rest; the 2-trig-per-sample recurrence in `docs/plans/sine-partial-banks.md`
+`sin()` dominates the rest; the 2-trig-per-sample recurrence in `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`
 §5.3 is the remaining lever, gated on a song profile.
 
 ## VCA Gain De-click Smoother (2026-06-08)

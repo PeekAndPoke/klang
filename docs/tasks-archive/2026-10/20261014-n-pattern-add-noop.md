@@ -1,5 +1,8 @@
 # `add()` does nothing on an `n()` pattern
 
+**Closed 2026-10-14 (maintainer, C8): every arithmetic sprudel function only ever touches the event's `value`. One
+principle, easy to learn; `n("0 1 2").add(2)` leaves `n` alone by design.**
+
 Status: **future / unconfirmed footgun — found 2026-08-31 while probing tweaks, not investigated.**
 Not a tweaks issue; filed separately so it does not get lost with that work.
 

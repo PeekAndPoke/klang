@@ -291,7 +291,7 @@ object Ignitors {
 
     /**
      * A sine carrying banks of sine partials at multiples of its own frequency, rendered in ONE
-     * block pass (`docs/plans/sine-partial-banks.md`). Replaces the hand-rolled
+     * block pass (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`). Replaces the hand-rolled
      * `Ignitor.sine().add(Ignitor.sine(freq * 2).mul(1/2)).add(...)` stacks: same partials, same gains,
      * one loop per partial instead of three block passes per partial.
      *

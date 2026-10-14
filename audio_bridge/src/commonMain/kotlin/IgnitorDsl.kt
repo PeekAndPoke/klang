@@ -341,7 +341,7 @@ sealed interface IgnitorDsl {
 
     /**
      * Sine wave oscillator, optionally carrying banks of sine PARTIALS at multiples of its own
-     * frequency (`docs/plans/sine-partial-banks.md`). The sine itself is partial 1 at gain
+     * frequency (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`). The sine itself is partial 1 at gain
      * [fundamental]; [harmonics] adds partials at `2f, 3f, ...`, [octaves] at `2f, 4f, 8f, ...`,
      * [suboctaves] at `f/2, f/4, ...`. An added partial at `m * f` or `f / m` has gain
      * `m ^ -rolloff` of its bank (the distance from the fundamental is `m` either way). Banks

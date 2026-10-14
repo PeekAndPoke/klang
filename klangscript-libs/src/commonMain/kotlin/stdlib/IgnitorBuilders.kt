@@ -35,7 +35,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 /**
  * Builder for [IgnitorDsl.Sine], handed to the `configure` lambda of `Ignitor.sine(...)`.
  * Knobs: `analog`, `phase`, and the partial banks `harmonics`, `octaves`, `suboctaves`, the explicit `partial` with
- * `fundamental` and `analogSpread` (`docs/plans/sine-partial-banks.md`). Immutable: every knob returns a new builder.
+ * `fundamental` and `analogSpread` (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`). Immutable: every knob returns a new builder.
  * `node` is the configured oscillator.
  */
 data class OscSineBuilder(val node: IgnitorDsl.Sine)

@@ -1,5 +1,7 @@
 # Code-style pass: name the arguments that could be swapped
 
+**Archived 2026-10-14 (maintainer, C1 of the 2026-10-10 baseline): done for the engine; not extended beyond it.**
+
 Status: **`audio_be` and `audio_bridge` done 2026-10-07, reviewed (round 1 clean) and committed on `engine-pass-1`
 (v0.6.0): `cf584b8c` (Task B), `315595ce` (`audio_bridge`), `3daf349e` (`audio_be` main), `a6fbbddf` (`audio_be`
 ignitor specs), `86065a81` (the other `audio_be` specs and the §24 exemptions); the 18-song corpus bit-identical.**
@@ -9,9 +11,9 @@ Report: `tmp/reviews/named-args-report.md`.
 - the other modules (`sprudel`, `klangscript`, `klangscript-libs`, the UI modules, the root), if the maintainer wants
   the pass there too; new code follows §24 already;
 - the data-table exception (`VowelBands.b`, `BodyMaterials.m`, 300 positional rows): Q18 in
-  [`_maintainer-questions.md`](_maintainer-questions.md);
+  [`_maintainer-questions.md`](../../tasks/_maintainer-questions.md);
 - `VoiceFactory.buildVoice`'s redundant `cut = data.cut` beside `data` moved to
-  [`engine-follow-ups.md`](in-progress/engine-follow-ups.md).
+  [`engine-follow-ups.md`](../../tasks/in-progress/engine-follow-ups.md).
 
 ## Why
 

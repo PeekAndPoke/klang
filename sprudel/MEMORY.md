@@ -75,6 +75,8 @@ setter semantics) and `/dsl-design`. What they produce today:
   the innermost range wins. The wall-clock signals are `timeOfDay`, `sineOfDay`, `timeOfNight`,
   `sineOfNight`. Guards: `LangSignalShorthandSpec`, `SignalShorthandIntelSpec`, the cosine row of
   `LangContinuousPatternsSpec`.
+- **Arithmetic touches only `value`** (maintainer, 2026-10-14): every arithmetic function (`add`, `mul`, ...) changes the
+  event's `value` and nothing else (`note`, `n`, `soundIndex` stay). One principle, easy to learn.
 
 ## Levels: `gain`, `velocity`, `pregain`
 
@@ -180,10 +182,10 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-03: the tremolo's `sync` is `rate` on every surface, the slot key `tremolo.rate`
   (`docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`).
 - 2026-10-03: the slot setters take a name or the param object, `katalystParam` is `katp`'s full name, wrong kinds are
-  script errors (`docs/plans/ignitor-katalyst-naming.md` section 4, step C4).
+  script errors (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md` section 4, step C4).
 - 2026-10-04: the Ignitor/Katalyst naming is complete: `ignitorParam` / `ignp` and `katalystParam` / `katp`, the
   bag `ignitorParams`, the songs spell `Ign.` and `ignp` (one `ignitorParam`), the old names guarded by `RetiredIgnitorNamesSpec`
-  (`docs/plans/ignitor-katalyst-naming.md`).
+  (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`).
 - 2026-10-05: one `range`: the bipolar twins and `toBipolar` / `fromBipolar` / `range2` removed, every signal callable as
   its range shorthand (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
 - 2026-10-05: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, `sinOfDay` / `sinOfNight` renamed to

@@ -25,7 +25,7 @@ let thud  = Ignitor.sine(Ignitor.freq().mul(0.6571)).mul(0.520)
 - **CPU is not the reason.** The harmonics bank measured 22 µs per block against 24 µs for the same seven
   sines hand-rolled (`docs/benchmarks/2026-09-07_sine-partial-banks_jvm.md`): `sin()` dominates either
   way. A real speed-up for inharmonic ratios needs other maths (a rotating phasor per partial instead of
-  `sin()`); the Chebyshev fast path planned for the banks (`docs/plans/sine-partial-banks.md` 5.3) only
+  `sin()`); the Chebyshev fast path planned for the banks (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md` 5.3) only
   works for integer multiples.
 - **Authoring.** Thirteen lines for one sound, and the start phase smuggled in as a sign.
 - **The start phase.** Choosing each partial's sign was worth 8 dB of onset peak (all positive: the hit
@@ -36,7 +36,7 @@ let thud  = Ignitor.sine(Ignitor.freq().mul(0.6571)).mul(0.520)
 ## Shape of the idea
 
 A fourth bank on the `Ignitor.sine` builder next to `harmonics`, `octaves` and `suboctaves`
-(`docs/plans/sine-partial-banks.md`), with explicit ratios and gains, perhaps phases:
+(`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`), with explicit ratios and gains, perhaps phases:
 
 ```javascript
 Ignitor.sine(x => x.fundamental(0).partials(
@@ -75,7 +75,7 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
   breaks). Inside the engine the sine can render ONE list, the concatenation of every bank's pairs, in
   one pass. The catch: bank knobs are signals read every block (a count or a rolloff can move), an
   explicit list is fixed at build, so the concatenation grows per block (the growth-only arrays already
-  allow it), and the integer-ratio fast path (`docs/plans/sine-partial-banks.md` 5.3) applies to the
+  allow it), and the integer-ratio fast path (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md` 5.3) applies to the
   integer banks' part only.
 
   Not on the table any more: partials of partials (every inharmonic partial carrying the harmonic
@@ -89,7 +89,7 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
   signs come within 1.8 dB of the best pattern, and free (Schroeder) phases gained nothing in the study
   ([`sine-noise-band.md`](../../tasks/future/sine-noise-band.md)).
 - **Drift.** How `analog` and `analogSpread` act on inharmonic partials (the banks drift as one
-  oscillator at spread 0 and each partial on its own at 1; `docs/plans/sine-partial-banks.md` section 2).
+  oscillator at spread 0 and each partial on its own at 1; `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md` section 2).
 - **Decided 2026-10-02: it gets built**: the maintainer decided to build the partials knob on the sine in any case (in
   today's names it would be written `Ignitor.sine(x => x.partials())`). The allocation measurement still belongs in the record, as the before and after.
 
@@ -179,7 +179,7 @@ triage by the coordinator.
   phase (a jump of the accumulator); a silent partial's change stays a jump (it would lose the glide). Exact without
   drift and phase modulation. A constant phase renders bit for bit as before.
 - **B3 (MINOR), one Nyquist law per node**: `gate` judges the magnitude (`|f| < sampleRate / 2`, NaN silent) for the
-  fundamental and all four banks; recorded in `docs/plans/sine-partial-banks.md` section 9. Corpus
+  fundamental and all four banks; recorded in `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md` section 9. Corpus
   (`CORPUS_LABEL=partials-r1`): 18 of 18 identical against `tmp/naming/corpus-pp-7c.txt`.
 - **B4 (NIT)**: the V8 allocation line above now quotes reviewer B's engine-level numbers.
 - **A1**: a lane-order row (`harmonics(1)` plus two explicit partials at spread 1 against the reference with multiples

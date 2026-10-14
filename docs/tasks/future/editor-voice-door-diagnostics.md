@@ -34,7 +34,7 @@ task is the editor's answer to them: a warning where a script says something the
 - The editor's linter renders `AnalyzedAst.diagnostics` (`klangscript/.../intel/AnalyzedAst.kt`, the checker
   pipeline where `NamedArgumentChecker` sits); see `docs/tasks/klangscript-intellisense.md` (step 0 done).
 - Runtime errors reach the editor through `SprudelDiagnostics` (`sprudel/.../SprudelDiagnostics.kt`,
-  `docs/tasks/runtime-errors-in-the-editor.md`).
+  `docs/tasks/future/runtime-errors-in-the-editor.md`).
 - The graph plan may change the question: `docs/plans/future/signal-graph-engine.md` section 1 attaches
   `.sprudel()` (today's `classic()`) automatically to an authored instrument, which would make candidate 1 moot.
   Decide that first.

@@ -316,5 +316,5 @@ Moved out of this doc when it was archived, so there is one live copy rather tha
 
 - **`docs/tasks/future/mini-notation-tweaks-followups.md`** — the seven tweak follow-ups, led by the
   unknown-tweak editor diagnostic and the by-ear pass that no test can stand in for.
-- **`docs/tasks/future/n-pattern-add-noop.md`** — `add()` is inert on an `n()` pattern. Found while
+- **`docs/tasks-archive/2026-10/20261014-n-pattern-add-noop.md`** — `add()` is inert on an `n()` pattern. Found while
   probing tweaks, verified pre-existing, unrelated to this work.

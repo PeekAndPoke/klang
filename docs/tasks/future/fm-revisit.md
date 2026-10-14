@@ -14,7 +14,7 @@ was decided by default is collected here, so the round starts from one page.
   modulator serves both detuned saw layers and jumps a block of phase at every block boundary (95 % of the energy off
   the harmonic grid, block-size dependent). The only built-in with that shape; no song uses sprudel's `fm`. Options
   then: rebuild `sgpad` to read one pitch per FM, or let the diagnostic below name it.
-- **The fm diagnostic** ([`../fm-above-forking-detune-diagnostic.md`](../fm-above-forking-detune-diagnostic.md),
+- **The fm diagnostic** ([`fm-above-forking-detune-diagnostic.md`](fm-above-forking-detune-diagnostic.md),
   C6 of the 2026-10-10 baseline): the first editor diagnostic, for an fm above a forking `detune`.
 - **FM's V8 allocations**: engine follow-ups 10c and 10d
   ([`../in-progress/engine-follow-ups.md`](../in-progress/engine-follow-ups.md)), performance only.

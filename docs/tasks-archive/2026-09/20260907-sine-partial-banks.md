@@ -3,7 +3,7 @@
 > Archived 2026-09-07. Status: **COMPLETE 2026-09-07.** Built, review-looped (two rounds, coding
 > and audio reviewer, 14 mutation checks red) and committed on branch `harmonics`: `6d4056f9`
 > (the feature), `a0ca2abd` (plan marked shipped), `39119aef` (benchmark harness fix found on the
-> way). The design record stays in `docs/plans/sine-partial-banks.md`, kept in `docs/plans/`
+> way). The design record stays in `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`, kept in `docs/plans/`
 > because eight files cite that path (the wire node's KDoc, the engine, the builders, the spec,
 > both module memories); this file is the archive pointer and the closing notes.
 

@@ -20,7 +20,7 @@ package io.peekandpoke.klang
  * twin here sat in a commented-out fragment (`//.mix(saw2, 1.0)`, where `saw` is the local supersaw, not the signal),
  * and the fragment is deleted. A comment only; the renders are identical in raw doubles.
  *
- * 2026-10-03, the Ignitor/Katalyst naming (`docs/plans/ignitor-katalyst-naming.md`): the script object, its slot
+ * 2026-10-03, the Ignitor/Katalyst naming (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`): the script object, its slot
  * accessor and its slot setter are spelled with their new names (`Ign.`, `Ign.slot.`, `ignp`). Syntax only; the
  * renders are identical in raw doubles.
  *

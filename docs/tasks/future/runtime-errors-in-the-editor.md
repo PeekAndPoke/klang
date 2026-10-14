@@ -1,5 +1,7 @@
 # Plan: surface runtime errors in the editor, with a clickable source location
 
+**Moved to `future/` 2026-10-14 (maintainer, C4): phases 1 to 3 shipped; phase 4 waits.**
+
 **Status: phases 1-3 SHIPPED 2026-08-22. Phase 4 audited 2026-09-07, one decision left, plus one
 known gap (below).**
 

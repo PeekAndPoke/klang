@@ -46,7 +46,7 @@ import kotlin.random.Random
  *
  * **One shape the engine does not process, an author rule** (maintainer, 2026-10-07 and 2026-10-09): one fm above a
  * `detune` that forks the note into two pitches. Its RESIDUE rows assert the difference and flip consciously the day
- * a fix lands; the build-time diagnostic is `docs/tasks/fm-above-forking-detune-diagnostic.md`.
+ * a fix lands; the build-time diagnostic is `docs/tasks/future/fm-above-forking-detune-diagnostic.md`.
  */
 class FmModulatorTopologySpec : StringSpec({
 

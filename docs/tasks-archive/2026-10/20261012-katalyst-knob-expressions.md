@@ -25,7 +25,7 @@ Q3, Q8 and Q12 by the maintainer, 2026-10-11, Q12's seed refined 2026-10-12; the
 - **E1 (Q2), a `seed` knob (5a), a tape-style delay tap (Q9), `blend(wet)` with a `Kat.param` (Q14)**:
   `docs/tasks/katalyst-knob-followups.md`, sections 1 to 4.
 - **The duck orbit switch click**: a modulated `duck.orbit` switches with no mechanism, as a `katp` one does:
-  `docs/tasks/by-ear/duck-orbit-switch-click.md` (the corner is recorded there).
+  `docs/tasks/future/duck-orbit-switch-click.md` (the corner is recorded there).
 
 ## Where to continue
 
@@ -303,7 +303,7 @@ body and vowel material/vowel indices step through the bank swap (the morph was 
      | phaser | `wet`, `floor` | the C4 pair glides over one block when EITHER is modulated (they share it; a `katp` move of the other then steps over one block too); the depth gate switches per block through the pair; an LFO through the gate lands the pair on identity, the next identity block clears the cascade, so every cycle restarts the cascade from rest (click-free: the wet coefficient is near 0 there) |
      | phaser | `center`, `sweep`; `rate` | one-block glides each; the rate at once. The `applied` short-circuit is defeated every block (step 6 measures) |
      | compressor | `threshold`, `ratio` (as its inverse), `knee`; `attack`, `release` | one-block glides; attack and release at once; the step 2 holders, no allocation (JVM). With a lookahead the attack resizes the box smoother CONTINUOUSLY (round 1: it re-primed both boxes on every length change, a gain step of 0.6 to 0.7) |
-     | duck | `depth`; `attack`; `orbit` | one-block glide; Q7: a modulating depth keeps the stage declared (`Ducking` reads a depth below 0 as 0), a NaN one does not (round 1); the attack at once; the orbit switches with no mechanism (the open item `docs/tasks/by-ear/duck-orbit-switch-click.md`); the switch weight keeps its 50 ms |
+     | duck | `depth`; `attack`; `orbit` | one-block glide; Q7: a modulating depth keeps the stage declared (`Ducking` reads a depth below 0 as 0), a NaN one does not (round 1); the attack at once; the orbit switches with no mechanism (the open item `docs/tasks/future/duck-orbit-switch-click.md`); the switch weight keeps its 50 ms |
      | body, vowel | `material`, `vowel` | ticked: a new index steps through the bank swap (20 ms, a change during a fade parked) |
      | body, vowel | `wet`, `floor` | ticked since 5c (Q8 (a)): the blend moves IN PLACE, no install. The pair of coefficients `dryGain`, `wetGain` glides per sample on every bank the swap holds (a fading pair included), over one block when either knob is modulated (they share the pair), 50 ms for a `katp` move otherwise; the bands ring on unless the mix lands at 0. Only a table change (index, on) installs through the swap, carrying its mix as one word; off fades the pair in service to dry. A mix at or below 0 bypasses once the blend has landed there; the landing block zeroes the band state, and a return starts the bands from rest under a wet coefficient from 0. (5b: refused at both doors and frozen when hand-built; 5c lifted both) |
      | eq | sections | refuse an expression, a modulator included (Q2, unchanged) |

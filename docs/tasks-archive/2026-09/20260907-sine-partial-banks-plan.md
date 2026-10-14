@@ -1,5 +1,8 @@
 # Sine partial banks: `harmonics`, `octaves` and `fundamental` on `Ignitor.sine()`
 
+**The plan, archived 2026-10-14 (maintainer, C11); the record of what was built is
+[`20260907-sine-partial-banks.md`](20260907-sine-partial-banks.md).**
+
 **Status: SHIPPED 2026-09-07, commit `6d4056f9` (C1 to C4, two review rounds, 14 mutation
 checks red). Archive record with the closing notes:
 `docs/tasks-archive/2026-09/20260907-sine-partial-banks.md`.** Kept in `docs/plans/` rather

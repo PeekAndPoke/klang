@@ -27,7 +27,7 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * The sine partial bank (`docs/plans/sine-partial-banks.md`): `IgnitorDsl.Sine` with `harmonics`,
+ * The sine partial bank (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`): `IgnitorDsl.Sine` with `harmonics`,
  * `octaves`, `suboctaves`, `fundamental` and `analogSpread`, rendered by `Ignitors.sinePartials`.
  *
  * The contract pinned here: the bank renders the SAME partials as the hand-rolled

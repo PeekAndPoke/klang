@@ -25,7 +25,7 @@ package io.peekandpoke.klang
  * 2026-10-05, one `range` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone, so a
  * twin is spelled as its signal with `.range(-1, 1)`. Syntax only; the renders are identical in raw doubles.
  *
- * 2026-10-03, the Ignitor/Katalyst naming (`docs/plans/ignitor-katalyst-naming.md`): the script object, its slot
+ * 2026-10-03, the Ignitor/Katalyst naming (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`): the script object, its slot
  * accessor and its slot setter are spelled with their new names (`Ign.`, `Ign.slot.`, `ignp`). Syntax only; the
  * renders are identical in raw doubles.
  *

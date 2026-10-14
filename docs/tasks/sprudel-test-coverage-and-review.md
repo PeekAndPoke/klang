@@ -51,6 +51,10 @@ forms in their own specs. A new knob of a listed door adds an entry there, not a
 
 ### Found 2026-09-24: 44 doors put no ARGUMENT location on their events
 
+**Decided 2026-10-14 (maintainer, C7):** the 44 doors put their argument's location on their events, and every location
+that already exists is passed through. Look first whether the central query and join helpers can do it in one place.
+The form-(d) sweep stays live here.
+
 Phase 3 step 3d(iii) strengthened `CallInfoTest`'s helper so a row must show a location that starts
 inside the call's argument span (before, any location passed, including the receiver's own mini-notation,
 so the file guarded nothing about arguments). 72 of 116 rows hold the strict check. 44 cannot, because no

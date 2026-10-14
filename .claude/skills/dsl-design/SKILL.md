@@ -254,7 +254,7 @@ the wire, and the backend registry/runtime. The Katalyst is the model:
 `Katalyst` object, `KatalystDsl`, `.katalyst()`, `KatalystRegistry`, no split.
 
 The split that was left open, a script object named apart from its type `IgnitorDsl`, is resolved (2026-10-04,
-`docs/plans/ignitor-katalyst-naming.md`): the script object, the wire field (`ignitorParams`), the setter
+`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`): the script object, the wire field (`ignitorParams`), the setter
 (`ignitorParam`) and the runtime all say Ignitor. A second, shorter name is the house pattern, for songs: `Ign` and
 `Kat` are `@KlangScript.Constant` vals holding the same object as `Ignitor` and `Katalyst`, so every member answers
 to both (no alias factory, no third name).

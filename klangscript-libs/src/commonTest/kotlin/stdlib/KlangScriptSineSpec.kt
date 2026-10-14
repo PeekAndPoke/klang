@@ -15,7 +15,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Door parity for the sine partial banks (`docs/plans/sine-partial-banks.md`): the script door
+ * Door parity for the sine partial banks (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`): the script door
  * `Ignitor.sine(freq, configure)` and the Kotlin door (`OscSineBuilder` on `IgnitorDsl.Sine`) build equal
  * nodes for every knob, `freq` stays the door's first parameter, and a sine without bank knobs is the
  * plain sine the engine short-circuits on.

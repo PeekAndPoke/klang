@@ -9,7 +9,7 @@
 > 4. Flanger and chorus: `docs/tasks/future/flanger-chorus.md`.
 > 5. Oversampler quality: folded into `docs/tasks/oversampling-regions.md` §6.
 > 6. Minor items: done, accepted by design (`.claude/skills/review-loop/audio-constraints.md`), or carried
->    (the cut-group hard cut is `docs/tasks/audit-audio-backend-leftovers.md` §4).
+>    (the cut-group hard cut is `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md` §4).
 
 Last updated: 2026-07-04.
 

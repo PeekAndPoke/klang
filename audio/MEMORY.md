@@ -180,7 +180,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Resource counts are capped, tones are not**: `coercePasses` (1 to 16), `coerceUnisonVoices` (0 to
   `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0) and `coerceSinePartials` (a sine plays its first
   `SINE_MAX_PARTIALS` = 256 explicit partials, the rest are not built), all in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
-- **The sine's partials** (`Ignitors.sinePartials`, `docs/plans/sine-partial-banks.md`): the fundamental and four banks,
+- **The sine's partials** (`Ignitors.sinePartials`, `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`): the fundamental and four banks,
   `harmonics`, `octaves`, `suboctaves` and the explicit `partials` (`IgnitorDsl.Sine.Partial(ratio, gain, phase)`,
   2026-10-10), summed raw, one loop per partial, every knob read once per block (an explicit partial's signal gain
   per sample, its moving phase gliding across the block), a partial whose frequency's MAGNITUDE is at or above
@@ -335,14 +335,14 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `duck-orbit-switch-click.md`, and the owed rounds listed there.
 - **Engine pass 1 follow-ups**: `docs/tasks/in-progress/engine-follow-ups.md` (the V8 residues, the phase-pool order, the
   audit's later steps and open decisions).
-- **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
+- **Open, correctness**: `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
   §4, the cut-group fade, done by lifecycle step 4), `docs/tasks/svf-coefficient-cache-never-engages.md`,
   `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (two NaN signal paths; its strip half closed with pitch
   pipeline step 4),
   `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md` (two residues, both an author rule today: a shared modulator that reads
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
   the mod again); the build-time diagnostic for the second, an fm above a forking detune:
-  `docs/tasks/fm-above-forking-detune-diagnostic.md`.
+  `docs/tasks/future/fm-above-forking-detune-diagnostic.md`.
 - **Scheduled or designed**: `docs/tasks/oversampling-regions.md`, `docs/tasks/master-dsl-followups.md`,
   `docs/tasks/katalyst-master-configure-doors.md`, `docs/tasks/pluck-release-tail.md`,
   `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
@@ -563,7 +563,7 @@ One line per step, newest first. A link to the archived task record where one ex
   `blockfloete` vibrato rates written as heard (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, B-1)
 - 2026-10-07 A shared modulator that reads no `Freq` runs once per block at any pitch; a non-finite pitch amount reads
   as unset; silence floors on the Eq parity specs; the wasm stub deleted (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`,
-  `docs/tasks-archive/2026-10/20261007-bugfix-ignitor-non-finite-pitch-amount.md`, `docs/tasks/audit-audio-backend-leftovers.md`)
+  `docs/tasks-archive/2026-10/20261007-bugfix-ignitor-non-finite-pitch-amount.md`, `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md`)
 - 2026-10-07 The saw's node is `Saw` end to end: the node `IgnitorDsl.Saw` (wire name `saw`), the factory
   `Ignitors.saw`; the sound names `sawtooth` / `saw` and the LFO shape `sawtooth` stay
   (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 3)
@@ -577,7 +577,7 @@ One line per step, newest first. A link to the archived task record where one ex
 - 2026-10-05 One `range`: the Ignitor's `unipolar()` / `bipolar()` go with their wire nodes; `range(0, 1)` and
   `mul(2).minus(1)` spell them (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`)
 - 2026-10-04 The Ignitor/Katalyst naming: the wire field is `ignitorParams`, `SoundValue.Dsl` holds an inline tree,
-  Katalyst params are their own type, `KatalystDsl.Slots` builds `classic` (`docs/plans/ignitor-katalyst-naming.md`)
+  Katalyst params are their own type, `KatalystDsl.Slots` builds `classic` (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`)
 - 2026-09-30 The reverb is one room for both ears (`CROSS_FEED` 0.5): [record](../docs/tasks-archive/2026-09/20260930-stereo-reverb.md)
 - 2026-09-29 The tremolo is composed from the oscillators (its own LFO removed, `skew`/`phase` gone, 16 ms edges, every depth floored at 0): [task](../docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md)
 - 2026-09-29 Filter drift is twice the pitch drift, by ear: [record](../docs/tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md)

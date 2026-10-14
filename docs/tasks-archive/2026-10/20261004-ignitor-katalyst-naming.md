@@ -1,5 +1,8 @@
 # Ignitor and Katalyst: one name each, end to end
 
+**Archived 2026-10-14 (maintainer, C11): done 2026-10-04. Its open Q10 (sprudel's bus doors reading their keys from
+`KatalystDsl.Slots`) moved to [`../../tasks/future/sprudel-bus-doors-katalyst-slots.md`](../../tasks/future/sprudel-bus-doors-katalyst-slots.md).**
+
 Planned 2026-10-03 from the maintainer's decisions of the same day (brief: `tmp/reviews/naming-plan-brief.md`).
 Status: **DONE 2026-10-04** on branch `ignitor-katalyst-naming` (commits C1 `807e42d3`, C2 `52e915f0`, D1 `d8b2642f`,
 C3 `1ac2f0b0`, C4 `e9250ea4`, then C5 with D2). Verified: a corpus of 18 songs (the built-ins and the frozen texts) over
@@ -270,7 +273,7 @@ carries `oscParams`). The old and new hash values go in the C1 commit message.
 - `FrozenSongs.kt` and `FrozenPieces.kt`: the SYNTAX-ONLY exception (maintainer, 2026-08-23) covers exactly this:
   "renames ... because a frozen song that no longer parses guards nothing. Values must never change." Each gets a
   dated line in its KDoc migration list ("2026-10, the Ignitor rename: the script object, its slot object and the
-  two setters, `docs/plans/ignitor-katalyst-naming.md`; the render bit-identical"), written WITHOUT the old
+  two setters, `docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`; the render bit-identical"), written WITHOUT the old
   spellings so the guard needs no allowlist line there.
 - `console/song-snapshots.sh` renders old tags' song texts on today's engine; texts before this rename stop
   parsing, exactly as its header already records for texts before `v0.3.8.2`. Its header gets one line.

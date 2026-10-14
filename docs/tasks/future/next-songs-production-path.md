@@ -1,6 +1,8 @@
 # The next songs: three references that pull the missing production tools in
 
-Status: **future; it waited for the engine tidy-up, which is done** (2026-10-09, v0.6.0, `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`). Agreed with the maintainer
+Status: **future, after the listening rounds (maintainer, 2026-10-14, C10): "trying to make guitar music worked kind of,
+but I am stuck there and need to learn more about sound design and production to make it really work, and working
+on new songs hopefully gives me new insights."** Before that it waited for the engine tidy-up, which is done (2026-10-09, v0.6.0, `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`). Agreed with the maintainer
 2026-10-08: "Let us wait until the current engine work / cleanup is done ... Will come back soon for writing the next
 song with you."
 

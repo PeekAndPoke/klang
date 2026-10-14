@@ -140,7 +140,7 @@ Ignitor.saw().mul(Ignitor.sine(4).range(0.5, 1)).plus(Ignitor.square().mul(Ignit
 Ignitor.sine(x => x.phase(Ignitor.sine(5).mul(0.2)))     // phase modulation by a 5 Hz LFO: a vibrato of about 6 Hz either way
 ```
 
-**Sine partial banks** (`Ignitor.sine` builder knobs; `docs/plans/sine-partial-banks.md`). The sine can carry banks
+**Sine partial banks** (`Ignitor.sine` builder knobs; `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`). The sine can carry banks
 of sine partials at multiples of ITS OWN frequency, rendered in one pass: `harmonics(count, rolloff = 1)` adds
 `count` partials at `2f, 3f, 4f ...`, `octaves(count, rolloff = 1)` at `2f, 4f, 8f ...`, `suboctaves(count,
 rolloff = 1)` at `f/2, f/4 ...`. An added partial at `m * f` or at `f / m` has gain `m ^ -rolloff` of its bank:

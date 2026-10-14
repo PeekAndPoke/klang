@@ -1,7 +1,7 @@
 # The pitch pipeline moves into the Ignitor tree
 
 Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lifecycle (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, done) and
-`code-style-named-args-pass.md`. Was: future, not planned. Named "its own later item" by the phase 3 spike (2026-09-20); opened as a file
+`../tasks-archive/2026-10/20261014-code-style-named-args-pass.md`. Was: future, not planned. Named "its own later item" by the phase 3 spike (2026-09-20); opened as a file
 2026-09-28 when the phase 3 record was archived (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md`,
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.
 **Planned 2026-10-07** (design worker, read-only on code): "The plan" below, six commits (steps 0 to 5) plus the
@@ -786,7 +786,7 @@ per block, N fms are N + 1 oscillator renders.
   identity node, `pitchMod(0)`, changes the output by -21.5 dB diff RMS under a vibrato on the note and -3.4 dB under
   an outer fm; nothing under a constant vibrato or any sprudel door; a RESIDUE row of `FmModulatorTopologySpec` pins
   it). The author rule covers both: "define the FM on both x and x.detune() and sum both", written
-  `x.fm(m1) + x.fm(m2).detune(7)`; the diagnostic is `../tasks/fm-above-forking-detune-diagnostic.md`. Unchanged: a modulator with an absolute `freq` (`Ign.sine(330)`),
+  `x.fm(m1) + x.fm(m2).detune(7)`; the diagnostic is `future/fm-above-forking-detune-diagnostic.md`. Unchanged: a modulator with an absolute `freq` (`Ign.sine(330)`),
   shielded like every absolute oscillator (B NIT); sprudel's own `fm` door, whose modulator lives in
   the strip's `FmRenderer` and follows nothing until step 4; a musical oscillator in a parameter position (the
   placement rule: it is not under the pitch node); the regrouping with sprudel `fm` (step 3's, ends in step 4).
@@ -867,7 +867,7 @@ per block, N fms are N + 1 oscillator renders.
 outer mod and detune scope; "better to have the general case first, maybe we find optimizations later"); an fm over
 another fm's carrier FOLLOWS; the one shape the engine cannot process (an fm above a forking `detune`) is an author
 rule ("define the FM on both x and x.detune() and sum both") with a build-time diagnostic as its own task
-(`fm-above-forking-detune-diagnostic.md`); `s("sgpad").fm(...)` in step 4 stays quiet and recorded, decided when it
+(`future/fm-above-forking-detune-diagnostic.md`); `s("sgpad").fm(...)` in step 4 stays quiet and recorded, decided when it
 happens on a real song. **Listened (maintainer, 2026-10-09):** the bell under `vib` "after" is fine; the two-modulator
 pair showed no audible difference, so "follows" stands. **The placement rule:** "`Ign.sine().fm(Ign.sine(), 3.5,
 400).vibrato(6, 0.5)` should mean the note's pitch. Otherwise it would probably be `Ign.sine().fm(Ign.sine().vibrato(),
@@ -1363,7 +1363,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     `Param`), "a non-zero literal is built", "a signal at 0 is built and writes 1.0" and the four bit-for-bit rows on
     a signal 0 with a probe beside the source; the non-finite rows split into "a non-finite literal builds no node",
     "renders the bare saw" and the signal-sample rows (a leaf behind an `OptimizerHint`). 18 rows. A3:
-    `pitchModSemitones` joins the list in `fm-above-forking-detune-diagnostic.md`. A4: the Kotlin `pitchMod(mod:
+    `pitchModSemitones` joins the list in `future/fm-above-forking-detune-diagnostic.md`. A4: the Kotlin `pitchMod(mod:
     Double)` overload, with parity rows (script by name, Kotlin Double). A5: the `PitchModFactories.kt` file KDoc names
     both converters. A6: "no clamp below `SAFE_MAX`". B1: the 7b bullet and the 7b note above. B3: the 7e bullet's
     bound (corrected in round 2: it names `AccelerateSemitoneLawSpec`, not P4). Mutation checks (one lock call each, `cp` restore, `cmp` clean): the gate removed red on the three

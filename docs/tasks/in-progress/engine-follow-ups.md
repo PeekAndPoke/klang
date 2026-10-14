@@ -1378,7 +1378,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 ## 5. Small leftovers
 
 18. **`VoiceFactory.buildVoice` takes `cut = data.cut` beside `data`** at both call sites, a redundancy. Source:
-    [`code-style-named-args-pass.md`](../code-style-named-args-pass.md), "Declarations". S.
+    [`code-style-named-args-pass.md`](../../tasks-archive/2026-10/20261014-code-style-named-args-pass.md), "Declarations". S.
 19. **`VcaOffTeardownSpec` keeps its file name** after its constant became `TEARDOWN_FADE_SECONDS`. Source: the record,
     step 5, "Left". S.
 20. **Test-only DSP entry points from the per-voice era** (audit A2.9): `Compressor.process(buffer, offset, length)`,
@@ -1475,7 +1475,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     the master's tail poll (1e-4 against 1e-5 everywhere else, decision D9). S each.
 26. **Step 20, the Katalyst by-ear items**, each with a home: A1.1
     ([`future/delay-ceiling-edges.md`](../future/delay-ceiling-edges.md)), A1.2
-    ([`by-ear/duck-orbit-switch-click.md`](../by-ear/duck-orbit-switch-click.md)), A1.3
+    ([`by-ear/duck-orbit-switch-click.md`](../future/duck-orbit-switch-click.md)), A1.3
     ([`by-ear/chain-swap-request-during-drain.md`](../by-ear/chain-swap-request-during-drain.md)), A1.9
     ([`future/transition-times.md`](../future/transition-times.md) §4).
 27. **The audit's decisions not taken yet** (section E): D2 (`MasterStage` against `MasterBus`, two "masters"), D4

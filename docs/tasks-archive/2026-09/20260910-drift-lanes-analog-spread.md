@@ -11,7 +11,7 @@
 > anchor below is a file and a line number as of `main` at `edcb5445` (2026-09-10). Re-grep before
 > editing, the numbers drift.
 > Priority: engine work-stream, "sound first". Estimated one day including the review loop.
-> Companion records: `docs/plans/sine-partial-banks.md` (where `analogSpread` was born, section 5.2
+> Companion records: `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md` (where `analogSpread` was born, section 5.2
 > step 4 has the drift math), `docs/tasks-archive/2026-09/20260907-sine-partial-banks.md`.
 
 ## 1. Why
@@ -293,7 +293,7 @@ next to `renderBlock()`.
 - `audio/MEMORY.md`: replace the `PolyAnalogDrift` mention; one status line for `DriftLanes` and
   the family-wide knob, pointing at this task (moved to `docs/tasks-archive/2026-09/` when done).
 - `klangscript/MEMORY.md`: one line under Recent Work.
-- `docs/plans/sine-partial-banks.md` section 5.2 step 4: one sentence that the drift lanes moved
+- `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md` section 5.2 step 4: one sentence that the drift lanes moved
   into `DriftLanes` and the supers share the knob.
 
 ## 11. Process

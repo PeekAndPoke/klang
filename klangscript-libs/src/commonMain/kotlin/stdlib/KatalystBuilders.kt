@@ -70,7 +70,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * means nothing on a bus knob (an oscillator has no bus value, a note frequency no bus note). Until 2026-10-12 such a
  * node was accepted and folded to one number when the chain was built; the type split removed that coercion.
  *
- * A BARE [IgnitorDsl.Param] keeps its own message (decision Q2 of `docs/plans/ignitor-katalyst-naming.md`,
+ * A BARE [IgnitorDsl.Param] keeps its own message (decision Q2 of `docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`,
  * 2026-10-03). THIS IS THE ONE HOME of the reason: an Ignitor param is the voice's slot by intent. Its author drives
  * it with `ignp`, which writes the voice's map and never reaches the chain, so on a chain the knob would sit at its
  * default while the song moves it; the fix is `Kat.param`. Not a coercion, for the reason [ignitorSlotName] gives:

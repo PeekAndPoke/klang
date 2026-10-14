@@ -5,7 +5,7 @@
 > redesign (`docs/plans/signal-flow-redesign.md`) rewrites most of what the campaign would have audited, and every
 > test written since 2026-08-02 is mutation-checked under `/review-loop` Standard 2, so the campaign as planned is
 > superseded. What was still concrete moved to
-> [`audit-audio-backend-leftovers.md`](../../tasks/audit-audio-backend-leftovers.md); the three parked
+> [`audit-audio-backend-leftovers.md`](../2026-10/20261014-audit-audio-backend-leftovers.md); the three parked
 > maintainer calls stay in [`audit-parked-decisions.md`](../../tasks/future/audit-parked-decisions.md); the §7
 > constraints list moved to `.claude/skills/review-loop/audio-constraints.md`. The brief below is the record as it
 > stood.

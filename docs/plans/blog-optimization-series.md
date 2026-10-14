@@ -482,7 +482,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   before it is double. Second act, DriftLanes (2026-09-10): one shared drift-lane container with
   the `analogSpread` blend, and the V8 lesson that reading a per-block value inside the sample
   loop cost 16 % of a drifting supersaw and nothing on the JVM.
-- **Artifacts.** `docs/plans/sine-partial-banks.md`, `docs/benchmarks/2026-09-07_sine-partial-banks_jvm.md`,
+- **Artifacts.** `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`, `docs/benchmarks/2026-09-07_sine-partial-banks_jvm.md`,
   `docs/tasks-archive/2026-09/20260907-*` (the sine bank record),
   `docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`,
   `docs/benchmarks/2026-09-10_drift-lanes_{jvm,nodejs}.md`, `audio/ref/memory-history.md` ("Loop shape beats

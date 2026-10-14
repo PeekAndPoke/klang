@@ -22,4 +22,4 @@ sound name where it earns one, and is tuned by ear.
 ## Covered since the spec
 
 - **Additive (sum of harmonics):** `Ignitor.sine()` with `harmonics`, `octaves` and `fundamental`
-  (`docs/plans/sine-partial-banks.md`, shipped 2026-09-07).
+  (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`, shipped 2026-09-07).
