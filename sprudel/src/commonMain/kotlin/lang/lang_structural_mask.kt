@@ -266,57 +266,12 @@ fun maskAll(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapper
 fun PatternMapperFn.maskAll(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.maskAll(*args, callInfo = callInfo) }
 
-// -- filter() ---------------------------------------------------------------------------------------------------------
+// -- filterWhen() -----------------------------------------------------------------------------------------------------
 
-private fun applyFilter(source: SprudelPattern, predicate: (SprudelPatternEvent) -> Boolean): SprudelPattern {
+/** Keeps only the events of [source] that satisfy [predicate]; shared by `filterWhen` and `within`. */
+internal fun applyFilter(source: SprudelPattern, predicate: (SprudelPatternEvent) -> Boolean): SprudelPattern {
     return source.map { events -> events.filter(predicate) }
 }
-
-/**
- * Filters events from this pattern using a predicate function.
- *
- * Only events for which [predicate] returns `true` are kept.
- *
- * @param predicate Function that receives a [SprudelPatternEvent] and returns `true` to keep it.
- * @return A pattern containing only the events that satisfy the predicate.
- *
- * No KlangScript example: an event's properties are not reachable from script today, so a
- * predicate written there has nothing to test. For time-based filtering use `filterWhen`,
- * which takes the begin time as a plain number. See docs/tasks/sprudel-function-testing.md.
- *
- * @category structural
- * @tags filter, gate, conditional, predicate
- */
-@KlangScript.Function
-fun SprudelPattern.filter(predicate: (SprudelPatternEvent) -> Boolean, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
-    applyFilter(this, predicate)
-
-/** Filters events from this string pattern using a predicate function. */
-@KlangScript.Function
-fun String.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).filter(predicate, callInfo)
-
-/**
- * Returns a [PatternMapperFn] that filters events from the source using a predicate.
- *
- * @param predicate Function that receives a [SprudelPatternEvent] and returns `true` to keep it.
- * @return A [PatternMapperFn] that keeps only events satisfying the predicate.
- *
- * No KlangScript example, for the same reason as [SprudelPattern.filter]: use `filterWhen`.
- *
- * @category structural
- * @tags filter, gate, conditional, predicate
- */
-@KlangScript.Function
-fun filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.filter(predicate, callInfo) }
-
-/** Chains a filter onto this [PatternMapperFn]; keeps only events satisfying the predicate. */
-@KlangScript.Function
-fun PatternMapperFn.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.filter(predicate, callInfo) }
-
-// -- filterWhen() -----------------------------------------------------------------------------------------------------
 
 /**
  * Filters events from this pattern based on their begin time.

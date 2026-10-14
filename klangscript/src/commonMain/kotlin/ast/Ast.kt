@@ -798,7 +798,7 @@ sealed class ArrowFunctionBody {
  * x => y => x + y
  *
  * // As callback argument
- * note("a b c").filter(x => x.data.note == "a")
+ * note("a b c d").filterWhen(t => t < 0.5)
  *
  * // Returning object literal (wrapped in parens to avoid ambiguity)
  * x => ({ value: x, doubled: x * 2 })

@@ -140,7 +140,7 @@ private const val SEPARATOR = "--------"
  *
  * It was 42 of 1425 when this gate was introduced (2026-08-31): 38 were doc rot and were fixed,
  * and the last 4 were removed from the KDoc because they were not rot at all but call forms no
- * test has ever run — see `docs/tasks/sprudel-function-testing.md`. Keep it empty if you can:
+ * test has ever run — see `docs/tasks-archive/2026-10/20261014-sprudel-function-testing.md`. Keep it empty if you can:
  * an entry here is a to-do, never an exemption, and the ratchet below means it can only shrink.
  *
  * Records are separated by [SEPARATOR]; a record starting with `#` is a comment.

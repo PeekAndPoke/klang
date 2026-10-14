@@ -17,7 +17,6 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.sprudel.pattern.ControlPattern
-import io.peekandpoke.klang.sprudel.pattern.RandLPattern
 import io.peekandpoke.klang.sprudel.pattern.RandrunPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
 import io.peekandpoke.klang.sprudel.pattern.SeedPattern
@@ -332,35 +331,6 @@ internal fun applyIrand(args: List<SprudelDslArg<Any?>>): SprudelPattern {
 @KlangScript.Function
 fun irand(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyIrand(listOf(n).asSprudelDslArgs(callInfo))
-
-// -- randL() ----------------------------------------------------------------------------------------------------------
-
-private fun applyRandL(args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val nArg = args.getOrNull(0)
-    val nVal = nArg?.value
-
-    val nPattern: SprudelPattern = (nArg ?: SprudelDslArg.of("0")).toPattern()
-
-    val staticN = nVal?.asIntOrNull()
-
-    return RandLPattern.create(nPattern, staticN)
-}
-
-/**
- * Creates a pattern that produces a list (array) of `n` random numbers (0–1).
- *
- * The list is resampled each cycle, for parameters that accept a list of values.
- *
- * No example: the only documented consumer was `partials`, which does not exist in the
- * codebase. See docs/tasks/sprudel-function-testing.md.
- *
- * @param n Number of random values to produce in each list. Any positive integer.
- * @category random
- * @tags randL, random, list, array, partials
- */
-@KlangScript.Function
-fun randL(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyRandL(listOf(n).asSprudelDslArgs(callInfo))
 
 // -- randrun() --------------------------------------------------------------------------------------------------------
 

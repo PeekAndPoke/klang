@@ -133,7 +133,7 @@ setter semantics) and `/dsl-design`. What they produce today:
 - `scale()` KDoc should say that later `.scale()` calls do not re-pitch (not written yet).
 - `docs/tasks/sprudel-sound-doors-compound.md` and `docs/tasks/sprudel-sound-function-surface.md`: the
   `snd*` family, the last doors that are not compound objects.
-- `docs/tasks/sprudel-function-testing.md`, `docs/tasks/sprudel-test-coverage-and-review.md`,
+- `docs/tasks-archive/2026-10/20261014-sprudel-function-testing.md`, `docs/tasks/sprudel-test-coverage-and-review.md`,
   `docs/tasks/sprudel-ui-tools.md`.
 - `docs/tasks/future/string-slot-readers.md`, `docs/tasks/future/editor-voice-door-diagnostics.md`,
   `docs/tasks/future/optimize-constant-control-fast-path.md`, `docs/tasks/oversampling-regions.md`.

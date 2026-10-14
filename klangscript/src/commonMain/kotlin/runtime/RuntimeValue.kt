@@ -238,7 +238,7 @@ data class NativeFunctionValue(
  *
  * **Usage in callbacks:**
  * ```javascript
- * note("a b c").filter(x => x.data.note == "a")
+ * note("a b c d").filterWhen(t => t < 0.5)
  * ```
  *
  * @param parameters List of parameter names

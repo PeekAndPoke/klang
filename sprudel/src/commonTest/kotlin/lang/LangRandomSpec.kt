@@ -206,67 +206,6 @@ class LangRandomSpec : StringSpec({
         }
     }
 
-    "randL oscillator".config(enabled = false) {
-        withClue("randL(4) produces integers in [0, 3] and changes over time") {
-            val n = 4
-
-            val pattern = randL(n)
-            val events1 = pattern.queryArc(0.0, 1.0)
-            val events2 = pattern.queryArc(1.0, 2.0)
-
-            // Check structure: randL(n) creates a sequence of n events per cycle
-            events1.size shouldBe n
-            events2.size shouldBe n
-
-            // Check values range
-            events1.forEach {
-                val v = it.data.value?.asDouble!!
-                (v >= 0 && v < 8) shouldBe true // The impl uses random.nextInt(0, 8), is that correct for n argument?
-            }
-
-            // Check that it changes (highly likely)
-            val values1 = events1.map { it.data.value?.asDouble }
-            val values2 = events2.map { it.data.value?.asDouble }
-            values1 shouldNotBe values2
-        }
-
-        withClue("randL(4).seed(1) produces consistent results") {
-            val n = 4
-            val pattern = randL(n).seed(1)
-
-            val events1 = pattern.queryArc(0.0, 1.0)
-            val events2 = pattern.queryArc(1.0, 2.0) // Next cycle
-
-            // Wait, if seeded, does it repeat exactly every cycle?
-            // The implementation uses `val seed = fraction * 100`.
-            // `evt.begin` increases. `evt.begin.floor()` increases.
-            // `fraction` = `evt.begin - evt.begin.floor()` should be the same for the same position in cycle.
-            // e.g. event 0 at 0.0: frac 0. event 0 at 1.0: frac 0.
-            // event 1 at 0.25: frac 0.25. event 1 at 1.25: frac 0.25.
-            // So yes, `seed` depends on `fraction` which is periodic.
-            // So it SHOULD repeat every cycle if the context seed is fixed.
-
-            val values1 = events1.map { it.data.value?.asDouble }
-            val values2 = events2.map { it.data.value?.asDouble }
-
-            values1 shouldBe values2
-        }
-
-        withClue("randL with different seeds produces different results") {
-            val n = 4
-            val p1 = randL(n).seed(123)
-            val events1 = p1.queryArc(0.0, 1.0)
-
-            val p2 = randL(n).seed(456)
-            val events2 = p2.queryArc(0.0, 1.0)
-
-            val values1 = events1.map { it.data.value?.asDouble }
-            val values2 = events2.map { it.data.value?.asDouble }
-
-            values1 shouldNotBe values2
-        }
-    }
-
     "randrun oscillator" {
         withClue("randrun(4) produces a permutation of 0..3 per cycle") {
             val n = 4

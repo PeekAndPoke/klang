@@ -1,5 +1,7 @@
 # Sprudel functions that nothing exercises
 
+**Archived 2026-10-14: nothing left open; `randL` and `filter` were cut (maintainer, C5 / Q41).**
+
 > Opened 2026-08-31, from the doc-example compile sweep (`docs/tasks-archive/2026-09/20260927-dsl-doc-example-rot.md`).
 > `DslDocExamplesSpec` compiled the 1425 playable examples in sprudel's own KDoc and found 42
 > broken, and querying a cycle found 4 more. Most were doc rot and were fixed. The rest were
@@ -23,7 +25,7 @@ not. `rev` is `fun rev(n: PatternLike = 1): PatternMapperFn`, so a bare `rev` is
 All three `pickF` examples are back in the KDoc, spelled `jux(rev())`, and pass the gate.
 
 What is left is a papercut, parked in
-[`future/bugfix-native-interop-function-values.md`](future/bugfix-native-interop-function-values.md): the
+[`future/bugfix-native-interop-function-values.md`](../../tasks/future/bugfix-native-interop-function-values.md): the
 spelling that fails is the point-free one every Tidal and Strudel user reaches for first, and it
 fails with an internal cast error rather than a "did you mean `rev()`?" diagnostic. The affected
 surface (every function taking a `PatternMapperFn`) is listed there.
@@ -32,53 +34,18 @@ surface (every function taking a `PatternMapperFn`) is listed there.
 `JsCompatTestData.kt` uses the arrow form (`x => x.add(1)`). None passes a named transform, in
 either spelling.
 
-## 2. `partials` does not exist
+## 2. `randL`
 
-`randL`'s only example, and the prose around it, promised a `partials` parameter:
+Cut 2026-10-14 (maintainer, C5).
 
-```
-s("saw").n(irand(12)).scale("F1:minor").partials(randL(8))   // 8 random partials
-```
+## 3. `filter`
 
-`partials` appears nowhere in `sprudel`, `audio_bridge` or `audio_be`. `randL` itself works and
-produces a list per cycle, but nothing in the codebase consumes a list-valued pattern, so the
-function currently has no reachable purpose. The example and the false prose were removed; `randL`
-is now documented without an example, which is itself a signal.
-
-**Decision needed, not a bug to fix blind:** either add `partials` (and settle what it drives), or
-retire `randL`, or point it at a list-consuming parameter that exists.
-
-## 3. `filter`'s predicate cannot inspect an event from KlangScript
-
-All three `filter` examples failed, and not on syntax:
-
-```
-s("bd sd hh cp").filter(x => x.part.begin < 0.5)   -> 'SprudelPatternEvent' has no method 'part'
-note("c d e f").filter(x => x.isOnset)             -> 'SprudelPatternEvent' has no method 'isOnset'
-```
-
-`SprudelPatternEvent` is a plain Kotlin data class with `part`, `whole`, `data` and friends, but
-none of it is reachable from script, so a predicate written in KlangScript has nothing it can test
-and `filter` has no usable script surface at all. The Kotlin door is fine; only the script one is
-empty.
-
-`filterWhen` does the time-based half of what those examples wanted and takes the begin time as a
-plain number, so it works from script and the built-in songs use it. The examples were removed and
-both `filter` KDocs now say so and point there.
-
-**Decision needed:** expose the event's useful fields to the interop (`part.begin`, `isOnset`,
-maybe `data`), or drop `filter` from the KlangScript surface and keep `filterWhen` as the script
-door.
+Cut 2026-10-14 (maintainer, C5).
 
 ## Doors now left without any example
 
-Removing the failing examples left these with none. They are not wrong, just undocumented by
-example, and they should get one when item 1 is fixed:
-
-- `randL`
-- `SprudelPattern.filter` and the top-level `filter` mapper
-
-(The three `pickF` doors got their examples back once item 1 turned out to be a missing call.)
+None. `randL` and `filter` were cut 2026-10-14 (maintainer, C5), and the three `pickF` doors got
+their examples back once item 1 turned out to be a missing call.
 
 ## Why this class of gap survives
 

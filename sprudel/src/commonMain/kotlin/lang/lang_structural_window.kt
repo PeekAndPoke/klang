@@ -148,9 +148,9 @@ private fun applyWithin(
         }
     }
 
-    val inside = source.filter(isBeginInWindow)
+    val inside = applyFilter(source, isBeginInWindow)
     val outsidePredicate: (SprudelPatternEvent) -> Boolean = { !isBeginInWindow(it) }
-    val outside = source.filter(outsidePredicate)
+    val outside = applyFilter(source, outsidePredicate)
 
     return StackPattern(listOf(transform(inside), outside))
 }
