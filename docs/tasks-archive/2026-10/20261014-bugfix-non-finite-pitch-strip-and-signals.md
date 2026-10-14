@@ -1,7 +1,10 @@
 # A non-finite pitch amount on the sprudel strip, and the per-sample NaN signal paths
 
+**Archived 2026-10-14 (maintainer, Q40 / C3): §2 is left to the author for now: a non-finite SIGNAL sample is the
+author's own, no per-sample guard. §1 was closed 2026-10-10.**
+
 Status: **open, correctness, small.** Section 1 closed 2026-10-10 (pitch pipeline step 4); section 2 open. Carved out 2026-10-07 from
-[`20261007-bugfix-ignitor-non-finite-pitch-amount.md`](../tasks-archive/2026-10/20261007-bugfix-ignitor-non-finite-pitch-amount.md) (done for the Ignitor door:
+[`20261007-bugfix-ignitor-non-finite-pitch-amount.md`](20261007-bugfix-ignitor-non-finite-pitch-amount.md) (done for the Ignitor door:
 `finiteOr` on vibrato, accelerate, pitch envelope and FM amounts in `PitchModFactories.kt`), where review round 1
 found these. Section 2 not started.
 

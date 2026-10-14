@@ -12,7 +12,7 @@ import io.kotest.matchers.shouldNotBe
 import kotlin.math.abs
 
 /**
- * The contract of [KnobGlide] (`docs/plans/knob-glide.md` §3). Every oracle here is the straight
+ * The contract of [KnobGlide] (`audio/ref/knob-glide.md` §3). Every oracle here is the straight
  * line from the start to the target over the glide time, written out by hand; none is read back
  * from the class.
  *

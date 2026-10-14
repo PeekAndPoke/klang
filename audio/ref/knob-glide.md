@@ -1,5 +1,7 @@
 # Knob glide: orbit settings change smoothly, never in one step
 
+> Moved from `docs/plans/` to `audio/ref/` 2026-10-14 (maintainer, Q43): no longer a plan, a law the engine follows.
+
 Decided 2026-09-19 with the maintainer (signal-flow plan section 7, the insert-style sends).
 Status: the pilot on the orbit reverb is the first step; this file is where its lessons land.
 

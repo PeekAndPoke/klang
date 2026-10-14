@@ -25,7 +25,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  * additive identities elsewhere in the engine, because this is a multiply by exactly 1.0, which
  * returns `-0.0` for `-0.0` anyway; skipping it is a saving, not a different answer.
  *
- * **A change GLIDES, per sample, over `KNOB_GLIDE_SECONDS`** (`docs/plans/knob-glide.md`, the LEVEL
+ * **A change GLIDES, per sample, over `KNOB_GLIDE_SECONDS`** (`audio/ref/knob-glide.md`, the LEVEL
  * rule; Katalyst 5c-8). At the output a written number is a constant (nothing fills a slot there,
  * phase 3 step 12 decision (b)), so a new number is a new chain and the 60 ms bus crossfade covers
  * it. On an orbit the factor can be a slot, so
@@ -45,7 +45,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  * look less trivial, a host reset landing under sounding notes, is gone since 5c-8: that was the
  * host's precondition to fix, not a state of this stage (answer 3 below).
  *
- * **The plan's four questions, for this stage** (`docs/plans/effect-state-machines.md` section 2):
+ * **The plan's four questions, for this stage** (`audio/ref/effect-state-machines.md` section 2):
  *
  *  1. *What outlives its states*: the level in force, [gain]. Every glide starts from it, a retarget
  *     mid-glide included, so nothing that begins a glide may touch it. Row: "a new target mid-glide

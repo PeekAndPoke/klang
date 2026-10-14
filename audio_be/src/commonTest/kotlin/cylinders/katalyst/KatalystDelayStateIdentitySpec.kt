@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
  * transition is on the audio thread.
  *
  * **What this spec guards is "the state machine adds no allocation"** (section 1 of
- * `docs/plans/effect-state-machines.md` and its identity-spec bullet), and only that. Rule 3's
+ * `audio/ref/effect-state-machines.md` and its identity-spec bullet), and only that. Rule 3's
  * "`enter` initialises the target's own data, so a state never carries a previous life's values" is
  * behaviour and is guarded in `KatalystDelayEffectSpec`: replacing `draining.enter(remaining)`
  * with a bare `state = draining` leaves every row HERE green and turns the drain rows there red,

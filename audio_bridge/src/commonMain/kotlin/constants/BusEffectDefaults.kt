@@ -187,7 +187,7 @@ const val DISTORT_OVERSAMPLE: Int = 2
 /**
  * How long an orbit knob takes to reach a new value, in seconds: a gliding knob moves there over
  * this time instead of jumping, because two patterns on one orbit take turns owning it and each
- * owner change can move every knob of the chain at once (`docs/plans/knob-glide.md`, decided 2026-09-19).
+ * owner change can move every knob of the chain at once (`audio/ref/knob-glide.md`, decided 2026-09-19).
  *
  * A safety net against clicks, applied per knob where a jump is AUDIBLE, not by default to every
  * knob. It grew well past its pilot (the orbit reverb's size, whose damping was measured to need

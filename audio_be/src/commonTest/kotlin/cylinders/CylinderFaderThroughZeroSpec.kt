@@ -41,7 +41,7 @@ import kotlin.math.round
  * checks in each block and keeps the orbit in use until one block after its last check-in), OWNERSHIP
  * (the newest sounding voice owns; when it stops, the next owns from that block, `Cylinder.offer`), and
  * the knob-glide LEVEL law (linear over `KNOB_GLIDE_SECONDS` rounded to whole
- * blocks, per sample, landing exactly; `docs/plans/knob-glide.md`), applied to a reference render of
+ * blocks, per sample, landing exactly; `audio/ref/knob-glide.md`), applied to a reference render of
  * the same voices at unity.
  */
 class CylinderFaderThroughZeroSpec : StringSpec({

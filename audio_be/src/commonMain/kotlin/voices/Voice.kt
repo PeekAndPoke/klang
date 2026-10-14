@@ -473,7 +473,7 @@ class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
 
     /**
-     * A voice's lifecycle state, a sealed type (`docs/plans/effect-state-machines.md` §1, the maintainer's rule
+     * A voice's lifecycle state, a sealed type (`audio/ref/effect-state-machines.md` §1, the maintainer's rule
      * of 2026-10-07): a state without data of its own is a `data object`; a state with data only it may see is a
      * class whose one instance is created with the voice; its `enter(...)` sets the state's data and returns the
      * state, and a transition is the one line `state = x.enter(...)`, so neither a transition nor a block

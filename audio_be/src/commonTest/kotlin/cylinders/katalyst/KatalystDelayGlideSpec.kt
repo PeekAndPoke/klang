@@ -17,7 +17,7 @@ import kotlin.math.ln
 import kotlin.math.sin
 
 /**
- * The orbit delay's `feedback` and `wet` GLIDE (`docs/plans/knob-glide.md`, Katalyst step 5b-2):
+ * The orbit delay's `feedback` and `wet` GLIDE (`audio/ref/knob-glide.md`, Katalyst step 5b-2):
  * the feedback per block (a COEFFICIENT), the wet per sample (a LEVEL). The oracles are independent
  * of the code under test: a bare [DelayLine] configured BY HAND with the straight-line values and
  * fed a feed computed by hand, and the drain countdown's formula evaluated by hand.

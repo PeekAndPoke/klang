@@ -24,7 +24,7 @@ import kotlin.math.min
  * into that same mix, so the dry signal stays and whatever follows in the chain (the reverb in the
  * classic order) hears the echoes. The same effect runs at the output (`master(...)`).
  *
- * **What glides** (`docs/plans/knob-glide.md`), each because its jump was measured audible first
+ * **What glides** (`audio/ref/knob-glide.md`), each because its jump was measured audible first
  * (step 5b-2, a band-limited pad and a pluck, energy above 8 kHz against a hard cut of the return):
  *  - `wet`, a LEVEL knob, per sample ([KnobGlide.advanceScaled]) into the feed.
  *  - `feedback`: a jump sat at -28 to -35 dB for 0.3 to 0.7, 0.7 to 0.0 and 0.0 to 0.9 (a hard
@@ -299,7 +299,7 @@ class KatalystDelayEffect(
     private val activeTail = TailCeiling()
 
     /**
-     * The lifecycle as a state machine (`docs/plans/effect-state-machines.md`), one class per
+     * The lifecycle as a state machine (`audio/ref/effect-state-machines.md`), one class per
      * state. One instance of each is created with the effect and [state] points at the current
      * one, so a transition is a pointer swap and nothing allocates on the audio thread. `enter`
      * is the only way into a state, and it is what resets that state's own data.
@@ -435,7 +435,7 @@ class KatalystDelayEffect(
             //
             // Mid-glide the feedback keeps moving through the drain (see [advanceGlide]), between
             // the one in force and the target, so the larger magnitude of the two bounds every
-            // period to come (the reverb's rule, `docs/plans/knob-glide.md` pilot log entry 6).
+            // period to come (the reverb's rule, `audio/ref/knob-glide.md` pilot log entry 6).
             // Read from the glide: an Active configure earlier in this block may have written its
             // target into the line already.
             val drainFeedback = if (feedbackGlide.isGliding) {
@@ -552,7 +552,7 @@ class KatalystDelayEffect(
     /**
      * Test seam: the current state OBJECT, for `KatalystDelayStateIdentitySpec`, which walks a full
      * transition cycle and asserts that only ever those three instances appear. That is how the
-     * "a transition allocates nothing" rule of `docs/plans/effect-state-machines.md` is guarded
+     * "a transition allocates nothing" rule of `audio/ref/effect-state-machines.md` is guarded
      * without an allocation profiler. Production never reads it.
      */
     internal val currentState: Any get() = state

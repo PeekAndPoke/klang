@@ -29,7 +29,7 @@ import io.peekandpoke.klang.common.infra.toKlangMap
  * audio thread, where nothing may allocate.
  *
  * What this spec guards is "the state machine adds no allocation" and only that
- * (`docs/plans/effect-state-machines.md`, the identity-spec bullet): it drives the cells of the
+ * (`audio/ref/effect-state-machines.md`, the identity-spec bullet): it drives the cells of the
  * table on [ChainSwap] through the HOST, a real [Cylinder], and asserts after each that the state is
  * one of the four instances seen first. Every state x event cell is driven, with one arm left out:
  * the late duck TAKEOVER of Fading x `ownerClaimed`, a data arm with no transition (its own rows are

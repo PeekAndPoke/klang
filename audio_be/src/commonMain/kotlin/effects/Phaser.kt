@@ -213,7 +213,7 @@ class Phaser(sampleRate: Int) {
      * One block of [buffer], in place.
      *
      * Every knob arrives as the value the GLIDE holds for this block, never as a field read
-     * (Katalyst 5c-9, `docs/plans/knob-glide.md`): `KatalystPhaserEffect` owns one
+     * (Katalyst 5c-9, `audio/ref/knob-glide.md`): `KatalystPhaserEffect` owns one
      * `KnobGlide` per knob and hands the results in.
      *
      * - [centerTo] and [sweepTo] are the breakpoint this block ENDS at; the cores start from the

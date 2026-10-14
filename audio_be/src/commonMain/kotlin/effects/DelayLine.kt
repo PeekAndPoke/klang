@@ -38,7 +38,7 @@ import kotlin.math.round
  *   `pos - delayInt`); `alpha=1` reads `s2` (one sample older).
  * - **A `time` change CROSSFADES from the old tap to the new one** over
  *   [KNOB_GLIDE_SECONDS], a linear per-sample ramp that feeds the output and
- *   the feedback path alike (`docs/plans/knob-glide.md`: the time never glides,
+ *   the feedback path alike (`audio/ref/knob-glide.md`: the time never glides,
  *   a glide would bend the echoes' pitch). Measured in Katalyst step 5b-2: the
  *   jump it replaces sat at -20 to -29 dB above 8 kHz on a band-limited pad,
  *   the class of a hard cut; with the crossfade it sits at the steady-state

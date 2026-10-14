@@ -1,5 +1,8 @@
 # The engine as a signal graph; sprudel's layout as one built-in graph
 
+> Also called "the configurable Motor" (maintainer, 2026-10-14): the engine's layout (cylinders, Katalysts, the
+> master) becomes a fully configurable graph instead of today's fixed buses into the master.
+
 Status: FUTURE, a long-term vision (maintainer, 2026-09-25). Tackled after the current engine
 redesign workstream (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` phase 3 and the signal-flow plan) is fully
 finished: "finishing the current workstream fully does not hurt. It lays a lot of foundations."

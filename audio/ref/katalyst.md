@@ -113,7 +113,7 @@ The glide time itself is an open question for the maintainer's ear: `docs/tasks/
 
 ## Writing a stage lifecycle: the state-machine template
 
-The plan is `docs/plans/effect-state-machines.md`; the delay (`KatalystDelayEffect`) is the template, and the
+The plan is `audio/ref/effect-state-machines.md`; the delay (`KatalystDelayEffect`) is the template, and the
 reverb, the filter swap and the compressor copy it. What every copy must keep:
 
 - **The tail question has THREE askers, and a new stage answers all three** (2026-10-09, the `distort` stage's review,

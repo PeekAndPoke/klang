@@ -63,7 +63,7 @@ import kotlin.math.min
  * orbit, and at the output the playback, runs late by it. Without oversampling there is none (this constructor's
  * default; a stage built from the DSL oversamples at 2x unless it names a factor, `DISTORT_OVERSAMPLE`).
  *
- * The lifecycle is a state machine (`docs/plans/effect-state-machines.md`), the shape of
+ * The lifecycle is a state machine (`audio/ref/effect-state-machines.md`), the shape of
  * [KatalystCompressorEffect]; the table on [State] is authoritative for its edges.
  *
  * **The four questions of the plan:**

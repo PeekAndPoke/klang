@@ -120,7 +120,7 @@ class KatalystReverbEffectSpec : StringSpec({
     }
 
     "a reverb that returns mid-drain keeps the network AND the tail ceiling" {
-        // The Draining -> Active edge (docs/plans/effect-state-machines.md, the re-entry
+        // The Draining -> Active edge (audio/ref/effect-state-machines.md, the re-entry
         // requirement): coming back re-arms NOTHING. The network keeps its content (the tail
         // continues under the new room, send-return semantics) and the tail ceiling keeps its
         // value, so the orbit still reports a tail while the room is audibly ringing. A converter
@@ -470,7 +470,7 @@ class KatalystReverbEffectSpec : StringSpec({
 
         effect.hasTail() shouldBe true // the tail was NOT cut
 
-        // The network holds a tail, so the new room GLIDES in (docs/plans/knob-glide.md): the first
+        // The network holds a tail, so the new room GLIDES in (audio/ref/knob-glide.md): the first
         // block runs one step on the way, and the new owner's size is in force after the loop.
         ctx.mixBuffer.fill(0.3)
         effect.process(ctx)

@@ -2386,7 +2386,7 @@ sealed interface IgnitorDsl {
      * (`x 1.5`), -0.5 an octave down, and -1.0 stops the oscillator (ratio 0). The law of FM: a modulator's swing
      * around the carrier. For a modulation in SEMITONES (the exponential law, `2^(mod / 12)`) see [PitchModSemitones].
      * No switch and no clamp: the ratio passes raw, a NaN sample of [mod] included
-     * (`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2).
+     * (`docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2).
      */
     @WireName("pitch-mod")
     data class PitchMod(
@@ -2410,7 +2410,7 @@ sealed interface IgnitorDsl {
      * A signal [mod] is always built. The ratio passes through `safeOut`, no clamp below it: past about 598 semitones it
      * holds at `SAFE_MAX`. A non-finite SAMPLE of a signal: +Infinity reads as `SAFE_MAX`, NaN or -Infinity as the
      * ratio 0, which holds the source still, as `pitchMod`'s raw NaN and FM's modulator do
-     * (`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2).
+     * (`docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2).
      */
     @WireName("pitch-mod-semitones")
     data class PitchModSemitones(

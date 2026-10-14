@@ -50,7 +50,7 @@ Each call is a stage. Per channel, the same operand on left and right. Memoryles
 - The laws and their clamps: `_arithmetic_laws.kt`. `Plus` and `Minus` are bare; `Times`, `Div` and `Pow` apply
   `safeOut` (±1e15, NaN to 0); `Div` maps a divisor of exactly zero to zero and guards any other with `safeDiv`.
 - The Katalyst `gain` stage (`KatalystGainEffect`) multiplies WITHOUT `safeOut`, glides a change over
-  `KNOB_GLIDE_SECONDS` (`KnobGlide`, the LEVEL rule of `docs/plans/knob-glide.md`) and skips the multiply at exactly
+  `KNOB_GLIDE_SECONDS` (`KnobGlide`, the LEVEL rule of `audio/ref/knob-glide.md`) and skips the multiply at exactly
   unity (bit-transparent).
 - A Katalyst knob takes a number or a `Kat.param`, through `toKatalystKnob` (`KatalystBuilders.kt`); a bare
   `Ignitor.param` is a script error there. A `Param` knob reads the orbit's `katp` state per block; at the output
@@ -162,4 +162,4 @@ Ignitor nodes); the cost of the stages goes into the harness with `docs/tasks-ar
 - `docs/plans/future/signal-graph-engine.md` §6.10 (the unified hierarchy, considered and set aside).
 - `audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt` and `docs/tasks/future/ignitor-optimizer-open-items.md`
   (the Ignitor optimizer this one borrows its rule shape from).
-- `docs/plans/knob-glide.md` (D4).
+- `audio/ref/knob-glide.md` (D4).

@@ -17,7 +17,7 @@ import kotlin.math.ln
 import kotlin.math.sin
 
 /**
- * The orbit reverb's size GLIDES (`docs/plans/knob-glide.md`, the pilot). The oracles
+ * The orbit reverb's size GLIDES (`audio/ref/knob-glide.md`, the pilot). The oracles
  * are independent of the code under test: the per-block values of a linear glide written out by
  * hand and handed to a bare [Reverb], the Freeverb feedback law `size * 0.28 + 0.7`, and the drain
  * countdown's formula evaluated by hand.

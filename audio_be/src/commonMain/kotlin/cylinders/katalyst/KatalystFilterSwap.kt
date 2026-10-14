@@ -57,7 +57,7 @@ import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
  * any pair is still heard. A host with a parked config knows one more thing than this class does,
  * so the intent a test seam reports is the host's, not [active] alone.
  *
- * The lifecycle is a state machine (`docs/plans/effect-state-machines.md`), the shape of
+ * The lifecycle is a state machine (`audio/ref/effect-state-machines.md`), the shape of
  * [KatalystDelayEffect]; the table on [State] is authoritative for its edges.
  *
  * **The four questions of the plan, answered for this swap:**

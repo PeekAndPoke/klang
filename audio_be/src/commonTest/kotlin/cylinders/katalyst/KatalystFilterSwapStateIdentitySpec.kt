@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter
  * between three objects created with the swap. The shape is `KatalystDelayStateIdentitySpec`'s.
  *
  * **What this spec guards is "the state machine adds no allocation"** (section 1 of
- * `docs/plans/effect-state-machines.md`), and only that. What the edges DO (the fade position a fade
+ * `audio/ref/effect-state-machines.md`), and only that. What the edges DO (the fade position a fade
  * starts from, the references a finished life drops, the cut and the instant install at Off) is
  * guarded in `KatalystFilterSwapSpec`.
  *

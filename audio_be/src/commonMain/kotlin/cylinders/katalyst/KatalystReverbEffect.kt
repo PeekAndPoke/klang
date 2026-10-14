@@ -67,7 +67,7 @@ import kotlin.math.min
  *
  * This adoption fixes the GATE shape only; the Freeverb internals keep their own audit round.
  *
- * **The room's SIZE glides** (`docs/plans/knob-glide.md`, the pilot, 2026-09-19): a new size
+ * **The room's SIZE glides** (`audio/ref/knob-glide.md`, the pilot, 2026-09-19): a new size
  * reaches the network over [KnobGlide]'s ~50 ms, one step per block, instead of in one step. It is
  * a COEFFICIENT knob, so the per-block value is written into the [Reverb] before it processes the
  * block ([advanceGlide]) and the shared DSP is untouched (the master shares it and does not
@@ -188,7 +188,7 @@ class KatalystReverbEffect(
         KnobGlide(sampleRate = units.sampleRate, blockFrames = blockFrames, modulated = sizeModulated)
 
     /**
-     * The lifecycle as a state machine (`docs/plans/effect-state-machines.md`, the shape of
+     * The lifecycle as a state machine (`audio/ref/effect-state-machines.md`, the shape of
      * [KatalystDelayEffect]), one class per state. One instance of each is created with the effect
      * and [state] points at the current one, so a transition is a pointer swap and nothing
      * allocates on the audio thread. `enter` is the only way into a state, and it is what
@@ -302,7 +302,7 @@ class KatalystReverbEffect(
             // non-finite comb cell makes the countdown non-finite (combPeakAbs reports any
             // poisoned cell as +Inf), and the reset is the heal (review rounds 1-2; the old
             // gate's takeover path provided exactly this exit). That second half is the reverb's
-            // own; the delay's test has no such arm (docs/plans/effect-state-machines.md, "copy the
+            // own; the delay's test has no such arm (audio/ref/effect-state-machines.md, "copy the
             // shape, not the condition").
             //
             // Mid-glide the size keeps moving through the drain (see [advanceGlide]), between the

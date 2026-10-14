@@ -56,7 +56,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   Done terminal), advanced per block in `Voice.render`, which dispatches on it with an exhaustive `when` (the `Voice`
   KDoc). A sealed type: the states without data are `data object`s, `Releasing` (the cull's silence count) and
   `Fading` (the cut's fade window) are classes, one instance each created with the voice; a transition is
-  `state = x.enter(...)`, so none allocates (the rule of `docs/plans/effect-state-machines.md` §1). The one list of
+  `state = x.enter(...)`, so none allocates (the rule of `audio/ref/effect-state-machines.md` §1). The one list of
   the transitions is the table in the `Voice` class KDoc. A culled voice
   is Done at its cull block (`Voice.culled`, a latch for the scheduler's count). Onset, gate end and end live in ONE place,
   `VoiceLimits` (the voice owns and writes it, `releaseGate` included; the stages read it via `BlockContext.limits`;
@@ -337,7 +337,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   audit's later steps and open decisions).
 - **Open, correctness**: `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
   §4, the cut-group fade, done by lifecycle step 4), `docs/tasks/svf-coefficient-cache-never-engages.md`,
-  `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` (two NaN signal paths; its strip half closed with pitch
+  `docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` (two NaN signal paths; its strip half closed with pitch
   pipeline step 4),
   `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md` (two residues, both an author rule today: a shared modulator that reads
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
@@ -349,7 +349,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
   `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md` (all in
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
-  decision left open (`docs/plans/knob-glide.md`).
+  decision left open (`audio/ref/knob-glide.md`).
 - **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
 - **Voice and instruments, future**: `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.

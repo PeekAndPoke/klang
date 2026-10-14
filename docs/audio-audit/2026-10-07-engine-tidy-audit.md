@@ -480,7 +480,7 @@ spelling of every node that a Zig port would not carry.
 
 ---
 
-## C. Effect lifecycles: is `docs/plans/effect-state-machines.md` really done?
+## C. Effect lifecycles: is `audio/ref/effect-state-machines.md` really done?
 
 ### C.1 The plan's section 3, row by row, against the code
 

@@ -43,7 +43,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
  *   (cascade, latch, LFO phase and the kernel params) with every glide forgotten. Only for a
  *   silent orbit (the cylinder's deactivation) or the shelf.
  *
- * **What glides, measured first** (`docs/plans/knob-glide.md`; metric: peak 0.7 ms RMS above
+ * **What glides, measured first** (`audio/ref/knob-glide.md`; metric: peak 0.7 ms RMS above
  * 8 kHz and peak 20 ms RMS below 60 Hz, both against the signal, sources band-limited to 3 kHz;
  * the phaser's own steady floor is -50 to -61 dB, set by the block-rate kinks of its interpolated
  * alpha):
@@ -64,7 +64,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
  * - `rate` does not glide: it only scales the LFO's phase increment, the phase itself carries on,
  *   and every jump over 0 to 20 Hz measured at or under the steady floor in both directions.
  *
- * **No state classes** (the complexity rule of `docs/plans/effect-state-machines.md`, the
+ * **No state classes** (the complexity rule of `audio/ref/effect-state-machines.md`, the
  * [KatalystGainEffect] precedent). The stage's situations are FRESH, gliding and settled, which
  * are exactly [KnobGlide]'s snap flag, block countdown and rest, plus "the cascade holds state",
  * which is [Phaser]'s own `engaged` latch next to the cascade it guards. Inner classes would copy

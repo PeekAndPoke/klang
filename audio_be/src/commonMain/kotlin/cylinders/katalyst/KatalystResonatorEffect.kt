@@ -72,7 +72,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * describes the pair the last install configured, its table, and the blend last applied to the pairs that sound. It
  * survives a fade-out on purpose, so a returning owner can take the fading bank back, and it is never trusted on its
  * own: an unchanged config with the intent off asks the swap whether that pair still sounds, and installs afresh when
- * it does not (question 2 of `docs/plans/effect-state-machines.md`).
+ * it does not (question 2 of `audio/ref/effect-state-machines.md`).
  */
 class KatalystResonatorEffect(
     /** Body or vowel: which unset constants [configure] substitutes, and which tables the pool is sized for. */

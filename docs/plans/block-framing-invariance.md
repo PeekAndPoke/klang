@@ -474,6 +474,10 @@ also caught.
 **P1. Triage the three siblings still on the 2026-08-07 deferred list** (two are audible), so this
 sweep starts from a known board rather than rediscovering them a third time.
 
+**P2 and E3, decided 2026-10-14 (maintainer, Q42 / C12):** a note must sound the same wherever in a block it starts.
+A round of checking was done; the next one, the P2 sweep, comes when all nodes are stable enough. E3 stays recorded
+until then.
+
 **P2. Exhaustive sweep** over all 78 node types with block-constant parameters. Triage into
 fix / block-rate-by-design / maintainer decision. Do not fix during triage; produce the list first.
 

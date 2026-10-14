@@ -287,7 +287,7 @@ Root `CLAUDE.md` (retired list; guardrail row `:86` per decision a), `.claude/sk
 `klangscript/MEMORY.md:69-71`, `klangscript/language-features/04-functions.md:184-193`,
 `klangscript/ref/feature-catalog.md:49`, `audio/MEMORY.md:1570, 2651`, `docs/tasks/tutorial-curriculum.md:13-19, 195`,
 `docs/tasks/master-dsl-followups.md` (sections 1, 5, 7), `docs/tasks/katalyst-master-configure-doors.md`
-(`.master(m => ...)` becomes `.master(k => ...)`), `docs/plans/effect-state-machines.md` (status line and the
+(`.master(m => ...)` becomes `.master(k => ...)`), `audio/ref/effect-state-machines.md` (status line and the
 section 3 row), `docs/plans/future/signal-graph-engine.md` section 3 seed list, `docs/tasks/builtin-instruments.md`
 row 12 (archived as `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`).
 

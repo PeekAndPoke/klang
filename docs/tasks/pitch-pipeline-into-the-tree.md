@@ -447,7 +447,7 @@ stays); `SynthVoiceTest` drives its strip rows with accelerate; `BlockFramingInv
 map and a vibrato row), `ClassicDoorRenderParitySpec` (two engagement rows), `SprudelVoiceDataSpec` and
 `LangPitchParamNamesSpec` (a door-parity row: sprudel word = slot = node knob) follow. Docs: `data-model.md`,
 `voice-synthesis.md`, `off-values.md`, `effects-mixing.md`, `PitchModDefaults.kt`, the two skill references, the two
-`MEMORY.md` files, `bugfix-non-finite-pitch-strip-and-signals.md`, `katalyst-master-configure-doors.md`.
+`MEMORY.md` files, `../tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md`, `katalyst-master-configure-doors.md`.
 
 - **Wire.** `WIRE_SCHEMA_HASH` `-168072926` to `-1897999924` (`vibrato`, `vibratoMod` cut). JS codec green.
 - **Corpus, bit-identical** (`tmp/naming/corpus-pp-s2.txt` against `corpus-pp-before.txt`): 17 of 18 rows identical,
@@ -802,7 +802,7 @@ per block, N fms are N + 1 oscillator renders.
   an authored vibrato with a non-finite depth or rate (built, the default read on both), an authored `accelerate(599)`
   and an authored `pitchMod` at +Infinity (silent for about a third of the frames on both, HEAD 12,810 zero frames,
   the tree 12,825). Silent on both, identical: an authored `pitchMod` at NaN (a NaN ratio, the NaN task's open
-  signal case, `bugfix-non-finite-pitch-strip-and-signals.md` section 2). What HEAD did, measured: no row produced a NaN
+  signal case, `../tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2). What HEAD did, measured: no row produced a NaN
   or an infinite sample on HEAD either; HEAD's `penv.semitones` 599 voice ended one block earlier (13,952 frames
   against 14,080).
 - **Mutation checks** (one lock call each, both 3b specs, restored, `cmp` clean; `$S/s3b/mut-*`): the pin never
@@ -1218,7 +1218,7 @@ words.
   positive-control row turns red, as it should). The rows move to `IgnitorDsl.Sine().classic()` and write slots: the
   vibrato and penv rows stay bit-identical, accelerate stays at 1e-11, FM joins the bit-identical list (E11 closed).
   `MidBlockOnsetControlRateSpec` retires with `EnvelopeCalc` (step 4).
-- **The NaN task** (`bugfix-non-finite-pitch-strip-and-signals.md`). Its section 1 DISSOLVES: the four raw amounts
+- **The NaN task** (`../tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md`). Its section 1 DISSOLVES: the four raw amounts
   become slots, sprudel's `classicSlotParams` drops a non-finite value at the boundary, the engine's `Param` leaf reads
   a non-finite override as unset (the slot default: off for `accelerate` and `fm.depth`, `VIBRATO_RATE_HZ`, `FM_RATIO`),
   and the nodes keep their own `finiteOr`. Close it with step 4, with one NaN row per slot (mandatory tier). Its
@@ -1272,7 +1272,7 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
   door's name (D8) and in the KDoc. Docs: `audio/ref/voice-synthesis.md` (a new section, "The pitch nodes and their two
   laws": the six pitch nodes, their laws and units, the non-finite reads, the identity, the grouping; the FM section's
   list), `ignitor-reference.md` (two rows and a paragraph), `audio/MEMORY.md` (a laws bullet, the combineMods bullet in
-  place, one History line), `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2 (the node's NaN path
+  place, one History line), `docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2 (the node's NaN path
   joins the list), `dsl-design/door-shapes.md` (the two doors in the "nothing to decide" line). No outside idea, nothing
   to credit.
   - **The law** (`PitchModSemitonesSpec`, new, 18 rows since review round 1; the seam is FM's: the `Sample` leaf over a probe that records

@@ -337,7 +337,7 @@ The design in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` stands, with t
     orbits.
   - two patterns competing for one orbit take turns owning it; that is how it is. What makes it
     acceptable is that EVERY room setting (wet, size, damping, delay feedback) GLIDES to its new
-    value over 50 ms instead of jumping (`docs/plans/knob-glide.md`). The delay's time does not
+    value over 50 ms instead of jumping (`audio/ref/knob-glide.md`). The delay's time does not
     glide (that would bend the echoes' pitch); it crossfades between the old and the new tap.
   - the glide is piloted on the orbit reverb first, with a log of the problems met, so the other
     orbit effects adopt it smoothly in 5c. The five doc examples that put two send amounts on one
@@ -451,7 +451,7 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   liveness rule, `claim` uses it) and `tryDeactivate(blockStart)` refusing while held; an orbit
   goes on the first block the lease has lapsed (two blocks after the last check-in), silence
   already counted stays counted. The fader glides over `KNOB_GLIDE_SECONDS` from where it stands
-  (the gain stage got no state classes: see `effect-state-machines.md` section 3). Consequence
+  (the gain stage got no state classes: see `../../audio/ref/effect-state-machines.md` section 3). Consequence
   heard in The Synthsale Pipers' Last Rave 163 to 237 s: orbit 6's supersaw plays at velocity 0
   under a slow phaser, whose sweep HEAD restarted at every reset (about 167) and which now runs on.
   No new cost: a culled voice holds its orbit until its scheduled end, as it did before (its

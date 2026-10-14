@@ -193,7 +193,7 @@ them onto a bus:
 
 - **(a) One Katalyst stage per effect** (K1 to K9 below). This is plain, testable and fast, and it keeps the
   Katalyst's law: a fixed stage, one DSP core, its own glide and switch law. It grows the stage list, and each
-  stage needs its own lifecycle (`docs/plans/effect-state-machines.md`).
+  stage needs its own lifecycle (`audio/ref/effect-state-machines.md`).
 - **(b) A Katalyst stage that runs an Ignitor tree** on the bus signal, per channel or on mid/side, with an
   input leaf. Every Ignitor node becomes a bus effect, and bus LFOs come for free (closes most of G2). It is the
   direction of [`future/signal-graph-engine.md`](future/signal-graph-engine.md), where "the Katalyst effects and the

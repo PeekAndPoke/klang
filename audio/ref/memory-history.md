@@ -1009,7 +1009,7 @@ they never covered these edges.
   precedent). The phaser's situations are `KnobGlide`'s snap flag, countdown and rest plus
   `Phaser`'s own `engaged` latch next to the cascade it guards; the duck's Off is `ducking` being
   null, the field the stage already had and the one `Cylinders` reads through `duckCylinderId`.
-  The four questions of `docs/plans/effect-state-machines.md` are answered in each class's KDoc.
+  The four questions of `audio/ref/effect-state-machines.md` are answered in each class's KDoc.
 - **A life can end without a fade, and its WEIGHT has to be put down anyway** (review round 1,
   a MAJOR). A duck whose sidechain orbit does not resolve gets no pass at all (`Cylinders`
   `continue`s), so the orbit's mix already goes out unducked and a switch-off there has nothing to
@@ -1186,7 +1186,7 @@ on a dry orbit, and every fader move (decided with the maintainer, signal-flow p
 Katalyst step 5c-7, a SOUND CHANGE under the 5c listening checkpoint (decided with the maintainer,
 `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c: "the compressor switches by gliding its gain reduction to 0 dB
 over the same 50 ms"). No identity-only commit before it (complexity rule of
-`docs/plans/effect-state-machines.md` section 2): the states and the glides arrived together.
+`audio/ref/effect-state-machines.md` section 2): the states and the glides arrived together.
 
 - **The law.** `KatalystCompressorEffect` has three preallocated states, Off (the instance at rest, `compressor` reads null), Engaged
   (in place) and Fading (`out = dry + w * (compressed - dry)`, `w` linear over `KNOB_GLIDE_SECONDS`
@@ -1578,7 +1578,7 @@ went red on exactly that). Both hand the SVF the RAW q; the vowel folds the clam
 ## The orbit reverb is a state machine too (2026-09-19)
 
 Katalyst step 5c-2, the delay's shape copied onto `KatalystReverbEffect` (the plan is
-`docs/plans/effect-state-machines.md`). A pure refactor, byte-identical: the private enum and its
+`audio/ref/effect-state-machines.md`). A pure refactor, byte-identical: the private enum and its
 `when`s became a private `sealed class State` with three preallocated `inner class` states, the
 transition table lives in the KDoc on `State`, the seam is `currentState`. What the reverb's own
 answers turned out to be:
@@ -1643,7 +1643,7 @@ answers turned out to be:
 
 ## Orbit knobs glide: the pilot on the orbit reverb (2026-09-19)
 
-`docs/plans/knob-glide.md` (its section 5 holds the pilot log). `KnobGlide` (audio_be root, the
+`audio/ref/knob-glide.md` (its section 5 holds the pilot log). `KnobGlide` (audio_be root, the
 sibling of `Crossfade`) moves one COEFFICIENT knob linearly over `KNOB_GLIDE_SECONDS` (0.05, in
 `BusEffectDefaults.kt`), rounded to whole 128-frame blocks (17 at 44.1 kHz, 19 at 48 kHz). It lands
 on the target bit for bit, restarts from the current value on a new target, ignores a non-finite
@@ -1679,7 +1679,7 @@ first real knob in 5b-2.
 
 ## An effect lifecycle as a state machine: the delay is the template (2026-09-19)
 
-Katalyst step 5c-1, the first conversion of `docs/plans/effect-state-machines.md` and the shape
+Katalyst step 5c-1, the first conversion of `audio/ref/effect-state-machines.md` and the shape
 the reverb, the filter swap, the compressor and the cylinder's swap bookkeeping copy. A pure
 refactor: `KatalystDelayEffect`'s `private enum class State` became a private `sealed class State`
 nested in the effect with three `private inner class` subclasses, one preallocated instance each,

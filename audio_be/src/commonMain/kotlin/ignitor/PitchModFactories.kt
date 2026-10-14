@@ -62,7 +62,7 @@ private class DeviationToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
  * semitones (`12 * log2(1e15)`) it holds at `SAFE_MAX`; no clamp below that. A literal 0 or non-finite mod never
  * gets here (the runtime arm's gate); a non-finite SAMPLE of a signal does, and there +Infinity reads as `SAFE_MAX`
  * and NaN and -Infinity as the ratio 0, which holds the source still, as `pitchMod`'s raw NaN and FM's modulator do.
- * No per-sample finite guard: `docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2. A signal at 0
+ * No per-sample finite guard: `docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2. A signal at 0
  * writes exactly 1.0 (`fastExp2(0.0)` is 1).
  */
 fun semitonesToRatioIgnitor(userMod: Ignitor): Ignitor = SemitonesToRatioIgnitor(userMod)

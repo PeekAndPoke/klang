@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * between three objects created with the effect. The shape is `KatalystDelayStateIdentitySpec`'s.
  *
  * **What this spec guards is "the state machine adds no allocation"** (section 1 of
- * `docs/plans/effect-state-machines.md`), and only that. What the edges DO (the fade law, the
+ * `audio/ref/effect-state-machines.md`), and only that. What the edges DO (the fade law, the
  * turn-around, the release on landing, the cut and the snap) is guarded in
  * `KatalystCompressorEffectSpec`.
  *

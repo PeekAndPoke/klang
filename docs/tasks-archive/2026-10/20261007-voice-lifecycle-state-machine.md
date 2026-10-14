@@ -332,7 +332,7 @@ before and after.
    transition and no block allocates. The dispatch stays an exhaustive `when` in expression form, now over `is`
    checks, and every other state check is an `is` check too (`claimsOrbit`, `releaseGate`, the scheduler's
    `removeDoneVoices`). The transitions are listed in ONE place, a states-by-events table in the `Voice` class
-   KDoc (the house form of `docs/plans/effect-state-machines.md` §1); the methods' KDocs point to it. Why a `when`
+   KDoc (the house form of `audio/ref/effect-state-machines.md` §1); the methods' KDocs point to it. Why a `when`
    and not the effects' virtual `process` per state: plan §1, "Which shape fits".
    - **Moved, because only that state reads it:** the fade window (`fadeStartFrame`, `fadeEndFrame`) from
      `VoiceLimits` into `Fading` (no stage read it through `BlockContext.limits`; the voice's `advance` and

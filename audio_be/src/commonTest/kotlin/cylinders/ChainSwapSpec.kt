@@ -22,7 +22,7 @@ import io.peekandpoke.klang.common.infra.toKlangMap
 
 /**
  * The contracts of [ChainSwap] that its conversion from five `Cylinder` fields worked out for itself
- * (phase 3 step 12 C1; `docs/plans/effect-state-machines.md` section 2): the REFUSAL of a begin while
+ * (phase 3 step 12 C1; `audio/ref/effect-state-machines.md` section 2): the REFUSAL of a begin while
  * the one leaving slot is taken, the RE-ENTRY of a request parked behind a drain, and "a finished
  * life leaves no record". What a swap SOUNDS like is `CylinderChainCrossfadeSpec`'s; what a request
  * does is `CylinderChainSwapSpec`'s.

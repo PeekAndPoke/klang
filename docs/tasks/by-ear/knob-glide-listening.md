@@ -1,6 +1,6 @@
 # Knob glide: two ear items
 
-Status: **open, a listening test (maintainer, 2026-10-14, C13).** From [`../../plans/knob-glide.md`](../../plans/knob-glide.md).
+Status: **open, a listening test (maintainer, 2026-10-14, C13).** From [`../../../audio/ref/knob-glide.md`](../../../audio/ref/knob-glide.md).
 
 1. **A body material change below 60 Hz:** at a 20 ms crossfade it reads -39.6 dB re the signal, at 50 ms -49.0 dB,
    a gap of 9.4 dB, loudest where a low mode starts cold (`croon` to `tube`, `wood` to `cedar`, `bell` to `wood`).

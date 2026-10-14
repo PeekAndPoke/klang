@@ -217,13 +217,13 @@ Template per decision:
 
 ### 3.7 Effect state machines
 - Decision: states pre-allocated, no framework, performance first then readability [M20] [M21] [M22].
-- Evidence: `docs/plans/effect-state-machines.md`.
+- Evidence: `audio/ref/effect-state-machines.md`.
 - Status: planned `[VERIFY]`.
 
 ### 3.8 Transitions: crossfade, parking slot, morph rejected
 - Iterations: 1. crossfade + bank cap 10 (`ANS 2026-09-19T15:11`) → 2. formant MORPH built and heard as
   "laser-shot" [SD7] [M24] → 3. two banks + one parking slot, 20 ms, cap removed [M25] [M26].
-- Evidence: `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) 2026-09-20 (MORPH, `MAX_BANKS`); `docs/plans/knob-glide.md`;
+- Evidence: `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) 2026-09-20 (MORPH, `MAX_BANKS`); `audio/ref/knob-glide.md`;
   `docs/tasks/future/transition-times.md`; "security net" [M23].
 - Status: settled.
 

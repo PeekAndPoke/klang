@@ -40,7 +40,7 @@ class KatalystCompressorEffectSpec : StringSpec({
     /** The switch fade, in samples: the decided law's length. */
     val fadeLen = (sampleRate * KNOB_GLIDE_SECONDS).toInt()
 
-    /** The knob glide, in whole blocks (`docs/plans/knob-glide.md`). */
+    /** The knob glide, in whole blocks (`audio/ref/knob-glide.md`). */
     val glideBlocks = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt()
 
     fun createCtx() = KatalystContext(

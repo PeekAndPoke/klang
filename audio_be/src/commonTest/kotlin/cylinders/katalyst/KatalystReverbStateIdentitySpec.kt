@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
  * transition is on the audio thread. The shape is `KatalystDelayStateIdentitySpec`'s.
  *
  * **What this spec guards is "the state machine adds no allocation"** (section 1 of
- * `docs/plans/effect-state-machines.md`), and only that. The behaviour of the edges (what a return
+ * `audio/ref/effect-state-machines.md`), and only that. The behaviour of the edges (what a return
  * mid-drain keeps, what a finished life forgets, the heal of a poisoned network) is guarded in
  * `KatalystReverbEffectSpec` and `KatalystReverbGlideSpec`.
  *

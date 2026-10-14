@@ -47,7 +47,6 @@ are the engine stream's (Q38).
 
 ## Open with the maintainer
 
-- Q40 to Q43 in [`../_maintainer-questions.md`](../_maintainer-questions.md) (C3, C5, C12 and the laws of C11).
 - Two listening tests: [`../by-ear/knob-glide-listening.md`](../by-ear/knob-glide-listening.md) (C13), and the
   listening rounds before the next songs (C10).
 - An FM round together: [`../future/fm-revisit.md`](../future/fm-revisit.md).

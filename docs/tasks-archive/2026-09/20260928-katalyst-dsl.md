@@ -522,7 +522,7 @@ complexity outranks the duplication.
   Classic keeps the owner-voice writers until 5b removes the voice fields.
   **5b-2 decided with the maintainer (2026-09-19), see the signal-flow plan section 7:** inserts at
   today's position, one owner `wet` per orbit, every room setting glides over 50 ms
-  (`docs/plans/knob-glide.md`), the delay's time crossfades between taps; the glide is piloted on
+  (`audio/ref/knob-glide.md`), the delay's time crossfades between taps; the glide is piloted on
   the orbit reverb first.
   **Listened 2026-09-19 by the maintainer, on a fresh JS build at `b27dd5ad`** (levels on the
   wire, `pregain`, the unity fader, 5b-1, the delay and reverb state machines, the reverb's size
@@ -823,7 +823,7 @@ complexity outranks the duplication.
   delay's ceiling at the cap would align it with the drain path. Idle hold only, never audio.
 - **DECIDED 2026-09-19 with the maintainer: how every orbit stage switches and changes (step 5c).**
   The principle: **always glide from the CURRENT state of the effect to the target state; only the
-  very first initialisation is instant.** It is the knob-glide rule (`docs/plans/knob-glide.md`)
+  very first initialisation is instant.** It is the knob-glide rule (`audio/ref/knob-glide.md`)
   applied to switching:
   - OFF is "glide the stage's mix to 0 over 50 ms, then release its resources"; ON is "install at
     mix 0 and glide up". An owner that returns mid-fade simply retargets, and the fade turns

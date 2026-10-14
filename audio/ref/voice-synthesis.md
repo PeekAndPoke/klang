@@ -150,7 +150,7 @@ holds at `SAFE_MAX`. The knobs of `accelerate` and `pitchEnvelope` read a non-fi
 (`finiteOr`). The vibrato's non-finite reads: the `vibrato` row of `audio/ref/off-values.md`. `pitchModSemitones` gates a non-finite LITERAL mod (the bare voice); a non-finite SAMPLE of a signal mod reaches
 `safeOut`: NaN and -Infinity read as the ratio 0 (the source holds still, a saw renders a DC, as with FM's modulator),
 +Infinity as `SAFE_MAX`
-(`docs/tasks/bugfix-non-finite-pitch-strip-and-signals.md` section 2 holds the open question for signals). `pitchMod`
+(`docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2 holds the open question for signals). `pitchMod`
 has no `safeOut`: its ratio passes raw.
 
 A literal `pitchModSemitones` of 0, or a non-finite literal, is gated: no node is built and the voice is the bare

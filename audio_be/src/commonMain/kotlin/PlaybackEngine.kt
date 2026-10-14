@@ -43,7 +43,7 @@ import kotlin.math.min
  * - **Idle** ([isIdle]), when the dispatcher may dispose a stopped engine: `Playing` and `Stopped` when nothing of
  *   it sounds and its master has settled and stopped ringing; `Releasing` never; `Released` and `Disposed` always.
  *
- * Every phase is a `data object`: none carries data of its own (`docs/plans/effect-state-machines.md` §1). The
+ * Every phase is a `data object`: none carries data of its own (`audio/ref/effect-state-machines.md` §1). The
  * quiet-block count is the engine's, because `Playing` counts it and `Stopped` reads it; the [TailRelease] is a
  * resource created with the engine, which `Releasing` restarts and both release phases render through.
  */

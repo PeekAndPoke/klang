@@ -50,7 +50,7 @@ import kotlin.math.min
  *   shelf: the orbit is silent by then, and a fade that survived would resume in the orbit's next
  *   life on new material.
  *
- * **What glides while it runs** (`docs/plans/knob-glide.md`, measured first in 5c-7): the gain
+ * **What glides while it runs** (`audio/ref/knob-glide.md`, measured first in 5c-7): the gain
  * computer's THRESHOLD, RATIO and KNEE, per sample ([Compressor.processGliding]), each on its own
  * [KnobGlide], the ratio as its INVERSE (the curve is linear in `1 / ratio - 1`; a glide linear in
  * the ratio bunched a 100 to 1 change into the glide's last blocks, -41 dB). A jump of any of them steps the gain at once, because the gain computer has no
@@ -82,7 +82,7 @@ import kotlin.math.min
  * Without a lookahead (the default, and every chain before step 12) none of this paragraph applies
  * and the effect is what it always was.
  *
- * The lifecycle is a state machine (`docs/plans/effect-state-machines.md`), the shape of
+ * The lifecycle is a state machine (`audio/ref/effect-state-machines.md`), the shape of
  * [KatalystDelayEffect]; the table on [State] is authoritative for its edges.
  *
  * **The four questions of the plan, answered for the compressor:**

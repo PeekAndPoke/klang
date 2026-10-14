@@ -17,7 +17,7 @@ import kotlin.math.max
  * its INPUT while the arriving chain's output fades in over [Crossfade], and then the leaving chain
  * rings out (drains) on silent input at full weight until it has no tail left. Phase 3 step 12 C1
  * (`docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md` section 6) moved it out of `Cylinder`, where it
- * was five fields, into three states (`docs/plans/effect-state-machines.md`, the delay's shape).
+ * was five fields, into three states (`audio/ref/effect-state-machines.md`, the delay's shape).
  *
  * **The capped drain** (step 12 decision (i), maintainer 2026-09-28). A drain has a maximum age,
  * [MAX_DRAIN_SECONDS] counted in frames from the fade's end. A chain that still reports a tail

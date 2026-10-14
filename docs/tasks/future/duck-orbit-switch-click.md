@@ -1,7 +1,7 @@
 # A `duck.orbit` switch onto a sounding source clicks
 
 **Moved to `future/` 2026-10-14 (maintainer, C9): ducking and the sidechain need their own work, maybe after the
-configurable Motor work; see also [`ducking-unfinished.md`](ducking-unfinished.md).**
+configurable Motor work ([`signal-graph-engine.md`](../../plans/future/signal-graph-engine.md)); see also [`ducking-unfinished.md`](ducking-unfinished.md).**
 
 Status: **open for the maintainer, measured, not fixed.** Carried 2026-09-28 out of the Katalyst DSL record when it
 was archived ([`../../tasks-archive/2026-09/20260928-katalyst-dsl.md`](../../tasks-archive/2026-09/20260928-katalyst-dsl.md),

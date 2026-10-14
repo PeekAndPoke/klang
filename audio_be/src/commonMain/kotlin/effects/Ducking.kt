@@ -101,7 +101,7 @@ class Ducking(
 
     /**
      * The same block, with [depth] and the stage's WEIGHT moving across it (Katalyst 5c-9,
-     * `docs/plans/knob-glide.md`). The envelope runs on the whole block either way, so it stays
+     * `audio/ref/knob-glide.md`). The envelope runs on the whole block either way, so it stays
      * continuous across every edge; what changes is only what the block multiplies by.
      *
      * - **depth** ramps linearly from [depthFrom] to [depthTo]. The target gain is LINEAR in depth

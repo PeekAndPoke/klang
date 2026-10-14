@@ -58,7 +58,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  * - **[reset] and [retire] are a HARD cut** to the clean slate, for the cylinder's deactivation
  *   and the shelf: the orbit is silent by then, and the next life's first switch snaps again.
  *
- * **What glides while it runs** (`docs/plans/knob-glide.md`, measured first):
+ * **What glides while it runs** (`audio/ref/knob-glide.md`, measured first):
  * - **depth** glides PER SAMPLE inside [Ducking.processStereoGliding], on its own axis: the target
  *   gain is linear in depth, and the detector's attack is instantaneous, so a depth step is a
  *   level step. Measured -16.8 dB at worst on a rise; a FALL already sat at the floor, because the
@@ -78,7 +78,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  *   Smoothing it means blending two sidechain sources, which is a decision about what a sidechain
  *   switch MEANS and is not this step's to take.
  *
- * **No state classes** (the complexity rule of `docs/plans/effect-state-machines.md`, the
+ * **No state classes** (the complexity rule of `audio/ref/effect-state-machines.md`, the
  * [KatalystGainEffect] precedent). Off is [ducking] being null, which is the field the stage has
  * always had and which `Cylinders` already reads through [duckCylinderId]; fresh, fading and
  * engaged are exactly [KnobGlide]'s snap flag, block countdown and rest. Inner classes would copy

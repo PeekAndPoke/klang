@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_be.effects.Ducking
 import kotlin.math.abs
 
 /**
- * The contract of [KatalystDuckEffect] (Katalyst 5c-9, `docs/plans/knob-glide.md` and
+ * The contract of [KatalystDuckEffect] (Katalyst 5c-9, `audio/ref/knob-glide.md` and
  * `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c).
  *
  * Every oracle is written out from the decided law: the switch rides a WEIGHT from where it stands

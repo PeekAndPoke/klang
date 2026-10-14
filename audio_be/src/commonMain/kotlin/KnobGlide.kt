@@ -11,7 +11,7 @@ import kotlin.math.round
 
 /**
  * One orbit knob moving to a new value over [KNOB_GLIDE_SECONDS] instead of jumping there
- * (`docs/plans/knob-glide.md`). One instance per knob, created with the effect that owns the knob;
+ * (`audio/ref/knob-glide.md`). One instance per knob, created with the effect that owns the knob;
  * nothing here allocates after construction. The sibling of [Crossfade], which ramps between two
  * whole chains the same way this ramps one number.
  *
@@ -190,7 +190,7 @@ internal class KnobGlide(
     /**
      * LEVEL use: moves the knob by one block, like [advance], and writes [source] times the knob
      * into [into] for [frames] samples, ramping per sample from the value the previous block ended
-     * on to the one this block ends on (`docs/plans/knob-glide.md`, pilot log entry 10).
+     * on to the one this block ends on (`audio/ref/knob-glide.md`, pilot log entry 10).
      *
      * **Written from the END**, `end - step * (frames - 1 - i)`, so the block's last sample is the
      * block's value bit for bit, and after the last block of a glide that is the target. A settled

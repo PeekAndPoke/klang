@@ -69,7 +69,7 @@ sweep audibly.
   at the moment the transition starts, which the engine does not do today: the orbit does not know
   the note's frequency.
 - A **cost check**: a shorter time means more transitions in flight per second and a steeper ramp;
-  a longer one means more smear (the one-pole rule in `docs/plans/knob-glide.md`: a knob retargeted
+  a longer one means more smear (the one-pole rule in `audio/ref/knob-glide.md`: a knob retargeted
   every block converges like a one-pole with tau about 49 ms, so a fast-wobbled knob already loses
   modulation depth).
 - **Per-effect answers**, if they differ, and then a defensible way to spell more than one

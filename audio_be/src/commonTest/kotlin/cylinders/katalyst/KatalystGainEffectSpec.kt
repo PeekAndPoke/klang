@@ -34,7 +34,7 @@ import kotlin.math.round
  * The master snaps its gain (its factor is resolved at chain build, so a new number is a new
  * chain and the 60 ms bus crossfade covers it). Here the factor is a SLOT, so `.katp` moves it
  * while the stage stands, and the stage owns the smoothing: the knob-glide LEVEL law
- * (`docs/plans/knob-glide.md`), linear over `KNOB_GLIDE_SECONDS` rounded to whole blocks, per sample
+ * (`audio/ref/knob-glide.md`), linear over `KNOB_GLIDE_SECONDS` rounded to whole blocks, per sample
  * within a block, written from the block's end so it lands exactly (Katalyst 5c-8; it was one
  * block, from the start). The oracle below is that law, computed here from the constant.
  */

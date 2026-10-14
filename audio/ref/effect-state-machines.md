@@ -1,5 +1,7 @@
 # Effect lifecycles as state machines
 
+> Moved from `docs/plans/` to `audio/ref/` 2026-10-14 (maintainer, Q43): no longer a plan, a law the engine follows.
+
 > Decided with the maintainer 2026-09-18, during the Katalyst work (`../tasks-archive/2026-09/20260928-katalyst-dsl.md`,
 > step 5c). Performance first, readability a close second: the model must cost what the flags cost
 > today and read as a state machine.

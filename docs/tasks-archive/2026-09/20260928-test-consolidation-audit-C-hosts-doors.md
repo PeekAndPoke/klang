@@ -193,7 +193,7 @@ the only one fed by `toVoiceData`) and the slots row.
 - `KlangScriptFilterDoorParitySpec` (named by `/dsl-design` section 3 as the pattern);
   `DslDocExamplesSpec` (`/dsl-design` checklist 10).
 - `LangDefaultQSpec` (C1 cross-surface tripwire).
-- `ChainSwapStateIdentitySpec` (the identity bullet of `docs/plans/effect-state-machines.md`: the
+- `ChainSwapStateIdentitySpec` (the identity bullet of `audio/ref/effect-state-machines.md`: the
   state machine allocates nothing); `CylinderChainCrossfadeSpec` duck and send rows (ledger row 23).
 - `CylinderKatalystPipelineSpec` phaser-floor forwarding (C4.2, kept inside the folded wiring row).
 - `WireCodecRoundTripSpec` SLOT_UNSET row and decoded-classic-name row; `CatalogueIndexSpec` tie rule.
