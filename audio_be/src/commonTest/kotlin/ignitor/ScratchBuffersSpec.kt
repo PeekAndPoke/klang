@@ -193,6 +193,25 @@ class ScratchBuffersSpec : StringSpec({
         (os2 !== os4) shouldBe true
     }
 
+    "more factors than the first slots hold: each keeps its own cached sub-pool, in any order of asking" {
+        // The sub-pools live in two scanned arrays that start at four slots and grow (engine follow-up 34).
+        val scratch = ScratchBuffers(blockFrames)
+        val factors = listOf(16, 2, 3, 8, 4, 6, 5)
+
+        scratch.hasOversample(2) shouldBe false
+
+        val pools = factors.map { scratch.oversample(it) }
+
+        for ((index, factor) in factors.withIndex()) {
+            scratch.hasOversample(factor) shouldBe true
+            (scratch.oversample(factor) === pools[index]) shouldBe true
+            pools[index].blockFrames shouldBe blockFrames * factor
+        }
+
+        scratch.hasOversample(7) shouldBe false
+        scratch.hasOversample(32) shouldBe false
+    }
+
     "oversampled ScratchBuffers also supports useDouble" {
         val scratch = ScratchBuffers(blockFrames)
         val os = scratch.oversample(2)

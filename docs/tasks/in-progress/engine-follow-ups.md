@@ -3,7 +3,7 @@
 **Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
-fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (DONE 2026-10-16), 34 (the bus distort's oversampled path), 39 to 41 (the
+fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (DONE 2026-10-16), 34 (DONE 2026-10-16), 39 to 41 (the
 Katalyst knob expressions' residues), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
 and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
@@ -1219,7 +1219,9 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
       with `analog` 29.9 to 52.6 B, `--predictable`): a box moved, not removed. With `isFiniteInline` nothing on
       these voices boxes any more, so the change buys nothing measurable and was dropped.
     - **Left, a known residue on the Katalyst glide path:** `DistortionCore.shapeRunRamped` still takes `driveFrom`
-      and `driveTo` as doubles (the bus distort while its amount glides); not measured, not fixed here.
+      and `driveTo` as doubles (the bus distort while its amount glides); not measured, not fixed here. Fixed at item
+      34 (2026-10-16): two heap numbers per gliding block, the ends now staged in fields by an `inline`
+      `processRamped`.
     Each fix has its KDoc as the guard (no test can pin a box). **Measured** (bytes and ns per block, 20,000 warm-up
     and 200,000 measured blocks; `--predictable` single-case processes repeat exactly, 2 rounds; the allocation
     check's method, two processes per round, medians of 3, HEAD / tree / HEAD again; a byte copy of HEAD's bundle):
@@ -1400,11 +1402,84 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     no `parallel` and no `eq`, so not this change; not located. Like `spluck-a`'s tail (item 7), a breach that does not
     repeat on a second run is that mode. HEAD's code also read `E-arith-glide` 511 B once (its line 500); filed as item
     36. S.
-34. **The bus distort's oversampled path allocates about 120 B per block on V8** (numbered after the last item, added
-    2026-10-11): `E-distort` at the default 2x reads 155 to 191 B, at `oversample = 0` 46 to 73 B. The profiler names
-    `DistortionCore.shapeRun`, the oversampler's `interpolate44` and `decimate44`, and a map lookup (likely
-    `ScratchBuffers.oversample`'s `getOrPut` by factor); not located further. A fix re-sets the `E-distort` line.
-    Source: `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
+34. **DONE (2026-10-16): the bus distort's oversampled path allocated about 120 B per block on V8; it now reads what
+    the engine reads without it, and every oversampled node and stage with it.** Reported (added 2026-10-11):
+    `E-distort` at the default 2x read 155 to 191 B, at `oversample = 0` 46 to 73 B; the profiler named
+    `DistortionCore.shapeRun`, the oversampler's `interpolate44` and `decimate44`, and a map lookup. Source:
+    `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". A purely independent performance fix
+    (Q38): no DSL door, wire type, public signature or sound changes (`ScratchBuffers.oversample` keeps its signature,
+    `DistortionCore` is `internal`). **Located on the production bundle**
+    (`:audio_benchmark:compileProductionExecutableKotlinJs`, node 22.12, `--predictable` single-case processes, the
+    sampling heap profiler with a warm-up-only run subtracted, so the interpreter's boxes of the warm-up drop out; the
+    names `shapeRun`, `interpolate44` and `decimate44` were that warm-up), with four probe cases added to
+    `AllocationCases.kt` for the measurement and taken out again: the bus distort at `oversample = 0`, at 4x, and with a
+    modulated amount (`Kat.sine(0.7).range(0.2, 0.4)`, so it glides every block) at 2x and at 0. Sites and fixes:
+    - **The sub-pool by factor** (`ScratchBuffers.oversample`, `getOrPut` on a `mutableMapOf<Int, ScratchBuffers>`):
+      the stdlib map hashes through the generic `hashCode(dynamic)` on Kotlin/JS, about 42 B per lookup on node (item
+      2's class; the profiler booked it under `hash`), and the bus distort at 2x asked three times per block (the two
+      cores and the phase twins' `captureDry`), about 125 B. Every other oversampled host asked it too: the `Shape` and
+      fused `Distort` nodes once per block (`tube4x`), the `parallel` stage's twins. **Fix:** the sub-pools in two
+      scanned arrays (`oversampleFactors`, `oversamplePools`), four slots that grow at build; a pool holds one to four
+      factors (the shared pool holds all four the warehouse warms, 2, 4, 8 and 16), so a lookup is a few compares. `KlangMap` does not fit (its keys are
+      strings). The KDoc at the arrays is the guard.
+    - **The drive across a call** (`DistortionCore.process`, and `processRamped` while the amount glides): V8 did not
+      inline `process` into the chain, so the bus stage's drive crossed as a heap number (one per block, the two cores
+      share the value; two while gliding, the ramp's two ends). This is item 31's residue on `shapeRunRamped` and the
+      same class one call up, so it is fixed here too. **Fix:** item 31's `EnvelopeCore.prepare` pattern: `process`
+      and `processRamped` are Kotlin `inline` (every call site and test unchanged) and stage the drive in
+      `blockDrive` (and the ramp's start in `rampFrom`) in the host's compiled code, then call the old bodies,
+      `processBlock` and `processRampedBlock`, which take no double; `shapeRunRamped` reads both ends from the fields.
+      The KDoc at `blockDrive` is the guard.
+    - **Nothing left on these paths.** `interpolate44` and `decimate44` allocate nothing in the window.
+    **Measured** (bytes and ns per block, 20,000 warm-up and 200,000 measured blocks; HEAD's bundle a byte copy; "map
+    only" is the tree with the first fix alone, which is also the mutant of the second):
+
+    | case | `--predictable`, HEAD / map only / tree | unpinned, medians of 3, HEAD / tree / HEAD again | pinned (`taskset -c 3`), the same |
+    |---|---|---|---|
+    | `E-distort` (2x) | 155.1 / 30.1 / 21.1 B (16.6 at 1,000,000 blocks, the figure the records cite), 13,813 / 13,541 ns | 180.2 / 36.0 / 185.9 | 159.8 / 41.7 / 148.6 |
+    | the bus distort at `oversample = 0` | 15.7 / 15.7 / 15.7 | | |
+    | the bus distort at 4x | 149.6 / 31.4 / 15.8, 27,825 / 22,105 ns | | |
+    | the bus distort gliding, 2x | 170.7 / 46.1 / 15.8 | 190.7 / 50.5 / 200.9 | 170.5 / 10.8 / 184.9 |
+    | the bus distort gliding, `oversample = 0` | 45.9 / 46.0 / 15.7 | | |
+    | `tube4x` | 57.3 / 15.8 / 15.8 | 66.5 / 26.1 / 52.3 | 57.0 / 25.5 / 62.2 |
+    | `E-parallel` | 196.6 / 36.9 / 14.7 | 222.7 / 25.0 / 220.2 | 175.7 / 10.6 / 185.8 |
+    | `E-bands` | 231.7 / 30.4 / 15.9 | 267.9 / 10.3 / 242.1 | 263.1 / 10.3 / 247.9 |
+    | `C-dist` | 15.6 / 15.6 / 15.4 | 21.1 / 10.4 / 21.2 | |
+    | `C-full` | 14.7 / 14.7 / 14.8 | | |
+    | `sawC` (control) | 16.0 / - / 16.0 | 19.8 / 20.9 / 16.2 | |
+
+    Under `--predictable` every row of the tree reads the method's floor (about 15 B, the voice-level heap number of
+    `renderStages`, item 30's class); the profiler with the warm-up subtracted books nothing else on `E-distort`. One
+    heap number is 16 B on node and 12 in Chrome. Time: within noise, a little faster (`E-distort` 0.98 of HEAD; the
+    4x row 0.79, not explained beyond the map). **JVM:** nothing here allocated before or after. **Bit for bit:** the
+    corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0 edited; `:audio_be:jvmTest` 2,777 of 2,777. The
+    allocation check: GREEN, 80 of 80; V8 `E-distort` 41 B (rounds 41.0, 14.6, 45.5), `tube4x` 16, `E-parallel` 20,
+    `E-bands` 21, `C-dist` 20; every JVM case 0. **New row:** "more factors than the first slots hold: each keeps its own
+    cached sub-pool, in any order of asking" (`ScratchBuffersSpec`). Mutants, one lock call each, restored and checked
+    with `cmp`: the scan matching by `>=` instead of `==` RED (1, the new row), the arrays not grown and the slots
+    overwritten from the start RED (1, the new row); both survive the old rows. **The budget line:** `E-distort` on V8
+    re-set from 232 to 96 by the header's rule (healthy rounds 9.7 to 57.0 B, medians 36 to 42; HEAD's code rounds
+    103.5 to 196.4): it catches the map put back, not the drive handed back as an argument (one heap number, under the
+    V8 resolution; the KDoc guards it). `tube4x` (160) fell by about 40 B with the same map and keeps its line, which
+    guards the per-sample class only. **Review round 1** (the code clean from both reviewers; one MAJOR on the
+    budgets): with the map gone `E-parallel`'s 268 no longer caught item 33: one view per BRANCH put back (the right
+    channel on `copyInto` in `KatalystParallelEffect.process` for every branch, 2 views on `E-parallel`, 3 on
+    `E-bands`) read 211.9, 248.0, 221.5, green, and `E-bands`'s 320 caught it in 2 of 3 rounds. Both re-set to 96 by
+    the header's rule: healthy medians 20 and 21 (this change's check), 46 and 26 (the re-check below); review round
+    1's reviewer runs reached worst rounds of 67.5 and 56.1, and review round 2's reviewer read a clean `E-parallel`
+    median of 57, outside those medians, 39 B under the line. On the clean tree the check read GREEN, 80 of 80
+    (`E-parallel` 45.9, 14.8, 46.2; `E-bands` 27.4, 6.0, 26.3; `E-distort` 10.4, 10.4, 46.7; `tube4x` 9.3, 9.8,
+    19.4). Two mutants against 96 (one lock call each, restored and checked with `cmp`; their scoreboard rows taken
+    out):
+    - one view per branch (round 1's): RED on both lines in every round, `E-parallel` 242.5, 236.4, 211.4 (median
+      236), `E-bands` 313.8, 338.9, 345.0 (median 339);
+    - one view per BLOCK (branch 0 only, review round 2's reviewer): `E-parallel` 149.6, 149.6, 144.0 (median 150,
+      RED), `E-bands` 133.8, 94.2, 87.0 (median 94, GREEN). A lower `E-bands` line would sit inside the V8 noise, so
+      it is no remedy.
+    So `E-parallel` guards a single view per block (item 33) and the sub-pool map (about 160 B there); `E-bands`
+    guards one view per branch and the sub-pool map (about 200 B there). The
+    `E-distort` figure in every record is the `--predictable` one at 1,000,000 blocks, 155 to 16 B (reviewer B: 16.1).
+    S.
 
 42. **A delay or reverb switched off fades its feed instead of cutting it** (added 2026-10-13, maintainer Q39: "fade,
     do not cut"). A sound change, so not part of the performance batch 31 to 41. Plan, cost and the corpus effect:

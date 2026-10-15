@@ -398,7 +398,11 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   on the JVM; not a Kotlin `Map` since step 5, so it has no `entries` to walk): its lookup allocates nothing (a new orbit map about 16 B; `C-remap` 2.03 to 2.16 us
   per block against 2.80 to 3.11 with the decoder reverted, about 0.9 us per new map). The worklet's decoder
   (`wireDecodeStringDoubleMap`), the warm-up and the sample-envelope merge make them; the allocation check's
-  `C-remap` guards the decoder. **Read a `KlangMap` by key, and walk it with its own walk:** it has no `entries`,
+  `C-remap` guards the decoder. A map with `Int` keys has no `KlangMap` (its keys are strings): the oversampled
+  sub-pools of `ScratchBuffers.oversample` were a `mutableMapOf<Int, ScratchBuffers>` asked by every oversampled node
+  and stage per block (three lookups per block on the bus distort at 2x, about 125 B), and are now two small arrays
+  scanned by factor (engine follow-up 34, 2026-10-16). **Read a `KlangMap` by key, and walk it with its own walk:**
+  it has no `entries`,
   `keys` or `values` (step 5), and iterating them on a map on JS allocates about 110 B per entry (the JS iterator's results
   and an entry object; 666 B per walk of 6 entries on node), where a `LinkedHashMap` walk is free once V8 inlines the
   whole loop. That inlining is not reliable either: a lookup written out as a scan over a `LinkedHashMap`'s entries
@@ -520,6 +524,12 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   classic saw reads (about 15 B per block, the method's floor). Left open on these voices: the fm's per-block calls
   (items 10c and 10d, about 2 heap numbers on `C-env3`) and a classic envelope with a non-integral sustain (about one
   heap number, booked in `AdsrIgnitor.generate` as its root call, on HEAD too; likely item 30's class).
+  **Engine follow-up 34 (2026-10-16) closed the oversampled path** that item 31 left (`tube4x`, `E-distort`): besides
+  the sub-pool map (the `HashMap` rule above), the bus distort handed its drive to a `DistortionCore.process` that V8
+  did not inline into the chain (one heap number per block, two while the amount glides, the ramp's two ends).
+  `process` and `processRamped` are Kotlin `inline` now and stage the drive in the core's fields, `EnvelopeCore`'s
+  pattern. Every oversampled case reads the floor under `--predictable` (`E-distort` 155 to 16 B at 1,000,000
+  blocks, `tube4x` 57 to 16, `E-parallel` 197 to 15, `E-bands` 232 to 16).
 - **A knob that moves every block makes its whole per-block path hot: measure a group of sites, and in both modes**
   (2026-10-12, Katalyst knob expressions step 6, `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`; the runs:
   `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). A modulated Katalyst knob runs the chain's hook every block
@@ -617,7 +627,14 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
      Run it in `audio_benchmark/build/compileSync/js/main/productionExecutable/kotlin/` with
      `KLANG_ALLOC_CASE=<case> KLANG_ALLOC_WARM=20000 KLANG_ALLOC_COUNT=200000`. The names are the bundle's
      (`protoOf.u2i` is a member); the line leads to the Kotlin through the bundle's source map. The profiler slows the
-     run and inflates the bytes: read it for where, not for how much.
+     run and inflates the bytes: read it for where, not for how much. **Subtract the warm-up:** the preload samples
+     the whole process, and the warm-up runs in the interpreter, which boxes every double, so a hot loop shows up as
+     an allocating function that allocates nothing once compiled (item 34's first report named `shapeRun`,
+     `interpolate44` and `decimate44` this way). Run the case once with `KLANG_ALLOC_COUNT=0`, keep the raw bytes per
+     stack, and subtract them from the window's run; what is left is the window's. For both runs print `v` unscaled
+     and every stack, not `slice(0, 12)` (with `KLANG_ALLOC_COUNT=0` the scaled value is Infinity). Give both runs the same node
+     flags and `--predictable`, so they share one tier-up history; small differences between unpinned runs are
+     noise.
   2. **V8, why it boxes:** `node --trace-turbo-inlining` (and `--trace-deopt`) on the same case shows whether the
      callee of the allocating function was inlined. A double that crosses a call that was not inlined becomes a heap
      number: the knob reads of item 8 and the limiter of item 3 were found this way.

@@ -368,6 +368,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Engine follow-up 34: `ScratchBuffers.oversample` finds a sub-pool by a scan of two arrays, not a
+  stdlib `Int` map (about 40 B per lookup on V8); `DistortionCore.process` and `processRamped` are `inline` and stage
+  the drive in fields. `E-distort` 155 to 16 B per block (`--predictable`, 1,000,000 blocks), `tube4x`,
+  `E-parallel` and `E-bands` at the floor too; bit for bit, corpus identical; the V8 lines of `E-distort` 232,
+  `E-parallel` 268 and `E-bands` 320 all to 96 (`E-parallel` catches a single view per block of item 33 again,
+  `E-bands` one view per branch only):
+  `docs/tasks/in-progress/engine-follow-ups.md` item 34
 - 2026-10-16 Engine follow-up 32: the delay and reverb stages skip an unchanged config (`applied`, the phaser's
   pattern), never while the feedback or size glide moves, the delay not while a refused grow leaves the ring short,
   the OFF arm never; in pinned mixed V8 processes their `configure` boxed up to four and three heap numbers per

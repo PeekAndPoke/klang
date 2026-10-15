@@ -57,7 +57,7 @@
 #   KlangMap, about 35 B less per note, all of it that map (review round 1: the map back on a LinkedHashMap read what
 #   HEAD reads, 31 to 35 B over the tree). Healthy rounds 12,988.5 to 13,050.7 B (45 rounds: the worker's 6 runs and
 #   review round 1's 27 rounds; full-check medians 13,004 to 13,023); the line is 45 B above the worst median (the
-#   check compares medians) and 17 above the worst round. The margins are thin, as E-parallel's: a lowercase on every
+#   check compares medians) and 17 above the worst round. The margins are thin: a lowercase on every
 #   call read 13,072.6 to 13,129.7 (11 rounds: one run of 3, median 13,090; review round 1's 8, median 13,091), so it is caught by its median,
 #   its lowest round only 5 B over the line; the lowercasing back at every level read 13,166 to 13,191 (RED). The
 #   dispatcher's map back on a HashMap (one stdlib hash per scheduled voice) read 13,036 to 13,072 (medians 13,047 to
@@ -73,17 +73,37 @@
 #   small array per block in one stage breached it on both platforms; a single box per block only on the JVM; applyLaw
 #   made a plain function read about 49 KB on V8 and 0 on the JVM, which inlines it there, and E-arith-glide caught it
 #   on both, 11 KB on the JVM). E-distort
-#   carries an open V8 allocation, budgeted as it stands: the bus distort's oversampled path (about 120 B per block;
-#   at oversample 0 the case read about 60; item 34). A fix re-sets that line. E-parallel and E-bands were re-set at
+#   carried an open V8 allocation, budgeted as it stood: the bus distort's oversampled path (about 120 B per block;
+#   at oversample 0 the case read about 60; item 34). Re-set at engine follow-up 34 (2026-10-16) from 232 to 96, by the
+#   same rule: the oversampled sub-pool is found by a scan instead of a stdlib map keyed by Int (about 40 B per lookup,
+#   three lookups per block), and the drive no longer crosses a call. Healthy rounds 9.7 to 57.0 B (9 rounds: the
+#   check's 41.0, 14.6, 45.5; single-case unpinned 56.0, 9.7, 36.0; pinned 15.7, 41.7, 57.0; medians 36 to 42; the
+#   re-check after review round 1 read 10.4, 10.4, 46.7); HEAD's
+#   code read rounds 103.5 to 196.4 (medians 149 to 186). 96 is 54 B above the highest healthy median and 39 above the
+#   worst round, and catches the map put back (about 125 B). It does not catch the drive handed to the core as an
+#   argument again (one heap number per block, 30 B against 16 under --predictable, inside the V8 noise): the KDoc at
+#   `DistortionCore.blockDrive` guards it. The same change took tube4x, E-parallel and E-bands down by about 40, 180
+#   and 210 B (the check's medians 16, 20 and 21, and 10, 46, 26 in the re-check), all three over the same map.
+#   tube4x keeps 160: it guards the per-sample class only (item 9; HEAD's map read 57 under it).
+#   E-parallel and E-bands were re-set at
 #   engine follow-up 33 (2026-10-11), by the same rule from that change's runs (4 runs of 3 rounds, and 15 single-case
 #   rounds each): `KatalystParallelEffect` copied the bus into each branch with `copyInto`, a typed-array view per call
-#   on V8, and now copies with `copyRangeInto`. E-parallel healthy medians 185 to 228 B (rounds up to 253), E-bands
-#   227 to 273 (rounds up to 279); HEAD's code read medians 619 and 809 (rounds 568 to 624 and 804 to 861). 268 and
-#   320 are 40 and 47 B above the highest healthy median, and a single view per block put back (one channel of one
-#   branch) reads over both: E-parallel rounds 272 to 319 (median 299), E-bands 330 to 373 (median 331). E-parallel's
-#   margin is thin: 268 sits 15 B above the highest healthy round (253) and 4 B below the mutant's lowest (272), under
-#   the V8 noise of about 25 B, so a single view per block is caught by its median, not in every round (re-set from
-#   272 in review round 1, where the line sat ON the mutant's lowest round).
+#   on V8, and now copies with `copyRangeInto`. Then 268 and 320, with healthy medians of 185 to 228 and 227 to 273 B
+#   (the sub-pool map still in them) and HEAD's code at medians 619 and 809.
+#   Re-set again at engine follow-up 34, review round 1 (2026-10-16), both to 96, by the same rule: with the map gone
+#   one view per BRANCH put back (the right channel on `copyInto` for every branch: 2 views on E-parallel, 3 on
+#   E-bands) read E-parallel 211.9, 248.0, 221.5, green under 268, and E-bands over 320 in only 2 of 3 rounds.
+#   Healthy runs: this change's check E-parallel 19.8, 60.9, 0.1 and E-bands 20.8, 26.6, 15.9 (medians 20 and 21), the
+#   re-check after review round 1 45.9, 14.8, 46.2 and 27.4, 6.0, 26.3 (medians 46 and 26); review round 1's reviewer
+#   runs reached worst rounds of 67.5 and 56.1, and review round 2's reviewer read a clean E-parallel median of 57,
+#   outside the medians above: 96 sits 39 B above it. Two mutants against 96:
+#   - one view per branch (round 1's): E-parallel 242.5, 236.4, 211.4 (median 236), E-bands 313.8, 338.9, 345.0
+#     (median 339), both RED in every round;
+#   - one view per BLOCK (the right channel on `copyInto` for branch 0 only, review round 2): E-parallel 149.6, 149.6,
+#     144.0 (median 150, RED), E-bands 133.8, 94.2, 87.0 (median 94, GREEN). A lower E-bands line is no remedy: it
+#     would sit inside the V8 noise of about 25 B.
+#   So E-parallel guards a single view per block (item 33) and the sub-pool map (item 34, about 160 B there); E-bands
+#   guards one view per branch and the sub-pool map (about 200 B there); both guard the per-sample class.
 #   E-arith-glide's figure is mostly its note path (a new voice every 32
 #   blocks: the same notes with constant operands read the same 205 B on the JVM and 439 on V8), which is why its JVM
 #   line is 6 B above 205, not above 0. Since the merge of 2026-10-11 the JVM reads that note path at 204 to 207 B
@@ -176,7 +196,7 @@ whitecolor         v8        64      item 3, the noise stays clean
 whitecolor         jvm       6       item 12's first JVM site
 C-dist             v8        72      item 8; item 9, the fused distort
 C-dist             jvm       6       item 9, the fused distort
-tube4x             v8        160     item 9, the Shape node oversampled
+tube4x             v8        160     item 9, the Shape node oversampled: the per-sample class only
 tube4x             jvm       6       item 9, the Shape node oversampled
 C-full             v8        112     item 8, the knob reads; item 29's SVF setup as a whole (its parts: the KDocs)
 C-full             jvm       6       item 12 step 2
@@ -198,7 +218,7 @@ E-arith            v8        96      the eight arithmetic stages, constant opera
 E-arith            jvm       6       the eight arithmetic stages, constant operands
 E-arith-glide      v8        500     the arithmetic glide: the per-sample ramp, div's reciprocal, an unset cap arriving at once (with the note path)
 E-arith-glide      jvm       211     the arithmetic glide; 204 to 207 B of it is the note path (since the merge of 2026-10-11)
-E-distort          v8        232     the bus distort, 2x: the per-sample class (its oversampled path's per-block boxes are open, item 34)
+E-distort          v8        96      the bus distort, 2x: the per-sample class and the sub-pool map (item 34)
 E-distort          jvm       6       the bus distort, 2x
 E-comp             v8        96      the orbit compressor and a lookahead limiter
 E-comp             jvm       6       the orbit compressor and a lookahead limiter
@@ -208,9 +228,9 @@ E-gain             v8        96      the group fader off unity
 E-gain             jvm       6       the group fader off unity
 E-duck             v8        152     the duck with a sounding sidechain (its tail: item 38)
 E-duck             jvm       6       the duck with a sounding sidechain
-E-parallel         v8        268     item 33, the per-branch copy; parallel, a distorted branch and its phase twin: the per-sample class
+E-parallel         v8        96      items 33 and 34, a single view per block and the sub-pool map; parallel, a distorted branch and its twin: the per-sample class
 E-parallel         jvm       6       parallel, a distorted branch and its phase twin
-E-bands            v8        320     item 33, the per-branch copy; bands, three with the mids distorted: the per-sample class
+E-bands            v8        96      items 33 and 34, one view per branch (not one per block) and the sub-pool map; bands, three with the mids distorted: the per-sample class
 E-bands            jvm       6       bands, three with the mids distorted
 E-body-vowel       v8        96      the body and the vowel on an orbit (V8; the JVM's guard is KatalystResonatorAllocationSpec)
 E-body-vowel       jvm       6       the body and the vowel on an orbit
