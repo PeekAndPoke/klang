@@ -488,8 +488,10 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   back where the voice is simpler, and then ITS callees compete for the caller's budget again: the static path's
   `computeStaticCoeffs` is a call in a two-filter voice but inlined in a one-filter one, where Kotlin's `coerceIn`
   was left out (about 2 heap numbers per block more than before, measured) until it was written out as two
-  comparisons (`clampSvfRange`). The `isFinite` guard beside it is still a 23-byte stdlib call (item 10): V8
-  inlined it in both shapes, but it is the next one out if `generate` grows. So a split is checked on both shapes.
+  comparisons (`clampSvfRange`). The `isFinite` guard beside it, a 23-byte stdlib call, was the next one out (engine
+  follow-up 31): a lowpass or a highpass alone with `analog` left it out (about one and two heap numbers per block),
+  and freeing two enum lookups of `generate`'s budget moved that box to a lowpass with `analog` instead of removing
+  it. It is `isFiniteInline` now. So a split is checked on both shapes.
   Two placements measured worse and were dropped: the static path in place (boxes in the two-filter voice) and
   both paths in one method (boxes in the one-filter voice, not explained). A box can also move instead of going: on
   HEAD V8 inlined `blockDriftMultiplier` into `generate` and left the `nextMultiplier()` it called out; with
@@ -498,6 +500,19 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   calls, and a double return is a box wherever the call stays: hence the step that returns nothing. `C-full` went
   from about 190 to about 40 bytes per block. A probe that renders one stage alone does not reproduce this class:
   build the voice the songs build, then narrow it.
+  **Engine follow-up 31 (2026-10-15) closed what item 29 left on the full voice**, each by a remedy of this file:
+  `EnvelopeCore.prepare` is Kotlin `inline` and leaves its six doubles in the core's own fields for the call past
+  the 460-byte limit (`prepareBlock`); `DistortionCore.shapeRun` (sixteen loops, never inlined) reads its drive from
+  a field. Both are fields and not a `DoubleArray`, because an array is an allocation per voice build (a
+  `Float64Array` per envelope read about 224 B per note on V8 and 64 on the JVM, `E-C-n1` over both lines), and these
+  fields did not box (measured, `--predictable`). `classic()`'s tremolo folds a voice-constant depth into one constant
+  at build (the chain
+  `MinusIgnitor.controlRateValue` then `MaxIgnitor.controlRateValue` was left out of the voice's budget, its double
+  result a heap number); and the SVF clamps test finiteness with `isFiniteInline`. In `--predictable` single-case
+  processes `C-full`, a lowpass or highpass with `analog`, the tremolo alone and the fused distort now read what the
+  classic saw reads (about 15 B per block, the method's floor). Left open on these voices: the fm's per-block calls
+  (items 10c and 10d, about 2 heap numbers on `C-env3`) and a classic envelope with a non-integral sustain (about one
+  heap number, booked in `AdsrIgnitor.generate` as its root call, on HEAD too; likely item 30's class).
 - **A knob that moves every block makes its whole per-block path hot: measure a group of sites, and in both modes**
   (2026-10-12, Katalyst knob expressions step 6, `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`; the runs:
   `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). A modulated Katalyst knob runs the chain's hook every block

@@ -73,8 +73,22 @@ internal class EnvelopeCore {
      * Resolves one block's envelope. Frame counts are voice-relative and may be fractional; [gateEndPos]
      * is the gate's voice-relative frame. [k] and [norm] are the Exponential curvature and its
      * [adsrExpNorm]; every host passes the defaults.
+     *
+     * **Inline, and the doubles travel through the core's own fields, ON PURPOSE** (engine follow-up 31, 2026-10-15;
+     * the rule in `audio/ref/performance.md`, "a non-integral double handed to a function that is not inlined is a
+     * heap number per call"). The block's work, [prepareBlock], is past V8's bytecode limit for inlining (460 bytes)
+     * and is never inlined, so a double argument crossed it as a heap number per host per block whenever it was not
+     * a small integer: a sustain of 0.3 or 0.7, a stage time that is not a whole number of frames. Here the host's
+     * own compiled code stores them, and the call carries only the gate frame and the curves. [sustain], [k] and
+     * [norm] are stored as they are (their final values); the three stage lengths are STAGED in the fields that
+     * [prepareBlock] reads first and then overwrites with their derived values ([attackFrames], [attDecFrames],
+     * [relDenom]). Staged in existing fields and not in a holder of its own because a holder is an allocation per
+     * voice build (a `DoubleArray(6)` read about 224 B per note on V8 and 64 on the JVM, over `E-C-n1`'s lines). No
+     * test can pin it (the sound is the same either way): this KDoc is the guard. Do not hand [prepareBlock] the
+     * doubles as arguments again.
      */
-    fun prepare(
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun prepare(
         attackFrames: Double,
         decayFrames: Double,
         sustainLevel: Double,
@@ -86,23 +100,38 @@ internal class EnvelopeCore {
         k: Double = ADSR_EXP_K,
         norm: Double = ADSR_EXP_NORM,
     ) {
+        // Staged: prepareBlock reads these three as the stage lengths, then overwrites them.
+        this.attackFrames = attackFrames
+        this.attDecFrames = decayFrames
+        this.relDenom = releaseFrames
+        // Final values.
+        this.sustain = sustainLevel
+        this.k = k
+        this.norm = norm
+
+        prepareBlock(gateEndPos = gateEndPos, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve)
+    }
+
+    /**
+     * Call only through `prepare`. [prepare]'s work. Reads the three stage lengths [prepare] staged in
+     * [attackFrames], [attDecFrames] and [relDenom], and overwrites those fields with what the law needs; [sustain],
+     * [k] and [norm] are already set.
+     */
+    internal fun prepareBlock(gateEndPos: Int, attackCurve: AdsrCurve, decayCurve: AdsrCurve, releaseCurve: AdsrCurve) {
         val a = stageFrames(attackFrames)
-        val d = stageFrames(decayFrames)
-        val r = floor(stageFrames(releaseFrames))
+        val d = stageFrames(attDecFrames)
+        val r = floor(stageFrames(relDenom))
 
         this.attackFrames = a
         this.attDecFrames = a + d
         this.attRate = if (a > 0.0) 1.0 / a else 1.0
         this.decRate = if (d > 0.0) 1.0 / d else 1.0
-        this.sustain = sustainLevel
         this.relDenom = releaseProgressDenom(r)
         this.relOffset = releaseProgressOffset(r)
         this.gateEndPos = gateEndPos
         this.attackCurve = attackCurve
         this.decayCurve = decayCurve
         this.releaseCurve = releaseCurve
-        this.k = k
-        this.norm = norm
 
         // A gate at or before the onset releases from 0: the voice was never open, so there is no
         // attack-decay level to release from. Evaluating the law there would extrapolate the attack

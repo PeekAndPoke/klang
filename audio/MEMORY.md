@@ -368,6 +368,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-15 Engine follow-up 31: the last per-block boxes of a full `classic()` voice on V8 removed, about one
+  heap number each: `EnvelopeCore.prepare` inline, its doubles staged in the core's own fields (a `DoubleArray`
+  holder cost an allocation per voice build, `E-C-n1` red); `DistortionCore.shapeRun` reads its drive from a field;
+  `classic()`'s tremolo folds a voice-constant depth at build; the SVF clamps use `isFiniteInline`. `C-full` about 47
+  to 15 B per block (`--predictable`), what the classic saw reads; bit for bit, corpus identical, no budget moved:
+  `docs/tasks/in-progress/engine-follow-ups.md` item 31
 - 2026-10-12 Engine follow-up 2, step 4, item 2 DONE: the allocation case `S-doors` guards sprudel's event path
   (query, `toVoiceData`, wire encode), a case that makes no sound checks its outputs instead of a peak; V8 36,500,
   JVM 15,764. The follow-ups file moved to `docs/tasks/in-progress/` (paused for the token budget):

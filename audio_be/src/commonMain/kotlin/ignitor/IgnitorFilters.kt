@@ -369,8 +369,9 @@ private class SvfIgnitor(
      * into [generate] (238 bytes of bytecode on the production bundle), and its callees then compete for
      * [generate]'s budget. That is why the `coerceIn` half of the clamps is written out as comparisons
      * (`clampSvfRange`): with Kotlin's `coerceIn` (a stdlib call, 67 bytes) V8 left the clamps out there, about 2
-     * heap numbers per block for a lowpass with `analog`. The `isFinite` guard (item 10) is still a stdlib call, 23
-     * bytes, which V8 inlined in both measured shapes; it is the next candidate to be left out if [generate] grows.
+     * heap numbers per block for a lowpass with `analog`. The `isFinite` guard was a stdlib call too, and V8 did
+     * leave it out (a lowpass or highpass alone with `analog`): since engine follow-up 31 it is `isFiniteInline`, an
+     * abs and a compare (`clampSvfCutoff`).
      */
     private fun computeStaticCoeffs(ctx: IgniteContext) {
         computeSvfCoeffs(cutoffHz = blockCutoff * blockDriftMul * offsetMul, q = blockQ, sampleRate = ctx.sampleRate.toDouble(), out = coefs)

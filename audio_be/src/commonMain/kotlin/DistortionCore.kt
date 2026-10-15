@@ -61,6 +61,19 @@ internal class DistortionCore(
     private val dcBlocker = LowPassHighPassFilters.DcBlocker(dcBlockCoefficient)
 
     /**
+     * The block's constant drive on its way into [shapeRun], which takes no double argument ON PURPOSE (engine
+     * follow-up 31, 2026-10-15; `audio/ref/performance.md`, "a non-integral double handed to a function that is not
+     * inlined is a heap number per call"). [shapeRun] is sixteen loops, far past V8's bytecode limit for inlining
+     * (460 bytes), so it is never inlined, and a drive handed to it as an argument (`10^(amount * 1.2)`, almost never
+     * a small integer) crossed as a heap number per block on every fused `Distort` and `Shape` node. A field, not a
+     * `DoubleArray(1)`: an array is an allocation per voice build (a `Float64Array` on Kotlin/JS, about 200 B per note
+     * on V8), and this field, written by [process] in its caller's compiled code, did not box (measured). No test can
+     * pin it (the bits are the same either way): this KDoc is the guard. Do not hand [shapeRun] the drive as an
+     * argument again.
+     */
+    private var blockDrive: Double = 1.0
+
+    /**
      * Back to a fresh core: the oversampler's filter history and the DC blocker's state cleared. For a
      * host that keeps its core across a hard cut (the Katalyst stage's `reset`); the voice builds a new
      * core per note and never calls it.
@@ -78,19 +91,21 @@ internal class DistortionCore(
         val os = oversampler
 
         if (os != null) {
-            // The round trip in two halves with the loop between them, inline: no closure per block and
-            // no side channel for the drive (engine tidy-up step 2, audit B4.1).
+            // The round trip in two halves with the loop between them, inline: no closure per block (engine tidy-up
+            // step 2, audit B4.1); the drive goes through [blockDrive], see there.
             scratchBuffers.oversample(os.factor).use { work ->
                 val count = os.upsample(source = buffer, offset = offset, length = length, work = work)
 
                 // NaN-guarded in the shaping loop: see "NaN and state" in the Oversampler KDoc.
-                shapeRun(buffer = work, from = 0, to = count, drive = drive)
+                blockDrive = drive
+                shapeRun(buffer = work, from = 0, to = count)
 
                 os.decimate(work = work, target = buffer, offset = offset, length = length)
             }
         } else {
             // NaN-guarded in the shaping loop: a NaN escaping here would permanently corrupt the DC blocker's IIR state.
-            shapeRun(buffer = buffer, from = offset, to = offset + length, drive = drive)
+            blockDrive = drive
+            shapeRun(buffer = buffer, from = offset, to = offset + length)
         }
 
         dcBlocker.process(buffer = buffer, offset = offset, length = length)
@@ -133,8 +148,9 @@ internal class DistortionCore(
     }
 
     /**
-     * Shapes `buffer[from, to)` in place at the constant [drive], NaN-guarded: `shape(x * drive)` per sample, the
-     * table of [applyDistortionShape] (pinned shape by shape against it by `OversamplerDecimatorParitySpec`).
+     * Shapes `buffer[from, to)` in place at the block's constant drive ([blockDrive]), NaN-guarded: `shape(x * drive)`
+     * per sample, the table of [applyDistortionShape] (pinned shape by shape against it by
+     * `OversamplerDecimatorParitySpec`).
      *
      * **One loop per shape, the `when` outside the loop (V8; engine follow-up item 9, 2026-10-10), kept for SPEED.**
      * Do not fold this back into one loop. A loop over [applyDistortionShape] boxes every shaped sample that is not a
@@ -146,23 +162,28 @@ internal class DistortionCore(
      * say so (the bits are the same either way). This KDoc is the guard; the measurement is in
      * `docs/tasks/in-progress/engine-follow-ups.md`.
      */
-    private fun shapeRun(buffer: AudioBuffer, from: Int, to: Int, drive: Double) = when (shape) {
-        DistortionShape.SOFT -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.fastTanh(it) }
-        DistortionShape.HARD -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.hardClip(it) }
-        DistortionShape.GENTLE -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.softClip(it) * 2.0 }
-        DistortionShape.CUBIC -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.cubicClip(it) }
-        DistortionShape.DIODE -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.diodeClip(it) }
-        DistortionShape.FOLD -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.sineFold(it) }
-        DistortionShape.CHEBYSHEV -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.chebyshevT3(it) }
-        DistortionShape.RECTIFY -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.rectify(it) }
-        DistortionShape.EXP -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.expClip(it) }
-        DistortionShape.SOFT_SAT -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.softSat(it) }
-        DistortionShape.TUBE -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.tube(it) }
-        DistortionShape.LINEAR_FOLD -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.linearFold(it) }
-        DistortionShape.ZERO_SQUARE -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.zeroSquare(it) }
-        DistortionShape.SINE_SHAPER -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.sineShaper(it) }
-        DistortionShape.ASYM -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.asym(it) }
-        DistortionShape.STOMP_BOX -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.stompBox(it) }
+    private fun shapeRun(buffer: AudioBuffer, from: Int, to: Int) {
+        // The drive arrives through [blockDrive], not as an argument: see there.
+        val drive = blockDrive
+
+        when (shape) {
+            DistortionShape.SOFT -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.fastTanh(it) }
+            DistortionShape.HARD -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.hardClip(it) }
+            DistortionShape.GENTLE -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.softClip(it) * 2.0 }
+            DistortionShape.CUBIC -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.cubicClip(it) }
+            DistortionShape.DIODE -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.diodeClip(it) }
+            DistortionShape.FOLD -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.sineFold(it) }
+            DistortionShape.CHEBYSHEV -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.chebyshevT3(it) }
+            DistortionShape.RECTIFY -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.rectify(it) }
+            DistortionShape.EXP -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.expClip(it) }
+            DistortionShape.SOFT_SAT -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.softSat(it) }
+            DistortionShape.TUBE -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.tube(it) }
+            DistortionShape.LINEAR_FOLD -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.linearFold(it) }
+            DistortionShape.ZERO_SQUARE -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.zeroSquare(it) }
+            DistortionShape.SINE_SHAPER -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.sineShaper(it) }
+            DistortionShape.ASYM -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.asym(it) }
+            DistortionShape.STOMP_BOX -> shapeLoop(buffer = buffer, from = from, to = to, drive = drive) { ShapingFuncs.stompBox(it) }
+        }
     }
 
     /**

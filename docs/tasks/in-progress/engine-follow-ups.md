@@ -3,8 +3,7 @@
 **Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
-fix that changes no API), open V8 items first: 31 (what item 29 left on a full `classic()`
-voice), 32 (the delay's and reverb's per-block `configure`), 34 (the bus distort's oversampled path), 39 to 41 (the
+fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (the delay's and reverb's per-block `configure`), 34 (the bus distort's oversampled path), 39 to 41 (the
 Katalyst knob expressions' residues), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
 and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
@@ -874,7 +873,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     compare helped pinned and hurt unpinned, so it was dropped; worth a second look only with a measurement that holds
     in both conditions. Also in the SVF clamps (`clampSvfCutoff`, `clampSvfQ`): item 29 wrote their `coerceIn` out
     as comparisons (`clampSvfRange`) and kept `isFinite`, a 23-byte stdlib call that V8 inlined in both voice shapes
-    measured there, the next one to be left out if `SvfIgnitor.generate` grows. Source: as 2. S.
+    measured there, the next one to be left out if `SvfIgnitor.generate` grows. It was: item 31 (2026-10-15) found it
+    left out in a one-filter voice with `analog` and put `isFiniteInline` in both SVF clamps. Source: as 2. S.
 10a. **DONE (2026-10-10, with 10b): every per-sample envelope boxed on V8, through the curve `when`.** Reported as
     about 2.17 KB per block for a voice whose pitch envelope is in its attack or decay (one 16-byte heap number per
     sample), about 65 KB per kick sweep; a double crossing a call V8 does not inline was suspected (`adsrCurveShape`,
@@ -1170,39 +1170,111 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     box nothing. `controlRateValue(freqHz)` keeps its argument: the build, the sizing reads and the Katalyst slots
     call it with no render context.
 
-31. **What item 29 left on a full `classic()` voice on V8** (numbered after the last item, added 2026-10-11): sites
-    item 29 located and did not fix, each about one heap number per block (16 B on node, 12 in Chrome), inside the
-    harness's V8 noise on `C-full`, so no budget catches them. Source: item 29, `tmp/reviews/e29-report.md`,
-    `tmp/reviews/e29-r1-B.md` (MINOR 4). S each.
-    - **`EnvelopeCore.prepare`'s arguments.** It is past V8's 460-byte limit (reason 5), never inlined, and takes
-      six doubles (the attack, decay and release frame counts, the sustain, `k`, `norm`). Every envelope host (the
-      chain `adsr` and `classic()`'s envelope, the FM, pitch and filter envelopes) calls it per block, so a
-      non-integral frame count or sustain is a heap number per block per host. `C-full`'s defaults travel as small
-      integers (0.01 and 0.1 s at 48 kHz are 480 and 4,800 frames, sustain 1.0); `lpf.sustain` 0.5 shows one more
-      (in `SvfIgnitor.prepareEnvelopeSweep`). Smallest remedy: a holder, fields on `EnvelopeCore` the host writes
-      and a `prepare()` that reads them: an interface change across every envelope host.
-    - **The tremolo's depth ladder.** `1 - max(depth, 0)` is block-constant; the `MinusIgnitor` scalar path calls
-      `b.controlRateValue` at one shared, polymorphic site that V8 does not inline, so `MaxIgnitor`'s non-integral
-      result is boxed (seen as `MaxIgnitor.controlRateValue` under the tremolo's `TimesIgnitor`). Smallest remedy:
-      a build-time fold of a block-constant subtree whose leaves are voice constants into one scalar: a new
-      mechanism, or a change in `IgnitorDslRuntime.kt` (ADAA-owned).
-    - **The fused distort** (`FusedDistortIgnitor.generate`, `IgnitorEffects.kt`, ADAA-owned): about one heap number
-      per block on `C-full` and `C-dist` (`DcBlocker` is a candidate it does not inline). Not located further.
-    - **Note, the SVF's `saturate` test** (`mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS` in
-      `SvfIgnitor.generate`) is a constant per node but runs per block, and in the two-filter voice it spends about
-      200 bytes of `generate`'s inlining budget on two enum `getInstance` / `initEntries` calls (reviewer B, round 1
-      of item 29). A constructor `val` would free that budget; not a box today, so left for a measured change.
-    The filter drift that item 29's first form only moved is fixed (item 29, review round 1).
-    - **Checked at item 7 (2026-10-11): item 29's double-field holders do not box.** Item 7 found two double fields
-      boxing in a single-case process where an array did not, so item 29's holders were measured in `--predictable`
-      single-case processes on HEAD (`338e520d`; item 29's probe bundle, whose engine module is byte-identical):
-      `C-full` 46 B per block, `lpf` + `env` + `analog` 21, `lpf` + `analog` 31, `hpf` + `analog` 46, classic saw
-      with `analog` 16, classic saw 16 (e8 method, medians of 2). A hand-edited copy with the SVF node's cutoff, q and drift fields
-      and `FilterHumanization.driftMul` replaced by `Float64Array`s read the same (`C-full` 46, `hpf` + `analog` 46),
-      so the fields are not the box. What the one-filter voices with `analog` keep, one or two heap numbers above the
-      classic saw, the profiler books in `SvfIgnitor.generate`; writing out the `coerceAtLeast` of the analog read
-      there moved `hpf` + `analog` from 46 to 37 B and `lpf` + `analog` from 31 to 37 (within a heap number, not
-      conclusive). Not located further; inside the harness's noise band.
+31. **DONE (2026-10-15): what item 29 left on a full `classic()` voice on V8, four sites, each about one heap number
+    per block; a full `classic()` voice now reads what the classic saw reads.** Reported (added 2026-10-11, from item
+    29, `tmp/reviews/e29-report.md`, `tmp/reviews/e29-r1-B.md` MINOR 4) as `EnvelopeCore.prepare`'s arguments, the
+    tremolo's depth ladder, the fused distort (not located) and, as a note, the SVF's per-block mode test; and (checked
+    at item 7) one or two heap numbers on a one-filter voice with `analog`, booked in `SvfIgnitor.generate`, not
+    located. A purely independent performance fix (Q38): no DSL door, wire type, public signature or sound changes
+    (`EnvelopeCore` is `internal`, the rest is private or `internal` too). **Located on the production bundle**
+    (`:audio_benchmark:compileProductionExecutableKotlinJs`, node 22.12, single-case processes, the sampling heap
+    profiler and `--trace-turbo-inlining` on a copy of the bundle with every method named), with seven probe cases added
+    to `AllocationCases.kt` for the measurement and taken out again: `C-full` with `lpf.sustain` 0.5, `lpf` 1200 Hz
+    with `analog` 0.2, `hpf` 80 Hz with `analog` 0.2, the tremolo alone (depth 0.3, rate 4.3), `C-full` without the
+    distort, a classic saw with `adsr.sustain` 0.7, and `C-full` as a new note every block through the engine. Sites
+    and fixes:
+    - **The fused distort** (`C-dist`, `C-full`): `FusedDistortIgnitor.generate` inlines `DistortionCore.process`,
+      which handed the drive (`10^(amount * 1.2)`, 3.98 at amount 0.5) to `shapeRun`, sixteen loops, never inlined,
+      so the drive crossed as a heap number. Not `DcBlocker`. **Fix:** `shapeRun` takes no double; `process` writes
+      the drive into a private field (`blockDrive`) and `shapeRun` reads it (`DistortionCore.kt`). One heap number
+      per block on every fused `Distort` and `Shape` node.
+    - **The tremolo's depth ladder** (`C-full`, the tremolo alone): in the voice's compile V8 inlined `RangeIgnitor`
+      and `MinusIgnitor.controlRateValue` into `TimesIgnitor.generate` but left `MaxIgnitor.controlRateValue` out,
+      so the floored depth (0.3) crossed. **Fix:** `tremoloGain` (`IgnitorDslRuntime.kt`) folds a voice-constant
+      depth (a `ParamIgnitor` or `ConstantIgnitor`, which is what `classic()`'s `tremolo.depth` slot builds) into
+      one `ConstantIgnitor` at build, `minusLaw(1.0, maxLaw(depth, 0.0))`, the two laws the nodes computed per block
+      on the same operands, so bit for bit; any other depth keeps the nodes. Not a general fold mechanism: one
+      builder, two nodes fewer per tremolo voice (the probe with a full voice per note read about 880 B less per
+      note on V8, most likely those nodes).
+    - **`EnvelopeCore.prepare`'s arguments** (`C-env3`, `C-full` with `lpf.sustain` 0.5): `prepare` is past the
+      460-byte limit and was a call from every host, so a non-integral sustain or stage length crossed as a heap
+      number per host per block (the filter envelope's sustain 0.5 in `C-full`, the fm's 0.3 in `C-env3`). **Fix:**
+      `prepare` is Kotlin `inline` (every call site and test unchanged) and stores its doubles into the core's own
+      fields in the host's compiled code: the sustain, `k` and `norm` as their final values, the three stage lengths
+      staged in `attackFrames`, `attDecFrames` and `relDenom`, which `prepareBlock` (the old body, not inlined) reads
+      first and then overwrites with their derived values. The first form held them in a `DoubleArray(6)`: per block
+      the same, but the array is an allocation per voice build, and the allocation check read `E-C-n1` RED on both
+      platforms (V8 13,292 against 13,068, JVM 6,680 against 6,628: about 224 and 64 B per note), so it was not kept.
+      The staging fields add nothing to a build (`E-C-n1` 13,009.6 / 13,022.2 B, `--predictable`). The chain `adsr`
+      did not box its sustain on HEAD (a classic saw at sustain 0.7 reads one heap number above the classic saw on
+      both sides, booked in `AdsrIgnitor.generate` as the voice's root call: likely item 30's class, not this one).
+    - **The SVF clamps' `isFinite`** (a lowpass or highpass alone with `analog`): with one SVF in the voice V8
+      inlines `computeStaticCoeffs` into `generate` and left the stdlib `isFinite()` of `clampSvfCutoff` and
+      `clampSvfQ` out, the cutoff and the q crossing it (about one heap number for the lowpass, two for the
+      highpass). Item 10 had named it "the next one out". **Fix:** both use `isFiniteInline` (one compare, the same
+      value for every input; `LowPassHighPassFilters.kt`), shared with `ResonatorBank` and `EqCore` (`E-eq`,
+      `E-body-vowel` unchanged at 15.5 and 14.4 B).
+    - **Left: the SVF's per-block mode test** (the note). A constructor `val` was measured: it freed the two enum
+      lookups of `generate`'s budget, and V8 spent the room elsewhere and left `isFinite` out instead (the lowpass
+      with `analog` 29.9 to 52.6 B, `--predictable`): a box moved, not removed. With `isFiniteInline` nothing on
+      these voices boxes any more, so the change buys nothing measurable and was dropped.
+    - **Left, a known residue on the Katalyst glide path:** `DistortionCore.shapeRunRamped` still takes `driveFrom`
+      and `driveTo` as doubles (the bus distort while its amount glides); not measured, not fixed here.
+    Each fix has its KDoc as the guard (no test can pin a box). **Measured** (bytes and ns per block, 20,000 warm-up
+    and 200,000 measured blocks; `--predictable` single-case processes repeat exactly, 2 rounds; the allocation
+    check's method, two processes per round, medians of 3, HEAD / tree / HEAD again; a byte copy of HEAD's bundle):
+
+    | case | `--predictable`, HEAD / tree | unpinned, HEAD / tree / HEAD again |
+    |---|---|---|
+    | `sawC` (control) | 21.6 / 15.4 B | 15.5 / 15.3 / 22.4 B |
+    | `C-full` | 46.7 / 14.6 B, 12,747 / 12,703 ns | 47.0 / 14.2 / 47.2 B |
+    | `C-full`, `lpf.sustain` 0.5 | 61.3 / 15.5 B | 62.5 / 14.0 / 56.6 B |
+    | `C-full` without the distort | 29.4 / 14.5 B | |
+    | `C-dist` | 30.1 / 14.9 B | 29.1 / 15.2 / 30.1 B |
+    | the tremolo alone | 31.2 / 15.3 B | 29.2 / 14.5 / 29.9 B |
+    | `lpf` + `analog` | 29.9 / 14.8 B | 9.6 / 10.0 / 21.1 B |
+    | `hpf` + `analog` | 52.7 / 15.7 B | 9.0 / 9.9 / 21.4 B |
+    | `C-env3` | 60.5 / 52.8 B | 66.7 / 51.1 / 57.8 B |
+    | classic saw, `adsr.sustain` 0.7 | 29.7 / 30.8 B | |
+    | `tube4x` (control) | 56.9 / 57.4 B | |
+    | `E-distort` (control, item 34) | 155.6 / 156.1 B | |
+    | `E-C-n1` (a voice build per block) | 13,009.6 / 13,022.2 B | |
+    | `C-full`, a new note every block | 24,253.9 / 23,369.9 B, 369,802 / 367,324 ns | |
+
+    Pinned (`taskset -c 3`, medians of 5, HEAD / tree / HEAD again; the machine was busy and single rounds ran from
+    -50 to 177 B, so pinned holds only where the gap is several heap numbers): `C-full` 40.5 / 21.0 / 53.1 B,
+    `C-full` with `lpf.sustain` 0.5 67.3 / 15.6 / 66.9, `C-env3` 91.5 / 51.7 / 51.2, `C-dist` 36.0 / 26.0 / 20.9,
+    the tremolo alone 26.1 / 26.8 / 36.7, `lpf` + `analog` 30.0 / 30.5 / 4.9, `hpf` + `analog` 108.8 / 36.4 / 66.1,
+    `sawC` 6.1 / 9.1 / 16.1 (the first form, with the array holder, read on core 11 at a quieter hour `C-full` 52.4 /
+    20.3 / 52.9, `C-dist` 36.4 / 15.8 / 40.8, `C-full` with `lpf.sustain` 0.5 73.1 / -0.5 / 77.2, medians of 3).
+    One heap number is 16 B on node and 12 in Chrome. The one-filter rows read inside the method's noise unpinned (as
+    item 29 found), so their `--predictable` rows are the evidence. Time: within noise (`C-full` 0.99 to 1.00 of
+    HEAD). **JVM:** nothing here allocated per block before or after (the allocation check, 0 B on every voice case).
+    Bit for bit: the corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0 edited (run on the final
+    form); `:audio_be:jvmTest` 2,773 of 2,773. The allocation check on the final form: GREEN, 80 of 80;
+    V8 `C-full` 26 B (rounds 15.4, 25.7, 26.0; the scoreboard's last nine runs read 31 to 57), `C-dist` 21 (15.8,
+    35.3, 20.8; before, 26 to 37), `C-env3` 31 (before, 61 to 97), `E-C-n1` 13,035 (rounds 13,021 to 13,061, 33 B
+    under its line; the voice build is unchanged, the JVM reads 6,616 as before); every JVM case as before. The
+    scoreboard keeps that run's two rows; the first form's red run's two rows were taken out (a form not kept, as a
+    mutant's).
+    **Review round 1** (clean from both reviewers; four comment-only NITs applied: the `process` comment names
+    `blockDrive`, "an abs and a compare" for `isFiniteInline`, `prepareBlock`'s KDoc starts "Call only through
+    `prepare`", the ramped residue above). Mutants, one lock call each, restored and checked with `cmp`:
+    - M3, a stale drive (`if (blockDrive == 1.0) blockDrive = drive` on both paths): survives `DistortionSpec` (2)
+      and `WaveshaperKnobsSpec` (13); killed by `KatalystDistortEffectSpec` (2 of 15, the two glide rows) and by
+      `StripLawCoresSpec` (2 of 5, "a MODULATED amount through 0 keeps the node contiguous" and "a NaN modulated
+      amount silences the shaper for that block"), so the voice side is covered too.
+    - M2, `relDenom` not staged: survives `StripLawCoresSpec` (5 of 5 green; it tests crush and distort, not the
+      envelope); killed by `EnvelopeLawSpec` (8 of 13, the release rows and all four host rows).
+    - The drive handed back to `shapeRun` as an argument (the box itself): `--predictable`, single case, mutant /
+      tree / mutant, `C-dist` 31.0 / 14.8 / 31.0 B and `C-full` 31.2 / 14.5 / 31.2 B: one heap number, as expected,
+      and no test can see it (the KDoc is the guard).
+    **What is left on these voices:** `C-env3` about 2 heap numbers (the fm's per-block calls, items 10c and 10d);
+    the classic envelope at a non-integral sustain, about one (above); `tube4x` and `E-distort` unchanged (the
+    oversampled path, item 34). **No budget line moves:** the four sites were each one heap number, under the V8
+    resolution of a line (about 25 B, header of `alloc-budgets.txt`), so no line can tell HEAD from the tree, and a
+    line set closer to the healthy rounds would not guard them; `C-full`'s 112 keeps guarding item 8 and item 29
+    as a whole. No new case: a case for these sites could not be budgeted to catch them. S.
 
 32. **What item 1 left: the delay's and the reverb's per-block `configure`** (numbered after the last item, added
     2026-10-11). Source: item 1 and its review round 1 (`tmp/reviews/e1-r1-B.md`, MINOR 3). The chain's writers
