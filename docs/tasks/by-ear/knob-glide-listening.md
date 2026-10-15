@@ -8,3 +8,5 @@ Status: **open, a listening test (maintainer, 2026-10-14, C13).** From [`../../.
 2. **The compressor's rising-threshold swing:** accepted as it is, or a fix? Listen on a bus whose threshold moves up.
 
 Make a listening pair for each, then decide.
+
+Pairs: `tmp/listening/knob-glide/` (local, not in git; start at `tmp/listening/00-index.md`).

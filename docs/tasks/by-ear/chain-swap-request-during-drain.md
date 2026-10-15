@@ -5,6 +5,8 @@ Status: **open question for the maintainer's ear** (phase 3 step 12, decision (g
 plan was archived (`docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`, section 0 row (g) and
 section 8 (g)).
 
+Pairs: `tmp/listening/chain-swap-drain/` (local, not in git; start at `tmp/listening/00-index.md`).
+
 ## What it is
 
 Since step 12 the orbit and the master swap their effect chain by one law, `ChainSwap`
