@@ -14,7 +14,7 @@ State: `main` after v0.6.5 and the pause housekeeping (2026-10-13); where each s
 
 # Part 0: Before the refill (2026-10-13)
 
-The calls that decide where the next work goes. All answered 2026-10-13: Q34 (the corpus re-accepted; songs move freely: `song-checks-move-freely.md`), Q35 (no ADAA exists, the
+The calls that decide where the next work goes. All answered 2026-10-13: Q34 (the corpus re-accepted; songs move freely: `../tasks-archive/2026-10/20261015-song-checks-move-freely.md`), Q35 (no ADAA exists, the
 link fixed), Q36 (the eight merged branches and the worktree deleted), Q37 (rule 1 stays provisional and is expected to go: the next review loop tries reviewers running mutants again;
 rule 2 dropped, the exception documented in its KDoc, and the register says rules are guard-rails), Q38 (after the refill, finish engine
 follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API), Q39 (fade, do not cut: engine follow-up 42), Q18 (the data tables stay positional, documented at

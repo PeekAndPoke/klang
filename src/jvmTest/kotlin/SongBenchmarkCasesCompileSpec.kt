@@ -20,6 +20,9 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
  * (a retired door, a renamed knob) used to break it silently until someone benchmarked. Found
  * 2026-09-07 when the envelope doors were removed: `FrozenSongs` and the LEAD ladder still called
  * `.release(...)`.
+ *
+ * Kind: for the future: every text it builds is frozen or transcribed, so it goes red on a DSL surface change and
+ * never on a song edit (`CLAUDE.md`, "Two kinds of check").
  */
 class SongBenchmarkCasesCompileSpec : StringSpec({
     fun engine() = klangScript {
@@ -36,11 +39,11 @@ class SongBenchmarkCasesCompileSpec : StringSpec({
         }
     }
 
-    "the live rig ablation and the ledger build and compile: every text anchor still matches the song it edits" {
-        // `rig()` rewrites the LIVE Der Schmetterling through text anchors that fail loudly when the song no
-        // longer contains them, and `all()` does not build it, so six anchors went stale unnoticed (found in
-        // phase 3 step 10). Building the cases here is what runs the anchors.
-        val cases = SongBenchmarkCases.rig() + SongBenchmarkCases.ledger()
+    "the rig ablation and the frozen ledger build and compile: every text anchor matches the frozen song it edits" {
+        // `rig()` rewrites the FROZEN Der Schmetterling through text anchors that fail loudly when the text does not
+        // contain them, and `all()` does not build it. Building the cases here is what runs the anchors. The ledger's
+        // live rows read the live song and are left out: songs move freely.
+        val cases = SongBenchmarkCases.rig() + SongBenchmarkCases.ledgerFrozen()
         cases.isNotEmpty() shouldBe true
 
         for (case in cases) {

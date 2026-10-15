@@ -10,6 +10,7 @@
 # whole run):
 #   tests   ./gradlew allTests :klangscript-ksp:test --continue
 #   corpus  ./gradlew runSongBenchmark --args=corpus              (src/jvmMain/kotlin/CorpusCheck.kt)
+#           (red when a frozen text or an unedited live song sounds different; an edited live song is information)
 #   timing  console/run-dsp-benchmarks.sh                         (no budgets: never red on its numbers)
 #   alloc   the production node bundle (relinked, so its time is fresh), then
 #           KLANG_BENCH_MODE=alloc ./gradlew :audio_benchmark:jvmRun
@@ -216,17 +217,41 @@ else
     fi
 fi
 
-# corpus: green only with its own CORPUS GREEN line; the songs that differ.
+# corpus: green only with its own CORPUS GREEN line; the frozen texts that differ and the live songs the engine moved
+# are red, the live songs whose text moved are listed as information (songs move freely).
 CORPUS_LINE=$(grep -m1 '^CORPUS ' "$LOGDIR/corpus.log" | sed -E 's/^CORPUS [A-Z]+: //; s/ \([0-9]+ s\)$//')
+CORPUS_INFO=$(grep -E '^INFO ' "$LOGDIR/corpus.log" | sed -E 's/^INFO +/information: live song /')
+
+# The verdict column holds the frozen half; the live half goes on its own line, so the duration column stays aligned.
+CORPUS_LIVE=""
+
+if [[ "$CORPUS_LINE" == *"; "* ]]; then
+    CORPUS_LIVE="${CORPUS_LINE#*; }"
+    CORPUS_LINE="${CORPUS_LINE%%; *}"
+fi
 
 if [ "${RC[corpus]}" = 0 ] && grep -q '^CORPUS GREEN: ' "$LOGDIR/corpus.log"; then
     verdict corpus GREEN "$CORPUS_LINE"
+
+    if [ -n "$CORPUS_LIVE" ]; then
+        LINES+=("          $CORPUS_LIVE")
+    fi
+
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            LINES+=("          $line")
+        fi
+    done <<< "$CORPUS_INFO"
 else
     RED=1
     SONGS=$(grep -E '^(CHANGED|NEW|MISSING) ' "$LOGDIR/corpus.log")
 
     if grep -q '^CORPUS RED: ' "$LOGDIR/corpus.log"; then
         verdict corpus RED "$CORPUS_LINE"
+
+        if [ -n "$CORPUS_LIVE" ]; then
+            LINES+=("          $CORPUS_LIVE")
+        fi
     else
         verdict corpus RED "$(why_red corpus)"
         WORSE+=("corpus did not run to the end")
@@ -240,8 +265,14 @@ else
     done <<< "$SONGS"
 
     if [ -z "$SONGS" ] && grep -q '^CORPUS RED: ' "$LOGDIR/corpus.log"; then
-        WORSE+=("corpus: $CORPUS_LINE")
+        WORSE+=("corpus: $CORPUS_LINE${CORPUS_LIVE:+; $CORPUS_LIVE}")
     fi
+
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            LINES+=("          $line")
+        fi
+    done <<< "$CORPUS_INFO"
 fi
 
 # timing: never red on its numbers; the compare file's red flags are information.

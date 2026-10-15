@@ -10,7 +10,7 @@ picks up again. Read it first, then the task file it names.
   at the time of writing.
 - The full check on `main` (2026-10-13, `9e1bcec7`): tests GREEN (17,684), allocation GREEN (80 of 80), timing done;
   the corpus differed only on the maintainer's song edits, re-accepted the same day (Q34) on the songs as of
-  `d9804f41`. Song edits should not turn the check red at all: [`../song-checks-move-freely.md`](../song-checks-move-freely.md).
+  `d9804f41`. Since 2026-10-15 a song edit no longer turns the check red ([`../../tasks-archive/2026-10/20261015-song-checks-move-freely.md`](../../tasks-archive/2026-10/20261015-song-checks-move-freely.md)).
 - No branch holds unmerged work of either session. The merged branches and the `katalyst-live-knobs` worktree were
   deleted 2026-10-13 (Q36), and so were the 55 older merged local branches and the abandoned experiment
   `code-blocks-with-mutator` (maintainer). `main` is the only local branch.
@@ -28,7 +28,7 @@ and goes to the maintainer.
    (fm).
 2. The known tails of the allocation check, each a breach that a rerun clears (the rule is in the header of
    `audio_benchmark/alloc-budgets.txt`): 4 (`spluck-a`), 36 (`E-arith`'s second mode), 38 (`E-duck`).
-3. [`../song-checks-move-freely.md`](../song-checks-move-freely.md) (small, decided).
+3. Done 2026-10-15: songs move freely (`../../tasks-archive/2026-10/20261015-song-checks-move-freely.md`).
    Then the behaviour changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39), 43 (solo reacts at once, Q28), 44 (`duty(width)`, Q29). Larger, decided, its own task: typed Kotlin doors
    ([`../kotlin-typed-doors.md`](../kotlin-typed-doors.md), Q24)
    and the frozen songs' shared orbits ([`../song-orbit-ownership-review.md`](../song-orbit-ownership-review.md), Q20).

@@ -18,6 +18,9 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
  *
  * Confirms each song compiles to a non-null SprudelPattern under the same
  * engine setup the user-facing app uses (stdlib + sprudel + builtin songs).
+ *
+ * Kind: for the future: a song that no longer compiles is a real break (the 2026-10-12 paste of a retired door), the
+ * one way a song edit may turn a check red (`CLAUDE.md`, "Two kinds of check").
  */
 class BuiltInSongsSmokeTest : StringSpec({
 

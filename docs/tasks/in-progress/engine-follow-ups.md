@@ -14,8 +14,8 @@ Status: **open, collected 2026-10-09** when the engine tidy-up was archived
 ([`20261009-engine-tidy-up.md`](../../tasks-archive/2026-10/20261009-engine-tidy-up.md), "the record" below; v0.6.0). Each
 item was checked against the later sections of the record and against the code at `662aa8db`; only what is still open
 is listed. Nothing here changes a surface a tutorial teaches, except where an item says so. A behaviour-neutral item is
-proven the usual way: bit-identity on the 18-song corpus and Kokon, and for an allocation item a measurement on the
-production bundle, pinned AND unpinned (`audio/ref/performance.md`).
+proven the usual way: the corpus GREEN with no live song edited (or accept first) and Kokon, and for an allocation
+item a measurement on the production bundle, pinned AND unpinned (`audio/ref/performance.md`).
 
 Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
 
