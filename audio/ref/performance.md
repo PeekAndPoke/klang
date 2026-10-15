@@ -320,7 +320,14 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   phaser's `WetDryMix.dryCoeff` and `wetCoeff` were left out of the writer's budget. The remedy is no call on the steady
   path: the house pattern of an unchanged config (the EQ's `unchanged`, the resonator's, the compressor's), now in the
   phaser stage too (`KatalystPhaserEffect.applied`, review round 1 of follow-up 1), after which every stage case read
-  the engine without a stage in every mixed process measured but one pinned process (the delay, one heap number). The delay's and the reverb's `configure` are item 32.
+  the engine without a stage in every mixed process measured but one pinned process (the delay, one heap number).
+  The delay and the reverb skip an unchanged config too since engine follow-up 32 (2026-10-16;
+  `KatalystDelayEffect.applied`, `KatalystReverbEffect.applied`): reproduced first in pinned mixed processes, their
+  `configure` booked 64 and 48 B per block (`ensureRing` and the setters left out), and after it every stage case
+  reads the engine without a stage in every pinned and unpinned mixed process measured. Two writes stay on the path,
+  which is what keeps the skip exact: a coefficient glide that moves (the old path writes its target every block,
+  and a reader between the configure and the block sees it) and the delay's latched retry of a refused grow. The
+  OFF arm is never skipped.
   **A `Math.ceil` handed to a call that is not inlined boxes even when it is a whole number:** V8 cannot rule out -0,
   so it cannot travel as a small integer (the `toInt()` inside the delay's `framesFor(time)`, run every block until
   follow-up 1 kept the conversion off the steady path).

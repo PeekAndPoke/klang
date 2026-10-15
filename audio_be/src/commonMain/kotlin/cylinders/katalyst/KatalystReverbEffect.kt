@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
+import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import kotlin.math.min
@@ -128,7 +129,8 @@ class KatalystReverbEffect(
      *
      * INVARIANT: the room params change only through [configure] and, while the size glides,
      * [advanceGlide] in [process]. A direct write bypasses the lifecycle and desyncs [state] from
-     * the DSP (tests may write directly to probe the core; production must not).
+     * the DSP (tests may write directly to probe the core; production must not). Since engine follow-up 32 an unchanged
+     * config skips, so re-sending the same config does not undo such a direct write.
      */
     var reverb: Reverb? = null
         private set
@@ -197,7 +199,7 @@ class KatalystReverbEffect(
      * | state \ event | `configure`, reverb ON | `configure`, reverb OFF | `process`, countdown ends | `reset` | `retire` / `release` |
      * |---|---|---|---|---|---|
      * | **Off** | **Active** (a unit is rented if there is none; the size snaps; on a modulated size the wet glides up from 0). Stays Off in ONE case: there is no unit AND the shelf refuses one | Off | (never) | Off | Off |
-     * | **Active** | Active (the knobs are rewritten, the size glide retargets; mid-fade the wet glide turns around) | **Draining**, or **Off** when the network is already silent OR poisoned (a non-finite countdown). On a modulated size with a finite value, first **Active** while the wet glide falls to 0 (the off-config is re-applied every block), then that | (never) | Off | Off |
+     * | **Active** | Active (the knobs are rewritten, the size glide retargets, an unchanged config writes nothing, see [applied]; mid-fade the wet glide turns around) | **Draining**, or **Off** when the network is already silent OR poisoned (a non-finite countdown). On a modulated size with a finite value, first **Active** while the wet glide falls to 0 (the off-config is re-applied every block), then that | (never) | Off | Off |
      * | **Draining** | **Active** (the network, its ceiling and the size glide carry on; a new size glides from where the room stands; on a modulated size the wet glides up from 0) | Draining (the countdown keeps running) | **Off** | Off | Off |
      *
      * The ON arm of [configure] is the same from every state but one line, so it stays on the effect
@@ -242,6 +244,8 @@ class KatalystReverbEffect(
             activeTail.reset()
             sizeGlide.reset()
             wetGlide.reset()
+            // The memo describes an Active life; this one has ended (see [applied]).
+            appliedValid = false
             state = this
         }
 
@@ -398,6 +402,39 @@ class KatalystReverbEffect(
     private val door = ReverbConfig()
 
     /**
+     * The three knobs the last ON-arm [configure] applied, in [ReverbConfig]'s order (size, lowpass, wet), valid while
+     * [appliedValid]: an unchanged config returns before it writes anything (engine follow-up 32, 2026-10-16).
+     *
+     * **Why:** the writer re-applies its config on every block (`KatalystChain.applyParams`), and on V8, in a mixed
+     * profile where most orbits take the off arm, this method can be compiled with its calls left out (the unit's
+     * `size` and `lowpass` setters among them), so their doubles crossed as heap numbers: two or three per block,
+     * measured in pinned mixed processes (`audio/ref/performance.md`). The phaser's house pattern
+     * (`KatalystPhaserEffect.applied`), with the one write item 1 found in the way handled: while the size glide
+     * moves, [advanceGlide] overwrites the unit's size before each block and this method writes the target back after
+     * it, so a MOVING size glide never skips; a settled one holds exactly the target, which is what the skipped write
+     * would store. Everything else the ON arm does on an unchanged config in [Active] is a no-op: the unit is there,
+     * the setters store the same numbers (a non-finite lowpass the same NaN), a `retarget` to the target that stands
+     * is free, `active.enter` keeps the state, and the return from another state does not apply (the memo is valid
+     * only in Active).
+     *
+     * **When it is valid:** set at the end of the ON arm, cleared at the start of every configure that does not skip
+     * and in [Off.enter]. So it is valid only in [Active]: every way out of Active is the OFF arm of this method or
+     * [Off.enter]. The OFF arm is never skipped, so the off-config a modulated size's fade needs every block still
+     * arrives every block; and a return after a fade, whose config may equal the memo, is not skipped either, because
+     * the off-config that began the fade cleared it.
+     *
+     * Compared NaN-aware with -0.0 told apart ([sameKnob]). It stores the RAW knobs, a deliberate departure from the
+     * cached-config rule of `/review-loop` ("store substituted values"): a memo that only skips an unchanged config must
+     * match the input exactly, raw is the simplest exact key, and [sameKnob] settles NaN. Every write [configure] makes
+     * is a function of these raw knobs, so equal raw knobs mean equal writes. An ARRAY, not double fields, so the
+     * stores cannot box (engine follow-up 7). No test can pin the box; this KDoc is the guard.
+     */
+    private val applied = DoubleArray(3)
+
+    /** True while [applied] describes the config in force; see there. */
+    private var appliedValid: Boolean = false
+
+    /**
      * The door for a direct caller (the specs): fills this stage's own [ReverbConfig] and configures from it, so the
      * rules below are written once, in the holder overload.
      */
@@ -438,6 +475,16 @@ class KatalystReverbEffect(
         val size = config.size
         val lowpass = config.lowpass
         val wet = config.wet
+        val last = applied
+
+        // An unchanged config in Active writes nothing: see [applied]. Never while the size glide moves.
+        if (appliedValid && !sizeGlide.isGliding && sameKnob(last[0], size) && sameKnob(last[1], lowpass) &&
+            sameKnob(last[2], wet)
+        ) {
+            return
+        }
+
+        appliedValid = false
 
         if (size.isFinite() && size >= MIN_ACTIVE_SIZE) {
             // Out of Off the glide was forgotten on the way in, so the room ARRIVES, it does not
@@ -464,6 +511,11 @@ class KatalystReverbEffect(
             // NaN-guard on a value a direct caller can pass: the shared default, see above.
             wetGlide.retarget(if (wet.isFinite()) wet else REVERB_WET)
             active.enter()
+
+            last[0] = size
+            last[1] = lowpass
+            last[2] = wet
+            appliedValid = true
             return
         }
 

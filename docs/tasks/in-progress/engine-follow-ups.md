@@ -3,7 +3,7 @@
 **Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
-fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (the delay's and reverb's per-block `configure`), 34 (the bus distort's oversampled path), 39 to 41 (the
+fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (DONE 2026-10-16), 34 (the bus distort's oversampled path), 39 to 41 (the
 Katalyst knob expressions' residues), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
 and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
@@ -1276,30 +1276,77 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     line set closer to the healthy rounds would not guard them; `C-full`'s 112 keeps guarding item 8 and item 29
     as a whole. No new case: a case for these sites could not be budgeted to catch them. S.
 
-32. **What item 1 left: the delay's and the reverb's per-block `configure`** (numbered after the last item, added
-    2026-10-11). Source: item 1 and its review round 1 (`tmp/reviews/e1-r1-B.md`, MINOR 3). The chain's writers
-    re-apply their resolved knobs on every block (`KatalystChain.applyParams`). On V8 a stage's `configure` can then be
-    a cold compile in a mixed profile, where most orbits take the off arm: a trace of one such process (item 1) shows
-    the delay's `configure` with nothing inlined but `isFinite`, its setters (`time`, `feedback`, `cap`), both
-    `KnobGlide.retarget`s and `ensureRing` left out, so every knob crosses a call, up to 5 heap numbers per block. In
-    single-case processes (the allocation check's shape) the phaser's residue was its wet/dry law instead,
-    `WetDryMix.dryCoeff` and `wetCoeff` left out of the writer's budget (reviewer B's trace). **The phaser is done**
-    (item 1, round 1): it skips an unchanged config, the house pattern (the EQ's `unchanged`, the resonator's, the
-    compressor's by reference; the writers' comment `KatalystSlotWriters.kt`, "the effect short-circuits an unchanged
-    config"), comparing the raw knobs NaN-aware and with -0.0 told apart (the cached-config rule: a NaN never defeats
-    the compare), invalidated by `reset`. After it no residue was measured on the delay or the reverb either: in 6
-    unpinned and 3 pinned mixed processes every stage case read the engine without a stage, but for one pinned
-    process with the delay one heap number above it (item 1, round 1). So what is left is a risk, not a measured
-    cost: a later compile history can bring the cold `configure` back. **Not built for the delay and the reverb,
-    because a skip is not exact there without more work:** the delay's `configure` writes the feedback target into
-    the line every block and `advanceGlide` overwrites it with the glide's value before the block, so between the two
-    a reader (`Active.sustainsItself`) sees the target; skipping would leave the glide's
-    last value there mid-glide. And a refused ring grow consults the shelf again on every `configure` (the latched
-    retry), which a skip would stop. The reverb writes its size target the same way (`advanceGlide` overwrites it
-    while the size glides). The remedy, when a case shows the cost again: the same skip with those two writes kept on
-    the steady path (the glide targets compared, the line's knobs rewritten only when they move, the latched retry
-    exempt), proven bit for bit with the owner-change dumps of item 1. Related: item 10 (`isFinite`, the call that
-    stays). S.
+32. **DONE (2026-10-16): what item 1 left, the delay's and the reverb's per-block `configure`; both now skip an
+    unchanged config, and in pinned mixed processes the delay and the reverb read the engine without a stage again.**
+    Reported (added 2026-10-11, from item 1 and its review round 1, `tmp/reviews/e1-r1-B.md` MINOR 3) as a risk, not a
+    measured cost: the chain's writers re-apply their knobs every block (`KatalystChain.applyParams`), and in a mixed
+    profile V8 can compile a stage's `configure` with its calls left out, so every knob crosses a call. A purely
+    independent performance fix (Q38): no DSL door, wire type, public signature or sound changes (the new state is
+    private). **Reproduced and located on HEAD** (item 1's probe, `ZzE1Probe*`, rebuilt on
+    `:audio_be:compileTestProductionExecutableKotlinJs`, node 22.12, with one case added, `flip`: owners taking turns A,
+    B, A, an off owner, A back mid-drain, off again, a fractional delay and a lowpassed reverb at the end; the probe was
+    moved out of the source sets after every build). In 3 pinned mixed processes (`taskset -c 11`, every case warmed
+    round-robin in one process, item 1's method) one process read the delay 64 B (four heap numbers) above the engine
+    without a stage and another the reverb 32 to 48 B above it; the sampling heap profiler in those processes booked
+    64.5 B per block in `KatalystDelayEffect.configure` and 48.3 B in `KatalystReverbEffect.configure` (the classic saw
+    cases), the compiled form calling `ensureRing` and the line's `time`, `feedback` and `cap` setters, the unit's
+    `size` and `lowpass` setters. Unpinned mixed (6 shuffled processes) and single-case processes showed no residue,
+    as item 1 found. **Fix:** item 1's remedy, with the two writes it named kept on the path:
+    - `KatalystDelayEffect.applied` and `KatalystReverbEffect.applied`, the phaser's house pattern: the raw knobs of
+      the last ON-arm `configure` in a `DoubleArray`, compared NaN-aware with -0.0 told apart (`sameKnob`); an
+      unchanged config returns before it writes anything.
+    - **Never while the coefficient glide moves** (the delay's feedback, the reverb's size): the old path writes the
+      target every block and the block's glide step overwrites it, so between the two the line or unit holds the
+      target (a reader there, `Active.sustainsItself`); a settled glide holds exactly the target.
+    - **The latched retry:** the delay's memo is valid only when the installed ring serves the time, so a refused
+      grow still consults the shelf every block.
+    - **The contract of the off-config** (the delay's class KDoc, and the reverb's modulated size): the memo is set
+      at the end of the ON arm and cleared at the start of every configure that does not skip and in `Off.enter`,
+      so it is valid only in Active, the OFF arm is never skipped, and a return after a fade or mid-drain, whose
+      config may equal the memo, is not skipped either. No glide is touched (the knob-glide law's "a retarget to the
+      unchanged target is a no-op" is what makes a skip exact).
+    The KDoc at each `applied` is the guard (no test can pin the box). **Three new rows:** "an unchanged config while
+    the feedback glides still writes the target" (`KatalystDelayGlideSpec`), the same for the size
+    (`KatalystReverbGlideSpec`), and "a refused GROW under an unchanged owner still takes the ring the SHELF serves
+    later" (`LazyRingSpec`). Mutants, one lock call each, restored and checked with `cmp` (the whole `:audio_be`
+    jvm suite ran each time): the skip while the feedback glides RED (1, the new row), while the size glides RED (1,
+    the new row), the memo valid on a short ring RED (1, the new row), the delay's OFF-arm clear dropped RED (2, among
+    them "at a steady feedback a return from the drain resumes the frozen ceiling untouched"), the delay's `Off.enter`
+    clear dropped RED (13), the reverb's OFF-arm clear RED (2), its `Off.enter` clear RED (12).
+    **Bit for bit:** raw doubles of the probe, 600 blocks, both channels, HEAD against the tree, 31 of 31 cases
+    identical on V8 and 31 of 31 on the JVM, every last block sounding (item 1's cases, `change` and `flip` among them,
+    four at 220 Hz). The corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0 edited.
+    `:audio_be:jvmTest` 2,776 of 2,776. **Measured** (bytes per block; HEAD / tree / HEAD again, a byte copy):
+
+    | case (probe) | mixed pinned, 3 processes | mixed unpinned, 6 shuffled processes |
+    |---|---|---|
+    | engine, no stage (control) | 16 16 16 / 48 16 16 / 16 16 16 | 16 to 48 / 16 to 32 / 16 to 48 |
+    | delay, and the fractional tap | 80 16 16 / 48 16 16 / 80 16 16 | the control in every process, all three |
+    | reverb | 16 64 16 / 48 16 16 / 16 64 16 | the same |
+    | reverb with a lowpass | 16 48 16 / 48 16 16 / 16 48 16 | the same |
+    | all three | 80 64 16 / 48 16 16 / 80 64 16 | the same |
+    | `C-full`'s voice, all three | 96 64 32 / 64 32 32 / 96 64 32 | the control plus the voice's 16 |
+    | `super7a`, all three | 80 64 16 / 48 16 16 / 80 64 16 | the same |
+
+    Pinned, every stage case of the tree reads the control in every process (the first process sits two heap numbers
+    higher as a whole, the control included); both HEAD copies reproduce the residue in the same processes. Single
+    case, `--predictable` (the allocation check's cases, 1,000,000 blocks, HEAD / tree): `E-delay` 18.3 / 19.7,
+    `E-stages` 15.2 / 16.6, `E-sawC-sus` 18.6 / 18.6, `C-remap` 31.9 / 32.0 B; at 200,000 blocks `E-delay` read
+    24.8 / 31.2, inside the method's step there (one 1 MB semi-space over the window, about 5 B per block; the
+    profiler booked the same two sites on both sides, `renderStages` and the off phaser's call). `E-kat-gates` 73.0 /
+    50.9, `E-kat-mix` 195.8 / 196.2 (200,000 blocks; a moving knob never skips). Unpinned single case, medians of 3,
+    HEAD / tree / HEAD again: `E-sawC-sus` 39.4 / 37.4 / 46.0, `E-delay` 67.2 / 51.6 / 63.8, `E-stages` 15.6 / 20.7 /
+    46.4, `C-remap` 66.7 / 67.5 / 61.8, `E-kat-gates` 72.7 / 65.6 / 77.1: inside the noise. One heap number is 16 B
+    on node and 12 in Chrome. **Time** (mixed unpinned medians): all three 18,929 / 18,506 / 18,594 ns, the reverb
+    15,237 / 15,064 / 15,155, the delay 7,474 / 7,445 / 7,499: within noise. **JVM:** nothing here allocated before
+    or after. The allocation check on the final form: GREEN, 80 of 80; `E-delay` 67 B (rounds 61 to 67), `E-stages` 0
+    (rounds -0.4 to 26), `C-remap` 62; the scoreboard keeps that run's two rows.
+    **No budget line moves:** the residue lived only in pinned mixed processes, and the check runs single-case
+    unpinned, where HEAD and the tree read alike (`E-delay`'s healthy medians 57 to 67 before and after), so the rule
+    gives no tighter line and a line set closer would not guard this fix. No new case: the check cannot reproduce the
+    profile that boxed. **Left:** the off phaser's call (item 1, located, not removed) and the voice-level 16 B
+    (`renderStages`, item 30's class), both unchanged; the moving delay time, reverb size and phaser breakpoint
+    (item 41). S.
 33. **DONE (2026-10-11): `KatalystParallelEffect.process` copied the bus into each branch with `copyInto`, a
     typed-array view per call on V8.** Reported (numbered after the last item, added 2026-10-11) as about 350 B per
     block in `E-parallel`, the largest site in the sampling profiler (`subarray`); an experiment with `copyRangeInto`

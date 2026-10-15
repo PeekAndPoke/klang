@@ -377,4 +377,36 @@ class KatalystDelayGlideSpec : StringSpec({
             }
         }
     }
+
+    "an unchanged config while the feedback glides still writes the target: the line holds it until the block" {
+        // Engine follow-up 32: an unchanged config returns before it writes anything, but never while the feedback
+        // glide moves. The old path, literally: every configure writes the target and the block's glide step
+        // overwrites it, so between the two a reader (`sustainsItself`) sees the target, rising here across 1.
+        val fx = effect()
+        val c = ctx()
+
+        for (b in 0 until 30) {
+            fx.configure(time = 0.02, feedback = 0.5, cap = 1.0, wet = 1.0)
+            block(fx, c, bare(feedback = 0.5), b) { 1.0 }
+        }
+
+        for (k in 1..glideBlocks) {
+            fx.configure(time = 0.02, feedback = 1.2, cap = 1.0, wet = 1.0)
+
+            withClue("block $k: after the owner's configure the line holds the target") {
+                fx.delayLine!!.feedback shouldBe 1.2
+                fx.sustainsItself() shouldBe true
+            }
+
+            block(fx, c, bare(feedback = 0.5), 29 + k) { 1.0 }
+
+            if (k < glideBlocks) {
+                withClue("block $k: the block ran on the glide's value") {
+                    (fx.delayLine!!.feedback < 1.2) shouldBe true
+                }
+            }
+        }
+
+        fx.delayLine!!.feedback shouldBe 1.2
+    }
 })

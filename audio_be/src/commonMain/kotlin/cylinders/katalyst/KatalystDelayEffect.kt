@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
+import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
@@ -307,7 +308,7 @@ class KatalystDelayEffect(
      * | state \ event | `configure`, delay ON | `configure`, delay OFF | `process`, countdown ends | `reset` | `retire` / `release` |
      * |---|---|---|---|---|---|
      * | **Off** | **Active** (a ring is rented if needed; on a modulated time the wet glides up from 0). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | Off | Off |
-     * | **Active** | Active (the knobs are rewritten; mid-fade the wet glide turns around) | **Draining**, or **Off** when the tap window is already silent. On a modulated time with a finite value, first **Active** while the wet glide falls to 0 (the off-config is re-applied every block), then that | (never) | Off | Off |
+     * | **Active** | Active (the knobs are rewritten, an unchanged config writes nothing, see [applied]; mid-fade the wet glide turns around) | **Draining**, or **Off** when the tap window is already silent. On a modulated time with a finite value, first **Active** while the wet glide falls to 0 (the off-config is re-applied every block), then that | (never) | Off | Off |
      * | **Draining** | **Active** (the ring and its ceiling carry on under the new tap; after a self-oscillating drain the ceiling is re-measured first; on a modulated time the wet glides up from 0) | Draining (the countdown keeps running) | **Off** | Off | Off |
      *
      * The ON arm of [configure] is the same from every state but two lines, so it stays on the
@@ -365,6 +366,8 @@ class KatalystDelayEffect(
             activeTail.reset()
             wetGlide.reset()
             feedbackGlide.reset()
+            // The memo describes an Active life; this one has ended (see [applied]).
+            appliedValid = false
             state = this
         }
 
@@ -561,6 +564,43 @@ class KatalystDelayEffect(
     private val door = DelayConfig()
 
     /**
+     * The four knobs the last ON-arm [configure] applied, in [DelayConfig]'s order (time, feedback, cap, wet), valid
+     * while [appliedValid]: an unchanged config returns before it writes anything (engine follow-up 32, 2026-10-16).
+     *
+     * **Why:** the writer re-applies its config on every block (`KatalystChain.applyParams`), and on V8, in a mixed
+     * profile where most orbits take the off arm, this method can be compiled with its calls left out (`ensureRing`
+     * and the line's `time`, `feedback` and `cap` setters), so their doubles crossed as heap numbers: up to four per
+     * block, measured in pinned mixed processes (`audio/ref/performance.md`). The phaser's house pattern
+     * (`KatalystPhaserEffect.applied`), with the two writes item 1 found in the way handled:
+     *  - **The feedback glide.** While it moves, [advanceGlide] overwrites the line's feedback before each block and
+     *    this method writes the target back after it, so the line holds the target between the two (a reader there,
+     *    [Active.sustainsItself], sees it). So a MOVING feedback glide never skips; a settled one holds exactly the
+     *    target, which is what the skipped write would store.
+     *  - **The latched retry.** A refused grow keeps the ring it has and consults the shelf again on every configure
+     *    ([ensureRing]); the memo is valid only when the installed ring serves the time, so that retry still runs
+     *    every block.
+     * Everything else the ON arm does on an unchanged config in [Active] is a no-op: the line's setters store the
+     * same numbers, a `retarget` to the target that stands is free, `active.enter` keeps the state, and the two
+     * lines for a return from another state do not apply (the memo is valid only in Active).
+     *
+     * **When it is valid:** set at the end of the ON arm, cleared at the start of every configure that does not skip
+     * and in [Off.enter]. So it is valid only in [Active]: every way out of Active is the OFF arm of this method or
+     * [Off.enter]. The OFF arm is never skipped, so the off-config the class KDoc's contract re-applies every block
+     * still arrives every block; and a return after a fade, whose config may equal the memo, is not skipped either,
+     * because the off-config that began the fade cleared it.
+     *
+     * Compared NaN-aware with -0.0 told apart ([sameKnob]). It stores the RAW knobs, a deliberate departure from the
+     * cached-config rule of `/review-loop` ("store substituted values"): a memo that only skips an unchanged config must
+     * match the input exactly, raw is the simplest exact key, and [sameKnob] settles NaN. Every write [configure] makes
+     * is a function of these raw knobs, so equal raw knobs mean equal writes. An ARRAY, not double fields, so the
+     * stores cannot box (engine follow-up 7). No test can pin the box; this KDoc is the guard.
+     */
+    private val applied = DoubleArray(4)
+
+    /** True while [applied] describes the config in force; see there. */
+    private var appliedValid: Boolean = false
+
+    /**
      * The door for a direct caller (the specs): fills this stage's own [DelayConfig] and configures from it, so the
      * rules below are written once, in the holder overload.
      */
@@ -587,6 +627,16 @@ class KatalystDelayEffect(
         val feedback = config.feedback
         val cap = config.cap
         val wet = config.wet
+        val last = applied
+
+        // An unchanged config in Active writes nothing: see [applied]. Never while the feedback glide moves.
+        if (appliedValid && !feedbackGlide.isGliding && sameKnob(last[0], time) && sameKnob(last[1], feedback) &&
+            sameKnob(last[2], cap) && sameKnob(last[3], wet)
+        ) {
+            return
+        }
+
+        appliedValid = false
 
         // Non-finite reads as OFF (time) or as the shared default (feedback, cap, wet), never as the
         // previous owner's value: DelayLine's setters DROP non-finite writes, so passing one through
@@ -624,6 +674,13 @@ class KatalystDelayEffect(
             }
 
             active.enter()
+
+            last[0] = time
+            last[1] = feedback
+            last[2] = cap
+            last[3] = wet
+            // Not while a refused grow leaves the ring short of the time: the latched retry runs every block.
+            appliedValid = line.capacityFrames >= framesNeeded(time)
             return
         }
 

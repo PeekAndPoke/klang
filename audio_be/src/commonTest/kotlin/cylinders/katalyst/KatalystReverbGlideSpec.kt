@@ -437,4 +437,39 @@ class KatalystReverbGlideSpec : StringSpec({
 
         (gliding <= 1e-12) shouldBe true
     }
+
+    "an unchanged config while the size glides still writes the target: the unit holds it until the block" {
+        // Engine follow-up 32: an unchanged config returns before it writes anything, but never while the size glide
+        // moves. The old path, literally: every configure writes the target and the block's glide step overwrites
+        // it, so between the two the unit holds the target.
+        val effect = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
+        val c = ctx()
+
+        repeat(30) { block ->
+            effect.configure(size = 0.2, lowpass = null, wet = 1.0)
+            fillInput(c.mixBuffer, block)
+            effect.process(c)
+        }
+
+        val unit = effect.reverb!!
+
+        for (k in 1..glideBlocks) {
+            effect.configure(size = 0.8, lowpass = null, wet = 1.0)
+
+            withClue("block $k: after the owner's configure the unit holds the target") {
+                unit.size.toRawBits() shouldBe 0.8.toRawBits()
+            }
+
+            fillInput(c.mixBuffer, 30 + k)
+            effect.process(c)
+
+            if (k < glideBlocks) {
+                withClue("block $k: the block ran on the glide's value") {
+                    (unit.size < 0.8) shouldBe true
+                }
+            }
+        }
+
+        unit.size.toRawBits() shouldBe 0.8.toRawBits()
+    }
 })

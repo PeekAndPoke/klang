@@ -249,10 +249,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   allocation pass (`DelayConfig`, `ReverbConfig`, `PhaserConfig`, the phaser's `PhaserBlock`). Since engine follow-up
   1 every box located in their block processing is gone (a tail step that takes no double, `DelayLine.observeTail`; a holder for the
   delay loops, `DelayLine.blockArgs`; `KnobGlide.advance`, `TailCeiling.observe` and `PhaserCore.alphaAt` Kotlin
-  `inline`), and the phaser stage skips an unchanged config (`KatalystPhaserEffect.applied`, the EQ's pattern); the
-  delay's and the reverb's per-block `configure` can still box in a cold compile, and an off phaser's call into
-  `Phaser.process` is located, not removed: `docs/tasks/in-progress/engine-follow-ups.md`
-  items 1 and 32, `audio/ref/performance.md`.
+  `inline`), and the phaser, delay and reverb stages skip an unchanged config (`applied` on each, the EQ's pattern;
+  the delay and the reverb never while their coefficient glide moves, and the delay not while a refused grow leaves
+  its ring short); an off phaser's call into `Phaser.process` is located, not removed:
+  `docs/tasks/in-progress/engine-follow-ups.md` items 1 and 32, `audio/ref/performance.md`.
 - **A map the engine reads by key on Kotlin/JS is a `KlangMap`** (`common/infra/KlangMap.kt`, engine follow-up 2):
   every Kotlin/JS `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte function context on V8 inside
   the stdlib's `hashCode` (27 per new orbit map on the classic chain, 24 to 76 per classic voice build). The decoder,
@@ -368,6 +368,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Engine follow-up 32: the delay and reverb stages skip an unchanged config (`applied`, the phaser's
+  pattern), never while the feedback or size glide moves, the delay not while a refused grow leaves the ring short,
+  the OFF arm never; in pinned mixed V8 processes their `configure` boxed up to four and three heap numbers per
+  block, now the engine without a stage; bit for bit, corpus identical, no budget moved:
+  `docs/tasks/in-progress/engine-follow-ups.md` item 32
 - 2026-10-15 Engine follow-up 31: the last per-block boxes of a full `classic()` voice on V8 removed, about one
   heap number each: `EnvelopeCore.prepare` inline, its doubles staged in the core's own fields (a `DoubleArray`
   holder cost an allocation per voice build, `E-C-n1` red); `DistortionCore.shapeRun` reads its drive from a field;
