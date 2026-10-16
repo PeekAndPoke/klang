@@ -29,6 +29,9 @@ import kotlin.random.Random
  * its first cycles queried, every distinct inlined ignitor graph rendered authored and optimized
  * with same-seeded streams and held to `OPTIMIZER_PARITY`. The shapes people wrote, with their
  * shared intermediates, params and rigs, are the corpus the hand-written rows cannot enumerate.
+ *
+ * Kind: for the future: it guards an engine property (the optimizer keeps the sound) over real material, so it goes
+ * red only when a song no longer compiles, no song holds an inlined instrument at all, or the optimizer breaks.
  */
 class OptimizerSongParitySpec : StringSpec({
 
@@ -138,6 +141,7 @@ class OptimizerSongParitySpec : StringSpec({
             }
         }
 
-        withClue("instrument graphs found across the songs") { (graphs > 10) shouldBe true }
+        // a floor against a vacuous pass only: how many instruments the songs hold is theirs to change
+        withClue("instrument graphs found across the songs") { (graphs > 0) shouldBe true }
     }
 })

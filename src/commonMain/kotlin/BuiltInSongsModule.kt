@@ -24,8 +24,8 @@ fun KlangScriptExtensionBuilder.registerBuiltInSong(song: Song, importName: Stri
  * Register all [BuiltInSongs] entries as importable klangscript libraries
  * under their canonical Projekt-Klangbuch URIs.
  *
- * Explicit per-song mapping — adding a new song to [BuiltInSongs] does *not*
- * automatically publish it to the canon. A line below is the act of publishing.
+ * Explicit per-song mapping in [builtInSongModules]: adding a new song to [BuiltInSongs] does *not*
+ * automatically publish it to the canon. A line there is the act of publishing.
  *
  * ```klangscript
  * import { song } from "peekandpoke/der-schmetterling"
@@ -41,16 +41,21 @@ fun KlangScriptExtensionBuilder.registerBuiltInSong(song: Song, importName: Stri
  * pinning will plug in alongside.
  */
 fun KlangScriptExtensionBuilder.registerBuiltInSongsAsModules() {
-    registerBuiltInSong(BuiltInSongs.derSchmetterling, "peekandpoke/der-schmetterling")
-    registerBuiltInSong(BuiltInSongs.tetris, "peekandpoke/tetris")
-    registerBuiltInSong(BuiltInSongs.tetrisRemix, "peekandpoke/tetris-echo")
-    registerBuiltInSong(BuiltInSongs.soundOfTheSea, "peekandpoke/sound-of-the-sea")
-    registerBuiltInSong(BuiltInSongs.sakura, "peekandpoke/sakura")
-    registerBuiltInSong(BuiltInSongs.aTruthWorthLyingFor, "peekandpoke/a-truth-worth-lying-for")
-    registerBuiltInSong(BuiltInSongs.strangerThings, "peekandpoke/stranger-things")
-    registerBuiltInSong(BuiltInSongs.irishLamentTechno, "peekandpoke/irish-lament-techno")
-    registerBuiltInSong(BuiltInSongs.irishLament, "peekandpoke/irish-lament")
-    registerBuiltInSong(BuiltInSongs.finalFantasy7Prelude, "peekandpoke/final-fantasy-7-prelude")
-    registerBuiltInSong(BuiltInSongs.smallTownBoy, "peekandpoke/small-town-boy")
-    registerBuiltInSong(BuiltInSongs.drunkenSailor, "peekandpoke/drunken-sailor")
+    builtInSongModules.forEach { (importName, song) -> registerBuiltInSong(song = song, importName = importName) }
 }
+
+/** The built-in songs published as modules, by import URI. A line below is the act of publishing. */
+val builtInSongModules: Map<String, Song> = mapOf(
+    "peekandpoke/der-schmetterling" to BuiltInSongs.derSchmetterling,
+    "peekandpoke/tetris" to BuiltInSongs.tetris,
+    "peekandpoke/tetris-echo" to BuiltInSongs.tetrisRemix,
+    "peekandpoke/sound-of-the-sea" to BuiltInSongs.soundOfTheSea,
+    "peekandpoke/sakura" to BuiltInSongs.sakura,
+    "peekandpoke/a-truth-worth-lying-for" to BuiltInSongs.aTruthWorthLyingFor,
+    "peekandpoke/stranger-things" to BuiltInSongs.strangerThings,
+    "peekandpoke/irish-lament-techno" to BuiltInSongs.irishLamentTechno,
+    "peekandpoke/irish-lament" to BuiltInSongs.irishLament,
+    "peekandpoke/final-fantasy-7-prelude" to BuiltInSongs.finalFantasy7Prelude,
+    "peekandpoke/small-town-boy" to BuiltInSongs.smallTownBoy,
+    "peekandpoke/drunken-sailor" to BuiltInSongs.drunkenSailor,
+)

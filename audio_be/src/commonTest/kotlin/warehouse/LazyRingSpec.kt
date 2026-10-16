@@ -455,6 +455,34 @@ class LazyRingSpec : StringSpec({
         rings.failures shouldBe 1
     }
 
+    "a refused GROW under an unchanged owner still takes the ring the SHELF serves later" {
+        // Engine follow-up 32: an unchanged config returns before it writes anything, but not while a refused grow
+        // leaves the ring short of the time: the latched retry consults the shelf on every block.
+        val alloc = Recording()
+        val (rings, _) = shelf(alloc)
+        val fx = effect(rings)
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0, wet = 1.0)
+        val small = fx.delayLine.shouldNotBeNull()
+        alloc.failing = true
+
+        repeat(5) { fx.configure(time = 0.7, feedback = 0.0, cap = 1.0, wet = 1.0) } // class 1; refused, latched
+
+        fx.delayLine shouldBeSameInstanceAs small
+        fx.deniedRents shouldBe 1
+
+        // Another orbit's class-1 ring comes back.
+        alloc.failing = false
+        val returned = rings.rent(2 * base).shouldNotBeNull()
+        rings.giveBack(returned)
+        alloc.failing = true
+        alloc.asked.clear()
+
+        fx.configure(time = 0.7, feedback = 0.0, cap = 1.0, wet = 1.0) // the same config once more
+
+        fx.delayLine.shouldNotBeNull().ring shouldBeSameInstanceAs returned
+        alloc.asked shouldBe emptyList()
+    }
+
     "a latched refusal at a larger class does NOT block a smaller class that may fit" {
         // Refused at class 1 (0.7 s); a later 0.3 s (class 0) is a different, smaller allocation
         // and is tried. The latch ratchets downward, so retries are bounded by the ladder, not by

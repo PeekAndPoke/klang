@@ -1012,11 +1012,23 @@ private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Igni
  * (the gain is exactly 1), whatever spelled it: a leaf the gate did not catch, arithmetic, a signal, a variant, a
  * hint. For a block-constant depth the floor and `1 - depth` fold to one value per block and `range` keeps its
  * constant-bound path.
+ *
+ * **A voice-constant depth (a slot leaf or a literal, the `classic()` tremolo) is folded HERE, at build, into one
+ * [ConstantIgnitor]** (engine follow-up 31, 2026-10-15): the same two laws on the same operands (`maxLaw`, then
+ * `minusLaw`, what `MaxIgnitor` and `MinusIgnitor` compute per block), so the gain is bit for bit the same. Kept for
+ * V8: built as nodes, `range` read the bound through `MinusIgnitor.controlRateValue`, which called
+ * `MaxIgnitor.controlRateValue` at a site V8 left out of the voice's inlining budget, and the non-integral floored
+ * depth crossed it as a heap number every block. Do not unfold it. Any other depth (a signal, arithmetic, a
+ * variant) keeps the nodes.
  */
 internal fun tremoloGain(rate: Ignitor, depth: Ignitor, lfoShapeIndex: Int, sampleRate: Int): Ignitor {
-    val floored = depth.max(ConstantIgnitor(0.0))
+    val from = if (depth is ParamIgnitor || depth is ConstantIgnitor) {
+        ConstantIgnitor(minusLaw(a = 1.0, b = maxLaw(a = depth.controlRateValue(0.0), b = 0.0)))
+    } else {
+        ConstantIgnitor(1.0).minus(depth.max(ConstantIgnitor(0.0)))
+    }
 
-    return tremoloLfo(lfoShapeIndex = lfoShapeIndex, rate = rate, sampleRate = sampleRate).range(from = ConstantIgnitor(1.0).minus(floored), to = ConstantIgnitor(1.0))
+    return tremoloLfo(lfoShapeIndex = lfoShapeIndex, rate = rate, sampleRate = sampleRate).range(from = from, to = ConstantIgnitor(1.0))
 }
 
 /**

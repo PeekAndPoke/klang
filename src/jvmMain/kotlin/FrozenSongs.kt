@@ -79,7 +79,13 @@ package io.peekandpoke.klang
  */
 object FrozenSongs {
 
-    /** "Der Schmetterling", the song this benchmark investigates. Snapshot 2026-09-25 of the live song (rpm 32.5), verbatim. */
+    /** The rpm of [derSchmetterling_2026_09_25]. */
+    const val derSchmetterlingRpm_2026_09_25: Double = 32.5
+
+    /** The rpm of [strangerThings_2026_07_03]. */
+    const val strangerThingsRpm_2026_07_03: Double = 34.0
+
+    /** "Der Schmetterling", the song this benchmark investigates. Snapshot 2026-09-25 of the live song, verbatim. */
     const val derSchmetterling_2026_09_25: String = """
 // 2026-09-26: .classic() appended to the authored instruments (phase 3 step 10, D5); nothing else changed
 import * from "stdlib"

@@ -444,6 +444,37 @@ class KatalystKnobModulatorSpec : StringSpec({
         }
     }
 
+    "a noise whose modulator index differs from its instruction index reads its own walk into its own register" {
+        // Engine follow-up 39 moved the noise arms into `samplePerlin(i, m)` and `sampleBerlin(i, m)`. Every row above
+        // has the n-th noise as the n-th instruction, so the two indices could be swapped unseen. Here a slot
+        // instruction comes first: the two noises are instructions 1 and 2 and modulators 0 and 1.
+        fun ignitorFirst(noise: Noise, seed: Int): Double {
+            val buffer = AudioBuffer(blockFrames)
+
+            noise.ignitor(seed).generate(buffer, 0.0, ctx())
+
+            return buffer[0]
+        }
+
+        for (noise in noises) {
+            val n0 = ignitorFirst(noise, KATALYST_KNOB_NOISE_SEED)
+            val n1 = ignitorFirst(noise, KATALYST_KNOB_NOISE_SEED + 1)
+            val p = program(
+                KatalystKnobDsl.Plus(
+                    left = KatalystKnobDsl.Plus(left = KatalystKnobDsl.Param("a", 1.0), right = c(2.0)),
+                    right = KatalystKnobDsl.Minus(left = noise.node(c(2.0)), right = noise.node(c(2.0))),
+                )
+            )
+
+            withClue(noise.name) {
+                p.instructionCount shouldBe 5
+                p.registers[p.slotRegisters[0]] = 1.0
+                p.tick()
+                shouldBeSameBits(actual = p.value(), expected = (1.0 + 2.0) + (n0 - n1), clue = "${noise.name}, tick 0")
+            }
+        }
+    }
+
     "a perlin clock wrapped by 256 reads the same value as the unwrapped one, bit for bit" {
         // The law's periodicity, on which the clock's wrap rests: the permutation repeats every 256 cells and each fBm
         // octave scales by a power of two, and both `x - 256 k` and the fractional parts are exact in doubles.

@@ -26,16 +26,23 @@ import kotlin.system.exitProcess
  * `docs/benchmarks/ledger.md`), `all` (default).
  *
  * Not a benchmark, but started here so it needs no task of its own: `corpus` checks the corpus against
- * `docs/benchmarks/corpus-reference.md` and exits 1 on a sound change, `corpus-accept` rewrites the reference
- * ([CorpusCheck]).
+ * `docs/benchmarks/corpus-reference.md` and exits 1 on a sound change the engine made, `corpus-accept` rewrites the
+ * reference while nothing is red, `corpus-accept-engine` also accepts a deliberate engine sound change ([CorpusCheck]).
  *
  * Prints a table per suite (with ladder deltas) and saves a markdown report to docs/benchmarks/.
  */
 fun main(args: Array<String>) {
     val suite = args.firstOrNull()?.lowercase() ?: "all"
 
-    if (suite == "corpus" || suite == "corpus-accept") {
-        exitProcess(CorpusCheck.run(accept = suite == "corpus-accept"))
+    val corpusMode = when (suite) {
+        "corpus" -> CorpusCheck.Mode.CHECK
+        "corpus-accept" -> CorpusCheck.Mode.ACCEPT
+        "corpus-accept-engine" -> CorpusCheck.Mode.ACCEPT_ENGINE
+        else -> null
+    }
+
+    if (corpusMode != null) {
+        exitProcess(CorpusCheck.run(mode = corpusMode))
     }
 
     println("=== Klang Song CPU Benchmark (JVM) ===")

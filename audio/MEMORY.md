@@ -249,10 +249,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   allocation pass (`DelayConfig`, `ReverbConfig`, `PhaserConfig`, the phaser's `PhaserBlock`). Since engine follow-up
   1 every box located in their block processing is gone (a tail step that takes no double, `DelayLine.observeTail`; a holder for the
   delay loops, `DelayLine.blockArgs`; `KnobGlide.advance`, `TailCeiling.observe` and `PhaserCore.alphaAt` Kotlin
-  `inline`), and the phaser stage skips an unchanged config (`KatalystPhaserEffect.applied`, the EQ's pattern); the
-  delay's and the reverb's per-block `configure` can still box in a cold compile, and an off phaser's call into
-  `Phaser.process` is located, not removed: `docs/tasks/in-progress/engine-follow-ups.md`
-  items 1 and 32, `audio/ref/performance.md`.
+  `inline`), and the phaser, delay and reverb stages skip an unchanged config (`applied` on each, the EQ's pattern;
+  the delay and the reverb never while their coefficient glide moves, and the delay not while a refused grow leaves
+  its ring short); an off phaser's call into `Phaser.process` is located, not removed:
+  `docs/tasks/in-progress/engine-follow-ups.md` items 1 and 32, `audio/ref/performance.md`.
 - **A map the engine reads by key on Kotlin/JS is a `KlangMap`** (`common/infra/KlangMap.kt`, engine follow-up 2):
   every Kotlin/JS `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte function context on V8 inside
   the stdlib's `hashCode` (27 per new orbit map on the classic chain, 24 to 76 per classic voice build). The decoder,
@@ -368,6 +368,42 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Engine follow-up 41: Kotlin/JS emits `Double.NaN` as the global `NaN`, a tagged value, so an `if` with
+  a NaN arm boxed its double arm on V8: the delay and reverb writers' gates and the `Reverb.lowpass` setter now store
+  each arm on its own, and `Reverb.normalizeSize` writes its clamp out (the stdlib `coerceIn` was left out of the
+  writer's budget next). Bit for bit; `E-kat-gates` 54.5 to 16.3 B per block, `E-kat-mix` 65.0 to 33.0 (the floor),
+  `C-remap` 32.0 to 16.8 (`--predictable`, 1,000,000 blocks); corpus identical; the V8 lines `E-kat-gates` 160 to 112,
+  `E-kat-mix` 124 to 96: `docs/tasks/in-progress/engine-follow-ups.md` item 41
+- 2026-10-16 Engine follow-up 40: the orbit compressor writes its five knobs through one holder
+  (`Compressor.knobArgs`) and one `applyKnobArgs`, which stores what the five setters store, bit for bit, and computes
+  the time constants once (3 `exp` per change where there were 15); the public setters stay for the other callers.
+  `E-kat-dyn` 97.1 to 45.3 B per block (the duck's floor), `E-kat-mix` 96.9 to 67.3 (`--predictable`), pinned about 200
+  ns per block faster; corpus identical; the V8 lines `E-kat-dyn` 152 to 96, `E-kat-mix` 250 to 124:
+  `docs/tasks/in-progress/engine-follow-ups.md` item 40
+- 2026-10-16 Engine follow-up 39: the Katalyst knob noises no longer cross `fbm` as heap numbers on V8: `fbm`
+  (`common`, shared with the Ignitor's `perlin` and `berlin`, bit for bit) calls `noise` at one site, and the knob's
+  noise arms are methods of their own (`samplePerlin`, `sampleBerlin`). `E-kat-perlin` 113.7 to 21.8 B per block,
+  `E-kat-all7` 118.5 to 15.0, `E-kat-mix` 196.2 to 96.9 (`--predictable`); corpus identical; the V8 lines
+  `E-kat-perlin` 232 to 96, `E-kat-all7` 336 to 250 (the per-sample class only, above a tail HEAD has too):
+  `docs/tasks/in-progress/engine-follow-ups.md` item 39
+- 2026-10-16 Engine follow-up 34: `ScratchBuffers.oversample` finds a sub-pool by a scan of two arrays, not a
+  stdlib `Int` map (about 40 B per lookup on V8); `DistortionCore.process` and `processRamped` are `inline` and stage
+  the drive in fields. `E-distort` 155 to 16 B per block (`--predictable`, 1,000,000 blocks), `tube4x`,
+  `E-parallel` and `E-bands` at the floor too; bit for bit, corpus identical; the V8 lines of `E-distort` 232,
+  `E-parallel` 268 and `E-bands` 320 all to 96 (`E-parallel` catches a single view per block of item 33 again,
+  `E-bands` one view per branch only):
+  `docs/tasks/in-progress/engine-follow-ups.md` item 34
+- 2026-10-16 Engine follow-up 32: the delay and reverb stages skip an unchanged config (`applied`, the phaser's
+  pattern), never while the feedback or size glide moves, the delay not while a refused grow leaves the ring short,
+  the OFF arm never; in pinned mixed V8 processes their `configure` boxed up to four and three heap numbers per
+  block, now the engine without a stage; bit for bit, corpus identical, no budget moved:
+  `docs/tasks/in-progress/engine-follow-ups.md` item 32
+- 2026-10-15 Engine follow-up 31: the last per-block boxes of a full `classic()` voice on V8 removed, about one
+  heap number each: `EnvelopeCore.prepare` inline, its doubles staged in the core's own fields (a `DoubleArray`
+  holder cost an allocation per voice build, `E-C-n1` red); `DistortionCore.shapeRun` reads its drive from a field;
+  `classic()`'s tremolo folds a voice-constant depth at build; the SVF clamps use `isFiniteInline`. `C-full` about 47
+  to 15 B per block (`--predictable`), what the classic saw reads; bit for bit, corpus identical, no budget moved:
+  `docs/tasks/in-progress/engine-follow-ups.md` item 31
 - 2026-10-12 Engine follow-up 2, step 4, item 2 DONE: the allocation case `S-doors` guards sprudel's event path
   (query, `toVoiceData`, wire encode), a case that makes no sound checks its outputs instead of a peak; V8 36,500,
   JVM 15,764. The follow-ups file moved to `docs/tasks/in-progress/` (paused for the token budget):

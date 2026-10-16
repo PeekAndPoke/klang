@@ -143,14 +143,20 @@ internal class KatalystDelayWriter(
     }
 
     private fun fill() {
-        config.time = gate()
+        // The gate in two stores, not `config.time = if (stageAskedFor(wet)) time.value else SLOT_UNSET`: Kotlin/JS
+        // emits `SLOT_UNSET` (`Double.NaN`) as the global `NaN`, a tagged value, and V8 merges the two arms into a
+        // tagged value, so a moving time became a heap number every block (engine follow-up 41; the V8 rule in
+        // `audio/ref/performance.md`). Each arm stores its own number; the values are the same.
+        if (stageAskedFor(wet)) {
+            config.time = time.value
+        } else {
+            config.time = SLOT_UNSET
+        }
+
         config.feedback = feedback.value
         config.cap = cap.value
         config.wet = wet.value
     }
-
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun gate(): Double = if (stageAskedFor(wet)) time.value else SLOT_UNSET
 }
 
 /**
@@ -193,16 +199,19 @@ internal class KatalystReverbWriter(
     }
 
     private fun fill() {
-        config.size = gate()
+        // The gate in two stores, not one store of an `if` whose other arm is `SLOT_UNSET`: that merge boxed a moving
+        // size every block on V8 ([KatalystDelayWriter]'s `fill` says why; engine follow-up 41).
+        if (stageAskedFor(wet)) {
+            config.size = Reverb.normalizeSize(size.value)
+        } else {
+            config.size = SLOT_UNSET
+        }
+
         // The lowpass slot, RAW: a non-finite one is unset, which [KatalystReverbEffect.configure] turns into the
         // engine's own fixed damping. A primitive, so a lowpass that moves per block boxes nothing (step 5b).
         config.lowpass = lowpass.value
         config.wet = wet.value
     }
-
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun gate(): Double =
-        if (stageAskedFor(wet)) Reverb.normalizeSize(size.value) else SLOT_UNSET
 }
 
 /**

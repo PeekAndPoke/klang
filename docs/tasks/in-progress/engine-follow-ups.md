@@ -3,10 +3,10 @@
 **Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
-fix that changes no API), open V8 items first: 31 (what item 29 left on a full `classic()`
-voice), 32 (the delay's and reverb's per-block `configure`), 34 (the bus distort's oversampled path), 39 to 41 (the
-Katalyst knob expressions' residues), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
-and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+fix that changes no API), open V8 items first: **the V8 batch is done** (31 DONE 2026-10-15; 32, 34, 39, 40 and 41
+DONE 2026-10-16; 33 DONE earlier). Left of the numbers 31 to 41: 35 (a gliding `div` slow on the JVM), the tails 36
+and 38 (not located), and 37 (a sound change, so outside Q38). Next: 10c and 10d (fm); the known tails 4, 36 and 38;
+then sections 2 to 5 (13, 11 and the small ones) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](../_maintainer-questions.md).
 
@@ -14,8 +14,8 @@ Status: **open, collected 2026-10-09** when the engine tidy-up was archived
 ([`20261009-engine-tidy-up.md`](../../tasks-archive/2026-10/20261009-engine-tidy-up.md), "the record" below; v0.6.0). Each
 item was checked against the later sections of the record and against the code at `662aa8db`; only what is still open
 is listed. Nothing here changes a surface a tutorial teaches, except where an item says so. A behaviour-neutral item is
-proven the usual way: bit-identity on the 18-song corpus and Kokon, and for an allocation item a measurement on the
-production bundle, pinned AND unpinned (`audio/ref/performance.md`).
+proven the usual way: the corpus GREEN with no live song edited (or accept first) and Kokon, and for an allocation
+item a measurement on the production bundle, pinned AND unpinned (`audio/ref/performance.md`).
 
 Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
 
@@ -874,7 +874,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     compare helped pinned and hurt unpinned, so it was dropped; worth a second look only with a measurement that holds
     in both conditions. Also in the SVF clamps (`clampSvfCutoff`, `clampSvfQ`): item 29 wrote their `coerceIn` out
     as comparisons (`clampSvfRange`) and kept `isFinite`, a 23-byte stdlib call that V8 inlined in both voice shapes
-    measured there, the next one to be left out if `SvfIgnitor.generate` grows. Source: as 2. S.
+    measured there, the next one to be left out if `SvfIgnitor.generate` grows. It was: item 31 (2026-10-15) found it
+    left out in a one-filter voice with `analog` and put `isFiniteInline` in both SVF clamps. Source: as 2. S.
 10a. **DONE (2026-10-10, with 10b): every per-sample envelope boxed on V8, through the curve `when`.** Reported as
     about 2.17 KB per block for a voice whose pitch envelope is in its attack or decay (one 16-byte heap number per
     sample), about 65 KB per kick sweep; a double crossing a call V8 does not inline was suspected (`adsrCurveShape`,
@@ -1170,64 +1171,185 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     box nothing. `controlRateValue(freqHz)` keeps its argument: the build, the sizing reads and the Katalyst slots
     call it with no render context.
 
-31. **What item 29 left on a full `classic()` voice on V8** (numbered after the last item, added 2026-10-11): sites
-    item 29 located and did not fix, each about one heap number per block (16 B on node, 12 in Chrome), inside the
-    harness's V8 noise on `C-full`, so no budget catches them. Source: item 29, `tmp/reviews/e29-report.md`,
-    `tmp/reviews/e29-r1-B.md` (MINOR 4). S each.
-    - **`EnvelopeCore.prepare`'s arguments.** It is past V8's 460-byte limit (reason 5), never inlined, and takes
-      six doubles (the attack, decay and release frame counts, the sustain, `k`, `norm`). Every envelope host (the
-      chain `adsr` and `classic()`'s envelope, the FM, pitch and filter envelopes) calls it per block, so a
-      non-integral frame count or sustain is a heap number per block per host. `C-full`'s defaults travel as small
-      integers (0.01 and 0.1 s at 48 kHz are 480 and 4,800 frames, sustain 1.0); `lpf.sustain` 0.5 shows one more
-      (in `SvfIgnitor.prepareEnvelopeSweep`). Smallest remedy: a holder, fields on `EnvelopeCore` the host writes
-      and a `prepare()` that reads them: an interface change across every envelope host.
-    - **The tremolo's depth ladder.** `1 - max(depth, 0)` is block-constant; the `MinusIgnitor` scalar path calls
-      `b.controlRateValue` at one shared, polymorphic site that V8 does not inline, so `MaxIgnitor`'s non-integral
-      result is boxed (seen as `MaxIgnitor.controlRateValue` under the tremolo's `TimesIgnitor`). Smallest remedy:
-      a build-time fold of a block-constant subtree whose leaves are voice constants into one scalar: a new
-      mechanism, or a change in `IgnitorDslRuntime.kt` (ADAA-owned).
-    - **The fused distort** (`FusedDistortIgnitor.generate`, `IgnitorEffects.kt`, ADAA-owned): about one heap number
-      per block on `C-full` and `C-dist` (`DcBlocker` is a candidate it does not inline). Not located further.
-    - **Note, the SVF's `saturate` test** (`mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS` in
-      `SvfIgnitor.generate`) is a constant per node but runs per block, and in the two-filter voice it spends about
-      200 bytes of `generate`'s inlining budget on two enum `getInstance` / `initEntries` calls (reviewer B, round 1
-      of item 29). A constructor `val` would free that budget; not a box today, so left for a measured change.
-    The filter drift that item 29's first form only moved is fixed (item 29, review round 1).
-    - **Checked at item 7 (2026-10-11): item 29's double-field holders do not box.** Item 7 found two double fields
-      boxing in a single-case process where an array did not, so item 29's holders were measured in `--predictable`
-      single-case processes on HEAD (`338e520d`; item 29's probe bundle, whose engine module is byte-identical):
-      `C-full` 46 B per block, `lpf` + `env` + `analog` 21, `lpf` + `analog` 31, `hpf` + `analog` 46, classic saw
-      with `analog` 16, classic saw 16 (e8 method, medians of 2). A hand-edited copy with the SVF node's cutoff, q and drift fields
-      and `FilterHumanization.driftMul` replaced by `Float64Array`s read the same (`C-full` 46, `hpf` + `analog` 46),
-      so the fields are not the box. What the one-filter voices with `analog` keep, one or two heap numbers above the
-      classic saw, the profiler books in `SvfIgnitor.generate`; writing out the `coerceAtLeast` of the analog read
-      there moved `hpf` + `analog` from 46 to 37 B and `lpf` + `analog` from 31 to 37 (within a heap number, not
-      conclusive). Not located further; inside the harness's noise band.
+31. **DONE (2026-10-15): what item 29 left on a full `classic()` voice on V8, four sites, each about one heap number
+    per block; a full `classic()` voice now reads what the classic saw reads.** Reported (added 2026-10-11, from item
+    29, `tmp/reviews/e29-report.md`, `tmp/reviews/e29-r1-B.md` MINOR 4) as `EnvelopeCore.prepare`'s arguments, the
+    tremolo's depth ladder, the fused distort (not located) and, as a note, the SVF's per-block mode test; and (checked
+    at item 7) one or two heap numbers on a one-filter voice with `analog`, booked in `SvfIgnitor.generate`, not
+    located. A purely independent performance fix (Q38): no DSL door, wire type, public signature or sound changes
+    (`EnvelopeCore` is `internal`, the rest is private or `internal` too). **Located on the production bundle**
+    (`:audio_benchmark:compileProductionExecutableKotlinJs`, node 22.12, single-case processes, the sampling heap
+    profiler and `--trace-turbo-inlining` on a copy of the bundle with every method named), with seven probe cases added
+    to `AllocationCases.kt` for the measurement and taken out again: `C-full` with `lpf.sustain` 0.5, `lpf` 1200 Hz
+    with `analog` 0.2, `hpf` 80 Hz with `analog` 0.2, the tremolo alone (depth 0.3, rate 4.3), `C-full` without the
+    distort, a classic saw with `adsr.sustain` 0.7, and `C-full` as a new note every block through the engine. Sites
+    and fixes:
+    - **The fused distort** (`C-dist`, `C-full`): `FusedDistortIgnitor.generate` inlines `DistortionCore.process`,
+      which handed the drive (`10^(amount * 1.2)`, 3.98 at amount 0.5) to `shapeRun`, sixteen loops, never inlined,
+      so the drive crossed as a heap number. Not `DcBlocker`. **Fix:** `shapeRun` takes no double; `process` writes
+      the drive into a private field (`blockDrive`) and `shapeRun` reads it (`DistortionCore.kt`). One heap number
+      per block on every fused `Distort` and `Shape` node.
+    - **The tremolo's depth ladder** (`C-full`, the tremolo alone): in the voice's compile V8 inlined `RangeIgnitor`
+      and `MinusIgnitor.controlRateValue` into `TimesIgnitor.generate` but left `MaxIgnitor.controlRateValue` out,
+      so the floored depth (0.3) crossed. **Fix:** `tremoloGain` (`IgnitorDslRuntime.kt`) folds a voice-constant
+      depth (a `ParamIgnitor` or `ConstantIgnitor`, which is what `classic()`'s `tremolo.depth` slot builds) into
+      one `ConstantIgnitor` at build, `minusLaw(1.0, maxLaw(depth, 0.0))`, the two laws the nodes computed per block
+      on the same operands, so bit for bit; any other depth keeps the nodes. Not a general fold mechanism: one
+      builder, two nodes fewer per tremolo voice (the probe with a full voice per note read about 880 B less per
+      note on V8, most likely those nodes).
+    - **`EnvelopeCore.prepare`'s arguments** (`C-env3`, `C-full` with `lpf.sustain` 0.5): `prepare` is past the
+      460-byte limit and was a call from every host, so a non-integral sustain or stage length crossed as a heap
+      number per host per block (the filter envelope's sustain 0.5 in `C-full`, the fm's 0.3 in `C-env3`). **Fix:**
+      `prepare` is Kotlin `inline` (every call site and test unchanged) and stores its doubles into the core's own
+      fields in the host's compiled code: the sustain, `k` and `norm` as their final values, the three stage lengths
+      staged in `attackFrames`, `attDecFrames` and `relDenom`, which `prepareBlock` (the old body, not inlined) reads
+      first and then overwrites with their derived values. The first form held them in a `DoubleArray(6)`: per block
+      the same, but the array is an allocation per voice build, and the allocation check read `E-C-n1` RED on both
+      platforms (V8 13,292 against 13,068, JVM 6,680 against 6,628: about 224 and 64 B per note), so it was not kept.
+      The staging fields add nothing to a build (`E-C-n1` 13,009.6 / 13,022.2 B, `--predictable`). The chain `adsr`
+      did not box its sustain on HEAD (a classic saw at sustain 0.7 reads one heap number above the classic saw on
+      both sides, booked in `AdsrIgnitor.generate` as the voice's root call: likely item 30's class, not this one).
+    - **The SVF clamps' `isFinite`** (a lowpass or highpass alone with `analog`): with one SVF in the voice V8
+      inlines `computeStaticCoeffs` into `generate` and left the stdlib `isFinite()` of `clampSvfCutoff` and
+      `clampSvfQ` out, the cutoff and the q crossing it (about one heap number for the lowpass, two for the
+      highpass). Item 10 had named it "the next one out". **Fix:** both use `isFiniteInline` (one compare, the same
+      value for every input; `LowPassHighPassFilters.kt`), shared with `ResonatorBank` and `EqCore` (`E-eq`,
+      `E-body-vowel` unchanged at 15.5 and 14.4 B).
+    - **Left: the SVF's per-block mode test** (the note). A constructor `val` was measured: it freed the two enum
+      lookups of `generate`'s budget, and V8 spent the room elsewhere and left `isFinite` out instead (the lowpass
+      with `analog` 29.9 to 52.6 B, `--predictable`): a box moved, not removed. With `isFiniteInline` nothing on
+      these voices boxes any more, so the change buys nothing measurable and was dropped.
+    - **Left, a known residue on the Katalyst glide path:** `DistortionCore.shapeRunRamped` still takes `driveFrom`
+      and `driveTo` as doubles (the bus distort while its amount glides); not measured, not fixed here. Fixed at item
+      34 (2026-10-16): two heap numbers per gliding block, the ends now staged in fields by an `inline`
+      `processRamped`.
+    Each fix has its KDoc as the guard (no test can pin a box). **Measured** (bytes and ns per block, 20,000 warm-up
+    and 200,000 measured blocks; `--predictable` single-case processes repeat exactly, 2 rounds; the allocation
+    check's method, two processes per round, medians of 3, HEAD / tree / HEAD again; a byte copy of HEAD's bundle):
 
-32. **What item 1 left: the delay's and the reverb's per-block `configure`** (numbered after the last item, added
-    2026-10-11). Source: item 1 and its review round 1 (`tmp/reviews/e1-r1-B.md`, MINOR 3). The chain's writers
-    re-apply their resolved knobs on every block (`KatalystChain.applyParams`). On V8 a stage's `configure` can then be
-    a cold compile in a mixed profile, where most orbits take the off arm: a trace of one such process (item 1) shows
-    the delay's `configure` with nothing inlined but `isFinite`, its setters (`time`, `feedback`, `cap`), both
-    `KnobGlide.retarget`s and `ensureRing` left out, so every knob crosses a call, up to 5 heap numbers per block. In
-    single-case processes (the allocation check's shape) the phaser's residue was its wet/dry law instead,
-    `WetDryMix.dryCoeff` and `wetCoeff` left out of the writer's budget (reviewer B's trace). **The phaser is done**
-    (item 1, round 1): it skips an unchanged config, the house pattern (the EQ's `unchanged`, the resonator's, the
-    compressor's by reference; the writers' comment `KatalystSlotWriters.kt`, "the effect short-circuits an unchanged
-    config"), comparing the raw knobs NaN-aware and with -0.0 told apart (the cached-config rule: a NaN never defeats
-    the compare), invalidated by `reset`. After it no residue was measured on the delay or the reverb either: in 6
-    unpinned and 3 pinned mixed processes every stage case read the engine without a stage, but for one pinned
-    process with the delay one heap number above it (item 1, round 1). So what is left is a risk, not a measured
-    cost: a later compile history can bring the cold `configure` back. **Not built for the delay and the reverb,
-    because a skip is not exact there without more work:** the delay's `configure` writes the feedback target into
-    the line every block and `advanceGlide` overwrites it with the glide's value before the block, so between the two
-    a reader (`Active.sustainsItself`) sees the target; skipping would leave the glide's
-    last value there mid-glide. And a refused ring grow consults the shelf again on every `configure` (the latched
-    retry), which a skip would stop. The reverb writes its size target the same way (`advanceGlide` overwrites it
-    while the size glides). The remedy, when a case shows the cost again: the same skip with those two writes kept on
-    the steady path (the glide targets compared, the line's knobs rewritten only when they move, the latched retry
-    exempt), proven bit for bit with the owner-change dumps of item 1. Related: item 10 (`isFinite`, the call that
-    stays). S.
+    | case | `--predictable`, HEAD / tree | unpinned, HEAD / tree / HEAD again |
+    |---|---|---|
+    | `sawC` (control) | 21.6 / 15.4 B | 15.5 / 15.3 / 22.4 B |
+    | `C-full` | 46.7 / 14.6 B, 12,747 / 12,703 ns | 47.0 / 14.2 / 47.2 B |
+    | `C-full`, `lpf.sustain` 0.5 | 61.3 / 15.5 B | 62.5 / 14.0 / 56.6 B |
+    | `C-full` without the distort | 29.4 / 14.5 B | |
+    | `C-dist` | 30.1 / 14.9 B | 29.1 / 15.2 / 30.1 B |
+    | the tremolo alone | 31.2 / 15.3 B | 29.2 / 14.5 / 29.9 B |
+    | `lpf` + `analog` | 29.9 / 14.8 B | 9.6 / 10.0 / 21.1 B |
+    | `hpf` + `analog` | 52.7 / 15.7 B | 9.0 / 9.9 / 21.4 B |
+    | `C-env3` | 60.5 / 52.8 B | 66.7 / 51.1 / 57.8 B |
+    | classic saw, `adsr.sustain` 0.7 | 29.7 / 30.8 B | |
+    | `tube4x` (control) | 56.9 / 57.4 B | |
+    | `E-distort` (control, item 34) | 155.6 / 156.1 B | |
+    | `E-C-n1` (a voice build per block) | 13,009.6 / 13,022.2 B | |
+    | `C-full`, a new note every block | 24,253.9 / 23,369.9 B, 369,802 / 367,324 ns | |
+
+    Pinned (`taskset -c 3`, medians of 5, HEAD / tree / HEAD again; the machine was busy and single rounds ran from
+    -50 to 177 B, so pinned holds only where the gap is several heap numbers): `C-full` 40.5 / 21.0 / 53.1 B,
+    `C-full` with `lpf.sustain` 0.5 67.3 / 15.6 / 66.9, `C-env3` 91.5 / 51.7 / 51.2, `C-dist` 36.0 / 26.0 / 20.9,
+    the tremolo alone 26.1 / 26.8 / 36.7, `lpf` + `analog` 30.0 / 30.5 / 4.9, `hpf` + `analog` 108.8 / 36.4 / 66.1,
+    `sawC` 6.1 / 9.1 / 16.1 (the first form, with the array holder, read on core 11 at a quieter hour `C-full` 52.4 /
+    20.3 / 52.9, `C-dist` 36.4 / 15.8 / 40.8, `C-full` with `lpf.sustain` 0.5 73.1 / -0.5 / 77.2, medians of 3).
+    One heap number is 16 B on node and 12 in Chrome. The one-filter rows read inside the method's noise unpinned (as
+    item 29 found), so their `--predictable` rows are the evidence. Time: within noise (`C-full` 0.99 to 1.00 of
+    HEAD). **JVM:** nothing here allocated per block before or after (the allocation check, 0 B on every voice case).
+    Bit for bit: the corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0 edited (run on the final
+    form); `:audio_be:jvmTest` 2,773 of 2,773. The allocation check on the final form: GREEN, 80 of 80;
+    V8 `C-full` 26 B (rounds 15.4, 25.7, 26.0; the scoreboard's last nine runs read 31 to 57), `C-dist` 21 (15.8,
+    35.3, 20.8; before, 26 to 37), `C-env3` 31 (before, 61 to 97), `E-C-n1` 13,035 (rounds 13,021 to 13,061, 33 B
+    under its line; the voice build is unchanged, the JVM reads 6,616 as before); every JVM case as before. The
+    scoreboard keeps that run's two rows; the first form's red run's two rows were taken out (a form not kept, as a
+    mutant's).
+    **Review round 1** (clean from both reviewers; four comment-only NITs applied: the `process` comment names
+    `blockDrive`, "an abs and a compare" for `isFiniteInline`, `prepareBlock`'s KDoc starts "Call only through
+    `prepare`", the ramped residue above). Mutants, one lock call each, restored and checked with `cmp`:
+    - M3, a stale drive (`if (blockDrive == 1.0) blockDrive = drive` on both paths): survives `DistortionSpec` (2)
+      and `WaveshaperKnobsSpec` (13); killed by `KatalystDistortEffectSpec` (2 of 15, the two glide rows) and by
+      `StripLawCoresSpec` (2 of 5, "a MODULATED amount through 0 keeps the node contiguous" and "a NaN modulated
+      amount silences the shaper for that block"), so the voice side is covered too.
+    - M2, `relDenom` not staged: survives `StripLawCoresSpec` (5 of 5 green; it tests crush and distort, not the
+      envelope); killed by `EnvelopeLawSpec` (8 of 13, the release rows and all four host rows).
+    - The drive handed back to `shapeRun` as an argument (the box itself): `--predictable`, single case, mutant /
+      tree / mutant, `C-dist` 31.0 / 14.8 / 31.0 B and `C-full` 31.2 / 14.5 / 31.2 B: one heap number, as expected,
+      and no test can see it (the KDoc is the guard).
+    **What is left on these voices:** `C-env3` about 2 heap numbers (the fm's per-block calls, items 10c and 10d);
+    the classic envelope at a non-integral sustain, about one (above); `tube4x` and `E-distort` unchanged (the
+    oversampled path, item 34). **No budget line moves:** the four sites were each one heap number, under the V8
+    resolution of a line (about 25 B, header of `alloc-budgets.txt`), so no line can tell HEAD from the tree, and a
+    line set closer to the healthy rounds would not guard them; `C-full`'s 112 keeps guarding item 8 and item 29
+    as a whole. No new case: a case for these sites could not be budgeted to catch them. S.
+
+32. **DONE (2026-10-16): what item 1 left, the delay's and the reverb's per-block `configure`; both now skip an
+    unchanged config, and in pinned mixed processes the delay and the reverb read the engine without a stage again.**
+    Reported (added 2026-10-11, from item 1 and its review round 1, `tmp/reviews/e1-r1-B.md` MINOR 3) as a risk, not a
+    measured cost: the chain's writers re-apply their knobs every block (`KatalystChain.applyParams`), and in a mixed
+    profile V8 can compile a stage's `configure` with its calls left out, so every knob crosses a call. A purely
+    independent performance fix (Q38): no DSL door, wire type, public signature or sound changes (the new state is
+    private). **Reproduced and located on HEAD** (item 1's probe, `ZzE1Probe*`, rebuilt on
+    `:audio_be:compileTestProductionExecutableKotlinJs`, node 22.12, with one case added, `flip`: owners taking turns A,
+    B, A, an off owner, A back mid-drain, off again, a fractional delay and a lowpassed reverb at the end; the probe was
+    moved out of the source sets after every build). In 3 pinned mixed processes (`taskset -c 11`, every case warmed
+    round-robin in one process, item 1's method) one process read the delay 64 B (four heap numbers) above the engine
+    without a stage and another the reverb 32 to 48 B above it; the sampling heap profiler in those processes booked
+    64.5 B per block in `KatalystDelayEffect.configure` and 48.3 B in `KatalystReverbEffect.configure` (the classic saw
+    cases), the compiled form calling `ensureRing` and the line's `time`, `feedback` and `cap` setters, the unit's
+    `size` and `lowpass` setters. Unpinned mixed (6 shuffled processes) and single-case processes showed no residue,
+    as item 1 found. **Fix:** item 1's remedy, with the two writes it named kept on the path:
+    - `KatalystDelayEffect.applied` and `KatalystReverbEffect.applied`, the phaser's house pattern: the raw knobs of
+      the last ON-arm `configure` in a `DoubleArray`, compared NaN-aware with -0.0 told apart (`sameKnob`); an
+      unchanged config returns before it writes anything.
+    - **Never while the coefficient glide moves** (the delay's feedback, the reverb's size): the old path writes the
+      target every block and the block's glide step overwrites it, so between the two the line or unit holds the
+      target (a reader there, `Active.sustainsItself`); a settled glide holds exactly the target.
+    - **The latched retry:** the delay's memo is valid only when the installed ring serves the time, so a refused
+      grow still consults the shelf every block.
+    - **The contract of the off-config** (the delay's class KDoc, and the reverb's modulated size): the memo is set
+      at the end of the ON arm and cleared at the start of every configure that does not skip and in `Off.enter`,
+      so it is valid only in Active, the OFF arm is never skipped, and a return after a fade or mid-drain, whose
+      config may equal the memo, is not skipped either. No glide is touched (the knob-glide law's "a retarget to the
+      unchanged target is a no-op" is what makes a skip exact).
+    The KDoc at each `applied` is the guard (no test can pin the box). **Three new rows:** "an unchanged config while
+    the feedback glides still writes the target" (`KatalystDelayGlideSpec`), the same for the size
+    (`KatalystReverbGlideSpec`), and "a refused GROW under an unchanged owner still takes the ring the SHELF serves
+    later" (`LazyRingSpec`). Mutants, one lock call each, restored and checked with `cmp` (the whole `:audio_be`
+    jvm suite ran each time): the skip while the feedback glides RED (1, the new row), while the size glides RED (1,
+    the new row), the memo valid on a short ring RED (1, the new row), the delay's OFF-arm clear dropped RED (2, among
+    them "at a steady feedback a return from the drain resumes the frozen ceiling untouched"), the delay's `Off.enter`
+    clear dropped RED (13), the reverb's OFF-arm clear RED (2), its `Off.enter` clear RED (12).
+    **Bit for bit:** raw doubles of the probe, 600 blocks, both channels, HEAD against the tree, 31 of 31 cases
+    identical on V8 and 31 of 31 on the JVM, every last block sounding (item 1's cases, `change` and `flip` among them,
+    four at 220 Hz). The corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0 edited.
+    `:audio_be:jvmTest` 2,776 of 2,776. **Measured** (bytes per block; HEAD / tree / HEAD again, a byte copy):
+
+    | case (probe) | mixed pinned, 3 processes | mixed unpinned, 6 shuffled processes |
+    |---|---|---|
+    | engine, no stage (control) | 16 16 16 / 48 16 16 / 16 16 16 | 16 to 48 / 16 to 32 / 16 to 48 |
+    | delay, and the fractional tap | 80 16 16 / 48 16 16 / 80 16 16 | the control in every process, all three |
+    | reverb | 16 64 16 / 48 16 16 / 16 64 16 | the same |
+    | reverb with a lowpass | 16 48 16 / 48 16 16 / 16 48 16 | the same |
+    | all three | 80 64 16 / 48 16 16 / 80 64 16 | the same |
+    | `C-full`'s voice, all three | 96 64 32 / 64 32 32 / 96 64 32 | the control plus the voice's 16 |
+    | `super7a`, all three | 80 64 16 / 48 16 16 / 80 64 16 | the same |
+
+    Pinned, every stage case of the tree reads the control in every process (the first process sits two heap numbers
+    higher as a whole, the control included); both HEAD copies reproduce the residue in the same processes. Single
+    case, `--predictable` (the allocation check's cases, 1,000,000 blocks, HEAD / tree): `E-delay` 18.3 / 19.7,
+    `E-stages` 15.2 / 16.6, `E-sawC-sus` 18.6 / 18.6, `C-remap` 31.9 / 32.0 B; at 200,000 blocks `E-delay` read
+    24.8 / 31.2, inside the method's step there (one 1 MB semi-space over the window, about 5 B per block; the
+    profiler booked the same two sites on both sides, `renderStages` and the off phaser's call). `E-kat-gates` 73.0 /
+    50.9, `E-kat-mix` 195.8 / 196.2 (200,000 blocks; a moving knob never skips). Unpinned single case, medians of 3,
+    HEAD / tree / HEAD again: `E-sawC-sus` 39.4 / 37.4 / 46.0, `E-delay` 67.2 / 51.6 / 63.8, `E-stages` 15.6 / 20.7 /
+    46.4, `C-remap` 66.7 / 67.5 / 61.8, `E-kat-gates` 72.7 / 65.6 / 77.1: inside the noise. One heap number is 16 B
+    on node and 12 in Chrome. **Time** (mixed unpinned medians): all three 18,929 / 18,506 / 18,594 ns, the reverb
+    15,237 / 15,064 / 15,155, the delay 7,474 / 7,445 / 7,499: within noise. **JVM:** nothing here allocated before
+    or after. The allocation check on the final form: GREEN, 80 of 80; `E-delay` 67 B (rounds 61 to 67), `E-stages` 0
+    (rounds -0.4 to 26), `C-remap` 62; the scoreboard keeps that run's two rows.
+    **No budget line moves:** the residue lived only in pinned mixed processes, and the check runs single-case
+    unpinned, where HEAD and the tree read alike (`E-delay`'s healthy medians 57 to 67 before and after), so the rule
+    gives no tighter line and a line set closer would not guard this fix. No new case: the check cannot reproduce the
+    profile that boxed. **Left:** the off phaser's call (item 1, located, not removed) and the voice-level 16 B
+    (`renderStages`, item 30's class), both unchanged; the moving delay time, reverb size and phaser breakpoint
+    (item 41). S.
 33. **DONE (2026-10-11): `KatalystParallelEffect.process` copied the bus into each branch with `copyInto`, a
     typed-array view per call on V8.** Reported (numbered after the last item, added 2026-10-11) as about 350 B per
     block in `E-parallel`, the largest site in the sampling profiler (`subarray`); an experiment with `copyRangeInto`
@@ -1281,11 +1403,84 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     no `parallel` and no `eq`, so not this change; not located. Like `spluck-a`'s tail (item 7), a breach that does not
     repeat on a second run is that mode. HEAD's code also read `E-arith-glide` 511 B once (its line 500); filed as item
     36. S.
-34. **The bus distort's oversampled path allocates about 120 B per block on V8** (numbered after the last item, added
-    2026-10-11): `E-distort` at the default 2x reads 155 to 191 B, at `oversample = 0` 46 to 73 B. The profiler names
-    `DistortionCore.shapeRun`, the oversampler's `interpolate44` and `decimate44`, and a map lookup (likely
-    `ScratchBuffers.oversample`'s `getOrPut` by factor); not located further. A fix re-sets the `E-distort` line.
-    Source: `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
+34. **DONE (2026-10-16): the bus distort's oversampled path allocated about 120 B per block on V8; it now reads what
+    the engine reads without it, and every oversampled node and stage with it.** Reported (added 2026-10-11):
+    `E-distort` at the default 2x read 155 to 191 B, at `oversample = 0` 46 to 73 B; the profiler named
+    `DistortionCore.shapeRun`, the oversampler's `interpolate44` and `decimate44`, and a map lookup. Source:
+    `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". A purely independent performance fix
+    (Q38): no DSL door, wire type, public signature or sound changes (`ScratchBuffers.oversample` keeps its signature,
+    `DistortionCore` is `internal`). **Located on the production bundle**
+    (`:audio_benchmark:compileProductionExecutableKotlinJs`, node 22.12, `--predictable` single-case processes, the
+    sampling heap profiler with a warm-up-only run subtracted, so the interpreter's boxes of the warm-up drop out; the
+    names `shapeRun`, `interpolate44` and `decimate44` were that warm-up), with four probe cases added to
+    `AllocationCases.kt` for the measurement and taken out again: the bus distort at `oversample = 0`, at 4x, and with a
+    modulated amount (`Kat.sine(0.7).range(0.2, 0.4)`, so it glides every block) at 2x and at 0. Sites and fixes:
+    - **The sub-pool by factor** (`ScratchBuffers.oversample`, `getOrPut` on a `mutableMapOf<Int, ScratchBuffers>`):
+      the stdlib map hashes through the generic `hashCode(dynamic)` on Kotlin/JS, about 42 B per lookup on node (item
+      2's class; the profiler booked it under `hash`), and the bus distort at 2x asked three times per block (the two
+      cores and the phase twins' `captureDry`), about 125 B. Every other oversampled host asked it too: the `Shape` and
+      fused `Distort` nodes once per block (`tube4x`), the `parallel` stage's twins. **Fix:** the sub-pools in two
+      scanned arrays (`oversampleFactors`, `oversamplePools`), four slots that grow at build; a pool holds one to four
+      factors (the shared pool holds all four the warehouse warms, 2, 4, 8 and 16), so a lookup is a few compares. `KlangMap` does not fit (its keys are
+      strings). The KDoc at the arrays is the guard.
+    - **The drive across a call** (`DistortionCore.process`, and `processRamped` while the amount glides): V8 did not
+      inline `process` into the chain, so the bus stage's drive crossed as a heap number (one per block, the two cores
+      share the value; two while gliding, the ramp's two ends). This is item 31's residue on `shapeRunRamped` and the
+      same class one call up, so it is fixed here too. **Fix:** item 31's `EnvelopeCore.prepare` pattern: `process`
+      and `processRamped` are Kotlin `inline` (every call site and test unchanged) and stage the drive in
+      `blockDrive` (and the ramp's start in `rampFrom`) in the host's compiled code, then call the old bodies,
+      `processBlock` and `processRampedBlock`, which take no double; `shapeRunRamped` reads both ends from the fields.
+      The KDoc at `blockDrive` is the guard.
+    - **Nothing left on these paths.** `interpolate44` and `decimate44` allocate nothing in the window.
+    **Measured** (bytes and ns per block, 20,000 warm-up and 200,000 measured blocks; HEAD's bundle a byte copy; "map
+    only" is the tree with the first fix alone, which is also the mutant of the second):
+
+    | case | `--predictable`, HEAD / map only / tree | unpinned, medians of 3, HEAD / tree / HEAD again | pinned (`taskset -c 3`), the same |
+    |---|---|---|---|
+    | `E-distort` (2x) | 155.1 / 30.1 / 21.1 B (16.6 at 1,000,000 blocks, the figure the records cite), 13,813 / 13,541 ns | 180.2 / 36.0 / 185.9 | 159.8 / 41.7 / 148.6 |
+    | the bus distort at `oversample = 0` | 15.7 / 15.7 / 15.7 | | |
+    | the bus distort at 4x | 149.6 / 31.4 / 15.8, 27,825 / 22,105 ns | | |
+    | the bus distort gliding, 2x | 170.7 / 46.1 / 15.8 | 190.7 / 50.5 / 200.9 | 170.5 / 10.8 / 184.9 |
+    | the bus distort gliding, `oversample = 0` | 45.9 / 46.0 / 15.7 | | |
+    | `tube4x` | 57.3 / 15.8 / 15.8 | 66.5 / 26.1 / 52.3 | 57.0 / 25.5 / 62.2 |
+    | `E-parallel` | 196.6 / 36.9 / 14.7 | 222.7 / 25.0 / 220.2 | 175.7 / 10.6 / 185.8 |
+    | `E-bands` | 231.7 / 30.4 / 15.9 | 267.9 / 10.3 / 242.1 | 263.1 / 10.3 / 247.9 |
+    | `C-dist` | 15.6 / 15.6 / 15.4 | 21.1 / 10.4 / 21.2 | |
+    | `C-full` | 14.7 / 14.7 / 14.8 | | |
+    | `sawC` (control) | 16.0 / - / 16.0 | 19.8 / 20.9 / 16.2 | |
+
+    Under `--predictable` every row of the tree reads the method's floor (about 15 B, the voice-level heap number of
+    `renderStages`, item 30's class); the profiler with the warm-up subtracted books nothing else on `E-distort`. One
+    heap number is 16 B on node and 12 in Chrome. Time: within noise, a little faster (`E-distort` 0.98 of HEAD; the
+    4x row 0.79, not explained beyond the map). **JVM:** nothing here allocated before or after. **Bit for bit:** the
+    corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0 edited; `:audio_be:jvmTest` 2,777 of 2,777. The
+    allocation check: GREEN, 80 of 80; V8 `E-distort` 41 B (rounds 41.0, 14.6, 45.5), `tube4x` 16, `E-parallel` 20,
+    `E-bands` 21, `C-dist` 20; every JVM case 0. **New row:** "more factors than the first slots hold: each keeps its own
+    cached sub-pool, in any order of asking" (`ScratchBuffersSpec`). Mutants, one lock call each, restored and checked
+    with `cmp`: the scan matching by `>=` instead of `==` RED (1, the new row), the arrays not grown and the slots
+    overwritten from the start RED (1, the new row); both survive the old rows. **The budget line:** `E-distort` on V8
+    re-set from 232 to 96 by the header's rule (healthy rounds 9.7 to 57.0 B, medians 36 to 42; HEAD's code rounds
+    103.5 to 196.4): it catches the map put back, not the drive handed back as an argument (one heap number, under the
+    V8 resolution; the KDoc guards it). `tube4x` (160) fell by about 40 B with the same map and keeps its line, which
+    guards the per-sample class only. **Review round 1** (the code clean from both reviewers; one MAJOR on the
+    budgets): with the map gone `E-parallel`'s 268 no longer caught item 33: one view per BRANCH put back (the right
+    channel on `copyInto` in `KatalystParallelEffect.process` for every branch, 2 views on `E-parallel`, 3 on
+    `E-bands`) read 211.9, 248.0, 221.5, green, and `E-bands`'s 320 caught it in 2 of 3 rounds. Both re-set to 96 by
+    the header's rule: healthy medians 20 and 21 (this change's check), 46 and 26 (the re-check below); review round
+    1's reviewer runs reached worst rounds of 67.5 and 56.1, and review round 2's reviewer read a clean `E-parallel`
+    median of 57, outside those medians, 39 B under the line. On the clean tree the check read GREEN, 80 of 80
+    (`E-parallel` 45.9, 14.8, 46.2; `E-bands` 27.4, 6.0, 26.3; `E-distort` 10.4, 10.4, 46.7; `tube4x` 9.3, 9.8,
+    19.4). Two mutants against 96 (one lock call each, restored and checked with `cmp`; their scoreboard rows taken
+    out):
+    - one view per branch (round 1's): RED on both lines in every round, `E-parallel` 242.5, 236.4, 211.4 (median
+      236), `E-bands` 313.8, 338.9, 345.0 (median 339);
+    - one view per BLOCK (branch 0 only, review round 2's reviewer): `E-parallel` 149.6, 149.6, 144.0 (median 150,
+      RED), `E-bands` 133.8, 94.2, 87.0 (median 94, GREEN). A lower `E-bands` line would sit inside the V8 noise, so
+      it is no remedy.
+    So `E-parallel` guards a single view per block (item 33) and the sub-pool map (about 160 B there); `E-bands`
+    guards one view per branch and the sub-pool map (about 200 B there). The
+    `E-distort` figure in every record is the `--predictable` one at 1,000,000 blocks, 155 to 16 B (reviewer B: 16.1).
+    S.
 
 42. **A delay or reverb switched off fades its feed instead of cutting it** (added 2026-10-13, maintainer Q39: "fade,
     do not cut"). A sound change, so not part of the performance batch 31 to 41. Plan, cost and the corpus effect:
@@ -1417,37 +1612,254 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     re-set to 152, above the tail, so the release's full check does not go red by chance (`alloc-budgets.txt`). The
     chain runs the duck with a sounding sidechain; the tail's site is not located. Locate it as `spluck-a`'s (item 7)
     and `E-arith`'s (item 36) were looked for; a fix re-sets the line. S.
-39. **The Katalyst knob noises cross three doubles per noise per block on V8** (numbered after the last item, added
-    2026-10-12): `KatalystKnobProgram.sample` calls `PerlinNoise.fbm(x, octaves, persistence)` and `BerlinNoise.fbm`
-    once per noise per tick; V8 does not inline them there, so the clock, the persistence and the result each cross a
-    call as a heap number, about 48 B per noise per block. `E-kat-perlin` (two noises) reads 113.7 B per block against
-    the fader's 15.7 and `E-kat-all7` (two noises among seven knobs) 120.0 (`--predictable`, single-case, run T of
-    `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`); with the allocation check's method `E-kat-perlin` reads medians of 144 to 149. The JVM reads 0. A
-    remedy changes the noise classes in `common.math`, which the Ignitor's per-sample noise sources share (a holder for
-    the argument and the result, or an `inline` fbm whose `noise` calls V8 then inlines, both to be measured on the
-    Ignitor's own cases too), so it was not built in step 6. A fix re-sets the `E-kat-perlin` and `E-kat-all7` lines.
-    Source: `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, step 6. S.
-40. **A modulated orbit compressor writes its five knobs through five setters every block** (numbered after the last
-    item, added 2026-10-12): `KatalystCompressorEffect.configure` calls `Compressor.thresholdDb`, `ratio`, `kneeDb`,
-    `attackSeconds` and `releaseSeconds`, each a setter call that V8 does not inline, so each knob crosses as a heap
-    number, and each setter runs `updateCoefficients` (15 `timeConstantCoeff`, an `exp` each, per block where one would
-    do). `E-kat-dyn` reads 98.7 B per block against the duck's floor of 46.7 (`--predictable`, single-case, run T of
-    `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`): 52 B, about three heap numbers. Measured on a hand-edited copy of that bundle (run X40 of the same
-    record): the five fields written in place and `updateCoefficients` (with `resizeSmoothing` under a lookahead)
-    called once read `E-kat-dyn` 45.4 and `E-kat-mix` 165.4 against 196.3 (`--predictable`; 57.2 and 164.4 with the
-    check's method). The remedy is a change to how `Compressor` stores its knobs (a holder or a `DoubleArray` the orbit
-    stage fills and one method that applies it, the setters kept for the other callers; the class is also the house
-    limiter's), so it was not built in step 6. Its time is not measured on its own. A fix re-sets the `E-kat-dyn` and
-    `E-kat-mix` lines. Source: as 39. S.
-41. **The residue of a moving delay time, reverb size and phaser breakpoint on V8** (numbered after the last item,
-    added 2026-10-12): `E-kat-gates` reads 66.6 B per block against the delay alone's 32.3 (`--predictable`,
-    single-case, run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). The sampling heap profiler (development runs, not recorded) books it in the
-    reverb's `process` and `observeTail`, the delay line's crossfade loop and `observeTail`, and the delay and reverb
-    writers' tick; on `E-kat-mix` also the phaser core's per-block writes of the new breakpoint. Not located further.
-    Ruled out by hand-edited copies of that bundle (probes R1 to R3 of the same record, step 6's review round 2): the
-    `Reverb.lowpass` setter as a direct write (66.7), the reverb configure's size path inlined too (66.9), and the
-    delay configure's five `isFinite` calls inlined (66.1; `E-kat-mix` 201.8): none removes a heap number. Source: as
-    39. S.
+39. **DONE (2026-10-16): the Katalyst knob noises crossed three doubles per noise per block on V8; `fbm` now calls
+    `noise` at one site and the knob's noise arms are methods of their own, and a noise knob reads what the fader
+    reads.** Reported (added 2026-10-12): `KatalystKnobProgram.sample` called `PerlinNoise.fbm(x, octaves,
+    persistence)` and `BerlinNoise.fbm` once per noise per tick, not inlined, so the clock, the persistence and the
+    result crossed as heap numbers, about 48 B per noise per block (`E-kat-perlin` 113.7 B, `E-kat-all7` 120.0,
+    `--predictable`, run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). Source:
+    `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, step 6. A purely independent performance fix
+    (Q38): no DSL door, wire type, public signature or sound changes (`fbm` keeps its signature; the two new methods
+    are private). **Located on the production bundle** (`:audio_benchmark:compileProductionExecutableKotlinJs`, node
+    22.12, `--predictable` single-case processes, the sampling heap profiler with a warm-up-only run subtracted,
+    `--trace-turbo-inlining`), with four probe cases added to `AllocationCases.kt` for the measurement and taken out
+    again: the Ignitor's `perlin` and `berlin` at 1 and at 8 octaves. On HEAD the profiler booked 64 B per block in
+    `sample` (the two arguments of two noises) and 32 B in `fbm` (the two results). Why: `fbm` called `noise` at two
+    sites (the early return for one octave and the loop), so its own optimized code carried two inlined copies of
+    `noise` (690 bytecode bytes, 806 with `fbm`'s own) and fitted no caller that had spent more than about 114 of
+    V8's 920. Two fixes, each needed:
+    - **One call site of `noise` in `fbm`** (`common`, `PerlinNoise.kt` and `BerlinNoise.kt`): the single-octave
+      path returns from the loop's first pass, `noise(x * 1.0)`, which is `noise(x)` bit for bit (signed zeros
+      included); for two octaves or more the operations are the old ones in the old order. The Ignitor's `perlin` and
+      `berlin` share the law and stay bit-identical. With it alone (the arms still in `sample`) `E-kat-perlin` read
+      21.9 B but `E-kat-all7` 120.2 and `E-kat-mix` 196.2: with several modulator kinds hot, `sample`'s budget goes to
+      them.
+    - **The noise arms as methods of their own** (`samplePerlin`, `sampleBerlin`, two Ints in, nothing out): with
+      several kinds hot V8 leaves them out of `sample`, compiles each on its own, and `fbm` fits there. With it alone
+      (`fbm` on two sites) `E-kat-all7` read 21.0 and `E-kat-mix` 96.6, but `E-kat-perlin` 113.7: with only noises
+      hot V8 inlined `samplePerlin` into `sample` (and, tried as well, into `run` when dispatched from there) and then
+      had no room for the heavy `fbm`.
+    Tried and not kept: `fbm` as Kotlin `inline` (`E-kat-perlin` 67.3 B, `noise` then crossed once per block). Not
+    deterministic in principle: where V8 puts these methods follows the profile, and the two halves together cover
+    the profiles measured. The guards are the KDoc at `samplePerlin` and the comment in each `fbm` (no test can pin
+    a box). **New rows:** "bit for bit the two-site form it replaced, at every octave count and on integral and
+    signed-zero points" (`PerlinNoiseSpec`, `BerlinNoiseSpec`; "and non-finite" since review round 1): octaves -1
+    to 9, six persistences (NaN among them), 664 points (NaN and both infinities among them), the old form as the
+    reference, NaN-aware and sign-aware; the perlin row also checks that its points reach a negative zero (berlin's
+    noise never yields one). And, from review round 1 (reviewer A: the instruction and modulator indices swapped in
+    a noise arm survived `KatalystKnobModulatorSpec`), "a noise whose modulator index differs from its instruction
+    index reads its own walk into its own register" (`KatalystKnobModulatorSpec`, a slot instruction first, the two
+    noises then instructions 1 and 2 and modulators 0 and 1, the value bit for bit). The swap in `sampleBerlin`
+    and in `samplePerlin`: RED, 1 of 20 each, the new row only. It fails by an index out of bounds, not by a wrong
+    value read: the first noise reads the second's walk into the slot's register, then the last noise asks for a
+    modulator past the end. That cannot be avoided: an instruction index is never below its modulator index, so in
+    any program where they differ the swap sends the last noise of a kind past the last modulator. Mutants, one lock call each, restored and checked with `cmp`: the single-octave return dropped (the loop's
+    one pass returns `0.0 + 1.0 * v`, which turns -0.0 into 0.0) RED on the perlin row (1 of 9; the old "octaves<=1
+    is byte-identical" row survives, `shouldBe` takes -0.0 for 0.0) and survives the berlin row, an equivalent mutant
+    there (berlin's noise never yields -0.0, and `0.0 + v` and `v / 1.0` change no other value); the return at
+    `octaves <= 2` RED on both rows (1 of 9, 1 of 10).
+    **Measured** (bytes and ns per block, 20,000 warm-up and 200,000 measured blocks; HEAD's bundle a byte copy;
+    the probes were in both bundles):
+
+    | case | `--predictable`, HEAD / tree | unpinned (the check's method), rounds, HEAD / tree |
+    |---|---|---|
+    | `E-kat-perlin` | 113.7 / 21.8 B (112.4 / 16.5 at 1,000,000 blocks), 5,807 / 5,767 ns | 112.3 to 149.0 / 41.0 to 61.6 (11 rounds) |
+    | `E-kat-all7` | 118.5 / 15.0 B (115.5 / 18.4 at 1,000,000), 7,421 / 7,462 ns | 139.6 to 161.0, one of 297.8 (13) / 8.0 to 67.7, four of 180.3 to 207.4 (21) |
+    | `E-kat-mix` | 196.2 / 96.9 B | 201.8 to 227.9 / 92.1 to 119.4 |
+    | `E-kat-gates`, `E-kat-sine`, `E-gain`, `sawC` (controls) | 50.9 / 50.9, 14.6 / 14.5, 15.6 / 15.6, 15.7 / 15.7 | |
+    | the Ignitor's perlin, 1 and 8 octaves | 14.9 / 14.5, 15.7 / 15.7 B, 6,689 / 6,762 ns at 8 | |
+    | the Ignitor's berlin, 1 and 8 octaves | 14.9 / 14.4, 15.7 / 15.7 B, 4,849 / 4,837 ns at 8 | |
+
+    Under `--predictable` the profiler with the warm-up subtracted books nothing on `E-kat-perlin` but the floor
+    (`renderStages`, item 30's class). `E-kat-all7`'s tail is a mode HEAD has too (the header of `alloc-budgets.txt`
+    cites a round of 277 in run T; here 297.8): about 140 B above either tree's healthy rounds, more than the
+    noises' 96, so not this fix failing; ten profiled unpinned processes did not catch it; not located. `E-kat-mix`
+    keeps about 50 B above the floor: item 40's setters and item 41's residue. One heap number is 16 B on node and 12
+    in Chrome. Time: within noise. **JVM:** nothing here allocated before or after (the check, 0 B on every `E-kat`
+    case). **Bit for bit:** the corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0 edited;
+    `:audio_be:jvmTest` 2,777 of 2,777 (with `KatalystKnobModulatorSpec`, the knob against the Ignitor's
+    oscillators). The allocation check: GREEN, 80 of 80 (run before the lines moved; under the new lines too:
+    `E-kat-perlin` 57 B, rounds 56.9, 41.0, 57.7; `E-kat-all7` 51, rounds 52.7, 51.4, 14.8; `E-kat-mix` 98).
+    **The budget lines** (the header's rule, the note at E-kat-perlin's re-set): `E-kat-perlin` v8 232 to 96, 39 B
+    above the highest healthy median (57). `E-kat-all7` v8 336 to 250, 43 B above the tail's highest round. Mutants
+    against them (the two halves put back one at a time, single-case rounds by the check's method, 5 each):
+    - `fbm` on two noise sites again: `E-kat-perlin` 107.5 to 150.8 across two sessions (this change's 129.3 to
+      145.5, review round 1's reviewer B 113.5, 150.8, 107.5), over 96 in every round, the lowest about 11 B (caught); `E-kat-all7`
+      24.4 to 77.9, the tree's figure (not caught, and nothing to catch: that profile does not box without this half).
+    - the noise arms back inside `sample`: `E-kat-perlin` 45.0 to 56.6, the tree's figure (not caught, nothing to
+      catch there); `E-kat-all7` 144.4 to 180.7, median 153, under 250 (NOT caught).
+    So `E-kat-perlin` guards the single `noise` site and HEAD (112.3 to 149.0); `E-kat-all7` guards the per-sample
+    class only, and the arms' half is guarded by its KDoc alone. `E-kat-mix` (item 40's line, 250) fell by about 100 B
+    and keeps its line; its header claim about the isFinite group (G1, 264) was measured before this change and most
+    likely no longer holds; item 40's fix re-sets it. S.
+40. **DONE (2026-10-16): a modulated orbit compressor wrote its five knobs through five setters every block; it now
+    hands them over in one call through a holder, and `E-kat-dyn` reads the duck's floor.** Reported (numbered after
+    the last item, added 2026-10-12): `KatalystCompressorEffect.configure` called `Compressor.thresholdDb`, `ratio`,
+    `kneeDb`, `attackSeconds` and `releaseSeconds`, each a setter call that V8 does not inline, so each knob crossed as
+    a heap number, and each setter ran `updateCoefficients` (three `timeConstantCoeff`, an `exp` each: 15 per block
+    where 3 do). `E-kat-dyn` read 98.7 B per block against the duck's floor of 46.7 (`--predictable`, run T of
+    `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`; run X40 of the same record, a hand-edited bundle, read 45.4).
+    Source: as 39. A purely independent performance fix (Q38): no DSL door, wire type, public signature or sound
+    changes (the five properties keep their types, getters and setters; the holder and the method are `internal`).
+    **Located on the production bundle** (`:audio_benchmark:compileProductionExecutableKotlinJs`, node 22.12,
+    `--predictable` single-case processes, the sampling heap profiler with a warm-up-only run subtracted): on HEAD it
+    booked 48.4 B per block in `KatalystCompressorEffect.configure` on `E-kat-dyn` and 32.1 B on `E-kat-mix`, and the
+    compiled `configure` held the five setter calls. **Fix** (`effects/Compressor.kt`,
+    `cylinders/katalyst/KatalystCompressorEffect.kt`):
+    - **`Compressor.knobArgs`** (a `DoubleArray(5)`, slots `KNOB_THRESHOLD` to `KNOB_RELEASE`) and
+      **`applyKnobArgs()`**, which takes no double: each knob guarded and coerced as its setter does (`isFiniteInline`,
+      the same answer as `isFinite()` for every input; the setters' `coerceAtLeast` written out, its stdlib body, so
+      -0.0 stays -0.0 on the knee), then `updateCoefficients` ONCE, and the lookahead's `resizeSmoothing` only when
+      the attack was written, as in the attack setter. The configure fills the holder and calls it once.
+    - **Why collapsing is exact:** nothing between the five setters reads what an earlier one computed. The
+      coefficients are a function of the stored attack and release alone (so only the last of five recomputations
+      survives), `resizeSmoothing` reads only the stored attack and no coefficient, and the setters' order touches
+      nothing else. With all five non-finite the old path computed nothing and the new one recomputes the same
+      constants from the same stored values.
+    - **The properties now have private backing fields** (`thresholdValue` and so on), because Kotlin cannot write a
+      property's `field` from outside its accessors; the setters' bodies are unchanged. The per-sample curve
+      (`calculateGainReduction`), `updateCoefficients` and `resizeSmoothing` read the fields. One consequence on
+      Kotlin/JS: a getter is now a call, where it compiled to a field read; `retarget` in the effect calls three per
+      change, and V8 inlines them in every profile measured (the tree reads the floor).
+    - **The other callers are untouched:** `Compressor` is built by the house limiter (`MasterStage`, its knobs set
+      once at construction, never through a setter per block) and by `EffectBenchmark`; the duck is its own class
+      (`Ducking`), and no voice holds a `Compressor`. Their code paths read the same stored numbers as before.
+    The KDoc at `Compressor.knobArgs` is the guard against the box (no test can pin it). **New row:** "applyKnobArgs
+    leaves the instance where the five setters leave it, bit for bit" (`CompressorSpec`): two instances, at lookahead
+    0 and 5 ms, take ten knob steps (NaN, both infinities, a ratio below 1, a knee of -3 and of -0.0, an attack and a
+    release under the 0.1 ms floor, a NaN attack beside other changes, attacks that move the box length), one through
+    the setters, one through the holder; the five stored knobs and every output sample are compared bit for bit.
+    Mutants, one lock call each, restored and checked with `cmp`: `updateCoefficients` dropped RED, `resizeSmoothing`
+    dropped RED, the ratio coercion dropped RED, the knee coerced with `<=` (-0.0 to 0.0) RED, the threshold's, the
+    release's and the attack's guard dropped RED (each 1 of 7, the new row); the attack-written condition dropped
+    (re-split on every call) survives, an equivalent mutant: the box length always equals the split of the stored
+    attack, so the re-split returns at once. On the effect (`KatalystCompressorEffectSpec`): `applyKnobArgs` not
+    called RED, the release slot filled with the attack RED (at least 8 rows each, among them "each of the five knobs
+    alone, changed in place in the same holder, reaches the instance").
+    **Measured** (bytes and ns per block, 20,000 warm-up and 200,000 measured blocks; HEAD's bundle a byte copy;
+    "setters back" is the tree with the five setter calls put back in `configure`, the crossing restored, which reads
+    more than HEAD because `retarget`'s getters are calls there too; G1 is step 6's isFinite group put back on this
+    tree, M1 `KnobGlide.retarget` a plain method again):
+
+    | case | `--predictable`, HEAD / tree / setters back / G1 | unpinned (the check's method), rounds |
+    |---|---|---|
+    | `E-kat-dyn` | 97.1 / 45.3 / 113.6 / 67.3 B | HEAD 83.7 to 104.2 (median 91.6, 5); tree 31.5 to 57.3 (13); setters back 73.2 to 129.4 (median 120, 8); G1 51.4 to 78.4 (8); M1 21.0 to 112.8 (3) |
+    | `E-kat-mix` | 96.9 / 67.3 / 120.1 / 134.3 B | HEAD 91.0 to 112.9 (5); tree 56.0 to 83.6 (13); setters back 96.1 to 123.0 (median 114, 8); G1 113.0 to 145.2 (median 136, 8); M1 263.1 to 305.1 (3) |
+    | `E-comp`, `E-duck`, `sawC` (controls) | 15.7 / 15.7, 46.6 / 46.6, 15.6 / 15.6 B | |
+    | `E-kat-sine`, `E-kat-all7` (G1) | G1 30.7, 36.0 B | |
+
+    Under `--predictable` the profiler with the warm-up subtracted books nothing in the compressor's `configure` on
+    the tree; what `E-kat-mix` keeps above the floor is the delay and reverb writers' tick (item 41). One heap number
+    is 16 B on node and 12 in Chrome. **Time** (`E-kat-dyn`, `--predictable`, HEAD and tree interleaved, 5 pairs):
+    unpinned medians 11,794 / 11,740 ns (within noise); pinned (`taskset -c 3`) 11,837 / 11,635 ns, the tree faster in
+    every pair by 85 to 224 ns, about 0.98: the twelve `exp` and four calls saved. **JVM:** nothing here allocated
+    before or after (the check, 0 B on every case). **Bit for bit:** the corpus GREEN, 3 of 3 frozen and 15 of 15 live
+    songs identical, 0 edited; `:audio_be:jvmTest` 2,779 of 2,779. The allocation check (under the new lines): GREEN,
+    80 of 80; V8 `E-kat-dyn` 51 B (rounds 72.2, 46.3, 50.7), `E-kat-mix` 78 (77.5, 87.8, 71.3), `E-comp` 40, `E-duck`
+    52.
+    **The budget lines** (the header's rule, the note at the follow-up 40 re-set in `alloc-budgets.txt`):
+    `E-kat-dyn` v8 152 to 96, 45 B above the highest healthy median (about 51). It catches the five setters put back
+    (median 120, 7 of 8 rounds over) and, by step 6's M7, `Compressor.glideArgs`; it does NOT reliably catch HEAD's
+    whole old form (median 91.6 here; the full checks read 87 to 108), so the KDoc at `knobArgs` guards it too.
+    `E-kat-mix` v8 250 to 124, 42 B above the highest healthy median (82). It catches M1 (every round over) and G1 in
+    most runs (median 136, a few rounds under), not the setters put back (median 114: `E-kat-dyn` is that line). The
+    old claim that 250 told G1 from the tree no longer held after item 39: G1 reads under 250 in every round now.
+    **Left:** the residue of `E-kat-mix` on the delay and reverb writers (item 41); the setters themselves keep
+    `isFinite()` and an `updateCoefficients` each, for the callers that write one knob. S.
+41. **DONE (2026-10-16): the residue of a moving delay time, reverb size and lowpass on V8 was a `NaN` arm; each
+    gate and the lowpass setter now store their two arms on their own, and `E-kat-gates` and `E-kat-mix` read their
+    floors.** Reported (numbered after the last item, added 2026-10-12): `E-kat-gates` read 66.6 B per block against
+    the delay alone's 32.3 (`--predictable`, single-case, run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`),
+    booked by development runs (not recorded, and without the warm-up subtracted) in the reverb's `process` and
+    `observeTail`, the delay line's crossfade loop and `observeTail`, the delay and reverb writers' tick, and on
+    `E-kat-mix` the phaser core's per-block breakpoint writes. Ruled out then by hand-edited bundles (probes R1 to R3 of
+    that record): the `Reverb.lowpass` setter as a direct write, the reverb configure's size path inlined, the delay
+    configure's five `isFinite` inlined. Source: as 39. A purely independent performance fix (Q38): no DSL door, wire
+    type, public signature or sound changes (the setter's and `normalizeSize`'s bodies only; the writers' `gate()`
+    helpers were private). **Located on the production bundle** (`:audio_benchmark:compileProductionExecutableKotlinJs`,
+    node 22.12, `--predictable` single-case processes, the sampling heap profiler with a warm-up-only run subtracted,
+    `--trace-turbo-inlining`, and `--trace-turbo-graph` filtered to one function, which named the sites). On HEAD
+    (after items 32, 39 and 40) the profiler booked `E-kat-gates` above the floor in two compiles only:
+    `KatalystChain.tickModulated` (27.5 B per block; the writers' tick and `fill` are inlined there) and
+    `KatalystReverbEffect.configure` (11.4 B; the `Reverb.lowpass` setter inlined); on `E-kat-mix` the delay and the
+    reverb writers' tick (16.0 and 16.1 B). Nothing in the reverb's `process`, `observeTail` or the delay line's loops:
+    those names were the warm-up (item 34's lesson). The graphs after `V8.TFSimplifiedLowering` showed the boxes as a
+    `ChangeFloat64ToTagged` feeding a tagged `Phi` whose other input is `JSLoadGlobal NaN`: Kotlin/JS emits
+    `Double.NaN` (and `SLOT_UNSET`) as the global `NaN`, a tagged value, so `if (c) value else NaN` merges into a
+    tagged value and the double arm becomes a heap number before the store. Sites and fixes:
+    - **The delay writer's gate** (`KatalystDelayWriter.fill`, `time.value` or `SLOT_UNSET`) and **the reverb
+      writer's** (`KatalystReverbWriter.fill`, `Reverb.normalizeSize(size.value)` or `SLOT_UNSET`): one heap number
+      per block each while the stage runs, a moving or a constant time alike, at every `fill` (so per new map too:
+      performance.md's "the delay writer's `resolve`, fully inlined, not explained" was this). **Fix:** one store per
+      arm (`if (stageAskedFor(wet)) { config.time = time.value } else { config.time = SLOT_UNSET }`), the private
+      `gate()` helpers gone. The same values.
+    - **The `Reverb.lowpass` setter** (`field = if (value.isFinite()) value else Double.NaN`, inlined into the reverb
+      configure): one heap number per block while the lowpass moves. R1's direct write had removed the guard, a
+      different shape; this keeps it. **Fix:** one store per arm.
+    - **`Reverb.normalizeSize`'s `coerceIn`** (a box that moved): with the first two fixes `E-kat-gates` read 37.3 B,
+      and the graph of `tickModulated` showed the stdlib `coerceIn` left out of its budget (inlined on HEAD), the
+      quotient `authored / 10` crossing it as a heap number. **Fix:** the clamp written out
+      (`if (normalized < 0.0) 0.0 else if (normalized > 1.0) 1.0 else normalized`, `clampSvfRange`'s case of item
+      29), the same value for every input, -0.0 included. `E-kat-gates` then read 14.6.
+    - **The phaser core's breakpoint writes** (`PhaserCore.prepareBlock`, `E-kat-mix`): its compiled graph holds no
+      box. Unpinned profiles booked about 2.5 B per block there in 2 of 3 processes, and 1 to 2 B in the knob's
+      `sample`; `--trace-deopt` shows `advance` and `sample` deoptimizing once inside the window (a branch first
+      taken there, a long-period modulator's wrap), and at 1,000,000 blocks both drop out (two unpinned profiles,
+      33.4 and 33.0 B, all of it the two voices' floor). A tier-up transient, not a per-block cost: nothing to fix.
+    - **A one-off deopt the fix brings:** the cold unset arm of each gate store is a `Deoptimize` (no type feedback)
+      in the compiled `tickModulated`, so the first time a running modulated chain closes a delay or reverb gate,
+      `tickModulated` deoptimizes once and recompiles. A one-off, like the phaser's tier-up above.
+    - **Left, not per block:** the reverb's `Active.deactivate` calls `Reverb`'s tail-window function with the size
+      as a default argument (a call left out, one heap number), once per crossing of the size gate, not per block.
+    The comment at each site is the guard (no test can pin a box). **The sweep:** the production bundle of
+    `audio_be` holds no other `? ... : NaN` or `? NaN :` ternary (the rest are default-argument prologues,
+    `x === VOID ? NaN : x`, whose argument is tagged anyway), and the sources no other `else Double.NaN`,
+    `else SLOT_UNSET` or `?: Double.NaN` on a per-block path (`KatalystReverbEffect.configure(size, lowpass?, wet)`
+    keeps its `lowpass ?: Double.NaN`, the direct door, not per block). **New rows:** "normalizeSize is bit for bit
+    the coerceIn form it replaced, signed zeros and non-finite inputs included" (`ReverbStabilitySpec`, 421 inputs:
+    both zeros, both smallest subnormals, the edges at 10, both infinities, NaN, a grid of sixteenths from -12.5 to
+    12.5; compared by raw bits), and "an infinite lowpass reads as unset too: the unit stores NaN, never the infinity"
+    (`KatalystReverbEffectSpec`; no row fed an infinity before, and NaN alone cannot tell the setter's NaN arm from a
+    raw store). Mutants, one lock call each, restored and checked with `cmp`: the clamp's `<` as `<=` (-0.0 to 0.0)
+    RED, 1 of 6, the new row only; the upper clamp dropped RED, 4 of 6; the setter's NaN arm storing `value` survived
+    the whole `:audio_be` jvm suite (2,780 green, which is why the second row exists) and is RED on it, 1 of 20; the
+    delay gate's unset arm storing `time.value` RED, 6 of 2,781 (`KatalystSlotResolverSpec`, `KatalystModulatedStagesSpec`,
+    `KatalystKnobExpressionSpec`); the reverb gate's storing `normalizeSize(size.value)` RED, 6 of 2,781.
+    **Measured** (bytes and ns per block, 20,000 warm-up blocks; HEAD's bundle a byte copy):
+
+    | case | `--predictable`, 200,000 blocks, HEAD / tree | 1,000,000 blocks, HEAD / tree | unpinned (the check's method), rounds, HEAD / tree | pinned (`taskset -c 3`), HEAD / tree |
+    |---|---|---|---|---|
+    | `E-kat-gates` | 50.9 / 14.6 B, 15,825 / 15,782 ns | 54.5 / 16.3 B, 16,368 / 16,392 ns | 40.7 to 97.9 (8) / 4.9 to 62.1 (8; review round 1's reviewer B 4.0 to 71.8, 12) | 56.0, 60.9, 130.3 / 10.7, 14.8, 15.2 |
+    | `E-kat-mix` | 67.3 / 42.4 B, 40,161 / 39,510 ns | 65.0 / 33.0 B, 40,302 / 40,158 ns | 55.4 to 77.6 (8) / 24.3 to 51.7 (8; reviewer B 19.7 to 56.9, 12) | 66.8, 67.3, 88.8 / 22.1, 41.5, 57.8 |
+    | `C-remap` (a new map every block) | 37.4 / 15.7 B | 32.0 / 16.8 B | 55.9 to 63.1 (5) / 42.0 to 57.7 (5) | 21.0, 26.1, 30.8 / 9.3, 10.1, 10.5 |
+    | `E-delay`, `E-stages`, `E-sawC-sus` (controls) | 31.2 / 31.2, 15.7 / 15.7, 31.2 / 31.2 | | | |
+    | `E-kat-dyn`, `-res`, `-all7`, `-perlin`, `-sine` (controls) | 45.3 / 45.3, 14.4 / 14.4, 14.9 / 14.9, 21.9 / 21.9, 14.6 / 14.6 | | | |
+
+    Under `--predictable` the profiler with the warm-up subtracted books nothing on the tree's `E-kat-gates` but the
+    floor (`renderStages`, item 30's class) and nothing on `E-kat-mix` but its two voices' floor (`Voice.render`, the
+    duck's trigger voice the second); `E-delay` keeps the off phaser's call (item 1, located, not removed). One heap
+    number is 16 B on node and 12 in Chrome. The tree's last-block peaks on V8 equal HEAD's on all three cases. Time:
+    within noise. **JVM:** nothing here allocated before or after (the check, 0 B on every `E-kat` case and on
+    `C-remap`). **Bit for bit:** the corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0
+    edited; `:audio_be:jvmTest` 2,781 of 2,781. The allocation check (under the new lines): GREEN, 80 of 80; V8
+    `E-kat-gates` 31 B (rounds 55.9, 31.3, 4.9), `E-kat-mix` 42 (42.1, 41.6, 30.0), `C-remap` 47, `E-delay` 63.
+    **The budget lines** (the header's rule, the note at the follow-up 41 re-set in `alloc-budgets.txt`):
+    `E-kat-gates` v8 160 to 112 and `E-kat-mix` v8 124 to 96, each 44 B above the worst healthy median of three
+    (68.3 and 52.2, review round 1's reviewer B; `E-kat-gates` was set at 96 first, about 28 B above that median,
+    so review round 1 raised it to 112). Mutants against them (single-case rounds by the check's method; each bundle built in one
+    lock call, the source restored and checked with `cmp`):
+    - **P**, the per-sample class (item 9's: an exhaustive `when` over a private two-entry enum yielding the reverb's
+      cross-feed step in its sample loop, bit for bit the same): `E-kat-gates` 1,179.9 to 1,195.9 B (3 rounds;
+      1,149.7 under `--predictable`), over 112 in every round (caught).
+    - **M1**, `KnobGlide.retarget` a plain method again: `E-kat-mix` 246.1 to 259.7 (5 rounds; 264.2 under
+      `--predictable`), every round over 96 (caught); `E-kat-gates` 42.9 to 83.2, the tree's figure (nothing to catch:
+      that profile inlines it).
+    - **HEAD's code** (the three `NaN` arms): `E-kat-gates` over 112 in none of 8 rounds (over 96 in 2), `E-kat-mix` over 96 in none: NOT caught.
+      Each site is one heap number per block, under the V8 resolution; the comments at the three sites and in
+      `normalizeSize` guard them.
+    So `E-kat-gates` guards the per-sample class on the delay and reverb paths, `E-kat-mix` `KnobGlide.retarget` and
+    the per-sample class; the isFinite group (G1) was not re-measured, and the header withdraws the claim that
+    `E-kat-mix` catches it. S.
 
 ## 6. The audit's later steps and its open decisions
 

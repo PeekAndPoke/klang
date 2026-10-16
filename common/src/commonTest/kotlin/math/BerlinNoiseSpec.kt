@@ -86,6 +86,51 @@ class BerlinNoiseSpec : StringSpec({
         }
     }
 
+    "BerlinNoise.fbm: bit for bit the two-site form it replaced, at every octave count and on integral, signed-zero and non-finite points" {
+        // The form before engine follow-up 39 (one noise call for octaves <= 1, one in the loop), kept here as the
+        // reference: the single call site must not move a bit (the Ignitor and the Katalyst knob both read this law).
+        // The sign test is kept for symmetry with the perlin row; berlin's noise never yields -0.0 (its values are
+        // `v0 + p * (v1 - v0)`, and `v0 = (h / MAX + 1) * 0.5` is never -0.0), so here it never fires.
+        fun reference(noise: BerlinNoise, t: Double, octaves: Int, persistence: Double): Double {
+            if (octaves <= 1) {
+                return noise.noise(t)
+            }
+
+            var sum = 0.0
+            var amp = 1.0
+            var freq = 1.0
+            var norm = 0.0
+
+            for (o in 0 until octaves) {
+                sum += amp * noise.noise(t * freq)
+                norm += amp
+                freq *= 2.0
+                amp *= persistence
+            }
+
+            return if (norm > 0.0) sum / norm else 0.0
+        }
+
+        val noise = BerlinNoise(Random(13))
+        val points = (0..255).map { it.toDouble() } + (0..400).map { it * 0.137 - 20.0 } + listOf(
+            -0.0, 0.0, -1.0, 1e9, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY,
+        )
+
+        for (octaves in -1..9) {
+            for (persistence in listOf(0.0, 0.5, 0.6, 1.0, -0.5, Double.NaN)) {
+                for (p in points) {
+                    val got = noise.fbm(p, octaves = octaves, persistence = persistence)
+                    val want = reference(noise, p, octaves, persistence)
+
+                    // The same value, a NaN for a NaN, and a zero of the same sign (`1 / -0.0` is `-Infinity`).
+                    val same = if (want != want) got != got else got == want && (want != 0.0 || 1.0 / got == 1.0 / want)
+
+                    same shouldBe true
+                }
+            }
+        }
+    }
+
     "BerlinNoise.fbm: more octaves changes the output (fractal detail takes effect)" {
         val noise = BerlinNoise(Random(13))
         val single = (0..200).map { noise.fbm(it * 0.15, 1, 0.5) }

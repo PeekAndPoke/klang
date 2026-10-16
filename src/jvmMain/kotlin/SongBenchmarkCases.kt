@@ -437,7 +437,7 @@ object SongBenchmarkCases {
             name = "Der Schmetterling (FULL frozen 09-25)",
             code = FrozenSongs.derSchmetterling_2026_09_25,
             group = "full-song",
-            rpm = 32.5,
+            rpm = FrozenSongs.derSchmetterlingRpm_2026_09_25,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
@@ -446,7 +446,7 @@ object SongBenchmarkCases {
             name = "Seltsamere Dinge (FULL frozen)",
             code = FrozenSongs.strangerThings_2026_07_03,
             group = "full-song",
-            rpm = 34.0,
+            rpm = FrozenSongs.strangerThingsRpm_2026_07_03,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
@@ -462,7 +462,7 @@ object SongBenchmarkCases {
             name = "Der Schmetterling (FROZEN 09-25)",
             code = FrozenSongs.derSchmetterling_2026_09_25,
             group = "full-song",
-            rpm = 32.5,
+            rpm = FrozenSongs.derSchmetterlingRpm_2026_09_25,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
@@ -508,7 +508,7 @@ object SongBenchmarkCases {
     fun experiments(): List<SongBenchmark.Case> = distortSweep + unisonSweep + fxIsolation + interactionSweep
 
     // ────────────────────────────────────────────────────────────────────────────────────────
-    // Live rig ablation (2026-09-15): where the cycles go in the CURRENT Der Schmetterling
+    // Rig ablation (2026-09-15): where the cycles go in Der Schmetterling, on the frozen 2026-09-25 text
     // ────────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -517,12 +517,15 @@ object SongBenchmarkCases {
      * of an A/B would otherwise render a different realisation.
      */
     private fun ungated(code: String): String =
-        swap("seed(timeOfDay.mul(60*60*60*24))", "seed(0.5)")(
+        swap(from = "seed(timeOfDay.mul(60*60*60*24))", to = "seed(0.5)")(
             Regex("""\.mute\("<[^"]*>"\)""").replace(code, ""),
         )
 
-    /** The live song, ungated. */
+    /** The live song, ungated: only the `--args=ledger` live rows read it, never a check. */
     private val liveUngated: String by lazy { ungated(derSchmetterlingSong.code) }
+
+    /** The text the rig suite edits: the frozen 2026-09-25 Der Schmetterling, ungated, so a song edit never moves it. */
+    private val rigUngated: String by lazy { ungated(FrozenSongs.derSchmetterling_2026_09_25) }
 
     /**
      * The song axis of the optimization series (`docs/plans/blog-optimization-series.md`, P16): every
@@ -560,27 +563,27 @@ object SongBenchmarkCases {
         }
     }
 
-    /** A case that renders [expr] on top of the ungated live song, after [edit] has rewritten the song text. */
-    private fun liveCase(name: String, group: String, expr: String, edit: (String) -> String = { it }): SongBenchmark.Case =
+    /** A case that renders [expr] on top of the ungated frozen song, after [edit] has rewritten the song text. */
+    private fun rigCase(name: String, group: String, expr: String, edit: (String) -> String = { it }): SongBenchmark.Case =
         SongBenchmark.Case(
             name = name,
             group = group,
-            rpm = derSchmetterlingSong.rpm,
+            rpm = FrozenSongs.derSchmetterlingRpm_2026_09_25,
             cycles = 8,
-            code = edit(liveUngated) + "\n\n" + expr + "\n",
+            code = edit(rigUngated) + "\n\n" + expr + "\n",
         )
 
-    /** Text swap that fails loudly when the song no longer contains the anchor: the suite tracks the live song. */
+    /** Text swap that fails loudly when the text does not contain the anchor (a wrong anchor, never a song edit). */
     private fun swap(from: String, to: String): (String) -> String = { src ->
-        require(src.contains(from)) { "rig suite anchor not found in the live song: $from" }
+        require(src.contains(from)) { "rig suite anchor not found in the song text: $from" }
         src.replace(from, to)
     }
 
-    /** Every match of [from] goes, and there must be exactly [expected] of them: a re-authored song fails loudly. */
+    /** Every match of [from] goes, and there must be exactly [expected] of them: a wrong anchor fails loudly. */
     private fun swapAll(from: Regex, to: String, expected: Int): (String) -> String = { src ->
         val matches = from.findAll(src).count()
 
-        require(matches == expected) { "rig suite anchor matched $matches times in the live song, expected $expected: ${from.pattern}" }
+        require(matches == expected) { "rig suite anchor matched $matches times in the song text, expected $expected: ${from.pattern}" }
 
         src.replace(from, to)
     }
@@ -591,24 +594,25 @@ object SongBenchmarkCases {
      * and the count-in's orbit config (its own room) never claims the orbit it shares with the lead (orbit 0).
      */
     private val ungateSong: (String) -> String = { src ->
-        swap("filterWhen(t => t < 2)", "filterWhen(t => t < 0)")(swap("x => x.late(2).filterWhen(t => t >= 2)", "x => x")(src))
+        swap(from = "filterWhen(t => t < 2)", to = "filterWhen(t => t < 0)")(swap(from = "x => x.late(2).filterWhen(t => t >= 2)", to = "x => x")(src))
     }
 
     /** Like [swap] with a pattern, for anchors whose VALUE is tuned by ear (a wet amount, a level). */
     private fun swap(from: Regex, to: String): (String) -> String = { src ->
         val matches = from.findAll(src).count()
 
-        require(matches == 1) { "rig suite anchor matched $matches times in the live song, needs exactly one: ${from.pattern}" }
+        require(matches == 1) { "rig suite anchor matched $matches times in the song text, needs exactly one: ${from.pattern}" }
 
         src.replace(from, to)
     }
 
+    /** The rhythm rig of the frozen text (guitars 2 and 3); the snare cut sits inside `makeGuitar`. */
     private const val RHYTHM_RIG =
-        "let rhythmRig = x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)"
+        "let guitar       = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)"
 
-    /** The rhythm rig with five of its stages replaced; the snare cut between the power amp and the cab stays. */
+    /** The rhythm rig with its five stages replaced. */
     private fun rhythmRig(pickup: String, pedal: String, preamp: String, power: String, cab: String): String =
-        "let rhythmRig = x => x.serial($pickup, $pedal, $preamp, $power, snareCut, $cab)"
+        "let guitar       = makeGuitar($pickup, $pedal, $preamp, $power, $cab)"
 
     private const val BAND = ".analog(feel).transpose(transposition)"
     private const val RHYTHM = "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange))$BAND"
@@ -619,56 +623,67 @@ object SongBenchmarkCases {
     private const val DRUMS_LIVE =
         "stack(kick.apply(kick_arrange), snare.apply(snare_arrange), hats.apply(hats_arrange), shaker.apply(shaker_arrange)).analog(feel / 2)"
 
-    /** The drums of the frozen 2026-09-16 text, which still has the clap: kept so the frozen rows compare with their own history. */
+    /** The drums of the frozen 2026-09-16 and 2026-09-25 texts, which still have the clap. */
     private const val DRUMS_FROZEN =
         "stack(kick.apply(kick_arrange), snare.apply(snare_arrange), hats.apply(hats_arrange), clap.apply(clap_arrange), shaker.apply(shaker_arrange)).analog(feel / 2)"
 
+    /**
+     * The rig suite (`--args=rig`): each part of Der Schmetterling solo, then the rhythm rig, the strings, the marimba
+     * and the drum one component at a time, on the FROZEN 2026-09-25 text.
+     *
+     * Kind: scaffolding of the rig ablation (2026-09-15) and the optimization blog series that still cites its rows
+     * (`docs/plans/blog-optimization-series.md`); it reads no live song, so a song edit never breaks it, and it goes
+     * when that series is done.
+     *
+     * Rows recorded before 2026-10-14 measured the live text of their day; from then on they measure the frozen
+     * 2026-09-25 text, so do not compare the two without saying so.
+     */
     fun rig(): List<SongBenchmark.Case> = listOf(
         // each part solo
-        liveCase("guitar1 (melody rig, uni 19)", "part", "guitar1.apply(guitar1_arrange)$BAND"),
-        liveCase("guitar2+3 (rhythm rig, uni 19+19)", "part", RHYTHM),
-        liveCase("lead (marimba)", "part", LEAD),
-        liveCase("trommel", "part", TROMMEL),
-        liveCase("bass", "part", "bass.apply(bass_arrange)$BAND"),
-        liveCase("drums (samples)", "part", DRUMS_LIVE),
+        rigCase(name = "guitar1 (melody rig, uni 19)", group = "part", expr = "guitar1.apply(guitar1_arrange)$BAND"),
+        rigCase(name = "guitar2+3 (rhythm rig, uni 19+19)", group = "part", expr = RHYTHM),
+        rigCase(name = "lead (marimba)", group = "part", expr = LEAD),
+        rigCase(name = "trommel", group = "part", expr = TROMMEL),
+        rigCase(name = "bass", group = "part", expr = "bass.apply(bass_arrange)$BAND"),
+        rigCase(name = "drums (samples)", group = "part", expr = DRUMS_FROZEN),
         // the rhythm rig, one stage at a time back to stock
-        liveCase("rhythm: full rig", "rig", RHYTHM),
-        liveCase("rhythm: pickup stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupStock", "pedalScreamer", "preampHighGain", "powerPushPull", "cab4x12"))),
-        liveCase("rhythm: pedal stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalStock", "preampHighGain", "powerPushPull", "cab4x12"))),
-        liveCase("rhythm: preamp stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalScreamer", "preampStock", "powerPushPull", "cab4x12"))),
-        liveCase("rhythm: power stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalScreamer", "preampHighGain", "powerStock", "cab4x12"))),
-        liveCase("rhythm: cab stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalScreamer", "preampHighGain", "powerPushPull", "cabStock"))),
-        liveCase("rhythm: all stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupStock", "pedalStock", "preampStock", "powerStock", "cabStock"))),
+        rigCase(name = "rhythm: full rig", group = "rig", expr = RHYTHM),
+        rigCase(name = "rhythm: pickup stock", group = "rig", expr = RHYTHM, edit = swap(from = RHYTHM_RIG, to = rhythmRig(pickup = "pickupStock", pedal = "pedalScreamer", preamp = "preampHighGain", power = "powerPushPull", cab = "cab4x12"))),
+        rigCase(name = "rhythm: pedal stock", group = "rig", expr = RHYTHM, edit = swap(from = RHYTHM_RIG, to = rhythmRig(pickup = "pickupHumbucker", pedal = "pedalStock", preamp = "preampHighGain", power = "powerPushPull", cab = "cab4x12"))),
+        rigCase(name = "rhythm: preamp stock", group = "rig", expr = RHYTHM, edit = swap(from = RHYTHM_RIG, to = rhythmRig(pickup = "pickupHumbucker", pedal = "pedalScreamer", preamp = "preampStock", power = "powerPushPull", cab = "cab4x12"))),
+        rigCase(name = "rhythm: power stock", group = "rig", expr = RHYTHM, edit = swap(from = RHYTHM_RIG, to = rhythmRig(pickup = "pickupHumbucker", pedal = "pedalScreamer", preamp = "preampHighGain", power = "powerStock", cab = "cab4x12"))),
+        rigCase(name = "rhythm: cab stock", group = "rig", expr = RHYTHM, edit = swap(from = RHYTHM_RIG, to = rhythmRig(pickup = "pickupHumbucker", pedal = "pedalScreamer", preamp = "preampHighGain", power = "powerPushPull", cab = "cabStock"))),
+        rigCase(name = "rhythm: all stock", group = "rig", expr = RHYTHM, edit = swap(from = RHYTHM_RIG, to = rhythmRig(pickup = "pickupStock", pedal = "pedalStock", preamp = "preampStock", power = "powerStock", cab = "cabStock"))),
 
         // the string side of the same guitars: what the unison count, the analog drift and the
         // string extras (pitch envelope, crackle burst) cost, the rig untouched
-        // each guitar's unison drops to 7 voices, its own spread kept (since 2026-10-04 the three guitars differ:
-        // 17, 15 and 15 voices); guitar 1 is not rendered by RHYTHM
-        liveCase("rhythm: uni 7+7", "string", RHYTHM) {
-            swapAll(Regex("""unison\(voices = \d+, spread = ([0-9.]+)\)"""), "unison(voices = 7, spread = $1)", expected = 3)(it)
+        // each guitar's unison drops to 7 voices, its own spread kept (the frozen guitars have 15, 13 and 11 voices);
+        // guitar 1 is not rendered by RHYTHM
+        rigCase(name = "rhythm: uni 7+7", group = "string", expr = RHYTHM) {
+            swapAll(from = Regex("""unison\(voices = \d+, spread = ([0-9.]+)\)"""), to = "unison(voices = 7, spread = $1)", expected = 3)(it)
         },
-        liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
-        liveCase("rhythm: no string extras", "string", RHYTHM) {
-            // the guitar's pick transient, tuned by ear (0.5, then 0.2 since 2026-10-09): any amount below one
-            // semitone, so the marimba's and the drum's own pitch envelopes (7 to 36 semitones) never match
-            swap(Regex("""    \.pitchEnvelope\(0\.[0-9]+, x => x\.adsr\([^)]*\)\)\n"""), "")(
-                swap(Regex("""    \.plus\(Ign\.crackle\([^\n]*\n"""), "")(it),
+        rigCase(name = "rhythm: no analog", group = "string", expr = "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
+        rigCase(name = "rhythm: no string extras", group = "string", expr = RHYTHM) {
+            // the guitar's pick transient (0.5 in the frozen text): any amount below one semitone, so the drum's own
+            // pitch envelopes (9 semitones) never match
+            swap(from = Regex("""    \.pitchEnvelope\(0\.[0-9]+, x => x\.adsr\([^)]*\)\)\n"""), to = "")(
+                swap(from = Regex("""    \.plus\(Ign\.crackle\([^\n]*\n"""), to = "")(it),
             )
         },
         // the marimba, one component at a time
-        liveCase("marimba: full", "marimba", LEAD),
-        liveCase("marimba: no analog", "marimba", LEAD, swap("let pAnalog = Ign.slot.analog\n  let ring = Ign.constant(400)", "let pAnalog = 0\n  let ring = Ign.constant(400)")),
-        liveCase("marimba: no body", "marimba", LEAD, swap(Regex("""\.body\(material = "steel", wet = [0-9.]+\)"""), "")),
+        rigCase(name = "marimba: full", group = "marimba", expr = LEAD),
+        rigCase(name = "marimba: no analog", group = "marimba", expr = LEAD, edit = swap(from = "let pAnalog = Ign.slot.analog\n  let ring = Ign.constant(400)", to = "let pAnalog = 0\n  let ring = Ign.constant(400)")),
+        rigCase(name = "marimba: no body", group = "marimba", expr = LEAD, edit = swap(from = Regex("""\.body\(material = "wood", wet = [0-9.]+\)"""), to = "")),
         // the drum, one component at a time
-        liveCase("trommel: full", "trommel", TROMMEL),
-        liveCase("trommel: no harmonic bank", "trommel", TROMMEL, swap(".plus(harms)", "")),
-        liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "[a-z]+", 2\)"""), "$1")),
-        liveCase("trommel: no body", "trommel", TROMMEL, swap(Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), "")),
-        liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = Ign.slot.analog\n \n  let ring = Ign.constant(", "let pAnalog = 0\n \n  let ring = Ign.constant(")),
+        rigCase(name = "trommel: full", group = "trommel", expr = TROMMEL),
+        rigCase(name = "trommel: no harmonic bank", group = "trommel", expr = TROMMEL, edit = swap(from = ".plus(harms)", to = "")),
+        rigCase(name = "trommel: no distort", group = "trommel", expr = TROMMEL, edit = swap(from = Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "[a-z]+", 2\)"""), to = "$1")),
+        rigCase(name = "trommel: no body", group = "trommel", expr = TROMMEL, edit = swap(from = Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), to = "")),
+        rigCase(name = "trommel: no analog", group = "trommel", expr = TROMMEL, edit = swap(from = "let pAnalog = Ign.slot.analog\n  \n  let ring = Ign.constant(", to = "let pAnalog = 0\n  \n  let ring = Ign.constant(")),
 
         // the whole song. Its arrangement holds two count-in cycles before the band; the case drops that gate and
         // the count-in itself, so all eight rendered cycles play the band and nothing else.
-        liveCase("song: full", "song", "song", ungateSong),
+        rigCase(name = "song: full", group = "song", expr = "song", edit = ungateSong),
     )
 
     /**
@@ -677,19 +692,16 @@ object SongBenchmarkCases {
      * move a piece's numbers between runs) and on the LIVE text (so the same run shows how far the
      * song has moved since the snapshot). Rows are appended to `docs/benchmarks/ledger.md`.
      */
-    fun ledger(): List<SongBenchmark.Case> {
-        // name, the expression on the frozen text, the expression on the live text
-        val pieces = listOf(
-            Triple("guitar melody (rig)", "guitar1.apply(guitar1_arrange)$BAND", "guitar1.apply(guitar1_arrange)$BAND"),
-            Triple("guitars rhythm (rig)", RHYTHM, RHYTHM),
-            Triple("marimba", LEAD, LEAD),
-            Triple("trommel", TROMMEL, TROMMEL),
-            Triple("bass", "bass.apply(bass_arrange)$BAND", "bass.apply(bass_arrange)$BAND"),
-            Triple("drums (samples)", DRUMS_FROZEN, DRUMS_LIVE),
-        )
+    fun ledger(): List<SongBenchmark.Case> = ledgerFrozen() + ledgerLive()
+
+    /**
+     * The ledger's frozen rows: the only ones a check builds, since they read no live song. (The rig suite's rows, not
+     * these, changed their text on 2026-10-14: see [rig].)
+     */
+    fun ledgerFrozen(): List<SongBenchmark.Case> {
         val frozen = ungated(FrozenPieces.derSchmetterling_2026_09_16)
 
-        return pieces.map { (name, expr, _) ->
+        return ledgerPieces.map { (name, expr, _) ->
             SongBenchmark.Case(
                 name = "$name @ frozen 2026-09-16",
                 group = "ledger",
@@ -697,16 +709,29 @@ object SongBenchmarkCases {
                 cycles = 8,
                 code = frozen + "\n\n" + expr + "\n",
             )
-        } + pieces.map { (name, _, expr) ->
-            SongBenchmark.Case(
-                name = "$name @ live",
-                group = "ledger-live",
-                rpm = derSchmetterlingSong.rpm,
-                cycles = 8,
-                code = liveUngated + "\n\n" + expr + "\n",
-            )
         }
     }
+
+    /** The ledger's live rows: information on how far the song has moved, never built by a check. */
+    private fun ledgerLive(): List<SongBenchmark.Case> = ledgerPieces.map { (name, _, expr) ->
+        SongBenchmark.Case(
+            name = "$name @ live",
+            group = "ledger-live",
+            rpm = derSchmetterlingSong.rpm,
+            cycles = 8,
+            code = liveUngated + "\n\n" + expr + "\n",
+        )
+    }
+
+    /** name, the expression on the frozen text, the expression on the live text. */
+    private val ledgerPieces: List<Triple<String, String, String>> = listOf(
+        Triple("guitar melody (rig)", "guitar1.apply(guitar1_arrange)$BAND", "guitar1.apply(guitar1_arrange)$BAND"),
+        Triple("guitars rhythm (rig)", RHYTHM, RHYTHM),
+        Triple("marimba", LEAD, LEAD),
+        Triple("trommel", TROMMEL, TROMMEL),
+        Triple("bass", "bass.apply(bass_arrange)$BAND", "bass.apply(bass_arrange)$BAND"),
+        Triple("drums (samples)", DRUMS_FROZEN, DRUMS_LIVE),
+    )
 
     fun all(): List<SongBenchmark.Case> = voices() + ladders() + experiments() + frozenSongs()
 }

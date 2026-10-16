@@ -75,22 +75,36 @@ class PerlinNoise(random: Random = Random(0)) {
      * ×[persistence] amplitude per octave, normalized by the amplitude sum so the result keeps [noise]'s
      * ≈[-1, 1] range. Higher octaves add finer detail; lower [persistence] makes the upper octaves quieter.
      *
-     * [octaves] <= 1 short-circuits to a single [noise] call — byte-identical to the single-octave path, so the
+     * [octaves] <= 1 is a single [noise] call, bit for bit the single-octave path, so the
      * default (octaves = 1) carries zero extra cost. Cost then scales **linearly** with [octaves]; callers
      * should cap it (the engine caps at 8).
      */
     fun fbm(x: Double, octaves: Int, persistence: Double): Double {
-        if (octaves <= 1) return noise(x)
         var sum = 0.0
         var amp = 1.0
         var freq = 1.0
         var norm = 0.0
-        for (o in 0 until octaves) {
-            sum += amp * noise(x * freq)
+        val passes = if (octaves <= 1) 1 else octaves
+
+        // ONE call site of [noise] (V8, engine follow-up 39): the single-octave path returns from the loop's first
+        // pass, `noise(x * 1.0)`, which is `noise(x)` bit for bit. Two sites (the old early return plus the loop)
+        // made V8 inline [noise] twice, and an fbm that heavy did not fit a caller's inlining budget: the Katalyst
+        // knob's `sample` then called it with its argument, its persistence and its result as heap numbers. Keep one
+        // site. No test can pin a box, so this comment guards the site; `PerlinNoiseSpec`'s "bit for bit the two-site
+        // form it replaced" row guards the bits.
+        for (o in 0 until passes) {
+            val v = noise(x * freq)
+
+            if (octaves <= 1) {
+                return v
+            }
+
+            sum += amp * v
             norm += amp
             freq *= 2.0
             amp *= persistence
         }
+
         return if (norm > 0.0) sum / norm else 0.0
     }
 }

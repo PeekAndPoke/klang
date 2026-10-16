@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.filters
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.safeOut
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.VowelBands
@@ -130,10 +131,17 @@ import kotlin.math.tan
  * substituted by 1 kHz. **The one home of these numbers** (Katalyst 5c-10): [bilinearK] applies
  * it, and `ResonatorBank` applies it BEFORE taking a logarithm of the frequency, which is only
  * safe while the two agree. A caller that has already clamped changes nothing by clamping again.
+ *
+ * The finiteness test is [isFiniteInline], an abs and a compare, ON PURPOSE (engine follow-up 31, 2026-10-15), and
+ * so is [clampSvfQ]'s: Kotlin's `isFinite()` is a stdlib call on Kotlin/JS, and inside the SVF node's `generate`, whose
+ * one inlining budget every SVF node shares, V8 left it out in a voice with one filter and `analog` (a lowpass or a
+ * highpass alone with the analog drift: about one and two heap numbers per block, the cutoff and the q crossing the
+ * call), and again when an unrelated change moved that budget. The same value for every input. No test can pin it:
+ * this KDoc is the guard. Do not put `isFinite()` back here.
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun clampSvfCutoff(cutoffHz: Double, sampleRate: Double): Double =
-    if (cutoffHz.isFinite()) clampSvfRange(x = cutoffHz, lo = 5.0, hi = 0.5 * sampleRate - 1.0) else 1000.0
+    if (cutoffHz.isFiniteInline()) clampSvfRange(x = cutoffHz, lo = 5.0, hi = 0.5 * sampleRate - 1.0) else 1000.0
 
 /** The q a non-finite q falls back to: Butterworth, `1/sqrt(2)`. */
 internal const val SVF_Q_FALLBACK: Double = 0.7071067811865475
@@ -146,7 +154,7 @@ internal const val SVF_Q_FALLBACK: Double = 0.7071067811865475
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun clampSvfQ(q: Double): Double =
-    if (q.isFinite()) clampSvfRange(x = q, lo = 0.1, hi = 200.0) else SVF_Q_FALLBACK
+    if (q.isFiniteInline()) clampSvfRange(x = q, lo = 0.1, hi = 200.0) else SVF_Q_FALLBACK
 
 /**
  * [x] held to `[lo, hi]` ([lo] at most [hi]): Kotlin's `coerceIn`, the same value for every input, written out

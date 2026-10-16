@@ -320,7 +320,14 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   phaser's `WetDryMix.dryCoeff` and `wetCoeff` were left out of the writer's budget. The remedy is no call on the steady
   path: the house pattern of an unchanged config (the EQ's `unchanged`, the resonator's, the compressor's), now in the
   phaser stage too (`KatalystPhaserEffect.applied`, review round 1 of follow-up 1), after which every stage case read
-  the engine without a stage in every mixed process measured but one pinned process (the delay, one heap number). The delay's and the reverb's `configure` are item 32.
+  the engine without a stage in every mixed process measured but one pinned process (the delay, one heap number).
+  The delay and the reverb skip an unchanged config too since engine follow-up 32 (2026-10-16;
+  `KatalystDelayEffect.applied`, `KatalystReverbEffect.applied`): reproduced first in pinned mixed processes, their
+  `configure` booked 64 and 48 B per block (`ensureRing` and the setters left out), and after it every stage case
+  reads the engine without a stage in every pinned and unpinned mixed process measured. Two writes stay on the path,
+  which is what keeps the skip exact: a coefficient glide that moves (the old path writes its target every block,
+  and a reader between the configure and the block sees it) and the delay's latched retry of a refused grow. The
+  OFF arm is never skipped.
   **A `Math.ceil` handed to a call that is not inlined boxes even when it is a whole number:** V8 cannot rule out -0,
   so it cannot travel as a small integer (the `toInt()` inside the delay's `framesFor(time)`, run every block until
   follow-up 1 kept the conversion off the steady path).
@@ -391,7 +398,11 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   on the JVM; not a Kotlin `Map` since step 5, so it has no `entries` to walk): its lookup allocates nothing (a new orbit map about 16 B; `C-remap` 2.03 to 2.16 us
   per block against 2.80 to 3.11 with the decoder reverted, about 0.9 us per new map). The worklet's decoder
   (`wireDecodeStringDoubleMap`), the warm-up and the sample-envelope merge make them; the allocation check's
-  `C-remap` guards the decoder. **Read a `KlangMap` by key, and walk it with its own walk:** it has no `entries`,
+  `C-remap` guards the decoder. A map with `Int` keys has no `KlangMap` (its keys are strings): the oversampled
+  sub-pools of `ScratchBuffers.oversample` were a `mutableMapOf<Int, ScratchBuffers>` asked by every oversampled node
+  and stage per block (three lookups per block on the bus distort at 2x, about 125 B), and are now two small arrays
+  scanned by factor (engine follow-up 34, 2026-10-16). **Read a `KlangMap` by key, and walk it with its own walk:**
+  it has no `entries`,
   `keys` or `values` (step 5), and iterating them on a map on JS allocates about 110 B per entry (the JS iterator's results
   and an entry object; 666 B per walk of 6 entries on node), where a `LinkedHashMap` walk is free once V8 inlines the
   whole loop. That inlining is not reliable either: a lookup written out as a scan over a `LinkedHashMap`'s entries
@@ -436,9 +447,10 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   `HashMap` read medians 13,047 to 13,058 and goes red in about 1 run in 30, so the comment at that field guards it. Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,
   `toMap`, `getOrPut` and `in` on a set before it lands: all of them make or read a stdlib map. The stdlib site is
   worth an upstream report.
-  **Measured, not removed:** in single-case processes three writers' `resolve` box one heap number each per new map
+  **Measured, not removed:** in single-case processes two writers' `resolve` box one heap number each per new map
   (the body's and the vowel's `fill`, which V8 leaves out and which hands the unset index, NaN, to
-  `ResonatorTables.at`; the delay writer's, fully inlined, not explained); under a mixed profile they do not.
+  `ResonatorTables.at`); under a mixed profile they do not. The delay writer's, "fully inlined, not explained" here
+  before, was its gate's `NaN` arm, removed by engine follow-up 41 (`C-remap` 32.0 to 16.8 B, `--predictable`).
 - **On V8, a shared one-line forwarding helper is one megamorphic call site: make it Kotlin `inline`** (2026-10-10,
   engine follow-ups 8 and 12). V8 keeps its type feedback per call site in the bytecode, not per caller, so a
   small plain function that every caller goes through to make one call (`Ignitors.readParam` was
@@ -488,8 +500,10 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   back where the voice is simpler, and then ITS callees compete for the caller's budget again: the static path's
   `computeStaticCoeffs` is a call in a two-filter voice but inlined in a one-filter one, where Kotlin's `coerceIn`
   was left out (about 2 heap numbers per block more than before, measured) until it was written out as two
-  comparisons (`clampSvfRange`). The `isFinite` guard beside it is still a 23-byte stdlib call (item 10): V8
-  inlined it in both shapes, but it is the next one out if `generate` grows. So a split is checked on both shapes.
+  comparisons (`clampSvfRange`). The `isFinite` guard beside it, a 23-byte stdlib call, was the next one out (engine
+  follow-up 31): a lowpass or a highpass alone with `analog` left it out (about one and two heap numbers per block),
+  and freeing two enum lookups of `generate`'s budget moved that box to a lowpass with `analog` instead of removing
+  it. It is `isFiniteInline` now. So a split is checked on both shapes.
   Two placements measured worse and were dropped: the static path in place (boxes in the two-filter voice) and
   both paths in one method (boxes in the one-filter voice, not explained). A box can also move instead of going: on
   HEAD V8 inlined `blockDriftMultiplier` into `generate` and left the `nextMultiplier()` it called out; with
@@ -498,6 +512,25 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   calls, and a double return is a box wherever the call stays: hence the step that returns nothing. `C-full` went
   from about 190 to about 40 bytes per block. A probe that renders one stage alone does not reproduce this class:
   build the voice the songs build, then narrow it.
+  **Engine follow-up 31 (2026-10-15) closed what item 29 left on the full voice**, each by a remedy of this file:
+  `EnvelopeCore.prepare` is Kotlin `inline` and leaves its six doubles in the core's own fields for the call past
+  the 460-byte limit (`prepareBlock`); `DistortionCore.shapeRun` (sixteen loops, never inlined) reads its drive from
+  a field. Both are fields and not a `DoubleArray`, because an array is an allocation per voice build (a
+  `Float64Array` per envelope read about 224 B per note on V8 and 64 on the JVM, `E-C-n1` over both lines), and these
+  fields did not box (measured, `--predictable`). `classic()`'s tremolo folds a voice-constant depth into one constant
+  at build (the chain
+  `MinusIgnitor.controlRateValue` then `MaxIgnitor.controlRateValue` was left out of the voice's budget, its double
+  result a heap number); and the SVF clamps test finiteness with `isFiniteInline`. In `--predictable` single-case
+  processes `C-full`, a lowpass or highpass with `analog`, the tremolo alone and the fused distort now read what the
+  classic saw reads (about 15 B per block, the method's floor). Left open on these voices: the fm's per-block calls
+  (items 10c and 10d, about 2 heap numbers on `C-env3`) and a classic envelope with a non-integral sustain (about one
+  heap number, booked in `AdsrIgnitor.generate` as its root call, on HEAD too; likely item 30's class).
+  **Engine follow-up 34 (2026-10-16) closed the oversampled path** that item 31 left (`tube4x`, `E-distort`): besides
+  the sub-pool map (the `HashMap` rule above), the bus distort handed its drive to a `DistortionCore.process` that V8
+  did not inline into the chain (one heap number per block, two while the amount glides, the ramp's two ends).
+  `process` and `processRamped` are Kotlin `inline` now and stage the drive in the core's fields, `EnvelopeCore`'s
+  pattern. Every oversampled case reads the floor under `--predictable` (`E-distort` 155 to 16 B at 1,000,000
+  blocks, `tube4x` 57 to 16, `E-parallel` 197 to 15, `E-bands` 232 to 16).
 - **A knob that moves every block makes its whole per-block path hot: measure a group of sites, and in both modes**
   (2026-10-12, Katalyst knob expressions step 6, `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`; the runs:
   `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). A modulated Katalyst knob runs the chain's hook every block
@@ -514,8 +547,49 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   carry a tail of high rounds in either tree (`E-kat-all7` read a round of 277 against medians of 155 to 161), so a
   remedy is judged by a mutant in both modes and a line is set above the tail; and the double-field settings holders
   (`CompressorSettings`, `DuckSettings`) do not box: as `Float64Array`s in a hand-edited bundle (run XS) `E-kat-dyn`
-  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). Open: the knob noises' `fbm` (item 39), the compressor's five setters (item 40), a residue on the moving
-  delay, reverb and phaser paths (item 41).
+  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). The residue on the moving delay and
+  reverb paths was a `NaN` arm (item 41, the `Double.NaN` rule below). **Closed by engine follow-up 40 (2026-10-16): a stage that writes several knobs
+  of one object every block hands them over in ONE call through a holder**, not through a setter per knob. The orbit
+  compressor called `Compressor`'s five setters, which V8 did not inline, so each knob crossed as a heap number
+  (the profiler booked 48 B per block in `KatalystCompressorEffect.configure`), and each setter recomputed the three
+  time constants. Now it fills `Compressor.knobArgs` (a `DoubleArray`) and calls `applyKnobArgs`, which guards and
+  coerces each knob as its setter does and computes the constants once: `E-kat-dyn` 97.1 to 45.3 B (the duck's
+  floor), `E-kat-mix` 96.9 to 67.3 (`--predictable`), pinned about 200 ns per block faster (0.98). Collapsing the
+  setters is exact only because nothing between them reads what an earlier one computed; check that first. The
+  setters stay public for the other callers, and their getters now read private fields: a Kotlin/JS getter on a
+  property with a private backing field compiles to a call (`retarget` calls three), which V8 inlines here
+  (measured: the floor); a hot reader inside the class reads the fields.
+- **A callee's own inlined size counts against its caller's budget: a helper that calls a small function at two
+  sites can fit no caller** (engine follow-up 39, 2026-10-16). `--trace-turbo-inlining` prints it as "existing opt
+  code's inlined bytecode size": V8 adds what a candidate's own optimized code inlined to the candidate's bytecode,
+  against the caller's cumulative 920. `fbm` called `noise` at two sites (the one-octave early return and the loop),
+  so it carried two inlined copies (690 bytes, 806 with its own 116) and fitted no caller that had spent more than
+  about 114: the Katalyst knob's `sample` handed it the clock and the persistence as heap numbers and got the result
+  back as one, three per noise and block. Two remedies, each needed in a different profile: `fbm` calls `noise` at
+  ONE site (the single octave returns from the loop's first pass, bit for bit; it fits `sample` when only noises are
+  hot, `E-kat-perlin` 113.7 to 21.8 B), and the noise arms are small methods of their own taking two Ints
+  (`samplePerlin`, `sampleBerlin`), which V8 leaves out of `sample` when several modulator kinds are hot and then
+  compiles with room for `fbm` (`E-kat-all7` 118.5 to 15.0, `E-kat-mix` 196.2 to 96.9). Each alone left one profile
+  boxing. Where V8 places such a method follows the profile, so measure a fix of this kind on every case that
+  reaches the site, with a mutant per half. Kotlin `inline` on `fbm` was worse (`noise` then crossed once per block).
+- **On Kotlin/JS, `Double.NaN` is the global `NaN`, a tagged value: an `if` with a NaN arm boxes its double arm on
+  V8** (engine follow-up 41, 2026-10-16). `x = if (c) value else Double.NaN` (and `SLOT_UNSET`, which is `Double.NaN`)
+  compiles to `c ? value : NaN`; V8 keeps the global load as a tagged value, so the two arms merge into a tagged
+  value (`Phi[kRepTagged]` after a `ChangeFloat64ToTagged` of the double arm in `--trace-turbo-graph`), and a
+  non-integral `value` can become a heap number every block (it did on these paths; a plain-JS probe of the same
+  graph allocated about nothing, so the graph alone does not prove a box: measure). Found on the moving delay and reverb paths: the delay writer's gate (`time` or `SLOT_UNSET`), the
+  reverb writer's (`normalizeSize(size)` or `SLOT_UNSET`) and the `Reverb.lowpass` setter (`value` or `NaN`), one
+  heap number per block each. **Remedy: one store per arm** (`if (c) { x = value } else { x = Double.NaN }`), the
+  same values, no merge. With them gone the reverb writer's freed budget left the stdlib `coerceIn` in
+  `normalizeSize` out of the writer's `tick` instead (its quotient crossed the call), so that clamp is written out
+  too (`clampSvfRange`'s case above): a box can move, so measure again after each fix. `E-kat-gates` 54.5 to 16.3 B
+  per block, `E-kat-mix` 65.0 to 33.0 (its two voices' floor), `C-remap` 32.0 to 16.8 (`--predictable`, 1,000,000
+  blocks). **How it was found:** the sampling heap profiler books an inlined box in the OUTERMOST optimized
+  function (here `KatalystChain.tickModulated`), so it names the compile, not the line; `--trace-turbo-graph
+  --trace-turbo-filter=<function>` then shows every `ChangeFloat64ToTagged` in the graph after
+  `V8.TFSimplifiedLowering`, and its use (a tagged `Phi`, a call argument) is the site. Grep a new per-block path's
+  production bundle for `: NaN;` and `? NaN :` (a function's default-argument prologue, `x === VOID ? NaN : x`, merges
+  an argument that is tagged anyway and costs nothing). The sweep of `audio_be` after the fix found no other.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per
@@ -595,7 +669,14 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
      Run it in `audio_benchmark/build/compileSync/js/main/productionExecutable/kotlin/` with
      `KLANG_ALLOC_CASE=<case> KLANG_ALLOC_WARM=20000 KLANG_ALLOC_COUNT=200000`. The names are the bundle's
      (`protoOf.u2i` is a member); the line leads to the Kotlin through the bundle's source map. The profiler slows the
-     run and inflates the bytes: read it for where, not for how much.
+     run and inflates the bytes: read it for where, not for how much. **Subtract the warm-up:** the preload samples
+     the whole process, and the warm-up runs in the interpreter, which boxes every double, so a hot loop shows up as
+     an allocating function that allocates nothing once compiled (item 34's first report named `shapeRun`,
+     `interpolate44` and `decimate44` this way). Run the case once with `KLANG_ALLOC_COUNT=0`, keep the raw bytes per
+     stack, and subtract them from the window's run; what is left is the window's. For both runs print `v` unscaled
+     and every stack, not `slice(0, 12)` (with `KLANG_ALLOC_COUNT=0` the scaled value is Infinity). Give both runs the same node
+     flags and `--predictable`, so they share one tier-up history; small differences between unpinned runs are
+     noise.
   2. **V8, why it boxes:** `node --trace-turbo-inlining` (and `--trace-deopt`) on the same case shows whether the
      callee of the allocating function was inlined. A double that crosses a call that was not inlined becomes a heap
      number: the knob reads of item 8 and the limiter of item 3 were found this way.

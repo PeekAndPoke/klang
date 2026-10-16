@@ -5,12 +5,14 @@
 
 package io.peekandpoke.klang.audio_be.effects
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
+import kotlin.math.sin
 
 class CompressorSpec : StringSpec({
 
@@ -179,5 +181,76 @@ class CompressorSpec : StringSpec({
         clean shouldBeLessThan 0.4
         // … and the poisoned one is not measurably louder, i.e. it still limits.
         poisoned shouldBeLessThan clean * 1.05
+    }
+
+    "applyKnobArgs leaves the instance where the five setters leave it, bit for bit" {
+        // Engine follow-up 40: the orbit compressor writes its five knobs through `knobArgs` and one
+        // `applyKnobArgs`, the time constants computed once, where it called the five setters, each of which
+        // computed them again. Both instances hear the same blocks and take the same knobs, one through the
+        // setters (threshold, ratio, knee, attack, release, the order the orbit stage used), the other through the
+        // holder; every stored knob and every output sample must match bit for bit. The steps reach every guard:
+        // non-finite knobs (each kept at its stored value), a ratio below 1 and a knee below 0 (coerced), a knee of
+        // -0.0 (kept, `coerceAtLeast` does not touch it), an attack and a release below the 0.1 ms floor, a NaN
+        // attack beside other changes (no smoothing re-split), and attacks that move the lookahead's box length.
+        val nan = Double.NaN
+        val inf = Double.POSITIVE_INFINITY
+        val steps = listOf(
+            doubleArrayOf(-18.0, 4.0, 6.0, 0.003, 0.1),
+            doubleArrayOf(-26.5, 2.5, 0.5, 0.0021, 0.051),
+            doubleArrayOf(-12.5, 5.5, 5.5, 0.0093, 0.187),
+            doubleArrayOf(nan, 0.5, -3.0, 0.004, nan),
+            doubleArrayOf(inf, 3.0, -0.0, nan, 0.07),
+            doubleArrayOf(-15.0, -inf, 2.0, 0.00005, 0.00002),
+            doubleArrayOf(-20.0, 1.0, 0.0, 0.0, 0.2),
+            doubleArrayOf(nan, nan, nan, nan, nan),
+            doubleArrayOf(-22.0, 8.0, 4.0, 0.06, 0.3),
+            doubleArrayOf(-24.0, 6.0, 3.0, 0.0011, -inf),
+        )
+        val block = 64
+
+        for (lookahead in listOf(0.0, 0.005)) {
+            val bySetters = Compressor(sampleRate = sampleRate, lookaheadSeconds = lookahead)
+            val byHolder = Compressor(sampleRate = sampleRate, lookaheadSeconds = lookahead)
+
+            steps.forEachIndexed { n, knobs ->
+                bySetters.thresholdDb = knobs[0]
+                bySetters.ratio = knobs[1]
+                bySetters.kneeDb = knobs[2]
+                bySetters.attackSeconds = knobs[3]
+                bySetters.releaseSeconds = knobs[4]
+
+                knobs.copyInto(byHolder.knobArgs)
+                byHolder.applyKnobArgs()
+
+                val clue = "lookahead $lookahead, step $n"
+
+                withClue("$clue, the stored knobs") {
+                    byHolder.thresholdDb.toRawBits() shouldBe bySetters.thresholdDb.toRawBits()
+                    byHolder.ratio.toRawBits() shouldBe bySetters.ratio.toRawBits()
+                    byHolder.kneeDb.toRawBits() shouldBe bySetters.kneeDb.toRawBits()
+                    byHolder.attackSeconds.toRawBits() shouldBe bySetters.attackSeconds.toRawBits()
+                    byHolder.releaseSeconds.toRawBits() shouldBe bySetters.releaseSeconds.toRawBits()
+                }
+
+                // A loud block that rises and falls, so the attack, both releases and the knee all act.
+                val start = n * block
+                val l1 = AudioBuffer(block) {
+                    0.9 * sin(0.031 * (start + it)) * (0.2 + 0.8 * abs(sin(0.0021 * (start + it))))
+                }
+                val r1 = AudioBuffer(block) { 0.7 * sin(0.047 * (start + it) + 1.0) }
+                val l2 = l1.copyOf()
+                val r2 = r1.copyOf()
+
+                bySetters.process(left = l1, right = r1, blockSize = block)
+                byHolder.process(left = l2, right = r2, blockSize = block)
+
+                for (k in 0 until block) {
+                    withClue("$clue, sample $k") {
+                        l2[k].toRawBits() shouldBe l1[k].toRawBits()
+                        r2[k].toRawBits() shouldBe r1[k].toRawBits()
+                    }
+                }
+            }
+        }
     }
 })

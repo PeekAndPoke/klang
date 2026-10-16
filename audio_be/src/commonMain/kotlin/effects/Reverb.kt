@@ -128,7 +128,14 @@ class Reverb(
     var lowpass: Double = Double.NaN
         set(value) {
             // NaN-guard: a non-finite cutoff is unset, never stored as a number.
-            field = if (value.isFinite()) value else Double.NaN
+            // Two stores, not `field = if (value.isFinite()) value else Double.NaN`: Kotlin/JS emits `Double.NaN` as
+            // the global `NaN`, a tagged value, and V8 merged the two arms into one, so a cutoff written every block
+            // became a heap number per block (engine follow-up 41; the V8 rule in `audio/ref/performance.md`).
+            if (value.isFinite()) {
+                field = value
+            } else {
+                field = Double.NaN
+            }
         }
 
     /**
@@ -523,7 +530,14 @@ class Reverb(
                 return 0.0
             }
 
-            return (authored / AUTHORED_SIZE_SCALE).coerceIn(0.0, 1.0)
+            val normalized = authored / AUTHORED_SIZE_SCALE
+
+            // Kotlin's `coerceIn(0.0, 1.0)`, the same value for every input (-0.0 included), written out ON PURPOSE
+            // (engine follow-up 41): the reverb writer's per-block `fill` inlines this function, and with a moving
+            // size V8 left the stdlib `coerceIn` out of that budget, so the quotient crossed the call as a heap
+            // number every block (`clampSvfRange`'s case, `audio/ref/performance.md`). No test can pin it: this
+            // comment is the guard.
+            return if (normalized < 0.0) 0.0 else if (normalized > 1.0) 1.0 else normalized
         }
 
         /** Reference sample rate the canonical Freeverb tunings were tuned for. */
