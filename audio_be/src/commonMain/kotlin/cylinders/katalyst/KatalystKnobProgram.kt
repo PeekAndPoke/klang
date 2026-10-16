@@ -163,9 +163,10 @@ internal class KatalystNoiseOrdinals {
  * and the registers and the clocks are `DoubleArray`s, `Float64Array`s on Kotlin/JS, whose elements never box. No
  * lambda, no allocation: evaluating allocates nothing on the JVM, measured (`KatalystSettingsAllocationSpec`,
  * `KatalystKnobModulatorAllocationSpec`); on V8 measured in step 6 (`E-kat-*`). Two calls cross a double on a moving
- * path: the noises' `fbm` (once per noise op per tick, its argument and result: three heap numbers per noise per
- * block, open as engine follow-up 39) and the wave shape's setter (only when `dt` or the duty changed; `E-kat-sawfm`,
- * a rebake every block, reads the fader's floor), both as the Ignitor makes them.
+ * path: the noises' `fbm` (once per noise op per tick, its two doubles and its result; three heap numbers per noise
+ * per block until engine follow-up 39, now inlined by V8 in the profiles measured: [samplePerlin]) and the wave
+ * shape's setter (only when `dt` or the duty changed; `E-kat-sawfm`, a rebake every block, reads the fader's floor),
+ * both as the Ignitor makes them.
  */
 internal class KatalystKnobProgram private constructor(
     private val ops: Array<KatalystKnobOp>,
@@ -352,19 +353,39 @@ internal class KatalystKnobProgram private constructor(
                 )
             }
 
-            KatalystKnobModulator.PERLIN -> {
-                val octaves = r[inB[i]].toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
+            KatalystKnobModulator.PERLIN -> samplePerlin(i = i, m = m)
 
-                r[out[i]] = perlins[m]!!.fbm(x = clocks[m], octaves = octaves, persistence = r[inC[i]])
-            }
-
-            KatalystKnobModulator.BERLIN -> {
-                val octaves = r[inB[i]].toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
-
-                // The Ignitor's berlin: the noise's `0..1` scaled to `-1..1`.
-                r[out[i]] = berlins[m]!!.fbm(t = clocks[m], octaves = octaves, persistence = r[inC[i]]) * 2.0 - 1.0
-            }
+            KatalystKnobModulator.BERLIN -> sampleBerlin(i = i, m = m)
         }
+    }
+
+    /**
+     * The perlin of instruction [i] (modulator [m]) at its clock into its output register.
+     *
+     * **V8 (engine follow-up 39): keep the two noise arms in these two small methods that take two Ints and return
+     * nothing, and keep `fbm`'s single call site of `noise` (its comment in `common`).** `fbm` takes and returns
+     * doubles, so a caller that V8 compiles without `fbm` inlined hands it the clock and the persistence as heap
+     * numbers and gets the result back as one: three per noise and block (`E-kat-perlin` 113.7 B against the fader's
+     * 15.6, `--predictable`). Where V8 puts this method decides where `fbm` must fit: with only noises hot it inlines
+     * this method into [sample], which has room for `fbm` only since `fbm` calls `noise` once (`E-kat-perlin`); with
+     * several modulator kinds hot [sample]'s budget is spent on them, this method stays a compile of its own, and
+     * `fbm` fits there (`E-kat-all7`, `E-kat-mix`). Each half alone leaves one of those profiles boxing (the
+     * follow-up's record). No test can pin a box; this KDoc is the guard.
+     */
+    private fun samplePerlin(i: Int, m: Int) {
+        val r = registers
+        val octaves = r[inB[i]].toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
+
+        r[out[i]] = perlins[m]!!.fbm(x = clocks[m], octaves = octaves, persistence = r[inC[i]])
+    }
+
+    /** The berlin of instruction [i] (modulator [m]) at its clock into its output register; V8: see [samplePerlin]. */
+    private fun sampleBerlin(i: Int, m: Int) {
+        val r = registers
+        val octaves = r[inB[i]].toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
+
+        // The Ignitor's berlin: the noise's `0..1` scaled to `-1..1`.
+        r[out[i]] = berlins[m]!!.fbm(t = clocks[m], octaves = octaves, persistence = r[inC[i]]) * 2.0 - 1.0
     }
 
     /**

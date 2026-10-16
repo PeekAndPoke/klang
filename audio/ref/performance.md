@@ -546,8 +546,21 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   carry a tail of high rounds in either tree (`E-kat-all7` read a round of 277 against medians of 155 to 161), so a
   remedy is judged by a mutant in both modes and a line is set above the tail; and the double-field settings holders
   (`CompressorSettings`, `DuckSettings`) do not box: as `Float64Array`s in a hand-edited bundle (run XS) `E-kat-dyn`
-  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). Open: the knob noises' `fbm` (item 39), the compressor's five setters (item 40), a residue on the moving
-  delay, reverb and phaser paths (item 41).
+  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). Open: the compressor's five setters
+  (item 40), a residue on the moving delay, reverb and phaser paths (item 41).
+- **A callee's own inlined size counts against its caller's budget: a helper that calls a small function at two
+  sites can fit no caller** (engine follow-up 39, 2026-10-16). `--trace-turbo-inlining` prints it as "existing opt
+  code's inlined bytecode size": V8 adds what a candidate's own optimized code inlined to the candidate's bytecode,
+  against the caller's cumulative 920. `fbm` called `noise` at two sites (the one-octave early return and the loop),
+  so it carried two inlined copies (690 bytes, 806 with its own 116) and fitted no caller that had spent more than
+  about 114: the Katalyst knob's `sample` handed it the clock and the persistence as heap numbers and got the result
+  back as one, three per noise and block. Two remedies, each needed in a different profile: `fbm` calls `noise` at
+  ONE site (the single octave returns from the loop's first pass, bit for bit; it fits `sample` when only noises are
+  hot, `E-kat-perlin` 113.7 to 21.8 B), and the noise arms are small methods of their own taking two Ints
+  (`samplePerlin`, `sampleBerlin`), which V8 leaves out of `sample` when several modulator kinds are hot and then
+  compiles with room for `fbm` (`E-kat-all7` 118.5 to 15.0, `E-kat-mix` 196.2 to 96.9). Each alone left one profile
+  boxing. Where V8 places such a method follows the profile, so measure a fix of this kind on every case that
+  reaches the site, with a mutant per half. Kotlin `inline` on `fbm` was worse (`noise` then crossed once per block).
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per

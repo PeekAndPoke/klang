@@ -3,7 +3,7 @@
 **Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
-fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (DONE 2026-10-16), 34 (DONE 2026-10-16), 39 to 41 (the
+fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (DONE 2026-10-16), 34 (DONE 2026-10-16), 39 (DONE 2026-10-16), 40 and 41 (the
 Katalyst knob expressions' residues), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
 and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
@@ -1611,16 +1611,86 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     re-set to 152, above the tail, so the release's full check does not go red by chance (`alloc-budgets.txt`). The
     chain runs the duck with a sounding sidechain; the tail's site is not located. Locate it as `spluck-a`'s (item 7)
     and `E-arith`'s (item 36) were looked for; a fix re-sets the line. S.
-39. **The Katalyst knob noises cross three doubles per noise per block on V8** (numbered after the last item, added
-    2026-10-12): `KatalystKnobProgram.sample` calls `PerlinNoise.fbm(x, octaves, persistence)` and `BerlinNoise.fbm`
-    once per noise per tick; V8 does not inline them there, so the clock, the persistence and the result each cross a
-    call as a heap number, about 48 B per noise per block. `E-kat-perlin` (two noises) reads 113.7 B per block against
-    the fader's 15.7 and `E-kat-all7` (two noises among seven knobs) 120.0 (`--predictable`, single-case, run T of
-    `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`); with the allocation check's method `E-kat-perlin` reads medians of 144 to 149. The JVM reads 0. A
-    remedy changes the noise classes in `common.math`, which the Ignitor's per-sample noise sources share (a holder for
-    the argument and the result, or an `inline` fbm whose `noise` calls V8 then inlines, both to be measured on the
-    Ignitor's own cases too), so it was not built in step 6. A fix re-sets the `E-kat-perlin` and `E-kat-all7` lines.
-    Source: `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, step 6. S.
+39. **DONE (2026-10-16): the Katalyst knob noises crossed three doubles per noise per block on V8; `fbm` now calls
+    `noise` at one site and the knob's noise arms are methods of their own, and a noise knob reads what the fader
+    reads.** Reported (added 2026-10-12): `KatalystKnobProgram.sample` called `PerlinNoise.fbm(x, octaves,
+    persistence)` and `BerlinNoise.fbm` once per noise per tick, not inlined, so the clock, the persistence and the
+    result crossed as heap numbers, about 48 B per noise per block (`E-kat-perlin` 113.7 B, `E-kat-all7` 120.0,
+    `--predictable`, run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). Source:
+    `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, step 6. A purely independent performance fix
+    (Q38): no DSL door, wire type, public signature or sound changes (`fbm` keeps its signature; the two new methods
+    are private). **Located on the production bundle** (`:audio_benchmark:compileProductionExecutableKotlinJs`, node
+    22.12, `--predictable` single-case processes, the sampling heap profiler with a warm-up-only run subtracted,
+    `--trace-turbo-inlining`), with four probe cases added to `AllocationCases.kt` for the measurement and taken out
+    again: the Ignitor's `perlin` and `berlin` at 1 and at 8 octaves. On HEAD the profiler booked 64 B per block in
+    `sample` (the two arguments of two noises) and 32 B in `fbm` (the two results). Why: `fbm` called `noise` at two
+    sites (the early return for one octave and the loop), so its own optimized code carried two inlined copies of
+    `noise` (690 bytecode bytes, 806 with `fbm`'s own) and fitted no caller that had spent more than about 114 of
+    V8's 920. Two fixes, each needed:
+    - **One call site of `noise` in `fbm`** (`common`, `PerlinNoise.kt` and `BerlinNoise.kt`): the single-octave
+      path returns from the loop's first pass, `noise(x * 1.0)`, which is `noise(x)` bit for bit (signed zeros
+      included); for two octaves or more the operations are the old ones in the old order. The Ignitor's `perlin` and
+      `berlin` share the law and stay bit-identical. With it alone (the arms still in `sample`) `E-kat-perlin` read
+      21.9 B but `E-kat-all7` 120.2 and `E-kat-mix` 196.2: with several modulator kinds hot, `sample`'s budget goes to
+      them.
+    - **The noise arms as methods of their own** (`samplePerlin`, `sampleBerlin`, two Ints in, nothing out): with
+      several kinds hot V8 leaves them out of `sample`, compiles each on its own, and `fbm` fits there. With it alone
+      (`fbm` on two sites) `E-kat-all7` read 21.0 and `E-kat-mix` 96.6, but `E-kat-perlin` 113.7: with only noises
+      hot V8 inlined `samplePerlin` into `sample` (and, tried as well, into `run` when dispatched from there) and then
+      had no room for the heavy `fbm`.
+    Tried and not kept: `fbm` as Kotlin `inline` (`E-kat-perlin` 67.3 B, `noise` then crossed once per block). Not
+    deterministic in principle: where V8 puts these methods follows the profile, and the two halves together cover
+    the profiles measured. The guards are the KDoc at `samplePerlin` and the comment in each `fbm` (no test can pin
+    a box). **New rows:** "bit for bit the two-site form it replaced, at every octave count and on integral and
+    signed-zero points" (`PerlinNoiseSpec`, `BerlinNoiseSpec`; "and non-finite" since review round 1): octaves -1
+    to 9, six persistences (NaN among them), 664 points (NaN and both infinities among them), the old form as the
+    reference, NaN-aware and sign-aware; the perlin row also checks that its points reach a negative zero (berlin's
+    noise never yields one). And, from review round 1 (reviewer A: the instruction and modulator indices swapped in
+    a noise arm survived `KatalystKnobModulatorSpec`), "a noise whose modulator index differs from its instruction
+    index reads its own walk into its own register" (`KatalystKnobModulatorSpec`, a slot instruction first, the two
+    noises then instructions 1 and 2 and modulators 0 and 1, the value bit for bit). The swap in `sampleBerlin`
+    and in `samplePerlin`: RED, 1 of 20 each, the new row only. It fails by an index out of bounds, not by a wrong
+    value read: the first noise reads the second's walk into the slot's register, then the last noise asks for a
+    modulator past the end. That cannot be avoided: an instruction index is never below its modulator index, so in
+    any program where they differ the swap sends the last noise of a kind past the last modulator. Mutants, one lock call each, restored and checked with `cmp`: the single-octave return dropped (the loop's
+    one pass returns `0.0 + 1.0 * v`, which turns -0.0 into 0.0) RED on the perlin row (1 of 9; the old "octaves<=1
+    is byte-identical" row survives, `shouldBe` takes -0.0 for 0.0) and survives the berlin row, an equivalent mutant
+    there (berlin's noise never yields -0.0, and `0.0 + v` and `v / 1.0` change no other value); the return at
+    `octaves <= 2` RED on both rows (1 of 9, 1 of 10).
+    **Measured** (bytes and ns per block, 20,000 warm-up and 200,000 measured blocks; HEAD's bundle a byte copy;
+    the probes were in both bundles):
+
+    | case | `--predictable`, HEAD / tree | unpinned (the check's method), rounds, HEAD / tree |
+    |---|---|---|
+    | `E-kat-perlin` | 113.7 / 21.8 B (112.4 / 16.5 at 1,000,000 blocks), 5,807 / 5,767 ns | 112.3 to 149.0 / 41.0 to 61.6 (11 rounds) |
+    | `E-kat-all7` | 118.5 / 15.0 B (115.5 / 18.4 at 1,000,000), 7,421 / 7,462 ns | 139.6 to 161.0, one of 297.8 (13) / 8.0 to 67.7, four of 180.3 to 207.4 (21) |
+    | `E-kat-mix` | 196.2 / 96.9 B | 201.8 to 227.9 / 92.1 to 119.4 |
+    | `E-kat-gates`, `E-kat-sine`, `E-gain`, `sawC` (controls) | 50.9 / 50.9, 14.6 / 14.5, 15.6 / 15.6, 15.7 / 15.7 | |
+    | the Ignitor's perlin, 1 and 8 octaves | 14.9 / 14.5, 15.7 / 15.7 B, 6,689 / 6,762 ns at 8 | |
+    | the Ignitor's berlin, 1 and 8 octaves | 14.9 / 14.4, 15.7 / 15.7 B, 4,849 / 4,837 ns at 8 | |
+
+    Under `--predictable` the profiler with the warm-up subtracted books nothing on `E-kat-perlin` but the floor
+    (`renderStages`, item 30's class). `E-kat-all7`'s tail is a mode HEAD has too (the header of `alloc-budgets.txt`
+    cites a round of 277 in run T; here 297.8): about 140 B above either tree's healthy rounds, more than the
+    noises' 96, so not this fix failing; ten profiled unpinned processes did not catch it; not located. `E-kat-mix`
+    keeps about 50 B above the floor: item 40's setters and item 41's residue. One heap number is 16 B on node and 12
+    in Chrome. Time: within noise. **JVM:** nothing here allocated before or after (the check, 0 B on every `E-kat`
+    case). **Bit for bit:** the corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0 edited;
+    `:audio_be:jvmTest` 2,777 of 2,777 (with `KatalystKnobModulatorSpec`, the knob against the Ignitor's
+    oscillators). The allocation check: GREEN, 80 of 80 (run before the lines moved; under the new lines too:
+    `E-kat-perlin` 57 B, rounds 56.9, 41.0, 57.7; `E-kat-all7` 51, rounds 52.7, 51.4, 14.8; `E-kat-mix` 98).
+    **The budget lines** (the header's rule, the note at E-kat-perlin's re-set): `E-kat-perlin` v8 232 to 96, 39 B
+    above the highest healthy median (57). `E-kat-all7` v8 336 to 250, 43 B above the tail's highest round. Mutants
+    against them (the two halves put back one at a time, single-case rounds by the check's method, 5 each):
+    - `fbm` on two noise sites again: `E-kat-perlin` 107.5 to 150.8 across two sessions (this change's 129.3 to
+      145.5, review round 1's reviewer B 113.5, 150.8, 107.5), over 96 in every round, the lowest about 11 B (caught); `E-kat-all7`
+      24.4 to 77.9, the tree's figure (not caught, and nothing to catch: that profile does not box without this half).
+    - the noise arms back inside `sample`: `E-kat-perlin` 45.0 to 56.6, the tree's figure (not caught, nothing to
+      catch there); `E-kat-all7` 144.4 to 180.7, median 153, under 250 (NOT caught).
+    So `E-kat-perlin` guards the single `noise` site and HEAD (112.3 to 149.0); `E-kat-all7` guards the per-sample
+    class only, and the arms' half is guarded by its KDoc alone. `E-kat-mix` (item 40's line, 250) fell by about 100 B
+    and keeps its line; its header claim about the isFinite group (G1, 264) was measured before this change and most
+    likely no longer holds; item 40's fix re-sets it. S.
 40. **A modulated orbit compressor writes its five knobs through five setters every block** (numbered after the last
     item, added 2026-10-12): `KatalystCompressorEffect.configure` calls `Compressor.thresholdDb`, `ratio`, `kneeDb`,
     `attackSeconds` and `releaseSeconds`, each a setter call that V8 does not inline, so each knob crosses as a heap

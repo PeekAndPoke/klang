@@ -139,17 +139,38 @@
 #   160 (67 to 117; set at 112 first, which the first full check's healthy 117 crossed), E-kat-mix 250 (196 to 205, the
 #   largest of 9 rounds 221; the rule's 40 B; review round 2 of step 6 chose it over 304: the rounds of 265 and 248 that
 #   set 304 were read on the engine before review round 1, whose two extra remedies are gone, and at 250 the line also
-#   tells the isFinite group (G1, 264) from the tree; a breach needs two of the three rounds above it).
-#   WHICH LINE GUARDS WHICH REMEDY (the mutants of the same record, the check's method): E-kat-mix guards
+#   tells the isFinite group (G1, 264) from the tree, unverified since item 39, below; a breach needs two of the
+#   three rounds above it).
+#   WHICH LINE GUARDS WHICH REMEDY (the mutants of the same record, the check's method, all read before item 39,
+#   which took about 100 B off E-kat-mix): E-kat-mix guards
 #   KnobGlide.retarget being inline (mutant M1 441); E-kat-dyn guards Compressor.glideArgs (mutant M7 196). No other
 #   line tells a remedy from its mutant: the KnobGlide fields (M6: E-kat-gates 124, E-kat-dyn 109), the phaser's
 #   prepareBlock with two arguments (M8: E-kat-mix 233) read under their lines and are guarded by their KDocs; the
-#   isFinite group (G1: E-kat-sine 67, E-kat-dyn 134) reads under those two lines but over E-kat-mix's (264). E-kat-res read M1 at 185 and HEAD's engine
+#   isFinite group (G1: E-kat-sine 67, E-kat-dyn 134) reads under those two lines but over E-kat-mix's (264; unverified since item 39: about 164 expected now, under
+#   250). E-kat-res read M1 at 185 and HEAD's engine
 #   (run H) at 171, over its 144 in those runs, but its healthy medians reach 98, so it is not counted as a guard.
-#   E-kat-sine, -square, -sawfm, -perlin, -all7, -gates and C-kat-remap guard the per-sample class only: HEAD's
-#   engine (run H) reads under each of them. Lines
-#   that carry an open V8 allocation, budgeted as it stands: E-kat-perlin and E-kat-all7 the noises' fbm (item 39),
-#   E-kat-dyn and E-kat-mix the compressor's five setters (item 40); a fix re-sets those lines.
+#   E-kat-sine, -square, -sawfm, -perlin, -all7, -gates and C-kat-remap guarded the per-sample class only: HEAD's
+#   engine (run H) read under each of them (until item 39, below: -perlin's 96 catches HEAD now). Lines
+#   that carried an open V8 allocation, budgeted as it stood: E-kat-perlin and E-kat-all7 the noises' fbm (item 39,
+#   done, below), E-kat-dyn and E-kat-mix the compressor's five setters (item 40, open); a fix re-sets those lines.
+#   Re-set at engine follow-up 39 (2026-10-16): the noises' fbm no longer crosses a call (fbm calls noise at one
+#   site, and the knob's two noise arms are methods of their own); three heap numbers per noise and block are gone
+#   (--predictable: E-kat-perlin 113.7 to 21.8 B, E-kat-all7 118.5 to 15.0, E-kat-mix 196.2 to 96.9). Healthy rounds
+#   of the check's method on the tree (2 single-case runs of 3 and 5, and this change's check): E-kat-perlin 41.0 to
+#   61.6 B (medians 52 to 57), no tail seen in 11 rounds; E-kat-all7 8.0 to 67.7 B in 17 of 21 rounds, and a tail of
+#   180.3 to 207.4 in the other 4 (HEAD reads that mode too, a round of 297.8 against its 139.6 to 161.0 in 13 rounds:
+#   about 140 B above either tree's healthy rounds, more than the noises' 96, so not the fix failing; not located).
+#   Mutants by the driver's method (single-case rounds, 5 each). E-kat-perlin 232 to 96: 39 B above the highest
+#   healthy median. It catches HEAD (rounds 112.3 to 149.0) and fbm back on two noise sites (rounds 107.5 to 150.8
+#   across two sessions, this change's and review round 1's; every round over, the lowest about 11 B); it does NOT catch the noise arms put back inside
+#   `sample` (45.0 to 56.6, the tree's figure: that profile has only noises hot and fbm fits `sample` there).
+#   E-kat-all7 336 to 250: 43 B above the tail's highest round, so it guards the per-sample class only. It catches
+#   neither half: the arms back in `sample` read 144.4 to 180.7 (median 153), under it; fbm back on two sites reads
+#   the tree's figure (24.4 to 77.9). The KDoc at `KatalystKnobProgram.samplePerlin` and the comment in `fbm` guard
+#   the two halves. E-kat-mix keeps 250 (item 40's line), though it fell by about 100 B with this change (the check's
+#   rounds 92.1 to 119.4): the claim above that it tells the isFinite group (G1, 264) from the tree was measured on
+#   the engine before this change, is not re-measured, and with the noises' 100 B gone most likely no longer holds;
+#   item 40's fix re-sets the line.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -240,9 +261,9 @@ E-kat-square       v8        96      a square with a slot-expression duty: the p
 E-kat-square       jvm       6       a square with a slot-expression duty
 E-kat-sawfm        v8        96      a saw whose freq is a sine (a rebake per block): the per-sample class only
 E-kat-sawfm        jvm       6       a saw whose freq is a sine
-E-kat-perlin       v8        232     perlin at 1 and 8 octaves: the per-sample class, above its tail (a round of 194); fbm open (item 39)
+E-kat-perlin       v8        96      perlin at 1 and 8 octaves: fbm on two noise sites (item 39) and the per-sample class
 E-kat-perlin       jvm       6       perlin at 1 and 8 octaves
-E-kat-all7         v8        336     all seven kinds: the per-sample class only, above its tail (a round of 277); fbm open (item 39)
+E-kat-all7         v8        250     all seven kinds: the per-sample class only, above its tail (a round of 207); item 39 by its KDoc
 E-kat-all7         jvm       6       all seven kinds
 E-kat-dyn          v8        152     the compressor's five, the duck's depth and attack: Compressor.glideArgs (mutant 196); the setters open (item 40)
 E-kat-dyn          jvm       6       the compressor's five, the duck's depth and attack
@@ -250,7 +271,7 @@ E-kat-res          v8        144     the body's and the vowel's wet and floor: t
 E-kat-res          jvm       6       the body's and the vowel's wet and floor
 E-kat-gates        v8        160     a delay time, a reverb size and lowpass through their gates: the per-sample class only (HEAD reads under it)
 E-kat-gates        jvm       6       a delay time, a reverb size and lowpass through their gates
-E-kat-mix          v8        250     the mixed orbit: KnobGlide.retarget inline (mutant 441), the isFinite group (264); items 39, 40, 41 open
+E-kat-mix          v8        250     the mixed orbit: KnobGlide.retarget inline (mutant 441), the isFinite group (264, unverified since item 39); items 40, 41 open
 E-kat-mix          jvm       6       the mixed orbit
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build

@@ -368,6 +368,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Engine follow-up 39: the Katalyst knob noises no longer cross `fbm` as heap numbers on V8: `fbm`
+  (`common`, shared with the Ignitor's `perlin` and `berlin`, bit for bit) calls `noise` at one site, and the knob's
+  noise arms are methods of their own (`samplePerlin`, `sampleBerlin`). `E-kat-perlin` 113.7 to 21.8 B per block,
+  `E-kat-all7` 118.5 to 15.0, `E-kat-mix` 196.2 to 96.9 (`--predictable`); corpus identical; the V8 lines
+  `E-kat-perlin` 232 to 96, `E-kat-all7` 336 to 250 (the per-sample class only, above a tail HEAD has too):
+  `docs/tasks/in-progress/engine-follow-ups.md` item 39
 - 2026-10-16 Engine follow-up 34: `ScratchBuffers.oversample` finds a sub-pool by a scan of two arrays, not a
   stdlib `Int` map (about 40 B per lookup on V8); `DistortionCore.process` and `processRamped` are `inline` and stage
   the drive in fields. `E-distort` 155 to 16 B per block (`--predictable`, 1,000,000 blocks), `tube4x`,
