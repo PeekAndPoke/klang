@@ -81,6 +81,24 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         effect.process(ctx)
     }
 
+    /**
+     * Silent blocks while the switch-off fade runs (engine follow-up 42): the stage stays in the ONE Active instance
+     * until the block the wet glide lands in, which moves it on by itself. Returns the state it moved to.
+     */
+    fun fadeOut(effect: KatalystDelayEffect, ctx: KatalystContext, active: Any): Any {
+        var blocks = 0
+
+        while (effect.currentState === active && blocks < 100) {
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+            blocks++
+        }
+
+        withClue("the fade lands inside its span") { (blocks < 100) shouldBe true }
+
+        return effect.currentState
+    }
+
     /** Silent blocks until the effect reports no tail, i.e. until the countdown has run out. */
     fun drainToOff(effect: KatalystDelayEffect, ctx: KatalystContext) {
         var blocks = 0
@@ -137,9 +155,12 @@ class KatalystDelayStateIdentitySpec : StringSpec({
 
         charge(effect, ctx)
 
-        // Active -> Draining.
+        // Active -> Active while the fade runs, then -> Draining on the block it lands in.
         effect.configure(time = 0.0, feedback = 0.6, cap = 2.0, wet = 1.0)
-        val draining = effect.currentState
+        withClue("the fade runs in the ONE Active instance") {
+            effect.currentState shouldBeSameInstanceAs active
+        }
+        val draining = fadeOut(effect, ctx, active)
         see(draining)
         withClue("Draining is its own state") {
             draining shouldNotBeSameInstanceAs active
@@ -163,7 +184,7 @@ class KatalystDelayStateIdentitySpec : StringSpec({
 
         effect.configure(time = 0.0, feedback = 0.4, cap = 1.0, wet = 1.0)
         withClue("Active -> Draining reuses the ONE Draining instance") {
-            effect.currentState shouldBeSameInstanceAs draining
+            fadeOut(effect, ctx, active) shouldBeSameInstanceAs draining
         }
         see(effect.currentState)
 
@@ -204,7 +225,7 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         effect.configure(time = 0.05, feedback = 0.6, cap = 2.0, wet = 1.0)
         charge(effect, ctx)
         effect.configure(time = 0.0, feedback = 0.6, cap = 2.0, wet = 1.0)
-        effect.currentState shouldBeSameInstanceAs draining
+        fadeOut(effect, ctx, active) shouldBeSameInstanceAs draining
         effect.reset()
         withClue("reset from mid-drain lands in the ONE Off instance") {
             effect.currentState shouldBeSameInstanceAs off
@@ -214,12 +235,12 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         // Draining -> Off through the RETIRE door, then a whole new life on a ring the warehouse
         // hands out zeroed: an off-config on that silent ring must land in Off directly. (A
         // countdown left over from the retired life would NOT show here: this path reaches Off
-        // through a local in `Active.deactivate` and never reads `Draining.remaining`. Where it
+        // through a local in `Active.leave` and never reads `Draining.remaining`. Where it
         // shows is `KatalystDelayEffectSpec`'s "the countdown a drain runs on is its own".)
         effect.configure(time = 0.05, feedback = 0.6, cap = 2.0, wet = 1.0)
         charge(effect, ctx)
         effect.configure(time = 0.0, feedback = 0.6, cap = 2.0, wet = 1.0)
-        effect.currentState shouldBeSameInstanceAs draining
+        fadeOut(effect, ctx, active) shouldBeSameInstanceAs draining
         effect.retire()
         withClue("retire from mid-drain lands in the ONE Off instance") {
             effect.currentState shouldBeSameInstanceAs off

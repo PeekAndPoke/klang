@@ -6,28 +6,34 @@
 package io.peekandpoke.klang.audio_be.voices
 
 /**
- * The solo state of one playback: "source X is soloed at amount a until t".
+ * The solo state of one playback: per source, its NEWEST solo event, "soloed at amount a from s until t".
  *
  * The scheduler records an entry from every event that carries a solo amount and a source id, a control event
  * (the keep-alive `solo(...)` puts over a rest) and a sounding note alike, and reads two things per block:
  *
- * - **Live**: an entry is live while `until + graceSec > now`. The others play at `1 - max(amount of live
- *   entries)`, or at 1.0 when no entry is live ([targetGain]). The grace bridges a seam between two back-to-back
- *   events, so a solo never shows a hole one block wide that would restart the ramp.
- * - **Protected**: a source keeps its entry, and its voices play at 1.0, while `until + holdSec > now`
- *   ([isProtected]). The hold must be at least the background's ramp time, so a soloed source's tail never dips
- *   while the others come back.
+ * - **Soloed**: a source is soloed while its newest event runs (`until + graceSec > now`) and carries a positive
+ *   amount ([isSoloed]); its voices play at 1.0. The grace bridges a seam between two back-to-back events, so a solo
+ *   never shows a hole one block wide that would restart the ramp.
+ * - **The others** play at `1 - max(amount of the soloed sources)`, or at 1.0 when none is soloed ([targetGain]).
  *
- * A re-recorded source takes the new amount (the last writer wins, so `solo("<1 0.5>")` follows its pattern) and
- * keeps the LATER of the two ends: a soloed note and the control event over its cycle start together and pop in no
- * fixed order, and the note's shorter gate must not cut the solo short. An end never moves back.
+ * The latest value wins at once (maintainer Q28, 2026-10-13, engine follow-up 43): an event with a LATER start
+ * replaces the source's amount and end, so `solo(1)` edited to `solo(0)` ends the solo at the first zero event and
+ * `solo("<1 0.5>")` follows its pattern. An event with an earlier start changes nothing. Nothing is held past the
+ * newest event.
+ *
+ * **Control events decide the end.** Once a source's entry comes from a control event (what `solo(...)` puts over
+ * its whole window, on a 1/8-cycle grid), a sounding note of it never sets the end: it updates the amount only. A
+ * note's gate may be far longer than a grid piece (`note("a3").slow(4).solo()`), and taking it would keep the solo
+ * alive for the whole note after `.solo()` was removed. With the SAME start (a note and the control piece over it,
+ * popped in no fixed order) the control event's end wins; the next piece covers a note whose gate is shorter. Only
+ * a source without control events (a frontend that sends notes alone) takes its ends from the notes, the later one
+ * at the same start.
  *
  * Fixed-capacity arrays and a linear scan: nothing allocates after construction (audit item B4.2,
  * `docs/audio-audit/2026-10-07-engine-tidy-audit.md`). A source beyond [capacity] takes the slot of the entry that
- * expires first. The tracker belongs to the playback's scheduler and dies with it.
+ * ends first. The tracker belongs to the playback's scheduler and dies with it.
  */
 internal class SoloTracker(
-    val holdSec: Double,
     val graceSec: Double,
     val capacity: Int = DEFAULT_CAPACITY,
 ) {
@@ -38,72 +44,123 @@ internal class SoloTracker(
 
     private val ids = arrayOfNulls<String>(capacity)
     private val amounts = DoubleArray(capacity)
+    private val startSecs = DoubleArray(capacity)
     private val untilSecs = DoubleArray(capacity)
 
-    /** The number of entries, live or only protecting. */
+    /** Whether the entry's end comes from a control event: then a note no longer sets it. */
+    private val fromControl = BooleanArray(capacity)
+
+    /** Whether the source has just lost its solo and the background has not come back yet ([isReleased]). */
+    private val released = BooleanArray(capacity)
+
+    /**
+     * The number of entries: those whose newest event still runs, soloed or not (amount 0), and the released ones
+     * ([isReleased]) until [clearReleased].
+     */
     var size: Int = 0
         private set
 
-    private var anyLive: Boolean = false
-    private var maxLiveAmount: Double = 0.0
+    private var maxAmount: Double = 0.0
 
     /**
-     * Records that [sourceId] is soloed at [amount] until [untilSec] (seconds on the backend clock).
+     * Records that [sourceId]'s solo event from [startSec] until [untilSec] (seconds on the backend clock) carries
+     * [amount]; [control] says whether it is a control event (`VoiceData.control`) or a sounding note.
      *
-     * An amount that is not positive and finite engages nothing (a NaN, 0.0, an infinity), and an end that is not
-     * finite is ignored: such an entry could never expire. An amount above 1.0 is kept as it is (the Motor stays raw;
-     * the frontend coerces).
+     * An amount that is not positive and finite (0.0, a NaN, an infinity) means "not soloed": it ends a running solo
+     * of the source and starts none. A start or an end that is not finite is ignored (such an entry could never be
+     * ordered or expire). An amount above 1.0 is kept as it is (the Motor stays raw; the frontend coerces).
      */
-    fun record(sourceId: String, amount: Double, untilSec: Double) {
-        // NaN-guard: a NaN amount fails the compare and engages nothing
-        if (!(amount > 0.0) || !amount.isFinite() || !untilSec.isFinite()) {
+    fun record(sourceId: String, amount: Double, startSec: Double, untilSec: Double, control: Boolean) {
+        if (!startSec.isFinite() || !untilSec.isFinite()) {
             return
         }
 
+        // NaN-guard: a NaN amount fails the compare and reads as "not soloed"
+        val value = if (amount > 0.0 && amount.isFinite()) amount else 0.0
         val existing = indexOf(sourceId)
 
         if (existing >= 0) {
-            amounts[existing] = amount
+            val later = startSec > startSecs[existing]
 
-            if (untilSec > untilSecs[existing]) {
-                untilSecs[existing] = untilSec
+            if (!later && startSec != startSecs[existing]) {
+                return
             }
 
+            // a soloed source told "0" is released; one soloed again is not
+            released[existing] = if (value > 0.0) false else released[existing] || amounts[existing] > 0.0
+            amounts[existing] = value
+            startSecs[existing] = startSec
+
+            when {
+                // a control event decides the end: a later one replaces it, one at the same start overrides a note's
+                // (two at the same start, one call site solo-ing twice, keep the later)
+                control -> {
+                    untilSecs[existing] = if (later || !fromControl[existing]) untilSec else maxOf(untilSecs[existing], untilSec)
+                    fromControl[existing] = true
+                }
+                // a note never moves a control event's end
+                fromControl[existing] -> {}
+                // notes alone: a later one replaces the end, one at the same start keeps the later
+                later -> {
+                    untilSecs[existing] = untilSec
+                }
+                else -> {
+                    untilSecs[existing] = maxOf(untilSecs[existing], untilSec)
+                }
+            }
+
+            return
+        }
+
+        // A source that is not soloed needs no entry to say so
+        if (value == 0.0) {
             return
         }
 
         val slot = if (size < capacity) size++ else soonestToExpire()
 
         ids[slot] = sourceId
-        amounts[slot] = amount
+        amounts[slot] = value
+        startSecs[slot] = startSec
         untilSecs[slot] = untilSec
+        fromControl[slot] = control
+        released[slot] = false
     }
 
-    /** Drops the entries whose hold has ended at [nowSec] and refreshes [targetGain]. Once per block. */
+    /**
+     * Ends the entries whose newest event has ended (plus the grace) at [nowSec] and refreshes [targetGain]. A soloed
+     * source whose event ends this way is not dropped but released (amount 0, [isReleased]) until [clearReleased];
+     * any other ended entry is dropped.
+     */
     fun advance(nowSec: Double) {
         var write = 0
-        var live = false
         var max = 0.0
 
         for (read in 0 until size) {
             val until = untilSecs[read]
 
-            if (until + holdSec <= nowSec) {
-                continue
+            if (until + graceSec <= nowSec) {
+                if (amounts[read] > 0.0) {
+                    // the solo ran out: released, and the next event of the source starts afresh
+                    amounts[read] = 0.0
+                    released[read] = true
+                    fromControl[read] = false
+                } else if (!released[read]) {
+                    continue
+                }
             }
 
             if (write != read) {
                 ids[write] = ids[read]
                 amounts[write] = amounts[read]
+                startSecs[write] = startSecs[read]
                 untilSecs[write] = until
+                fromControl[write] = fromControl[read]
+                released[write] = released[read]
             }
 
-            if (until + graceSec > nowSec) {
-                live = true
-
-                if (amounts[write] > max) {
-                    max = amounts[write]
-                }
+            if (amounts[write] > max) {
+                max = amounts[write]
             }
 
             write++
@@ -114,15 +171,47 @@ internal class SoloTracker(
         }
 
         size = write
-        anyLive = live
-        maxLiveAmount = max
+        maxAmount = max
     }
 
-    /** The level the voices of every unprotected source play at, as of the last [advance]: `1 - max amount`. */
-    fun targetGain(): Double = if (anyLive) 1.0 - maxLiveAmount else 1.0
+    /** The level the voices of every source that is not soloed play at, as of the last [advance]: `1 - max amount`. */
+    fun targetGain(): Double = 1.0 - maxAmount
 
-    /** True while [sourceId] holds an entry, as of the last [advance]: its voices play at 1.0. */
-    fun isProtected(sourceId: String?): Boolean = sourceId != null && indexOf(sourceId) >= 0
+    /** True while [sourceId] is soloed, as of the last [advance]: its voices play at 1.0. */
+    fun isSoloed(sourceId: String?): Boolean {
+        if (sourceId == null) {
+            return false
+        }
+
+        val index = indexOf(sourceId)
+
+        return index >= 0 && amounts[index] > 0.0
+    }
+
+    /**
+     * True while [sourceId] has just lost its solo (its newest event said 0, or its solo ran out) and the scheduler
+     * has not called [clearReleased] yet: its voices, new ones included, play at the level the background is coming
+     * back to, not at the ramp's (no dip).
+     */
+    fun isReleased(sourceId: String?): Boolean {
+        if (sourceId == null) {
+            return false
+        }
+
+        val index = indexOf(sourceId)
+
+        return index >= 0 && released[index]
+    }
+
+    /**
+     * Ends every release: the background's ramp has reached its target, or the target fell (another solo). A
+     * released entry whose event has ended is dropped at the next [advance].
+     */
+    fun clearReleased() {
+        for (i in 0 until size) {
+            released[i] = false
+        }
+    }
 
     private fun indexOf(sourceId: String): Int {
         for (i in 0 until size) {
@@ -134,11 +223,18 @@ internal class SoloTracker(
         return -1
     }
 
+    /** The slot a new source takes when full: an entry that solos nothing (amount 0) first, else the one ending first. */
     private fun soonestToExpire(): Int {
         var slot = 0
 
         for (i in 1 until size) {
-            if (untilSecs[i] < untilSecs[slot]) {
+            val zeroFirst = (amounts[i] == 0.0) != (amounts[slot] == 0.0)
+
+            if (zeroFirst) {
+                if (amounts[i] == 0.0) {
+                    slot = i
+                }
+            } else if (untilSecs[i] < untilSecs[slot]) {
                 slot = i
             }
         }

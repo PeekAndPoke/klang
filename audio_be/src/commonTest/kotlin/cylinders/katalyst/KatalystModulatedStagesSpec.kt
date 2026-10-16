@@ -250,8 +250,9 @@ class KatalystModulatedStagesSpec : StringSpec({
 
     "a modulated delay time below MIN_ACTIVE_DELAY_SECONDS fades the feed, drains the stage, and resumes, per block" {
         // 0.025 +- 0.075 s: blocks 4 to 7 are below 0.01 s. The wet is modulated too (0.5 +- 0.1, never 0), so the
-        // feed's fade spans one block: block 4 stays Active while it falls to 0, block 5's off-config finds it landed
-        // and drains (review round 2 of step 5b; before it the drain began at block 4).
+        // feed's fade spans one block: block 4 runs Active while it falls to 0, and the block it lands in moves the
+        // stage on into the drain by itself (engine follow-up 42; since review round 2 of step 5b block 5's off-config
+        // did that, so block 4 read Active).
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Delay(
@@ -264,7 +265,7 @@ class KatalystModulatedStagesSpec : StringSpec({
         val delay = chain.delay.shouldNotBeNull()
 
         run(chain, blocks = 12) { k, _ ->
-            val expected = if (k in 5..7) "Draining" else "Active"
+            val expected = if (k in 4..7) "Draining" else "Active"
 
             withClue("block $k at time ${ranged(k, from = -0.05, to = 0.1)}") {
                 stateOf(delay.currentState) shouldBe expected
@@ -278,8 +279,8 @@ class KatalystModulatedStagesSpec : StringSpec({
         // return fed the full wet at once; with a DC mix each was a step of the whole echo (0.4) one delay time later.
         // Now the wet glide takes the feed to 0 over its span while the stage stays Active, the drain starts where it
         // lands, and a return glides it up from 0 (round 2). The bound is a hundredth of the feed: a 50 ms ramp of
-        // 0.4 moves about 2e-4 a sample. An unmodulated time keeps the hard cut (`KatalystDelayEffectSpec`, "drains
-        // on schedule"). The chain-level rows below drive the same through `KatalystChainBuilder.build`.
+        // 0.4 moves about 2e-4 a sample. Since engine follow-up 42 every switch-off fades (the rows "every switch-off
+        // path fades the feed" below). The chain-level rows below drive the same through `KatalystChainBuilder.build`.
         val warmBlocks = 400
 
         fun delay() = KatalystDelayEffect(
@@ -306,8 +307,7 @@ class KatalystModulatedStagesSpec : StringSpec({
             effect = comingBack,
             prepare = { ctx ->
                 warm(comingBack, ctx, warmBlocks) { on(comingBack) }
-                // Past the fade (19 blocks at 48 kHz) and the off that found it landed, the drain still running: the
-                // return is from Draining.
+                // Past the fade (19 blocks at 48 kHz), the drain still running: the return is from Draining.
                 warm(comingBack, ctx, 24) { off(comingBack) }
                 states += stateOf(comingBack.currentState)
             },
@@ -364,7 +364,7 @@ class KatalystModulatedStagesSpec : StringSpec({
 
     "a modulated reverb size below MIN_ACTIVE_SIZE fades the feed, drains the room, and resumes, per block" {
         // Authored 0.1 +- 0.6: blocks 4 to 7 are below 0.1, which normalizes under 0.01. The delay's row above: a
-        // modulated wet makes the fade one block, so block 4 stays Active and the drain starts at block 5.
+        // modulated wet makes the fade one block, which lands inside block 4, so the drain starts there.
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Reverb(wet = lfoRange(from = 0.4, to = 0.6), size = lfoRange(from = -0.5, to = 0.7)),
@@ -373,7 +373,7 @@ class KatalystModulatedStagesSpec : StringSpec({
         val reverb = chain.reverb.shouldNotBeNull()
 
         run(chain, blocks = 12) { k, _ ->
-            val expected = if (k in 5..7) "Draining" else "Active"
+            val expected = if (k in 4..7) "Draining" else "Active"
 
             withClue("block $k at size ${ranged(k, from = -0.5, to = 0.7)}") {
                 stateOf(reverb.currentState) shouldBe expected
@@ -384,7 +384,7 @@ class KatalystModulatedStagesSpec : StringSpec({
     "the reverb's size gate fades the feed out and back in: no one-sample feed edge in either direction" {
         // The delay's row above, on the room, built with `sizeModulated`: a feed cut or restart in one sample steps
         // the network's output (the allpasses pass a step of their input at once). DC mix 0.5, wet 0.8, size 0.5 on
-        // and 0 off. An unmodulated size keeps the hard cut (`KatalystReverbEffectSpec`, "drains on schedule").
+        // and 0 off. Since engine follow-up 42 every switch-off fades (the rows "every switch-off path" below).
         val warmBlocks = 900
 
         fun reverb() = KatalystReverbEffect(
@@ -572,8 +572,8 @@ class KatalystModulatedStagesSpec : StringSpec({
     "a reverb poisoned during its feed fade heals where the fade lands, as a poisoned network at the off does" {
         // A runaway finite send through the fade (`Double.MAX_VALUE`, the route `KatalystReverbEffectSpec`'s
         // "overflow-poisoned network" row names: the input guard scrubs only non-finite samples) overflows a comb cell
-        // while the stage is still Active. The off-config that finds the glide landed counts down from it, the count
-        // is infinite, and `Active.deactivate` resets the network into Off at once, its heal for a poisoned network.
+        // while the stage is still Active. The block the glide lands in counts down from it, the count
+        // is infinite, and `Active.leave` resets the network into Off at once, its heal for a poisoned network.
         val fx = KatalystReverbEffect(units = ReverbUnits(sampleRate), blockFrames = blockFrames, sizeModulated = true)
         val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
 
@@ -666,20 +666,19 @@ class KatalystModulatedStagesSpec : StringSpec({
     "through build(): a modulated delay time through the gate fades the feed out, and every return glides it up" {
         // The builder tells the stage its time is modulated (`timeModulated = time.isModulated`). A square LFO holds
         // the time at 0.05 s over blocks 0 to 255 and from 512 on, and at 0 (finite, below the gate) over 256 to 511.
-        // The wet's slot `w` is unset (NaN) over blocks 560 to 679: the stage is no longer asked for, the hard cut,
-        // from which the stage returns while it still drains. DC mix 0.5, wet 0.8, feedback 0.3: the dry signal
-        // stands, so a step of the output is a step of the feed (0.4 at most) one delay time later, then at 0.3 per
-        // period. Every window stays under a hundredth of the feed; the hard cut's window holds its own edge, which
-        // shows the measure sees one.
-        val chain = build(
-            KatalystDsl.of(
-                KatalystStageDsl.Delay(
-                    wet = KatalystKnobDsl.Param("w", 0.8),
-                    time = squareGate(period = 512, highBlocks = 256, low = 0.0, high = 0.05),
-                    feedback = c(0.3),
-                ),
+        // The wet's slot `w` is unset (NaN) over blocks 560 to 679: the stage is no longer asked for (a non-finite
+        // time), which fades too since engine follow-up 42 (it was the hard cut), and the stage returns while it still
+        // drains. DC mix 0.5, wet 0.8, feedback 0.3: the dry signal stands, so a step of the output is a step of the
+        // feed (0.4 at most) one delay time later, then at 0.3 per period. Every window stays under a hundredth of
+        // the feed; the cut measured 0.4 in its window, which shows the measure sees one.
+        val dsl = KatalystDsl.of(
+            KatalystStageDsl.Delay(
+                wet = KatalystKnobDsl.Param("w", 0.8),
+                time = squareGate(period = 512, highBlocks = 256, low = 0.0, high = 0.05),
+                feedback = c(0.3),
             ),
         )
+        val chain = build(dsl)
         val delay = chain.delay.shouldNotBeNull()
         val unset = klangMapOf("w" to Double.NaN)
         val (steps, states) = gateRun(chain, blocks = 768, state = { delay.currentState }) { k ->
@@ -689,19 +688,33 @@ class KatalystModulatedStagesSpec : StringSpec({
         val first = steps.largest(from = 0, to = 256)
         val off = steps.largest(from = 256, to = 512)
         val fromOff = steps.largest(from = 512, to = 560)
-        val cut = steps.largest(from = 560, to = 680)
+        val unsetOff = steps.largest(from = 560, to = 680)
         val fromDraining = steps.largest(from = 680, to = 768)
 
+        // The meter's positive control: the same chain, its ring emptied in one sample at block 200 (`reset`, the
+        // synchronous hard cut), so the echo vanishes at once. The measure must see that edge.
+        val control = build(dsl)
+        val controlDelay = control.delay.shouldNotBeNull()
+        val (controlSteps, _) = gateRun(control, blocks = 201, state = { controlDelay.currentState }) { k ->
+            if (k == 200) {
+                controlDelay.reset()
+            }
+
+            null
+        }
+        val hardEdge = controlSteps.largest(from = 200, to = 201)
+
         println("delay through build: ${transitions(states)}")
-        println("delay feed edge: first $first, off $off, from Off $fromOff, cut $cut, from Draining $fromDraining")
+        println("delay feed edge: first $first, off $off, from Off $fromOff, unset $unsetOff, from Draining $fromDraining")
 
         // Softly, edges first: a mutant shows every window it opens, not only the first state it moves.
         assertSoftly {
             withClue("the first activation fades in: $first") { first shouldBeLessThanOrEqual 0.004 }
             withClue("going off: $off") { off shouldBeLessThanOrEqual 0.004 }
             withClue("the return from Off: $fromOff") { fromOff shouldBeLessThanOrEqual 0.004 }
-            withClue("the hard cut is one: $cut") { (cut > 0.1).shouldBeTrue() }
-            withClue("the return from the hard cut's drain: $fromDraining") {
+            withClue("the meter sees a hard edge: $hardEdge") { (hardEdge > 0.1).shouldBeTrue() }
+            withClue("an unset wet fades too: $unsetOff") { unsetOff shouldBeLessThanOrEqual 0.004 }
+            withClue("the return from the drain: $fromDraining") {
                 fromDraining shouldBeLessThanOrEqual 0.004
             }
             withClue("the scenario: ${transitions(states)}") {
@@ -710,7 +723,8 @@ class KatalystModulatedStagesSpec : StringSpec({
                 states[300] shouldBe "Draining"
                 states[511] shouldBe "Off"
                 states[512] shouldBe "Active"
-                states[560] shouldBe "Draining"
+                states[560] shouldBe "Active"
+                states[600] shouldBe "Draining"
                 states[679] shouldBe "Draining"
                 states[767] shouldBe "Active"
             }
@@ -720,19 +734,19 @@ class KatalystModulatedStagesSpec : StringSpec({
     "through build(): a modulated reverb size through the gate fades the feed out, and every return glides it up" {
         // The delay's row above on the room (`sizeModulated = size.isModulated`): the authored size 5 (0.5 normalized)
         // over blocks 0 to 639 and from 1920 on, 0 (below the gate) over 640 to 1919, which the drain needs to reach
-        // Off; `w` unset over 2000 to 2399, long enough for the room's own echoes of the hard cut to fall a decade
-        // under the bound before the return, short enough that the room still drains. The size never moves while the
+        // Off; `w` unset over 2000 to 2399 (a non-finite size, a fade since engine follow-up 42, the hard cut before),
+        // long enough for the room to fall a decade under the bound before the return, short enough that it still
+        // drains. The size never moves while the
         // stage runs, so its glide's span cannot show here: only the feed's fade and its glide from 0 keep each window
         // under the bound (measured in round 1 by hand: a cut 0.0104 and a restart 0.0117 in one sample, the fades
         // about 1e-4).
-        val chain = build(
-            KatalystDsl.of(
-                KatalystStageDsl.Reverb(
-                    wet = KatalystKnobDsl.Param("w", 0.8),
-                    size = squareGate(period = 1920, highBlocks = 640, low = 0.0, high = 5.0),
-                ),
+        val dsl = KatalystDsl.of(
+            KatalystStageDsl.Reverb(
+                wet = KatalystKnobDsl.Param("w", 0.8),
+                size = squareGate(period = 1920, highBlocks = 640, low = 0.0, high = 5.0),
             ),
         )
+        val chain = build(dsl)
         val reverb = chain.reverb.shouldNotBeNull()
         val unset = klangMapOf("w" to Double.NaN)
         val (steps, states) = gateRun(chain, blocks = 2560, state = { reverb.currentState }) { k ->
@@ -742,19 +756,32 @@ class KatalystModulatedStagesSpec : StringSpec({
         val first = steps.largest(from = 0, to = 640)
         val off = steps.largest(from = 640, to = 1920)
         val fromOff = steps.largest(from = 1920, to = 2000)
-        val cut = steps.largest(from = 2000, to = 2400)
+        val unsetOff = steps.largest(from = 2000, to = 2400)
         val fromDraining = steps.largest(from = 2400, to = 2560)
 
+        // The meter's positive control, as on the delay: the network emptied in one sample at block 600.
+        val control = build(dsl)
+        val controlReverb = control.reverb.shouldNotBeNull()
+        val (controlSteps, _) = gateRun(control, blocks = 601, state = { controlReverb.currentState }) { k ->
+            if (k == 600) {
+                controlReverb.reset()
+            }
+
+            null
+        }
+        val hardEdge = controlSteps.largest(from = 600, to = 601)
+
         println("reverb through build: ${transitions(states)}")
-        println("reverb feed edge: first $first, off $off, from Off $fromOff, cut $cut, from Draining $fromDraining")
+        println("reverb feed edge: first $first, off $off, from Off $fromOff, unset $unsetOff, from Draining $fromDraining")
 
         // Softly, edges first: a mutant shows every window it opens, not only the first state it moves.
         assertSoftly {
             withClue("the first activation fades in: $first") { first shouldBeLessThanOrEqual 1e-3 }
             withClue("going off: $off") { off shouldBeLessThanOrEqual 1e-3 }
             withClue("the return from Off: $fromOff") { fromOff shouldBeLessThanOrEqual 1e-3 }
-            withClue("the hard cut is one: $cut") { (cut > 5e-3).shouldBeTrue() }
-            withClue("the return from the hard cut's drain: $fromDraining") {
+            withClue("the meter sees a hard edge: $hardEdge") { (hardEdge > 5e-3).shouldBeTrue() }
+            withClue("an unset wet fades too: $unsetOff") { unsetOff shouldBeLessThanOrEqual 1e-3 }
+            withClue("the return from the drain: $fromDraining") {
                 fromDraining shouldBeLessThanOrEqual 1e-3
             }
             withClue("the scenario: ${transitions(states)}") {
@@ -763,7 +790,8 @@ class KatalystModulatedStagesSpec : StringSpec({
                 states[700] shouldBe "Draining"
                 states[1919] shouldBe "Off"
                 states[1920] shouldBe "Active"
-                states[2000] shouldBe "Draining"
+                states[2000] shouldBe "Active"
+                states[2040] shouldBe "Draining"
                 states[2399] shouldBe "Draining"
                 states[2400] shouldBe "Active"
             }

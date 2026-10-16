@@ -1156,16 +1156,16 @@ fun KatalystTriBuilder.phase(phase: IgnitorDslLike): KatalystTriBuilder =
 data class KatalystSquareBuilder(val node: KatalystKnobDsl.Square)
 
 /**
- * The share of each cycle the square spends high, 0 to 1 (default 0.5, a square). A Kat expression moves it, which is
- * a pulse-width modulation of the LFO.
+ * `width` is the share of each cycle the square spends high, 0 to 1 (default 0.5, a square). A Kat expression moves
+ * it, which is a pulse-width modulation of the LFO.
  *
  * ```KlangScript
  * Katalyst(k => k.gain(Kat.square(1, x => x.duty(0.25)).range(0.4, 1)))   // full level a quarter of each second
  * ```
  */
 @KlangScript.Function
-fun KatalystSquareBuilder.duty(duty: IgnitorDslLike): KatalystSquareBuilder =
-    copy(node = node.copy(duty = duty.toKatalystKnob()))
+fun KatalystSquareBuilder.duty(width: IgnitorDslLike): KatalystSquareBuilder =
+    copy(node = node.copy(duty = width.toKatalystKnob()))
 
 /**
  * Where in its cycle the square is read, in cycles (default 0, the foot of its rising edge): 0.5 starts it on its

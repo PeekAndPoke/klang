@@ -10,18 +10,34 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.round
 
 class KatalystReverbEffectSpec : StringSpec({
 
     val sampleRate = 44100
     val blockFrames = 128
 
+    /** The switch-off fade of the feed (engine follow-up 42): the wet glide's span, 17 blocks here. */
+    val fadeBlocks = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt()
+
     fun createCtx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
     )
+
+    /**
+     * Runs the switch-off fade on a SILENT mix, so the fade feeds nothing and the stage enters the drain from the
+     * network the off-config found, decayed only by its own feedback over the fade: the rows below are about the drain.
+     */
+    fun fadeOut(effect: KatalystReverbEffect, ctx: KatalystContext) {
+        repeat(fadeBlocks) {
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+        }
+    }
 
     // The production door takes every param explicitly (no defaults, mirroring the delay);
     // this trims the boilerplate for rows that only care about the lifecycle-deciding size.
@@ -97,22 +113,25 @@ class KatalystReverbEffectSpec : StringSpec({
         drained.reverb!!.size shouldBe 0.05
 
         // 40 blocks ≈ 3 revolutions of the longest comb, well inside the countdown, so the two
-        // runs must agree: the drain is by construction "active with silent input".
+        // runs must agree: the drain is by construction "active with silent input". The first
+        // [fadeBlocks] are the switch-off fade, fed a silent mix here like the reference.
         var maxDiff = 0.0
 
-        repeat(40) {
+        repeat(40) { block ->
             refCtx.mixBuffer.clear()
             ref.process(refCtx)
 
             // The draining side's mix carries GARBAGE: a drain must not be fed from it (the owner
             // said off). The 0.7 itself is dry signal passing through, so what the stage ADDED is
             // compared, up to the rounding of taking the 0.7 back out; a fed 0.7 would add ~0.1.
-            drainedCtx.mixBuffer.fill(0.7)
+            val garbage = if (block < fadeBlocks) 0.0 else 0.7
+
+            drainedCtx.mixBuffer.fill(garbage)
             drained.process(drainedCtx)
 
             for (i in 0 until blockFrames) {
-                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.left[i] - (drainedCtx.mixBuffer.left[i] - 0.7)))
-                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.right[i] - (drainedCtx.mixBuffer.right[i] - 0.7)))
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.left[i] - (drainedCtx.mixBuffer.left[i] - garbage)))
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.right[i] - (drainedCtx.mixBuffer.right[i] - garbage)))
             }
         }
 
@@ -158,7 +177,11 @@ class KatalystReverbEffectSpec : StringSpec({
             returning.process(returningCtx)
         }
 
-        withClue("the row must return MID-drain") { returning.hasTail() shouldBe true }
+        // The switch-off fade (engine follow-up 42) takes 17 of the 20 blocks; the row needs the DRAIN, not the fade.
+        withClue("the row must return MID-drain") {
+            returning.currentState::class.simpleName shouldBe "Draining"
+            returning.hasTail() shouldBe true
+        }
 
         // A new owner with the same knobs claims the orbit while the network is still charged.
         returning.configure(size = 0.5, lowpass = null, wet = 1.0)
@@ -306,6 +329,7 @@ class KatalystReverbEffectSpec : StringSpec({
         }
 
         effect.configureSize(size = 0.0)
+        fadeOut(effect, ctx)
 
         val drainBlocks = ceil(
             effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) / blockFrames
@@ -450,6 +474,8 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) shouldBe Double.POSITIVE_INFINITY
 
         effect.configureSize(size = 0.0)
+        // The switch-off fade runs first (engine follow-up 42); its landing block finds the poison and heals.
+        fadeOut(effect, ctx)
 
         effect.hasTail() shouldBe false
         // hasTail(0.0) is itself NaN-blind (NaN > 0.0 is false), so the heal is pinned with the
@@ -467,7 +493,10 @@ class KatalystReverbEffectSpec : StringSpec({
         }
 
         effect.configureSize(size = 0.0)
-        // The original countdown: a mutant that stays Draining would terminally reset by then.
+        // The switch-off fade first (engine follow-up 42): the row is about a return from the DRAIN.
+        fadeOut(effect, ctx)
+        // The original countdown, measured where the fade landed: a mutant that stays Draining would terminally reset
+        // by then.
         val originalDrainBlocks = ceil(
             effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) / blockFrames
         ).toInt() + 2
@@ -476,6 +505,7 @@ class KatalystReverbEffectSpec : StringSpec({
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
+        effect.currentState::class.simpleName shouldBe "Draining"
         effect.hasTail() shouldBe true // mid-drain
 
         // New owner takes the orbit with the LONGEST room: network kept, params written, sends live.

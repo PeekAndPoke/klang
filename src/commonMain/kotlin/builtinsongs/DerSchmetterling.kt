@@ -165,7 +165,7 @@ let makeGuitar = (rig) => {
   let pAttack     = Ign.param("attack",       0.005, "Attack")
   let pDecay      = Ign.param("decay",        1.000, "Decay")
   let pSustain    = Ign.param("sustain",      0.400, "sustain")
-  let pRelease    = Ign.param("release",      0.012, "Release")
+  let pRelease    = Ign.param("release",      0.010, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
@@ -223,7 +223,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.2)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(10, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.2)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -287,7 +287,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8)).sound(guit
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "oak", wet = 0.15)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.175)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.185)  // .mute()
   .late(berlin(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
@@ -301,10 +301,11 @@ export guitar2_pat =
 
 export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", guitarDecay(2))
-  .clip(guitarClip(2).fast(2)).pan(0.25).body(material = "mahogany", wet = 0.15) // .superimpose(pan(0.95))
+  .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
+  .body(material = "mahogany", wet = 0.15) // .superimpose(pan(0.95))
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
-  .scale("<e2:minor>").gain(0.140).mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").gain(0.080).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar2_shape).tag("guitar2")
@@ -316,10 +317,10 @@ export guitar3_pat =
 
 export guitar3_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", guitarDecay(2))
-  .clip(guitarClip(2).fast(2)).pan(0.75)
+  .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
 
-export guitar3_arrange = x => x.orbit(2) //  . solo()
-  .scale("<e2:minor>").gain(0.142).mute("<0!128 1!16 0!16>") //.mute()
+export guitar3_arrange = x => x.orbit(3) //  . solo()
+  .scale("<e2:minor>").gain(0.080).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0000, 0.0004).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
@@ -330,8 +331,8 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.45) // . mute()
-    .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
-    .adsr(0.003, 0.3, 0.33, 0.025).hpf(30)
+    .ignp("sub", 1.00).ignp("harmonics", 0.95).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
+    .adsr(0.003, 0.3, 0.50, 0.025).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
@@ -529,9 +530,9 @@ export song = stack(
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
     .reverb(0.05, 7, 6000)
-    .gain(4.0)
+    .gain(4.5)
     .bands(b => b.cut(150)
-      .band(mid => mid.distort(0.10, "soft", 4).mul(0.80)).cut(5000)
+      .band(mid => mid.distort(0.10, "soft", 4).mul(0.80)).cut(4800)
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))

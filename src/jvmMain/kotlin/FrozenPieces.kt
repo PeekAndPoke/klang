@@ -49,6 +49,7 @@ object FrozenPieces {
 
     const val derSchmetterling_2026_09_16: String = """
 // 2026-09-26: .classic() appended to the authored instruments (phase 3 step 10, D5); nothing else changed
+// 2026-10-16: the bass moved from orbit 3 (guitar 3) to orbit 6, the count-in from orbit 7 (the hats) to orbit 10: one owner per orbit (Q20)
 import * from "stdlib"
 import * from "sprudel"
 
@@ -352,7 +353,7 @@ export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sou
     .ignp("sub", 1.0).ignp("harmonics", 1.0)  // . solo()
     .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
 
-export bass_arrange = x => x.orbit(3) // . mute()
+export bass_arrange = x => x.orbit(6) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
   .pan(0.5).clip("<[0.85 0.75 0.65 0.75]>*4".sub(perlin.range(0.0, 0.05)))
   .late(berlin.range(0.0002, 0.0005).mul(drunk).seg(4))
@@ -429,7 +430,7 @@ export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
 // Count-in  --------------------------------------------------------------------------------------------------------------------------------------------------
 export countin = sound("oh!2").apply(hats_shape).velocity(0.5).tag("countin").reverb(wet = "0.1", size = 0)
-export countin_arrange = x => x.orbit(7).filterWhen(t => t < 2)
+export countin_arrange = x => x.orbit(10).filterWhen(t => t < 2)
 
 // Song  ------------------------------------------------------------------------------------------------------------------------------------------------------
 export song_arrange = x => x.late(2).filterWhen(t => t >= 2) // shift the song one cycle to make room for the count-in

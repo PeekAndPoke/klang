@@ -229,9 +229,14 @@ private fun soloIdOf(callInfo: CallInfo?): String {
  *
  * Pass a value between `0.0` (no solo) and `1.0` (full solo). The other patterns play at `1 - amount`:
  * `solo(0.7)` leaves them at 0.3, `solo(1)` silences them. Omit or pass `null` to use the default amount
- * of `0.95`: the others drop to 5 %. The others fade down and back up over about 1.5 s. Accepts control
- * patterns, so the amount can change per cycle. When several patterns are soloed, the strongest amount wins:
- * a `solo(0.7)` beside a `solo()` changes nothing.
+ * of `0.95`: the others drop to 5 %. The others fade down and back up over about 1.5 s, and the fade starts at
+ * once: the newest amount wins. A pattern changed to `solo(0)` is no longer soloed from its first event with the
+ * new amount; when `solo()` is removed, the solo ends when the pattern's last soloed event ends, at most 1/8 of
+ * the soloed pattern's own cycle after the edit takes effect (plus a few milliseconds; after `.solo().slow(4)`,
+ * half a cycle). A structural op after `.solo()` (`struct`, `mask`, `degradeBy`) drops the solo in its gaps:
+ * put `.solo()` last. Tracked in `docs/tasks/future/solo-survives-ops.md`. Accepts control patterns, so the
+ * amount can change per cycle. When several patterns are soloed, the strongest amount wins: a `solo(0.7)` beside
+ * a `solo()` changes nothing.
  *
  * ```KlangScript(Playable)
  * stack(

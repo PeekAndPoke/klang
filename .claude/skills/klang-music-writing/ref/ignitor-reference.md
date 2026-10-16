@@ -92,7 +92,7 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 | `Ignitor.ramp(freq?)`     | Reverse sawtooth                         |
 | `Ignitor.zawtooth(freq?)` | Naive sawtooth (brighter, no anti-alias) |
 | `Ignitor.impulse(freq?)`  | Single-sample impulse per cycle          |
-| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse; one `duty` modulator may be shared by pulses at any pitches unless it reads `Ignitor.freq()` anywhere (see `phase(x)` below for the rule) |
+| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse (`x => x.duty(width)`: the share of each cycle that is high, 0 to 1, 0.5 a square); one `duty` modulator may be shared by pulses at any pitches unless it reads `Ignitor.freq()` anywhere (see `phase(x)` below for the rule) |
 
 ### Super Oscillators (Unison/Detuned)
 

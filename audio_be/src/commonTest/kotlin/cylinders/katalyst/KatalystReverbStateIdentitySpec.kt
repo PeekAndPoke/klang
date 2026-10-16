@@ -61,6 +61,24 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         effect.process(ctx)
     }
 
+    /**
+     * Silent blocks while the switch-off fade runs (engine follow-up 42): the stage stays in the ONE Active instance
+     * until the block the wet glide lands in, which moves it on by itself. Returns the state it moved to.
+     */
+    fun fadeOut(effect: KatalystReverbEffect, ctx: KatalystContext, active: Any): Any {
+        var blocks = 0
+
+        while (effect.currentState === active && blocks < 100) {
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+            blocks++
+        }
+
+        withClue("the fade lands inside its span") { (blocks < 100) shouldBe true }
+
+        return effect.currentState
+    }
+
     /** Silent blocks until the effect reports no tail, i.e. until the countdown has run out. */
     fun drainToOff(effect: KatalystReverbEffect, ctx: KatalystContext) {
         var blocks = 0
@@ -114,9 +132,12 @@ class KatalystReverbStateIdentitySpec : StringSpec({
 
         charge(effect, ctx)
 
-        // Active -> Draining.
+        // Active -> Active while the fade runs, then -> Draining on the block it lands in.
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
-        val draining = effect.currentState
+        withClue("the fade runs in the ONE Active instance") {
+            effect.currentState shouldBeSameInstanceAs active
+        }
+        val draining = fadeOut(effect, ctx, active)
         see(draining)
         withClue("Draining is its own state") {
             draining shouldNotBeSameInstanceAs active
@@ -139,7 +160,7 @@ class KatalystReverbStateIdentitySpec : StringSpec({
 
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         withClue("Active -> Draining reuses the ONE Draining instance") {
-            effect.currentState shouldBeSameInstanceAs draining
+            fadeOut(effect, ctx, active) shouldBeSameInstanceAs draining
         }
         see(effect.currentState)
 
@@ -148,14 +169,14 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         effect.currentState shouldBeSameInstanceAs active
         charge(effect, ctx)
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
-        effect.currentState shouldBeSameInstanceAs draining
+        fadeOut(effect, ctx, active) shouldBeSameInstanceAs draining
         effect.configure(size = 0.2, lowpass = null, wet = 1.0)
         withClue("a return mid-drain and mid-glide reuses the ONE Active instance") {
             effect.currentState shouldBeSameInstanceAs active
         }
         see(effect.currentState)
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
-        effect.currentState shouldBeSameInstanceAs draining
+        fadeOut(effect, ctx, active) shouldBeSameInstanceAs draining
 
         // Draining -> Off, by the countdown running out.
         drainToOff(effect, ctx)
@@ -195,7 +216,7 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         effect.configure(size = 0.5, lowpass = null, wet = 1.0)
         charge(effect, ctx)
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
-        effect.currentState shouldBeSameInstanceAs draining
+        fadeOut(effect, ctx, active) shouldBeSameInstanceAs draining
         effect.reset()
         withClue("reset from mid-drain lands in the ONE Off instance") {
             effect.currentState shouldBeSameInstanceAs off
@@ -221,8 +242,8 @@ class KatalystReverbStateIdentitySpec : StringSpec({
 
         effect.reverb.shouldNotBeNull().combPeakAbs() shouldBe Double.POSITIVE_INFINITY
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
-        withClue("a poisoned network heals into the ONE Off instance") {
-            effect.currentState shouldBeSameInstanceAs off
+        withClue("a poisoned network heals into the ONE Off instance, on the fade's landing") {
+            fadeOut(effect, ctx, active) shouldBeSameInstanceAs off
         }
         see(effect.currentState)
 
@@ -230,7 +251,7 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         effect.configure(size = 0.5, lowpass = null, wet = 1.0)
         charge(effect, ctx)
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
-        effect.currentState shouldBeSameInstanceAs draining
+        fadeOut(effect, ctx, active) shouldBeSameInstanceAs draining
         effect.retire()
         withClue("retire from mid-drain lands in the ONE Off instance") {
             effect.currentState shouldBeSameInstanceAs off

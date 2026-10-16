@@ -245,7 +245,8 @@ documents its tells per unit (Q22).
 **Slot names (maintainer, 2026-10-08, decision D4 and Q21, provisional):** a slot is `<door>.<param>`; the namespace is the sprudel
 door's name (`lpf`, `penv`); the param part is the engine door's word (the Ignitor's, or the Katalyst's for a bus
 stage), after a check that it is the better word, and the sprudel door's parameter takes the same word. A one-knob
-door stays flat (`onepole`, `accelerate`, `pregain`, the sample slots). The table: `docs/tasks-archive/2026-10/20261009-classic-slot-names-check.md`.
+door stays flat (`onepole`, `accelerate`, `pregain`, the sample slots). A `snd*` door's parameter takes the knob or slot word
+(`sndPulze(duty)`), not the knob's inner parameter word (`duty(width)`, Q29, 2026-10-16). The table: `docs/tasks-archive/2026-10/20261009-classic-slot-names-check.md`.
 
 ## 5. One word per concept, end to end
 

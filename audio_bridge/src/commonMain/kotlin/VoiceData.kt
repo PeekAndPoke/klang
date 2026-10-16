@@ -80,7 +80,7 @@ data class VoiceData(
     /**
      * Solo amount: 0.0 = no solo, 1.0 = full solo. While a source is soloed every other voice of the playback
      * plays at `1 - amount` (the strongest solo wins), so 1.0 silences them. Recorded by the scheduler from any
-     * event that carries it with a [sourceId], a [control] event included.
+     * event that carries it with a [sourceId], a [control] event included; a source's newest event wins at once.
      */
     val solo: Double?,
 

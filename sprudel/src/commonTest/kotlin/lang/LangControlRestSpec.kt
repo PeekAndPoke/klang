@@ -119,7 +119,7 @@ class LangControlRestSpec : StringSpec({
         compound("fm", t("depth", "2", "4"), t("ratio", "1", "2"), t("attack", "0.01", "0.02"), t("decay", "0.1", "0.2"), t("sustain", "0.3", "0.6"), t("release", "0.1", "0.2")),
         listOf(
             single("analog", "character", "1", "2"),
-            single("duty", "amount", "0.3", "0.6"),
+            single("duty", "width", "0.3", "0.6"),
             single("onepole", "freq", "1000", "2000"),
             Row("ignitorParam(slot = \"analog\", ", "value", "1", "2"),
             Row("ignp(slot = \"analog\", ", "value", "1", "2"),

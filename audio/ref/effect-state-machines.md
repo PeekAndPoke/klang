@@ -53,7 +53,11 @@ class KatalystDelayEffect : KatalystEffect {
     }
 
     private inner class Off : State() { fun enter() { ... } ... }
-    private inner class Active : State() { fun enter() { state = this } ... }   // owns NOTHING
+    private inner class Active : State() {
+        private var fading = false                  // the switch-off fade (engine follow-up 42): dies with the state
+        fun enter() { fading = false; state = this }
+        ...                                         // process: the block the fade lands in moves on into the drain
+    }
     private inner class Draining : State() {
         private var remaining = 0.0                 // dies with the state, so it lives here
         fun enter(remaining: Double) { this.remaining = remaining; state = this }
@@ -151,6 +155,14 @@ of the four (review ledger, 2026-09-19).
 - Entering Off has a precondition, a contract on `Off.enter`: the caller has already zeroed the
   ring or handed it back, because `Off.hasTail()` answers a hardcoded false.
 - A drain runs on its own countdown. Row: "the countdown a drain runs on is its own".
+- **Every switch-off fades the feed, and the fade finishes itself** (engine follow-up 42, 2026-10-16, maintainer Q39:
+  "fade, do not cut"; the reverb the same). The off-config only STARTS it: the wet glide falls to 0 over its span
+  while the stage stays Active (`fading`, Active's one datum), and `Active.process` moves the stage on into Draining
+  or Off at the end of the block the glide lands in. It needs no further off-config, so an orbit whose owner stopped
+  offering (`Cylinder.commitOwner` configures nothing then) and the leaving chain of a swap drain like any other.
+  Before, the move waited for the next off-config (knob expressions step 5b, a modulated time only), and every other
+  switch-off cut the feed in one sample. Accepted cost: on an owner change the new owner's first 50 ms feed the old
+  ring at a falling level. Rows: `KatalystSwitchOffFadeSpec`.
 - The identity spec: every reachable cell of the transition table points at one of the three
   preallocated instances, compared with `shouldBeSameInstanceAs` and an identity COLLECTION (a
   list plus `none { it === state }`, never a Kotlin `Set`, which compares with `equals`), through
@@ -164,7 +176,7 @@ with every host file open, and where it changes what a listener hears it is deci
 maintainer and recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` BEFORE the step is briefed.
 
 - **Copy the shape, not the condition.** Each effect's predicates are its own. The reverb's
-  OFF-ARM test ("already silent", now its `Active.deactivate`) carries `|| !remaining.isFinite()`: a non-finite countdown there means a
+  OFF-ARM test ("already silent", now its `Active.leave`) carries `|| !remaining.isFinite()`: a non-finite countdown there means a
   POISONED network, and the reset is the only exit such an orbit ever gets. Its countdown-end
   test is a plain `<= 0.0`. A transliterated delay condition pins that orbit for the life of the
   playback.
@@ -220,8 +232,8 @@ maintainer and recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` B
 
 | effect | states | today |
 |---|---|---|
-| `KatalystDelayEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-1), the template |
-| `KatalystReverbEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-2); its off-arm test, `|| !remaining.isFinite()`, lives in `Active.deactivate` |
+| `KatalystDelayEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-1), the template; every switch-off fades the feed in Active since engine follow-up 42 (2026-10-16), the landing block moves on by itself |
+| `KatalystReverbEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-2); its off-arm test, `|| !remaining.isFinite()`, lives in `Active.leave`, which the fade's landing block reaches (engine follow-up 42) |
 | `KatalystFilterSwap` (body, vowel, eq) | first commit CONVERTED 2026-09-19 (Katalyst 5c-4): Off, Engaged, Crossfading; every event dispatches, `clear` included, because the outgoing pair (a reference) belongs to Crossfading. Second commit DONE 2026-09-19 (Katalyst 5c-6), a sound change: `clear` fades to dry and enters Off only on landing, `reset` stays the synchronous hard cut; **Third commit DONE 2026-09-20 (Katalyst 5c-11), the maintainer's own model after they rejected the morph by ear:** TWO banks, the one in service and one outgoing, and a change arriving mid-fade is REFUSED by the swap (`set` and `clear` are no-ops while `Crossfading`, and `settled` is the precondition a caller reads) and PARKED BY THE HOST as the CONFIG it came as, one slot, latest wins, re-offered from the host's own `process` after `swap.process`. Parking a config and not a pair is what keeps a stage at two banks. The fade is `BANK_CROSSFADE_SECONDS` (20 ms), its own constant; `KNOB_GLIDE_SECONDS` keeps every level and dynamics glide. A `fresh` snap flag outside the states keeps the first initialisation instant. **The precedent worth naming: a state machine may REFUSE an event, and the refusal belongs in the table.** The 10-bank pool of 5c-6, its drop rule and its overflow parking are retired |
 | `KatalystCompressorEffect` | CONVERTED 2026-09-19 (Katalyst 5c-7) together with its switch-off: Off, Engaged, Fading (`out = dry + w * (compressed - dry)`, w linear over 50 ms); a return turns the fade around on the same instance; `reset` enters Off without dispatching (Fading holds only numbers); a `fresh` snap flag keeps the first initialisation instant | was a nullable instance |
 | `KatalystGainEffect` | DONE 2026-09-19 (Katalyst 5c-8) WITHOUT state classes: fresh, ramping and settled are exactly `KnobGlide`'s snap flag, countdown and rest, and the gain has no Off and no switch-off, so states would copy the helper (the complexity rule above); the four questions are answered in its KDoc | a `KnobGlide` plus the unity skip |

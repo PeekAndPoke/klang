@@ -19,7 +19,7 @@ Created 2026-08-31.
 | File | What the ear work is |
 |---|---|
 | [`chain-swap-request-during-drain.md`](chain-swap-request-during-drain.md) | Phase 3 step 12 decision (g): a second chain edit (orbit or master) waits for the old chain's ring-out, up to about 24.5 s. Keep, cut the drain, or let several chains drain? |
-| [`delay-reverb-owner-change-cut.md`](delay-reverb-owner-change-cut.md) | Katalyst knob expressions step 5b (2026-10-12): an unmodulated delay or reverb switched off by an owner change or a `katp` cuts its feed in one sample; a fade would bleed the new owner into the old room. Cut, fade, or fade only a `katp`? |
+| [`delay-reverb-owner-change-cut.md`](delay-reverb-owner-change-cut.md) | **DONE 2026-10-16** (maintainer Q39 "fade, do not cut", engine follow-up 42): every delay and reverb switch-off fades its feed; the bleed of a new owner into the old room is accepted. The check by ear: `tmp/listening/delay-reverb-fade/` |
 | [`../future/duck-orbit-switch-click.md`](../future/duck-orbit-switch-click.md) | Katalyst step 5c (2026-09-20, measured): moving a ducker's sidechain to a sounding orbit steps the reduction. Leave it, blend the two sources, or dip and return? |
 
 ---

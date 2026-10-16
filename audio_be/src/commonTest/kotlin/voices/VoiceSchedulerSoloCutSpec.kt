@@ -11,6 +11,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.BackendClock
@@ -342,8 +344,8 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
 
     "solo: after the last control event the background comes back, and the soloed voice stays at 1.0 all the way" {
         // The lead sounds for 30 s and carries no solo itself; control events solo its source for 2 s.
-        // After them the background ramps back over 1.5 s, and the lead must not dip on the way: the
-        // hold (2 s) is at least the ramp. Reference: the same lead with no solo anywhere.
+        // After them the background ramps back over 1.5 s, and the lead must not dip on the way: with no hold
+        // since Q28, the no-dip rule keeps it at 1.0. Reference: the same lead with no solo anywhere.
         val rig = Rig()
         rig.schedule(0.0, tone(sourceId = "lead", pan = 0.0))
         rig.schedule(0.0, soloControl(sourceId = "lead", solo = 0.95), durSec = 2.0)
@@ -403,37 +405,43 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         }
     }
 
-    // ── A soloed VOICE is protected for its whole life; the source's window serves between events (Q14, Q28) ───
+    // ── Solo reacts at once: a source is soloed while its NEWEST event says so, no hold, no per-voice protection
+    // (Q28 as answered 2026-10-13, engine follow-up 43; it replaced Q14's "a soloed voice is protected for its whole
+    // life" and the 2 s hold after a source's last solo event) ──────────────────────────────────────────────
 
-    /** A soloed pad with a 5 s release, hard left: its tail outlives the 2 s hold by far. */
+    /** A soloed pad with a 5 s release, hard left: its tail outlives its event by far. */
     fun pad(solo: Double? = 1.0): VoiceData = tone(sourceId = "pad", pan = 0.0, solo = solo).copy(ignitorParams = klangMapOf("adsr.release" to 5.0))
 
-    "solo: a soloed pad's long release plays at full level beside another live solo, until the voice ends (Q14)" {
-        // `note("c3").sound(myPad).release(5).solo()` beside `s("bd*4").solo()`: the kick (hard right) solos all
-        // the way. Reference: the same pad soloed alone, which nothing ducks. Before Q14 the pad's protection ended
-        // 2 s after its last event and the kick's live solo silenced the ringing tail from 2.5 s.
-        val rig = Rig()
-        rig.schedule(0.0, pad(), durSec = 0.5)
-        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+    /** A rig whose kick (hard right) solos at 1.0 from 0 s: the rest is muted once the 1.5 s ramp is down. */
+    fun kickRig(): Rig = Rig().apply { schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0)) }
+
+    /** The left peak of [peaks] (one pair per block) at [sec]. */
+    fun List<Pair<Double, Double>>.leftAt(sec: Double): Double = this[blocksFor(sec)].first
+
+    "solo: a soloed pad's release beside another live solo is ducked at once when its event ends (Q28)" {
+        // `note("c3").sound(myPad).release(5).solo()` beside `s("bd*4").solo()`, the pad's one event from 2.0 to
+        // 2.5 s, after the kick's ramp has muted the rest. Reference: the same pad with no kick. Before Q28's answer
+        // the pad's voice was protected to its end; with only the 2 s hold it would ring at full level to 4.5 s.
+        val rig = kickRig()
+        rig.schedule(2.0, pad(), durSec = 0.5)
         val reference = Rig()
-        reference.schedule(0.0, pad(), durSec = 0.5)
+        reference.schedule(2.0, pad(), durSec = 0.5)
 
-        val blocks = blocksFor(7.0)
-        val soloed = rig.peaksPerBlock(blocks)
-        val alone = reference.peaksPerBlock(blocks)
+        val soloed = rig.peaksPerBlock(blocksFor(7.0))
+        val alone = reference.peaksPerBlock(blocksFor(7.0))
 
-        withClue("the tail still sounds at 4 s (the row is not vacuous)") { alone[blocksFor(4.0)].first shouldBeGreaterThan 1e-3 }
+        withClue("the tail still sounds at 4 s (the row is not vacuous)") { alone.leftAt(4.0) shouldBeGreaterThan 1e-3 }
+        withClue("at full level while soloed (2.25 s)") { soloed.leftAt(2.25) shouldBe (alone.leftAt(2.25) plusOrMinus 1e-12) }
 
-        for (block in 0 until blocks) {
-            withClue("block $block (${block * blockDurationSec} s): the pad at full level") {
-                soloed[block].first shouldBe (alone[block].first plusOrMinus 1e-12)
+        for (block in blocksFor(2.55) until soloed.size) {
+            // not exactly 0: the kick, hard right, leaks cos(pi / 2) = 6e-17 of itself into the left channel
+            withClue("block $block (${block * blockDurationSec} s): the tail ducked to 1 - 1.0") {
+                soloed[block].first shouldBeLessThan 1e-9
             }
         }
-
-        withClue("the pad's voice has ended by 7 s: only the kick is left") { rig.activeCount shouldBe 1 }
     }
 
-    "solo: past the window a plain note of the soloed source is ducked (Q14)" {
+    "solo: a plain note of the source after its solo ended is ducked" {
         val rig = Rig()
         rig.schedule(0.0, pad(), durSec = 0.5)
         rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
@@ -441,111 +449,58 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
 
         withClue("the pad's voice has ended") { rig.activeCount shouldBe 1 }
 
-        // the same source again, a note without solo: no entry protects it, so the kick's live solo silences it
+        // the same source again, a note without solo: nothing solos it, so the kick's live solo silences it
         rig.schedule(rig.nowSec(), pad(solo = null), durSec = 1.0)
         val (padPeak, kickPeak) = rig.renderPeaks(blocksFor(0.5))
 
         withClue("the kick still sounds") { kickPeak shouldBeGreaterThan 1e-3 }
-        // not exactly 0: the kick, hard right, leaks cos(pi / 2) = 6e-17 of itself into the left channel
         withClue("the plain pad note is ducked to 1 - 1.0") { padPeak shouldBeLessThan 1e-9 }
     }
 
-    // Only a voice that was soloed itself is protected past the window (Q28): a voice with no solo of its own, or an
-    // amount of 0, has the source's window alone, so it drops back 2 s after the source's last soloed event, even while
-    // a soloed voice of the same source still rings beside it. Round 0 kept the whole source for as long as any of its
-    // voices sounded, round 1 for as long as a soloed one did; both kept un-soloed notes at full level.
+    "solo: solo(1) on a release(5) pad, then the same text with solo(0): the whole source is ducked at once from the first solo(0) event, the soloed tail included" {
+        // The old Q28 example: the pad soloed in the cycle from 2 to 4 s, then the same source with amount 0 in the
+        // cycles from 4 to 10 s, all with a 5 s release, beside the soloed kick. Left is the whole pad source.
+        fun Rig.song() {
+            schedule(2.0, pad(), durSec = 2.0)
 
-    "solo: Q28's example: solo(1) on a release(5) pad, then the same text with solo(0): the solo(0) notes are ducked from the window's end, the soloed pad rings to its end" {
-        // The pad (hard left) soloed in cycle 0 (0 to 2 s), then the same pad with amount 0 in cycles 1 to 3 (the same
-        // source id), all with a 5 s release, beside a soloed kick (hard right). The solo(0) notes are read alone as the
-        // left channel minus the same render with them at gain 0; the soloed pad as the render without them.
-        fun Rig.song(zeroGain: Double?, withZeros: Boolean = true) {
-            schedule(0.0, pad(), durSec = 2.0)
-
-            if (withZeros) {
-                for (cycle in 1..3) {
-                    schedule(cycle * 2.0, pad(solo = 0.0).copy(gain = zeroGain), durSec = 2.0)
-                }
-            }
-
-            schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
-        }
-
-        val blocks = blocksFor(8.0)
-        val all = Rig().apply { song(zeroGain = null) }.renderLeft(blocks)
-        val withoutZeros = Rig().apply { song(zeroGain = 0.0) }.renderLeft(blocks)
-        val padOnly = Rig().apply { song(zeroGain = null, withZeros = false) }.renderLeft(blocks)
-
-        fun peak(samples: DoubleArray, sec: Double): Double {
-            val from = blocksFor(sec) * blockFrames
-
-            return (from until from + blockFrames).maxOf { abs(samples[it]) }
-        }
-
-        val zeros = DoubleArray(all.size) { all[it] - withoutZeros[it] }
-
-        withClue("the solo(0) notes sound inside the window (2.5 s, 3.5 s)") {
-            peak(zeros, 2.5) shouldBeGreaterThan 1e-3
-            peak(zeros, 3.5) shouldBeGreaterThan 1e-3
-        }
-
-        for (sec in listOf(4.5, 5.0, 6.0, 7.5)) {
-            withClue("the solo(0) notes ducked at $sec s, the soloed pad still ringing") { peak(zeros, sec) shouldBeLessThan 1e-9 }
-        }
-
-        for (block in 0 until blocks) {
-            withClue("block $block: the soloed pad unchanged by its solo(0) neighbours") {
-                val from = block * blockFrames
-
-                (from until from + blockFrames).maxOf { abs(withoutZeros[it] - padOnly[it]) } shouldBeLessThan 1e-12
+            for (cycle in 2..4) {
+                schedule(cycle * 2.0, pad(solo = 0.0), durSec = 2.0)
             }
         }
 
-        withClue("the soloed pad still rings at 6.5 s, at full level") { peak(padOnly, 6.5) shouldBeGreaterThan 1e-3 }
-    }
+        val peaks = kickRig().apply { song() }.peaksPerBlock(blocksFor(9.0))
+        val alone = Rig().apply { song() }.peaksPerBlock(blocksFor(9.0))
 
-    "solo: a voice whose own solo amount is NaN is not protected past the window (the NaN guard)" {
-        // A soloed short note of "pad" (0 to 1 s) opens the window; a pad voice with amount NaN rings 5 s beside the kick.
-        val rig = Rig()
-        rig.schedule(0.0, tone(sourceId = "pad", pan = 0.0, solo = 1.0), durSec = 1.0)
-        rig.schedule(0.0, pad(solo = Double.NaN), durSec = 1.0)
-        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        withClue("the soloed cycle at full level (3.0 s)") { peaks.leftAt(3.0) shouldBe (alone.leftAt(3.0) plusOrMinus 1e-12) }
 
-        val peaks = rig.peaksPerBlock(blocksFor(5.0))
-
-        withClue("inside the window (2.5 s) the NaN voice sounds") { peaks[blocksFor(2.5)].first shouldBeGreaterThan 1e-3 }
-
-        for (sec in listOf(3.5, 4.5)) {
-            withClue("past the window ($sec s) the NaN voice is ducked") { peaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        for (sec in listOf(4.05, 4.5, 6.0, 8.5)) {
+            withClue("the pad sounds alone at $sec s (not vacuous)") { alone.leftAt(sec) shouldBeGreaterThan 1e-3 }
+            withClue("the source ducked at $sec s, its soloed tail and its solo(0) notes alike") { peaks.leftAt(sec) shouldBeLessThan 1e-9 }
         }
     }
 
-    "solo: solo(1) edited to solo(0) at the same call site: the source drops back at the window's end, its notes still sounding (Q14)" {
-        // The live edit: the soloed note (0 to 2 s), then overlapping notes of the same source with amount 0, which is
-        // what the same `solo(...)` call site sends after the edit. The kick (hard right) solos all the way.
-        val rig = Rig()
+    "solo: solo(1) edited to solo(0) at the same call site: the source drops back at the first zero event, its notes still sounding" {
+        // The live edit: the soloed note (0 to 2 s), then overlapping notes of the same source with amount 0 from
+        // 1.9 s, which is what the same `solo(...)` call site sends after the edit. The kick solos all the way.
+        val rig = kickRig()
         rig.schedule(0.0, tone(sourceId = "pad", pan = 0.0, solo = 1.0), durSec = 2.0)
 
         for (k in 1..4) {
             rig.schedule(k * 1.9, tone(sourceId = "pad", pan = 0.0, solo = 0.0), durSec = 2.0)
         }
 
-        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
-
         val peaks = rig.peaksPerBlock(blocksFor(8.0))
 
-        withClue("protected at 3.5 s: the last soloed event ended at 2.0 s, plus the 2 s hold") {
-            peaks[blocksFor(3.5)].first shouldBeGreaterThan 1e-3
-        }
+        withClue("soloed at 1.85 s") { peaks.leftAt(1.85) shouldBeGreaterThan 1e-3 }
 
-        for (sec in listOf(4.5, 6.0, 7.5)) {
-            withClue("ducked at $sec s, a note of the source sounding") { peaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        for (sec in listOf(1.95, 2.5, 3.5, 6.0, 7.5)) {
+            withClue("ducked at $sec s, a note of the source sounding") { peaks.leftAt(sec) shouldBeLessThan 1e-9 }
         }
     }
 
-    "solo: solo(\"<1 0 0 0>\") protects the soloed cycles and their window, not the zeros between them (Q14)" {
+    "solo: solo(\"<1 0 0 0>\") solos the soloed cycles, not one block of the zeros between them" {
         // One note per 2 s cycle, each overlapping the next by 0.1 s; the amount is 1 in cycles 0 and 4, 0 in the rest.
-        val rig = Rig()
+        val rig = kickRig()
 
         for (cycle in 0 until 8) {
             val amount = if (cycle % 4 == 0) 1.0 else 0.0
@@ -553,47 +508,64 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
             rig.schedule(cycle * 2.0, tone(sourceId = "pad", pan = 0.0, solo = amount), durSec = 2.1)
         }
 
-        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
-
         val peaks = rig.peaksPerBlock(blocksFor(16.0))
 
-        for (sec in listOf(1.0, 3.5, 9.0, 11.5)) {
-            withClue("protected at $sec s (a soloed cycle or its window)") { peaks[blocksFor(sec)].first shouldBeGreaterThan 1e-3 }
+        for (sec in listOf(1.0, 1.95, 9.0, 9.95)) {
+            withClue("soloed at $sec s") { peaks.leftAt(sec) shouldBeGreaterThan 1e-3 }
         }
 
-        for (sec in listOf(5.0, 7.5, 13.0, 15.5)) {
-            withClue("ducked at $sec s (a zero cycle past the window)") { peaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        for (sec in listOf(2.05, 3.5, 5.0, 7.5, 10.05, 13.0, 15.5)) {
+            withClue("ducked at $sec s (a zero cycle)") { peaks.leftAt(sec) shouldBeLessThan 1e-9 }
         }
     }
 
-    "solo: a soloed voice with no source id, or with an infinite amount, is not protected past the window (the guards)" {
-        // Each beside the kick's live solo. The voice with no source id opens no window at all (the tracker needs the
-        // id), so it is ducked once the ramp is down; the +Inf voice rings 5 s next to a soloed short note of "pad"
-        // that opens the window to 3 s, as the NaN row does.
-        val noSource = Rig()
-        noSource.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+    "solo: amount 0, a NaN or an infinity as a source's newest event ends its running solo" {
+        // A soloed pad note from 0 to 4 s beside the kick; at 2.0 s the same source sends a control event with X.
+        for ((name, amount) in listOf("amount 0" to 0.0, "amount NaN" to Double.NaN, "amount +Inf" to Double.POSITIVE_INFINITY)) {
+            val rig = kickRig()
+            rig.schedule(0.0, tone(sourceId = "pad", pan = 0.0, solo = 1.0), durSec = 4.0)
+            rig.schedule(2.0, soloControl(sourceId = "pad", solo = amount), durSec = 2.0)
+
+            val peaks = rig.peaksPerBlock(blocksFor(3.6))
+
+            withClue("$name: soloed at 1.9 s") { peaks.leftAt(1.9) shouldBeGreaterThan 1e-3 }
+
+            for (sec in listOf(2.05, 2.5, 3.5)) {
+                withClue("$name: ducked at $sec s") { peaks.leftAt(sec) shouldBeLessThan 1e-9 }
+            }
+        }
+    }
+
+    "solo: an event with an EARLIER start than the source's newest changes nothing" {
+        // The heap pops in start order, so an older event can only arrive late, after a newer one was recorded.
+        // The newer says 0 (the solo ended at 1.0 s); a late event from 0.5 s with amount 1 must not solo it again.
+        val rig = kickRig()
+        rig.schedule(0.0, tone(sourceId = "pad", pan = 0.0, solo = 1.0), durSec = 1.0)
+        rig.schedule(1.0, soloControl(sourceId = "pad", solo = 0.0), durSec = 3.0)
+        rig.peaksPerBlock(blocksFor(2.0))
+
+        rig.schedule(0.5, soloControl(sourceId = "pad", solo = 1.0), durSec = 3.0)
+        rig.schedule(rig.nowSec(), tone(sourceId = "pad", pan = 0.0))
+
+        val peaks = rig.peaksPerBlock(blocksFor(1.0))
+
+        withClue("the pad stays ducked") { peaks.last().first shouldBeLessThan 1e-9 }
+    }
+
+    "solo: a soloed voice with no source id solos nothing and is ducked" {
+        val noSource = kickRig()
         noSource.schedule(0.0, pad().copy(sourceId = null), durSec = 1.0)
 
-        val infinite = Rig()
-        infinite.schedule(0.0, tone(sourceId = "pad", pan = 0.0, solo = 1.0), durSec = 1.0)
-        infinite.schedule(0.0, pad(solo = Double.POSITIVE_INFINITY), durSec = 1.0)
-        infinite.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        val peaks = noSource.peaksPerBlock(blocksFor(3.0))
 
-        val noSourcePeaks = noSource.peaksPerBlock(blocksFor(5.0))
-        val infinitePeaks = infinite.peaksPerBlock(blocksFor(5.0))
-
-        withClue("the +Inf voice sounds inside the window (2.5 s)") { infinitePeaks[blocksFor(2.5)].first shouldBeGreaterThan 1e-3 }
-
-        for (sec in listOf(3.5, 4.5)) {
-            withClue("no source id: ducked at $sec s") { noSourcePeaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
-            withClue("+Inf amount: ducked at $sec s, past the window") { infinitePeaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        for (sec in listOf(1.6, 2.5)) {
+            withClue("ducked at $sec s") { peaks.leftAt(sec) shouldBeLessThan 1e-9 }
         }
     }
 
-    "solo: a held realtime key of the source with no solo of its own is not protected past the window (Q28)" {
+    "solo: a held realtime key of the source with no solo of its own is ducked once the source's solo ends" {
         // A soloed timeline note of "lead" from 0 to 1 s, and a realtime key of "lead" held all the time without a solo.
-        val rig = Rig()
-        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
+        val rig = kickRig()
         rig.schedule(0.0, tone(sourceId = "lead", pan = 0.0, solo = 0.95), durSec = 1.0)
         rig.engine.scheduler.startRealtimeVoice(
             playbackId = "song",
@@ -602,13 +574,345 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
 
         val peaks = rig.peaksPerBlock(blocksFor(6.0))
 
-        withClue("protected at 2.5 s: the soloed note ended at 1.0 s, plus the 2 s hold") {
-            peaks[blocksFor(2.5)].first shouldBeGreaterThan 1e-3
+        withClue("soloed at 0.9 s") { peaks.leftAt(0.9) shouldBeGreaterThan 1e-3 }
+
+        for (sec in listOf(1.6, 3.5, 5.5)) {
+            withClue("the held key ducked at $sec s") { peaks.leftAt(sec) shouldBeLessThan 1e-9 }
+        }
+    }
+
+    "solo: solo() then solo(0) with no other solo: the part that was soloed stays at full level while the rest comes back (no dip)" {
+        // Control events solo the lead (hard left, 30 s, no solo of its own) at 0.95 for 2 s, then say 0. Without the
+        // no-dip rule the lead would drop to the background's 0.05 at 2 s and fade back in over 1.5 s.
+        val rig = Rig()
+        rig.schedule(0.0, tone(sourceId = "lead", pan = 0.0))
+        rig.schedule(0.0, soloControl(sourceId = "lead", solo = 0.95), durSec = 2.0)
+        rig.schedule(2.0, soloControl(sourceId = "lead", solo = 0.0), durSec = 28.0)
+        rig.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+        val reference = Rig()
+        reference.schedule(0.0, tone(sourceId = "lead", pan = 0.0))
+        reference.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+
+        val blocks = blocksFor(5.0)
+        val soloed = rig.peaksPerBlock(blocks)
+        val unsoloed = reference.peaksPerBlock(blocks)
+
+        for (block in 0 until blocks) {
+            withClue("block $block (${block * blockDurationSec} s): the lead at full level") {
+                soloed[block].first shouldBe (unsoloed[block].first plusOrMinus 1e-12)
+            }
         }
 
-        for (sec in listOf(3.5, 5.5)) {
-            withClue("the held key ducked at $sec s") { peaks[blocksFor(sec)].first shouldBeLessThan 1e-9 }
+        withClue("the bed ducked at 1.9 s") {
+            (soloed[blocksFor(1.9)].second / unsoloed[blocksFor(1.9)].second) shouldBe (0.05 plusOrMinus 1e-12)
         }
+        withClue("the bed on its way back at 2.5 s") {
+            (soloed[blocksFor(2.5)].second / unsoloed[blocksFor(2.5)].second) shouldBeLessThan 0.9
+        }
+        withClue("the bed back at full level at 4 s") {
+            (soloed[blocksFor(4.0)].second / unsoloed[blocksFor(4.0)].second) shouldBe (1.0 plusOrMinus 1e-12)
+        }
+    }
+
+    "solo: a voice that starts while the background comes back starts on the ramp, not at full level" {
+        // The no-dip rule holds a voice that WAS above the ramp; a new voice has no level yet and joins the ramp.
+        val late = tone(sourceId = "late", pan = 1.0)
+        val rig = Rig()
+        rig.schedule(0.0, soloControl(sourceId = "lead", solo = 0.95), durSec = 2.0)
+        rig.schedule(2.5, late)
+        val reference = Rig()
+        reference.schedule(2.5, late)
+
+        val blocks = blocksFor(2.6)
+        val ratio = rig.peaksPerBlock(blocks).last().second / reference.peaksPerBlock(blocks).last().second
+
+        withClue("on the way back at 2.6 s") {
+            ratio shouldBeGreaterThan 0.05
+            ratio shouldBeLessThan 0.9
+        }
+    }
+
+    "solo: a removed solo ends with its last control event, not with a long soloed note's gate (round 1 MAJOR)" {
+        // `note("a3").slow(4).solo("<[1 ~ ~ ~ ~ ~ ~ ~] ~ ~ ~>")` and the same after `.solo()` is removed: the control
+        // pieces (1/8 cycle, 0.25 s here) stop, and a soloed note started on the last grid line (sharing its start, in
+        // either pop order) or inside the last piece rings 8 s on. The solo must end within the piece plus the grace:
+        // the bed (hard right) starts back up at once. Before the fix the note's gate held it down to its end.
+        for (case in listOf("note first", "control first", "note inside the piece")) {
+            val rig = Rig()
+            val note = tone(sourceId = "lead", pan = 0.0, solo = 0.95)
+
+            for (piece in 0 until 7) {
+                rig.schedule(piece * 0.25, soloControl(sourceId = "lead", solo = 0.95), durSec = 0.25)
+            }
+
+            when (case) {
+                "note first" -> {
+                    rig.schedule(1.75, note, durSec = 8.0)
+                    rig.schedule(1.75, soloControl(sourceId = "lead", solo = 0.95), durSec = 0.25)
+                }
+                "control first" -> {
+                    rig.schedule(1.75, soloControl(sourceId = "lead", solo = 0.95), durSec = 0.25)
+                    rig.schedule(1.75, note, durSec = 8.0)
+                }
+                else -> {
+                    rig.schedule(1.75, soloControl(sourceId = "lead", solo = 0.95), durSec = 0.25)
+                    rig.schedule(1.8, note, durSec = 8.0)
+                }
+            }
+
+            rig.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+            val reference = Rig().apply { schedule(0.0, tone(sourceId = "bed", pan = 1.0)) }
+
+            val blocks = blocksFor(3.7)
+            val soloed = rig.peaksPerBlock(blocks)
+            val unsoloed = reference.peaksPerBlock(blocks)
+
+            fun bedRatio(sec: Double): Double = soloed[blocksFor(sec)].second / unsoloed[blocksFor(sec)].second
+
+            withClue("$case: ducked at 1.95 s") { bedRatio(1.95) shouldBe (0.05 plusOrMinus 1e-12) }
+            withClue("$case: on its way back at 2.3 s (the solo ended near 2.0 s)") { bedRatio(2.3) shouldBeGreaterThan 0.06 }
+            withClue("$case: back at full level at 3.6 s") { bedRatio(3.6) shouldBe (1.0 plusOrMinus 1e-12) }
+        }
+    }
+
+    "solo: a voice that loses its solo while another solo is live fades over at least the cut fade (4 ms), at once" {
+        // The kick solos at 1.0 from 0 s (the rest muted from 1.5 s); "y" (hard left, 301.3 Hz) is soloed from 2.0 to
+        // 2.5 s by a control event. When its solo ends it falls to 0: over CUT_FADE_SECONDS (two blocks), not inside
+        // one block (2.7 ms, a tick). Read as the ratio to the same tone alone, on samples where the tone is loud.
+        val lead = tone(sourceId = "y", pan = 0.0).copy(freqHz = 301.3)
+        val rig = kickRig()
+        rig.schedule(0.0, lead)
+        rig.schedule(2.0, soloControl(sourceId = "y", solo = 0.95), durSec = 0.5)
+        val reference = Rig()
+        reference.schedule(0.0, lead)
+
+        val blocks = blocksFor(2.6)
+        val soloed = rig.renderLeft(blocks)
+        val alone = reference.renderLeft(blocks)
+        val loud = 0.5 * (0 until blocksFor(2.4) * blockFrames).maxOf { abs(alone[it]) }
+
+        var firstFalling = -1
+        var firstSilent = -1
+
+        for (i in (2.4 * sampleRate).toInt() until (2.59 * sampleRate).toInt()) {
+            if (abs(alone[i]) < loud) {
+                continue
+            }
+
+            val ratio = abs(soloed[i]) / abs(alone[i])
+
+            if (firstFalling < 0 && ratio < 0.98) {
+                firstFalling = i
+            }
+
+            if (firstSilent < 0 && ratio < 0.02) {
+                firstSilent = i
+            }
+        }
+
+        withClue("it falls (at $firstFalling) and goes silent (at $firstSilent)") {
+            firstFalling shouldBeGreaterThan (2.5 * sampleRate).toInt()
+            firstSilent shouldBeGreaterThan firstFalling
+        }
+        withClue("the fall takes at least most of 4 ms (192 frames), not one 128-frame block") {
+            (firstSilent - firstFalling) shouldBeGreaterThan 170
+        }
+        withClue("and is done within 20 ms of the event's end: it reacts at once") {
+            firstSilent shouldBeLessThan (2.52 * sampleRate).toInt()
+        }
+    }
+
+    "solo: a NEW note of a source that just lost its solo plays at full level, not on the ramp (round 2 MAJOR)" {
+        // The lead ("lead", hard left) soloed at 0.95 by control events from 0 to 2 s, then either `solo(0)` (control
+        // events with amount 0) or nothing (the `.solo()` removed). Its next note starts at 2.5 s, while the bed
+        // (hard right) is still on its way back: it plays at full level at once. Before the fix it started on the ramp
+        // (0.29 at 2.5 s) and faded in over 1.5 s.
+        for (case in listOf("solo(0)", "solo removed")) {
+            val rig = Rig()
+            rig.schedule(0.0, soloControl(sourceId = "lead", solo = 0.95), durSec = 2.0)
+
+            if (case == "solo(0)") {
+                rig.schedule(2.0, soloControl(sourceId = "lead", solo = 0.0), durSec = 28.0)
+            }
+
+            rig.schedule(2.5, tone(sourceId = "lead", pan = 0.0))
+            rig.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+            val reference = Rig()
+            reference.schedule(2.5, tone(sourceId = "lead", pan = 0.0))
+            reference.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+
+            val blocks = blocksFor(4.0)
+            val soloed = rig.peaksPerBlock(blocks)
+            val unsoloed = reference.peaksPerBlock(blocks)
+
+            withClue("$case: the bed still on its way back at 2.55 s") {
+                (soloed[blocksFor(2.55)].second / unsoloed[blocksFor(2.55)].second) shouldBeLessThan 0.9
+            }
+
+            for (block in blocksFor(2.5) until blocks) {
+                withClue("$case, block $block (${block * blockDurationSec} s): the new lead note at full level") {
+                    soloed[block].first shouldBe (unsoloed[block].first plusOrMinus 1e-12)
+                }
+            }
+        }
+    }
+
+    "solo: a release ends when the background is back, or when another solo starts: later notes start on the ramp again" {
+        // "lead" soloed at 0.95 from 0 to 2 s, then released. Case "back": the bed is back by 3.6 s; another solo ("x",
+        // control only) from 4.0 to 6.0 s, and a new lead note at 6.3 s, on the ramp back. Case "fell": "x" solos from
+        // 2.5 to 3.0 s, before the ramp is back, and a new lead note at 3.3 s. In both the lead is background again: its
+        // note starts on the ramp, below full level, like any other new voice.
+        for ((case, xFrom, noteAt) in listOf(Triple("back", 4.0, 6.3), Triple("fell", 2.5, 3.3))) {
+            val xDur = if (case == "back") 2.0 else 0.5
+            val rig = Rig()
+            rig.schedule(0.0, soloControl(sourceId = "lead", solo = 0.95), durSec = 2.0)
+            rig.schedule(xFrom, soloControl(sourceId = "x", solo = 0.95), durSec = xDur)
+            rig.schedule(noteAt, tone(sourceId = "lead", pan = 0.0))
+            val reference = Rig()
+            reference.schedule(noteAt, tone(sourceId = "lead", pan = 0.0))
+
+            val blocks = blocksFor(noteAt + 0.1)
+            val ratio = rig.peaksPerBlock(blocks).last().first / reference.peaksPerBlock(blocks).last().first
+
+            withClue("$case: the new lead note on the ramp") { ratio shouldBeLessThan 0.9 }
+        }
+    }
+
+    "solo: a release ends once the background has reached its target, also when the target later rises again" {
+        // "lead" at 0.95 from 0 to 2 s beside "b" at 0.5 from 0 to 5 s (control only): at 2 s the lead is released and
+        // the rest ramps up to 0.5, which it reaches by about 3.5 s. When "b" ends at 5 s the rest ramps up again; a
+        // new lead note at 5.3 s is background by then and starts on that ramp, not at full level.
+        val rig = Rig()
+        rig.schedule(0.0, soloControl(sourceId = "lead", solo = 0.95), durSec = 2.0)
+        rig.schedule(0.0, soloControl(sourceId = "b", solo = 0.5), durSec = 5.0)
+        rig.schedule(5.3, tone(sourceId = "lead", pan = 0.0))
+        val reference = Rig()
+        reference.schedule(5.3, tone(sourceId = "lead", pan = 0.0))
+
+        val blocks = blocksFor(5.4)
+        val ratio = rig.peaksPerBlock(blocks).last().first / reference.peaksPerBlock(blocks).last().first
+
+        withClue("the new lead note on the ramp") { ratio shouldBeLessThan 0.9 }
+    }
+
+    "solo: solo(\"<1 0>\"): the notes of a 0 cycle play at full level from their first block, with no other solo" {
+        // One lead note per 2 s cycle with the amount 1, 0, 1, 0, the bed hard right. In the 0 cycles the lead is not
+        // soloed, and its new notes play at full level while the bed comes back; in the 1 cycles the bed ducks again.
+        val rig = Rig()
+        val reference = Rig()
+
+        for (cycle in 0 until 4) {
+            val amount = if (cycle % 2 == 0) 1.0 else 0.0
+
+            rig.schedule(cycle * 2.0, tone(sourceId = "lead", pan = 0.0, solo = amount), durSec = 2.0)
+            reference.schedule(cycle * 2.0, tone(sourceId = "lead", pan = 0.0), durSec = 2.0)
+        }
+
+        rig.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+        reference.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+
+        val blocks = blocksFor(7.9)
+        val soloed = rig.peaksPerBlock(blocks)
+        val unsoloed = reference.peaksPerBlock(blocks)
+
+        for (sec in listOf(1.0, 2.01, 2.5, 3.9, 5.0, 6.01, 6.5, 7.8)) {
+            withClue("the lead at full level at $sec s") {
+                soloed[blocksFor(sec)].first shouldBe (unsoloed[blocksFor(sec)].first plusOrMinus 1e-12)
+            }
+        }
+
+        withClue("the bed coming back in the 0 cycle (2.5 s)") {
+            (soloed[blocksFor(2.5)].second / unsoloed[blocksFor(2.5)].second) shouldBeLessThan 0.9
+        }
+        withClue("the bed ducking again in the next 1 cycle (5.8 s)") {
+            (soloed[blocksFor(5.8)].second / unsoloed[blocksFor(5.8)].second) shouldBeLessThan 0.1
+        }
+    }
+
+    "solo: a long soloed note as the source's FIRST event, at the start of the first control piece, does not set the end" {
+        // The one order where the note creates the entry: the control piece at the same start must take the end over
+        // from the note's 8 s gate. Both scheduling orders; the solo ends with the last piece (2.0 s).
+        for (noteFirst in listOf(true, false)) {
+            val rig = Rig()
+            val note = tone(sourceId = "lead", pan = 0.0, solo = 0.95)
+
+            if (noteFirst) {
+                rig.schedule(0.0, note, durSec = 8.0)
+                rig.schedule(0.0, soloControl(sourceId = "lead", solo = 0.95), durSec = 0.25)
+            } else {
+                rig.schedule(0.0, soloControl(sourceId = "lead", solo = 0.95), durSec = 0.25)
+                rig.schedule(0.0, note, durSec = 8.0)
+            }
+
+            for (piece in 1 until 8) {
+                rig.schedule(piece * 0.25, soloControl(sourceId = "lead", solo = 0.95), durSec = 0.25)
+            }
+
+            rig.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+            val reference = Rig().apply { schedule(0.0, tone(sourceId = "bed", pan = 1.0)) }
+
+            val soloed = rig.peaksPerBlock(blocksFor(3.7))
+            val unsoloed = reference.peaksPerBlock(blocksFor(3.7))
+
+            withClue("note first = $noteFirst: ducked at 1.95 s") {
+                (soloed[blocksFor(1.95)].second / unsoloed[blocksFor(1.95)].second) shouldBe (0.05 plusOrMinus 1e-12)
+            }
+            withClue("note first = $noteFirst: back at full level at 3.6 s") {
+                (soloed[blocksFor(3.6)].second / unsoloed[blocksFor(3.6)].second) shouldBe (1.0 plusOrMinus 1e-12)
+            }
+        }
+    }
+
+    "solo: decided (round 3): when the target rises again during a release, the old voice holds, the new note starts at full" {
+        // "a" (a tone hard left) soloed at 0.95 from 0 to 2 s, "b" at 0.5 from 0 to 2.5 s (control only). At 2 s "a"
+        // is released and the rest ramps toward 0.5; at 2.5 s "b" ends, before the ramp lands, and the target rises to
+        // 1.0. a's old voice holds at 0.5 until the ramp passes it; a's new note (hard right) at 3.0 s starts at 1.0.
+        val rig = Rig()
+        rig.schedule(0.0, tone(sourceId = "a", pan = 0.0))
+        rig.schedule(0.0, soloControl(sourceId = "a", solo = 0.95), durSec = 2.0)
+        rig.schedule(0.0, soloControl(sourceId = "b", solo = 0.5), durSec = 2.5)
+        rig.schedule(3.0, tone(sourceId = "a", pan = 1.0))
+        val reference = Rig()
+        reference.schedule(0.0, tone(sourceId = "a", pan = 0.0))
+        reference.schedule(3.0, tone(sourceId = "a", pan = 1.0))
+
+        val blocks = blocksFor(3.1)
+        val soloed = rig.peaksPerBlock(blocks)
+        val alone = reference.peaksPerBlock(blocks)
+
+        withClue("the old voice held at 0.5 (3.09 s)") { (soloed.last().first / alone.last().first) shouldBe (0.5 plusOrMinus 1e-12) }
+        withClue("the new note at full level (3.09 s)") { (soloed.last().second / alone.last().second) shouldBe (1.0 plusOrMinus 1e-12) }
+    }
+
+    "solo: two solos at 1.0 and 0.5: when the stronger ends, its voices go straight to 0.5 while the rest ramps up to it" {
+        // "a" (hard left, a 30 s tone) soloed at 1.0 for 2 s by control events, "b" soloed at 0.5 throughout by control
+        // events only; the bed hard right. After 2 s the target is 1 - 0.5: the bed ramps up from 0, "a" goes to 0.5
+        // over one block (it never dips to the bed's level on the way).
+        val rig = Rig()
+        rig.schedule(0.0, tone(sourceId = "a", pan = 0.0))
+        rig.schedule(0.0, soloControl(sourceId = "a", solo = 1.0), durSec = 2.0)
+        rig.schedule(0.0, soloControl(sourceId = "b", solo = 0.5))
+        rig.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+        val reference = Rig()
+        reference.schedule(0.0, tone(sourceId = "a", pan = 0.0))
+        reference.schedule(0.0, tone(sourceId = "bed", pan = 1.0))
+
+        val blocks = blocksFor(4.5)
+        val soloed = rig.peaksPerBlock(blocks)
+        val unsoloed = reference.peaksPerBlock(blocks)
+
+        fun leftRatio(sec: Double): Double = soloed[blocksFor(sec)].first / unsoloed[blocksFor(sec)].first
+        fun rightRatio(sec: Double): Double = soloed[blocksFor(sec)].second / unsoloed[blocksFor(sec)].second
+
+        withClue("a at full level while soloed (1.9 s)") { leftRatio(1.9) shouldBe (1.0 plusOrMinus 1e-12) }
+        withClue("the bed muted while a solos (1.9 s)") { rightRatio(1.9) shouldBe 0.0 }
+
+        for (sec in listOf(2.05, 2.5, 3.0, 4.4)) {
+            withClue("a at 0.5 from just after its solo ends ($sec s)") { leftRatio(sec) shouldBe (0.5 plusOrMinus 1e-12) }
+        }
+
+        withClue("the bed still low at 2.05 s") { rightRatio(2.05) shouldBeLessThan 0.05 }
+        withClue("the bed at 0.5 at 4.4 s") { rightRatio(4.4) shouldBe (0.5 plusOrMinus 1e-12) }
     }
 
     // ── Solo on the realtime path: refreshed every block while a voice of the source holds its gate ───────────
@@ -720,9 +1024,10 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         withClue("ended after the last note-off") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
     }
 
-    "solo: a released realtime solo's long tail plays at full level beside another live solo, until it ends (Q14)" {
-        // The realtime key's solo lasts while its gate is open; after the note-off the 5 s tail rings on, and the
-        // kick's live solo (hard right) would silence it from 2 s after the note-off without the voice keeping it.
+    "solo: a released realtime solo's long tail beside another live solo is ducked at once after the note-off (Q28)" {
+        // The realtime key's solo lasts while its gate is open; after the note-off its 5 s tail rings on, and the
+        // kick's live solo (hard right) silences it once the grace has passed. Before Q28's answer the voice kept its
+        // protection to its end. The key goes down after the kick's ramp has muted the rest.
         fun Rig.pressPad() {
             engine.scheduler.startRealtimeVoice(
                 playbackId = "song",
@@ -730,10 +1035,11 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
             )
         }
 
-        val rig = Rig()
-        rig.schedule(0.0, tone(sourceId = "kick", pan = 1.0, solo = 1.0))
-        rig.pressPad()
+        val rig = kickRig()
         val reference = Rig()
+        rig.renderPeaks(rampBlocks)
+        reference.renderPeaks(rampBlocks)
+        rig.pressPad()
         reference.pressPad()
 
         val held = rig.peaksPerBlock(blocksFor(0.5))
@@ -742,24 +1048,20 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         rig.release(liveId = 1)
         reference.release(liveId = 1)
 
-        val tail = rig.peaksPerBlock(blocksFor(6.0))
-        val tailAlone = reference.peaksPerBlock(blocksFor(6.0))
+        val tail = rig.peaksPerBlock(blocksFor(4.0))
+        val tailAlone = reference.peaksPerBlock(blocksFor(4.0))
 
         withClue("the tail still sounds 3.5 s after the note-off (the row is not vacuous)") {
             tailAlone[blocksFor(3.5)].first shouldBeGreaterThan 1e-3
         }
 
-        for ((name, pair) in listOf("held" to (held to heldAlone), "tail" to (tail to tailAlone))) {
-            val (soloed, alone) = pair
-
-            for (block in soloed.indices) {
-                withClue("$name block $block: the pad at full level") {
-                    soloed[block].first shouldBe (alone[block].first plusOrMinus 1e-12)
-                }
-            }
+        for (block in held.indices) {
+            withClue("held block $block: the pad at full level") { held[block].first shouldBe (heldAlone[block].first plusOrMinus 1e-12) }
         }
 
-        withClue("the pad's voice has ended: only the kick is left") { rig.activeCount shouldBe 1 }
+        for (block in blocksFor(0.03) until tail.size) {
+            withClue("tail block $block: ducked to 1 - 1.0") { tail[block].first shouldBeLessThan 1e-9 }
+        }
     }
 
     "solo: a held realtime note that made no voice (its sample is not loaded) solos nothing" {
@@ -783,13 +1085,13 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         withClue("back to full level after the cut") { bedRatio(rig = rig, reference = reference, blocks = rampBlocks + 10) shouldBe (1.0 plusOrMinus 1e-12) }
     }
 
-    "solo: a voice entering or leaving protection ramps over one block, never a step (no click)" {
+    "solo: a voice entering or leaving a solo moves without a step (no click)" {
         // `solo(1.0)` on "x" (control events only) mutes everything else. The lead "y" is soloed from 2 s to 3 s:
-        // at 2.0 s it enters protection (0 to 1.0), at 5.0 s (3 s plus the 2 s hold) it leaves it (1.0 to 0).
+        // at 2.0 s it enters protection (0 to 1.0), just after 3.0 s (its event's end plus the grace) it leaves it
+        // (1.0 to 0).
         // Each change is ramped across one 128-frame block, so the largest sample step stays at the sine's own
         // slope plus at most one 128th of its amplitude. A step inside one sample would be the full amplitude.
-        // 301.3 Hz, not 440: a 440 Hz sine started at 0 crosses zero exactly at 2.0 s and 5.0 s, where a step
-        // would hide.
+        // 301.3 Hz, not 440: a 440 Hz sine started at 0 crosses zero exactly at 2.0 s, where a step would hide.
         val lead = tone(sourceId = "y", pan = 0.0).copy(freqHz = 301.3)
         val rig = Rig()
         rig.schedule(0.0, soloControl(sourceId = "x", solo = 1.0))
@@ -798,7 +1100,7 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         val reference = Rig()
         reference.schedule(0.0, lead)
 
-        val blocks = blocksFor(5.1)
+        val blocks = blocksFor(3.2)
         val soloed = rig.renderLeft(blocks)
         val unsoloed = reference.renderLeft(blocks)
 
@@ -817,9 +1119,10 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         withClue("the reference sine has a slope") { slope shouldBeGreaterThan 1e-3 }
         withClue("muted before 2 s") { maxStep(samples = soloed, fromSec = 1.8, toSec = 1.95) shouldBe 0.0 }
         withClue("solo start at 2.0 s") { maxStep(samples = soloed, fromSec = 1.95, toSec = 2.05) shouldBeLessThan slope * 1.2 }
-        withClue("heard between, at full level") { maxStep(samples = soloed, fromSec = 3.0, toSec = 3.1) shouldBe (maxStep(samples = unsoloed, fromSec = 3.0, toSec = 3.1) plusOrMinus 1e-12) }
-        withClue("protection end at 5.0 s") { maxStep(samples = soloed, fromSec = 4.95, toSec = 5.05) shouldBeLessThan slope * 1.2 }
-        withClue("muted after") { maxStep(samples = soloed, fromSec = 5.05, toSec = 5.09) shouldBe 0.0 }
+        withClue("heard between, at full level") { maxStep(samples = soloed, fromSec = 2.5, toSec = 2.6) shouldBe (maxStep(samples = unsoloed, fromSec = 2.5, toSec = 2.6) plusOrMinus 1e-12) }
+        withClue("heard to just before 3.0 s") { maxStep(samples = soloed, fromSec = 2.95, toSec = 2.99) shouldBeGreaterThan slope * 0.5 }
+        withClue("the solo's end just after 3.0 s") { maxStep(samples = soloed, fromSec = 2.99, toSec = 3.05) shouldBeLessThan slope * 1.2 }
+        withClue("muted after") { maxStep(samples = soloed, fromSec = 3.05, toSec = 3.15) shouldBe 0.0 }
     }
 
     "solo: a voice that starts while the others are muted is silent from its first sample (no ramp in from 1.0)" {

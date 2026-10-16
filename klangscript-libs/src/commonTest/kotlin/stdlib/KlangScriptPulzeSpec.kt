@@ -42,6 +42,17 @@ class KlangScriptPulzeSpec : StringSpec({
         ks("Ignitor.square(x => x.duty(0.3))") shouldBe (node() as IgnitorDsl.Pulze).copy(duty = IgnitorDsl.Constant(0.3))
     }
 
+    "duty's parameter is width (Q29): named on both doors, the square and the raw pulze" {
+        val square = (node() as IgnitorDsl.Pulze).copy(duty = IgnitorDsl.Constant(0.3))
+        val raw = (KlangScriptIgnitor.pulze() as IgnitorDsl.RawPulze).copy(duty = IgnitorDsl.Constant(0.3))
+
+        ks("Ignitor.square(x => x.duty(width = 0.3))") shouldBe square
+        KlangScriptIgnitor.square { it.duty(width = 0.3) } shouldBe square
+        ks("Ignitor.pulze(x => x.duty(width = 0.3))") shouldBe raw
+        ks("Ignitor.pulze(x => x.duty(0.3))") shouldBe raw
+        KlangScriptIgnitor.pulze { it.duty(width = 0.3) } shouldBe raw
+    }
+
     "analog(5.0)" {
         ks("Ignitor.square(x => x.analog(5.0))") shouldBe (node() as IgnitorDsl.Pulze).copy(analog = IgnitorDsl.Constant(5.0))
     }

@@ -75,8 +75,8 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * added on top of the dry sound, and every voice on the orbit is echoed alike. So a pattern that
  * should stay dry, or echo by a different amount, goes on an orbit of its own. When another pattern
  * with a delay takes the orbit over, `wet` and `feedback` move smoothly to its values, and a new
- * time crossfades to the new echo; a pattern without one switches the delay off, which does not
- * fade yet (the echoes already sent ring out).
+ * time crossfades to the new echo; a pattern without one switches the delay off: its feed fades
+ * out over 50 ms and the echoes already sent ring out.
  *
  * The call sets every slot: the ones you leave out take the same default as on the master delay,
  * wet 0.25, time 0.25 s, feedback 0.3 and cap 1, unless an earlier call already set them. So a bare

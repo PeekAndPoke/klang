@@ -28,14 +28,19 @@ import kotlin.math.floor
  *    Why the grid: the engine records a control event until its end, and a live edit resends only the events that
  *    start after the edit's cutoff (`KlangPatternScheduler.resyncCurrentCycle`, now plus 0.2 s). With one control
  *    event per cycle, adding or removing `.solo()` took effect up to a whole cycle (or two) later. With the grid,
- *    both directions take effect within 1/8 cycle after the cutoff, then the engine's ramp runs. `control` survives every later op (`merge` never takes it from the other side,
- *    the field setters copy it along), and the engine never builds a voice from a control event, so nothing after
- *    `.solo()` can make one sound.
+ *    both directions take effect within one grid piece after the cutoff (plus the engine's 4-block grace), then
+ *    the engine's ramp runs. The grid is in the soloed pattern's own time: a tempo op after the solo scales it, so
+ *    after `.solo().slow(n)` a piece is n/8 of a cycle. A structural op after the solo (`struct`, `mask`,
+ *    `degradeBy`) filters the control events like any other, so the coverage has gaps where it drops them. `control` survives every later op (`merge` never takes it from the other side, the field
+ *    setters copy it along), and the engine never builds a voice from a control event, so nothing after `.solo()`
+ *    can make one sound.
  *
- * The engine records "source [soloId] is soloed at this amount until the event's end" from any event that carries
- * a positive amount, control events and sounding notes alike (`VoiceScheduler`). The control events therefore keep
- * the solo alive through a rest, which sounding fillers used to do until 2026-10-07
- * (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`).
+ * The engine keeps per source its NEWEST solo event, control events and sounding notes alike (`SoloTracker`): the
+ * source is soloed while that event runs and carries a positive amount, so an amount of 0 (`solo(0)`, a zero in
+ * the control pattern) ends the solo at once. The end comes from the control events: a soloed note's gate never
+ * extends it, so a long note cannot keep a removed solo alive. The control events therefore keep the solo alive
+ * through a rest, which sounding fillers used to do until 2026-10-07
+ * (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`), and end it within one grid piece.
  *
  * Pure and immutable: [soloId] is fixed at construction by the door, and a query depends on its arguments only.
  *
