@@ -301,24 +301,24 @@ private fun applyDuty(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * note("c3 e3 g3").s("pulse").duty("<0.5 0.25 0.1>")   // PWM-style duty sweep
  * ```
  *
- * @param amount Duty cycle, 0 to 1. Default 0.5.
+ * @param width The share of each cycle the wave is high, 0 to 1. Default 0.5, a square.
  * @return A new pattern with the duty cycle applied.
  * @scope voice
  * @category tonal
  * @tags duty, pulse, square, pwm, oscillator
  */
 @KlangScript.Function
-fun SprudelPattern.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyDuty(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.duty(width: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDuty(this, listOfNotNull(width).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the pulse duty cycle.
  *
- * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+ * @param width The share of each cycle the wave is high, 0 to 1 (default 0.5, a square).
  */
 @KlangScript.Function
-fun String.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).duty(amount, callInfo)
+fun String.duty(width: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).duty(width, callInfo)
 
 /**
  * The pulse duty cycle of each event, as a value other setters can read.
@@ -345,22 +345,22 @@ object duty : FieldAccessor({ it.ignitorParams?.get("duty") }) {
     /**
      * Creates a [PatternMapperFn] that sets the pulse duty cycle.
      *
-     * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+     * @param width The share of each cycle the wave is high, 0 to 1 (default 0.5, a square).
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.duty(amount, callInfo) }
+    operator fun invoke(width: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.duty(width, callInfo) }
 }
 
 
 /**
  * Chains a duty-set onto this [PatternMapperFn].
  *
- * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+ * @param width The share of each cycle the wave is high, 0 to 1 (default 0.5, a square).
  */
 @KlangScript.Function
-fun PatternMapperFn.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.duty(amount, callInfo) }
+fun PatternMapperFn.duty(width: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.duty(width, callInfo) }
 
 // -- onepole() --------------------------------------------------------------------------------------------------------
 

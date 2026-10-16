@@ -29,7 +29,7 @@ and goes to the maintainer.
 2. The known tails of the allocation check, each a breach that a rerun clears (the rule is in the header of
    `audio_benchmark/alloc-budgets.txt`): 4 (`spluck-a`), 36 (`E-arith`'s second mode), 38 (`E-duck`).
 3. Done 2026-10-15: songs move freely (`../../tasks-archive/2026-10/20261015-song-checks-move-freely.md`).
-   Then the behaviour changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39), 43 (solo reacts at once, Q28), 44 (`duty(width)`, Q29). Larger, decided, its own task: typed Kotlin doors
+   Then the behaviour changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39), 43 (solo reacts at once, Q28), 44 (`duty(width)`, Q29, done 2026-10-16). Larger, decided, its own task: typed Kotlin doors
    ([`../kotlin-typed-doors.md`](../kotlin-typed-doors.md), Q24)
    and the frozen songs' shared orbits ([`../song-orbit-ownership-review.md`](../song-orbit-ownership-review.md), Q20).
 4. Sections 2 to 6 of the same file (13, 11, the small leftovers, the audit's later steps).

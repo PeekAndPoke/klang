@@ -161,3 +161,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-07: member access reaches every value kind's extensions (`true.toString()`), and the editor reads a name by
   position (hover, closures seeing later locals, param tools and locals, diagnostics name the call as written)
   (`docs/tasks-archive/2026-10/20261007-boolean-member-access.md`, `docs/tasks-archive/2026-10/20261007-callable-object-docs.md` "Open items, done").
+- 2026-10-16: the pulse builders' `duty(width)` (was `duty(duty)`) on `Ign.square`, `Ign.pulze` and `Kat.square`, the
+  word of sprudel's `duty` door (Q29; `docs/tasks/in-progress/engine-follow-ups.md` item 44, `docs/retired-names.md`).

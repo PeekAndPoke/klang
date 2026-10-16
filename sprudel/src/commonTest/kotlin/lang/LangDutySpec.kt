@@ -27,6 +27,16 @@ class LangDutySpec : StringSpec({
             // form (d): the PatternMapperFn.duty chained-mapper overload
             "chained duty(ctrl)" to seq(pat).apply(duty(ctrl).duty(ctrl)),
             "script chained duty(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(duty("$ctrl").duty("$ctrl"))"""),
+            // the parameter is `width` on every form (Q29), named
+            "pattern.duty(width = ctrl)" to seq(pat).duty(width = ctrl),
+            "script pattern.duty(width = ctrl)" to SprudelPattern.compile("""seq("$pat").duty(width = "$ctrl")"""),
+            "string.duty(width = ctrl)" to pat.duty(width = ctrl),
+            "script string.duty(width = ctrl)" to SprudelPattern.compile(""""$pat".duty(width = "$ctrl")"""),
+            "duty(width = ctrl)" to seq(pat).apply(duty(width = ctrl)),
+            "script duty(width = ctrl)" to SprudelPattern.compile("""seq("$pat").apply(duty(width = "$ctrl"))"""),
+            "chained duty(width = ctrl)" to seq(pat).apply(duty(width = ctrl).duty(width = ctrl)),
+            "script chained duty(width = ctrl)" to
+                SprudelPattern.compile("""seq("$pat").apply(duty(width = "$ctrl").duty(width = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.ignitorParams?.get("duty") shouldBe 0.25

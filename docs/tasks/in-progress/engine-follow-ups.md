@@ -1499,6 +1499,20 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     every surface in the same change, the KlangScript stdlib and Kotlin doors with their door-parity spec, the sprudel
     door (`lang_synthesis_ignitorparam.kt`) and the docs; the slot name `duty` is unchanged. Not part of the
     performance batch 31 to 41. S.
+    **DONE (2026-10-16, maintainer: "no backward compat needed yet", so no alias):** `width` on every duty door:
+    sprudel's `duty(width)` (the pattern, string and mapper forms and the `duty(...)` call of the accessor object) and
+    the three pulse builders' knob, `duty(width)` (was `duty(duty)`) on `OscSquareBuilder` (`Ign.square`),
+    `OscPulzeBuilder` (`Ign.pulze`) and `KatalystSquareBuilder` (`Kat.square`), with their KDocs and a line in the
+    music-writing Ignitor reference. Unchanged: positional calls, the node fields and the slot `duty`, and
+    `sndPulze(duty)`, whose parameter names the slot like the other sound doors'. No song, tutorial or doc called
+    `duty(amount = ...)` or a builder `duty(duty = ...)` by name. Pins: `LangControlRestSpec`'s `duty(width)` row,
+    `KlangScriptPulzeSpec` (named `width` on both doors, square and raw pulze), the `Kat.square` row of
+    `KlangScriptKatalystModulatorDoorParitySpec`, and since review round 1 `LangDutySpec`'s named `width` rows on
+    all four sprudel forms (pattern, string, standalone, chained mapper; each form alone back to `amount` is RED). Mutants, each RED then restored and `cmp` clean: sprudel's door back
+    to `amount` (the rest row: "unknown parameter 'width'"), the builders back to `duty` with the Kotlin rows made
+    positional (the script rows of both specs; the raw pulze alone too), and with the Kotlin rows named (they no
+    longer compile). Green: the jvmTests of `klangscript-libs`, `sprudel`, `audio_bridge` and the root (songs); corpus
+    GREEN, 3 of 3 frozen and 15 live identical, 0 edited. Old names in `docs/retired-names.md`.
 
 ## 2. Allocation on the JVM, at build and per orbit
 

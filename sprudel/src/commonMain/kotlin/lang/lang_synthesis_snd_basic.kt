@@ -379,7 +379,7 @@ private fun applySndPulze(source: SprudelPattern): SprudelPattern =
  * Sets the sound to a pulse wave oscillator with configurable duty cycle.
  *
  * @param-tool duty SprudelPulzeEditor, SprudelPulzeSequenceEditor
- * @param duty Pulse width / duty cycle (0.0–1.0)
+ * @param duty The share of each cycle the wave is high, 0 to 1 (default 0.5, a square).
  * @return A new pattern with sound set to "pulze" and parameters applied.
  * @category tonal
  * @tags pulze, pulse, oscillator, snd
@@ -394,7 +394,7 @@ fun SprudelPattern.sndPulze(duty: PatternLike? = null, callInfo: CallInfo? = nul
 /**
  * Parses this string as a pattern and sets sound to pulse wave.
  *
- * @param duty Duty cycle (0–1).
+ * @param duty The share of each cycle the wave is high, 0 to 1 (default 0.5, a square).
  * @return A new pattern with sound set to "pulze".
  * @category tonal
  * @tags pulze, pulse, oscillator, snd
@@ -406,7 +406,7 @@ fun String.sndPulze(duty: PatternLike? = null, callInfo: CallInfo? = null): Spru
 /**
  * Returns a [PatternMapperFn] that sets the sound to pulse wave.
  *
- * @param duty Duty cycle (0–1).
+ * @param duty The share of each cycle the wave is high, 0 to 1 (default 0.5, a square).
  * @return A [PatternMapperFn] that sets sound to "pulze".
  * @category tonal
  * @tags pulze, pulse, oscillator, snd
@@ -416,7 +416,7 @@ fun sndPulze(duty: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
     { p -> p.sndPulze(duty, callInfo) }
 
 /** Chains a pulse wave sound onto this [PatternMapperFn].
- * @param duty Duty cycle (0–1).
+ * @param duty The share of each cycle the wave is high, 0 to 1 (default 0.5, a square).
  */
 @KlangScript.Function
 fun PatternMapperFn.sndPulze(duty: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

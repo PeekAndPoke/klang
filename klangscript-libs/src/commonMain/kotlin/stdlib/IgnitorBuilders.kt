@@ -291,9 +291,9 @@ data class OscPulzeBuilder(val node: IgnitorDsl.RawPulze)
 @KlangScript.Function
 fun OscPulzeBuilder.phase(phase: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Pulse width / duty cycle (0..1, default 0.5 = square). Accepts an `Ignitor.*` graph for PWM. */
+/** Pulse width / duty cycle: `width` is the share of each cycle the wave is high, 0 to 1 (default 0.5, a square). Accepts an `Ignitor.*` graph for PWM. */
 @KlangScript.Function
-fun OscPulzeBuilder.duty(duty: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(duty = duty.toIgnitorDsl()))
+fun OscPulzeBuilder.duty(width: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(duty = width.toIgnitorDsl()))
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function
@@ -322,9 +322,9 @@ data class OscSquareBuilder(val node: IgnitorDsl.Pulze)
 @KlangScript.Function
 fun OscSquareBuilder.phase(phase: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
 
-/** Pulse width / duty cycle (0..1, default 0.5 = square). Accepts an `Ignitor.*` graph for PWM. */
+/** Pulse width / duty cycle: `width` is the share of each cycle the wave is high, 0 to 1 (default 0.5, a square). Accepts an `Ignitor.*` graph for PWM. */
 @KlangScript.Function
-fun OscSquareBuilder.duty(duty: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(duty = duty.toIgnitorDsl()))
+fun OscSquareBuilder.duty(width: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(duty = width.toIgnitorDsl()))
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
 @KlangScript.Function

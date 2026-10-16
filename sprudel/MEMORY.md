@@ -230,3 +230,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-11: a `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s two slot maps are `KlangMap`s, built
   by `toVoiceData` from the bags, and `ParamBag.toMap()` returns a plain copy; events identical on V8 and the JVM
   (`docs/tasks/in-progress/engine-follow-ups.md` item 2, step 5).
+- 2026-10-16: `duty(width)` (was `amount`) on the duty door, its three forms and the mapper (Q29); positional calls
+  and the slot `duty` unchanged, `sndPulze(duty)` keeps the slot's word (`docs/tasks/in-progress/engine-follow-ups.md`
+  item 44, `docs/retired-names.md`).

@@ -118,6 +118,8 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         kx("""Kat.square(1, x => x.duty(Kat.param("pw", 0.3)).phase(Kat.param("q", 0).neg()))""") shouldBe
                 KatalystKnobDsl.Square(freq = c(1.0), duty = duty, phase = phase)
         kx("Kat.square(1, x => x.duty(0.25))") shouldBe KatalystKnobDsl.Square(freq = c(1.0), duty = c(0.25))
+        kx("Kat.square(1, x => x.duty(width = 0.25))") shouldBe KatalystKnobDsl.Square(freq = c(1.0), duty = c(0.25))
+        KlangScriptKatalyst.square(1) { it.duty(width = 0.25) } shouldBe KatalystKnobDsl.Square(freq = c(1.0), duty = c(0.25))
         KlangScriptKatalyst.square(1) { it.duty(KlangScriptKatalyst.param("pw", 0.3)) } shouldBe
                 KatalystKnobDsl.Square(freq = c(1.0), duty = duty)
         kx("""Kat.sine(1, x => x.phase(Kat.param("q", 0).neg()))""") shouldBe
