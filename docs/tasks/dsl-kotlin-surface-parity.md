@@ -1,5 +1,9 @@
 # DSL Kotlin-surface parity — every DSL usable from Kotlin directly
 
+Status (2026-10-16): the Kotlin-door half of this task is succeeded by
+[`kotlin-typed-doors.md`](kotlin-typed-doors.md). Its "`IgnitorDsl` primary plus a scalar overload" shape is
+retired (Q47): the Kotlin door is typed only, numbers enter through `.ign` / `.kat`.
+
 **Principle (maintainer, 2026-08-20):** the foundation of every Klang DSL must allow direct
 use from Kotlin, not only from KlangScript. Sprudel achieved this and is the model. Script
 stdlib and Kotlin extensions are two doors to ONE DSL — every surface addition lands on both

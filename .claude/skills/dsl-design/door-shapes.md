@@ -97,11 +97,18 @@ oscillators (already `(freq, configure)`).
   puts `lookahead` FIFTH, where the compressor and sprudel put `release`: a compressor-shaped 5-argument call
   `m.limiter(-3, 4, 2, 0.01, 0.2)` sets 200 ms of lookahead (bounded to 50 ms, i.e. latency), not a release. It
   is the maintainer's table; the release note recommends named arguments for the limiter.
-- **Recorded two-door asymmetries (step 3b, 2026-09-25).** The Kotlin `tremolo` door stays FLAT
-  (`tremolo(rate, depth, shape = "sine")`) where the script door takes a builder, the
-  filter doors' precedent. The Kotlin `shape` and `distort` doors keep a `String` shape and an `Int` factor, while
-  the script doors also take a number or a slot; a Kotlin caller writes a slot through the node constructor, as
-  for `floor` and the pitch envelope.
+- **The typed Kotlin door (maintainer, 2026-10-16, `docs/tasks/kotlin-typed-doors.md`; target state, the sweep
+  follows in steps 2 to 4).** Named parameters on the Kotlin door are now THE RULE where the script takes a
+  configure lambda: a flat Kotlin door is no longer an asymmetry to record but the shape every Kotlin door has.
+  Every value parameter is typed (`IgnitorDsl` / `KatalystKnobDsl`, numbers through `.ign` / `.kat`), so a slot or
+  a signal goes straight into the argument and the "write it through the node constructor" workaround below
+  retires. Build-time knobs (`shape`, `oversample`, `lookahead`, the phase pool, shimmer `pitches`) stay plain
+  values: the one recorded exception. The two bullets below describe the code until the sweep lands.
+- **Recorded two-door asymmetries (step 3b, 2026-09-25; superseded by the typed Kotlin door above).** The Kotlin
+  `tremolo` door stays FLAT (`tremolo(rate, depth, shape = "sine")`) where the script door takes a builder, the
+  filter doors' precedent (now the rule). The Kotlin `shape` and `distort` doors keep a `String` shape and an `Int`
+  factor (build-time knobs, which stay plain), while the script doors also take a number or a slot; until the
+  sweep a Kotlin caller writes a slot through the node constructor, as for `floor` and the pitch envelope.
 - **Recorded asymmetries (oscillator phase task, 2026-10-06).** (1) The tremolo's `range` is on the Ignitor doors
   only; sprudel's `tremolo(depth, rate, shape)` gets none (maintainer, 2026-10-06, "not in sprudel yet"): it is a
   flat door with no builder layer for a two-value knob, and `classic()` places no range slots. The engine is ready
@@ -111,11 +118,12 @@ oscillators (already `(freq, configure)`).
   built-in sounds read no `phase` slot and the default costs nothing; an instrument author opens it per note with
   `x.phase(Ignitor.param("phase", 0))` and the pattern's `ignp("phase", ...)`. Sprudel sounds get no `phase` slot
   (maintainer, 2026-10-06).
-- **Recorded two-door asymmetries (step 3d(i)).** The Kotlin filter doors stay flat and name the four envelope
-  stages separately (audio_bridge cannot see the script builders; a superset of the builder). The Kotlin
-  `phaser`/`shimmer` set `floor` only by `.copy(floor = ...)`: `floor` exists only as an effect-builder knob
-  (the maintainer's condition), so the Kotlin node extensions `.wet()`/`.dryFloor()` were REMOVED, not renamed.
-  There is no Kotlin `pitchEnvelope` door (there was none before either); Kotlin builds the node.
+- **Recorded two-door asymmetries (step 3d(i); superseded by the typed Kotlin door above).** The Kotlin filter
+  doors stay flat and name the four envelope stages separately (audio_bridge cannot see the script builders; a
+  superset of the builder), which is now the rule for every Kotlin door. The Kotlin `phaser`/`shimmer` set `floor`
+  only by `.copy(floor = ...)` until the sweep; the typed door gains a named `floor =` (Q48, 2026-10-16). The node
+  extensions `.wet()`/`.dryFloor()` stay removed. There is no Kotlin `pitchEnvelope` door (there was none before
+  either); Kotlin builds the node.
 - **Sprudel's `penv` carries two dead slots**, `release` and `curve`, and an `anchor` whose meaning moves
   to a sustain. Raised for the sprudel side, not decided here. (Decided in D3 (4), landed in step 5b c1,
   2026-09-25: `penv(amount, attack, decay, sustain, release)`, a real release, `curve` and `anchor` removed.)

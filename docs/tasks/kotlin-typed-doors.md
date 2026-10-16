@@ -1,7 +1,7 @@
 # Typed Kotlin doors: the compiler checks every door
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
-below), step 1 next.** Large, mostly mechanical.
+below); step 1 done 2026-10-16, step 2a next.** Large, mostly mechanical.
 
 ## Why
 
@@ -92,3 +92,18 @@ logic moves); 5 optional `.ign`/`.kat` for existing `Constant(x)` lines, only wh
   Kotlin door like the rest.
 - **Q51:** yes, build-time knobs (`shape`, `oversample`, `lookahead`, the phase pool, shimmer `pitches`) stay plain
   values: the one recorded exception.
+
+## Step 1 (2026-10-16): the extensions and the rule texts
+
+`audio_bridge` gained `val Double.ign` / `val Int.ign` (an `IgnitorDsl.Constant`, in `IgnitorDsl.kt` before the
+arithmetic) and `val Double.kat` / `val Int.kat` (a `KatalystKnobDsl.Constant`, at the end of `KatalystKnobDsl.kt`),
+plus `operator fun unaryMinus()` on each `Constant` returning the negated `Constant`: Kotlin reads `-1.ign` as
+`-(1.ign)`, and the operator keeps it `Constant(-1.0)`, the script's `-1`. No `ign`, `kat` or `unaryMinus` existed
+before, so nothing clashes; the KDoc says the precise `Constant` receiver wins over any later general operator.
+`NumberExtensionsSpec` (commonTest, 6 rows) pins the constants, Int against Double, and the minus rows; both mutants
+(each `unaryMinus` returning `Neg(this)`) went red by assertion, restored and `cmp`-checked; the JS target compiles.
+The rule texts now describe the typed door as the target state, the sweep following in steps 2 to 4: the "Two doors,
+one DSL" row in `CLAUDE.md` (with Q46's `Ign` / `Kat` objects and Q50's `XxxLike = Any` only on script functions),
+`/dsl-design` §3 (the layering replaces "klangscript-libs IS the Kotlin door"), the two recorded asymmetry bullets in
+`door-shapes.md` (named parameters on the Kotlin door are the rule now), and `klangscript-libs/CLAUDE.md`. No door
+and no caller changed.

@@ -218,3 +218,28 @@ sealed interface KatalystKnobDsl {
         val persistence: KatalystKnobDsl = Constant(0.5),
     ) : KatalystKnobDsl
 }
+
+// Numbers into the typed Kotlin door
+
+/**
+ * This number as a Katalyst knob: the way a plain number enters the typed Kotlin door, e.g. `0.3.kat` for a knob
+ * held at 0.3, or `BodyMaterials.indexOf("wood").kat` for a name knob. The same node the script door builds from a
+ * bare `0.3`.
+ *
+ * Boxing a number into a node at build time is fine (maintainer, 2026-10-16): it happens once, when the chain is
+ * written, never in the audio path.
+ */
+val Double.kat: KatalystKnobDsl.Constant get() = KatalystKnobDsl.Constant(this)
+
+/** [Double.kat] for an [Int]: `2.kat` is `KatalystKnobDsl.Constant(2.0)`, the same tree as `2.0.kat`. */
+val Int.kat: KatalystKnobDsl.Constant get() = KatalystKnobDsl.Constant(this.toDouble())
+
+/**
+ * The negated number, still a [KatalystKnobDsl.Constant]: `-1.kat` is `Constant(-1.0)`, the same tree as the script's
+ * `-1`, not a negation node around a constant.
+ *
+ * Kotlin reads `-1.kat` as `-(1.kat)`, so this operator is what keeps the tree flat. Being declared on the precise
+ * `Constant` type, it wins over any extension operator on `KatalystKnobDsl` in this package; keep the general
+ * operators as extensions (a member would win).
+ */
+operator fun KatalystKnobDsl.Constant.unaryMinus(): KatalystKnobDsl.Constant = KatalystKnobDsl.Constant(-value)

@@ -57,6 +57,8 @@ Decided 2026-09-05; plan and status in `docs/tasks-archive/2026-09/20260906-dsl-
 door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)
 ```
 
+(Script door; the Kotlin door takes them as named parameters, §3.)
+
 ```javascript
 Ignitor.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
 //           ^ inside the braces you configure the oscillator   ^ outside you process it
@@ -122,9 +124,26 @@ script-only surface forces raw constructor calls and splits the vocabulary.
 
 - A surface addition lands on BOTH doors in the same deliverable. A stdlib function without its
   Kotlin twin is a review finding (`docs/tasks/dsl-kotlin-surface-parity.md`).
-- Builders live in `klangscript-libs`, next to their doors, and are annotated for KlangScript
-  directly (KSP runs there like in sprudel): one implementation, one KDoc, no delegate objects.
-  `klangscript-libs` IS the Kotlin door for the builders; `audio_bridge` stays pure wire types.
+- **The layering (maintainer, 2026-10-16, option C; target state, the sweep follows in steps 2 to
+  4 of `docs/tasks/kotlin-typed-doors.md`, so today's code does not match yet):** A new door
+  during the sweep lands in the target layering where its DSL already has it and follows today's
+  layering otherwise: an Ignitor door lands typed in `audio_bridge` once step 2 covers its family,
+  a new Katalyst door follows today's layering until step 4.
+  - The ONE public Kotlin door is typed and lives in `audio_bridge`, next to the wire types: every
+    value parameter is an `IgnitorDsl` / `KatalystKnobDsl`, a number enters as `0.5.ign` /
+    `0.5.kat` (`-1.ign` is `Constant(-1.0)`), so a number or a signal fits each argument on its own
+    with no overloads. It holds each door's logic. Typed Kotlin `Ign` and `Kat` objects mirror the
+    script objects word for word (`Ign.saw()`, `Kat.sine(...)`), so moving between KlangScript and
+    Kotlin costs only the `.ign` / `.kat` and the door shape (named parameters for a configure lambda).
+  - The KlangScript door (`klangscript-libs`, the `@KlangScript...` functions, objects and
+    builders) is internal to its module, converts its number-or-signal arguments once
+    (`toIgnitorDsl`, `toKatalystKnob`) and calls the typed Kotlin door. It is not the Kotlin door.
+  - Only KlangScript-exposed functions take `XxxLike = Any` parameters, converted and checked at
+    run time. A shared function (`bands`, `cut`, `serial`, `parallel`, `blend`) may serve both
+    doors only while its signature has no `Any`-typed parameter.
+  - Where the script takes a configure lambda, the Kotlin door takes named parameters.
+  - The one recorded exception: build-time knobs (`shape`, `oversample`, `lookahead`, the phase
+    pool, shimmer `pitches`) stay plain values on the Kotlin door.
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
   (`KlangScriptFilterDoorParitySpec` is the pattern).
 - Script-door param defaults are SAFE LITERALS (number, string, bool, null). Since 2026-10-06 the

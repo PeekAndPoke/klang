@@ -2427,6 +2427,30 @@ sealed interface IgnitorDsl {
 // Builder Extensions
 // ═════════════════════════════════════════════════════════════════════════════════
 
+// Numbers into the typed Kotlin door
+
+/**
+ * This number as an Ignitor value: the way a plain number enters the typed Kotlin door, e.g.
+ * `osc.vibrato(rate = 0.5.ign, semitones = 0.3.ign)`. The same node the script door builds from a bare `0.5`.
+ *
+ * Boxing a number into a node at build time is fine (maintainer, 2026-10-16): it happens once, when the tree is
+ * written, never in the audio path.
+ */
+val Double.ign: IgnitorDsl.Constant get() = IgnitorDsl.Constant(this)
+
+/** [Double.ign] for an [Int]: `5.ign` is `IgnitorDsl.Constant(5.0)`, the same tree as `5.0.ign`. */
+val Int.ign: IgnitorDsl.Constant get() = IgnitorDsl.Constant(this.toDouble())
+
+/**
+ * The negated number, still a [IgnitorDsl.Constant]: `-1.ign` is `Constant(-1.0)`, the same tree as the script's
+ * `-1`, not a negation node around a constant.
+ *
+ * Kotlin reads `-1.ign` as `-(1.ign)`, so this operator is what keeps the tree flat. Being declared on the precise
+ * `Constant` type, it wins over any extension operator on `IgnitorDsl` in this package (for example one that
+ * builds [IgnitorDsl.Neg]); keep the general operators as extensions (a member would win).
+ */
+operator fun IgnitorDsl.Constant.unaryMinus(): IgnitorDsl.Constant = IgnitorDsl.Constant(-value)
+
 // Arithmetic
 
 /** Adds two ignitor signals together (sample-by-sample sum). */

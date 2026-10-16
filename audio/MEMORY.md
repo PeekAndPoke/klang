@@ -375,6 +375,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Typed Kotlin doors step 1: `.ign` / `.kat` on `Double` and `Int` and a `unaryMinus` on each `Constant`
+  (`-1.ign` is `Constant(-1.0)`), pinned by `NumberExtensionsSpec`; the "Two doors, one DSL" rule rewritten for the
+  typed door as the target state (`docs/tasks/kotlin-typed-doors.md`).
 - 2026-10-16 Engine follow-up 42: every delay and reverb switch-off fades its feed over the wet glide (Q39, "fade, do
   not cut"), and the landing block moves the stage into the drain by itself, so an orbit without an owner drains too;
   the new owner's first 50 ms bleed into the old ring or room, accepted; corpus unmoved (it reaches no such switch-off):

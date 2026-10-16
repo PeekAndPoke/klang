@@ -6,8 +6,10 @@ String/Array/Number/Boolean extensions. Kotlin Multiplatform (JVM + JS).
 
 The language itself lives in `:klangscript` and knows nothing about this module. This module is
 to `:klangscript` what `:sprudel` is: a library on top of the language, registered by KSP from
-`@KlangScript.*` annotations, with BOTH doors of every DSL in one place (the Kotlin API and its
-script registration). Split out of `:klangscript` on 2026-09-06
+`@KlangScript.*` annotations. Today it holds BOTH doors of every DSL in one place (the Kotlin API and its
+script registration). Target state (maintainer, 2026-10-16, `docs/tasks/kotlin-typed-doors.md`, the sweep
+follows in steps 2 to 4): this module is the KlangScript door only, internal, converting once and calling the
+typed Kotlin door in `audio_bridge`; the typed `Ign` / `Kat` objects and every Kotlin door live there. Split out of `:klangscript` on 2026-09-06
 (`docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`).
 
 ## Layout
@@ -32,7 +34,10 @@ script registration). Split out of `:klangscript` on 2026-09-06
 
 - Every DSL surface follows `/dsl-design` (immutability, configure lambdas on builder types, two
   doors, parity, one word per concept). The builders of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`
-  land HERE, next to their doors; this module is the Kotlin door for them as well.
+  land HERE, next to their doors. Until the typed-doors sweep (steps 2 to 4 of
+  `docs/tasks/kotlin-typed-doors.md`) this module is also the Kotlin door for them; the target is that the
+  Kotlin door is the typed one in `audio_bridge` and everything here is internal and delegates. Only the
+  script-exposed functions here take `XxxLike = Any` parameters (Q50, 2026-10-16).
 - Script-door parameter defaults are safe literals (number, string, boolean, null); since 2026-10-06
   the KSP processor refuses any other default with a build error naming the door and the parameter
   (the default thunk fills every script call, the pasted literal serves native callers; `/dsl-design` §3).
