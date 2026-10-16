@@ -7,7 +7,9 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.peekandpoke.klang.audio_bridge.Ign as KotlinIgn
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.OscSawBuilder
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -96,7 +98,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun saw(freq: IgnitorDslLike? = null, configure: ((OscSawBuilder) -> OscSawBuilder)? = null): IgnitorDsl =
-        OscSawBuilder(IgnitorDsl.Saw(freq = freq.orNoteFreq())).configuredBy("Ignitor.saw", configure).node
+        KotlinIgn.saw(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.saw", configure) }
 
     /**
      * Creates a square wave oscillator: a variable-duty pulse whose `duty` defaults to 50%.
@@ -382,17 +384,8 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun pluck(freq: IgnitorDslLike? = null, configure: ((OscPluckBuilder) -> OscPluckBuilder)? = null): IgnitorDsl =
-        OscPluckBuilder(
-            // Sealed constants, not the node's open `Slots.*` params: a custom pluck ignores sprudel's
-            // per-note modulation unless the author opts in with `Ignitor.slot.*` (see [KlangScriptIgnitorSlots]).
-            IgnitorDsl.Pluck(
-                freq = freq.orNoteFreq(),
-                feedback = IgnitorDsl.Constant(0.996),
-                brightness = IgnitorDsl.Constant(0.5),
-                pickPosition = IgnitorDsl.Constant(0.5),
-                stiffness = IgnitorDsl.Constant(0.0),
-            ),
-        ).configuredBy("Ignitor.pluck", configure).node
+        // The typed Kotlin door holds the sealed string defaults (not the node's open `Slots.*` params).
+        OscPluckBuilder(KotlinIgn.pluck(freq = freq.orNoteFreq())).configuredBy("Ignitor.pluck", configure).node
 
     /**
      * Creates a unison Karplus-Strong plucked string model.
@@ -406,18 +399,8 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun superpluck(freq: IgnitorDslLike? = null, configure: ((OscSuperPluckBuilder) -> OscSuperPluckBuilder)? = null): IgnitorDsl =
-        OscSuperPluckBuilder(
-            // Sealed constants like [pluck]; unlike the super oscillators, the unison pair is sealed too.
-            IgnitorDsl.SuperPluck(
-                freq = freq.orNoteFreq(),
-                voices = IgnitorDsl.Constant(8.0),
-                spread = IgnitorDsl.Constant(0.2),
-                feedback = IgnitorDsl.Constant(0.996),
-                brightness = IgnitorDsl.Constant(0.5),
-                pickPosition = IgnitorDsl.Constant(0.5),
-                stiffness = IgnitorDsl.Constant(0.0),
-            ),
-        ).configuredBy("Ignitor.superpluck", configure).node
+        // The typed Kotlin door holds the sealed defaults, the unison pair included.
+        OscSuperPluckBuilder(KotlinIgn.superpluck(freq = freq.orNoteFreq())).configuredBy("Ignitor.superpluck", configure).node
 
     // ── Parameter Slot ───────────────────────────────────────────────────────
 

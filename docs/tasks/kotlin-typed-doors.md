@@ -1,7 +1,8 @@
 # Typed Kotlin doors: the compiler checks every door
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
-below); step 1 done 2026-10-16, step 2a next.** Large, mostly mechanical.
+below, revised the same day: one set of builders, equal doors); steps 1 and 1b done; spike S1 done 2026-10-16 (review
+rounds 1 and 2 applied); rollout S2 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
 
 ## Why
 
@@ -76,7 +77,8 @@ logic moves); 5 optional `.ign`/`.kat` for existing `Constant(x)` lines, only wh
 
 ## The maintainer's answers (2026-10-16, Q44 to Q51)
 
-- **Q44, Q45:** yes. Option C; the Kotlin door uses named parameters where the script takes a configure lambda.
+- **Q44, Q45:** yes. Option C; the Kotlin door uses named parameters where the script takes a configure lambda
+  (the named-parameter half is superseded by the revision below: the same builders and shapes on both doors).
 - **Q46: surface parity.** "When there is an `Ign` object in KlangScript it should be there in Kotlin as well.
   Switching from KlangScript to Kotlin or vice versa should be easy for the user. The only difference might be the
   function doors and the `.ign` and `.kat` on the Kotlin side." So typed Kotlin `Ign` and `Kat` objects live in
@@ -84,14 +86,15 @@ logic moves); 5 optional `.ign`/`.kat` for existing `Constant(x)` lines, only wh
   the nodes; the script objects in `klangscript-libs` become internal and delegate to them.
 - **Q47:** retire the Kotlin `Double` operators (`saw * 0.5.ign`), "as long as the KlangScript side stays intact"
   (the script keeps `saw * 0.5`).
-- **Q48:** allow `floor =` on the Kotlin phaser and shimmer.
+- **Q48:** allow `floor =` on the Kotlin phaser and shimmer. (Superseded by the revision below: `floor` is a builder
+  knob on the Kotlin door, as on the script.)
 - **Q49:** an eq section given an expression throws `IllegalArgumentException` at build time, naming door and parameter.
 - **Q50: the rule.** "Only KlangScript-exposed functions accept any `XxxLike = Any` params, converted and checked at
   run time. The Kotlin doors should be typesafe." So `bands`, `cut`, `serial`, `parallel` and `blend` may stay one
   shared function only where their signature has no `Any`-typed parameter; any that takes an `XxxLike` gets a typed
   Kotlin door like the rest.
-- **Q51:** yes, build-time knobs (`shape`, `oversample`, `lookahead`, the phase pool, shimmer `pitches`) stay plain
-  values: the one recorded exception.
+- **Q51:** yes, build-time knobs stay plain values: the one recorded exception. The criterion (a knob the script
+  takes as a plain number or string stays plain; a plain `Double`, no `Int` overloads) lives in `/dsl-design` §3.
 
 ## Step 1 (2026-10-16): the extensions and the rule texts
 
@@ -107,3 +110,121 @@ one DSL" row in `CLAUDE.md` (with Q46's `Ign` / `Kat` objects and Q50's `XxxLike
 `/dsl-design` §3 (the layering replaces "klangscript-libs IS the Kotlin door"), the two recorded asymmetry bullets in
 `door-shapes.md` (named parameters on the Kotlin door are the rule now), and `klangscript-libs/CLAUDE.md`. No door
 and no caller changed.
+
+## Step 1b (2026-10-16): the typed `Ign` and `Kat` objects
+
+Inventory: the script `Ign` has 28 functions and the `slot` property (`freq`, nine oscillators, `silence`, six noises,
+five super oscillators, `pluck`, `superpluck`, `param`, `constant`, `variants`); the script `Kat` has 10 functions,
+the call form and the `slot` property (`build` and its call form `Kat(...)`, `classic`, `param`, five periodic
+modulators, `perlin`, `berlin`). `audio_bridge` gained `object Ign` (`Ign.kt`) and `object Kat` (`Kat.kt`) with the
+same words, parameter names, order and defaults; every value parameter is an `IgnitorDsl` / `KatalystKnobDsl`, the
+builder knobs are named parameters of the same word with the node's default (`Ign.saw(freq = 110.ign, analog =
+5.ign, phase = 0.5.ign)`), and the knobs the script already takes as plain numbers (`resetSamples`, `shapeMax`, the
+flanks, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`) stay plain `Double` (Q51). Each function returns
+its precise node type; `Ign.slot` is `IgnitorDsl.Slots`, `Kat.slot` is `KatalystDsl.Slots`. One piece of door logic
+moved: the sealed string defaults of `pluck` and `superpluck` (constants, not the open `Slots.*` params) live in the
+Kotlin door now, and the script doors build on it (`KotlinIgn.pluck(freq = ...)`, an import alias, since both
+objects are called `Ign`). The other script doors keep their conversions (`orNoteFreq`, the `variants` child check),
+which belong to the script edge.
+
+Not mirrored, each waiting for an API decision (superseded by the revision below: these take the script's own
+builder shapes, `harmonics(count, rolloff)`, chained `partial`, chained `phasePool`, so the questions are closed): the sine's partial banks (`harmonics(count, rolloff)`,
+`octaves(count, rolloff)`, `suboctaves(count, rolloff)`: `harmonics` + `harmonicsRolloff` as the node names them, or
+`harmonicsCount` + `harmonicsRolloff` by the `rangeFrom` / `rangeTo` rule), the sine's repeatable `partial(ratio, gain,
+phase)` (a list parameter, perhaps `partials = listOf(...)`, has no script word), the super oscillators'
+`phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` (the node's flat names, or prefixed
+ones; `on` defaults to 1 in the call and 0 on the node), and `Kat.build` / `Kat(...)`, the chain, which is step 4.
+
+`KotlinIgnObjectParitySpec` (72 tests) and `KotlinKatObjectParitySpec` (24) compare the script call with the Kotlin
+call for every mirrored function: defaults, numbers, a signal, and every knob with distinct values; noise sources
+compare with the per-call `uid` zeroed, and one row pins the pluck doors' sealed node by hand, since the script door
+now builds on the Kotlin one. Six mutants went red and were restored and `cmp`-checked: a wrong `whitenoise` default,
+a swapped `saw` parameter, a dropped `supersaw` knob, a wrong sealed `pluck` default, a swapped `Kat.square` duty and
+phase, a wrong `Kat.perlin` default. `:audio_bridge:jvmTest`, `:klangscript-libs:jvmTest` and
+`:audio_bridge:compileKotlinJs` are green; the corpus is GREEN, frozen 3 of 3 identical, 13 live identical and 2
+edited, `Kokon` and `Der Schmetterling`, whose code hashes changed with the maintainer's song commit `13019900`, not
+with this step.
+
+## Revision (maintainer, 2026-10-16): one set of builders, equal doors
+
+"The underlying builders should be the same for KlangScript or Kotlin and the DSL doors should be equal / similar,
+only differing in which parameters are accepted." This supersedes Q45's flat named parameters: the Kotlin door uses
+the same builders and the same shapes as the script (configure lambdas, chained knobs, `harmonics(count, rolloff)`,
+chained `partial`, chained `phasePool`, maintainer 2026-10-16), with typed parameters:
+
+```
+Ign.saw().vibrato(5, 0.3, v => v.range(0, 1))                       // KlangScript
+Ign.saw().vibrato(5.ign, 0.3.ign) { it.range(0.ign, 1.ign) }        // Kotlin
+```
+
+So the builders move to `audio_bridge` with typed knob methods (reachable by the engine); the KlangScript side keeps
+thin internal `Any`-taking variants that convert and call the same typed builder methods (Q50), registered by KSP.
+Step 1b's flat named parameters are reworked onto the builders; the step 1 rule texts that say "named parameters for
+a configure lambda" come back out. "The rest should follow naturally" (maintainer).
+
+## Spike S1 (2026-10-16): `vibrato` and `saw` on one set of builders
+
+`VibratoBuilder` and `OscSawBuilder` moved to `audio_bridge/src/commonMain/kotlin/IgnitorBuilders.kt` (same simple
+names, the script shows them) with typed member knobs (`range(from, to)`, `phase`, `analog` take `IgnitorDsl`;
+`resetSamples`, `shapeMax` stay `Double`, Q51), plus `internal fun <B> B.configured(configure)`. `IgnitorDsl.vibrato`
+is now ONE door, `vibrato(rate: IgnitorDsl, semitones: IgnitorDsl, configure)`, replacing the flat `Double` and
+`IgnitorDsl` overloads (`rangeFrom`, `rangeTo`, `phase` as named parameters are gone); `Ign.saw` is
+`saw(freq, configure)`. The script doors `vibrato` and `Ignitor.saw` convert and call the typed doors with the checking
+wrapper (`self.vibrato(r, s) { it.configuredBy("vibrato", configure) }`); the script knobs are `internal` extensions
+that convert and call `this.member(...)`. Callers moved to `.ign` (`WarmupVocabulary`, six `audio_be` specs, the JS
+wire codec spec, `KlangScriptVibratoDoorParitySpec`); `KotlinIgnObjectParitySpec` has the saw rows in the builder
+shape, four vibrato rows and a pin of the saw and vibrato default nodes (the script doors build on the Kotlin ones now).
+
+Proven: (a) an `internal` `@KlangScript.Function` compiles in the generated KSP code, JVM and JS (the generated file is
+in the same module); a `name = "resetSamples"` override generates `typedReceiver.scriptResetSamples(...)` under the
+script word. (b) The script call reaches the variant and the variant the member: no recursion, the right node (the
+parity rows; a variant returning `this`, a swapped `range` in the variant, `scriptResetSamples` calling `shapeMax`, and
+a swapped `range` in the member each went red, as did a wrong `Ign.saw` freq default; restored, `cmp`-checked).
+(c) `GeneratedStdlibDocs.kt` differs only in the two types' `fqcn` (`script.stdlib` to `audio_bridge`); every KDoc text
+is byte-identical. (d) In `sprudel` (a scratch file, removed), `saw.phase(0.5.ign)` and `vib.range(0.ign, 1.ign)`
+compile, `saw.phase(0.5)`, `vib.range(0, 1)` and `saw.scriptResetSamples(4.0)` fail with "Cannot access ...: it is
+internal in file". (e) `:audio_bridge:compileKotlinJs`, `:klangscript-libs:compileKotlinJs` and
+`:audio_bridge:compileTestKotlinJs` are green. `:audio_bridge`, `:klangscript-libs`, `:audio_be`, `:sprudel` and root
+`jvmTest` are green; the corpus is GREEN, frozen 3 of 3 identical, 13 live identical, `Kokon` and `Der Schmetterling`
+edited by the maintainer's song commit as in step 1b.
+
+### Pattern
+
+The recipe lives once, in `/dsl-design` §3 ("The typed-door pattern"), with the test rule beside it (one row per
+member knob against the node written out with `.copy()`, plus the parity rows).
+
+### Review round 1 (2026-10-16)
+
+Two reviewers found two gaps, both applied. (1) A script variant named like its member silently called ITSELF once
+the member's parameter names drifted (reviewer A's mutant `range(lo, hi)`: it compiled and threw a
+`StackOverflowError`). Every script variant now has a Kotlin name of its own and the script word in the annotation
+(`scriptRange`, `scriptPhase`, `scriptAnalog`, `scriptResetSamples`, `scriptShapeMax`); the same mutant is now a
+compile error in the variant ("No parameter with name 'from' found"), restored and `cmp`-checked. (2) Parity rows
+cannot see a member bug, since both doors share the member: `KotlinIgnObjectParitySpec` gained one row per saw and
+vibrato member knob against the node written out with `.copy()`, from Kotlin and from the script
+(`KlangScriptSawRampSpec`, `KlangScriptIgnitorPhaseDoorParitySpec` and `KlangScriptVibratoDoorParitySpec` already
+covered every knob against written-out nodes from the script). Decided for the rollout (coordinator): the eq becomes
+two typed builders of the same words (voice and Katalyst) sharing one helper for the section conversion and the Q49
+refusal; a name knob gets a typed `String` member beside the index form through the same coercing lookup; build-time
+knobs take a plain `Double`, no `Int` overloads. The rule texts now say "the same builders and shapes; only the
+accepted types differ" (`CLAUDE.md`, `/dsl-design` §2 to §4, `door-shapes.md`, `klangscript-libs/CLAUDE.md`, the
+flat doors' KDocs in `IgnitorDsl.kt`, `Ign.kt`, `Kat.kt`).
+
+## Rollout steps (coordinator, 2026-10-16; replace steps 2 to 4)
+
+Each step follows the typed-door pattern in `/dsl-design` §3: builders into `audio_bridge` with typed members,
+renamed internal script variants, the script door converting and delegating, written-out-node rows per knob.
+
+| Step | Scope | From the design step's cut |
+|------|-------|----------------------------|
+| S2  | the other oscillators (`Ign.sine` with its partial banks, square, tri, ramp, zawtooth, zamp, impulse, pulze, the super oscillators with `phasePool`, pluck, superpluck) onto their builders | new with the revision |
+| S3a | filters and eq (two typed eq builders, voice and Katalyst, one helper with the Q49 refusal) | step 2a |
+| S3b | adsr, fm and pitchEnvelope | step 2b, part of 2d |
+| S3c | phaser, shimmer (`floor` as a builder knob) and tremolo | part of 2d |
+| S4  | the arithmetic; the `Double` twins out (Q47) | step 2c |
+| S5  | Katalyst: the chain door `Kat.build` / `Kat(...)`, its stage builders and the knob arithmetic (renamed variants) | step 4 |
+| S6  | `bands`, `serial`, `parallel` and `blend` (shared only where no `Any` parameter remains, Q50) | new with Q50 |
+| S7  | the visibility sweep: every remaining script door and builder knob `internal` | step 3 |
+
+The file counts per step come from the design report's table, which this record does not carry; the coordinator
+holds it.

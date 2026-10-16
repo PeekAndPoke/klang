@@ -12,6 +12,7 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.pitchMod
 import io.peekandpoke.klang.audio_bridge.pitchModSemitones
@@ -220,12 +221,12 @@ class PitchModSemitonesSpec : StringSpec({
     }
 
     "under and over a vibrato: the ratio is the vibrato's times 2^(7/12), frame by frame" {
-        val vibrato = ratiosOf(probed.vibrato(rate = 6.0, semitones = 0.5))
+        val vibrato = ratiosOf(probed.vibrato(rate = 6.0.ign, semitones = 0.5.ign))
         val fifth = 2.0.pow(7.0 / 12.0)
 
         vibrato.max() shouldBeGreaterThan 1.0
-        shouldFollow(ratiosOf(probed.pitchModSemitones(7.0).vibrato(rate = 6.0, semitones = 0.5))) { vibrato[it] * fifth }
-        shouldFollow(ratiosOf(probed.vibrato(rate = 6.0, semitones = 0.5).pitchModSemitones(7.0))) { vibrato[it] * fifth }
+        shouldFollow(ratiosOf(probed.pitchModSemitones(7.0).vibrato(rate = 6.0.ign, semitones = 0.5.ign))) { vibrato[it] * fifth }
+        shouldFollow(ratiosOf(probed.vibrato(rate = 6.0.ign, semitones = 0.5.ign).pitchModSemitones(7.0))) { vibrato[it] * fifth }
     }
 
     // ── Non-finite and huge amounts: a literal is gated, a signal's sample meets safeOut (no clamp below SAFE_MAX) ─

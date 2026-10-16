@@ -8,6 +8,7 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.OscSawBuilder
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
@@ -344,12 +345,12 @@ fun OscSquareBuilder.fallFlank(fallFlank: Double): OscSquareBuilder = copy(node 
 
 // ── Saw ─────────────────────────────────────────────────────────────────
 
-/**
- * Builder for [IgnitorDsl.Saw], handed to the `configure` lambda of `Ignitor.saw(...)`.
- * Knobs: `analog`, `resetSamples`, `shapeMax`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
+/*
+ * `OscSawBuilder` lives in `audio_bridge` (`IgnitorBuilders.kt` there) with its typed member knobs; the script knobs
+ * below are `internal` extensions with a Kotlin name of their own (`scriptPhase`, the script word in `name`) that
+ * convert and call those members, so a renamed or retyped member is a compile error, never a self-call
+ * (`/dsl-design` section 3, the typed-door pattern).
  */
-data class OscSawBuilder(val node: IgnitorDsl.Saw)
 
 /**
  * Where in its cycle the sawtooth runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
@@ -362,20 +363,20 @@ data class OscSawBuilder(val node: IgnitorDsl.Saw)
  * Ignitor.saw(x => x.phase(0.5))   // starts mid-rise, at 0
  * ```
  */
-@KlangScript.Function
-fun OscSawBuilder.phase(phase: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSawBuilder.scriptPhase(phase: IgnitorDslLike): OscSawBuilder = this.phase(phase = phase.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSawBuilder.analog(character: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSawBuilder.scriptAnalog(character: IgnitorDslLike): OscSawBuilder = this.analog(character = character.toIgnitorDsl())
 
 /** Analog flyback time in samples: lower = brighter, sharper reset; higher = softer (default 1.0). */
-@KlangScript.Function
-fun OscSawBuilder.resetSamples(resetSamples: Double): OscSawBuilder = copy(node = node.copy(resetSamples = resetSamples))
+@KlangScript.Function(name = "resetSamples")
+internal fun OscSawBuilder.scriptResetSamples(resetSamples: Double): OscSawBuilder = this.resetSamples(resetSamples = resetSamples)
 
 /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps high notes sane (default 0.5). */
-@KlangScript.Function
-fun OscSawBuilder.shapeMax(shapeMax: Double): OscSawBuilder = copy(node = node.copy(shapeMax = shapeMax))
+@KlangScript.Function(name = "shapeMax")
+internal fun OscSawBuilder.scriptShapeMax(shapeMax: Double): OscSawBuilder = this.shapeMax(shapeMax = shapeMax)
 
 // ── Ramp ─────────────────────────────────────────────────────────────────
 

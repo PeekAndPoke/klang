@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
+import io.peekandpoke.klang.audio_bridge.VibratoBuilder
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.tap
@@ -423,8 +424,12 @@ fun TremoloBuilder.shape(name: IgnitorDslLike): TremoloBuilder =
 
 // ── Vibrato ──────────────────────────────────────────────────────────────────
 
-/** Builder for [IgnitorDsl.Vibrato], handed to the `configure` lambda of `.vibrato(...)`. Knobs: `range`, `phase`. */
-data class VibratoBuilder(val node: IgnitorDsl.Vibrato)
+/*
+ * `VibratoBuilder` lives in `audio_bridge` (`IgnitorBuilders.kt` there) with its typed member knobs; the script knobs
+ * below are `internal` extensions with a Kotlin name of their own (`scriptRange`, the script word in `name`) that
+ * convert and call those members, so a renamed or retyped member is a compile error, never a self-call
+ * (`/dsl-design` section 3, the typed-door pattern).
+ */
 
 /**
  * Where the vibrato's swing sits, in the -1..1 language of the Ignitor `range`: the LFO's -1 maps to [from], its +1
@@ -438,9 +443,9 @@ data class VibratoBuilder(val node: IgnitorDsl.Vibrato)
  * Ignitor.saw().vibrato(5, 0.5, v => v.range(0, 1).phase(0.75))   // from the note up to half a semitone, never below
  * ```
  */
-@KlangScript.Function
-fun VibratoBuilder.range(from: IgnitorDslLike, to: IgnitorDslLike): VibratoBuilder =
-    copy(node = node.copy(rangeFrom = from.toIgnitorDsl(), rangeTo = to.toIgnitorDsl()))
+@KlangScript.Function(name = "range")
+internal fun VibratoBuilder.scriptRange(from: IgnitorDslLike, to: IgnitorDslLike): VibratoBuilder =
+    this.range(from = from.toIgnitorDsl(), to = to.toIgnitorDsl())
 
 /**
  * Where in its cycle the vibrato's LFO runs: a fraction of one cycle added to its phase every sample (default 0), the
@@ -453,8 +458,8 @@ fun VibratoBuilder.range(from: IgnitorDslLike, to: IgnitorDslLike): VibratoBuild
  * Ignitor.saw().vibrato(5, 0.5, v => v.phase(0.25))   // every note starts at the top of its wobble
  * ```
  */
-@KlangScript.Function
-fun VibratoBuilder.phase(phase: IgnitorDslLike): VibratoBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun VibratoBuilder.scriptPhase(phase: IgnitorDslLike): VibratoBuilder = this.phase(phase = phase.toIgnitorDsl())
 
 // ── Shimmer ──────────────────────────────────────────────────────────────────
 

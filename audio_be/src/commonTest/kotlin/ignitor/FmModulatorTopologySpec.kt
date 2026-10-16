@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.pitchMod
 import io.peekandpoke.klang.audio_bridge.plus
@@ -65,7 +66,7 @@ class FmModulatorTopologySpec : StringSpec({
     /** A probed leaf that reads `Freq`, so a `detune` over it forks. It writes the probe's signal plus 0. */
     fun pf() = p.plus(IgnitorDsl.Freq.mul(0.0))
 
-    val vib: (IgnitorDsl) -> IgnitorDsl = { it.vibrato(rate = 6.0, semitones = 0.5) }
+    val vib: (IgnitorDsl) -> IgnitorDsl = { it.vibrato(rate = 6.0.ign, semitones = 0.5.ign) }
 
     /** A vibrato whose RATE reads the note: its memo keeps the freq key, the shape that breaks a modulator asking at its own frequency. */
     val vibOnNote: (IgnitorDsl) -> IgnitorDsl = { IgnitorDsl.Vibrato(inner = it, rate = IgnitorDsl.Freq.mul(0.03), semitones = c(0.5)) }
@@ -263,17 +264,17 @@ class FmModulatorTopologySpec : StringSpec({
         val penv: (IgnitorDsl) -> IgnitorDsl = {
             IgnitorDsl.PitchEnvelope(inner = it, semitones = c(12.0), attack = c(0.01), decay = c(0.05), sustain = c(0.0), release = c(0.1))
         }
-        val f2 = p.fm(modulator = penv(p), ratio = 2.5, depth = 200.0).vibrato(rate = 4.0, semitones = 0.3)
-        val top = p.vibrato(rate = 7.0, semitones = 0.2).fm(modulator = f2, ratio = 1.5, depth = 300.0).vibrato(rate = 6.0, semitones = 0.5)
+        val f2 = p.fm(modulator = penv(p), ratio = 2.5, depth = 200.0).vibrato(rate = 4.0.ign, semitones = 0.3.ign)
+        val top = p.vibrato(rate = 7.0.ign, semitones = 0.2.ign).fm(modulator = f2, ratio = 1.5, depth = 300.0).vibrato(rate = 6.0.ign, semitones = 0.5.ign)
         val l = lanes(top)
-        val above = times(alone(vib), alone({ it.vibrato(rate = 4.0, semitones = 0.3) }))
+        val above = times(alone(vib), alone({ it.vibrato(rate = 4.0.ign, semitones = 0.3.ign) }))
 
         shouldMatch("the inner modulator: (outer vibrato * its fm's vibrato) * its own pitch envelope", l.ratios(825.0), times(above, alone(penv)))
         shouldMatch("the inner carrier: (outer vibrato * its fm's vibrato) * fm2", l.ratios(330.0), times(above, term(out = l.out(825.0), depth = 200.0, fmHz = 330.0)))
         shouldMatch(
             "the carrier: (outer vibrato * fm1) * its own vibrato, which reaches no modulator",
             l.ratios(note),
-            times(times(alone(vib), term(out = l.out(330.0), depth = 300.0, fmHz = note)), alone({ it.vibrato(rate = 7.0, semitones = 0.2) })),
+            times(times(alone(vib), term(out = l.out(330.0), depth = 300.0, fmHz = note)), alone({ it.vibrato(rate = 7.0.ign, semitones = 0.2.ign) })),
         )
         l.totalPerBlock shouldBe setOf(3)
     }
@@ -295,9 +296,9 @@ class FmModulatorTopologySpec : StringSpec({
     }
 
     "an fm voice in a parameter position (the outer fm's depth) follows its own vibrato only, never the outer one" {
-        val inParam = IgnitorDsl.Detune(inner = pf().fm(modulator = p, ratio = 2.5, depth = 100.0).vibrato(rate = 5.0, semitones = 0.3), semitones = c(7.0))
+        val inParam = IgnitorDsl.Detune(inner = pf().fm(modulator = p, ratio = 2.5, depth = 100.0).vibrato(rate = 5.0.ign, semitones = 0.3.ign), semitones = c(7.0))
         val l = lanes(vib(IgnitorDsl.Fm(carrier = p, modulator = p, ratio = c(3.5), depth = inParam)))
-        val own = alone({ it.vibrato(rate = 5.0, semitones = 0.3) })
+        val own = alone({ it.vibrato(rate = 5.0.ign, semitones = 0.3.ign) })
         val pc = note * fifth
 
         shouldMatch("the outer modulator reads the outer vibrato", l.ratios(770.0), alone(vib))
@@ -354,10 +355,10 @@ class FmModulatorTopologySpec : StringSpec({
     "shared: one fm let under two different vibratos: each copy's modulator follows its own vibrato" {
         val f = sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0)
 
-        output(f.vibrato(rate = 6.0, semitones = 0.5) + f.vibrato(rate = 4.0, semitones = 0.3)).toList() shouldBe
+        output(f.vibrato(rate = 6.0.ign, semitones = 0.5.ign) + f.vibrato(rate = 4.0.ign, semitones = 0.3.ign)).toList() shouldBe
             output(
-                sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0).vibrato(rate = 6.0, semitones = 0.5) +
-                    sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0).vibrato(rate = 4.0, semitones = 0.3),
+                sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0).vibrato(rate = 6.0.ign, semitones = 0.5.ign) +
+                    sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0).vibrato(rate = 4.0.ign, semitones = 0.3.ign),
             ).toList()
     }
 

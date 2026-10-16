@@ -43,7 +43,7 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
 
     val doors = listOf(
         PhaseDoor("sine", { p -> KlangScriptIgnitor.sine(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Sine(freq = c(4.0), phase = p) }),
-        PhaseDoor("saw", { p -> KlangScriptIgnitor.saw(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Saw(freq = c(4.0), phase = p) }),
+        PhaseDoor("saw", { p -> KlangScriptIgnitor.saw(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Saw(freq = c(4.0), phase = p) }),
         PhaseDoor("ramp", { p -> KlangScriptIgnitor.ramp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Ramp(freq = c(4.0), phase = p) }),
         PhaseDoor("square", { p -> KlangScriptIgnitor.square(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Pulze(freq = c(4.0), phase = p) }),
         PhaseDoor("pulze", { p -> KlangScriptIgnitor.pulze(4.0) { it.phase(p) } }, { p -> IgnitorDsl.RawPulze(freq = c(4.0), phase = p) }),

@@ -2763,7 +2763,8 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * `lpf(freq, q, passes)`; the script door takes it on its builder,
  * `lowpass(freq, q, x => x.passes(n))`, and refuses a third number. The node carries it as a knob
  * ([IgnitorDsl.Lowpass.passes]); a SLOT there is written through the node constructor, which is
- * what `classic()` does (a recorded two-door asymmetry, the `shape`/`distort` precedent of step 3b).
+ * what `classic()` does (a leftover of the flat door: the typed-door rollout puts this door on the script's
+ * builder, `docs/tasks/kotlin-typed-doors.md`).
  * The five envelope knobs are a COMPOUND DOOR (`/dsl-design` section 4): `null` means the call
  * did not name that knob, and naming ANY of them fills the others from
  * `constants/FilterEnvelopeDefaults.kt`, `env` included. So `lowpass(800.0, decay = 0.3,
@@ -2789,9 +2790,9 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * @param humanize Per-voice cutoff tolerance and drift lane, both scaled by `analog`
  * (see [IgnitorDsl.Lowpass.humanize]). `false` draws nothing and changes nothing.
  *
- * This flat signature is the ENGINE-LEVEL Kotlin door (the precedent of `eq`/`band`/`tap`,
- * `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`): `audio_bridge` cannot see the
- * script builders, so the script door `lowpass(freq, q, configure)` collects its builder's knobs
+ * This flat signature is the ENGINE-LEVEL Kotlin door until the typed-door rollout moves the builders into
+ * `audio_bridge` and this door onto them (`docs/tasks/kotlin-typed-doors.md`, `/dsl-design` section 3, the
+ * typed-door pattern); today the script door `lowpass(freq, q, configure)` collects its builder's knobs
  * and calls THIS function after the lambda, which is where the compound fill runs, once, for both
  * doors. The one asymmetry: here the four stage times can be named one at a time, while the
  * builder's `adsr(attack, decay, sustain, release)` names all four at once; every
@@ -3152,9 +3153,9 @@ fun IgnitorDsl.shape(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.S
  * @param declick the de-click one-pole on the gain, in seconds; `null` keeps the node's
  *   default, the `declick` slot (0 = off). See [IgnitorDsl.Adsr.declick].
  *
- * This flat signature is the ENGINE-LEVEL Kotlin door, the filter doors' precedent: `audio_bridge`
- * cannot see the script builders, so the script door `adsr(a, d, s, r, e => e.curves(...).declick(...))`
- * collects its builder's knobs and calls THIS function. The builder's `declick` is this function's
+ * This flat signature is the ENGINE-LEVEL Kotlin door until the typed-door rollout moves the builders into
+ * `audio_bridge` and this door onto them (`docs/tasks/kotlin-typed-doors.md`); today the script door
+ * `adsr(a, d, s, r, e => e.curves(...).declick(...))` collects its builder's knobs and calls THIS function. The builder's `declick` is this function's
  * `declick` and the node's: one word on every door, the unit in the KDoc (`/dsl-design` section 4). The
  * envelope's ON/OFF switch is not on either door ([IgnitorDsl.Adsr.on]).
  */
@@ -3277,9 +3278,9 @@ fun IgnitorDsl.Tremolo.hasClassicRange(): Boolean =
  * [shape] (a name from [LfoShapes], converted to its index). See [IgnitorDsl.Tremolo].
  *
  * FLAT, where the script door is `tremolo(rate, depth, configure)` with `shape` and `range(from, to)` on a
- * builder (here [rangeFrom] and [rangeTo], default `(-1, 0)`, the classic dip): a recorded two-door asymmetry,
- * the filter doors' precedent (`audio_bridge` cannot see the script builders; the flat door is a superset of the
- * builder). A slot in any knob is written through the node.
+ * builder (here [rangeFrom] and [rangeTo], default `(-1, 0)`, the classic dip): a leftover the typed-door rollout
+ * removes, when the builder moves into `audio_bridge` and this door takes it, as [vibrato] does since spike S1
+ * (`docs/tasks/kotlin-typed-doors.md`). A slot in any knob is written through the node.
  */
 fun IgnitorDsl.tremolo(
     rate: Double,
@@ -3319,46 +3320,23 @@ fun IgnitorDsl.shimmer(
 // Pitch modulation
 
 /**
- * Applies vibrato (pitch modulation) at the given LFO [rate] in Hz, [semitones] deep, its swing placed by [rangeFrom] and
- * [rangeTo] (default `(-1, 1)`, both ways; `(0, 1)` only upward) and its LFO starting at [phase] (a fraction of one
- * cycle, default 0). See [IgnitorDsl.Vibrato].
+ * Applies vibrato (pitch modulation) at the given LFO [rate] in Hz, [semitones] deep. Any knob may be a number
+ * (`5.ign`), a slot or a moving signal; a signal depth is read per sample. Where the swing sits and where the LFO
+ * starts are knobs on the [VibratoBuilder], the same builder and shape as the script door:
  *
- * FLAT, where the script door is `vibrato(rate, semitones, configure)` with `range(from, to)` and `phase` on a builder:
- * the tremolo's recorded two-door asymmetry (`audio_bridge` cannot see the script builders; the flat door is a superset
- * of the builder). Every knob also takes a signal through the [IgnitorDsl] overload.
- */
-fun IgnitorDsl.vibrato(
-    rate: Double,
-    semitones: Double,
-    rangeFrom: Double = VIBRATO_RANGE_FROM,
-    rangeTo: Double = VIBRATO_RANGE_TO,
-    phase: Double = VIBRATO_PHASE,
-) = vibrato(
-    rate = IgnitorDsl.Constant(rate),
-    semitones = IgnitorDsl.Constant(semitones),
-    rangeFrom = IgnitorDsl.Constant(rangeFrom),
-    rangeTo = IgnitorDsl.Constant(rangeTo),
-    phase = IgnitorDsl.Constant(phase),
-)
-
-/**
- * [vibrato] with signals: any knob may be a number ([IgnitorDsl.Constant]), a slot or a moving signal, as on the script
- * door (`x.vibrato(5.0, Ignitor.sine(0.5) ...)` swells the depth). A signal depth is read per sample.
+ * ```kotlin
+ * Ign.saw().vibrato(5.ign, 0.3.ign) { it.range(0.ign, 1.ign) }   // script: Ign.saw().vibrato(5, 0.3, v => v.range(0, 1))
+ * ```
+ *
+ * See [IgnitorDsl.Vibrato]; the full text lives on the script door (`KlangScriptIgnitorExtensions.vibrato`).
  */
 fun IgnitorDsl.vibrato(
     rate: IgnitorDsl,
     semitones: IgnitorDsl,
-    rangeFrom: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_RANGE_FROM),
-    rangeTo: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_RANGE_TO),
-    phase: IgnitorDsl = IgnitorDsl.Constant(VIBRATO_PHASE),
-) = IgnitorDsl.Vibrato(
-    inner = this,
-    rate = rate,
-    semitones = semitones,
-    rangeFrom = rangeFrom,
-    rangeTo = rangeTo,
-    phase = phase,
-)
+    configure: ((VibratoBuilder) -> VibratoBuilder)? = null,
+): IgnitorDsl.Vibrato = VibratoBuilder(
+    IgnitorDsl.Vibrato(inner = this, rate = rate, semitones = semitones),
+).configured(configure).node
 
 /** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
 fun IgnitorDsl.accelerate(semitones: Double) = IgnitorDsl.Accelerate(

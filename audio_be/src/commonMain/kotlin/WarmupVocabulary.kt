@@ -27,6 +27,7 @@ import io.peekandpoke.klang.audio_bridge.floor
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.frac
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lerp
 import io.peekandpoke.klang.audio_bridge.log
 import io.peekandpoke.klang.audio_bridge.lowpass
@@ -230,7 +231,7 @@ object WarmupVocabulary {
         .tremolo(rate = 3.0, depth = 0.3, shape = "square") // a non-sine LFO, the pulse oscillator with its edge
         .tremolo(rate = 4.0, depth = 0.3, rangeFrom = 0.0, rangeTo = 1.0) // off the classic range: the general gain
         .shimmer()
-        .vibrato(rate = 5.0, semitones = 0.2)
+        .vibrato(rate = 5.0.ign, semitones = 0.2.ign)
         .accelerate(1.0)
         .pitchMod(IgnitorDsl.Sine(freq = Constant(3.0)).mul(Constant(0.1)))
         .pitchModSemitones(IgnitorDsl.Sine(freq = Constant(4.0)).mul(Constant(0.3)))

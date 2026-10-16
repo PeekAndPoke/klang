@@ -7,8 +7,8 @@ String/Array/Number/Boolean extensions. Kotlin Multiplatform (JVM + JS).
 The language itself lives in `:klangscript` and knows nothing about this module. This module is
 to `:klangscript` what `:sprudel` is: a library on top of the language, registered by KSP from
 `@KlangScript.*` annotations. Today it holds BOTH doors of every DSL in one place (the Kotlin API and its
-script registration). Target state (maintainer, 2026-10-16, `docs/tasks/kotlin-typed-doors.md`, the sweep
-follows in steps 2 to 4): this module is the KlangScript door only, internal, converting once and calling the
+script registration). Target state (maintainer, 2026-10-16, `docs/tasks/kotlin-typed-doors.md`, the rollout
+S2 to S7 follows): this module is the KlangScript door only, internal, converting once and calling the
 typed Kotlin door in `audio_bridge`; the typed `Ign` / `Kat` objects and every Kotlin door live there. Split out of `:klangscript` on 2026-09-06
 (`docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`).
 
@@ -24,9 +24,9 @@ typed Kotlin door in `audio_bridge`; the typed `Ign` / `Kat` objects and every K
 | `src/commonMain/kotlin/stdlib/KlangScriptKatalyst.kt` | `Katalyst(k => ...)` (its call form, `@KlangScript.Invoke`), `Katalyst.build`, `Katalyst.classic`, `Katalyst.param` (a `KatalystKnobDsl.Param`, the chain's own knob node), the knob modulators (`Katalyst.sine`, `saw`, `ramp`, `tri`, `square`, `perlin`, `berlin`), `Katalyst.slot`, and the short name `Kat`: the chain for an orbit (`katalyst(...)`) and for the output (`master(...)`, since phase 3 step 12) |
 | `src/commonMain/kotlin/stdlib/KlangScriptKatalystSlots.kt` | `Katalyst.slot` and its stage groups (`Katalyst.slot.reverb.wet`, ...): the script face of `KatalystDsl.Slots`, the knobs `classic()` places |
 | `src/commonMain/kotlin/stdlib/KatalystBuilders.kt` | `KatalystBuilder` (each knob appends one stage, in written order; `limiter` is a compressor preset) and its stage builders; `toKatalystKnob`, the one conversion to a knob; the knob arithmetic on `KatalystKnobDsl` (`plus` ... `range`) and the modulators' builders (`phase`, `duty`) |
-| `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |
+| `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs; for builders already moved to `audio_bridge/IgnitorBuilders.kt` (`OscSawBuilder` since S1) only the internal, renamed script knobs (`scriptPhase`, ...) |
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |
-| `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `AdsrBuilder` (curves, declick) and `ModAdsrBuilder` (curves) for the envelopes, `FilterBuilder`/`BandFilterBuilder` (the four filters), `EqBuilder` (band, tap), `PitchEnvelopeBuilder`, `FmBuilder`, `PhaserBuilder`/`ShimmerBuilder` (floor), `TremoloBuilder` (shape) |
+| `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `AdsrBuilder` (curves, declick) and `ModAdsrBuilder` (curves) for the envelopes, `FilterBuilder`/`BandFilterBuilder` (the four filters), `EqBuilder` (band, tap), `PitchEnvelopeBuilder`, `FmBuilder`, `PhaserBuilder`/`ShimmerBuilder` (floor), `TremoloBuilder` (shape); the internal script knobs of `VibratoBuilder` (`range`, `phase`), whose class lives in `audio_bridge` since S1 |
 | `src/{jvmMain,jsMain}/kotlin/stdlib/PlatformConsole.kt` | Platform console output                                              |
 | `build/generated/ksp/metadata/commonMain/kotlin/`  | KSP output, never edit: one `GeneratedStdlib<Area>Registration.kt` per source file area, the entry point `GeneratedStdlibRegistration.kt`, the docs `GeneratedStdlibDocs.kt` |
 
@@ -34,9 +34,12 @@ typed Kotlin door in `audio_bridge`; the typed `Ign` / `Kat` objects and every K
 
 - Every DSL surface follows `/dsl-design` (immutability, configure lambdas on builder types, two
   doors, parity, one word per concept). The builders of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`
-  land HERE, next to their doors. Until the typed-doors sweep (steps 2 to 4 of
-  `docs/tasks/kotlin-typed-doors.md`) this module is also the Kotlin door for them; the target is that the
-  Kotlin door is the typed one in `audio_bridge` and everything here is internal and delegates. Only the
+  move to `audio_bridge` in the typed-doors rollout (`docs/tasks/kotlin-typed-doors.md`; `OscSawBuilder` and
+  `VibratoBuilder` since spike S1), with typed member knobs; the Kotlin door there has the same builders and
+  shapes, only the accepted types differ. What stays HERE is the script door: internal, renamed knob variants
+  (`@KlangScript.Function(name = "range") internal fun VibratoBuilder.scriptRange(...)`) that convert and call
+  the members, and the script doors that convert and delegate (`/dsl-design` §3, the typed-door pattern). Until
+  the rollout reaches a builder, this module is still its Kotlin door. Only the
   script-exposed functions here take `XxxLike = Any` parameters (Q50, 2026-10-16).
 - Script-door parameter defaults are safe literals (number, string, boolean, null); since 2026-10-06
   the KSP processor refuses any other default with a build error naming the door and the parameter

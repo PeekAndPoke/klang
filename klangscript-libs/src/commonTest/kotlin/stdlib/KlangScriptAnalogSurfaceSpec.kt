@@ -10,6 +10,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -94,7 +95,7 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
         val ign = KlangScriptIgnitor
         val kotlin = listOf<Pair<String, IgnitorDsl>>(
             "sine" to ign.sine(configure = { it.analog(character = 3.0) }),
-            "saw" to ign.saw(configure = { it.analog(character = 3.0) }),
+            "saw" to ign.saw(configure = { it.analog(character = 3.ign) }),
             "tri" to ign.tri(configure = { it.analog(character = 3.0) }),
             "ramp" to ign.ramp(configure = { it.analog(character = 3.0) }),
             "zawtooth" to ign.zawtooth(configure = { it.analog(character = 3.0) }),

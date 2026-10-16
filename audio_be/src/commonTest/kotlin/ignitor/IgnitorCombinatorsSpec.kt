@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.abs
@@ -329,7 +330,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "vibrato(rate, depth) - output differs from plain sine (frequency modulation)" {
         val dry = generate(IgnitorDsl.Sine().toExciter(random = testRandom))
-        val wet = generate(IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.05).toExciter(random = testRandom))
+        val wet = generate(IgnitorDsl.Sine().vibrato(rate = 5.0.ign, semitones = 0.05.ign).toExciter(random = testRandom))
 
         var differs = false
         for (i in dry.indices) {

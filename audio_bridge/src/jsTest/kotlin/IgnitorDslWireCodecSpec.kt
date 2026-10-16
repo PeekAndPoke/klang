@@ -321,16 +321,12 @@ class IgnitorDslWireCodecSpec : StringSpec({
     }
 
     // --- pitch modulation -----------------------------------------------------------------------------------
-    "Vibrato" { check(IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.02)) }
+    "Vibrato" { check(IgnitorDsl.Sine().vibrato(rate = 5.0.ign, semitones = 0.02.ign)) }
     "Vibrato with a range and a phase (7c), a signal bound" {
         check(
-            IgnitorDsl.Sine().vibrato(
-                rate = IgnitorDsl.Constant(5.0),
-                semitones = IgnitorDsl.Constant(0.5),
-                rangeFrom = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(1.0)).mul(0.5),
-                rangeTo = IgnitorDsl.Constant(1.0),
-                phase = IgnitorDsl.Constant(0.25),
-            )
+            IgnitorDsl.Sine().vibrato(rate = 5.0.ign, semitones = 0.5.ign) {
+                it.range(from = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(1.0)).mul(0.5), to = 1.0.ign).phase(0.25.ign)
+            }
         )
     }
     "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0)) }

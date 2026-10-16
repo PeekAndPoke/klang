@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
+import io.peekandpoke.klang.audio_bridge.VibratoBuilder
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -18,6 +19,7 @@ import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.rangex
+import io.peekandpoke.klang.audio_bridge.vibrato
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
@@ -665,9 +667,9 @@ object KlangScriptIgnitorExtensions {
         rate: IgnitorDslLike,
         semitones: IgnitorDslLike,
         configure: ((VibratoBuilder) -> VibratoBuilder)? = null,
-    ): IgnitorDsl = VibratoBuilder(
-        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl()),
-    ).configuredBy("vibrato", configure).node
+    ): IgnitorDsl = self.vibrato(rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl()) {
+        it.configuredBy("vibrato", configure)
+    }
 
     /** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
     @KlangScript.Method

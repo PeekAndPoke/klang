@@ -375,6 +375,15 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Typed Kotlin doors spike S1: `VibratoBuilder` and `OscSawBuilder` live in `audio_bridge`
+  (`IgnitorBuilders.kt`) with typed member knobs; `IgnitorDsl.vibrato(rate, semitones, configure)` replaces the flat
+  overloads and `Ign.saw(freq, configure)` the named knobs; the script knobs are internal, renamed variants
+  (`scriptRange`) that convert and call the members. The recipe: `/dsl-design` §3, the typed-door pattern
+  (`docs/tasks/kotlin-typed-doors.md`).
+- 2026-10-16 Typed Kotlin doors step 1b: the typed `Ign` and `Kat` objects in `audio_bridge` (`Ign.kt`, `Kat.kt`),
+  the script objects' words (their knobs as named parameters, superseded by the maintainer's revision the same day:
+  the same builders and shapes, see S1); the pluck doors' sealed defaults moved there, pinned by
+  `KotlinIgnObjectParitySpec` / `KotlinKatObjectParitySpec` (`docs/tasks/kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors step 1: `.ign` / `.kat` on `Double` and `Int` and a `unaryMinus` on each `Constant`
   (`-1.ign` is `Constant(-1.0)`), pinned by `NumberExtensionsSpec`; the "Two doors, one DSL" rule rewritten for the
   typed door as the target state (`docs/tasks/kotlin-typed-doors.md`).
