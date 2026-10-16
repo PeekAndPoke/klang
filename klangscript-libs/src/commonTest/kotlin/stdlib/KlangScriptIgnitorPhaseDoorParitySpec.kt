@@ -42,20 +42,20 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
     )
 
     val doors = listOf(
-        PhaseDoor("sine", { p -> KlangScriptIgnitor.sine(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Sine(freq = c(4.0), phase = p) }),
+        PhaseDoor("sine", { p -> KlangScriptIgnitor.sine(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Sine(freq = c(4.0), phase = p) }),
         PhaseDoor("saw", { p -> KlangScriptIgnitor.saw(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Saw(freq = c(4.0), phase = p) }),
-        PhaseDoor("ramp", { p -> KlangScriptIgnitor.ramp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Ramp(freq = c(4.0), phase = p) }),
-        PhaseDoor("square", { p -> KlangScriptIgnitor.square(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Pulze(freq = c(4.0), phase = p) }),
-        PhaseDoor("pulze", { p -> KlangScriptIgnitor.pulze(4.0) { it.phase(p) } }, { p -> IgnitorDsl.RawPulze(freq = c(4.0), phase = p) }),
-        PhaseDoor("tri", { p -> KlangScriptIgnitor.tri(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Tri(freq = c(4.0), phase = p) }),
-        PhaseDoor("zawtooth", { p -> KlangScriptIgnitor.zawtooth(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Zawtooth(freq = c(4.0), phase = p) }),
-        PhaseDoor("zamp", { p -> KlangScriptIgnitor.zamp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Zamp(freq = c(4.0), phase = p) }),
-        PhaseDoor("impulse", { p -> KlangScriptIgnitor.impulse(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Impulse(freq = c(4.0), phase = p) }),
-        PhaseDoor("supersaw", { p -> KlangScriptIgnitor.supersaw(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperSaw(freq = c(4.0), phase = p) }),
-        PhaseDoor("supersine", { p -> KlangScriptIgnitor.supersine(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperSine(freq = c(4.0), phase = p) }),
-        PhaseDoor("supersquare", { p -> KlangScriptIgnitor.supersquare(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperSquare(freq = c(4.0), phase = p) }),
-        PhaseDoor("supertri", { p -> KlangScriptIgnitor.supertri(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperTri(freq = c(4.0), phase = p) }),
-        PhaseDoor("superramp", { p -> KlangScriptIgnitor.superramp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperRamp(freq = c(4.0), phase = p) }),
+        PhaseDoor("ramp", { p -> KlangScriptIgnitor.ramp(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Ramp(freq = c(4.0), phase = p) }),
+        PhaseDoor("square", { p -> KlangScriptIgnitor.square(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Pulze(freq = c(4.0), phase = p) }),
+        PhaseDoor("pulze", { p -> KlangScriptIgnitor.pulze(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.RawPulze(freq = c(4.0), phase = p) }),
+        PhaseDoor("tri", { p -> KlangScriptIgnitor.tri(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Tri(freq = c(4.0), phase = p) }),
+        PhaseDoor("zawtooth", { p -> KlangScriptIgnitor.zawtooth(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Zawtooth(freq = c(4.0), phase = p) }),
+        PhaseDoor("zamp", { p -> KlangScriptIgnitor.zamp(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Zamp(freq = c(4.0), phase = p) }),
+        PhaseDoor("impulse", { p -> KlangScriptIgnitor.impulse(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Impulse(freq = c(4.0), phase = p) }),
+        PhaseDoor("supersaw", { p -> KlangScriptIgnitor.supersaw(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperSaw(freq = c(4.0), phase = p) }),
+        PhaseDoor("supersine", { p -> KlangScriptIgnitor.supersine(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperSine(freq = c(4.0), phase = p) }),
+        PhaseDoor("supersquare", { p -> KlangScriptIgnitor.supersquare(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperSquare(freq = c(4.0), phase = p) }),
+        PhaseDoor("supertri", { p -> KlangScriptIgnitor.supertri(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperTri(freq = c(4.0), phase = p) }),
+        PhaseDoor("superramp", { p -> KlangScriptIgnitor.superramp(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperRamp(freq = c(4.0), phase = p) }),
     )
 
     "every periodic oscillator door: phase(x) positional, named, on Ign and on the Kotlin door is the node with its phase written" {

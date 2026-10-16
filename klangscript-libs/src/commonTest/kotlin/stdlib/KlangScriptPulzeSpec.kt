@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -47,10 +48,10 @@ class KlangScriptPulzeSpec : StringSpec({
         val raw = (KlangScriptIgnitor.pulze() as IgnitorDsl.RawPulze).copy(duty = IgnitorDsl.Constant(0.3))
 
         ks("Ignitor.square(x => x.duty(width = 0.3))") shouldBe square
-        KlangScriptIgnitor.square { it.duty(width = 0.3) } shouldBe square
+        KlangScriptIgnitor.square { it.duty(width = 0.3.ign) } shouldBe square
         ks("Ignitor.pulze(x => x.duty(width = 0.3))") shouldBe raw
         ks("Ignitor.pulze(x => x.duty(0.3))") shouldBe raw
-        KlangScriptIgnitor.pulze { it.duty(width = 0.3) } shouldBe raw
+        KlangScriptIgnitor.pulze { it.duty(width = 0.3.ign) } shouldBe raw
     }
 
     "analog(5.0)" {

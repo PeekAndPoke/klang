@@ -24,7 +24,7 @@ typed Kotlin door in `audio_bridge`; the typed `Ign` / `Kat` objects and every K
 | `src/commonMain/kotlin/stdlib/KlangScriptKatalyst.kt` | `Katalyst(k => ...)` (its call form, `@KlangScript.Invoke`), `Katalyst.build`, `Katalyst.classic`, `Katalyst.param` (a `KatalystKnobDsl.Param`, the chain's own knob node), the knob modulators (`Katalyst.sine`, `saw`, `ramp`, `tri`, `square`, `perlin`, `berlin`), `Katalyst.slot`, and the short name `Kat`: the chain for an orbit (`katalyst(...)`) and for the output (`master(...)`, since phase 3 step 12) |
 | `src/commonMain/kotlin/stdlib/KlangScriptKatalystSlots.kt` | `Katalyst.slot` and its stage groups (`Katalyst.slot.reverb.wet`, ...): the script face of `KatalystDsl.Slots`, the knobs `classic()` places |
 | `src/commonMain/kotlin/stdlib/KatalystBuilders.kt` | `KatalystBuilder` (each knob appends one stage, in written order; `limiter` is a compressor preset) and its stage builders; `toKatalystKnob`, the one conversion to a knob; the knob arithmetic on `KatalystKnobDsl` (`plus` ... `range`) and the modulators' builders (`phase`, `duty`) |
-| `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs; for builders already moved to `audio_bridge/IgnitorBuilders.kt` (`OscSawBuilder` since S1) only the internal, renamed script knobs (`scriptPhase`, ...) |
+| `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders' script knobs: internal, renamed variants (`scriptPhase`, `scriptVoices`, ...) that convert and call the typed members; the builders themselves (`OscSineBuilder`, `OscSuperSawBuilder`, ...) live in `audio_bridge/IgnitorBuilders.kt` (`OscSawBuilder` since S1, the rest since S2) |
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |
 | `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `AdsrBuilder` (curves, declick) and `ModAdsrBuilder` (curves) for the envelopes, `FilterBuilder`/`BandFilterBuilder` (the four filters), `EqBuilder` (band, tap), `PitchEnvelopeBuilder`, `FmBuilder`, `PhaserBuilder`/`ShimmerBuilder` (floor), `TremoloBuilder` (shape); the internal script knobs of `VibratoBuilder` (`range`, `phase`), whose class lives in `audio_bridge` since S1 |
 | `src/{jvmMain,jsMain}/kotlin/stdlib/PlatformConsole.kt` | Platform console output                                              |
@@ -35,7 +35,7 @@ typed Kotlin door in `audio_bridge`; the typed `Ign` / `Kat` objects and every K
 - Every DSL surface follows `/dsl-design` (immutability, configure lambdas on builder types, two
   doors, parity, one word per concept). The builders of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`
   move to `audio_bridge` in the typed-doors rollout (`docs/tasks/kotlin-typed-doors.md`; `OscSawBuilder` and
-  `VibratoBuilder` since spike S1), with typed member knobs; the Kotlin door there has the same builders and
+  `VibratoBuilder` since spike S1, every other oscillator builder since S2), with typed member knobs; the Kotlin door there has the same builders and
   shapes, only the accepted types differ. What stays HERE is the script door: internal, renamed knob variants
   (`@KlangScript.Function(name = "range") internal fun VibratoBuilder.scriptRange(...)`) that convert and call
   the members, and the script doors that convert and delegate (`/dsl-design` §3, the typed-door pattern). Until

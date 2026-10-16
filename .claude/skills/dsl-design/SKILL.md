@@ -159,7 +159,10 @@ script-only surface forces raw constructor calls and splits the vocabulary.
      symbol); no nullable Kotlin parameters for a default. A script door whose parameter is optional
      keeps its safe literal `null` and substitutes the SAME symbol on `null`, never a retyped literal:
      `freq?.toIgnitorDsl() ?: IgnitorDsl.Freq` (`orNoteFreq` in `KlangScriptIgnitor.saw` is the
-     example). The default-node row (below) pins that the two agree.
+     example). The default-node row (below) pins that the two agree. A multi-argument chained knob
+     (`phasePool(on, kMin, ...)`) keeps literal defaults on the script variant (KSP) while the Kotlin
+     member takes the engine constants (`SUPERTRI_K_MIN`); the bare-call parity row (`phasePool()`
+     from both doors) guards against the two drifting apart.
   3. Every script function on a receiver type that delegates to a typed function of the same word
      gets a Kotlin name of its own and the script word in `name = "..."`, never only the clashing
      ones: the builder knobs, and as well the Katalyst knob arithmetic (`plus`, `times`, ...) and
@@ -187,7 +190,11 @@ script-only surface forces raw constructor calls and splits the vocabulary.
   parity row cannot see a member that writes the wrong field, nor a wrong default in the Kotlin door
   the script door builds on: every member knob also gets a row against the node WRITTEN OUT with
   `.copy()`, never through a builder, with a distinct value off its default (`KlangScriptSawRampSpec`
-  is the template), and one row pins each Kotlin door's default node.
+  is the template), and one row pins each Kotlin door's default node. A repeatable (appending) knob
+  (`partial`) keeps its append logic in the member; a written-out row with two or more calls, the list in written order (`KlangScriptSineSpec`),
+  (`node.copy(partials = listOf(...))`) pins it. A sealed-default door (`pluck`, `superpluck`, whose
+  knobs default to constants, not the node's `Slots.*`) has the sealed node, written out, as its
+  default-node row, not `Node(freq = Freq)`.
 - Script-door param defaults are SAFE LITERALS (number, string, bool, null). Since 2026-10-06 the
   KSP processor refuses any other default (`IgnitorDsl.Slots.rate`, `emptyList()`) with a build error
   naming the door and the parameter. The spec's default thunk returns the literal and fills an

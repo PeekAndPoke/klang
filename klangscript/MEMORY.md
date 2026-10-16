@@ -37,7 +37,8 @@ record), and put the narrative in the task record, which gets archived. The full
   which later locals a closure sees is stated once in `ref/intel-analyzer.md`, "Locals declared further down";
   a local shadows a global for the checker and the param tools alike. `ref/intel-analyzer.md`.
 - **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
-  on immutable oscillator builder wrappers (`IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
+  on immutable oscillator builder wrappers (in `audio_bridge/IgnitorBuilders.kt` with typed members since the typed-doors
+  rollout S2, the script knobs internal renamed variants in `klangscript-libs/.../IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
   `octaves`, `suboctaves`, `partial` (one explicit partial per call), `fundamental` (a gain), `analog` and `analogSpread`, and the six super builders
   carry `analogSpread` (0 to 1, 1 is a drift lane per voice). Door shapes follow `/dsl-design` §2.
 - **Number methods** on `KlangScriptNumberExtensions`: `pow abs sqrt round floor ceil min max clamp rem mod

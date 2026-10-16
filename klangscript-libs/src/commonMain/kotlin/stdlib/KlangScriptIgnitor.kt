@@ -9,7 +9,22 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.Ign as KotlinIgn
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.OscImpulseBuilder
+import io.peekandpoke.klang.audio_bridge.OscPluckBuilder
+import io.peekandpoke.klang.audio_bridge.OscPulzeBuilder
+import io.peekandpoke.klang.audio_bridge.OscRampBuilder
 import io.peekandpoke.klang.audio_bridge.OscSawBuilder
+import io.peekandpoke.klang.audio_bridge.OscSineBuilder
+import io.peekandpoke.klang.audio_bridge.OscSquareBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperPluckBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperRampBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperSawBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperSineBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperSquareBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperTriBuilder
+import io.peekandpoke.klang.audio_bridge.OscTriBuilder
+import io.peekandpoke.klang.audio_bridge.OscZampBuilder
+import io.peekandpoke.klang.audio_bridge.OscZawtoothBuilder
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -84,7 +99,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun sine(freq: IgnitorDslLike? = null, configure: ((OscSineBuilder) -> OscSineBuilder)? = null): IgnitorDsl =
-        OscSineBuilder(IgnitorDsl.Sine(freq = freq.orNoteFreq())).configuredBy("Ignitor.sine", configure).node
+        KotlinIgn.sine(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.sine", configure) }
 
     /**
      * Creates a sawtooth wave oscillator (analog flyback shape, no PolyBLEP, softens with pitch).
@@ -114,7 +129,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun square(freq: IgnitorDslLike? = null, configure: ((OscSquareBuilder) -> OscSquareBuilder)? = null): IgnitorDsl =
-        OscSquareBuilder(IgnitorDsl.Pulze(freq = freq.orNoteFreq())).configuredBy("Ignitor.square", configure).node
+        KotlinIgn.square(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.square", configure) }
 
     /**
      * Creates a triangle wave oscillator. Its flanks are fixed fully open; `analog` and `phase` are its knobs.
@@ -128,7 +143,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun tri(freq: IgnitorDslLike? = null, configure: ((OscTriBuilder) -> OscTriBuilder)? = null): IgnitorDsl =
-        OscTriBuilder(IgnitorDsl.Tri(freq = freq.orNoteFreq())).configuredBy("Ignitor.tri", configure).node
+        KotlinIgn.tri(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.tri", configure) }
 
     /**
      * Creates a ramp (reverse sawtooth) wave oscillator.
@@ -142,7 +157,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun ramp(freq: IgnitorDslLike? = null, configure: ((OscRampBuilder) -> OscRampBuilder)? = null): IgnitorDsl =
-        OscRampBuilder(IgnitorDsl.Ramp(freq = freq.orNoteFreq())).configuredBy("Ignitor.ramp", configure).node
+        KotlinIgn.ramp(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.ramp", configure) }
 
     /**
      * Creates a naive sawtooth without anti-aliasing (brighter, harsher).
@@ -156,7 +171,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun zawtooth(freq: IgnitorDslLike? = null, configure: ((OscZawtoothBuilder) -> OscZawtoothBuilder)? = null): IgnitorDsl =
-        OscZawtoothBuilder(IgnitorDsl.Zawtooth(freq = freq.orNoteFreq())).configuredBy("Ignitor.zawtooth", configure).node
+        KotlinIgn.zawtooth(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.zawtooth", configure) }
 
     /**
      * Creates a raw ramp ("zamp"): a naive reverse sawtooth without anti-aliasing (the raw [ramp]).
@@ -170,7 +185,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun zamp(freq: IgnitorDslLike? = null, configure: ((OscZampBuilder) -> OscZampBuilder)? = null): IgnitorDsl =
-        OscZampBuilder(IgnitorDsl.Zamp(freq = freq.orNoteFreq())).configuredBy("Ignitor.zamp", configure).node
+        KotlinIgn.zamp(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.zamp", configure) }
 
     /**
      * Creates an impulse (click) oscillator.
@@ -184,7 +199,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun impulse(freq: IgnitorDslLike? = null, configure: ((OscImpulseBuilder) -> OscImpulseBuilder)? = null): IgnitorDsl =
-        OscImpulseBuilder(IgnitorDsl.Impulse(freq = freq.orNoteFreq())).configuredBy("Ignitor.impulse", configure).node
+        KotlinIgn.impulse(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.impulse", configure) }
 
     /**
      * Creates a raw pulse ("pulze"): a naive, aliased pulse with variable duty cycle (the raw counterpart of [square]).
@@ -198,7 +213,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun pulze(freq: IgnitorDslLike? = null, configure: ((OscPulzeBuilder) -> OscPulzeBuilder)? = null): IgnitorDsl =
-        OscPulzeBuilder(IgnitorDsl.RawPulze(freq = freq.orNoteFreq())).configuredBy("Ignitor.pulze", configure).node
+        KotlinIgn.pulze(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.pulze", configure) }
 
     /** Creates a silent ignitor (zero output). */
     @KlangScript.Method
@@ -304,7 +319,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun supersaw(freq: IgnitorDslLike? = null, configure: ((OscSuperSawBuilder) -> OscSuperSawBuilder)? = null): IgnitorDsl =
-        OscSuperSawBuilder(IgnitorDsl.SuperSaw(freq = freq.orNoteFreq())).configuredBy("Ignitor.supersaw", configure).node
+        KotlinIgn.supersaw(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.supersaw", configure) }
 
     /**
      * Creates a supersine (multiple detuned sine oscillators).
@@ -320,7 +335,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun supersine(freq: IgnitorDslLike? = null, configure: ((OscSuperSineBuilder) -> OscSuperSineBuilder)? = null): IgnitorDsl =
-        OscSuperSineBuilder(IgnitorDsl.SuperSine(freq = freq.orNoteFreq())).configuredBy("Ignitor.supersine", configure).node
+        KotlinIgn.supersine(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.supersine", configure) }
 
     /**
      * Creates a supersquare (multiple detuned square oscillators).
@@ -336,7 +351,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun supersquare(freq: IgnitorDslLike? = null, configure: ((OscSuperSquareBuilder) -> OscSuperSquareBuilder)? = null): IgnitorDsl =
-        OscSuperSquareBuilder(IgnitorDsl.SuperSquare(freq = freq.orNoteFreq())).configuredBy("Ignitor.supersquare", configure).node
+        KotlinIgn.supersquare(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.supersquare", configure) }
 
     /**
      * Creates a supertri (multiple detuned triangle oscillators).
@@ -352,7 +367,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun supertri(freq: IgnitorDslLike? = null, configure: ((OscSuperTriBuilder) -> OscSuperTriBuilder)? = null): IgnitorDsl =
-        OscSuperTriBuilder(IgnitorDsl.SuperTri(freq = freq.orNoteFreq())).configuredBy("Ignitor.supertri", configure).node
+        KotlinIgn.supertri(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.supertri", configure) }
 
     /**
      * Creates a superramp (multiple detuned ramp oscillators, the mirror of [supersaw]).
@@ -368,7 +383,7 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun superramp(freq: IgnitorDslLike? = null, configure: ((OscSuperRampBuilder) -> OscSuperRampBuilder)? = null): IgnitorDsl =
-        OscSuperRampBuilder(IgnitorDsl.SuperRamp(freq = freq.orNoteFreq())).configuredBy("Ignitor.superramp", configure).node
+        KotlinIgn.superramp(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.superramp", configure) }
 
     // ── Physical Models ──────────────────────────────────────────────────────
 
@@ -384,8 +399,8 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun pluck(freq: IgnitorDslLike? = null, configure: ((OscPluckBuilder) -> OscPluckBuilder)? = null): IgnitorDsl =
-        // The typed Kotlin door holds the sealed string defaults (not the node's open `Slots.*` params).
-        OscPluckBuilder(KotlinIgn.pluck(freq = freq.orNoteFreq())).configuredBy("Ignitor.pluck", configure).node
+        // The typed Kotlin door holds the sealed defaults (not the node's open `Slots.*` params).
+        KotlinIgn.pluck(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.pluck", configure) }
 
     /**
      * Creates a unison Karplus-Strong plucked string model.
@@ -399,8 +414,8 @@ object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun superpluck(freq: IgnitorDslLike? = null, configure: ((OscSuperPluckBuilder) -> OscSuperPluckBuilder)? = null): IgnitorDsl =
-        // The typed Kotlin door holds the sealed defaults, the unison pair included.
-        OscSuperPluckBuilder(KotlinIgn.superpluck(freq = freq.orNoteFreq())).configuredBy("Ignitor.superpluck", configure).node
+        // The typed Kotlin door holds the sealed defaults (not the node's open `Slots.*` params).
+        KotlinIgn.superpluck(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.superpluck", configure) }
 
     // ── Parameter Slot ───────────────────────────────────────────────────────
 

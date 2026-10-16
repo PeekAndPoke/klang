@@ -2,7 +2,7 @@
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
 below, revised the same day: one set of builders, equal doors); steps 1 and 1b done; spike S1 done 2026-10-16 (review
-rounds 1 and 2 applied); rollout S2 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
+rounds 1 and 2 applied); rollout S2 (the other oscillators) done 2026-10-16, S3a next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
 
 ## Why
 
@@ -209,6 +209,39 @@ refusal; a name knob gets a typed `String` member beside the index form through 
 knobs take a plain `Double`, no `Int` overloads. The rule texts now say "the same builders and shapes; only the
 accepted types differ" (`CLAUDE.md`, `/dsl-design` §2 to §4, `door-shapes.md`, `klangscript-libs/CLAUDE.md`, the
 flat doors' KDocs in `IgnitorDsl.kt`, `Ign.kt`, `Kat.kt`).
+
+## Rollout S2 (2026-10-16): the other oscillators on their builders
+
+The fifteen other oscillator builders moved to `audio_bridge/IgnitorBuilders.kt` with typed member knobs:
+`OscSineBuilder`, `OscTriBuilder`, `OscZawtoothBuilder`, `OscZampBuilder`, `OscImpulseBuilder`, `OscPulzeBuilder`,
+`OscSquareBuilder`, `OscRampBuilder`, the five super builders, `OscPluckBuilder` and `OscSuperPluckBuilder`. The sine
+keeps its chained shapes (`harmonics`, `octaves`, `suboctaves` as `(count, rolloff = 1.0.ign)`, `partial(ratio, gain =
+1.0.ign, phase = 0.0.ign)` appending one partial per call), the super builders keep the one-call `phasePool(on = 1.0,
+kMin, ...)` with plain `Double` and `String` arguments and the family's engine constants as Kotlin defaults (the script
+variant keeps its literals, the same values; the bare `phasePool()` row pins that they agree). Plain-number knobs stay
+plain (`flankSamples`, `riseFlank`, `fallFlank`, `resetSamples`, `shapeMax`, `spreadPower`, `sideAtten`, `gainJitter`,
+`centerJitter`). No oscillator knob is a name knob, so pattern point 7 had nothing to do here (`phasePool`'s `selection`
+is a free-form `"name[:width[:outliers]]"` string, plain on both doors). Every `Ign` oscillator door is now
+`(freq = IgnitorDsl.Freq, configure)`, the flat named knobs gone; `pluck` and `superpluck` build their sealed default
+node and hand it to the builder. The script doors in `KlangScriptIgnitor` call the Kotlin doors with the checking
+wrapper (`KotlinIgn.sine(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.sine", configure) }`), and all 92 script
+knobs are `internal`, renamed (`scriptVoices`, `name = "voices"`) variants that convert and call the member. Callers:
+only `klangscript-libs` tests reached the moved knobs from Kotlin (six specs, onto `.ign`); no caller in `audio_be`,
+`audio_bridge`, `sprudel`, `src/` or `audio_benchmark` used them or the flat `Ign` doors. `GeneratedStdlibDocs.kt`
+differs from the S1 tree only in the fifteen types' `fqcn` (`script.stdlib` to `audio_bridge`); every KDoc text is
+byte-identical.
+
+`KotlinIgnObjectParitySpec` has its oscillator rows in the builder shape (plus a partial-bank row and two `phasePool`
+rows per super oscillator), one default-node row per Kotlin door (pluck and superpluck keep their sealed-node pin), and
+one row per member knob (101 rows) against the node written out with `.copy()`, each run from Kotlin and from the
+script, with a guard that the row moves its knob off the default. Five mutants went red and were restored and
+`cmp`-checked: `OscSuperSineBuilder.analogSpread` writing `analog` (caught only by the member rows), a wrong default
+symbol on `Ign.zamp`'s `freq` (the default-node row), `scriptStiffness` casting instead of converting (an internal
+error on a number), `OscSuperRampBuilder.scriptPhasePool` passing a fixed `selection` (the free-form string knob mapped
+wrong), and a wrong `kMin` default on the supertri `phasePool` member. `:audio_bridge`, `:klangscript-libs`, `:audio_be`, `:sprudel` and root
+`jvmTest` are green, `:audio_bridge:compileKotlinJs` and `:klangscript-libs:compileKotlinJs` too; the corpus is
+GREEN, frozen 3 of 3 identical, 13 live identical, `Kokon` and `Der Schmetterling` edited by the maintainer's song
+commit as in S1.
 
 ## Rollout steps (coordinator, 2026-10-16; replace steps 2 to 4)
 

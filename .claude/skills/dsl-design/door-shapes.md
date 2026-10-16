@@ -105,7 +105,9 @@ oscillators (already `(freq, configure)`).
   argument and the "write it through the node constructor" workaround below retires. Build-time knobs stay plain
   values, the one recorded exception, by the criterion in `/dsl-design` §3 (a knob the script takes as a plain
   number or string). The
-  two bullets below describe the code until the rollout lands; `vibrato` and `Ign.saw` are there (S1).
+  two bullets below describe the code until the rollout lands; `vibrato` and `Ign.saw` are there (S1), and every
+  other oscillator door with its builder (S2: `Ign.sine` with its partial banks and chained `partial`, the super
+  oscillators with chained `phasePool`, the plucks).
 - **Recorded two-door asymmetries (step 3b, 2026-09-25; superseded by the typed Kotlin door above).** The Kotlin
   `tremolo` door stays FLAT (`tremolo(rate, depth, shape = "sine")`) where the script door takes a builder, the
   filter doors' precedent, until the rollout puts it on the same builder. The Kotlin `shape` and `distort` doors keep a `String` shape and an `Int`

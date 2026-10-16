@@ -94,22 +94,22 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
     "door parity: the knob's word is `character` on every builder, script and Kotlin alike (Q25)" {
         val ign = KlangScriptIgnitor
         val kotlin = listOf<Pair<String, IgnitorDsl>>(
-            "sine" to ign.sine(configure = { it.analog(character = 3.0) }),
+            "sine" to ign.sine(configure = { it.analog(character = 3.ign) }),
             "saw" to ign.saw(configure = { it.analog(character = 3.ign) }),
-            "tri" to ign.tri(configure = { it.analog(character = 3.0) }),
-            "ramp" to ign.ramp(configure = { it.analog(character = 3.0) }),
-            "zawtooth" to ign.zawtooth(configure = { it.analog(character = 3.0) }),
-            "zamp" to ign.zamp(configure = { it.analog(character = 3.0) }),
-            "impulse" to ign.impulse(configure = { it.analog(character = 3.0) }),
-            "square" to ign.square(configure = { it.analog(character = 3.0) }),
-            "pulze" to ign.pulze(configure = { it.analog(character = 3.0) }),
-            "pluck" to ign.pluck(configure = { it.analog(character = 3.0) }),
-            "superpluck" to ign.superpluck(configure = { it.analog(character = 3.0) }),
-            "supersaw" to ign.supersaw(configure = { it.analog(character = 3.0) }),
-            "supersine" to ign.supersine(configure = { it.analog(character = 3.0) }),
-            "supersquare" to ign.supersquare(configure = { it.analog(character = 3.0) }),
-            "supertri" to ign.supertri(configure = { it.analog(character = 3.0) }),
-            "superramp" to ign.superramp(configure = { it.analog(character = 3.0) }),
+            "tri" to ign.tri(configure = { it.analog(character = 3.ign) }),
+            "ramp" to ign.ramp(configure = { it.analog(character = 3.ign) }),
+            "zawtooth" to ign.zawtooth(configure = { it.analog(character = 3.ign) }),
+            "zamp" to ign.zamp(configure = { it.analog(character = 3.ign) }),
+            "impulse" to ign.impulse(configure = { it.analog(character = 3.ign) }),
+            "square" to ign.square(configure = { it.analog(character = 3.ign) }),
+            "pulze" to ign.pulze(configure = { it.analog(character = 3.ign) }),
+            "pluck" to ign.pluck(configure = { it.analog(character = 3.ign) }),
+            "superpluck" to ign.superpluck(configure = { it.analog(character = 3.ign) }),
+            "supersaw" to ign.supersaw(configure = { it.analog(character = 3.ign) }),
+            "supersine" to ign.supersine(configure = { it.analog(character = 3.ign) }),
+            "supersquare" to ign.supersquare(configure = { it.analog(character = 3.ign) }),
+            "supertri" to ign.supertri(configure = { it.analog(character = 3.ign) }),
+            "superramp" to ign.superramp(configure = { it.analog(character = 3.ign) }),
         )
 
         kotlin.size shouldBe supported.size

@@ -375,6 +375,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Typed Kotlin doors S2: the other fifteen oscillator builders (`OscSineBuilder` ... `OscSuperPluckBuilder`)
+  live in `audio_bridge` with typed member knobs, every `Ign` oscillator door is `(freq, configure)` (the flat named
+  knobs are gone), the script doors delegate to them, the script knobs are internal renamed variants; pinned per
+  member knob against written-out nodes in `KotlinIgnObjectParitySpec` (`docs/tasks/kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors spike S1: `VibratoBuilder` and `OscSawBuilder` live in `audio_bridge`
   (`IgnitorBuilders.kt`) with typed member knobs; `IgnitorDsl.vibrato(rate, semitones, configure)` replaces the flat
   overloads and `Ign.saw(freq, configure)` the named knobs; the script knobs are internal, renamed variants
