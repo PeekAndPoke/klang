@@ -98,15 +98,15 @@ oscillators (already `(freq, configure)`).
   puts `lookahead` FIFTH, where the compressor and sprudel put `release`: a compressor-shaped 5-argument call
   `m.limiter(-3, 4, 2, 0.01, 0.2)` sets 200 ms of lookahead (bounded to 50 ms, i.e. latency), not a release. It
   is the maintainer's table; the release note recommends named arguments for the limiter.
-- **The typed Kotlin door (maintainer, 2026-10-16, `docs/tasks/kotlin-typed-doors.md`; target state, the
-  rollout follows spike S1).** The Kotlin door has the SAME builders and shapes as the script door; only the
+- **The typed Kotlin door (maintainer, 2026-10-16, `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`; in force since the rollout
+  S1 to S7 of 2026-10-16).** The Kotlin door has the SAME builders and shapes as the script door; only the
   accepted types differ (the recipe: `/dsl-design` §3, the typed-door pattern). A flat Kotlin door where the script
-  takes a configure lambda is no longer the rule but a leftover the rollout removes. Every value parameter is typed
+  takes a configure lambda is a review finding. The script doors are `internal` to `klangscript-libs` (S7), so a
+  Kotlin caller outside it reaches only the typed door. Every value parameter is typed
   (`IgnitorDsl` / `KatalystKnobDsl`, numbers through `.ign` / `.kat`), so a slot or a signal goes straight into the
-  argument and the "write it through the node constructor" workaround below retires. Build-time knobs stay plain
+  argument and the old "write it through the node constructor" workaround is retired. Build-time knobs stay plain
   values, the one recorded exception, by the criterion in `/dsl-design` §3 (a knob the script takes as a plain
-  number or string). The
-  two bullets below describe the code until the rollout lands; `vibrato` and `Ign.saw` are there (S1), every
+  number or string). Where each family landed: `vibrato` and `Ign.saw` (S1), every
   other oscillator door with its builder (S2: `Ign.sine` with its partial banks and chained `partial`, the super
   oscillators with chained `phasePool`, the plucks), and the four filters, `onepole` and the voice `eq` (S3a:
   `lowpass(freq, q = FILTER_Q.ign, configure)`, the flat `Double` twins and the flat `IgnitorDsl.Eq.band`/`tap` gone),

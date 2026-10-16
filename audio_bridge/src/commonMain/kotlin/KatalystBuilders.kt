@@ -35,7 +35,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 
 /*
- * The Katalyst's builders, ONE set for both doors (`docs/tasks/kotlin-typed-doors.md`, rollout S5): the chain's
+ * The Katalyst's builders, ONE set for both doors (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, rollout S5): the chain's
  * [KatalystBuilder], its stage builders and the modulators' builders, with TYPED member knobs (every value a
  * [KatalystKnobDsl], a number through `.kat`). The KlangScript door (`klangscript-libs`, `KatalystBuilders.kt` there)
  * adds `internal`, renamed `@KlangScript.Function` variants (`scriptReverb`, the script word in `name = "reverb"`) that

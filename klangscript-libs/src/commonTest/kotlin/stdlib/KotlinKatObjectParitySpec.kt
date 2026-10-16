@@ -25,7 +25,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * The typed Kotlin `Kat` object (`audio_bridge`, Q46 of `docs/tasks/kotlin-typed-doors.md`, on its builders since
+ * The typed Kotlin `Kat` object (`audio_bridge`, Q46 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, on its builders since
  * rollout S5) against the KlangScript `Kat`: for every function the typed object mirrors, the script call and the
  * Kotlin call build equal values, with the defaults, with numbers, with a signal, and with every builder knob (the same
  * `configure` lambda and builder on both doors). The chain door (`Kat.build`, `Kat { ... }`) and every member of its

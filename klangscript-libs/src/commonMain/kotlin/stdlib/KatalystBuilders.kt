@@ -136,7 +136,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * guard (`guardNativeCall` in klangscript) gives them the location of the stage call, so the editor marks
  * `k.reverb(...)`. Guard: `KlangScriptKatalystDoorParitySpec`, "a wrong knob value is reported at the stage call".
  */
-fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
+internal fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
     is KatalystKnobDsl -> this
     is Number -> KatalystKnobDsl.Constant(this.toDouble())
     is IgnitorDsl.Param -> throw KlangScriptTypeError("an Ignitor param in a Katalyst chain; use Kat.param", operation = "Katalyst knob")
@@ -151,7 +151,7 @@ fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
  * PRE-CHECKED against the one section helper (`eqSectionKnobOrNull` in `audio_bridge`, with the reason for the
  * recorded asymmetry): a Katalyst expression is a [KlangScriptTypeError] here, with the script's own words ("a
  * Katalyst eq section takes a number or a Kat.param; got a Kat expression"), before the typed builder would refuse
- * it at build time (Q49 of `docs/tasks/kotlin-typed-doors.md`; `/dsl-design` section 3, the typed-door pattern,
+ * it at build time (Q49 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`; `/dsl-design` section 3, the typed-door pattern,
  * point 5).
  */
 internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl = toKatalystKnob().also { knob ->

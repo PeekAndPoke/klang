@@ -2,7 +2,7 @@
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
 below, revised the same day: one set of builders, equal doors); steps 1 and 1b done; spike S1 done 2026-10-16 (review
-rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) and S4 (the arithmetic) and S5 (the Katalyst) and S6 (the composition doors) done 2026-10-16, S7 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
+rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) and S4 (the arithmetic) and S5 (the Katalyst) and S6 (the composition doors) and S7 (the visibility sweep) done 2026-10-16: the rollout is done, the task archived; what is left lives in other files ("Left after the rollout", at the end). The pattern stays in `/dsl-design` §3.** Large, mostly mechanical.
 
 ## Why
 
@@ -38,7 +38,7 @@ arithmetic and the filters take all numbers or all signals, `phaser` and `shimme
 - The "Two doors, one DSL" rule (`CLAUDE.md`, `/dsl-design` §3) and the door-parity specs: what parity means once the
   Kotlin door is typed and the script door is not (same names, meaning and scale stay; the types differ by design).
 - The order: Ignitor first, then Katalyst; how the sweep is cut into reviewable steps.
-- Related, separate: curves as nodes ([`future/curves.md`](future/curves.md)), where values plug into nodes the same way.
+- Related, separate: curves as nodes ([`future/curves.md`](../../tasks/future/curves.md)), where values plug into nodes the same way.
 
 ## Design (2026-10-16, read-only design step)
 
@@ -384,7 +384,7 @@ function of its main word (`add` and `plus` both `self.plus(...)`, `sub` `minus`
 overloading for native values (`Interpreter.evaluateBinaryOp` takes numbers and strings only), so the script's
 arithmetic on a signal was and is the method, `saw.mul(0.5)`; `Ign.sine(2) * 0.5` is a `KlangScriptTypeError`
 before and after, pinned by a row so the step is seen not to move it. A recorded asymmetry (review round 1): Kotlin
-has `+` / `*` on signals, the script is method-only until [`klangscript-native-object-operators.md`](klangscript-native-object-operators.md)
+has `+` / `*` on signals, the script is method-only until [`klangscript-native-object-operators.md`](../../tasks/klangscript-native-object-operators.md)
 lands (decided 2026-10-07: script operators on native objects through `__times__` / `__rtimes__`, the goal `saw * 4`);
 the pinning row goes red on purpose then. `GeneratedStdlibDocs.kt` is byte-identical
 (the KSP docs use the script name); the registration calls the renamed variants.
@@ -527,6 +527,47 @@ the song texts the maintainer's as of `13019900` (unchanged since); `corpus` the
 live 15 identical, 0 edited. An engagement control (every cut scaled by 1.1 in `coerceCut`) turned it RED, both songs
 "moved by the engine", restored and `cmp`-checked.
 
+## Rollout S7 (2026-10-16): the visibility sweep
+
+The script door objects in `klangscript-libs` are `internal` now: `KlangScriptIgnitor` and the script `Ign`,
+`KlangScriptIgnitorExtensions`, `KlangScriptKatalyst` and the script `Kat`, the 28 slot objects
+(`KlangScriptIgnitorSlots`, the classic slot groups, `KlangScriptKatalystSlots` and its stage groups), the two
+conversions `toIgnitorDsl` and `toKatalystKnob` (public extensions on `Any` until now) and the `IgnitorDslLike` alias.
+The builder knobs, the arithmetic and the composition variants were internal already (S1 to S6). Public by design,
+since other modules use them and they are no door: `ignitorSlotName` / `katalystSlotName` with `IgnitorSlotLike` /
+`KatalystSlotLike` (sprudel's `ignp` / `katp`, the one remaining public `Any` parameter, kept on purpose), the engine
+entry (`klangScript()`, `stdlibLib`, `KlangStdLib`), `ConsoleLevel` (the app's player), `Interval.ratio` and the
+script constants `PI` / `E` (no door, left as they were); `Interval.ratio` is the one Kotlin door kept in the module, for `tones`, not an audio door. Callers moved: three sprudel specs (`EmptyVariantsDoorRenderSpec`,
+`VariantsNumberChildRenderSpec`, `LangSlotSetterSpec`) called `KlangScriptIgnitor.sine` / `variants` as their Kotlin
+door and now call `Ign.sine()`, `Ign.variants(400.ign, 1200.ign)`; nothing in `src/`, `audio_be` or `audio_benchmark`
+called a script door. Leftovers: none. No public `IgnitorDslLike` or `Any`-typed Kotlin door is left outside the
+script door, no `Double` twin is left in `IgnitorDsl.kt` or `KatalystKnobDsl.kt`, and every Kotlin door the script
+door calls is typed; `optimizer(on: Int = 1)` keeps its `Int`, a plain node field the script takes plain as well
+(§3 criterion, not a twin).
+
+Proofs: a scratch file in `sprudel` commonTest (removed) importing `KlangScriptIgnitor`, `KlangScriptIgnitorExtensions`,
+`KlangScriptKatalyst`, `KlangScriptIgnitorSlots`, the script `Ign`, `toIgnitorDsl` and `toKatalystKnob` failed with
+"Cannot access ...: it is internal in file" on every one, while `Ign.saw(110.ign) { it.analog(5.ign) }`,
+`Kat.sine(0.7.kat)` and `ignitorSlotName(...)` compiled. The 19 KSP outputs, `GeneratedStdlibDocs.kt` among them,
+were regenerated byte-identical (visibility changes no docs). Under the build lock, one call at a time: `jvmTest`
+across every project, `compileKotlinJs` and `compileTestKotlinJs` across every project with
+`:audio_benchmark:compileKotlinJvm`, and `:klangscript-ksp:test` are green; the corpus is GREEN, frozen 3 of 3
+identical, live 15 identical, 0 edited. A pure visibility change needs no mutation check (decision 2). The rule texts
+lost their transition markers ("target state", "until the rollout"): the "Two doors, one DSL" row in `CLAUDE.md`,
+`/dsl-design` §3 (the layering, and the filter-curve note of §4), `door-shapes.md` and `klangscript-libs/CLAUDE.md`
+describe the code as it is; the typed-door pattern stays in `/dsl-design` §3 as the reference.
+
+## Left after the rollout
+
+Each open point has its own home, or needs one:
+
+- **Sprudel's own typed Kotlin door** (its `PatternLike = Any` doors): flagged during the rollout, out of its scope,
+  needs its own design. No task file yet; where it lives is the maintainer's call.
+- **Script operators on signals** (`saw * 4` in KlangScript; today `saw.mul(4)`, and a row pins `saw * 0.5` as a type
+  error that goes red on purpose when it lands): [`klangscript-native-object-operators.md`](../../tasks/klangscript-native-object-operators.md).
+- **Q14, the Katalyst `blend` taking a `Kat.param`** (its Kotlin `wet` then becomes a `KatalystKnobDsl`):
+  [`katalyst-knob-followups.md`](../../tasks/katalyst-knob-followups.md) §4.
+
 ## Rollout steps (coordinator, 2026-10-16; replace steps 2 to 4)
 
 Each step follows the typed-door pattern in `/dsl-design` §3: builders into `audio_bridge` with typed members,
@@ -541,7 +582,7 @@ renamed internal script variants, the script door converting and delegating, wri
 | S4  | the arithmetic; the `Double` twins out (Q47) | step 2c |
 | S5  | Katalyst: the chain door `Kat.build` / `Kat(...)`, its stage builders and the knob arithmetic (renamed variants) | step 4 |
 | S6  | `bands`, `serial`, `parallel` and `blend` (shared only where no `Any` parameter remains, Q50) | new with Q50 |
-| S7  | the visibility sweep: every remaining script door and builder knob `internal` | step 3 |
+| S7  | the visibility sweep: every remaining script door and builder knob `internal` (done 2026-10-16) | step 3 |
 
 The file counts per step come from the design report's table, which this record does not carry; the coordinator
 holds it.

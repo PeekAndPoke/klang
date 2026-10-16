@@ -376,49 +376,54 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Typed Kotlin doors S7, the rollout done: the script door objects in `klangscript-libs` (`KlangScriptIgnitor`,
+  `KlangScriptIgnitorExtensions`, `KlangScriptKatalyst`, the script `Ign` / `Kat`, the slot objects, `toIgnitorDsl`,
+  `toKatalystKnob`) are `internal`, so a Kotlin caller outside reaches only the typed doors in `audio_bridge`; three
+  sprudel specs moved to `Ign`; no `Double` twin or flat door left; generated docs byte-identical, corpus identical
+  (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S6: `IgnitorBandsBuilder` and `KatalystBandsBuilder` live in `audio_bridge/BandsBuilders.kt`
   with typed members (`band(processor)`, `cut(freq: Double)`, plain: never slot-read) and the crossover once; `serial`,
   `parallel`, `blend` (`wet: Double`, plain as the script takes it) and `bands` are typed `KatalystBuilder` members, the
   Ignitor `bands` a typed door and its `blend` `Double` twin gone; the script variants wrap every stage, branch and band
   processor in its check; a KSP fix records an extension function's own file as a source; corpus identical, Kokon
-  and Der Schmetterling re-accepted so they are guarded again (`docs/tasks/kotlin-typed-doors.md`).
+  and Der Schmetterling re-accepted so they are guarded again (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S5: `KatalystBuilder`, its stage builders and the modulators' builders live in
   `audio_bridge/KatalystBuilders.kt` with typed members (each stage's omitted parameter its bare-stage constant, the
   limiter preset and the `classic` once-only logic there; name forms for body and vowel, distort by name only); `Kat.build`/`Kat { }`
   and the modulators on their builders in `Kat`; the knob arithmetic one typed function per word in
   `KatalystKnobDsl.kt`; the script knobs are internal renamed variants; `serial`, `parallel`, `blend`, `bands` wait for
-  S6; corpus identical, alloc 80 of 80 (`docs/tasks/kotlin-typed-doors.md`).
+  S6; corpus identical, alloc 80 of 80 (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S4: the Ignitor arithmetic is one typed function per word (`saw * 0.5.ign`, the fifteen
   `Double` twins and their operators gone, Q47); the script words are internal renamed variants that convert and call
   them, the `min`/`max` crossing lives once in the typed functions; the script's `*` stays numbers only; corpus
-  identical (`docs/tasks/kotlin-typed-doors.md`).
+  identical (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S3b and S3c: `AdsrBuilder`, `FmBuilder`, `PitchEnvelopeBuilder` (its `adsr` holds the
   default fill once), `PhaserBuilder`, `ShimmerBuilder` and `TremoloBuilder` (`shape` with a typed `String` form) live in
   `audio_bridge/EffectBuilders.kt`; `adsr`, `fm`, `phaser`, `shimmer`, `tremolo` and a new Kotlin `pitchEnvelope` are one
   typed door each on their builders, `detune`, `drive`, `distort`, `crush`, `coarse`, `accelerate`, `pitchMod` and
   `pitchModSemitones` typed (the flat doors and `Double` twins are gone), `octaveUp`/`octaveDown` new on Kotlin; new
-  `constants/ShimmerDefaults.kt`; corpus identical (`docs/tasks/kotlin-typed-doors.md`).
+  `constants/ShimmerDefaults.kt`; corpus identical (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S3a: `FilterBuilder`, `BandFilterBuilder` (with `FilterKnobs` and the nested
   `ModAdsrBuilder`) and the eq's two builders, `EqBuilder` (voice) and `KatalystEqBuilder` (chain, Q49 refusal at build
   time), live in `audio_bridge/EffectBuilders.kt`; `lowpass`/`highpass`/`bandpass`/`notch` are `(freq, q = FILTER_Q.ign,
   configure)`, `onepole(freq)` and `eq(configure)` one function each (the flat doors and `Double` twins are gone, the
-  fill runs once in the Kotlin door); new `constants/FilterDefaults.kt`; corpus identical (`docs/tasks/kotlin-typed-doors.md`).
+  fill runs once in the Kotlin door); new `constants/FilterDefaults.kt`; corpus identical (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S2: the other fifteen oscillator builders (`OscSineBuilder` ... `OscSuperPluckBuilder`)
   live in `audio_bridge` with typed member knobs, every `Ign` oscillator door is `(freq, configure)` (the flat named
   knobs are gone), the script doors delegate to them, the script knobs are internal renamed variants; pinned per
-  member knob against written-out nodes in `KotlinIgnObjectParitySpec` (`docs/tasks/kotlin-typed-doors.md`).
+  member knob against written-out nodes in `KotlinIgnObjectParitySpec` (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors spike S1: `VibratoBuilder` and `OscSawBuilder` live in `audio_bridge`
   (`IgnitorBuilders.kt`) with typed member knobs; `IgnitorDsl.vibrato(rate, semitones, configure)` replaces the flat
   overloads and `Ign.saw(freq, configure)` the named knobs; the script knobs are internal, renamed variants
   (`scriptRange`) that convert and call the members. The recipe: `/dsl-design` §3, the typed-door pattern
-  (`docs/tasks/kotlin-typed-doors.md`).
+  (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors step 1b: the typed `Ign` and `Kat` objects in `audio_bridge` (`Ign.kt`, `Kat.kt`),
   the script objects' words (their knobs as named parameters, superseded by the maintainer's revision the same day:
   the same builders and shapes, see S1); the pluck doors' sealed defaults moved there, pinned by
-  `KotlinIgnObjectParitySpec` / `KotlinKatObjectParitySpec` (`docs/tasks/kotlin-typed-doors.md`).
+  `KotlinIgnObjectParitySpec` / `KotlinKatObjectParitySpec` (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors step 1: `.ign` / `.kat` on `Double` and `Int` and a `unaryMinus` on each `Constant`
   (`-1.ign` is `Constant(-1.0)`), pinned by `NumberExtensionsSpec`; the "Two doors, one DSL" rule rewritten for the
-  typed door as the target state (`docs/tasks/kotlin-typed-doors.md`).
+  typed door as the target state (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-16 Engine follow-up 42: every delay and reverb switch-off fades its feed over the wet glide (Q39, "fade, do
   not cut"), and the landing block moves the stage into the drain by itself, so an orbit without an owner drains too;
   the new owner's first 50 ms bleed into the old ring or room, accepted; corpus unmoved (it reaches no such switch-off):

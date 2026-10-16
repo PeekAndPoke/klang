@@ -86,7 +86,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 /**
  * Accepts [IgnitorDsl] or [Number]. Numbers are converted to [IgnitorDsl.Constant] automatically.
  */
-typealias IgnitorDslLike = Any
+internal typealias IgnitorDslLike = Any
 
 /**
  * Converts an [IgnitorDslLike] value to [IgnitorDsl]. Numbers become [IgnitorDsl.Constant] (not
@@ -100,7 +100,7 @@ typealias IgnitorDslLike = Any
  * node (`toKatalystKnob`; decision Q2 of `docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`, D1 of
  * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`).
  */
-fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
+internal fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
     is IgnitorDsl -> this
     is Number -> IgnitorDsl.Constant(this.toDouble())
     is KatalystKnobDsl -> throw KlangScriptTypeError("a Katalyst knob in an Ignitor tree; use Ign.param", operation = "sound parameter")
@@ -261,7 +261,7 @@ internal fun <K> catalogueIndex(
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(IgnitorDsl::class)
-object KlangScriptIgnitorExtensions {
+internal object KlangScriptIgnitorExtensions {
 
     // ── Filters ──────────────────────────────────────────────────────────────
 

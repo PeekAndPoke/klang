@@ -8,7 +8,7 @@ package io.peekandpoke.klang.script.stdlib
 /**
  * JVM implementation of console output — routes all levels to stdout.
  */
-actual fun platformConsoleOutput(level: ConsoleLevel, args: List<String>) {
+internal actual fun platformConsoleOutput(level: ConsoleLevel, args: List<String>) {
     val message = args.joinToString(" ")
     when (level) {
         ConsoleLevel.LOG -> println(message)

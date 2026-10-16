@@ -164,3 +164,8 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-10/20261007-boolean-member-access.md`, `docs/tasks-archive/2026-10/20261007-callable-object-docs.md` "Open items, done").
 - 2026-10-16: the pulse builders' `duty(width)` (was `duty(duty)`) on `Ign.square`, `Ign.pulze` and `Kat.square`, the
   word of sprudel's `duty` door (Q29; `docs/tasks/in-progress/engine-follow-ups.md` item 44, `docs/retired-names.md`).
+- 2026-10-16: typed Kotlin doors S1 to S7 (the rollout done): every builder lives in `audio_bridge` with typed members,
+  the `klangscript-libs` stdlib is the script door only, its doors, objects, knob variants and conversions
+  `internal` (S7); public there only what is no door (`ignitorSlotName` / `katalystSlotName`, `klangScript()`,
+  `stdlibLib`, `KlangStdLib`). A KSP fix on the way: a top-level extension function's own file is a source
+  (`collectSourceFiles`, S6) (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).

@@ -1,7 +1,7 @@
 # DSL Kotlin-surface parity — every DSL usable from Kotlin directly
 
 Status (2026-10-16): the Kotlin-door half of this task is succeeded by
-[`kotlin-typed-doors.md`](kotlin-typed-doors.md). Its "`IgnitorDsl` primary plus a scalar overload" shape is
+[`../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../tasks-archive/2026-10/20261016-kotlin-typed-doors.md). Its "`IgnitorDsl` primary plus a scalar overload" shape is
 retired (Q47): the Kotlin door is typed only, numbers enter through `.ign` / `.kat`.
 
 **Principle (maintainer, 2026-08-20):** the foundation of every Klang DSL must allow direct

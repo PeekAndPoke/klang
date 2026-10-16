@@ -247,7 +247,7 @@ operator fun KatalystKnobDsl.Constant.unaryMinus(): KatalystKnobDsl.Constant = K
 // Knob expressions: the Ignitor's arithmetic on a Katalyst knob
 //
 // ONE typed function per word, every operand a KatalystKnobDsl: a number comes in through `.kat`
-// (`Kat.param("fader", 1.0).times(0.5.kat)`), the typed-doors rollout S5 (`docs/tasks/kotlin-typed-doors.md`). The script
+// (`Kat.param("fader", 1.0).times(0.5.kat)`), the typed-doors rollout S5 (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`). The script
 // door keeps taking numbers (`Kat.param("fader", 1).times(0.5)`): its `internal`, renamed variants (`scriptTimes`,
 // `klangscript-libs`) convert once and call these. The script's aliases (`add`, `sub`, `mul`, `power`, `negate`) are
 // here too, one-line typed delegates to their main word, so a script ports word for word. The text of each word lives on its script variant. Plain functions, as they

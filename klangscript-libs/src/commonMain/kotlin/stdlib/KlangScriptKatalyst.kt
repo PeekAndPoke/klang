@@ -54,7 +54,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("Katalyst")
-object KlangScriptKatalyst {
+internal object KlangScriptKatalyst {
     override fun toString(): String = "[Katalyst object]"
 
     /**
@@ -328,4 +328,4 @@ object KlangScriptKatalyst {
  * @tags katalyst, kat, alias, chain
  */
 @KlangScript.Constant
-val Kat: KlangScriptKatalyst = KlangScriptKatalyst
+internal val Kat: KlangScriptKatalyst = KlangScriptKatalyst

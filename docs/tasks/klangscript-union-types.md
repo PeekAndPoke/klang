@@ -71,8 +71,10 @@ The runtime sorts the value out by kind, and that works. The EDITOR knows nothin
 The alias stays `typealias PatternLike = Any` in Kotlin, so no door signature and no runtime code
 changes. What is new is a declaration KSP can read that says what the alias stands for. The
 members must be able to carry FUNCTION types with their parameter types (the whole point is
-typing a lambda), and the declaration must be readable from a DEPENDENCY module, because
-`IgnitorDslLike` is declared in `klangscript-libs` and used by doors in `sprudel`.
+typing a lambda), and the declaration must be readable from a DEPENDENCY module wherever an alias is
+used outside its module. (Corrected 2026-10-16: `IgnitorDslLike` is not used in `sprudel`, and since the
+typed-doors rollout S7 it is `internal` to `klangscript-libs`, so its union is a same-module declaration;
+`PatternLike` is declared and used in `sprudel`.)
 
 **§D1, the declaration form. Parked for the maintainer.** Two candidates:
 
@@ -236,7 +238,8 @@ closed set of names. The Kotlin side owns the set; KlangScript sees a string; In
 
 1. **Spike §D1** (cross-module lookup of the marker function), decide the declaration form.
 2. **KSP emission + model**: `unionMembers` populated, shared `val` per alias, `renderExpanded()`,
-   the `*Like`-without-union warning. Declare the unions of `PatternLike` and `IgnitorDslLike`.
+   the `*Like`-without-union warning. Declare the unions of `PatternLike` and `IgnitorDslLike` (the latter
+   internal to `klangscript-libs` since 2026-10-16, so step 1's cross-module lookup is not needed for it).
 3. **Analyzer**: lambda typing through a union; hover and docs popup show the expansion.
 4. **Argument type check** (§3.3): `accepts()`, `ArgumentTypeChecker`, severity per §D2.
 5. **Runtime throw** (§3.5): the conversion throws on an unknown kind with the named message;

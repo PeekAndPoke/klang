@@ -46,7 +46,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("Ignitor")
-object KlangScriptIgnitor {
+internal object KlangScriptIgnitor {
 
     override fun toString(): String = "[Ignitor object]"
 
@@ -503,7 +503,7 @@ object KlangScriptIgnitor {
  * @tags ignitor, ign, alias, instrument
  */
 @KlangScript.Constant
-val Ign: KlangScriptIgnitor = KlangScriptIgnitor
+internal val Ign: KlangScriptIgnitor = KlangScriptIgnitor
 
 /**
  * One child of [KlangScriptIgnitor.variants], converted as every value knob is ([toIgnitorDsl]). A script `null` (a

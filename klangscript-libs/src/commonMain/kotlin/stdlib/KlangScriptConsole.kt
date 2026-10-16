@@ -16,7 +16,7 @@ enum class ConsoleLevel { LOG, WARN, ERROR, INFO, DEBUG }
  * JS: routes to browser `console.log`, `console.warn`, etc.
  * JVM: routes to `println` / `System.err`.
  */
-expect fun platformConsoleOutput(level: ConsoleLevel, args: List<String>)
+internal expect fun platformConsoleOutput(level: ConsoleLevel, args: List<String>)
 
 /**
  * Console object for KlangScript — provides logging functions.

@@ -51,7 +51,7 @@ private class Row(
 )
 
 /**
- * The two doors of the effect family of the typed-doors rollout S3b and S3c (`docs/tasks/kotlin-typed-doors.md`):
+ * The two doors of the effect family of the typed-doors rollout S3b and S3c (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`):
  * `adsr`, `fm`, `pitchEnvelope`, `phaser`, `shimmer` and `tremolo` on their shared builders in `audio_bridge`
  * (`AdsrBuilder`, `FmBuilder`, `PitchEnvelopeBuilder`, `PhaserBuilder`, `ShimmerBuilder`, `TremoloBuilder`), and the
  * retyped doors (`detune`, `octaveUp`, `octaveDown`, `drive`, `shape` and `distort` with their name forms, `crush`, `coarse`, `accelerate`,

@@ -6,10 +6,11 @@ String/Array/Number/Boolean extensions. Kotlin Multiplatform (JVM + JS).
 
 The language itself lives in `:klangscript` and knows nothing about this module. This module is
 to `:klangscript` what `:sprudel` is: a library on top of the language, registered by KSP from
-`@KlangScript.*` annotations. Today it holds BOTH doors of every DSL in one place (the Kotlin API and its
-script registration). Target state (maintainer, 2026-10-16, `docs/tasks/kotlin-typed-doors.md`, the rollout
-S2 to S7 follows): this module is the KlangScript door only, internal, converting once and calling the
-typed Kotlin door in `audio_bridge`; the typed `Ign` / `Kat` objects and every Kotlin door live there. Split out of `:klangscript` on 2026-09-06
+`@KlangScript.*` annotations. It is the KlangScript door only (maintainer, 2026-10-16; in force since the
+rollout S1 to S7 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`): internal, converting once and
+calling the typed Kotlin door in `audio_bridge`, where the typed `Ign` / `Kat` objects and every Ignitor and
+Katalyst Kotlin door live. The one Kotlin door kept here is `Interval.ratio` (`IntervalRatio.kt`), for the
+interval vocabulary of `tones`, not an audio door. Split out of `:klangscript` on 2026-09-06
 (`docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`).
 
 ## Layout
@@ -35,13 +36,19 @@ typed Kotlin door in `audio_bridge`; the typed `Ign` / `Kat` objects and every K
 
 - Every DSL surface follows `/dsl-design` (immutability, configure lambdas on builder types, two
   doors, parity, one word per concept). The builders of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`
-  move to `audio_bridge` in the typed-doors rollout (`docs/tasks/kotlin-typed-doors.md`; `OscSawBuilder` and
+  moved to `audio_bridge` in the typed-doors rollout (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`; `OscSawBuilder` and
   `VibratoBuilder` since spike S1, every other oscillator builder since S2, the filters' and the eq's builders since S3a, the envelopes' since S3b, the phaser's, the shimmer's and the tremolo's since S3c, the Katalyst's since S5, the bands' since S6), with typed member knobs; the Kotlin door there has the same builders and
   shapes, only the accepted types differ. What stays HERE is the script door: internal, renamed knob variants
   (`@KlangScript.Function(name = "range") internal fun VibratoBuilder.scriptRange(...)`) that convert and call
-  the members, and the script doors that convert and delegate (`/dsl-design` §3, the typed-door pattern). Until
-  the rollout reaches a builder, this module is still its Kotlin door. Only the
-  script-exposed functions here take `XxxLike = Any` parameters (Q50, 2026-10-16).
+  the members, and the script doors that convert and delegate (`/dsl-design` §3, the typed-door pattern). Only the
+  script-exposed functions here take `XxxLike = Any` parameters (Q50, 2026-10-16), and they are `internal`: the
+  script objects (`KlangScriptIgnitor`, `KlangScriptIgnitorExtensions`, `KlangScriptKatalyst`, the script `Ign` /
+  `Kat`, the slot objects), the conversions (`toIgnitorDsl`, `toKatalystKnob`) and `IgnitorDslLike` (S7). A Kotlin
+  caller in another module uses the typed door in `audio_bridge`. Public by design, since other modules use them
+  and they are no door: the one `Any`-taking exception, `ignitorSlotName` / `katalystSlotName` with `IgnitorSlotLike` / `KatalystSlotLike`
+  (sprudel's `ignp` / `katp`), `klangScript()`, `stdlibLib`, `KlangStdLib`, `ConsoleLevel` (the app's player),
+  `Interval.ratio` (the one Kotlin door kept in this module, for `tones`, not an audio door) and the script
+  constants `PI` / `E` (no door, left as they were).
 - Script-door parameter defaults are safe literals (number, string, boolean, null); since 2026-10-06
   the KSP processor refuses any other default with a build error naming the door and the parameter
   (the default thunk fills every script call, the pasted literal serves native callers; `/dsl-design` §3).

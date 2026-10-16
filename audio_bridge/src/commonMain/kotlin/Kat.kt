@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_bridge
 
 /**
  * The typed Kotlin `Kat`: the KlangScript object `Kat` (`Katalyst`) word for word, for Kotlin
- * (`docs/tasks/kotlin-typed-doors.md`, Q46, rollout S5). Same function words, same parameter names, order and
+ * (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, Q46, rollout S5). Same function words, same parameter names, order and
  * defaults, the same builders and shapes; every value parameter is a [KatalystKnobDsl] (a number enters as `0.5.kat`).
  *
  * ```kotlin

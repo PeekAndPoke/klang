@@ -124,12 +124,10 @@ script-only surface forces raw constructor calls and splits the vocabulary.
 
 - A surface addition lands on BOTH doors in the same deliverable. A stdlib function without its
   Kotlin twin is a review finding (`docs/tasks/dsl-kotlin-surface-parity.md`).
-- **The layering (maintainer, 2026-10-16, option C; target state, the rollout S2 to S7 of
-  `docs/tasks/kotlin-typed-doors.md` follows, so today's code does not match yet):** A new door
-  during the rollout lands in the target layering where its family already has it and follows
-  today's layering otherwise: an Ignitor door lands typed in `audio_bridge` once its rollout step
-  covers its family; a new Katalyst door lands typed in `audio_bridge` since S5 (`KatalystBuilders.kt`), the
-  composition doors (`serial`, `parallel`, `blend`, `bands`) since S6.
+- **The layering of the Ignitor and Katalyst DSLs (maintainer, 2026-10-16, option C; in force since the
+  rollout S1 to S7 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, 2026-10-16):** every new
+  Ignitor or Katalyst door lands in it. sprudel's doors still take `PatternLike = Any` on one shared function
+  until its own typed door is designed (maintainer's call; see the archived task, "Left after the rollout").
   - The ONE public Kotlin door is typed and lives in `audio_bridge`, next to the wire types: every
     value parameter is an `IgnitorDsl` / `KatalystKnobDsl`, a number enters as `0.5.ign` /
     `0.5.kat` (`-1.ign` is `Constant(-1.0)`), so a number or a signal fits each argument on its own
@@ -138,10 +136,17 @@ script-only surface forces raw constructor calls and splits the vocabulary.
     Kotlin costs only the `.ign` / `.kat`: the builders and the shapes are the same
     (`Ign.saw().vibrato(5.ign, 0.3.ign) { it.range(0.ign, 1.ign) }`).
   - The KlangScript door (`klangscript-libs`, the `@KlangScript...` functions, objects and
-    builders) is internal to its module, converts its number-or-signal arguments once
-    (`toIgnitorDsl`, `toKatalystKnob`) and calls the typed Kotlin door. It is not the Kotlin door.
-  - Only KlangScript-exposed functions take `XxxLike = Any` parameters, converted and checked at
-    run time. A shared function (`bands`, `cut`, `serial`, `parallel`, `blend`) may serve both
+    builder knobs) is internal to its module, converts its number-or-signal arguments once
+    (`toIgnitorDsl`, `toKatalystKnob`) and calls the typed Kotlin door. It is not the Kotlin door: a
+    Kotlin caller outside the module cannot reach `KlangScriptIgnitor`, `KlangScriptKatalyst`, the
+    script `Ign` / `Kat` or the conversions (S7). Public there only what other modules use and is
+    no audio door: the slot-name resolvers `ignitorSlotName` / `katalystSlotName` with their
+    `IgnitorSlotLike` / `KatalystSlotLike` (sprudel's `ignp` / `katp`), the engine entry
+    (`klangScript()`, `stdlibLib`, `KlangStdLib`), `Interval.ratio` (the one Kotlin door kept in
+    this module, for the interval vocabulary of `tones`, not an audio door) and the script constants
+    `PI` / `E` (no door, left as they were).
+  - In the Ignitor and Katalyst DSLs only KlangScript-exposed functions take `XxxLike = Any`
+    parameters, converted and checked at run time. A shared function (`bands`, `cut`, `serial`, `parallel`, `blend`) may serve both
     doors only while its signature has no `Any`-typed parameter.
   - The same builders and shapes on both doors (maintainer, 2026-10-16): where the script takes a
     configure lambda, so does the Kotlin door, with the same builder; only the accepted types differ.
@@ -153,7 +158,7 @@ script-only surface forces raw constructor calls and splits the vocabulary.
     oversample factor, `passes`): those are read once per voice but FROM THE SLOTS, so they are
     typed like any knob (maintainer, 2026-10-16). Only a plain node field (a `Double`, `String` or
     `List` the script also takes plain) stays plain.
-- **The typed-door pattern** (spike S1 of `docs/tasks/kotlin-typed-doors.md`, 2026-10-16; this
+- **The typed-door pattern** (spike S1 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, 2026-10-16; this
   is its one home):
   1. The builder lives in `audio_bridge` (`IgnitorBuilders.kt` / `KatalystBuilders.kt`) under its
      simple name (the script shows it), its knobs CLASS MEMBERS with typed parameters, each with a
@@ -367,8 +372,8 @@ the bug.
   `env(...)` and `adsr(...)`, and the fill runs once after the lambda. The three CURVES are NOT stage
   knobs (maintainer, 2026-09-23): a curve shapes an envelope, it does not ask for one. Since 3c they
   live only inside the envelope's own builder (`adsr(..., e => e.curves(...))`), so on the script door a
-  curve cannot be written without naming the stage; on the Kotlin door (flat until the typed-door rollout moves it onto the builder) a curve alone still leaves
-  the filter untouched. The pitch envelope's builder
+  curve cannot be written without naming the stage, and on the Kotlin door too, which has the same builder since
+  the typed-door rollout S3a. The pitch envelope's builder
   has no depth to fill (the depth is its door input), so the rule has nothing to do there. Sprudel's
   `penv(semitones, attack, decay, sustain, release)` (phase 3 step 5b (c), 2026-09-25; `semitones` was `amount`
   until pitch pipeline step 1, 2026-10-09) is a voice-side door on

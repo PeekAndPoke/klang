@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 
 /*
  * The effect builders: what an effect door hands to its `configure` lambda, ONE set for both doors
- * (`docs/tasks/kotlin-typed-doors.md`: rollout S3a the four filters and the eq, S3b the amplitude envelope, the pitch
+ * (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`: rollout S3a the four filters and the eq, S3b the amplitude envelope, the pitch
  * envelope and the FM, S3c the phaser, the shimmer and the tremolo; the oscillators' and the vibrato's builders are
  * in `IgnitorBuilders.kt`).
  *
@@ -302,7 +302,7 @@ data class EqBuilder(val node: IgnitorDsl.Eq) {
  * `band`, `tap`, the voice [EqBuilder]'s words, defaults and sections. Each knob takes a number (`300.kat`) or a
  * Katalyst param, which the engine reads from the orbit's `katp` state; a Katalyst EXPRESSION (`Kat.sine(...)`,
  * `Kat.param(...).times(2.kat)`) is refused at build time with an [IllegalArgumentException] naming the knob and the
- * parameter (maintainer, Q49 of `docs/tasks/kotlin-typed-doors.md`): a section reads a number or a slot, never a
+ * parameter (maintainer, Q49 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`): a section reads a number or a slot, never a
  * moving knob (the recorded asymmetry on [eqSectionKnobOrNull]).
  */
 data class KatalystEqBuilder(val sections: List<IgnitorDsl.EqSection> = emptyList()) {

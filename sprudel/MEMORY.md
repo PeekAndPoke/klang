@@ -130,6 +130,8 @@ setter semantics) and `/dsl-design`. What they produce today:
 
 ## Open threads
 
+- A typed Kotlin door for sprudel (its doors take `PatternLike = Any`), not designed, the maintainer's call:
+  `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, "Left after the rollout".
 - `scale()` KDoc should say that later `.scale()` calls do not re-pitch (not written yet).
 - `docs/tasks/sprudel-sound-doors-compound.md` and `docs/tasks/sprudel-sound-function-surface.md`: the
   `snd*` family, the last doors that are not compound objects.

@@ -2771,7 +2771,7 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * envelope on and fills the other from `constants/FilterEnvelopeDefaults.kt`, once, after the lambda
  * ([fillFilterEnvelope], here, for both doors); a lambda that names neither is the filter without an envelope. The
  * four stage times are named together, by the builder's `adsr`: the flat door that named one stage at a time
- * (`lowpass(800.0, decay = 0.3)`) is gone, recorded in `docs/tasks/kotlin-typed-doors.md` (rollout S3a). `passes` is
+ * (`lowpass(800.0, decay = 0.3)`) is gone, recorded in `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md` (rollout S3a). `passes` is
  * rounded and coerced to 1..[FILTER_MAX_PASSES] here when it is a number ([coercePasses]); a SLOT goes straight
  * in (`it.passes(IgnitorDsl.Slots.lpf.passes)`) and the runtime coerces what it reads. See [IgnitorDsl.Lowpass]; the full text lives on the script door
  * (`KlangScriptIgnitorExtensions.lowpass`).
@@ -2971,7 +2971,7 @@ fun IgnitorDsl.shape(shape: String, oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ig
  * Unshaped stages keep the node's default, [AdsrCurve.Default] (exponential); an unnamed `declick` keeps the node's
  * `declick` slot (0 = off). The flat door that took the curves and the de-click as parameters
  * (`adsr(a, d, s, r, attackCurve = ..., declick = ...)`) and its `Double` twin went with the typed-doors rollout S3b
- * (`docs/tasks/kotlin-typed-doors.md`). The envelope's ON/OFF switch is on neither door ([IgnitorDsl.Adsr.on]). The
+ * (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`). The envelope's ON/OFF switch is on neither door ([IgnitorDsl.Adsr.on]). The
  * full text lives on the script door (`KlangScriptIgnitorExtensions.adsr`).
  */
 fun IgnitorDsl.adsr(
@@ -3080,7 +3080,7 @@ fun IgnitorDsl.Tremolo.hasClassicRange(): Boolean =
  *
  * Without the knobs the LFO is a sine and the swing the classic dip (`range(-1, 0)`, [TREMOLO_RANGE_FROM]). The flat
  * door that took `shape`, `rangeFrom` and `rangeTo` as parameters went with the typed-doors rollout S3c
- * (`docs/tasks/kotlin-typed-doors.md`). See [IgnitorDsl.Tremolo]; the full text lives on the script door
+ * (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`). See [IgnitorDsl.Tremolo]; the full text lives on the script door
  * (`KlangScriptIgnitorExtensions.tremolo`).
  */
 fun IgnitorDsl.tremolo(
