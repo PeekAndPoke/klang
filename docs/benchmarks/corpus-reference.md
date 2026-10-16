@@ -14,14 +14,14 @@ engine sound change that moved a frozen text or an unedited live song. An engine
 the same change rides along as INFO, which is why a neutrality proof reads "the corpus GREEN with no live song
 edited (or accept first)".
 
-Accepted on 2026-10-15, tree `92e58d54-dirty`.
+Accepted on 2026-10-16, tree `301df16b-dirty`.
 
 | song | code | hash | peak |
 |---|---|---|---|
 | Final Synthasy VII Prelude | f286893a239c01cc | f91ffdccb17b59e3 | 0.3866 |
 | Kokon | abd3d040477b1365 | eff99e5e3d78dca1 | 0.7487 |
 | Die Kirschblüte | 77725fe200a5c902 | a18405ffedce68aa | 0.7038 |
-| Der Schmetterling | 9c5fcba19887fe43 | 07a31c45f7b077c9 | 0.7593 |
+| Der Schmetterling | 917273a4de5405b4 | 55faedad281e1972 | 0.7646 |
 | Gestrandet | a962895a572fc098 | 09ee233fd4a79694 | 0.0550 |
 | Seltsamere Dinge | 064dc0ef445ff932 | 7e832e7e800d6336 | 0.9217 |
 | Stein um Stein | 8ffa5142260feb48 | 6dfae9e37f91e993 | 0.9066 |
@@ -33,6 +33,6 @@ Accepted on 2026-10-15, tree `92e58d54-dirty`.
 | The Synthsale Piper's Farewell | 4b9caa4a49e4bf59 | 55cbbd8c4b93e528 | 0.3457 |
 | Smalltown Synth | dc6e828e4b09ee88 | 9643b2874b42c492 | 0.9108 |
 | Drunken Synthlor | f076f371d34fff8c | d274594ba5b2fdc0 | 0.8508 |
-| frozen derSchmetterling_2026_09_25 | aa6418c9c6178d5f | 31108000e4bbdb24 | 0.9249 |
-| frozen strangerThings_2026_07_03 | 11791dbfb0a20972 | bdc0904443f2e42a | 0.6663 |
-| frozen piece derSchmetterling_2026_09_16 | b8ddc1e61b78b614 | 0fc662a01aaecd03 | 0.9144 |
+| frozen derSchmetterling_2026_09_25 | ad38dddae123a069 | b0151ba274832b17 | 0.9249 |
+| frozen strangerThings_2026_07_03 | bd29f1f5289c3292 | f8774ba9e1f50b48 | 0.6647 |
+| frozen piece derSchmetterling_2026_09_16 | 816b24cab402d05a | e37e6174f55c1ab3 | 0.9144 |

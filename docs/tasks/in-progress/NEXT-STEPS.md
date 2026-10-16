@@ -31,7 +31,9 @@ and goes to the maintainer.
 3. Done 2026-10-15: songs move freely (`../../tasks-archive/2026-10/20261015-song-checks-move-freely.md`).
    Then the behaviour changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39), 43 (solo reacts at once, Q28, done 2026-10-16), 44 (`duty(width)`, Q29, done 2026-10-16). Larger, decided, its own task: typed Kotlin doors
    ([`../kotlin-typed-doors.md`](../kotlin-typed-doors.md), Q24)
-   and the frozen songs' shared orbits ([`../song-orbit-ownership-review.md`](../song-orbit-ownership-review.md), Q20).
+   and the frozen songs' shared orbits ([`../song-orbit-ownership-review.md`](../song-orbit-ownership-review.md), Q20,
+   done 2026-10-16: each conflicting pattern on a free orbit, the three frozen rows (the 09-25 count-in too) re-accepted, moved by the text, not the engine; a listening pair per
+   text in `tmp/listening/frozen-orbits/`; the live songs in that file stay with the maintainer).
 4. Sections 2 to 6 of the same file (13, 11, the small leftovers, the audit's later steps).
 
 A step there runs as before: a worker, a review loop, the allocation check for an allocation item, and a full check

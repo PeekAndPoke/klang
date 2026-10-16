@@ -88,6 +88,7 @@ object FrozenSongs {
     /** "Der Schmetterling", the song this benchmark investigates. Snapshot 2026-09-25 of the live song, verbatim. */
     const val derSchmetterling_2026_09_25: String = """
 // 2026-09-26: .classic() appended to the authored instruments (phase 3 step 10, D5); nothing else changed
+// 2026-10-16: the count-in moved from orbit 0 (the lead) to orbit 11: one owner per orbit (Q20)
 import * from "stdlib"
 import * from "sprudel"
 
@@ -475,7 +476,7 @@ export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
 // Count-in  --------------------------------------------------------------------------------------------------------------------------------------------------
 export countin = sound("oh!2").apply(hats_shape).velocity(0.5).tag("countin").reverb(wet = "0.1", size = 0)
-export countin_arrange = x => x.orbit(0).filterWhen(t => t < 2)
+export countin_arrange = x => x.orbit(11).filterWhen(t => t < 2)
 
 // Song  ------------------------------------------------------------------------------------------------------------------------------------------------------
 export song_arrange = x => x.late(2).filterWhen(t => t >= 2) // shift the song one cycle to make room for the count-in
@@ -533,6 +534,7 @@ export song = stack(
 
     /** "Seltsamere Dinge" (Stranger Things) — even heavier (unison 15 + body wood/glass + vowel). Snapshot 2026-07-03. */
     const val strangerThings_2026_07_03: String = """
+// 2026-10-16: the melody's glass octave moved from orbit 1 to orbit 6, the lyrics from orbit 0 to orbit 7: one owner per orbit (Q20)
 import * from "stdlib"
 import * from "sprudel"
 
@@ -546,7 +548,7 @@ stack(
     .bpf(sine.range(2000, 2200).fast(3.14)).hpf(800)
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
-  n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
+  n("0").morse("Schön ist es auf der Welt zu sein!").orbit(7)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(freq = 2000, q = 7.0).hpf(1000).analog(2)
     .sound("pulse").onepole(4916).crush(5).gain(0.06).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.1) // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body(material = "membrane")
@@ -558,7 +560,7 @@ stack(
     .pan(0.5) // . solo()
     .hpf(400).lpf(freq = 1200, env = perlin.range(21.7, 27.9).lpf(q = 3.0).slow(8)).analog(5).body(material = "wood")
     .superimpose(x =>
-      x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.06).pan(0.2).superimpose(pan(0.8)).body(material = "glass")
+      x.orbit(6).hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.06).pan(0.2).superimpose(pan(0.8)).body(material = "glass")
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a2]]>/4").clip(0.67).struct("x!4").slow(16)

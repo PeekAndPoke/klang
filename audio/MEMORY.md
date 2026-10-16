@@ -373,6 +373,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Q20: the frozen `strangerThings_2026_07_03`, `derSchmetterling_2026_09_25` and the frozen piece
+  `derSchmetterling_2026_09_16` give each pattern that shared an orbit with other bus settings a free orbit of its
+  own; the three corpus rows moved because the frozen TEXT was edited, not the engine, and were re-accepted
+  (`corpus-accept-engine`): `docs/tasks/song-orbit-ownership-review.md`
 - 2026-10-16 Engine follow-up 43: solo reacts at once (Q28): a source's newest solo event wins, the 2 s hold and the
   per-voice `ActiveVoice.soloed` gone, a voice leaving its solo does not dip: `docs/tasks/in-progress/engine-follow-ups.md` item 43
 - 2026-10-16 Engine follow-up 41: Kotlin/JS emits `Double.NaN` as the global `NaN`, a tagged value, so an `if` with

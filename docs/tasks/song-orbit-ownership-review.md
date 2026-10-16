@@ -2,7 +2,9 @@
 
 Status: **the frozen songs decided (maintainer, 2026-10-13, Q20): fix their shared-orbit conflicts, so they are
 reasonable in what they do** (each conflicting pattern its own orbit, or the settings made to agree; the corpus
-reference of the two frozen songs is re-accepted after). The live songs below stay with the maintainer.
+reference of the two frozen songs is re-accepted after). **The frozen texts: done 2026-10-16** (each section below
+says what changed; the 09-25 Der Schmetterling's count-in too). The three frozen corpus rows moved because their
+frozen TEXT was edited (Q20), not because the engine changed. The live songs below stay with the maintainer.
 First noted 2026-10-07 for the maintainer to review in the song code. Found by voice lifecycle step 5
 (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`), measured in review (`tmp/reviews/vl5-r1-B.md`, reviewer B, round 1).
 
@@ -50,27 +52,58 @@ which patterns conflict.
 - **Orbit 6:** the Tetris bassline `:157-166` (phaser) against the stabs `:207-212` (reverb 0.4/6), from 233.7 s.
 - **Likely fix:** separate orbits for the hat and the clap, the stab and the sub, the bassline and the stabs.
 
-## frozen strangerThings_2026_07_03 (`src/jvmMain/kotlin/FrozenSongs.kt`, string from `:528`)
+## frozen strangerThings_2026_07_03 (`src/jvmMain/kotlin/FrozenSongs.kt`, string from `:536`)
 
-- **Orbit 1:** the melody `:547-552` (`body(material = "wood")`) and its superimposed octave copy `:553-554`
+- **Orbit 1:** the melody `:556-561` (`body(material = "wood")`) and its superimposed octave copy `:562-564`
   (`body(material = "glass")`): two different bodies on one orbit, starting on the same frame. Only one body can
   sound; which one is a tie (the old render gave glass 82 % of the time by list-order accident, the first new
   render wood 72 %).
-- **Orbit 0:** the shore noise `:581-583` (no body) against the lyrics `:542-545` (`body(material = "membrane")`)
-  and the claps `:538-540`.
-- **Orbits 2 and 3:** the bass and its octave copy `:557-563` with `vowel(vowel = "i a e".slow(12))` on `:564`: the
+- **Orbit 0:** the shore noise `:590-592` (no body) against the lyrics `:551-554` (`body(material = "membrane")`)
+  and the claps `:547-549`.
+- **Orbits 2 and 3:** the bass and its octave copy `:566-572` with `vowel(vowel = "i a e".slow(12))` on `:573`: the
   vowel now changes at each note's onset (no conflict, the rule working).
 - **Note:** a frozen song is a snapshot; fixing it means deciding whether frozen songs keep their old sound.
+- **Done 2026-10-16 (Q20), a free orbit per conflict, each pattern keeps its own sound:**
+  - the melody's glass octave (the `superimpose` lambda) now starts with `x.orbit(6)`: wood keeps orbit 1, glass has
+    orbit 6;
+  - the lyrics moved from `.orbit(0)` to `.orbit(7)`: the claps and the shore noise (both without a body) keep orbit 0
+    and agree;
+  - a dated comment heads the text. Corpus row `bdc0904443f2e42a` (peak 0.6663) to `f8774ba9e1f50b48` (peak 0.6647),
+    re-accepted with `corpus-accept-engine` (the text moved it, not the engine). Listening pair:
+    `tmp/listening/frozen-orbits/stranger-things.md`.
 
 ## frozen piece derSchmetterling_2026_09_16 (`src/jvmMain/kotlin/FrozenPieces.kt`, string from `:50`)
 
-- **Orbit 3:** guitar 3 `:332-344` (`body(material = "rosewood", wet = 0.3)` on `:338`, the group's
-  `reverb(wet = 0.15, size = 3.0)` on `:449`) against the bass `:347-360` (`.orbit(3)` on `:355`, no body, no
+- **Orbit 3:** guitar 3 `:333-345` (`body(material = "rosewood", wet = 0.3)` on `:339`, the group's
+  `reverb(wet = 0.15, size = 3.0)` on `:450`) against the bass `:348-361` (the orbit on `:356`, no body, no
   reverb). 16th-note guitar against bass notes: about 2100 flips of body and reverb.
-- **Orbit 7:** the count-in `:431-432` (`reverb(wet = "0.1", size = 0)`) against the hats `:411-415` (group reverb
-  0.25/4 and a compressor on `:462`).
+- **Orbit 7:** the count-in `:432-433` (`reverb(wet = "0.1", size = 0)`) against the hats `:412-416` (group reverb
+  0.25/4 and a compressor on `:463`).
 - **Note:** check whether the current Der Schmetterling (`DerSchmetterling.kt`) still shares orbit 3 between guitar
   3 and the bass; the current song did not change in the corpus, so it probably does not.
+- **Done 2026-10-16 (Q20), a free orbit per conflict:**
+  - `bass_arrange` moved from `x.orbit(3)` to `x.orbit(6)`: guitar 3 keeps orbit 3 with its rosewood body and the
+    guitar group's reverb;
+  - `countin_arrange` moved from `x.orbit(7)` to `x.orbit(10)`: the hats keep orbit 7 with the drum group's reverb and
+    compressor;
+  - a dated comment under the text's first line. Corpus row `0fc662a01aaecd03` to `e37e6174f55c1ab3` (peak 0.9144
+    both), re-accepted with `corpus-accept-engine` (the text moved it, not the engine). The ledger's frozen rows read this text (`SongBenchmarkCases`
+    `ledgerFrozen`); they render each piece solo, so the orbit numbers do not move them, and its compile spec stays
+    green. Listening pair: `tmp/listening/frozen-orbits/schmetterling.md`.
+- **Seen on the way, not changed:** the current Der Schmetterling puts guitar 3 on `x.orbit(2)`, beside guitar 2
+  (guitar 2's mahogany body against none): the same kind of conflict, in a live song, so the maintainer's.
+
+## frozen derSchmetterling_2026_09_25 (`src/jvmMain/kotlin/FrozenSongs.kt`, string from `:89`)
+
+- **Orbit 0:** the count-in `:478-479` (`reverb(wet = "0.1", size = 0)`) against the lead `:332`
+  (`body(material = "wood", wet = 0.4)`, `reverb(wet = 0.10, size = 1.0)` on `:487`). Found in Q20's review round 1.
+  The lead is muted for its first 64 cycles, so in practice the two never sound together.
+- **Done 2026-10-16 (Q20, coordinator):** `countin_arrange` moved from `x.orbit(0)` to `x.orbit(11)` (free: the text
+  uses 0 to 10), with a dated comment under the text's first line. The rig suite's anchors still match (its compile
+  spec green). Corpus row `31108000e4bbdb24` to `b0151ba274832b17` (peak 0.9249 both), re-accepted with
+  `corpus-accept-engine`; the text moved it, not the engine. Rendered at 16 bit over all 256 cycles, the two
+  versions differ in 327 samples by one LSB, from 138 s on: inaudible. Listening pair:
+  `tmp/listening/frozen-orbits/schmetterling-0925-countin.md`.
 
 ## The handover itself
 
