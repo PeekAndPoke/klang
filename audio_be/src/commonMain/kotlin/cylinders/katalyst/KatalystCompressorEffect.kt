@@ -137,7 +137,8 @@ class KatalystCompressorEffect(
     /**
      * The DSP, ONE instance built with the effect (5c-7 review round 1: the ON edge used to build a
      * `Compressor` on the audio thread). It outlives every state: [Off.enter] resets it (the
-     * envelope back to rest) and the ON arm of [configure] writes all five knobs, which together
+     * envelope back to rest) and the ON arm of [configure] writes all five knobs
+     * ([Compressor.applyKnobArgs], which stores what the five setters store), which together
      * give the same doubles as a freshly built instance on the classic path (the constructor and
      * the setters store the same coerced values and compute the same coefficients). Proven by every
      * spec row that compares a new life against a FRESH bare `Compressor` bit for bit. One difference remains for a direct caller only: a
@@ -171,9 +172,9 @@ class KatalystCompressorEffect(
 
     /**
      * The five knobs last written into [compressor], in [CompressorSettings]' order (threshold, ratio, knee, attack,
-     * release), valid while [appliedValid]: an unchanged config costs five compares per block instead of five setters
-     * and about fifteen `exp()` (the open item on `writeCompressor`, closed here). Forgotten in [Off.enter], so the ON
-     * arm out of Off always writes the knobs.
+     * release), valid while [appliedValid]: an unchanged config costs five compares per block instead of the knob write
+     * ([Compressor.applyKnobArgs], three `exp()`; five setters and fifteen before engine follow-up 40). Forgotten in
+     * [Off.enter], so the ON arm out of Off always writes the knobs.
      *
      * VALUES, not the settings object (katalyst knob expressions step 2, 2026-10-11): the writer refills one holder in
      * place, so a reference compare would never see a change. Skipping is exact: every write is a function of the five
@@ -488,12 +489,16 @@ class KatalystCompressorEffect(
 
         if (!unchanged) {
             val c = instance
+            // One call through the instance's holder, not five setters: no double crosses a call, and the time
+            // constants are computed once (`Compressor.knobArgs`, engine follow-up 40).
+            val args = c.knobArgs
 
-            c.thresholdDb = threshold
-            c.ratio = ratio
-            c.kneeDb = knee
-            c.attackSeconds = attack
-            c.releaseSeconds = release
+            args[Compressor.KNOB_THRESHOLD] = threshold
+            args[Compressor.KNOB_RATIO] = ratio
+            args[Compressor.KNOB_KNEE] = knee
+            args[Compressor.KNOB_ATTACK] = attack
+            args[Compressor.KNOB_RELEASE] = release
+            c.applyKnobArgs()
             last[0] = threshold
             last[1] = ratio
             last[2] = knee

@@ -3,7 +3,7 @@
 **Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
-fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (DONE 2026-10-16), 34 (DONE 2026-10-16), 39 (DONE 2026-10-16), 40 and 41 (the
+fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (DONE 2026-10-16), 34 (DONE 2026-10-16), 39 (DONE 2026-10-16), 40 (DONE 2026-10-16) and 41 (the
 Katalyst knob expressions' residues), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
 and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
@@ -1691,18 +1691,80 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     class only, and the arms' half is guarded by its KDoc alone. `E-kat-mix` (item 40's line, 250) fell by about 100 B
     and keeps its line; its header claim about the isFinite group (G1, 264) was measured before this change and most
     likely no longer holds; item 40's fix re-sets it. S.
-40. **A modulated orbit compressor writes its five knobs through five setters every block** (numbered after the last
-    item, added 2026-10-12): `KatalystCompressorEffect.configure` calls `Compressor.thresholdDb`, `ratio`, `kneeDb`,
-    `attackSeconds` and `releaseSeconds`, each a setter call that V8 does not inline, so each knob crosses as a heap
-    number, and each setter runs `updateCoefficients` (15 `timeConstantCoeff`, an `exp` each, per block where one would
-    do). `E-kat-dyn` reads 98.7 B per block against the duck's floor of 46.7 (`--predictable`, single-case, run T of
-    `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`): 52 B, about three heap numbers. Measured on a hand-edited copy of that bundle (run X40 of the same
-    record): the five fields written in place and `updateCoefficients` (with `resizeSmoothing` under a lookahead)
-    called once read `E-kat-dyn` 45.4 and `E-kat-mix` 165.4 against 196.3 (`--predictable`; 57.2 and 164.4 with the
-    check's method). The remedy is a change to how `Compressor` stores its knobs (a holder or a `DoubleArray` the orbit
-    stage fills and one method that applies it, the setters kept for the other callers; the class is also the house
-    limiter's), so it was not built in step 6. Its time is not measured on its own. A fix re-sets the `E-kat-dyn` and
-    `E-kat-mix` lines. Source: as 39. S.
+40. **DONE (2026-10-16): a modulated orbit compressor wrote its five knobs through five setters every block; it now
+    hands them over in one call through a holder, and `E-kat-dyn` reads the duck's floor.** Reported (numbered after
+    the last item, added 2026-10-12): `KatalystCompressorEffect.configure` called `Compressor.thresholdDb`, `ratio`,
+    `kneeDb`, `attackSeconds` and `releaseSeconds`, each a setter call that V8 does not inline, so each knob crossed as
+    a heap number, and each setter ran `updateCoefficients` (three `timeConstantCoeff`, an `exp` each: 15 per block
+    where 3 do). `E-kat-dyn` read 98.7 B per block against the duck's floor of 46.7 (`--predictable`, run T of
+    `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`; run X40 of the same record, a hand-edited bundle, read 45.4).
+    Source: as 39. A purely independent performance fix (Q38): no DSL door, wire type, public signature or sound
+    changes (the five properties keep their types, getters and setters; the holder and the method are `internal`).
+    **Located on the production bundle** (`:audio_benchmark:compileProductionExecutableKotlinJs`, node 22.12,
+    `--predictable` single-case processes, the sampling heap profiler with a warm-up-only run subtracted): on HEAD it
+    booked 48.4 B per block in `KatalystCompressorEffect.configure` on `E-kat-dyn` and 32.1 B on `E-kat-mix`, and the
+    compiled `configure` held the five setter calls. **Fix** (`effects/Compressor.kt`,
+    `cylinders/katalyst/KatalystCompressorEffect.kt`):
+    - **`Compressor.knobArgs`** (a `DoubleArray(5)`, slots `KNOB_THRESHOLD` to `KNOB_RELEASE`) and
+      **`applyKnobArgs()`**, which takes no double: each knob guarded and coerced as its setter does (`isFiniteInline`,
+      the same answer as `isFinite()` for every input; the setters' `coerceAtLeast` written out, its stdlib body, so
+      -0.0 stays -0.0 on the knee), then `updateCoefficients` ONCE, and the lookahead's `resizeSmoothing` only when
+      the attack was written, as in the attack setter. The configure fills the holder and calls it once.
+    - **Why collapsing is exact:** nothing between the five setters reads what an earlier one computed. The
+      coefficients are a function of the stored attack and release alone (so only the last of five recomputations
+      survives), `resizeSmoothing` reads only the stored attack and no coefficient, and the setters' order touches
+      nothing else. With all five non-finite the old path computed nothing and the new one recomputes the same
+      constants from the same stored values.
+    - **The properties now have private backing fields** (`thresholdValue` and so on), because Kotlin cannot write a
+      property's `field` from outside its accessors; the setters' bodies are unchanged. The per-sample curve
+      (`calculateGainReduction`), `updateCoefficients` and `resizeSmoothing` read the fields. One consequence on
+      Kotlin/JS: a getter is now a call, where it compiled to a field read; `retarget` in the effect calls three per
+      change, and V8 inlines them in every profile measured (the tree reads the floor).
+    - **The other callers are untouched:** `Compressor` is built by the house limiter (`MasterStage`, its knobs set
+      once at construction, never through a setter per block) and by `EffectBenchmark`; the duck is its own class
+      (`Ducking`), and no voice holds a `Compressor`. Their code paths read the same stored numbers as before.
+    The KDoc at `Compressor.knobArgs` is the guard against the box (no test can pin it). **New row:** "applyKnobArgs
+    leaves the instance where the five setters leave it, bit for bit" (`CompressorSpec`): two instances, at lookahead
+    0 and 5 ms, take ten knob steps (NaN, both infinities, a ratio below 1, a knee of -3 and of -0.0, an attack and a
+    release under the 0.1 ms floor, a NaN attack beside other changes, attacks that move the box length), one through
+    the setters, one through the holder; the five stored knobs and every output sample are compared bit for bit.
+    Mutants, one lock call each, restored and checked with `cmp`: `updateCoefficients` dropped RED, `resizeSmoothing`
+    dropped RED, the ratio coercion dropped RED, the knee coerced with `<=` (-0.0 to 0.0) RED, the threshold's, the
+    release's and the attack's guard dropped RED (each 1 of 7, the new row); the attack-written condition dropped
+    (re-split on every call) survives, an equivalent mutant: the box length always equals the split of the stored
+    attack, so the re-split returns at once. On the effect (`KatalystCompressorEffectSpec`): `applyKnobArgs` not
+    called RED, the release slot filled with the attack RED (at least 8 rows each, among them "each of the five knobs
+    alone, changed in place in the same holder, reaches the instance").
+    **Measured** (bytes and ns per block, 20,000 warm-up and 200,000 measured blocks; HEAD's bundle a byte copy;
+    "setters back" is the tree with the five setter calls put back in `configure`, the crossing restored, which reads
+    more than HEAD because `retarget`'s getters are calls there too; G1 is step 6's isFinite group put back on this
+    tree, M1 `KnobGlide.retarget` a plain method again):
+
+    | case | `--predictable`, HEAD / tree / setters back / G1 | unpinned (the check's method), rounds |
+    |---|---|---|
+    | `E-kat-dyn` | 97.1 / 45.3 / 113.6 / 67.3 B | HEAD 83.7 to 104.2 (median 91.6, 5); tree 31.5 to 57.3 (13); setters back 73.2 to 129.4 (median 120, 8); G1 51.4 to 78.4 (8); M1 21.0 to 112.8 (3) |
+    | `E-kat-mix` | 96.9 / 67.3 / 120.1 / 134.3 B | HEAD 91.0 to 112.9 (5); tree 56.0 to 83.6 (13); setters back 96.1 to 123.0 (median 114, 8); G1 113.0 to 145.2 (median 136, 8); M1 263.1 to 305.1 (3) |
+    | `E-comp`, `E-duck`, `sawC` (controls) | 15.7 / 15.7, 46.6 / 46.6, 15.6 / 15.6 B | |
+    | `E-kat-sine`, `E-kat-all7` (G1) | G1 30.7, 36.0 B | |
+
+    Under `--predictable` the profiler with the warm-up subtracted books nothing in the compressor's `configure` on
+    the tree; what `E-kat-mix` keeps above the floor is the delay and reverb writers' tick (item 41). One heap number
+    is 16 B on node and 12 in Chrome. **Time** (`E-kat-dyn`, `--predictable`, HEAD and tree interleaved, 5 pairs):
+    unpinned medians 11,794 / 11,740 ns (within noise); pinned (`taskset -c 3`) 11,837 / 11,635 ns, the tree faster in
+    every pair by 85 to 224 ns, about 0.98: the twelve `exp` and four calls saved. **JVM:** nothing here allocated
+    before or after (the check, 0 B on every case). **Bit for bit:** the corpus GREEN, 3 of 3 frozen and 15 of 15 live
+    songs identical, 0 edited; `:audio_be:jvmTest` 2,779 of 2,779. The allocation check (under the new lines): GREEN,
+    80 of 80; V8 `E-kat-dyn` 51 B (rounds 72.2, 46.3, 50.7), `E-kat-mix` 78 (77.5, 87.8, 71.3), `E-comp` 40, `E-duck`
+    52.
+    **The budget lines** (the header's rule, the note at the follow-up 40 re-set in `alloc-budgets.txt`):
+    `E-kat-dyn` v8 152 to 96, 45 B above the highest healthy median (about 51). It catches the five setters put back
+    (median 120, 7 of 8 rounds over) and, by step 6's M7, `Compressor.glideArgs`; it does NOT reliably catch HEAD's
+    whole old form (median 91.6 here; the full checks read 87 to 108), so the KDoc at `knobArgs` guards it too.
+    `E-kat-mix` v8 250 to 124, 42 B above the highest healthy median (82). It catches M1 (every round over) and G1 in
+    most runs (median 136, a few rounds under), not the setters put back (median 114: `E-kat-dyn` is that line). The
+    old claim that 250 told G1 from the tree no longer held after item 39: G1 reads under 250 in every round now.
+    **Left:** the residue of `E-kat-mix` on the delay and reverb writers (item 41); the setters themselves keep
+    `isFinite()` and an `updateCoefficients` each, for the callers that write one knob. S.
 41. **The residue of a moving delay time, reverb size and phaser breakpoint on V8** (numbered after the last item,
     added 2026-10-12): `E-kat-gates` reads 66.6 B per block against the delay alone's 32.3 (`--predictable`,
     single-case, run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). The sampling heap profiler (development runs, not recorded) books it in the

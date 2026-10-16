@@ -368,6 +368,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Engine follow-up 40: the orbit compressor writes its five knobs through one holder
+  (`Compressor.knobArgs`) and one `applyKnobArgs`, which stores what the five setters store, bit for bit, and computes
+  the time constants once (3 `exp` per change where there were 15); the public setters stay for the other callers.
+  `E-kat-dyn` 97.1 to 45.3 B per block (the duck's floor), `E-kat-mix` 96.9 to 67.3 (`--predictable`), pinned about 200
+  ns per block faster; corpus identical; the V8 lines `E-kat-dyn` 152 to 96, `E-kat-mix` 250 to 124:
+  `docs/tasks/in-progress/engine-follow-ups.md` item 40
 - 2026-10-16 Engine follow-up 39: the Katalyst knob noises no longer cross `fbm` as heap numbers on V8: `fbm`
   (`common`, shared with the Ignitor's `perlin` and `berlin`, bit for bit) calls `noise` at one site, and the knob's
   noise arms are methods of their own (`samplePerlin`, `sampleBerlin`). `E-kat-perlin` 113.7 to 21.8 B per block,

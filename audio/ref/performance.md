@@ -546,8 +546,18 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   carry a tail of high rounds in either tree (`E-kat-all7` read a round of 277 against medians of 155 to 161), so a
   remedy is judged by a mutant in both modes and a line is set above the tail; and the double-field settings holders
   (`CompressorSettings`, `DuckSettings`) do not box: as `Float64Array`s in a hand-edited bundle (run XS) `E-kat-dyn`
-  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). Open: the compressor's five setters
-  (item 40), a residue on the moving delay, reverb and phaser paths (item 41).
+  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). Open: a residue on the moving delay,
+  reverb and phaser paths (item 41). **Closed by engine follow-up 40 (2026-10-16): a stage that writes several knobs
+  of one object every block hands them over in ONE call through a holder**, not through a setter per knob. The orbit
+  compressor called `Compressor`'s five setters, which V8 did not inline, so each knob crossed as a heap number
+  (the profiler booked 48 B per block in `KatalystCompressorEffect.configure`), and each setter recomputed the three
+  time constants. Now it fills `Compressor.knobArgs` (a `DoubleArray`) and calls `applyKnobArgs`, which guards and
+  coerces each knob as its setter does and computes the constants once: `E-kat-dyn` 97.1 to 45.3 B (the duck's
+  floor), `E-kat-mix` 96.9 to 67.3 (`--predictable`), pinned about 200 ns per block faster (0.98). Collapsing the
+  setters is exact only because nothing between them reads what an earlier one computed; check that first. The
+  setters stay public for the other callers, and their getters now read private fields: a Kotlin/JS getter on a
+  property with a private backing field compiles to a call (`retarget` calls three), which V8 inlines here
+  (measured: the floor); a hot reader inside the class reads the fields.
 - **A callee's own inlined size counts against its caller's budget: a helper that calls a small function at two
   sites can fit no caller** (engine follow-up 39, 2026-10-16). `--trace-turbo-inlining` prints it as "existing opt
   code's inlined bytecode size": V8 adds what a candidate's own optimized code inlined to the candidate's bytecode,

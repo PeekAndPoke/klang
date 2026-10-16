@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.LN10_OVER_20
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_be.utils.fastExp
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
 import kotlin.math.abs
 import kotlin.math.ln
@@ -78,25 +79,35 @@ class Compressor(
      */
     val lookaheadSeconds: Double = 0.0,
 ) {
+    // The five knobs as stored: the properties below read and write them, and [applyKnobArgs] writes them directly.
+    private var thresholdValue: Double = guardOr(value = thresholdDb, fallback = -20.0)
+    private var ratioValue: Double = guardOr(value = ratio, fallback = 4.0).coerceAtLeast(1.0)
+    private var kneeValue: Double = guardOr(value = kneeDb, fallback = 6.0).coerceAtLeast(0.0)
+    private var attackValue: Double = guardOr(value = attackSeconds, fallback = 0.003)
+    private var releaseValue: Double = guardOr(value = releaseSeconds, fallback = 0.1)
+
     // Compressor parameters (all mutable for real-time changes; setters silently ignore non-finite values).
-    var thresholdDb: Double = guardOr(value = thresholdDb, fallback = -20.0)
+    var thresholdDb: Double
+        get() = thresholdValue
         set(value) {
             if (!value.isFinite()) return
-            field = value
+            thresholdValue = value
             updateCoefficients()
         }
 
-    var ratio: Double = guardOr(value = ratio, fallback = 4.0).coerceAtLeast(1.0)
+    var ratio: Double
+        get() = ratioValue
         set(value) {
             if (!value.isFinite()) return
-            field = value.coerceAtLeast(1.0)
+            ratioValue = value.coerceAtLeast(1.0)
             updateCoefficients()
         }
 
-    var kneeDb: Double = guardOr(value = kneeDb, fallback = 6.0).coerceAtLeast(0.0)
+    var kneeDb: Double
+        get() = kneeValue
         set(value) {
             if (!value.isFinite()) return
-            field = value.coerceAtLeast(0.0)
+            kneeValue = value.coerceAtLeast(0.0)
             updateCoefficients()
         }
 
@@ -114,20 +125,84 @@ class Compressor(
      * within a small factor of a fixed 2 ms attack's (`LimiterLookaheadSpec`), where the re-priming this
      * replaced stepped it by 0.6 to 0.7 of an 0.87 reduction (review round 1 of step 5b).
      */
-    var attackSeconds: Double = guardOr(value = attackSeconds, fallback = 0.003)
+    var attackSeconds: Double
+        get() = attackValue
         set(value) {
             if (!value.isFinite()) return
-            field = value
+            attackValue = value
             updateCoefficients()
             if (delayFrames > 0) resizeSmoothing()
         }
 
-    var releaseSeconds: Double = guardOr(value = releaseSeconds, fallback = 0.1)
+    var releaseSeconds: Double
+        get() = releaseValue
         set(value) {
             if (!value.isFinite()) return
-            field = value
+            releaseValue = value
             updateCoefficients()
         }
+
+    /**
+     * The five knobs of one [applyKnobArgs], written by the caller before the call, indexed by [KNOB_THRESHOLD] ...
+     * [KNOB_RELEASE]: the raw values, as a caller would hand them to the five setters.
+     *
+     * **A holder, on purpose** (engine follow-up 40, 2026-10-16): the orbit compressor writes all five knobs on every
+     * block one of them moves. Through the five setters each knob crossed a call V8 does not inline, so each was a
+     * heap number (`audio/ref/performance.md`, the rule on a double handed to a function that is not inlined), and
+     * each setter recomputed the three time constants, fifteen `exp` per block where three do. An ARRAY, not double
+     * fields: an element access in optimized code never allocates (engine follow-up 7), as for [glideArgs]. No test
+     * can pin the box; this KDoc and the allocation check's `E-kat-dyn` line are the guard.
+     */
+    internal val knobArgs = DoubleArray(KNOB_ARGS)
+
+    /**
+     * Applies [knobArgs] as the five setters would, called in the order threshold, ratio, knee, attack, release, and
+     * stores the same numbers bit for bit: each knob guarded and coerced as its setter does (a non-finite one keeps
+     * the stored value), then the time constants computed ONCE. That is exact because nothing between the setters
+     * reads what an earlier one computed: the coefficients are a function of the stored attack and release alone, so
+     * the last of five recomputations is the only one that survives, and the lookahead's smoothing re-split
+     * ([resizeSmoothing]) reads only the stored attack and runs, as in the attack setter, only when the attack was
+     * written. Guarded by "applyKnobArgs leaves the instance where the five setters leave it, bit for bit"
+     * (`CompressorSpec`).
+     */
+    internal fun applyKnobArgs() {
+        val args = knobArgs
+        val threshold = args[KNOB_THRESHOLD]
+        val ratio = args[KNOB_RATIO]
+        val knee = args[KNOB_KNEE]
+        val attack = args[KNOB_ATTACK]
+        val release = args[KNOB_RELEASE]
+
+        // `isFiniteInline`, not the stdlib `isFinite()` (a call on Kotlin/JS): the same answer for every input.
+        if (threshold.isFiniteInline()) {
+            thresholdValue = threshold
+        }
+
+        // The setters' `coerceAtLeast`, written out (the stdlib's body), so no double crosses a call.
+        if (ratio.isFiniteInline()) {
+            ratioValue = if (ratio < 1.0) 1.0 else ratio
+        }
+
+        if (knee.isFiniteInline()) {
+            kneeValue = if (knee < 0.0) 0.0 else knee
+        }
+
+        val attackWritten = attack.isFiniteInline()
+
+        if (attackWritten) {
+            attackValue = attack
+        }
+
+        if (release.isFiniteInline()) {
+            releaseValue = release
+        }
+
+        updateCoefficients()
+
+        if (attackWritten && delayFrames > 0) {
+            resizeSmoothing()
+        }
+    }
 
     // Envelope follower state.
     private var envelopeDb: Double = SILENCE_DB
@@ -277,7 +352,7 @@ class Compressor(
      * order they always were, so a fixed attack (the house limiter) renders bit for bit as before.
      */
     private fun resizeSmoothing() {
-        val requested = (attackSeconds * sampleRate).toInt()
+        val requested = (attackValue * sampleRate).toInt()
         val total = requested.coerceIn(2, delayFrames + 2)
         // Floor the per-box tap count. At `half == 1` the two boxes are an identity — no smoothing
         // at all — and the gain steps by the full reduction in a single sample (~595 dB/ms), which
@@ -712,7 +787,12 @@ class Compressor(
      */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun calculateGainReduction(inputDb: Double): Double =
-        gainReductionDb(inputDb = inputDb, thresholdDb = thresholdDb, slope = 1.0 / ratio - 1.0, kneeDb = kneeDb)
+        gainReductionDb(
+            inputDb = inputDb,
+            thresholdDb = thresholdValue,
+            slope = 1.0 / ratioValue - 1.0,
+            kneeDb = kneeValue,
+        )
 
     /**
      * [calculateGainReduction] with the knobs passed in: the one home of the curve, shared by the
@@ -742,8 +822,8 @@ class Compressor(
      * Update time constants for attack and release.
      */
     private fun updateCoefficients() {
-        val attackTime = max(0.0001, attackSeconds)
-        val releaseTime = max(0.0001, releaseSeconds)
+        val attackTime = max(0.0001, attackValue)
+        val releaseTime = max(0.0001, releaseValue)
 
         attackCoeff = timeConstantCoeff(timeSeconds = attackTime, sampleRate = sampleRate.toDouble())
         releaseCoeff = timeConstantCoeff(timeSeconds = releaseTime, sampleRate = sampleRate.toDouble())
@@ -828,6 +908,14 @@ class Compressor(
         internal const val GLIDE_KNEE_FROM: Int = 4
         internal const val GLIDE_KNEE_TO: Int = 5
         private const val GLIDE_ARGS: Int = 6
+
+        /** The slots of [knobArgs]: the threshold, the ratio, the knee, the attack and the release. */
+        internal const val KNOB_THRESHOLD: Int = 0
+        internal const val KNOB_RATIO: Int = 1
+        internal const val KNOB_KNEE: Int = 2
+        internal const val KNOB_ATTACK: Int = 3
+        internal const val KNOB_RELEASE: Int = 4
+        private const val KNOB_ARGS: Int = 5
 
         /** How much faster the dual release's fast branch is than the configured release. */
         private const val FAST_RELEASE_DIVISOR: Double = 10.0
