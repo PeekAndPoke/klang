@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangMinHeap
 import kotlin.random.Random
@@ -44,14 +45,8 @@ class VoiceScheduler(
          */
         const val REALTIME_HELD_GATE_SEC: Double = 36_000.0
 
-        /** The background's solo ramp, in and out (cubic). Today's value, kept by default (maintainer to confirm). */
+        /** The background's solo ramp, in and out (cubic); confirmed by the maintainer 2026-10-08 (Q12). */
         const val SOLO_RAMP_SEC: Double = 1.5
-
-        /**
-         * How long a soloed source keeps its voices at full level after its last solo event ends. At least
-         * [SOLO_RAMP_SEC], so its tail never dips while the others come back.
-         */
-        const val SOLO_HOLD_SEC: Double = 2.0
 
         /** Blocks a solo entry stays live past its end, so two back-to-back events never leave a hole at a seam. */
         const val SOLO_GRACE_BLOCKS: Int = 4
@@ -103,15 +98,11 @@ class VoiceScheduler(
         data class Realtime(val liveId: Int, val held: Boolean, val solo: Double?) : VoiceOrigin
     }
 
-    // Wrapper to track the source id (what solo protects) and the origin alongside Voice.
-    // [soloed]: the voice was started with a solo amount of its own (positive and finite) and a source id, so it is
-    // protected for its whole life, its release included (Q14, per voice since review: Q28); its source's window
-    // protects every voice of the source between events, the soloed ones and the others alike.
+    // Wrapper to track the source id (what solo is tracked by) and the origin alongside Voice.
     private data class ActiveVoice(
         val voice: Voice,
         val sourceId: String?,
         val origin: VoiceOrigin,
-        val soloed: Boolean,
     )
 
     // State with active voices
@@ -120,9 +111,15 @@ class VoiceScheduler(
     // Smooth gain transition for solo/mute: the level of every voice whose source is not soloed
     private val soloMuteRamp = SoloRamp(initialValue = 1.0, durationSec = SOLO_RAMP_SEC)
 
+    // The most a voice that has lost its solo falls per block: a full drop takes at least the house cut fade
+    // (CUT_FADE_SECONDS, 4 ms), so it never ticks, and still reacts at once to the ear
+    private val soloFallPerBlock = context.blockFrames / (CUT_FADE_SECONDS * context.sampleRateDouble)
+
+    // The background's target of the last block: a falling target ends every release (SoloTracker.clearReleased)
+    private var lastBackgroundTarget: Double = 1.0
+
     // Who is soloed, at which amount, until when (per playback: this scheduler is the playback's)
     private val soloTracker = SoloTracker(
-        holdSec = SOLO_HOLD_SEC,
         graceSec = SOLO_GRACE_BLOCKS * context.blockFrames / context.sampleRateDouble,
     )
 
@@ -428,21 +425,40 @@ class VoiceScheduler(
         ctx.blockStart = cursorFrame
 
         // 2.5. Solo: the tracker (recorded at promotion, and here for the held realtime voices) says which sources are
-        // protected (their window) and what the others play at, `1 - amount` of the strongest live solo, reached on the
-        // ramp. A voice soloed itself is protected on its own for its whole life ([ActiveVoice.soloed]).
+        // soloed NOW (their newest event, Q28) and what the others play at, `1 - amount` of the strongest solo,
+        // reached on the ramp. Nothing is held past a source's newest event, and no voice keeps a protection of its own.
         recordRealtimeSolo(cursorFrame = cursorFrame, blockEnd = blockEnd)
         soloTracker.advance(nowSec = context.clock.secAt(cursorFrame))
 
         val blockDurationSec = context.blockFrames.toDouble() / context.sampleRateDouble
-        val currentBackgroundGain = soloMuteRamp.step(target = soloTracker.targetGain(), dt = blockDurationSec)
+        val backgroundTarget = soloTracker.targetGain()
+
+        // A falling target (a new or stronger solo) ends every release: those sources are background again, and stay
+        // so when that solo ends before the ramp has turned
+        if (backgroundTarget < lastBackgroundTarget) {
+            soloTracker.clearReleased()
+        }
+
+        lastBackgroundTarget = backgroundTarget
+
+        val currentBackgroundGain = soloMuteRamp.step(target = backgroundTarget, dt = blockDurationSec)
 
         // 3. Render Loop. A voice that ends here (render returns false: `Done`) leaves the list in the same pass
         // ([retainInOrder], as [removeDoneVoices]): the survivors keep their order.
         active.retainInOrder { activeVoice ->
-            if (activeVoice.soloed || soloTracker.isProtected(activeVoice.sourceId)) {
-                activeVoice.voice.setGainMultiplier(1.0)
+            val voice = activeVoice.voice
+
+            if (soloTracker.isSoloed(activeVoice.sourceId)) {
+                voice.setGainMultiplier(1.0)
             } else {
-                activeVoice.voice.setGainMultiplier(currentBackgroundGain)
+                voice.setGainMultiplier(
+                    backgroundLevel(
+                        voice = voice,
+                        released = soloTracker.isReleased(activeVoice.sourceId),
+                        rampLevel = currentBackgroundGain,
+                        target = backgroundTarget,
+                    )
+                )
             }
 
             val isAlive = activeVoice.voice.render(ctx)
@@ -452,6 +468,11 @@ class VoiceScheduler(
             }
 
             isAlive
+        }
+
+        // The background has reached its target: the release is over, and its slot is freed
+        if (currentBackgroundGain == backgroundTarget) {
+            soloTracker.clearReleased()
         }
 
         // Diagnostics emission lives on the dispatcher now (D5): it always runs renderBlock — even
@@ -544,7 +565,7 @@ class VoiceScheduler(
             head.data.katalyst?.let { cylinders.requestChain(orbit = head.data.cylinder ?: 0, name = it) }
             // Solo state, the same kind of engine state and the same rule: "this source is soloed at this amount
             // until this event ends", from a control event (what `solo(...)` puts over a rest) or a sounding note.
-            recordSolo(head.data, untilSec = epoch + head.gateEndTime)
+            recordSolo(head.data, startSec = absoluteStartSec, untilSec = epoch + head.gateEndTime)
 
             // A control-only event has now been consumed — it must never reach voice creation.
             // The flag is explicit because a null `sound` is NOT silent: the ignitor registry
@@ -609,18 +630,7 @@ class VoiceScheduler(
             playbackCtx = pCtx,
             getSample = ::getCompleteSample,
         )?.let { voice ->
-            val sourceId = absoluteVoice.data.sourceId
-            val ownSolo = absoluteVoice.data.solo
-
-            active.add(
-                ActiveVoice(
-                    voice = voice,
-                    sourceId = sourceId,
-                    origin = origin,
-                    // NaN-guard: a NaN amount fails the compare and protects nothing, as the tracker refuses it
-                    soloed = sourceId != null && ownSolo != null && ownSolo > 0.0 && ownSolo.isFinite(),
-                )
-            )
+            active.add(ActiveVoice(voice = voice, sourceId = absoluteVoice.data.sourceId, origin = origin))
         }
     }
 
@@ -631,6 +641,7 @@ class VoiceScheduler(
      * nothing. Timeline voices are not read here: their solo comes from the events, control events included.
      */
     private fun recordRealtimeSolo(cursorFrame: Double, blockEnd: Double) {
+        val startSec = context.clock.secAt(cursorFrame)
         val untilSec = context.clock.secAt(blockEnd)
 
         for (i in 0 until active.size) {
@@ -641,16 +652,62 @@ class VoiceScheduler(
             if (origin is VoiceOrigin.Realtime && origin.solo != null && sourceId != null &&
                 activeVoice.voice.gateOpenAt(cursorFrame)
             ) {
-                soloTracker.record(sourceId = sourceId, amount = origin.solo, untilSec = untilSec)
+                soloTracker.record(
+                    sourceId = sourceId,
+                    amount = origin.solo,
+                    startSec = startSec,
+                    untilSec = untilSec,
+                    control = false,
+                )
             }
         }
     }
 
-    /** Records [data]'s solo amount for its source until [untilSec]; nothing without both (see [SoloTracker.record]). */
-    private fun recordSolo(data: VoiceData, untilSec: Double) {
+    /**
+     * Records [data]'s solo amount for its source from [startSec] until [untilSec]; nothing without both (see
+     * [SoloTracker.record]).
+     */
+    private fun recordSolo(data: VoiceData, startSec: Double, untilSec: Double) {
         val amount = data.solo ?: return
         val sourceId = data.sourceId ?: return
 
-        soloTracker.record(sourceId = sourceId, amount = amount, untilSec = untilSec)
+        soloTracker.record(
+            sourceId = sourceId,
+            amount = amount,
+            startSec = startSec,
+            untilSec = untilSec,
+            control = data.control == true,
+        )
+    }
+
+    /**
+     * The multiplier of a voice whose source is not soloed: the background's [rampLevel], with these exceptions:
+     *
+     * - **A voice that lost its solo does not dip.** A voice already sounding between the ramp and the target (the
+     *   ramp at or below the [target]) holds its level, at most the target, until the ramp reaches it. Two solos at
+     *   1.0 and 0.5, the stronger ending: its voices go to 0.5, the rest ramps up to them.
+     * - **Nor do the next notes of its source.** A NEW voice of a source that has just lost its solo ([released]: its
+     *   newest event said 0, or its solo ran out, until the ramp reaches its target or the target falls) starts at `max(rampLevel,
+     *   target)`, the level the background is coming back to, and then holds by the rule above. `s("bd*4").solo()`
+     *   with the solo removed: the next kicks play at full level at once. A new voice of any other source starts on
+     *   the ramp.
+     * - **A falling voice fades over at least [CUT_FADE_SECONDS].** It falls by at most [soloFallPerBlock] per block
+     *   (a full drop: two blocks at 48 kHz), to the ramp's level when another solo is live, or to the target.
+     *
+     * Every other voice is at or behind the ramp and takes its level, bit for bit as before: the ramp's own steps
+     * stay below the fall limit while one transition moves the target by less than about 125 (sprudel coerces the
+     * amounts to 0 to 1, so the target moves by at most 1). What still moves fast: a voice entering a solo goes to 1.0 over one block (`SendRenderer`'s block ramp), a
+     * voice of a released source rising to the target does so over one block, and the ramp itself starts at once.
+     */
+    private fun backgroundLevel(voice: Voice, released: Boolean, rampLevel: Double, target: Double): Double {
+        if (!voice.hasGainMultiplier) {
+            return if (released) maxOf(rampLevel, target) else rampLevel
+        }
+
+        val previous = voice.gainMultiplier
+
+        val level = if (rampLevel <= target) maxOf(rampLevel, minOf(previous, target)) else rampLevel
+
+        return maxOf(level, previous - soloFallPerBlock)
     }
 }

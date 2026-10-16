@@ -204,6 +204,9 @@ class Voice(
     /** The multiplier this block ends on. */
     val gainMultiplier: Double get() = _gainMultiplier
 
+    /** True once [setGainMultiplier] has been called: before that, [gainMultiplier] is only the default 1.0. */
+    val hasGainMultiplier: Boolean get() = gainMultiplierSet
+
     /**
      * The multiplier this block starts from: the one the previous block ended on. `SendRenderer` ramps linearly
      * from here to [gainMultiplier] across the block, so a change is never a step inside a sample (a click); when

@@ -108,10 +108,12 @@ voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`); one not 
 - On each block: activates due voices, removes finished voices
 - Sample resolution: when a sample voice is due but the PCM isn't loaded yet,
   sends `Feedback.RequestSample` to frontend and delays activation
-- Solo: `SoloTracker` records "source soloed at amount a until t" from any event (control events included); a
-  voice of a soloed source plays at `Voice.gainMultiplier` 1.0, every other voice at `1 - amount` of the strongest
-  live solo, reached on a 1.5 s ramp (0 only at `solo(1.0)`); a change is ramped across one block in `SendRenderer`.
-  The rules: `audio/MEMORY.md`, and `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`
+- Solo: `SoloTracker` keeps per source its newest solo event ("soloed at amount a from s until t") from any event
+  (control events included); a voice of a soloed source plays at `Voice.gainMultiplier` 1.0, every other voice at
+  `1 - amount` of the strongest solo, reached on a 1.5 s ramp (0 only at `solo(1.0)`), and a voice that has just lost
+  its solo holds until that ramp reaches it (no dip); a change is ramped across one block in `SendRenderer`. No hold
+  after a source's last event (Q28). The rules: `audio/MEMORY.md`, `docs/tasks/in-progress/engine-follow-ups.md`
+  item 43, and `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`
 
 ## Oscillators
 

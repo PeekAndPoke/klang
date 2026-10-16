@@ -1492,6 +1492,96 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     earlier solo, and nothing waits 2 s after the last solo event. Replaces the behaviour of
     [`20261009-solo-protects-whole-voice.md`](../../tasks-archive/2026-10/20261009-solo-protects-whole-voice.md) and
     Q28's three refinements. A behaviour change, so not part of the performance batch 31 to 41. S to M.
+    **The semantics (written 2026-10-16, before the code).** One rule: a source is soloed while the newest solo
+    event it sent is still running and carries a positive amount. "Newest" is the latest START; two events of one
+    source with the same start give the amount popped last. The END comes from the control events: once a source
+    has one, a sounding note of it never sets or extends the end (round 1 MAJOR; a source with notes alone takes the
+    later note end). An older event changes nothing. A source is protected (its voices at 1.0)
+    exactly while it is soloed: no per-voice flag, no hold. Every other voice follows the background's level, which
+    moves at once toward `1 - (the strongest soloed amount)`, or 1.0 when nothing is soloed, on the existing ramp
+    (`SOLO_RAMP_SEC`, 1.5 s cubic, Q12), with a change of one voice's multiplier spread over one block (no click).
+    **No dip:** a voice that has just lost its protection never moves away from its target; it holds its level until
+    the background's ramp reaches it, then follows the ramp (without this, `solo()` then `solo(0)` would drop the
+    part that was soloed to the background's ducked level and fade it back in over 1.5 s). The source's NEXT notes do
+    not dip either (round 2): the source is "released" from the moment its solo ends until the ramp reaches its
+    target or the target falls, and a new voice of it starts at `max(ramp, target)`, the level the rest is coming back to.
+
+    | Case | What plays |
+    |---|---|
+    | `solo()` on | From the source's first solo event the others ramp toward `1 - 0.95`, starting at once; the source's voices at 1.0 (one block in) |
+    | `.solo()` removed by a live edit | The source's last control event ends (at most one grid piece after the edit's cutoff: 1/8 of the soloed pattern's own cycle, n/8 of a cycle after `.solo().slow(n)`) and, 4 blocks of seam grace later, the solo ends: the others ramp back at once, the source's voices stay at 1.0 and its next notes start at full level (no dip; `s("bd*4").solo()` removed: the next kicks at once at full level). A long soloed note (`note("a3").slow(4)`) does not keep it: its gate never sets the end. Before: 2 s hold |
+    | `solo(1)` edited to `solo(0)` | The first event with amount 0 ends the solo at its start: as above, at once. Before: 2 s hold, a soloed voice kept for its whole life |
+    | a voice losing its solo while another solo is live | Falls to the ducked level at once, over at least `CUT_FADE_SECONDS` (4 ms, two blocks; round 1, the coordinator), not inside one block (2.7 ms, can tick) |
+    | two solos, 1.0 and 0.5 | Both sources at 1.0, the rest at 0 (the strongest wins, confirmed 2026-10-08; "latest" is per source, not across sources). The 1.0 one ends: its voices go straight to 0.5 (one block), the rest ramps up to 0.5 |
+    | a soloed note ringing into its release | Protected while its source is soloed. Once the source's solo ends the tail is a background voice: at once at the ducked level if another solo is live, else at full level while the rest comes back. Before: protected to its end (Q14, Q28) |
+    | rests | The control events over the rests keep the source soloed, unchanged |
+    | `solo("<1 0>")` | Soloed in the 1 cycles, not in the 0 cycles, each at the cycle's first event; the 0 cycles' notes at full level from their first block while the rest comes back. Before: 2 s into the 0 cycle |
+    | a note of the source that started before its solo | Protected while the source is soloed, as before; dropped at once when the solo ends (another solo live) |
+    | a held realtime key | Solos its source while held (refreshed per block); the last key's note-off ends the solo after the grace, and its release tail is not protected |
+    | amount 0, NaN, an infinity, as the newest event | Not soloed (ends a running solo of that source; starts nothing) |
+
+    **DONE (2026-10-16, as the semantics above; no backward compat, maintainer 2026-10-16).** Removed: the 2 s hold
+    (`SOLO_HOLD_SEC`, `SoloTracker.holdSec`, the "protected" window) and the per-voice flag `ActiveVoice.soloed`.
+    Kept: the 32-entry `SoloTracker` (it is the per-source state the background level and "latest wins" need, not
+    only the protection), the 4-block seam grace, the 1.5 s ramp (`SOLO_RAMP_SEC`, Q12), the per-block multiplier
+    ramp in `SendRenderer`, the sprudel side unchanged (its 1/8-cycle grid already sends a `solo(0)` as amount-0
+    events; one KDoc sentence on `solo`). The tracker now stores each source's newest event (`record(sourceId,
+    amount, startSec, untilSec)`, `isSoloed`); an amount that is not positive and finite is stored as 0 and ends the
+    solo; a source that is not soloed takes no slot. The no-dip rule is `VoiceScheduler.backgroundLevel` (it reads
+    the voice's last multiplier, `Voice.hasGainMultiplier` for a new one). Not changed: the strongest solo wins across
+    sources (confirmed 2026-10-08), read as Q28's "latest" being per source. Pins: `VoiceSchedulerSoloCutSpec` (47
+    rows; the Q14 and old Q28 rows rewritten to the new behaviour: a soloed release ducked at once when its event
+    ends, the old Q28 example ducked from the first `solo(0)` event, the edit, `solo("<1 0 0 0>")`, 0, NaN and +Inf
+    as the newest event, an older event ignored, the held key, the released realtime tail; new: no dip after
+    `solo(0)`, two solos 1.0 and 0.5, a new voice joins the ramp) and `SoloTrackerSpec` (10 rows, after round 1). Mutants, each RED
+    then restored: the no-dip rule removed (4 rows), an older event replacing (2), the same start taking the last
+    end (2), a later start keeping the later end (1, the tracker row), an amount 0 ignored as before (5), an
+    infinity kept (3), a 2 s hold put back (15), soloed ignoring the amount (6), a new voice starting from 1.0 (1).
+    Green: `:audio_be:jvmTest` (2,788), `:sprudel:jvmTest`; corpus GREEN, 3 of 3 frozen and 15 live identical, 0
+    edited (every `solo(` in the songs is commented out). The 1.5 s ramp stays (maintainer, 2026-10-16: "the change
+    starts at once").
+    **Review round 1 (2026-10-16):** MAJOR (reviewer B): removing `.solo()` from
+    `note("a3").slow(4).sound("sine").solo("<[1 ~ ~ ~ ~ ~ ~ ~] ~ ~ ~>")` held the rest at 0 to 4.0 s, because the
+    soloed note shared its start with the grid piece and the later end (its gate) won. Fixed: control events decide
+    the end (`SoloTracker.record(..., control)`, `fromControl` per entry), a note only updates the amount. MINOR
+    (reviewer A, decided by the coordinator): a falling voice that held or was soloed falls by at most one cut fade
+    per block (`soloFallPerBlock`, `CUT_FADE_SECONDS`), so a full drop takes two blocks; `backgroundLevel`'s
+    unreachable falling branch is gone (its mutant survived). KDocs of `SoloPattern` and `solo` corrected; the
+    tracker evicts an amount-0 entry first when full. New rows: the removed solo with a long note on and inside the
+    last grid piece, scheduled in both orders (`VoiceSchedulerSoloCutSpec`); the fall over at least 4 ms; the tracker's
+    control end (same and later start), notes alone, the eviction. Mutants, each RED then restored: a note extending
+    a control end (3 rows), a control event at the same start keeping the note's end (1, the tracker row; corrected in
+    round 2: in the scheduler rows the source already has a control entry, so the note takes the `fromControl` arm
+    in either pop order, and the `!fromControl` same-start arm is reachable only when the note is the source's FIRST
+    event; the round 2 row for that case stays green under the mutant too, because the heap popped the control
+    piece first in both scheduling orders, so the tracker row is that arm's pin), no fall floor (1), the eviction
+    ignoring amount 0 (1); the no-dip and new-voice mutants rerun (5 and 3).
+    **Review round 2 (2026-10-16):** MAJOR 1: a source that had just lost its solo started its NEXT notes on the ramp
+    (`s("bd*4").solo()` removed: the kicks back at about -26 dB, a new note at 2.5 s read 0.29). Fixed: the tracker
+    marks such a source released (`isReleased`; set when a soloed source's newest event says 0 or its solo runs out,
+    ended by `clearReleased` once the ramp reaches its target or the target falls, then the entry drops); a new
+    voice of it starts at `max(ramp, target)` and then holds by the no-dip rule. The release arm for voices already sounding was dropped:
+    the no-dip rule gives them the same level while the target does not rise again during the release. When it does
+    ("a" at 0.95 and "b" at 0.5, "a" ends, then "b" ends before the ramp lands), a's old voice holds at 0.5 until the
+    ramp passes it while a's new note starts at 1.0; kept as decided by the coordinator in round 3 (the gentler
+    behaviour), pinned by a row. MAJOR 2 ("Solo survives
+    ops", maintainer): not done, the design went back to the coordinator (no central filter path in sprudel; see the
+    report). Both KDocs say the grid is in the soloed pattern's own time (n/8 of a cycle after `.solo().slow(n)`);
+    `SoloPattern`'s says from round 2, and the `solo` door's from round 3, that a structural op after the solo drops
+    its control events in its gaps (put `.solo()` last; `docs/tasks/future/solo-survives-ops.md`). NIT: the
+    `backgroundLevel` KDoc states its bit-for-bit bound (the target moving by less than about 125, corrected in round 3: the cubic's slope peaks at 3). New rows: a new
+    note after `solo(0)` and after the solo is removed, `solo("<1 0>")` with no other solo, a long note as the
+    source's first event, a release ending at the target and on a falling target (each then starting the next note
+    on the ramp); tracker: released by 0 and by running out, cleared, soloed again, never soloed. Mutants,
+    each RED then restored: a new voice of a released source on the ramp (2), no release on a 0 (3), no release on
+    running out (3), soloed again staying released (1, tracker), and reruns: no dip (6), a new voice from 1.0 (3), a
+    note extending a control end (3), no fall floor (1), no clear on a falling target (1), no clear at the target
+    (1). Survivor: the same-start control arm at scheduler level (above; the tracker row pins it).
+    **Review round 3 (2026-10-16):** no CRITICAL or MAJOR. Applied: the `solo` door's KDoc names the gaps a structural
+    op leaves; the rising-target release kept as decided and pinned (`VoiceSchedulerSoloCutSpec`, RED with the
+    release arm back); `SoloTrackerSpec` rows for the run-out reset of `fromControl` and for a cleared release not
+    set again by the next 0 (each RED under its mutant); the bound in `backgroundLevel`'s KDoc is about 125; the
+    `size` KDoc names the released entries.
 
 44. **`duty(amount)` becomes `duty(width)`** (added 2026-10-13, maintainer Q29: "width seems to be the better name").
     The pulse width door's parameter: 0 to 1, the share of the cycle that is high (0.5 = square); positional

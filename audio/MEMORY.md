@@ -171,12 +171,17 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Build-time knobs** (shapes, the oversample factor, `passes`, curves, the tremolo shape) are read once,
   leaf-only; a non-leaf takes the default and is not built. `Oversampler.factorOf`: non-finite is 0, a fraction
   truncates, no upper clamp (the D7 stopgap until `docs/tasks/oversampling-regions.md`).
-- **Solo**: background gain `1 - max(live amounts)` (`solo(1.0)` is exact silence, `solo()` is 0.95); `SoloTracker` (per
-  playback, fixed arrays) records "soloed at a until t" from any event, control events included; live = `end + 4 blocks >
-  now`, protected = `end + SOLO_HOLD_SEC > now` for every voice of the source, and a voice soloed itself (its own amount
-  positive and finite, `ActiveVoice.soloed`) for its whole life (a long release beside another solo, Q14, Q28); `SOLO_HOLD_SEC >= SOLO_RAMP_SEC` (guard: `VoiceSchedulerSoloCutSpec`). Realtime voices have no
-  control events: each one whose gate is open records its source until the block's end, so a realtime solo follows the
-  held gates.
+- **Solo**: background gain `1 - max(amounts of the soloed sources)` (`solo(1.0)` is exact silence, `solo()` is 0.95),
+  reached on the 1.5 s `SoloRamp`; `SoloTracker` (per playback, fixed arrays) keeps per source its NEWEST event (the
+  latest start wins at once; the end comes from the control events, a note's gate never extends it), recorded from
+  any event, control events included. A source is soloed, and its voices at 1.0, while that event runs (`end + 4 blocks > now`) with a
+  positive finite amount; an amount 0, NaN or infinity ends it. No hold, no per-voice protection (Q28, engine
+  follow-up 43). No dip: a voice that lost its solo never moves away from the background's target, it holds until
+  the ramp reaches it (`VoiceScheduler.backgroundLevel`), and falls over at least `CUT_FADE_SECONDS`; a new voice
+  starts on the ramp, except one of a source that has just lost its solo (`SoloTracker.isReleased`, until the ramp
+  reaches its target or the target falls), which starts at `max(ramp, target)`. Realtime voices have no
+  control events: each one whose gate is open records its source for the block, so a realtime solo follows the held
+  gates. Guards: `VoiceSchedulerSoloCutSpec`, `SoloTrackerSpec`.
 - **Resource counts are capped, tones are not**: `coercePasses` (1 to 16), `coerceUnisonVoices` (0 to
   `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0) and `coerceSinePartials` (a sine plays its first
   `SINE_MAX_PARTIALS` = 256 explicit partials, the rest are not built), all in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
@@ -368,6 +373,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Engine follow-up 43: solo reacts at once (Q28): a source's newest solo event wins, the 2 s hold and the
+  per-voice `ActiveVoice.soloed` gone, a voice leaving its solo does not dip: `docs/tasks/in-progress/engine-follow-ups.md` item 43
 - 2026-10-16 Engine follow-up 41: Kotlin/JS emits `Double.NaN` as the global `NaN`, a tagged value, so an `if` with
   a NaN arm boxed its double arm on V8: the delay and reverb writers' gates and the `Reverb.lowpass` setter now store
   each arm on its own, and `Reverb.normalizeSize` writes its clamp out (the stdlib `coerceIn` was left out of the
@@ -519,7 +526,7 @@ One line per step, newest first. A link to the archived task record where one ex
   cents): the entries below and `DEV-DIARY.MD`
 - 2026-10-09 A `distort` stage on the Katalyst (bus and master), the voice's law at the house DC pole, the oversampler's
   latency held in every state: `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`
-- 2026-10-09 A soloed voice is protected for its whole life (`ActiveVoice.soloed`, Q14 and Q28); the window serves between events:
+- 2026-10-09 Superseded by follow-up 43 (2026-10-16): a soloed voice is protected for its whole life (`ActiveVoice.soloed`, Q14 and Q28); the window serves between events:
   `docs/tasks-archive/2026-10/20261009-solo-protects-whole-voice.md`
 - 2026-10-09 Pitch pipeline step 3b: a pitch node means what it wraps; above an `fm` it moves the whole operator
   (`CarrierFreqMod`, the modulator reads the outer mod at the carrier's frequency, once per block). A sound change for
