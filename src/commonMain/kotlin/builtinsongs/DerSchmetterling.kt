@@ -329,9 +329,9 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.45) // . mute()
-    .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
-    .adsr(0.003, 0.3, 0.33, 0.025).hpf(30)
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.50) // . mute()
+    .ignp("sub", 1.00).ignp("harmonics", 0.95).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
+    .adsr(0.003, 0.3, 0.50, 0.025).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
