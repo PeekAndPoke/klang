@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -38,6 +39,18 @@ class KatalystDelayGlideSpec : StringSpec({
     fun effect() = KatalystDelayEffect(
         delayLine = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate),
         blockFrames = blockFrames,
+    )
+
+    /**
+     * A stage whose wet holds a modulator, so the switch-off fade of the feed spans ONE block (engine follow-up 42):
+     * the drain then starts while a 17-block feedback glide still moves, which an unmodulated wet's 17-block fade
+     * would outlast.
+     */
+    fun quickFade() = KatalystDelayEffect(
+        rings = SizedBuffers.forRings(sampleRate),
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        wetModulated = true,
     )
 
     fun bare(feedback: Double) = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate, time = 0.02, feedback = feedback)
@@ -177,7 +190,7 @@ class KatalystDelayGlideSpec : StringSpec({
     }
 
     "an off-config during a RISING feedback glide drains for the feedback the glide is heading to" {
-        val fx = effect()
+        val fx = quickFade()
         val c = ctx()
 
         fx.configure(time = 0.02, feedback = 0.2, cap = 1.0, wet = 1.0)
@@ -191,15 +204,18 @@ class KatalystDelayGlideSpec : StringSpec({
             fx.process(c)
         }
 
-        val peak = fx.delayLine!!.tapWindowPeakAbs()
-
+        // The off-config, then its one-block fade, whose landing measures the tap window the drain starts from.
         fx.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+        c.mixBuffer.clear()
+        fx.process(c)
+
+        val peak = fx.delayLine!!.tapWindowPeakAbs()
 
         // The countdown by hand, from the drain's formula: periods of the 882-sample tap, plus the
         // spare one, at the LARGER magnitude of the feedback in force and the one it glides to.
         fun countdown(fb: Double): Double = (ceil(ln(1e-5 / peak) / ln(fb)) + 1.0) * 0.02 * sampleRate
 
-        val inForce = 0.2 + 0.7 * 2 / glideBlocks
+        val inForce = 0.2 + 0.7 * 3 / glideBlocks
         val offBlock = ceil(countdown(0.9) / blockFrames).toInt()
 
         (countdown(0.9) > countdown(inForce)) shouldBe true
@@ -220,7 +236,7 @@ class KatalystDelayGlideSpec : StringSpec({
     "an off-config during a FALLING feedback glide drains for the feedback still in force" {
         // The other direction, guarded on its own (pilot log entry 6): with a rising-only row the
         // mutant "count down from the target" passes.
-        val fx = effect()
+        val fx = quickFade()
         val c = ctx()
 
         fx.configure(time = 0.02, feedback = 0.9, cap = 1.0, wet = 1.0)
@@ -234,11 +250,12 @@ class KatalystDelayGlideSpec : StringSpec({
             fx.process(c)
         }
 
-        val peak = fx.delayLine!!.tapWindowPeakAbs()
-
         fx.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+        c.mixBuffer.clear()
+        fx.process(c)
 
-        val inForce = 0.9 + (0.2 - 0.9) * 2 / glideBlocks
+        val peak = fx.delayLine!!.tapWindowPeakAbs()
+        val inForce = 0.9 + (0.2 - 0.9) * 3 / glideBlocks
         val countdown = (ceil(ln(1e-5 / peak) / ln(inForce)) + 1.0) * 0.02 * sampleRate
         val offBlock = ceil(countdown / blockFrames).toInt()
 

@@ -10,20 +10,37 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.round
 
 class KatalystDelayEffectSpec : StringSpec({
 
     val sampleRate = 44100
     val blockFrames = 128
 
+    /** The switch-off fade of the feed (engine follow-up 42): the wet glide's span, 17 blocks here. */
+    val fadeBlocks = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt()
+
     fun createCtx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
     )
+
+    /**
+     * Runs the switch-off fade on a SILENT mix, so the fade feeds nothing and the stage enters the drain from the
+     * ring the off-config found, decayed only by its own feedback over the fade: the rows below are about the drain.
+     */
+    fun fadeOut(effect: KatalystDelayEffect, ctx: KatalystContext) {
+        repeat(fadeBlocks) {
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+        }
+    }
 
     fun createEffect(delayTime: Double = 0.5, feedback: Double = 0.0): KatalystDelayEffect {
         val dl = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate)
@@ -87,22 +104,25 @@ class KatalystDelayEffectSpec : StringSpec({
         drained.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         // 40 blocks ≈ 2.3 echo periods at 0.05 s, well inside the countdown, so the two runs
-        // must agree: the drain is by construction "active with silent input".
+        // must agree: the drain is by construction "active with silent input". The first
+        // [fadeBlocks] are the switch-off fade, fed a silent mix here like the reference.
         var maxDiff = 0.0
 
-        repeat(40) {
+        repeat(40) { block ->
             refCtx.mixBuffer.clear()
             ref.process(refCtx)
 
             // The draining side's mix carries GARBAGE: a drain must not be fed from it (the owner
             // said off). The 0.7 itself is dry signal passing through, so what the stage ADDED is
             // compared, up to the rounding of taking the 0.7 back out; a fed 0.7 would add ~0.7.
-            drainedCtx.mixBuffer.fill(0.7)
+            val garbage = if (block < fadeBlocks) 0.0 else 0.7
+
+            drainedCtx.mixBuffer.fill(garbage)
             drained.process(drainedCtx)
 
             for (i in 0 until blockFrames) {
-                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.left[i] - (drainedCtx.mixBuffer.left[i] - 0.7)))
-                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.right[i] - (drainedCtx.mixBuffer.right[i] - 0.7)))
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.left[i] - (drainedCtx.mixBuffer.left[i] - garbage)))
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.right[i] - (drainedCtx.mixBuffer.right[i] - garbage)))
             }
         }
 
@@ -368,6 +388,7 @@ class KatalystDelayEffectSpec : StringSpec({
         }
 
         effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+        fadeOut(effect, ctx)
 
         val drainBlocks = ceil(
             effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs()) / blockFrames
@@ -737,8 +758,17 @@ class KatalystDelayEffectSpec : StringSpec({
         // line's feedback is still below 1 at the off-edge while the drain glides on to 1.2 and the
         // ring grows to the cap under a ceiling frozen at the charge. The drain's bound (the larger
         // of the glide's value and target) is what the return must be judged by, not the line's.
+        // A modulated wet, so the switch-off fade spans ONE block (engine follow-up 42): the drain then starts while
+        // the 17-block feedback glide still moves, which an unmodulated wet's 17-block fade would outlast.
         for (tame in listOf(0.0, 0.3)) {
-            val effect = createEffect(delayTime = 0.1, feedback = 0.9)
+            val effect = KatalystDelayEffect(
+                rings = SizedBuffers.forRings(sampleRate),
+                sampleRate = sampleRate,
+                blockFrames = blockFrames,
+                wetModulated = true,
+            ).apply {
+                configure(time = 0.1, feedback = 0.9, cap = 1.0, wet = 1.0)
+            }
             val ctx = createCtx()
             ctx.mixBuffer.fill(0.001)
             effect.process(ctx)
@@ -748,6 +778,13 @@ class KatalystDelayEffectSpec : StringSpec({
                     effect.configure(time = 0.1, feedback = 1.2, cap = 1.0, wet = 1.0)
                 } else if (b == 1) {
                     withClue("the off-edge must land inside the glide, below 1") {
+                        (abs(effect.delayLine!!.feedback) < 1.0) shouldBe true
+                    }
+                    effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+                } else if (b == 2) {
+                    // The fade landed in block 1: the DRAIN starts here, and it must start inside the glide.
+                    withClue("the drain must start inside the glide, below 1") {
+                        (effect.currentState::class.simpleName) shouldBe "Draining"
                         (abs(effect.delayLine!!.feedback) < 1.0) shouldBe true
                     }
                     effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
@@ -789,8 +826,9 @@ class KatalystDelayEffectSpec : StringSpec({
         }
 
         fallsAt(toggle = false) shouldBe 2476
-        // The frozen ceiling resumes where it stood: the fall moves by exactly the 31 drained blocks.
-        fallsAt(toggle = true) shouldBe 2507
+        // The frozen ceiling resumes where it stood: the fall moves by exactly the drained blocks, the 31 toggled
+        // ones less the switch-off fade's 17, which run Active and move the ceiling on (engine follow-up 42).
+        fallsAt(toggle = true) shouldBe 2476 + 31 - fadeBlocks
     }
 
     "the four-number door hands time, feedback and cap to the line" {

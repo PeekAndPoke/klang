@@ -120,7 +120,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Knob glide** `KNOB_GLIDE_SECONDS` 0.05 in whole blocks (17 at 44.1 kHz, 19 at 48 kHz), one block for a knob that
   holds a modulator; **bank crossfade** `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. The bank
   crossfade and the compressor's switch fade run one linear law, `utils/linear_crossfade.kt` (the chain swap's
-  `Crossfade` and the duck's glide are other laws). Which knob glides how: `audio/ref/katalyst.md`.
+  `Crossfade` and the duck's glide are other laws). Every delay and reverb switch-off fades the feed over the wet
+  glide and drains from the block it lands in, no further off-config needed (follow-up 42). Which knob glides how:
+  `audio/ref/katalyst.md`.
 - **Body and vowel** are one stage class with two kinds (`KatalystResonatorEffect`, `ResonatorKind`); a chain runs
   both stages as two instances. One table per catalogue index (`ResonatorTables`, equal rows share an instance, so a
   switch among aliases installs nothing); a TABLE change installs into the pooled pair nobody hears (two pairs, built
@@ -373,6 +375,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Engine follow-up 42: every delay and reverb switch-off fades its feed over the wet glide (Q39, "fade, do
+  not cut"), and the landing block moves the stage into the drain by itself, so an orbit without an owner drains too;
+  the new owner's first 50 ms bleed into the old ring or room, accepted; corpus unmoved (it reaches no such switch-off):
+  `docs/tasks/in-progress/engine-follow-ups.md` item 42
 - 2026-10-16 Q20: the frozen `strangerThings_2026_07_03`, `derSchmetterling_2026_09_25` and the frozen piece
   `derSchmetterling_2026_09_16` give each pattern that shared an orbit with other bus settings a free orbit of its
   own; the three corpus rows moved because the frozen TEXT was edited, not the engine, and were re-accepted

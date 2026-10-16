@@ -25,18 +25,19 @@ import kotlin.math.min
  * size glide's lifecycle below: the first configure out of Off snaps, [Off.enter] forgets it. Not
  * advanced while Draining, where nothing is fed.
  *
- * **A modulated size switches the feed with the wet glide** (knob expressions step 5b, review rounds 1
- * and 2, the delay's rule and contract, written down in [KatalystDelayEffect]'s KDoc): on a stage whose
- * size knob holds a modulator ([sizeModulated]), a FINITE size below [MIN_ACTIVE_SIZE] first takes the
- * wet glide to 0 over its span (50 ms, one block for a modulated wet) and stays [Active] while it falls;
- * the off-config that finds it landed measures the combs and enters [Draining] or [Off] as every other
- * off does, and that off-config is RE-APPLIED every block (the writer of a modulated size is a modulated
- * writer). Back in Active from any other state, its first activation included, the wet glides up from 0
- * ([KnobGlide.startFrom]); a return mid-fade turns the glide around. Without it an LFO through the gate
- * cut and restarted the feed in one sample, which the allpasses pass on at once as a step of the room's
- * output. An unset modulated size fades too: the writer's gate hands [Reverb.normalizeSize]'s 0 for it,
- * a finite size below the gate. Every other switch-off keeps the hard cut (the delay's KDoc says why):
- * a wet the stage is no longer asked for, and a non-finite size from a direct caller.
+ * **Every switch-off fades the feed with the wet glide** (engine follow-up 42, maintainer Q39,
+ * 2026-10-13: "fade, do not cut"; the delay's rule, written down in [KatalystDelayEffect]'s KDoc): any
+ * off-config (an owner change to a voice that leaves the reverb off, a `katp` size below
+ * [MIN_ACTIVE_SIZE], an unset size, a non-finite one) takes the wet glide to 0 over its span (50 ms, one
+ * block for a modulated wet) and the stage stays [Active] while it falls; the block the glide LANDS in
+ * measures the combs at its end and enters [Draining] or [Off] ([Active.process]), with no further
+ * off-config needed, so an orbit whose owner stopped offering drains too. On an owner change the NEW
+ * owner's mix feeds the OLD owner's room for the fade's span at a falling level, the bleed accepted with
+ * the decision. Back in Active out of Draining the wet glides up from 0, where the fade left it; out of
+ * Off it snaps, except on a modulated size ([sizeModulated]), whose wet glides up from 0
+ * ([KnobGlide.startFrom]), its first activation included; a return mid-fade turns the glide around.
+ * Without the fades an LFO through the gate cut and restarted the feed in one sample, which the
+ * allpasses pass on at once as a step of the room's output.
  *
  * Owns the same active/draining/off lifecycle as [KatalystDelayEffect] (block-framing ledger D3,
  * adopted here as the decided follow-up): turning the reverb off must never freeze a live tail
@@ -104,8 +105,8 @@ class KatalystReverbEffect(
     /** True when the wet's knob holds a modulator: [wetGlide] spans one block (knob expressions step 5b, D2). */
     wetModulated: Boolean = false,
     /**
-     * True when the size's knob holds a modulator: [sizeGlide] spans one block (step 5b, D2), a finite size below
-     * [MIN_ACTIVE_SIZE] fades the feed out before the drain, and a return glides it up from 0 (see the class KDoc).
+     * True when the size's knob holds a modulator: [sizeGlide] spans one block (step 5b, D2), and a return out of
+     * [Off] glides the wet up from 0 instead of snapping it (see the class KDoc).
      */
     private val sizeModulated: Boolean = false,
 ) : KatalystEffect {
@@ -155,8 +156,8 @@ class KatalystReverbEffect(
     private val feed = StereoBuffer(blockFrames)
 
     /**
-     * The owner's `wet`, a LEVEL knob (see the class KDoc). On a modulated size it is taken to 0 before the drain and
-     * started from 0 on a return; forgotten in [Off.enter].
+     * The owner's `wet`, a LEVEL knob (see the class KDoc). Taken to 0 before every drain; on a modulated size started
+     * from 0 on a return out of Off; forgotten in [Off.enter].
      */
     private val wetGlide = KnobGlide(sampleRate = units.sampleRate, blockFrames = blockFrames, modulated = wetModulated)
 
@@ -196,11 +197,11 @@ class KatalystReverbEffect(
      * allocates on the audio thread. `enter` is the only way into a state, and it is what
      * initialises that state's own data.
      *
-     * | state \ event | `configure`, reverb ON | `configure`, reverb OFF | `process`, countdown ends | `reset` | `retire` / `release` |
-     * |---|---|---|---|---|---|
-     * | **Off** | **Active** (a unit is rented if there is none; the size snaps; on a modulated size the wet glides up from 0). Stays Off in ONE case: there is no unit AND the shelf refuses one | Off | (never) | Off | Off |
-     * | **Active** | Active (the knobs are rewritten, the size glide retargets, an unchanged config writes nothing, see [applied]; mid-fade the wet glide turns around) | **Draining**, or **Off** when the network is already silent OR poisoned (a non-finite countdown). On a modulated size with a finite value, first **Active** while the wet glide falls to 0 (the off-config is re-applied every block), then that | (never) | Off | Off |
-     * | **Draining** | **Active** (the network, its ceiling and the size glide carry on; a new size glides from where the room stands; on a modulated size the wet glides up from 0) | Draining (the countdown keeps running) | **Off** | Off | Off |
+     * | state \ event | `configure`, reverb ON | `configure`, reverb OFF | `process`, the fade lands | `process`, countdown ends | `reset` | `retire` / `release` |
+     * |---|---|---|---|---|---|---|
+     * | **Off** | **Active** (a unit is rented if there is none; the size snaps; on a modulated size the wet glides up from 0). Stays Off in ONE case: there is no unit AND the shelf refuses one | Off | (never) | (never) | Off | Off |
+     * | **Active** | Active (the knobs are rewritten, the size glide retargets, an unchanged config writes nothing, see [applied]; mid-fade the wet glide turns around) | Active while the wet glide falls to 0 (the fade); with the wet already at rest at 0, at once what the next column says | **Draining**, or **Off** when the network is already silent OR poisoned (a non-finite countdown) | (never) | Off | Off |
+     * | **Draining** | **Active** (the network, its ceiling and the size glide carry on; a new size glides from where the room stands; the wet glides up from 0) | Draining (the countdown keeps running) | (never) | **Off** | Off | Off |
      *
      * The ON arm of [configure] is the same from every state but one line, so it stays on the effect
      * and only the OFF arm dispatches ([deactivate]); the one line is a reference compare that starts
@@ -220,10 +221,9 @@ class KatalystReverbEffect(
 
         /**
          * The owner's off-config arrived. [unit] is the effect's network, which [configure] has
-         * already proven non-null. A state that has nothing to do with it ignores it. [fade] is true
-         * when the off is a modulated size crossing the gate with a finite value (see the class KDoc).
+         * already proven non-null. A state that has nothing to do with it ignores it.
          */
-        abstract fun deactivate(unit: Reverb, fade: Boolean)
+        abstract fun deactivate(unit: Reverb)
     }
 
     /** Nothing in the network and nothing to do: a true short-circuit until an owner re-enables. */
@@ -232,7 +232,7 @@ class KatalystReverbEffect(
          * PRECONDITION: the caller has already emptied the unit, because [hasTail] here answers a
          * hardcoded `false` and cannot check. Entering Off with a charged network is a silent cut.
          *
-         * The four callers and how each satisfies it: [Active.deactivate] resets the unit when the
+         * The four callers and how each satisfies it: [Active.leave] resets the unit when the
          * countdown it measured is already over OR not finite (a poisoned network, which the reset
          * heals); [Draining.process] resets it when the countdown runs out; [reset] resets it and
          * puts the DSP params back to factory; [release] hands the unit to the shelf DIRTY and drops
@@ -254,15 +254,23 @@ class KatalystReverbEffect(
         override fun hasTail(): Boolean = false
 
         /** Already off: an owner that says off again says nothing. */
-        override fun deactivate(unit: Reverb, fade: Boolean) {}
+        override fun deactivate(unit: Reverb) {}
     }
 
     /**
-     * The owner wants reverb. It carries no data of its own: the knobs live on the [Reverb], where
-     * the DSP reads them, and the tail ceiling and the size glide outlive this state.
+     * The owner wants reverb, or its feed is fading out after an off-config ([fading]). The knobs live
+     * on the [Reverb], where the DSP reads them, and the tail ceiling and the size glide outlive this state.
      */
     private inner class Active : State() {
+        /**
+         * True while an off-config's fade runs: the wet glide falls to 0, and the block it lands in goes
+         * on into the drain ([process]). Dies with the state; [enter], the ON arm's door, clears it, which
+         * is what turns a fade around on a return.
+         */
+        private var fading = false
+
         fun enter() {
+            fading = false
             state = this
         }
 
@@ -283,23 +291,39 @@ class KatalystReverbEffect(
             // double (engine follow-up 1, `Reverb.observeTail` says why).
             unit.observeTail(ceiling = activeTail, input = feed, frames = frames)
             unit.process(input = feed, output = ctx.mixBuffer, length = frames)
+
+            // The fade lands in this block: the drain starts from what the combs hold now, with no off-config
+            // needed to move it on (an orbit without an owner configures nothing; see the class KDoc).
+            if (fading && !wetGlide.isGliding) {
+                leave(unit)
+            }
         }
 
         /** A ceiling, not a scan: [process] maintains it from the feed. */
         override fun hasTail(): Boolean = reverb != null && activeTail.hasTail
 
-        override fun deactivate(unit: Reverb, fade: Boolean) {
-            // A modulated size crossing the gate: the feed falls to 0 over the wet glide's span while the stage stays
-            // Active, and only an off-config that finds the glide landed goes on below (see the class KDoc). A wet at
-            // rest at 0 has nothing to fade.
-            if (fade && (wetGlide.isGliding || wetGlide.value != 0.0)) {
+        override fun deactivate(unit: Reverb) {
+            // Every switch-off: the feed falls to 0 over the wet glide's span while the stage stays Active, and the
+            // block the glide lands in goes on into [leave] ([process]; see the class KDoc). A wet at rest at 0 has
+            // nothing to fade, and neither has a glide that snaps (no block has consumed its first value yet).
+            if (wetGlide.isGliding || wetGlide.value != 0.0) {
                 wetGlide.retarget(0.0)
 
                 if (wetGlide.isGliding) {
+                    fading = true
+
                     return
                 }
             }
 
+            leave(unit)
+        }
+
+        /**
+         * The way out of Active once the feed is at 0: [Draining], or [Off] when the network is already silent or
+         * poisoned.
+         */
+        private fun leave(unit: Reverb) {
             // One comb scan at the transition: the countdown starts from what the combs actually
             // hold, so a barely-charged network drains in proportion to its content. An
             // already-silent network goes straight to Off, and so does a BROKEN one: a
@@ -356,7 +380,7 @@ class KatalystReverbEffect(
             advanceGlide(unit)
             unit.process(input = silentInput, output = ctx.mixBuffer, length = frames)
 
-            // A plain end test: a non-finite countdown never gets here, [Active.deactivate] heals it.
+            // A plain end test: a non-finite countdown never gets here, [Active.leave] heals it.
             val left = remaining - frames
             remaining = left
 
@@ -374,7 +398,7 @@ class KatalystReverbEffect(
          * second off-config must NOT restart it, or an owner re-applied every block would hold
          * the tail open for ever.
          */
-        override fun deactivate(unit: Reverb, fade: Boolean) {}
+        override fun deactivate(unit: Reverb) {}
     }
 
     private val off = Off()
@@ -418,10 +442,10 @@ class KatalystReverbEffect(
      * only in Active).
      *
      * **When it is valid:** set at the end of the ON arm, cleared at the start of every configure that does not skip
-     * and in [Off.enter]. So it is valid only in [Active]: every way out of Active is the OFF arm of this method or
-     * [Off.enter]. The OFF arm is never skipped, so the off-config a modulated size's fade needs every block still
-     * arrives every block; and a return after a fade, whose config may equal the memo, is not skipped either, because
-     * the off-config that began the fade cleared it.
+     * and in [Off.enter]. So it is valid only in [Active] and never during a fade: every way out of Active is the OFF
+     * arm of this method (which clears it before a fade begins, so the landing in [Active.process] finds it cleared) or
+     * [Off.enter]. The OFF arm is never skipped; and a return after a fade, whose config may equal the memo, is not
+     * skipped either, because the off-config that began the fade cleared it.
      *
      * Compared NaN-aware with -0.0 told apart ([sameKnob]). It stores the RAW knobs, a deliberate departure from the
      * cached-config rule of `/review-loop` ("store substituted values"): a memo that only skips an unchanged config must
@@ -502,8 +526,9 @@ class KatalystReverbEffect(
             unit.lowpass = lowpass
             sizeGlide.retarget(boundedSize)
 
-            // A modulated size returns to Active with its feed at 0, out of Off or Draining alike, so the wet glides
-            // up from there; a return mid-fade (Active) turns the falling glide around where it stands (class KDoc).
+            // A modulated size returns to Active with its feed at 0 out of Off too, so the wet glides up from there
+            // (out of Draining the fade left it at 0 already); a return mid-fade (Active) turns the falling glide
+            // around where it stands (class KDoc).
             if (sizeModulated && state !== active) {
                 wetGlide.startFrom(0.0)
             }
@@ -522,10 +547,8 @@ class KatalystReverbEffect(
         // Never activated: nothing to drain.
         val unit = reverb ?: return
 
-        // Only [Active] has work to do here; the other two say why they do not.
-        // A FINITE size on this arm is below the gate; only a modulated one fades the feed, an unset one included (the
-        // writer hands `normalizeSize`'s 0 for it). A non-finite size (the writer's "not asked for") is the hard cut.
-        state.deactivate(unit = unit, fade = sizeModulated && size.isFinite())
+        // Only [Active] has work to do here (the fade, see the class KDoc); the other two say why they do not.
+        state.deactivate(unit)
     }
 
     /**

@@ -1482,9 +1482,64 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     `E-distort` figure in every record is the `--predictable` one at 1,000,000 blocks, 155 to 16 B (reviewer B: 16.1).
     S.
 
-42. **A delay or reverb switched off fades its feed instead of cutting it** (added 2026-10-13, maintainer Q39: "fade,
-    do not cut"). A sound change, so not part of the performance batch 31 to 41. Plan, cost and the corpus effect:
-    [`../by-ear/delay-reverb-owner-change-cut.md`](../by-ear/delay-reverb-owner-change-cut.md). M.
+42. **DONE (2026-10-16): a delay or reverb switched off fades its feed instead of cutting it** (added 2026-10-13,
+    maintainer Q39: "fade, do not cut"). A sound change, so not part of the performance batch 31 to 41. Plan, cost and
+    the corpus effect: [`../by-ear/delay-reverb-owner-change-cut.md`](../by-ear/delay-reverb-owner-change-cut.md),
+    option (b). M.
+    **The design.** Every off-config (an owner change to a voice that leaves the stage off, a `katp` time or size
+    below the gate, an unset or non-finite one) takes the wet glide to 0 over its span (50 ms, one block for a
+    modulated wet) while the stage stays Active and feeds the falling level into the ring or the room, the law knob
+    expressions step 5b built for a modulated time or size. The by-ear file's cost ("the fade rests on the off-config
+    being re-applied every block", which `Cylinder.commitOwner` does not do for an orbit without an owner) is paid
+    in the stage, not with new plumbing: the off-config only STARTS the fade (`Active.fading`, a flag that dies with
+    the state, cleared by `Active.enter`, which is what turns a fade around on a return), and `Active.process` moves
+    the stage on into Draining or Off at the end of the block the glide lands in (`Active.leave`, the old tail of
+    `deactivate`). So an orbit whose owner stopped offering, and the leaving chain of a swap, drain like any other.
+    For the modulated gates the move comes one block earlier than before (the landing block's end, not the next
+    block's off-config); the ring or the room is the same at both moments, so the drain is the same. The `fade`
+    parameter of `deactivate` is gone (every off fades), and `timeModulated` / `sizeModulated` now decide only the
+    glide from 0 out of Off; a return out of Draining glides up from 0 on every stage, where the fade left it.
+    **The bleed, accepted with the decision and recorded in both class KDocs:** on an owner change the NEW owner's
+    first 50 ms reach the OLD owner's ring or room at a falling level. Item 32's memo needs nothing: the OFF arm
+    clears it before a fade begins, so it is never valid during a fade and the landing finds it cleared.
+    No allocation: one Boolean per Active instance, no new call on the per-block path but one compare.
+    **Corpus GREEN, nothing moved** (3 of 3 frozen, 15 of 15 live identical, 0 edited). The by-ear file predicted
+    `frozen piece derSchmetterling_2026_09_16`; Q20 (2026-10-16) moved that piece's bass off guitar 3's orbit first.
+    **The corpus reaches no switch-off of a fed delay or reverb**, so it is no evidence for the fade either way: the
+    switch-off feed boosted to 4x on both stages left it GREEN, and so did (review round 1, reviewer B) a mutant that
+    never switches off at all. A control every reverb song hears (`length = frames - 1` in the reverb's Active) turned
+    all 18 rows red, so the run did read the tree. The evidence for the fade is `KatalystSwitchOffFadeSpec` and the
+    listening pairs.
+    **Rows.** New, `KatalystSwitchOffFadeSpec`: "every switch-off path fades the feed linearly to 0, then drains on
+    its own with no further off-config" (both stages; time or size 0.005, 0, NaN, Inf; against a stage kept ON at wet 1
+    fed the hand-computed ramp, then silence, 1e-12; the state per block; the drain to Off), "a return mid-fade turns
+    the glide around and the stage never leaves Active", "an off-config re-applied every block, applied once, or
+    dropped mid-fade renders the same samples" (an orbit losing its owner mid-fade), and on a `Cylinder` "an owner
+    change switches the delay and the reverb off with a fade, and the orbit drains with no owner left" (a next owner
+    that names neither stage, and one whose `katp` sets time and size below the gates; each offers 5 blocks of the
+    fade and is gone). Moved to the fade: the drain rows of `KatalystDelayEffectSpec` and `KatalystReverbEffectSpec`
+    (the fade runs on a silent mix first; "at a steady feedback a return from the drain resumes the frozen ceiling
+    untouched" now falls at 2476 + 31 - 17, the fade's blocks running Active), the mid-glide drain rows of the two glide
+    specs (on a modulated wet, so the fade is one block and the drain still starts mid-glide), the two state identity
+    specs (the fade runs in the ONE Active instance), and `KatalystModulatedStagesSpec` (the drain starts at block 4,
+    the landing block; the unset-wet window of both through-`build()` rows was "the hard cut is one" and is now a fade
+    under the same bound).
+    **Mutants**, one lock call each, restored and checked with `cmp`, against the new spec: no landing in the delay's
+    `process` RED (3), the delay fading only on a modulated time RED (3), the delay's `enter` keeping `fading` RED
+    (1, the return row), the same three on the reverb RED (3, 3, 1), the delay's and the reverb's drain never ending
+    RED (2 each). **Review round 1** (production code clean from both reviewers): "a glide rising ACROSS 1 when the
+    owner leaves" in `KatalystDelayEffectSpec` no longer reached its scenario (the 17-block fade outlasted the feedback
+    glide, so the drain began settled) and the reviewer's mutant, the drain's feedback bound taken from the line
+    (`feedback = line.feedback`), survived; the row now runs on a modulated wet (a one-block fade) and its clue checks
+    that the DRAIN starts mid-glide, and the mutant is RED (1, that row). The reverb's "returns mid-drain" and "owner
+    arriving MID-drain" rows now assert the Draining state before the return (the second one fades out first; it
+    returned mid-fade). The two through-`build()` rows got back a positive control for their step meter: the same
+    chain emptied in one sample by `reset` must read a hard edge (each RED when `reset` keeps the ring or the
+    network). `:audio_be:jvmTest` 2,807 of 2,807. The allocation check GREEN, 80 of 80 (`E-delay` 46 B, rounds
+    45 to 77; `E-stages` 25; `E-kat-gates` 32; `E-kat-mix` 51; the JVM 0 throughout); no budget line moved.
+    **Listening pairs** (before on HEAD's two stage files, after on the tree): `tmp/listening/delay-reverb-fade/`,
+    an owner change that switches the reverb off (`owner-change-reverb.md`) and a `katp` delay time below its gate and
+    back (`katp-delay-gate.md`); no corpus pair, nothing moved.
 
 43. **Solo reacts at once: the latest `solo()` value wins immediately** (added 2026-10-13, maintainer Q28, revising
     their Q14: "This is a debugging tool, not a musical one, and it has to react quickly to the user's needs"). The

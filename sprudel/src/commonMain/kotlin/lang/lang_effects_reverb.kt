@@ -101,7 +101,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * stay dry, or sit in the room by a different amount, goes on an orbit of its own. The room hears
  * everything before it on the orbit: a `body`, a `vowel` and the `delay`'s echoes. When another
  * pattern with a reverb takes the orbit over, `wet` and `size` move smoothly to its values; a
- * pattern without one switches the room off, which does not fade yet (the tail rings out).
+ * pattern without one switches the room off: its feed fades out over 50 ms and the tail rings out.
  *
  * The call sets every slot: the ones you leave out take the same default as on the master reverb,
  * wet 0.25 and size 5 (lowpass has none), unless an earlier call already set them. So a bare

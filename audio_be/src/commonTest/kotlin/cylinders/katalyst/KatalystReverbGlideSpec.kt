@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -193,7 +194,9 @@ class KatalystReverbGlideSpec : StringSpec({
     }
 
     "an off-config during a RISING glide drains for the feedback the glide is heading to" {
-        val effect = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
+        // A modulated wet: the switch-off fade spans ONE block (engine follow-up 42), so the drain starts while the
+        // size still glides, which an unmodulated wet's 17-block fade would outlast.
+        val effect = KatalystReverbEffect(units = ReverbUnits(sampleRate), blockFrames = blockFrames, wetModulated = true)
         // The law Draining keeps: it is Active on silent input, mid-glide too.
         val active = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
         val c = ctx()
@@ -218,20 +221,28 @@ class KatalystReverbGlideSpec : StringSpec({
             active.process(a)
         }
 
-        val peak = effect.reverb!!.combPeakAbs()
         val sizeNow = 0.05 + 0.95 * 2 / glideBlocks
 
         (abs(effect.reverb!!.size - sizeNow) <= 1e-12) shouldBe true
 
-        // ...and the owner turns it off.
+        // ...and the owner turns it off: one block of fade, the Active side running on beside it.
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
+        active.configure(size = 1.0, lowpass = null, wet = 1.0)
+        c.mixBuffer.clear()
+        a.mixBuffer.clear()
+        effect.process(c)
+        active.process(a)
+
+        // The landing measured the combs the drain starts from, three blocks into the glide.
+        val peak = effect.reverb!!.combPeakAbs()
+        val sizeAtDrain = 0.05 + 0.95 * 3 / glideBlocks
 
         // The countdown by hand, from the drain's formula: revolutions of the 1640-sample longest
-        // comb, plus the spare one. Too short: the feedback in force at the off-config. Long
-        // enough: the feedback the glide is heading to, which the drain reaches 15 blocks later.
+        // comb, plus the spare one. Too short: the feedback in force at the drain's start. Long
+        // enough: the feedback the glide is heading to, which the drain reaches 14 blocks later.
         fun countdown(feedback: Double): Double = (ceil(ln(1e-5 / peak) / ln(feedback)) + 1.0) * 1640.0
 
-        val tooShort = countdown(sizeNow * 0.28 + 0.7)
+        val tooShort = countdown(sizeAtDrain * 0.28 + 0.7)
         val enough = countdown(1.0 * 0.28 + 0.7)
 
         (enough > tooShort) shouldBe true
@@ -272,7 +283,8 @@ class KatalystReverbGlideSpec : StringSpec({
     }
 
     "an off-config during a FALLING glide drains for the feedback still in force, not the target's" {
-        val effect = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
+        // A modulated wet, for the one-block fade (see the RISING row).
+        val effect = KatalystReverbEffect(units = ReverbUnits(sampleRate), blockFrames = blockFrames, wetModulated = true)
         val c = ctx()
 
         // The largest room, charged...
@@ -293,15 +305,18 @@ class KatalystReverbGlideSpec : StringSpec({
 
         (abs(effect.reverb!!.size - sizeNow) <= 1e-12) shouldBe true
 
-        val peak = effect.reverb!!.combPeakAbs()
-
-        // ...and the owner turns it off.
+        // ...and the owner turns it off: one block of fade, whose landing measures the combs.
         effect.configure(size = 0.0, lowpass = null, wet = 1.0)
+        c.mixBuffer.clear()
+        effect.process(c)
+
+        val peak = effect.reverb!!.combPeakAbs()
+        val sizeAtDrain = 1.0 + (0.01 - 1.0) * 3 / glideBlocks
 
         // The countdown by hand from the size IN FORCE, the larger of the two while falling (the
         // accepted over-hold: the room decays faster than this from here on). Off lands on the
         // block that takes the countdown to zero or below.
-        val countdown = (ceil(ln(1e-5 / peak) / ln(sizeNow * 0.28 + 0.7)) + 1.0) * 1640.0
+        val countdown = (ceil(ln(1e-5 / peak) / ln(sizeAtDrain * 0.28 + 0.7)) + 1.0) * 1640.0
         val offBlock = ceil(countdown / blockFrames).toInt()
 
         repeat(offBlock - 1) {

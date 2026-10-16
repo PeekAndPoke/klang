@@ -186,6 +186,20 @@ changes (18 of 18 built-in songs and frozen pieces bit-identical in raw doubles 
     to `Int.MAX_VALUE` on both targets), and the LEVEL half. The helper is about 120 lines with
     its KDoc; its only state is value, target, start, remaining and the snap flag.
 
+**Engine follow-up 42 (2026-10-16), the delay's and the reverb's switch-off: fade, do not cut** (maintainer Q39,
+2026-10-13; `docs/tasks/by-ear/delay-reverb-owner-change-cut.md` option (b)). Every off-config, an owner change, a
+`katp` time or size below the gate, an unset or non-finite one, takes the `wet` glide to 0 over its span (50 ms, one
+block for a modulated wet) while the stage stays Active and feeds the falling level into the ring or the room; the
+block the glide lands in moves the stage on into the drain at its end. The law is the LEVEL law above, applied to the
+switch-off: no edge reaches the unit. Until then only a MODULATED time or size faded (knob expressions step 5b, where
+the move to the drain waited for the next off-config, re-applied every block by the modulated writer), and every other
+switch-off cut the feed in one sample. **The lesson: a fade that needs its event re-applied every block hangs where
+nobody re-applies it** (an orbit without an owner, a leaving chain); finish a fade in the state's own `process`. The
+price, accepted: on an owner change the NEW owner's first 50 ms reach the OLD owner's ring or room at a falling level.
+A return from Draining glides the wet up from 0, where the fade left it; out of Off it still snaps (an empty unit),
+except on a modulated time or size. The corpus did not move: it reaches no switch-off of a fed stage, so the evidence
+is `KatalystSwitchOffFadeSpec` and the listening pairs (`tmp/listening/delay-reverb-fade/`).
+
 **Katalyst 5b-2 (2026-09-19), the first LEVEL knobs and the delay.** The LEVEL half landed with
 the owner's `wet` of the delay and the reverb (`KnobGlide.advanceScaled`: from the end, exact
 landing, a multiply-only fast path when settled, a short block spreads its share over the frames

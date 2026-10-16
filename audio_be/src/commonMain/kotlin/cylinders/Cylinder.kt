@@ -390,7 +390,7 @@ class Cylinder(
         // The chain FADING OUT is still audible, so it is still configured (step 3b): the
         // owner keeps steering it until the fade ends. Not while it DRAINS: the ring-out runs
         // on the settings the chain had when it left service, and a new owner's settings (a
-        // different time or room, or an off-config that would cut the room's feed of echoes)
+        // different time or room, or an off-config that would fade out the room's feed of echoes)
         // are the arriving chain's business.
         swap.configureLeaving(voice.katalystParams)
     }
@@ -551,8 +551,9 @@ class Cylinder(
      *    service, and it is NOT retired. It keeps processing, its stages still Active, on SILENT
      *    input with its output added at FULL weight, so the echoes and the room it had already
      *    scheduled ring out on their own timeline instead of being cut mid-tail, and the room keeps
-     *    hearing the delay's ring-out (a stage switched off would read its own silent input and cut
-     *    that feed in one sample, measured in step 5b-2). The stages' tail ceilings bound it
+     *    hearing the delay's ring-out (a stage switched off would read its own silent input and fade
+     *    that feed out within 50 ms; before engine follow-up 42 it cut it in one sample, measured in
+     *    step 5b-2). The stages' tail ceilings bound it
      *    (`KatalystDelayEffect`, `KatalystReverbEffect`), and the chain retires (units back to the
      *    shelves) on the first block [KatalystChain.hasTail] is false. A drain still reporting a
      *    tail after [ChainSwap.MAX_DRAIN_SECONDS] (a self-oscillating delay never stops) has its
