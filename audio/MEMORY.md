@@ -368,6 +368,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Engine follow-up 41: Kotlin/JS emits `Double.NaN` as the global `NaN`, a tagged value, so an `if` with
+  a NaN arm boxed its double arm on V8: the delay and reverb writers' gates and the `Reverb.lowpass` setter now store
+  each arm on its own, and `Reverb.normalizeSize` writes its clamp out (the stdlib `coerceIn` was left out of the
+  writer's budget next). Bit for bit; `E-kat-gates` 54.5 to 16.3 B per block, `E-kat-mix` 65.0 to 33.0 (the floor),
+  `C-remap` 32.0 to 16.8 (`--predictable`, 1,000,000 blocks); corpus identical; the V8 lines `E-kat-gates` 160 to 112,
+  `E-kat-mix` 124 to 96: `docs/tasks/in-progress/engine-follow-ups.md` item 41
 - 2026-10-16 Engine follow-up 40: the orbit compressor writes its five knobs through one holder
   (`Compressor.knobArgs`) and one `applyKnobArgs`, which stores what the five setters store, bit for bit, and computes
   the time constants once (3 `exp` per change where there were 15); the public setters stay for the other callers.

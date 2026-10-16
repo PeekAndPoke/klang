@@ -3,9 +3,10 @@
 **Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
-fix that changes no API), open V8 items first: 31 (DONE 2026-10-15), 32 (DONE 2026-10-16), 34 (DONE 2026-10-16), 39 (DONE 2026-10-16), 40 (DONE 2026-10-16) and 41 (the
-Katalyst knob expressions' residues), 10c and 10d (fm); the known tails 4, 36 and 38; then sections 2 to 5 (13, 11 and the small ones)
-and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+fix that changes no API), open V8 items first: **the V8 batch is done** (31 DONE 2026-10-15; 32, 34, 39, 40 and 41
+DONE 2026-10-16; 33 DONE earlier). Left of the numbers 31 to 41: 35 (a gliding `div` slow on the JVM), the tails 36
+and 38 (not located), and 37 (a sound change, so outside Q38). Next: 10c and 10d (fm); the known tails 4, 36 and 38;
+then sections 2 to 5 (13, 11 and the small ones) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](../_maintainer-questions.md).
 
@@ -1765,15 +1766,100 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     old claim that 250 told G1 from the tree no longer held after item 39: G1 reads under 250 in every round now.
     **Left:** the residue of `E-kat-mix` on the delay and reverb writers (item 41); the setters themselves keep
     `isFinite()` and an `updateCoefficients` each, for the callers that write one knob. S.
-41. **The residue of a moving delay time, reverb size and phaser breakpoint on V8** (numbered after the last item,
-    added 2026-10-12): `E-kat-gates` reads 66.6 B per block against the delay alone's 32.3 (`--predictable`,
-    single-case, run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). The sampling heap profiler (development runs, not recorded) books it in the
-    reverb's `process` and `observeTail`, the delay line's crossfade loop and `observeTail`, and the delay and reverb
-    writers' tick; on `E-kat-mix` also the phaser core's per-block writes of the new breakpoint. Not located further.
-    Ruled out by hand-edited copies of that bundle (probes R1 to R3 of the same record, step 6's review round 2): the
-    `Reverb.lowpass` setter as a direct write (66.7), the reverb configure's size path inlined too (66.9), and the
-    delay configure's five `isFinite` calls inlined (66.1; `E-kat-mix` 201.8): none removes a heap number. Source: as
-    39. S.
+41. **DONE (2026-10-16): the residue of a moving delay time, reverb size and lowpass on V8 was a `NaN` arm; each
+    gate and the lowpass setter now store their two arms on their own, and `E-kat-gates` and `E-kat-mix` read their
+    floors.** Reported (numbered after the last item, added 2026-10-12): `E-kat-gates` read 66.6 B per block against
+    the delay alone's 32.3 (`--predictable`, single-case, run T of `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`),
+    booked by development runs (not recorded, and without the warm-up subtracted) in the reverb's `process` and
+    `observeTail`, the delay line's crossfade loop and `observeTail`, the delay and reverb writers' tick, and on
+    `E-kat-mix` the phaser core's per-block breakpoint writes. Ruled out then by hand-edited bundles (probes R1 to R3 of
+    that record): the `Reverb.lowpass` setter as a direct write, the reverb configure's size path inlined, the delay
+    configure's five `isFinite` inlined. Source: as 39. A purely independent performance fix (Q38): no DSL door, wire
+    type, public signature or sound changes (the setter's and `normalizeSize`'s bodies only; the writers' `gate()`
+    helpers were private). **Located on the production bundle** (`:audio_benchmark:compileProductionExecutableKotlinJs`,
+    node 22.12, `--predictable` single-case processes, the sampling heap profiler with a warm-up-only run subtracted,
+    `--trace-turbo-inlining`, and `--trace-turbo-graph` filtered to one function, which named the sites). On HEAD
+    (after items 32, 39 and 40) the profiler booked `E-kat-gates` above the floor in two compiles only:
+    `KatalystChain.tickModulated` (27.5 B per block; the writers' tick and `fill` are inlined there) and
+    `KatalystReverbEffect.configure` (11.4 B; the `Reverb.lowpass` setter inlined); on `E-kat-mix` the delay and the
+    reverb writers' tick (16.0 and 16.1 B). Nothing in the reverb's `process`, `observeTail` or the delay line's loops:
+    those names were the warm-up (item 34's lesson). The graphs after `V8.TFSimplifiedLowering` showed the boxes as a
+    `ChangeFloat64ToTagged` feeding a tagged `Phi` whose other input is `JSLoadGlobal NaN`: Kotlin/JS emits
+    `Double.NaN` (and `SLOT_UNSET`) as the global `NaN`, a tagged value, so `if (c) value else NaN` merges into a
+    tagged value and the double arm becomes a heap number before the store. Sites and fixes:
+    - **The delay writer's gate** (`KatalystDelayWriter.fill`, `time.value` or `SLOT_UNSET`) and **the reverb
+      writer's** (`KatalystReverbWriter.fill`, `Reverb.normalizeSize(size.value)` or `SLOT_UNSET`): one heap number
+      per block each while the stage runs, a moving or a constant time alike, at every `fill` (so per new map too:
+      performance.md's "the delay writer's `resolve`, fully inlined, not explained" was this). **Fix:** one store per
+      arm (`if (stageAskedFor(wet)) { config.time = time.value } else { config.time = SLOT_UNSET }`), the private
+      `gate()` helpers gone. The same values.
+    - **The `Reverb.lowpass` setter** (`field = if (value.isFinite()) value else Double.NaN`, inlined into the reverb
+      configure): one heap number per block while the lowpass moves. R1's direct write had removed the guard, a
+      different shape; this keeps it. **Fix:** one store per arm.
+    - **`Reverb.normalizeSize`'s `coerceIn`** (a box that moved): with the first two fixes `E-kat-gates` read 37.3 B,
+      and the graph of `tickModulated` showed the stdlib `coerceIn` left out of its budget (inlined on HEAD), the
+      quotient `authored / 10` crossing it as a heap number. **Fix:** the clamp written out
+      (`if (normalized < 0.0) 0.0 else if (normalized > 1.0) 1.0 else normalized`, `clampSvfRange`'s case of item
+      29), the same value for every input, -0.0 included. `E-kat-gates` then read 14.6.
+    - **The phaser core's breakpoint writes** (`PhaserCore.prepareBlock`, `E-kat-mix`): its compiled graph holds no
+      box. Unpinned profiles booked about 2.5 B per block there in 2 of 3 processes, and 1 to 2 B in the knob's
+      `sample`; `--trace-deopt` shows `advance` and `sample` deoptimizing once inside the window (a branch first
+      taken there, a long-period modulator's wrap), and at 1,000,000 blocks both drop out (two unpinned profiles,
+      33.4 and 33.0 B, all of it the two voices' floor). A tier-up transient, not a per-block cost: nothing to fix.
+    - **A one-off deopt the fix brings:** the cold unset arm of each gate store is a `Deoptimize` (no type feedback)
+      in the compiled `tickModulated`, so the first time a running modulated chain closes a delay or reverb gate,
+      `tickModulated` deoptimizes once and recompiles. A one-off, like the phaser's tier-up above.
+    - **Left, not per block:** the reverb's `Active.deactivate` calls `Reverb`'s tail-window function with the size
+      as a default argument (a call left out, one heap number), once per crossing of the size gate, not per block.
+    The comment at each site is the guard (no test can pin a box). **The sweep:** the production bundle of
+    `audio_be` holds no other `? ... : NaN` or `? NaN :` ternary (the rest are default-argument prologues,
+    `x === VOID ? NaN : x`, whose argument is tagged anyway), and the sources no other `else Double.NaN`,
+    `else SLOT_UNSET` or `?: Double.NaN` on a per-block path (`KatalystReverbEffect.configure(size, lowpass?, wet)`
+    keeps its `lowpass ?: Double.NaN`, the direct door, not per block). **New rows:** "normalizeSize is bit for bit
+    the coerceIn form it replaced, signed zeros and non-finite inputs included" (`ReverbStabilitySpec`, 421 inputs:
+    both zeros, both smallest subnormals, the edges at 10, both infinities, NaN, a grid of sixteenths from -12.5 to
+    12.5; compared by raw bits), and "an infinite lowpass reads as unset too: the unit stores NaN, never the infinity"
+    (`KatalystReverbEffectSpec`; no row fed an infinity before, and NaN alone cannot tell the setter's NaN arm from a
+    raw store). Mutants, one lock call each, restored and checked with `cmp`: the clamp's `<` as `<=` (-0.0 to 0.0)
+    RED, 1 of 6, the new row only; the upper clamp dropped RED, 4 of 6; the setter's NaN arm storing `value` survived
+    the whole `:audio_be` jvm suite (2,780 green, which is why the second row exists) and is RED on it, 1 of 20; the
+    delay gate's unset arm storing `time.value` RED, 6 of 2,781 (`KatalystSlotResolverSpec`, `KatalystModulatedStagesSpec`,
+    `KatalystKnobExpressionSpec`); the reverb gate's storing `normalizeSize(size.value)` RED, 6 of 2,781.
+    **Measured** (bytes and ns per block, 20,000 warm-up blocks; HEAD's bundle a byte copy):
+
+    | case | `--predictable`, 200,000 blocks, HEAD / tree | 1,000,000 blocks, HEAD / tree | unpinned (the check's method), rounds, HEAD / tree | pinned (`taskset -c 3`), HEAD / tree |
+    |---|---|---|---|---|
+    | `E-kat-gates` | 50.9 / 14.6 B, 15,825 / 15,782 ns | 54.5 / 16.3 B, 16,368 / 16,392 ns | 40.7 to 97.9 (8) / 4.9 to 62.1 (8; review round 1's reviewer B 4.0 to 71.8, 12) | 56.0, 60.9, 130.3 / 10.7, 14.8, 15.2 |
+    | `E-kat-mix` | 67.3 / 42.4 B, 40,161 / 39,510 ns | 65.0 / 33.0 B, 40,302 / 40,158 ns | 55.4 to 77.6 (8) / 24.3 to 51.7 (8; reviewer B 19.7 to 56.9, 12) | 66.8, 67.3, 88.8 / 22.1, 41.5, 57.8 |
+    | `C-remap` (a new map every block) | 37.4 / 15.7 B | 32.0 / 16.8 B | 55.9 to 63.1 (5) / 42.0 to 57.7 (5) | 21.0, 26.1, 30.8 / 9.3, 10.1, 10.5 |
+    | `E-delay`, `E-stages`, `E-sawC-sus` (controls) | 31.2 / 31.2, 15.7 / 15.7, 31.2 / 31.2 | | | |
+    | `E-kat-dyn`, `-res`, `-all7`, `-perlin`, `-sine` (controls) | 45.3 / 45.3, 14.4 / 14.4, 14.9 / 14.9, 21.9 / 21.9, 14.6 / 14.6 | | | |
+
+    Under `--predictable` the profiler with the warm-up subtracted books nothing on the tree's `E-kat-gates` but the
+    floor (`renderStages`, item 30's class) and nothing on `E-kat-mix` but its two voices' floor (`Voice.render`, the
+    duck's trigger voice the second); `E-delay` keeps the off phaser's call (item 1, located, not removed). One heap
+    number is 16 B on node and 12 in Chrome. The tree's last-block peaks on V8 equal HEAD's on all three cases. Time:
+    within noise. **JVM:** nothing here allocated before or after (the check, 0 B on every `E-kat` case and on
+    `C-remap`). **Bit for bit:** the corpus GREEN, 3 of 3 frozen and 15 of 15 live songs identical, 0
+    edited; `:audio_be:jvmTest` 2,781 of 2,781. The allocation check (under the new lines): GREEN, 80 of 80; V8
+    `E-kat-gates` 31 B (rounds 55.9, 31.3, 4.9), `E-kat-mix` 42 (42.1, 41.6, 30.0), `C-remap` 47, `E-delay` 63.
+    **The budget lines** (the header's rule, the note at the follow-up 41 re-set in `alloc-budgets.txt`):
+    `E-kat-gates` v8 160 to 112 and `E-kat-mix` v8 124 to 96, each 44 B above the worst healthy median of three
+    (68.3 and 52.2, review round 1's reviewer B; `E-kat-gates` was set at 96 first, about 28 B above that median,
+    so review round 1 raised it to 112). Mutants against them (single-case rounds by the check's method; each bundle built in one
+    lock call, the source restored and checked with `cmp`):
+    - **P**, the per-sample class (item 9's: an exhaustive `when` over a private two-entry enum yielding the reverb's
+      cross-feed step in its sample loop, bit for bit the same): `E-kat-gates` 1,179.9 to 1,195.9 B (3 rounds;
+      1,149.7 under `--predictable`), over 112 in every round (caught).
+    - **M1**, `KnobGlide.retarget` a plain method again: `E-kat-mix` 246.1 to 259.7 (5 rounds; 264.2 under
+      `--predictable`), every round over 96 (caught); `E-kat-gates` 42.9 to 83.2, the tree's figure (nothing to catch:
+      that profile inlines it).
+    - **HEAD's code** (the three `NaN` arms): `E-kat-gates` over 112 in none of 8 rounds (over 96 in 2), `E-kat-mix` over 96 in none: NOT caught.
+      Each site is one heap number per block, under the V8 resolution; the comments at the three sites and in
+      `normalizeSize` guard them.
+    So `E-kat-gates` guards the per-sample class on the delay and reverb paths, `E-kat-mix` `KnobGlide.retarget` and
+    the per-sample class; the isFinite group (G1) was not re-measured, and the header withdraws the claim that
+    `E-kat-mix` catches it. S.
 
 ## 6. The audit's later steps and its open decisions
 

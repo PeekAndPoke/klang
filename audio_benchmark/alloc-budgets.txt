@@ -187,6 +187,22 @@
 #   (G1, re-measured on this tree: rounds 113.0 to 145.2, median 136) in most runs but not every one; and the five
 #   setters put back not at all (rounds 96.1 to 123.0, median 114, under it: E-kat-dyn guards them). The claim above
 #   that 250 told G1 from the tree no longer held after item 39 (G1 here reads under 250 in every round).
+#   Re-set at engine follow-up 41 (2026-10-16): Kotlin/JS emits `Double.NaN` as the global `NaN`, a tagged value, so
+#   the delay and reverb writers' gates (`time` or `SLOT_UNSET`, `normalizeSize(size)` or `SLOT_UNSET`) and the
+#   `Reverb.lowpass` setter boxed their double arm every block; each arm now stores on its own, and
+#   `Reverb.normalizeSize` writes its clamp out (--predictable, 1,000,000 blocks: E-kat-gates 54.5 to 16.3 B, the
+#   floor; E-kat-mix 65.0 to 33.0, its two voices' floor; C-remap 32.0 to 16.8). Healthy rounds of the check's method
+#   on the tree (8 single-case rounds each, this change's check, medians 31 and 42, and review round 1's reviewer B,
+#   12 rounds each): E-kat-gates 4.0 to 71.8 B (worst median of three 68.3), E-kat-mix 19.7 to 56.9 (worst median of
+#   three 52.2); no tail seen. HEAD's code read E-kat-gates 40.7 to 97.9 (median about 67) and E-kat-mix 55.4 to 77.6.
+#   E-kat-gates 160 to 112 (set at 96 first, which review round 1 found only about 28 B above reviewer B's worst
+#   median), 44 B above the worst healthy median: it catches the per-sample class (mutant P, an exhaustive `when` yielding a double in the reverb's
+#   sample loop, item 9's class: 1,180 to 1,196 B, every round over) and HEAD's three boxes NOT (no round of 8
+#   over 112; one heap number per site is under the V8 resolution): the comments at the three sites and in
+#   `normalizeSize` guard them. E-kat-mix 124 to 96, 44 B above the worst healthy median: it catches
+#   KnobGlide.retarget as a plain method (M1, re-measured on this tree: rounds 246.1 to 259.7) and not HEAD's code
+#   (under it in every round). The isFinite group (G1) was not re-measured; the claim that E-kat-mix catches it is
+#   withdrawn until it is.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
 #
@@ -238,7 +254,7 @@ tube4x             jvm       6       item 9, the Shape node oversampled
 C-full             v8        112     item 8, the knob reads; item 29's SVF setup as a whole (its parts: the KDocs)
 C-full             jvm       6       item 12 step 2
 C-remap            v8        192     item 2, the decoder's KlangMap: a new orbit map per block (not item 8: the voice lines)
-C-remap            jvm       36      item 2; reads 24 B, the reverb writer's Double? lowpass per new map by design, so 36 and not 6
+C-remap            jvm       36      item 2; reads 0 B in every row since 2026-10-13 (it read 24 B, the reverb writer's Double? lowpass per new map, before)
 C-kat-remap        v8        64      a slot expression evaluated on a new map every block: the evaluation allocates nothing (no remedy)
 C-kat-remap        jvm       6       a slot expression evaluated on a new map every block
 E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample class only)
@@ -285,9 +301,9 @@ E-kat-dyn          v8        96      the compressor's five, the duck's depth and
 E-kat-dyn          jvm       6       the compressor's five, the duck's depth and attack
 E-kat-res          v8        144     the body's and the vowel's wet and floor: the per-sample class (KnobGlide.retarget's mutant reads over it, not reliably)
 E-kat-res          jvm       6       the body's and the vowel's wet and floor
-E-kat-gates        v8        160     a delay time, a reverb size and lowpass through their gates: the per-sample class only (HEAD reads under it)
+E-kat-gates        v8        112     a delay time, a reverb size and lowpass through their gates: the per-sample class (mutant 1,180 to 1,196); item 41 by its comments
 E-kat-gates        jvm       6       a delay time, a reverb size and lowpass through their gates
-E-kat-mix          v8        124     the mixed orbit: KnobGlide.retarget inline (mutant 263 to 305), the isFinite group in most runs (median 136); item 41 open
+E-kat-mix          v8        96      the mixed orbit: KnobGlide.retarget inline (mutant 246 to 260); item 41 by its comments
 E-kat-mix          jvm       6       the mixed orbit
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build

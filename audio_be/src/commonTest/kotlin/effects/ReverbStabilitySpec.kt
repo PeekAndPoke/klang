@@ -39,6 +39,33 @@ class ReverbStabilitySpec : StringSpec({
     }
 
 
+    "normalizeSize is bit for bit the coerceIn form it replaced, signed zeros and non-finite inputs included" {
+        // Engine follow-up 41 wrote the clamp out (a stdlib call boxed on V8); the old body is the reference.
+        fun reference(authored: Double): Double =
+            if (authored != authored) 0.0 else (authored / Reverb.AUTHORED_SIZE_SCALE).coerceIn(0.0, 1.0)
+
+        val inputs = mutableListOf(
+            0.0, -0.0, Double.MIN_VALUE, -Double.MIN_VALUE, 1e-300, -1e-300, 0.1, -0.1, 5.0, 9.999999999999998,
+            10.0, 10.000000000000002, 10.71, 30.0, -5.0, Double.MAX_VALUE, -Double.MAX_VALUE,
+            Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN,
+        )
+
+        for (i in -200..200) {
+            inputs += i * 0.0625
+        }
+
+        for (authored in inputs) {
+            val got = Reverb.normalizeSize(authored)
+            val want = reference(authored)
+
+            // Bits, not `shouldBe`: it takes -0.0 for 0.0.
+            got.toRawBits() shouldBe want.toRawBits()
+        }
+
+        // The rows reach a negative zero, so a mutant that loses the sign is seen.
+        Reverb.normalizeSize(-0.0).toRawBits() shouldBe (-0.0).toRawBits()
+    }
+
     "the authored scale is bounded, so a Freeverb comb can never exceed unity" {
         // feedback = normalized * 0.28 + 0.7, so normalized <= 1.0 keeps feedback <= 0.98 (unity at ~1.071).
         Reverb.normalizeSize(30.0) shouldBe 1.0

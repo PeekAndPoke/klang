@@ -447,9 +447,10 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   `HashMap` read medians 13,047 to 13,058 and goes red in about 1 run in 30, so the comment at that field guards it. Grep a new per-event path for `HashMap`, `mutableMapOf`, `mapOf`, `linkedMapOf`, `associate`,
   `toMap`, `getOrPut` and `in` on a set before it lands: all of them make or read a stdlib map. The stdlib site is
   worth an upstream report.
-  **Measured, not removed:** in single-case processes three writers' `resolve` box one heap number each per new map
+  **Measured, not removed:** in single-case processes two writers' `resolve` box one heap number each per new map
   (the body's and the vowel's `fill`, which V8 leaves out and which hands the unset index, NaN, to
-  `ResonatorTables.at`; the delay writer's, fully inlined, not explained); under a mixed profile they do not.
+  `ResonatorTables.at`); under a mixed profile they do not. The delay writer's, "fully inlined, not explained" here
+  before, was its gate's `NaN` arm, removed by engine follow-up 41 (`C-remap` 32.0 to 16.8 B, `--predictable`).
 - **On V8, a shared one-line forwarding helper is one megamorphic call site: make it Kotlin `inline`** (2026-10-10,
   engine follow-ups 8 and 12). V8 keeps its type feedback per call site in the bytecode, not per caller, so a
   small plain function that every caller goes through to make one call (`Ignitors.readParam` was
@@ -546,8 +547,8 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   carry a tail of high rounds in either tree (`E-kat-all7` read a round of 277 against medians of 155 to 161), so a
   remedy is judged by a mutant in both modes and a line is set above the tail; and the double-field settings holders
   (`CompressorSettings`, `DuckSettings`) do not box: as `Float64Array`s in a hand-edited bundle (run XS) `E-kat-dyn`
-  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). Open: a residue on the moving delay,
-  reverb and phaser paths (item 41). **Closed by engine follow-up 40 (2026-10-16): a stage that writes several knobs
+  and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). The residue on the moving delay and
+  reverb paths was a `NaN` arm (item 41, the `Double.NaN` rule below). **Closed by engine follow-up 40 (2026-10-16): a stage that writes several knobs
   of one object every block hands them over in ONE call through a holder**, not through a setter per knob. The orbit
   compressor called `Compressor`'s five setters, which V8 did not inline, so each knob crossed as a heap number
   (the profiler booked 48 B per block in `KatalystCompressorEffect.configure`), and each setter recomputed the three
@@ -571,6 +572,24 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   compiles with room for `fbm` (`E-kat-all7` 118.5 to 15.0, `E-kat-mix` 196.2 to 96.9). Each alone left one profile
   boxing. Where V8 places such a method follows the profile, so measure a fix of this kind on every case that
   reaches the site, with a mutant per half. Kotlin `inline` on `fbm` was worse (`noise` then crossed once per block).
+- **On Kotlin/JS, `Double.NaN` is the global `NaN`, a tagged value: an `if` with a NaN arm boxes its double arm on
+  V8** (engine follow-up 41, 2026-10-16). `x = if (c) value else Double.NaN` (and `SLOT_UNSET`, which is `Double.NaN`)
+  compiles to `c ? value : NaN`; V8 keeps the global load as a tagged value, so the two arms merge into a tagged
+  value (`Phi[kRepTagged]` after a `ChangeFloat64ToTagged` of the double arm in `--trace-turbo-graph`), and a
+  non-integral `value` can become a heap number every block (it did on these paths; a plain-JS probe of the same
+  graph allocated about nothing, so the graph alone does not prove a box: measure). Found on the moving delay and reverb paths: the delay writer's gate (`time` or `SLOT_UNSET`), the
+  reverb writer's (`normalizeSize(size)` or `SLOT_UNSET`) and the `Reverb.lowpass` setter (`value` or `NaN`), one
+  heap number per block each. **Remedy: one store per arm** (`if (c) { x = value } else { x = Double.NaN }`), the
+  same values, no merge. With them gone the reverb writer's freed budget left the stdlib `coerceIn` in
+  `normalizeSize` out of the writer's `tick` instead (its quotient crossed the call), so that clamp is written out
+  too (`clampSvfRange`'s case above): a box can move, so measure again after each fix. `E-kat-gates` 54.5 to 16.3 B
+  per block, `E-kat-mix` 65.0 to 33.0 (its two voices' floor), `C-remap` 32.0 to 16.8 (`--predictable`, 1,000,000
+  blocks). **How it was found:** the sampling heap profiler books an inlined box in the OUTERMOST optimized
+  function (here `KatalystChain.tickModulated`), so it names the compile, not the line; `--trace-turbo-graph
+  --trace-turbo-filter=<function>` then shows every `ChangeFloat64ToTagged` in the graph after
+  `V8.TFSimplifiedLowering`, and its use (a tagged `Phi`, a call argument) is the site. Grep a new per-block path's
+  production bundle for `: NaN;` and `? NaN :` (a function's default-argument prologue, `x === VOID ? NaN : x`, merges
+  an argument that is tagged anyway and costs nothing). The sweep of `audio_be` after the fix found no other.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per

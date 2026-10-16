@@ -389,6 +389,19 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.reverb!!.lowpass.isNaN() shouldBe true
     }
 
+    "an infinite lowpass reads as unset too: the unit stores NaN, never the infinity" {
+        // The setter's two stores (engine follow-up 41): only an infinity tells the NaN arm from a raw store.
+        val effect = createEffect(size = 0.5)
+
+        for (infinite in listOf(Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            effect.configure(size = 0.5, lowpass = 500.0, wet = 1.0)
+            effect.reverb!!.lowpass shouldBe 500.0
+
+            effect.configure(size = 0.5, lowpass = infinite, wet = 1.0)
+            effect.reverb!!.lowpass.isNaN() shouldBe true
+        }
+    }
+
     "size is bounded to 0..1 at the door too" {
         // Production pre-normalizes in VoiceFactory, so this pins the door contract for the
         // future direct caller the KDoc cites (review round 3: the clamp had no guard).
