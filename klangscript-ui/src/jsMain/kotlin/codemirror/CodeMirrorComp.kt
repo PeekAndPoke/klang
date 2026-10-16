@@ -11,6 +11,7 @@ import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
 import io.peekandpoke.klang.codemirror.ext.Extension
+import io.peekandpoke.klang.codemirror.ext.MinimapConfig
 import io.peekandpoke.klang.codemirror.ext.autocompletion
 import io.peekandpoke.klang.codemirror.ext.basicSetup
 import io.peekandpoke.klang.codemirror.ext.forEachDiagnostic
@@ -18,6 +19,7 @@ import io.peekandpoke.klang.codemirror.ext.forceLinting
 import io.peekandpoke.klang.codemirror.ext.javascript
 import io.peekandpoke.klang.codemirror.ext.lintGutter
 import io.peekandpoke.klang.codemirror.ext.linter
+import io.peekandpoke.klang.codemirror.ext.showMinimap
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.intel.toCodeMirrorSeverity
 import io.peekandpoke.klang.script.intel.toOffsets
@@ -32,6 +34,7 @@ import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.OnChange
+import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -56,6 +59,7 @@ fun Tag.KlangScriptEditorComp(
     popups: PopupsManager? = null,
     onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
+    showMinimap: Boolean = false,
 ): ComponentRef<KlangScriptEditorComp> = comp(
     KlangScriptEditorComp.Props(
         code = code,
@@ -67,6 +71,7 @@ fun Tag.KlangScriptEditorComp(
         popups = popups,
         onNavigate = onNavigate,
         onOpenTool = onOpenTool,
+        showMinimap = showMinimap,
     )
 ) {
     KlangScriptEditorComp(it)
@@ -86,6 +91,11 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val popups: PopupsManager? = null,
         val onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
         val onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
+        /**
+         * Shows a minimap of the whole document on the right. The editor then scrolls itself
+         * (`height: 100%`), so the host must give it a definite height.
+         */
+        val showMinimap: Boolean = false,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -180,6 +190,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 linterExtension,
                 lintGutter(),
                 *dslExtensions.toTypedArray(),
+                *buildMinimapExtensions().toTypedArray(),
             )
         ).unsafeCast<Array<Extension>>()
 
@@ -234,6 +245,26 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             }
         }
         container.addEventListener("click", panelClickListener)
+    }
+
+    /** The minimap extension when [Props.showMinimap] is set, nothing otherwise. */
+    private fun buildMinimapExtensions(): List<Extension> {
+        if (!props.showMinimap) {
+            return emptyList()
+        }
+
+        val config = jsObject<MinimapConfig> {
+            create = { _ ->
+                // A plain object: inside a jsObject lambda `dom` would bind to this component's own `dom`
+                val holder: dynamic = js("{}")
+                holder.dom = document.createElement("div")
+                holder
+            }
+            displayText = "blocks"
+            showOverlay = "always"
+        }
+
+        return listOf(showMinimap.of(config))
     }
 
     /** Builds DSL-aware extensions (hover docs, code completion) when libraries are configured. */

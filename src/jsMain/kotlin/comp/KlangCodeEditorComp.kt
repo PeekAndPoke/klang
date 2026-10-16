@@ -63,6 +63,7 @@ fun Tag.KlangCodeEditorComp(
     pauseHighlightsWhen: (() -> Boolean)? = null,
     extraVoiceHandler: ((KlangPlaybackSignal.VoicesScheduled.VoiceEvent) -> Unit)? = null,
     currentSource: String? = null,
+    showMinimap: Boolean = false,
 ): ComponentRef<KlangCodeEditorComp> = comp(
     KlangCodeEditorComp.Props(
         ctrl = ctrl,
@@ -72,6 +73,7 @@ fun Tag.KlangCodeEditorComp(
         pauseHighlightsWhen = pauseHighlightsWhen,
         extraVoiceHandler = extraVoiceHandler,
         currentSource = currentSource,
+        showMinimap = showMinimap,
     )
 ) {
     KlangCodeEditorComp(it)
@@ -97,6 +99,8 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
          * `null` (the default) matches main-script locations.
          */
         val currentSource: String?,
+        /** Shows a minimap of the whole document; the host must give the editor a definite height. */
+        val showMinimap: Boolean,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -306,6 +310,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 onOpenTool = { toolName, toolCtx, argFrom, event ->
                     openTool(toolName = toolName, toolCtx = toolCtx, argFrom = argFrom, event = event)
                 },
+                showMinimap = props.showMinimap,
             ).track(editorRef)
         }
     }

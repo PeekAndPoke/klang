@@ -225,6 +225,7 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
 
                         - **[CodeMirror 6](https://codemirror.net)** — the code editor at the heart of the coding experience
                         - **[Lezer](https://lezer.codemirror.net)** — parser generator powering syntax highlighting
+                        - **[codemirror-minimap](https://github.com/replit/codemirror-minimap)** by Replit: the small overview of the whole song beside the code editor
                     """.trimIndent()
                 )
             }

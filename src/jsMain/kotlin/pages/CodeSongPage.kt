@@ -418,14 +418,16 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         )
                     }
 
-                    // Inner SCROLLER — clips the editor content just inside the
-                    // frame; its small radius hugs the outer curve.
-                    div {
+                    // Inner CLIP — clips the editor content just inside the
+                    // frame; its small radius hugs the outer curve. The editor
+                    // fills it and scrolls itself, which the minimap needs
+                    // (`klang-editor-fill` in klang.css passes the height down).
+                    div("klang-editor-fill") {
                         key = "dashboard-form-code-scroll"
                         css {
                             flex = Flex(1.0, 1.0, FlexBasis.auto)
                             minHeight = 0.px
-                            overflowY = Overflow.auto
+                            overflowY = Overflow.hidden
                             overflowX = Overflow.hidden
                             display = Display.flex
                             flexDirection = FlexDirection.column
@@ -446,6 +448,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             availableLibraries = listOf(stdlibLib, sprudelLib),
             maxHighlightsPerEvent = highlightPerEvent,
             pauseHighlightsWhen = { currentModals.isNotEmpty() },
+            showMinimap = true,
         ).track(codeEditorRef)
     }
 }

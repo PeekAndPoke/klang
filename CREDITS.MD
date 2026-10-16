@@ -201,6 +201,7 @@ The live coding experience is powered by:
 
 - **[CodeMirror 6](https://codemirror.net)** — the code editor at the heart of the coding experience
 - **[Lezer](https://lezer.codemirror.net)** — parser generator powering syntax highlighting
+- **[codemirror-minimap](https://github.com/replit/codemirror-minimap)** by Replit: the small overview of the whole song beside the code editor
 
 ## The Foundation
 
