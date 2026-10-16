@@ -5,19 +5,23 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.peekandpoke.klang.audio_bridge.BandFilterBuilder
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
+import io.peekandpoke.klang.audio_bridge.EqBuilder
+import io.peekandpoke.klang.audio_bridge.FilterBuilder
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.VibratoBuilder
 import io.peekandpoke.klang.audio_bridge.adsr
-import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.blend
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.eq
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
+import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.rangex
 import io.peekandpoke.klang.audio_bridge.vibrato
 import io.peekandpoke.klang.common.SourceLocation
@@ -235,14 +239,8 @@ object KlangScriptIgnitorExtensions {
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         configure: ((FilterBuilder) -> FilterBuilder)? = null,
-    ): IgnitorDsl {
-        val k = FilterBuilder().configuredBy("lowpass", configure).knobs
-
-        return self.lowpass(
-            freq.toIgnitorDsl(), q.toIgnitorDsl(), coercePasses(k.passes), k.analog,
-            k.env, k.attack, k.decay, k.sustain, k.release,
-            k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
-        )
+    ): IgnitorDsl = self.lowpass(freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl()) {
+        it.configuredBy("lowpass", configure)
     }
 
     /**
@@ -256,14 +254,8 @@ object KlangScriptIgnitorExtensions {
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         configure: ((FilterBuilder) -> FilterBuilder)? = null,
-    ): IgnitorDsl {
-        val k = FilterBuilder().configuredBy("highpass", configure).knobs
-
-        return self.highpass(
-            freq.toIgnitorDsl(), q.toIgnitorDsl(), coercePasses(k.passes), k.analog,
-            k.env, k.attack, k.decay, k.sustain, k.release,
-            k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
-        )
+    ): IgnitorDsl = self.highpass(freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl()) {
+        it.configuredBy("highpass", configure)
     }
 
     /**
@@ -272,8 +264,7 @@ object KlangScriptIgnitorExtensions {
      * `warmth` / `onePoleLowpass`).
      */
     @KlangScript.Method
-    fun onepole(self: IgnitorDsl, freq: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.OnePoleLowpass(inner = self, freq = freq.toIgnitorDsl())
+    fun onepole(self: IgnitorDsl, freq: IgnitorDslLike): IgnitorDsl = self.onepole(freq = freq.toIgnitorDsl())
 
     /**
      * SVF bandpass filter. Passes frequencies near the cutoff, attenuates others. The knobs are
@@ -289,14 +280,8 @@ object KlangScriptIgnitorExtensions {
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         configure: ((BandFilterBuilder) -> BandFilterBuilder)? = null,
-    ): IgnitorDsl {
-        val k = BandFilterBuilder().configuredBy("bandpass", configure).knobs
-
-        return self.bandpass(
-            freq.toIgnitorDsl(), q.toIgnitorDsl(), k.analog,
-            k.env, k.attack, k.decay, k.sustain, k.release,
-            k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
-        )
+    ): IgnitorDsl = self.bandpass(freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl()) {
+        it.configuredBy("bandpass", configure)
     }
 
     /**
@@ -342,13 +327,8 @@ object KlangScriptIgnitorExtensions {
      * ```
      */
     @KlangScript.Method
-    fun eq(self: IgnitorDsl, configure: ((EqBuilder) -> EqBuilder)? = null): IgnitorDsl {
-        val opened = when (self) {
-            is IgnitorDsl.Eq -> self
-            else -> IgnitorDsl.Eq(inner = self)
-        }
-        return EqBuilder(opened).configuredBy("eq", configure).node
-    }
+    fun eq(self: IgnitorDsl, configure: ((EqBuilder) -> EqBuilder)? = null): IgnitorDsl =
+        self.eq { it.configuredBy("eq", configure) }
 
     /**
      * SVF notch (band-reject) filter. The knobs are [bandpass]'s, on a [BandFilterBuilder].
@@ -361,14 +341,8 @@ object KlangScriptIgnitorExtensions {
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         configure: ((BandFilterBuilder) -> BandFilterBuilder)? = null,
-    ): IgnitorDsl {
-        val k = BandFilterBuilder().configuredBy("notch", configure).knobs
-
-        return self.notch(
-            freq.toIgnitorDsl(), q.toIgnitorDsl(), k.analog,
-            k.env, k.attack, k.decay, k.sustain, k.release,
-            k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
-        )
+    ): IgnitorDsl = self.notch(freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl()) {
+        it.configuredBy("notch", configure)
     }
 
     // ── Envelope ─────────────────────────────────────────────────────────────

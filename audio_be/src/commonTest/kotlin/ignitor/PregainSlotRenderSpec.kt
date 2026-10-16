@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.distort
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.pregain
@@ -196,7 +197,7 @@ class PregainSlotRenderSpec : StringSpec({
         // a pure level change reads as ZERO and only a change of SHAPE survives. The drive amount
         // was picked by sweeping this number (0.1 -> 0.082, 0.3 -> 0.181, 0.5 -> 0.223,
         // 1.0 -> 0.117, 2.0 -> 0.006 through the same lowpass).
-        val example = IgnitorDsl.Saw().pregain().distort(0.5).lowpass(2500.0)
+        val example = IgnitorDsl.Saw().pregain().distort(0.5).lowpass(2500.0.ign)
 
         val hard = render(example)
         val soft = render(example, mapOf("pregain" to 0.4))
@@ -237,7 +238,7 @@ class PregainSlotRenderSpec : StringSpec({
         // Same level-blind measure as the doc-example row: both renders normalised to unit RMS, so
         // a pure level change reads zero.
         fun shapeDistance(shape: String, drive: Double): Double {
-            val dsl = IgnitorDsl.Saw().pregain().distort(drive, shape).lowpass(2500.0)
+            val dsl = IgnitorDsl.Saw().pregain().distort(drive, shape).lowpass(2500.0.ign)
             val loud = render(dsl)
             val soft = render(dsl, mapOf("pregain" to 0.4))
             val loudRms = sqrt(loud.sumOf { it * it } / loud.size)

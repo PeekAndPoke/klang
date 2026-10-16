@@ -26,6 +26,7 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.toKlangMap
@@ -56,7 +57,6 @@ import io.peekandpoke.klang.script.stdlib.plus
 import io.peekandpoke.klang.script.stdlib.pow
 import io.peekandpoke.klang.script.stdlib.range
 import io.peekandpoke.klang.script.stdlib.reverb
-import io.peekandpoke.klang.script.stdlib.tap
 import io.peekandpoke.klang.script.stdlib.times
 import io.peekandpoke.klang.script.stdlib.vowel
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -469,7 +469,7 @@ object AllocationCases {
             engine = true,
             sound = "saw",
             chain = katalyst {
-                it.eq { e -> e.band(freq = 180.0, db = -3.5).band(freq = 2500.0, q = 1.3, db = 4.5).tap(freq = 800.0, gain = 0.6) }
+                it.eq { e -> e.band(freq = 180.0.kat, db = (-3.5).kat).band(freq = 2500.0.kat, q = 1.3.kat, db = 4.5.kat).tap(freq = 800.0.kat, gain = 0.6.kat) }
             },
         ),
         Case(name = "E-gain", engine = true, sound = "saw", chain = katalyst { it.gain(0.7) }),

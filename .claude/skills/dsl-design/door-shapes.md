@@ -105,9 +105,14 @@ oscillators (already `(freq, configure)`).
   argument and the "write it through the node constructor" workaround below retires. Build-time knobs stay plain
   values, the one recorded exception, by the criterion in `/dsl-design` §3 (a knob the script takes as a plain
   number or string). The
-  two bullets below describe the code until the rollout lands; `vibrato` and `Ign.saw` are there (S1), and every
+  two bullets below describe the code until the rollout lands; `vibrato` and `Ign.saw` are there (S1), every
   other oscillator door with its builder (S2: `Ign.sine` with its partial banks and chained `partial`, the super
-  oscillators with chained `phasePool`, the plucks).
+  oscillators with chained `phasePool`, the plucks), and the four filters, `onepole` and the voice `eq` (S3a:
+  `lowpass(freq, q = FILTER_Q.ign, configure)`, the flat `Double` twins and the flat `IgnitorDsl.Eq.band`/`tap` gone).
+  The eq is ONE concept with two value domains, so it has two typed builders of the same words: `EqBuilder` on a
+  voice (`IgnitorDsl` knobs) and `KatalystEqBuilder` on a chain (`KatalystKnobDsl` knobs), one helper
+  (`eqSectionKnobOrNull`) for the chain's section conversion and its refusal of an expression (Q49: an
+  `IllegalArgumentException` at build time on the Kotlin door, a script error pre-checked on the script door).
 - **Recorded two-door asymmetries (step 3b, 2026-09-25; superseded by the typed Kotlin door above).** The Kotlin
   `tremolo` door stays FLAT (`tremolo(rate, depth, shape = "sine")`) where the script door takes a builder, the
   filter doors' precedent, until the rollout puts it on the same builder. The Kotlin `shape` and `distort` doors keep a `String` shape and an `Int`
@@ -123,8 +128,10 @@ oscillators (already `(freq, configure)`).
   `x.phase(Ignitor.param("phase", 0))` and the pattern's `ignp("phase", ...)`. Sprudel sounds get no `phase` slot
   (maintainer, 2026-10-06).
 - **Recorded two-door asymmetries (step 3d(i); superseded by the typed Kotlin door above).** The Kotlin filter
-  doors stay flat and name the four envelope stages separately (a superset of the builder), until the rollout moves
-  the builders into `audio_bridge` and the Kotlin door onto them. The Kotlin `phaser`/`shimmer` set `floor` only by
+  doors were flat and named the four envelope stages (and a curve) separately, a superset of the builder; since
+  the rollout S3a they are on the builder, and that superset is the recorded loss: a Kotlin caller names the stages
+  in ONE `adsr(attack, decay, sustain, release)` call (the left-out ones as their `FILTER_ENV_*` constants), and a
+  curve only inside it. The Kotlin `phaser`/`shimmer` set `floor` only by
   `.copy(floor = ...)` until then; `floor` becomes a builder knob on the Kotlin door, as on the script (the
   revision of 2026-10-16 supersedes Q48's named `floor =`). The node
   extensions `.wet()`/`.dryFloor()` stay removed. There is no Kotlin `pitchEnvelope` door (there was none before

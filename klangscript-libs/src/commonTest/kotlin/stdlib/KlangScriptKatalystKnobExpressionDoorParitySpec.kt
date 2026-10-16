@@ -185,8 +185,9 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
             withClue(script) { shouldThrow<KlangScriptTypeError> { ks(script) }.message shouldBe message }
         }
 
-        shouldThrow<KlangScriptTypeError> {
+        // The Kotlin door's typed eq builder refuses it at build time (Q49, the typed-doors rollout S3a).
+        shouldThrow<IllegalArgumentException> {
             KlangScriptKatalyst.build { it.eq { e -> e.band(freq = KlangScriptKatalyst.param("f", 300.0).times(2)) } }
-        }.message shouldBe message
+        }.message shouldBe "Katalyst eq band(freq = ...) takes a number or a Kat.param; got a Kat expression"
     }
 })

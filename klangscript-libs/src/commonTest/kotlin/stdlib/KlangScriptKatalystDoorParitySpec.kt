@@ -20,7 +20,6 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
-import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -656,8 +655,10 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
             withClue(script) { shouldThrow<KlangScriptTypeError> { ks(script) }.message shouldBe message }
         }
 
+        // The Kotlin door's eq builder is typed since the typed-doors rollout S3a (`KatalystEqBuilder.band` takes a
+        // `KatalystKnobDsl`), so an Ignitor node there is a compile error; the script variant still converts and refuses.
         shouldThrow<KlangScriptTypeError> {
-            KlangScriptKatalyst.build { it.eq { e -> e.band(freq = IgnitorDsl.Constant(300.0)) } }
+            KlangScriptKatalyst.build { it.eq { e -> e.scriptBand(freq = IgnitorDsl.Constant(300.0)) } }
         }.message shouldBe message
     }
 
@@ -685,8 +686,11 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     "a Katalyst param on an eq section of a chain is the section's slot; on a voice it is a script error" {
         val chain = ks("""Katalyst(k => k.eq(e => e.band(freq = Kat.param("f", 300), db = Kat.slot.gain.gain)))""")
         val section = (chain.stages.single() as KatalystStageDsl.Eq).sections.single()
-        section shouldBe IgnitorDsl.Eq(inner = IgnitorDsl.Silence)
-            .band(IgnitorDsl.Param("f", 300.0), IgnitorDsl.Constant(0.707), IgnitorDsl.Param("gain.gain", 1.0)).sections.single()
+        section shouldBe IgnitorDsl.EqSection.Bell(
+            freq = IgnitorDsl.Param("f", 300.0),
+            q = IgnitorDsl.Constant(0.707),
+            db = IgnitorDsl.Param("gain.gain", 1.0),
+        )
 
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")

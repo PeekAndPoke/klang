@@ -221,12 +221,12 @@ class ClassicTailSpec : StringSpec({
 
     "endsInClassic: a tree whose last call is classic() ends in it, on any source" {
         saw.classic().endsInClassic() shouldBe true
-        IgnitorDsl.Sine().lowpass(900.0).classic().endsInClassic() shouldBe true
+        IgnitorDsl.Sine().lowpass(900.0.ign).classic().endsInClassic() shouldBe true
     }
 
     "endsInClassic reads the ROOT only: a stage after classic() is not the tag" {
         saw.classic().mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
-        saw.classic().lowpass(900.0).endsInClassic() shouldBe false
+        saw.classic().lowpass(900.0.ign).endsInClassic() shouldBe false
     }
 
     "endsInClassic looks through an optimizer hint at the root: the by-ear A/B does not switch the voice path" {

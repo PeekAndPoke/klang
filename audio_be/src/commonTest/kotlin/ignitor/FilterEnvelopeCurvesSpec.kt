@@ -11,9 +11,13 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.bandpass
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
 import kotlin.random.Random
@@ -87,11 +91,14 @@ class FilterEnvelopeCurvesSpec : StringSpec({
 
     val kinds = listOf("lowpass", "highpass", "bandpass", "notch")
 
+    /** A curve as its knob; `null` (not named) is the unshaped `MOD_ENV_CURVE`, the node's default. */
+    fun curve(c: AdsrCurve?): IgnitorDsl = AdsrCurves.knob(c ?: MOD_ENV_CURVE)
+
     fun node(kind: String, env: Double, ac: AdsrCurve?, dc: AdsrCurve?, rc: AdsrCurve?): IgnitorDsl = when (kind) {
-        "lowpass" -> saw.lowpass(900.0, env = env, decay = 0.02, sustain = 0.2, release = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
-        "highpass" -> saw.highpass(300.0, env = env, decay = 0.02, sustain = 0.2, release = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
-        "bandpass" -> saw.bandpass(900.0, env = env, decay = 0.02, sustain = 0.2, release = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
-        else -> saw.notch(900.0, env = env, decay = 0.02, sustain = 0.2, release = 0.01, attackCurve = ac, decayCurve = dc, releaseCurve = rc)
+        "lowpass" -> saw.lowpass(900.0.ign) { it.env(env.ign).adsr(FILTER_ENV_ATTACK_SEC.ign, 0.02.ign, 0.2.ign, 0.01.ign) { e -> e.curves(attack = curve(ac), decay = curve(dc), release = curve(rc)) } }
+        "highpass" -> saw.highpass(300.0.ign) { it.env(env.ign).adsr(FILTER_ENV_ATTACK_SEC.ign, 0.02.ign, 0.2.ign, 0.01.ign) { e -> e.curves(attack = curve(ac), decay = curve(dc), release = curve(rc)) } }
+        "bandpass" -> saw.bandpass(900.0.ign) { it.env(env.ign).adsr(FILTER_ENV_ATTACK_SEC.ign, 0.02.ign, 0.2.ign, 0.01.ign) { e -> e.curves(attack = curve(ac), decay = curve(dc), release = curve(rc)) } }
+        else -> saw.notch(900.0.ign) { it.env(env.ign).adsr(FILTER_ENV_ATTACK_SEC.ign, 0.02.ign, 0.2.ign, 0.01.ign) { e -> e.curves(attack = curve(ac), decay = curve(dc), release = curve(rc)) } }
     }
 
     fun raw(kind: String, env: FilterEnvDef): (Ignitor) -> Ignitor = { src ->

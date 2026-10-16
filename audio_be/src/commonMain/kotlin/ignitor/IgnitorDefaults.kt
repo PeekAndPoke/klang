@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
@@ -188,7 +189,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
         "sgpad",
         (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(semitones = 0.1))
             .div(other = IgnitorDsl.Param(name = "divisor", default = 2.0))
-            .onepole(freq = 3000.0)
+            .onepole(3000.0.ign)
     )
 
     // FM bell: sine carrier with sine modulator
@@ -212,7 +213,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     // Buzzy filtered square
     put(
         "sgbuzz",
-        IgnitorDsl.Square().lowpass(freq = 2000.0),
+        IgnitorDsl.Square().lowpass(2000.0.ign),
     )
 
     // ─── Unified-EQ demo: the smallest sound that exercises the fused EqCore end to end

@@ -375,6 +375,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Typed Kotlin doors S3a: `FilterBuilder`, `BandFilterBuilder` (with `FilterKnobs` and the nested
+  `ModAdsrBuilder`) and the eq's two builders, `EqBuilder` (voice) and `KatalystEqBuilder` (chain, Q49 refusal at build
+  time), live in `audio_bridge/EffectBuilders.kt`; `lowpass`/`highpass`/`bandpass`/`notch` are `(freq, q = FILTER_Q.ign,
+  configure)`, `onepole(freq)` and `eq(configure)` one function each (the flat doors and `Double` twins are gone, the
+  fill runs once in the Kotlin door); new `constants/FilterDefaults.kt`; corpus identical (`docs/tasks/kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S2: the other fifteen oscillator builders (`OscSineBuilder` ... `OscSuperPluckBuilder`)
   live in `audio_bridge` with typed member knobs, every `Ign` oscillator door is `(freq, configure)` (the flat named
   knobs are gone), the script doors delegate to them, the script knobs are internal renamed variants; pinned per

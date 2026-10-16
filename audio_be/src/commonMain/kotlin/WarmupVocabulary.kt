@@ -11,7 +11,6 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl.Freq
 import io.peekandpoke.klang.audio_bridge.abs
 import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.adsr
-import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.ceil
 import io.peekandpoke.klang.audio_bridge.clamp
@@ -56,7 +55,6 @@ import io.peekandpoke.klang.audio_bridge.sign
 import io.peekandpoke.klang.audio_bridge.sq
 import io.peekandpoke.klang.audio_bridge.sqrt
 import io.peekandpoke.klang.audio_bridge.tanh
-import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.vibrato
 
@@ -180,7 +178,7 @@ object WarmupVocabulary {
         val forward = IgnitorDsl.Affine(affine, mul = Constant(0.9))
         // the fill shape is block-constant, and a Plus folds a block-constant operand as a scalar
         // without rendering it: a filter consumes it unconditionally, so the fill really runs
-        val filled = IgnitorDsl.Affine(Constant(0.25), pre = Constant(0.1), mul = Constant(0.2)).lowpass(1000.0)
+        val filled = IgnitorDsl.Affine(Constant(0.25), pre = Constant(0.1), mul = Constant(0.2)).lowpass(1000.0.ign)
         forward.plus(filled).detune(7.0).optimizer(on = 1).mul(Constant(0.5))
     }
 
@@ -192,18 +190,19 @@ object WarmupVocabulary {
      * guitar takes with its `analog` param (review round 3).
      */
     val filters: IgnitorDsl = IgnitorDsl.Saw()
-        .lowpass(freq = 3000.0, q = 1.2, passes = 2)
-        .highpass(freq = 80.0, q = 0.9)
-        .onepole(freq = 6000.0)
-        .bandpass(freq = 1200.0, q = 2.0)
-        .notch(freq = 900.0, q = 4.0)
-        .lowpass(freq = 4000.0, q = 1.0, analog = 1.0)
-        .highpass(freq = 60.0, q = 0.8, analog = 1.0)
-        .bandpass(freq = 1500.0, q = 1.5, analog = 1.0)
-        .notch(freq = 700.0, q = 3.0, analog = 1.0)
-        .eq()
-        .band(freq = 400.0, q = 1.0, db = 3.0) // EqSection.Bell
-        .tap(freq = 2500.0, q = 3.0, gain = 0.5) // EqSection.RawTap
+        .lowpass(freq = 3000.0.ign, q = 1.2.ign) { it.passes(2.0) }
+        .highpass(freq = 80.0.ign, q = 0.9.ign)
+        .onepole(6000.0.ign)
+        .bandpass(freq = 1200.0.ign, q = 2.0.ign)
+        .notch(freq = 900.0.ign, q = 4.0.ign)
+        .lowpass(freq = 4000.0.ign, q = 1.0.ign) { it.analog(1.0.ign) }
+        .highpass(freq = 60.0.ign, q = 0.8.ign) { it.analog(1.0.ign) }
+        .bandpass(freq = 1500.0.ign, q = 1.5.ign) { it.analog(1.0.ign) }
+        .notch(freq = 700.0.ign, q = 3.0.ign) { it.analog(1.0.ign) }
+        .eq {
+            it.band(freq = 400.0.ign, q = 1.0.ign, db = 3.0.ign) // EqSection.Bell
+                .tap(freq = 2500.0.ign, q = 3.0.ign, gain = 0.5.ign) // EqSection.RawTap
+        }
         .let { eq ->
             eq.copy(
                 sections = eq.sections +

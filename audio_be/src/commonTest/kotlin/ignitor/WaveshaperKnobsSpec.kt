@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.common.infra.toKlangMap
@@ -282,7 +283,7 @@ class WaveshaperKnobsSpec : StringSpec({
             source.tremolo(rate = 4.0, depth = 0.2).gates() shouldBe true
         }
         withClue("under a filter: absorbed along the spine") {
-            source.tremolo(rate = 4.0, depth = 1.0).lowpass(2000.0).gates() shouldBe true
+            source.tremolo(rate = 4.0, depth = 1.0).lowpass(2000.0.ign).gates() shouldBe true
         }
         withClue("gated off at depth 0: no stage, nothing to report") { source.tremolo(rate = 4.0, depth = 0.0).gates() shouldBe false }
 

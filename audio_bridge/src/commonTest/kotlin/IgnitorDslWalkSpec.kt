@@ -283,7 +283,7 @@ class IgnitorDslWalkSpec : StringSpec({
     "withChildNodes rejects a size mismatch loudly" {
         // Internal invariant, not user input: a mis-chunked list would swap a bell's q into its
         // db. It must throw at build time rather than silently produce a different sound.
-        val eq = IgnitorDsl.Sine().eq().band(1200.0).tap(850.0)
+        val eq = IgnitorDsl.Sine().eq { it.band(1200.0.ign).tap(850.0.ign) }
         shouldThrow<IllegalArgumentException> { eq.withChildNodes(eq.childNodes().drop(1)) }
         shouldThrow<IllegalArgumentException> { eq.withChildNodes(eq.childNodes() + m(0)) }
     }
@@ -292,7 +292,7 @@ class IgnitorDslWalkSpec : StringSpec({
         // Eq is the only node whose children are CHUNKED ACROSS SUB-OBJECTS: 1 + sum(section
         // arities. Variants is variable-arity too, but it is one flat list). A mis-chunk keeps
         // the child COUNT identical, so the generic round-trip above cannot see it.
-        val eq = IgnitorDsl.Sine().eq().band(freq = 1200.0, q = 0.9, db = 6.0).tap(freq = 850.0, q = 0.8, gain = 1.7)
+        val eq = IgnitorDsl.Sine().eq { it.band(freq = 1200.0.ign, q = 0.9.ign, db = 6.0.ign).tap(freq = 850.0.ign, q = 0.8.ign, gain = 1.7.ign) }
         val replaced = eq.withChildNodes(eq.childNodes().indices.map { m(it + 500) })
                 as IgnitorDsl.Eq
 

@@ -2,7 +2,7 @@
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
 below, revised the same day: one set of builders, equal doors); steps 1 and 1b done; spike S1 done 2026-10-16 (review
-rounds 1 and 2 applied); rollout S2 (the other oscillators) done 2026-10-16, S3a next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
+rounds 1 and 2 applied); rollout S2 (the other oscillators) and S3a (the filters and the eq) done 2026-10-16, S3b next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
 
 ## Why
 
@@ -242,6 +242,59 @@ wrong), and a wrong `kMin` default on the supertri `phasePool` member. `:audio_b
 `jvmTest` are green, `:audio_bridge:compileKotlinJs` and `:klangscript-libs:compileKotlinJs` too; the corpus is
 GREEN, frozen 3 of 3 identical, 13 live identical, `Kokon` and `Der Schmetterling` edited by the maintainer's song
 commit as in S1.
+
+## Rollout S3a (2026-10-16): the filters and the eq on their builders
+
+`FilterKnobs`, `FilterBuilder`, `BandFilterBuilder` and the eq's builders moved to `audio_bridge/EffectBuilders.kt`
+(a new file beside `IgnitorBuilders.kt`, the script side's name), with typed member knobs: `passes(n: Double)` (a
+build-time number, Q51), `analog`, `env` (`IgnitorDsl`), `humanize(on: Boolean = true)` (the script variant coerces
+with `coerceFlag`), and `adsr(attack, decay, sustain, release, configure)` with a nested configure on `ModAdsrBuilder`,
+which had to move with it (S3b's `AdsrBuilder`, `PitchEnvelopeBuilder` and `FmBuilder` stay); `ModAdsrBuilder.curves`
+has the index form (`IgnitorDsl`, omitted = `MOD_ENV_CURVE`) and, by pattern point 7, a `String` form through
+`AdsrCurves.indexOf`, the lookup the script variant uses. The Kotlin doors are ONE function per word:
+`lowpass`/`highpass`/`bandpass`/`notch(freq, q = FILTER_Q.ign, configure)`, `onepole(freq)` and `eq(configure)`; the
+flat engine-level doors, their `Double` twins and the flat `IgnitorDsl.Eq.band`/`tap` are gone. `fillFilterEnvelope`
+still lives once in `audio_bridge` and runs in the Kotlin door after the lambda (`FilterKnobs.envelope()`), which the
+script door calls (`self.lowpass(f, q) { it.configuredBy("lowpass", configure) }`). New default symbols in
+`constants/FilterDefaults.kt` (`FILTER_Q`, `EQ_BAND_DB`, `EQ_TAP_GAIN`), read by the doors, the builders and the
+node fields (the same numbers); the script keeps its literal `0.707` (KSP literals), and the default-node rows pin
+that the two agree. The recorded loss: Kotlin can no longer name one filter-envelope stage (or one curve) at a time;
+callers name the four stages in one `adsr`, the left-out ones as their `FILTER_ENV_*` constants (the same node).
+
+The eq is decision A: `EqBuilder` (voice, `IgnitorDsl` knobs) and `KatalystEqBuilder` (chain, `KatalystKnobDsl`
+knobs, holding the section list), the same words, defaults and sections. ONE helper, `eqSectionKnobOrNull` in
+`audio_bridge`, maps a Katalyst knob onto the section's Ignitor leaf and decides the refusal of an expression; the
+Kotlin builder refuses it at build time (`IllegalArgumentException`, "Katalyst eq band(freq = ...) takes a number or
+a Kat.param; got a Kat expression", Q49), the script variant pre-checks it (`toEqSectionKatalystKnob`) with the
+script's old error. The Katalyst half landed now: only the chain DOOR `KatalystBuilder.eq` stays on today's layering
+(in `klangscript-libs`, `configuredBy`) until S5; it now takes a `KatalystEqBuilder`. Generated docs: the moved types
+differ only in their `fqcn`; the additions are the two `KatalystEqBuilder` knobs (`band`, `tap`, new short KDocs) and
+the Katalyst `eq` door's `configure` type and KDoc (it named the shared `EqBuilder`); every other text is
+byte-identical.
+
+Callers: 37 files, mechanical (`.ign` / `.kat`, the builder shape; the warmup vocabulary, `IgnitorDefaults`,
+the benchmarks' guitar and `E-eq` cases, 18 `audio_be` specs (`IgnitorFilterKnobsSpec`, `FilterEnvelopeCurvesSpec`, `FilterSlotLayerFillSpec`, `EqIgnitorSpec`, ...), the wire codec and wire-shared JS specs, the
+klangscript-libs, sprudel and root specs). One twin-overload row (`IgnitorDslSpec`, "the DSL-typed and scalar
+overloads carry the SAME defaults") went with the twins; three Kotlin-door rows that expected a script error from
+`KatalystBuilder.eq` now expect the build-time refusal or call the script variant. `KlangScriptFilterDoorParitySpec`
+is reworked onto the builder shape (parity of every knob, a default-node row per door, one written-out row per member
+knob from both doors, the compound fill from both doors, the Kotlin `passes` coercion and `humanize(false)`);
+`KlangScriptEqDoorParitySpec` is new (10 rows: voice and chain, written-out sections, defaults, order, slots, the
+refusal per parameter from both doors). Nine mutants went red, restored and `cmp`-checked: `BandFilterBuilder.env`
+writing `analog`, the highpass door skipping the depth fill, a wrong `q` default symbol on `bandpass`, the Kotlin eq
+refusal removed, the script pre-check removed (an internal error instead of the script error), `scriptTap` on the
+chain casting instead of converting, `scriptEnv` casting, the `curves` String form swapping decay and release, and
+the voice `tap` swapping `q` and `gain`. `:audio_bridge`, `:klangscript-libs`, `:audio_be`, `:sprudel` and root
+`jvmTest` are green, the JS sources of `audio_bridge`, `audio_be`, `klangscript-libs` and `sprudel` compile; the
+corpus is GREEN, frozen 3 of 3 identical, 13 live identical, `Kokon` and `Der Schmetterling` edited by the
+maintainer's song commit as before; an engagement control (the lowpass door with `q = 0.8`) turned it RED (2 frozen,
+5 live moved), restored.
+
+Review round 1 (2026-10-16): no critical or major finding. Applied: rows for the omitted-argument defaults of
+`ModAdsrBuilder.curves` (both forms, against the script `curves("lin")`; the reviewer's surviving mutant on the
+`String` decay default and a wrong index-form release default now go red, restored and `cmp`-checked); named
+arguments at about 150 Kotlin call sites where they could be swapped (`/code-style`); three nits; the S3a cases as
+point 9 of the typed-door pattern in `/dsl-design` §3.
 
 ## Rollout steps (coordinator, 2026-10-16; replace steps 2 to 4)
 

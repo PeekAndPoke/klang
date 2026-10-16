@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
@@ -119,7 +120,7 @@ class IgnitorDslRuntimeTest : StringSpec({
     "sgpad composition produces non-zero output" {
         val dsl = (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1))
             .div(IgnitorDsl.Param("divisor", 2.0))
-            .onepole(3000.0)
+            .onepole(3000.0.ign)
         val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
@@ -139,7 +140,7 @@ class IgnitorDslRuntimeTest : StringSpec({
     }
 
     "sgbuzz composition produces non-zero output" {
-        val dsl = IgnitorDsl.Square().lowpass(2000.0)
+        val dsl = IgnitorDsl.Square().lowpass(2000.0.ign)
         val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
@@ -252,12 +253,12 @@ class IgnitorDslRuntimeTest : StringSpec({
         val inner = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Square()))
         val outer = IgnitorDsl.Variants(
             listOf(
-                inner.lowpass(2000.0),
+                inner.lowpass(2000.0.ign),
                 inner.drive(0.4),
             )
         )
 
-        val expectedIndex0 = referenceBlock(IgnitorDsl.Sine().lowpass(2000.0))
+        val expectedIndex0 = referenceBlock(IgnitorDsl.Sine().lowpass(2000.0.ign))
         val expectedIndex1 = referenceBlock(IgnitorDsl.Square().drive(0.4))
 
         val pickedIndex0 = generateBlock(outer.toExciter(soundIndex = 0, random = testRandom))

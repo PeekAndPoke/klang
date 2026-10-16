@@ -7,21 +7,20 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.throwables.shouldThrowAny
-import io.kotest.matchers.string.shouldContain
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.eq
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.shimmer
-import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -45,14 +44,14 @@ class KlangScriptEffectBuilderSpec : StringSpec({
 
     val saw = IgnitorDsl.Saw()
 
-    "eq: script lambda == Kotlin eq().band().tap()" {
+    "eq: script lambda == Kotlin eq { band().tap() }" {
         ks("Ignitor.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))") shouldBe
-                saw.eq().band(300.0, 1.0, -4.0).tap(850.0, 0.707, 1.7)
+                saw.eq { it.band(freq = 300.0.ign, q = 1.0.ign, db = (-4.0).ign).tap(freq = 850.0.ign, q = 0.707.ign, gain = 1.7.ign) }
     }
 
     "eq: the Kotlin door of the stdlib takes the same lambda" {
         ks("Ignitor.saw().eq(e => e.band(300, 1.0, -4))") shouldBe
-                KlangScriptIgnitorExtensions.eq(saw, configure = { it.band(300.0, 1.0, -4.0) })
+                KlangScriptIgnitorExtensions.eq(saw, configure = { it.scriptBand(freq = 300.0, q = 1.0, db = -4.0) })
     }
 
     "eq: a lambda that returns nothing is a script-level type error" {

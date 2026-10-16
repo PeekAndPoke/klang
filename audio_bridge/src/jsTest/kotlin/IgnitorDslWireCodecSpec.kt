@@ -7,6 +7,10 @@ package io.peekandpoke.klang.audio_bridge
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.wire.decode_IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_IgnitorDsl
 
@@ -32,11 +36,11 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Silence" { check(IgnitorDsl.Silence) }
     "Sample" { check(IgnitorDsl.Sample) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
-    "Parallel" { check(IgnitorDsl.Sine().parallel({ it }, { it.lowpass(800.0) }, { it.mul(0.5) })) }
+    "Parallel" { check(IgnitorDsl.Sine().parallel({ it }, { it.lowpass(800.0.ign) }, { it.mul(0.5) })) }
 
     // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where
     // it gets used; every field non-default so a dropped one shows up.
-    "OptimizerHint" { check(IgnitorDsl.Sine().lowpass(2000.0).optimizer(on = 0)) }
+    "OptimizerHint" { check(IgnitorDsl.Sine().lowpass(2000.0.ign).optimizer(on = 0)) }
     "Param (with description)" { check(IgnitorDsl.Param(name = "cutoff", default = 1000.0, description = "Filter cutoff")) }
 
     // --- oscillator primitives ------------------------------------------------------------------------------
@@ -190,8 +194,8 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- frequency / filters --------------------------------------------------------------------------------
     "Detune" { check(IgnitorDsl.Sine().detune(7.0)) }
-    "Lowpass" { check(IgnitorDsl.Square().lowpass(2000.0)) }
-    "Lowpass with passes" { check(IgnitorDsl.Square().lowpass(freq = 2000.0, q = 1.2, passes = 3)) }
+    "Lowpass" { check(IgnitorDsl.Square().lowpass(2000.0.ign)) }
+    "Lowpass with passes" { check(IgnitorDsl.Square().lowpass(freq = 2000.0.ign, q = 1.2.ign) { it.passes(3.0) }) }
     "Lowpass with a slotted passes (a knob since phase 3 step 5)" {
         check(IgnitorDsl.Lowpass(IgnitorDsl.Square(), passes = IgnitorDsl.Param("lpf.passes", 2.0)))
     }
@@ -208,16 +212,16 @@ class IgnitorDslWireCodecSpec : StringSpec({
         // the tag survives the wire (phase 3 step 10): a registered instrument reaches the engine through here
         decoded.endsInClassic() shouldBe true
     }
-    "Highpass (custom q)" { check(IgnitorDsl.Saw().highpass(freq = 500.0, q = 1.5)) }
-    "OnePoleLowpass" { check(IgnitorDsl.Saw().onepole(3000.0)) }
-    "Bandpass" { check(IgnitorDsl.Sine().bandpass(freq = 1000.0, q = 2.0)) }
-    "Notch" { check(IgnitorDsl.Sine().notch(freq = 1000.0, q = 2.0)) }
+    "Highpass (custom q)" { check(IgnitorDsl.Saw().highpass(freq = 500.0.ign, q = 1.5.ign)) }
+    "OnePoleLowpass" { check(IgnitorDsl.Saw().onepole(3000.0.ign)) }
+    "Bandpass" { check(IgnitorDsl.Sine().bandpass(freq = 1000.0.ign, q = 2.0.ign)) }
+    "Notch" { check(IgnitorDsl.Sine().notch(freq = 1000.0.ign, q = 2.0.ign)) }
     "Lowpass, Highpass, Bandpass, Notch with envelope curves (non-default)" {
         listOf(
-            IgnitorDsl.Square().lowpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
-            IgnitorDsl.Square().highpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
-            IgnitorDsl.Square().bandpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
-            IgnitorDsl.Square().notch(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+            IgnitorDsl.Square().lowpass(800.0.ign) { it.env(24.0.ign).adsr(FILTER_ENV_ATTACK_SEC.ign, FILTER_ENV_DECAY_SEC.ign, FILTER_ENV_SUSTAIN_LEVEL.ign, FILTER_ENV_RELEASE_SEC.ign) { e -> e.curves(attack = AdsrCurves.knob(AdsrCurve.Square), decay = AdsrCurves.knob(AdsrCurve.Cube), release = AdsrCurves.knob(AdsrCurve.SCurve)) } },
+            IgnitorDsl.Square().highpass(800.0.ign) { it.env(24.0.ign).adsr(FILTER_ENV_ATTACK_SEC.ign, FILTER_ENV_DECAY_SEC.ign, FILTER_ENV_SUSTAIN_LEVEL.ign, FILTER_ENV_RELEASE_SEC.ign) { e -> e.curves(attack = AdsrCurves.knob(AdsrCurve.Square), decay = AdsrCurves.knob(AdsrCurve.Cube), release = AdsrCurves.knob(AdsrCurve.SCurve)) } },
+            IgnitorDsl.Square().bandpass(800.0.ign) { it.env(24.0.ign).adsr(FILTER_ENV_ATTACK_SEC.ign, FILTER_ENV_DECAY_SEC.ign, FILTER_ENV_SUSTAIN_LEVEL.ign, FILTER_ENV_RELEASE_SEC.ign) { e -> e.curves(attack = AdsrCurves.knob(AdsrCurve.Square), decay = AdsrCurves.knob(AdsrCurve.Cube), release = AdsrCurves.knob(AdsrCurve.SCurve)) } },
+            IgnitorDsl.Square().notch(800.0.ign) { it.env(24.0.ign).adsr(FILTER_ENV_ATTACK_SEC.ign, FILTER_ENV_DECAY_SEC.ign, FILTER_ENV_SUSTAIN_LEVEL.ign, FILTER_ENV_RELEASE_SEC.ign) { e -> e.curves(attack = AdsrCurves.knob(AdsrCurve.Square), decay = AdsrCurves.knob(AdsrCurve.Cube), release = AdsrCurves.knob(AdsrCurve.SCurve)) } },
         ).forEach { check(it) }
     }
     // Step 3c: the curves are index KNOBS now, so a slot must survive too (one per node, a
@@ -225,10 +229,10 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Lowpass, Highpass, Bandpass, Notch with a curve SLOT" {
         val slot = IgnitorDsl.Param("lpcurve", 3.0)
         listOf(
-            IgnitorDsl.Square().lowpass(800.0, env = 24.0).copy(attackCurve = slot),
-            IgnitorDsl.Square().highpass(800.0, env = 24.0).copy(decayCurve = slot),
-            IgnitorDsl.Square().bandpass(800.0, env = 24.0).copy(releaseCurve = slot),
-            IgnitorDsl.Square().notch(800.0, env = 24.0).copy(attackCurve = slot, releaseCurve = slot),
+            IgnitorDsl.Square().lowpass(800.0.ign) { it.env(24.0.ign) }.copy(attackCurve = slot),
+            IgnitorDsl.Square().highpass(800.0.ign) { it.env(24.0.ign) }.copy(decayCurve = slot),
+            IgnitorDsl.Square().bandpass(800.0.ign) { it.env(24.0.ign) }.copy(releaseCurve = slot),
+            IgnitorDsl.Square().notch(800.0.ign) { it.env(24.0.ign) }.copy(attackCurve = slot, releaseCurve = slot),
         ).forEach { check(it) }
     }
     "Eq (every section variant, all fields non-default)" {
@@ -365,13 +369,13 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
     }
     "deep composite (SuperSaw → lowpass → adsr)" {
-        check(IgnitorDsl.SuperSaw(freq = IgnitorDsl.Constant(5.0)).lowpass(2000.0).adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5))
+        check(IgnitorDsl.SuperSaw(freq = IgnitorDsl.Constant(5.0)).lowpass(2000.0.ign).adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5))
     }
     "sgpad-style composite" {
         check(
             (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1))
                 .div(IgnitorDsl.Param("divisor", 2.0))
-                .onepole(3000.0)
+                .onepole(3000.0.ign)
         )
     }
 })

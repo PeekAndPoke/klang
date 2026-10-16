@@ -21,7 +21,9 @@ in the same deliverable.
     on BOTH doors with identical names and defaults. Since 2026-09-06 (S3 of
     `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`) the script door is `.eq(e => e.band(...).tap(...))` on an
     `EqBuilder` in `klangscript-libs`, which delegates to the audio_bridge Kotlin extensions
-    `IgnitorDsl.Eq.band/tap`; future Eq section methods land on both.
+    `IgnitorDsl.Eq.band/tap`; future Eq section methods land on both. (Since the typed-doors rollout S3a, 2026-10-16,
+    `EqBuilder` lives in `audio_bridge` with typed `band`/`tap` members, the Kotlin door is `eq { it.band(...) }` and
+    the flat `IgnitorDsl.Eq.band/tap` are gone; the chain has its own `KatalystEqBuilder`.)
   - **Known gap (D5 round 3):** the Kotlin door ships HOMOGENEOUS overloads (all-IgnitorDsl or
     all-Double), while the script door takes `IgnitorDslLike` per parameter — so the mixed
     `band(someDsl, 0.7, 6.0)` shape compiles in script but not in Kotlin, where the scalars

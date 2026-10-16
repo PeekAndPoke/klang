@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FILTER_MAX_PASSES
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
@@ -28,7 +29,7 @@ class FilterPassesKnobSpec : StringSpec({
 
     fun lp(passes: IgnitorDsl): IgnitorDsl = IgnitorDsl.Lowpass(inner = saw, freq = IgnitorDsl.Constant(900.0), q = IgnitorDsl.Constant(2.0), passes = passes)
 
-    fun literal(n: Int): DoubleArray = renderVoiceWindows(saw.lowpass(freq = 900.0, q = 2.0, passes = n))
+    fun literal(n: Int): DoubleArray = renderVoiceWindows(saw.lowpass(freq = 900.0.ign, q = 2.0.ign) { it.passes(n.toDouble()) })
 
     fun shouldBeCount(clue: String, n: Int, actual: DoubleArray) {
         withClue("$clue renders $n passes") { firstBitMismatch(a = literal(n), b = actual) shouldBe -1 }
@@ -79,8 +80,8 @@ class FilterPassesKnobSpec : StringSpec({
         val actual = renderVoiceWindows(hp, mapOf("p" to 2.0))
 
         withClue("hpf p = 2") {
-            firstBitMismatch(a = renderVoiceWindows(saw.highpass(freq = 900.0, q = 2.0, passes = 2)), b = actual) shouldBe -1
-            firstBitMismatch(a = renderVoiceWindows(saw.highpass(freq = 900.0, q = 2.0, passes = 1)), b = actual) shouldNotBe -1
+            firstBitMismatch(a = renderVoiceWindows(saw.highpass(freq = 900.0.ign, q = 2.0.ign) { it.passes(2.0) }), b = actual) shouldBe -1
+            firstBitMismatch(a = renderVoiceWindows(saw.highpass(freq = 900.0.ign, q = 2.0.ign) { it.passes(1.0) }), b = actual) shouldNotBe -1
         }
     }
 })

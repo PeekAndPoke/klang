@@ -5,22 +5,23 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
-import io.peekandpoke.klang.audio_bridge.mul
-import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.endsInClassic
+import io.peekandpoke.klang.audio_bridge.ign
+import io.peekandpoke.klang.audio_bridge.lowpass
+import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.optimizer
-import io.peekandpoke.klang.audio_bridge.lowpass
-import io.peekandpoke.klang.audio_bridge.notch
-import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.pregain
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
 
 /** This file's one seeded stream: every run draws the same, and successive builds still draw
@@ -43,7 +44,7 @@ class IgnitorRegistryTest : StringSpec({
         // keeps the two trees comparable for debugging. (The by-ear A/B does NOT go through here —
         // .optimizer(0) travels inside the tree and comes back out of optimized() untouched.)
         val registry = IgnitorRegistry()
-        val authored = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0)
+        val authored = IgnitorDsl.Saw().notch(freq = 210.0.ign, q = 2.5.ign).lowpass(5300.0.ign)
         registry.register("gtr", authored)
 
         registry.get("gtr") shouldBe authored
@@ -57,7 +58,7 @@ class IgnitorRegistryTest : StringSpec({
         // FORK. A local-only optimized() lookup returns null for every built-in and
         // VoiceFactory then drops the voice: the whole song goes silent.
         val root = IgnitorRegistry()
-        root.register("gtr", IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0))
+        root.register("gtr", IgnitorDsl.Saw().notch(freq = 210.0.ign, q = 2.5.ign).lowpass(5300.0.ign))
         val fork = root.fork()
 
         fork.optimized("gtr") shouldNotBe null
@@ -68,8 +69,8 @@ class IgnitorRegistryTest : StringSpec({
         // Live coding re-registers names with edited trees; a getOrPut would keep playing the
         // old sound forever.
         val registry = IgnitorRegistry()
-        registry.register("s", IgnitorDsl.Saw().lowpass(1000.0))
-        registry.register("s", IgnitorDsl.Sine().lowpass(2000.0).notch(freq = 300.0, q = 1.0))
+        registry.register("s", IgnitorDsl.Saw().lowpass(1000.0.ign))
+        registry.register("s", IgnitorDsl.Sine().lowpass(2000.0.ign).notch(freq = 300.0.ign, q = 1.0.ign))
 
         (registry.optimized("s") as IgnitorDsl.Eq).let {
             it.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
@@ -88,7 +89,7 @@ class IgnitorRegistryTest : StringSpec({
         // every other spec in the repo stays green while every voice silently ships unfused.
         // White-box by necessity.
         val registry = IgnitorRegistry()
-        registry.register("gtr", IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0))
+        registry.register("gtr", IgnitorDsl.Saw().notch(freq = 210.0.ign, q = 2.5.ign).lowpass(5300.0.ign))
 
         val exciter = registry.createExciter("gtr", VoiceData.empty.copy(sound = "gtr"), 440.0, random = testRandom)!!.ignitor
 
@@ -370,10 +371,10 @@ class IgnitorRegistryTest : StringSpec({
             saw.classic().optimizer(1),
             saw.classic().optimizer(0),
             IgnitorRegistry.builtInVoice(saw),
-            saw.lowpass(900.0).lowpass(900.0).classic(),
+            saw.lowpass(900.0.ign).lowpass(900.0.ign).classic(),
             saw.classic().mul(IgnitorDsl.Constant(0.5)),
             saw.classic().mul(IgnitorDsl.Constant(1.0)),
-            saw.lowpass(900.0),
+            saw.lowpass(900.0.ign),
         )
 
         for (tree in trees) {

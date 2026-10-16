@@ -232,9 +232,10 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         shouldThrow<KlangScriptTypeError> {
             ks("Katalyst(k => k.eq(e => e.band(freq = Kat.sine(0.2).range(200, 800))))")
         }.message shouldBe message
-        shouldThrow<KlangScriptTypeError> {
+        // The Kotlin door's typed eq builder refuses it at build time (Q49, the typed-doors rollout S3a).
+        shouldThrow<IllegalArgumentException> {
             KlangScriptKatalyst.build { it.eq { e -> e.band(freq = KlangScriptKatalyst.sine(0.2)) } }
-        }.message shouldBe message
+        }.message shouldBe "Katalyst eq band(freq = ...) takes a number or a Kat.param; got a Kat expression"
     }
 
     "a body's and a vowel's wet and floor take a modulator, alone and inside an expression, on both doors (5c)" {

@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystEqBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
@@ -20,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
+import io.peekandpoke.klang.audio_bridge.eqSectionKnobOrNull
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -54,7 +56,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * call; the reason is on [toKatalystKnob]. The chain reads its knobs once per block. The exceptions are the knobs fixed
  * when the chain is built, plain numbers or names: the compressor's and the limiter's `lookahead` (it sizes a delay
  * ring) and `distort`'s `shape` and `oversample`; the `eq` sections, whose knobs take a number or a param only
- * ([toEqSectionKnob]).
+ * ([toEqSectionKatalystKnob], over `eqSectionKnobOrNull` in `audio_bridge`).
  */
 
 /**
@@ -62,7 +64,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * [KatalystKnobDsl.Constant], a Katalyst knob (`Kat.param(...)`, `Kat.slot.*`, an expression over them such as
  * `Kat.param("beat", 0.5).div(4)`) as it is. The one conversion of every Katalyst builder knob and of every operand of
  * a knob expression, the Katalyst `eq` sections included (they map the result onto their Ignitor section and refuse
- * an expression, see [toEqSectionKnob]).
+ * an expression, see [toEqSectionKatalystKnob]).
  *
  * ANY [IgnitorDsl] is a [KlangScriptTypeError]: the Katalyst has its own knob language (decision D1 of
  * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, `docs/plans/future/signal-graph-engine.md` §6.10), and an
@@ -94,30 +96,20 @@ fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
 }
 
 /**
- * A Katalyst knob as the [IgnitorDsl] an EQ section carries: the residue of mixing the two DSLs that decision Q2 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` keeps (maintainer, 2026-10-11, E2: "keep shared, slots only").
- * The `eq`
- * stage's sections are [IgnitorDsl.EqSection], the one section law shared with the voice EQ and with `bands`, so a
- * bus section's knob is an Ignitor leaf: a [KatalystKnobDsl.Constant] becomes an [IgnitorDsl.Constant] and a
- * [KatalystKnobDsl.Param] the [IgnitorDsl.Param] of the same name and default, which the engine reads from the
- * orbit's `katp` state (`KatalystChainBuilder.eqKnob`). Recorded asymmetry: a section knob takes a number or a
- * `Kat.param` only, never what a stage knob may take beyond that: a Katalyst expression is a [KlangScriptTypeError]
- * ("a Katalyst eq section takes a number or a Kat.param; got a Kat expression"), where on a stage knob it listens. A
- * Katalyst section hierarchy (E1) is its own task, for the day a song wants a swept bus EQ.
+ * A Katalyst `eq` section's script argument as its knob: converted like every chain knob ([toKatalystKnob]), then
+ * PRE-CHECKED against the one section helper (`eqSectionKnobOrNull` in `audio_bridge`, with the reason for the
+ * recorded asymmetry): a Katalyst expression is a [KlangScriptTypeError] here, with the script's own words ("a
+ * Katalyst eq section takes a number or a Kat.param; got a Kat expression"), before the typed builder would refuse
+ * it at build time (Q49 of `docs/tasks/kotlin-typed-doors.md`; `/dsl-design` section 3, the typed-door pattern,
+ * point 5).
  */
-internal fun KatalystKnobDsl.toEqSectionKnob(): IgnitorDsl = when (this) {
-    is KatalystKnobDsl.Constant -> IgnitorDsl.Constant(value)
-    is KatalystKnobDsl.Param -> IgnitorDsl.Param(name = name, default = default, description = description)
-
-    is KatalystKnobDsl.Plus, is KatalystKnobDsl.Minus, is KatalystKnobDsl.Times, is KatalystKnobDsl.Div,
-    is KatalystKnobDsl.Pow, is KatalystKnobDsl.Min, is KatalystKnobDsl.Max, is KatalystKnobDsl.Neg,
-    is KatalystKnobDsl.Abs, is KatalystKnobDsl.Range,
-    is KatalystKnobDsl.Sine, is KatalystKnobDsl.Saw, is KatalystKnobDsl.Ramp, is KatalystKnobDsl.Tri,
-    is KatalystKnobDsl.Square, is KatalystKnobDsl.PerlinNoise, is KatalystKnobDsl.BerlinNoise,
-    -> throw KlangScriptTypeError(
-        "a Katalyst eq section takes a number or a Kat.param; got a Kat expression",
-        operation = "Katalyst eq",
-    )
+internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl = toKatalystKnob().also { knob ->
+    if (knob.eqSectionKnobOrNull() == null) {
+        throw KlangScriptTypeError(
+            "a Katalyst eq section takes a number or a Kat.param; got a Kat expression",
+            operation = "Katalyst eq",
+        )
+    }
 }
 
 // ── The chain ────────────────────────────────────────────────────────────────
@@ -541,20 +533,14 @@ fun KatalystBuilder.duck(
 /**
  * Appends the mix equalizer: one stage whose sections apply left to right.
  *
- * The same [EqBuilder] the oscillator's `.eq(...)` uses, so a section means the same thing on a
- * voice and on an orbit.
+ * The voice eq's words, defaults and sections on a [KatalystEqBuilder], so a section means the same thing on a
+ * voice and on an orbit; its knobs take a number or a Katalyst param.
  *
- * @param configure receives the [EqBuilder] (knobs: `band`, `tap`) and returns it.
+ * @param configure receives the [KatalystEqBuilder] (knobs: `band`, `tap`) and returns it.
  */
 @KlangScript.Function
-fun KatalystBuilder.eq(configure: ((EqBuilder) -> EqBuilder)? = null): KatalystBuilder {
-    // [EqBuilder] wraps the voice-side [IgnitorDsl.Eq] node, which needs an `inner` to filter.
-    // A chain stage has no inner: it filters whatever the orbit hands it. So the builder gets
-    // [IgnitorDsl.Silence] as a placeholder and only its SECTIONS travel into the stage.
-    val built = EqBuilder(IgnitorDsl.Eq(inner = IgnitorDsl.Silence), onKatalyst = true).configuredBy("Katalyst eq", configure).node
-
-    return append(KatalystStageDsl.Eq(sections = built.sections))
-}
+fun KatalystBuilder.eq(configure: ((KatalystEqBuilder) -> KatalystEqBuilder)? = null): KatalystBuilder =
+    append(KatalystStageDsl.Eq(sections = KatalystEqBuilder().configuredBy("Katalyst eq", configure).sections))
 
 /**
  * Appends make-up gain on the orbit: the group fader, after the inserts.

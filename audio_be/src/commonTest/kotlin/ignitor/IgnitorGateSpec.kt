@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.constants.ADSR_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.neg
@@ -712,7 +713,7 @@ class IgnitorGateSpec : StringSpec({
             "highpass" to saw.highpass(freq = unset),
             "bandpass" to saw.bandpass(freq = unset),
             "notch" to saw.notch(freq = unset),
-            "lowpass, passes = 4" to saw.lowpass(freq = unset, passes = 4),
+            "lowpass, passes = 4" to saw.lowpass(unset) { it.passes(4.0) },
         )
 
         for ((name, tree) in off) {
@@ -725,11 +726,11 @@ class IgnitorGateSpec : StringSpec({
         // The reason the rule is "unset" and not a number: a lowpass up at the top of the band is
         // still a filter, and a numeric off value would silently delete one somebody meant.
         val on = mapOf(
-            "lowpass" to saw.lowpass(freq = 2000.0),
-            "highpass" to saw.highpass(freq = 2000.0),
-            "bandpass" to saw.bandpass(freq = 2000.0),
-            "notch" to saw.notch(freq = 2000.0),
-            "lowpass at 20 kHz, which is NOT an off state" to saw.lowpass(freq = 20000.0),
+            "lowpass" to saw.lowpass(2000.0.ign),
+            "highpass" to saw.highpass(2000.0.ign),
+            "bandpass" to saw.bandpass(2000.0.ign),
+            "notch" to saw.notch(2000.0.ign),
+            "lowpass at 20 kHz, which is NOT an off state" to saw.lowpass(20000.0.ign),
         )
 
         for ((name, tree) in on) {
@@ -946,7 +947,7 @@ class IgnitorGateSpec : StringSpec({
         // for `noMod()` where it should use `inner.withMod()` would silently drop the inner
         // envelope's two seconds and cut every voice of that instrument short.
         val chained = IgnitorDsl.Adsr(
-            inner = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(2.0)).lowpass(freq = 2000.0),
+            inner = IgnitorDsl.Adsr(inner = saw, release = IgnitorDsl.Constant(2.0)).lowpass(2000.0.ign),
             release = IgnitorDsl.Constant(SLOT_UNSET),
         )
 

@@ -24,9 +24,9 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "a run of adjacent filters collapses into ONE Eq, in written order" {
         val dsl = IgnitorDsl.Saw()
-            .notch(freq = 210.0, q = 2.5)
-            .highpass(freq = 440.0, q = 0.707)
-            .lowpass(freq = 5300.0, q = 0.707)
+            .notch(freq = 210.0.ign, q = 2.5.ign)
+            .highpass(freq = 440.0.ign, q = 0.707.ign)
+            .lowpass(freq = 5300.0.ign, q = 0.707.ign)
             .optimize()
 
         val eq = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -38,7 +38,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "C5/D6: passes = N expands into N staggered sections — never one section that loses slope" {
-        val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0, q = 1.0, passes = 2).optimize()
+        val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0.ign, q = 1.0.ign) { it.passes(2.0) }.optimize()
             .shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.sections.size shouldBe 2
         val q0 = (eq.sections[0] as IgnitorDsl.EqSection.Lowpass).q
@@ -66,13 +66,13 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "a lone filter converts to a one-section Eq" {
         // Standalone conversion is ON by measurement, not assumption: Node 0.44 vs 0.74 us/block
         // for a one-section core versus a single Ignitor filter node, JVM a wash.
-        val eq = IgnitorDsl.Sine().lowpass(2000.0).optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
+        val eq = IgnitorDsl.Sine().lowpass(2000.0.ign).optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.sections.size shouldBe 1
     }
 
     "a filter on top of an existing authored Eq appends into it" {
-        val eq = IgnitorDsl.Saw().eq().band(freq = 1200.0, q = 0.9, db = 6.0)
-            .lowpass(5000.0)
+        val eq = IgnitorDsl.Saw().eq { it.band(freq = 1200.0.ign, q = 0.9.ign, db = 6.0.ign) }
+            .lowpass(5000.0.ign)
             .optimize()
             .shouldBeInstanceOf<IgnitorDsl.Eq>()
 
@@ -82,7 +82,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "section params are carried across unchanged" {
-        val eq = IgnitorDsl.Sine().lowpass(freq = 5300.0, q = 0.9).optimize() as IgnitorDsl.Eq
+        val eq = IgnitorDsl.Sine().lowpass(freq = 5300.0.ign, q = 0.9.ign).optimize() as IgnitorDsl.Eq
         val lp = eq.sections.single() as IgnitorDsl.EqSection.Lowpass
         (lp.freq as IgnitorDsl.Constant).value shouldBe 5300.0
         (lp.q as IgnitorDsl.Constant).value shouldBe 0.9
@@ -94,10 +94,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // becomes 1. (The song file itself is the maintainer's to commit, so the repo copy may
         // still carry the older hand-built parallel form.)
         val authored = IgnitorDsl.Saw()
-            .eq()
-            .tap(freq = 850.0, q = 0.707, gain = 1.7)
-            .tap(freq = 2500.0, q = 0.7, gain = 5.0)
-            .notch(freq = 210.0, q = 2.5)
+            .eq { it.tap(freq = 850.0.ign, q = 0.707.ign, gain = 1.7.ign).tap(freq = 2500.0.ign, q = 0.7.ign, gain = 5.0.ign) }
+            .notch(freq = 210.0.ign, q = 2.5.ign)
             .let {
                 IgnitorDsl.Highpass(
                     inner = it,
@@ -105,8 +103,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
                     q = c(0.707),
                 )
             }
-            .lowpass(freq = 5250.0, q = 0.707)
-            .lowpass(freq = 5250.0, q = 0.707)
+            .lowpass(freq = 5250.0.ign, q = 0.707.ign)
+            .lowpass(freq = 5250.0.ign, q = 0.707.ign)
 
         val eq = authored.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
@@ -120,7 +118,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "a nonlinear node between two filters blocks the fusion" {
         // The maintainer's example. Nothing may move across the distort, so this is two
         // independent one-section Eqs, never one two-section Eq.
-        val dsl = IgnitorDsl.Sine().bandpass(1000.0).distort(0.5).lowpass(4000.0).optimize()
+        val dsl = IgnitorDsl.Sine().bandpass(1000.0.ign).distort(0.5).lowpass(4000.0.ign).optimize()
 
         val outer = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         outer.sections.size shouldBe 1
@@ -136,7 +134,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // A scalar commutes with a linear filter on paper, not in floating point, and the serial
         // rule keeps its no-reorder shape: the gain (folded into an Affine since R2) is a wall
         // between the two Eqs until step 3 folds it into a neighbouring Eq's gain.
-        val dsl = IgnitorDsl.Sine().lowpass(2000.0).mul(c(0.5)).lowpass(3000.0).optimize()
+        val dsl = IgnitorDsl.Sine().lowpass(2000.0.ign).mul(c(0.5)).lowpass(3000.0.ign).optimize()
 
         val outer = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         outer.sections.size shouldBe 1
@@ -240,9 +238,9 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // A rendered parity row cannot see this: a regression that makes the optimizer MORE
         // conservative below a wall is bit-identical. Only a shape assertion catches it.
         val dsl = IgnitorDsl.Saw()
-            .lowpass(freq = 2000.0, q = 0.707)
-            .onepole(800.0)
-            .lowpass(freq = 4000.0, q = 0.707)
+            .lowpass(freq = 2000.0.ign, q = 0.707.ign)
+            .onepole(800.0.ign)
+            .lowpass(freq = 4000.0.ign, q = 0.707.ign)
             .optimize()
 
         val outer = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -253,11 +251,11 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "an analog filter between two fusible ones splits them the same way" {
         val dsl = IgnitorDsl.Lowpass(
-            inner = IgnitorDsl.Saw().lowpass(freq = 2000.0, q = 0.707),
+            inner = IgnitorDsl.Saw().lowpass(freq = 2000.0.ign, q = 0.707.ign),
             freq = IgnitorDsl.Constant(3000.0),
             q = IgnitorDsl.Constant(0.707),
             analog = IgnitorDsl.Constant(2.0),
-        ).lowpass(freq = 4000.0, q = 0.707).optimize()
+        ).lowpass(freq = 4000.0.ign, q = 0.707.ign).optimize()
 
         val outer = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         outer.sections.size shouldBe 1
@@ -266,7 +264,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "onepole (the one-pole lowpass) is left alone (no one-pole section type exists)" {
-        IgnitorDsl.Sine().onepole(800.0).optimize()
+        IgnitorDsl.Sine().onepole(800.0.ign).optimize()
             .shouldBeInstanceOf<IgnitorDsl.OnePoleLowpass>()
     }
 
@@ -276,8 +274,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // let t = sig.notch(...); t.lowpass(a).add(t.lowpass(b))
         // Absorbing the shared notch into either branch would compute it twice — a silent CPU
         // regression, which is the opposite of the point.
-        val shared = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5)
-        val dsl = IgnitorDsl.Plus(left = shared.lowpass(3000.0), right = shared.lowpass(6000.0)).optimize()
+        val shared = IgnitorDsl.Saw().notch(freq = 210.0.ign, q = 2.5.ign)
+        val dsl = IgnitorDsl.Plus(left = shared.lowpass(3000.0.ign), right = shared.lowpass(6000.0.ign)).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
         val left = plus.left.shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -295,10 +293,10 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // the real inner and append into a shared Eq — forking it and computing the lowpass
         // twice per block. Audio would be unaffected, which is what makes it dangerous: it
         // is a silent CPU regression landing exactly in the .optimizer(0) -> (1) A/B flow.
-        val shared = IgnitorDsl.Saw().lowpass(1000.0)
+        val shared = IgnitorDsl.Saw().lowpass(1000.0.ign)
         val dsl = IgnitorDsl.Plus(
-            left = shared.optimizer(on = 1).notch(freq = 210.0, q = 2.5),
-            right = shared.highpass(300.0),
+            left = shared.optimizer(on = 1).notch(freq = 210.0.ign, q = 2.5.ign),
+            right = shared.highpass(300.0.ign),
         ).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
@@ -313,7 +311,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "a shared subtree is rewritten once and stays shared" {
-        val shared = IgnitorDsl.Saw().lowpass(1000.0)
+        val shared = IgnitorDsl.Saw().lowpass(1000.0.ign)
         val dsl = IgnitorDsl.Plus(left = shared, right = shared).optimize()
 
         val plus = dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
@@ -323,7 +321,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     // ── Purity / stability ────────────────────────────────────────────────────
 
     "optimize is idempotent" {
-        val once = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0).optimize()
+        val once = IgnitorDsl.Saw().notch(freq = 210.0.ign, q = 2.5.ign).lowpass(5300.0.ign).optimize()
         once.optimize() shouldBe once
     }
 
@@ -361,7 +359,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     // ── Kill switch ───────────────────────────────────────────────────────────
 
     "optimizer(0) disables fusion for the WHOLE definition" {
-        val dsl = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0).optimizer(on = 0)
+        val dsl = IgnitorDsl.Saw().notch(freq = 210.0.ign, q = 2.5.ign).lowpass(5300.0.ign).optimizer(on = 0)
         (dsl.optimize() === dsl) shouldBe true
     }
 
@@ -375,13 +373,13 @@ class IgnitorDslOptimizerSpec : StringSpec({
                     q = c(0.707),
                 )
             }
-            .notch(freq = 210.0, q = 2.5)
+            .notch(freq = 210.0.ign, q = 2.5.ign)
 
         (dsl.optimize() === dsl) shouldBe true
     }
 
     "optimizer(1) leaves fusion ON and dissolves the marker" {
-        val marked = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(5300.0).optimizer(on = 1)
+        val marked = IgnitorDsl.Saw().notch(freq = 210.0.ign, q = 2.5.ign).lowpass(5300.0.ign).optimizer(on = 1)
         val eq = marked.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.sections.size shouldBe 2
     }
@@ -391,9 +389,9 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // renders. If an on=1 marker survived the rewrite it would split the chain in two,
         // so flipping 0 -> 1 would show a THIRD sound that ships nowhere.
         val marked = IgnitorDsl.Saw()
-            .lowpass(5000.0)
+            .lowpass(5000.0.ign)
             .optimizer(on = 1)
-            .notch(freq = 210.0, q = 2.5)
+            .notch(freq = 210.0.ign, q = 2.5.ign)
 
         val eq = marked.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
@@ -562,7 +560,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "R2: a divide by a literal zero is a multiply by a literal zero: a dead branch that is still built" {
         // the engine renders neither (nothing upstream renders); keeping the subtree keeps the
         // build-time draws of the nodes after it (a phase pool) in step with the authored tree
-        val filtered = IgnitorDsl.Saw().lowpass(1000.0)
+        val filtered = IgnitorDsl.Saw().lowpass(1000.0.ign)
 
         filtered.div(c(0.0)).optimize() shouldBe
             IgnitorDsl.Affine(filtered.optimize(), pre = none, mul = c(0.0), add = none)

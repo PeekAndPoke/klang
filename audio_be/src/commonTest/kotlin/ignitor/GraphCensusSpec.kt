@@ -5,19 +5,20 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.common.infra.klangMapOf
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.assertions.withClue
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.tremolo
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * The census on hand-counted graphs: each row states the passes and the buffer traffic a reader
@@ -47,7 +48,7 @@ class GraphCensusSpec : StringSpec({
     }
 
     "a filter is one pass in place per stage, and holds a section's state per stage" {
-        GraphCensus.of(saw.lowpass(1000.0)).let {
+        GraphCensus.of(saw.lowpass(1000.0.ign)).let {
             it.passes shouldBe 2
             it.traffic shouldBe 3
             it.bytes shouldBe 64 + 48
@@ -152,8 +153,8 @@ class GraphCensusSpec : StringSpec({
     }
 
     "a shared node renders once into a memo, and every consumer copies the memo out" {
-        val filtered = saw.lowpass(1000.0)
-        val census = GraphCensus.of(filtered.plus(filtered.highpass(2000.0)))
+        val filtered = saw.lowpass(1000.0.ign)
+        val census = GraphCensus.of(filtered.plus(filtered.highpass(2000.0.ign)))
 
         // saw 1, lowpass 1, highpass 1, plus 1; the shared filtered subtree is counted once
         census.passes shouldBe 4
@@ -171,7 +172,7 @@ class GraphCensusSpec : StringSpec({
     }
 
     "a pitch-mod node renders its mod block, the ratio loop reads it, the source reads the ratio" {
-        val census = GraphCensus.of(IgnitorDsl.Vibrato(saw.lowpass(1000.0)))
+        val census = GraphCensus.of(IgnitorDsl.Vibrato(saw.lowpass(1000.0.ign)))
 
         census.passes shouldBe 3
         census.traffic shouldBe 3 + 4
@@ -180,7 +181,7 @@ class GraphCensusSpec : StringSpec({
     }
 
     "one variant is counted, the one the sound index picks, and the others make nothing shared" {
-        val variants = IgnitorDsl.Variants(listOf(saw, saw.lowpass(1000.0).highpass(100.0)))
+        val variants = IgnitorDsl.Variants(listOf(saw, saw.lowpass(1000.0.ign).highpass(100.0.ign)))
 
         GraphCensus.of(variants).let {
             it.passes shouldBe 1

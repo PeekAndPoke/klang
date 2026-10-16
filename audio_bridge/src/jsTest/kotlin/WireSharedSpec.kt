@@ -28,7 +28,7 @@ class WireSharedSpec : StringSpec({
     fun same(a: Any?, b: Any?): Boolean = a === b
 
     /** A node with state worth sharing, and a sum that uses it twice: `let s = ...; s + s.lowpass(800)`. */
-    val s = IgnitorDsl.Saw().lowpass(800.0)
+    val s = IgnitorDsl.Saw().lowpass(800.0.ign)
     val twice = IgnitorDsl.Plus(left = s, right = IgnitorDsl.Times(left = s, right = IgnitorDsl.Constant(0.5)))
 
     "a node used twice is encoded as one JS object" {
@@ -64,7 +64,7 @@ class WireSharedSpec : StringSpec({
     "two EQUAL but distinct nodes stay two: identity is kept, nothing is interned" {
         // Two oscillators written twice are two oscillators (`IgnitorDslOptimizer`'s KDoc); folding them would change
         // the sound of every instrument that layers two equal voices.
-        val apart = IgnitorDsl.Plus(left = IgnitorDsl.Saw().lowpass(800.0), right = IgnitorDsl.Saw().lowpass(800.0))
+        val apart = IgnitorDsl.Plus(left = IgnitorDsl.Saw().lowpass(800.0.ign), right = IgnitorDsl.Saw().lowpass(800.0.ign))
         val decoded = decode_IgnitorDsl(hop(encode_IgnitorDsl(apart))) as IgnitorDsl.Plus
 
         decoded shouldBe apart

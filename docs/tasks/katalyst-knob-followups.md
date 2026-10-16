@@ -10,7 +10,9 @@
 
 The `eq` sections stay `IgnitorDsl.EqSection`, shared with the voice and with `bands`, and each section knob takes a
 number or a `Kat.param` (E2, the maintainer's choice, "keep shared, slots only"); an expression or a modulator there
-is a script error (`toEqSectionKnob` in `klangscript-libs/.../KatalystBuilders.kt`). E1 is a section hierarchy of the
+is a script error on the script door (`toEqSectionKatalystKnob` in `klangscript-libs/.../KatalystBuilders.kt`) and an
+`IllegalArgumentException` at build time on the typed Kotlin door (Q49; the one helper `eqSectionKnobOrNull` in
+`audio_bridge/.../EffectBuilders.kt`, since the typed-doors rollout S3a). E1 is a section hierarchy of the
 Katalyst's own on `KatalystKnobDsl`, with `eq` and `bands` split per host: its own task when a song wants a swept bus
 EQ.
 

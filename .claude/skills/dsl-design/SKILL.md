@@ -185,6 +185,18 @@ script-only surface forces raw constructor calls and splits the vocabulary.
   8. Sweeps: update `door-shapes.md` and every KDoc citing the old door; a regex sweep skips string
      literals (KlangScript in Kotlin strings looks like Kotlin); `-1.ign` needs
      `import io.peekandpoke.klang.audio_bridge.unaryMinus` (a top-level extension).
+  9. Cases met in rollout S3a (the filters and the eq):
+     - A nested builder moves with its parent (`ModAdsrBuilder` with `FilterBuilder.adsr`), even ahead of its own step.
+     - A `String` name form cannot default its first argument: with the index form also all-default, `curves()`
+       would be ambiguous. The index form keeps every default; the name form needs the first.
+     - A script default that is a literal (`q = 0.707`), not `null`, stays a literal (KSP); the default-node row pins
+       it equal to the Kotlin symbol (`FILTER_Q.ign`).
+     - A node-less builder (`FilterKnobs`, which must know what was NAMED for the compound fill) does not end in
+       `.node`: the door builds the node itself after the fill.
+     - A door with no knobs (`onepole`) gets no builder and no `configure`.
+     - Kotlin call sites name arguments that could be swapped (`lowpass(freq = 800.ign, q = 2.ign)`,
+       `band(freq = ..., q = ..., db = ...)`, `/code-style`); a single argument stays positional, and KlangScript stays
+       positional.
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
   (`KlangScriptFilterDoorParitySpec` is the pattern). Since both doors share the builder members, a
   parity row cannot see a member that writes the wrong field, nor a wrong default in the Kotlin door

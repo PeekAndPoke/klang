@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.detune
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
@@ -219,7 +220,7 @@ class IgnitorTailSpec : StringSpec({
         ends(authored, mapOf("adsr.on" to 0.0, "lpf.freq" to 800.0)) shouldBe false
         ends(IgnitorDsl.Sine()) shouldBe false
         ends(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2)) shouldBe true
-        ends(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).lowpass(800.0)) shouldBe false
+        ends(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2).lowpass(800.0.ign)) shouldBe false
         // a MODULATED release has no static length, so it cannot promise to reach zero by the voice's end: the
         // voice keeps its teardown fade (step 10); the same envelope with a static release ends the voice
         val modulated = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), release = IgnitorDsl.Constant(0.3).plus(IgnitorDsl.PerlinNoise().mul(c(0.01))))

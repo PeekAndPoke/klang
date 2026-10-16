@@ -125,10 +125,10 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
         val ext = KlangScriptIgnitorExtensions
         val saw = ign.saw()
         val filters = listOf<Pair<String, IgnitorDsl>>(
-            "lowpass" to ext.lowpass(self = saw, freq = 800, q = 1, configure = { it.analog(character = 4.0) }),
-            "highpass" to ext.highpass(self = saw, freq = 800, q = 1, configure = { it.analog(character = 4.0) }),
-            "bandpass" to ext.bandpass(self = saw, freq = 800, q = 1, configure = { it.analog(character = 4.0) }),
-            "notch" to ext.notch(self = saw, freq = 800, q = 1, configure = { it.analog(character = 4.0) }),
+            "lowpass" to ext.lowpass(self = saw, freq = 800, q = 1, configure = { it.scriptAnalog(character = 4.0) }),
+            "highpass" to ext.highpass(self = saw, freq = 800, q = 1, configure = { it.scriptAnalog(character = 4.0) }),
+            "bandpass" to ext.bandpass(self = saw, freq = 800, q = 1, configure = { it.scriptAnalog(character = 4.0) }),
+            "notch" to ext.notch(self = saw, freq = 800, q = 1, configure = { it.scriptAnalog(character = 4.0) }),
         )
 
         for ((door, node) in filters) {

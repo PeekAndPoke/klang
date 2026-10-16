@@ -21,6 +21,8 @@ import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.eq
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.stdlib.KatalystBandsBuilder
 import io.peekandpoke.klang.script.stdlib.KatalystBuilder
@@ -29,7 +31,6 @@ import io.peekandpoke.klang.script.stdlib.band
 import io.peekandpoke.klang.script.stdlib.bands
 import io.peekandpoke.klang.script.stdlib.cut
 import io.peekandpoke.klang.script.stdlib.gain
-import io.peekandpoke.klang.script.stdlib.tap
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -191,7 +192,7 @@ class BandsCrossoverSpec : StringSpec({
         // top band, 50 Hz is about 48 dB down (two octaves under a 24 dB per octave side), so the boost adds almost nothing.
         val f = 50.0
         val split = KlangScriptIgnitorExtensions.bands(sine(f)) {
-            it.cut(200.0).band { top -> KlangScriptIgnitorExtensions.eq(top) { e -> e.tap(f, 0.7, 2.0) } }
+            it.cut(200.0).band { top -> top.eq { e -> e.tap(freq = f.ign, q = 0.7.ign, gain = 2.0.ign) } }
         }
 
         db(ignitorLevel(split, f)) shouldBe (0.0 plusOrMinus 0.6)
