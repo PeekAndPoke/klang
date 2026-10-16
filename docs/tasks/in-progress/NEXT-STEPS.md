@@ -50,7 +50,5 @@ are the engine stream's (Q38).
 - Two listening tests: [`../by-ear/knob-glide-listening.md`](../by-ear/knob-glide-listening.md) (C13), and the
   listening rounds before the next songs (C10).
 - An FM round together: [`../future/fm-revisit.md`](../future/fm-revisit.md).
-- The provisional rule "reviewers name the mutants, the worker runs them" (Q37): in the next review loop, let a
-  reviewer run its own mutants again; if that passes, remove the rule from `/review-loop` and `/agent-fleet`.
 - The stdlib's `hashCode(dynamic)` closure (every Kotlin/JS `HashMap` operation allocates on V8) is noted for an
   upstream report, not filed (engine follow-ups, item 2).

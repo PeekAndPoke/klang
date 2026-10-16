@@ -292,14 +292,12 @@ reader.
   dotted paths afterwards; the compiler cannot tell prose from code inside a string.
 - **Reviewers may run Gradle, under the lock** (maintainer, 2026-10-04): a doubt settled by a run beats a guess; the
   rules (one lock call around mutate, build, restore; `cp` and `cmp`) are in `/agent-fleet`, "Reviewers may build".
-- **Reviewers name the mutants, the worker runs them** *(provisional, maintainer 2026-10-11; expected to go, 2026-10-13:
-  the refusals look like an outlier, so the next review loop lets a reviewer run its own mutants again, and if that
-  passes, this rule is removed)*: a reviewer's
-  mutate-build-restore lock call was refused twice on 2026-10-11 (the safety check saw an `rm` that was not there),
-  while the workers' identical calls passed. A reviewer reads the code, names each mutant it doubts with the result it
-  expects (red on which row, or green as a gap), and puts them in its findings; the worker runs each one in the next
-  fix round, one lock call each, and reports red or green. Reviewers still build and run tests and measurements under
-  the lock; a scratch copy (`git archive` inside one lock call) is fine for a measurement.
+- **A refused mutant goes to the worker** (maintainer, 2026-10-16; it replaces the provisional 2026-10-11 rule that
+  reviewers only name mutants). Reviewers run their own mutants, each in one lock call (back up, mutate, run, restore
+  with `cp`, check with `cmp`). When the safety check refuses a reviewer's call (it has flagged an `rm` that was not
+  there, three times in the 2026-10-15 batch, against many calls that passed), the reviewer does not rephrase it: it
+  names the mutant and the result it expects in its findings, and the worker runs it in the next fix round. A scratch
+  copy (`git archive` inside one lock call) is fine for a measurement.
 - **Snapshot the working tree only inside a lock call** (2026-10-08). A blind pair runs side by side, and a
   mutation check lives in the REAL tree for the length of its lock call. Reviewer B of tidy step 11 (b) and (c) copied
   the tree without the lock while reviewer A had `polarity = -1.0` mutated in, and its "new side" carried the mutant.
