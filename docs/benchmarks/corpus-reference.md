@@ -14,14 +14,14 @@ engine sound change that moved a frozen text or an unedited live song. An engine
 the same change rides along as INFO, which is why a neutrality proof reads "the corpus GREEN with no live song
 edited (or accept first)".
 
-Accepted on 2026-10-16, tree `301df16b-dirty`.
+Accepted on 2026-10-16, tree `a7c25296-dirty`.
 
 | song | code | hash | peak |
 |---|---|---|---|
 | Final Synthasy VII Prelude | f286893a239c01cc | f91ffdccb17b59e3 | 0.3866 |
-| Kokon | abd3d040477b1365 | eff99e5e3d78dca1 | 0.7487 |
+| Kokon | 62615593294bb4b8 | 7850f2706e06e2ff | 0.7545 |
 | Die Kirschblüte | 77725fe200a5c902 | a18405ffedce68aa | 0.7038 |
-| Der Schmetterling | 917273a4de5405b4 | 55faedad281e1972 | 0.7646 |
+| Der Schmetterling | 2a3cf7d76de2f713 | da2a743be7e77962 | 0.7716 |
 | Gestrandet | a962895a572fc098 | 09ee233fd4a79694 | 0.0550 |
 | Seltsamere Dinge | 064dc0ef445ff932 | 7e832e7e800d6336 | 0.9217 |
 | Stein um Stein | 8ffa5142260feb48 | 6dfae9e37f91e993 | 0.9066 |

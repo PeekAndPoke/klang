@@ -128,8 +128,8 @@ script-only surface forces raw constructor calls and splits the vocabulary.
   `docs/tasks/kotlin-typed-doors.md` follows, so today's code does not match yet):** A new door
   during the rollout lands in the target layering where its family already has it and follows
   today's layering otherwise: an Ignitor door lands typed in `audio_bridge` once its rollout step
-  covers its family; a new Katalyst door lands typed in `audio_bridge` since S5 (`KatalystBuilders.kt`), except
-  `serial`, `parallel`, `blend` and `bands`, which follow today's layering until S6.
+  covers its family; a new Katalyst door lands typed in `audio_bridge` since S5 (`KatalystBuilders.kt`), the
+  composition doors (`serial`, `parallel`, `blend`, `bands`) since S6.
   - The ONE public Kotlin door is typed and lives in `audio_bridge`, next to the wire types: every
     value parameter is an `IgnitorDsl` / `KatalystKnobDsl`, a number enters as `0.5.ign` /
     `0.5.kat` (`-1.ign` is `Constant(-1.0)`), so a number or a signal fits each argument on its own
@@ -261,11 +261,33 @@ script-only surface forces raw constructor calls and splits the vocabulary.
          (`fun KatalystBuilder.reverb(...)`) must take point 3 or Kotlin silently calls the member; the knob arithmetic
          on `KatalystKnobDsl` is the same (`scriptTimes`), its typed functions plain extensions returning the precise
          node, no operators (there were none).
-       - The builder's own primitive (`KatalystBuilder.append`) is public while a later step's script functions
-         (`serial`, `parallel`, `blend`, `bands`, S6) still live in `klangscript-libs` and append through it.
+       - The builder's own primitive (`KatalystBuilder.append`) is public. (Since S6 no script function appends
+         through it; it stays a public member, a stage door of its own.)
        - A door-table spec that omitted parameters through a `null` cannot do so on a typed door: its Kotlin lambda
          fills the others from the bare data class, the script variant called from Kotlin (`scriptDelay(time = ...)`)
          carries the omission rows, and the default-node rows, written with literal numbers, pin the typed defaults.
+     - Met in rollout S6 (the composition doors, `serial`, `parallel`, `blend`, `bands`):
+       - A script function that takes a FUNCTION the script supplies (a stage, a branch, a band processor) checks it
+         where it is called, never in the typed door: the variant wraps each one in its check (`checkedStage`, over
+         `runStage`, in `Configure.kt`) and hands the wrapper to the typed door, which only invokes what it gets. The
+         wrapper knows its number when it is made (`band ${processors.size}`, processor `processors.last().size`), so
+         the messages are the ones the script had. The typed door and the typed `split` hold no `runStage`.
+       - A function argument the script refuses at the call (not a function, `null` on a non-vararg parameter: "expected
+         a function, got null") is refused before the variant runs; only a vararg element reaches the null check.
+       - The §3 criterion decides a door parameter as it decides a knob: the Katalyst `blend`'s `wet`, which the script
+         takes as a plain number only, is a plain `Double` on Kotlin; the Ignitor's, a slot or a signal, an
+         `IgnitorDsl`. A `bands` `cut`, written into the EQ sections as a constant and never slot-read, is a plain
+         `Double` on both doors.
+       - The crossover's math lives once beside its builders in `audio_bridge`; the split is pinned against nodes
+         written out by hand (each cut, the bands in order, each processor on its own band), since a parity row shares
+         the split.
+       - KSP: a top-level extension function's entry records its own file as a source (`collectSourceFiles`, pinned by
+         `SourceFilesTest`), or an incremental run that does not dirty that file drops its registrations when its
+         receiver has no file in the module (met when `BandsBuilders.kt` kept only renamed variants; the gap predates
+         S1, sprudel's `lang_structural_chunk.kt` had it too, and the other builder files were dirty only by chance,
+         through `toIgnitorDsl`).
+       - A song in the corpus that reads "edited" is not engine-guarded: refresh its live row (a plain
+         `corpus-accept`, which refuses a red row) before relying on the corpus for a door the song uses.
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
   (`KlangScriptFilterDoorParitySpec` is the pattern). Since both doors share the builder members, a
   parity row cannot see a member that writes the wrong field, nor a wrong default in the Kotlin door

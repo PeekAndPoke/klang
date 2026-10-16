@@ -20,17 +20,14 @@ import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBandsBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.bands
 import io.peekandpoke.klang.audio_bridge.eq
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.mul
-import io.peekandpoke.klang.script.stdlib.KatalystBandsBuilder
-import io.peekandpoke.klang.script.stdlib.KlangScriptIgnitorExtensions
-import io.peekandpoke.klang.script.stdlib.band
-import io.peekandpoke.klang.script.stdlib.bands
-import io.peekandpoke.klang.script.stdlib.cut
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -157,7 +154,7 @@ class BandsCrossoverSpec : StringSpec({
     "Ignitor: two untouched bands sum to flat level" {
         for (f in probes) {
             withClue("$f Hz") {
-                db(ignitorLevel(KlangScriptIgnitorExtensions.bands(sine(f)) { it.cut(200.0) }, f)) shouldBe (0.0 plusOrMinus 0.001)
+                db(ignitorLevel(sine(f).bands { it.cut(200.0) }, f)) shouldBe (0.0 plusOrMinus 0.001)
             }
         }
     }
@@ -165,12 +162,12 @@ class BandsCrossoverSpec : StringSpec({
     "Ignitor: three and four untouched bands sum to flat level (the all-pass alignment)" {
         for (f in probes) {
             withClue("$f Hz, three bands") {
-                db(ignitorLevel(KlangScriptIgnitorExtensions.bands(sine(f)) { it.cut(300.0).cut(600.0) }, f)) shouldBe
+                db(ignitorLevel(sine(f).bands { it.cut(300.0).cut(600.0) }, f)) shouldBe
                         (0.0 plusOrMinus 0.001)
             }
 
             withClue("$f Hz, four bands") {
-                db(ignitorLevel(KlangScriptIgnitorExtensions.bands(sine(f)) { it.cut(200.0).cut(400.0).cut(800.0) }, f)) shouldBe
+                db(ignitorLevel(sine(f).bands { it.cut(200.0).cut(400.0).cut(800.0) }, f)) shouldBe
                         (0.0 plusOrMinus 0.001)
             }
         }
@@ -178,7 +175,7 @@ class BandsCrossoverSpec : StringSpec({
 
     "Ignitor: a muted mid band takes the mids out and leaves the lows and the highs" {
         fun muted(f: Double) = db(
-            ignitorLevel(KlangScriptIgnitorExtensions.bands(sine(f)) { it.cut(200.0).band { mid -> mid.mul(0.0.ign) }.cut(2000.0) }, f),
+            ignitorLevel(sine(f).bands { it.cut(200.0).band { mid -> mid.mul(0.0.ign) }.cut(2000.0) }, f),
         )
 
         muted(700.0) shouldBeLessThan -20.0
@@ -191,7 +188,7 @@ class BandsCrossoverSpec : StringSpec({
         // whole signal: a 2x boost at 50 Hz added in the TOP band of a 200 Hz split, +9.5 dB at 50 Hz. Read from the
         // top band, 50 Hz is about 48 dB down (two octaves under a 24 dB per octave side), so the boost adds almost nothing.
         val f = 50.0
-        val split = KlangScriptIgnitorExtensions.bands(sine(f)) {
+        val split = sine(f).bands {
             it.cut(200.0).band { top -> top.eq { e -> e.tap(freq = f.ign, q = 0.7.ign, gain = 2.0.ign) } }
         }
 

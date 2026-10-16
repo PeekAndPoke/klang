@@ -13,6 +13,7 @@ import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.serial
@@ -99,6 +100,11 @@ class KlangScriptSerialDoorParitySpec : StringSpec({
             .node
 
         kotlin shouldBe katalyst("Katalyst(k => k.serial(k => k.reverb(0.25, 7), k => k.gain(1.4)))")
+        // Written out: the stages first to last.
+        kotlin shouldBe KatalystDsl.of(
+            KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.25), size = KatalystKnobDsl.Constant(7.0)),
+            KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.4)),
+        )
     }
 
     "Katalyst: with no stage, serial() is the chain itself, on both doors" {

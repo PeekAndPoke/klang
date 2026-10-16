@@ -36,10 +36,6 @@ import io.peekandpoke.klang.audio_bridge.times
 import io.peekandpoke.klang.audio_bridge.unaryMinus
 import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.toKlangMap
-import io.peekandpoke.klang.script.stdlib.band
-import io.peekandpoke.klang.script.stdlib.bands
-import io.peekandpoke.klang.script.stdlib.cut
-import io.peekandpoke.klang.script.stdlib.parallel
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.analog

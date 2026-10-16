@@ -121,8 +121,12 @@ oscillators (already `(freq, configure)`).
   whose omitted parameter is the bare stage's constant, `k.reverb(wet = 0.2.kat, size = 4.kat)`; the name forms
   `body(material = "wood")`, `vowel(vowel = "a")` beside the index forms, `distort(shape = "tube")` by name only; the stage
   builders' `floor` and `cap`; the modulators on their builders, `Kat.sine(0.7.kat) { it.phase(0.25.kat) }`; the
-  knob arithmetic one typed function per word, `Kat.param("fader", 1.0).times(0.5.kat)`; `serial`, `parallel`,
-  `blend` and `bands` follow in S6).
+  knob arithmetic one typed function per word, `Kat.param("fader", 1.0).times(0.5.kat)`) and the composition doors
+  (S6: `serial`, `parallel`, `blend` and `bands` typed on both DSLs, the Katalyst four members of `KatalystBuilder`;
+  `bands` on `IgnitorBandsBuilder` / `KatalystBandsBuilder` with `band(processor)` and `cut(freq: Double)`, a plain
+  number on both doors since the split writes it as a constant; the Ignitor `blend(wet: IgnitorDsl, branch)`, its
+  `Double` twin gone, the Katalyst `blend(wet: Double, branch)`, plain as the script takes it, the recorded Q14
+  asymmetry).
   The eq is ONE concept with two value domains, so it has two typed builders of the same words: `EqBuilder` on a
   voice (`IgnitorDsl` knobs) and `KatalystEqBuilder` on a chain (`KatalystKnobDsl` knobs), one helper
   (`eqSectionKnobOrNull`) for the chain's section conversion and its refusal of an expression (Q49: an

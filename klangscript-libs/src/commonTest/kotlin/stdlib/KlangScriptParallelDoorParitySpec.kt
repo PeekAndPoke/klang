@@ -65,6 +65,10 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
         val saw = ignitor("Ignitor.saw()")
 
         saw.parallel({ it.mul(2.0.ign) }, { it.mul(3.0.ign) }) shouldBe ignitor("Ignitor.saw().parallel(x => x.mul(2), x => x.mul(3))")
+        // Written out: the branches in the order written, each given the same signal.
+        saw.parallel({ it.mul(2.0.ign) }, { it.mul(3.0.ign) }) shouldBe IgnitorDsl.Parallel(
+            branches = listOf(IgnitorDsl.Times(left = saw, right = c(2.0)), IgnitorDsl.Times(left = saw, right = c(3.0))),
+        )
     }
 
     "Ignitor: with no branch, parallel() is the signal itself; with one, that branch, on both doors" {
@@ -97,6 +101,7 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
         )
 
         katalyst("Katalyst(k => k.gain(2.0).parallel(b => b, b => b.gain(0.5).gain(0.25)))") shouldBe expected
+        start.gain(2.0.kat).parallel({ it }, { it.gain(0.5.kat).gain(0.25.kat) }).node shouldBe expected
     }
 
     "Katalyst: the Kotlin door builds the same chain as the script door" {

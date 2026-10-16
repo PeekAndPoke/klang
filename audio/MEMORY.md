@@ -224,7 +224,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   the longest lookahead); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
   hoisted to the orbit's duck. A `reverb` or `delay` in a branch carries the dry too. The doors write no stage for zero
   branches and inline one. `through` is `serial` since the same day (`docs/retired-names.md`).
-- **`bands` on both hosts** (2026-10-10): DSL sugar in `klangscript-libs` (`BandsBuilders.kt`) over `parallel` and
+- **`bands` on both hosts** (2026-10-10): DSL sugar in `audio_bridge` (`BandsBuilders.kt`, since typed doors S6; the
+  script variants in `klangscript-libs`) over `parallel` and
   the EQ's existing sections, no DSP of its own. Linkwitz-Riley: band k is the high side of every cut below it (on a
   voice a split tree, each high side shared by identity), the low side of its own, and the all-pass of every cut
   above, one raw tap section in an EQ of its own (`x - 2 * bandpass(x)`, Q 1/sqrt(2)), so untouched bands sum to an
@@ -375,6 +376,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Typed Kotlin doors S6: `IgnitorBandsBuilder` and `KatalystBandsBuilder` live in `audio_bridge/BandsBuilders.kt`
+  with typed members (`band(processor)`, `cut(freq: Double)`, plain: never slot-read) and the crossover once; `serial`,
+  `parallel`, `blend` (`wet: Double`, plain as the script takes it) and `bands` are typed `KatalystBuilder` members, the
+  Ignitor `bands` a typed door and its `blend` `Double` twin gone; the script variants wrap every stage, branch and band
+  processor in its check; a KSP fix records an extension function's own file as a source; corpus identical, Kokon
+  and Der Schmetterling re-accepted so they are guarded again (`docs/tasks/kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S5: `KatalystBuilder`, its stage builders and the modulators' builders live in
   `audio_bridge/KatalystBuilders.kt` with typed members (each stage's omitted parameter its bare-stage constant, the
   limiter preset and the `classic` once-only logic there; name forms for body and vowel, distort by name only); `Kat.build`/`Kat { }`

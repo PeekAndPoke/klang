@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.EqBuilder
 import io.peekandpoke.klang.audio_bridge.FilterBuilder
 import io.peekandpoke.klang.audio_bridge.FmBuilder
+import io.peekandpoke.klang.audio_bridge.IgnitorBandsBuilder
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
@@ -23,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.abs
 import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.bandpass
+import io.peekandpoke.klang.audio_bridge.bands
 import io.peekandpoke.klang.audio_bridge.blend
 import io.peekandpoke.klang.audio_bridge.ceil
 import io.peekandpoke.klang.audio_bridge.clamp
@@ -53,6 +55,7 @@ import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.octaveDown
 import io.peekandpoke.klang.audio_bridge.octaveUp
 import io.peekandpoke.klang.audio_bridge.onepole
+import io.peekandpoke.klang.audio_bridge.parallel
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.pitchEnvelope
 import io.peekandpoke.klang.audio_bridge.pitchMod
@@ -65,6 +68,7 @@ import io.peekandpoke.klang.audio_bridge.rangex
 import io.peekandpoke.klang.audio_bridge.recip
 import io.peekandpoke.klang.audio_bridge.round
 import io.peekandpoke.klang.audio_bridge.select
+import io.peekandpoke.klang.audio_bridge.serial
 import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.audio_bridge.shimmer
 import io.peekandpoke.klang.audio_bridge.sign
@@ -740,9 +744,9 @@ object KlangScriptIgnitorExtensions {
      *
      * @param stages functions from a signal to a signal, applied first to last.
      */
-    @KlangScript.Method
-    fun serial(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
-        runSerialStages("Ignitor serial", self, stages, returns = "signal", example = "x => x.lowpass(800)") { it is IgnitorDsl }
+    @KlangScript.Method(name = "serial")
+    internal fun scriptSerial(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+        self.serial(*checkedStages(door = "Ignitor serial", noun = "stage", stages = stages, example = "x => x.lowpass(800)"))
 
     /**
      * Runs this signal through the branches side by side and SUMS them, the twin of `serial`: `x.parallel(a, b)` is
@@ -763,27 +767,9 @@ object KlangScriptIgnitorExtensions {
      *
      * @param branches functions from a signal to a signal, each given this signal.
      */
-    @KlangScript.Method
-    fun parallel(self: IgnitorDsl, vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
-        val built = branches.mapIndexed { index, branch ->
-            runStage<IgnitorDsl, IgnitorDsl>(
-                door = "Ignitor parallel",
-                noun = "branch",
-                index = index,
-                stage = branch,
-                input = self,
-                returns = "signal",
-                example = "x => x.lowpass(800)",
-                isResult = { it is IgnitorDsl },
-            )
-        }
-
-        return when (built.size) {
-            0 -> self
-            1 -> built[0]
-            else -> IgnitorDsl.Parallel(branches = built)
-        }
-    }
+    @KlangScript.Method(name = "parallel")
+    internal fun scriptParallel(self: IgnitorDsl, vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+        self.parallel(*checkedStages(door = "Ignitor parallel", noun = "branch", stages = branches, example = "x => x.lowpass(800)"))
 
     /**
      * A dry/wet blend, the linear law: `x.blend(wet, f)` is `x.parallel(d => d.mul(1 - wet), w => f(w).mul(wet))`, so 0 is
@@ -801,21 +787,19 @@ object KlangScriptIgnitorExtensions {
      * @param wet the share of the branch, 0 to 1.
      * @param branch a function from the signal to a signal.
      */
-    @KlangScript.Method
-    fun blend(self: IgnitorDsl, wet: IgnitorDslLike, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl {
-        return self.blend(wet = wet.toIgnitorDsl()) { signal ->
-            runStage<IgnitorDsl, IgnitorDsl>(
-                door = "Ignitor blend",
-                noun = "branch",
-                index = 0,
-                stage = branch,
-                input = signal,
-                returns = "signal",
-                example = "x => x.distort(0.5)",
-                isResult = { it is IgnitorDsl },
-            )
-        }
-    }
+    @KlangScript.Method(name = "blend")
+    internal fun scriptBlend(self: IgnitorDsl, wet: IgnitorDslLike, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl = self.blend(
+        wet = wet.toIgnitorDsl(),
+        branch = checkedStage(
+            door = "Ignitor blend",
+            noun = "branch",
+            index = 0,
+            stage = branch,
+            returns = "signal",
+            example = "x => x.distort(0.5)",
+            isResult = { it is IgnitorDsl },
+        ),
+    )
 
     /**
      * Splits this signal into frequency BANDS, processes each band on its own and sums them again: multiband
@@ -835,9 +819,27 @@ object KlangScriptIgnitorExtensions {
      *
      * @param configure receives the bands builder and returns it.
      */
-    @KlangScript.Method
-    fun bands(self: IgnitorDsl, configure: ((IgnitorBandsBuilder) -> IgnitorBandsBuilder)? = null): IgnitorDsl =
-        IgnitorBandsBuilder().configuredBy("Ignitor bands", configure).split(self)
+    @KlangScript.Method(name = "bands")
+    internal fun scriptBands(self: IgnitorDsl, configure: ((IgnitorBandsBuilder) -> IgnitorBandsBuilder)? = null): IgnitorDsl =
+        self.bands { it.configuredBy("Ignitor bands", configure) }
+
+    /** Every script-supplied stage or branch of an Ignitor `serial` / `parallel`, wrapped in its check ([checkedStage]). */
+    private fun checkedStages(
+        door: String,
+        noun: String,
+        stages: Array<out (IgnitorDsl) -> IgnitorDsl>,
+        example: String,
+    ): Array<(IgnitorDsl) -> IgnitorDsl> = Array(stages.size) { index ->
+        checkedStage(
+            door = door,
+            noun = noun,
+            index = index,
+            stage = stages[index],
+            returns = "signal",
+            example = example,
+            isResult = { it is IgnitorDsl },
+        )
+    }
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
     //

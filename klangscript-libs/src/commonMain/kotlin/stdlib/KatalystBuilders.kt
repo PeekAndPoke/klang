@@ -9,6 +9,7 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBandsBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystBodyBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDelayBuilder
@@ -104,8 +105,9 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * TYPED members, the one Kotlin door. Every script knob below is an `internal`, renamed variant (`scriptReverb`, the
  * script word in `name = "reverb"`) that converts its arguments once ([toKatalystKnob]) and calls the member; an
  * omitted (`null`) argument becomes the member's own default SYMBOL (`REVERB_WET.kat`), never a retyped literal
- * (`/dsl-design` section 3, the typed-door pattern). `serial`, `parallel`, `blend` and `bands` keep today's layering
- * until rollout S6.
+ * (`/dsl-design` section 3, the typed-door pattern). `serial`, `parallel`, `blend` and `bands` are typed members too
+ * since rollout S6; their variants wrap every script stage, branch and band processor in its check ([checkedStage])
+ * and keep the `blend` `wet` check script-side.
  */
 
 /**
@@ -670,9 +672,10 @@ internal fun KatalystBuilder.scriptMax(other: IgnitorDslLike): KatalystBuilder =
  *
  * @param stages functions from a builder to a builder, applied first to last.
  */
-@KlangScript.Function
-fun KatalystBuilder.serial(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
-    runSerialStages("Katalyst serial", this, stages, returns = "builder", example = "k => k.gain(0.8)") { it is KatalystBuilder }
+@KlangScript.Function(name = "serial")
+internal fun KatalystBuilder.scriptSerial(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder = this.serial(
+    *checkedStages(door = "Katalyst serial", noun = "stage", stages = stages, example = "k => k.gain(0.8)"),
+)
 
 /**
  * Runs the bus through [branches] side by side, from this position, and SUMS them: the twin of [serial]. Each branch
@@ -696,27 +699,10 @@ fun KatalystBuilder.serial(vararg stages: (KatalystBuilder) -> KatalystBuilder):
  *
  * @param branches functions from a builder to a builder, each given an empty one.
  */
-@KlangScript.Function
-fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
-    val built = branches.mapIndexed { index, branch ->
-        runStage<KatalystBuilder, KatalystBuilder>(
-            door = "Katalyst parallel",
-            noun = "branch",
-            index = index,
-            stage = branch,
-            input = KatalystBuilder(KatalystDsl(emptyList())),
-            returns = "builder",
-            example = "b => b.distort(0.5)",
-            isResult = { it is KatalystBuilder },
-        ).node
-    }
-
-    return when (built.size) {
-        0 -> this
-        1 -> copy(node = KatalystDsl(node.stages + built[0].stages))
-        else -> append(KatalystStageDsl.Parallel(branches = built))
-    }
-}
+@KlangScript.Function(name = "parallel")
+internal fun KatalystBuilder.scriptParallel(vararg branches: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder = this.parallel(
+    *checkedStages(door = "Katalyst parallel", noun = "branch", stages = branches, example = "b => b.distort(0.5)"),
+)
 
 /**
  * A dry/wet blend of the bus, the linear law: `k.blend(wet, f)` sums the bus times `1 - wet` with [branch]'s stages
@@ -742,8 +728,9 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
  * @param wet the share of the branch, 0 to 1.
  * @param branch a function from a builder to a builder, given an empty one.
  */
-@KlangScript.Function
-fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+@KlangScript.Function(name = "blend")
+internal fun KatalystBuilder.scriptBlend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+    // The script-side check (the typed-door pattern, point 5): a plain number, or a Kat constant holding one.
     val number = when (wet) {
         is Number -> wet.toDouble()
         is KatalystKnobDsl.Constant -> wet.value
@@ -753,25 +740,17 @@ fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> Kata
             operation = "Katalyst blend",
         )
     }
-    // NaN-guard on a value the author can write: an unset blend is no blend.
-    val share = if (number.isFinite()) number else 0.0
-    val processed = runStage<KatalystBuilder, KatalystBuilder>(
-        door = "Katalyst blend",
-        noun = "branch",
-        index = 0,
-        stage = branch,
-        input = KatalystBuilder(KatalystDsl(emptyList())),
-        returns = "builder",
-        example = "b => b.distort(0.5)",
-        isResult = { it is KatalystBuilder },
-    )
 
-    return append(
-        KatalystStageDsl.Parallel(
-            branches = listOf(
-                KatalystDsl.of(KatalystStageDsl.Gain(gain = (1.0 - share).toKatalystKnob())),
-                processed.gain(share.kat).node,
-            ),
+    return this.blend(
+        wet = number,
+        branch = checkedStage(
+            door = "Katalyst blend",
+            noun = "branch",
+            index = 0,
+            stage = branch,
+            returns = "builder",
+            example = "b => b.distort(0.5)",
+            isResult = { it is KatalystBuilder },
         ),
     )
 }
@@ -793,9 +772,27 @@ fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> Kata
  *
  * @param configure receives the bands builder and returns it.
  */
-@KlangScript.Function
-fun KatalystBuilder.bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBuilder)? = null): KatalystBuilder =
-    copy(node = KatalystDsl(node.stages + KatalystBandsBuilder().configuredBy("Katalyst bands", configure).split()))
+@KlangScript.Function(name = "bands")
+internal fun KatalystBuilder.scriptBands(configure: ((KatalystBandsBuilder) -> KatalystBandsBuilder)? = null): KatalystBuilder =
+    this.bands { it.configuredBy("Katalyst bands", configure) }
+
+/** Every script-supplied stage or branch of a Katalyst `serial` / `parallel`, wrapped in its check ([checkedStage]). */
+private fun checkedStages(
+    door: String,
+    noun: String,
+    stages: Array<out (KatalystBuilder) -> KatalystBuilder>,
+    example: String,
+): Array<(KatalystBuilder) -> KatalystBuilder> = Array(stages.size) { index ->
+    checkedStage(
+        door = door,
+        noun = noun,
+        index = index,
+        stage = stages[index],
+        returns = "builder",
+        example = example,
+        isResult = { it is KatalystBuilder },
+    )
+}
 
 // ── Knob expressions: the Ignitor's arithmetic on a Katalyst knob ─────────────────────────────────────────────────
 //

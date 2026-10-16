@@ -264,6 +264,57 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
      * "correct" the crossing (guardrail, `CLAUDE.md`) (script knob `max`).
      */
     fun max(other: KatalystKnobDsl): KatalystBuilder = append(KatalystStageDsl.Min(other = other))
+
+    // ── Composition: groups of stages as values (rollout S6) ──────────────────────────────────────────────────────
+    //
+    // The script variants (`scriptSerial`, `scriptParallel`, `scriptBlend`, `scriptBands`) wrap every stage, branch and
+    // band processor in the script's check (`runStage`) before handing it here, so these members only invoke them.
+
+    /** Runs the chain through [stages] in series, first to last: `serial(a, b)` is `b(a(this))` (script knob `serial`). */
+    fun serial(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
+        stages.fold(this) { builder, stage -> stage(builder) }
+
+    /**
+     * Runs the bus through [branches] side by side and sums them, each branch given an EMPTY builder; no branch is the
+     * chain as it is, one branch its stages in place (script knob `parallel`).
+     */
+    fun parallel(vararg branches: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+        val built = branches.map { branch -> branch(KatalystBuilder()).node }
+
+        return when (built.size) {
+            0 -> this
+            1 -> copy(node = KatalystDsl(node.stages + built[0].stages))
+            else -> append(KatalystStageDsl.Parallel(branches = built))
+        }
+    }
+
+    /**
+     * A dry/wet blend, the linear law: the bus times `1 - wet` beside [branch]'s stages (from an empty builder) times
+     * [wet]. A plain number, as the script takes it (recorded asymmetry with the Ignitor's, which takes a slot or a
+     * signal); one that is not finite reads as 0, the dry bus (script knob `blend`).
+     */
+    fun blend(wet: Double, branch: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+        // NaN-guard on a value the author can write: an unset blend is no blend. The one guard, for both doors.
+        val share = if (wet.isFinite()) wet else 0.0
+        val processed = branch(KatalystBuilder())
+
+        return append(
+            KatalystStageDsl.Parallel(
+                branches = listOf(
+                    KatalystDsl.of(KatalystStageDsl.Gain(gain = (1.0 - share).kat)),
+                    processed.gain(share.kat).node,
+                ),
+            ),
+        )
+    }
+
+    /**
+     * Splits the bus into frequency bands from this position, the bands from a [KatalystBandsBuilder] (`band`, `cut`),
+     * the Linkwitz-Riley crossover in `BandsBuilders.kt`; no [configure], or no `cut`, is the one band, its stages in
+     * place (script knob `bands`).
+     */
+    fun bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBuilder)? = null): KatalystBuilder =
+        copy(node = KatalystDsl(node.stages + KatalystBandsBuilder().configured(configure).split()))
 }
 
 /**

@@ -2,7 +2,7 @@
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
 below, revised the same day: one set of builders, equal doors); steps 1 and 1b done; spike S1 done 2026-10-16 (review
-rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) and S4 (the arithmetic) and S5 (the Katalyst) done 2026-10-16, S6 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
+rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) and S4 (the arithmetic) and S5 (the Katalyst) and S6 (the composition doors) done 2026-10-16, S7 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
 
 ## Why
 
@@ -470,6 +470,62 @@ each with a written-out row; the S4 sub-point that said "Kotlin has one word per
 Nits: point 7 says "per knob" and how a mixed `curves` call is written; `door-shapes.md` has `lookahead` on the
 compressor row, a Katalyst `limiter` row, and the build-time sentence no longer contradicts `distort`'s name-only
 `shape`; the name-form rows use literal indices; the saw, ramp and tri default nodes are written out.
+
+## Rollout S6 (2026-10-16): `bands`, `serial`, `parallel` and `blend`
+
+`IgnitorBandsBuilder` and `KatalystBandsBuilder` moved to `audio_bridge/BandsBuilders.kt` with typed members,
+`band(processor)` and `cut(freq: Double)`, and the Linkwitz-Riley crossover (`coerceCut`, the sides, the all-pass, the
+two `split`s) lives there once. `cut` stays plain by the §3 criterion: the script takes a plain number, and the runtime
+never reads it from a slot (the split writes it into the EQ sections as a `Constant`, the order coercion needs the
+number when the split is written). The typed `split` only invokes the processors it holds; the script variant
+`scriptBand` wraps the script's processor in its stage check (`checkedStage` over `runStage`, new in `Configure.kt`,
+`runSerialStages` gone) with the band and processor numbers taken when it wraps (`processors.size`,
+`processors.last().size`), so the messages are unchanged. `scriptCut` passes the number through. The Kotlin doors:
+`IgnitorDsl.bands(configure)` (new in `IgnitorDsl.kt`), and `serial`, `parallel`, `blend` and `bands` as members of
+`KatalystBuilder` (`serial` folds, `parallel` gives each branch an empty builder, `bands(configure)`). `blend`: the
+Ignitor's is ONE typed door, `blend(wet: IgnitorDsl, branch)`, its `Double` twin from S4 gone (the script takes a
+number, a slot or a signal); the Katalyst's is `blend(wet: Double, branch)`, since the script takes a plain number
+only (the recorded Q14 asymmetry), with the NaN guard once in the member; the script's `wet` check (a number or a Kat
+constant, else the script error) stays in `scriptBlend` (pattern point 5). The Ignitor `serial`, `parallel` and
+`blend` were typed already; their script doors are now `internal`, renamed variants (`scriptSerial`,
+`scriptParallel`, `scriptBlend`, `scriptBands`, on both DSLs) that convert, wrap each stage or branch in its check and
+call the typed door; the script `parallel` no longer builds its `Parallel` node itself. No word was script-only or
+Kotlin-only, so no alias or new word was needed.
+
+A KSP fix came with it: `KlangScriptProcessor` recorded a top-level extension function's RECEIVER file as the source
+of the aggregating outputs, and once the receiver moved to `audio_bridge` (no file in this module) the function's own
+file was not recorded. An incremental KSP run that did not dirty that file then dropped its registrations from the
+regenerated outputs (seen: `GeneratedStdlibBandsBuildersRegistration.kt` vanished and every script `cut` and `band`
+was "no method"). The gap predates S1: it covers any file holding only top-level extension functions on a receiver with no file in the
+module, so `sprudel/src/commonMain/kotlin/lang/lang_structural_chunk.kt` (only `String` extensions, a type with no file
+at all) had it too, and the other builder files survived only by chance, made dirty through their lookups of
+`toIgnitorDsl`. The fix covers all of them: the collection is a pure function, `collectSourceFiles` in
+`klangscript-ksp/SourceFiles.kt`, which adds every type extension's method files, pinned by `SourceFilesTest` (a
+receiver without a file, its function's file among the sources; dropping that line went red, restored and
+`cmp`-checked). Three KSP runs in a row (full, incremental, up to date) keep 179 functions, and `sourceToOutputs` lists
+the four builder files.
+
+Callers: the root `BandsCrossoverSpec` (`sine(f).bands { ... }`, `KatalystBandsBuilder` from `audio_bridge`), the
+benchmark's `AllocationCases` (the stdlib imports gone, the members reached), and the four door-parity specs; no
+`audio_be`, `sprudel` or song caller needed a change. `GeneratedStdlibDocs.kt` differs only in the two bands builders'
+`fqcn` (`script.stdlib` to `audio_bridge`); every KDoc text is byte-identical. New rows: in
+`KlangScriptBandsDoorParitySpec` the split WRITTEN OUT by hand on both DSLs (each cut's sections, the all-pass, the
+bands in order, a distinct processor per band) from both doors, the members written out (a lone cut, two processors
+summed, a falling cut coerced), default-node rows from Kotlin (`bands()`, `bands { it }`, one processor), and the band
+and processor numbers in the script's errors (processor 2 of band 3, and so on); in `KlangScriptBlendDoorParitySpec` the
+Ignitor node written out with a number and with a param from both doors, the Katalyst chain written out from Kotlin,
+and `scriptBlend` given a Kat constant; written-out rows for the Kotlin `parallel` (both DSLs) and the Katalyst
+`serial`. Five mutants went red, restored and `cmp`-checked: the Ignitor `cut`
+member prepending its cut (the two cuts swapped), the Katalyst split handing band k the processors of band N-1-k, the
+Ignitor `blend` share inverted, `scriptBand` handing the processor on without its check, and `scriptBlend` casting `wet`
+instead of converting. `:audio_bridge`, `:klangscript-libs`, `:audio_be`, `:sprudel`, root `jvmTest` and
+`:klangscript-ksp:test` (with `SourceFilesTest`) are green; `compileKotlinJs` and `compileTestKotlinJs` of `audio_bridge` and `klangscript-libs`
+and `:audio_benchmark:compileKotlinJvm` too. The corpus baseline was refreshed: `Kokon` and `Der Schmetterling` (the songs with `bands`
+and `serial`) had read "edited" since the maintainer's song commit, so the corpus did not guard them. A plain
+`corpus-accept` (no red row) on this step's tree (`a7c25296-dirty`, S6 to be committed on it) wrote their live rows,
+the song texts the maintainer's as of `13019900` (unchanged since); `corpus` then read GREEN, frozen 3 of 3 identical,
+live 15 identical, 0 edited. An engagement control (every cut scaled by 1.1 in `coerceCut`) turned it RED, both songs
+"moved by the engine", restored and `cmp`-checked.
 
 ## Rollout steps (coordinator, 2026-10-16; replace steps 2 to 4)
 
