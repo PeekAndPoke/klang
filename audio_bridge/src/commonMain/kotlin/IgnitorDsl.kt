@@ -2464,7 +2464,8 @@ operator fun IgnitorDsl.Constant.unaryMinus(): IgnitorDsl.Constant = IgnitorDsl.
 
 // Arithmetic
 //
-// ONE typed function per word, every operand an IgnitorDsl: a number comes in through `.ign` (`saw * 0.5.ign`,
+// ONE typed function per word, every operand an IgnitorDsl; the script's aliases (`add`, `sub`, `mul`, `mix`, `rem`,
+// `power`, `negate`, `reciprocal`) are one-line typed delegates to their main word, so a script ports word for word: a number comes in through `.ign` (`saw * 0.5.ign`,
 // `x.clamp(lo = (-0.5).ign, hi = 0.5.ign)`). The `Double` twins, operators included, went with the typed-doors
 // rollout S4 (Q47); the script door keeps taking numbers (`x.mul(0.5)`), converts and calls these. The general
 // operators stay EXTENSIONS: a member would beat `Constant.unaryMinus`, and `-1.ign` would become a `Neg` node.
@@ -2475,8 +2476,29 @@ operator fun IgnitorDsl.plus(other: IgnitorDsl) = IgnitorDsl.Plus(left = this, r
 /** Multiplies two ignitor signals together (ring modulation). */
 operator fun IgnitorDsl.times(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
 
-/** Scales this signal by a modulatable [other] factor. Alias for [times]. */
-fun IgnitorDsl.mul(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
+/** Scales this signal by a modulatable [other] factor. Alias for [times], the script's `mul`. */
+fun IgnitorDsl.mul(other: IgnitorDsl) = times(other)
+
+/** Alias for [plus], the script's `add`. */
+fun IgnitorDsl.add(other: IgnitorDsl) = plus(other)
+
+/** Alias for [minus], the script's `sub`. */
+fun IgnitorDsl.sub(other: IgnitorDsl) = minus(other)
+
+/** Alias for [neg], the script's `negate`. */
+fun IgnitorDsl.negate() = neg()
+
+/** Alias for [pow], the script's `power`. */
+fun IgnitorDsl.power(exp: IgnitorDsl) = pow(exp)
+
+/** Alias for [lerp], the script's `mix`. */
+fun IgnitorDsl.mix(other: IgnitorDsl, t: IgnitorDsl) = lerp(other = other, t = t)
+
+/** Alias for [mod], the script's `rem`. */
+fun IgnitorDsl.rem(other: IgnitorDsl) = mod(other)
+
+/** Alias for [recip], the script's `reciprocal`. */
+fun IgnitorDsl.reciprocal() = recip()
 
 /**
  * Places the `pregain` slot here: how hard the pattern plays INTO whatever follows.

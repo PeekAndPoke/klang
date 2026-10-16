@@ -11,6 +11,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.abs
+import io.peekandpoke.klang.audio_bridge.add
 import io.peekandpoke.klang.audio_bridge.ceil
 import io.peekandpoke.klang.audio_bridge.clamp
 import io.peekandpoke.klang.audio_bridge.constants.RANGEX_FLOOR
@@ -24,20 +25,26 @@ import io.peekandpoke.klang.audio_bridge.log
 import io.peekandpoke.klang.audio_bridge.max
 import io.peekandpoke.klang.audio_bridge.min
 import io.peekandpoke.klang.audio_bridge.minus
+import io.peekandpoke.klang.audio_bridge.mix
 import io.peekandpoke.klang.audio_bridge.mod
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.neg
+import io.peekandpoke.klang.audio_bridge.negate
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.pow
+import io.peekandpoke.klang.audio_bridge.power
 import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.range
 import io.peekandpoke.klang.audio_bridge.rangex
 import io.peekandpoke.klang.audio_bridge.recip
+import io.peekandpoke.klang.audio_bridge.reciprocal
+import io.peekandpoke.klang.audio_bridge.rem
 import io.peekandpoke.klang.audio_bridge.round
 import io.peekandpoke.klang.audio_bridge.select
 import io.peekandpoke.klang.audio_bridge.sign
 import io.peekandpoke.klang.audio_bridge.sq
 import io.peekandpoke.klang.audio_bridge.sqrt
+import io.peekandpoke.klang.audio_bridge.sub
 import io.peekandpoke.klang.audio_bridge.tanh
 import io.peekandpoke.klang.audio_bridge.times
 import io.peekandpoke.klang.audio_bridge.unaryMinus
@@ -77,6 +84,7 @@ class KlangScriptIgnitorArithmeticDoorParitySpec : StringSpec({
 
         sine + 0.5.ign shouldBe written
         sine.plus(0.5.ign) shouldBe written
+        sine.add(0.5.ign) shouldBe written
         ignitor("Ign.sine(2).plus(0.5)") shouldBe written
         ignitor("Ign.sine(2).add(0.5)") shouldBe written
     }
@@ -101,6 +109,7 @@ class KlangScriptIgnitorArithmeticDoorParitySpec : StringSpec({
         val written = IgnitorDsl.Minus(left = sine, right = c(0.125))
 
         sine.minus(0.125.ign) shouldBe written
+        sine.sub(0.125.ign) shouldBe written
         ignitor("Ign.sine(2).minus(0.125)") shouldBe written
         ignitor("Ign.sine(2).sub(0.125)") shouldBe written
     }
@@ -116,6 +125,7 @@ class KlangScriptIgnitorArithmeticDoorParitySpec : StringSpec({
         val written = IgnitorDsl.Pow(base = sine, exp = c(3.0))
 
         sine.pow(3.ign) shouldBe written
+        sine.power(3.ign) shouldBe written
         ignitor("Ign.sine(2).pow(3)") shouldBe written
         ignitor("Ign.sine(2).power(3)") shouldBe written
     }
@@ -124,6 +134,7 @@ class KlangScriptIgnitorArithmeticDoorParitySpec : StringSpec({
         val written = IgnitorDsl.Mod(left = sine, right = c(0.4))
 
         sine.mod(0.4.ign) shouldBe written
+        sine.rem(0.4.ign) shouldBe written
         ignitor("Ign.sine(2).mod(0.4)") shouldBe written
         ignitor("Ign.sine(2).rem(0.4)") shouldBe written
     }
@@ -165,6 +176,7 @@ class KlangScriptIgnitorArithmeticDoorParitySpec : StringSpec({
         val towardConstant = IgnitorDsl.Lerp(left = sine, right = c(0.5), t = c(0.35))
 
         sine.lerp(other = saw, t = 0.3.ign) shouldBe towardSignal
+        sine.mix(other = saw, t = 0.3.ign) shouldBe towardSignal
         sine.lerp(other = 0.5.ign, t = 0.35.ign) shouldBe towardConstant
         ignitor("Ign.sine(2).lerp(Ign.saw(3), 0.3)") shouldBe towardSignal
         ignitor("Ign.sine(2).mix(Ign.saw(3), 0.3)") shouldBe towardSignal
@@ -205,7 +217,7 @@ class KlangScriptIgnitorArithmeticDoorParitySpec : StringSpec({
     "the one-operand words build their node on both doors, aliases included" {
         val rows = listOf(
             Triple("neg", sine.neg(), IgnitorDsl.Neg(inner = sine)),
-            Triple("negate", sine.neg(), IgnitorDsl.Neg(inner = sine)),
+            Triple("negate", sine.negate(), IgnitorDsl.Neg(inner = sine)),
             Triple("abs", sine.abs(), IgnitorDsl.Abs(inner = sine)),
             Triple("exp", sine.exp(), IgnitorDsl.Exp(inner = sine)),
             Triple("log", sine.log(), IgnitorDsl.Log(inner = sine)),
@@ -217,7 +229,7 @@ class KlangScriptIgnitorArithmeticDoorParitySpec : StringSpec({
             Triple("round", sine.round(), IgnitorDsl.Round(inner = sine)),
             Triple("frac", sine.frac(), IgnitorDsl.Frac(inner = sine)),
             Triple("recip", sine.recip(), IgnitorDsl.Recip(inner = sine)),
-            Triple("reciprocal", sine.recip(), IgnitorDsl.Recip(inner = sine)),
+            Triple("reciprocal", sine.reciprocal(), IgnitorDsl.Recip(inner = sine)),
             Triple("sq", sine.sq(), IgnitorDsl.Sq(inner = sine)),
             Triple("pregain", sine.pregain(), IgnitorDsl.Times(left = sine, right = IgnitorDsl.Slots.pregain)),
         )

@@ -11,9 +11,26 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.Kat
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.abs
+import io.peekandpoke.klang.audio_bridge.add
+import io.peekandpoke.klang.audio_bridge.div
+import io.peekandpoke.klang.audio_bridge.kat
+import io.peekandpoke.klang.audio_bridge.max
+import io.peekandpoke.klang.audio_bridge.min
+import io.peekandpoke.klang.audio_bridge.minus
+import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.neg
+import io.peekandpoke.klang.audio_bridge.negate
+import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.audio_bridge.pow
+import io.peekandpoke.klang.audio_bridge.power
+import io.peekandpoke.klang.audio_bridge.range
+import io.peekandpoke.klang.audio_bridge.sub
+import io.peekandpoke.klang.audio_bridge.times
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -50,27 +67,31 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
     val fader = KatalystKnobDsl.Param("fader", 1.0)
     val faderScript = """Kat.param("fader", 1)"""
 
-    /** One door with an operand: its name, the parameter's name, the Kotlin door, and the node it must build. */
+    /**
+     * One door with an operand: its script name, the parameter's name, the typed Kotlin function (`audio_bridge`, the
+     * main word's for an alias), the script variant called from Kotlin, and the node it must build.
+     */
     data class Door(
         val name: String,
         val param: String,
-        val kotlin: (KatalystKnobDsl, Any) -> KatalystKnobDsl,
+        val kotlin: (KatalystKnobDsl, KatalystKnobDsl) -> KatalystKnobDsl,
+        val script: (KatalystKnobDsl, Any) -> KatalystKnobDsl,
         val node: (KatalystKnobDsl, KatalystKnobDsl) -> KatalystKnobDsl,
     )
 
     val doors = listOf(
-        Door("plus", "other", { k, v -> k.plus(v) }, { a, b -> KatalystKnobDsl.Plus(left = a, right = b) }),
-        Door("add", "other", { k, v -> k.add(v) }, { a, b -> KatalystKnobDsl.Plus(left = a, right = b) }),
-        Door("minus", "other", { k, v -> k.minus(v) }, { a, b -> KatalystKnobDsl.Minus(left = a, right = b) }),
-        Door("sub", "other", { k, v -> k.sub(v) }, { a, b -> KatalystKnobDsl.Minus(left = a, right = b) }),
-        Door("times", "other", { k, v -> k.times(v) }, { a, b -> KatalystKnobDsl.Times(left = a, right = b) }),
-        Door("mul", "other", { k, v -> k.mul(v) }, { a, b -> KatalystKnobDsl.Times(left = a, right = b) }),
-        Door("div", "other", { k, v -> k.div(v) }, { a, b -> KatalystKnobDsl.Div(left = a, right = b) }),
-        Door("pow", "exp", { k, v -> k.pow(v) }, { a, b -> KatalystKnobDsl.Pow(base = a, exp = b) }),
-        Door("power", "exp", { k, v -> k.power(v) }, { a, b -> KatalystKnobDsl.Pow(base = a, exp = b) }),
+        Door("plus", "other", { k, v -> k.plus(v) }, { k, v -> k.scriptPlus(v) }, { a, b -> KatalystKnobDsl.Plus(left = a, right = b) }),
+        Door("add", "other", { k, v -> k.add(v) }, { k, v -> k.scriptAdd(v) }, { a, b -> KatalystKnobDsl.Plus(left = a, right = b) }),
+        Door("minus", "other", { k, v -> k.minus(v) }, { k, v -> k.scriptMinus(v) }, { a, b -> KatalystKnobDsl.Minus(left = a, right = b) }),
+        Door("sub", "other", { k, v -> k.sub(v) }, { k, v -> k.scriptSub(v) }, { a, b -> KatalystKnobDsl.Minus(left = a, right = b) }),
+        Door("times", "other", { k, v -> k.times(v) }, { k, v -> k.scriptTimes(v) }, { a, b -> KatalystKnobDsl.Times(left = a, right = b) }),
+        Door("mul", "other", { k, v -> k.mul(v) }, { k, v -> k.scriptMul(v) }, { a, b -> KatalystKnobDsl.Times(left = a, right = b) }),
+        Door("div", "other", { k, v -> k.div(v) }, { k, v -> k.scriptDiv(v) }, { a, b -> KatalystKnobDsl.Div(left = a, right = b) }),
+        Door("pow", "exp", { k, v -> k.pow(v) }, { k, v -> k.scriptPow(v) }, { a, b -> KatalystKnobDsl.Pow(base = a, exp = b) }),
+        Door("power", "exp", { k, v -> k.power(v) }, { k, v -> k.scriptPower(v) }, { a, b -> KatalystKnobDsl.Pow(base = a, exp = b) }),
         // The crossing: the doors are clamps, the nodes are the mathematical min and max.
-        Door("min", "other", { k, v -> k.min(v) }, { a, b -> KatalystKnobDsl.Max(left = a, right = b) }),
-        Door("max", "other", { k, v -> k.max(v) }, { a, b -> KatalystKnobDsl.Min(left = a, right = b) }),
+        Door("min", "other", { k, v -> k.min(v) }, { k, v -> k.scriptMin(v) }, { a, b -> KatalystKnobDsl.Max(left = a, right = b) }),
+        Door("max", "other", { k, v -> k.max(v) }, { k, v -> k.scriptMax(v) }, { a, b -> KatalystKnobDsl.Min(left = a, right = b) }),
     )
 
     "every operand door builds its own node, a number operand a Constant, positionally and named, on both doors" {
@@ -79,7 +100,8 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
 
             withClue("${door.name}, positional") { kx("$faderScript.${door.name}(0.375)") shouldBe expected }
             withClue("${door.name}, named") { kx("$faderScript.${door.name}(${door.param} = 0.375)") shouldBe expected }
-            withClue("${door.name}, Kotlin") { door.kotlin(fader, 0.375) shouldBe expected }
+            withClue("${door.name}, Kotlin") { door.kotlin(fader, 0.375.kat) shouldBe expected }
+            withClue("${door.name}, the script variant from Kotlin") { door.script(fader, 0.375) shouldBe expected }
         }
     }
 
@@ -90,11 +112,13 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
         for (door in doors) {
             withClue("${door.name}, a param operand") {
                 kx("""$faderScript.${door.name}(Kat.param("trim", 0.8))""") shouldBe door.node(fader, trim)
-                door.kotlin(fader, KlangScriptKatalyst.param("trim", 0.8)) shouldBe door.node(fader, trim)
+                door.kotlin(fader, Kat.param("trim", 0.8)) shouldBe door.node(fader, trim)
+                door.script(fader, Kat.param("trim", 0.8)) shouldBe door.node(fader, trim)
             }
             withClue("${door.name}, an expression operand") {
                 kx("""$faderScript.${door.name}(Kat.param("trim", 0.8).neg())""") shouldBe door.node(fader, nested)
-                door.kotlin(fader, KlangScriptKatalyst.param("trim", 0.8).neg()) shouldBe door.node(fader, nested)
+                door.kotlin(fader, Kat.param("trim", 0.8).neg()) shouldBe door.node(fader, nested)
+                door.script(fader, Kat.param("trim", 0.8).neg()) shouldBe door.node(fader, nested)
             }
         }
     }
@@ -102,8 +126,10 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
     "the min and max doors are clamps: min builds the mathematical Max, max the Min" {
         kx("$faderScript.min(0.2)") shouldBe KatalystKnobDsl.Max(left = fader, right = c(0.2))
         kx("$faderScript.max(0.9)") shouldBe KatalystKnobDsl.Min(left = fader, right = c(0.9))
-        fader.min(0.2) shouldBe KatalystKnobDsl.Max(left = fader, right = c(0.2))
-        fader.max(0.9) shouldBe KatalystKnobDsl.Min(left = fader, right = c(0.9))
+        fader.min(0.2.kat) shouldBe KatalystKnobDsl.Max(left = fader, right = c(0.2))
+        fader.max(0.9.kat) shouldBe KatalystKnobDsl.Min(left = fader, right = c(0.9))
+        fader.scriptMin(0.2) shouldBe KatalystKnobDsl.Max(left = fader, right = c(0.2))
+        fader.scriptMax(0.9) shouldBe KatalystKnobDsl.Min(left = fader, right = c(0.9))
     }
 
     "neg, negate and abs wrap the knob, on both doors" {
@@ -118,6 +144,9 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
         fader.neg() shouldBe KatalystKnobDsl.Neg(inner = fader)
         fader.negate() shouldBe KatalystKnobDsl.Neg(inner = fader)
         fader.abs() shouldBe KatalystKnobDsl.Abs(inner = fader)
+        fader.scriptNeg() shouldBe KatalystKnobDsl.Neg(inner = fader)
+        fader.scriptNegate() shouldBe KatalystKnobDsl.Neg(inner = fader)
+        fader.scriptAbs() shouldBe KatalystKnobDsl.Abs(inner = fader)
     }
 
     "range(from, to), positional and named, numbers and params, on both doors" {
@@ -126,13 +155,16 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
         kx("$faderScript.range(400, 1600)") shouldBe expected
         kx("$faderScript.range(from = 400, to = 1600)") shouldBe expected
         kx("$faderScript.range(to = 1600, from = 400)") shouldBe expected
-        fader.range(400, 1600) shouldBe expected
-        fader.range(to = 1600.0, from = 400.0) shouldBe expected
+        fader.range(from = 400.kat, to = 1600.kat) shouldBe expected
+        fader.range(to = 1600.0.kat, from = 400.0.kat) shouldBe expected
+        fader.scriptRange(400, 1600) shouldBe expected
+        fader.scriptRange(to = 1600.0, from = 400.0) shouldBe expected
 
         val withParams = KatalystKnobDsl.Range(inner = fader, from = KatalystKnobDsl.Param("lo", 200.0), to = c(800.0))
 
         kx("""$faderScript.range(Kat.param("lo", 200), 800)""") shouldBe withParams
-        fader.range(KlangScriptKatalyst.param("lo", 200.0), 800) shouldBe withParams
+        fader.range(from = Kat.param("lo", 200.0), to = 800.kat) shouldBe withParams
+        fader.scriptRange(Kat.param("lo", 200.0), 800) shouldBe withParams
     }
 
     "an expression is a stage knob like a param, on both doors" {
@@ -140,7 +172,7 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
 
         ks("""Katalyst(k => k.gain(Kat.param("fader", 1).times(0.5)))""") shouldBe
                 KatalystDsl.of(KatalystStageDsl.Gain(gain = gain))
-        KlangScriptKatalyst.build { it.gain(KlangScriptKatalyst.param("fader", 1.0).times(0.5)) } shouldBe
+        Kat.build { it.gain(Kat.param("fader", 1.0).times(0.5.kat)) } shouldBe
                 KatalystDsl.of(KatalystStageDsl.Gain(gain = gain))
 
         // A door parameter, a builder knob and an arithmetic stage's operand.
@@ -168,9 +200,10 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
             withClue(script) { shouldThrow<KlangScriptTypeError> { engine().execute(script) }.message shouldBe message }
         }
 
-        shouldThrow<KlangScriptTypeError> { fader.times(IgnitorDsl.Sine()) }.message shouldBe sound
-        shouldThrow<KlangScriptTypeError> { fader.pow(IgnitorDsl.Param("a", 1.0)) }.message shouldBe param
-        shouldThrow<KlangScriptTypeError> { fader.plus("x") }.message shouldBe
+        // The typed functions refuse an Ignitor node at compile time; the script variants convert and refuse.
+        shouldThrow<KlangScriptTypeError> { fader.scriptTimes(IgnitorDsl.Sine()) }.message shouldBe sound
+        shouldThrow<KlangScriptTypeError> { fader.scriptPow(IgnitorDsl.Param("a", 1.0)) }.message shouldBe param
+        shouldThrow<KlangScriptTypeError> { fader.scriptPlus("x") }.message shouldBe
                 "a Katalyst knob takes a number, a Kat.param or a Kat expression; got a string"
     }
 
@@ -187,7 +220,7 @@ class KlangScriptKatalystKnobExpressionDoorParitySpec : StringSpec({
 
         // The Kotlin door's typed eq builder refuses it at build time (Q49, the typed-doors rollout S3a).
         shouldThrow<IllegalArgumentException> {
-            KlangScriptKatalyst.build { it.eq { e -> e.band(freq = KlangScriptKatalyst.param("f", 300.0).times(2)) } }
+            Kat.build { it.eq { e -> e.band(freq = Kat.param("f", 300.0).times(2.kat)) } }
         }.message shouldBe "Katalyst eq band(freq = ...) takes a number or a Kat.param; got a Kat expression"
     }
 })

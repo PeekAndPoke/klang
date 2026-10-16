@@ -11,11 +11,13 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.blend
 import io.peekandpoke.klang.audio_bridge.ign
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -102,9 +104,9 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
     "Katalyst: the Kotlin door builds the same chain as the script door; a wet that is not finite is 0" {
         val empty = KatalystBuilder(KatalystDsl(emptyList()))
 
-        empty.blend(0.3) { it.distort(0.6) }.node shouldBe katalyst("Katalyst(k => k.blend(0.3, b => b.distort(0.6)))")
+        empty.blend(0.3) { it.distort(amount = 0.6.kat) }.node shouldBe katalyst("Katalyst(k => k.blend(0.3, b => b.distort(0.6)))")
 
-        val stage = empty.blend(Double.NaN) { it.distort(0.6) }.node.stages.single().shouldBeInstanceOf<KatalystStageDsl.Parallel>()
+        val stage = empty.blend(Double.NaN) { it.distort(amount = 0.6.kat) }.node.stages.single().shouldBeInstanceOf<KatalystStageDsl.Parallel>()
 
         stage.branches[0].stages.single() shouldBe KatalystStageDsl.Gain(k(1.0))
         stage.branches[1].stages.last() shouldBe KatalystStageDsl.Gain(k(0.0))

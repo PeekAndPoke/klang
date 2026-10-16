@@ -33,18 +33,15 @@ import io.peekandpoke.klang.audio_be.ignitor.plus
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.Kat
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.kat
+import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.audio_bridge.range
+import io.peekandpoke.klang.audio_bridge.times
 import io.peekandpoke.klang.common.infra.toKlangMap
-import io.peekandpoke.klang.script.stdlib.Kat
-import io.peekandpoke.klang.script.stdlib.div
-import io.peekandpoke.klang.script.stdlib.gain
-import io.peekandpoke.klang.script.stdlib.max
-import io.peekandpoke.klang.script.stdlib.plus
-import io.peekandpoke.klang.script.stdlib.pow
-import io.peekandpoke.klang.script.stdlib.range
-import io.peekandpoke.klang.script.stdlib.times
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
 import kotlin.math.sin
@@ -553,9 +550,9 @@ class EffectBenchmark(
             // ── Katalyst stages: the arithmetic (docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md).
             // The operands are not integers (V8 keeps an integral double as a small integer, which hides a box).
             katalystCase("Katalyst empty chain (baseline: stereo copy + dispatch)", KatalystDsl(emptyList())),
-            katalystCase("Katalyst times (1 cheap stage)", AllocationCases.katalyst { it.times(0.9) }),
-            katalystCase("Katalyst times+plus+max (3 cheap stages)", AllocationCases.katalyst { it.times(0.9).plus(0.013).max(0.45) }),
-            katalystCase("Katalyst pow (1 stage)", AllocationCases.katalyst { it.pow(0.7) }),
+            katalystCase("Katalyst times (1 cheap stage)", AllocationCases.katalyst { it.times(0.9.kat) }),
+            katalystCase("Katalyst times+plus+max (3 cheap stages)", AllocationCases.katalyst { it.times(0.9.kat).plus(0.013.kat).max(0.45.kat) }),
+            katalystCase("Katalyst pow (1 stage)", AllocationCases.katalyst { it.pow(0.7.kat) }),
             // Gliding all the time: the divisor moves every 8 blocks, inside the 17-block glide (44.1 kHz), so every
             // block takes the moving branch (the reciprocal, multiplied in per sample).
             katalystCase(
@@ -575,7 +572,7 @@ class EffectBenchmark(
             // every block its time moves. It is not the cost of any one of them.
             katalystCase(
                 "Katalyst gain, constant (control of the knob rows)",
-                AllocationCases.katalyst { it.gain(0.65) },
+                AllocationCases.katalyst { it.gain(0.65.kat) },
             ),
             // A new map every block: the slot re-resolves every block, the expression re-evaluates (an evaluation per
             // new map is the most a slot expression ever costs; a song's map changes per note).
@@ -586,7 +583,7 @@ class EffectBenchmark(
             ),
             katalystCase(
                 "Katalyst gain, slot expression (a new map every block)",
-                AllocationCases.katalyst { it.gain(Kat.param("bench.g", 0.6).times(1.1).plus(0.013)) },
+                AllocationCases.katalyst { it.gain(Kat.param("bench.g", 0.6).times(1.1.kat).plus(0.013.kat)) },
                 moves = listOf(mapOf("bench.g" to 0.6), mapOf("bench.g" to 0.7)),
             ),
             katalystCase("Katalyst gain, sine knob (E-kat-sine's chain)", AllocationCases.sineChain),
@@ -598,11 +595,11 @@ class EffectBenchmark(
             katalystCase("Katalyst gain, saw with a sine freq (E-kat-sawfm's chain)", AllocationCases.sawFmChain),
             katalystCase(
                 "Katalyst gain, perlin 1 octave",
-                AllocationCases.katalyst { it.gain(Kat.perlin(0.0031).range(0.45, 0.85)) },
+                AllocationCases.katalyst { it.gain(Kat.perlin(0.0031.kat).range(from = 0.45.kat, to = 0.85.kat)) },
             ),
             katalystCase(
                 "Katalyst gain, perlin 8 octaves",
-                AllocationCases.katalyst { it.gain(Kat.perlin(0.0031, octaves = 8.0).range(0.45, 0.85)) },
+                AllocationCases.katalyst { it.gain(Kat.perlin(0.0031.kat, octaves = 8.0.kat).range(from = 0.45.kat, to = 0.85.kat)) },
             ),
             katalystCase("Katalyst 7 stages, constants (control of E-kat-all7)", AllocationCases.allKindsConstant),
             katalystCase(

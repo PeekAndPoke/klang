@@ -375,6 +375,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Typed Kotlin doors S5: `KatalystBuilder`, its stage builders and the modulators' builders live in
+  `audio_bridge/KatalystBuilders.kt` with typed members (each stage's omitted parameter its bare-stage constant, the
+  limiter preset and the `classic` once-only logic there; name forms for body and vowel, distort by name only); `Kat.build`/`Kat { }`
+  and the modulators on their builders in `Kat`; the knob arithmetic one typed function per word in
+  `KatalystKnobDsl.kt`; the script knobs are internal renamed variants; `serial`, `parallel`, `blend`, `bands` wait for
+  S6; corpus identical, alloc 80 of 80 (`docs/tasks/kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S4: the Ignitor arithmetic is one typed function per word (`saw * 0.5.ign`, the fifteen
   `Double` twins and their operators gone, Q47); the script words are internal renamed variants that convert and call
   them, the `min`/`max` crossing lives once in the typed functions; the script's `*` stays numbers only; corpus

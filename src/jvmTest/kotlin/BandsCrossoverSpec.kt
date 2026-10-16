@@ -20,17 +20,17 @@ import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.eq
 import io.peekandpoke.klang.audio_bridge.ign
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.stdlib.KatalystBandsBuilder
-import io.peekandpoke.klang.script.stdlib.KatalystBuilder
 import io.peekandpoke.klang.script.stdlib.KlangScriptIgnitorExtensions
 import io.peekandpoke.klang.script.stdlib.band
 import io.peekandpoke.klang.script.stdlib.bands
 import io.peekandpoke.klang.script.stdlib.cut
-import io.peekandpoke.klang.script.stdlib.gain
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -218,7 +218,7 @@ class BandsCrossoverSpec : StringSpec({
 
     "Katalyst: a muted mid band takes the mids out and leaves the lows and the highs" {
         val split = KatalystBuilder(KatalystDsl(emptyList()))
-            .bands { it.cut(200.0).band { mid -> mid.gain(0.0) }.cut(2000.0) }
+            .bands { it.cut(200.0).band { mid -> mid.gain(0.0.kat) }.cut(2000.0) }
             .node
 
         db(katalystLevel(split, 700.0)) shouldBeLessThan -20.0

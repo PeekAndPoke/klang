@@ -11,9 +11,11 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ign
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -81,7 +83,7 @@ class KlangScriptBandsDoorParitySpec : StringSpec({
 
     "Katalyst: the Kotlin door builds the same chain as the script door" {
         val script = katalyst("Katalyst(k => k.bands(b => b.cut(150).band(m => m.distort(0.15)).cut(5000)).gain(1.2))")
-        val kotlin = empty.bands { it.cut(150.0).band { m -> m.distort(0.15) }.cut(5000.0) }.gain(1.2).node
+        val kotlin = empty.bands { it.cut(150.0).band { m -> m.distort(amount = 0.15.kat) }.cut(5000.0) }.gain(1.2.kat).node
 
         kotlin shouldBe script
     }

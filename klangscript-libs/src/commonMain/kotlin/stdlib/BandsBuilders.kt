@@ -8,6 +8,7 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.script.annotations.KlangScript

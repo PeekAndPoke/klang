@@ -2,7 +2,7 @@
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
 below, revised the same day: one set of builders, equal doors); steps 1 and 1b done; spike S1 done 2026-10-16 (review
-rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) and S4 (the arithmetic) done 2026-10-16, S5 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
+rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) and S4 (the arithmetic) and S5 (the Katalyst) done 2026-10-16, S6 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
 
 ## Why
 
@@ -408,6 +408,68 @@ sources compile (`compileTestKotlinJvm compileTestKotlinJs`); the corpus is GREE
 identical, `Kokon` and `Der Schmetterling` edited by the maintainer's song commit as before; an engagement control (the
 typed `mul` scaling its operand by 0.9, which every script `mul` reaches through its variant) turned it RED (3 frozen,
 13 live moved), restored.
+
+## Rollout S5 (2026-10-16): the Katalyst on its builders
+
+`KatalystBuilder`, its stage builders (`KatalystBodyBuilder`, `KatalystVowelBuilder`, `KatalystDelayBuilder`,
+`KatalystPhaserBuilder`, with `floor` and `cap`) and the modulators' builders (`KatalystSineBuilder`, `Saw`, `Ramp`,
+`Tri`, `Square` with `phase` and `duty`) moved to `audio_bridge/KatalystBuilders.kt` with typed members. Every stage
+door is a member (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `distort`, `duck`, `eq`,
+`gain`, `classic`, `append`, and the arithmetic stages `plus`, `minus`, `times`, `div`, `neg`, `abs`, `pow`, `min`,
+`max`, the crossing once in the member); its parameters are non-null with the bare stage's constant
+(`delay(wet = DELAY_WET.kat, time = DELAY_TIME_SECONDS.kat, ...)`), and the script variant substitutes the same symbol
+for its `null`. The one nullable parameter is the reverb's `lowpass`, whose bare value is `null` itself (the engine's
+damping, no wire constant), passed through. The limiter preset numbers, the `classic` once-only logic
+(`containsInOrder`) and the eq stage's section building live in the members now. Name knobs: `body(wet, material:
+String, configure)` and `vowel(wet, vowel: String, configure)` beside the index forms, through `BodyMaterials.indexOf`
+/ `VowelBands.indexOf` (the lookups the script's `catalogueIndex` uses); `distort(amount, shape: String =
+DistortionShapes.names[SOFT_INDEX], oversample = DISTORT_OVERSAMPLE)` takes the name only, as the script does (`shape`
+and `oversample` stay plain, fields of the stage, Q51; a first cut's Kotlin-only `shape: Int` form was dropped,
+coordinator: the doors offer the same forms, point 7 corrected). The reverb's nullable `lowpass` was accepted by the
+coordinator. `Kat.build(configure)` and `Kat { ... }` are new on the
+typed `Kat`; its five periodic modulators are `(freq, configure)` on the builders (step 1b's flat `phase` / `duty`
+parameters gone), `perlin` and `berlin` stay flat. The knob arithmetic is one typed function per word in
+`audio_bridge/KatalystKnobDsl.kt` (`Kat.param("fader", 1.0).times(0.5.kat)`, precise node types, plain functions, no
+operators as before).
+
+The script side converts and delegates: every chain knob, stage-builder knob, modulator-builder knob and knob-arithmetic
+word in `klangscript-libs/KatalystBuilders.kt` is an `internal`, renamed variant (`scriptReverb`, `scriptFloor`,
+`scriptPhase`, `scriptTimes`, ...; an alias calls its main word's member, `scriptAdd` calls `plus`), and the script `Kat`
+object's `build`, `classic`, `param` and modulators call the typed `Kat` (`KotlinKat.build { it.configuredBy("Katalyst",
+configure) }`). The script `eq` door is `this.eq { it.configuredBy("Katalyst eq", configure) }` onto S3a's
+`KatalystEqBuilder`. `toKatalystKnob`, the eq pre-check, `configuredBy` and `runStage` stay script-side; `serial`,
+`parallel`, `blend` and `bands` keep today's layering for S6 and compile against the moved builder (`blend` passes
+`share.kat`; `append` is public for them). Generated docs: the ten moved types differ only in their `fqcn`
+(`script.stdlib` to `audio_bridge`); every KDoc text is byte-identical. Callers: `audio_benchmark` (`AllocationCases`,
+`EffectBenchmark`) off `stdlib.Kat` onto the typed `Kat` (the `katalyst { }` helper is `Kat.build`), the root
+`BandsCrossoverSpec`, and eight `klangscript-libs` specs; no `audio_be` or `sprudel` spec built a chain through the old
+door.
+
+`KotlinKatObjectParitySpec` (37 tests) is on the builder shape: the parity rows (the modulators with `configure`, and
+seven chain rows through `Kat()`, `Kat.build` and every builder shape), a default-node row per stage door, written out
+with literal numbers from both doors (14, the limiter preset and the three name forms included), one row per member
+knob and per stage-door parameter against the stage written out with `.copy()` (50, each guarded off its bare stage,
+from Kotlin and from the script), the modulator members, `classic` once-only and the eq refusal (Q49) through both
+doors. The six Katalyst parity specs (door, arithmetic, knob expression, modulator, and the serial / parallel / blend /
+bands rows) call the typed door for Kotlin and the script variants from Kotlin for the omission and refusal rows.
+Eight mutants went red, restored and `cmp`-checked: the phaser member writing `center` from `sweep`, a wrong default
+symbol on the member's `delay(time)`, the same wrong symbol in `scriptDelay`'s `null` substitution, `scriptGain`
+casting instead of converting, `classic` appending twice, the knob `plus` building `Times`, a wrong limiter `knee`
+preset, and the body name form looking up `VowelBands`. `:audio_bridge`, `:klangscript-libs`, `:audio_be`, `:sprudel`
+and root `jvmTest` are green, the JS sources and JS tests of `audio_bridge`, `klangscript-libs` and the root compile,
+`:audio_benchmark:compileKotlinJvm` too; the alloc harness is GREEN, 80 of 80 within budget; the corpus is GREEN,
+frozen 3 of 3 identical, 13 live identical, `Kokon` and `Der Schmetterling` edited by the maintainer's song commit as
+before; an engagement control (the typed `reverb` member scaling `wet` by 0.9, which every script `k.reverb` reaches
+through its variant) turned it RED (2 frozen, 4 live moved), restored.
+
+Review round 1 (2026-10-16): code clean; DSL one minor, applied. Kotlin mirrors the script's words, aliases included
+(coordinator: porting is the goal, `mid.distort(...).mul(0.80)` ports as `.mul(0.80.kat)`): each alias is a one-line
+typed delegate to its main word, on `KatalystBuilder` and `KatalystKnobDsl` (`add`, `sub`, `mul`, `power`, `negate`)
+and on the Ignitor (`add`, `sub`, `mix`, `rem`, `power`, `negate`, `reciprocal`, and `mul` now delegating to `times`),
+each with a written-out row; the S4 sub-point that said "Kotlin has one word per concept" is superseded in point 9.
+Nits: point 7 says "per knob" and how a mixed `curves` call is written; `door-shapes.md` has `lookahead` on the
+compressor row, a Katalyst `limiter` row, and the build-time sentence no longer contradicts `distort`'s name-only
+`shape`; the name-form rows use literal indices; the saw, ramp and tri default nodes are written out.
 
 ## Rollout steps (coordinator, 2026-10-16; replace steps 2 to 4)
 

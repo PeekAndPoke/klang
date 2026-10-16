@@ -7,8 +7,15 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
+import io.peekandpoke.klang.audio_bridge.KatalystRampBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystSawBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystSineBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystSquareBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystTriBuilder
+import io.peekandpoke.klang.audio_bridge.Kat as KotlinKat
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
@@ -64,7 +71,7 @@ object KlangScriptKatalyst {
      */
     @KlangScript.Method
     fun build(configure: ((KatalystBuilder) -> KatalystBuilder)? = null): KatalystDsl =
-        KatalystBuilder(KatalystDsl(emptyList())).configuredBy("Katalyst", configure).node
+        KotlinKat.build { it.configuredBy("Katalyst", configure) }
 
     /**
      * The chain every orbit has always run: body, vowel, delay, reverb, phaser, compressor and the
@@ -93,7 +100,7 @@ object KlangScriptKatalyst {
      * pattern's `body(material = "wood")` still reaches it.
      */
     @KlangScript.Method
-    fun classic(): KatalystDsl = KatalystDsl.classic
+    fun classic(): KatalystDsl = KotlinKat.classic()
 
     /**
      * Creates a named **chain slot** with a default value: the knob a pattern can then move with
@@ -128,7 +135,7 @@ object KlangScriptKatalyst {
      */
     @KlangScript.Method
     fun param(name: String, default: Double, description: String = ""): KatalystKnobDsl =
-        KatalystKnobDsl.Param(name = name, default = default, description = description)
+        KotlinKat.param(name = name, default = default, description = description)
 
     // ── The modulators: a bus LFO, on any knob that takes a Kat.param ─────────────────────────────────────────────
     //
@@ -161,8 +168,7 @@ object KlangScriptKatalyst {
      */
     @KlangScript.Method
     fun sine(freq: IgnitorDslLike, configure: ((KatalystSineBuilder) -> KatalystSineBuilder)? = null): KatalystKnobDsl =
-        KatalystSineBuilder(KatalystKnobDsl.Sine(freq = freq.toKatalystKnob()))
-            .configuredBy("Katalyst.sine", configure).node
+        KotlinKat.sine(freq.toKatalystKnob()) { it.configuredBy("Katalyst.sine", configure) }
 
     /**
      * A sawtooth LFO for a chain knob: rises from -1 to 1 over each cycle at [freq] Hz, then falls back over the
@@ -178,8 +184,7 @@ object KlangScriptKatalyst {
      */
     @KlangScript.Method
     fun saw(freq: IgnitorDslLike, configure: ((KatalystSawBuilder) -> KatalystSawBuilder)? = null): KatalystKnobDsl =
-        KatalystSawBuilder(KatalystKnobDsl.Saw(freq = freq.toKatalystKnob()))
-            .configuredBy("Katalyst.saw", configure).node
+        KotlinKat.saw(freq.toKatalystKnob()) { it.configuredBy("Katalyst.saw", configure) }
 
     /**
      * A ramp (falling sawtooth) LFO for a chain knob: falls from 1 to -1 over each cycle at [freq] Hz.
@@ -194,8 +199,7 @@ object KlangScriptKatalyst {
      */
     @KlangScript.Method
     fun ramp(freq: IgnitorDslLike, configure: ((KatalystRampBuilder) -> KatalystRampBuilder)? = null): KatalystKnobDsl =
-        KatalystRampBuilder(KatalystKnobDsl.Ramp(freq = freq.toKatalystKnob()))
-            .configuredBy("Katalyst.ramp", configure).node
+        KotlinKat.ramp(freq.toKatalystKnob()) { it.configuredBy("Katalyst.ramp", configure) }
 
     /**
      * A triangle LFO for a chain knob: from -1 up to 1 and back over each cycle at [freq] Hz.
@@ -210,8 +214,7 @@ object KlangScriptKatalyst {
      */
     @KlangScript.Method
     fun tri(freq: IgnitorDslLike, configure: ((KatalystTriBuilder) -> KatalystTriBuilder)? = null): KatalystKnobDsl =
-        KatalystTriBuilder(KatalystKnobDsl.Tri(freq = freq.toKatalystKnob()))
-            .configuredBy("Katalyst.tri", configure).node
+        KotlinKat.tri(freq.toKatalystKnob()) { it.configuredBy("Katalyst.tri", configure) }
 
     /**
      * A square LFO for a chain knob: -1 or 1, switching over the Ignitor pulse's short flanks, at [freq] Hz; its
@@ -233,8 +236,7 @@ object KlangScriptKatalyst {
         freq: IgnitorDslLike,
         configure: ((KatalystSquareBuilder) -> KatalystSquareBuilder)? = null,
     ): KatalystKnobDsl =
-        KatalystSquareBuilder(KatalystKnobDsl.Square(freq = freq.toKatalystKnob()))
-            .configuredBy("Katalyst.square", configure).node
+        KotlinKat.square(freq.toKatalystKnob()) { it.configuredBy("Katalyst.square", configure) }
 
     /**
      * A Perlin noise walk for a chain knob: smooth, organic drift in about `-1..1`, the Ignitor's `perlin`. Every
@@ -257,7 +259,7 @@ object KlangScriptKatalyst {
         octaves: IgnitorDslLike = 1.0,
         persistence: IgnitorDslLike = 0.5,
     ): KatalystKnobDsl =
-        KatalystKnobDsl.PerlinNoise(
+        KotlinKat.perlin(
             rate = rate.toKatalystKnob(),
             octaves = octaves.toKatalystKnob(),
             persistence = persistence.toKatalystKnob(),
@@ -282,7 +284,7 @@ object KlangScriptKatalyst {
         octaves: IgnitorDslLike = 1.0,
         persistence: IgnitorDslLike = 0.5,
     ): KatalystKnobDsl =
-        KatalystKnobDsl.BerlinNoise(
+        KotlinKat.berlin(
             rate = rate.toKatalystKnob(),
             octaves = octaves.toKatalystKnob(),
             persistence = persistence.toKatalystKnob(),

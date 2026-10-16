@@ -13,10 +13,15 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.Kat
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.div
+import io.peekandpoke.klang.audio_bridge.kat
+import io.peekandpoke.klang.audio_bridge.range
+import io.peekandpoke.klang.audio_bridge.times
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -51,43 +56,52 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
 
     fun c(value: Double): KatalystKnobDsl = KatalystKnobDsl.Constant(value)
 
-    /** One periodic door: its name, its Kotlin door with and without a phase, and the node it builds. */
+    /**
+     * One periodic door: its name, the typed Kotlin door (`Kat` in `audio_bridge`) with and without a phase, the script
+     * object called from Kotlin with its script phase variant, and the node it builds.
+     */
     data class Periodic(
         val name: String,
-        val kotlin: (Any) -> KatalystKnobDsl,
-        val kotlinPhased: (Any, Any) -> KatalystKnobDsl,
+        val kotlin: (KatalystKnobDsl) -> KatalystKnobDsl,
+        val kotlinPhased: (KatalystKnobDsl, KatalystKnobDsl) -> KatalystKnobDsl,
+        val scriptPhased: (Any, Any) -> KatalystKnobDsl,
         val node: (KatalystKnobDsl, KatalystKnobDsl) -> KatalystKnobDsl,
     )
 
     val periodic = listOf(
         Periodic(
             name = "sine",
-            kotlin = { f -> KlangScriptKatalyst.sine(f) },
-            kotlinPhased = { f, p -> KlangScriptKatalyst.sine(f) { it.phase(p) } },
+            kotlin = { f -> Kat.sine(f) },
+            kotlinPhased = { f, p -> Kat.sine(f) { it.phase(p) } },
+            scriptPhased = { f, p -> KlangScriptKatalyst.sine(f) { it.scriptPhase(p) } },
             node = { f, p -> KatalystKnobDsl.Sine(freq = f, phase = p) },
         ),
         Periodic(
             name = "saw",
-            kotlin = { f -> KlangScriptKatalyst.saw(f) },
-            kotlinPhased = { f, p -> KlangScriptKatalyst.saw(f) { it.phase(p) } },
+            kotlin = { f -> Kat.saw(f) },
+            kotlinPhased = { f, p -> Kat.saw(f) { it.phase(p) } },
+            scriptPhased = { f, p -> KlangScriptKatalyst.saw(f) { it.scriptPhase(p) } },
             node = { f, p -> KatalystKnobDsl.Saw(freq = f, phase = p) },
         ),
         Periodic(
             name = "ramp",
-            kotlin = { f -> KlangScriptKatalyst.ramp(f) },
-            kotlinPhased = { f, p -> KlangScriptKatalyst.ramp(f) { it.phase(p) } },
+            kotlin = { f -> Kat.ramp(f) },
+            kotlinPhased = { f, p -> Kat.ramp(f) { it.phase(p) } },
+            scriptPhased = { f, p -> KlangScriptKatalyst.ramp(f) { it.scriptPhase(p) } },
             node = { f, p -> KatalystKnobDsl.Ramp(freq = f, phase = p) },
         ),
         Periodic(
             name = "tri",
-            kotlin = { f -> KlangScriptKatalyst.tri(f) },
-            kotlinPhased = { f, p -> KlangScriptKatalyst.tri(f) { it.phase(p) } },
+            kotlin = { f -> Kat.tri(f) },
+            kotlinPhased = { f, p -> Kat.tri(f) { it.phase(p) } },
+            scriptPhased = { f, p -> KlangScriptKatalyst.tri(f) { it.scriptPhase(p) } },
             node = { f, p -> KatalystKnobDsl.Tri(freq = f, phase = p) },
         ),
         Periodic(
             name = "square",
-            kotlin = { f -> KlangScriptKatalyst.square(f) },
-            kotlinPhased = { f, p -> KlangScriptKatalyst.square(f) { it.phase(p) } },
+            kotlin = { f -> Kat.square(f) },
+            kotlinPhased = { f, p -> Kat.square(f) { it.phase(p) } },
+            scriptPhased = { f, p -> KlangScriptKatalyst.square(f) { it.scriptPhase(p) } },
             node = { f, p -> KatalystKnobDsl.Square(freq = f, phase = p) },
         ),
     )
@@ -105,8 +119,9 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
                 kx("Kat.${door.name}(freq = 2.5, configure = x => x.phase(0.25))") shouldBe phased
             }
             withClue("${door.name}, Kotlin") {
-                door.kotlin(2.5) shouldBe bare
-                door.kotlinPhased(2.5, 0.25) shouldBe phased
+                door.kotlin(2.5.kat) shouldBe bare
+                door.kotlinPhased(2.5.kat, 0.25.kat) shouldBe phased
+                door.scriptPhased(2.5, 0.25) shouldBe phased
             }
         }
     }
@@ -119,9 +134,10 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
                 KatalystKnobDsl.Square(freq = c(1.0), duty = duty, phase = phase)
         kx("Kat.square(1, x => x.duty(0.25))") shouldBe KatalystKnobDsl.Square(freq = c(1.0), duty = c(0.25))
         kx("Kat.square(1, x => x.duty(width = 0.25))") shouldBe KatalystKnobDsl.Square(freq = c(1.0), duty = c(0.25))
-        KlangScriptKatalyst.square(1) { it.duty(width = 0.25) } shouldBe KatalystKnobDsl.Square(freq = c(1.0), duty = c(0.25))
-        KlangScriptKatalyst.square(1) { it.duty(KlangScriptKatalyst.param("pw", 0.3)) } shouldBe
-                KatalystKnobDsl.Square(freq = c(1.0), duty = duty)
+        Kat.square(1.kat) { it.duty(width = 0.25.kat) } shouldBe KatalystKnobDsl.Square(freq = c(1.0), duty = c(0.25))
+        Kat.square(1.kat) { it.duty(Kat.param("pw", 0.3)) } shouldBe KatalystKnobDsl.Square(freq = c(1.0), duty = duty)
+        KlangScriptKatalyst.square(1) { it.scriptDuty(width = 0.25) } shouldBe
+                KatalystKnobDsl.Square(freq = c(1.0), duty = c(0.25))
         kx("""Kat.sine(1, x => x.phase(Kat.param("q", 0).neg()))""") shouldBe
                 KatalystKnobDsl.Sine(freq = c(1.0), phase = phase)
     }
@@ -130,8 +146,8 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         val beat = KatalystKnobDsl.Div(left = KatalystKnobDsl.Param("bpm", 120.0), right = c(60.0))
 
         kx("""Kat.sine(Kat.param("bpm", 120).div(60))""") shouldBe KatalystKnobDsl.Sine(freq = beat)
-        KlangScriptKatalyst.sine(KlangScriptKatalyst.param("bpm", 120.0).div(60)) shouldBe
-                KatalystKnobDsl.Sine(freq = beat)
+        Kat.sine(Kat.param("bpm", 120.0).div(60.kat)) shouldBe KatalystKnobDsl.Sine(freq = beat)
+        KlangScriptKatalyst.sine(Kat.param("bpm", 120.0).div(60.kat)) shouldBe KatalystKnobDsl.Sine(freq = beat)
         kx("""Kat.perlin(Kat.param("drift", 0.002))""") shouldBe
                 KatalystKnobDsl.PerlinNoise(rate = KatalystKnobDsl.Param("drift", 0.002))
     }
@@ -140,14 +156,14 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         val noises = listOf(
             Triple(
                 "perlin",
-                { r: Any, o: Any, p: Any -> KlangScriptKatalyst.perlin(rate = r, octaves = o, persistence = p) },
+                { r: KatalystKnobDsl, o: KatalystKnobDsl, p: KatalystKnobDsl -> Kat.perlin(rate = r, octaves = o, persistence = p) },
                 { r: KatalystKnobDsl, o: KatalystKnobDsl, p: KatalystKnobDsl ->
                     KatalystKnobDsl.PerlinNoise(rate = r, octaves = o, persistence = p)
                 },
             ),
             Triple(
                 "berlin",
-                { r: Any, o: Any, p: Any -> KlangScriptKatalyst.berlin(rate = r, octaves = o, persistence = p) },
+                { r: KatalystKnobDsl, o: KatalystKnobDsl, p: KatalystKnobDsl -> Kat.berlin(rate = r, octaves = o, persistence = p) },
                 { r: KatalystKnobDsl, o: KatalystKnobDsl, p: KatalystKnobDsl ->
                     KatalystKnobDsl.BerlinNoise(rate = r, octaves = o, persistence = p)
                 },
@@ -161,9 +177,11 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
             withClue("$name, rate only") { kx("Kat.$name(0.004)") shouldBe defaults }
             withClue("$name, positional") { kx("Kat.$name(0.004, 3, 0.6)") shouldBe full }
             withClue("$name, named") { kx("Kat.$name(persistence = 0.6, rate = 0.004, octaves = 3)") shouldBe full }
-            withClue("$name, Kotlin") { kotlin(0.004, 3, 0.6) shouldBe full }
+            withClue("$name, Kotlin") { kotlin(0.004.kat, 3.kat, 0.6.kat) shouldBe full }
         }
 
+        Kat.perlin(0.004.kat) shouldBe KatalystKnobDsl.PerlinNoise(rate = c(0.004))
+        Kat.berlin(0.004.kat) shouldBe KatalystKnobDsl.BerlinNoise(rate = c(0.004))
         KlangScriptKatalyst.perlin(0.004) shouldBe KatalystKnobDsl.PerlinNoise(rate = c(0.004))
         KlangScriptKatalyst.berlin(0.004) shouldBe KatalystKnobDsl.BerlinNoise(rate = c(0.004))
     }
@@ -178,13 +196,13 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         val sweep = KatalystKnobDsl.Range(inner = KatalystKnobDsl.Sine(freq = c(0.1)), from = c(400.0), to = c(1600.0))
 
         kx("Kat.sine(0.1).range(400, 1600)") shouldBe sweep
-        KlangScriptKatalyst.sine(0.1).range(400, 1600) shouldBe sweep
+        Kat.sine(0.1.kat).range(from = 400.kat, to = 1600.kat) shouldBe sweep
 
         val phaser = KatalystDsl.of(KatalystStageDsl.Phaser(wet = c(0.6), center = sweep))
 
         ks("Katalyst(k => k.phaser(wet = 0.6, center = Kat.sine(0.1).range(400, 1600)))") shouldBe phaser
-        KlangScriptKatalyst.build {
-            it.phaser(0.6, center = KlangScriptKatalyst.sine(0.1).range(400, 1600))
+        Kat.build {
+            it.phaser(wet = 0.6.kat, center = Kat.sine(0.1.kat).range(from = 400.kat, to = 1600.kat))
         } shouldBe phaser
 
         // A slot times a modulator: the depth from the pattern, the motion from the chain.
@@ -194,7 +212,7 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         )
 
         kx("""Kat.param("depth", 1).times(Kat.square(2))""") shouldBe tremolo
-        KlangScriptKatalyst.param("depth", 1.0).times(KlangScriptKatalyst.square(2)) shouldBe tremolo
+        Kat.param("depth", 1.0).times(Kat.square(2.kat)) shouldBe tremolo
 
         // An arithmetic stage's operand, and the body's index (which a modulator may move: a bank swap per change).
         ks("Katalyst(k => k.div(Kat.tri(0.5).range(1, 2)))") shouldBe KatalystDsl.of(
@@ -220,7 +238,7 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         shouldThrow<KlangScriptTypeError> { engine().execute("Kat.sine(Ignitor.sine(1))") }.message shouldBe sound
         shouldThrow<KlangScriptTypeError> { KlangScriptKatalyst.perlin(IgnitorDsl.Sine()) }.message shouldBe sound
         shouldThrow<KlangScriptTypeError> {
-            KlangScriptKatalyst.square(1) { it.duty(IgnitorDsl.Sine()) }
+            KlangScriptKatalyst.square(1) { it.scriptDuty(IgnitorDsl.Sine()) }
         }.message shouldBe sound
         // The other way round: a Katalyst modulator on an Ignitor is refused there.
         shouldThrowAny { engine().execute("Ignitor.sine(440).mul(Kat.sine(1))") }
@@ -234,7 +252,7 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
         }.message shouldBe message
         // The Kotlin door's typed eq builder refuses it at build time (Q49, the typed-doors rollout S3a).
         shouldThrow<IllegalArgumentException> {
-            KlangScriptKatalyst.build { it.eq { e -> e.band(freq = KlangScriptKatalyst.sine(0.2)) } }
+            Kat.build { it.eq { e -> e.band(freq = Kat.sine(0.2.kat)) } }
         }.message shouldBe "Katalyst eq band(freq = ...) takes a number or a Kat.param; got a Kat expression"
     }
 
@@ -272,16 +290,16 @@ class KlangScriptKatalystModulatorDoorParitySpec : StringSpec({
                     KatalystDsl.of(bareVowel.copy(wet = c(0.5), floor = tri))
         }
 
-        val kotlinTri = KlangScriptKatalyst.tri(0.5).range(0.2, 0.4)
+        val kotlinTri = Kat.tri(0.5.kat).range(from = 0.2.kat, to = 0.4.kat)
 
         withClue("body wet and floor, Kotlin") {
-            KlangScriptKatalyst.build {
-                it.body(wet = KlangScriptKatalyst.sine(1)) { b -> b.floor(kotlinTri) }
+            Kat.build {
+                it.body(wet = Kat.sine(1.kat)) { b -> b.floor(kotlinTri) }
             } shouldBe KatalystDsl.of(bareBody.copy(wet = sine, floor = tri))
         }
         withClue("vowel wet and floor, Kotlin") {
-            KlangScriptKatalyst.build {
-                it.vowel(KlangScriptKatalyst.sine(1), "a") { v -> v.floor(kotlinTri) }
+            Kat.build {
+                it.vowel(wet = Kat.sine(1.kat), vowel = "a") { v -> v.floor(kotlinTri) }
             } shouldBe KatalystDsl.of(
                 KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("a")), wet = sine, floor = tri)
             )

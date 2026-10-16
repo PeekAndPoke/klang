@@ -9,9 +9,12 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.audio_bridge.Kat
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
@@ -36,27 +39,32 @@ class KlangScriptKatalystArithmeticDoorParitySpec : StringSpec({
 
     val empty = KatalystBuilder(KatalystDsl(emptyList()))
 
-    /** One door with an operand: its name, the parameter's name, the Kotlin door, and the stage it must build. */
+    /**
+     * One door with an operand: its script name, the parameter's name, the typed Kotlin door (the main word's member;
+     * an alias is a one-line delegate to its main word, `/dsl-design` section 3, point 9, S5), the script variant called from Kotlin, and
+     * the stage it must build.
+     */
     data class Door(
         val name: String,
         val param: String,
-        val kotlin: (KatalystBuilder, Any) -> KatalystBuilder,
+        val kotlin: (KatalystBuilder, KatalystKnobDsl) -> KatalystBuilder,
+        val script: (KatalystBuilder, Any) -> KatalystBuilder,
         val stage: (KatalystKnobDsl) -> KatalystStageDsl,
     )
 
     val doors = listOf(
-        Door("plus", "other", { k, v -> k.plus(v) }, { KatalystStageDsl.Plus(other = it) }),
-        Door("add", "other", { k, v -> k.add(v) }, { KatalystStageDsl.Plus(other = it) }),
-        Door("minus", "other", { k, v -> k.minus(v) }, { KatalystStageDsl.Minus(other = it) }),
-        Door("sub", "other", { k, v -> k.sub(v) }, { KatalystStageDsl.Minus(other = it) }),
-        Door("times", "other", { k, v -> k.times(v) }, { KatalystStageDsl.Times(other = it) }),
-        Door("mul", "other", { k, v -> k.mul(v) }, { KatalystStageDsl.Times(other = it) }),
-        Door("div", "other", { k, v -> k.div(v) }, { KatalystStageDsl.Div(other = it) }),
-        Door("pow", "exp", { k, v -> k.pow(v) }, { KatalystStageDsl.Pow(exp = it) }),
-        Door("power", "exp", { k, v -> k.power(v) }, { KatalystStageDsl.Pow(exp = it) }),
+        Door("plus", "other", { k, v -> k.plus(v) }, { k, v -> k.scriptPlus(v) }, { KatalystStageDsl.Plus(other = it) }),
+        Door("add", "other", { k, v -> k.add(v) }, { k, v -> k.scriptAdd(v) }, { KatalystStageDsl.Plus(other = it) }),
+        Door("minus", "other", { k, v -> k.minus(v) }, { k, v -> k.scriptMinus(v) }, { KatalystStageDsl.Minus(other = it) }),
+        Door("sub", "other", { k, v -> k.sub(v) }, { k, v -> k.scriptSub(v) }, { KatalystStageDsl.Minus(other = it) }),
+        Door("times", "other", { k, v -> k.times(v) }, { k, v -> k.scriptTimes(v) }, { KatalystStageDsl.Times(other = it) }),
+        Door("mul", "other", { k, v -> k.mul(v) }, { k, v -> k.scriptMul(v) }, { KatalystStageDsl.Times(other = it) }),
+        Door("div", "other", { k, v -> k.div(v) }, { k, v -> k.scriptDiv(v) }, { KatalystStageDsl.Div(other = it) }),
+        Door("pow", "exp", { k, v -> k.pow(v) }, { k, v -> k.scriptPow(v) }, { KatalystStageDsl.Pow(exp = it) }),
+        Door("power", "exp", { k, v -> k.power(v) }, { k, v -> k.scriptPower(v) }, { KatalystStageDsl.Pow(exp = it) }),
         // The crossing: the doors are clamps, the stages are the mathematical min and max.
-        Door("min", "other", { k, v -> k.min(v) }, { KatalystStageDsl.Max(other = it) }),
-        Door("max", "other", { k, v -> k.max(v) }, { KatalystStageDsl.Min(other = it) }),
+        Door("min", "other", { k, v -> k.min(v) }, { k, v -> k.scriptMin(v) }, { KatalystStageDsl.Max(other = it) }),
+        Door("max", "other", { k, v -> k.max(v) }, { k, v -> k.scriptMax(v) }, { KatalystStageDsl.Min(other = it) }),
     )
 
     "every operand door builds its own stage, positionally and named, on both doors" {
@@ -65,7 +73,8 @@ class KlangScriptKatalystArithmeticDoorParitySpec : StringSpec({
 
             withClue("${door.name}, positional") { ks("Katalyst(k => k.${door.name}(0.375))") shouldBe expected }
             withClue("${door.name}, named") { ks("Katalyst(k => k.${door.name}(${door.param} = 0.375))") shouldBe expected }
-            withClue("${door.name}, Kotlin") { door.kotlin(empty, 0.375).node shouldBe expected }
+            withClue("${door.name}, Kotlin") { door.kotlin(empty, 0.375.kat).node shouldBe expected }
+            withClue("${door.name}, the script variant from Kotlin") { door.script(empty, 0.375).node shouldBe expected }
         }
     }
 
@@ -75,7 +84,8 @@ class KlangScriptKatalystArithmeticDoorParitySpec : StringSpec({
 
             withClue("${door.name}, script") { ks("""Katalyst(k => k.${door.name}(Kat.param("trim", 0.8)))""") shouldBe expected }
             withClue("${door.name}, Kotlin") {
-                door.kotlin(empty, KlangScriptKatalyst.param("trim", 0.8)).node shouldBe expected
+                door.kotlin(empty, Kat.param("trim", 0.8)).node shouldBe expected
+                door.script(empty, Kat.param("trim", 0.8)).node shouldBe expected
             }
         }
     }
@@ -87,9 +97,12 @@ class KlangScriptKatalystArithmeticDoorParitySpec : StringSpec({
         ks("Katalyst(k => k.negate())") shouldBe flip
         empty.neg().node shouldBe flip
         empty.negate().node shouldBe flip
+        empty.scriptNeg().node shouldBe flip
+        empty.scriptNegate().node shouldBe flip
 
         ks("Katalyst(k => k.abs())") shouldBe KatalystDsl.of(KatalystStageDsl.Abs)
         empty.abs().node shouldBe KatalystDsl.of(KatalystStageDsl.Abs)
+        empty.scriptAbs().node shouldBe KatalystDsl.of(KatalystStageDsl.Abs)
     }
 
     "the arithmetic stages append in written order among the others" {
