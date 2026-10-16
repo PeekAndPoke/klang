@@ -37,67 +37,8 @@ Q43 (the two laws moved to `audio/ref/`).
 
 # Part 0c: Typed Kotlin doors, the design's open points (2026-10-16)
 
-Home: [`kotlin-typed-doors.md`](kotlin-typed-doors.md), "Design". Recommended layering: option C (the script door calls
-the typed Kotlin door in `audio_bridge`). Q44 is the layering itself; Q45 to Q51 follow from it.
-
-## Q44. The layering: option C?
-
-The KlangScript door becomes internal and calls the typed Kotlin door in `audio_bridge`, which already holds the
-filters and `adsr` this way. Recommendation: yes (the only option the engine itself can use).
-
-## Q45. The Kotlin door is flat where the script uses a configure lambda
-
-```
-x.vibrato(5, 0.5, v => v.range(0, 1))                                  // script
-x.vibrato(5.ign, 0.5.ign, rangeFrom = 0.ign, rangeTo = 1.ign)         // Kotlin
-```
-
-Accept this as the general rule (today a list of recorded exceptions)? Recommendation: yes; Kotlin's named
-parameters do what the lambda does in script.
-
-## Q46. No Kotlin `Ign` object: oscillators are their node constructors
-
-```kotlin
-osc.vibrato(rate = IgnitorDsl.PerlinNoise(), semitones = 0.3.ign)     // not Ign.perlin()
-```
-
-Fine, or a thin `Ign` facade (a second word for the same concept)? Recommendation: no facade.
-
-## Q47. The arithmetic operators with a Double operand retire too
-
-```kotlin
-saw * 0.5          // today
-saw * 0.5.ign      // after
-```
-
-Or keep the two operator twins (`times`, `plus`) as a deliberate exception? Recommendation: retire them, one rule.
-
-## Q48. `floor` on the phaser and shimmer
-
-`door-shapes.md` says `floor` is never an Ignitor effect door parameter. On the flat Kotlin door:
-`osc.phaser(0.5.ign, 0.3.ign, floor = 0.2.ign)`, or keep `.copy(floor = ...)`? Recommendation: allow it on the
-Kotlin door (it is the flat form of the script's builder knob).
-
-## Q49. The Katalyst eq section takes a leaf only
-
-Typed `KatalystKnobDsl`, it still compiles an expression the stage refuses:
-`KatalystDsl().eq(band(freq = KatalystKnobDsl.Sine(1.kat)))`. Throw `IllegalArgumentException` at construction (build
-time, not the audio path), or coerce? Recommendation: throw, with the door and parameter named.
-
-## Q50. Doors that are already one typed function for both doors
-
-`bands`/`cut`, `serial`, `parallel`, `blend` take `Double`s and lambdas and serve both doors today:
-`bands(sine(f)) { it.cut(200.0) }`. Keep them shared, or split for uniformity? Recommendation: keep them shared.
-
-## Q51. Build-time knobs stay plain scalars
-
-```kotlin
-osc.distort(0.5.ign, shape = "hard", oversample = 2)
-```
-
-`shape: String`, `oversample: Int`, `lookahead`, the supersaw phase pool, shimmer `pitches: List<Double>`: record
-them as the one exception to "every value parameter takes the DSL's own type"? Recommendation: yes (they are
-fixed at build, never a signal).
+All answered 2026-10-16 (Q44 to Q51): recorded in [`kotlin-typed-doors.md`](kotlin-typed-doors.md), "The maintainer's
+answers". Q46 adds typed Kotlin `Ign` and `Kat` objects for surface parity.
 
 ---
 

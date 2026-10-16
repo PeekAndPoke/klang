@@ -1,7 +1,7 @@
 # Typed Kotlin doors: the compiler checks every door
 
-Status: **decided (maintainer, 2026-10-13, Q24); design step done 2026-10-16 (option C below, awaiting the maintainer's
-answers to Q44 to Q51 in `_maintainer-questions.md`), no code yet.** Large, mostly mechanical.
+Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
+below), step 1 next.** Large, mostly mechanical.
 
 ## Why
 
@@ -73,3 +73,22 @@ and default; the types differ by design." Plus `/dsl-design` §3 and `door-shape
 (31), 2d effects and pitch (34), each mechanical apart from the `IgnitorDsl.kt` hunk; 3 the Ignitor script door goes
 internal and delegates (about 45, needs a reviewer); 4 the Katalyst chain door in `audio_bridge` (about 15, new door,
 logic moves); 5 optional `.ign`/`.kat` for existing `Constant(x)` lines, only where edited anyway.
+
+## The maintainer's answers (2026-10-16, Q44 to Q51)
+
+- **Q44, Q45:** yes. Option C; the Kotlin door uses named parameters where the script takes a configure lambda.
+- **Q46: surface parity.** "When there is an `Ign` object in KlangScript it should be there in Kotlin as well.
+  Switching from KlangScript to Kotlin or vice versa should be easy for the user. The only difference might be the
+  function doors and the `.ign` and `.kat` on the Kotlin side." So typed Kotlin `Ign` and `Kat` objects live in
+  `audio_bridge` with the same words as the script objects (`Ign.saw()`, `Ign.perlin()`, `Kat.sine(...)`), building
+  the nodes; the script objects in `klangscript-libs` become internal and delegate to them.
+- **Q47:** retire the Kotlin `Double` operators (`saw * 0.5.ign`), "as long as the KlangScript side stays intact"
+  (the script keeps `saw * 0.5`).
+- **Q48:** allow `floor =` on the Kotlin phaser and shimmer.
+- **Q49:** an eq section given an expression throws `IllegalArgumentException` at build time, naming door and parameter.
+- **Q50: the rule.** "Only KlangScript-exposed functions accept any `XxxLike = Any` params, converted and checked at
+  run time. The Kotlin doors should be typesafe." So `bands`, `cut`, `serial`, `parallel` and `blend` may stay one
+  shared function only where their signature has no `Any`-typed parameter; any that takes an `XxxLike` gets a typed
+  Kotlin door like the rest.
+- **Q51:** yes, build-time knobs (`shape`, `oversample`, `lookahead`, the phase pool, shimmer `pitches`) stay plain
+  values: the one recorded exception.
