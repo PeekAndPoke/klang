@@ -375,6 +375,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-16 Typed Kotlin doors S3b and S3c: `AdsrBuilder`, `FmBuilder`, `PitchEnvelopeBuilder` (its `adsr` holds the
+  default fill once), `PhaserBuilder`, `ShimmerBuilder` and `TremoloBuilder` (`shape` with a typed `String` form) live in
+  `audio_bridge/EffectBuilders.kt`; `adsr`, `fm`, `phaser`, `shimmer`, `tremolo` and a new Kotlin `pitchEnvelope` are one
+  typed door each on their builders, `detune`, `drive`, `distort`, `crush`, `coarse`, `accelerate`, `pitchMod` and
+  `pitchModSemitones` typed (the flat doors and `Double` twins are gone), `octaveUp`/`octaveDown` new on Kotlin; new
+  `constants/ShimmerDefaults.kt`; corpus identical (`docs/tasks/kotlin-typed-doors.md`).
 - 2026-10-16 Typed Kotlin doors S3a: `FilterBuilder`, `BandFilterBuilder` (with `FilterKnobs` and the nested
   `ModAdsrBuilder`) and the eq's two builders, `EqBuilder` (voice) and `KatalystEqBuilder` (chain, Q49 refusal at build
   time), live in `audio_bridge/EffectBuilders.kt`; `lowpass`/`highpass`/`bandpass`/`notch` are `(freq, q = FILTER_Q.ign,

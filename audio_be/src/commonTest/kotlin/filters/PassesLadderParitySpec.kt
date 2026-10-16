@@ -25,7 +25,7 @@ class PassesLadderParitySpec : StringSpec({
         for (n in 2..5) {
             for (userQ in listOf(0.707, 1.0, 1.3)) {
                 val ladder = butterworthQLadder(n, userQ)
-                val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0.ign, q = userQ.ign) { it.passes(n.toDouble()) }.optimize()
+                val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0.ign, q = userQ.ign) { it.passes(n.ign) }.optimize()
                     as IgnitorDsl.Eq
                 eq.sections.size shouldBe n
                 for (k in 0 until n) {

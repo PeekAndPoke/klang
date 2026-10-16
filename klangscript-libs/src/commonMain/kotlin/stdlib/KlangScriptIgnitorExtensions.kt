@@ -5,24 +5,47 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.peekandpoke.klang.audio_bridge.AdsrBuilder
 import io.peekandpoke.klang.audio_bridge.BandFilterBuilder
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.EqBuilder
 import io.peekandpoke.klang.audio_bridge.FilterBuilder
+import io.peekandpoke.klang.audio_bridge.FmBuilder
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
+import io.peekandpoke.klang.audio_bridge.PhaserBuilder
+import io.peekandpoke.klang.audio_bridge.PitchEnvelopeBuilder
+import io.peekandpoke.klang.audio_bridge.ShimmerBuilder
+import io.peekandpoke.klang.audio_bridge.TremoloBuilder
 import io.peekandpoke.klang.audio_bridge.VibratoBuilder
+import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.blend
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.coarse
+import io.peekandpoke.klang.audio_bridge.constants.SHIMMER_PITCHES
+import io.peekandpoke.klang.audio_bridge.crush
+import io.peekandpoke.klang.audio_bridge.detune
+import io.peekandpoke.klang.audio_bridge.distort
+import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.eq
+import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
+import io.peekandpoke.klang.audio_bridge.octaveDown
+import io.peekandpoke.klang.audio_bridge.octaveUp
 import io.peekandpoke.klang.audio_bridge.onepole
+import io.peekandpoke.klang.audio_bridge.phaser
+import io.peekandpoke.klang.audio_bridge.pitchEnvelope
+import io.peekandpoke.klang.audio_bridge.pitchMod
+import io.peekandpoke.klang.audio_bridge.pitchModSemitones
 import io.peekandpoke.klang.audio_bridge.rangex
+import io.peekandpoke.klang.audio_bridge.shape
+import io.peekandpoke.klang.audio_bridge.shimmer
+import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.vibrato
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.annotations.KlangScript
@@ -371,14 +394,12 @@ object KlangScriptIgnitorExtensions {
         sustain: IgnitorDslLike,
         release: IgnitorDslLike,
         configure: ((AdsrBuilder) -> AdsrBuilder)? = null,
-    ): IgnitorDsl {
-        val k = AdsrBuilder().configuredBy("adsr", configure)
-
-        return self.adsr(
-            attack.toIgnitorDsl(), decay.toIgnitorDsl(), sustain.toIgnitorDsl(), release.toIgnitorDsl(),
-            k.attackCurve, k.decayCurve, k.releaseCurve, k.declick,
-        )
-    }
+    ): IgnitorDsl = self.adsr(
+        attack = attack.toIgnitorDsl(),
+        decay = decay.toIgnitorDsl(),
+        sustain = sustain.toIgnitorDsl(),
+        release = release.toIgnitorDsl(),
+    ) { it.configuredBy("adsr", configure) }
 
     // ── The classic tail ─────────────────────────────────────────────────────
 
@@ -401,14 +422,13 @@ object KlangScriptIgnitorExtensions {
      * `ignp("lpf.freq", 1800)`.
      *
      * Want another order? Write your own tail from the same `Ignitor.slot` slots, as far as a door takes them: every
-     * filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs, the pitch envelope's
+     * filter's `freq`, `q`, `passes`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs, the pitch envelope's
      * `penv.*` and `penvCurves.*` (`pitchEnvelope(Ignitor.slot.penv.semitones, ...)`), the flat `accelerate`
      * (`accelerate(Ignitor.slot.accelerate)`), the vibrato's `vibrato.*`
      * (`vibrato(Ignitor.slot.vibrato.rate, Ignitor.slot.vibrato.semitones, v => v.range(Ignitor.slot.vibrato.rangeFrom,
      * Ignitor.slot.vibrato.rangeTo).phase(Ignitor.slot.vibrato.phase))`), the FM's `fm.*`
      * (`fm(Ignitor.sine(x => x.analog(0)), Ignitor.slot.fm.ratio, Ignitor.slot.fm.depth, ...)`) and the envelope's stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
-     * around the instrument. Three groups only `classic()` can place: `lpf.passes` / `hpf.passes` (the filter
-     * builder's `passes(n)` takes a number), `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
+     * around the instrument. Two groups only `classic()` can place: `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
      * builds a drive into a shaper that always runs and caps its output; `classic()` uses the one distort node that
      * switches off as a whole, so a slot on the door's distort would shape every note, written or not).
      *
@@ -429,8 +449,7 @@ object KlangScriptIgnitorExtensions {
      * colour belongs to `shape`.
      */
     @KlangScript.Method
-    fun drive(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl())
+    fun drive(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl = self.drive(amount = amount.toIgnitorDsl())
 
     /**
      * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
@@ -448,7 +467,7 @@ object KlangScriptIgnitorExtensions {
      */
     @KlangScript.Method
     fun shape(self: IgnitorDsl, shape: IgnitorDslLike = "soft", oversample: IgnitorDslLike = 0): IgnitorDsl =
-        shapeNode(self, shape, oversample)
+        self.shape(shape = shapeIndex(shape), oversample = oversample.toIgnitorDsl())
 
     /**
      * Waveshaping distortion. Convenience for drive(amount) + shape(shape, oversample).
@@ -466,25 +485,19 @@ object KlangScriptIgnitorExtensions {
         amount: IgnitorDslLike,
         shape: IgnitorDslLike = "soft",
         oversample: IgnitorDslLike = 0,
-    ): IgnitorDsl = shapeNode(IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl()), shape, oversample)
+    ): IgnitorDsl = self.distort(amount = amount.toIgnitorDsl(), shape = shapeIndex(shape), oversample = oversample.toIgnitorDsl())
 
-    /** The one construction behind [shape] and [distort]: the name, number or slot to its index knob. */
-    private fun shapeNode(inner: IgnitorDsl, shape: IgnitorDslLike, oversample: IgnitorDslLike): IgnitorDsl.Shape =
-        IgnitorDsl.Shape(
-            inner = inner,
-            shape = catalogueIndex(shape, IgnitorDsl.Constant(DistortionShapes.SOFT_INDEX.toDouble()), DistortionShapes::indexOf),
-            oversample = oversample.toIgnitorDsl(),
-        )
+    /** A `shape` argument as the waveshaper's index knob: a name through `DistortionShapes`, a number or a slot as it is. */
+    private fun shapeIndex(shape: IgnitorDslLike): IgnitorDsl =
+        catalogueIndex(shape, IgnitorDsl.Constant(DistortionShapes.SOFT_INDEX.toDouble()), DistortionShapes::indexOf)
 
     /** Applies bit-depth reduction (bitcrusher): [bits] is the bit depth, `2^bits` levels; below 1 it passes through. */
     @KlangScript.Method
-    fun crush(self: IgnitorDsl, bits: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Crush(inner = self, bits = bits.toIgnitorDsl())
+    fun crush(self: IgnitorDsl, bits: IgnitorDslLike): IgnitorDsl = self.crush(bits = bits.toIgnitorDsl())
 
     /** Applies sample-rate reduction: [factor] is the sample-hold factor; at 1 or less nothing is held. */
     @KlangScript.Method
-    fun coarse(self: IgnitorDsl, factor: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Coarse(inner = self, factor = factor.toIgnitorDsl())
+    fun coarse(self: IgnitorDsl, factor: IgnitorDslLike): IgnitorDsl = self.coarse(factor = factor.toIgnitorDsl())
 
     /**
      * Applies a multi-stage phaser effect. [wet] comes FIRST, as on every door that has one, and
@@ -505,15 +518,12 @@ object KlangScriptIgnitorExtensions {
         center: IgnitorDslLike = 1000.0,
         sweep: IgnitorDslLike = 1000.0,
         configure: ((PhaserBuilder) -> PhaserBuilder)? = null,
-    ): IgnitorDsl = PhaserBuilder(
-        IgnitorDsl.Phaser(
-            inner = self,
-            rate = rate.toIgnitorDsl(),
-            wet = wet.toIgnitorDsl(),
-            center = center.toIgnitorDsl(),
-            sweep = sweep.toIgnitorDsl(),
-        ),
-    ).configuredBy("phaser", configure).node
+    ): IgnitorDsl = self.phaser(
+        wet = wet.toIgnitorDsl(),
+        rate = rate.toIgnitorDsl(),
+        center = center.toIgnitorDsl(),
+        sweep = sweep.toIgnitorDsl(),
+    ) { it.configuredBy("phaser", configure) }
 
     /**
      * Applies amplitude tremolo: an oscillator at [rate] Hz pulls the level down by up to [depth]
@@ -529,9 +539,9 @@ object KlangScriptIgnitorExtensions {
         rate: IgnitorDslLike,
         depth: IgnitorDslLike,
         configure: ((TremoloBuilder) -> TremoloBuilder)? = null,
-    ): IgnitorDsl = TremoloBuilder(
-        IgnitorDsl.Tremolo(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl()),
-    ).configuredBy("tremolo", configure).node
+    ): IgnitorDsl = self.tremolo(rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl()) {
+        it.configuredBy("tremolo", configure)
+    }
 
     /**
      * Applies a granular shimmer cloud with configurable pitch transpositions and feedback. [wet]
@@ -564,17 +574,15 @@ object KlangScriptIgnitorExtensions {
                     operation = "shimmer",
                 )
             }
-            else -> listOf(0.0, 7.0, 12.0)
+            else -> SHIMMER_PITCHES
         }
-        return ShimmerBuilder(
-            IgnitorDsl.Shimmer(
-                inner = self,
-                wet = wet.toIgnitorDsl(),
-                feedback = feedback.toIgnitorDsl(),
-                pitches = pitchList,
-                tone = tone.toIgnitorDsl(),
-            ),
-        ).configuredBy("shimmer", configure).node
+
+        return self.shimmer(
+            wet = wet.toIgnitorDsl(),
+            feedback = feedback.toIgnitorDsl(),
+            tone = tone.toIgnitorDsl(),
+            pitches = pitchList,
+        ) { it.configuredBy("shimmer", configure) }
     }
 
     // ── FM Synthesis ─────────────────────────────────────────────────────────
@@ -600,31 +608,25 @@ object KlangScriptIgnitorExtensions {
         ratio: IgnitorDslLike,
         depth: IgnitorDslLike,
         configure: ((FmBuilder) -> FmBuilder)? = null,
-    ): IgnitorDsl = FmBuilder(
-        IgnitorDsl.Fm(
-            carrier = self,
-            modulator = modulator.toIgnitorDsl(),
-            ratio = ratio.toIgnitorDsl(),
-            depth = depth.toIgnitorDsl(),
-        ),
-    ).configuredBy("fm", configure).node
+    ): IgnitorDsl = self.fm(
+        modulator = modulator.toIgnitorDsl(),
+        ratio = ratio.toIgnitorDsl(),
+        depth = depth.toIgnitorDsl(),
+    ) { it.configuredBy("fm", configure) }
 
     // ── Pitch Modulation ─────────────────────────────────────────────────────
 
     /** Shifts pitch by semitones. */
     @KlangScript.Method
-    fun detune(self: IgnitorDsl, semitones: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Detune(inner = self, semitones = semitones.toIgnitorDsl())
+    fun detune(self: IgnitorDsl, semitones: IgnitorDslLike): IgnitorDsl = self.detune(semitones = semitones.toIgnitorDsl())
 
     /** Shifts pitch up one octave (+12 semitones). */
     @KlangScript.Method
-    fun octaveUp(self: IgnitorDsl): IgnitorDsl =
-        IgnitorDsl.Detune(inner = self, semitones = IgnitorDsl.Constant(12.0))
+    fun octaveUp(self: IgnitorDsl): IgnitorDsl = self.octaveUp()
 
     /** Shifts pitch down one octave (-12 semitones). */
     @KlangScript.Method
-    fun octaveDown(self: IgnitorDsl): IgnitorDsl =
-        IgnitorDsl.Detune(inner = self, semitones = IgnitorDsl.Constant(-12.0))
+    fun octaveDown(self: IgnitorDsl): IgnitorDsl = self.octaveDown()
 
     /**
      * Applies pitch vibrato: [rate] Hz LFO, [semitones] deep. A signal depth is followed sample by sample
@@ -647,8 +649,7 @@ object KlangScriptIgnitorExtensions {
 
     /** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
     @KlangScript.Method
-    fun accelerate(self: IgnitorDsl, semitones: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Accelerate(inner = self, semitones = semitones.toIgnitorDsl())
+    fun accelerate(self: IgnitorDsl, semitones: IgnitorDslLike): IgnitorDsl = self.accelerate(semitones = semitones.toIgnitorDsl())
 
     /**
      * Pitch modulation by any signal, the LINEAR law: the frequency is multiplied by `1 + mod`, per sample. [mod] is
@@ -657,8 +658,7 @@ object KlangScriptIgnitorExtensions {
      * `pitchModSemitones`.
      */
     @KlangScript.Method
-    fun pitchMod(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.PitchMod(inner = self, mod = mod.toIgnitorDsl())
+    fun pitchMod(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl = self.pitchMod(mod = mod.toIgnitorDsl())
 
     /**
      * Pitch modulation by any signal, in SEMITONES: the frequency is multiplied by `2^(mod / 12)`, per sample. 12 is
@@ -667,8 +667,7 @@ object KlangScriptIgnitorExtensions {
      * `accelerate` and `pitchEnvelope`, for any signal. The linear law (`1 + mod`, FM's): `pitchMod`.
      */
     @KlangScript.Method
-    fun pitchModSemitones(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.PitchModSemitones(inner = self, mod = mod.toIgnitorDsl())
+    fun pitchModSemitones(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl = self.pitchModSemitones(mod = mod.toIgnitorDsl())
 
     /**
      * Applies a pitch envelope (pitch sweep over time). [semitones] is the shift at the envelope
@@ -686,9 +685,9 @@ object KlangScriptIgnitorExtensions {
         self: IgnitorDsl,
         semitones: IgnitorDslLike,
         configure: ((PitchEnvelopeBuilder) -> PitchEnvelopeBuilder)? = null,
-    ): IgnitorDsl = PitchEnvelopeBuilder(
-        IgnitorDsl.PitchEnvelope(inner = self, semitones = semitones.toIgnitorDsl()),
-    ).configuredBy("pitchEnvelope", configure).node
+    ): IgnitorDsl = self.pitchEnvelope(semitones = semitones.toIgnitorDsl()) {
+        it.configuredBy("pitchEnvelope", configure)
+    }
 
     // ── Analog Drift ────────────────────────────────────────────────────────
 

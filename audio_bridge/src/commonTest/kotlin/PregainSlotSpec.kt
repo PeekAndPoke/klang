@@ -62,8 +62,8 @@ class PregainSlotSpec : StringSpec({
     "a tree that places the slot discovers it; one that does not has no pregain to discover" {
         // `0.5` and not `2.0`: at 2.0 the shaper is in hard saturation and the slot is
         // inaudible, and a spec is the first place anybody copies an instrument out of.
-        val driven = IgnitorDsl.Saw().pregain().distort(0.5)
-        val plain = IgnitorDsl.Saw().distort(0.5)
+        val driven = IgnitorDsl.Saw().pregain().distort(0.5.ign)
+        val plain = IgnitorDsl.Saw().distort(0.5.ign)
 
         withClue("the driven instrument offers the slot") {
             driven.getParamSlots().map { it.name } shouldBe listOf("analog", "pregain")

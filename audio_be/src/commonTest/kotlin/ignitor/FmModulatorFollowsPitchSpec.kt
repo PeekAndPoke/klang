@@ -72,7 +72,7 @@ class FmModulatorFollowsPitchSpec : StringSpec({
 
     /** One fm over a probed carrier and a probed modulator. */
     fun fmOp(carrier: IgnitorDsl = probed, modulator: IgnitorDsl = probed, ratio: Double, depth: Double) =
-        carrier.fm(modulator = modulator, ratio = ratio, depth = depth)
+        carrier.fm(modulator = modulator, ratio = ratio.ign, depth = depth.ign)
 
     fun pitchEnvelope(inner: IgnitorDsl) = IgnitorDsl.PitchEnvelope(
         inner = inner, semitones = c(12.0), attack = c(0.01), decay = c(0.05), sustain = c(0.0), release = c(0.1),
@@ -225,7 +225,7 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     }
 
     "authored: an accelerate above the fm bends the modulator with the carrier, through the gate and the hold" {
-        render(op.accelerate(semitones = 7.0)).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(op.accelerate(semitones = 7.0.ign)).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: a vibrato inside a pitchMod, both above the fm" {
@@ -237,11 +237,11 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     }
 
     "authored: three pitch nodes above the fm, vibrato outermost (step 4's classic head)" {
-        render(pitchEnvelope(op).accelerate(semitones = 7.0).vibrato(rate = 6.0.ign, semitones = 0.5.ign)).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(pitchEnvelope(op).accelerate(semitones = 7.0.ign).vibrato(rate = 6.0.ign, semitones = 0.5.ign)).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: three pitch nodes above the fm, the pitch envelope outermost" {
-        render(pitchEnvelope(op.vibrato(rate = 6.0.ign, semitones = 0.5.ign).accelerate(semitones = -5.0))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(pitchEnvelope(op.vibrato(rate = 6.0.ign, semitones = 0.5.ign).accelerate(semitones = (-5.0).ign))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: a vibrato whose rate reads the note (a freq-keyed mod) bends the modulator with the carrier" {
@@ -265,7 +265,7 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     }
 
     "authored: two fm nodes summed under one vibrato: both follow, each keeps its ratio" {
-        val other = fmOp(ratio = 2.5, depth = 200.0).detune(semitones = 7.0)
+        val other = fmOp(ratio = 2.5, depth = 200.0).detune(semitones = 7.0.ign)
         val lanes = render((fmOp(ratio = 1.5, depth = 300.0) + other).vibrato(rate = 6.0.ign, semitones = 0.5.ign))
         val otherHz = noteHz * 2.0.pow(7.0 / 12.0)
 
@@ -274,13 +274,13 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     }
 
     "authored: an fm under a detune under a vibrato: the detune moves both, the vibrato bends both" {
-        val lanes = render(op.detune(semitones = 7.0).vibrato(rate = 6.0.ign, semitones = 0.5.ign))
+        val lanes = render(op.detune(semitones = 7.0.ign).vibrato(rate = 6.0.ign, semitones = 0.5.ign))
 
         lanes.shouldFollow(carrierHz = noteHz * 2.0.pow(7.0 / 12.0), ratio = 3.5)
     }
 
     "authored: an fm stacked with its detuned copy (the sgpad shape) under a vibrato: every layer follows" {
-        val lanes = render((op + op.detune(semitones = 0.1)).vibrato(rate = 6.0.ign, semitones = 0.5.ign))
+        val lanes = render((op + op.detune(semitones = 0.1.ign)).vibrato(rate = 6.0.ign, semitones = 0.5.ign))
 
         lanes.shouldFollow(carrierHz = noteHz, ratio = 3.5)
         lanes.shouldFollow(carrierHz = noteHz * 2.0.pow(0.1 / 12.0), ratio = 3.5)
@@ -290,7 +290,7 @@ class FmModulatorFollowsPitchSpec : StringSpec({
         // The outer modulator is a plain sine: its term must be visible on the carrier, and a second probed leaf
         // under the same mod would share the first one's build (one `IgnitorDsl.Sample` object, one cache entry).
         val inner = fmOp(ratio = 1.5, depth = 300.0)
-        val lanes = render(inner.fm(modulator = sine(), ratio = 2.5, depth = 200.0))
+        val lanes = render(inner.fm(modulator = sine(), ratio = 2.5.ign, depth = 200.0.ign))
 
         lanes.shouldFollow(carrierHz = noteHz, ratio = 1.5)
     }
@@ -325,7 +325,7 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     }
 
     "PLACEMENT, on the carrier: a vibrato on the carrier only bends the carrier alone, the modulator does not follow" {
-        val lanes = render(probed.vibrato(rate = 6.0.ign, semitones = 0.5.ign).fm(modulator = probed, ratio = 3.5, depth = 400.0))
+        val lanes = render(probed.vibrato(rate = 6.0.ign, semitones = 0.5.ign).fm(modulator = probed, ratio = 3.5.ign, depth = 400.0.ign))
 
         lanes.lane(noteHz).ratios.any { it != 1.0 } shouldBe true
         lanes.shouldBeUnbent(noteHz * 3.5)
@@ -341,10 +341,10 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     val sprudelFm = mapOf("fm.depth" to 300.0, "fm.ratio" to 1.4)
 
     /** The question's `bell` (`Ign.sine().fm(Ign.sine(), 3.5, 400).adsr(0.001, 1.0, 0.0, 1.0).classic()`), probed. */
-    val bell = fmOp(ratio = 3.5, depth = 400.0).adsr(attack = 0.001, decay = 1.0, sustain = 0.0, release = 1.0).classic()
+    val bell = fmOp(ratio = 3.5, depth = 400.0).adsr(attack = 0.001.ign, decay = 1.0.ign, sustain = 0.0.ign, release = 1.0.ign).classic()
 
     /** The built-in `sgbell` shape, probed, under `classic()` as the registry serves it. */
-    val sgbell = probed.fm(modulator = probed, ratio = 1.4, depth = 300.0, attack = 0.001, decay = 0.5, sustain = 0.0, release = 0.05).classic()
+    val sgbell = probed.fm(modulator = probed, ratio = 1.4.ign, depth = 300.0.ign) { it.adsr(attack = 0.001.ign, decay = 0.5.ign, sustain = 0.0.ign, release = 0.05.ign) }.classic()
 
     for ((name, bag) in listOf(
         "vib" to vib,

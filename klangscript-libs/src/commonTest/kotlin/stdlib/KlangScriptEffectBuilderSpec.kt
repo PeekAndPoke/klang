@@ -64,12 +64,12 @@ class KlangScriptEffectBuilderSpec : StringSpec({
             inner = saw, rate = IgnitorDsl.Constant(0.3),
             wet = IgnitorDsl.Constant(0.25), floor = IgnitorDsl.Constant(0.1),
         )
-        dsl shouldBe saw.phaser(wet = 0.25, rate = 0.3).copy(floor = IgnitorDsl.Constant(0.1))
+        dsl shouldBe saw.phaser(wet = 0.25.ign, rate = 0.3.ign) { it.floor(0.1.ign) }
     }
 
     "phaser: center and sweep stay door parameters, the lambda follows them" {
         val dsl = ks("Ignitor.saw().phaser(0.4, 0.3, 800, 600, x => x.floor(0.1))") as IgnitorDsl.Phaser
-        dsl shouldBe saw.phaser(0.4, 0.3, 800.0, 600.0).copy(floor = IgnitorDsl.Constant(0.1))
+        dsl shouldBe saw.phaser(wet = 0.4.ign, rate = 0.3.ign, center = 800.0.ign, sweep = 600.0.ign) { it.floor(0.1.ign) }
         dsl.floor shouldBe IgnitorDsl.Constant(0.1)
         dsl.center shouldBe IgnitorDsl.Constant(800.0)
         dsl.sweep shouldBe IgnitorDsl.Constant(600.0)
@@ -88,12 +88,12 @@ class KlangScriptEffectBuilderSpec : StringSpec({
         dsl shouldBe IgnitorDsl.Shimmer(inner = saw)
         dsl shouldBe saw.shimmer()
         dsl.pitches shouldBe listOf(0.0, 7.0, 12.0)
-        (ks("Ignitor.saw().shimmer(0.3)") as IgnitorDsl.Shimmer) shouldBe saw.shimmer(wet = 0.3)
+        (ks("Ignitor.saw().shimmer(0.3)") as IgnitorDsl.Shimmer) shouldBe saw.shimmer(wet = 0.3.ign)
     }
 
     "shimmer: explicit pitches array still binds positionally before the lambda" {
         val dsl = ks("Ignitor.saw().shimmer(0.3, 0.4, 3000, [0, 4, 7, 11], x => x.floor(0.2))") as IgnitorDsl.Shimmer
-        dsl shouldBe saw.shimmer(0.3, 0.4, 3000.0, listOf(0.0, 4.0, 7.0, 11.0)).copy(floor = IgnitorDsl.Constant(0.2))
+        dsl shouldBe saw.shimmer(wet = 0.3.ign, feedback = 0.4.ign, tone = 3000.0.ign, pitches = listOf(0.0, 4.0, 7.0, 11.0)) { it.floor(0.2.ign) }
         dsl.pitches shouldBe listOf(0.0, 4.0, 7.0, 11.0)
         dsl.wet shouldBe IgnitorDsl.Constant(0.3)
         dsl.feedback shouldBe IgnitorDsl.Constant(0.4)
@@ -109,7 +109,7 @@ class KlangScriptEffectBuilderSpec : StringSpec({
     }
 
     "drive: amount only, the type is gone on both doors" {
-        ks("Ignitor.saw().drive(0.5)") shouldBe saw.drive(0.5)
+        ks("Ignitor.saw().drive(0.5)") shouldBe saw.drive(0.5.ign)
         ks("Ignitor.saw().drive(0.5)") shouldBe IgnitorDsl.Drive(inner = saw, amount = IgnitorDsl.Constant(0.5))
     }
 
@@ -180,11 +180,11 @@ class KlangScriptEffectBuilderSpec : StringSpec({
 
     "fm: the index envelope is ONE adsr call on the builder == the Kotlin door's env fields" {
         ks("Ignitor.saw().fm(Ignitor.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.2))") shouldBe
-                saw.fm(IgnitorDsl.Sine(), 1.4, 300.0, attack = 0.001, decay = 0.5, sustain = 0.0, release = 0.2)
+                saw.fm(modulator = IgnitorDsl.Sine(), ratio = 1.4.ign, depth = 300.0.ign) { it.adsr(attack = 0.001.ign, decay = 0.5.ign, sustain = 0.0.ign, release = 0.2.ign) }
     }
 
     "fm: without a lambda the depth is constant, the same node as the Kotlin door's defaults" {
-        ks("Ignitor.saw().fm(Ignitor.sine(), 2, 200)") shouldBe saw.fm(IgnitorDsl.Sine(), 2.0, 200.0)
+        ks("Ignitor.saw().fm(Ignitor.sine(), 2, 200)") shouldBe saw.fm(modulator = IgnitorDsl.Sine(), ratio = 2.0.ign, depth = 200.0.ign)
     }
 
     "fm: the builder offers adsr only (its freq stays hidden, maintainer 2026-08-30)" {

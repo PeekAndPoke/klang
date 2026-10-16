@@ -72,7 +72,7 @@ class PitchModulationTest : StringSpec({
         // Audit F12. Accelerate is a tree node since pitch pipeline step 3 (`classic()`'s stage), so the voice renders
         // it through the instrument: 0 semitones is gated off (the bare sine), a real glide is the positive control.
         fun render(semitones: Double?): AudioBuffer {
-            val dsl = if (semitones == null) IgnitorDsl.Sine() else IgnitorDsl.Sine().accelerate(semitones = semitones)
+            val dsl = if (semitones == null) IgnitorDsl.Sine() else IgnitorDsl.Sine().accelerate(semitones = semitones.ign)
             val voice = createSynthVoice(blockFrames = bf, signal = dsl.toExciter(random = Random(1)))
             val ctx = createContext(blockFrames = bf)
             voice.render(ctx)

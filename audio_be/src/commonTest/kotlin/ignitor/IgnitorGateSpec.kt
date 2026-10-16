@@ -713,7 +713,7 @@ class IgnitorGateSpec : StringSpec({
             "highpass" to saw.highpass(freq = unset),
             "bandpass" to saw.bandpass(freq = unset),
             "notch" to saw.notch(freq = unset),
-            "lowpass, passes = 4" to saw.lowpass(unset) { it.passes(4.0) },
+            "lowpass, passes = 4" to saw.lowpass(unset) { it.passes(4.0.ign) },
         )
 
         for ((name, tree) in off) {

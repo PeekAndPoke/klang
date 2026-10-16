@@ -25,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.distort
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.plus
@@ -420,7 +421,7 @@ object AllocationCases {
             name = "tube4x",
             engine = false,
             sound = AUTHORED,
-            dsl = saw().distort(amount = 0.5, shape = "tube", oversample = 4),
+            dsl = saw().distort(amount = 0.5.ign, shape = "tube", oversample = 4.ign),
         ),
         Case(name = "C-full", engine = false, sound = "saw", params = full),
         // A new owner, and so a new param map instance, on the orbit every block: the chain re-resolves its 27 slot

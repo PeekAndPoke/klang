@@ -25,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.random.Random
@@ -83,7 +84,7 @@ object ClassicVoiceRig {
             )
         }
 
-        return filter.adsr(attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC, declick = ENV_DECLICK_SECONDS)
+        return filter.adsr(attack = VOICE_ADSR_ATTACK_SEC.ign, decay = VOICE_ADSR_DECAY_SEC.ign, sustain = VOICE_ADSR_SUSTAIN_LEVEL.ign, release = VOICE_ADSR_RELEASE_SEC.ign) { it.declick(ENV_DECLICK_SECONDS.ign) }
     }
 
     fun render(data: VoiceData, sampleRate: Int): DoubleArray {

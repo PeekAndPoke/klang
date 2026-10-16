@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.shimmer
 import io.peekandpoke.klang.script.klangScript
@@ -61,13 +62,13 @@ class LangWetKnobSpec : StringSpec({
         firstData(note("c").phaser(wet = 0.5)).toVoiceData().katalystParams?.get("phaser.floor") shouldBe PHASER_FLOOR
     }
 
-    "ignitor Kotlin door: wet is the first door parameter, floor a field of the node" {
-        val p = IgnitorDsl.Sine().phaser(0.25, 1.0).copy(floor = IgnitorDsl.Constant(0.1))
+    "ignitor Kotlin door: wet is the first door parameter, floor a builder knob" {
+        val p = IgnitorDsl.Sine().phaser(wet = 0.25.ign, rate = 1.0.ign) { it.floor(0.1.ign) }
         p.wet shouldBe IgnitorDsl.Constant(0.25)
         p.rate shouldBe IgnitorDsl.Constant(1.0)
         p.floor shouldBe IgnitorDsl.Constant(0.1)
 
-        val sh = IgnitorDsl.Sine().shimmer(0.3).copy(floor = IgnitorDsl.Constant(0.2))
+        val sh = IgnitorDsl.Sine().shimmer(wet = 0.3.ign) { it.floor(0.2.ign) }
         sh.wet shouldBe IgnitorDsl.Constant(0.3)
         sh.floor shouldBe IgnitorDsl.Constant(0.2)
     }

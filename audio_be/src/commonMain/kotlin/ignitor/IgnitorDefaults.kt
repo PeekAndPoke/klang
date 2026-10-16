@@ -187,7 +187,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     // Rich detuned pad: two saws slightly detuned, mixed and lowpass filtered
     put(
         "sgpad",
-        (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(semitones = 0.1))
+        (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(semitones = 0.1.ign))
             .div(other = IgnitorDsl.Param(name = "divisor", default = 2.0))
             .onepole(3000.0.ign)
     )
@@ -195,19 +195,18 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     // FM bell: sine carrier with sine modulator
     put(
         "sgbell",
-        IgnitorDsl.Sine().fm(
-            modulator = IgnitorDsl.Sine(),
-            ratio = 1.4,
-            depth = 300.0,
-            attack = 0.001,
-            decay = 0.5,
-            sustain = 0.0,
-            // Non-zero on purpose: with release 0 the depth collapses to zero in ONE sample at
-            // gate end — a hard frequency step that ticks on every note-off. Release 0 is raw
-            // engine semantics (maintainer, 2026-08-28: "0 means 0"), so the PRESET carries the
-            // ramp. Found when the per-sample depth envelope made the collapse deterministic.
-            release = 0.05,
-        )
+        IgnitorDsl.Sine().fm(modulator = IgnitorDsl.Sine(), ratio = 1.4.ign, depth = 300.0.ign) {
+            it.adsr(
+                attack = 0.001.ign,
+                decay = 0.5.ign,
+                sustain = 0.0.ign,
+                // Non-zero on purpose: with release 0 the depth collapses to zero in ONE sample at
+                // gate end: a hard frequency step that ticks on every note-off. Release 0 is raw
+                // engine semantics (maintainer, 2026-08-28: "0 means 0"), so the PRESET carries the
+                // ramp. Found when the per-sample depth envelope made the collapse deterministic.
+                release = 0.05.ign,
+            )
+        }
     )
 
     // Buzzy filtered square

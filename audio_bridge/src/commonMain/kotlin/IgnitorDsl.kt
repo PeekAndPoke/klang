@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_PASSES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_Q
 import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_DECAY_SEC
@@ -20,6 +21,8 @@ import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
@@ -32,6 +35,11 @@ import io.peekandpoke.klang.audio_bridge.constants.RAMP_SHAPE_MAX
 import io.peekandpoke.klang.audio_bridge.constants.RANGEX_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.SAW_RESET_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.SAW_SHAPE_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SHAPE_OVERSAMPLE
+import io.peekandpoke.klang.audio_bridge.constants.SHIMMER_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.SHIMMER_PITCHES
+import io.peekandpoke.klang.audio_bridge.constants.SHIMMER_TONE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.SHIMMER_WET
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
@@ -1524,7 +1532,7 @@ sealed interface IgnitorDsl {
          * 1..[FILTER_MAX_PASSES] and reads a non-finite value as one pass. The graph optimizer
          * fuses only a `Constant` count; a slot could change it per note. Default: one pass.
          */
-        val passes: IgnitorDsl = Constant(1.0),
+        val passes: IgnitorDsl = Constant(FILTER_PASSES),
         /**
          * Cutoff-envelope DEPTH in semitones, and the node's envelope SWITCH: at exactly `0` no
          * envelope is built and the filter is bit-identical to one without these knobs.
@@ -1615,7 +1623,7 @@ sealed interface IgnitorDsl {
         /** See [Lowpass.analog]: the same character scale and tells for the HP tap. */
         val analog: IgnitorDsl = Constant(0.0),
         /** Cascade count, a knob read once at voice build; see [Lowpass.passes]. */
-        val passes: IgnitorDsl = Constant(1.0),
+        val passes: IgnitorDsl = Constant(FILTER_PASSES),
         /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds; see [Lowpass.env]. */
@@ -2090,7 +2098,7 @@ sealed interface IgnitorDsl {
     data class Shape(
         val inner: IgnitorDsl,
         val shape: IgnitorDsl = Constant(DistortionShapes.SOFT_INDEX.toDouble()),
-        val oversample: IgnitorDsl = Constant(0.0),
+        val oversample: IgnitorDsl = Constant(SHAPE_OVERSAMPLE),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); shape.collectParams(out); oversample.collectParams(out)
@@ -2185,8 +2193,8 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(0.5),
         val wet: IgnitorDsl = Constant(0.5),
-        val center: IgnitorDsl = Constant(1000.0),
-        val sweep: IgnitorDsl = Constant(1000.0),
+        val center: IgnitorDsl = Constant(PHASER_CENTER_HZ),
+        val sweep: IgnitorDsl = Constant(PHASER_SWEEP_HZ),
         val floor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -2264,10 +2272,10 @@ sealed interface IgnitorDsl {
     @WireName("shimmer")
     data class Shimmer(
         val inner: IgnitorDsl,
-        val wet: IgnitorDsl = Constant(0.5),
-        val feedback: IgnitorDsl = Constant(0.5),
-        val pitches: List<Double> = listOf(0.0, 7.0, 12.0),
-        val tone: IgnitorDsl = Constant(4000.0),
+        val wet: IgnitorDsl = Constant(SHIMMER_WET),
+        val feedback: IgnitorDsl = Constant(SHIMMER_FEEDBACK),
+        val pitches: List<Double> = SHIMMER_PITCHES,
+        val tone: IgnitorDsl = Constant(SHIMMER_TONE_HZ),
         val floor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -2681,11 +2689,17 @@ fun IgnitorDsl.blend(wet: Double, branch: (IgnitorDsl) -> IgnitorDsl): IgnitorDs
 
 // Frequency
 
-/** Shifts pitch by the given number of [semitones]. */
-fun IgnitorDsl.detune(semitones: Double) = IgnitorDsl.Detune(
-    inner = this,
-    semitones = IgnitorDsl.Constant(semitones),
-)
+/**
+ * Shifts pitch by [semitones], a number (`7.ign`), a slot or a moving signal. ONE door, typed (the `Double` twin went
+ * with the typed-doors rollout S3c); the text lives on the script door (`KlangScriptIgnitorExtensions.detune`).
+ */
+fun IgnitorDsl.detune(semitones: IgnitorDsl): IgnitorDsl.Detune = IgnitorDsl.Detune(inner = this, semitones = semitones)
+
+/** Shifts pitch up one octave: [detune] by 12 semitones. */
+fun IgnitorDsl.octaveUp(): IgnitorDsl.Detune = detune(semitones = 12.ign)
+
+/** Shifts pitch down one octave: [detune] by -12 semitones. */
+fun IgnitorDsl.octaveDown(): IgnitorDsl.Detune = detune(semitones = (-12).ign)
 
 // Filters
 
@@ -2748,11 +2762,15 @@ fun fillFilterEnvelope(
     )
 }
 
-/** A scalar door argument as a knob: `null` (the call did not name it) stays null for the fill. */
-private fun Double?.asKnob(): IgnitorDsl? = this?.let { IgnitorDsl.Constant(it) }
-
-/** A scalar door's curve as its index knob: `null` (not named) stays null, the node's default. */
-private fun AdsrCurve?.asCurveKnob(): IgnitorDsl? = this?.let { AdsrCurves.knob(it) }
+/**
+ * A filter's `passes` knob as the node carries it: a constant is rounded and coerced to 1..[FILTER_MAX_PASSES] here,
+ * at the door ([coercePasses], S3a's rule); a slot or another node passes through, and the runtime coerces the value it
+ * reads at voice build the same way (`passesKnob`).
+ */
+private fun IgnitorDsl.coercedPasses(): IgnitorDsl = when (this) {
+    is IgnitorDsl.Constant -> IgnitorDsl.Constant(coercePasses(value).toDouble())
+    else -> this
+}
 
 /** A modulation envelope's unshaped curve: the index of `MOD_ENV_CURVE`, the node fields' default. */
 private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
@@ -2763,7 +2781,7 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * [configure] lambda receives, the same builder and shape as the script door:
  *
  * ```kotlin
- * Ign.saw().lowpass(freq = 800.ign, q = 1.2.ign) { it.passes(2.0).analog(3.ign) }
+ * Ign.saw().lowpass(freq = 800.ign, q = 1.2.ign) { it.passes(2.ign).analog(3.ign) }
  * Ign.saw().lowpass(800.ign) { it.env(24.ign).adsr(0.005.ign, 0.3.ign, 0.2.ign, 0.2.ign) { e -> e.curves("lin", "exp", "exp") } }
  * // script: Ignitor.saw().lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2, e => e.curves("lin", "exp", "exp")))
  * ```
@@ -2773,8 +2791,8 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * ([fillFilterEnvelope], here, for both doors); a lambda that names neither is the filter without an envelope. The
  * four stage times are named together, by the builder's `adsr`: the flat door that named one stage at a time
  * (`lowpass(800.0, decay = 0.3)`) is gone, recorded in `docs/tasks/kotlin-typed-doors.md` (rollout S3a). `passes` is
- * rounded and coerced to 1..[FILTER_MAX_PASSES] here ([coercePasses]); a SLOT for it is written through the node
- * constructor, which is what `classic()` does. See [IgnitorDsl.Lowpass]; the full text lives on the script door
+ * rounded and coerced to 1..[FILTER_MAX_PASSES] here when it is a number ([coercePasses]); a SLOT goes straight
+ * in (`it.passes(IgnitorDsl.Slots.lpf.passes)`) and the runtime coerces what it reads. See [IgnitorDsl.Lowpass]; the full text lives on the script door
  * (`KlangScriptIgnitorExtensions.lowpass`).
  */
 fun IgnitorDsl.lowpass(
@@ -2790,7 +2808,7 @@ fun IgnitorDsl.lowpass(
         freq = freq,
         q = q,
         analog = k.analog,
-        passes = IgnitorDsl.Constant(coercePasses(k.passes).toDouble()),
+        passes = k.passes.coercedPasses(),
         env = envelope.env,
         attack = envelope.attack,
         decay = envelope.decay,
@@ -2817,7 +2835,7 @@ fun IgnitorDsl.highpass(
         freq = freq,
         q = q,
         analog = k.analog,
-        passes = IgnitorDsl.Constant(coercePasses(k.passes).toDouble()),
+        passes = k.passes.coercedPasses(),
         env = envelope.env,
         attack = envelope.attack,
         decay = envelope.decay,
@@ -2924,153 +2942,143 @@ fun IgnitorDsl.eq(configure: ((EqBuilder) -> EqBuilder)? = null): IgnitorDsl.Eq 
     return EqBuilder(opened).configured(configure).node
 }
 
-/** Pre-amplification: gain without a curve, see [IgnitorDsl.Drive]. */
-fun IgnitorDsl.drive(amount: Double) =
-    IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount))
+/**
+ * Pre-amplification: gain without a curve, see [IgnitorDsl.Drive]. [amount] is a number (`0.4.ign`), a slot or a
+ * signal; ONE door, typed (the `Double` twin went with the typed-doors rollout S3c).
+ */
+fun IgnitorDsl.drive(amount: IgnitorDsl): IgnitorDsl.Drive = IgnitorDsl.Drive(inner = this, amount = amount)
 
 /**
- * Pure waveshaping without drive. See [IgnitorDsl.Shape] for the full list of supported [shape] values.
+ * Pure waveshaping without drive. [shape] is the waveshaper's INDEX in [DistortionShapes] (`DistortionShapes.SOFT_INDEX`,
+ * `soft`, by default), [oversample] the oversampling factor (2, 4, 8; 0 or 1 = off); both are knobs the runtime reads
+ * once per note, so each takes a number (`4.ign`) or a slot (a moving signal is a non-leaf and reads as the default). The name form
+ * takes the waveshaper's name. See [IgnitorDsl.Shape] for the shapes:
  *
  * Quick reference:
- *  - soft / gentle / softsat / cubic / exp / sineshaper — symmetric soft
- *  - hard / zerosquare / chebyshev / fold / linearfold — symmetric hard / wavefolding
- *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
+ *  - soft / gentle / softsat / cubic / exp / sineshaper: symmetric soft
+ *  - hard / zerosquare / chebyshev / fold / linearfold: symmetric hard / wavefolding
+ *  - diode / tube / asym / stompbox / rectify: asymmetric (even harmonics, DC offset)
  *
- * The node carries the shape as an INDEX and [oversample] as a knob; this door takes a name and a
- * whole factor. A SLOT in either position is written through the node (`IgnitorDsl.Shape(inner,
- * shape = IgnitorDsl.Param(...))`): a recorded two-door asymmetry, since the script door, which has no
- * node constructor, also accepts a number or a slot (phase 3 step 3b, 2026-09-25).
+ * Typed since the typed-doors rollout S3c (maintainer, 2026-10-16: slot knobs, not build-time knobs); the full text
+ * lives on the script door (`KlangScriptIgnitorExtensions.shape`).
  */
-fun IgnitorDsl.shape(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Shape(
-    inner = this,
-    shape = IgnitorDsl.Constant(DistortionShapes.indexOf(shape)),
-    oversample = IgnitorDsl.Constant(oversample.toDouble()),
-)
+fun IgnitorDsl.shape(
+    shape: IgnitorDsl = DistortionShapes.SOFT_INDEX.ign,
+    oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ign,
+): IgnitorDsl.Shape = IgnitorDsl.Shape(inner = this, shape = shape, oversample = oversample)
+
+/**
+ * [shape] by NAME (`shape("tube")`), through the lookup the script door uses ([DistortionShapes.indexOf]): an unknown
+ * name is `soft`, coerced, never thrown. The name has no default here (pattern point 9: with the index form all-default,
+ * a bare call would be ambiguous).
+ */
+fun IgnitorDsl.shape(shape: String, oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ign): IgnitorDsl.Shape =
+    shape(shape = DistortionShapes.indexOf(shape).ign, oversample = oversample)
 
 // Envelope
 
 /**
- * Wraps this signal in an ADSR amplitude envelope.
+ * Wraps this signal in an ADSR amplitude envelope: [attack], [decay] and [release] in seconds, [sustain] a level 0 to
+ * 1, each a number (`0.01.ign`), a slot or a signal. The curves and the de-click are knobs on the [AdsrBuilder] the
+ * [configure] lambda receives, the same builder and shape as the script door:
  *
- * @param attackCurve curve of the attack, as its [AdsrCurves] index knob (a constant or a slot);
- *   `null` keeps the node's default, [AdsrCurve.Default] (exponential).
- * @param decayCurve curve of the decay; see [attackCurve].
- * @param releaseCurve curve of the release; see [attackCurve].
- * @param declick the de-click one-pole on the gain, in seconds; `null` keeps the node's
- *   default, the `declick` slot (0 = off). See [IgnitorDsl.Adsr.declick].
+ * ```kotlin
+ * Ign.saw().adsr(0.01.ign, 0.3.ign, 0.5.ign, 0.2.ign) { it.curves("linear", "exp", "exp").declick(0.0005.ign) }
+ * // script: Ignitor.saw().adsr(0.01, 0.3, 0.5, 0.2, e => e.curves("linear", "exp", "exp").declick(0.0005))
+ * ```
  *
- * This flat signature is the ENGINE-LEVEL Kotlin door until the typed-door rollout moves the builders into
- * `audio_bridge` and this door onto them (`docs/tasks/kotlin-typed-doors.md`); today the script door
- * `adsr(a, d, s, r, e => e.curves(...).declick(...))` collects its builder's knobs and calls THIS function. The builder's `declick` is this function's
- * `declick` and the node's: one word on every door, the unit in the KDoc (`/dsl-design` section 4). The
- * envelope's ON/OFF switch is not on either door ([IgnitorDsl.Adsr.on]).
+ * Unshaped stages keep the node's default, [AdsrCurve.Default] (exponential); an unnamed `declick` keeps the node's
+ * `declick` slot (0 = off). The flat door that took the curves and the de-click as parameters
+ * (`adsr(a, d, s, r, attackCurve = ..., declick = ...)`) and its `Double` twin went with the typed-doors rollout S3b
+ * (`docs/tasks/kotlin-typed-doors.md`). The envelope's ON/OFF switch is on neither door ([IgnitorDsl.Adsr.on]). The
+ * full text lives on the script door (`KlangScriptIgnitorExtensions.adsr`).
  */
 fun IgnitorDsl.adsr(
     attack: IgnitorDsl,
     decay: IgnitorDsl,
     sustain: IgnitorDsl,
     release: IgnitorDsl,
-    attackCurve: IgnitorDsl? = null,
-    decayCurve: IgnitorDsl? = null,
-    releaseCurve: IgnitorDsl? = null,
-    declick: IgnitorDsl? = null,
-): IgnitorDsl.Adsr {
-    val defaults = IgnitorDsl.Adsr(inner = this)
-
-    return defaults.copy(
-        attack = attack,
-        decay = decay,
-        sustain = sustain,
-        release = release,
-        attackCurve = attackCurve ?: defaults.attackCurve,
-        decayCurve = decayCurve ?: defaults.decayCurve,
-        releaseCurve = releaseCurve ?: defaults.releaseCurve,
-        declick = declick ?: defaults.declick,
-    )
-}
-
-/** Scalar convenience overload of [adsr]: the curves as [AdsrCurve]s, `null` for the default. */
-fun IgnitorDsl.adsr(
-    attack: Double,
-    decay: Double,
-    sustain: Double,
-    release: Double,
-    attackCurve: AdsrCurve? = null,
-    decayCurve: AdsrCurve? = null,
-    releaseCurve: AdsrCurve? = null,
-    declick: Double? = null,
-): IgnitorDsl.Adsr = adsr(
-    attack = IgnitorDsl.Constant(attack), decay = IgnitorDsl.Constant(decay),
-    sustain = IgnitorDsl.Constant(sustain), release = IgnitorDsl.Constant(release),
-    attackCurve = attackCurve.asCurveKnob(), decayCurve = decayCurve.asCurveKnob(), releaseCurve = releaseCurve.asCurveKnob(), declick = declick.asKnob(),
-)
+    configure: ((AdsrBuilder) -> AdsrBuilder)? = null,
+): IgnitorDsl.Adsr = AdsrBuilder(
+    IgnitorDsl.Adsr(inner = this, attack = attack, decay = decay, sustain = sustain, release = release),
+).configured(configure).node
 
 // FM
 
-/** Applies FM synthesis to this carrier using the given [modulator], [ratio], and [depth]. */
+/**
+ * Applies FM synthesis to this carrier: [modulator] at [ratio] times the carrier's frequency, [depth] the modulation
+ * index in Hz. The index envelope is a knob on the [FmBuilder] the [configure] lambda receives, the same builder and
+ * shape as the script door:
+ *
+ * ```kotlin
+ * Ign.sine().fm(modulator = Ign.sine(), ratio = 1.4.ign, depth = 300.ign) { it.adsr(0.001.ign, 0.5.ign, 0.ign, 0.05.ign) }
+ * // script: Ignitor.sine().fm(Ignitor.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.05))
+ * ```
+ *
+ * Without the knob the depth is constant (`FM_ENV_*`, `adsr(0, 0, 1, 0)`). The flat door that took the four stages
+ * as parameters went with the typed-doors rollout S3b. See [IgnitorDsl.Fm]; the full text lives on the script door
+ * (`KlangScriptIgnitorExtensions.fm`).
+ */
 fun IgnitorDsl.fm(
     modulator: IgnitorDsl,
-    ratio: Double,
-    depth: Double,
-    attack: Double = FM_ENV_ATTACK_SEC,
-    decay: Double = FM_ENV_DECAY_SEC,
-    sustain: Double = FM_ENV_SUSTAIN_LEVEL,
-    release: Double = FM_ENV_RELEASE_SEC,
-) = IgnitorDsl.Fm(
-    carrier = this,
-    modulator = modulator,
-    ratio = IgnitorDsl.Constant(ratio),
-    depth = IgnitorDsl.Constant(depth),
-    attack = IgnitorDsl.Constant(attack),
-    decay = IgnitorDsl.Constant(decay),
-    sustain = IgnitorDsl.Constant(sustain),
-    release = IgnitorDsl.Constant(release),
-)
+    ratio: IgnitorDsl,
+    depth: IgnitorDsl,
+    configure: ((FmBuilder) -> FmBuilder)? = null,
+): IgnitorDsl.Fm = FmBuilder(
+    IgnitorDsl.Fm(carrier = this, modulator = modulator, ratio = ratio, depth = depth),
+).configured(configure).node
 
 // Effects
 
 /**
- * Applies waveshaping distortion with the given [amount] and waveshaper [shape].
- *
- * Equivalent to `this.drive(amount).shape(shape, oversample)`. See [IgnitorDsl.Shape] for the
- * full list of supported [shape] values.
- *
- * Quick reference:
- *  - soft / gentle / softsat / cubic / exp / sineshaper — symmetric soft
- *  - hard / zerosquare / chebyshev / fold / linearfold — symmetric hard / wavefolding
- *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
- *
- * A name and a whole factor, as on [shape]; a slot is written through the node (the same recorded
- * asymmetry).
+ * Applies waveshaping distortion: [drive] by [amount], then [shape] with the waveshaper [shape] (an index, `soft` by
+ * default) and the [oversample] factor, each a number or a slot, read once per note; the name form takes the waveshaper's name.
+ * See [IgnitorDsl.Shape] for the shapes, and the script door (`KlangScriptIgnitorExtensions.distort`) for the full text.
  */
-fun IgnitorDsl.distort(amount: Double, shape: String = "soft", oversample: Int = 0) =
-    IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)).shape(shape, oversample)
+fun IgnitorDsl.distort(
+    amount: IgnitorDsl,
+    shape: IgnitorDsl = DistortionShapes.SOFT_INDEX.ign,
+    oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ign,
+): IgnitorDsl.Shape = drive(amount = amount).shape(shape = shape, oversample = oversample)
 
-/** Applies bit-crush quantization at the given bit depth, [bits]. */
-fun IgnitorDsl.crush(bits: Double) = IgnitorDsl.Crush(
-    inner = this,
-    bits = IgnitorDsl.Constant(bits),
-)
-
-/** Applies sample-rate reduction by the given sample-hold [factor]. */
-fun IgnitorDsl.coarse(factor: Double) = IgnitorDsl.Coarse(
-    inner = this,
-    factor = IgnitorDsl.Constant(factor),
-)
+/** [distort] with the waveshaper by NAME (`distort(amount = 0.4.ign, shape = "tube")`), through [DistortionShapes.indexOf]. */
+fun IgnitorDsl.distort(amount: IgnitorDsl, shape: String, oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ign): IgnitorDsl.Shape =
+    drive(amount = amount).shape(shape = shape, oversample = oversample)
 
 /**
- * Applies a phaser effect: [wet] first, as on every door that has one, then the sweep [rate] in
- * Hz. Both are required, because a positional rate follows the wet. The dry floor is a field of
- * the node (`floor`, default 0.0) and a knob on the script builder only: `floor` is never a
- * method on a signal, where it would meet the round-down `floor()`.
+ * Applies bit-crush quantization at the bit depth [bits] (`2^bits` levels; below 1 it passes through), a number
+ * (`6.ign`), a slot or a signal. ONE door, typed (the `Double` twin went with the typed-doors rollout S3c).
  */
-fun IgnitorDsl.phaser(wet: Double, rate: Double, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
-    inner = this,
-    rate = IgnitorDsl.Constant(rate),
-    wet = IgnitorDsl.Constant(wet),
-    center = IgnitorDsl.Constant(center),
-    sweep = IgnitorDsl.Constant(sweep),
-)
+fun IgnitorDsl.crush(bits: IgnitorDsl): IgnitorDsl.Crush = IgnitorDsl.Crush(inner = this, bits = bits)
+
+/**
+ * Applies sample-rate reduction by the sample-hold [factor] (at 1 or less nothing is held), a number (`3.ign`), a slot
+ * or a signal. ONE door, typed (the `Double` twin went with the typed-doors rollout S3c).
+ */
+fun IgnitorDsl.coarse(factor: IgnitorDsl): IgnitorDsl.Coarse = IgnitorDsl.Coarse(inner = this, factor = factor)
+
+/**
+ * Applies a phaser effect: [wet] first, as on every door that has one, then the sweep [rate] in Hz. Both are required,
+ * because a positional rate follows the wet; [center] and [sweep] in Hz default to the bus phaser's constants
+ * ([PHASER_CENTER_HZ], [PHASER_SWEEP_HZ]). The dry floor is a knob on the [PhaserBuilder] the [configure] lambda
+ * receives, the same builder and shape as the script door (`floor` is never a method on a signal, where it would meet
+ * the round-down `floor()`):
+ *
+ * ```kotlin
+ * Ign.saw().phaser(wet = 0.3.ign, rate = 0.5.ign) { it.floor(0.2.ign) }   // script: Ignitor.saw().phaser(0.3, 0.5, x => x.floor(0.2))
+ * ```
+ *
+ * See [IgnitorDsl.Phaser]; the full text lives on the script door (`KlangScriptIgnitorExtensions.phaser`).
+ */
+fun IgnitorDsl.phaser(
+    wet: IgnitorDsl,
+    rate: IgnitorDsl,
+    center: IgnitorDsl = PHASER_CENTER_HZ.ign,
+    sweep: IgnitorDsl = PHASER_SWEEP_HZ.ign,
+    configure: ((PhaserBuilder) -> PhaserBuilder)? = null,
+): IgnitorDsl.Phaser = PhaserBuilder(
+    IgnitorDsl.Phaser(inner = this, rate = rate, wet = wet, center = center, sweep = sweep),
+).configured(configure).node
 
 /**
  * True when the tremolo's swing is the literal default `(-1, 0)`, the classic dip: the one test of it, read by the
@@ -3080,48 +3088,51 @@ fun IgnitorDsl.Tremolo.hasClassicRange(): Boolean =
     rangeFrom == IgnitorDsl.Constant(TREMOLO_RANGE_FROM) && rangeTo == IgnitorDsl.Constant(TREMOLO_RANGE_TO)
 
 /**
- * Applies a tremolo (amplitude modulation) at the given LFO [rate] in Hz and [depth], with the LFO's
- * [shape] (a name from [LfoShapes], converted to its index). See [IgnitorDsl.Tremolo].
+ * Applies a tremolo (amplitude modulation): an LFO at [rate] Hz pulls the level down by up to [depth] (0 to 1). The
+ * LFO's shape and where its swing sits are knobs on the [TremoloBuilder] the [configure] lambda receives, the same
+ * builder and shape as the script door:
  *
- * FLAT, where the script door is `tremolo(rate, depth, configure)` with `shape` and `range(from, to)` on a
- * builder (here [rangeFrom] and [rangeTo], default `(-1, 0)`, the classic dip): a leftover the typed-door rollout
- * removes, when the builder moves into `audio_bridge` and this door takes it, as [vibrato] does since spike S1
- * (`docs/tasks/kotlin-typed-doors.md`). A slot in any knob is written through the node.
+ * ```kotlin
+ * Ign.saw().tremolo(rate = 4.ign, depth = 0.8.ign) { it.shape("square").range(from = 0.ign, to = 1.ign) }
+ * // script: Ignitor.saw().tremolo(4, 0.8, x => x.shape("square").range(0, 1))
+ * ```
+ *
+ * Without the knobs the LFO is a sine and the swing the classic dip (`range(-1, 0)`, [TREMOLO_RANGE_FROM]). The flat
+ * door that took `shape`, `rangeFrom` and `rangeTo` as parameters went with the typed-doors rollout S3c
+ * (`docs/tasks/kotlin-typed-doors.md`). See [IgnitorDsl.Tremolo]; the full text lives on the script door
+ * (`KlangScriptIgnitorExtensions.tremolo`).
  */
 fun IgnitorDsl.tremolo(
-    rate: Double,
-    depth: Double,
-    shape: String = "sine",
-    rangeFrom: Double = TREMOLO_RANGE_FROM,
-    rangeTo: Double = TREMOLO_RANGE_TO,
-) = IgnitorDsl.Tremolo(
-    inner = this,
-    rate = IgnitorDsl.Constant(rate),
-    depth = IgnitorDsl.Constant(depth),
-    shape = IgnitorDsl.Constant(LfoShapes.indexOf(shape)),
-    rangeFrom = IgnitorDsl.Constant(rangeFrom),
-    rangeTo = IgnitorDsl.Constant(rangeTo),
-)
+    rate: IgnitorDsl,
+    depth: IgnitorDsl,
+    configure: ((TremoloBuilder) -> TremoloBuilder)? = null,
+): IgnitorDsl.Tremolo = TremoloBuilder(
+    IgnitorDsl.Tremolo(inner = this, rate = rate, depth = depth),
+).configured(configure).node
 
 /**
- * Applies a granular shimmer (pitch-shift cloud with feedback). [wet] first, as on every door
- * that has one, default 0.5. [tone]: feedback-path LPF cutoff in Hz. [pitches]: semitone
- * transpositions. An empty list spawns no grains: only the dry plays, at its wet/dry level (silent at wet 1).
- * Same order as the script door. The dry floor is the node's `floor` field (default 0.0), a knob on the script
- * builder only; see [phaser].
+ * Applies a granular shimmer (pitch-shift cloud with feedback). [wet] first, as on every door that has one; [tone] is
+ * the feedback path's lowpass cutoff in Hz, [pitches] the grains' transpositions in semitones, a plain list (an empty
+ * one spawns no grains: only the dry plays, at its wet/dry level). The defaults are the `SHIMMER_*` constants, the
+ * node's. The dry floor is a knob on the [ShimmerBuilder] the [configure] lambda receives, the same builder and shape
+ * as the script door:
+ *
+ * ```kotlin
+ * Ign.saw().shimmer(wet = 0.4.ign, feedback = 0.5.ign, tone = 4000.ign, pitches = listOf(0.0, 7.0, 12.0)) { it.floor(0.2.ign) }
+ * // script: Ignitor.saw().shimmer(0.4, 0.5, 4000, [0, 7, 12], x => x.floor(0.2))
+ * ```
+ *
+ * See [IgnitorDsl.Shimmer]; the full text lives on the script door (`KlangScriptIgnitorExtensions.shimmer`).
  */
 fun IgnitorDsl.shimmer(
-    wet: Double = 0.5,
-    feedback: Double = 0.5,
-    tone: Double = 4000.0,
-    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
-) = IgnitorDsl.Shimmer(
-    inner = this,
-    wet = IgnitorDsl.Constant(wet),
-    feedback = IgnitorDsl.Constant(feedback),
-    pitches = pitches,
-    tone = IgnitorDsl.Constant(tone),
-)
+    wet: IgnitorDsl = SHIMMER_WET.ign,
+    feedback: IgnitorDsl = SHIMMER_FEEDBACK.ign,
+    tone: IgnitorDsl = SHIMMER_TONE_HZ.ign,
+    pitches: List<Double> = SHIMMER_PITCHES,
+    configure: ((ShimmerBuilder) -> ShimmerBuilder)? = null,
+): IgnitorDsl.Shimmer = ShimmerBuilder(
+    IgnitorDsl.Shimmer(inner = this, wet = wet, feedback = feedback, pitches = pitches, tone = tone),
+).configured(configure).node
 
 // Pitch modulation
 
@@ -3144,29 +3155,45 @@ fun IgnitorDsl.vibrato(
     IgnitorDsl.Vibrato(inner = this, rate = rate, semitones = semitones),
 ).configured(configure).node
 
-/** Applies a pitch glide of [semitones] from the onset to the gate close, held through the release. */
-fun IgnitorDsl.accelerate(semitones: Double) = IgnitorDsl.Accelerate(
-    inner = this,
-    semitones = IgnitorDsl.Constant(semitones),
-)
+/**
+ * Applies a pitch glide of [semitones] from the onset to the gate close, held through the release; a number
+ * (`12.ign`), a slot or a signal. ONE door, typed (the `Double` twin went with the typed-doors rollout S3c).
+ */
+fun IgnitorDsl.accelerate(semitones: IgnitorDsl): IgnitorDsl.Accelerate = IgnitorDsl.Accelerate(inner = this, semitones = semitones)
+
+/**
+ * Applies a pitch envelope: the pitch sweeps [semitones] up at the envelope's peak and back to the note. The stages
+ * are ONE `adsr` call on the [PitchEnvelopeBuilder] the [configure] lambda receives, whose own lambda shapes them with
+ * `curves`, the same builders and shape as the script door:
+ *
+ * ```kotlin
+ * Ign.sine().pitchEnvelope(24.ign) { it.adsr(0.001.ign, 0.05.ign, 0.ign, 0.ign) { e -> e.curves("lin", "exp", "exp") } }
+ * // script: Ignitor.sine().pitchEnvelope(24, x => x.adsr(0.001, 0.05, 0, 0, e => e.curves("lin", "exp", "exp")))
+ * ```
+ *
+ * Without the `adsr` knob the stages are the `PITCH_ENV_*` constants, exponential (the node's defaults). New with the
+ * typed-doors rollout S3b: before it, a Kotlin caller wrote the node. See [IgnitorDsl.PitchEnvelope]; the full text
+ * lives on the script door (`KlangScriptIgnitorExtensions.pitchEnvelope`).
+ */
+fun IgnitorDsl.pitchEnvelope(
+    semitones: IgnitorDsl,
+    configure: ((PitchEnvelopeBuilder) -> PitchEnvelopeBuilder)? = null,
+): IgnitorDsl.PitchEnvelope = PitchEnvelopeBuilder(
+    IgnitorDsl.PitchEnvelope(inner = this, semitones = semitones),
+).configured(configure).node
 
 /**
  * Pitch modulation by any signal, the LINEAR law: the frequency times `1 + mod` (0 = no change, 1.0 = an octave up,
  * -1.0 stops the oscillator). In semitones: [pitchModSemitones].
  */
-fun IgnitorDsl.pitchMod(mod: IgnitorDsl) = IgnitorDsl.PitchMod(inner = this, mod = mod)
+fun IgnitorDsl.pitchMod(mod: IgnitorDsl): IgnitorDsl.PitchMod = IgnitorDsl.PitchMod(inner = this, mod = mod)
 
-/** [pitchMod] by a constant deviation [mod], the script door's `x.pitchMod(0.5)`. */
-fun IgnitorDsl.pitchMod(mod: Double) = pitchMod(IgnitorDsl.Constant(mod))
 
 /**
  * Pitch modulation by any signal, in SEMITONES: the frequency times `2^(mod / 12)` (0 = no change, 12 = an octave up).
  * The linear law: [pitchMod].
  */
-fun IgnitorDsl.pitchModSemitones(mod: IgnitorDsl) = IgnitorDsl.PitchModSemitones(inner = this, mod = mod)
-
-/** [pitchModSemitones] by a constant [mod] in SEMITONES, the script door's `x.pitchModSemitones(7)`. */
-fun IgnitorDsl.pitchModSemitones(mod: Double) = pitchModSemitones(IgnitorDsl.Constant(mod))
+fun IgnitorDsl.pitchModSemitones(mod: IgnitorDsl): IgnitorDsl.PitchModSemitones = IgnitorDsl.PitchModSemitones(inner = this, mod = mod)
 
 // ═════════════════════════════════════════════════════════════════════════════════
 // Discovery

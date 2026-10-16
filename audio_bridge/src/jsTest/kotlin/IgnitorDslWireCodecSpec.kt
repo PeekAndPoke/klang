@@ -193,9 +193,9 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Select" { check(IgnitorDsl.Sine().select(whenTrue = IgnitorDsl.Constant(1.0), whenFalse = IgnitorDsl.Constant(-1.0))) }
 
     // --- frequency / filters --------------------------------------------------------------------------------
-    "Detune" { check(IgnitorDsl.Sine().detune(7.0)) }
+    "Detune" { check(IgnitorDsl.Sine().detune(7.0.ign)) }
     "Lowpass" { check(IgnitorDsl.Square().lowpass(2000.0.ign)) }
-    "Lowpass with passes" { check(IgnitorDsl.Square().lowpass(freq = 2000.0.ign, q = 1.2.ign) { it.passes(3.0) }) }
+    "Lowpass with passes" { check(IgnitorDsl.Square().lowpass(freq = 2000.0.ign, q = 1.2.ign) { it.passes(3.0.ign) }) }
     "Lowpass with a slotted passes (a knob since phase 3 step 5)" {
         check(IgnitorDsl.Lowpass(IgnitorDsl.Square(), passes = IgnitorDsl.Param("lpf.passes", 2.0)))
     }
@@ -256,7 +256,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     }
 
     // --- envelope / FM --------------------------------------------------------------------------------------
-    "Adsr" { check(IgnitorDsl.Sine().adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5)) }
+    "Adsr" { check(IgnitorDsl.Sine().adsr(attack = 0.01.ign, decay = 0.3.ign, sustain = 0.5.ign, release = 0.5.ign)) }
     "Adsr with declick" {
         check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), declick = IgnitorDsl.Constant(0.0008)))
     }
@@ -275,26 +275,26 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
         check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), on = IgnitorDsl.Param("adsrOn", 1.0)))
     }
-    "Fm" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0, decay = 0.5)) }
+    "Fm" { check(IgnitorDsl.Sine().fm(modulator = IgnitorDsl.Sine(), ratio = 1.4.ign, depth = 300.0.ign) { it.adsr(attack = 0.0.ign, decay = 0.5.ign, sustain = 1.0.ign, release = 0.0.ign) }) }
     "Fm with absolute freq" {
         // freq NON-default per the file rule: a dropped emitted field would otherwise be
         // filled by the Kotlin default and round-trip green (review round 1).
         check(
-            IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0)
+            IgnitorDsl.Sine().fm(modulator = IgnitorDsl.Sine(), ratio = 1.4.ign, depth = 300.0.ign)
                 .let { it as IgnitorDsl.Fm }.copy(freq = IgnitorDsl.Constant(220.0))
         )
     }
-    "Fm with Adsr" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0).adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5)) }
+    "Fm with Adsr" { check(IgnitorDsl.Sine().fm(modulator = IgnitorDsl.Sine(), ratio = 1.4.ign, depth = 300.0.ign).adsr(attack = 0.01.ign, decay = 0.3.ign, sustain = 0.5.ign, release = 0.5.ign)) }
 
     // --- effects --------------------------------------------------------------------------------------------
-    "Drive" { check(IgnitorDsl.Sine().drive(0.5)) }
+    "Drive" { check(IgnitorDsl.Sine().drive(0.5.ign)) }
     "Shape" { check(IgnitorDsl.Sine().shape("hard")) }
     // Phase 3 step 3b: `shape` is an INDEX knob and `oversample` a knob read at build (D7). Both
     // non-default, one of them a slot, so a dropped or swapped field cannot round-trip green.
     "Shape (index and oversample knobs)" {
         check(IgnitorDsl.Shape(inner = IgnitorDsl.Sine(), shape = IgnitorDsl.Constant(10.0), oversample = IgnitorDsl.Param("os", 4.0)))
     }
-    "Distort (Drive+Shape chain)" { check(IgnitorDsl.Sine().distort(0.5)) }
+    "Distort (Drive+Shape chain)" { check(IgnitorDsl.Sine().distort(0.5.ign)) }
     "Distort (the gated unit node, every field non-default)" {
         check(
             IgnitorDsl.Distort(
@@ -305,11 +305,11 @@ class IgnitorDslWireCodecSpec : StringSpec({
             )
         )
     }
-    "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
-    "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
-    "Phaser" { check(IgnitorDsl.Sine().phaser(wet = 0.4, rate = 0.5).copy(floor = IgnitorDsl.Constant(0.25))) }
-    "Tremolo with a range" { check(IgnitorDsl.Sine().tremolo(rate = 5.0, depth = 0.5, rangeFrom = 0.0, rangeTo = 2.0)) }
-    "Tremolo" { check(IgnitorDsl.Sine().tremolo(rate = 5.0, depth = 0.5)) }
+    "Crush" { check(IgnitorDsl.Sine().crush(8.0.ign)) }
+    "Coarse" { check(IgnitorDsl.Sine().coarse(4.0.ign)) }
+    "Phaser" { check(IgnitorDsl.Sine().phaser(wet = 0.4.ign, rate = 0.5.ign) { it.floor(0.25.ign) }) }
+    "Tremolo with a range" { check(IgnitorDsl.Sine().tremolo(rate = 5.0.ign, depth = 0.5.ign) { it.range(from = 0.0.ign, to = 2.0.ign) }) }
+    "Tremolo" { check(IgnitorDsl.Sine().tremolo(rate = 5.0.ign, depth = 0.5.ign)) }
     "Tremolo (shape non-default, the depth a slot)" {
         check(
             IgnitorDsl.Tremolo(
@@ -321,7 +321,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
     }
     "Shimmer (pitches list)" {
-        check(IgnitorDsl.Square().shimmer(wet = 0.3, pitches = listOf(0.0, 7.0, 12.0)).copy(floor = IgnitorDsl.Constant(0.1)))
+        check(IgnitorDsl.Square().shimmer(wet = 0.3.ign, pitches = listOf(0.0, 7.0, 12.0)) { it.floor(0.1.ign) })
     }
 
     // --- pitch modulation -----------------------------------------------------------------------------------
@@ -333,7 +333,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             }
         )
     }
-    "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0)) }
+    "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0.ign)) }
     "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0))) }
     "PitchEnvelope (every ADSR field and curve non-default)" {
         check(
@@ -369,11 +369,11 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
     }
     "deep composite (SuperSaw → lowpass → adsr)" {
-        check(IgnitorDsl.SuperSaw(freq = IgnitorDsl.Constant(5.0)).lowpass(2000.0.ign).adsr(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5))
+        check(IgnitorDsl.SuperSaw(freq = IgnitorDsl.Constant(5.0)).lowpass(2000.0.ign).adsr(attack = 0.01.ign, decay = 0.3.ign, sustain = 0.5.ign, release = 0.5.ign))
     }
     "sgpad-style composite" {
         check(
-            (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1))
+            (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1.ign))
                 .div(IgnitorDsl.Param("divisor", 2.0))
                 .onepole(3000.0.ign)
         )

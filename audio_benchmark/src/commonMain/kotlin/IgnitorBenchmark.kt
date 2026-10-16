@@ -222,7 +222,7 @@ class IgnitorBenchmark(
             fun sine(i: Int): IgnitorDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(THUD_RATIOS[i])).mul(THUD_GAINS[i])
 
             return (1 until THUD_RATIOS.size).fold(sine(0)) { acc, i -> acc.plus(sine(i)) }
-                .adsr(attack = 0.0005, decay = 0.050, sustain = 0.0, release = 0.02).mul(1.245)
+                .adsr(attack = 0.0005.ign, decay = 0.050.ign, sustain = 0.0.ign, release = 0.02.ign).mul(1.245)
         }
 
         /** The same thud as ONE sine with 13 explicit partials: the same ratios, the gains' magnitudes, the signs as phase 0.5. */
@@ -235,7 +235,7 @@ class IgnitorBenchmark(
                     phase = IgnitorDsl.Constant(if (THUD_GAINS[i] < 0.0) 0.5 else 0.0),
                 )
             },
-        ).adsr(attack = 0.0005, decay = 0.050, sustain = 0.0, release = 0.02).mul(1.245)
+        ).adsr(attack = 0.0005.ign, decay = 0.050.ign, sustain = 0.0.ign, release = 0.02.ign).mul(1.245)
 
         /**
          * Standard set of benchmark cases covering individual oscillators, super oscillators,
@@ -426,7 +426,7 @@ class IgnitorBenchmark(
             fun IgnitorDsl.distortion(amount: Double, shape: String, os: Int): IgnitorDsl {
                 val driven = if (drives) IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)) else this
 
-                return driven.shape(shape, oversample = if (oversample) os else 0)
+                return driven.shape(shape = shape, oversample = (if (oversample) os else 0).ign)
             }
 
             val string = guitarString(muls)
@@ -456,7 +456,7 @@ class IgnitorBenchmark(
 
             return power
                 .newEq { it.band(freq = 110.0.ign, q = 1.2.ign, db = 3.0.ign).band(freq = 2700.0.ign, q = 2.0.ign, db = 4.0.ign) }
-                .lowpass(freq = 5000.0.ign, q = 0.707.ign) { it.passes(3.0) }
+                .lowpass(freq = 5000.0.ign, q = 0.707.ign) { it.passes(3.0.ign) }
                 .level(0.19)
         }
 
@@ -476,7 +476,7 @@ class IgnitorBenchmark(
             )
             val burst = IgnitorDsl.Crackle(chaos = IgnitorDsl.Constant(1.25))
                 .highpass(1000.0.ign)
-                .adsr(0.005, 0.1, 0.0, 0.05)
+                .adsr(attack = 0.005.ign, decay = 0.1.ign, sustain = 0.0.ign, release = 0.05.ign)
             val plucked = IgnitorDsl.PitchEnvelope(
                 inner = saw,
                 semitones = IgnitorDsl.Constant(0.5),
@@ -485,7 +485,7 @@ class IgnitorBenchmark(
             ).plus(if (muls) burst.mul(IgnitorDsl.Constant(1.0)) else burst)
 
             // Sustain held: the song's 0.0 would end the voice during warmup and leave an empty renderer to measure.
-            return plucked.adsr(0.005, 1.0, 1.0, 0.03)
+            return plucked.adsr(attack = 0.005.ign, decay = 1.0.ign, sustain = 1.0.ign, release = 0.03.ign)
         }
     }
 }

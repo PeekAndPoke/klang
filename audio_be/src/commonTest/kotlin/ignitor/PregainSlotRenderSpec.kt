@@ -197,7 +197,7 @@ class PregainSlotRenderSpec : StringSpec({
         // a pure level change reads as ZERO and only a change of SHAPE survives. The drive amount
         // was picked by sweeping this number (0.1 -> 0.082, 0.3 -> 0.181, 0.5 -> 0.223,
         // 1.0 -> 0.117, 2.0 -> 0.006 through the same lowpass).
-        val example = IgnitorDsl.Saw().pregain().distort(0.5).lowpass(2500.0.ign)
+        val example = IgnitorDsl.Saw().pregain().distort(0.5.ign).lowpass(2500.0.ign)
 
         val hard = render(example)
         val soft = render(example, mapOf("pregain" to 0.4))
@@ -238,7 +238,7 @@ class PregainSlotRenderSpec : StringSpec({
         // Same level-blind measure as the doc-example row: both renders normalised to unit RMS, so
         // a pure level change reads zero.
         fun shapeDistance(shape: String, drive: Double): Double {
-            val dsl = IgnitorDsl.Saw().pregain().distort(drive, shape).lowpass(2500.0.ign)
+            val dsl = IgnitorDsl.Saw().pregain().distort(drive.ign, shape).lowpass(2500.0.ign)
             val loud = render(dsl)
             val soft = render(dsl, mapOf("pregain" to 0.4))
             val loudRms = sqrt(loud.sumOf { it * it } / loud.size)
@@ -278,9 +278,9 @@ class PregainSlotRenderSpec : StringSpec({
         // `0.5` for the reason the doc-example row gives: nobody should copy a drive out of a
         // spec at which the knob under test is inaudible. This row is a tree comparison and
         // would pass at any drive; the choice is about what a reader takes away.
-        val helper = render(IgnitorDsl.Sine().pregain().distort(0.5), mapOf("pregain" to 0.7))
+        val helper = render(IgnitorDsl.Sine().pregain().distort(0.5.ign), mapOf("pregain" to 0.7))
         val spelled = render(
-            IgnitorDsl.Sine().mul(IgnitorDsl.Slots.pregain).distort(0.5),
+            IgnitorDsl.Sine().mul(IgnitorDsl.Slots.pregain).distort(0.5.ign),
             mapOf("pregain" to 0.7),
         )
 

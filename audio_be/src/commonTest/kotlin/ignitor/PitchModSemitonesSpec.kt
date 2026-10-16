@@ -146,14 +146,14 @@ class PitchModSemitonesSpec : StringSpec({
     // ── The law ──────────────────────────────────────────────────────────────────────────────────────────────
 
     "a constant 7 semitones: every frame reads 2^(7/12), a fifth up" {
-        val got = ratiosOf(probed.pitchModSemitones(7.0))
+        val got = ratiosOf(probed.pitchModSemitones(7.0.ign))
         val fifth = 2.0.pow(7.0 / 12.0)
 
         shouldFollow(got) { fifth }
     }
 
     "a negative amount, -7 semitones: every frame reads 2^(-7/12), a fifth down" {
-        val got = ratiosOf(probed.pitchModSemitones(-7.0))
+        val got = ratiosOf(probed.pitchModSemitones((-7.0).ign))
 
         shouldFollow(got) { 2.0.pow(-7.0 / 12.0) }
     }
@@ -172,18 +172,18 @@ class PitchModSemitonesSpec : StringSpec({
     }
 
     "two semitone nodes nested sum their semitones: 7 inside 5 is the octave" {
-        shouldFollow(ratiosOf(probed.pitchModSemitones(7.0).pitchModSemitones(5.0))) { 2.0 }
+        shouldFollow(ratiosOf(probed.pitchModSemitones(7.0.ign).pitchModSemitones(5.0.ign))) { 2.0 }
     }
 
     // ── The gate and the identity ────────────────────────────────────────────────────────────────────────────
 
     "a literal 0 builds no node: no pitch mod reaches the source, as a Constant and as a Param" {
-        probe(probed.pitchModSemitones(0.0)).modded.count { it } shouldBe 0
+        probe(probed.pitchModSemitones(0.0.ign)).modded.count { it } shouldBe 0
         probe(probed.pitchModSemitones(IgnitorDsl.Param("pms", 0.0))).modded.count { it } shouldBe 0
     }
 
     "a non-zero literal is built: the source reads the mod on every frame" {
-        probe(probed.pitchModSemitones(7.0)).modded.count { !it } shouldBe 0
+        probe(probed.pitchModSemitones(7.0.ign)).modded.count { !it } shouldBe 0
         probe(probed.pitchModSemitones(IgnitorDsl.Param("pms", -0.5))).modded.count { !it } shouldBe 0
     }
 
@@ -216,8 +216,8 @@ class PitchModSemitonesSpec : StringSpec({
     "under and over pitchMod: the ratio is the product, 2^(7/12) times 1 + 0.25" {
         val expected = 2.0.pow(7.0 / 12.0) * 1.25
 
-        shouldFollow(ratiosOf(probed.pitchModSemitones(7.0).pitchMod(c(0.25)))) { expected }
-        shouldFollow(ratiosOf(probed.pitchMod(c(0.25)).pitchModSemitones(7.0))) { expected }
+        shouldFollow(ratiosOf(probed.pitchModSemitones(7.0.ign).pitchMod(c(0.25)))) { expected }
+        shouldFollow(ratiosOf(probed.pitchMod(c(0.25)).pitchModSemitones(7.0.ign))) { expected }
     }
 
     "under and over a vibrato: the ratio is the vibrato's times 2^(7/12), frame by frame" {
@@ -225,8 +225,8 @@ class PitchModSemitonesSpec : StringSpec({
         val fifth = 2.0.pow(7.0 / 12.0)
 
         vibrato.max() shouldBeGreaterThan 1.0
-        shouldFollow(ratiosOf(probed.pitchModSemitones(7.0).vibrato(rate = 6.0.ign, semitones = 0.5.ign))) { vibrato[it] * fifth }
-        shouldFollow(ratiosOf(probed.vibrato(rate = 6.0.ign, semitones = 0.5.ign).pitchModSemitones(7.0))) { vibrato[it] * fifth }
+        shouldFollow(ratiosOf(probed.pitchModSemitones(7.0.ign).vibrato(rate = 6.0.ign, semitones = 0.5.ign))) { vibrato[it] * fifth }
+        shouldFollow(ratiosOf(probed.vibrato(rate = 6.0.ign, semitones = 0.5.ign).pitchModSemitones(7.0.ign))) { vibrato[it] * fifth }
     }
 
     // ── Non-finite and huge amounts: a literal is gated, a signal's sample meets safeOut (no clamp below SAFE_MAX) ─
@@ -234,7 +234,7 @@ class PitchModSemitonesSpec : StringSpec({
     "a non-finite literal builds no node: NaN and both infinities leave the source unmodulated" {
         for (v in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
             withClue("literal $v") {
-                probe(probed.pitchModSemitones(v)).modded.count { it } shouldBe 0
+                probe(probed.pitchModSemitones(v.ign)).modded.count { it } shouldBe 0
             }
         }
     }
@@ -242,7 +242,7 @@ class PitchModSemitonesSpec : StringSpec({
     "a non-finite literal renders the bare saw, bit for bit" {
         val saw = IgnitorDsl.Saw(analog = c(0.0))
 
-        render(saw.pitchModSemitones(Double.NaN)).toList() shouldBe render(saw).toList()
+        render(saw.pitchModSemitones(Double.NaN.ign)).toList() shouldBe render(saw).toList()
     }
 
     "a non-finite signal sample: NaN and -Infinity read as the ratio 0 (the source holds still), +Infinity as 1e15" {
@@ -253,8 +253,8 @@ class PitchModSemitonesSpec : StringSpec({
 
     "598 semitones is the first whole amount past 1e15: it holds there, while 597 passes raw" {
         // 12 * log2(1e15) is about 597.95.
-        ratiosOf(probed.pitchModSemitones(598.0)).count { it != 1e15 } shouldBe 0
-        shouldFollow(ratiosOf(probed.pitchModSemitones(597.0))) { 2.0.pow(597.0 / 12.0) }
+        ratiosOf(probed.pitchModSemitones(598.0.ign)).count { it != 1e15 } shouldBe 0
+        shouldFollow(ratiosOf(probed.pitchModSemitones(597.0.ign))) { 2.0.pow(597.0 / 12.0) }
         (2.0.pow(597.0 / 12.0) < 1e15) shouldBe true
     }
 

@@ -235,12 +235,12 @@ class ClassicTailSpec : StringSpec({
         saw.classic().optimizer(0).optimizer(1).endsInClassic() shouldBe true
         // ...and it is still the ROOT only: a hint is not a stage, a stage after the hint is
         saw.classic().optimizer(0).mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
-        saw.adsr(attack = 0.01, decay = 0.1, sustain = 1.0, release = 0.05).optimizer(0).endsInClassic() shouldBe false
+        saw.adsr(attack = 0.01.ign, decay = 0.1.ign, sustain = 1.0.ign, release = 0.05.ign).optimizer(0).endsInClassic() shouldBe false
     }
 
     "endsInClassic: an envelope written by hand is not the tag, unless its switch is classic()'s own slot" {
         saw.endsInClassic() shouldBe false
-        saw.adsr(attack = 0.01, decay = 0.1, sustain = 1.0, release = 0.05).endsInClassic() shouldBe false
+        saw.adsr(attack = 0.01.ign, decay = 0.1.ign, sustain = 1.0.ign, release = 0.05.ign).endsInClassic() shouldBe false
         IgnitorDsl.Adsr(inner = saw, on = IgnitorDsl.Param("on", 1.0)).endsInClassic() shouldBe false
         IgnitorDsl.Adsr(inner = saw, on = IgnitorDsl.Constant(1.0)).endsInClassic() shouldBe false
         // the switch compared by NAME, as the wire codec builds a new Param: a hand-built tail of your own that

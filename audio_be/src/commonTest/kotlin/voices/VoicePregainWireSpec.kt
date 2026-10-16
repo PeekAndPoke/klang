@@ -20,6 +20,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.distort
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
@@ -61,10 +62,10 @@ class VoicePregainWireSpec : StringSpec({
      * "driven" instrument is deaf to the knob under test is worse than none, and it is also the
      * instrument somebody copies out of here.
      */
-    val driven: IgnitorDsl = IgnitorDsl.Saw().pregain().distort(0.5)
+    val driven: IgnitorDsl = IgnitorDsl.Saw().pregain().distort(0.5.ign)
 
     /** The same instrument with no slot anywhere, like an authored instrument that never places it. */
-    val plain: IgnitorDsl = IgnitorDsl.Saw().distort(0.5)
+    val plain: IgnitorDsl = IgnitorDsl.Saw().distort(0.5.ign)
 
     /**
      * One voice, built the production way from [data] on an instrument registered as `"test-inst"`,

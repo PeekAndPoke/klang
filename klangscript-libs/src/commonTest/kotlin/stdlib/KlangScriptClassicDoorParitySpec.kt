@@ -78,7 +78,7 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
 
     "the script door builds the Kotlin door's tree, on an authored instrument" {
         ks("Ignitor.saw().distort(0.4, \"tube\").lowpass(2500, 1.2).classic()") shouldBe
-            IgnitorDsl.Saw().distort(0.4, "tube").lowpass(freq = 2500.0.ign, q = 1.2.ign).classic()
+            IgnitorDsl.Saw().distort(0.4.ign, "tube").lowpass(freq = 2500.0.ign, q = 1.2.ign).classic()
     }
 
     "every Ignitor.slot group property is the Kotlin slot object itself, and it names itself <group>.<param>" {

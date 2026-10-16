@@ -256,7 +256,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // INDEPENDENTLY written ladder implementations (bridge `passesLadderRel` and engine
         // `butterworthQLadder`). PassesLadderParitySpec pins the numbers; this pins the render.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Saw().lowpass(freq = 2400.0.ign, q = 0.707.ign) { it.passes(2.0) }
+            IgnitorDsl.Saw().lowpass(freq = 2400.0.ign, q = 0.707.ign) { it.passes(2.0.ign) }
         )
     }
 
@@ -585,7 +585,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
 
     "a chain split by a nonlinear node is inaudible on BOTH sides" {
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sine().bandpass(freq = 1000.0.ign, q = 0.8.ign).distort(0.5).lowpass(freq = 4000.0.ign, q = 0.707.ign)
+            IgnitorDsl.Sine().bandpass(freq = 1000.0.ign, q = 0.8.ign).distort(0.5.ign).lowpass(freq = 4000.0.ign, q = 0.707.ign)
         )
     }
 

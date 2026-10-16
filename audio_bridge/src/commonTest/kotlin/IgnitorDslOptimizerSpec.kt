@@ -38,7 +38,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "C5/D6: passes = N expands into N staggered sections — never one section that loses slope" {
-        val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0.ign, q = 1.0.ign) { it.passes(2.0) }.optimize()
+        val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0.ign, q = 1.0.ign) { it.passes(2.0.ign) }.optimize()
             .shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.sections.size shouldBe 2
         val q0 = (eq.sections[0] as IgnitorDsl.EqSection.Lowpass).q
@@ -118,7 +118,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "a nonlinear node between two filters blocks the fusion" {
         // The maintainer's example. Nothing may move across the distort, so this is two
         // independent one-section Eqs, never one two-section Eq.
-        val dsl = IgnitorDsl.Sine().bandpass(1000.0.ign).distort(0.5).lowpass(4000.0.ign).optimize()
+        val dsl = IgnitorDsl.Sine().bandpass(1000.0.ign).distort(0.5.ign).lowpass(4000.0.ign).optimize()
 
         val outer = dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         outer.sections.size shouldBe 1
@@ -327,7 +327,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
 
     "a tree with nothing to fuse returns the SAME instance" {
         // Identity, not just equality: MemoizingIgnitor caches on node identity downstream.
-        val dsl = IgnitorDsl.Sine().distort(0.5)
+        val dsl = IgnitorDsl.Sine().distort(0.5.ign)
         (dsl.optimize() === dsl) shouldBe true
     }
 

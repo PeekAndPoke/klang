@@ -17,6 +17,9 @@ package io.peekandpoke.klang.audio_bridge.constants
 /** The filters' and the eq sections' default resonance: the Butterworth `q`, flat at the cutoff. */
 const val FILTER_Q: Double = 0.707
 
+/** The lowpass's and highpass's default cascade count: one pass, 12 dB/oct (a knob, so a slot can carry it). */
+const val FILTER_PASSES: Double = 1.0
+
 /** The eq `band`'s default gain in decibels: `0` is exactly transparent. */
 const val EQ_BAND_DB: Double = 0.0
 

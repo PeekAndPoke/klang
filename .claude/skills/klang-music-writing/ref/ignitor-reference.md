@@ -737,9 +737,9 @@ and its curves `Ignitor.slot.penvCurves.attack|decay|release`, and the filter en
 
 Want another order? Write your own tail from the same slots, as far as a door takes them:
 `Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).crush(Ignitor.slot.crush.bits).lowpass(Ignitor.slot.lpf.freq)`.
-The doors take a slot for every filter's `freq`, `q`, `env` and envelope stages, for `crush`, `coarse`,
-the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.classic()` can place:
-- `lpf.passes` / `hpf.passes`: the filter builder's `passes(n)` takes a number, not a slot;
+The doors take a slot for every filter's `freq`, `q`, `passes` (`x => x.passes(Ignitor.slot.lpf.passes)`), `env` and
+envelope stages, for `crush`, `coarse`, the tremolo's knobs and the envelope's stages and curves. Two groups ONLY
+`.classic()` can place:
 - `adsr.on`: no door has the switch (on a door, not writing `adsr()` already means no envelope);
 - `distort.*`: the `distort` door builds a drive into a shaper whose shaper always runs and caps its
   output, while `.classic()` uses the one distort node that switches drive AND shape off together and

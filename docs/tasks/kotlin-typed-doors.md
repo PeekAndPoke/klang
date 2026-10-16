@@ -2,7 +2,7 @@
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
 below, revised the same day: one set of builders, equal doors); steps 1 and 1b done; spike S1 done 2026-10-16 (review
-rounds 1 and 2 applied); rollout S2 (the other oscillators) and S3a (the filters and the eq) done 2026-10-16, S3b next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
+rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) done 2026-10-16, S4 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
 
 ## Why
 
@@ -95,6 +95,18 @@ logic moves); 5 optional `.ign`/`.kat` for existing `Constant(x)` lines, only wh
   Kotlin door like the rest.
 - **Q51:** yes, build-time knobs stay plain values: the one recorded exception. The criterion (a knob the script
   takes as a plain number or string stays plain; a plain `Double`, no `Int` overloads) lives in `/dsl-design` §3.
+  Corrected 2026-10-16 (maintainer, S3c review round 1): the voice `shape`'s and `distort`'s `shape` and `oversample`
+  are build-time in the engine's sense (read once per voice) but SLOT-READ, read per event from the slots (`IgnitorDslRuntime.kt`,
+  `distortionShapeKnob`, `oversampleStagesKnob`), so they are typed on the Kotlin door. Checked the same way: the
+  Katalyst compressor's `lookahead` and `distort` knobs, the super oscillators' `phasePool` arguments and the
+  shimmer's `pitches` are plain fields on their nodes (`Double`, `String`, `List<Double>`), never a slot, so they
+  stay plain. The filters' `passes` is the same class (an `IgnitorDsl` on the node, `classic()`'s `lpf.passes` /
+  `hpf.passes` slot read at voice build), so it is typed too under the same decision: `FilterBuilder.passes(n:
+  IgnitorDsl)` (the band filters have no `passes`), default `FILTER_PASSES` (new in `constants/FilterDefaults.kt`, the
+  node fields read it), a constant still rounded and coerced to 1..16 at the door (`coercePasses`), a slot passed
+  through for the runtime's own coercion; the script variant converts and delegates, so `passes` is no longer a
+  `classic()`-only group. `KlangScriptFilterDoorParitySpec` has a slot row and a literal default-pass row; two mutants
+  (the script variant casting, a default of 2) went red, restored and `cmp`-checked.
 
 ## Step 1 (2026-10-16): the extensions and the rule texts
 
@@ -246,7 +258,7 @@ commit as in S1.
 ## Rollout S3a (2026-10-16): the filters and the eq on their builders
 
 `FilterKnobs`, `FilterBuilder`, `BandFilterBuilder` and the eq's builders moved to `audio_bridge/EffectBuilders.kt`
-(a new file beside `IgnitorBuilders.kt`, the script side's name), with typed member knobs: `passes(n: Double)` (a
+(a new file beside `IgnitorBuilders.kt`, the script side's name), with typed member knobs: `passes(n: Double)` (typed since S3c, see Q51; then a
 build-time number, Q51), `analog`, `env` (`IgnitorDsl`), `humanize(on: Boolean = true)` (the script variant coerces
 with `coerceFlag`), and `adsr(attack, decay, sustain, release, configure)` with a nested configure on `ModAdsrBuilder`,
 which had to move with it (S3b's `AdsrBuilder`, `PitchEnvelopeBuilder` and `FmBuilder` stay); `ModAdsrBuilder.curves`
@@ -295,6 +307,62 @@ Review round 1 (2026-10-16): no critical or major finding. Applied: rows for the
 `String` decay default and a wrong index-form release default now go red, restored and `cmp`-checked); named
 arguments at about 150 Kotlin call sites where they could be swapped (`/code-style`); three nits; the S3a cases as
 point 9 of the typed-door pattern in `/dsl-design` §3.
+
+## Rollout S3b and S3c (2026-10-16): the envelopes and the effects on their builders
+
+S3b: `AdsrBuilder`, `FmBuilder` and `PitchEnvelopeBuilder` moved to `audio_bridge/EffectBuilders.kt` with typed member
+knobs. `AdsrBuilder` collected nullable knobs before; with nothing to fill it is a node builder now (`curves` in the
+index form, omitted = `AdsrCurve.Default`, and by pattern point 7 a `String` form through `AdsrCurves.indexOf`;
+`declick`). `FmBuilder.adsr` takes the four stages (no lambda: the FM envelope has no curves yet).
+`PitchEnvelopeBuilder.adsr(attack, decay, sustain, release, configure)` holds the envelope's default fill, ONCE for both
+doors: a curve its `ModAdsrBuilder` lambda left out is the node's default read off a fresh `PitchEnvelope`, so a later
+`adsr` replaces an earlier one completely. The Kotlin doors are one function per word: `adsr(attack, decay, sustain,
+release, configure)`, `fm(modulator, ratio, depth, configure)` and, new on Kotlin (there was none, Kotlin wrote the
+node), `pitchEnvelope(semitones, configure)`. The flat `adsr` with `attackCurve` ... `declick` parameters, its `Double`
+twin and the flat `fm` with its four stage parameters are gone.
+
+S3c: `PhaserBuilder`, `ShimmerBuilder` (`floor`, as on the script; Q48's named `floor =` stays superseded) and
+`TremoloBuilder` (`range(from, to)`, `shape(index)` and, a name knob by point 7, `shape(name: String)` through
+`LfoShapes.indexOf`, the lookup the script variant's `catalogueIndex` uses) moved there too. The doors:
+`phaser(wet, rate, center = PHASER_CENTER_HZ.ign, sweep = PHASER_SWEEP_HZ.ign, configure)` (the bus phaser's
+constants, the same 1000 Hz, now also the node fields' defaults), `shimmer(wet = SHIMMER_WET.ign, feedback =
+SHIMMER_FEEDBACK.ign, tone = SHIMMER_TONE_HZ.ign, pitches = SHIMMER_PITCHES, configure)` (new
+`constants/ShimmerDefaults.kt`, read by the node too; `pitches` a plain list) and `tremolo(rate, depth, configure)`;
+the flat `Double` doors and the flat tremolo's `shape`, `rangeFrom`, `rangeTo` are gone. The number-only doors of the
+family are typed, their `Double` twins deleted: `detune`, `drive`, `crush`, `coarse`, `accelerate`, `pitchMod`,
+`pitchModSemitones`, and `shape` and `distort`: `shape(shape = DistortionShapes.SOFT_INDEX.ign, oversample =
+SHAPE_OVERSAMPLE.ign)` and `distort(amount, shape = ..., oversample = ...)`, each with the point 7 name form
+(`shape: String`, no default, through `DistortionShapes.indexOf`), since `shape` and `oversample` are slot knobs the
+runtime reads per event (maintainer, 2026-10-16, review round 1; the first cut kept them plain, `String` and `Int`).
+New `constants/ShapeDefaults.kt` (`SHAPE_OVERSAMPLE`, 0, which the node reads too). The script doors convert
+(`catalogueIndex`) and delegate; their own `Shape` construction is gone. `octaveUp`
+and `octaveDown` were script-only words and got their Kotlin door (`detune(12.ign)`, `detune((-12).ign)`). The
+arithmetic (S4) and `blend` (S6) keep their twins for now.
+
+Every script door of the family converts and calls the typed door with the checking wrapper (`self.tremolo(r, d) {
+it.configuredBy("tremolo", configure) }`); the shimmer's pitch-list check stays script-side. All eight script knobs are
+`internal`, renamed variants (`scriptCurves`, `scriptDeclick`, `scriptAdsr` on the pitch envelope and the FM,
+`scriptFloor` on the phaser and the shimmer, `scriptRange`, `scriptShape`). Callers: 41 files, mechanical (the
+warmup vocabulary, `IgnitorDefaults`' `sgpad` and `sgbell`, the benchmarks' thud, guitar and `tube4x` cases, 23
+`audio_be` specs, the JS wire codec spec, the klangscript-libs, sprudel and audio_bridge specs); Kotlin call sites name
+the arguments that could be swapped (`phaser(wet = ..., rate = ...)`, `fm(modulator = ..., ratio = ..., depth =
+...)`), and `.copy(floor = ...)` became the builder's `floor`. Generated docs: the six moved types differ only in their
+`fqcn` (`script.stdlib` to `audio_bridge`); every KDoc text is byte-identical.
+
+`KlangScriptEffectDoorParitySpec` is new (52 rows, each from both doors): a default-node row per Kotlin door (16,
+written out with literal numbers, never a constant), door-input rows (every defaulted argument off its default, and a
+signal in each door), one row per member knob against the node written out with `.copy()` (16, with a guard that each
+moves its knob off the default, the omitted-argument defaults of both `curves` forms included), the tremolo's unknown
+name, and three rows for the pitch envelope's fill through both doors (a left-out curve, a second `adsr` call, a
+slotted depth). Eight mutants went red, restored and `cmp`-checked: `FmBuilder.adsr` writing `decay` from `sustain`,
+the pitch envelope's fill reading the builder's node instead of a fresh default (the skipped fill), a wrong default
+symbol on the shimmer's `tone`, `scriptDeclick` casting instead of converting (an internal error on a number), the
+tremolo `String` form mapping one shape off, `distort` dropping its `shape`, `octaveDown` passing +12, and a wrong
+decay default in `AdsrBuilder`'s name form. `:audio_bridge`, `:klangscript-libs`, `:audio_be`, `:sprudel` and root
+`jvmTest` are green, the JS sources and JS tests of `audio_bridge`, `klangscript-libs`, `audio_be`, `sprudel` and the
+root compile; the corpus is GREEN, frozen 3 of 3 identical, 13 live identical, `Kokon` and `Der Schmetterling` edited by
+the maintainer's song commit as before; an engagement control (the Kotlin `adsr` door building with `declick =
+0.001`) turned it RED (2 frozen, 5 live moved), restored.
 
 ## Rollout steps (coordinator, 2026-10-16; replace steps 2 to 4)
 

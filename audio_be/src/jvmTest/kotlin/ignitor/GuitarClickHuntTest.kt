@@ -79,7 +79,7 @@ class GuitarClickHuntTest : StringSpec({
     fun pickNoiseBranch(): IgnitorDsl =
         IgnitorDsl.PinkNoise()
             .highpass(3000.0.ign)
-            .adsr(attack = 0.001, decay = 0.025, sustain = 0.0, release = 0.005)
+            .adsr(attack = 0.001.ign, decay = 0.025.ign, sustain = 0.0.ign, release = 0.005.ign)
             .mulD(0.15)
 
     fun lowEndBranch(): IgnitorDsl = IgnitorDsl.SuperSaw(
@@ -109,7 +109,7 @@ class GuitarClickHuntTest : StringSpec({
     fun postHpf(): IgnitorDsl = postBrightnessLp().highpass(100.0.ign)
 
     fun fullGuitar(): IgnitorDsl =
-        postHpf().adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
+        postHpf().adsr(attack = 0.004.ign, decay = 0.15.ign, sustain = 0.8.ign, release = 0.05.ign)
 
     // ── Voice rendering ──
 
@@ -271,10 +271,10 @@ class GuitarClickHuntTest : StringSpec({
     fun chainWithSources(sourceMix: IgnitorDsl, distortShape: String = "chebyshev"): IgnitorDsl {
         val withBp = sourceMix.bandpass(freq = 1000.0.ign, q = 0.1.ign).plusDsl(lowEndBranch())
         val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-        val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).shape(distortShape, oversample = 8)
+        val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).shape(shape = distortShape, oversample = 8.ign)
         val postLp = distorted.lowpass(freq = brightness.ign, q = 0.9.ign)
         val hpf = postLp.highpass(100.0.ign)
-        return hpf.adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
+        return hpf.adsr(attack = 0.004.ign, decay = 0.15.ign, sustain = 0.8.ign, release = 0.05.ign)
     }
 
     // Source sets: full minus one, full, only-one
@@ -385,8 +385,8 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(freq = 1000.0.ign, q = 0.1.ign).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).shape(shape, oversample = 4)
-            val full = distorted.lowpass(freq = brightness.ign, q = 0.9.ign).highpass(100.0.ign).adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
+            val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).shape(shape = shape, oversample = 4.ign)
+            val full = distorted.lowpass(freq = brightness.ign, q = 0.9.ign).highpass(100.0.ign).adsr(attack = 0.004.ign, decay = 0.15.ign, sustain = 0.8.ign, release = 0.05.ign)
 
             val perNote = mutableListOf<Pair<Int, Metrics>>()
             for (m in rhythmMidis) {
@@ -417,8 +417,8 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(freq = 1000.0.ign, q = 0.1.ign).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(d)).shape("chebyshev", oversample = 8)
-            val full = distorted.lowpass(freq = brightness.ign, q = 0.9.ign).highpass(100.0.ign).adsr(attack = 0.004, decay = 0.15, sustain = 0.8, release = 0.05)
+            val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(d)).shape(shape = "chebyshev", oversample = 8.ign)
+            val full = distorted.lowpass(freq = brightness.ign, q = 0.9.ign).highpass(100.0.ign).adsr(attack = 0.004.ign, decay = 0.15.ign, sustain = 0.8.ign, release = 0.05.ign)
 
             val perNote = mutableListOf<Pair<Int, Metrics>>()
             for (m in rhythmMidis) {
@@ -721,7 +721,7 @@ private fun IgnitorDsl.lowpassMod(cutoff: IgnitorDsl, q: Double): IgnitorDsl =
 
 /** Mirrors the script door `.distort(amount, "chebyshev", 8)` on a tree — `factorToStages(8) = 3` (8x oversample). */
 private fun IgnitorDsl.distortChebyshev8(driveAmount: Double): IgnitorDsl =
-    IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(driveAmount)).shape("chebyshev", oversample = 8)
+    IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(driveAmount)).shape(shape = "chebyshev", oversample = 8.ign)
 
 /** The tag of the click-hunt harness: excluded from `audio_be`'s default `jvmTest` run, see [GuitarClickHuntTest]. */
 object ClickHunt : Tag()

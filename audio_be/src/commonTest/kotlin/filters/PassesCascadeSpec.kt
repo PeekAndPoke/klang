@@ -68,10 +68,10 @@ class PassesCascadeSpec : StringSpec({
     }
 
     fun rmsIgnitorLp(passes: Int, freq: Double): Double =
-        rmsIgnitor(IgnitorDsl.Sine().lowpass(freq = 1000.0.ign, q = 0.707.ign) { it.passes(passes.toDouble()) }, freq)
+        rmsIgnitor(IgnitorDsl.Sine().lowpass(freq = 1000.0.ign, q = 0.707.ign) { it.passes(passes.ign) }, freq)
 
     fun rmsIgnitorHp(passes: Int, freq: Double): Double =
-        rmsIgnitor(IgnitorDsl.Sine().highpass(freq = 1000.0.ign, q = 0.707.ign) { it.passes(passes.toDouble()) }, freq)
+        rmsIgnitor(IgnitorDsl.Sine().highpass(freq = 1000.0.ign, q = 0.707.ign) { it.passes(passes.ign) }, freq)
 
     "the q ladder: passes = 1 is the user q VERBATIM; passes = 2 is the 4th-order Butterworth pair" {
         butterworthQLadder(1, 1.2).toList() shouldBe listOf(1.2)

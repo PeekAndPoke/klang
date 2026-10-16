@@ -7,13 +7,15 @@ package io.peekandpoke.klang.audio_bridge
 
 import io.peekandpoke.klang.audio_bridge.constants.EQ_BAND_DB
 import io.peekandpoke.klang.audio_bridge.constants.EQ_TAP_GAIN
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_PASSES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_Q
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 
 /*
  * The effect builders: what an effect door hands to its `configure` lambda, ONE set for both doors
- * (`docs/tasks/kotlin-typed-doors.md`, rollout S3a: the four filters and the eq; the oscillators' builders are in
- * `IgnitorBuilders.kt`).
+ * (`docs/tasks/kotlin-typed-doors.md`: rollout S3a the four filters and the eq, S3b the amplitude envelope, the pitch
+ * envelope and the FM, S3c the phaser, the shimmer and the tremolo; the oscillators' and the vibrato's builders are
+ * in `IgnitorBuilders.kt`).
  *
  *     Ign.saw().lowpass(freq = 800.ign, q = 1.2.ign) { it.env(24.ign).adsr(0.005.ign, 0.3.ign, 0.2.ign, 0.2.ign) }   // Kotlin
  *     Ignitor.saw().lowpass(800, 1.2, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))                         // KlangScript
@@ -22,6 +24,43 @@ import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
  * door adds `internal`, renamed `@KlangScript.Function` variants in `klangscript-libs` (`scriptEnv`, the script word in
  * `name`) that convert their `Any` arguments and call these members; the user-facing text lives on those variants.
  */
+
+// ── Amplitude envelope ──────────────────────────────────────────────────────────
+
+/**
+ * Builder for [IgnitorDsl.Adsr], handed to the `configure` lambda of `.adsr(attack, decay, sustain, release,
+ * configure)`, the amplitude envelope. Knobs: `curves`, `declick`. A knob that is not named keeps the node's default.
+ * Immutable: every knob returns a new builder.
+ */
+data class AdsrBuilder(val node: IgnitorDsl.Adsr) {
+    /**
+     * Shapes the three stages, each a curve's [AdsrCurves] index (a constant or a slot); an omitted one is
+     * [AdsrCurve.Default], so every call sets all three stages. The text is on the script knob `curves` (`scriptCurves`
+     * in `klangscript-libs`).
+     */
+    fun curves(
+        attack: IgnitorDsl = AdsrCurves.knob(AdsrCurve.Default),
+        decay: IgnitorDsl = AdsrCurves.knob(AdsrCurve.Default),
+        release: IgnitorDsl = AdsrCurves.knob(AdsrCurve.Default),
+    ): AdsrBuilder = copy(node = node.copy(attackCurve = attack, decayCurve = decay, releaseCurve = release))
+
+    /**
+     * [curves] by NAME (`it.curves("linear", "exp", "exp")`), through the lookup the script knob uses
+     * ([AdsrCurves.indexOf]): an unknown name is [AdsrCurve.Default], coerced, never thrown.
+     */
+    fun curves(
+        attack: String,
+        decay: String = AdsrCurves.names[AdsrCurve.Default.ordinal],
+        release: String = AdsrCurves.names[AdsrCurve.Default.ordinal],
+    ): AdsrBuilder = curves(
+        attack = AdsrCurves.indexOf(attack, AdsrCurve.Default).ign,
+        decay = AdsrCurves.indexOf(decay, AdsrCurve.Default).ign,
+        release = AdsrCurves.indexOf(release, AdsrCurve.Default).ign,
+    )
+
+    /** De-clicks the envelope's gain by [seconds] (0 = off); the text is on the script knob `declick` (`scriptDeclick` in `klangscript-libs`). */
+    fun declick(seconds: IgnitorDsl): AdsrBuilder = copy(node = node.copy(declick = seconds))
+}
 
 // ── Modulation envelope ─────────────────────────────────────────────────────────
 
@@ -68,7 +107,7 @@ data class ModAdsrBuilder(
  * [lowpass] and its siblings), which the script door calls too.
  */
 data class FilterKnobs(
-    val passes: Double = 1.0,
+    val passes: IgnitorDsl = FILTER_PASSES.ign,
     val analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
     val humanize: Boolean = false,
     val env: IgnitorDsl? = null,
@@ -100,8 +139,8 @@ data class FilterKnobs(
  */
 data class FilterBuilder(val knobs: FilterKnobs = FilterKnobs()) {
 
-    /** Cascade count, a build-time number (rounded, coerced to 1..16 at the door); the text is on the script knob `passes` (`scriptPasses` in `klangscript-libs`). */
-    fun passes(n: Double): FilterBuilder = copy(knobs = knobs.copy(passes = n))
+    /** Cascade count, a number or a slot read at voice build (rounded, coerced to 1..16); the text is on the script knob `passes` (`scriptPasses` in `klangscript-libs`). */
+    fun passes(n: IgnitorDsl): FilterBuilder = copy(knobs = knobs.copy(passes = n))
 
     /** Analog character, 0..10; the text is on the script knob `analog` (`scriptAnalog` in `klangscript-libs`). */
     fun analog(character: IgnitorDsl): FilterBuilder = copy(knobs = knobs.copy(analog = character))
@@ -145,6 +184,92 @@ data class BandFilterBuilder(val knobs: FilterKnobs = FilterKnobs()) {
         release: IgnitorDsl,
         configure: ((ModAdsrBuilder) -> ModAdsrBuilder)? = null,
     ): BandFilterBuilder = copy(knobs = knobs.adsr(attack, decay, sustain, release, ModAdsrBuilder().configured(configure)))
+}
+
+// ── Pitch envelope ───────────────────────────────────────────────────────────
+
+/**
+ * Builder for [IgnitorDsl.PitchEnvelope], handed to the `configure` lambda of `.pitchEnvelope(semitones, configure)`.
+ * Knob: `adsr` (whose own lambda carries `curves`). Immutable: every knob returns a new builder.
+ */
+data class PitchEnvelopeBuilder(val node: IgnitorDsl.PitchEnvelope) {
+    /**
+     * The four stages in ONE call, its lambda shaping them on a [ModAdsrBuilder]; the text is on the script knob `adsr`
+     * (`scriptAdsr` in `klangscript-libs`).
+     *
+     * THE ONE HOME of the pitch envelope's default fill, for both doors: a curve the lambda did not shape is the node's
+     * default (`MOD_ENV_CURVE`), read off a fresh [IgnitorDsl.PitchEnvelope], never the curve an earlier `adsr` call
+     * set. So one `adsr` call is the whole envelope, and a later call replaces an earlier one completely, curves
+     * included. The depth is the door's input, so there is no companion to fill (`/dsl-design` section 4).
+     */
+    fun adsr(
+        attack: IgnitorDsl,
+        decay: IgnitorDsl,
+        sustain: IgnitorDsl,
+        release: IgnitorDsl,
+        configure: ((ModAdsrBuilder) -> ModAdsrBuilder)? = null,
+    ): PitchEnvelopeBuilder {
+        val curves = ModAdsrBuilder().configured(configure)
+        val defaults = IgnitorDsl.PitchEnvelope(inner = node.inner)
+
+        return copy(
+            node = node.copy(
+                attack = attack,
+                decay = decay,
+                sustain = sustain,
+                release = release,
+                attackCurve = curves.attackCurve ?: defaults.attackCurve,
+                decayCurve = curves.decayCurve ?: defaults.decayCurve,
+                releaseCurve = curves.releaseCurve ?: defaults.releaseCurve,
+            ),
+        )
+    }
+}
+
+// ── FM ───────────────────────────────────────────────────────────────────────
+
+/** Builder for [IgnitorDsl.Fm], handed to the `configure` lambda of `.fm(modulator, ratio, depth, configure)`. Knob: `adsr`. */
+data class FmBuilder(val node: IgnitorDsl.Fm) {
+    /**
+     * The modulation INDEX envelope, the four stages in one call (no lambda: the FM index envelope has no curves yet);
+     * the text is on the script knob `adsr` (`scriptAdsr` in `klangscript-libs`).
+     */
+    fun adsr(attack: IgnitorDsl, decay: IgnitorDsl, sustain: IgnitorDsl, release: IgnitorDsl): FmBuilder =
+        copy(node = node.copy(attack = attack, decay = decay, sustain = sustain, release = release))
+}
+
+// ── Phaser, shimmer ──────────────────────────────────────────────────────────
+
+/** Builder for [IgnitorDsl.Phaser], handed to the `configure` lambda of `.phaser(...)`. Knob: `floor`. */
+data class PhaserBuilder(val node: IgnitorDsl.Phaser) {
+    /** Minimum dry coefficient (default 0); the text is on the script knob `floor` (`scriptFloor` in `klangscript-libs`). */
+    fun floor(floor: IgnitorDsl): PhaserBuilder = copy(node = node.copy(floor = floor))
+}
+
+/** Builder for [IgnitorDsl.Shimmer], handed to the `configure` lambda of `.shimmer(...)`. Knob: `floor`. */
+data class ShimmerBuilder(val node: IgnitorDsl.Shimmer) {
+    /** Minimum dry coefficient (default 0); the text is on the script knob `floor` (`scriptFloor` in `klangscript-libs`). */
+    fun floor(floor: IgnitorDsl): ShimmerBuilder = copy(node = node.copy(floor = floor))
+}
+
+// ── Tremolo ──────────────────────────────────────────────────────────────────
+
+/** Builder for [IgnitorDsl.Tremolo], handed to the `configure` lambda of `.tremolo(...)`. Knobs: `shape`, `range`. */
+data class TremoloBuilder(val node: IgnitorDsl.Tremolo) {
+    /** Where the tremolo's swing sits; the text is on the script knob `range` (`scriptRange` in `klangscript-libs`). */
+    fun range(from: IgnitorDsl, to: IgnitorDsl): TremoloBuilder = copy(node = node.copy(rangeFrom = from, rangeTo = to))
+
+    /**
+     * The LFO's waveform as its [LfoShapes] index (a constant or a slot); the text is on the script knob `shape`
+     * (`scriptShape` in `klangscript-libs`).
+     */
+    fun shape(index: IgnitorDsl): TremoloBuilder = copy(node = node.copy(shape = index))
+
+    /**
+     * [shape] by NAME (`it.shape("square")`), through the lookup the script knob uses ([LfoShapes.indexOf]): an
+     * unknown name is the sine, coerced, never thrown.
+     */
+    fun shape(name: String): TremoloBuilder = shape(index = LfoShapes.indexOf(name).ign)
 }
 
 // ── Eq ───────────────────────────────────────────────────────────────────────

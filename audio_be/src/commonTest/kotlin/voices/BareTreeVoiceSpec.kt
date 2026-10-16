@@ -16,11 +16,13 @@ import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.random.Random
@@ -45,16 +47,17 @@ class BareTreeVoiceSpec : StringSpec({
     val gateFrame = (gateSec * sampleRate).toInt()
 
     val dc = IgnitorDsl.Constant(0.5)
-    val linear = AdsrCurve.Linear
+    val linear = AdsrCurves.knob(AdsrCurve.Linear)
+    val exponential = AdsrCurves.knob(AdsrCurve.Exponential)
 
     val registry = IgnitorRegistry().apply {
         registerDefaults()
         // No envelope, no stage: the bare tree.
         register("bare", dc)
         // Its own envelope at the ROOT, a static release of 0.2 s, linear stages so the release is arithmetic.
-        register("enveloped", dc.adsr(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.2, attackCurve = linear, decayCurve = linear, releaseCurve = linear))
+        register("enveloped", dc.adsr(attack = 0.0.ign, decay = 0.0.ign, sustain = 1.0.ign, release = 0.2.ign) { it.curves(attack = linear, decay = linear, release = linear) })
         // The same with an exponential release of a FRACTIONAL frame count: 0.00501 s is 240.48 frames.
-        register("envelopedexp", dc.adsr(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.00501, attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Exponential, releaseCurve = AdsrCurve.Exponential))
+        register("envelopedexp", dc.adsr(attack = 0.0.ign, decay = 0.0.ign, sustain = 1.0.ign, release = 0.00501.ign) { it.curves(attack = exponential, decay = exponential, release = exponential) })
         // classic() below the root: each branch has the voice chain, the root is a sum.
         register("branches", dc.classic().plus(dc.classic()))
     }

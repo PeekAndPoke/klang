@@ -13,10 +13,10 @@ defaulted knob is temporary stays flat. A knob that nothing reads is removed, no
 | `lowpass`, `highpass` | `freq, q = 0.707, configure` | `passes`, `analog`, `humanize`, `env(semitones)`, `adsr(attack, decay, sustain, release, e => e.curves(attack, decay, release))` (nested since 3c) | the envelope is ONE `adsr` call, the pattern of the chain's own `adsr`; `env` and `adsr` each switch the cutoff envelope on and the other fills from the constants (the compound fill, now at the end of the lambda). The third positional argument becomes the lambda, which ends the `lowpass`/`lpf` positional trap |
 | `bandpass`, `notch` | `freq, q = 0.707, configure` | as above without `passes` | |
 | `drive` | `amount` | none | `driveType` is REMOVED everywhere (door, `IgnitorDsl.Drive`, the wire, `DriveIgnitor`): it had one value and nothing read it. `drive` is boost without shaping; every colour belongs to `shape` |
-| `shape` | `shape = "soft", oversample = 0` | none | flat: `oversample` is the D7 stopgap and leaves with `oversampling-regions.md` |
+| `shape` | `shape = "soft", oversample = 0` | none | flat: `oversample` is the D7 stopgap and leaves with `oversampling-regions.md`. Both are slot knobs, typed on the Kotlin door since typed doors S3c, `shape` with a `String` name form |
 | `distort` | `amount, shape = "soft", oversample = 0` | none | flat for the same reason; matches sprudel's `distort` position for position |
 | `pitchEnvelope` | `semitones, configure` | `adsr(attack, decay, sustain, release, e => e.curves(attack, decay, release))` (nested since 3c) | `releaseSec`, `curve` and `anchor` leave: release and curve were read and DISCARDED on both surfaces (the Ignitor runtime and the strip's `PitchEnvelopeRenderer`); the sustain replaces `anchor` and the release becomes real. An ADSR attacks from 0 where the old envelope attacked from the anchor; no song sets `anchor` or calls `penv`. The 12 call sites become `pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))` |
-| `tremolo` | `rate, depth, configure` | `shape(name)`, `range(from, to)` | `range` (2026-10-06, `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): where the LFO swing sits, in the -1..1 language of `range`, gain `1 + depth * that`, default `(-1, 0)` the classic dip; the Kotlin door is still flat today (`rangeFrom`, `rangeTo`) and moves onto the same builder in the typed-door rollout; sprudel has none by decision (see the asymmetries below). 3b added `shape`, `skew` and `phase`; `skew` and `phase` were dropped on 2026-09-29 when the tremolo became a composition of the oscillators (`docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`). Rate first, like every Ignitor LFO door (`phaser`, `vibrato`); sprudel's `tremolo(depth, rate, shape)` says `rate` too (renamed from `sync` 2026-10-03, `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`); its order differs on purpose: depth first is sprudel's bare-call rule, a bare call reads the pattern's values as the first parameter |
+| `tremolo` | `rate, depth, configure` | `shape(name)`, `range(from, to)` | `range` (2026-10-06, `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): where the LFO swing sits, in the -1..1 language of `range`, gain `1 + depth * that`, default `(-1, 0)` the classic dip; the Kotlin door has the same builder and shape since typed doors S3c (2026-10-16): `tremolo(rate, depth) { it.shape("square").range(0.ign, 1.ign) }`, `shape` with a typed `String` form beside the index form; sprudel has none by decision (see the asymmetries below). 3b added `shape`, `skew` and `phase`; `skew` and `phase` were dropped on 2026-09-29 when the tremolo became a composition of the oscillators (`docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`). Rate first, like every Ignitor LFO door (`phaser`, `vibrato`); sprudel's `tremolo(depth, rate, shape)` says `rate` too (renamed from `sync` 2026-10-03, `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`); its order differs on purpose: depth first is sprudel's bare-call rule, a bare call reads the pattern's values as the first parameter |
 | `shimmer` | `wet, feedback = 0.5, tone = 4000, pitches, configure` | `floor` | the wet rule below; `dryFloor` becomes `floor` |
 | `fm` | `modulator, ratio, depth, configure` | `adsr(attack, decay, sustain, release)` | `freq` stays HIDDEN: the walk first put `freq(hz)` on the builder, then the maintainer, shown the recorded decision of 2026-08-30 ("a hidden internal of the pitch machinery; the default IS the semantics"), kept it hidden (2026-09-24). The node always had the index envelope; the Kotlin door exposed it (the built-in `sgbell` uses it) and the script door did not, a two-doors gap this closes. No `adsrCurves` yet: the FM envelope has no curve support, and a knob that does nothing is not offered. The maintainer wants it LATER; follow-up in `docs/tasks/future/envelope-shape-followups.md` §4 |
 | `phaser` (Ignitor AND Katalyst) | `wet, rate, center, sweep, configure` | `floor` | ONE shape on both hosts. On the Katalyst the door parameters are OPTIONAL, and an omitted one means exactly what an omitted builder knob meant before: the bare stage's fixed default, never the owner voice. Only a `Param` slot reads the orbit's `katp` state, whether `classic()` places it or an author writes it with `Katalyst.param`. The one home of what each bare stage carries is `KatalystStageDsl`'s KDoc in `KatalystDsl.kt`, with the data classes' constructor defaults. (Corrected 2026-09-24 by the 3d(ii) implementer and the round 1 reviewers, who read the code; the first wording was the coordinator's, written without it.) On the Ignitor `rate` stays required, so writing it means writing `wet` too. The PRINCIPLE, decided here for every bus effect: the effect's musical inputs on the door; secondary knobs on the builder |
@@ -108,16 +108,22 @@ oscillators (already `(freq, configure)`).
   two bullets below describe the code until the rollout lands; `vibrato` and `Ign.saw` are there (S1), every
   other oscillator door with its builder (S2: `Ign.sine` with its partial banks and chained `partial`, the super
   oscillators with chained `phasePool`, the plucks), and the four filters, `onepole` and the voice `eq` (S3a:
-  `lowpass(freq, q = FILTER_Q.ign, configure)`, the flat `Double` twins and the flat `IgnitorDsl.Eq.band`/`tap` gone).
+  `lowpass(freq, q = FILTER_Q.ign, configure)`, the flat `Double` twins and the flat `IgnitorDsl.Eq.band`/`tap` gone),
+  the envelopes (S3b: `adsr(attack, decay, sustain, release, configure)` on `AdsrBuilder`, `fm(modulator, ratio,
+  depth, configure)` on `FmBuilder`, a new Kotlin `pitchEnvelope(semitones, configure)` on `PitchEnvelopeBuilder`,
+  whose `adsr` holds the default fill once) and the effects (S3c: `phaser`, `shimmer` with `floor` on their
+  builders, `tremolo` with `shape` and `range`; the one-value doors `detune`, `drive`, `distort`'s amount, `crush`,
+  `coarse`, `accelerate`, `pitchMod`, `pitchModSemitones` typed, their `Double` twins gone, and `octaveUp`,
+  `octaveDown` new on Kotlin).
   The eq is ONE concept with two value domains, so it has two typed builders of the same words: `EqBuilder` on a
   voice (`IgnitorDsl` knobs) and `KatalystEqBuilder` on a chain (`KatalystKnobDsl` knobs), one helper
   (`eqSectionKnobOrNull`) for the chain's section conversion and its refusal of an expression (Q49: an
   `IllegalArgumentException` at build time on the Kotlin door, a script error pre-checked on the script door).
-- **Recorded two-door asymmetries (step 3b, 2026-09-25; superseded by the typed Kotlin door above).** The Kotlin
-  `tremolo` door stays FLAT (`tremolo(rate, depth, shape = "sine")`) where the script door takes a builder, the
-  filter doors' precedent, until the rollout puts it on the same builder. The Kotlin `shape` and `distort` doors keep a `String` shape and an `Int`
-  factor (build-time knobs, which stay plain), while the script doors also take a number or a slot; until the
-  sweep a Kotlin caller writes a slot through the node constructor, as for `floor` and the pitch envelope.
+- **Recorded two-door asymmetries (step 3b, 2026-09-25; the tremolo half superseded by the typed Kotlin door
+  above, S3c).** The Kotlin `tremolo` door was FLAT (`tremolo(rate, depth, shape = "sine", rangeFrom, rangeTo)`);
+  since S3c it is on the script's builder. The Kotlin `shape` and `distort` doors kept a `String` shape and an `Int`
+  factor; since S3c they are typed too (`shape` and `oversample` are slot knobs read per event, maintainer
+  2026-10-16), with a `String` name form, so the asymmetry is gone.
 - **Recorded asymmetries (oscillator phase task, 2026-10-06).** (1) The tremolo's `range` is on the Ignitor doors
   only; sprudel's `tremolo(depth, rate, shape)` gets none (maintainer, 2026-10-06, "not in sprudel yet"): it is a
   flat door with no builder layer for a two-value knob, and `classic()` places no range slots. The engine is ready
@@ -132,10 +138,10 @@ oscillators (already `(freq, configure)`).
   the rollout S3a they are on the builder, and that superset is the recorded loss: a Kotlin caller names the stages
   in ONE `adsr(attack, decay, sustain, release)` call (the left-out ones as their `FILTER_ENV_*` constants), and a
   curve only inside it. The Kotlin `phaser`/`shimmer` set `floor` only by
-  `.copy(floor = ...)` until then; `floor` becomes a builder knob on the Kotlin door, as on the script (the
+  `.copy(floor = ...)` until S3c; since then `floor` is a builder knob on the Kotlin door, as on the script (the
   revision of 2026-10-16 supersedes Q48's named `floor =`). The node
-  extensions `.wet()`/`.dryFloor()` stay removed. There is no Kotlin `pitchEnvelope` door (there was none before
-  either); Kotlin builds the node.
+  extensions `.wet()`/`.dryFloor()` stay removed. There was no Kotlin `pitchEnvelope` door until S3b (Kotlin built
+  the node); it is the script's shape now.
 - **Sprudel's `penv` carries two dead slots**, `release` and `curve`, and an `anchor` whose meaning moves
   to a sustain. Raised for the sprudel side, not decided here. (Decided in D3 (4), landed in step 5b c1,
   2026-09-25: `penv(amount, attack, decay, sustain, release)`, a real release, `curve` and `anchor` removed.)

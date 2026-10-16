@@ -153,7 +153,7 @@ class FmModulatorTopologySpec : StringSpec({
         var x: IgnitorDsl = p
 
         for (k in 0 until n) {
-            x = x.fm(modulator = p, ratio = ratios[k], depth = depths[k])
+            x = x.fm(modulator = p, ratio = ratios[k].ign, depth = depths[k].ign)
         }
 
         return x
@@ -244,9 +244,9 @@ class FmModulatorTopologySpec : StringSpec({
 
     for ((tag, wrap) in listOf("a vibrato" to vib, "a vibrato whose rate reads the note" to vibOnNote)) {
         "nested: a modulator of a modulator of a modulator, under $tag: every level follows" {
-            val f3 = p.fm(modulator = p, ratio = 3.5, depth = 150.0)
-            val f2 = p.fm(modulator = f3, ratio = 2.5, depth = 200.0)
-            val l = lanes(wrap(p.fm(modulator = f2, ratio = 1.5, depth = 300.0)))
+            val f3 = p.fm(modulator = p, ratio = 3.5.ign, depth = 150.0.ign)
+            val f2 = p.fm(modulator = f3, ratio = 2.5.ign, depth = 200.0.ign)
+            val l = lanes(wrap(p.fm(modulator = f2, ratio = 1.5.ign, depth = 300.0.ign)))
             val v = alone(wrap)
             val m3m = note * 1.5 * 2.5 * 3.5
             val m3c = note * 1.5 * 2.5
@@ -264,8 +264,8 @@ class FmModulatorTopologySpec : StringSpec({
         val penv: (IgnitorDsl) -> IgnitorDsl = {
             IgnitorDsl.PitchEnvelope(inner = it, semitones = c(12.0), attack = c(0.01), decay = c(0.05), sustain = c(0.0), release = c(0.1))
         }
-        val f2 = p.fm(modulator = penv(p), ratio = 2.5, depth = 200.0).vibrato(rate = 4.0.ign, semitones = 0.3.ign)
-        val top = p.vibrato(rate = 7.0.ign, semitones = 0.2.ign).fm(modulator = f2, ratio = 1.5, depth = 300.0).vibrato(rate = 6.0.ign, semitones = 0.5.ign)
+        val f2 = p.fm(modulator = penv(p), ratio = 2.5.ign, depth = 200.0.ign).vibrato(rate = 4.0.ign, semitones = 0.3.ign)
+        val top = p.vibrato(rate = 7.0.ign, semitones = 0.2.ign).fm(modulator = f2, ratio = 1.5.ign, depth = 300.0.ign).vibrato(rate = 6.0.ign, semitones = 0.5.ign)
         val l = lanes(top)
         val above = times(alone(vib), alone({ it.vibrato(rate = 4.0.ign, semitones = 0.3.ign) }))
 
@@ -280,8 +280,8 @@ class FmModulatorTopologySpec : StringSpec({
     }
 
     "two summed branches with their own fm chains, one detuned, under one vibrato" {
-        val a = p.fm(modulator = p, ratio = 1.5, depth = 300.0).fm(modulator = p, ratio = 2.5, depth = 200.0)
-        val b = pf().fm(modulator = p, ratio = 3.5, depth = 150.0).detune(semitones = 7.0)
+        val a = p.fm(modulator = p, ratio = 1.5.ign, depth = 300.0.ign).fm(modulator = p, ratio = 2.5.ign, depth = 200.0.ign)
+        val b = pf().fm(modulator = p, ratio = 3.5.ign, depth = 150.0.ign).detune(semitones = 7.0.ign)
         val l = lanes(vib(a + b))
         val v = alone(vib)
         val fmA2 = term(out = l.out(550.0), depth = 200.0, fmHz = note)
@@ -296,7 +296,7 @@ class FmModulatorTopologySpec : StringSpec({
     }
 
     "an fm voice in a parameter position (the outer fm's depth) follows its own vibrato only, never the outer one" {
-        val inParam = IgnitorDsl.Detune(inner = pf().fm(modulator = p, ratio = 2.5, depth = 100.0).vibrato(rate = 5.0.ign, semitones = 0.3.ign), semitones = c(7.0))
+        val inParam = IgnitorDsl.Detune(inner = pf().fm(modulator = p, ratio = 2.5.ign, depth = 100.0.ign).vibrato(rate = 5.0.ign, semitones = 0.3.ign), semitones = c(7.0))
         val l = lanes(vib(IgnitorDsl.Fm(carrier = p, modulator = p, ratio = c(3.5), depth = inParam)))
         val own = alone({ it.vibrato(rate = 5.0.ign, semitones = 0.3.ign) })
         val pc = note * fifth
@@ -328,37 +328,37 @@ class FmModulatorTopologySpec : StringSpec({
     "shared: one let as the modulator and on the spine renders as two separate sines (HEAD rendered the one at two pitches)" {
         val m = sine()
 
-        output(vib(sine().fm(modulator = m, ratio = 2.0, depth = 300.0)) + m).toList() shouldBe
-            output(vib(sine().fm(modulator = sine(), ratio = 2.0, depth = 300.0)) + sine()).toList()
+        output(vib(sine().fm(modulator = m, ratio = 2.0.ign, depth = 300.0.ign)) + m).toList() shouldBe
+            output(vib(sine().fm(modulator = sine(), ratio = 2.0.ign, depth = 300.0.ign)) + sine()).toList()
     }
 
     "shared: one let as carrier and modulator of the same fm renders as two separate sines" {
         val s = sine()
 
-        output(vib(s.fm(modulator = s, ratio = 1.0, depth = 300.0))).toList() shouldBe
-            output(vib(sine().fm(modulator = sine(), ratio = 1.0, depth = 300.0))).toList()
+        output(vib(s.fm(modulator = s, ratio = 1.0.ign, depth = 300.0.ign))).toList() shouldBe
+            output(vib(sine().fm(modulator = sine(), ratio = 1.0.ign, depth = 300.0.ign))).toList()
     }
 
     "shared: one modulator let in two fms at two ratios renders as two modulators (HEAD rendered the one at two pitches)" {
         val m = sine()
 
-        output(vib(sine().fm(modulator = m, ratio = 1.5, depth = 300.0) + sine().fm(modulator = m, ratio = 2.5, depth = 200.0))).toList() shouldBe
-            output(vib(sine().fm(modulator = sine(), ratio = 1.5, depth = 300.0) + sine().fm(modulator = sine(), ratio = 2.5, depth = 200.0))).toList()
+        output(vib(sine().fm(modulator = m, ratio = 1.5.ign, depth = 300.0.ign) + sine().fm(modulator = m, ratio = 2.5.ign, depth = 200.0.ign))).toList() shouldBe
+            output(vib(sine().fm(modulator = sine(), ratio = 1.5.ign, depth = 300.0.ign) + sine().fm(modulator = sine(), ratio = 2.5.ign, depth = 200.0.ign))).toList()
     }
 
     "shared: one fm let twice (f + f) under a vibrato keeps its drifting modulator ONE instance: f + f is f * 2" {
-        val f = sine().fm(modulator = sine(analog = 0.5), ratio = 1.5, depth = 300.0)
+        val f = sine().fm(modulator = sine(analog = 0.5), ratio = 1.5.ign, depth = 300.0.ign)
 
         output(vib(f + f)).toList() shouldBe output(vib(f.mul(2.0))).toList()
     }
 
     "shared: one fm let under two different vibratos: each copy's modulator follows its own vibrato" {
-        val f = sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0)
+        val f = sine().fm(modulator = sine(), ratio = 3.5.ign, depth = 400.0.ign)
 
         output(f.vibrato(rate = 6.0.ign, semitones = 0.5.ign) + f.vibrato(rate = 4.0.ign, semitones = 0.3.ign)).toList() shouldBe
             output(
-                sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0).vibrato(rate = 6.0.ign, semitones = 0.5.ign) +
-                    sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0).vibrato(rate = 4.0.ign, semitones = 0.3.ign),
+                sine().fm(modulator = sine(), ratio = 3.5.ign, depth = 400.0.ign).vibrato(rate = 6.0.ign, semitones = 0.5.ign) +
+                    sine().fm(modulator = sine(), ratio = 3.5.ign, depth = 400.0.ign).vibrato(rate = 4.0.ign, semitones = 0.3.ign),
             ).toList()
     }
 
@@ -369,8 +369,8 @@ class FmModulatorTopologySpec : StringSpec({
         // memo combines the outer mod's wrapper, which ignores the frequency it is called with, so the memo drops its
         // freq key and the two detuned layers of the modulator share one render (review round 1, A MAJOR 1: it kept
         // the key and rendered at both pitches).
-        val modulator = (sine() + sine().detune(semitones = 7.0)).pitchMod(p.mul(0.01))
-        val l = lanes(vib(p.fm(modulator = modulator, ratio = 1.5, depth = 300.0)))
+        val modulator = (sine() + sine().detune(semitones = 7.0.ign)).pitchMod(p.mul(0.01))
+        val l = lanes(vib(p.fm(modulator = modulator, ratio = 1.5.ign, depth = 300.0.ign)))
 
         withClue("probe renders per block: the carrier and the modulator's LFO, once each; lanes ${l.calls.map { it.hz }.distinct()}") {
             l.totalPerBlock shouldBe setOf(2)
@@ -383,9 +383,9 @@ class FmModulatorTopologySpec : StringSpec({
         // The inner fm's wrapper wraps the outer fm's wrapper, not a memo, so only the `combineMods` clause for a
         // wrapper, whatever it wraps, drops the key here (review round 2, MINOR 2: narrowing the clause to a wrapper
         // over an invariant memo rendered this LFO twice, at 825 and 1236 Hz, even under a constant vibrato).
-        val innermost = (sine() + sine().detune(semitones = 7.0)).pitchMod(p.mul(0.01))
-        val inner = p.fm(modulator = innermost, ratio = 2.5, depth = 100.0)
-        val l = lanes(vib(p.fm(modulator = inner, ratio = 1.5, depth = 300.0)))
+        val innermost = (sine() + sine().detune(semitones = 7.0.ign)).pitchMod(p.mul(0.01))
+        val inner = p.fm(modulator = innermost, ratio = 2.5.ign, depth = 100.0.ign)
+        val l = lanes(vib(p.fm(modulator = inner, ratio = 1.5.ign, depth = 300.0.ign)))
 
         withClue("probe renders per block: the carrier, the inner fm's carrier, the innermost LFO, once each; lanes ${l.calls.map { it.hz }.distinct()}") {
             l.totalPerBlock shouldBe setOf(3)
@@ -398,8 +398,8 @@ class FmModulatorTopologySpec : StringSpec({
         // note (a probed LFO an octave up, so its renders are counted): it renders once per carrier pitch, the
         // memo's freq-key rule, and a stale pin would ask it at the other pitch, a third render and the wrong mod.
         val counted: (IgnitorDsl) -> IgnitorDsl = { it.pitchMod(IgnitorDsl.Detune(inner = pf(), semitones = c(12.0))) }
-        val op = p.fm(modulator = p, ratio = 3.5, depth = 400.0)
-        val l = lanes(counted(op + op.detune(semitones = 7.0)))
+        val op = p.fm(modulator = p, ratio = 3.5.ign, depth = 400.0.ign)
+        val l = lanes(counted(op + op.detune(semitones = 7.0.ign)))
         val fc = note * fifth
 
         shouldMatch("the note's modulator reads what its carrier reads but its own term", l.ratios(note), times(l.ratios(note * 3.5), term(out = l.out(note * 3.5), depth = 400.0, fmHz = note)))
@@ -416,7 +416,7 @@ class FmModulatorTopologySpec : StringSpec({
         // block (the next RESIDUE rows: with a pitch node inside the modulator under a mod that reads the note, the
         // second render reads the first pitch's outer mod). Author rule (maintainer, 2026-10-09): define the FM on both
         // layers and sum them, `x.fm(m1) + x.fm(m2).detune(7)`.
-        val l = lanes(vib((p + IgnitorDsl.Detune(inner = pf(), semitones = c(7.0))).fm(modulator = p, ratio = 3.5, depth = 400.0)))
+        val l = lanes(vib((p + IgnitorDsl.Detune(inner = pf(), semitones = c(7.0))).fm(modulator = p, ratio = 3.5.ign, depth = 400.0.ign)))
 
         shouldMatch("the modulator rendered for the note reads the vibrato", l.ratios(770.0), alone(vib))
         shouldMatch("the modulator rendered for the fifth reads the vibrato", l.ratios(770.0 * fifth), alone(vib))
@@ -431,8 +431,8 @@ class FmModulatorTopologySpec : StringSpec({
         // render reads its own pitch's outer mod, with it the fifth's render reads the note's. Flips consciously the
         // day a fix (a memo keyed by the pin) lands.
         val stack = p + IgnitorDsl.Detune(inner = pf(), semitones = c(7.0))
-        val plain = lanes(vibOnNote(stack.fm(modulator = p, ratio = 3.5, depth = 400.0)))
-        val withNode = lanes(vibOnNote(stack.fm(modulator = p.pitchMod(c(0.0)), ratio = 3.5, depth = 400.0)))
+        val plain = lanes(vibOnNote(stack.fm(modulator = p, ratio = 3.5.ign, depth = 400.0.ign)))
+        val withNode = lanes(vibOnNote(stack.fm(modulator = p.pitchMod(c(0.0)), ratio = 3.5.ign, depth = 400.0.ign)))
         val noteModulator = 770.0
         val fifthModulator = 770.0 * fifth
 
@@ -445,8 +445,8 @@ class FmModulatorTopologySpec : StringSpec({
     }
 
     "RESIDUE (author rule): one fm above a forking detune is NOT one operator per layer; the recipe is" {
-        val oneFm = vib((sine() + sine().detune(semitones = 7.0)).fm(modulator = sine(), ratio = 3.5, depth = 400.0))
-        val perLayer = vib(sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0) + sine().fm(modulator = sine(), ratio = 3.5, depth = 400.0).detune(semitones = 7.0))
+        val oneFm = vib((sine() + sine().detune(semitones = 7.0.ign)).fm(modulator = sine(), ratio = 3.5.ign, depth = 400.0.ign))
+        val perLayer = vib(sine().fm(modulator = sine(), ratio = 3.5.ign, depth = 400.0.ign) + sine().fm(modulator = sine(), ratio = 3.5.ign, depth = 400.0.ign).detune(semitones = 7.0.ign))
 
         output(oneFm).toList() shouldNotBe output(perLayer).toList()
     }

@@ -187,7 +187,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             val k = kotlinDoor(
                 door, modulated, c(1.2),
                 configure = {
-                    it.passes(2.0).analog(4.ign).humanize().env(24.ign)
+                    it.passes(2.0.ign).analog(4.ign).humanize().env(24.ign)
                         .adsr(0.005.ign, 0.3.ign, 0.2.ign, 0.05.ign) { e -> e.curves("exp", "square", "cube") }
                 },
                 band = {
@@ -207,6 +207,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             withClue("$door script bare") { script(door, "800").filterFields() shouldBe bare(door).filterFields() }
             withClue("$door script x => x") { script(door, "800, x => x").filterFields() shouldBe bare(door).filterFields() }
             withClue("$door envelope off") { bare(door).envKnobs() shouldBe listOf(c(0.0)) + constantStages }
+            withClue("$door one pass, the literal") { bare(door).filterFields()["passes"] shouldBe c(1.0) }
             withClue("$door unshaped curves: MOD_ENV_CURVE's knob") {
                 bare(door).filterFields()["attackCurve"] shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
             }
@@ -244,7 +245,11 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             )
 
             if (door == "lowpass" || door == "highpass") {
-                row("passes", "passes(3)", { it.passes = 3.0 }, written(door, passes = c(3.0)))
+                row("passes", "passes(3)", { it.passes = c(3.0) }, written(door, passes = c(3.0)))
+                row(
+                    "passes, a slot", """passes(Ignitor.param("np", 2))""", { it.passes = IgnitorDsl.Param("np", 2.0) },
+                    written(door, passes = IgnitorDsl.Param("np", 2.0)),
+                )
             }
         }
     }
@@ -372,9 +377,9 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         }
 
         // The coercion is the Kotlin door's (the script door calls it): rounded, 1..16.
-        saw.lowpass(800.ign) { it.passes(0.0) } shouldBe bare("lowpass")
-        (saw.highpass(800.ign) { it.passes(2.6) }).passes shouldBe IgnitorDsl.Constant(3.0)
-        (saw.lowpass(800.ign) { it.passes(99.0) }).passes shouldBe IgnitorDsl.Constant(16.0)
+        saw.lowpass(800.ign) { it.passes(0.0.ign) } shouldBe bare("lowpass")
+        (saw.highpass(800.ign) { it.passes(2.6.ign) }).passes shouldBe IgnitorDsl.Constant(3.0)
+        (saw.lowpass(800.ign) { it.passes(99.0.ign) }).passes shouldBe IgnitorDsl.Constant(16.0)
 
         for (door in listOf("bandpass", "notch")) {
             withClue("$door offers no passes") { shouldThrowAny { ks("Ignitor.saw().$door(800, x => x.passes(2))") } }
@@ -400,7 +405,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
  * on the builder of the door (only `passes` is lowpass and highpass only).
  */
 private class FilterKnobsCall {
-    var passes: Double? = null
+    var passes: IgnitorDsl? = null
     var analog: IgnitorDsl? = null
     var humanize: Boolean = false
     var env: IgnitorDsl? = null

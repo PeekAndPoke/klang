@@ -236,7 +236,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
                 it
                     .lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(1.2 * ladder[0]))
                     .lowpass(cutoffHz = ConstantIgnitor(800.0), q = ConstantIgnitor(1.2 * ladder[1]))
-            } shouldBe render(saw.lowpass(freq = 800.0.ign, q = 1.2.ign) { it.passes(2.0) })
+            } shouldBe render(saw.lowpass(freq = 800.0.ign, q = 1.2.ign) { it.passes(2.0.ign) })
         }
     }
 
@@ -446,7 +446,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
         // The strip's cascade is ONE AudioFilter with N stages: one tolerance, one drift lane,
         // one multiplier per block. Three stages drawing three tolerances would be a different
         // filter AND a shifted stream.
-        drawsTakenBy(saw.lowpass(800.0.ign) { it.passes(3.0).analog(4.0.ign).humanize() }) shouldBe 4
+        drawsTakenBy(saw.lowpass(800.0.ign) { it.passes(3.0.ign).analog(4.0.ign).humanize() }) shouldBe 4
     }
 
     "humanize changes the sound at analog > 0 and nothing at all at analog 0" {

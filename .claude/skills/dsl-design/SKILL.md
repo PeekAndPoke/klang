@@ -148,6 +148,10 @@ script-only surface forces raw constructor calls and splits the vocabulary.
     as a plain number (or string) stays plain on the Kotlin door** (Q51). A number is a plain
     `Double` (the script's `resetSamples(4)` is Kotlin `resetSamples(4.0)`), no `Int` overloads.
     This is the one place the criterion lives; other texts point here instead of listing names.
+    Not to be confused with the engine's "build-time knobs" (`buildTimeKnobValue`: shapes, the
+    oversample factor, `passes`): those are read once per voice but FROM THE SLOTS, so they are
+    typed like any knob (maintainer, 2026-10-16). Only a plain node field (a `Double`, `String` or
+    `List` the script also takes plain) stays plain.
 - **The typed-door pattern** (spike S1 of `docs/tasks/kotlin-typed-doors.md`, 2026-10-16; this
   is its one home):
   1. The builder lives in `audio_bridge` (`IgnitorBuilders.kt` / `KatalystBuilders.kt`) under its
@@ -185,7 +189,7 @@ script-only surface forces raw constructor calls and splits the vocabulary.
   8. Sweeps: update `door-shapes.md` and every KDoc citing the old door; a regex sweep skips string
      literals (KlangScript in Kotlin strings looks like Kotlin); `-1.ign` needs
      `import io.peekandpoke.klang.audio_bridge.unaryMinus` (a top-level extension).
-  9. Cases met in rollout S3a (the filters and the eq):
+  9. Cases met in the rollout, S3a first (the filters and the eq):
      - A nested builder moves with its parent (`ModAdsrBuilder` with `FilterBuilder.adsr`), even ahead of its own step.
      - A `String` name form cannot default its first argument: with the index form also all-default, `curves()`
        would be ambiguous. The index form keeps every default; the name form needs the first.
@@ -197,6 +201,21 @@ script-only surface forces raw constructor calls and splits the vocabulary.
      - Kotlin call sites name arguments that could be swapped (`lowpass(freq = 800.ign, q = 2.ign)`,
        `band(freq = ..., q = ..., db = ...)`, `/code-style`); a single argument stays positional, and KlangScript stays
        positional.
+     - Met in rollout S3b and S3c (the envelopes, the effects, the one-value doors):
+       - A builder that only collected nullable knobs, with nothing left to fill (the old `AdsrBuilder`), becomes a node
+         builder: the door builds the default node, the knobs copy onto it, the door ends in `.node`. `FilterKnobs` stays
+         node-less only because its fill must know what was NAMED.
+       - A builder fill that falls back to "the node's default" reads a FRESH default node, never the builder's current
+         node (`PitchEnvelopeBuilder.adsr`), or a second `adsr` call keeps the first one's curves; a row with two calls pins it.
+       - A word the script has and Kotlin lacked gets its Kotlin door in the same step (`pitchEnvelope`, `octaveUp`,
+         `octaveDown`), and the script door delegates.
+       - Before keeping a knob plain (point 3), check the runtime: a knob it reads per event from a slot is typed
+         (`shape`'s and `distort`'s `shape` and `oversample`, maintainer 2026-10-16), whatever the old door took.
+       - A default symbol is the other surface's constant when the meaning is the same (the voice phaser's `center` and
+         `sweep` are `PHASER_CENTER_HZ`, `PHASER_SWEEP_HZ`), otherwise a new constants file (`ShimmerDefaults.kt`); the
+         node's field reads the same symbol.
+       - A one-argument name knob has no ambiguity to dodge: the index form's parameter is `index`, the name form's
+         `name` (`TremoloBuilder.shape`).
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
   (`KlangScriptFilterDoorParitySpec` is the pattern). Since both doors share the builder members, a
   parity row cannot see a member that writes the wrong field, nor a wrong default in the Kotlin door
