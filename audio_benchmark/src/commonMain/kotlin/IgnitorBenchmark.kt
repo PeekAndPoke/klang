@@ -219,10 +219,10 @@ class IgnitorBenchmark(
 
         /** The thud as Der Schmetterling wrote it on 2026-09-30: 13 hand-rolled sines, each `Ign.sine(Ign.freq().mul(r)).mul(g)`, summed with `.plus`. */
         private fun thudSines(): IgnitorDsl {
-            fun sine(i: Int): IgnitorDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(THUD_RATIOS[i])).mul(THUD_GAINS[i])
+            fun sine(i: Int): IgnitorDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(THUD_RATIOS[i].ign)).mul(THUD_GAINS[i].ign)
 
             return (1 until THUD_RATIOS.size).fold(sine(0)) { acc, i -> acc.plus(sine(i)) }
-                .adsr(attack = 0.0005.ign, decay = 0.050.ign, sustain = 0.0.ign, release = 0.02.ign).mul(1.245)
+                .adsr(attack = 0.0005.ign, decay = 0.050.ign, sustain = 0.0.ign, release = 0.02.ign).mul(1.245.ign)
         }
 
         /** The same thud as ONE sine with 13 explicit partials: the same ratios, the gains' magnitudes, the signs as phase 0.5. */
@@ -235,7 +235,7 @@ class IgnitorBenchmark(
                     phase = IgnitorDsl.Constant(if (THUD_GAINS[i] < 0.0) 0.5 else 0.0),
                 )
             },
-        ).adsr(attack = 0.0005.ign, decay = 0.050.ign, sustain = 0.0.ign, release = 0.02.ign).mul(1.245)
+        ).adsr(attack = 0.0005.ign, decay = 0.050.ign, sustain = 0.0.ign, release = 0.02.ign).mul(1.245.ign)
 
         /**
          * Standard set of benchmark cases covering individual oscillators, super oscillators,

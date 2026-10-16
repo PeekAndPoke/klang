@@ -216,6 +216,22 @@ script-only surface forces raw constructor calls and splits the vocabulary.
          node's field reads the same symbol.
        - A one-argument name knob has no ambiguity to dodge: the index form's parameter is `index`, the name form's
          `name` (`TremoloBuilder.shape`).
+     - Met in rollout S4 (the arithmetic):
+       - A script word on a `@KlangScript.TypeExtensions` object (`fun mul(self, other)`) cannot recurse through
+         `self.mul(...)` (an object member is no extension candidate), but takes point 3 all the same: `internal`,
+         `scriptMul`, `@KlangScript.Method(name = "mul")`. One rule, no case to judge; the generated docs stay
+         byte-identical (they use the script name).
+       - A script alias with no typed word of its own (`add`, `sub`, `mix`, `rem`, `power`, `negate`, `reciprocal`)
+         calls the typed function of its main word; Kotlin has one word per concept, the script keeps its aliases.
+       - A guardrail that crosses nodes (`min` builds `Max`) lives ONCE, in the typed function; the script variant
+         delegates and never builds the node, so one "correction" turns both doors red together.
+       - A parameter keeps the script's name even where a call site would read better otherwise (`clamp(lo, hi)`):
+         a Kotlin-only rename is a parameter-parity break (§4).
+       - Check what the script's operators do before promising them: the interpreter's binary operators take numbers
+         and strings only, so a signal's script arithmetic is the method (`saw.mul(0.5)`); a row pins `saw * 0.5` as
+         the type error it already was. A recorded asymmetry: Kotlin has `+` / `*` on signals, the script is
+         method-only until `docs/tasks/klangscript-native-object-operators.md` lands (decided 2026-10-07,
+         `__times__` / `__rtimes__`, the goal `saw * 4`); that row then goes red on purpose.
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
   (`KlangScriptFilterDoorParitySpec` is the pattern). Since both doors share the builder members, a
   parity row cannot see a member that writes the wrong field, nor a wrong default in the Kotlin door

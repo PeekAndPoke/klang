@@ -54,7 +54,7 @@ class WireSharedSpec : StringSpec({
     }
 
     "a parallel's branches still read ONE input after the hop" {
-        val dsl = s.parallel({ it }, { it.mul(0.5) }) as IgnitorDsl.Parallel
+        val dsl = s.parallel({ it }, { it.mul(0.5.ign) }) as IgnitorDsl.Parallel
         val decoded = decode_IgnitorDsl(hop(encode_IgnitorDsl(dsl))) as IgnitorDsl.Parallel
 
         decoded shouldBe dsl

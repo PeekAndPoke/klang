@@ -64,12 +64,12 @@ class FmModulatorTopologySpec : StringSpec({
     fun sine(analog: Double = 0.0) = IgnitorDsl.Sine(freq = IgnitorDsl.Freq, analog = c(analog))
 
     /** A probed leaf that reads `Freq`, so a `detune` over it forks. It writes the probe's signal plus 0. */
-    fun pf() = p.plus(IgnitorDsl.Freq.mul(0.0))
+    fun pf() = p.plus(IgnitorDsl.Freq.mul(0.0.ign))
 
     val vib: (IgnitorDsl) -> IgnitorDsl = { it.vibrato(rate = 6.0.ign, semitones = 0.5.ign) }
 
     /** A vibrato whose RATE reads the note: its memo keeps the freq key, the shape that breaks a modulator asking at its own frequency. */
-    val vibOnNote: (IgnitorDsl) -> IgnitorDsl = { IgnitorDsl.Vibrato(inner = it, rate = IgnitorDsl.Freq.mul(0.03), semitones = c(0.5)) }
+    val vibOnNote: (IgnitorDsl) -> IgnitorDsl = { IgnitorDsl.Vibrato(inner = it, rate = IgnitorDsl.Freq.mul(0.03.ign), semitones = c(0.5)) }
 
     class Call(val elapsed: Int, val hz: Double, val ratios: DoubleArray, val out: DoubleArray)
 
@@ -349,7 +349,7 @@ class FmModulatorTopologySpec : StringSpec({
     "shared: one fm let twice (f + f) under a vibrato keeps its drifting modulator ONE instance: f + f is f * 2" {
         val f = sine().fm(modulator = sine(analog = 0.5), ratio = 1.5.ign, depth = 300.0.ign)
 
-        output(vib(f + f)).toList() shouldBe output(vib(f.mul(2.0))).toList()
+        output(vib(f + f)).toList() shouldBe output(vib(f.mul(2.0.ign))).toList()
     }
 
     "shared: one fm let under two different vibratos: each copy's modulator follows its own vibrato" {
@@ -369,7 +369,7 @@ class FmModulatorTopologySpec : StringSpec({
         // memo combines the outer mod's wrapper, which ignores the frequency it is called with, so the memo drops its
         // freq key and the two detuned layers of the modulator share one render (review round 1, A MAJOR 1: it kept
         // the key and rendered at both pitches).
-        val modulator = (sine() + sine().detune(semitones = 7.0.ign)).pitchMod(p.mul(0.01))
+        val modulator = (sine() + sine().detune(semitones = 7.0.ign)).pitchMod(p.mul(0.01.ign))
         val l = lanes(vib(p.fm(modulator = modulator, ratio = 1.5.ign, depth = 300.0.ign)))
 
         withClue("probe renders per block: the carrier and the modulator's LFO, once each; lanes ${l.calls.map { it.hz }.distinct()}") {
@@ -383,7 +383,7 @@ class FmModulatorTopologySpec : StringSpec({
         // The inner fm's wrapper wraps the outer fm's wrapper, not a memo, so only the `combineMods` clause for a
         // wrapper, whatever it wraps, drops the key here (review round 2, MINOR 2: narrowing the clause to a wrapper
         // over an invariant memo rendered this LFO twice, at 825 and 1236 Hz, even under a constant vibrato).
-        val innermost = (sine() + sine().detune(semitones = 7.0.ign)).pitchMod(p.mul(0.01))
+        val innermost = (sine() + sine().detune(semitones = 7.0.ign)).pitchMod(p.mul(0.01.ign))
         val inner = p.fm(modulator = innermost, ratio = 2.5.ign, depth = 100.0.ign)
         val l = lanes(vib(p.fm(modulator = inner, ratio = 1.5.ign, depth = 300.0.ign)))
 

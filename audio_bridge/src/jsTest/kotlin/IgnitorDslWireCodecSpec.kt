@@ -36,7 +36,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Silence" { check(IgnitorDsl.Silence) }
     "Sample" { check(IgnitorDsl.Sample) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
-    "Parallel" { check(IgnitorDsl.Sine().parallel({ it }, { it.lowpass(800.0.ign) }, { it.mul(0.5) })) }
+    "Parallel" { check(IgnitorDsl.Sine().parallel({ it }, { it.lowpass(800.0.ign) }, { it.mul(0.5.ign) })) }
 
     // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where
     // it gets used; every field non-default so a dropped one shows up.
@@ -329,7 +329,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Vibrato with a range and a phase (7c), a signal bound" {
         check(
             IgnitorDsl.Sine().vibrato(rate = 5.0.ign, semitones = 0.5.ign) {
-                it.range(from = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(1.0)).mul(0.5), to = 1.0.ign).phase(0.25.ign)
+                it.range(from = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(1.0)).mul(0.5.ign), to = 1.0.ign).phase(0.25.ign)
             }
         )
     }
@@ -352,7 +352,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     }
     "PitchMod" { check(IgnitorDsl.Sine().pitchMod(IgnitorDsl.Sine())) }
     // Its own tag: a decode into `PitchMod` (the same two fields) would be equal in shape and wrong in law.
-    "PitchModSemitones" { check(IgnitorDsl.Sine().pitchModSemitones(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(5.0)).mul(7.0))) }
+    "PitchModSemitones" { check(IgnitorDsl.Sine().pitchModSemitones(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(5.0)).mul(7.0.ign))) }
 
     // --- dispatch / deep composites -------------------------------------------------------------------------
     "Variants (primitive children)" {

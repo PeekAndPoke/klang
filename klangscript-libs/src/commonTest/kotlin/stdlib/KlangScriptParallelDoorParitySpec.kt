@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.parallel
 import io.peekandpoke.klang.script.klangScript
@@ -61,7 +62,7 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
     "Ignitor: the Kotlin door builds the same node as the script door" {
         val saw = ignitor("Ignitor.saw()")
 
-        saw.parallel({ it.mul(2.0) }, { it.mul(3.0) }) shouldBe ignitor("Ignitor.saw().parallel(x => x.mul(2), x => x.mul(3))")
+        saw.parallel({ it.mul(2.0.ign) }, { it.mul(3.0.ign) }) shouldBe ignitor("Ignitor.saw().parallel(x => x.mul(2), x => x.mul(3))")
     }
 
     "Ignitor: with no branch, parallel() is the signal itself; with one, that branch, on both doors" {
@@ -70,7 +71,7 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
         ignitor("Ignitor.saw().parallel()") shouldBe saw
         saw.parallel() shouldBe saw
         ignitor("Ignitor.saw().parallel(x => x.mul(2))") shouldBe ignitor("Ignitor.saw().mul(2)")
-        saw.parallel({ it.mul(2.0) }) shouldBe saw.mul(2.0)
+        saw.parallel({ it.mul(2.0.ign) }) shouldBe saw.mul(2.0.ign)
     }
 
     "Ignitor: a broken branch is named" {

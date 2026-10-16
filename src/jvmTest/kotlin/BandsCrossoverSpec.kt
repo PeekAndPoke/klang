@@ -178,7 +178,7 @@ class BandsCrossoverSpec : StringSpec({
 
     "Ignitor: a muted mid band takes the mids out and leaves the lows and the highs" {
         fun muted(f: Double) = db(
-            ignitorLevel(KlangScriptIgnitorExtensions.bands(sine(f)) { it.cut(200.0).band { mid -> mid.mul(0.0) }.cut(2000.0) }, f),
+            ignitorLevel(KlangScriptIgnitorExtensions.bands(sine(f)) { it.cut(200.0).band { mid -> mid.mul(0.0.ign) }.cut(2000.0) }, f),
         )
 
         muted(700.0) shouldBeLessThan -20.0

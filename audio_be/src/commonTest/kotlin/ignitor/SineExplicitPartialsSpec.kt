@@ -359,7 +359,7 @@ class SineExplicitPartialsSpec : StringSpec({
     }
 
     "a 12 Hz tremolo on a partial's gain is the partial as its own sine times the same tremolo" {
-        val tremolo = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(12.0)).range(from = 0.0, to = 1.0)
+        val tremolo = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(12.0)).range(from = 0.0.ign, to = 1.0.ign)
         val partial = render(dslPartial(gain = tremolo, phase = 0.0).toExciter(random = Random(1)), 210.0, count = 40)
         val own = render(ownSine(0.0).mul(tremolo).toExciter(random = Random(1)), 210.0, count = 40)
 

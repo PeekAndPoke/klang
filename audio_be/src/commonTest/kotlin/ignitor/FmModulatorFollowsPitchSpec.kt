@@ -213,11 +213,11 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     }
 
     "authored: a pitchMod above the fm (an LFO at a fixed rate) bends the modulator with the carrier" {
-        render(op.pitchMod(sine(freq = c(5.0)).mul(0.03))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(op.pitchMod(sine(freq = c(5.0)).mul(0.03.ign))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: a pitchModSemitones above the fm (an LFO in semitones) bends the modulator with the carrier" {
-        render(op.pitchModSemitones(sine(freq = c(5.0)).mul(0.5))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(op.pitchModSemitones(sine(freq = c(5.0)).mul(0.5.ign))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: a pitch envelope above the fm bends the modulator with the carrier" {
@@ -229,11 +229,11 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     }
 
     "authored: a vibrato inside a pitchMod, both above the fm" {
-        render(op.vibrato(rate = 6.0.ign, semitones = 0.5.ign).pitchMod(sine(freq = c(3.0)).mul(0.02))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(op.vibrato(rate = 6.0.ign, semitones = 0.5.ign).pitchMod(sine(freq = c(3.0)).mul(0.02.ign))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: a pitchMod inside a vibrato, both above the fm" {
-        render(op.pitchMod(sine(freq = c(3.0)).mul(0.02)).vibrato(rate = 6.0.ign, semitones = 0.5.ign)).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(op.pitchMod(sine(freq = c(3.0)).mul(0.02.ign)).vibrato(rate = 6.0.ign, semitones = 0.5.ign)).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: three pitch nodes above the fm, vibrato outermost (step 4's classic head)" {
@@ -245,13 +245,13 @@ class FmModulatorFollowsPitchSpec : StringSpec({
     }
 
     "authored: a vibrato whose rate reads the note (a freq-keyed mod) bends the modulator with the carrier" {
-        val freqRate = IgnitorDsl.Vibrato(inner = op, rate = IgnitorDsl.Freq.mul(0.03), semitones = c(0.5))
+        val freqRate = IgnitorDsl.Vibrato(inner = op, rate = IgnitorDsl.Freq.mul(0.03.ign), semitones = c(0.5))
 
         render(freqRate).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     "authored: a pitchMod at audio rate on the note (a freq-keyed mod) bends the modulator with the carrier" {
-        render(op.pitchMod(sine().mul(0.01))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
+        render(op.pitchMod(sine().mul(0.01.ign))).shouldFollow(carrierHz = noteHz, ratio = 3.5)
     }
 
     // ── Stacks ───────────────────────────────────────────────────────────────────────────────────────────────────

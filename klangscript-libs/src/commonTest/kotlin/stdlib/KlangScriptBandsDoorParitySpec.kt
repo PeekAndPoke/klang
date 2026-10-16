@@ -13,6 +13,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -47,7 +48,7 @@ class KlangScriptBandsDoorParitySpec : StringSpec({
         val saw = ignitor("Ignitor.saw()")
         val script = ignitor("Ignitor.saw().bands(b => b.band(x => x.mul(2)).cut(200).cut(2000).band(x => x.mul(3)))")
         val kotlin = KlangScriptIgnitorExtensions.bands(saw) {
-            it.band { x -> x.mul(2.0) }.cut(200.0).cut(2000.0).band { x -> x.mul(3.0) }
+            it.band { x -> x.mul(2.0.ign) }.cut(200.0).cut(2000.0).band { x -> x.mul(3.0.ign) }
         }
 
         kotlin shouldBe script

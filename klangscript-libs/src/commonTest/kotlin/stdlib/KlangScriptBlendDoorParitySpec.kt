@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.blend
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -60,7 +61,7 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
     "Ignitor: the Kotlin door builds the same node as the script door" {
         val saw = ignitor("Ignitor.saw()")
 
-        saw.blend(0.25) { it.mul(4.0) } shouldBe ignitor("Ignitor.saw().blend(0.25, y => y.mul(4))")
+        saw.blend(0.25) { it.mul(4.0.ign) } shouldBe ignitor("Ignitor.saw().blend(0.25, y => y.mul(4))")
     }
 
     "Ignitor: a slot as wet moves the blend: the dry share is 1 - the slot" {
@@ -73,10 +74,10 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
 
     "Ignitor: a wet that is not finite is 0, the dry signal, on both doors and both Kotlin overloads" {
         val saw = ignitor("Ignitor.saw()")
-        val dryOnly = saw.blend(0.0) { it.mul(4.0) }
+        val dryOnly = saw.blend(0.0) { it.mul(4.0.ign) }
 
-        saw.blend(Double.NaN) { it.mul(4.0) } shouldBe dryOnly
-        saw.blend(IgnitorDsl.Constant(Double.POSITIVE_INFINITY)) { it.mul(4.0) } shouldBe dryOnly
+        saw.blend(Double.NaN) { it.mul(4.0.ign) } shouldBe dryOnly
+        saw.blend(IgnitorDsl.Constant(Double.POSITIVE_INFINITY)) { it.mul(4.0.ign) } shouldBe dryOnly
         ignitor("Ignitor.saw().blend(Math.sqrt(-1), y => y.mul(4))") shouldBe dryOnly
 
         val out = dryOnly.shouldBeInstanceOf<IgnitorDsl.Parallel>()

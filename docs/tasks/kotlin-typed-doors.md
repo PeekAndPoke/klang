@@ -2,7 +2,7 @@
 
 Status: **decided (maintainer, 2026-10-13, Q24); design step done and answered 2026-10-16 (option C, with the answers
 below, revised the same day: one set of builders, equal doors); steps 1 and 1b done; spike S1 done 2026-10-16 (review
-rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) done 2026-10-16, S4 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
+rounds 1 and 2 applied); rollout S2 (the other oscillators), S3a (the filters and the eq) and S3b with S3c (the envelopes, the effects and the one-value doors) and S4 (the arithmetic) done 2026-10-16, S5 next (the steps at the end), following the typed-door pattern in `/dsl-design` §3.** Large, mostly mechanical.
 
 ## Why
 
@@ -363,6 +363,51 @@ decay default in `AdsrBuilder`'s name form. `:audio_bridge`, `:klangscript-libs`
 root compile; the corpus is GREEN, frozen 3 of 3 identical, 13 live identical, `Kokon` and `Der Schmetterling` edited by
 the maintainer's song commit as before; an engagement control (the Kotlin `adsr` door building with `declick =
 0.001`) turned it RED (2 frozen, 5 live moved), restored.
+
+## Rollout S4 (2026-10-16): the arithmetic, the `Double` twins out (Q47)
+
+The Ignitor arithmetic in `audio_bridge/IgnitorDsl.kt` is ONE typed function per word, every operand an `IgnitorDsl`:
+the fifteen `Double` twins are gone, the two operators among them (`plus`, `times`) included, so Kotlin writes
+`saw * 0.5.ign`, `x.clamp(lo = -0.5.ign, hi = 0.5.ign)`, `x.range(from = 200.ign, to = 800.ign)`. Deleted: `plus`,
+`times`, `mul`, `div`, `minus`, `pow`, `min`, `max`, `clamp`, both `lerp` twins, `range`, `rangex`, `mod`, `select`.
+`blend`'s twin stays for S6. The operators stay extensions (a member would beat `Constant.unaryMinus`); `minus` and
+`div` stay plain functions, as before (no new operators). The `min` / `max` crossing (guardrail) lives once, in the
+typed functions; the script variants delegate and never build the node. `clamp` keeps `lo` / `hi`: the script door
+has those names (`clamp(hi = 0.75, lo = -0.5)` is a script call in the parity rows), and renaming the Kotlin side alone
+would break parameter parity.
+
+The script side is intact. Every arithmetic word of `KlangScriptIgnitorExtensions` (35 methods, the one-operand words
+and `pregain` included) is an `internal`, renamed variant (`@KlangScript.Method(name = "mul") internal fun
+scriptMul(self, other)`) that converts once (`toIgnitorDsl`) and calls the typed function; an alias calls the typed
+function of its main word (`add` and `plus` both `self.plus(...)`, `sub` `minus`, `mix` `lerp`, `rem` `mod`, `power`
+`pow`, `negate` `neg`, `reciprocal` `recip`). Before, each built its node itself. The interpreter has no operator
+overloading for native values (`Interpreter.evaluateBinaryOp` takes numbers and strings only), so the script's
+arithmetic on a signal was and is the method, `saw.mul(0.5)`; `Ign.sine(2) * 0.5` is a `KlangScriptTypeError`
+before and after, pinned by a row so the step is seen not to move it. A recorded asymmetry (review round 1): Kotlin
+has `+` / `*` on signals, the script is method-only until [`klangscript-native-object-operators.md`](klangscript-native-object-operators.md)
+lands (decided 2026-10-07: script operators on native objects through `__times__` / `__rtimes__`, the goal `saw * 4`);
+the pinning row goes red on purpose then. `GeneratedStdlibDocs.kt` is byte-identical
+(the KSP docs use the script name); the registration calls the renamed variants.
+
+Callers: 15 files, mechanical (`.ign`): six `audio_be` specs (`FmModulatorFollowsPitchSpec`, `FmModulatorTopologySpec`,
+`IgnitorParallelSpec`, `PitchModSemitonesSpec`, `SineExplicitPartialsSpec`, `VibratoCompositionSpec`), the benchmark's
+thud (`IgnitorBenchmark`), the two JS wire specs of `audio_bridge`, four `klangscript-libs` specs (bands, blend,
+parallel, pitch modulation) and the root `BandsCrossoverSpec`. No engine code, no default, no `classic()` and no
+`sprudel` source used a twin; the design's estimate of about 30 files was high, most callers wrote nodes or were moved
+already. `KlangScriptIgnitorArithmeticDoorParitySpec` is rewritten (19 rows): per word the node written out by hand
+with distinct values, the Kotlin call (`x + 0.5.ign`, `x * 0.25.ign` and the named forms) and every script spelling
+and alias against it; the crossing pinned on both doors with a number and with a signal; every two-operand word with a
+signal from the script; the one-operand words in one table row; `-1.ign` beside the arithmetic (`sine * -1.ign` is the
+script's `mul(-1)`); and the script's numbers-only operators. Six mutants went red, restored and `cmp`-checked: the
+typed `range` swapping its ends (the written-out row), the crossing "corrected" on `max` and, separately, on `min`
+(red in this spec AND in `StdLibIgnitorTest`, the guard unchanged), `scriptMul` casting instead of converting (an
+internal error on a number), the alias `reciprocal` calling `sq`, and a general `unaryMinus` member on `IgnitorDsl`
+(`NumberExtensionsSpec` red: `-1.ign` became `Neg(Constant(1))`). `:audio_bridge`, `:klangscript-libs`,
+`:klangscript`, `:audio_be`, `:sprudel` and `jvmTest` across all projects are green, every module's JVM and JS test
+sources compile (`compileTestKotlinJvm compileTestKotlinJs`); the corpus is GREEN, frozen 3 of 3 identical, 13 live
+identical, `Kokon` and `Der Schmetterling` edited by the maintainer's song commit as before; an engagement control (the
+typed `mul` scaling its operand by 0.9, which every script `mul` reaches through its variant) turned it RED (3 frozen,
+13 live moved), restored.
 
 ## Rollout steps (coordinator, 2026-10-16; replace steps 2 to 4)
 

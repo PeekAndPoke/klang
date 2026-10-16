@@ -49,7 +49,7 @@ class KlangScriptPitchModDoorParitySpec : StringSpec({
 
         ignitor("Ign.saw().pitchModSemitones(Ign.sine(5).mul(0.5))") shouldBe expected
         ignitor("Ign.saw().pitchModSemitones(mod = Ign.sine(5).mul(0.5))") shouldBe expected
-        saw.pitchModSemitones(lfo.mul(0.5)) shouldBe expected
+        saw.pitchModSemitones(lfo.mul(0.5.ign)) shouldBe expected
     }
 
     "two laws, two nodes: pitchMod builds the linear node on both doors and both Kotlin overloads, never the semitone one" {

@@ -160,7 +160,7 @@ class PitchModSemitonesSpec : StringSpec({
 
     "a signal: the ratio follows 2^(lfo / 12) frame by frame, and the LFO advances once per block" {
         // 40 Hz over 1536 frames at 48 kHz is 1.28 cycles: both signs, three semitones deep.
-        val mod = lfo(40.0).mul(3.0)
+        val mod = lfo(40.0).mul(3.0.ign)
         // The same LFO rendered alone: its values are the oracle's input. A tree that rendered its mod twice per
         // block would run it at twice the rate and leave this stream.
         val lfoValues = render(mod)
