@@ -223,7 +223,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(10, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.2)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(10, 0.8).fundamental(0).analog(pAnalog).analogSpread(0.2)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -302,7 +302,7 @@ export guitar2_pat =
 export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", guitarDecay(2))
   .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
-  .body(material = "mahogany", wet = 0.15) // .superimpose(pan(0.95))
+  .body(material = "maple", wet = 0.15) 
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
   .scale("<e2:minor>").gain(0.080).mute("<0!128 1!16 0!16>") // .mute()
@@ -318,6 +318,7 @@ export guitar3_pat =
 export guitar3_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.08)
   .ignp("decay", guitarDecay(2))
   .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
+  .body(material = "mahogany", wet = 0.15) 
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
   .scale("<e2:minor>").gain(0.080).mute("<0!128 1!16 0!16>") //.mute()
@@ -530,7 +531,7 @@ export song = stack(
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
     .reverb(0.05, 7, 6000)
-    .gain(4.5)
+    .gain(4.2)
     .bands(b => b.cut(150)
       .band(mid => mid.distort(0.10, "soft", 4).mul(0.80)).cut(4800)
     ) // the glue on the mids only: the kick and the hats stay clean

@@ -233,7 +233,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(10, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -329,7 +329,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
   .ignp("decay", 0.35).clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2)))
-  .gain(0.50).late(perlin(0.0008, 0.0014)).apply(
+  .gain(0.48).late(perlin(0.0008, 0.0014)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
