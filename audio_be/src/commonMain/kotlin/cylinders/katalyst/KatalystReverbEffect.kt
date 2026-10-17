@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.min
 
 /**
@@ -173,8 +174,26 @@ class KatalystReverbEffect(
      * is the one place it is forgotten, because there the network is empty. Guarded by "a reverb that
      * returns mid-drain keeps the network AND the tail ceiling" and "a life that ended in Off starts
      * the next one with an empty ceiling" in `KatalystReverbEffectSpec`.
+     *
+     * Two floors on purpose ([swapDraining]): the engine's [SILENCE_FLOOR] on the cells in ordinary
+     * playback, [Reverb.TAIL_FLOOR] (the output-referred one) only while the chain drains after a swap.
      */
     private val activeTail = TailCeiling()
+
+    /**
+     * True from the first [measureTail] of this stage's life until it is [reset] or retired: its chain
+     * is the leaving chain of a `ChainSwap` drain (the drain is the one caller of
+     * `KatalystChain.measureTails`), and [Active] answers [hasTail] against [Reverb.TAIL_FLOOR]
+     * instead of [SILENCE_FLOOR].
+     *
+     * **Two floors on purpose** (maintainer, 2026-10-17): ordinary playback stays bit for bit as it
+     * was (the cell floor, which holds a room about 20 dB past inaudible, decides when an orbit, the
+     * master and an engine go idle, and the corpus pins that), while a drain, which only frees a slot
+     * and some CPU, ends near the room's audible ring-out. A chain that leaves service is retired and
+     * a chain that enters it is reset (`Cylinder.beginFade`, `MasterBus.land`), so one re-used from
+     * the cache starts on the ordinary floor again.
+     */
+    private var swapDraining: Boolean = false
 
     /**
      * The room's size on the normalized 0..1 axis [Reverb.size] holds (see the class KDoc).
@@ -218,6 +237,9 @@ class KatalystReverbEffect(
 
         /** This state's answer to [KatalystReverbEffect.hasTail], where the reasoning lives. */
         abstract fun hasTail(): Boolean
+
+        /** [KatalystReverbEffect.measureTail]: only [Active] answers from a ceiling, so only it measures. */
+        open fun measureTail() {}
 
         /**
          * The owner's off-config arrived. [unit] is the effect's network, which [configure] has
@@ -300,7 +322,34 @@ class KatalystReverbEffect(
         }
 
         /** A ceiling, not a scan: [process] maintains it from the feed. */
-        override fun hasTail(): Boolean = reverb != null && activeTail.hasTail
+        override fun hasTail(): Boolean =
+            reverb != null && if (swapDraining) activeTail.hasTailOver(Reverb.TAIL_FLOOR) else activeTail.hasTail
+
+        /**
+         * The ceiling comes down to one scan of the combs ([Reverb.combPeakAbs]) divided by the
+         * feedback: the comb damping's store can hold up to `peak / feedback` across one revolution,
+         * the same lag the countdown's spare revolution absorbs ([Reverb.drainSamplesUntilSilent]).
+         * Allpass cells are left out by that function's own convention; the ceiling's own slack (it
+         * sits up to about 10 dB above the measurement, see [TailCeiling.tighten]) covers them. Skipped while the size
+         * glides (a rising feedback would make the divisor too small) and at a feedback outside
+         * (0, 1), where nothing decays to tighten to; a poisoned network scans as infinite and
+         * tightens nothing.
+         */
+        override fun measureTail() {
+            val unit = reverb ?: return
+
+            if (sizeGlide.isGliding) {
+                return
+            }
+
+            val fb = unit.tailFeedback
+
+            if (fb <= 0.0 || fb >= 1.0) {
+                return
+            }
+
+            activeTail.tighten(unit.combPeakAbs() / fb)
+        }
 
         override fun deactivate(unit: Reverb) {
             // Every switch-off: the feed falls to 0 over the wet glide's span while the stage stays Active, and the
@@ -575,6 +624,20 @@ class KatalystReverbEffect(
     override fun hasTail(): Boolean = state.hasTail()
 
     /**
+     * The orbit's input is silent from now on (a chain swapped away and draining, `ChainSwap`): an
+     * Active room's ceiling comes down to what its combs hold (see [Active.measureTail]). Without it
+     * the ceiling, built for a network still being fed, stays up to its slack above the content for
+     * the whole ring-out: a size-10 room drained past the 20 s cap; measured, it now ends in about 14
+     * to 18 s depending on its charge, the chain's output under -100 dBFS at the end
+     * (the swap's output gate; the stage alone ends at about -93 to -97 dBFS) (2026-10-17).
+     * The first call also switches the stage onto the drain's floor ([swapDraining]).
+     */
+    override fun measureTail() {
+        swapDraining = true
+        state.measureTail()
+    }
+
+    /**
      * Rents the unit on the first activating configure. Refused → stays Off, counted, latched until
      * [reset]. Nothing else in this class allocates.
      */
@@ -604,6 +667,7 @@ class KatalystReverbEffect(
         reverb = null
         off.enter()
         refused = false
+        swapDraining = false
         deniedRents = 0 // per life, see the delay's release()
     }
 
@@ -621,6 +685,7 @@ class KatalystReverbEffect(
         }
         off.enter()
         refused = false
+        swapDraining = false
     }
 
     /**

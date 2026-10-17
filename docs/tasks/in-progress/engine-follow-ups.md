@@ -2047,7 +2047,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 26. **Step 20, the Katalyst by-ear items**, each with a home: A1.1
     ([`future/delay-ceiling-edges.md`](../future/delay-ceiling-edges.md)), A1.2
     ([`by-ear/duck-orbit-switch-click.md`](../future/duck-orbit-switch-click.md)), A1.3
-    ([`by-ear/chain-swap-request-during-drain.md`](../by-ear/chain-swap-request-during-drain.md)), A1.9
+    ([`by-ear/chain-swap-request-during-drain.md`](../../tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md)), A1.9
     ([`future/transition-times.md`](../future/transition-times.md) §4).
 27. **The audit's decisions not taken yet** (section E): D2 (`MasterStage` against `MasterBus`, two "masters"), D4
     (one block driver or two: offline renders never run the dispatcher), D6 and D9 (above), D8 (the delay and reverb

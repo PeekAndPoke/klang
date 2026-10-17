@@ -90,12 +90,18 @@ The glide time itself is an open question for the maintainer's ear: `docs/tasks/
   `tryDeactivate` clears the orbit's mix buffer (a stale buffer once leaked into a room).
 - **The tail question** is `KatalystChain.hasTail()`, answered by `TailCeiling` compares (`effects/TailCeiling.kt`),
   never by a scan (`Reverb.hasTail()` has no production caller). The ceiling may only err towards holding longer.
+  Every ceiling is held to `SILENCE_FLOOR`, except a reverb whose chain drains after a swap: that one answers against
+  `Reverb.TAIL_FLOOR`, its comb level whose output is about -90 dBFS (two floors on purpose, maintainer 2026-10-17:
+  the cell floor held a draining room about 20 dB past inaudible, and ordinary playback stays as it was).
   Its open edges (a lengthened tap, a feedback cut on a changing owner): `docs/tasks/future/delay-ceiling-edges.md`.
 - **A chain swap is `ChainSwap`** (`audio_be/.../ChainSwap.kt`), at both positions: the leaving chain's INPUT
   ramps down over `Crossfade.XFADE_SECONDS` (0.06) while the arriving chain ramps up, then the leaving chain drains
   at full weight until it has no tail, capped at `ChainSwap.MAX_DRAIN_SECONDS` (20 s), after which `TailRelease`
-  releases it. A request during a fade or drain is parked by the host, latest wins (worst case about 24.5 s;
-  whether a request should wait for the drain is open: `docs/tasks/by-ear/chain-swap-request-during-drain.md`).
+  releases it; while it drains it measures its tails every `TAIL_MEASURE_SECONDS` (0.5 s), so a room's ceiling
+  follows what the room holds. A request during a fade, drain or release is parked by the host, latest wins, and
+  tells the swap (`requestWaiting`): a drain or a release is then CUT, the leaving output faded by a raised cosine
+  over `ChainSwap.CUT_SECONDS` (0.15 s), and a request during the fade cuts where the fade ends; the request lands
+  about 0.2 s after it was made (maintainer, 2026-10-17: `docs/tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md`).
   Chains of different latency are placed so their weights meet at the output (`KatalystChain.latencyFrames`).
 - **`TailRelease` is the one release law** (`audio_be/.../TailRelease.kt`): exponential from exactly 1, 60 dB per
   `RT60_SECONDS` (3 s), retired under `FLOOR_DB` (-90 dB), 4.5 s in all.

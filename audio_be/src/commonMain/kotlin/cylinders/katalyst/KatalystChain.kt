@@ -398,6 +398,18 @@ class KatalystChain internal constructor(
     }
 
     /**
+     * Every stage's [KatalystEffect.measureTail]: the chain's input is silent from now on (it drains
+     * after a swap), so a tail ceiling may come down to a measurement. A stage fed by one before it
+     * still hears that feed, which its ceiling credits after the measurement as always. Asked by `ChainSwap` while it
+     * drains, at most every `ChainSwap.TAIL_MEASURE_SECONDS`.
+     */
+    fun measureTails() {
+        for (i in stages.indices) {
+            stages[i].measureTail()
+        }
+    }
+
+    /**
      * True while a stage holds a tail that can NEVER end on its own, which a stopped engine
      * releases after its hold instead of waiting for (phase 3 step 12 decision (j)). Only a delay
      * can, also inside a `parallel` branch: at |feedback| >= 1 it recirculates without loss ([KatalystDelayEffect.sustainsItself]).

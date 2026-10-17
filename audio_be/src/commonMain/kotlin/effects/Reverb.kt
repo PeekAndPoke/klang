@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.ln
+import kotlin.math.pow
 
 /**
  * High-performance stereo reverb based on the Freeverb algorithm
@@ -77,7 +78,7 @@ class Reverb(
 ) {
     // --- Tuning (Freeverb canonical, scaled to actual sample rate) ---
     private val srScale = sampleRate / REFERENCE_SAMPLE_RATE.toDouble()
-    private val combTuning = intArrayOf(1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617)
+    private val combTuning = intArrayOf(1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617) // COMB_COUNT entries
         .map { (it * srScale).toInt().coerceAtLeast(1) }.toIntArray()
     private val allPassTuning = intArrayOf(556, 441, 341, 225)
         .map { (it * srScale).toInt().coerceAtLeast(1) }.toIntArray()
@@ -566,6 +567,36 @@ class Reverb(
 
         /** Output normalisation — sum of 8 resonant combs has high peak amplitude. */
         private const val FIXED_GAIN: Double = 0.015
+
+        /** The number of parallel combs per channel (the length of the comb tuning). */
+        private const val COMB_COUNT: Int = 8
+
+        /**
+         * The comb-cell level under which a room DRAINING after a chain swap has no tail (2026-10-17):
+         * the level whose OUTPUT is about -90 dBFS, the floor a tail release retires at
+         * (`TailRelease.FLOOR_DB`: a step there is at most about one 16-bit step). What is heard of the
+         * cells is their sum through [FIXED_GAIN], so the cell floor is that output level over
+         * `COMB_COUNT * FIXED_GAIN` (0.12): about 2.6e-4. Measured on a size-10 ring-out, the output
+         * peak sat at 0.08 to 0.13 times the comb peak, so the allpass diffusers are taken at unity.
+         *
+         * **A measured ratio, not a bound.** The diffusers can raise a narrow band by up to about
+         * 17 dB at worst (1.67 per stage, four stages), and a pure tone can cancel in the comb sum
+         * (about 0.02 times the comb peak), so the output at "no tail" ranges from a few dB above
+         * -90 dBFS on a coincidence to well under it; measured on broadband charges, drained the way a
+         * swap drains: -93 to -97 dBFS (`ReverbTailFloorSpec`, which pins the window).
+         *
+         * **The drain's floor only, two floors on purpose** (maintainer, 2026-10-17): in ordinary
+         * playback a room's ceiling is still held to the engine's [SILENCE_FLOOR] on the cells (an output
+         * near -120 dBFS), so when an orbit, the master and an engine go idle stays bit for bit as it was
+         * (the corpus pins it; applied everywhere, this floor moved 13 corpus songs under -90 dBFS but
+         * one hit at -55 dBFS). Only the leaving chain of a swap drain answers against it
+         * (`KatalystReverbEffect.swapDraining`), where the cell floor kept a size-10 room past the 20 s
+         * cap. The drain also waits for the chain's output under [SILENCE_FLOOR] (`ChainSwap`). Far above the comb's
+         * `ANTI_DENORMAL` residue (about 5e-17), so the bias can never hold a tail open. The stage's own
+         * switch-off countdown (`KatalystReverbEffect`'s Draining) still counts down to [SILENCE_FLOOR]
+         * in the cells: it errs long, and was left as it is.
+         */
+        val TAIL_FLOOR: Double = 10.0.pow(-90.0 / 20.0) / (COMB_COUNT * FIXED_GAIN)
 
         /** Allpass coefficient — Jezar Freeverb fixed value. */
         private const val ALL_PASS_FEEDBACK: Double = 0.5

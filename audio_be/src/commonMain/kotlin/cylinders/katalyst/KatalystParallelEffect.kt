@@ -133,6 +133,13 @@ class KatalystParallelEffect internal constructor(
         return false
     }
 
+    /** Each branch measures its own stages: the chain's input is silent, so is every branch's (see [KatalystChain.measureTails]). */
+    override fun measureTail() {
+        for (i in branches.indices) {
+            branches[i].measureTails()
+        }
+    }
+
     /** The branches hand back what they rented; the pads are the stage's own and only clear. */
     override fun retire() {
         clearPads()

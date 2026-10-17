@@ -53,6 +53,16 @@ interface KatalystEffect {
     fun hasTail(): Boolean
 
     /**
+     * The CHAIN's input is silent from now on (a chain swapped away and draining, `ChainSwap`). A
+     * stage may still be fed by a stage before it (a delay's echoes into a room), which its bound
+     * keeps crediting as always; a stage whose [hasTail] answers from a conservative bound may bring
+     * that bound DOWN to a measurement of what it actually holds now. Never raises a bound, never touches the audio. O(unit),
+     * so it is asked rarely (`ChainSwap.TAIL_MEASURE_SECONDS`), never per block. Only the reverb
+     * measures; every other stage has nothing to tighten.
+     */
+    fun measureTail() {}
+
+    /**
      * Hand back what the warehouse lent this stage and clear the rest: the stage is going to the
      * shelf with its cylinder. For a stage that rents nothing this is [reset], stated as such; the
      * delay and the reverb release their unit DIRTY instead (see `KatalystChain.retire`).

@@ -50,9 +50,9 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  *  - **the chain in service** ([current]) and **the instant install**: a master that arrives before
  *    the engine has rendered its first block is adopted at full weight, no fade (master round M1,
  *    plan risk R4; [hasRendered] is the predicate);
- *  - **the parked request** ([pendingKey], latest wins): a request while the swap is busy (a fade or
- *    a drain, decision (g): it waits for the ring-out, at most the drain's cap plus its release,
- *    about 24.5 s, decision (i)) or for a name not registered yet.
+ *  - **the parked request** ([pendingKey], latest wins): a request while the swap is busy (a fade, a
+ *    drain, a release or a cut; since 2026-10-17 the swap cuts a ring-out a request waits behind, so
+ *    it lands within about a fifth of a second, see [ChainSwap]) or for a name not registered yet.
  *    [pollPendingSwap] offers it again every block;
  *  - **no duck**: a duck stage is inert at the output (decision (c)), so this host raises none of the
  *    swap's duck events.
@@ -299,12 +299,13 @@ class MasterBus(
      *  - **The name is not registered here** (the `RegisterKatalyst` command has not arrived, or
      *    was dropped): parked and retried every block ([pollPendingSwap]), never a silent fall back
      *    to unity. A later re-emission of the event lands it too.
-     *  - **A fade or drain is running**: parked (latest wins) and landed once the swap is settled,
-     *    after the leaving chain's ring-out (decision (g), kept for step 12), which the swap caps at
-     *    [ChainSwap.MAX_DRAIN_SECONDS] and then releases exponentially (decision (i)): about 24.5 s
-     *    at worst. Cutting a fade
-     *    short would drop its leaving chain at full weight, the click the swap exists to prevent. A
-     *    request for the chain leaving service parks like any other and comes back empty.
+     *  - **A fade, drain, release or cut is running**: parked (latest wins), the swap is told a
+     *    request waits ([ChainSwap.requestWaiting]), and it lands once the swap is settled. The swap
+     *    cuts the leaving chain's ring-out over [ChainSwap.CUT_SECONDS] instead of waiting for it
+     *    (maintainer, 2026-10-17; decision (g) until then), and a running fade finishes first:
+     *    cutting a fade short would drop its leaving chain at full weight, the click the swap exists
+     *    to prevent. About 0.15 to 0.22 s in all. A request for the chain leaving service parks like
+     *    any other and comes back empty.
      *  - **Otherwise** it lands now ([land]).
      *
      * Note this does *not* rescue a **recreated engine**: the backend registry is a per-engine fork
@@ -337,6 +338,12 @@ class MasterBus(
         if (dsl == null || !swap.settled) {
             pendingKey = key
 
+            if (dsl != null) {
+                // A known chain waits behind the swap: a ring-out is cut, not waited for
+                // (maintainer, 2026-10-17; see [ChainSwap]).
+                swap.requestWaiting()
+            }
+
             return
         }
 
@@ -357,6 +364,11 @@ class MasterBus(
         val key = pendingKey ?: return
 
         if (!swap.settled) {
+            // A name registered meanwhile could land: the swap hears that a request waits (idempotent).
+            if (registry.findByKey(key) != null) {
+                swap.requestWaiting()
+            }
+
             return
         }
 

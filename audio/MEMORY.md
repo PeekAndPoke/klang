@@ -77,7 +77,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   by `Cylinders.processAndMix`; an ownerless orbit keeps its last settings). Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
 - **Reverb**: one room for both ears: each side's combs are fed `(L + R) / 2` (`Reverb.CROSS_FEED` 0.5, by ear
   2026-09-30); an input with equal sides feeds what it did before, bit for bit. A Freeverb tail only: no pre-delay,
-  no early reflections (`docs/tasks/future/reverb-models.md`).
+  no early reflections (`docs/tasks/future/reverb-models.md`). Two tail floors on purpose (maintainer,
+  2026-10-17): ordinary playback holds a room's ceiling to `SILENCE_FLOOR` on the cells (unchanged, the corpus pins
+  it); only while its chain drains after a swap (`KatalystReverbEffect.swapDraining`, set by the drain's
+  `measureTail`, cleared by reset and retire) does it answer against `Reverb.TAIL_FLOOR`, the comb level whose output
+  is about -90 dBFS, a MEASURED ratio, not a bound (the diffusers can add up to about 17 dB on a narrow band).
 - **Master**: the same Katalyst chain at the output (`MasterBus`, `master(Katalyst(k => ...))`, off with
   `master(Katalyst())`). The Master DSL is retired.
 - **House stage**: `MasterStage`: DC blockers, the limiter (-1 dB, 20:1, 5 ms lookahead, always on, not
@@ -108,7 +112,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `pitchModSemitones` at a literal mod since 7a). The
   rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
-  at most `MAX_DRAIN_SECONDS` 20 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
+  at most `MAX_DRAIN_SECONDS` 20 s; a request that waits behind the drain or the release CUTS it (a raised cosine over
+  `CUT_SECONDS` 0.15 s, maintainer 2026-10-17), so an edit lands in about 0.2 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
   under -90 dB. **A stopped playback is never hard-cut**; only an endless tail triggers the release, 20 s after the
   last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
   `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
@@ -339,8 +344,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 ## Open threads
 
-- **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
-  `duck-orbit-switch-click.md`, and the owed rounds listed there.
+- **By ear** (`docs/tasks/by-ear/README.md`): `duck-orbit-switch-click.md`, and the owed rounds listed there.
 - **Engine pass 1 follow-ups**: `docs/tasks/in-progress/engine-follow-ups.md` (the V8 residues, the phase-pool order, the
   audit's later steps and open decisions).
 - **Open, correctness**: `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
@@ -376,6 +380,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-17 A chain request no longer waits for the ring-out: `ChainSwap` gains `Cutting` (a raised cosine over
+  0.15 s from a drain, a release, or a fade's end) on the host's `requestWaiting`; the drain measures its tails
+  (`KatalystChain.measureTails`, `TailCeiling.tighten`) against an output-referred floor used only while draining
+  (`Reverb.TAIL_FLOOR`, about -90 dBFS out; ordinary playback bit-identical), and the drain also waits for the chain's output under `SILENCE_FLOOR`,
+  so a size-10 room drains in about 14 to 18 s (by its charge), not to the 20 s cap
+  (`docs/tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md`).
 - 2026-10-16 Typed Kotlin doors S7, the rollout done: the script door objects in `klangscript-libs` (`KlangScriptIgnitor`,
   `KlangScriptIgnitorExtensions`, `KlangScriptKatalyst`, the script `Ign` / `Kat`, the slot objects, `toIgnitorDsl`,
   `toKatalystKnob`) are `internal`, so a Kotlin caller outside reaches only the typed doors in `audio_bridge`; three

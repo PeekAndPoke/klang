@@ -409,4 +409,57 @@ class TailCeilingSpec : StringSpec({
         decay(0.001) shouldBe decay(null)
         (decay(0.9) > decay(null)) shouldBe true
     }
+
+    "tighten only ever lowers, in both windows, and a non-finite measurement changes nothing" {
+        // The twin of remeasure (2026-10-17): an owner that knows its input is silent brings the
+        // ceiling down to a measurement. Window 100, fb 0.5, 150 samples in: previous 0.5, current 0.75.
+        fun decay(tighten: Double?): Int {
+            val x = TailCeiling()
+            x.observe(inputPeak = 0.5, frames = 150, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+            if (tighten != null) {
+                x.tighten(tighten)
+            }
+            var n = 0
+            while (x.hasTail) {
+                x.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+                n++
+                (n < 1000) shouldBe true
+            }
+            return n
+        }
+
+        val untouched = decay(null)
+
+        // A measurement ABOVE the ceiling changes nothing: the same decay, block for block.
+        decay(0.9) shouldBe untouched
+        decay(100.0) shouldBe untouched
+        decay(Double.NaN) shouldBe untouched
+        decay(Double.POSITIVE_INFINITY) shouldBe untouched
+        decay(-1.0) shouldBe untouched
+        // A measurement below it shortens the decay, in proportion: 0.001 is about 9 halvings under 0.5.
+        (decay(0.001) < untouched - 12) shouldBe true
+        // Under the floor: no tail at once.
+        val c = TailCeiling()
+        c.observe(inputPeak = 0.5, frames = 150, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+        c.tighten(SILENCE_FLOOR / 2.0)
+        c.hasTail shouldBe false
+    }
+
+    "hasTailOver asks at the owner's floor: a higher floor ends sooner on the same content, SILENCE_FLOOR is hasTail" {
+        fun windows(floor: Double): Int {
+            val x = TailCeiling()
+            x.observe(inputPeak = 1.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+            var w = 0
+            while (x.hasTailOver(floor)) {
+                x.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+                w++
+                (w < 100) shouldBe true
+            }
+            return w
+        }
+
+        // 1.0 halves below 1e-5 in 17 windows (the row above), below 1e-3 in 10.
+        windows(SILENCE_FLOOR) shouldBe 17
+        windows(1e-3) shouldBe 10
+    }
 })

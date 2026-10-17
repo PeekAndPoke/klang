@@ -47,6 +47,21 @@ internal class TailRelease(sampleRate: Int, private val blockFrames: Int) {
     }
 
     /**
+     * The gain the next sample would be added under: where a quicker fade that takes over from this
+     * release starts (`ChainSwap`'s cut), so the two meet without a step. 0 once under the floor.
+     * Called once per takeover, never per block.
+     */
+    fun nextGain(): Double {
+        val g = exp(-releasedFrames / tauFrames)
+
+        if (g < floorGain) {
+            return 0.0
+        }
+
+        return g
+    }
+
+    /**
      * Adds one block of [source] to [target] under the release gain and advances it. Returns true
      * when the gain has fallen under the floor within this block (it is 0 from there on), which is
      * where the owner may retire the source: nothing it plays is heard any more.

@@ -21,7 +21,9 @@ import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.roomCha
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
+import kotlin.math.pow
 
 /**
  * The decided law of the capped drain, written here from the constants and nothing else, for the
@@ -68,12 +70,11 @@ class ChainSwapCapSpec : StringSpec({
         )
     )
 
-    "a self-sustaining chain swapped away is released at the cap: exp(-k / tau) from exactly 1, then 0, and the parked request lands" {
+    "a self-sustaining chain swapped away, with no request waiting, is released at the cap: exp(-k / tau) from exactly 1, then 0" {
         fun rig() = CylinderSwapRig().apply {
             registry.register("room", roomChain(3.0))
             registry.register("loop", loop)
             registry.register("dry", dryChain(0.9))
-            registry.register("late", dryChain(1.1))
         }
 
         val swapped = rig()
@@ -100,15 +101,9 @@ class ChainSwapCapSpec : StringSpec({
 
         val leaving = swapped.swap.leaving.shouldNotBeNull()
         var ring = 0.0
-        var parkedAt = -1
 
+        // No request waits: one would cut the drain (`ChainSwapCutSpec`), and the cap is what this row is about.
         for (b in 0 until releaseAt + releaseBlocks + 30) {
-            if (b == 100) {
-                // Parked behind the drain; latest wins, and it is all that is ever asked for.
-                swapped.cylinder.requestChain("late")
-                parkedAt = b
-            }
-
             val got = swapped.block(level = 0.0)
             val want = control.block(level = 0.0)
 
@@ -138,19 +133,11 @@ class ChainSwapCapSpec : StringSpec({
                     swapped.swap.holds(leaving) shouldBe true
                 }
 
-                b == releaseAt + releaseBlocks - 1 -> withClue("block $b: the release's last block retired the chain and forgot it") {
+                b >= releaseAt + releaseBlocks - 1 -> withClue("block $b: the release's last block retired the chain and forgot it") {
                     swapped.swap.settled shouldBe true
                     swapped.swap.holds(leaving) shouldBe false
                 }
-
-                b == releaseAt + releaseBlocks -> withClue("block $b: the parked request landed on the next block's poll") {
-                    swapped.swap.isFading shouldBe true
-                }
             }
-        }
-
-        withClue("the request really was parked (the loop was draining then)") {
-            parkedAt shouldBe 100
         }
 
         withClue("positive control: the loop still rang at full level through the release, so the release is not vacuous") {
@@ -324,18 +311,32 @@ class ChainSwapCapSpec : StringSpec({
         }
     }
 
-    /** What a room of [size] did when it was swapped away after 400 blocks at 0.5, against a control that kept it. */
-    class RoomDrain(val blocks: Int, val capBlocks: Int, val released: Boolean, val settled: Boolean, val worst: Double)
+    /**
+     * What a room of [size] did when it was swapped away after 400 blocks at 0.5, against a control
+     * that kept it: how long the drain ran, the block after which the control's ring stayed under
+     * -90 dBFS for good ([quietFrom], its audible ring-out), and the loudest the control's ring was
+     * after the drain ended ([ringAfterEnd], what the retire cut).
+     */
+    class RoomDrain(
+        val blocks: Int,
+        val capBlocks: Int,
+        val released: Boolean,
+        val settled: Boolean,
+        val worst: Double,
+        val quietFrom: Int,
+        val ringAfterEnd: Double,
+    )
 
-    fun drainRoom(size: Double): RoomDrain {
+    fun drainRoom(size: Double, hall: KatalystDsl = roomChain(size)): RoomDrain {
         fun rig() = CylinderSwapRig().apply {
-            registry.register("hall", roomChain(size))
+            registry.register("hall", hall)
             registry.register("dry", dryChain(0.9))
         }
 
         val swapped = rig()
         val control = rig()
         val capBlocks = (ChainSwap.MAX_DRAIN_SECONDS * swapped.sampleRate).toInt() / swapped.blockFrames
+        val inaudible = 10.0.pow(-90.0 / 20.0)
 
         for (rig in listOf(swapped, control)) {
             rig.cylinder.requestChain("hall")
@@ -347,6 +348,7 @@ class ChainSwapCapSpec : StringSpec({
         var blocks = 0
         var released = false
         var worst = 0.0
+        var quietFrom = 0
 
         while (!swapped.swap.settled && blocks < capBlocks * 2) {
             val got = swapped.block(level = 0.0)
@@ -354,24 +356,50 @@ class ChainSwapCapSpec : StringSpec({
 
             for (i in got.indices) {
                 worst = maxOf(worst, abs(got[i] - want[i]))
+
+                if (abs(want[i]) >= inaudible) {
+                    quietFrom = blocks + 1
+                }
             }
 
             released = released || swapped.swap.isReleasing
             blocks++
         }
 
-        return RoomDrain(blocks = blocks, capBlocks = capBlocks, released = released, settled = swapped.swap.settled, worst = worst)
+        // The control rings on: where it falls under -90 dBFS for good, and how loud it still was.
+        var ringAfterEnd = 0.0
+
+        for (b in blocks until capBlocks * 2) {
+            val want = control.block(level = 0.0)
+
+            for (i in want.indices) {
+                ringAfterEnd = maxOf(ringAfterEnd, abs(want[i]))
+
+                if (abs(want[i]) >= inaudible) {
+                    quietFrom = b + 1
+                }
+            }
+        }
+
+        return RoomDrain(
+            blocks = blocks,
+            capBlocks = capBlocks,
+            released = released,
+            settled = swapped.swap.settled,
+            worst = worst,
+            quietFrom = quietFrom,
+            ringAfterEnd = ringAfterEnd,
+        )
     }
 
     "a room swapped away drains to its own end: the cap never touches it" {
-        // Size 9 rings out on its own in about 10 s here (its tail ceiling reaching -100 dBFS).
         val drain = drainRoom(9.0)
 
         withClue("the room drained and settled on its own, never released") {
             drain.released shouldBe false
             drain.settled shouldBe true
             drain.blocks shouldBeLessThan drain.capBlocks
-            drain.blocks shouldBeGreaterThan drain.capBlocks / 3
+            drain.blocks shouldBeGreaterThan drain.capBlocks / 4
         }
 
         withClue("and the swapped rig was the room's own ring-out, sample for sample") {
@@ -379,19 +407,90 @@ class ChainSwapCapSpec : StringSpec({
         }
     }
 
-    "the largest room (size 10) can outlast the cap, and loses nothing above -100 dBFS to it" {
-        // Size 10's comb feedback is 0.98, and its tail CEILING (conservative by up to 2x, see
-        // `TailCeiling`) can take longer than the cap to cross -100 dBFS: measured, the drain of
-        // this charge reached the cap and the release differed from the room's own ring-out by
-        // under 1e-6, below half a 16-bit step. The row pins the level, not whether the cap fires.
+    "the largest room (size 10) drains to its own end near its audible ring-out, well before the cap" {
+        // Before 2026-10-17 its tail CEILING, conservative and held to a comb-cell floor about 20 dB
+        // under the room's output floor, kept this drain open to the cap (20 s) and beyond: the
+        // render `tmp/listening/chain-swap-drain/second-edit-waits.wav` waited 22.6 s. The drain now
+        // measures the room (`ChainSwap.TAIL_MEASURE_SECONDS`) against the drain's output-referred floor
+        // (`Reverb.TAIL_FLOOR`, about -90 dBFS at the output; ordinary playback keeps SILENCE_FLOOR).
         val drain = drainRoom(10.0)
+        val sampleRate = 44100.0
+        val second = (sampleRate / 128).toInt()
 
-        withClue("the swap settled, released or not") {
+        withClue("the room drained and settled on its own, never released, well before the cap") {
+            drain.released shouldBe false
             drain.settled shouldBe true
+            drain.blocks shouldBeLessThan drain.capBlocks - 2 * second
         }
 
-        withClue("the largest difference from the room's own ring-out is below -100 dBFS") {
-            drain.worst shouldBeLessThan 1e-5
+        // Two answers end the drain: the room's ceiling under its floor, and the chain's output block (both
+        // channels) under SILENCE_FLOOR. Here, measured: the ring (left) under -90 dBFS for good at 13.2 s, the
+        // drain's end at 17.2 s; the retire cut -106 dBFS. The floor takes the comb sum as coherent, and this
+        // rig's two pure tones partly cancel in it (about 0.02 x the comb peak), so it errs long.
+        withClue("it ended within 5 s of its ring falling under -90 dBFS for good, and cut nothing above -90 dBFS") {
+            drain.blocks shouldBeLessThan drain.quietFrom + 5 * second
+            drain.ringAfterEnd shouldBeLessThan 10.0.pow(-90.0 / 20.0)
+        }
+
+        withClue("and up to its end the swapped rig was the room's own ring-out, sample for sample") {
+            drain.worst shouldBe 0.0
+        }
+
+        withClue("positive control: the room really rang for many seconds") {
+            drain.quietFrom shouldBeGreaterThan 8 * second
+        }
+    }
+
+    "a size-10 room inside a parallel branch drains like one in the chain, well before the cap" {
+        // The branch measures its own stages (`KatalystParallelEffect.measureTail`).
+        val drain = drainRoom(size = 10.0, hall = KatalystDsl.of(KatalystStageDsl.Parallel(branches = listOf(roomChain(10.0)))))
+        val second = 44100 / 128
+
+        withClue("the room drained and settled on its own, never released, well before the cap") {
+            drain.released shouldBe false
+            drain.settled shouldBe true
+            drain.blocks shouldBeLessThan drain.capBlocks - 2 * second
+            drain.worst shouldBe 0.0
+        }
+    }
+
+    "a gain after the room does not raise the retire's step: the drain ends only once the chain's output is under the silence floor" {
+        // The stages answer for what they hold, not for what follows them: before the output gate a size-3 room
+        // followed by +30 dB retired with the chain's output at -69 dBFS (review, 2026-10-17).
+        val loud = KatalystDsl.of(
+            KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(3.0)),
+            KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(31.62)),
+        )
+        val rig = CylinderSwapRig().apply {
+            registry.register("loud", loud)
+            registry.register("dry", dryChain(0.9))
+            cylinder.requestChain("loud")
+            render(blocks = 300, level = 0.5)
+        }
+
+        rig.cylinder.requestChain("dry")
+
+        var lastPeak = 0.0
+        var loudest = 0.0
+        var blocks = 0
+
+        while (!rig.swap.settled && blocks < 20000) {
+            lastPeak = rig.block(level = 0.0).maxOf { abs(it) }
+            loudest = maxOf(loudest, lastPeak)
+            blocks++
+        }
+
+        withClue("the drain ended on its own") {
+            rig.swap.settled shouldBe true
+            blocks shouldBeLessThan (ChainSwap.MAX_DRAIN_SECONDS * rig.sampleRate).toInt() / rig.blockFrames
+        }
+
+        withClue("its last block, the step the retire leaves, was under the silence floor: $lastPeak") {
+            lastPeak shouldBeLessThan SILENCE_FLOOR
+        }
+
+        withClue("positive control: the chain rang loud") {
+            loudest shouldBeGreaterThan 0.1
         }
     }
 })
