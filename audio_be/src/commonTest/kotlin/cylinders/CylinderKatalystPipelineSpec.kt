@@ -88,8 +88,8 @@ class OrbitBusPipelineSpec : StringSpec({
         bodyActiveOn(cylinder) shouldBe true // the sound does not: the first block still carries the fading body
 
         // The sound fades to dry over BANK_CROSSFADE_SECONDS (Katalyst steps 5c-6 and 5c-11),
-        // then the body is gone. The fade is 6.9 blocks at 44.1 kHz, and a fade lands on a block
-        // BOUNDARY, so it takes 7: `toInt()` truncates the 6.9 to 6 and the `+ 1` is what makes
+        // then the body is gone. The fade is 17.2 blocks at 44.1 kHz (50 ms), and a fade lands on a block
+        // BOUNDARY, so it takes 18: `toInt()` truncates the 17.2 to 17 and the `+ 1` is what makes
         // this the ceiling.
         repeat((sampleRate * BANK_CROSSFADE_SECONDS / bf).toInt() + 1) { bodyActiveOn(cylinder) }
         bodyActiveOn(cylinder) shouldBe false

@@ -222,7 +222,7 @@ Template per decision:
 
 ### 3.8 Transitions: crossfade, parking slot, morph rejected
 - Iterations: 1. crossfade + bank cap 10 (`ANS 2026-09-19T15:11`) → 2. formant MORPH built and heard as
-  "laser-shot" [SD7] [M24] → 3. two banks + one parking slot, 20 ms, cap removed [M25] [M26].
+  "laser-shot" [SD7] [M24] → 3. two banks + one parking slot, 20 ms, cap removed [M25] [M26] → 4. 50 ms, chosen by ear (2026-10-17).
 - Evidence: `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) 2026-09-20 (MORPH, `MAX_BANKS`); `audio/ref/knob-glide.md`;
   `docs/tasks/future/transition-times.md`; "security net" [M23].
 - Status: settled.

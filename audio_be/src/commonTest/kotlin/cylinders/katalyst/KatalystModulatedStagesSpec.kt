@@ -1001,9 +1001,11 @@ class KatalystModulatedStagesSpec : StringSpec({
     // ── Body and vowel ───────────────────────────────────────────────────────────────────────────────────────────
 
     "a modulated body material steps through the bank swap, a change during a fade parked: steps, never morphs" {
-        // Index 2 on blocks 0 and 1, index 1 on blocks 2 to 5, index 2 from block 6 (the square at phase 0.3).
+        // Index 2 on blocks 0 and 1, index 1 on blocks 2 to 17, index 2 from block 18 (a square of 32 blocks at phase
+        // 0.453125). A slower square than the eighth since the bank crossfade became 50 ms (2026-10-17): the fade from
+        // block 2 runs 2400 samples, 18.75 blocks, so the change at block 18 arrives inside it.
         val material = KatalystKnobDsl.Range(
-            inner = KatalystKnobDsl.Square(freq = c(EIGHTH_HZ), phase = c(0.3)),
+            inner = KatalystKnobDsl.Square(freq = c(EIGHTH_HZ / 4.0), phase = c(0.453125)),
             from = c(1.0),
             to = c(2.0),
         )
@@ -1016,24 +1018,24 @@ class KatalystModulatedStagesSpec : StringSpec({
 
         one shouldNotBe two
 
-        run(chain, blocks = 16) { _, _ ->
+        run(chain, blocks = 30) { _, _ ->
             tables += body.installedTable
             parked += body.isParked
         }
 
         withClue("block 0 installs index 2's bank at once") { tables[0] shouldBe two }
         withClue("block 2 installs index 1's bank, a swap") { tables[2] shouldBe one }
-        withClue("block 6 asks for index 2 during that swap's fade: parked, index 1 still installed") {
-            parked[6].shouldBeTrue()
-            tables[6] shouldBe one
+        withClue("block 18 asks for index 2 during that swap's fade: parked, index 1 still installed") {
+            parked[18].shouldBeTrue()
+            tables[18] shouldBe one
         }
-        val landed = (7 until tables.size).first { tables[it] === two }
+        val landed = (19 until tables.size).first { tables[it] === two }
 
-        withClue("the parked bank lands with the fade (7.5 blocks from block 2), not before: block $landed") {
-            (landed in 9..10).shouldBeTrue()
+        withClue("the parked bank lands with the fade (18.75 blocks from block 2), not before: block $landed") {
+            (landed in 20..21).shouldBeTrue()
             parked[landed].shouldBeFalse()
         }
-        withClue("a whole bank per change, never one per block: ${body.installs} installs in 16 blocks") {
+        withClue("a whole bank per change, never one per block: ${body.installs} installs in 30 blocks") {
             (body.installs <= 4).shouldBeTrue()
         }
     }
@@ -1354,10 +1356,12 @@ class KatalystModulatedStagesSpec : StringSpec({
 
     "a table change while the mix moves still swaps, and the moving mix reaches both pairs of the fade (5c)" {
         // The material moves from wood to glass at block 6 (an owner's katp): glass installs into the other pair from
-        // rest and fades in over 960 samples (20 ms) while wood fades out. The wet moves every block. The install snaps
+        // rest and fades in over 2400 samples (50 ms, the bank crossfade since 2026-10-17; a literal, so the row pins the
+        // decided length, not whatever the constant says) while wood fades out. The wet moves every block. The install snaps
         // glass's blend at block 6's wet and leaves wood's as it sounded (block 5's); from block 7 on the mix moves
         // BOTH pairs, so both terms of the swap's crossfade carry it.
-        val blocks = 20
+        // 30 blocks: the fade starts at block 6 and lands inside block 24 (6 + 2400 / 128 = 24.75).
+        val blocks = 30
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Body(
@@ -1408,7 +1412,7 @@ class KatalystModulatedStagesSpec : StringSpec({
                     } else {
                         val glassOut = blendAt(k = k, i = i, wet = wetGlass[j], from = glassFrom, to = glassTo)
                         val p = j - 6 * blockFrames
-                        val weight = if (p < 960) (960 - p) * (1.0 / 960) else 0.0
+                        val weight = if (p < 2400) (2400 - p) * (1.0 / 2400) else 0.0
 
                         glassOut + weight * (woodOut - glassOut)
                     }
@@ -1429,9 +1433,9 @@ class KatalystModulatedStagesSpec : StringSpec({
     )
 
     "an owner back inside a fade to dry with a new wet takes the fading bank back and glides it to that wet (5c)" {
-        // Block 5 names no material (`bm` 0, the index of none: a null table), so the bank fades to dry over 960
-        // samples. Block 7, 256 samples into that fade, names wood again with a new wet, 0.3 to 0.8: the fading pair is
-        // taken back where it stands (the swap turns the fade around, the dry going out from its weight then, 256/960)
+        // Block 5 names no material (`bm` 0, the index of none: a null table), so the bank fades to dry over 2400
+        // samples (50 ms since 2026-10-17, a literal on purpose). Block 7, 256 samples into that fade, names wood again with a new wet, 0.3 to 0.8: the fading pair is
+        // taken back where it stands (the swap turns the fade around, the dry going out from its weight then, 256/2400)
         // and its blend glides over 50 ms (19 blocks) to the new wet. The bank is never re-installed, so its bands ring
         // on from block 0 and the full-wet render of wood is its band sum throughout.
         val blocks = 30
@@ -1455,7 +1459,7 @@ class KatalystModulatedStagesSpec : StringSpec({
         val wet = render(build(fullWetBody(wood)), blocks)
         val start = dryOf(0.3, 0.4) to wetOf(0.3)
         val target = dryOf(0.8, 0.4) to wetOf(0.8)
-        val inv = 1.0 / 960
+        val inv = 1.0 / 2400
 
         // After j blocks of the glide (block 7 is j = 1), linear in each coefficient, landing on the target at j = 19.
         fun at(j: Int): Pair<Double, Double> {
@@ -1478,13 +1482,13 @@ class KatalystModulatedStagesSpec : StringSpec({
                         bank
                     } else if (k < 7) {
                         // The fade to dry: the bank is the outgoing entry, from weight 1.
-                        val w = (960 - (j - 5 * blockFrames)) * inv
+                        val w = (2400 - (j - 5 * blockFrames)) * inv
 
                         dry + w * (bank - dry)
                     } else {
-                        // Turned around: the bank is the target, the dry the outgoing entry from 256/960.
+                        // Turned around: the bank is the target, the dry the outgoing entry from 256/2400.
                         val q = j - 7 * blockFrames
-                        val w = if (q < 960) (1.0 - 704 * inv) * ((960 - q) * inv) else 0.0
+                        val w = if (q < 2400) (1.0 - 2144 * inv) * ((2400 - q) * inv) else 0.0
 
                         bank + w * (dry - bank)
                     }
@@ -1502,11 +1506,12 @@ class KatalystModulatedStagesSpec : StringSpec({
     }
 
     "a new wet after a fade to dry has landed installs a fresh bank and counts no blend move (5c)" {
-        // Block 2 names no material, so the bank fades to dry and lands inside block 9 (960 samples). Block 12 names
+        // Block 2 names no material, so the bank fades to dry and lands inside block 20 (2400 samples, 50 ms since
+        // 2026-10-17, a literal on purpose: 2 + 2400 / 128 = 20.75). Block 23 names
         // wood again with a new wet: the config cache still holds wood, but no pair sounds, so nothing moves in place
         // and the change installs a fresh bank, its blend snapped at the new wet, fading in from dry over bands from
-        // rest (a full-wet render whose tone starts at block 12).
-        val blocks = 24
+        // rest (a full-wet render whose tone starts at block 23).
+        val blocks = 45
         val chain = slotBody()
         val body = chain.body.shouldNotBeNull()
         val out = render(chain, blocks, before = { k ->
@@ -1514,11 +1519,11 @@ class KatalystModulatedStagesSpec : StringSpec({
                 chain.applyParams(klangMapOf("bm" to 0.0))
             }
 
-            if (k == 12) {
+            if (k == 23) {
                 chain.applyParams(klangMapOf("bm" to wood, "bw" to 0.8))
             }
         })
-        val wet = render(build(fullWetBody(wood)), blocks, from = 12)
+        val wet = render(build(fullWetBody(wood)), blocks, from = 23)
         val target = dryOf(0.8, 0.4) to wetOf(0.8)
 
         withClue("a fresh install at the new wet, and no blend move: no pair sounded to move") {
@@ -1526,19 +1531,19 @@ class KatalystModulatedStagesSpec : StringSpec({
             body.blendMoves shouldBe 0
             body.installedMix shouldBe 0.8
         }
-        for (k in 10..11) {
+        for (k in 21..22) {
             withClue("block $k, landed on the dry: the tone, bit for bit") {
                 (0 until blockFrames).all { out[k * blockFrames + it] == tone(k = k, i = it) }.shouldBeTrue()
             }
         }
-        for (k in 12 until blocks) {
+        for (k in 23 until blocks) {
             withClue("block $k: the fresh bank fading in over the dry") {
                 deviation(out, k) { i ->
                     val j = k * blockFrames + i
                     val bank = blendAt(k = k, i = i, wet = wet[j], from = target, to = target)
                     val dry = tone(k = k, i = i)
-                    val q = j - 12 * blockFrames
-                    val w = if (q < 960) (960 - q) * (1.0 / 960) else 0.0
+                    val q = j - 23 * blockFrames
+                    val w = if (q < 2400) (2400 - q) * (1.0 / 2400) else 0.0
 
                     bank + w * (dry - bank)
                 }.shouldBeLessThanOrEqual(1e-9)

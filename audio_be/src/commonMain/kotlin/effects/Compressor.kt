@@ -207,6 +207,34 @@ class Compressor(
     // Envelope follower state.
     private var envelopeDb: Double = SILENCE_DB
 
+    /**
+     * True when the knobs at the `TO` ends of [glideArgs] reduce LESS than those at the `FROM` ends, both on this curve
+     * at the fixed reference input [KNOB_MOVE_REFERENCE_DB] (0 dBFS), never at the follower's envelope. The orbit
+     * compressor's knob move asks it once per new move to pick its law (`CompressorKnobMove`): the six knobs travel in
+     * the holder, the answer is a Boolean, so no double crosses a call.
+     *
+     * STRICT on purpose: a tie glides (both thresholds above 0 dBFS reduce nothing there; a knee-only change far below
+     * the reference is the same line).
+     */
+    internal fun reducesLessAtGlideEnds(): Boolean {
+        val a = glideArgs
+        val env = KNOB_MOVE_REFERENCE_DB
+        val now = gainReductionDb(
+            inputDb = env,
+            thresholdDb = a[GLIDE_THRESHOLD_FROM],
+            slope = a[GLIDE_INVERSE_RATIO_FROM] - 1.0,
+            kneeDb = a[GLIDE_KNEE_FROM],
+        )
+        val then = gainReductionDb(
+            inputDb = env,
+            thresholdDb = a[GLIDE_THRESHOLD_TO],
+            slope = a[GLIDE_INVERSE_RATIO_TO] - 1.0,
+            kneeDb = a[GLIDE_KNEE_TO],
+        )
+
+        return then > now
+    }
+
     // Computed coefficients (refreshed on any parameter setter).
     private var attackCoeff: Double = 0.0
     private var releaseCoeff: Double = 0.0
@@ -358,7 +386,7 @@ class Compressor(
         // at all — and the gain steps by the full reduction in a single sample (~595 dB/ms), which
         // is exactly the click MIN_LOOKAHEAD_FRAMES exists to prevent. Reachable from the DSL as
         // `.lookahead(0.005).attack(0.0)`, i.e. from "make it snappy". The zero-lookahead path has
-        // the equivalent floor in updateCoefficients() (`max(0.0001, attackSeconds)`); this is its
+        // the equivalent floor in updateCoefficients() (`max(MIN_TIME_SECONDS, attackValue)`); this is its
         // twin, and a bound against a defect rather than a clamp on taste.
         // NB `boxA.size` is (delayFrames + 2) / 2, and delayFrames >= MIN_LOOKAHEAD_FRAMES, so the
         // range cannot invert. That coupling is MIN_LOOKAHEAD_FRAMES >= 2 * MIN_BOX_TAPS - 2 — break
@@ -822,8 +850,8 @@ class Compressor(
      * Update time constants for attack and release.
      */
     private fun updateCoefficients() {
-        val attackTime = max(0.0001, attackValue)
-        val releaseTime = max(0.0001, releaseValue)
+        val attackTime = max(MIN_TIME_SECONDS, attackValue)
+        val releaseTime = max(MIN_TIME_SECONDS, releaseValue)
 
         attackCoeff = timeConstantCoeff(timeSeconds = attackTime, sampleRate = sampleRate.toDouble())
         releaseCoeff = timeConstantCoeff(timeSeconds = releaseTime, sampleRate = sampleRate.toDouble())
@@ -916,6 +944,25 @@ class Compressor(
         internal const val KNOB_ATTACK: Int = 3
         internal const val KNOB_RELEASE: Int = 4
         private const val KNOB_ARGS: Int = 5
+
+        /**
+         * The shortest attack or release time the follower computes its coefficient from, in seconds: a bound against a
+         * defect (a zero or negative time has no one-pole), not a clamp on taste; the stored knob is untouched. The
+         * orbit compressor's knob move releases with the same floor (`KatalystCompressorEffect`).
+         */
+        internal const val MIN_TIME_SECONDS: Double = 0.0001
+
+        /**
+         * The input level, in dBFS, at which the orbit compressor's knob move judges a new setting ([reducesLessAtGlideEnds]):
+         * a move that reduces less HERE releases, any other glides. A fixed loud level, decided by the maintainer on
+         * 2026-10-17 ("judge at a fixed loud level"): loud material is where a swell and a ceiling are heard. The
+         * follower's envelope was tried first and failed: after a rest it has fallen toward -100 dB, every relaxing move
+         * read as a tie and glided in 50 ms, and the new owner's first note met the old threshold moving linearly (a 16 dB
+         * swell in 20 ms). A crossover, threshold and ratio moving in opposite directions, is judged by its behaviour on
+         * loud material; a quiet passage may then see the other direction for a moment, bounded by the two curves'
+         * difference at that level.
+         */
+        internal const val KNOB_MOVE_REFERENCE_DB: Double = 0.0
 
         /** How much faster the dual release's fast branch is than the configured release. */
         private const val FAST_RELEASE_DIVISOR: Double = 10.0

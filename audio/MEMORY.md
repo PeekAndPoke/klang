@@ -123,7 +123,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   these, never an Ignitor node; the `eq` sections take a number or a `Kat.param` only. A knob over slots is evaluated when the owner's map changes; a knob that holds a modulator is
   ticked once per processed block at the top of `KatalystChain.process`. `audio/ref/katalyst.md`.
 - **Knob glide** `KNOB_GLIDE_SECONDS` 0.05 in whole blocks (17 at 44.1 kHz, 19 at 48 kHz), one block for a knob that
-  holds a modulator; **bank crossfade** `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. The bank
+  holds a modulator; **bank crossfade** `BANK_CROSSFADE_SECONDS` 0.05 (by ear 2026-10-17; 20 ms before), counted in
+  samples, with two banks and one parking slot, so a material changes at most every 18 blocks at 44.1 kHz (19 at
+  48 kHz): 16ths pass, 32nds park above about 143 BPM. A compressor move that RELAXES on balance (its net reduction at a fixed
+  0 dBFS is less; the three knobs on one fraction) releases at the compressor's own release time,
+  never faster than the 50 ms glide (`CompressorKnobMove`, by ear 2026-10-17). The bank
   crossfade and the compressor's switch fade run one linear law, `utils/linear_crossfade.kt` (the chain swap's
   `Crossfade` and the duck's glide are other laws). Every delay and reverb switch-off fades the feed over the wet
   glide and drains from the block it lands in, no further off-config needed (follow-up 42). Which knob glides how:
@@ -360,8 +364,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
   `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md` (all in
-  `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
-  decision left open (`audio/ref/knob-glide.md`).
+  `docs/tasks/future/`).
 - **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
 - **Voice and instruments, future**: `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
@@ -380,6 +383,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-17 Knob glide, two ear decisions: the bank crossfade is 50 ms (`BANK_CROSSFADE_SECONDS`, 20 ms before), and a
+  compressor move that relaxes on balance (judged by its net reduction at a fixed 0 dBFS) releases at the compressor's
+  release time on one shared fraction, never faster than the glide; a 40 dB threshold rise no longer swells 32.2 dB with 10 to
+  90 % in 46 ms (`CompressorKnobMove`); corpus: three body songs
+  moved by the crossfade, nothing by the compressor (`docs/tasks/by-ear/knob-glide-listening.md`).
 - 2026-10-17 A chain request no longer waits for the ring-out: `ChainSwap` gains `Cutting` (a raised cosine over
   0.15 s from a drain, a release, or a fade's end) on the host's `requestWaiting`; the drain measures its tails
   (`KatalystChain.measureTails`, `TailCeiling.tighten`) against an output-referred floor used only while draining

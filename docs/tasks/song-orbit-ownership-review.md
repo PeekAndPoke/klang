@@ -108,4 +108,4 @@ which patterns conflict.
 ## The handover itself
 
 Measured clean: bus settings glide (`KNOB_GLIDE_SECONDS`, 50 ms), a reverb switched off drains its room, and body
-or vowel changes go through the 20 ms bank crossfade. No clicks at a change of owner.
+or vowel changes go through the 20 ms bank crossfade (20 ms then; 50 ms since 2026-10-17). No clicks at a change of owner.
